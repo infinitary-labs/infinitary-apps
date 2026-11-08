@@ -193,23 +193,18 @@ test("a crowded last-known fleet retains all 64 inspectable crew at minimum widt
   }
 });
 
-/** The near crew layer's lit pixels, sorted by hue: the gray of a wait and the ember of a review. */
-function arrowInk(page: import("@playwright/test").Page) {
-  return page.evaluate(() => {
-    const canvas = document.querySelector<HTMLCanvasElement>('canvas[data-crew-layer="near"]');
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) throw new Error("crew near layer missing");
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    let gray = 0;
-    let ember = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      const [r = 0, g = 0, b = 0, a = 0] = [data[i], data[i + 1], data[i + 2], data[i + 3]];
-      if (a === 0) continue;
-      if (Math.max(r, g, b) - Math.min(r, g, b) < 40) gray++;
-      else if (r > g && g > b && r - b > 60) ember++;
-    }
-    return { gray, ember };
-  });
+/**
+ * The arrows the near crew layer drew, as the stage names each one it paints
+ * (`data-crew-arrows`, `kind:from>to`, CrewOrbit.tsx), sorted. Which color
+ * each kind is drawn in is `drawDependencyLink`'s, held by its unit test in
+ * `crewmate.test.ts`; this journey holds which arrows the stage draws
+ * between computers (INF-2456, in place of counting canvas pixel hues).
+ */
+async function drawnArrows(page: import("@playwright/test").Page): Promise<string[]> {
+  const arrows = await page
+    .locator('canvas[data-crew-layer="near"]')
+    .getAttribute("data-crew-arrows");
+  return (arrows ?? "").split(" ").filter(Boolean).sort();
 }
 
 // Captain (INF-556): "i do think drawing a wait between computers may be helpful",
@@ -253,14 +248,18 @@ test("a wait and a review between computers draw their arrows across the stage",
         "data-crew-computer",
         other,
       );
-    // Every crewmate is idle, so its glyph is the cool cyan: the only gray
-    // ink is a wait's arrow and the only ember ink is a review's.
+    // This Mac's first task waits on both of the other computer's tasks, and
+    // the other computer's review reads this Mac's second: two wait arrows
+    // and one review arrow cross the stage, and nothing else is drawn.
     await expect
-      .poll(async () => {
-        const ink = await arrowInk(page);
-        return { gray: ink.gray > 40, ember: ink.ember > 40 };
-      })
-      .toEqual({ gray: true, ember: true });
+      .poll(() => drawnArrows(page))
+      .toEqual(
+        [
+          "wait:sample-0-0>sample-1-0",
+          "wait:sample-0-0>sample-1-1",
+          "review:review>sample-0-1",
+        ].sort(),
+      );
   } finally {
     await app.close();
   }

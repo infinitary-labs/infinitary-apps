@@ -19,6 +19,7 @@ import { RUNS_ON_THIS_MAC } from "../../src/shared/repos";
 import type { TaskView } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
 import type { ScriptedCall } from "../helpers/scriptedCalls";
+import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { waitForFirstmateIdle } from "./crew";
 import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type HelperRun, startHelper } from "./helperRun";
@@ -77,30 +78,18 @@ function projectWithOrigin(): string {
  * folder, the home's or the computer's.
  */
 function seedGrokKey(dir: string): void {
-  const account = join(dir, "accounts", "xai", "acct_crew");
-  mkdirSync(account, { recursive: true, mode: 0o700 });
-  writeFileSync(
-    join(account, "auth.json"),
-    JSON.stringify({ xai: { type: "api_key", key: "disposable-key" } }),
-    { mode: 0o600 },
-  );
-  writeFileSync(
-    join(dir, "accounts", "registry.json"),
-    JSON.stringify({
-      version: 1,
-      accounts: [
-        {
-          id: "acct_crew",
-          providerId: "xai",
-          kind: "api_key",
-          label: "Crew",
-          enabled: true,
-          createdAt: 1,
-        },
-      ],
-      pins: {},
-    }),
-  );
+  seedAccountStore(dir, "xai", "acct_crew");
+  seedAccountAuth(dir, "xai", "acct_crew", { xai: { type: "api_key", key: "disposable-key" } });
+  seedAccountRegistry(dir, [
+    {
+      id: "acct_crew",
+      providerId: "xai",
+      kind: "api_key",
+      label: "Crew",
+      enabled: true,
+      createdAt: 1,
+    },
+  ]);
 }
 
 /** The stand-in's models, with Grok's crew model answering there too. */

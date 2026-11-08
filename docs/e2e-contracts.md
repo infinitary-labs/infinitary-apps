@@ -65,6 +65,7 @@ The existing fixture helpers for Claude seats, GitHub, GitLab, knowledge, older 
 It refuses a home/user-data byte writer, copier, link, rename, deletion or metadata mutation outside a declared owner, and an exported seed/mock helper without an owner declaration.
 It also refuses a quota `snapshot.json` written outside a declared owner, wherever its folder lives: a journey passes its reading, and its catalog when it needs one, to `seedQuotaFixture`, which checks both against the reader's schemas.
 It follows imported filesystem aliases, namespace calls and scoped path aliases rooted in the launcher's home/user-data naming contract; it checks a copy's destination and both sides of a rename, never the write's payload.
+The account vault's own `accounts` folder counts under any data folder, whatever the variable naming that folder, so a helper's `dir` parameter is held to the account owner as `userDataDir` is.
 Empty directories have no saved-file envelope, and files under explicit `worktrees` or `workspace` path segments are authored project input rather than app-owned saved formats.
 A journey authoring another project input or evidence artifact names that input beside its write with `// e2e-fixture: input -- <reason>`.
 A journey proving an external mutation, such as corrupted data, missing media, changed trust or deleted window caches, keeps `// e2e-fixture: mutation -- <reason>` beside that mutation.

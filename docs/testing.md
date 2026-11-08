@@ -130,6 +130,7 @@ A card's pictures are the core's own copies: the home reads each through `inf:ca
 `bodyDrawn(title)` waits until the shown card's body has drawn, and `inCardBody(title, read)` runs `read` inside it.
 
 Browser commands (`tests/helpers/browserCommands.ts`) reach the page itself, such as the media a person's Mac sets, and `evaluateInFrame` reads inside a sandboxed frame, found by its name or its title, such as a card body, that the page cannot script; `cdp()` from `vitest/browser` reads the browser's own counters.
+A journey helper that takes a Playwright page, such as the layout invariant or the first mate idle wait, is checked here on a plain page of the browser's own, through a command in `tests/helpers/journeyHelperPages.ts`, never by launching the app only to replace its page.
 A frame program served as text, such as Observe's, draws in a same-origin frame the test builds from the program and the design tokens (`tests/browser/observe-frame.test.ts`).
 The project's Chromium runs with Web Share on, as the window's does, and draws scrollbars as the window does: over the content on a Mac by default, beside it on Linux, and beside it wherever a page styles them.
 Install it once with `pnpm exec playwright install --only-shell chromium`, then run `pnpm exec vitest run --project browser`.
@@ -1054,7 +1055,7 @@ What a journey asserts, each fact from its one place:
   The layout rule leaves inline Set counts and decoded image dimensions alone; a non-layout arithmetic use that it flags keeps an adjacent reason (PNG decoding and the encoded demo attachment limits).
   The frame helper inspects folding only to avoid waiting for an offscreen rail to paint; it never asserts a layout.
   `expectClearOf` accepts any placement that stays inside the window without overlapping the journey's needed controls; the task-board, task-key and row summaries share it rather than reimplementing their placement algorithm.
-  `layout-invariants.spec.ts` exercises clear placements on every side and refuses overlap, an escaped edge and a missing control.
+  `tests/browser/layout-invariants.test.ts` exercises clear placements on every side and refuses overlap, an escaped edge and a missing control, on a plain page of the browser layer.
   A spec whose subject is every element of a tag says so where it counts them, in `// biome-ignore lint/plugin/e2e-structural-selectors: <why>` (a card body's iframes and images in `card-containment.spec.ts`, a card document's scripts in `card-scripts.spec.ts`, a diagram's labels in `phase4-cards.spec.ts`).
   A thirteenth rule, `e2e-frame-actions` (`tests/lint/e2eFrameActions.ts`, run by `scripts/lint-e2e-frames.ts` in `pnpm check` and `pnpm lint`), refuses native `click`, `dblclick`, `check`, `uncheck`, `setChecked`, `tap`, `hover` and `dragTo` on frame contents.
   It follows `frameLocator` and `contentFrame` chains, scoped locator aliases and local or imported helpers' returns and arguments through TypeScript's symbols, rather than guessing from variable names; `owner()` returns the outer iframe element and stays native.

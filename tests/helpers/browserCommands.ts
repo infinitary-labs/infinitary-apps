@@ -2,6 +2,7 @@ import { basename, join } from "node:path";
 import type { BrowserCommand } from "vitest/node";
 import type { HomeRead, HomeSeed, readHome } from "./browserFreshHome";
 import type { ReducedMotion } from "./browserProvided";
+import { firstmateIdleReadings, layoutReadings } from "./journeyHelperPages";
 
 /**
  * What a browser test asks of the page that holds it, beyond the runner's
@@ -9,7 +10,9 @@ import type { ReducedMotion } from "./browserProvided";
  * person's Mac sets (Reduced motion), applied to the whole page as the
  * window's Chromium applies the system setting, a reading inside a
  * sandboxed frame the page cannot script, the page's cookies cleared, its
- * garbage collected, and the answers of a home seeded for the test's story.
+ * garbage collected, the answers of a home seeded for the test's story, and
+ * the journeys' own Playwright helpers read on a plain page
+ * (`journeyHelperPages.ts`).
  */
 const emulateReducedMotion: BrowserCommand<[ReducedMotion]> = async (context, reducedMotion) => {
   await context.page.emulateMedia({ reducedMotion });
@@ -98,4 +101,6 @@ export const browserCommands = {
   clearCookies,
   collectGarbage,
   seededHome,
+  layoutReadings,
+  firstmateIdleReadings,
 };

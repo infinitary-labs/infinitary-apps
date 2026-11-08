@@ -248,12 +248,7 @@ describe("the e2e assertion contract's lint", () => {
     writeFileSync(join(root, "tests/e2e/model-lists.spec.ts"), source);
     writeFileSync(join(root, "tests/e2e/runEvidence.ts"), source);
     writeFileSync(join(root, "tests/e2e/frames.ts"), source);
-    for (const file of [
-      "windowKeys.ts",
-      "crew.ts",
-      "crew-idle-helper.spec.ts",
-      "phase1-shell.spec.ts",
-    ])
+    for (const file of ["windowKeys.ts", "crew.ts", "phase1-shell.spec.ts"])
       writeFileSync(join(root, "tests/e2e", file), source);
 
     const diagnostics = lint(root, [
@@ -263,7 +258,6 @@ describe("the e2e assertion contract's lint", () => {
       "tests/e2e/windowKeys.ts",
       "tests/e2e/frames.ts",
       "tests/e2e/crew.ts",
-      "tests/e2e/crew-idle-helper.spec.ts",
       "tests/e2e/phase1-shell.spec.ts",
     ]);
 
@@ -287,7 +281,7 @@ describe("the e2e assertion contract's lint", () => {
       expect(rulesIn("tests/e2e/windowKeys.ts")).not.toContain(rule);
       expect(rulesIn("tests/e2e/model-lists.spec.ts")).toContain(rule);
     }
-    for (const file of ["crew.ts", "crew-idle-helper.spec.ts", "phase1-shell.spec.ts"]) {
+    for (const file of ["crew.ts", "phase1-shell.spec.ts"]) {
       expect(rulesIn(`tests/e2e/${file}`)).not.toContain("pose");
       expect(rulesIn(`tests/e2e/${file}`)).toContain("typedKeys");
     }

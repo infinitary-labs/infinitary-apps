@@ -28,6 +28,21 @@ writeFileSync(script, 'join(home, ".gitconfig")');`);
     expect(lintFixtureOwners([file]).map(({ line }) => line)).toEqual([4, 5]);
   });
 
+  // INF-2456: task-move and basis-placement wrote the vault's registry and a
+  // key's auth.json by hand through a helper's `dir` parameter, which the
+  // lint read as an unknown folder; INF-2417's ledger found them.
+  it("refuses an account file written under any data folder, however the folder is named", () => {
+    const { file } = fixture(`
+function seedGrokKey(dir: string): void {
+  const account = join(dir, "accounts", "xai", "acct_crew");
+  mkdirSync(account, { recursive: true, mode: 0o700 });
+  writeFileSync(join(account, "auth.json"), key, { mode: 0o600 });
+  writeFileSync(join(dir, "accounts", "registry.json"), registry);
+}
+`);
+    expect(lintFixtureOwners([file]).map(({ line }) => line)).toEqual([5, 6]);
+  });
+
   it("keeps same-named destination variables in different functions separate", () => {
     const { file } = fixture(`
 function seed(homeDir: string) { const file = join(homeDir, "AGENTS.md"); writeFileSync(file, marker); }

@@ -21,6 +21,6 @@ or {
   },
   $literal <: r"(?s).*(?:First mate|Firstmate) - (?:[a-z]|\$\{).*",
   $filename <: r".*tests/e2e/.*",
-  not $filename <: r".*tests/e2e/(?:crew\.ts|crew-idle-helper\.spec\.ts|phase1-shell\.spec\.ts)",
+  not $filename <: r".*tests/e2e/(?:crew\.ts|phase1-shell\.spec\.ts)",
   register_diagnostic(span=$literal, message="The first mate's pose reads idle before a turn has started as well as after it ended. Wait for its answer with askFirstmate(page, text) (tests/e2e/lastTurn.ts), or for its turn to end with waitForFirstmateIdle(page) (tests/e2e/crew.ts) (docs/testing.md, the e2e assertion contract).", severity="error")
 }

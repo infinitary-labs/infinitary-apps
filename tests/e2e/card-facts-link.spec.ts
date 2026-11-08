@@ -15,7 +15,7 @@ import { launchApp } from "./launch";
 import { atRest, holdPointer } from "./layout";
 import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockModels";
 import { promptInput } from "./prompt";
-import { factsStrip, showCard } from "./stack";
+import { factsStrip, pushCards, showCard } from "./stack";
 import { focusOn } from "./windowKeys";
 
 /**
@@ -202,9 +202,7 @@ test("a press on the fact strip's pull request link opens it though the strip re
     const letGo = await holdPointer(page, link);
     // The strip has the button down before the refresh is pushed.
     await expect.poll(noted).toEqual(["down"]);
-    await app.evaluate(({ BrowserWindow }, refreshed) => {
-      BrowserWindow.getAllWindows()[0]?.webContents.send("inf:cards", refreshed);
-    }, refreshed);
+    await pushCards(app, refreshed);
     await expect(facts.cell("checks")).toHaveAttribute("title", later);
     await letGo();
     await expect.poll(opened).toEqual([PR, PR]);

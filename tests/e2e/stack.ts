@@ -1,4 +1,10 @@
-import { expect, type FrameLocator, type Locator, type Page } from "@playwright/test";
+import {
+  type ElectronApplication,
+  expect,
+  type FrameLocator,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 import {
   CARD_CHAT_LABEL,
   MERGE_CLOSES_MARK,
@@ -7,6 +13,7 @@ import {
   type SettleFact,
 } from "../../src/shared/cards";
 import type { ComposerNotice } from "../../src/shared/composer";
+import type { PushChannel, PushPayload } from "../../src/shared/ipc";
 import type { RiskDimension } from "../../src/shared/risk";
 import { drawnFrame } from "./frames";
 import { takeTurn } from "./inputQueue";
@@ -36,6 +43,28 @@ export async function expectUpdateSeen(page: Page, cardId: string): Promise<void
       ),
     )
     .toBe(true);
+}
+
+/**
+ * Pushes a card list to the window as the host's card stack does when it
+ * refreshes its cards (`CardService`'s broadcast on the core's `inf:cards`
+ * push), so a journey can land a refresh at a moment it holds, such as
+ * while a press is down. The channel and the list's shape are the push
+ * contract's (`src/shared/ipc.ts`), so a renamed channel or a changed card
+ * fails the typecheck here rather than pushing nothing. INF-2456 repairs
+ * the hand-built pushes INF-2417's ledger found in two journeys.
+ */
+export async function pushCards(
+  app: ElectronApplication,
+  cards: PushPayload<"inf:cards">,
+): Promise<void> {
+  const channel: PushChannel = "inf:cards";
+  await app.evaluate(
+    ({ BrowserWindow }, { channel, cards }) => {
+      BrowserWindow.getAllWindows()[0]?.webContents.send(channel, cards);
+    },
+    { channel, cards },
+  );
 }
 
 /** The pager of a stack of `count`, whatever position is shown; its words are the stack's own. */

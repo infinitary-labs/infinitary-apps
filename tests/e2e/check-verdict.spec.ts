@@ -12,14 +12,14 @@ import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { type Card, SETTLE_FACTS_OPEN } from "../../src/shared/cards";
-import { checksFinishedAgo } from "../../src/shared/checksSpan";
+import { checksFinishedAgo, checksRestWords, checksSpanOf } from "../../src/shared/checksSpan";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedDelivery } from "../helpers/taskDelivery";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { heroShot, regionShot } from "./pictures";
-import { factsStrip, showCard, shownEntry } from "./stack";
+import { factsStrip, pushCards, showCard, shownEntry } from "./stack";
 import { pressKey } from "./windowKeys";
 
 /** Nightly session audit finding 3: a failed merge check must carry the
@@ -53,12 +53,12 @@ test("failed merge checks carry head-bound verdicts with keyboard-readable evide
     classification: classification as keyof typeof CHECK_VERDICT_WORDS,
     evidence: `The log for ${classification} reports <meter> & a different unit.\nCompared with untouched main.`,
   }));
-  seedDelivery(tasks, "check-verdict", {
-    mode: "direct-pr",
+  const delivery = {
+    mode: "direct-pr" as const,
     prNumber: 58,
     prUrl: "https://github.com/octo/meterlab/pull/58",
     headSha,
-    ci: "red",
+    ci: "red" as const,
     ciAt: Date.now(),
     ciRepair: {
       failures: [{ headSha, checks: [...diagnoses.map((d) => d.check), "linux-checks"] }],
@@ -67,13 +67,14 @@ test("failed merge checks carry head-bound verdicts with keyboard-readable evide
         {
           headSha: "b".repeat(40),
           check: "linux-checks",
-          classification: "own-regression",
+          classification: "own-regression" as const,
           evidence: "old diagnosis",
         },
       ],
       repairs: [],
     },
-  });
+  };
+  seedDelivery(tasks, "check-verdict", delivery);
   const card: Card = {
     id: "card-verdict",
     taskId: "check-verdict",
@@ -172,16 +173,21 @@ test("failed merge checks carry head-bound verdicts with keyboard-readable evide
     await expect(strip).not.toContainText("old diagnosis");
     // No recorded run of main fails these checks, so no line says so.
     await expect(strip.locator("[data-check-outside]")).toHaveCount(0);
-    // Refresh exactly as the host pushes live check ages, without reloading the frame.
+    // Refresh as the host's next tick does, without reloading the frame: the
+    // same strip with its checks read a minute later, in the words the host
+    // writes for that reading (INF-2456).
+    const checks = factsStrip(cardBody(launched.page, "The meter fix is ready")).cell("checks");
+    const title = await checks.getAttribute("title");
+    const later = checksRestWords(checksSpanOf(delivery), delivery.ciAt + 60_000);
+    expect(later).not.toBe(title);
     const cards = await launched.page.evaluate(() => window.infinitary.cards.list());
     const refreshed = cards.map((card) => ({
       ...card,
-      body: card.body.replace("failed</span>", "failed · just read</span>"),
+      body: card.body.replace(`title="${title}"`, `title="${later}"`),
     }));
-    await launched.app.evaluate(({ BrowserWindow }, cards) => {
-      BrowserWindow.getAllWindows()[0]?.webContents.send("inf:cards", cards);
-    }, refreshed);
-    await expect(strip).toContainText("just read");
+    expect(refreshed).not.toEqual(cards);
+    await pushCards(launched.app, refreshed);
+    await expect(checks).toHaveAttribute("title", later);
     for (const diagnosis of diagnoses)
       await expect(strip.getByText(diagnosis.evidence, { exact: true })).toBeVisible();
     // A new evidence identity must not inherit the previous disclosure's open state.
@@ -189,9 +195,7 @@ test("failed merge checks carry head-bound verdicts with keyboard-readable evide
       ...card,
       body: card.body.replaceAll(headSha, "c".repeat(40)),
     }));
-    await launched.app.evaluate(({ BrowserWindow }, cards) => {
-      BrowserWindow.getAllWindows()[0]?.webContents.send("inf:cards", cards);
-    }, changed);
+    await pushCards(launched.app, changed);
     await expect(strip.locator("details[open]")).toHaveCount(0);
     for (const state of ["green", "stale"]) {
       await showCard(launched.page, `The ${state} reading`);

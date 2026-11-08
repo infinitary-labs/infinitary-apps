@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "small-journey-ledger-repairs",
+      "reason": "Test-only repairs: journeys seed account files and the activity feed through their owners, push card refreshes through the typed push contract, read crew arrows through the stage's own hook, the Observe frame test publishes the read contract's shapes, and two helper self-tests move to the browser layer; no app behavior changes."
+    }
+  ]
+}

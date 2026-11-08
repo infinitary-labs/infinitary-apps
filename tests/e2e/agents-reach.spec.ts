@@ -13,7 +13,6 @@ import {
   fixedHoldWords,
   overrideCellWords,
   overrideWords,
-  standingOverrideWords,
   withoutHoldWords,
 } from "../../src/shared/holds";
 import type { TaskView } from "../../src/shared/tasks";
@@ -52,13 +51,10 @@ import {
   REACH_AUDIT_RULE,
   REACH_READ_STEER,
   REACH_READ_WORDS,
-  REACH_RERUN_CARD_TITLE,
   REACH_RERUN_CHANGE,
   REACH_RERUN_CHECK,
-  REACH_RERUN_HOLDS,
   REACH_RERUN_MARKER,
   REACH_RERUN_PATH,
-  REACH_RERUN_REPLY,
   REACH_RULE_CHANGE,
   REACH_RULE_DONE_TITLE,
   REACH_RULE_HOLDS,
@@ -72,13 +68,12 @@ import {
 } from "./scenarios/agentsReach";
 import {
   MOCK_REVIEW_ASK_CARD_TITLE,
-  MOCK_REVIEW_CAP_CARD_TITLE,
   MOCK_REVIEWED_CHANGE,
   REREVIEW_PROMPT_MARKER,
   reviewedTier,
 } from "./scenarios/reviewedTier";
 import { settingsSection } from "./settings";
-import { cardReply, factsStrip, showCard, shownCard } from "./stack";
+import { factsStrip, showCard, shownCard } from "./stack";
 import { pressKey } from "./windowKeys";
 
 /**

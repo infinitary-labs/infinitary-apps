@@ -6,6 +6,14 @@ import spacing from "../../.claude/skills/infinitary-design/tokens/spacing.css?r
 import typography from "../../.claude/skills/infinitary-design/tokens/typography.css?raw";
 import script from "../../src/renderer/src/plugins/builtin/observe/observe.frame.js?raw";
 import html from "../../src/renderer/src/plugins/builtin/observe/observe.html?raw";
+import {
+  FIRSTMATE_SESSION_ID,
+  type ObserveSessionDetail,
+  type ObserveSessionSummary,
+  type ObserveTurn,
+  type ObserveUsageTotals,
+} from "../../src/shared/observe";
+import type { ReadName, ReadResult } from "../../src/shared/reads";
 
 /**
  * The Observe frame program and its stylesheet, the very text the app's own
@@ -15,11 +23,17 @@ import html from "../../src/renderer/src/plugins/builtin/observe/observe.html?ra
  *
  * Each test draws the program in a frame of its own, as the app draws it in
  * a frame, so no test sees a document, listener or scroll another left.
+ *
+ * What the test publishes as the host has the Observe reads' own shapes
+ * (`src/shared/observe.ts`, through `ReadResult`), so a session, turn or
+ * usage field the host changes fails the typecheck here instead of leaving
+ * the frame read a shape the host no longer sends (INF-2456, repairing the
+ * hand-built stand-ins INF-2417's ledger found).
  */
 
 const tokens = [colors, typography, spacing, effects].join("\n");
-const main = {
-  id: "firstmate",
+const main: ObserveSessionSummary = {
+  id: FIRSTMATE_SESSION_ID,
   kind: "orchestrator",
   title: "First mate",
   taskId: "firstmate",
@@ -35,14 +49,26 @@ const main = {
   transcriptNote: null,
   routing: null,
 };
-const crew = (id: string) => ({ ...main, id, taskId: id, title: `Crew ${id}`, kind: "crewmate" });
-const turns = (count: number) =>
+const crew = (id: string): ObserveSessionSummary => ({
+  ...main,
+  id,
+  taskId: id,
+  title: `Crew ${id}`,
+  kind: "crewmate",
+});
+const turns = (count: number): ObserveTurn[] =>
   Array.from({ length: count }, (_, i) => ({
     id: `t${i}`,
     at: 1000 + i,
     kind: "assistant",
     text: `Message ${i}\n${"Wrapped evidence. ".repeat(i % 17)}`,
   }));
+/** A session's detail as the host reads it from its file, with no card threads. */
+const detailOf = (session: ObserveSessionSummary, of: ObserveTurn[]): ObserveSessionDetail => ({
+  ...session,
+  turns: of,
+  threads: [],
+});
 
 type Callback = (value: unknown) => void;
 /** The frame's world as this test plays the host: each read's newest callback, and the one it replaced for a session. */
@@ -67,7 +93,7 @@ async function settle(): Promise<void> {
   for (let i = 0; i < 4; i++) await new Promise((done) => view().requestAnimationFrame(done));
 }
 
-async function publish(read: string, value: unknown): Promise<void> {
+async function publish<N extends ReadName>(read: N, value: ReadResult<N>): Promise<void> {
   view().callbacks[read]?.(value);
   await settle();
 }
@@ -134,7 +160,7 @@ beforeEach(async () => {
 
 test("follows the live bottom, keeps the reader's place through updates, and follows again only at the bottom", async () => {
   const history = turns(1000);
-  await publish("observe.session", { ...main, turns: history });
+  await publish("observe.session", detailOf(main, history));
   await expect.poll(() => inViewport(transcriptRow("Message 999"))).toBe(true);
   await publish("observe.live", {
     id: main.id,
@@ -152,10 +178,10 @@ test("follows the live bottom, keeps the reader's place through updates, and fol
     text: "streaming answer with many more lines\n".repeat(30),
     tools: [],
   });
-  await publish("observe.session", {
-    ...main,
-    turns: [...history, ...turns(2).map((t) => ({ ...t, id: `new-${t.id}` }))],
-  });
+  await publish(
+    "observe.session",
+    detailOf(main, [...history, ...turns(2).map((t) => ({ ...t, id: `new-${t.id}` }))]),
+  );
   await expect.poll(() => inViewport(one(`[data-window-id="${id}"]`))).toBe(true);
   // Back at the bottom, the live answer is followed again.
   scroller().scrollTop = scroller().scrollHeight;
@@ -165,7 +191,7 @@ test("follows the live bottom, keeps the reader's place through updates, and fol
 });
 
 test("keeps the reading anchor on resize, replaces history on compaction, and ignores an old session's late response", async () => {
-  await publish("observe.session", { ...main, turns: turns(1500) });
+  await publish("observe.session", detailOf(main, turns(1500)));
   scroller().scrollTop = scroller().scrollHeight / 2;
   await settle();
   const before = visibleAnchor();
@@ -173,22 +199,22 @@ test("keeps the reading anchor on resize, replaces history on compaction, and ig
   await settle();
   const after = visibleAnchor();
   expect(after.id).toBe(before.id);
-  await publish("observe.session", {
-    ...main,
-    turns: [{ id: "compact", kind: "compaction", at: 1000, text: "Compacted history" }],
-  });
+  await publish(
+    "observe.session",
+    detailOf(main, [{ id: "compact", kind: "compaction", at: 1000, text: "Compacted history" }]),
+  );
   await expect.poll(() => words(scroller())).toContain("Compacted history");
   expect(doc().querySelectorAll("[data-observe-turn]")).toHaveLength(1);
   await publish("observe.sessions", [main, crew("other")]);
   // Switch while a replacement of the OLD transcript is queued for paint.
   // No old node or late read may survive under the new session's header.
-  view().callbacks["observe.session"]?.({ ...main, turns: turns(10) });
+  view().callbacks["observe.session"]?.(detailOf(main, turns(10)));
   one('[data-observe-session="other"]')?.click();
   await settle();
   await expect.poll(() => words(scroller())).toContain("Loading the transcript");
-  view().oldDetail?.({ ...main, turns: turns(10) });
+  view().oldDetail?.(detailOf(main, turns(10)));
   await expect.poll(() => words(scroller())).not.toContain("Message");
-  await publish("observe.session", { ...crew("other"), turns: [] });
+  await publish("observe.session", detailOf(crew("other"), []));
   await expect.poll(() => words(scroller())).toContain("No turns recorded yet");
   expect(scroller().querySelectorAll("[data-observe-turn]")).toHaveLength(0);
 });
@@ -222,11 +248,11 @@ test("keeps the visible crew in view across prepends, and the keyboard reaches c
   await settle();
   await expect
     .poll(() => doc().activeElement?.getAttribute("data-observe-session"))
-    .toBe("firstmate");
+    .toBe(FIRSTMATE_SESSION_ID);
 });
 
 test("unchanged pushes and unrelated summary changes leave the reader's text selection intact", async () => {
-  const detail = { ...main, turns: turns(1200) };
+  const detail = detailOf(main, turns(1200));
   await publish("observe.session", detail);
   scroller().scrollTop = 0;
   await settle();
@@ -246,7 +272,7 @@ test("unchanged pushes and unrelated summary changes leave the reader's text sel
 
 // Focused copy checks exercise the real frame program, not source strings.
 test("discloses category and price coverage without turning ledger rows into turns", async () => {
-  const usage = {
+  const usage: ObserveUsageTotals = {
     input: 47,
     output: 0,
     cacheRead: 0,
@@ -272,11 +298,11 @@ test("discloses category and price coverage without turning ledger rows into tur
       },
     ],
   };
-  const session = { ...main, model: "test/transcript", usage };
+  const session: ObserveSessionSummary = { ...main, model: "test/transcript", usage };
   await publish("observe.sessions", [session]);
-  await publish("observe.session", { ...session, turns: [] });
+  await publish("observe.session", detailOf(session, []));
   const header = () => words(one("[data-observe-detail-header]"));
-  const row = () => words(one('[data-observe-session="firstmate"]'));
+  const row = () => words(one(`[data-observe-session="${FIRSTMATE_SESSION_ID}"]`));
   for (const region of [header, row]) {
     await expect.poll(region).toContain("47 in (2/3 records)");
     expect(region()).toContain("0 out (1/3 records)");
@@ -288,7 +314,7 @@ test("discloses category and price coverage without turning ledger rows into tur
   }
   expect(header()).toContain("Session model: test/transcript");
   expect(header()).toContain("test/historical (historical label; may combine models)");
-  const unknown = {
+  const unknown: ObserveSessionSummary = {
     ...main,
     usage: {
       input: 0,
@@ -303,14 +329,17 @@ test("discloses category and price coverage without turning ledger rows into tur
     },
   };
   await publish("observe.sessions", [unknown]);
-  await publish("observe.session", { ...unknown, turns: [] });
+  await publish("observe.session", detailOf(unknown, []));
   await expect.poll(header).toContain("Not available in");
   expect(header()).toContain("Estimated Not available (0/1 records priced)");
   expect(header()).not.toContain("$0.0000");
   // An older producer has no coverage facts. Never infer completeness from its numeric zeroes.
-  const legacy = { ...main, usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, turns: 3 } };
+  const legacy: ObserveSessionSummary = {
+    ...main,
+    usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, turns: 3 },
+  };
   await publish("observe.sessions", [legacy]);
-  await publish("observe.session", { ...legacy, turns: [] });
+  await publish("observe.session", detailOf(legacy, []));
   await expect.poll(header).toContain("coverage unknown");
   expect(header()).toContain("Usage record count unavailable");
   expect(header()).not.toContain("3 turns");

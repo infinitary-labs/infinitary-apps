@@ -1,7 +1,7 @@
-import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import Database from "better-sqlite3";
-import { feedLineFrom, reportSummary } from "../../src/shared/feed";
+import { ActivityStore } from "../../src/core/storage/activityStore";
+import { openDatabase } from "../../src/core/storage/db";
+import { type FeedLine, feedLineFrom, reportSummary } from "../../src/shared/feed";
 import { type LaunchedApp, launchApp } from "./launch";
 import { MOCK_COMPLETION_TEXT } from "./mockProvider";
 import { measured, PERF_TAG } from "./perf";
@@ -135,15 +135,20 @@ test("two hundred persisted lines come back at boot with the newest in view, and
   await launched.close();
   // Seed the retained window to the brim, as a long-running app would have
   // it: the feed the frame gets at boot is the largest it will ever be.
-  const db = new Database(join(userDataDir, "firstmate.db"));
-  db.prepare("DELETE FROM activity_events").run();
-  const insert = db.prepare("INSERT INTO activity_events (kind, text, at) VALUES (?, ?, ?)");
-  const feedKinds = ["info", "ok", "warn", "danger", "you"];
-  const base = Date.now() - RETAINED_LINES * 60_000;
-  for (let i = 0; i < RETAINED_LINES; i += 1) {
-    insert.run(feedKinds[i % feedKinds.length], seededLine(i), base + i * 60_000);
+  // The lines go in through the feed's own store, a minute apart on its
+  // clock, as the app writes them (INF-2456).
+  const db = openDatabase(userDataDir);
+  try {
+    const feedKinds: FeedLine["kind"][] = ["info", "ok", "warn", "danger", "you"];
+    let at = Date.now() - RETAINED_LINES * 60_000;
+    const feed = new ActivityStore(db, () => (at += 60_000));
+    feed.clear();
+    for (let i = 0; i < RETAINED_LINES; i += 1) {
+      feed.record({ kind: feedKinds[i % feedKinds.length] ?? "info", text: seededLine(i) });
+    }
+  } finally {
+    db.close();
   }
-  db.close();
 
   launched = await launchApp({ withMockProvider: true, userDataDir });
   const { page } = launched;

@@ -90,6 +90,19 @@ export function lintFixtureOwners(files: string[]): FixtureOwnerDiagnostic[] {
         )
       )
         return false;
+      // The account vault's own folder (`accounts/`, src/core/pi/accountVault.ts)
+      // under any data folder, however the folder is named: a helper's `dir`
+      // parameter is as much the app's saved state as `userDataDir`
+      // (INF-2456, the account files INF-2417's ledger found the lint missed).
+      if (
+        ts.isCallExpression(node) &&
+        calleeName(node.expression) === "join" &&
+        node.arguments.length > 1 &&
+        ts.isIdentifier(node.arguments[0] as ts.Expression) &&
+        ts.isStringLiteralLike(node.arguments[1] as ts.Expression) &&
+        (node.arguments[1] as ts.StringLiteralLike).text === "accounts"
+      )
+        return true;
       if (ts.isIdentifier(node)) {
         if (/^(?:home|homeDir|userData|userDataDir|accountsDir)$/.test(node.text)) return true;
         const symbol = checker.getSymbolAtLocation(node);

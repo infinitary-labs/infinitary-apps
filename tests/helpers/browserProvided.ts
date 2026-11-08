@@ -47,6 +47,15 @@ export type CrewStory = {
 /** The media a person's system sets for motion. */
 export type ReducedMotion = "reduce" | "no-preference";
 
+/** Where one layout probe box stands, in CSS pixels, and whether its control is gone (`layoutReadings`). */
+export type LayoutProbe = { left: number; top: number; controlRemoved?: boolean };
+
+/** What the layout helper read of one probe: its losses, and whether `expectClearOf` accepted it. */
+export type LayoutReading = { losses: string[]; accepted: boolean };
+
+/** One reading of the first mate idle wait: the label it read last, and whether it resolved. */
+export type IdleReading = { read: string | null; resolved: boolean };
+
 declare module "vitest" {
   interface ProvidedContext {
     freshHome: FreshHomeAnswers;
@@ -65,5 +74,7 @@ declare module "vitest/browser" {
     clearCookies(): Promise<void>;
     collectGarbage(): Promise<void>;
     seededHome(input?: unknown): Promise<FreshHomeAnswers>;
+    layoutReadings(probes: LayoutProbe[]): Promise<LayoutReading[]>;
+    firstmateIdleReadings(): Promise<IdleReading[]>;
   }
 }

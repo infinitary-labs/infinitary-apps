@@ -13,6 +13,7 @@ import {
 } from "../../../tests/helpers/prCiHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import {
+  ForgeBaseMoved,
   type ForgeChange,
   ForgeError,
   type ForgePull,
@@ -28,8 +29,9 @@ import { MERGE_CHECKS_HOLD_REASON } from "./mergeAuthorization";
 import { queueNoteFacts, queueWakeWords } from "./projectQueue";
 
 // Integration budget (docs/test-cohorts.md): real git plus the put-in's own
-// 300 + 900 ms retry backoff, the slowest test (a put-in retried after a
-// transient failure) 1.3 s at its fastest of five Mac runs; five times is 6.5 s.
+// 300 + 900 ms retry backoff, the slowest test (a merge sent again after
+// GitHub said the main branch moved, with one second's re-read) 1.4 s at its
+// fastest of five Mac runs; five times is 7 s.
 vi.setConfig({ testTimeout: 10_000 });
 
 // This file chains real git and is not about the utility-QoS clamp, so what
@@ -483,8 +485,17 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     readiness: ForgeReadiness = "clean";
     merged = false;
     reads = 0;
+    /** Refusals the next merge requests meet, one each, before a request goes through. */
+    refusals: Error[] = [];
+    /** What the pull request reads as for this many reads after a refusal, before `readiness` again. */
+    afterRefusal?: { readiness: ForgeReadiness; reads: number };
+    private settling = 0;
     async pull(number: number): Promise<ForgePull> {
       this.reads += 1;
+      const readiness =
+        this.settling > 0 && this.afterRefusal ? this.afterRefusal.readiness : this.readiness;
+      if (this.settling > 0) this.settling -= 1;
+      this.calls.push(`pull ${readiness}`);
       return {
         number,
         state: this.merged ? "closed" : "open",
@@ -492,8 +503,15 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
         ...(this.merged ? { mergedSha: "squash01" } : {}),
         headSha: this.change?.headSha ?? "gone",
         base: "main",
-        readiness: this.readiness,
+        readiness,
       };
+    }
+    override async putIn(change: Parameters<FakeForge["putIn"]>[0], headSha: string) {
+      const refusal = this.refusals.shift();
+      if (!refusal) return super.putIn(change, headSha);
+      this.calls.push(`putIn ${change.branch} ${headSha}`);
+      this.settling = this.afterRefusal?.reads ?? 0;
+      throw refusal;
     }
   }
 
@@ -593,6 +611,62 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     const other = await service.merges.merge("ab12cd34", attended);
     expect(other.ok).toBe(false);
     expect(other.stop).toBeUndefined();
+  });
+
+  // The captain's ask: retry on its own right away when GitHub says main
+  // moved, with no crewmate step, and need a crewmate only for a conflict or
+  // what cannot be resolved on its own. GitHub's answers as it gave them to a
+  // batch's merges: the refusal, then the pull request read as computing
+  // while GitHub works the new main in, then clean.
+  describe("a merge GitHub refused because the main branch moved", () => {
+    const baseMoved = () =>
+      new ForgeBaseMoved(
+        "GitHub answered 405 to PUT /repos/x/y/pulls/23/merge: Base branch was modified. Review and try the merge again.",
+      );
+
+    it("is sent again on its own at the approved version, once GitHub reads it clean", async () => {
+      const { service, forge, guard, dispatched } = await pinned();
+      forge.refusals = [baseMoved()];
+      // GitHub reads computing to the refusal's own read, the next try's
+      // check read and its first readiness read.
+      forge.afterRefusal = { readiness: "computing", reads: 3 };
+      const outcome = await service.merges.merge("ab12cd34", guard());
+      expect(outcome).toMatchObject({ ok: true, receipt: { head: "feedbeef" } });
+      expect(outcome.stop).toBeUndefined();
+      expect(forge.calls.filter((call) => call.startsWith("putIn"))).toEqual([
+        "putIn fm/task-ab12cd34 feedbeef",
+        "putIn fm/task-ab12cd34 feedbeef",
+      ]);
+      expect(dispatched).toEqual(["feedbeef", "feedbeef"]);
+      // GitHub was read again until it decided, and only then was the merge sent.
+      const after = forge.calls.slice(forge.calls.indexOf("putIn fm/task-ab12cd34 feedbeef") + 1);
+      expect(after).toContain("pull computing");
+      expect(after.slice(-3)).toEqual([
+        "pull clean",
+        "beforeDispatch feedbeef",
+        "putIn fm/task-ab12cd34 feedbeef",
+      ]);
+    });
+
+    it("stops on a conflict GitHub reads after it, for the crewmate, sending nothing more", async () => {
+      const { service, forge, guard } = await pinned();
+      forge.refusals = [baseMoved()];
+      forge.afterRefusal = { readiness: "computing", reads: 1 };
+      forge.readiness = "conflict";
+      // The captain's own click reads GitHub before sending again, as the host's merge does.
+      const outcome = await service.merges.merge("ab12cd34", guard({ unattended: false }));
+      expect(outcome).toMatchObject({ ok: false, stop: "conflict" });
+      expect(forge.calls.filter((call) => call.startsWith("putIn"))).toHaveLength(1);
+    });
+
+    it("waits on GitHub, not the crewmate, when every request meets the same refusal", async () => {
+      const { service, forge, guard } = await pinned();
+      forge.refusals = [baseMoved(), baseMoved(), baseMoved()];
+      const outcome = await service.merges.merge("ab12cd34", guard());
+      expect(outcome).toMatchObject({ ok: false, stop: "computing" });
+      expect(outcome.problem).toContain("Base branch was modified");
+      expect(forge.calls.filter((call) => call.startsWith("putIn"))).toHaveLength(3);
+    });
   });
 
   it("merges a queue-pr change only once its queue passes the approved version, marking each version it waits on (INF-2430 piece 2)", async () => {

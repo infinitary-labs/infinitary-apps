@@ -11,6 +11,7 @@ import {
 import { NEVER_SENT_AGAIN } from "@shared/writeAsk";
 import {
   type Forge,
+  ForgeBaseMoved,
   type ForgeChange,
   type ForgeCheckState,
   type ForgePull,
@@ -32,12 +33,17 @@ import {
 } from "./changeContext";
 import {
   type ChangeMerge,
+  MERGE_RETRY_DELAYS_MS,
+  type MergeAttempt,
   type MergeGuard,
   type MergeStop,
   type PrOutcome,
+  readDecided,
   readinessStop,
   readinessStops,
   sleep,
+  stripAttempt,
+  UNDECIDED_REREAD_MS,
 } from "./changeMerge";
 import { MERGE_CHECKS_HOLD_REASON, standingAuthorization } from "./mergeAuthorization";
 
@@ -48,16 +54,6 @@ import { MERGE_CHECKS_HOLD_REASON, standingAuthorization } from "./mergeAuthoriz
  */
 const SELECTED_CHANGE_WORDS =
   "It is now this task's current change: check_change reads it until you name another or open_change opens one. Your merge card merges it, its review naming this review and its after saying whether the task continues or closes.";
-
-/**
- * The gaps between reads of a pull request the task did not open while
- * GitHub has not decided whether it can merge, after the captain's click
- * (INF-457). GitHub answers `mergeable: null` while a check it has just
- * started works out a test merge, often just after the default branch moved,
- * and asks to be read again shortly. Half a minute in all; still undecided
- * after the last read, the click is refused.
- */
-const UNDECIDED_REREAD_MS = [1_000, 2_000, 3_000, 5_000, 8_000, 11_000];
 
 /** A review's pull request read again, or why it may not merge. */
 type Reread =
@@ -322,7 +318,16 @@ export class MergeReviews {
       };
     }
     if (review.skips) return this.mergeSkippingRules(taskId, review);
-    return this.mergeNamed(taskId, review, guard);
+    // A merge GitHub refused because the main branch moved is tried again
+    // as the task's own merge is (`ChangeMerge.merge`): each try reads the
+    // pull request until GitHub decides, and sends only where it may merge.
+    let attempt = await this.mergeNamed(taskId, review, guard);
+    for (const delay of MERGE_RETRY_DELAYS_MS) {
+      if (!attempt.baseMoved) break;
+      await sleep(delay);
+      attempt = await this.mergeNamed(taskId, review, guard, true);
+    }
+    return stripAttempt(attempt);
   }
 
   /**
@@ -735,8 +740,9 @@ export class MergeReviews {
 
   /**
    * Re-read a review's pull request. `ok` means it still matches and may
-   * merge. At the captain's click (`click`), a pull request GitHub has not
-   * decided on yet is read again until it decides (`readDecided`).
+   * merge. At the captain's click, or before a merge GitHub refused because
+   * the main branch moved is sent again (`click`), a pull request GitHub has
+   * not decided on yet is read again until it decides (`readDecided`).
    */
   private async readReviewTarget(
     taskId: string,
@@ -845,14 +851,16 @@ export class MergeReviews {
    * names, read again by its number, sent once at the reviewed version (or
    * the version a declared repair carried the approval to). A story
    * published on that pull request must still be the published one.
+   * `settle` follows a refusal because the main branch moved.
    */
   private async mergeNamed(
     taskId: string,
     review: MergeReview,
     guard?: MergeGuard,
-  ): Promise<PrOutcome> {
+    settle = false,
+  ): Promise<MergeAttempt> {
     const candidate = guard ? { ...review, headSha: guard.head } : review;
-    const fresh = await this.readReviewTarget(taskId, candidate, !guard?.unattended);
+    const fresh = await this.readReviewTarget(taskId, candidate, !guard?.unattended || settle);
     if (!fresh.ok) {
       if (fresh.text === "already-merged") {
         const located = this.context.locate(taskId, "check", review);
@@ -933,46 +941,21 @@ export class MergeReviews {
         ? await forge.pull?.(review.number).catch(() => undefined)
         : undefined;
       if (after?.merged && after.headSha === candidate.headSha) return merged(after.mergedSha);
+      const stop = guard
+        ? ((await this.merges.refusalStop(forge, guard, caught, message)) ??
+          (dispatched ? "outcome" : undefined))
+        : /409/.test(message)
+          ? "moved"
+          : undefined;
       return {
         ok: false,
         text: `Cannot merge: ${message}`,
         problem: message,
-        stop: guard
-          ? ((await this.merges.refusalStop(forge, guard, caught, message)) ??
-            (dispatched ? "outcome" : undefined))
-          : /409/.test(message)
-            ? "moved"
-            : undefined,
+        stop,
+        ...(caught instanceof ForgeBaseMoved && (stop === undefined || stop === "computing")
+          ? { baseMoved: true }
+          : {}),
       };
     }
   }
-}
-
-/**
- * A pull request read until GitHub decides whether it can merge `head`: while
- * it reads computing at that head and stays open, it is read again after each
- * of `gaps` in turn (INF-457). The last read comes back with how long the
- * gaps took, and the caller checks it as it would a single read, so a moved
- * head or a closed pull request still stops the merge. Throws as a read does.
- */
-async function readDecided(
-  read: () => Promise<ForgePull>,
-  head: string,
-  gaps: readonly number[],
-): Promise<{ pull: ForgePull; waited: number }> {
-  let pull = await read();
-  let waited = 0;
-  for (const gap of gaps) {
-    if (
-      pull.readiness !== "computing" ||
-      pull.state !== "open" ||
-      pull.merged ||
-      pull.headSha !== head
-    )
-      break;
-    await sleep(gap);
-    waited += gap;
-    pull = await read();
-  }
-  return { pull, waited };
 }

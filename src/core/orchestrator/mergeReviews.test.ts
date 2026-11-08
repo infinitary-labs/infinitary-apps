@@ -9,6 +9,7 @@ import {
 } from "../../../tests/helpers/prCiHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import {
+  ForgeBaseMoved,
   type ForgeChange,
   ForgeError,
   type ForgePull,
@@ -869,12 +870,13 @@ describe("the captain's click on a pull request the task did not open, while Git
       at: Date.now(),
     };
     seedDelivery(harness.tasks, "ab12cd34", { mergeReviews: [review] });
-    // The click, with the gaps between GitHub's reads on a fake clock: it
-    // settles only if the wait ends.
-    const click = async () => {
+    // The click, or the host's merge under a kept approval (`guard`), with
+    // the gaps between GitHub's reads on a fake clock: it settles only if the
+    // wait ends.
+    const click = async (guard?: MergeGuard) => {
       vi.useFakeTimers({ toFake: ["setTimeout"] });
       try {
-        const outcome = harness.service.reviews.mergeReview("ab12cd34", review.id);
+        const outcome = harness.service.reviews.mergeReview("ab12cd34", review.id, guard);
         await vi.runAllTimersAsync();
         return await outcome;
       } finally {
@@ -902,6 +904,42 @@ describe("the captain's click on a pull request the task did not open, while Git
     expect(outcome).toMatchObject({ ok: false, stop: "moved" });
     expect(forge.reads).toBe(2);
     expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
+  });
+
+  // The captain's ask: retry on its own right away when GitHub says main
+  // moved, with no crewmate step. GitHub's refusal as it gave it to a batch's
+  // merges, then the pull request read as computing until GitHub decides.
+  it("sends the host's merge GitHub refused because main moved again, once GitHub reads it clean", async () => {
+    const { forge, click } = await adopted([
+      { readiness: "clean" }, // the read before the request
+      { readiness: "computing" }, // read back after the refusal
+      { readiness: "computing" }, // the refusal's cause
+      { readiness: "computing" }, // the next try's first read
+      { readiness: "clean" },
+    ]);
+    const putIn = forge.putIn.bind(forge);
+    let refused = false;
+    forge.putIn = async (change, head) => {
+      if (refused) return putIn(change, head);
+      refused = true;
+      forge.calls.push(`putIn ${change.branch} ${head}`);
+      throw new ForgeBaseMoved(
+        "GitHub answered 405 to PUT /repos/infinitary-labs/infinitary/pulls/94/merge: Base branch was modified. Review and try the merge again.",
+      );
+    };
+    const outcome = await click({
+      head: PR94.headSha,
+      prNumber: PR94.number,
+      unattended: true,
+      beforeDispatch: () => undefined,
+    });
+    expect(outcome).toMatchObject({ ok: true, receipt: { head: PR94.headSha } });
+    expect(outcome).not.toHaveProperty("baseMoved");
+    expect(forge.reads).toBe(5);
+    expect(forge.calls.filter((call) => call.startsWith("putIn"))).toEqual([
+      `putIn ${PR94.branch} ${PR94.headSha}`,
+      `putIn ${PR94.branch} ${PR94.headSha}`,
+    ]);
   });
 });
 

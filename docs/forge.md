@@ -593,7 +593,7 @@ A confirmed continuing merge consumes the approval and wakes the crewmate once w
 A host merge result is not new captain guidance about that approval.
 Only a pull request GitHub reads as clean at the reviewed head is sent, so a sign-in that could bypass the branch's rules never does.
 GitHub answers `mergeable: null` while a check it has just started works out a test merge, often just after the default branch moved, and asks to be read again shortly (INF-457).
-At the captain's click, that answer is read again after 1, 2, 3, 5, 8 and 11 seconds (`UNDECIDED_REREAD_MS` in `src/core/orchestrator/mergeReviews.ts`), and every read is checked as the first one was.
+At the captain's click, that answer is read again after 1, 2, 3, 5, 8 and 11 seconds (`UNDECIDED_REREAD_MS` in `src/core/orchestrator/changeMerge.ts`), and every read is checked as the first one was.
 The merge goes as soon as GitHub reads clean at the reviewed head; a moved head or a closed pull request still sends nothing, and GitHub still undecided after half a minute refuses the attempt, saying how long it asked.
 An ordinary click remains kept through that wait, while a closed or replaced pull request ends its approval.
 The card's own read before it goes up asks once.
@@ -872,7 +872,10 @@ The app builds a new client for each call, so the store lives in the home's forg
 
 ## Failures are typed
 
-A forge throws `ForgeError` with a `failure`: `transient` (any 5xx or the host unreachable - `ChangeMerge.merge` retries these quietly, and nothing else), `sign-in` (a 401), `permission` (a 403, never retried; a spent hourly allowance, a 403 or 429 with no calls left, is a `ForgeAllowanceSpent` carrying the reset time, which the timed reads wait for), `not-found`, `refused` (a stale head, a default branch that moved on, branch protection), `unsupported`.
+A forge throws `ForgeError` with a `failure`: `transient` (any 5xx or the host unreachable - `ChangeMerge.merge` retries these quietly), `sign-in` (a 401), `permission` (a 403, never retried; a spent hourly allowance, a 403 or 429 with no calls left, is a `ForgeAllowanceSpent` carrying the reset time, which the timed reads wait for), `not-found`, `refused` (a stale head, a default branch that moved on, branch protection), `unsupported`.
+GitHub's 405 "Base branch was modified" to a merge request is a `ForgeBaseMoved`, still `refused`: the default branch moved while GitHub merged, which says nothing about the change.
+A merge that meets it is sent again with the same short backoff, each try reading the pull request until GitHub decides (`UNDECIDED_REREAD_MS`) and sending only when it reads clean at the approved head, the captain's own click included; a conflict or another stop it reads then stops the merge as it would any other time.
+Still refused after the last try, a kept approval waits on `computing`, which the host reads again on its own and which wakes no one.
 The raw words stay on the error for the record and `plainProblem`; the kind is what code decides on.
 
 ## Who reads it

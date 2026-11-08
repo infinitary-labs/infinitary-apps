@@ -21,6 +21,7 @@ import {
   checkTimes,
   type Forge,
   ForgeAllowanceSpent,
+  ForgeBaseMoved,
   type ForgeChange,
   type ForgeCheck,
   type ForgeCheckState,
@@ -1419,6 +1420,15 @@ function failureOf(response: Response, method: string, path: string, text: strin
       return new ForgeError("permission", spent ? `${what} (the hourly allowance is spent)` : what);
   }
   if (response.status === 404) return new ForgeError("not-found", what);
+  // GitHub refuses a merge when the main branch moved while it merged: the
+  // pull request may still merge once GitHub has read it again.
+  if (
+    response.status === 405 &&
+    method === "PUT" &&
+    /\/pulls\/\d+\/merge(\?|$)/.test(path) &&
+    /^Base branch was modified\b/i.test(said)
+  )
+    return new ForgeBaseMoved(what);
   // Any 5xx is the host's own failure, not a verdict on what was asked: a
   // read retries it quietly, and a write's outcome stays unknown (INF-2675
   // finding 7: a 500 on a commit's statuses ended two check watches).

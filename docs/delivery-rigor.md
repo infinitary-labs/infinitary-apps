@@ -463,6 +463,7 @@ The captain's merge click on a merge card is an approval of that change, and a r
   The kept-merge line on a checks reading asks the crewmate to bring the branch up to date only when the merge waits on a conflict or a moved version.
   Then every page of the checks (`GitHubForge.checks`; a suite past the pages it reads keeps a pending item), and GitHub's own readiness for the pinned pull request (`GitHubForge.pull`): only `clean` merges, so a sign-in that could bypass a required review or another branch rule never does.
   The captain's own click keeps today's single attempt and reads readiness only to classify a refusal.
+  GitHub's refusal because the main branch moved while it merged is the exception for both: the merge is sent again on its own, right away, once GitHub reads the pull request clean at the approved head; only a conflict or another stop it reads then waits for someone ([the forge seam](forge.md), "Failures are typed").
   Right before the last look, the guard's `held` reads the approval again, so guidance that arrives while the gates are read - or while the captain's own click waits for the crewmate's turn to end - stops the merge as a `guidance` wait and the approval stands.
 - **Waits.**
   A conflict, a moved head, checks, a review, GitHub's rules, GitHub not knowing yet, a draft, a sign-in, a hiccup, the captain's undeclared guidance or another refusal leaves the approval standing with `waiting` on that stop.

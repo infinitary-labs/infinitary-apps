@@ -4,6 +4,7 @@ import { isMergeConflict } from "@shared/plainProblem";
 import { deliveryForRecord, opensPullRequest, queueShipped, type RepoView } from "@shared/repos";
 import {
   type Forge,
+  ForgeBaseMoved,
   type ForgeChange,
   type ForgeCheckState,
   ForgeError,
@@ -124,11 +125,37 @@ export type MergeGuard = {
   beforeDispatch: (head: string, mark?: boolean) => string | undefined;
 };
 
-/** Backoff between put-in attempts retried for a transient host/network failure. */
-const MERGE_RETRY_DELAYS_MS = [300, 900];
+/**
+ * Backoff between put-in attempts retried for a transient host/network
+ * failure, or for a refusal because the main branch moved while it merged.
+ */
+export const MERGE_RETRY_DELAYS_MS = [300, 900];
+
+/**
+ * The gaps between reads of a pull request while GitHub has not decided
+ * whether it can merge (INF-457): after the captain's click on a pull
+ * request the task did not open, and before a merge GitHub refused because
+ * the main branch moved is sent again. GitHub answers `mergeable: null`
+ * while a check it has just started works out a test merge, often just
+ * after the default branch moved, and asks to be read again shortly. Half a
+ * minute in all; still undecided after the last read, nothing is sent.
+ */
+export const UNDECIDED_REREAD_MS = [1_000, 2_000, 3_000, 5_000, 8_000, 11_000];
 
 export const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * A merge attempt with what decides whether it is tried again: `transient`
+ * a hiccup, `dispatched` a request that went out, `baseMoved` a refusal
+ * because the main branch moved while it merged, with nothing else read
+ * that stops it. None of them leaves the merge.
+ */
+export type MergeAttempt = PrOutcome & {
+  transient?: boolean;
+  dispatched?: boolean;
+  baseMoved?: boolean;
+};
 
 /** A merge's refusal on the saved story names the soft hold the captain's words pass (INF-1365). */
 function storyHeld(caught: unknown): never {
@@ -160,22 +187,24 @@ export class ChangeMerge {
    *
    * A network/host hiccup on either the recheck or the put-in itself is not
    * a verdict about the change - it is retried a couple of times with a
-   * short backoff before giving up. A durable refusal (checks actually
-   * failed, a stale head, branch protection) is never retried here: it
-   * returns straight away so the captain's own retry - after fixing
-   * whatever is wrong - is the one that runs next.
+   * short backoff before giving up. So is a refusal because the main branch
+   * moved while the host merged: each try after it reads the pull request
+   * until the host has decided, and sends only where it says the change may
+   * merge. A durable refusal (checks actually failed, a stale head, branch
+   * protection, a conflict) is never retried here: it returns straight away
+   * so the captain's own retry - after fixing whatever is wrong - is the one
+   * that runs next.
    */
   async merge(taskId: string, guard?: MergeGuard, boundary?: MergeBoundary): Promise<PrOutcome> {
-    let attempt: PrOutcome & { transient?: boolean; dispatched?: boolean } = {
-      ok: false,
-      text: "",
-    };
+    let attempt: MergeAttempt = { ok: false, text: "" };
+    let settle = false;
     for (let i = 0; i < MERGE_RETRY_DELAYS_MS.length + 1; i++) {
-      attempt = await this.mergeOnce(taskId, guard, boundary);
-      if (attempt.ok || !attempt.transient) break;
+      attempt = await this.mergeOnce(taskId, guard, boundary, settle);
+      if (attempt.ok || !(attempt.transient || attempt.baseMoved)) break;
+      settle ||= attempt.baseMoved === true;
       // A request that went out and whose answer never came may have merged:
       // read the pull request back before anything is sent again (FI3-304).
-      if (guard && attempt.dispatched) {
+      if (guard && attempt.dispatched && attempt.transient) {
         const after = await this.readBack(taskId, guard);
         if (after.merged) return after.merged;
         if (after.closed) return after.closed;
@@ -194,11 +223,17 @@ export class ChangeMerge {
     return outcome;
   }
 
+  /**
+   * One try. `settle` follows a refusal because the main branch moved: the
+   * pull request is read until the host decides, and only a change it says
+   * may merge is sent, the captain's own click included.
+   */
   private async mergeOnce(
     taskId: string,
     guard?: MergeGuard,
     boundary?: MergeBoundary,
-  ): Promise<PrOutcome & { transient?: boolean; dispatched?: boolean }> {
+    settle = false,
+  ): Promise<MergeAttempt> {
     // The change this re-check read, never an earlier one: a stale earlier
     // success must never survive a failed re-check.
     const status = await this.checks.run(taskId);
@@ -331,11 +366,17 @@ export class ChangeMerge {
       // Guidance is read after the carry, so a newer word during that wait
       // still stops the merge.
       const queueWait = this.queueWait(taskId, this.queueItems(taskId, change));
-      if (hasChangeRequests(forge.kind) && (guard?.unattended || boundary?.unattended)) {
+      if (hasChangeRequests(forge.kind) && (guard?.unattended || boundary?.unattended || settle)) {
         if (change.number === undefined)
           return { ok: false, text: "Cannot merge: the pull request identity is missing." };
-        const pull = await this.context.pullOf(forge, guard?.prNumber ?? change.number);
-        const held = readinessStop(forge, pull, { head: guard?.head ?? change.headSha });
+        const number = guard?.prNumber ?? change.number;
+        const head = guard?.head ?? change.headSha;
+        const { pull } = await readDecided(
+          () => this.context.pullOf(forge, number),
+          head,
+          settle ? UNDECIDED_REREAD_MS : [],
+        );
+        const held = readinessStop(forge, pull, { head });
         if (held && !(queueWait && held.stop === "protected")) return held;
       }
       // The change's saved story, the same way a continuing merge reads it.
@@ -378,12 +419,17 @@ export class ChangeMerge {
       const message = caught instanceof Error ? caught.message : String(caught);
       const repoId = this.options.tasks.get(taskId)?.repoId;
       const stop = guard ? await this.refusalStop(forge, guard, caught, message) : undefined;
+      // The main branch moved while the host merged: tried again unless the
+      // pull request's own state already says why it cannot merge.
+      const baseMoved =
+        caught instanceof ForgeBaseMoved && (stop === undefined || stop === "computing");
       return {
         ok: false,
         text: `Cannot merge: ${message}`,
         problem: message,
         ...(isTransientForgeFailure(caught) ? { transient: true } : {}),
         ...(dispatched ? { dispatched: true } : {}),
+        ...(baseMoved ? { baseMoved: true } : {}),
         ...(stop ? { stop } : {}),
         ...(isSignInForgeFailure(caught) ? { signIn: this.context.signInFact(forge, repoId) } : {}),
       };
@@ -693,7 +739,9 @@ export class ChangeMerge {
   /**
    * Why GitHub refused a guarded merge request, read from its typed answer
    * and the pull request's own state - never from the words, but for the
-   * merge endpoint's conflict refusal the feed already recognizes.
+   * merge endpoint's conflict refusal the feed already recognizes. A refusal
+   * because the main branch moved, with nothing in the pull request's state
+   * that stops it, waits on the host: the app reads it again on its own.
    */
   async refusalStop(
     forge: Forge,
@@ -714,6 +762,7 @@ export class ChangeMerge {
     } catch {
       // The read is evidence only; the refusal itself still speaks.
     }
+    if (caught instanceof ForgeBaseMoved) return "computing";
     return isMergeConflict(message) ? "conflict" : undefined;
   }
 
@@ -798,11 +847,43 @@ export function mergedReceipt(pull: ForgePull): NonNullable<PrOutcome["receipt"]
   };
 }
 
-function stripAttempt(
-  attempt: PrOutcome & { transient?: boolean; dispatched?: boolean },
-): PrOutcome {
-  const { transient: _transient, dispatched: _dispatched, ...outcome } = attempt;
+export function stripAttempt(attempt: MergeAttempt): PrOutcome {
+  const {
+    transient: _transient,
+    dispatched: _dispatched,
+    baseMoved: _baseMoved,
+    ...outcome
+  } = attempt;
   return outcome;
+}
+
+/**
+ * A pull request read until GitHub decides whether it can merge `head`: while
+ * it reads computing at that head and stays open, it is read again after each
+ * of `gaps` in turn (INF-457). The last read comes back with how long the
+ * gaps took, and the caller checks it as it would a single read, so a moved
+ * head or a closed pull request still stops the merge. Throws as a read does.
+ */
+export async function readDecided(
+  read: () => Promise<ForgePull>,
+  head: string,
+  gaps: readonly number[],
+): Promise<{ pull: ForgePull; waited: number }> {
+  let pull = await read();
+  let waited = 0;
+  for (const gap of gaps) {
+    if (
+      pull.readiness !== "computing" ||
+      pull.state !== "open" ||
+      pull.merged ||
+      pull.headSha !== head
+    )
+      break;
+    await sleep(gap);
+    waited += gap;
+    pull = await read();
+  }
+  return { pull, waited };
 }
 
 /** Why a readiness holds a merge, with where the project lives in the host's words. */

@@ -72,6 +72,7 @@ export {
   changeTitle,
   describeCheckState,
   ForgeAllowanceSpent,
+  ForgeBaseMoved,
   ForgeError,
   ForgeWriteError,
   isRedCheckState,

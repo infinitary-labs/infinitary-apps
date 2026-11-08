@@ -1170,6 +1170,30 @@ describe("GitHubForge", () => {
     });
   });
 
+  it("types GitHub's refusal of a merge whose main branch moved as that fact, apart from a change that cannot merge", async () => {
+    // The captain's ask: retry on its own right away when GitHub says main
+    // moved, and need a crewmate only for a conflict. GitHub's own answer,
+    // read off the record of a batch whose merges it refused this way.
+    let refusal = "Base branch was modified. Review and try the merge again.";
+    const { forge } = await stub({
+      "PUT /repos/octo/meter/pulls/23/merge": () => ({
+        status: 405,
+        json: { message: refusal },
+      }),
+    });
+    const change = { number: 23, url: null, branch: "b", headSha: "feedbeef", title: "fix: meter" };
+    await expect(forge.putIn(change, "feedbeef")).rejects.toMatchObject({
+      name: "ForgeBaseMoved",
+      failure: "refused",
+      message: `GitHub answered 405 to PUT /repos/octo/meter/pulls/23/merge: ${refusal}`,
+    });
+    refusal = "Pull Request has merge conflicts";
+    await expect(forge.putIn(change, "feedbeef")).rejects.toMatchObject({
+      name: "ForgeError",
+      failure: "refused",
+    });
+  });
+
   it("opens a change onto the branch open_change names without reading the default branch, and reads a pull request's base (INF-1873)", async () => {
     const { forge, seen } = await stub({
       "POST /repos/octo/meter/pulls": () => ({

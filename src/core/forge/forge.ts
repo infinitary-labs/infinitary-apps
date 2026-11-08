@@ -293,6 +293,20 @@ export class ForgeAllowanceSpent extends ForgeError {
   }
 }
 
+/**
+ * The host refused a merge because the branch it merges into moved while it
+ * merged (GitHub's 405 "Base branch was modified"): a fact about when the
+ * request went out, not a verdict on the change. Its failure stays
+ * `refused`, so nothing treats it as a hiccup; the merge reads the pull
+ * request again and sends once more only where the host says it may merge.
+ */
+export class ForgeBaseMoved extends ForgeError {
+  constructor(message: string) {
+    super("refused", message);
+    this.name = "ForgeBaseMoved";
+  }
+}
+
 /** When a spent allowance comes back, if that is why the host refused; otherwise undefined. */
 export function allowanceResetOf(caught: unknown): number | undefined {
   return caught instanceof ForgeAllowanceSpent ? caught.resetAt : undefined;

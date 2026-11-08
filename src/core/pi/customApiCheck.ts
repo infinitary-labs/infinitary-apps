@@ -50,7 +50,7 @@ export type CustomModelProof = {
 
 /**
  * The owner may persist this non-secret fingerprint. Any address, mode, key
- * revision, header, model, limit, protocol, profile, certificate or policy
+ * revision, header, address exception, model, limit, protocol, profile, certificate or policy
  * change makes an old proof unusable. Identity/label and role placement are
  * separate. A secret header's value is bound through the opaque revision,
  * never hashed here; a connection without headers keeps its earlier fingerprint.
@@ -79,6 +79,8 @@ export function customModelFingerprint(candidate: CustomConnectionCandidate): st
         storage: candidate.storage,
         capabilities: candidate.capabilities,
         cacheRetention: candidate.cacheRetention ?? "none",
+        // A connection without an exception keeps its earlier fingerprint.
+        ...(candidate.exception ? { exception: true } : {}),
         ...(candidate.headers?.length
           ? {
               headers: candidate.headers.map((header) => ({

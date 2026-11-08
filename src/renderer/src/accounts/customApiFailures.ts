@@ -1,4 +1,10 @@
-import type { CustomApiFailureCategory, CustomNetworkMode } from "@shared/customApi";
+import {
+  type CustomApiAnswer,
+  type CustomApiFailureCategory,
+  type CustomNetworkMode,
+  customNetworkLabel,
+} from "@shared/customApi";
+import { HERE } from "@shared/deviceNames";
 
 /** Where a failure is told: beside the field at fault, on a model's row, or above Save. */
 export type CustomApiFailurePlace =
@@ -37,7 +43,51 @@ export type FailureContext = {
   network?: CustomNetworkMode;
   /** An operation address's base, offered in its place. */
   suggestion?: string;
+  /** `destination`: what DNS answered for the name, read with the live line. */
+  answers?: readonly CustomApiAnswer[];
+  /** `destination`: whether an exception for this address can be made. */
+  exceptionOffered?: boolean;
+  /** The computer that reads the address, as the form names it. Absent, this Mac. */
+  who?: string;
 };
+
+/** The words that show a person's exception for an address, on its line and its connection. */
+export const CUSTOM_EXCEPTION_WORDS = {
+  line: "Exception made for this address",
+  tag: "Address exception",
+} as const;
+
+/** One DNS answer and the kind of network it points to, in the form's words. */
+function answerWords(answer: CustomApiAnswer, who?: string): string {
+  if (answer.kind === "reserved") return `${answer.address} (reserved)`;
+  const label = customNetworkLabel(answer.kind, who);
+  return `${answer.address} (${label.charAt(0).toLowerCase()}${label.slice(1)})`;
+}
+
+/** A list in words: one, "a and b", or "a, b and c". */
+function listWords(items: readonly string[]): string {
+  if (items.length < 2) return items.join("");
+  return `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`;
+}
+
+/**
+ * The refused destination, saying what DNS answered when the name was read:
+ * a reserved answer, or answers in more than one kind of network.
+ */
+export function destinationWords(
+  context: Pick<FailureContext, "answers" | "exceptionOffered" | "who">,
+): string {
+  const answers = context.answers ?? [];
+  if (!answers.length)
+    return "Infinitary can't send to this address: it points to a reserved address, or to more than one kind of network.";
+  const why = answers.some((answer) => answer.kind === "reserved")
+    ? "A reserved answer often comes from a proxy app or a DNS filter that answers for every name."
+    : "They point to more than one kind of network.";
+  const never = context.exceptionOffered
+    ? ""
+    : ` Infinitary makes no exception for an answer that points to ${context.who ?? HERE.this}, a link-local or a cloud metadata address.`;
+  return `Infinitary can't send to this address. DNS answered ${listWords(answers.map((answer) => answerWords(answer, context.who)))}. ${why}${never}`;
+}
 
 function hostAndPath(address: string): { host: string; where: string; base: string } {
   try {
@@ -82,7 +132,7 @@ export function placeCustomApiFailure(
     case "destination":
       return {
         at: "address",
-        text: "Infinitary can't send to this address: it points to a reserved address, or to more than one kind of network.",
+        text: destinationWords(context),
       };
     case "network":
       return {

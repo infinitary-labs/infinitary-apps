@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "dns-answers-exception",
+      "kind": "improvement",
+      "title": "A refused custom API address says what DNS answered",
+      "body": "When Add a custom API refuses an address because its name points to a reserved address or to more than one kind of network, the form now lists each address DNS answered and what kind it is. A reserved answer often comes from a proxy app or a DNS filter. You can make an exception for that one address, and the connection then shows Address exception. Without the exception, the address stays refused.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "dns-answers-exception-dark.webp",
+        "light": "dns-answers-exception-light.webp",
+        "alt": "The custom API form lists 198.18.0.42 as reserved and a public IPv6 address, with an unticked choice to make an exception for that address"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

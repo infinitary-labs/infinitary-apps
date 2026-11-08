@@ -4,7 +4,10 @@ import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { WELCOME_TITLE } from "@shared/welcome";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
-import { placeCustomApiFailure } from "../../src/renderer/src/accounts/customApiFailures";
+import {
+  CUSTOM_EXCEPTION_WORDS,
+  placeCustomApiFailure,
+} from "../../src/renderer/src/accounts/customApiFailures";
 import { customApiCaFixture } from "../helpers/customApiCaFixture";
 import { scratchDir } from "../helpers/scratchDirs";
 import {
@@ -450,6 +453,117 @@ test("the server's model list supplies model names and limits nobody typed", asy
     test.info().outputPath("listed-models.json"),
     JSON.stringify({ wire: api.requests, custom: saved }, null, 2),
   );
+});
+
+// INF-3100's report: a proxy app answering a public API's name with a reserved
+// stand-in address (198.18.0.0/15) left the form refusing with no reason. The
+// captain asked that the form say what DNS answered and let the person make
+// an exception for that one address, shown on the connection afterwards.
+test("a name DNS answers with a reserved address is refused naming the answers, and saved with the person's exception for it", async () => {
+  model = await startMockProvider();
+  api = await startCustomApiFixture(model.port);
+  launched = await launchApp({
+    reuseMockProvider: model,
+    modelsJson: () => JSON.stringify({ providers: {} }),
+  });
+  const target = "fakeip.example.test";
+  const stand = "198.18.0.42";
+  const answers = [
+    { address: stand, kind: "reserved" as const },
+    { address: "2606:4700:10::6814:2011", kind: "public" as const },
+  ];
+  // DNS answers as a fake-IP proxy would. The real policy checks every answer;
+  // the connector, once handed the checked stand-in, reaches the fixture.
+  await launched.app.evaluate(
+    async ({ app }, { target, answers, port }) => {
+      const { createRequire, syncBuiltinESMExports } = process.getBuiltinModule("node:module");
+      const require = createRequire(`${app.getAppPath()}/package.json`);
+      const dns = require("node:dns/promises") as typeof import("node:dns/promises");
+      const https = require("node:https") as typeof import("node:https");
+      const http = require("node:http") as typeof import("node:http");
+      const nativeLookup = dns.lookup;
+      const nativeRequest = https.request;
+      dns.lookup = ((hostname: string, options: import("node:dns").LookupAllOptions) =>
+        hostname === target
+          ? Promise.resolve(
+              answers.map(({ address }) => ({ address, family: address.includes(":") ? 6 : 4 })),
+            )
+          : nativeLookup(hostname, options)) as unknown as typeof dns.lookup;
+      https.request = ((
+        url: URL,
+        options: import("node:https").RequestOptions,
+        callback: (res: import("node:http").IncomingMessage) => void,
+      ) => {
+        if (url.hostname !== target) return nativeRequest(url, options, callback);
+        if (!options.lookup || options.rejectUnauthorized !== true || options.agent !== false)
+          throw new Error("Unsafe HTTPS options");
+        options.lookup(target, { all: true }, (_error, addresses) => {
+          const checked = (Array.isArray(addresses) ? addresses : [{ address: addresses }]).map(
+            (entry) => entry.address,
+          );
+          if (checked[0] !== answers[0]?.address) throw new Error("Unchecked answer");
+        });
+        return http.request(
+          new URL(`http://127.0.0.1:${port}${url.pathname}`),
+          {
+            ...options,
+            // Both answers were checked, so Node's multi-address connect asks for all.
+            lookup: ((_host, opts, done) =>
+              opts.all
+                ? done(null, [{ address: "127.0.0.1", family: 4 }])
+                : done(null, "127.0.0.1", 4)) as import("node:net").LookupFunction,
+          },
+          callback,
+        );
+      }) as typeof https.request;
+      syncBuiltinESMExports();
+    },
+    { target, answers, port: Number(new URL(api.baseUrl).port) },
+  );
+  const page = launched.page;
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("tab", { name: "Intelligence" }).click();
+  await page.locator('[data-connect-chips="foot"] [data-connect-custom-api]').click();
+  const f = customApiForm(page);
+  const address = `https://${target}${new URL(api.baseUrl).pathname}`;
+  await fillCustomApi(page, {
+    name: "Behind a proxy app",
+    address,
+    key: "synthetic-desktop-literal-key",
+    models: [{ id: "operator-model", context: 200000, output: 4096 }],
+  });
+  const refused = placeCustomApiFailure("destination", {
+    address,
+    stage: "address",
+    answers,
+    exceptionOffered: true,
+  }).text;
+  // The line under the address says what DNS answered, and the exception is offered, off.
+  await expect(f.answers).toHaveText(refused);
+  await expect(f.exception).not.toBeChecked();
+  // Refused by default: Save names the answers and nothing reaches the server.
+  expect(await saveCustomApi(page)).toBe("failed");
+  await expect(f.error("address")).toHaveText(refused);
+  expect(api.requests).toHaveLength(0);
+  await page.screenshot({ path: test.info().outputPath("custom-reserved-refused.png") });
+  // The person's own choice, by keys: Space ticks the exception.
+  await pressKey(f.exception, "Space");
+  await expect(f.exception).toBeChecked();
+  await expect(f.sendsTo).toContainText(CUSTOM_EXCEPTION_WORDS.line);
+  expect(await saveCustomApi(page)).toBe("saved");
+  expect(api.requests[0]?.path).toBe(`${new URL(api.baseUrl).pathname}/models`);
+  const saved = await page.evaluate(() => window.infinitary.accounts.custom.list());
+  expect(saved).toMatchObject([{ baseUrl: address, mode: "public", addressException: true }]);
+  // The connection shows its exception, and Edit keeps it ticked for that address.
+  const accounts = await page.evaluate(() => window.infinitary.accounts.list());
+  const account = accounts[0];
+  if (!account) throw new Error("Missing account");
+  const block = customApiBlock(page, account.id);
+  await expect(block.exception).toBeVisible();
+  await page.screenshot({ path: test.info().outputPath("custom-reserved-excepted.png") });
+  await block.edit.click();
+  const edit = customApiEditDialog(page, "Behind a proxy app");
+  await expect(edit.getByLabel(/^Make an exception for /)).toBeChecked();
 });
 
 for (const mode of [

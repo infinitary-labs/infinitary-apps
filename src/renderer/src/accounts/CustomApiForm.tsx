@@ -30,6 +30,8 @@ import {
 import { focusWithRing } from "../design/focus";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
 import {
+  CUSTOM_EXCEPTION_WORDS,
+  destinationWords,
   type FailureContext,
   type PlacedFailure,
   placeCustomApiFailure,
@@ -62,7 +64,7 @@ type Errors = Partial<Record<Field, string>>;
 /** A row's failure, and whether its ID, its sizes or the model itself is at fault. */
 type RowError = { text: string; at: "id" | "sizes" | "model" };
 /** An approval holds for the address it was given for, and returns with that address. */
-type Approvals = { http?: string; storage?: string; certificates?: string };
+type Approvals = { http?: string; storage?: string; certificates?: string; exception?: string };
 
 const SIZES_UNKNOWN = placeCustomApiFailure("limits", { address: "", stage: "check" }).text;
 const ROW_DOT: Record<RowState | "none", { tone: StatusDotTone; label: string }> = {
@@ -85,6 +87,14 @@ function FormInput({ invalid = false, ...rest }: InputProps & { invalid?: boolea
 }
 /** The address as typed, the key an approval is remembered under. */
 const addressKey = (value: string) => value.trim().replace(/\/+$/, "");
+/** The host an address names, as the exception's words call it. */
+const hostOf = (value: string) => {
+  try {
+    return new URL(value).host;
+  } catch {
+    return value;
+  }
+};
 const digits = (value: string) => Number(value.replace(/[^0-9]/g, "")) || 0;
 
 /**
@@ -220,6 +230,7 @@ export function CustomApiForm({
     ...(original?.baseUrl.startsWith("http:") ? { http: original.baseUrl } : {}),
     ...(original?.allowStorageDefault ? { storage: original.baseUrl } : {}),
     ...(original?.certificates.length ? { certificates: original.baseUrl } : {}),
+    ...(original?.addressException ? { exception: original.baseUrl } : {}),
   });
   const [pem, setPem] = useState("");
   const [keepCertificates, setKeepCertificates] = useState(Boolean(original?.certificates.length));
@@ -293,7 +304,15 @@ export function CustomApiForm({
       });
   };
   const approve = (what: keyof Approvals, on: boolean) => {
-    edited(what === "http" ? "http" : what === "certificates" ? "certificates" : "save");
+    edited(
+      what === "http"
+        ? "http"
+        : what === "certificates"
+          ? "certificates"
+          : what === "exception"
+            ? "address"
+            : "save",
+    );
     setApprovals((current) => ({ ...current, [what]: on ? typedKey : undefined }));
   };
   const changeHeader = (uiId: string, change: Partial<FormHeader>) => {
@@ -332,6 +351,8 @@ export function CustomApiForm({
       // Save, with this address shown above it, is the approval to send to it.
       approvedDestination: destination,
       unencryptedLocalApproved: approved("http") || httpRemembered,
+      // The person's exception for this address's DNS answers, bound to the address shown.
+      ...(approved("exception") ? { addressException: destination } : {}),
       ...(pem || certificatesKept
         ? {
             certificates: {
@@ -370,11 +391,18 @@ export function CustomApiForm({
     if (placed.fix) setFix(placed.fix);
     if (placed.askCertificate) setCertificateAsked(true);
   };
+  /** What DNS answered for a refused name, for the sentence that says so. */
+  const answered = (read: CustomApiAddress): Partial<FailureContext> => ({
+    who,
+    ...(read.answers ? { answers: read.answers } : {}),
+    ...(read.exceptionOffered ? { exceptionOffered: true } : {}),
+  });
   const addressFailure = (read: CustomApiAddress, into: Errors) =>
     show(
       placeCustomApiFailure(read.failure ?? "address", {
         address: baseUrl,
         stage: "address",
+        ...answered(read),
         ...(read.suggestion ? { suggestion: read.suggestion } : {}),
       }),
       into,
@@ -425,6 +453,7 @@ export function CustomApiForm({
             address: read.destination,
             stage: result.failure.stage,
             keyed,
+            ...answered(read),
             ...(result.view?.mode || network ? { network: result.view?.mode ?? network } : {}),
             ...(result.failure.suggestion ? { suggestion: result.failure.suggestion } : {}),
           });
@@ -511,6 +540,7 @@ export function CustomApiForm({
         const context: Omit<FailureContext, "stage"> = {
           address: read.destination,
           keyed,
+          ...answered(read),
           listed: Boolean(result.listed),
           ...(result.view?.mode || network ? { network: result.view?.mode ?? network } : {}),
         };
@@ -702,10 +732,38 @@ export function CustomApiForm({
             : line.destination && (
                 <p className="fm-custom-hint" data-custom-sends-to>
                   Sends to <b className="fm-custom-mono">{line.destination}</b>
-                  {network ? ` · ${customNetworkLabel(network, who)}` : ""}
+                  {approved("exception")
+                    ? ` · ${CUSTOM_EXCEPTION_WORDS.line}`
+                    : network
+                      ? ` · ${customNetworkLabel(network, who)}`
+                      : ""}
                 </p>
               )}
+          {!errors.address &&
+            !approved("exception") &&
+            line.failure === "destination" &&
+            Boolean(line.answers?.length) && (
+              <p className="fm-custom-hint" data-custom-answers>
+                {destinationWords(answered(line))}
+              </p>
+            )}
         </div>
+        {((line.failure === "destination" && line.exceptionOffered) || approved("exception")) && (
+          <div className="fm-custom-http" data-custom-exception>
+            <label className="fm-custom-choice">
+              <input
+                type="checkbox"
+                checked={approved("exception")}
+                onChange={(event) => approve("exception", event.target.checked)}
+              />
+              <span>
+                Make an exception for {hostOf(line.destination ?? typedKey)}: send to it whatever
+                DNS answers, apart from {who} itself, link-local and cloud metadata addresses. Do
+                this only if you know why DNS answers this way, such as a proxy app.
+              </span>
+            </label>
+          </div>
+        )}
         {http &&
           (httpRemembered ? (
             <p className="fm-custom-hint">Unencrypted HTTP is approved for this address.</p>
@@ -1531,6 +1589,11 @@ export function CustomApiAccountsSection() {
               {view.baseUrl.startsWith("http:") && (
                 <span className="fm-custom-tag" data-tone="warn">
                   Unencrypted
+                </span>
+              )}
+              {view.addressException && (
+                <span className="fm-custom-tag" data-tone="warn">
+                  {CUSTOM_EXCEPTION_WORDS.tag}
                 </span>
               )}
               <span className="fm-custom-tag" data-tone={ready ? "ok" : "idle"}>

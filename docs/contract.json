@@ -5905,6 +5905,9 @@
                           "allowStorageDefault": {
                             "type": "boolean"
                           },
+                          "addressException": {
+                            "type": "boolean"
+                          },
                           "certificates": {
                             "type": "array",
                             "items": {
@@ -6447,6 +6450,34 @@
               "limits",
               "context-limit"
             ]
+          },
+          "answers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "address": {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "local",
+                    "private",
+                    "public",
+                    "reserved"
+                  ]
+                }
+              },
+              "required": [
+                "address",
+                "kind"
+              ]
+            }
+          },
+          "exceptionOffered": {
+            "type": "boolean"
           }
         }
       }
@@ -6729,6 +6760,10 @@
               },
               "useExistingCertificates": {
                 "type": "boolean"
+              },
+              "addressException": {
+                "type": "string",
+                "maxLength": 4096
               }
             },
             "required": [
@@ -6814,6 +6849,9 @@
                 "type": "boolean"
               },
               "allowStorageDefault": {
+                "type": "boolean"
+              },
+              "addressException": {
                 "type": "boolean"
               },
               "certificates": {
@@ -7113,6 +7151,9 @@
             "type": "boolean"
           },
           "allowStorageDefault": {
+            "type": "boolean"
+          },
+          "addressException": {
             "type": "boolean"
           },
           "certificates": {
@@ -7418,6 +7459,9 @@
           "allowStorageDefault": {
             "type": "boolean"
           },
+          "addressException": {
+            "type": "boolean"
+          },
           "certificates": {
             "type": "array",
             "items": {
@@ -7636,6 +7680,9 @@
             "type": "boolean"
           },
           "allowStorageDefault": {
+            "type": "boolean"
+          },
+          "addressException": {
             "type": "boolean"
           },
           "certificates": {
@@ -13621,6 +13668,34 @@
               "limits",
               "context-limit"
             ]
+          },
+          "answers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "address": {
+                  "type": "string",
+                  "maxLength": 64
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "local",
+                    "private",
+                    "public",
+                    "reserved"
+                  ]
+                }
+              },
+              "required": [
+                "address",
+                "kind"
+              ]
+            }
+          },
+          "exceptionOffered": {
+            "type": "boolean"
           }
         }
       }
@@ -13766,6 +13841,10 @@
               },
               "useExistingCertificates": {
                 "type": "boolean"
+              },
+              "addressException": {
+                "type": "string",
+                "maxLength": 4096
               }
             },
             "required": [
@@ -13851,6 +13930,9 @@
                 "type": "boolean"
               },
               "allowStorageDefault": {
+                "type": "boolean"
+              },
+              "addressException": {
                 "type": "boolean"
               },
               "certificates": {
@@ -14211,6 +14293,10 @@
               },
               "useExistingCertificates": {
                 "type": "boolean"
+              },
+              "addressException": {
+                "type": "string",
+                "maxLength": 4096
               }
             },
             "required": [
@@ -14294,6 +14380,9 @@
             "type": "boolean"
           },
           "allowStorageDefault": {
+            "type": "boolean"
+          },
+          "addressException": {
             "type": "boolean"
           },
           "certificates": {
@@ -14510,6 +14599,9 @@
             "type": "boolean"
           },
           "allowStorageDefault": {
+            "type": "boolean"
+          },
+          "addressException": {
             "type": "boolean"
           },
           "certificates": {
@@ -14794,6 +14886,9 @@
           "allowStorageDefault": {
             "type": "boolean"
           },
+          "addressException": {
+            "type": "boolean"
+          },
           "certificates": {
             "type": "array",
             "items": {
@@ -15007,6 +15102,9 @@
           "allowStorageDefault": {
             "type": "boolean"
           },
+          "addressException": {
+            "type": "boolean"
+          },
           "certificates": {
             "type": "array",
             "items": {
@@ -15214,6 +15312,9 @@
               "type": "boolean"
             },
             "allowStorageDefault": {
+              "type": "boolean"
+            },
+            "addressException": {
               "type": "boolean"
             },
             "certificates": {
@@ -54458,6 +54559,9 @@
                     "allowStorageDefault": {
                       "type": "boolean"
                     },
+                    "addressException": {
+                      "type": "boolean"
+                    },
                     "certificates": {
                       "type": "array",
                       "items": {
@@ -64783,6 +64887,9 @@
                           "allowStorageDefault": {
                             "type": "boolean"
                           },
+                          "addressException": {
+                            "type": "boolean"
+                          },
                           "certificates": {
                             "type": "array",
                             "items": {
@@ -65755,6 +65862,9 @@
                             "type": "boolean"
                           },
                           "allowStorageDefault": {
+                            "type": "boolean"
+                          },
+                          "addressException": {
                             "type": "boolean"
                           },
                           "certificates": {
@@ -69156,6 +69266,9 @@
                   "allowStorageDefault": {
                     "type": "boolean"
                   },
+                  "addressException": {
+                    "type": "boolean"
+                  },
                   "certificates": {
                     "type": "array",
                     "items": {
@@ -69710,6 +69823,34 @@
                 "limits",
                 "context-limit"
               ]
+            },
+            "answers": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "address": {
+                    "type": "string",
+                    "maxLength": 64
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "local",
+                      "private",
+                      "public",
+                      "reserved"
+                    ]
+                  }
+                },
+                "required": [
+                  "address",
+                  "kind"
+                ]
+              }
+            },
+            "exceptionOffered": {
+              "type": "boolean"
             }
           }
         }
@@ -69971,6 +70112,10 @@
                 },
                 "useExistingCertificates": {
                   "type": "boolean"
+                },
+                "addressException": {
+                  "type": "string",
+                  "maxLength": 4096
                 }
               },
               "required": [
@@ -70057,6 +70202,9 @@
                   "type": "boolean"
                 },
                 "allowStorageDefault": {
+                  "type": "boolean"
+                },
+                "addressException": {
                   "type": "boolean"
                 },
                 "certificates": {
@@ -70351,6 +70499,9 @@
             "allowStorageDefault": {
               "type": "boolean"
             },
+            "addressException": {
+              "type": "boolean"
+            },
             "certificates": {
               "type": "array",
               "items": {
@@ -70635,6 +70786,9 @@
             "allowStorageDefault": {
               "type": "boolean"
             },
+            "addressException": {
+              "type": "boolean"
+            },
             "certificates": {
               "type": "array",
               "items": {
@@ -70846,6 +71000,9 @@
               "type": "boolean"
             },
             "allowStorageDefault": {
+              "type": "boolean"
+            },
+            "addressException": {
               "type": "boolean"
             },
             "certificates": {

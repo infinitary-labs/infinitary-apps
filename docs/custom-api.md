@@ -44,6 +44,13 @@ This is a transport lifetime, not the account Pause policy.
   The class read is stored with the connection and held on every request as an explicit choice was.
   A same-address edit keeps the class the connection was saved with, including one chosen explicitly before FI3-1312, and a changed address reads its own.
   A name that later resolves into another class fails closed, as before.
+- A refused name says what DNS answered (`answers` on `inf:accounts:custom:address`, each with its kind: this Mac, the organization's network, the public internet or reserved), and the form names them in its sentence.
+  A proxy app's stand-in answers (198.18.0.0/15 in fake-IP mode) or a DNS filter are the usual cause of a reserved answer for a public name.
+- The person may make an exception for that one address (INF-3100's follow-up, captain's choice): a checkbox under the address, off by default, offered only for a name whose every answer stays clear of this computer, the unspecified address, link-local, multicast and the known metadata services, directly, IPv4-mapped or through NAT64.
+  Save then sends `addressException`, the canonical address shown, and the owner refuses an exception for any other address or for a literal address.
+  An excepted connection is held as the public class, and every request checks its answers against that same never-excepted list instead of a class.
+  The connection's block shows **Address exception**, the line under the address reads "Exception made for this address", and Edit keeps the checkbox ticked for that address; unticking it on a same-address edit holds the connection to its class again.
+  A computer that runs work without this change ignores the field and keeps refusing the address.
 - The full base path/port are preserved; no `/v1` is invented.
   Operation URLs return a suggestion for confirmation.
   Credentials, queries, fragments, backslashes, dot segments, repeated inner path separators and encoded/non-ASCII paths are refused conservatively.

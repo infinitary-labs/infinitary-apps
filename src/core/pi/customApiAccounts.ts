@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { chmodSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { isIP } from "node:net";
 import { join } from "node:path";
 import type { ModelRuntime } from "@earendil-works/pi-coding-agent";
 import {
@@ -38,6 +39,9 @@ import {
   assertCustomHeaders,
   assertLiteralBearerKey,
   CustomApiError,
+  customApiAnswerKind,
+  customApiExceptionAllows,
+  customApiHostname,
   normalizeCustomApiBase,
 } from "./customApiPolicy";
 import { customApiStream } from "./customApiStream";
@@ -86,7 +90,7 @@ export class CustomApiAccountOwner {
   private readonly drafts = new Map<string, Draft>();
   private readonly live = new Map<string, Live>();
 
-  /** `resolve` stands in for DNS in tests; policy still classifies every answer. */
+  /** `resolve` stands in for DNS in tests, for the address and the model list; policy still classifies every answer. */
   constructor(private readonly resolve?: CustomApiResolver) {}
 
   /**
@@ -101,15 +105,18 @@ export class CustomApiAccountOwner {
       if (!(error instanceof CustomApiError)) return {};
       if (error.baseSuggestion) return { suggestion: error.baseSuggestion, failure: "address" };
       if (error.category === "address") return { failure: "address" };
+      // A refused name says what DNS answered, and whether an exception may reach it.
+      const answered = deniedAnswers(baseUrl, error);
       // A name that does not resolve yet, or points somewhere refused: still say
       // where it would send, in the canonical form the approval binds.
       try {
         return {
           destination: normalizeCustomApiBase(baseUrl, "public").baseUrl,
           failure: error.category,
+          ...answered,
         };
       } catch {
-        return { failure: error.category };
+        return { failure: error.category, ...answered };
       }
     }
   }
@@ -125,8 +132,13 @@ export class CustomApiAccountOwner {
     const input = customApiConnectInputSchema.parse(raw);
     let draft: Draft;
     try {
-      const mode = await this.networkFor(input);
-      const view = this.prepare({ ...input, mode });
+      const { mode, exception } = await this.networkFor(input);
+      const { addressException, ...rest } = input;
+      const view = this.prepare({
+        ...rest,
+        mode,
+        ...(exception && addressException !== undefined ? { addressException } : {}),
+      });
       draft = this.requireDraft(view.draftId ?? "");
     } catch (error) {
       return { failure: failureOf(error, "address") };
@@ -146,19 +158,42 @@ export class CustomApiAccountOwner {
     }
   }
 
-  private async networkFor(input: CustomApiConnectInput): Promise<CustomApiInput["mode"]> {
+  /**
+   * The network the connection is held to, and whether the person's exception
+   * for this address goes with it. A same-address edit keeps the saved class
+   * and takes the exception as the form now sends it; a fresh read needs the
+   * exception only when DNS answered what no class holds.
+   */
+  private async networkFor(
+    input: CustomApiConnectInput,
+  ): Promise<{ mode: CustomApiInput["mode"]; exception: boolean }> {
+    const asked = input.addressException !== undefined;
     const saved = input.replaceAccountId
       ? this.requireLive(input.replaceAccountId).stored.input
       : undefined;
     if (saved) {
       try {
         if (normalizeCustomApiBase(input.baseUrl, saved.mode).baseUrl === saved.baseUrl)
-          return saved.mode;
+          return { mode: saved.mode, exception: asked };
       } catch {
         /* A changed address reads its own network. */
       }
     }
-    return (await readCustomApiDestination(input.baseUrl, this.resolve)).mode;
+    try {
+      return {
+        mode: (await readCustomApiDestination(input.baseUrl, this.resolve)).mode,
+        exception: false,
+      };
+    } catch (error) {
+      // It is sent as the public internet, the class with the strongest warnings.
+      if (
+        asked &&
+        error instanceof CustomApiError &&
+        deniedAnswers(input.baseUrl, error).exceptionOffered
+      )
+        return { mode: "public", exception: true };
+      throw error;
+    }
   }
 
   review(baseUrl: string, mode: CustomApiInput["mode"], pem?: string): CustomApiReview {
@@ -177,6 +212,12 @@ export class CustomApiAccountOwner {
     input.baseUrl = normalizeCustomApiBase(input.baseUrl, input.mode).baseUrl;
     if (input.approvedDestination !== input.baseUrl) throw new CustomApiError("destination");
     if (input.baseUrl.startsWith("http:") && !input.unencryptedLocalApproved)
+      throw new CustomApiError("destination");
+    // An exception is the person's for the one address it was made for, and only for a name.
+    if (
+      input.addressException !== undefined &&
+      (input.addressException !== input.baseUrl || isIP(customApiHostname(input.baseUrl)))
+    )
       throw new CustomApiError("destination");
     const original = input.replaceAccountId ? this.requireLive(input.replaceAccountId) : undefined;
     const source = input.sourceDraftId ? this.requireDraft(input.sourceDraftId) : undefined;
@@ -287,7 +328,7 @@ export class CustomApiAccountOwner {
 
   async discover(draftId: string): Promise<CustomListedModel[]> {
     const draft = this.requireDraft(draftId);
-    const transport = createCustomApiTransport(this.destination(draft));
+    const transport = createCustomApiTransport(this.destination(draft), this.resolve);
     try {
       return await listCustomApiModels(transport, draft.abort.signal);
     } finally {
@@ -580,6 +621,7 @@ export class CustomApiAccountOwner {
       ...(input.protocol === "anthropic-messages" ? { anthropic: true } : {}),
       baseUrl: input.baseUrl,
       mode: input.mode,
+      ...(input.addressException ? { exception: true } : {}),
       credential: input.noKey ? { kind: "local-no-key" } : { kind: "bearer", key: input.key },
       ...(input.headers.length ? { headers: input.headers } : {}),
       ...(input.certificates ? { certificates: input.certificates } : {}),
@@ -636,6 +678,7 @@ export class CustomApiAccountOwner {
       ),
       enabled,
       allowStorageDefault: input.allowStorageDefault,
+      ...(input.addressException ? { addressException: true } : {}),
       // Saved identity can still be read after expiry; admission/proof validation
       // continues to parse the actual PEM and refuses invalid trust.
       certificates: stored.reviewedCertificates ?? [],
@@ -687,6 +730,26 @@ export class CustomApiAccountOwner {
 }
 function revision(): string {
   return randomBytes(16).toString("hex");
+}
+/**
+ * What DNS answered for a refused name, each with its kind of network, and
+ * whether the person may make an exception for them. A literal address was
+ * never answered by DNS, so it gets neither.
+ */
+function deniedAnswers(
+  baseUrl: string,
+  error: CustomApiError,
+): Pick<CustomApiAddress, "answers" | "exceptionOffered"> {
+  if (error.category !== "destination" || !error.addresses?.length) return {};
+  try {
+    if (isIP(customApiHostname(baseUrl))) return {};
+  } catch {
+    return {};
+  }
+  return {
+    answers: error.addresses.map((address) => ({ address, kind: customApiAnswerKind(address) })),
+    exceptionOffered: customApiExceptionAllows(error.addresses),
+  };
 }
 function failureOf(error: unknown, stage: CustomApiFailure["stage"]): CustomApiFailure {
   if (!(error instanceof CustomApiError)) return { category: "malformed", stage };

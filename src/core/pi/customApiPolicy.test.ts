@@ -7,6 +7,8 @@ import {
   assertLiteralBearerKey,
   CustomApiError,
   classifyCustomApiAddresses,
+  customApiAnswerKind,
+  customApiExceptionAllows,
   normalizeCustomApiBase,
 } from "./customApiPolicy";
 
@@ -257,5 +259,58 @@ describe("extra request headers", () => {
     const many = Array.from({ length: 21 }, (_, at) => header(`X-Header-${at}`));
     expect(() => assertCustomHeaders(many.slice(0, 20), true)).not.toThrow();
     expect(() => assertCustomHeaders(many, true)).toThrow(CustomApiError);
+  });
+});
+
+// INF-3100: a proxy app answering a public API's name with a 198.18.0.0/15
+// stand-in made the form refuse with no reason. The captain asked that it say
+// what DNS answered and let the person make an exception for that address.
+describe("an exception for an address whose DNS answers no class holds", () => {
+  it("keeps the answers a refusal was made for, each with its kind of network", () => {
+    // What a fake-IP proxy answered for opencode.ai in INF-3100's reproduction.
+    const answers = ["198.18.0.42", "2606:4700:10::6814:2011"];
+    let refused: unknown;
+    try {
+      classifyCustomApiAddresses(answers);
+    } catch (error) {
+      refused = error;
+    }
+    expect(refused).toBeInstanceOf(CustomApiError);
+    expect(refused).toMatchObject({ category: "destination", addresses: answers });
+    expect((refused as Error).message).not.toContain("198.18");
+    expect(answers.map(customApiAnswerKind)).toEqual(["reserved", "public"]);
+    expect(
+      ["127.0.0.1", "10.0.0.5", "fd12:3456::1", "64:ff9b::6814:2011"].map(customApiAnswerKind),
+    ).toEqual(["local", "private", "private", "reserved"]);
+  });
+
+  it.each([
+    ["198.18.0.42"],
+    ["198.18.1.7", "2606:4700:10::ac42:ad95"],
+    ["104.20.32.17", "10.0.0.5"],
+    ["104.20.32.17", "fd12:3456::1"],
+    ["64:ff9b::6814:2011"],
+  ])("may be made for answers like %s", (...answers) => {
+    expect(customApiExceptionAllows(answers)).toBe(true);
+  });
+
+  it.each([
+    [[]],
+    [["0.0.0.0"]],
+    [["104.20.32.17", "127.0.0.1"]],
+    [["::1"]],
+    [["::ffff:127.0.0.1"]],
+    [["169.254.169.254"]],
+    [["::ffff:169.254.169.254"]],
+    [["fe80::1"]],
+    [["100.100.100.200"]],
+    [["fd00:ec2::254"]],
+    [["224.0.0.1"]],
+    [["ff02::1"]],
+    [["64:ff9b::7f00:1"]],
+    [["64:ff9b::a9fe:a9fe"]],
+    [["not-an-ip"]],
+  ])("is never made for %j: this computer, link-local, multicast or metadata", (answers) => {
+    expect(customApiExceptionAllows(answers)).toBe(false);
   });
 });

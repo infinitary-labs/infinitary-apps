@@ -465,6 +465,37 @@ describe("opt-in custom transport on actual sockets", () => {
     await expect(consume).rejects.toMatchObject({ category: "cancelled" });
   });
 
+  // INF-3100: the person's exception for an address whose DNS answers are
+  // reserved or mixed still holds every request to what no exception reaches.
+  it("holds an excepted address's every request away from this computer and metadata answers", async () => {
+    let reached = 0;
+    const base = await fixture((_req, res) => {
+      reached += 1;
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end("{}");
+    });
+    const port = new URL(base).port;
+    for (const answers of [
+      ["198.18.0.42", "127.0.0.1"],
+      ["169.254.169.254"],
+      ["::ffff:127.0.0.1"],
+      ["64:ff9b::a9fe:a9fe"],
+    ]) {
+      const client = createCustomApiTransport(
+        {
+          baseUrl: `http://fakeip.example.test:${port}/proxy/v1`,
+          mode: "public",
+          exception: true,
+          credential: { kind: "bearer", key: "synthetic" },
+        },
+        async () => answers,
+      );
+      transports.push(client);
+      await expect(client.request("models")).rejects.toMatchObject({ category: "destination" });
+    }
+    expect(reached).toBe(0);
+  });
+
   it("checks every DNS result again and cancels unresolved DNS without late requests", async () => {
     const resolve = vi.fn().mockResolvedValue(["8.8.8.8", "127.0.0.1"]);
     const client = createCustomApiTransport(

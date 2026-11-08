@@ -12,6 +12,15 @@ export function customNetworkLabel(network: CustomNetworkMode, who: string = HER
   if (network === "private") return "Your organization's network";
   return "Public internet";
 }
+/**
+ * One DNS answer for an address's name, and the kind of network it points to:
+ * `reserved` is a range Infinitary never sends to without an exception.
+ */
+export const customApiAnswerSchema = z.object({
+  address: z.string().max(64),
+  kind: z.enum(["local", "private", "public", "reserved"]),
+});
+export type CustomApiAnswer = z.infer<typeof customApiAnswerSchema>;
 /** Why a custom connection's step failed, as a closed category the form places at its field. */
 export const customApiFailureCategorySchema = z.enum([
   "address",
@@ -112,6 +121,12 @@ export const customApiInputSchema = z.object({
   sourceDraftId: z.string().optional(),
   /** Reuse the same connection's public CAs after fingerprint approval. */
   useExistingCertificates: z.boolean().optional(),
+  /**
+   * The canonical address the person made an exception for, after the form
+   * told them what DNS answered: its name may then point to reserved or mixed
+   * networks. Absent, the network check refuses those answers, as always.
+   */
+  addressException: z.string().max(4096).optional(),
 });
 export type CustomApiInput = z.infer<typeof customApiInputSchema>;
 /**
@@ -182,6 +197,8 @@ export const customApiViewSchema = z.object({
     .default([]),
   enabled: z.boolean(),
   allowStorageDefault: z.boolean(),
+  /** The person made an exception for this address's DNS answers. */
+  addressException: z.boolean().optional(),
   certificates: z.array(customCertificateViewSchema),
   models: z.array(
     customModelInputSchema.extend({
@@ -227,6 +244,10 @@ export const customApiAddressSchema = z.object({
   network: customNetworkModeSchema.optional(),
   suggestion: z.string().optional(),
   failure: customApiFailureCategorySchema.optional(),
+  /** `destination`: what DNS answered for the name, each with the network it points to. */
+  answers: z.array(customApiAnswerSchema).optional(),
+  /** `destination`: the person may make an exception for this address. */
+  exceptionOffered: z.boolean().optional(),
 });
 export type CustomApiAddress = z.infer<typeof customApiAddressSchema>;
 export const CUSTOM_API_PROVIDER_PREFIX = "fm-custom-";

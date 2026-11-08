@@ -10,6 +10,7 @@ import {
 } from "./customApiCertificates";
 import {
   assertCustomApiAddresses,
+  assertCustomApiException,
   assertCustomHeaders,
   assertLiteralBearerKey,
   type CustomApiDestination,
@@ -112,6 +113,11 @@ export type CustomApiTransportOptions = {
   anthropic?: boolean;
   baseUrl: string;
   mode: CustomNetworkMode;
+  /**
+   * The person made an exception for this address: its answers may be reserved
+   * or span networks, and each request checks only what no exception reaches.
+   */
+  exception?: boolean;
   /**
    * A server that needs no key gets none, in any mode; a connection's own
    * headers may carry its credential instead. No availability marker on wire.
@@ -244,7 +250,8 @@ export function createCustomApiTransport(
           ? [destination.hostname]
           : await resolve(destination.hostname);
         if (failed || closed) return;
-        assertCustomApiAddresses(addresses, destination.mode);
+        if (options.exception) assertCustomApiException(addresses);
+        else assertCustomApiAddresses(addresses, destination.mode);
         const address = addresses[0];
         if (!address) throw new CustomApiError("destination");
         const url = new URL(`${destination.baseUrl}/${operation}`);

@@ -93,3 +93,52 @@ describe("where a custom connection's failure is told", () => {
     expect(customNetworkLabel("public")).toBe("Public internet");
   });
 });
+
+// INF-3100: the refusal named no answer and no cause, so a person behind a
+// fake-IP proxy could not tell why opencode.ai was refused. The captain asked
+// that the form say what DNS answered.
+describe("a refused destination says what DNS answered", () => {
+  it("names each answer with its network, and why a reserved one appears", () => {
+    expect(
+      placeCustomApiFailure("destination", {
+        address,
+        stage: "address",
+        answers: [
+          { address: "198.18.0.42", kind: "reserved" },
+          { address: "2606:4700:10::6814:2011", kind: "public" },
+        ],
+        exceptionOffered: true,
+      }),
+    ).toEqual({
+      at: "address",
+      text: `Infinitary can't send to this address. DNS answered 198.18.0.42 (reserved) and 2606:4700:10::6814:2011 (${customNetworkLabel("public").toLowerCase()}). A reserved answer often comes from a proxy app or a DNS filter that answers for every name.`,
+    });
+  });
+
+  it("says answers span networks, and that no exception reaches this computer", () => {
+    const placed = placeCustomApiFailure("destination", {
+      address,
+      stage: "address",
+      who: "Mac mini",
+      answers: [
+        { address: "104.20.32.17", kind: "public" },
+        { address: "10.0.0.5", kind: "private" },
+        { address: "127.0.0.1", kind: "local" },
+      ],
+    });
+    expect(placed.text).toBe(
+      "Infinitary can't send to this address. DNS answered 104.20.32.17 (public internet), 10.0.0.5 (your organization's network) and 127.0.0.1 (on Mac mini). They point to more than one kind of network. Infinitary makes no exception for an answer that points to Mac mini, a link-local or a cloud metadata address.",
+    );
+  });
+
+  it("keeps the general sentence for a literal address no DNS answered", () => {
+    expect(
+      placeCustomApiFailure("destination", {
+        address: "http://169.254.169.254/v1",
+        stage: "address",
+      }).text,
+    ).toBe(
+      "Infinitary can't send to this address: it points to a reserved address, or to more than one kind of network.",
+    );
+  });
+});

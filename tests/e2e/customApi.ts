@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { type CustomNetworkMode, customNetworkLabel } from "@shared/customApi";
+import { CUSTOM_EXCEPTION_WORDS } from "../../src/renderer/src/accounts/customApiFailures";
 
 /**
  * The custom API dialog as a person works it, wherever it opened: Add from
@@ -17,6 +18,10 @@ export function customApiForm(page: Page) {
     /** The live line under the address: where Save sends, and the network read from it. */
     sendsTo: form.locator("[data-custom-sends-to]"),
     http: form.getByLabel(/^Send over unencrypted HTTP/),
+    /** The live sentence saying what DNS answered for a refused name. */
+    answers: form.locator("[data-custom-answers]"),
+    /** The person's exception for that one address, offered under it. */
+    exception: form.getByLabel(/^Make an exception for /),
     key: form.getByLabel(/^API key/),
     protocol: form.getByLabel("API protocol"),
     fetch: form.getByRole("button", { name: /^Fetch (from server|again)$/ }),
@@ -100,6 +105,7 @@ export function customApiBlock(page: Page, accountId: string) {
     edit: block.getByRole("button", { name: "Edit", exact: true }),
     resume: block.getByRole("button", { name: "Resume", exact: true }),
     unencrypted: block.getByText("Unencrypted", { exact: true }),
+    exception: block.getByText(CUSTOM_EXCEPTION_WORDS.tag, { exact: true }),
     /** The model's Firstmate choice on its line. */
     firstmate: (model: string) =>
       block.getByRole("radio", { name: `Use ${model} for your first mate`, exact: true }),

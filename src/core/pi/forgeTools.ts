@@ -97,14 +97,14 @@ export const SKIP_RULES_DESCRIPTION = [
  * a crewmate writes them; the card draws them, so no prose repeats them.
  */
 export const AFTER_MERGE_STORY_RULE =
-  "Optional afterMerge: work started once this merges, never repeated in prose; task: an unstarted task's key; doer firstmate for a change in the app itself, such as Automation, settings or directions, which no crewmate reaches: the first mate does it at the merge and no task is filed.";
+  "Optional afterMerge: work started once this merges, never repeated in prose; task: an unstarted task's key; doer firstmate for a change in the app itself (Automation, settings, directions): it files no task.";
 
 export const PREPARE_CHANGE_STORY_DESCRIPTION = [
   "why holds 1 or 2 short sentences, whatChanged 1 to 5 short bullets, before and after one short sentence each, checked 1 to 6 observed {check, result} facts.",
   "base, head and every captureHead are full 40-character commit ids from git rev-parse, never short; a later revision keeps the first base and each kept view's Before media.",
   "Before media name base, After media head; media taken on another version name that version with applicability, kept as data, not displayed; kind new has no Before.",
   "layout adjacent needs exactly two media in each shown state.",
-  "Everyone who can see the project reads the story, and anyone when it is public: write it for a stranger, naming the captain's setup only by its kind, with no computer, host, user or account names, keys and what they reach, addresses, paths, clock times, time zones, other projects, task keys or the captain's own words.",
+  "Everyone who can see the project reads the story: write it for a stranger, naming the captain's setup only by its kind, with no computer, host, user or account names, keys and what they reach, addresses, paths, clock times, time zones, other projects, task keys or the captain's own words.",
   "publishable true is your declaration that you read the whole story once as that stranger and it holds nothing personal or local.",
   AFTER_MERGE_STORY_RULE,
 ].join(" ");
@@ -113,7 +113,7 @@ export const PREPARE_CHANGE_TOOL = crewmateTool({
   name: "prepare_change",
   label: "Prepare change story",
   description:
-    "Prepare one two-tier change story, without showing a card or uploading. Commit the demonstrated code first. Use the same title on the story, pull request and merge card. Aim for 150 open words on the card, 250 on the pull request. Put commands, file names and counts in verification, which folds; nonempty unfinished work folds too. Risk is the card radar and one PR line with its table folded. Omit empty sections and boilerplate. Never write code versions, hashes or story revision numbers in any prose, captions, alt text, verification or projectText, even folded; keep versions only in base, head and captureHead. This is an instruction, not a prose refusal check. Ordered views pair Before and After pictures under one heading; recordings stack. Inspect the exact publishable pictures or MP4s and their posters before selecting them; no private threads or secrets. No visible change gives noPicture and no views. The host retains immutable copies in the task card folder. Keep public template text and issue references in projectText. No setting, new approval, upload fallback or evidence commit. Meaningful drawn figures need inspected raster exports. A private GitLab project uploads only while GitLab requires sign-in to view its media; report that refusal, never change the setting.",
+    "Prepare one two-tier change story, without showing a card or uploading. Commit the demonstrated code first. Use the same title on the story, pull request and merge card. Aim for 150 open words on the card, 250 on the pull request. Put commands, file names and counts in verification, which folds; nonempty unfinished work folds too. Risk is the card radar and one PR line with its table folded. Omit empty sections and boilerplate. Never write code versions, hashes or story revision numbers in any prose, captions, alt text, verification or projectText, even folded; keep versions only in base, head and captureHead. Ordered views pair Before and After pictures under one heading; recordings stack. Inspect the exact publishable pictures or MP4s and their posters before selecting them; no private threads or secrets. No visible change gives noPicture and no views. Keep public template text and issue references in projectText. No setting, new approval, upload fallback or evidence commit. Meaningful drawn figures need inspected raster exports. A private GitLab project uploads only while GitLab requires sign-in to view its media; report that refusal, never change the setting.",
   parameters: Type.Object({
     story: zodParameter<ChangePresentationDraft>(changePresentationDraftSchema, {
       description: PREPARE_CHANGE_STORY_DESCRIPTION,

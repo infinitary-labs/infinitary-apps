@@ -523,10 +523,10 @@ const BROWSER_BUTTON_DESCRIPTION = [
  * description, which a Claude model reads.
  */
 const BROWSER_PAGE_DESCRIPTION = [
-  "Optional, only beside browser_button: an HTML file from your task's project, such as index.html, that the button opens in this task's browser with the captain in control, such as Play on a finished game's note.",
+  "Optional, only beside browser_button: an HTML file from your task's project, such as index.html, that the button opens in this task's browser with the captain in control.",
   "Give its path relative to your working copy, the same in the project folder: an .html or .htm file, with no .. and no link on the way.",
-  "The app checks it in your working copy or the project folder when the card goes up, and on each click serves only files inside the project folder on a local address of its own, so before your work is merged the click opens the project's current file or says it is not there yet.",
-  "It needs no browser open now, works after your task closes, never answers or closes the card, changes no merge and does not keep your task open; never beside browser_handoff.",
+  "The app checks it when the card goes up and serves only files inside the project folder locally, so before your work is merged the click opens the project's current file or says it is not there yet.",
+  "It needs no browser open now, works after your task closes, never answers or closes the card, changes no merge; never beside browser_handoff.",
 ].join(" ");
 
 /** The label the request's description gives as its example of the captain's step to sign in. */
@@ -549,7 +549,7 @@ const BROWSER_HANDOFF_DESCRIPTION = [
   "A purchase, booking or other submission that commits the captain is the captain's to make: prepare it up to its last step and ask here, with the card as its review.",
   `The review names what the captain commits to, read from the page now - for a trip the route, dates and times with time zones, passengers, seller, total and currency, baggage and fare rules - with anything uncertain and what changed since the captain chose; label the step, such as ${BROWSER_PAY_STEP}, beside one such as Stop here.`,
   "If the price or terms change after a review, stop and review again: an earlier choice does not cover them.",
-  "If the page does not confirm the captain's last step, the outcome is unknown: never submit, reload or resend it; check where the site lists it, such as its bookings, and ask the captain here to check.",
+  "If the page does not confirm the captain's last step, the outcome is unknown: never submit, reload or resend it; check where the site lists it, such as its bookings, and ask the captain here.",
   UNKNOWN_OUTCOME_WORDS,
 ].join(" ");
 

@@ -41,6 +41,7 @@ import { startHomeFiles } from "./files/homeFiles";
 import { startFirstLaunch } from "./firstLaunch";
 import { startHomeForges } from "./forge/homeForges";
 import { FreezeRecorder, freezeWake, infinitaryProject } from "./freeze/freezeRecorder";
+import { FreezeTally } from "./freeze/freezeTally";
 import { isFreezeRecorderEnabled } from "./freeze/watchdog";
 import type { HostCapabilities } from "./host";
 import { captureLoginPath } from "./hostEnv";
@@ -1485,31 +1486,34 @@ export async function createServices(
   homeDevices.attachPressure((view) => resourcePressure.observe(view));
   resourcePressure.observe(computerResourceFeed.snapshot());
   // The freeze recorder (docs/freeze-recorder.md), in alpha builds only: each
-  // main thread stall goes to its record, and a summary of this run's stalls
-  // to the first mate only when the captain's projects hold Infinitary's own
-  // source, where a fix goes.
-  let freezeSummarized = false;
-  const freezeRecorder = isFreezeRecorderEnabled({
+  // main thread stall goes to its record and to the per-version tally, and
+  // when the app first starts on a new version each earlier version's whole
+  // tally goes to the first mate, only when the captain's projects hold
+  // Infinitary's own source, where a fix goes (INF-3044).
+  const freezeBuild = isFreezeRecorderEnabled({
     packaged: host.app.packaged,
     version: host.app.version,
     env: process.env,
   })
+    ? sourceIdentity(source())
+    : undefined;
+  const freezeRecorder = freezeBuild
     ? new FreezeRecorder({
         recordPath: paths.freezeRecordPath,
-        build: sourceIdentity(source()),
+        build: freezeBuild,
         memory: {
           recordPath: paths.memoryRecordPath,
           ...(host.processFootprint ? { footprint: host.processFootprint } : {}),
         },
         onFreeze: () => {},
-        // One summary per installed version (the inbox's once-identity), with
-        // the stalls since this run started rather than its first stall.
-        onSummary: ({ example, ...rate }) => {
-          if (freezeSummarized) return;
+        tally: new FreezeTally(paths.freezeTallyPath, host.app.version, freezeBuild),
+        // One summary per ended version (the inbox's once-identity); a
+        // version that ends with no such project is never summarized.
+        onVersionsEnded: (summaries) => {
           const project = infinitaryProject(repos.list());
           if (!project) return;
-          freezeSummarized = true;
-          notifyFirstmate(freezeWake(example, project, host.app.version, rate), "scheduled");
+          for (const summary of summaries)
+            notifyFirstmate(freezeWake(summary, project), "scheduled");
         },
       })
     : null;

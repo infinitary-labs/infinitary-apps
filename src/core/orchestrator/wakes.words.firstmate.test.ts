@@ -124,7 +124,86 @@ const CASES: WordsCases<FirstmateWakeKind> = {
   ],
   "freeze-recorded": [
     {
-      name: "a measured stall with frames",
+      name: "a version's whole tally at the next version's first start",
+      wake: {
+        facts: {
+          kind: "freeze-recorded",
+          project: { id: "b3483155", name: "infinitary" },
+          summary: {
+            version: "0.6.3-alpha.280",
+            build: {
+              computer: "a Mac",
+              version: "0.6.3-alpha.280",
+              commit: "8421eddf0010a80709febc5ad5d8fbfd661878a1",
+              mutable: false,
+            },
+            runs: 3,
+            runningMs: 9_000_000,
+            stalls: 500,
+            stallMs: 79_400,
+            cpuMs: 77_100,
+            interrupted: 1,
+            firstAt: "2026-11-07T08:18:22.000Z",
+            lastAt: "2026-11-07T10:47:51.000Z",
+            locations: [
+              {
+                frames: [
+                  { name: "listFeed", file: "out/main/index.js", line: 52_310, column: 11 },
+                  { name: "recentFeed", file: "out/main/index.js", line: 61_022, column: 7 },
+                ],
+                stalls: 179,
+                stallMs: 32_220,
+                cpuMs: 31_870,
+                longestMs: 1_204,
+                firstAt: "2026-11-07T08:18:22.000Z",
+                lastAt: "2026-11-07T10:47:51.000Z",
+                waited: 0,
+                late: 2,
+              },
+              {
+                frames: [
+                  { name: "resolveKey", file: "out/main/index.js", line: 40_118, column: 5 },
+                ],
+                stalls: 124,
+                stallMs: 19_840,
+                cpuMs: 19_510,
+                longestMs: 412,
+                firstAt: "2026-11-07T08:20:01.000Z",
+                lastAt: "2026-11-07T10:44:12.000Z",
+                waited: 0,
+                late: 0,
+              },
+              {
+                frames: [],
+                stalls: 197,
+                stallMs: 27_340,
+                cpuMs: 25_720,
+                longestMs: 980,
+                firstAt: "2026-11-07T08:19:40.000Z",
+                lastAt: "2026-11-07T10:46:02.000Z",
+                waited: 31,
+                late: 0,
+              },
+            ],
+            example: {
+              incidentId: "fz-77",
+              status: "completed",
+              at: "2026-11-07T08:41:13.000Z",
+              wallMs: 1_204,
+              cpuMs: 1_188,
+              frames: [{ name: "listFeed", file: "out/main/index.js", line: 52_310, column: 11 }],
+              captureRequestedAt: "2026-11-07T08:41:13.060Z",
+              capturedAt: "2026-11-07T08:41:14.210Z",
+              uncertain: "late",
+            },
+          },
+        },
+      },
+      words:
+        '[fm-op] the app has started on a version after 0.6.3-alpha.280, so that version\'s freeze record is complete: over 3 runs of it on this computer and 150 minutes awake, the freeze recorder saw its main thread, which handles the captain\'s clicks and keys, stop answering 500 times (about 3.3 a minute awake), 79400 ms in all, 77100 ms of that the main thread\'s own processor time, from 2026-11-07T08:18:22.000Z through 2026-11-07T10:47:51.000Z, and found 1 that never finished, whose duration, processor time and location are unknown. Version build identity: {"computer":"a Mac","version":"0.6.3-alpha.280","commit":"8421eddf0010a80709febc5ad5d8fbfd661878a1","mutable":false}. Every captured location, most time first; each is one captured JavaScript call path, innermost first, not a cause or per-function timing ("waited": the main thread spent under half that stall on its own processor, so it was likely waiting outside JavaScript and the names may come from code that ran after the wait; "late": the names were read only after that stall had ended):\n1. 179 stalls, 32220 ms in all, 31870 ms processor time, longest 1204 ms, first 2026-11-07T08:18:22.000Z, last 2026-11-07T10:47:51.000Z, 2 marked late: listFeed (out/main/index.js:52310:11) <- recentFeed (out/main/index.js:61022:7)\n2. 124 stalls, 19840 ms in all, 19510 ms processor time, longest 412 ms, first 2026-11-07T08:20:01.000Z, last 2026-11-07T10:44:12.000Z: resolveKey (out/main/index.js:40118:5)\n3. 197 stalls, 27340 ms in all, 25720 ms processor time, longest 980 ms, first 2026-11-07T08:19:40.000Z, last 2026-11-07T10:46:02.000Z, 31 marked waited: no JavaScript frames captured\nThe longest stopped it for 1204 ms at 2026-11-07T08:41:13.000Z, 1188 ms of that its own processor time; capture requested: 2026-11-07T08:41:13.060Z; captured: 2026-11-07T08:41:14.210Z; incident: fz-77; status: completed. The app\'s own source is the captain\'s project "infinitary" (repo_id b3483155). Every stack is only a captured location, not a cause: even high processor use and a capture before recovery can name short JavaScript after long native work. Treat any cause as a hypothesis until measured. Judge whether investigation is worthwhile; if it is, tell the captain once in plain words and offer a fix task in that project on a decision card whose first work is diagnosis, not a targeted repair. Carry the version and build identity, each location\'s counts and times, the longest stall\'s incident and capture timing and missing evidence into its brief, without inventing unavailable facts. Before choosing a targeted repair, measure the suspected work in the affected context; require causal before/after evidence with comparable workload and instrumentation, not just a faster unrelated snapshot or a changed stack. If the evidence does not establish a cause, report it as unknown rather than substituting another hypothesis. File or start nothing before their choice. You hear one automatic summary per installed app version, when the app first starts on the next one; individual incidents stay in the local record.',
+    },
+    {
+      name: "a measured stall with frames, saved before the version summary",
       wake: {
         facts: {
           kind: "freeze-recorded",
@@ -153,7 +232,7 @@ const CASES: WordsCases<FirstmateWakeKind> = {
         '[fm-op] the freeze recorder saw this app\'s main thread, which handles the captain\'s clicks and keys, stop answering for 2412 ms at 2026-11-05T17:02:08.000Z; 2380 ms of that was the main thread\'s own processor time. One captured JavaScript location, innermost first (not a cause or per-function timing): renderWake (out/main/index.js:41022:17) <- drainWakes (out/main/index.js:41510:9). These names are uncertain: they were read only after the stall had ended, so they may come from code that ran later. Capture requested: 2026-11-05T17:02:09.000Z; captured: 2026-11-05T17:02:09.400Z. Incident build identity: {"computer":"a Mac","version":"0.6.2-alpha.115","commit":"8421eddf0010a80709febc5ad5d8fbfd661878a1","mutable":false}. Incident: fz-31; status: completed. The app\'s own source is the captain\'s project "infinitary" (repo_id b3483155). Every stack is only a captured location, not a cause: even high processor use and a capture before recovery can name short JavaScript after long native work. Treat any cause as a hypothesis until measured. Judge whether investigation is worthwhile; if it is, tell the captain once in plain words and offer a fix task in that project on a decision card whose first work is diagnosis, not a targeted repair. Carry the incident and build identity, interval measurements, capture request/capture timing and missing evidence into its brief, without inventing unavailable facts. Before choosing a targeted repair, measure the suspected work in the affected context; require causal before/after evidence with comparable workload and instrumentation, not just a faster unrelated snapshot or a changed stack. If the evidence does not establish a cause, report it as unknown rather than substituting another hypothesis. File or start nothing before their choice. You hear one automatic summary per installed app version; later evidence stays in the local record.',
     },
     {
-      name: "a run's stalls with its longest",
+      name: "a run's stalls with its longest, saved before the version summary",
       wake: {
         facts: {
           kind: "freeze-recorded",
@@ -180,7 +259,7 @@ const CASES: WordsCases<FirstmateWakeKind> = {
         "[fm-op] since this app started at 2026-11-07T08:18:00.000Z, the freeze recorder saw its main thread, which handles the captain's clicks and keys, stop answering 94 times in 30 minutes (about 3.1 a minute), 15870 ms in all, through 2026-11-07T08:48:00.000Z, and found 1 that never finished, a previous run's included, whose duration is unknown. The longest stopped it for 1204 ms at 2026-11-07T08:41:13.000Z; 1188 ms of that was the main thread's own processor time. One captured JavaScript location, innermost first (not a cause or per-function timing): listFeed (out/main/index.js:52310:11) <- recentFeed (out/main/index.js:61022:7). Capture requested: not recorded; captured: not recorded. Incident build identity: not recorded. Incident: fz-77; status: completed. The app's own source is the captain's project \"infinitary\" (repo_id b3483155). Every stack is only a captured location, not a cause: even high processor use and a capture before recovery can name short JavaScript after long native work. Treat any cause as a hypothesis until measured. Judge whether investigation is worthwhile; if it is, tell the captain once in plain words and offer a fix task in that project on a decision card whose first work is diagnosis, not a targeted repair. Carry the incident and build identity, interval measurements, capture request/capture timing and missing evidence into its brief, without inventing unavailable facts. Before choosing a targeted repair, measure the suspected work in the affected context; require causal before/after evidence with comparable workload and instrumentation, not just a faster unrelated snapshot or a changed stack. If the evidence does not establish a cause, report it as unknown rather than substituting another hypothesis. File or start nothing before their choice. You hear one automatic summary per installed app version; later evidence stays in the local record.",
     },
     {
-      name: "an interrupted stall with nothing captured",
+      name: "an interrupted stall with nothing captured, saved before the version summary",
       wake: {
         facts: {
           kind: "freeze-recorded",

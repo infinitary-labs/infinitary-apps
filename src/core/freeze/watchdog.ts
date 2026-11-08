@@ -46,7 +46,8 @@ export function isFreezeRecorderEnabled(build: {
  * thread's heartbeats, each carrying `process.threadCpuUsage()`, and on a
  * missed one pauses the main thread once for its call frames and resumes it.
  * Enabled only after the stall, a wait's pause landed in code that ran after
- * the wait (INF-2061's lab). The incident start is written before asking for names; completion adds the
+ * the wait (INF-2061's lab). Once it has handed over a previous run's
+ * unfinished stalls it says `{ recovered: true }`. The incident start is written before asking for names; completion adds the
  * processor time when the next heartbeat arrives. A gap the watchdog's
  * own timer also slept through is the whole computer pausing, such as
  * sleep, and is no freeze.
@@ -177,6 +178,7 @@ parentPort.on("message", (message) => {
       persist(interrupted);
       parentPort.postMessage(interrupted);
     }
+    parentPort.postMessage({ recovered: true });
     return;
   }
   const now = performance.now();

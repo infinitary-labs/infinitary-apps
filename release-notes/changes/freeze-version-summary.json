@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "freeze-version-summary",
+      "reason": "The alpha freeze recorder's summary to the first mate now covers every stall of a version and arrives when the app first starts on the next one; it reaches only alpha builds whose project list holds Infinitary's own source, so it is how the project itself is developed, with no result a person using the app notices."
+    }
+  ]
+}

@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
-import { freezeWake } from "../freeze/freezeRecorder";
+import { type FreezeIncident, freezeWake } from "../freeze/freezeRecorder";
+import type { VersionSummary } from "../freeze/freezeTally";
 import { idleStallWays } from "../orchestrator/holds";
 import { IDLE_NUDGE_TEXT, idleNudge } from "../orchestrator/idleWakes";
 import { jobBoundOnce, jobBoundWake } from "../orchestrator/jobWakes";
@@ -640,7 +641,19 @@ describe("the typed wake envelope (the primitives review, P3)", () => {
         status: "interrupted" as const,
         at: "2026-10-31T07:12:04.512Z",
       };
-      const wake = freezeWake(interrupted, project, "0.6.2-alpha.44");
+      // A version's summary as the next version's first start sends it (INF-3044).
+      const summary = (version: string, example: FreezeIncident): VersionSummary => ({
+        version,
+        runs: 1,
+        runningMs: 60_000,
+        stalls: "wallMs" in example ? 1 : 0,
+        stallMs: "wallMs" in example ? example.wallMs : 0,
+        cpuMs: "wallMs" in example ? example.cpuMs : 0,
+        interrupted: "wallMs" in example ? 0 : 1,
+        locations: [],
+        example,
+      });
+      const wake = freezeWake(summary("0.6.2-alpha.44", interrupted), project);
       const id = inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, "scheduled");
       expect(id).not.toBeNull();
       inbox.markDelivered([id ?? 0]);
@@ -659,14 +672,14 @@ describe("the typed wake envelope (the primitives review, P3)", () => {
       expect(
         restarted.enqueueWake(
           FIRSTMATE_RECIPIENT,
-          freezeWake(another, project, "0.6.2-alpha.44"),
+          freezeWake(summary("0.6.2-alpha.44", another), project),
           "scheduled",
         ),
       ).toBeNull();
       expect(
         restarted.enqueueWake(
           FIRSTMATE_RECIPIENT,
-          freezeWake(another, project, "0.6.2-alpha.45"),
+          freezeWake(summary("0.6.2-alpha.45", another), project),
           "scheduled",
         ),
       ).not.toBeNull();

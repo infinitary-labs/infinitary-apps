@@ -12,6 +12,8 @@ import { type HoldOverride, overrideTakenBackWords, standingOverrideWords } from
 import { QUEUE_STATUS, type QueueWorkflow, type RepoDelivery } from "@shared/repos";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import type { FreezeLine } from "../freeze/freezeRecorder";
+import type { FreezeLocation, VersionSummary } from "../freeze/freezeTally";
+import { capWithOverflow } from "../overflow";
 import type { PressureTaskShare } from "../placed/resourcePressure";
 import { FIX_LABEL } from "../queue/shipped/rules.mjs";
 import type { SeatPauseClass } from "./seat";
@@ -32,12 +34,22 @@ export type NoticeFacts =
     }
   | {
       /**
-       * The freeze recorder saw the app's main thread stall (INF-2066,
-       * docs/freeze-recorder.md), and the captain's project list holds
-       * Infinitary's own source, where a fix goes. Once per installed
-       * version. `sinceStart` counts this run's stalls (INF-2971); the
-       * incident fields then describe its longest one. A wake queued
-       * before the count has none.
+       * One installed version's whole freeze tally (INF-3044,
+       * docs/freeze-recorder.md): every stall the freeze recorder saw in
+       * every run of it, sent when the app first starts on the next
+       * version, once per version, while the captain's project list holds
+       * Infinitary's own source, where a fix goes.
+       */
+      kind: "freeze-recorded";
+      project: { id: string; name: string };
+      summary: VersionSummary;
+    }
+  | {
+      /**
+       * A freeze wake saved before INF-3044: one stall, or one run's
+       * stalls with its longest (`sinceStart`, INF-2971), from a version
+       * that summarized itself while it ran. Kept so a saved wake still
+       * renders; nothing sends it any more.
        */
       kind: "freeze-recorded";
       project: { id: string; name: string };
@@ -260,9 +272,7 @@ const FREEZE_UNCERTAIN_WORDS: Record<NonNullable<FreezeLine["uncertain"]>, strin
 };
 
 /** How often the main thread stopped since this run started, from the recorder's own counts. */
-function freezeRate(
-  rate: NonNullable<Extract<WakeFacts, { kind: "freeze-recorded" }>["sinceStart"]>,
-): string {
+function freezeRate(rate: NonNullable<SavedFreezeFacts["sinceStart"]>): string {
   const minutes = Math.max(0, Date.parse(rate.until) - Date.parse(rate.since)) / 60_000;
   const perMinute = minutes > 0 ? ` (about ${(rate.stalls / minutes).toFixed(1)} a minute)` : "";
   const unfinished =
@@ -272,8 +282,58 @@ function freezeRate(
   return `since this app started at ${rate.since}, the freeze recorder saw its main thread, which handles the captain's clicks and keys, stop answering ${rate.stalls} times in ${Math.round(minutes)} minutes${perMinute}, ${rate.stallMs} ms in all, through ${rate.until}${unfinished}.`;
 }
 
-/** A recorded main thread freeze, as the first mate hears it once per installed version. */
-function renderFreezeRecorded(facts: Extract<WakeFacts, { kind: "freeze-recorded" }>): string {
+type FreezeFacts = Extract<WakeFacts, { kind: "freeze-recorded" }>;
+type SavedFreezeFacts = Exclude<FreezeFacts, { summary: VersionSummary }>;
+
+/** What the guidance after a freeze's facts says, for a version's summary and a saved wake alike. */
+const FREEZE_GUIDANCE =
+  "Every stack is only a captured location, not a cause: even high processor use and a capture before recovery can name short JavaScript after long native work. Treat any cause as a hypothesis until measured. Judge whether investigation is worthwhile; if it is, tell the captain once in plain words and offer a fix task in that project on a decision card whose first work is diagnosis, not a targeted repair.";
+const FREEZE_REPAIR =
+  "Before choosing a targeted repair, measure the suspected work in the affected context; require causal before/after evidence with comparable workload and instrumentation, not just a faster unrelated snapshot or a changed stack. If the evidence does not establish a cause, report it as unknown rather than substituting another hypothesis. File or start nothing before their choice.";
+
+/** One captured location's line in a version's summary. */
+function freezeLocationLine(location: FreezeLocation, place: number): string {
+  const path = location.frames.length
+    ? location.frames
+        .map((frame) => `${frame.name} (${frame.file}:${frame.line}:${frame.column})`)
+        .join(" <- ")
+    : "no JavaScript frames captured";
+  const marks = [
+    location.waited ? `${location.waited} marked waited` : "",
+    location.late ? `${location.late} marked late` : "",
+  ].filter(Boolean);
+  return `${place}. ${location.stalls} stalls, ${location.stallMs} ms in all, ${location.cpuMs} ms processor time, longest ${location.longestMs} ms, first ${location.firstAt}, last ${location.lastAt}${marks.length ? `, ${marks.join(", ")}` : ""}: ${path}`;
+}
+
+/** One installed version's whole freeze tally, as the first mate hears it at the next version's first start. */
+function renderFreezeSummary(
+  project: { id: string; name: string },
+  summary: VersionSummary,
+): string {
+  const minutes = summary.runningMs / 60_000;
+  const perMinute =
+    minutes > 0 ? ` (about ${(summary.stalls / minutes).toFixed(1)} a minute awake)` : "";
+  const span = summary.firstAt ? `, from ${summary.firstAt} through ${summary.lastAt}` : "";
+  const unfinished =
+    summary.interrupted > 0
+      ? `, and found ${summary.interrupted} that never finished, whose duration, processor time and location are unknown`
+      : "";
+  const build = ` Version build identity: ${summary.build ? JSON.stringify(summary.build) : "not recorded"}.`;
+  const locations = summary.locations.length
+    ? ` Every captured location, most time first; each is one captured JavaScript call path, innermost first, not a cause or per-function timing ("waited": the main thread spent under half that stall on its own processor, so it was likely waiting outside JavaScript and the names may come from code that ran after the wait; "late": the names were read only after that stall had ended):\n${capWithOverflow(summary.locations.map((location, index) => freezeLocationLine(location, index + 1)).join("\n"), "freeze-locations")}\n`
+    : " The recorder captured no completed stall, so no location is known. ";
+  const example = summary.example;
+  const exampleWords =
+    "wallMs" in example
+      ? `The longest stopped it for ${example.wallMs} ms at ${example.at}, ${example.cpuMs} ms of that its own processor time`
+      : `None finished; the newest that never finished began at ${example.at}`;
+  const timing = `capture requested: ${example.captureRequestedAt ?? "not recorded"}; captured: ${example.capturedAt ?? "not recorded"}; incident: ${example.incidentId ?? "not recorded"}; status: ${example.status ?? "not recorded"}.`;
+  return `[fm-op] the app has started on a version after ${summary.version}, so that version's freeze record is complete: over ${summary.runs} runs of it on this computer and ${Math.round(minutes)} minutes awake, the freeze recorder saw its main thread, which handles the captain's clicks and keys, stop answering ${summary.stalls} times${perMinute}, ${summary.stallMs} ms in all, ${summary.cpuMs} ms of that the main thread's own processor time${span}${unfinished}.${build}${locations}${exampleWords}; ${timing} The app's own source is the captain's project "${project.name}" (repo_id ${project.id}). ${FREEZE_GUIDANCE} Carry the version and build identity, each location's counts and times, the longest stall's incident and capture timing and missing evidence into its brief, without inventing unavailable facts. ${FREEZE_REPAIR} You hear one automatic summary per installed app version, when the app first starts on the next one; individual incidents stay in the local record.`;
+}
+
+/** A recorded main thread freeze: a version's summary, or a wake saved before INF-3044. */
+function renderFreezeRecorded(facts: FreezeFacts): string {
+  if ("summary" in facts) return renderFreezeSummary(facts.project, facts.summary);
   const path = facts.frames.length
     ? `One captured JavaScript location, innermost first (not a cause or per-function timing): ${facts.frames.map((frame) => `${frame.name} (${frame.file}:${frame.line}:${frame.column})`).join(" <- ")}.`
     : "The recorder captured no JavaScript frames; the cause remains unknown.";
@@ -292,7 +352,7 @@ function renderFreezeRecorded(facts: Extract<WakeFacts, { kind: "freeze-recorded
   const opening = facts.sinceStart
     ? `${freezeRate(facts.sinceStart)} ${facts.wallMs === null ? `The example is one that never finished, which began at ${facts.at}` : `The longest stopped it for ${duration} at ${facts.at}`}`
     : `the freeze recorder saw this app's main thread, which handles the captain's clicks and keys, stop answering for ${duration} at ${facts.at}`;
-  return `[fm-op] ${opening}; ${cpu}. ${path}${uncertain}${timing}${build}${incident} The app's own source is the captain's project "${facts.project.name}" (repo_id ${facts.project.id}). Every stack is only a captured location, not a cause: even high processor use and a capture before recovery can name short JavaScript after long native work. Treat any cause as a hypothesis until measured. Judge whether investigation is worthwhile; if it is, tell the captain once in plain words and offer a fix task in that project on a decision card whose first work is diagnosis, not a targeted repair. Carry the incident and build identity, interval measurements, capture request/capture timing and missing evidence into its brief, without inventing unavailable facts. Before choosing a targeted repair, measure the suspected work in the affected context; require causal before/after evidence with comparable workload and instrumentation, not just a faster unrelated snapshot or a changed stack. If the evidence does not establish a cause, report it as unknown rather than substituting another hypothesis. File or start nothing before their choice. You hear one automatic summary per installed app version; later evidence stays in the local record.`;
+  return `[fm-op] ${opening}; ${cpu}. ${path}${uncertain}${timing}${build}${incident} The app's own source is the captain's project "${facts.project.name}" (repo_id ${facts.project.id}). ${FREEZE_GUIDANCE} Carry the incident and build identity, interval measurements, capture request/capture timing and missing evidence into its brief, without inventing unavailable facts. ${FREEZE_REPAIR} You hear one automatic summary per installed app version; later evidence stays in the local record.`;
 }
 
 /** How the first mate hears the captain's Update panel press opens. */

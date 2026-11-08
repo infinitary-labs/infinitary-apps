@@ -44,6 +44,12 @@ export type AppPaths = {
    */
   freezeRecordPath: string;
   /**
+   * The freeze recorder's per-version tally (docs/freeze-recorder.md, "The
+   * per-version tally"): every stall of each installed version, written
+   * only by the main thread.
+   */
+  freezeTallyPath: string;
+  /**
    * The freeze recorder's memory reading (docs/freeze-recorder.md, "The
    * memory reading"): one JSON line per reading of the main process's memory.
    */
@@ -151,6 +157,7 @@ export function appPathsFor(userData: string): AppPaths {
     devicesDir: join(userData, "devices"),
     webSignInsDir: join(userData, "web-sign-ins"),
     freezeRecordPath: join(userData, "freezes.jsonl"),
+    freezeTallyPath: join(userData, "freeze-tally.json"),
     memoryRecordPath: join(userData, "memory.jsonl"),
     panelLogPath: join(userData, "logs", "panels.log"),
     taskChannelDir: join(userData, "task-channel"),

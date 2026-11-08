@@ -18,6 +18,7 @@ import {
   HEARTBEAT_MS,
   RECORD_MAX_LINES,
 } from "./freezeRecorder";
+import { FreezeTally, type VersionSummary } from "./freezeTally";
 import { readMemoryRecord } from "./memoryRecorder";
 import { armWatchdog } from "./watchdog";
 
@@ -257,6 +258,7 @@ describe("the freeze recorder", () => {
     // case reads, end before the kill and leave nothing to interrupt
     // (INF-2974).
     const dir = scratchDir("infinitary-freeze-interrupted-");
+    const ENDED = "0.0.1-alpha.1";
     const recordPath = join(dir, "freezes.jsonl");
     const root = resolve(__dirname, "../../..");
     await build({
@@ -278,7 +280,11 @@ describe("the freeze recorder", () => {
     writeFileSync(
       entry,
       `import { FreezeRecorder } from "./recorder.mjs";
-      const recorder = new FreezeRecorder({ recordPath: process.argv[2], onFreeze() {} });
+      const recorder = new FreezeRecorder({
+        recordPath: process.argv[2],
+        build: { computer: "disposable recorder process", version: "${ENDED}", commit: null, mutable: true },
+        onFreeze() {},
+      });
       recorder.start();
       console.log("waiting");
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0);`,
@@ -308,10 +314,24 @@ describe("the freeze recorder", () => {
       console.info("Before native wait replies:", JSON.stringify(started));
       child.kill("SIGKILL");
       await ended;
-      const interrupted = await new Promise<FreezeIncident>((done) => {
-        recorder = new FreezeRecorder({ recordPath, onFreeze: done });
+      // The next version's first start recovers the stall, then summarizes
+      // the version that had it, counting it (INF-3044).
+      let interrupted: FreezeIncident | undefined;
+      const summaries = await new Promise<VersionSummary[]>((done) => {
+        recorder = new FreezeRecorder({
+          recordPath,
+          onFreeze: (line) => {
+            interrupted ??= line;
+          },
+          tally: new FreezeTally(join(dir, "freeze-tally.json"), `${ENDED}-next`),
+          onVersionsEnded: done,
+        });
         recorder.start();
       });
+      if (!interrupted) throw new Error("no stall was recovered before the summary");
+      expect(summaries).toMatchObject([
+        { version: ENDED, interrupted: 1, stalls: 0, example: { incidentId: started.incidentId } },
+      ]);
       expect(interrupted).toMatchObject({ ...started, status: "interrupted" });
       expect(interrupted).toHaveProperty("interruptedAt");
       expect(interrupted).not.toHaveProperty("completedAt");

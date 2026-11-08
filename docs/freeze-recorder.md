@@ -86,15 +86,26 @@ The split (`memorySplit`) reads the JavaScript heap, the native memory JavaScrip
 A growing third part points at native objects the app's code no longer reaches, and a growing second part at buffers it still does.
 It records no values or text, and nothing sends it anywhere.
 
+## The per-version tally
+
+Beside the record, the recorder keeps every stall each installed version had, over every run of it on this computer (INF-3044's plan, the captain's ask that the once-per-version summary "cover all freezses that happened from that app version").
+The tally is `freeze-tally.json` in the app's data folder (`AppPaths.freezeTallyPath`, `src/core/freeze/freezeTally.ts`), written only by the main thread, and the record's 500-line bound does not cut it short.
+For each version it holds the runs the recorder started, the time those runs were awake on the monotonic clock, which a sleeping computer stops, the completed stalls with their time between heartbeats and processor time in all, the unfinished ones, and every captured location with its count, time, processor time, longest stall, first and last seen and how many of its stalls were marked `waited` or `late`.
+A location is the exact captured call path; a stall with no frames captured has a location of its own.
+It also keeps the longest completed stall whole, or the newest unfinished one when none completed, as the summary's example.
+Each stall counts toward the version in its own build identity, so an unfinished stall recovered at the next start counts for the version that had it.
+The recorder writes the tally every minute (`TALLY_WRITE_MS`) and when it stops; a run that is force-quit loses the completed stalls of its last minute from the tally, while its unfinished stall is recovered from the record.
+
 ## The first mate's offer
 
-Each completed or recovered interrupted incident is handed to the core, and the recorder counts them from its start (`StallCounter`): completed stalls and their time in all, unfinished ones, and the longest completed stall, or the newest unfinished one when none completed.
-At each memory reading's interval (`MEMORY_READING_MS`) after a stall, the recorder hands that count to the core as the run's summary (`onSummary`), so the summary covers a stretch of use, never only the first stall of a start (INF-2971's audit: four wakes with one stall each while the app stopped about three times a minute).
-When one of the captain's projects lives at Infinitary's own source on GitHub (`INFINITARY_SOURCE`, matched by where the project lives, not its name), the first mate hears that summary as a `freeze-recorded` wake, at most once per installed app version through the durable inbox's once-identity.
-The wake says how many times the main thread stopped since the app started, over how many minutes and about how many a minute, their time in all and any that never finished, and names the longest stall's facts as before.
+Each completed or recovered interrupted incident is handed to the core and counted in the tally.
+When the app first starts on a new version, the watchdog first recovers the previous runs' unfinished stalls and says so (`{ recovered: true }`); the recorder then takes every earlier version out of the tally and hands each that had a stall to the core as that version's summary (`onVersionsEnded`).
+When one of the captain's projects lives at Infinitary's own source on GitHub (`INFINITARY_SOURCE`, matched by where the project lives, not its name), the first mate hears each summary as a `freeze-recorded` wake, at most once per installed app version through the durable inbox's once-identity.
+The wake says how many runs and minutes awake the version had, how many times the main thread stopped and about how many a minute, their time and processor time in all and any that never finished, then every location, most time first, each with its count, time, processor time, longest, first and last seen and uncertain marks, and the longest stall's identity and capture timing.
+A list of locations too long for one message spills whole to a file (`capWithOverflow`), and the wake names it.
 Different call paths, restart, acknowledgement or dismissal do not reset that identity; another installed version has its own allowance.
-Later incidents remain in the bounded local record without automatic model turns.
-A recovered interrupted incident may supply the summary's example, with missing measurements explicitly unknown.
+A version that ends while no such project is on the list is taken out of the tally and never summarized, and one kept for days sends nothing until the next version starts.
+A wake saved before the tally (one stall, or one run's stalls with its longest) still renders with its old words.
 Explicit captain questions are independent of this automatic allowance.
 The captain's answer on INF-2061 asked for exactly this: "offer a fix task only if the canonical infinitary github repo is a project in the project list".
 The wake gives the facts and leaves the judgment to the first mate: whether investigation is worthwhile, and if so a decision card offering a fix task whose first work is diagnosis.

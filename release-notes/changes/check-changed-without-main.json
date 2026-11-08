@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "check-changed-without-main",
+      "reason": "The quick check before a push now treats a checkout with no main branch, such as the main check's one-commit checkout, as having nothing committed since main, so it no longer runs the release-notes check on an empty change and fails; only the project's own checks change, so nothing a person sees changes."
+    }
+  ]
+}

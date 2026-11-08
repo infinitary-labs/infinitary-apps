@@ -15,24 +15,35 @@ import { fileURLToPath } from "node:url";
  * `typecheck-lint-build` check (INF-2074, docs/testing.md "Where the heavy
  * checks run").
  */
-const git = (...args: string[]) =>
-  execFileSync("git", args, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }).trim();
+// Its stderr rides a failure's message, so a probe that misses prints nothing.
+const git = (args: string[], cwd?: string) =>
+  execFileSync("git", args, {
+    cwd,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    stdio: ["ignore", "pipe", "pipe"],
+  }).trim();
 
-function baseRef(): string {
+/**
+ * The commit the branch grew from: its merge base with main, or HEAD's own
+ * commit in a checkout with no main to compare with, such as the main
+ * check's one-commit checkout of a push, where nothing is committed since.
+ */
+export function baseRef(cwd?: string): string {
   for (const ref of ["origin/main", "main"]) {
     try {
-      return git("merge-base", "HEAD", ref);
+      return git(["merge-base", "HEAD", ref], cwd);
     } catch {
       // Try the next name.
     }
   }
-  return "HEAD";
+  return git(["rev-parse", "HEAD"], cwd);
 }
 
 /** Files that exist now and differ from the branch's base, committed or not. */
 export function changedFiles(base = baseRef()): string[] {
-  const tracked = git("diff", "--name-only", "--diff-filter=ACMR", base).split("\n");
-  const untracked = git("ls-files", "--others", "--exclude-standard").split("\n");
+  const tracked = git(["diff", "--name-only", "--diff-filter=ACMR", base]).split("\n");
+  const untracked = git(["ls-files", "--others", "--exclude-standard"]).split("\n");
   return [...new Set([...tracked, ...untracked])].filter(Boolean);
 }
 
@@ -102,7 +113,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     steps.push({ label: args.join(" "), command: "node", args });
   // The pull request's first step. It reads commits, so it waits for the
   // branch's first one; before that there is nothing to push.
-  if (base !== git("rev-parse", "HEAD"))
+  if (base !== git(["rev-parse", "HEAD"]))
     steps.push({
       label: "release notes",
       command: "node",

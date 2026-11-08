@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { baseRef } from "../scripts/check-changed.ts";
 import { ciModeRefusal } from "../scripts/checks-mode.ts";
 import { scratchDir } from "./helpers/scratchDirs";
 
@@ -97,6 +98,19 @@ describe("where the heavy checks run", () => {
     expect(result.stdout).toMatch(/check:changed: \d+ changed file/);
     expect(result.stderr).not.toContain("typecheck-lint-build");
     expect(result.status, result.stdout + result.stderr).toBe(0);
+  });
+
+  // The bug a main check found: its push checkout holds one commit and no main
+  // branch, and the quick check took the word HEAD for a commit since main, so
+  // it ran the release-notes check on nothing and refused.
+  it("takes a checkout with no main branch to have nothing committed since main", () => {
+    const { home, run } = computer();
+    const repo = join(home, "repo");
+    const made = run(
+      `git init -q -b work "${repo}" && git -C "${repo}" -c user.name=t -c user.email=t@example.com commit -q --allow-empty -m one`,
+    );
+    expect(made.status, made.stderr).toBe(0);
+    expect(baseRef(repo)).toBe(run(`git -C "${repo}" rev-parse HEAD`).stdout.trim());
   });
 
   // The real runner boots in about a second.

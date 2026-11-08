@@ -21,6 +21,7 @@ import { join } from "node:path";
  */
 export const QUEUE_SOURCES: readonly string[] = [
   "1159b9f2fb307e12e2c42b53138621070b9c16059dffa9d7572d4499c7451e52",
+  "ea521b053773608a62f541f5f4ed9bda15a9d576dcf82ed08e1cec174260ee17",
 ];
 
 /** The shipped queue's version: how many sources it has had. */

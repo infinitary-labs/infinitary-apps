@@ -22,7 +22,7 @@ const out = fileURLToPath(new URL("../resources/runbooks/queue/skills/queue-setu
 const repoRoot = fileURLToPath(new URL("../", import.meta.url));
 
 // This repository's grants, the one edit a project makes to a stamped file
-// (the queue file's `checks` job): verify.yml, which the batch checks call,
+// (the queue file's `checks` and `confirm` jobs, the same in both): verify.yml, which the batch checks call,
 // asks for a read of the project's runs (its Mac installer lane reads its
 // caller's run), and a called workflow can ask for no more than its caller
 // grants. It names no secret and no write.
@@ -30,9 +30,9 @@ const GRANTS_AT = "      contents: read\n      # The team's grants";
 const OWN_GRANTS = "      contents: read\n      actions: read\n      # The team's grants";
 const withOwnGrants = (path: string, text: string) => {
   if (path !== GITHUB_QUEUE_PART.queueFile) return text;
-  if (text.split(GRANTS_AT).length !== 2)
-    throw new Error(`The shipped queue file no longer marks its grants as "${GRANTS_AT}".`);
-  return text.replace(GRANTS_AT, OWN_GRANTS);
+  if (text.split(GRANTS_AT).length !== 3)
+    throw new Error(`The shipped queue file no longer marks its two jobs' grants as "${GRANTS_AT}".`);
+  return text.replaceAll(GRANTS_AT, OWN_GRANTS);
 };
 
 const hash = shippedSourceHash(source);

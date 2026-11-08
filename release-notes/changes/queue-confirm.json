@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "queue-confirm",
+      "kind": "improvement",
+      "area": "projects",
+      "title": "A batch that fails runs what failed once more before it pauses",
+      "body": "When a batch of approved changes fails its checks, the queue now runs only what failed again on the same batch. If it passes, the batch passes and your changes merge, so one flaky test no longer holds everyone's changes. If it fails again, the batch pauses for a fix as before. Your first mate offers a project's queue the update, and setting up a queue now splits its checks so this rerun stays short.",
+      "noPicture": "The change is in how a project's queue runs its checks; no screen in the app looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

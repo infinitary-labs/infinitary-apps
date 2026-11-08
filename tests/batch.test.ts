@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readMainPush, readQueueStatus, sortMainPush } from "../scripts/batch.mjs";
+import { confirmFiles, confirmRound } from "../scripts/batch-confirm.ts";
 import { legacyJobName } from "../scripts/ci-job-names.mjs";
 import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWorkflows.ts";
 
@@ -91,10 +92,15 @@ describe("main's check sorting a push", () => {
           listCommitStatusesForRef: "statuses",
         },
         pulls: { list: "pulls" },
+        actions: { listJobsForWorkflowRun: "jobs" },
       },
       paginate: async (method: string, parameters: { ref?: string }) =>
-        method === "statuses" ? (statuses[parameters.ref!] ?? []) : open,
+        method === "statuses" ? (statuses[parameters.ref!] ?? []) : method === "jobs" ? jobs : open,
     };
+    let jobs = [
+      { name: "Batch checks / Merge batch · Desktop checks / verify", conclusion: "success" },
+      { name: "Batch confirm", conclusion: "skipped" },
+    ];
     let open = [{ number: 935, head: { sha: other }, base: { ref: "main" } }];
     expect(await readMainPush(github, repo, { sha: pr917.merge, tree: other })).toEqual({
       kind: "landing",
@@ -106,6 +112,18 @@ describe("main's check sorting a push", () => {
       run: 41_600_000_001,
     });
     expect(await readMainPush(github, repo, { sha: other, tree: pr917.tree })).toEqual({
+      kind: "full",
+    });
+    // A batch that passed only on its confirm ran the failed files again,
+    // not the whole check, so main's own full check runs for the alpha.
+    jobs = [
+      { name: "Batch checks / Merge batch · Desktop checks / verify", conclusion: "failure" },
+      {
+        name: "Batch confirm / Merge batch · Confirm failed tests (Linux)",
+        conclusion: "success",
+      },
+    ];
+    expect(await readMainPush(github, repo, { sha: pr917.merge, tree: pr917.tree })).toEqual({
       kind: "full",
     });
   });
@@ -141,7 +159,9 @@ describe("infinitary-batch-checks.yml", () => {
   it("is what the shipped queue calls, with the batch, its base and its tree", () => {
     const queue = workflow(".github/workflows/infinitary-queue.yml");
     expect(queue.jobs.checks?.uses).toBe("./.github/workflows/infinitary-batch-checks.yml");
-    expect(Object.keys(queue.jobs.checks?.with ?? {}).sort()).toEqual(
+    // GitHub refuses an input the called file does not declare, so it
+    // declares every input the queue's checks and its confirm pass.
+    expect(Object.keys(queue.jobs.confirm?.with ?? {}).sort()).toEqual(
       Object.keys(batch.on.workflow_call?.inputs ?? {}).sort(),
     );
     for (const id of ["sweep", "critical-path"]) {
@@ -211,6 +231,78 @@ describe("infinitary-batch-checks.yml", () => {
     const name = workflowString(job.name!, { inputs });
     expect(name).toBe(`Merge batch · Batch passed (tree ${pr917.tree})`);
     expect(legacyJobName(name)).toBe(`Batch passed (tree ${pr917.tree})`);
+  });
+});
+
+// The captain's pick on INF-3012, "A only: the confirm step": when the
+// sweep fails, the queue calls this file once more on the same batch, and
+// only the failed test files run, three rounds, on the platform whose job
+// failed. The job names and files are ones this repository's sweeps failed.
+describe("the batch's confirm", () => {
+  const batch = workflow(".github/workflows/infinitary-batch-checks.yml");
+  const macJob = "Merge batch · Desktop checks / Merge batch · Parallel journeys (Mac)";
+  const linuxJob =
+    "Merge batch · Desktop checks / Merge batch · Integration tests (Linux; group 2/2)";
+  const confirm = (failed_jobs: string) => ({
+    inputs: { failed_jobs, failed_files: "knowledge-references.spec.ts" },
+  });
+
+  it("runs only the confirm, and the sweep, the critical path and the tree's job skip", () => {
+    for (const id of ["sweep", "critical-path"]) {
+      expect(workflowValue(batch.jobs[id]!.if!, confirm(macJob)), id).toBe(false);
+      expect(workflowValue(batch.jobs[id]!.if!, confirm("")), id).toBe(true);
+    }
+    expect(workflowValue(batch.jobs.confirm!.if!, confirm(macJob))).toBe(true);
+    expect(workflowValue(batch.jobs.confirm!.if!, confirm(""))).toBe(false);
+  });
+
+  it("confirms on each platform whose job failed, on the machines the sweep took", () => {
+    const platforms = (failed: string) =>
+      workflowValue(
+        String(
+          (batch.jobs.confirm as { strategy: { matrix: { platform: string } } }).strategy.matrix
+            .platform,
+        ),
+        confirm(failed),
+      );
+    expect(platforms(macJob)).toEqual(["mac"]);
+    expect(platforms(linuxJob)).toEqual(["linux"]);
+    expect(platforms(`${linuxJob}\n${macJob}`)).toEqual(["linux", "mac"]);
+    const vars = {
+      MAC_QUEUES: JSON.stringify({
+        split: "mini-mac-split",
+        release_split: "mini-mac-release-split",
+      }),
+    };
+    const runsOn = String(batch.jobs.confirm!["runs-on"]);
+    expect(workflowString(runsOn, { matrix: { platform: "mac" }, vars })).toBe(
+      "mini-mac-release-split",
+    );
+    expect(workflowString(runsOn, { matrix: { platform: "linux" }, vars })).toBe("ubuntu-24.04");
+  });
+
+  it("finds each failed file as the logs name it, and runs Vitest files and journeys by their lanes", () => {
+    const files = confirmFiles([
+      "src/core/freeze/freezeRecorder.integration.test.ts",
+      "knowledge-references.spec.ts",
+    ]);
+    expect(files).toEqual([
+      "src/core/freeze/freezeRecorder.integration.test.ts",
+      "tests/e2e/knowledge-references.spec.ts",
+    ]);
+    expect(() => confirmFiles(["tests/gone.test.ts"])).toThrow(/not in the composed batch/);
+    const round = confirmRound(files, ["--workers=4"]);
+    expect(round[0]).toEqual(["test", "src/core/freeze/freezeRecorder.integration.test.ts"]);
+    expect(round[1]).toContain("--project=desktop");
+    expect(round[2]).toEqual(
+      expect.arrayContaining(["--project=application", "--workers=4", "--retries", "0"]),
+    );
+    expect(
+      round
+        .slice(1)
+        .every((command) => command.at(-1) === "tests/e2e/knowledge-references.spec.ts"),
+    ).toBe(true);
+    expect(confirmRound(["src/core/freeze/freezeRecorder.integration.test.ts"])).toHaveLength(1);
   });
 });
 

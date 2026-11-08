@@ -9,6 +9,8 @@
  * Infinitary merges its own passed changes.
  */
 import {
+  CONFIRM_JOB,
+  confirmPlan,
   conflictsWithMain,
   FIX_LABEL,
   failedTestFiles,
@@ -151,25 +153,40 @@ function startForm(github, context) {
   });
 }
 
+const FAILED = ["failure", "timed_out", "cancelled"];
+const inConfirm = (name) => name === CONFIRM_JOB || name.startsWith(`${CONFIRM_JOB} / `);
+
 /**
- * Each test file the failed jobs' logs name as failed, with the batch's
- * changes whose diffs touch it. A log GitHub cannot give adds nothing.
+ * The batch run's failed jobs, its confirm's aside, each with the test
+ * files its log names as failed. A log GitHub cannot give names none.
  */
-async function readFailedFiles(github, repo, failedJobs, members) {
-  const files = [];
-  for (const job of failedJobs) {
-    let log;
+async function readFailedJobs(github, repo, run) {
+  const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+    ...repo,
+    run_id: run,
+    per_page: 100,
+  });
+  const failed = [];
+  for (const job of jobs) {
+    if (!FAILED.includes(job.conclusion) || inConfirm(job.name)) continue;
+    let files = [];
     try {
-      ({ data: log } = await github.rest.actions.downloadJobLogsForWorkflowRun({
+      const { data: log } = await github.rest.actions.downloadJobLogsForWorkflowRun({
         ...repo,
         job_id: job.id,
-      }));
+      });
+      files = failedTestFiles(typeof log === "string" ? log : Buffer.from(log).toString("utf8"));
     } catch {
-      continue;
+      // A log GitHub cannot give names no file.
     }
-    const text = typeof log === "string" ? log : Buffer.from(log).toString("utf8");
-    for (const file of failedTestFiles(text)) if (!files.includes(file)) files.push(file);
+    failed.push({ name: job.name, url: job.html_url ?? "", files });
   }
+  return failed;
+}
+
+/** Each failed test file, with the batch's changes whose diffs touch it. */
+async function touchingChanges(github, repo, failedJobs, members) {
+  const files = [...new Set(failedJobs.flatMap((job) => job.files))];
   if (!files.length) return [];
   const changed = new Map();
   for (const member of members) {
@@ -250,28 +267,39 @@ export async function mark({ github, context, core, output, members }) {
 }
 
 /**
- * The verdict job: green passes every change still in this run; red
- * pauses them behind one new issue that names the failed checks, the
- * failed test files and the paused changes. It reruns nothing and blames
- * no change.
+ * After red batch checks: what the confirm runs again on the same batch,
+ * as the outputs `jobs` (the failed jobs' names, one a line) and `files`
+ * (the failed test files, separated by spaces). Both are empty when a
+ * failed job's log named no test file, and then nothing runs again.
  */
-export async function decide({ github, context, core, result, members, tree }) {
+export async function failures({ github, context, core }) {
+  const plan = confirmPlan(await readFailedJobs(github, context.repo, context.runId));
+  core.notice(
+    plan
+      ? `The batch checks run once more on the same batch for ${plan.jobs.split("\n").join(", ")} (${plan.files}).`
+      : "A failed job's log named no failed test file, so nothing runs again and the batch pauses.",
+  );
+  core.setOutput("jobs", plan?.jobs ?? "");
+  core.setOutput("files", plan?.files ?? "");
+}
+
+/**
+ * The verdict job: green passes every change still in this run, and so
+ * does a red batch whose confirm passed (`confirm`, that job's result);
+ * otherwise it pauses them behind one new issue that names the failed
+ * checks, the failed test files and the paused changes, and blames no
+ * change.
+ */
+export async function decide({ github, context, core, result, members, tree, confirm = "" }) {
   const repo = context.repo;
   const run = context.runId;
   const current = await readCurrent(github, repo, members);
   let failed = [];
   let failedFiles = [];
   if (result !== "success") {
-    const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
-      ...repo,
-      run_id: run,
-      per_page: 100,
-    });
-    const failedJobs = jobs.filter((job) =>
-      ["failure", "timed_out", "cancelled"].includes(job.conclusion),
-    );
-    failed = failedJobs.map((job) => ({ name: job.name, url: job.html_url ?? "" }));
-    failedFiles = await readFailedFiles(github, repo, failedJobs, members);
+    const failedJobs = await readFailedJobs(github, repo, run);
+    failed = failedJobs.map((job) => ({ name: job.name, url: job.url }));
+    failedFiles = await touchingChanges(github, repo, failedJobs, members);
   }
   const decided = verdict({
     run,
@@ -282,6 +310,7 @@ export async function decide({ github, context, core, result, members, tree }) {
     current,
     failed,
     failedFiles,
+    confirm,
   });
   for (const write of decided.writes) await writeStatus(github, repo, write);
   if (decided.pause) {

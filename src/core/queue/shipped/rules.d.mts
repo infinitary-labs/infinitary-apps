@@ -31,12 +31,18 @@ export type Pause = {
   members: Member[];
   failed: FailedCheck[];
   failedFiles: FailedFile[];
+  /** Whether the batch checks ran once more to confirm the failure, and it failed again. */
+  confirmed?: boolean;
 };
+/** A failed job of a batch run with the test files its log named. */
+export type FailedJob = { name: string; files: string[] };
 
 export const QUEUE: string;
 export const WAITING: string;
 export const FIX_LABEL: string;
 export const PAUSE_LABEL: string;
+export const CHECKS_JOB: string;
+export const CONFIRM_JOB: string;
 export function inBatch(run: number): string;
 export function passed(run: number, tree: string): string;
 export function readQueueState(statuses: readonly QueueStatus[]): QueueState | null;
@@ -58,6 +64,9 @@ export function readComposition(
   members: readonly Member[],
 ): { tree: string; merged: Member[]; conflictsMain: Member[]; conflictsBatch: Member[] };
 export function conflictsWithMain(member: Member, url: string): StatusWrite;
+export function confirmPlan(
+  failedJobs: readonly FailedJob[],
+): { jobs: string; files: string } | null;
 export function verdict(input: {
   run: number;
   runUrl: string;
@@ -67,6 +76,8 @@ export function verdict(input: {
   current: ReadonlyMap<number, CurrentMember>;
   failed?: FailedCheck[];
   failedFiles?: FailedFile[];
+  /** The confirm's result: success passes a red batch; empty or skipped when none ran. */
+  confirm?: string;
 }): { writes: StatusWrite[]; next: "form" | null; pause: Pause | null; summary: string };
 export function pauseWrites(pause: Pause, issueUrl: string): StatusWrite[];
 export function pauseIssue(pause: Pause, runUrl: string): { title: string; body: string };

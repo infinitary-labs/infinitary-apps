@@ -10,6 +10,12 @@ name: Infinitary batch checks
 # shipped compose step. The last job names the batch's tree, which main's
 # check and the alpha's proof follow (scripts/main-alpha-proof.mjs).
 #
+# When they fail, the queue calls this file once more on the same batch to
+# confirm, with failed_jobs and failed_files: then only the confirm job runs,
+# each failed test file three rounds on the platform whose job failed, and
+# every other job skips itself (the captain's pick on INF-3012, "A only: the
+# confirm step").
+#
 # Its jobs lead with the Merge batch trigger (scripts/ci-job-names.mjs); the
 # queue names its own jobs.
 
@@ -28,6 +34,16 @@ on:
         description: The tree the queue composed, which every job must build (the queue passes it)
         required: true
         type: string
+      failed_jobs:
+        description: In the queue's confirm, the failed jobs' names, one a line (empty in the batch's own run)
+        required: false
+        type: string
+        default: ""
+      failed_files:
+        description: In the queue's confirm, the failed test files, separated by spaces
+        required: false
+        type: string
+        default: ""
 
 # verify.yml reads its caller's run; the queue file's checks job grants it.
 permissions:
@@ -38,6 +54,7 @@ jobs:
   # The alpha's full check on the composed batch, without the phone check:
   # hosted Linux, and the Mac lanes on the release split line.
   sweep:
+    if: inputs.failed_jobs == ''
     name: Merge batch · Desktop checks
     uses: ./.github/workflows/verify.yml
     with:
@@ -55,6 +72,7 @@ jobs:
   # whatever part of the full check the sweep runs (the captain, on INF-2508:
   # "the e2e journey + browser tests should all run during the sweep batch").
   critical-path:
+    if: inputs.failed_jobs == ''
     name: Merge batch · Critical-path journey
     uses: ./.github/workflows/source-journeys.yml
     with:
@@ -78,3 +96,87 @@ jobs:
       - env:
           TREE: ${{ inputs.tree }}
         run: echo "The sweep and the critical path passed on tree $TREE."
+
+  # The confirm: each failed test file three rounds on the composed batch,
+  # on Linux when a Linux job failed and on the Mac when a Mac job did, the
+  # same machines the sweep took (scripts/batch-confirm.ts).
+  confirm:
+    if: inputs.failed_jobs != ''
+    name: ${{ format('Merge batch · Confirm failed tests ({0})', matrix.platform == 'mac' && 'Mac' || 'Linux') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(contains(inputs.failed_jobs, '(Mac)') && (contains(inputs.failed_jobs, '(Linux') && '["linux","mac"]' || '["mac"]') || '["linux"]') }}
+    runs-on: ${{ matrix.platform == 'mac' && (fromJSON(vars.MAC_QUEUES || '{}').release_split || fromJSON(vars.MAC_QUEUES || '{}').split || vars.MAC_RUNNER || 'macos-15') || 'ubuntu-24.04' }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: Application Support/firstmate
+    steps:
+      - name: Checkout the keep-awake action
+        if: matrix.platform == 'mac'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base }}
+          sparse-checkout: .github/actions/keep-mac-awake
+          fetch-depth: 1
+      - name: Keep the Mac awake
+        if: matrix.platform == 'mac'
+        uses: ./.github/actions/keep-mac-awake
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.base }}
+          path: Application Support/firstmate
+      - name: Compose the batch
+        env:
+          HEADS: ${{ inputs.batch }}
+          BASE: ${{ inputs.base }}
+          TREE: ${{ inputs.tree }}
+        # shellcheck disable=SC2086 # one word per change
+        run: bash .github/actions/infinitary-batch/compose.sh apply "$BASE" "$TREE" $HEADS
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+          package_json_file: Application Support/firstmate/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
+          cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
+      - uses: ./Application Support/firstmate/.github/actions/node-headers
+      - uses: ./Application Support/firstmate/.github/actions/electron-download
+        with:
+          working-directory: Application Support/firstmate
+      - run: pnpm install --frozen-lockfile
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      # A journey among the files needs the built app, and on Linux the
+      # virtual desktop source-journeys.yml prepares.
+      - id: journeys
+        env:
+          FILES: ${{ inputs.failed_files }}
+        run: |
+          case " $FILES " in *.spec.ts\ *) echo "any=true" >> "$GITHUB_OUTPUT" ;; esac
+      - if: steps.journeys.outputs.any == 'true' && matrix.platform == 'linux'
+        uses: ./Application Support/firstmate/.github/actions/linux-desktop
+        with:
+          working-directory: Application Support/firstmate
+      - if: steps.journeys.outputs.any == 'true'
+        run: pnpm build
+      - if: steps.journeys.outputs.any == 'true' && matrix.platform == 'mac'
+        run: pnpm exec playwright install ffmpeg
+      - name: Run each failed test file three rounds
+        env:
+          FILES: ${{ inputs.failed_files }}
+          PLATFORM: ${{ matrix.platform }}
+          JOURNEYS: ${{ steps.journeys.outputs.any }}
+          SCREEN: 2560x1600x24
+        run: |
+          if [ "$PLATFORM" = mac ]; then
+            cores="$(node scripts/job-cores.ts)"
+            node scripts/batch-confirm.ts --files "$FILES" -- "--workers=$(( cores > 1 ? cores / 2 : 1 ))"
+          elif [ "$JOURNEYS" = true ]; then
+            scripts/on-screen.sh node scripts/batch-confirm.ts --files "$FILES"
+          else
+            node scripts/batch-confirm.ts --files "$FILES"
+          fi

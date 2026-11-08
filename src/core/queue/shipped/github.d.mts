@@ -25,8 +25,9 @@ export function readOpenQueue(
 ): Promise<QueueEntry[]>;
 export function form(args: ScriptArgs): Promise<void>;
 export function mark(args: ScriptArgs & { output: string; members: Member[] }): Promise<void>;
+export function failures(args: ScriptArgs): Promise<void>;
 export function decide(
-  args: ScriptArgs & { result: string; members: Member[]; tree: string },
+  args: ScriptArgs & { result: string; members: Member[]; tree: string; confirm?: string },
 ): Promise<void>;
 export function answer(
   args: ScriptArgs & { action: string; number?: string; reason: string },

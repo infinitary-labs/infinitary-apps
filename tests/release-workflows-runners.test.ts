@@ -386,6 +386,9 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     "main.yml:sort",
     "main.yml:covered",
     "infinitary-batch-checks.yml:passed",
+    // Its confirm reruns failed files on the machines the sweep took, which
+    // are hosted on Linux (INF-3012's direction A).
+    "infinitary-batch-checks.yml:confirm",
   ];
   // DOP-251's plan: each kind is one stage of moving Linux jobs to the Mac
   // mini's Linux guests (docs/testing.md, "Each Linux job's kind").

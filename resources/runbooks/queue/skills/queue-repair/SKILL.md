@@ -19,6 +19,7 @@ Every teammate's Infinitary shows the pause, so the claim on the issue says who 
 ## Then answer it
 
 Read the failed jobs' logs before judging; never rerun a check to see whether it passes.
+Before it paused, the queue already ran what failed once more on the same batch, and it failed again, unless the issue says nothing ran again; so a failure that repeated there is most likely real, not a flake.
 
 - **Fix forward.** Open a pull request with the fix and label it `infinitary-queue-fix` before its merge card.
   Once its approver approves it, the queue ends the pause and the next batch takes every paused change, every waiting change and the fix.

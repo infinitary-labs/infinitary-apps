@@ -538,10 +538,13 @@ Its Linux jobs run on GitHub's hosted machines and its Mac lanes on the `release
 Beside it, the `critical-path` job runs the critical path on the same composed commit on GitHub's hosted Linux ("The critical path"), so the batch's check runs it whatever part of the full check the sweep runs (the captain, on INF-2508: "the e2e journey + browser tests should all run during the sweep batch").
 Every job composes the batch with the shipped compose script, `.github/actions/infinitary-batch/compose.sh apply`, in its own checkout, and fails if its tree differs from the one the queue composed.
 The last job, `Merge batch · Batch passed (tree T)`, passes only once both did and names the tree they built.
-A red batch fixes forward (INF-2948, the captain: "whenever we meet a failure, we pause the sweeps until a fix arrives, then we rerun the sweep with everything queued + the fix, if there's another error, repeat"): the queue pauses its changes behind one issue, and the app starts the repair ("A paused batch's repair").
+When they fail, the queue's confirm calls the same file again with the failed jobs and files, and only its `confirm` job runs: each failed test file three rounds with no retries, on hosted Linux when a Linux job failed and on the `release_split` Mac when a Mac job did, while the sweep, the critical path and the tree's job skip (`scripts/batch-confirm.ts`; the captain's pick on INF-3012, "A only: the confirm step").
+A green confirm passes the batch; its run's summary names what failed, and that flaky test still needs an owner who fixes its root cause.
+A red confirm fixes forward (INF-2948, the captain: "whenever we meet a failure, we pause the sweeps until a fix arrives, then we rerun the sweep with everything queued + the fix, if there's another error, repeat"): the queue pauses its changes behind one issue, and the app starts the repair ("A paused batch's repair").
 
 `main.yml`'s `sort` job reads the pushed commit's pull request with the queue's own rules (`scripts/batch.mjs`).
 When that change passed batch run N on exactly the pushed files, the push is covered: a job named `Main push · Covered by batch run N` replaces the full check.
+A batch that passed only on its confirm ran the failed files again, not the whole check, so its last merge gets main's full check, which the alpha then follows.
 While another change of batch N is still open and green, the push is landing: the run cancels itself, cuts no alpha and leaves no failed run, and the batch's last merge is read in full.
 Anything else gets the full check, a merge outside the queue and a batch merged in an order that changed its files included.
 The alpha's proof follows a covered run to its queue run and reads its batch checks and the tree their last job names (`scripts/main-alpha-proof.mjs`, `docs/alpha.md` "Cutting an alpha").
@@ -550,7 +553,7 @@ The fleet never cancels a running batch or a running main check unless the capta
 
 ## A paused batch's repair
 
-A paused batch reaches the first mate as the app's `queue-paused` wake, and its repair follows the `queue-repair` skill (`docs/forge.md`, "One queue for every host"): it claims the pause's issue, reads the failed jobs' logs and the files the issue names, then fixes forward with a pull request labelled `infinitary-queue-fix`, sends one change back, or files a flake's owner and resumes.
+A paused batch already failed its confirm, unless its issue says nothing ran again; it reaches the first mate as the app's `queue-paused` wake, and its repair follows the `queue-repair` skill (`docs/forge.md`, "One queue for every host"): it claims the pause's issue, reads the failed jobs' logs and the files the issue names, then fixes forward with a pull request labelled `infinitary-queue-fix`, sends one change back, or files a flake's owner and resumes.
 A send-back or a resume is the queue's own by-hand start, from Settings → Projects or `infinitary-queue.yml`'s Run workflow with `action`, `number` and `reason`.
 A file the repair's computer cannot run, such as a journey where journeys run only through CI, is judged from its log and the changes' diffs, or run through `journeys.yml` with `files` on a branch the repair pushes at the composed commit.
 The composed commit is `main`'s version the batch run names with each change's version merged in order: `bash .github/actions/infinitary-batch/compose.sh apply <base> <tree> <number:version>...` rebuilds it on any clone.

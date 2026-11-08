@@ -7,9 +7,11 @@
  * whose batch passed reads "Passed batch run N; tree T", and the app merges
  * it. This module reads that state, with the queue's own rules, for
  * main.yml's first job: a push whose files are exactly a green batch's needs
- * no check run again.
+ * no check run again, unless the batch passed only on its confirm, which ran
+ * the failed files again and not the whole check: then main's full check
+ * runs, and the alpha follows it.
  */
-import { QUEUE, readQueueState } from "../.github/infinitary/rules.mjs";
+import { CONFIRM_JOB, QUEUE, readQueueState } from "../.github/infinitary/rules.mjs";
 
 /**
  * The change's queue state from its version's statuses, newest first as
@@ -57,6 +59,20 @@ async function readOpenQueue(github, repo) {
   );
 }
 
+/** Whether a batch run passed on its confirm: its confirm's jobs ran. */
+async function confirmed(github, repo, run) {
+  const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+    ...repo,
+    run_id: run,
+    per_page: 100,
+  });
+  return jobs.some(
+    (job) =>
+      (job.name === CONFIRM_JOB || job.name.startsWith(`${CONFIRM_JOB} / `)) &&
+      job.conclusion !== "skipped",
+  );
+}
+
 /** main.yml's sort: reads the pushed commit's pull request and its queue state. */
 export async function readMainPush(github, repo, { sha, tree }) {
   const { data: pulls } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
@@ -67,5 +83,7 @@ export async function readMainPush(github, repo, { sha, tree }) {
   if (!pull) return { kind: "full" };
   const queue = readQueueStatus(await statusesOf(github, repo, pull.head.sha));
   if (queue?.kind !== "passed") return { kind: "full" };
-  return sortMainPush({ tree, queue, open: await readOpenQueue(github, repo) });
+  const sorted = sortMainPush({ tree, queue, open: await readOpenQueue(github, repo) });
+  if (sorted.kind === "covered" && (await confirmed(github, repo, queue.run))) return { kind: "full" };
+  return sorted;
 }

@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import { QUEUE_STATUS } from "@shared/repos";
 import { describe, expect, it } from "vitest";
 import type { ScriptArgs } from "./github.mjs";
-import { answer, decide, form, mark } from "./github.mjs";
+import { answer, decide, failures, form, mark } from "./github.mjs";
 import type { Member } from "./rules.mjs";
 import { FIX_LABEL, PAUSE_LABEL, QUEUE, queueKind, readPauseMarker, WAITING } from "./rules.mjs";
 
@@ -14,7 +14,9 @@ import { FIX_LABEL, PAUSE_LABEL, QUEUE, queueKind, readPauseMarker, WAITING } fr
 // and new approvals wait", and "a change its crewmate declares as the
 // pause's fix ends the pause once approved; the next batch takes every
 // paused change, every waiting change and the fix". The stand-in answers in
-// the shapes GitHub's REST API answers github-script's client with.
+// the shapes GitHub's REST API answers github-script's client with. Since
+// INF-3012 a red batch runs what failed once more before it pauses (the
+// confirm), so the pause follows a red confirm.
 
 const owner = "acme";
 const name = "shop";
@@ -269,7 +271,7 @@ describe("the shipped queue on GitHub", () => {
     expect(project.dispatches).toEqual([]);
   });
 
-  it("pauses a red batch behind one issue that names the failed check and the paused changes, rerunning nothing", async () => {
+  it("pauses a batch whose confirm failed again behind one issue that names the failed check and the paused changes", async () => {
     const project = new Project();
     project.open(71);
     project.open(72);
@@ -286,12 +288,19 @@ describe("the shipped queue on GitHub", () => {
       "2026-11-06T17:20:01.0000000Z   1 failed\n2026-11-06T17:20:01.0000000Z     [desktop] › tests/e2e/card-leave.spec.ts:14:1 › leaves a card\n",
     );
 
-    await decide({ ...runOf(project, 504).args, result: "failure", members, tree: TREE });
+    await decide({
+      ...runOf(project, 504).args,
+      result: "failure",
+      confirm: "failure",
+      members,
+      tree: TREE,
+    });
 
     expect(project.issues).toHaveLength(1);
     const [issue] = project.issues;
     expect(issue?.labels).toEqual([PAUSE_LABEL]);
     expect(issue?.body).toContain("[Batch checks / e2e]");
+    expect(issue?.body).toContain("failed again when they ran once more on the same batch");
     expect(readPauseMarker(issue?.body)).toEqual({ run: 504, changes: [71, 72] });
     for (const number of [71, 72]) {
       expect(project.queueOf(number)).toMatchObject({
@@ -313,6 +322,91 @@ describe("the shipped queue on GitHub", () => {
     expect(later.members).toEqual([]);
     expect(later.run.notices.join(" ")).toMatch(/paused until its fix is approved/);
     expect(project.queueOf(73)).toMatchObject({ kind: "waiting" });
+  });
+
+  // The captain's pick on INF-3012, "A only: the confirm step": a red batch
+  // first runs what failed once more on the same composed batch; a green
+  // confirm passes the batch, and only a red one pauses it. The jobs are
+  // named as this repository's batch run names them, and the files are two
+  // that failed on their own in its sweeps.
+  it("confirms a red batch with the failed jobs and files, and passes it when the confirm passes", async () => {
+    const project = new Project();
+    project.open(65);
+    project.approve(65);
+    const { members } = await formRun(project, 520);
+    const mac =
+      "Batch checks / Merge batch · Desktop checks / Merge batch · Parallel journeys (Mac)";
+    const linux =
+      "Batch checks / Merge batch · Desktop checks / Merge batch · Integration tests (Linux; group 2/2)";
+    project.jobs = [
+      { id: 1, name: "Form the batch", conclusion: "success", html_url: `${server}/j/1` },
+      { id: 2, name: mac, conclusion: "failure", html_url: `${server}/j/2` },
+      { id: 3, name: linux, conclusion: "failure", html_url: `${server}/j/3` },
+    ];
+    project.logs.set(
+      2,
+      "2026-11-07T19:20:01.0000000Z   1 failed\n2026-11-07T19:20:01.0000000Z     [application] › knowledge-references.spec.ts:41:3 › opens a saved reference\n",
+    );
+    project.logs.set(
+      3,
+      "2026-11-07T19:12:44.0000000Z  FAIL  |integration| src/core/freeze/freezeRecorder.integration.test.ts > writes the record\n",
+    );
+
+    const read = runOf(project, 520);
+    await failures(read.args);
+    expect(read.outputs.get("jobs")).toBe(
+      [mac, linux].map((name) => name.slice("Batch checks / ".length)).join("\n"),
+    );
+    expect(read.outputs.get("files")).toBe(
+      "knowledge-references.spec.ts src/core/freeze/freezeRecorder.integration.test.ts",
+    );
+
+    // The confirm's own jobs are not the batch's failures.
+    project.jobs.push({
+      id: 4,
+      name: "Batch confirm / Merge batch · Confirm failed tests (Mac)",
+      conclusion: "success",
+      html_url: `${server}/j/4`,
+    });
+    const verdict = runOf(project, 520);
+    await decide({ ...verdict.args, result: "failure", confirm: "success", members, tree: TREE });
+
+    expect(project.queueOf(65)).toMatchObject({ kind: "passed", run: 520, tree: TREE });
+    expect(project.issues).toEqual([]);
+    expect(verdict.summary.join(" ")).toContain(
+      "knowledge-references.spec.ts, src/core/freeze/freezeRecorder.integration.test.ts failed in its checks and passed",
+    );
+  });
+
+  it("runs nothing again when a failed job's log names no test file, and pauses", async () => {
+    const project = new Project();
+    project.open(66);
+    project.approve(66);
+    const { members } = await formRun(project, 521);
+    project.jobs = [
+      { id: 2, name: "Batch checks / e2e", conclusion: "failure", html_url: `${server}/j/2` },
+      { id: 3, name: "Batch checks / typecheck", conclusion: "failure", html_url: `${server}/j/3` },
+    ];
+    project.logs.set(
+      2,
+      "2026-11-06T17:20:01.0000000Z   1 failed\n2026-11-06T17:20:01.0000000Z     [desktop] › tests/e2e/card-leave.spec.ts:14:1 › leaves a card\n",
+    );
+    project.logs.set(3, "2026-11-06T17:20:01.0000000Z src/a.ts(3,1): error TS2304\n");
+
+    const read = runOf(project, 521);
+    await failures(read.args);
+    expect(read.outputs.get("jobs")).toBe("");
+    expect(read.outputs.get("files")).toBe("");
+
+    await decide({
+      ...runOf(project, 521).args,
+      result: "failure",
+      confirm: "skipped",
+      members,
+      tree: TREE,
+    });
+    expect(project.queueOf(66)).toMatchObject({ kind: "paused", run: 521 });
+    expect(project.issues[0]?.body).toContain("nothing ran again");
   });
 
   it("still pauses a red batch when the project cannot open the pause's issue", async () => {
@@ -434,6 +528,16 @@ describe("the shipped queue on GitHub", () => {
     expect(checks?.uses).toBe("./.github/workflows/infinitary-batch-checks.yml");
     expect(checks?.permissions).toEqual({ contents: "read" });
     expect(checks).not.toHaveProperty("secrets");
+    // The confirm calls the same file with the same grants, told what failed.
+    const confirm = workflow.jobs.confirm;
+    expect(confirm?.uses).toBe(checks?.uses);
+    expect(confirm?.permissions).toEqual(checks?.permissions);
+    expect(confirm).not.toHaveProperty("secrets");
+    expect(confirm?.with).toEqual({
+      ...(checks?.with as object),
+      failed_jobs: "${{ needs.failures.outputs.jobs }}",
+      failed_files: "${{ needs.failures.outputs.files }}",
+    });
   });
 
   // The window cannot import the queue's rules, so it keeps its own copy of

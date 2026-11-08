@@ -52,7 +52,7 @@ describe("the signed channel workflow", () => {
     const signing = jobOf(release, "release");
     expect(JSON.stringify(resolve)).not.toContain("secrets.");
     expect(call).toMatchObject({
-      needs: ["resolve", "notes"],
+      needs: ["resolve", "notes", "phone"],
       uses: "./.github/workflows/verify.yml",
       with: {
         // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
@@ -173,6 +173,9 @@ describe("the signed channel workflow", () => {
     // Neither verification nor signing starts without it.
     expect(jobOf(release, "verify").needs).toContain("notes");
     expect(jobOf(release, "release").needs).toContain("notes");
+    // A failed phone check stops the Linux packages and desktop checks too (INF-3059).
+    expect(jobOf(release, "verify").needs).toContain("phone");
+    expect(jobOf(release, "linux").needs).toContain("phone");
     // The signing job packages the notes job's catalog and verifies the
     // packaged copy's identity before notarizing, signing-gate checks or launch.
     const order = steps.map((candidate) => candidate.id ?? candidate.name);

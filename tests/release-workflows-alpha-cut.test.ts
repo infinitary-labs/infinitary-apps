@@ -383,9 +383,20 @@ describe("an alpha with nothing new to build", () => {
       verify_required: skip === "true" ? "" : "true",
       main_run: skip === "true" ? "" : url(73),
     };
-    for (const [id, job] of Object.entries(release.jobs)) {
-      if (id === "resolve") continue;
-      const needs = typeof job.needs === "string" ? [job.needs] : (job.needs ?? []);
+    const needsOf = (job: { needs?: string | string[] }) =>
+      typeof job.needs === "string" ? [job.needs] : (job.needs ?? []);
+    // Jobs are decided after every job they need, whatever order the file lists them in.
+    const pending = Object.entries(release.jobs).filter(([id]) => id !== "resolve");
+    const ordered: typeof pending = [];
+    while (pending.length) {
+      const index = pending.findIndex(([, job]) =>
+        needsOf(job).every((need) => ordered.some(([id]) => id === need) || need === "resolve"),
+      );
+      if (index < 0) throw new Error("the release workflow's jobs need each other in a cycle");
+      ordered.push(...pending.splice(index, 1));
+    }
+    for (const [id, job] of ordered) {
+      const needs = needsOf(job);
       const context = {
         needs: Object.fromEntries(
           needs.map((need) => [

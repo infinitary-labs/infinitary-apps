@@ -513,9 +513,11 @@ jobs:
   # files reuses every lane and omits this call (INF-2508); any other alpha
   # runs every lane. A stable omits the reusable workflow, relying on its
   # alpha's run (no green skipped lanes).
+  # It waits for the phone check, as the Linux packages do, so a failed phone
+  # check spends no desktop check minutes.
   verify:
     if: ${{ needs.resolve.outputs.verify_required == 'true' && needs.resolve.outputs.main_journeys != 'true' }}
-    needs: [resolve, notes]
+    needs: [resolve, notes, phone]
     name: ${{ format('{0} · Desktop checks', needs.resolve.outputs.trigger) }}
     uses: ./.github/workflows/verify.yml
     with:
@@ -537,8 +539,10 @@ jobs:
   # and opened on a clean copy of each system before anything publishes. Its
   # run keeps them as the linux-packages artifact the upload job uploads.
   # A publishing run's package jobs take the release's Linux label too.
+  # It waits for the phone check, which takes half a minute: a failed one stops
+  # the packages and their install checks, which could never publish.
   linux:
-    needs: [resolve, notes]
+    needs: [resolve, notes, phone]
     name: ${{ format('{0} · Linux packages', needs.resolve.outputs.trigger) }}
     uses: ./.github/workflows/linux-packages.yml
     with:

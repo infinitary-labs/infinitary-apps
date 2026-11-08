@@ -428,6 +428,7 @@ A phone build keeps changing things on a release when the release's view floor r
   Until Apple shows that a version of Infinitary was ever released in the App Store, a stable waits for no phone.
   Once one was, a stable always waits for such a build, also while a withdrawn version leaves none live.
 
+The Linux packages and the desktop checks wait for the phone job too, so a failed phone job spends no hosted machine minutes on packages that can never publish (INF-3059).
 Without such a build the phone job fails, and the release job neither signs nor publishes anything; a rehearsal says what it would wait for and never fails on it.
 
 ## Promoting an alpha

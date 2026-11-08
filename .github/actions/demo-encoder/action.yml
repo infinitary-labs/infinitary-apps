@@ -1,0 +1,36 @@
+name: The demo encoder's download
+description: Keep the pinned FFmpeg build a demo recording is encoded with in the Actions cache, so a journey reads it there instead of from GitHub's release server.
+inputs:
+  working-directory:
+    description: Checkout whose tests/e2e/demoEncoder.ts names the pinned build.
+    default: .
+runs:
+  using: composite
+  steps:
+    # A journey that records a demo fetches the pinned encoder on first use
+    # (tests/e2e/demoEncoder.ts) into the machine's own cache folder, and a
+    # fresh runner has none, so every such job downloaded it from GitHub's
+    # release server in the middle of a journey, with no retry: one 504 there
+    # failed a merge batch's demo journeys in every Linux journey group and on
+    # the Mac. Restored here, a job reaches that server only on the pin's
+    # first download; a machine that already keeps the build skips the
+    # restore and runs its own copy.
+    - id: encoder
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        node --input-type=module -e '
+          const { existsSync } = await import("node:fs");
+          const { encoderCache } = await import("./tests/e2e/demoEncoder.ts");
+          const cache = encoderCache();
+          if (cache) {
+            console.log(`dir=${cache.dir}`);
+            console.log(`key=${cache.key}`);
+            console.log(`kept=${existsSync(cache.binary)}`);
+          }
+        ' >> "$GITHUB_OUTPUT"
+    - if: steps.encoder.outputs.key != '' && steps.encoder.outputs.kept != 'true'
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.encoder.outputs.dir }}
+        key: ${{ steps.encoder.outputs.key }}

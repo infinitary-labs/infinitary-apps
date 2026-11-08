@@ -277,6 +277,10 @@ jobs:
       # Playwright's window recorder is not part of an install; a journey
       # that records would otherwise fetch it in the middle of its test.
       - run: pnpm exec playwright install ffmpeg
+      # The pinned encoder a demo journey records with, from the Actions cache.
+      - uses: ./Application Support/firstmate/.github/actions/demo-encoder
+        with:
+          working-directory: Application Support/firstmate
       - id: e2e
         name: Build, then run the chosen journeys
         # --no-deps: the desktop lane is the other lanes' teardown and a

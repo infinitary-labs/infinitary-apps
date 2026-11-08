@@ -361,6 +361,11 @@ jobs:
       - id: recorder
         if: ${{ !cancelled() && (matrix.lane == 'mac' || matrix.lane == 'parallel' || matrix.lane == 'desktop') && steps.install.outcome == 'success' }}
         run: pnpm exec playwright install ffmpeg
+      # The pinned encoder a demo journey records with, from the Actions cache.
+      - if: ${{ !cancelled() && (matrix.lane == 'mac' || matrix.lane == 'parallel' || matrix.lane == 'desktop') && steps.install.outcome == 'success' }}
+        uses: ./Application Support/firstmate/.github/actions/demo-encoder
+        with:
+          working-directory: Application Support/firstmate
       # The signature the journeys below run on, read from the binary itself:
       # Electron's own, never this runner's local development identity. A
       # report, never a gate.

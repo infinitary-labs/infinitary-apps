@@ -19,24 +19,36 @@ import { gunzipSync } from "node:zlib";
  * release: each archive's digest below is the one that release publishes,
  * and `ffmpeg` is the FFmpeg major version those bytes report. The Mac
  * builds are FFmpeg 6; the release's Linux build is John Van Sickle's
- * static FFmpeg 7. Moving the pin is a change of these three lines and their
- * digests, never a download of whatever is newest.
+ * static FFmpeg 7. Moving the pin is a change of these three lines, their
+ * digests and their asset ids, never a download of whatever is newest.
+ *
+ * `id` is the release asset's number in GitHub's API, the second way to the
+ * same bytes: GitHub's release download address answered 504 for every
+ * release while the API's asset address still served them, so a download
+ * tries the API's address when the release's fails, and the digest check
+ * holds either way.
  */
 
 const RELEASE = "b6.1.1";
-const PINNED: Readonly<Record<string, { asset: string; sha256: string; ffmpeg: number }>> = {
+const REPOSITORY = "eugeneware/ffmpeg-static";
+const PINNED: Readonly<
+  Record<string, { asset: string; id: number; sha256: string; ffmpeg: number }>
+> = {
   "darwin-arm64": {
     asset: "ffmpeg-darwin-arm64.gz",
+    id: 316528311,
     sha256: "8923876afa8db5585022d7860ec7e589af192f441c56793971276d450ed3bbfa",
     ffmpeg: 6,
   },
   "darwin-x64": {
     asset: "ffmpeg-darwin-x64.gz",
+    id: 316528367,
     sha256: "929b375c1182d956c51f7ac25e0b2b0411fb01f6f407aa15c9758efeb4242106",
     ffmpeg: 6,
   },
   "linux-x64": {
     asset: "ffmpeg-linux-x64.gz",
+    id: 316528626,
     sha256: "bfe8a8fc511530457b528c48d77b5737527b504a3797a9bc4866aeca69c2dffa",
     ffmpeg: 7,
   },
@@ -45,12 +57,25 @@ const PINNED: Readonly<Record<string, { asset: string; sha256: string; ffmpeg: n
 /** Why no demo can be encoded here, worded for the crewmate who reads it. */
 export class DemoEncoderUnavailable extends Error {}
 
-function cacheDir(): string {
+/**
+ * Where this machine keeps the pinned build, and the name CI keeps that
+ * folder under in its cache (.github/actions/demo-encoder): a fresh runner
+ * restores it there instead of fetching it from GitHub's release server in
+ * the middle of a journey. `undefined` on a platform with no pinned build.
+ */
+export function encoderCache(): { dir: string; binary: string; key: string } | undefined {
+  const platform = `${process.platform}-${process.arch}`;
+  if (!PINNED[platform]) return undefined;
   const base =
     process.platform === "darwin"
       ? join(homedir(), "Library", "Caches")
       : (process.env.XDG_CACHE_HOME ?? join(homedir(), ".cache"));
-  return join(base, "infinitary-dev", `ffmpeg-${RELEASE}`);
+  const dir = join(base, "infinitary-dev", `ffmpeg-${RELEASE}`);
+  return {
+    dir,
+    binary: join(dir, `ffmpeg-${platform}`),
+    key: `demo-encoder-${RELEASE}-${platform}`,
+  };
 }
 
 /** The pinned build's own words about itself: the FFmpeg version its pin publishes. */
@@ -83,6 +108,36 @@ export function needH264(binary: string): void {
 }
 
 /**
+ * The pinned archive's bytes, from the release's download address or, when
+ * that fails, from the API's address for the same asset. Throws
+ * `DemoEncoderUnavailable` naming what each address answered.
+ */
+async function download(pin: { asset: string; id: number }): Promise<Buffer> {
+  const ways = [
+    { url: `https://github.com/${REPOSITORY}/releases/download/${RELEASE}/${pin.asset}` },
+    {
+      url: `https://api.github.com/repos/${REPOSITORY}/releases/assets/${pin.id}`,
+      headers: { accept: "application/octet-stream" },
+    },
+  ];
+  const failures: string[] = [];
+  for (const { url, headers } of ways) {
+    try {
+      const response = await fetch(url, { headers });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return Buffer.from(await response.arrayBuffer());
+    } catch (error) {
+      failures.push(
+        `${new URL(url).host}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
+  throw new DemoEncoderUnavailable(
+    `the pinned encoder could not be downloaded (${failures.join("; ")})`,
+  );
+}
+
+/**
  * The pinned encoder's path, fetched and checked on first use. Throws
  * `DemoEncoderUnavailable` on a platform it has no build for, when the
  * download fails, when the bytes are not the pinned ones, or when it does
@@ -91,21 +146,13 @@ export function needH264(binary: string): void {
 export async function demoEncoder(): Promise<string> {
   const platform = `${process.platform}-${process.arch}`;
   const pin = PINNED[platform];
-  if (!pin) throw new DemoEncoderUnavailable(`no pinned encoder is published for ${platform}`);
-  const dir = cacheDir();
-  const binary = join(dir, `ffmpeg-${platform}`);
+  const cache = encoderCache();
+  if (!pin || !cache) {
+    throw new DemoEncoderUnavailable(`no pinned encoder is published for ${platform}`);
+  }
+  const { dir, binary } = cache;
   if (!existsSync(binary)) {
-    const url = `https://github.com/eugeneware/ffmpeg-static/releases/download/${RELEASE}/${pin.asset}`;
-    let archive: Buffer;
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      archive = Buffer.from(await response.arrayBuffer());
-    } catch (error) {
-      throw new DemoEncoderUnavailable(
-        `the pinned encoder could not be downloaded (${error instanceof Error ? error.message : String(error)})`,
-      );
-    }
+    const archive = await download(pin);
     const digest = createHash("sha256").update(archive).digest("hex");
     if (digest !== pin.sha256) {
       throw new DemoEncoderUnavailable(

@@ -165,6 +165,10 @@ jobs:
         run: pnpm build
       - if: steps.journeys.outputs.any == 'true' && matrix.platform == 'mac'
         run: pnpm exec playwright install ffmpeg
+      - if: steps.journeys.outputs.any == 'true'
+        uses: ./Application Support/firstmate/.github/actions/demo-encoder
+        with:
+          working-directory: Application Support/firstmate
       - name: Run each failed test file three rounds
         env:
           FILES: ${{ inputs.failed_files }}

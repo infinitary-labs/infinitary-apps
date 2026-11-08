@@ -158,6 +158,10 @@ jobs:
       - uses: ./Application Support/firstmate/.github/actions/linux-desktop
         with:
           working-directory: Application Support/firstmate
+      # The pinned encoder a demo journey records with, from the Actions cache.
+      - uses: ./Application Support/firstmate/.github/actions/demo-encoder
+        with:
+          working-directory: Application Support/firstmate
       - run: pnpm build
       # Linux runs every journey it can (docs/testing.md, "Tests that need a
       # Mac"): the keyboard journeys press Ctrl where a Mac presses Command

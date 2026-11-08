@@ -170,6 +170,39 @@ describe("every workflow", () => {
     expect(cached).toContain("verify.yml:lane");
   });
 
+  // Queue run 42464252348's merge batch failed its demo journeys in every
+  // Linux journey group and on the Mac, which the captain's watch on main and
+  // release-path check failures sent to be fixed at its cause: each fetched
+  // the pinned encoder from GitHub's release server mid-journey and took a
+  // 504 there. So every job that prepares Playwright's window recorder for a
+  // recording journey restores the demo encoder's download too
+  // (.github/actions/demo-encoder).
+  // Every pull request's check prepares the Linux desktop for its one fixed
+  // journey, the critical path, which records no demo, so it restores none.
+  it("restores the demo encoder wherever a job prepares the window recorder", () => {
+    const noDemo = ["ci.yml:typecheck-lint-build"];
+    const recorders: string[] = [];
+    for (const file of workflows) {
+      for (const [id, job] of Object.entries(load(file).jobs)) {
+        if (noDemo.includes(`${file}:${id}`)) continue;
+        const steps = job.steps ?? [];
+        const recorder = steps.findIndex(
+          (step) =>
+            /\bplaywright install ffmpeg\b/.test(step.run ?? "") ||
+            step.uses?.endsWith("/.github/actions/linux-desktop"),
+        );
+        if (recorder < 0) continue;
+        recorders.push(`${file}:${id}`);
+        const encoder = steps.findIndex((step) =>
+          step.uses?.endsWith("/.github/actions/demo-encoder"),
+        );
+        expect(encoder, `${file}:${id} restores the demo encoder`).toBeGreaterThan(recorder);
+      }
+    }
+    // The workflow whose journey groups failed in that run.
+    expect(recorders).toContain("source-journeys.yml:source-desktop");
+  });
+
   // A value a shell step reads comes through its environment, never pasted
   // into the script: an expression in a run line is a quoting hazard and an
   // injection path for a value the run does not own.

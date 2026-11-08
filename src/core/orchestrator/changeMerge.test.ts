@@ -17,6 +17,7 @@ import {
   type ForgeChange,
   ForgeError,
   type ForgePull,
+  type ForgeQueueStart,
   type ForgeReadiness,
   QUEUE_STATUS,
   type QueueWorkflow,
@@ -765,6 +766,63 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
       receipt: { head: "repair01" },
     });
     expect(putIns()).toEqual(["putIn fm/task-ab12cd34 repair01"]);
+  });
+
+  // The reviews' findings (approval-never-restarts, restart-misses-card-route,
+  // restart-on-unattended-reruns): on a host whose mark starts nothing, a
+  // change the queue held joins only when a start reads it again, so the
+  // captain's own click on a waiting version starts the queue on the merge
+  // card's route too, and a kept approval's unattended retry starts nothing.
+  it("starts the queue on each of the captain's clicks on a waiting version where a mark starts nothing, never on an unattended retry", async () => {
+    const forge = new PinnedForge();
+    const harness = setup({ forge });
+    await insertDirectPrTask(harness.tasks, harness.repos, {
+      shape: { kind: "fix", kind_source: "none", delivery_ask: "queue-pr" },
+    });
+    const repoId = harness.tasks.get("ab12cd34")?.repoId;
+    if (!repoId) throw new Error("the task has no project");
+    harness.repos.recordQueue(repoId, {
+      workflows: [{ path: ".gitlab/infinitary-queue.yml", active: true, shipped: 1 }],
+    });
+    const marked: string[] = [];
+    const starts: string[] = [];
+    Object.assign(forge, {
+      markStartsQueue: false,
+      startQueue: async (start: ForgeQueueStart) => {
+        starts.push(start.action);
+      },
+      markQueued: async (sha: string) => {
+        marked.push(sha);
+        forge.atHead[sha] = [
+          { name: "linux-checks", state: "success" },
+          { name: QUEUE_STATUS, state: "pending" },
+        ];
+        return {};
+      },
+    });
+    // The captain's first click marks the version, and the mark's start runs.
+    expect(await harness.service.merges.merge("ab12cd34")).toMatchObject({ stop: "queue" });
+    expect(starts).toEqual(["form"]);
+    expect(marked).toEqual(["feedbeef"]);
+    // A second click on the waiting version starts it again and marks nothing.
+    expect(await harness.service.merges.merge("ab12cd34")).toMatchObject({ stop: "queue" });
+    expect(starts).toEqual(["form", "form"]);
+    expect(marked).toEqual(["feedbeef"]);
+    // A kept approval's unattended retry starts nothing.
+    const kept: MergeGuard = {
+      head: "feedbeef",
+      prNumber: 23,
+      unattended: true,
+      beforeDispatch: () => undefined,
+    };
+    expect(await harness.service.merges.merge("ab12cd34", kept)).toMatchObject({ stop: "queue" });
+    expect(
+      await harness.service.merges.merge("ab12cd34", undefined, {
+        unattended: true,
+        beforeDispatch: () => undefined,
+      }),
+    ).toMatchObject({ stop: "queue" });
+    expect(starts).toEqual(["form", "form"]);
   });
 
   it("reads the project's workflows at a queue merge click, keeps the mark's id, and records the queue's first answer (INF-2886)", async () => {

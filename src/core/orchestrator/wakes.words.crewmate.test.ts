@@ -695,6 +695,34 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         "[fm-op] your merge card's merge of PR #1061 did not happen. Nothing was merged. GitHub reports a conflict.",
     },
   ],
+  "queue-held": [
+    {
+      name: "a Developer's version held for a Maintainer",
+      wake: {
+        facts: {
+          kind: "queue-held",
+          change: "!12",
+          head: "5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0",
+          words: "Waiting for a Maintainer to approve this version",
+        },
+      },
+      words:
+        "The project's queue holds !12 at 5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0 out of its batches; its status reads \"Waiting for a Maintainer to approve this version\". Its code joins a batch only once a Maintainer of the project approves the merge request after its last push, since a later mark does not admit it, and then the captain's merge click starts the queue again, which nothing else does. Put up your merge card again saying a Maintainer must approve this version first; do not start the queue yourself.",
+    },
+  ],
+  "queue-start-failed": [
+    {
+      name: "after two failed starts",
+      wake: {
+        facts: {
+          kind: "queue-start-failed",
+          why: "GitLab answered 403: insufficient permissions to create a pipeline.",
+        },
+      },
+      words:
+        "The app tried twice to start your project's queue so it forms its next batch, and both starts failed: GitLab answered 403: insufficient permissions to create a pipeline. No batch forms until something starts it. Start it yourself through your project's API the way the queue-setup skill's queue starts it, or report what stops you.",
+    },
+  ],
   "external-merge": [
     {
       name: "with another pull request open",

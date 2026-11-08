@@ -19,6 +19,7 @@ import {
   createChangeDelivery,
 } from "../../src/core/orchestrator/changeDelivery";
 import { ChangePresentations } from "../../src/core/orchestrator/changePresentations";
+import type { TypedWake, WakeFacts } from "../../src/core/orchestrator/wakes";
 import type { AppDatabase } from "../../src/core/storage/db";
 import { seedTask, type TaskSeed } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
@@ -62,8 +63,10 @@ export class FakeForge implements Forge {
   /** Fail `changeFor` only this many more times. */
   failChangeForTimes = 0;
   /** The checks GitHub holds at named versions, or its refusal there; other versions read `states`. */
-  atHead: Record<string, { name: string; state: ForgeCheckState; statusId?: number }[] | Error> =
-    {};
+  atHead: Record<
+    string,
+    { name: string; state: ForgeCheckState; statusId?: number; detail?: string }[] | Error
+  > = {};
   readonly calls: string[] = [];
 
   constructor(where: { kind?: Forge["kind"]; place?: string | null } = {}) {
@@ -193,6 +196,10 @@ export function setup(
     forge?: FakeForge;
     now?: () => number;
     onNote?: (text: string) => void;
+    /** The steer to a task's crewmate, as the app wires it to the inbox. */
+    steer?: (taskId: string, wake: TypedWake) => void;
+    /** The first mate's notice, as the app wires it. */
+    tell?: (facts: Extract<WakeFacts, { kind: "queue-stalled" }>) => void;
     /** Check commit names against real git rather than skipping the check. */
     realRange?: boolean;
     bringBranchHome?: (taskId: string) => Promise<string | undefined>;
@@ -226,6 +233,8 @@ export function setup(
     ...(options.realRange ? {} : { validateRange: async () => {} }),
     ...(options.now ? { now: options.now } : {}),
     ...(options.onNote ? { onNote: options.onNote } : {}),
+    ...(options.steer ? { steer: options.steer } : {}),
+    ...(options.tell ? { tell: options.tell } : {}),
   });
   return { db, tasks, repos, service, forge, paths, presentations, readHead };
 }

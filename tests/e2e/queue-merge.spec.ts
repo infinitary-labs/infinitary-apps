@@ -10,7 +10,7 @@ import {
   QUEUE_PLAN_ASKED_OPENING,
 } from "../../src/core/orchestrator/noticeWakes";
 import { QUEUE_SETUP_WORDS } from "../../src/core/orchestrator/queueChoice";
-import { GITHUB_QUEUE_PART, QUEUE_VERSION, shippedFiles } from "../../src/core/queue/shipped";
+import { GITHUB_QUEUE_PART, shippedFiles } from "../../src/core/queue/shipped";
 import { pauseIssue, pauseWrites, verdict, WAITING } from "../../src/core/queue/shipped/rules.mjs";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
@@ -589,7 +589,7 @@ test("a project running the shipped queue is batched for every teammate, and its
     const queue = choices.getByRole("radio", { name: PROJECT_DELIVERY_WORDS["queue-pr"] });
     await expect(queue).toBeChecked();
     await expect(queue).toBeDisabled();
-    await expect(row.getByText(QUEUE_SHIPPED_WORDS.set(QUEUE_VERSION))).toBeVisible();
+    await expect(row.getByText(QUEUE_SHIPPED_WORDS.set(GITHUB_QUEUE_PART.version))).toBeVisible();
     await expect(row.locator("[data-queue-how-to]")).toHaveCount(0);
     const panel = row.getByRole("region", { name: QUEUE_PAUSE_WORDS.title });
     await expect(panel.getByText(QUEUE_PAUSE_WORDS.unclaimed)).toBeVisible();

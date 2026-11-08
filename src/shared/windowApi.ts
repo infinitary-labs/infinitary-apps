@@ -104,6 +104,7 @@ import type {
 import type {
   ProjectsFolderView,
   QueueAnswer,
+  QueueCredential,
   RepoPolicyPatch,
   RepoRemoval,
   RepoSetupResult,
@@ -232,6 +233,10 @@ export type FirstmateApi = {
     configure: (repoId: string, changes: RepoPolicyPatch) => Promise<RepoView>;
     /** Resume a paused batch, or send one change back, with a reason (docs/forge.md, "A paused batch"). */
     queueAnswer: (repoId: string, answer: QueueAnswer) => Promise<{ ok: true }>;
+    /** The token the project's queue writes with, where its host keeps one (GitLab); null where the queue needs none. */
+    queueCredential: (repoId: string) => Promise<QueueCredential | null>;
+    /** Create that token where the project lives with your sign-in; it never reaches the app. */
+    createQueueCredential: (repoId: string) => Promise<QueueCredential>;
     /** Where new projects go. */
     folder: () => Promise<ProjectsFolderView>;
     /** A folder the person chose, or null for the default; refused with a readable reason. */

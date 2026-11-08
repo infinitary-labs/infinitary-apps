@@ -285,6 +285,20 @@ const CASES: WordsCases<FirstmateWakeKind> = {
     },
   ],
   // The shipped queue's pause (the captain's claim-issue and quiet).
+  "queue-stalled": [
+    {
+      name: "after a merge, with no task waiting in the queue",
+      wake: {
+        facts: {
+          kind: "queue-stalled",
+          project: { id: "p-7a21", name: "meter" },
+          why: "GitLab answered 403: insufficient permissions to create a pipeline.",
+        },
+      },
+      words:
+        "[fm-op] after a merge in project \"meter\" (repo_id p-7a21), the app tried twice to start the project's queue so it forms its next batch, and both starts failed: GitLab answered 403: insufficient permissions to create a pipeline. No batch forms there until something starts it, and no task of this app waits in that queue. Start one task in that project now, with no card first, whose brief says to start the queue through the project's API the way the queue-setup skill's queue starts it, or to report what stops it. Put up no card about it.",
+    },
+  ],
   "queue-paused": [
     {
       name: "nobody has claimed it",

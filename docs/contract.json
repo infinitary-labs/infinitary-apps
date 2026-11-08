@@ -2580,6 +2580,81 @@
         ]
       }
     },
+    "inf:repos:queue-credential": {
+      "effect": "read",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "missing",
+                  "ready",
+                  "unreadable"
+                ]
+              },
+              "expiresAt": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "inf:repos:queue-credential-create": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "missing",
+              "ready",
+              "unreadable"
+            ]
+          },
+          "expiresAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ]
+      }
+    },
     "inf:repos:folder": {
       "effect": "read",
       "reach": "home",

@@ -131,6 +131,30 @@ export type DeliveryFacts =
       signIn?: boolean;
     }
   | {
+      /**
+       * The app's start of the project's queue, after a mark or a merge,
+       * failed twice (docs/forge.md, "The shipped queue"): no batch forms
+       * until something starts it.
+       */
+      kind: "queue-start-failed";
+      /** What the project's host answered, or why the start did not reach it. */
+      why: string;
+    }
+  | {
+      /**
+       * The project's queue held the task's version for a Maintainer (the
+       * GitLab part's held words, docs/forge.md "The shipped queue on
+       * GitLab"): it joins a batch only after a Maintainer's approval
+       * after its last push and then a click that starts the queue. Once per version.
+       */
+      kind: "queue-held";
+      /** How the change is named where it lives, such as !12. */
+      change: string;
+      head: string;
+      /** The words on the version's queue status. */
+      words: string;
+    }
+  | {
       /** A task-scoped run's first failure or terminal reading, independent of PR green. */
       kind: "run-watch";
       outcome:
@@ -433,6 +457,10 @@ export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
     [facts, ...(facts.also ?? []).map((one) => ({ ...one, to: facts.to }))]
       .map(writeAnsweredWords)
       .join("\n\n"),
+  "queue-held": (facts) =>
+    `The project's queue holds ${facts.change} at ${facts.head} out of its batches; its status reads "${facts.words}". Its code joins a batch only once a Maintainer of the project approves the merge request after its last push, since a later mark does not admit it, and then the captain's merge click starts the queue again, which nothing else does. Put up your merge card again saying a Maintainer must approve this version first; do not start the queue yourself.`,
+  "queue-start-failed": (facts) =>
+    `The app tried twice to start your project's queue so it forms its next batch, and both starts failed: ${facts.why} No batch forms until something starts it. Start it yourself through your project's API the way the queue-setup skill's queue starts it, or report what stops you.`,
   "run-watch": (facts) => renderRunWatch(facts),
   "checks-settled": (facts) => renderChecksSettled(facts),
   "main-check-observed": (facts) =>

@@ -52,6 +52,14 @@ import { join } from "node:path";
  * `/-/project/<id>/uploads/<secret>/<name>` address GitLab answers with; and
  * the quick actions a description's own lines carry, run and removed from
  * the saved text as GitLab does.
+ *
+ * And what the shipped queue reaches (docs/forge.md, "The shipped queue on
+ * GitLab"): a version's commit statuses, refusing a waiting status on a
+ * version whose newest one of that name already waits, as GitLab does; a
+ * pipeline started on a ref; the files on the default branch, base64 as
+ * GitLab serves them; the queue's pause issue with its notes and its close;
+ * and the project's access tokens and CI variables, a variable's value never
+ * read back.
  */
 export const GITLAB_STUB_KEY = "glpat-hermetic-sign-in-key";
 export const GITLAB_STUB_LOGIN = "octo";
@@ -107,6 +115,36 @@ export type GitLabStubMerge = {
   sha: string;
   squash: boolean;
   message: string;
+};
+
+/** One commit status GitLab accepted on a version. */
+export type GitLabStubStatus = {
+  id: number;
+  name: string;
+  status: string;
+  description: string | null;
+  target_url: string | null;
+  created_at: string;
+};
+
+/** An issue the queue opened for a paused batch, as GitLab lists it. */
+export type GitLabStubIssue = {
+  iid: number;
+  description: string;
+  labels: string[];
+  assignees?: string[];
+  state?: "opened" | "closed";
+};
+
+/** A project access token, as GitLab lists it; its secret only in the answer that made it. */
+export type GitLabStubToken = {
+  id: number;
+  name: string;
+  scopes: string[];
+  access_level: number;
+  expires_at: string;
+  active: boolean;
+  revoked: boolean;
 };
 
 /** One project upload GitLab kept, as the app sent it. */
@@ -218,6 +256,19 @@ export async function startGitLabStub(host: string) {
   let history: { ref: string; source: string }[] = [];
   /** A retried job's first id to its newest attempt's. */
   const retried = new Map<number, number>();
+  /** Commit statuses by version, oldest first, as GitLab keeps every one it accepted. */
+  const statuses = new Map<string, GitLabStubStatus[]>();
+  let nextStatusId = 1;
+  /** Every pipeline the API started on a ref (`POST /pipeline`), in order. */
+  const started: { ref: string }[] = [];
+  /** Files on the default branch, by path. */
+  const files = new Map<string, string>();
+  /** The queue's one pause issue, open or closed, and every note written on it. */
+  let pauseIssue: GitLabStubIssue | null = null;
+  const notes: { iid: number; body: string }[] = [];
+  /** The project's access tokens, and its CI variables by key. */
+  const tokens: GitLabStubToken[] = [];
+  const variables = new Map<string, Record<string, unknown>>();
   const project = {
     id: 7,
     path_with_namespace: GITLAB_STUB_PROJECT,
@@ -720,6 +771,167 @@ export async function startGitLabStub(host: string) {
         send(200, { id: commit[1], parent_ids: [GITLAB_STUB_MAIN_SHA, head] });
         return;
       }
+      // A version's commit statuses: GitLab refuses a waiting status on a
+      // version whose newest status of that name already waits.
+      const status = /^\/statuses\/([0-9a-f]{40})$/.exec(rest);
+      if (method === "POST" && status?.[1]) {
+        const sha = status[1];
+        const name = typeof body.name === "string" ? body.name : "default";
+        const state = String(body.state ?? "");
+        const kept = statuses.get(sha) ?? [];
+        const newest = kept.filter((row) => row.name === name).at(-1);
+        if (newest && ["pending", "running"].includes(newest.status) && newest.status === state) {
+          send(400, { message: `Cannot transition status via :enqueue from :${state}` });
+          return;
+        }
+        const row: GitLabStubStatus = {
+          id: nextStatusId++,
+          name,
+          status: state,
+          description: typeof body.description === "string" ? body.description : null,
+          target_url: typeof body.target_url === "string" ? body.target_url : null,
+          created_at: new Date(Date.UTC(2026, 9, 9, 12, 0, nextStatusId)).toISOString(),
+        };
+        statuses.set(sha, [...kept, row]);
+        send(201, { ...row, sha });
+        return;
+      }
+      const statusList = /^\/repository\/commits\/([0-9a-f]{40})\/statuses$/.exec(rest);
+      if (method === "GET" && statusList?.[1]) {
+        const name = url.searchParams.get("name");
+        send(
+          200,
+          paged((statuses.get(statusList[1]) ?? []).filter((row) => !name || row.name === name)),
+        );
+        return;
+      }
+      if (method === "POST" && rest === "/pipeline") {
+        const ref = String(body.ref ?? "");
+        started.push({ ref });
+        const id = 900 + started.length;
+        send(201, {
+          id,
+          ref,
+          status: "created",
+          source: "api",
+          web_url: `https://${host}/${GITLAB_STUB_PROJECT}/-/pipelines/${id}`,
+        });
+        return;
+      }
+      const file = /^\/repository\/files\/([^/]+)$/.exec(rest);
+      if (method === "GET" && file?.[1]) {
+        const text =
+          url.searchParams.get("ref") === "main"
+            ? files.get(decodeURIComponent(file[1]))
+            : undefined;
+        if (text === undefined) send(404, { message: "404 File Not Found" });
+        else
+          send(200, {
+            file_path: decodeURIComponent(file[1]),
+            encoding: "base64",
+            content: Buffer.from(text).toString("base64"),
+          });
+        return;
+      }
+      if (method === "GET" && rest === "/issues") {
+        const label = url.searchParams.get("labels");
+        const state = url.searchParams.get("state");
+        const listed =
+          pauseIssue &&
+          (!state || (pauseIssue.state ?? "opened") === state) &&
+          (!label || pauseIssue.labels.includes(label))
+            ? [pauseIssue]
+            : [];
+        send(
+          200,
+          paged(
+            listed.map((issue) => ({
+              iid: issue.iid,
+              description: issue.description,
+              labels: issue.labels,
+              state: issue.state ?? "opened",
+              web_url: `https://${host}/${GITLAB_STUB_PROJECT}/-/issues/${issue.iid}`,
+              assignees: (issue.assignees ?? []).map((username) => ({ username })),
+            })),
+          ),
+        );
+        return;
+      }
+      const issue = /^\/issues\/(\d+)(\/notes)?$/.exec(rest);
+      if (issue && (!pauseIssue || pauseIssue.iid !== Number(issue[1]))) {
+        send(404, { message: "404 Issue Not Found" });
+        return;
+      }
+      if (issue && pauseIssue && method === "POST" && issue[2] === "/notes") {
+        notes.push({ iid: pauseIssue.iid, body: String(body.body ?? "") });
+        send(201, { id: notes.length, body: body.body });
+        return;
+      }
+      if (issue && pauseIssue && method === "PUT" && issue[2] === undefined) {
+        if (body.state_event === "close") pauseIssue = { ...pauseIssue, state: "closed" };
+        send(200, { iid: pauseIssue.iid, state: pauseIssue.state ?? "opened" });
+        return;
+      }
+      // Project access tokens: the Maintainer key the stand-in signs in with may make them.
+      if (method === "GET" && rest === "/access_tokens") {
+        const state = url.searchParams.get("state");
+        send(
+          200,
+          paged(tokens.filter((token) => state !== "active" || (token.active && !token.revoked))),
+        );
+        return;
+      }
+      if (method === "POST" && rest === "/access_tokens") {
+        const token: GitLabStubToken = {
+          id: 300 + tokens.length,
+          name: String(body.name ?? ""),
+          scopes: (body.scopes as string[]) ?? [],
+          access_level: Number(body.access_level ?? 30),
+          expires_at: String(body.expires_at ?? ""),
+          active: true,
+          revoked: false,
+        };
+        tokens.push(token);
+        send(201, { ...token, token: `glpat-queue-${token.id}` });
+        return;
+      }
+      const revoke = /^\/access_tokens\/(\d+)$/.exec(rest);
+      if (method === "DELETE" && revoke) {
+        const token = tokens.find((row) => row.id === Number(revoke[1]));
+        if (!token) send(404, { message: "404 Not Found" });
+        else {
+          token.active = false;
+          token.revoked = true;
+          res.writeHead(204);
+          res.end();
+        }
+        return;
+      }
+      if (method === "POST" && rest === "/variables") {
+        const key = String(body.key ?? "");
+        if (variables.has(key)) {
+          send(400, { message: { key: [`(${key}) has already been taken`] } });
+          return;
+        }
+        variables.set(key, body);
+        send(201, body);
+        return;
+      }
+      const variable = /^\/variables\/([A-Za-z0-9_]+)$/.exec(rest);
+      if (variable?.[1] && method === "GET") {
+        const kept = variables.get(variable[1]);
+        if (!kept) send(404, { message: "404 Variable Not Found" });
+        else send(200, { ...kept, value: undefined });
+        return;
+      }
+      if (variable?.[1] && method === "PUT") {
+        if (!variables.has(variable[1])) send(404, { message: "404 Variable Not Found" });
+        else {
+          variables.set(variable[1], { key: variable[1], ...body });
+          send(200, { key: variable[1], ...body });
+        }
+        return;
+      }
       send(404, { message: "404 Not Found" });
     });
   });
@@ -784,6 +996,42 @@ export async function startGitLabStub(host: string) {
       };
       mergeRequests.set(request.iid, request);
       return request.iid;
+    },
+    /** Every commit status GitLab holds on a version, oldest first. */
+    statuses: (sha: string) => (statuses.get(sha) ?? []).map((row) => ({ ...row })),
+    /** Write a commit status as the queue's own job would, with its token. */
+    setStatus: (sha: string, row: { name: string; status: string; description: string }) => {
+      const kept = statuses.get(sha) ?? [];
+      statuses.set(sha, [
+        ...kept,
+        {
+          id: nextStatusId++,
+          ...row,
+          target_url: null,
+          created_at: new Date(Date.UTC(2026, 9, 9, 12, 0, nextStatusId)).toISOString(),
+        },
+      ]);
+    },
+    /** Every pipeline the API started, in order. */
+    pipelineStarts: () => started.map((start) => ({ ...start })),
+    /** The project's files on its default branch. */
+    serveFiles: (next: Record<string, string>) => {
+      files.clear();
+      for (const [path, text] of Object.entries(next)) files.set(path, text);
+    },
+    /** The queue's pause issue as the queue opened it, and who took it; null for none. */
+    servePauseIssue: (next: GitLabStubIssue | null) => {
+      pauseIssue = next;
+    },
+    /** The pause issue as GitLab holds it now, and every note written on it. */
+    pauseIssue: () =>
+      pauseIssue ? { ...pauseIssue, notes: notes.map((note) => note.body) } : null,
+    /** The project's access tokens, without their secrets. */
+    tokens: () => tokens.map((token) => ({ ...token })),
+    /** One CI variable as the project keeps it, its value included. */
+    variable: (key: string) => {
+      const kept = variables.get(key);
+      return kept ? { ...kept } : undefined;
     },
     close: () =>
       new Promise<void>((resolve, reject) => {

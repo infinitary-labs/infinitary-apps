@@ -20,10 +20,12 @@ import {
   type ForgePull,
   QUEUE_STATUS,
 } from "../forge";
+import { HELD } from "../queue/shipped/gitlab.mjs";
 import { TaskStore } from "../storage/taskStore";
 import { git } from "../workspace/git";
 import type { MergeGuard } from "./changeMerge";
 import { CheckWatcher } from "./checkWatch";
+import type { TypedWake } from "./wakes";
 
 // Integration cohort (docs/test-cohorts.md): real git at the run's own
 // priority, the slowest test (the no-CI project's merge) 0.59 s at its fastest
@@ -1519,5 +1521,49 @@ describe("the slot's head moves with the change it names (INF-1884 R2)", () => {
       prNumber: 94,
       checkTarget: { number: 94, branch: RELEASE_BRANCH },
     });
+  });
+});
+
+// INF-2997's review (held-rejoin-no-click), under the captain's "retry the
+// start after a mark, and wake the task's crewmate if it still fails. Never
+// swallow the failure.": a version the GitLab queue holds for a Maintainer
+// joins a batch only after an approval and a click that starts the queue, so
+// a reading of the held words wakes the task's crewmate, once per version
+// (docs/forge.md, "The shipped queue on GitLab").
+describe("a reading of a version the queue holds for a Maintainer", () => {
+  it("wakes the task's crewmate with the held words once per version", async () => {
+    const forge = new FakeForge();
+    const steers: { taskId: string; wake: TypedWake }[] = [];
+    const { tasks, repos, service } = setup({
+      forge,
+      steer: (taskId, wake) => steers.push({ taskId, wake }),
+    });
+    await insertDirectPrTask(tasks, repos, {
+      shape: { kind: "fix", kind_source: "none", delivery_ask: "queue-pr" },
+    });
+    recordPr(tasks, 23);
+    const head = forge.change?.headSha ?? "";
+    forge.atHead[head] = [
+      { name: "linux-checks", state: "success" },
+      { name: QUEUE_STATUS, state: "pending", detail: HELD },
+    ];
+    await service.checkTool.checkForCrew("ab12cd34");
+    expect(steers).toEqual([
+      {
+        taskId: "ab12cd34",
+        wake: {
+          facts: { kind: "queue-held", change: "!23", head, words: HELD },
+          once: `queue-held:${head}`,
+        },
+      },
+    ]);
+
+    // A waiting version's own words wake nobody.
+    forge.atHead[head] = [
+      { name: "linux-checks", state: "success" },
+      { name: QUEUE_STATUS, state: "pending", detail: "Waiting for the batch check" },
+    ];
+    await service.checkTool.checkForCrew("ab12cd34");
+    expect(steers).toHaveLength(1);
   });
 });

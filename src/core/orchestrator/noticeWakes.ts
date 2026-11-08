@@ -123,6 +123,17 @@ export type NoticeFacts =
       claimedBy?: string;
     }
   | {
+      /**
+       * The app's start of a project's queue after a merge failed twice
+       * (docs/forge.md, "The shipped queue"), and no live task of this app
+       * waits in that queue to start it: no batch forms until something does.
+       */
+      kind: "queue-stalled";
+      project: { id: string; name: string };
+      /** What the project's host answered, or why the start did not reach it. */
+      why: string;
+    }
+  | {
       kind: "task-policies-changed";
       task: { id: string; key: string; title: string };
       policies: EffectiveTaskPolicies;
@@ -401,6 +412,8 @@ export const NOTICE_WORDS: KindWords<NoticeFacts> = {
   "queue-plan-asked": (facts) => renderQueuePlanAsked(facts),
   "queue-offered": (facts) => renderQueueOffered(facts),
   "queue-paused": (facts) => renderQueuePaused(facts),
+  "queue-stalled": (facts) =>
+    `[fm-op] after a merge in project "${facts.project.name}" (repo_id ${facts.project.id}), the app tried twice to start the project's queue so it forms its next batch, and both starts failed: ${facts.why} No batch forms there until something starts it, and no task of this app waits in that queue. Start one task in that project now, with no card first, whose brief says to start the queue through the project's API the way the queue-setup skill's queue starts it, or to report what stops it. Put up no card about it.`,
   "task-policies-changed": (facts) =>
     `Current policies for ${facts.task.key || facts.task.id}: ${JSON.stringify(facts.policies)}. These replace earlier delivery/care/merging instructions, not scope. Keep working without restarting; never start queued work from this notice. Before the next push or merge, perform any validation/review the new care requires. Retain published work, the existing pull request, evidence, repair counts and all unrelated holds. A lower care removes only policy-owned requirements. Explicit self-merging permission can release an already-ready result: the first mate rechecks every requirement and uses the existing settle path, without another approval click. It grants no permission past other decisions, explicit withdrawal holds, dependencies, caps or failed checks. Ask-first cancels unsent merges; a merge already sent cannot be stopped. Read the current record before acting.${facts.guidance?.length ? `\n\n${POLICY_GUIDANCE_HEADING}\n\n${facts.guidance.join("\n\n")}` : ""}`,
   "task-override-changed": (facts) =>

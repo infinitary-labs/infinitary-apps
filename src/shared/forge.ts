@@ -51,6 +51,11 @@ export function hasChangeRequests(kind: ForgeKind | undefined): boolean {
   return kind === "github" || kind === "gitlab";
 }
 
+/** How a host names a proposed change by its number: GitLab's merge request `!N`, every other host's `#N`. */
+export function changeNumberLabel(kind: ForgeKind | undefined, number: number): string {
+  return `${kind === "gitlab" ? "!" : "#"}${number}`;
+}
+
 /** A host on the person's own server the app knows, and the kind of host it runs. */
 export type KnownForgeHost = { host: string; kind: ForgeKind };
 

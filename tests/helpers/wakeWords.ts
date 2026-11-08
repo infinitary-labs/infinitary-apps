@@ -28,6 +28,7 @@ export type FirstmateWakeKind =
   | "queue-plan-asked"
   | "queue-offered"
   | "queue-paused"
+  | "queue-stalled"
   | "validation-question-stale"
   | "idle-stall"
   | "idle-asked"

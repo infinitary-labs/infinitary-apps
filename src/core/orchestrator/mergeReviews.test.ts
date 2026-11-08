@@ -20,6 +20,13 @@ import {
   QUEUE_STATUS,
 } from "../forge";
 import type { MergeGuard } from "./changeMerge";
+import type { TypedWake, WakeFacts } from "./wakes";
+
+/** Where a failed start of the queue's next batch is told, as the app wires it. */
+type QueueWakes = {
+  steer?: (taskId: string, wake: TypedWake) => void;
+  tell?: (facts: Extract<WakeFacts, { kind: "queue-stalled" }>) => void;
+};
 
 // Integration cohort (docs/test-cohorts.md): a real `git init` per project at
 // the run's own priority, the slowest test (the refusals by number) 0.6 s at
@@ -71,9 +78,9 @@ const SKIPPABLE: ForgeRuleset = {
  * number, with its branch rules and the merge past them. The test moves
  * `host` between calls. A shape puts the project's delivery ask on the task.
  */
-async function onGitHub(shape?: { delivery_ask: "queue-pr" }) {
+async function onGitHub(shape?: { delivery_ask: "queue-pr" }, wakes: QueueWakes = {}) {
   const forge = new FakeForge();
-  const harness = setup({ forge });
+  const harness = setup({ forge, ...wakes });
   await insertDirectPrTask(harness.tasks, harness.repos, {
     ...(shape ? { shape: { kind: "fix", kind_source: "none", ...shape } } : {}),
   });
@@ -944,8 +951,8 @@ describe("the captain's click on a pull request the task did not open, while Git
 });
 
 describe("a review's click on a queue-pr project (docs/forge.md, \"A project's queue\")", () => {
-  async function queuedReview() {
-    const harness = await onGitHub({ delivery_ask: "queue-pr" });
+  async function queuedReview(wakes: QueueWakes = {}) {
+    const harness = await onGitHub({ delivery_ask: "queue-pr" }, wakes);
     const review: MergeReview = {
       id: "mrqueued00001",
       kind: "github",
@@ -1028,6 +1035,135 @@ describe("a review's click on a queue-pr project (docs/forge.md, \"A project's q
       receipt: { head: HEAD, sha: MERGED },
     });
     expect(starts).toEqual(["form", "form"]);
+  });
+
+  // The review's finding (lost-start-stalls) and the captain's choice on it:
+  // "retry the start after a mark, and wake the task's crewmate if it still
+  // fails. Never swallow the failure."
+  it("starts the next batch once more when a start fails, and when that fails too notes it and wakes a crewmate waiting in the queue, or the first mate", async () => {
+    const steers: { taskId: string; wake: TypedWake }[] = [];
+    const told: Extract<WakeFacts, { kind: "queue-stalled" }>[] = [];
+    const { service, forge, repos, tasks, task, review } = await queuedReview({
+      steer: (taskId, wake) => steers.push({ taskId, wake }),
+      tell: (facts) => told.push(facts),
+    });
+    if (!task.repoId) throw new Error("the task has no project");
+    const repo = repos.recordQueue(task.repoId, {
+      workflows: [{ path: ".github/workflows/infinitary-queue.yml", active: true, shipped: 1 }],
+    });
+    const answers: (Error | undefined)[] = [
+      new ForgeError("transient", "could not reach GitHub: socket hang up"),
+      undefined,
+    ];
+    const starts: string[] = [];
+    Object.assign(forge, {
+      startQueue: async (start: ForgeQueueStart) => {
+        starts.push(start.action);
+        const answer = answers.shift();
+        if (answer) throw answer;
+      },
+    });
+    forge.markQueued = async () => ({});
+    forge.atHead[HEAD] = [
+      { name: "linux-checks", state: "success" },
+      { name: QUEUE_STATUS, state: "success" },
+    ];
+    expect(await service.reviews.mergeReview("ab12cd34", review.id)).toMatchObject({ ok: true });
+    await vi.waitFor(() => expect(starts).toEqual(["form", "form"]));
+    expect(steers).toEqual([]);
+    expect(told).toEqual([]);
+
+    // After a mark, both starts fail: this task's crewmate hears it.
+    const refused = "GitHub answered 403: Resource not accessible by integration";
+    const fail = () =>
+      answers.push(new ForgeError("permission", refused), new ForgeError("permission", refused));
+    seedDelivery(tasks, "ab12cd34", { queueMark: { head: HEAD, at: 1 } });
+    fail();
+    service.merges.startNextBatch("ab12cd34", "mark");
+    await vi.waitFor(() => expect(steers).toHaveLength(1));
+    expect(starts).toEqual(["form", "form", "form", "form"]);
+    expect(steers[0]).toEqual({
+      taskId: "ab12cd34",
+      wake: { facts: { kind: "queue-start-failed", why: refused } },
+    });
+    expect(
+      tasks
+        .timeline("ab12cd34")
+        .filter((event) => event.kind === "note")
+        .map((event) => event.text),
+    ).toContain(`The project's queue did not start: ${refused}`);
+
+    // After a merge the merged task closes with its wakes (the re-review's
+    // after-merge-wake-lost): with no other task waiting in the queue, the
+    // first mate hears it.
+    fail();
+    service.merges.startNextBatch("ab12cd34", "merge");
+    await vi.waitFor(() => expect(told).toHaveLength(1));
+    expect(told[0]).toEqual({
+      kind: "queue-stalled",
+      project: { id: task.repoId, name: repo?.name },
+      why: refused,
+    });
+    expect(steers).toHaveLength(1);
+
+    // A task still waiting in that queue hears it instead.
+    insertTask(tasks, { id: "cd56ef78", repoId: task.repoId, branch: "fm/task-cd56ef78" });
+    seedDelivery(tasks, "cd56ef78", { queueMark: { head: "9".repeat(40), at: 2 } });
+    fail();
+    service.merges.startNextBatch("ab12cd34", "merge");
+    await vi.waitFor(() => expect(steers).toHaveLength(2));
+    expect(steers[1]).toEqual({
+      taskId: "cd56ef78",
+      wake: { facts: { kind: "queue-start-failed", why: refused } },
+    });
+    expect(told).toHaveLength(1);
+  });
+
+  // The re-review's finding (approval-never-restarts): a change the queue
+  // held, such as one waiting for a Maintainer's approval on GitLab, joins
+  // only when a start reads it again, so a click on a waiting version starts
+  // the queue on a host whose mark starts nothing, and marks nothing twice.
+  it("starts the queue again on a click on a waiting version where a mark starts nothing", async () => {
+    const { service, forge, repos, task, review } = await queuedReview();
+    if (!task.repoId) throw new Error("the task has no project");
+    repos.recordQueue(task.repoId, {
+      workflows: [{ path: ".gitlab/infinitary-queue.yml", active: true, shipped: 1 }],
+    });
+    const starts: string[] = [];
+    const marked: string[] = [];
+    Object.assign(forge, {
+      markStartsQueue: false,
+      startQueue: async (start: ForgeQueueStart) => {
+        starts.push(start.action);
+      },
+    });
+    forge.markQueued = async (sha) => {
+      marked.push(sha);
+      return {};
+    };
+    forge.atHead[HEAD] = [
+      { name: "linux-checks", state: "success" },
+      { name: QUEUE_STATUS, state: "pending" },
+    ];
+    expect(await service.reviews.mergeReview("ab12cd34", review.id)).toMatchObject({
+      ok: false,
+      stop: "queue",
+    });
+    expect(starts).toEqual(["form"]);
+    expect(marked).toEqual([]);
+    // A kept approval's unattended retry of the same review starts nothing
+    // (the review's restart-on-unattended-reruns).
+    const kept: MergeGuard = {
+      head: HEAD,
+      prNumber: 23,
+      unattended: true,
+      beforeDispatch: () => undefined,
+    };
+    expect(await service.reviews.mergeReview("ab12cd34", review.id, kept)).toMatchObject({
+      ok: false,
+      stop: "queue",
+    });
+    expect(starts).toEqual(["form"]);
   });
 
   it("refuses in words when the host cannot mark a version for the queue", async () => {

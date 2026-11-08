@@ -2,7 +2,7 @@ import type { ForgeCheckState } from "@shared/checkSnapshot";
 import type { ForgeKind } from "@shared/forge";
 import type { ForgeProject } from "@shared/forges";
 import type { PresentationDestination } from "@shared/presentationDestination";
-import type { QueueWorkflow } from "@shared/repos";
+import type { QueueCredential, QueueWorkflow } from "@shared/repos";
 import type { ForgeApi } from "./api";
 import type { ForgeAttachments } from "./attachments";
 import type { ForgeWorkflows } from "./workflows";
@@ -458,6 +458,25 @@ export interface Forge {
   queuePause?(): Promise<ForgeQueuePause | null>;
   /** Start the shipped queue by hand where the project lives, with the captain's sign-in. */
   startQueue?(start: ForgeQueueStart): Promise<void>;
+  /**
+   * Whether the host starts the shipped queue on its own when `markQueued`
+   * marks a version (GitHub's status event does). Where it does not, the app
+   * starts the queue itself after each mark.
+   */
+  readonly markStartsQueue?: boolean;
+  /**
+   * The token the shipped queue writes with, on a host whose queue jobs get
+   * no credential of their own (GitLab): whether the project has it, read
+   * with the captain's sign-in. A host that needs none supplies neither.
+   */
+  queueCredential?(): Promise<QueueCredential>;
+  /**
+   * Create the queue's token where the project lives with the captain's
+   * sign-in, keep it in the project's CI settings where only the queue's
+   * jobs receive it, and revoke the queue's older tokens. The token never
+   * reaches the app's own records.
+   */
+  createQueueCredential?(): Promise<QueueCredential>;
   /** Close the change without putting it in. */
   close(change: ForgeChange): Promise<void>;
   /** How the change is named on a surface: `#N`, `!N`, or the branch where it has no number. */

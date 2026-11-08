@@ -343,7 +343,7 @@ export class MergeReviews {
     by?: "captain",
   ): { head: string; sha?: string } {
     const receipt = { head, ...(sha ? { sha } : {}) };
-    this.merges.startNextBatch(taskId);
+    this.merges.startNextBatch(taskId, "merge");
     const record = this.options.tasks.get(taskId);
     const reviews = record?.delivery?.mergeReviews;
     if (!reviews) return receipt;
@@ -655,6 +655,7 @@ export class MergeReviews {
           change,
           fresh.queueWait.state,
           () => undefined,
+          true,
         );
         return {
           ...waiting,
@@ -927,8 +928,13 @@ export class MergeReviews {
       const held = guard?.held?.();
       if (held) return { ok: false, stop: "guidance", text: held };
       if (fresh.queueWait)
-        return await this.merges.enqueue(taskId, forge, change, fresh.queueWait.state, () =>
-          guard?.beforeDispatch(candidate.headSha, true),
+        return await this.merges.enqueue(
+          taskId,
+          forge,
+          change,
+          fresh.queueWait.state,
+          () => guard?.beforeDispatch(candidate.headSha, true),
+          !guard?.unattended,
         );
       const stopped = guard?.beforeDispatch(candidate.headSha);
       if (stopped) return { ok: false, stop: "withdrawn", text: stopped };

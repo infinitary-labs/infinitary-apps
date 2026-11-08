@@ -741,6 +741,12 @@ export async function createServices(
     // asks the sign-in service to look again; its health read is the proof.
     forgeFor,
     onNote: (text, taskId) => broadcastEvent({ type: "firstmate_note", text, taskId }),
+    steer: (taskId, wake) => {
+      if (wake.once === undefined) inbox.enqueue(taskId, wake);
+      else if (!inbox.woken(taskId, wake.once))
+        inbox.enqueueSteerOnce(taskId, { ...wake, once: wake.once });
+    },
+    tell: (facts) => firstmateForSeat?.notifyOp({ facts }, "agent"),
     bringBranchHome: (taskId, strict, branch) => placed.bringBranchHome(taskId, strict, branch),
     checkedOut: (taskId) => placed.checkedOut(taskId),
     verifyValidationEvidence: (taskId): void =>

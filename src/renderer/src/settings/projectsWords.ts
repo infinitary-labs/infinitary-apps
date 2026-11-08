@@ -1,3 +1,4 @@
+import { changeNumberLabel, type ForgeKind } from "@shared/forge";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
 import { QUEUE_STATUS, type RepoView } from "@shared/repos";
 import { AUTONOMY_WORDS, CARE_WORDS, PROJECT_DELIVERY_WORDS } from "@shared/vocabulary";
@@ -34,6 +35,48 @@ export const QUEUE_HOW_TO_WORDS = {
     "Your first mate can plan the queue with you: ask it to set up a queue for this project.",
   guide: "Open GitHub's guide to commit statuses",
   guideLink: "https://docs.github.com/en/rest/commits/statuses#create-a-commit-status",
+  /**
+   * On GitLab a waiting status cannot be set waiting again, so the waiting
+   * mark is a finished status whose description says it waits
+   * (docs/forge.md, "The shipped queue on GitLab").
+   */
+  gitlab: {
+    steps: [
+      "Ask your first mate to set up the queue Infinitary ships. It plans with you which of your project's checks each batch runs, and a batch that fails pauses until a fix is approved.",
+      `Or write your own pipeline that finds merge requests whose newest ${QUEUE_STATUS} status says Waiting for the batch check, and tests them, together or one at a time.`,
+      `Have it set ${QUEUE_STATUS} to success or failed on each version, with the reason in its description. Infinitary merges a version once it reads success, with no second click.`,
+    ],
+    guide: "Open GitLab's guide to commit statuses",
+    guideLink: "https://docs.gitlab.com/api/commits/#set-the-pipeline-status-of-a-commit",
+  },
+} as const;
+
+/** The how-to's steps and guide for a project's host. */
+export function queueHowTo(kind: ForgeKind | undefined): {
+  steps: readonly string[];
+  guide: string;
+  guideLink: string;
+} {
+  return kind === "gitlab" ? QUEUE_HOW_TO_WORDS.gitlab : QUEUE_HOW_TO_WORDS;
+}
+
+/**
+ * The key the shipped queue writes with on GitLab, under "Where changes go"
+ * (docs/forge.md, "The shipped queue on GitLab"; the plan's "one click
+ * creates its project token"). GitLab hands a pipeline no key that may
+ * write a status, so the queue keeps its own in the project's CI settings.
+ */
+export const QUEUE_KEY_WORDS = {
+  title: "The queue's key",
+  missing: (place: string) =>
+    `Your project's queue needs its own key on ${place} to write each change's batch check. Infinitary makes it with your sign-in and keeps it in the project's CI settings, where only the queue's own jobs can read it.`,
+  ready: (date: string) =>
+    `The queue's key is in place until ${date}. Making a new one replaces it at once.`,
+  unreadable: (place: string) =>
+    `Your sign-in cannot read this project's keys on ${place}. Making one needs the Maintainer role on the project, and on gitlab.com a Premium or Ultimate plan.`,
+  make: "Make the queue's key",
+  remake: "Make a new key",
+  made: "Made the queue's key. It stays in your project's CI settings, never on this computer.",
 } as const;
 
 /**
@@ -53,8 +96,8 @@ export const QUEUE_SHIPPED_WORDS = {
  */
 export const QUEUE_PAUSE_WORDS = {
   title: "Batch paused",
-  summary: (run: number, changes: readonly number[], since: string) =>
-    `Paused since ${since}: batch run ${run} failed its checks, so ${changes.length === 1 ? "one approved change waits" : `${changes.length} approved changes wait`} for a fix: ${changes.map((number) => `#${number}`).join(", ")}.`,
+  summary: (run: number, changes: readonly number[], since: string, kind?: ForgeKind) =>
+    `Paused since ${since}: batch run ${run} failed its checks, so ${changes.length === 1 ? "one approved change waits" : `${changes.length} approved changes wait`} for a fix: ${changes.map((number) => changeNumberLabel(kind, number)).join(", ")}.`,
   claimed: (who: string) => `${who} is repairing it.`,
   unclaimed:
     "Nobody has taken the repair yet. A crewmate starts it when one of your changes is paused.",

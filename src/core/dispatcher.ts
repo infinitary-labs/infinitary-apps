@@ -357,6 +357,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       await services.queuePauses.answer(repoId, answer);
       return { ok: true as const };
     },
+    "inf:repos:queue-credential": (repoId) => services.queuePauses.credential(repoId),
+    "inf:repos:queue-credential-create": (repoId) => services.queuePauses.createCredential(repoId),
     "inf:repos:configure": async (repoId, changes) => {
       if (changes.path !== undefined && services.supervisor.facts.activeTasksOnRepo(repoId).length)
         throw new Error(

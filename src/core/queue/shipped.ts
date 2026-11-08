@@ -5,37 +5,42 @@ import { join } from "node:path";
 /**
  * The shipped queue (docs/forge.md, "The shipped queue"): the fix-forward
  * queue Infinitary writes into a project, generated from the one source in
- * `./shipped/` and stamped with its version. The rules name no host
- * (`rules.mjs`); each host part names the files a project gets there.
+ * `./shipped/` and stamped with its host part's version. The rules name no
+ * host (`rules.mjs`); each host part names the files a project gets there.
  * This module imports nothing of the app's, so a plain-Node script can
  * generate the files from it.
  */
 
-/**
- * The SHA-256 of the files in `./shipped/` at each version of the shipped
- * queue, oldest first, in `SHIPPED_SOURCES` order. It only grows: a change
- * to the source appends its hash, which moves `QUEUE_VERSION`, so a project
- * whose stamp is older is offered the update as a pull request.
- * `scripts/generate-shipped-queue.ts` refuses a source whose hash is not the
- * last one, and a list that does not keep the default branch's as its start.
- */
-export const QUEUE_SOURCES: readonly string[] = [
-  "1159b9f2fb307e12e2c42b53138621070b9c16059dffa9d7572d4499c7451e52",
-  "ea521b053773608a62f541f5f4ed9bda15a9d576dcf82ed08e1cec174260ee17",
-];
-
-/** The shipped queue's version: how many sources it has had. */
-export const QUEUE_VERSION = QUEUE_SOURCES.length;
-
-/** The source files, in the order their hash reads them. */
+/** Every source file of the shipped queue in `./shipped/`; each host part hashes the ones it ships. */
 export const SHIPPED_SOURCES = [
   "rules.mjs",
   "github.mjs",
   "compose.sh",
   "action.yml",
   "workflow.yml",
+  "gitlab.mjs",
+  "gitlab-batch.yml",
+  "gitlab-queue.yml",
 ] as const;
 type ShippedSource = (typeof SHIPPED_SOURCES)[number];
+
+/*
+ * Each host part's version history: the SHA-256 of the sources it ships at
+ * each version, oldest first, in the order its `hashed` list reads them.
+ * A list only grows: a change to a part's sources appends its hash, which
+ * moves that part's version, so a project on that host whose stamp is older
+ * is offered the update as a pull request, while a project on another host
+ * keeps its version. `scripts/generate-shipped-queue.ts` refuses a source
+ * whose hash is not its list's last, and a list that does not keep the
+ * default branch's as its start.
+ */
+export const GITHUB_QUEUE_SOURCES: readonly string[] = [
+  "1159b9f2fb307e12e2c42b53138621070b9c16059dffa9d7572d4499c7451e52",
+  "ea521b053773608a62f541f5f4ed9bda15a9d576dcf82ed08e1cec174260ee17",
+];
+export const GITLAB_QUEUE_SOURCES: readonly string[] = [
+  "b41bb2e51bccbe8ec5285463ce6ffe6aa58bbe3f0cd1a48c0d1b169dd7d91cc5",
+];
 
 /** The stamp's words after its comment mark, on each shipped file's first line (the second under a shebang). */
 const STAMP_WORDS = (version: number) =>
@@ -55,6 +60,16 @@ export function readQueueStamp(text: string): number | undefined {
  * batch's checks.
  */
 export type QueueHostPart = {
+  /** The host's name as a heading names it. */
+  name: string;
+  /** The folder of the queue-setup skill its files are written to. */
+  folder: string;
+  /** The sources whose hash is this part's version, in the order they are hashed. */
+  hashed: readonly ShippedSource[];
+  /** This part's version history (see `GITHUB_QUEUE_SOURCES`). */
+  sources: readonly string[];
+  /** This part's version: how many sources it has had. */
+  version: number;
   /** Each shipped file, from its source in `./shipped/` to its path in the project. */
   files: readonly { source: ShippedSource; path: string }[];
   /** The file whose stamp says the project runs the shipped queue. */
@@ -65,6 +80,11 @@ export type QueueHostPart = {
 
 /** The GitHub part: an Actions workflow, a composite step and the script it runs. */
 export const GITHUB_QUEUE_PART: QueueHostPart = {
+  name: "GitHub",
+  folder: "github",
+  hashed: ["rules.mjs", "github.mjs", "compose.sh", "action.yml", "workflow.yml"],
+  sources: GITHUB_QUEUE_SOURCES,
+  version: GITHUB_QUEUE_SOURCES.length,
   files: [
     { source: "workflow.yml", path: ".github/workflows/infinitary-queue.yml" },
     { source: "action.yml", path: ".github/actions/infinitary-batch/action.yml" },
@@ -76,15 +96,48 @@ export const GITHUB_QUEUE_PART: QueueHostPart = {
   checksFile: ".github/workflows/infinitary-batch-checks.yml",
 };
 
-/** The SHA-256 of the shipped sources in `dir`, which the last of `QUEUE_SOURCES` must be. */
-export function shippedSourceHash(dir: string): string {
+/**
+ * The GitLab part: a CI file the project's own `.gitlab-ci.yml` includes,
+ * the batch checks' template, and the script its jobs run. Its jobs run in
+ * pipelines the API starts on the default branch, and write through a
+ * project access token kept in the project's CI settings.
+ */
+export const GITLAB_QUEUE_PART: QueueHostPart = {
+  name: "GitLab",
+  folder: "gitlab",
+  hashed: ["rules.mjs", "gitlab.mjs", "compose.sh", "gitlab-batch.yml", "gitlab-queue.yml"],
+  sources: GITLAB_QUEUE_SOURCES,
+  version: GITLAB_QUEUE_SOURCES.length,
+  files: [
+    { source: "gitlab-queue.yml", path: ".gitlab/infinitary-queue.yml" },
+    { source: "gitlab-batch.yml", path: ".gitlab/infinitary-batch.yml" },
+    { source: "compose.sh", path: ".gitlab/infinitary/compose.sh" },
+    { source: "rules.mjs", path: ".gitlab/infinitary/rules.mjs" },
+    { source: "gitlab.mjs", path: ".gitlab/infinitary/gitlab.mjs" },
+  ],
+  queueFile: ".gitlab/infinitary-queue.yml",
+  checksFile: ".gitlab/infinitary-batch-checks.yml",
+};
+
+/** Every host part, by the kind of host it runs on. */
+export const QUEUE_PARTS = { github: GITHUB_QUEUE_PART, gitlab: GITLAB_QUEUE_PART } as const;
+
+/** The shipped queue's part for a kind of host, or undefined where it has none. */
+export function queuePartFor(kind: string | undefined): QueueHostPart | undefined {
+  return kind !== undefined && Object.hasOwn(QUEUE_PARTS, kind)
+    ? QUEUE_PARTS[kind as keyof typeof QUEUE_PARTS]
+    : undefined;
+}
+
+/** The SHA-256 of a host part's sources in `dir`, which the last of its `sources` must be. */
+export function shippedSourceHash(dir: string, part: QueueHostPart): string {
   const hash = createHash("sha256");
-  for (const source of SHIPPED_SOURCES) hash.update(readFileSync(join(dir, source)));
+  for (const source of part.hashed) hash.update(readFileSync(join(dir, source)));
   return hash.digest("hex");
 }
 
 /** One source file as a project gets it: the stamp on its first line, under a shebang if it has one. */
-export function stampedFile(source: ShippedSource, text: string, version = QUEUE_VERSION): string {
+export function stampedFile(source: ShippedSource, text: string, version: number): string {
   const mark = source.endsWith(".mjs") ? "//" : "#";
   const stamp = `${mark} ${STAMP_WORDS(version)}\n`;
   if (text.startsWith("#!")) {
@@ -101,6 +154,6 @@ export function shippedFiles(
 ): { source: ShippedSource; path: string; text: string }[] {
   return part.files.map((file) => ({
     ...file,
-    text: stampedFile(file.source, readFileSync(join(dir, file.source), "utf8")),
+    text: stampedFile(file.source, readFileSync(join(dir, file.source), "utf8"), part.version),
   }));
 }

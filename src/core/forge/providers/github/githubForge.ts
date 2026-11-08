@@ -851,6 +851,9 @@ export class GitHubForge implements Forge {
     };
   }
 
+  /** GitHub's status event starts the shipped queue's workflow on each mark. */
+  readonly markStartsQueue = true;
+
   async markQueued(sha: string): Promise<ForgeQueueMark> {
     const answer = (await this.request(
       "POST",

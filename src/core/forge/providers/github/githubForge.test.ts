@@ -5,7 +5,7 @@ import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkSnapshotSummary } from "../../../../shared/checkSnapshot";
-import { GITHUB_QUEUE_PART, QUEUE_VERSION, shippedFiles } from "../../../queue/shipped";
+import { GITHUB_QUEUE_PART, shippedFiles } from "../../../queue/shipped";
 import { WORKFLOW as QUEUE_WORKFLOW } from "../../../queue/shipped/github.mjs";
 import { PAUSE_LABEL, pauseIssue } from "../../../queue/shipped/rules.mjs";
 import { QUEUE_STATUS, QUEUE_WAITING_WORDS } from "../../forge";
@@ -468,7 +468,7 @@ describe("GitHubForge", () => {
         .map((request) => request.url.split("?")[0] ?? "")
         .filter((url) => url.includes("/contents/"));
     expect(await forge.queueWorkflows()).toEqual([
-      { path: GITHUB_QUEUE_PART.queueFile, active: true, shipped: QUEUE_VERSION },
+      { path: GITHUB_QUEUE_PART.queueFile, active: true, shipped: GITHUB_QUEUE_PART.version },
     ]);
     expect(reads()).toEqual([`/repos/octo/meter/contents/${GITHUB_QUEUE_PART.queueFile}`]);
 

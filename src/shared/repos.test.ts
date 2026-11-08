@@ -70,17 +70,24 @@ describe("deliveryForRecord", () => {
   });
 });
 
-// INF-2430 piece 2: a project on GitHub may merge its pull requests through its own queue.
+// INF-2430 piece 2: a project on GitHub may merge its pull requests through its own queue,
+// and INF-2952 piece 2 brings the queue to GitLab; the plan's not-offered answer keeps it
+// from a host whose CI cannot run it.
 // The order is the one Settings shows, local merge first, from the lightest choice
 // to the most involved (the captain's ask to move local merge to the very left).
 describe("a project's delivery choices", () => {
-  it("offers the queue only to a project on GitHub", () => {
-    expect(deliveryChoices({ kind: "github", name: "github.com" })).toEqual([
+  it("offers the queue only to a project on a host whose CI runs it", () => {
+    for (const host of [
+      { kind: "github", name: "github.com" },
+      { kind: "gitlab", name: "gitlab.com" },
+      { kind: "gitlab", name: "gitlab.example.com" },
+    ] as const)
+      expect(deliveryChoices(host)).toEqual(["local-only", "direct-pr", "queue-pr"]);
+    expect(deliveryChoices({ kind: "bitbucket", name: "bitbucket.org" })).toEqual([
       "local-only",
       "direct-pr",
-      "queue-pr",
     ]);
-    expect(deliveryChoices({ kind: "gitlab", name: "gitlab.com" })).toEqual([
+    expect(deliveryChoices({ kind: "git", name: "git.example.com" })).toEqual([
       "local-only",
       "direct-pr",
     ]);

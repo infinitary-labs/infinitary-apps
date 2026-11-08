@@ -289,6 +289,7 @@ export class ChangeMerge {
         items?.every((item) => item.name === QUEUE_STATUS || PASSED_STATES.has(item.state)) ===
         true;
       if (queue?.state === "pending" && othersPassed && status.recorded) {
+        if (!guard?.unattended && !boundary?.unattended) this.restartQueue(taskId, checked.forge);
         return {
           ok: false,
           text: `Cannot merge yet - ${QUEUE_WAITING_WORDS}: the project's queue has not passed ${checked.change.headSha} (${QUEUE_STATUS} is pending). ${status.text}`,
@@ -395,6 +396,7 @@ export class ChangeMerge {
           () =>
             guard?.beforeDispatch(change.headSha, true) ??
             boundary?.beforeDispatch(change.headSha, true),
+          !guard?.unattended && !boundary?.unattended,
         );
       const withdrawn =
         guard?.beforeDispatch(change.headSha) ?? boundary?.beforeDispatch(change.headSha);
@@ -407,7 +409,7 @@ export class ChangeMerge {
       }
       dispatched = true;
       const receipt = await forge.putIn(publishedChange, publishedChange.headSha);
-      this.startNextBatch(taskId);
+      this.startNextBatch(taskId, "merge");
       return {
         ok: true,
         ...this.putInText(taskId, forge, change),
@@ -540,13 +542,18 @@ export class ChangeMerge {
   }
 
   /**
-   * After a batched change merges, through the merge card or a
+   * After the app marks a version waiting on a host whose mark starts
+   * nothing, or after a batched change merges, through the merge card or a
    * merge review, start the shipped queue again where the project lives, so
-   * the next batch forms on the new default branch: the merge's own push
-   * starts no workflow there (docs/forge.md, "The shipped queue"). A start
-   * that fails waits for the next approval's start.
+   * the next batch forms: neither the mark nor the merge's own push starts a
+   * workflow there (docs/forge.md, "The shipped queue"). A start that fails
+   * is tried once more; a second failure is noted on the task and wakes the
+   * crewmate of a task still waiting in that queue - this one after a mark,
+   * another after a merge, since a merged task closes and its wakes with it
+   * - or, with none, the first mate, since no batch forms until something
+   * starts one.
    */
-  startNextBatch(taskId: string): void {
+  startNextBatch(taskId: string, after: "mark" | "merge"): void {
     if (!this.queued(taskId)) return;
     const record = this.options.tasks.get(taskId);
     const repoId = record?.delivery?.checkTarget?.repoId ?? record?.repoId;
@@ -554,7 +561,43 @@ export class ChangeMerge {
     if (!repo || queueShipped(repo) === undefined) return;
     const forge = this.options.forgeFor(repo);
     if (!forge.startQueue) return;
-    void forge.startQueue({ action: "form" }).catch(() => {});
+    const start = (): Promise<void> => forge.startQueue?.({ action: "form" }) ?? Promise.resolve();
+    void start()
+      .catch(start)
+      .catch((error: unknown) => {
+        const why = error instanceof Error ? error.message : String(error);
+        this.options.tasks.note(taskId, `The project's queue did not start: ${why}`, {
+          news: true,
+        });
+        const waiting = this.options.tasks
+          .listLive()
+          .filter(
+            (task) =>
+              (after === "mark" || task.id !== taskId) &&
+              (task.delivery?.checkTarget?.repoId ?? task.repoId) === repo.id &&
+              task.delivery?.queueMark !== undefined,
+          )
+          .sort((a, b) => Number(a.id !== taskId) - Number(b.id !== taskId));
+        const crewmate = waiting[0];
+        if (crewmate)
+          this.options.steer?.(crewmate.id, { facts: { kind: "queue-start-failed", why } });
+        else
+          this.options.tell?.({
+            kind: "queue-stalled",
+            project: { id: repo.id, name: repo.name },
+            why,
+          });
+      });
+  }
+
+  /**
+   * The captain's own merge click on a version already waiting, on a host
+   * whose mark starts nothing: start the queue again, since only a start
+   * reads a change the queue held, such as one waiting for a Maintainer's
+   * approval. A kept approval's unattended retry starts nothing.
+   */
+  private restartQueue(taskId: string, forge: Forge): void {
+    if (!forge.markStartsQueue) this.startNextBatch(taskId, "mark");
   }
 
   /** Whether the task merges through its project's queue (`queue-pr`). */
@@ -617,6 +660,7 @@ export class ChangeMerge {
     change: ForgeChange,
     state: ForgeCheckState | undefined,
     look: () => string | undefined,
+    attended: boolean,
   ): Promise<PrOutcome> {
     if (state !== undefined && state !== "pending") {
       return {
@@ -649,8 +693,13 @@ export class ChangeMerge {
         `Marked ${change.headSha} with ${QUEUE_STATUS}, waiting for the project's queue.`,
         { news: false, data: { queue: change.headSha } },
       );
-      await this.checks.run(taskId);
     }
+    // A host whose mark starts nothing has the queue started here: on the
+    // mark, and on the captain's own click on a version already waiting
+    // (`restartQueue`), never on a kept approval's unattended retry.
+    if (state === undefined && !forge.markStartsQueue) this.startNextBatch(taskId, "mark");
+    else if (attended) this.restartQueue(taskId, forge);
+    if (state === undefined) await this.checks.run(taskId);
     return {
       ok: false,
       text: `Cannot merge yet - ${QUEUE_WAITING_WORDS}: the host marked ${change.headSha} with ${QUEUE_STATUS}, waiting; the project's queue sets it to success or failure.`,

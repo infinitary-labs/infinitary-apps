@@ -1,5 +1,6 @@
 import { forgePlace } from "@shared/forge";
 import type { ForgeProject } from "@shared/forges";
+import type { QueueCredential } from "@shared/repos";
 import { requireConventional } from "../../../workspace/conventional";
 import type { ForgeApi } from "../../api";
 import {
@@ -11,14 +12,20 @@ import {
   ForgeError,
   type ForgeLocation,
   type ForgePull,
+  type ForgeQueueMark,
+  type ForgeQueuePause,
+  type ForgeQueueStart,
   type ForgeReadiness,
   ForgeWriteError,
   isFullCommitId,
+  QUEUE_STATUS,
+  type QueueWorkflow,
 } from "../../forge";
 import { gitLabReleaseUpload, nextGitLabPagePath, parseGitLabApiRequest } from "./api";
 import { GitLabAttachments, gitlabStoryDestination } from "./attachments";
 import { GITLAB_READ_MAX_BYTES, GitLabClient, type GitLabOptions } from "./client";
 import { GitLabProjects } from "./projects";
+import { GitLabQueue } from "./queue";
 import { GitLabWorkflows } from "./workflows";
 
 /**
@@ -108,6 +115,10 @@ export class GitLabForge implements Forge {
   readonly attachments?: GitLabAttachments;
   private readonly client: GitLabClient;
   private readonly projects: GitLabProjects;
+  /** The shipped queue's GitLab part, with the person's own sign-in. */
+  private readonly queue: GitLabQueue;
+  /** GitLab starts nothing on a status: the app starts the queue after each mark. */
+  readonly markStartsQueue = false;
 
   constructor(
     readonly location: ForgeLocation,
@@ -118,6 +129,7 @@ export class GitLabForge implements Forge {
     this.client = new GitLabClient(this.host, options);
     this.projects = new GitLabProjects(this.host, options);
     this.workflows = new GitLabWorkflows(this.client, () => this.projectPath());
+    this.queue = new GitLabQueue(this.client, this.place, () => this.projectPath());
     const project = location.owner && location.name ? `${location.owner}/${location.name}` : null;
     this.api = {
       place: this.place,
@@ -287,10 +299,38 @@ export class GitLabForge implements Forge {
         MAX_MERGE_COMMIT_READS;
     for (const pipeline of counted) {
       const read = await this.pipelineChecks(pipeline, counted.length > 1);
-      items.push(...read.items);
+      items.push(...read.items.filter((item) => !isQueueItem(item.name)));
       complete &&= read.complete;
     }
+    // The queue status is read on its own: its waiting is a finished
+    // `skipped` there, which a pipeline's reading would count as passed.
+    const queue = await this.queue.check(head);
+    if (queue) items.push(queue);
     return { items, complete };
+  }
+
+  markQueued(sha: string): Promise<ForgeQueueMark> {
+    return this.queue.markQueued(sha);
+  }
+
+  queueWorkflows(options?: { all?: boolean }): Promise<QueueWorkflow[]> {
+    return this.queue.workflows(options);
+  }
+
+  queuePause(): Promise<ForgeQueuePause | null> {
+    return this.queue.pause();
+  }
+
+  startQueue(start: ForgeQueueStart): Promise<void> {
+    return this.queue.start(start);
+  }
+
+  queueCredential(): Promise<QueueCredential> {
+    return this.queue.credential();
+  }
+
+  createQueueCredential(): Promise<QueueCredential> {
+    return this.queue.createCredential();
   }
 
   /**
@@ -577,6 +617,11 @@ export class GitLabForge implements Forge {
   private mergeRequestPath(iid: number): string {
     return `${this.projectPath()}/merge_requests/${iid}`;
   }
+}
+
+/** A pipeline job that is the queue status, as GitLab may list it, alone or named with its pipeline. */
+function isQueueItem(name: string): boolean {
+  return name === QUEUE_STATUS || name.startsWith(`${QUEUE_STATUS} [`);
 }
 
 function numbered(change: ForgeChange, place: string): number {

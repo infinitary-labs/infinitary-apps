@@ -12,6 +12,7 @@ import { lastTurnSchema } from "../lastTurn";
 import {
   projectsFolderViewSchema,
   queueAnswerSchema,
+  queueCredentialSchema,
   repoPolicyPatchSchema,
   repoRemovalSchema,
   repoSetupResultSchema,
@@ -208,6 +209,25 @@ export const talkChannels = {
     reach: "home",
     request: z.tuple([z.string().min(1), queueAnswerSchema]),
     response: okSchema,
+  },
+  // The token a project's shipped queue writes with, where its host keeps
+  // one in the project's CI settings (GitLab; docs/forge.md, "The shipped
+  // queue on GitLab"): null on a host whose queue needs none.
+  "inf:repos:queue-credential": {
+    effect: "read",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([z.string().min(1)]),
+    response: queueCredentialSchema.nullable(),
+  },
+  // Create that token with the captain's own sign-in (Settings -> Projects),
+  // one click; the token itself never reaches the app.
+  "inf:repos:queue-credential-create": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([z.string().min(1)]),
+    response: queueCredentialSchema,
   },
   // Where new projects go (Settings -> Projects): the folder clone and init
   // create their directories in. Null puts it back to the app's own fleet

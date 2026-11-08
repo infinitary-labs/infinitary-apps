@@ -454,4 +454,146 @@ describe("GitLabForge", () => {
     );
     expect(await forge.changeFor("fm/task-1")).toMatchObject({ number: 4 });
   });
+
+  // INF-2952 piece 2, the captain's approved plan: "a crewmate's merge
+  // request adds its pipeline" on GitLab. The queue writes its waiting as a
+  // finished `skipped` status (GitLab refuses a waiting status set waiting
+  // again), so the app must read that status as the queue still waiting,
+  // never as a pass, whatever the pipeline it joined says.
+  it("reads the queue's waiting mark as still waiting and its pass as a pass, apart from the pipelines", async () => {
+    const head = "a".repeat(40);
+    let queue = [
+      {
+        id: 7,
+        name: "infinitary/queue",
+        status: "skipped",
+        description: "Waiting for the batch check",
+      },
+    ];
+    const { forge, fetcher } = forgeAnswering((method, path) => {
+      if (method === "POST" && path === `/api/v4${PROJECT}/statuses/${head}`)
+        return Response.json({ id: 8 });
+      if (path === `/api/v4${PROJECT}/merge_requests/4/pipelines`)
+        return Response.json([
+          { id: 30, sha: head, ref: "refs/merge-requests/4/head", status: "success" },
+        ]);
+      if (path === `/api/v4${PROJECT}/pipelines`) return Response.json([]);
+      if (path === `/api/v4${PROJECT}/pipelines/30/jobs`)
+        return Response.json([
+          { id: 1, name: "test", status: "success" },
+          { id: 2, name: "infinitary/queue", status: "skipped" },
+        ]);
+      if (path === `/api/v4${PROJECT}/repository/commits/${head}/statuses`)
+        return Response.json(queue);
+      return Response.json({ message: "404 Not Found" }, { status: 404 });
+    });
+    const change = { number: 4, url: null, branch: "fm/task-1", headSha: head };
+
+    expect(await forge.markQueued(head)).toEqual({ id: 8 });
+    const mark = fetcher.mock.calls.find(([, init]) => init?.method === "POST");
+    expect(JSON.parse(String(mark?.[1]?.body))).toEqual({
+      state: "skipped",
+      name: "infinitary/queue",
+      description: "Waiting for the batch check",
+    });
+    expect(forge.markStartsQueue).toBe(false);
+
+    const waiting = (await forge.checks(change)).items.filter(
+      (item) => item.name === "infinitary/queue",
+    );
+    expect(waiting).toEqual([
+      expect.objectContaining({
+        state: "pending",
+        statusId: 7,
+        detail: "Waiting for the batch check",
+      }),
+    ]);
+
+    queue = [
+      {
+        id: 9,
+        name: "infinitary/queue",
+        status: "success",
+        description: `Passed batch run 41; tree ${"b".repeat(40)}`,
+      },
+      ...queue,
+    ];
+    const passed = (await forge.checks(change)).items.filter(
+      (item) => item.name === "infinitary/queue",
+    );
+    expect(passed).toEqual([expect.objectContaining({ state: "success", statusId: 9 })]);
+  });
+
+  // The plan's "one click creates its project token": the token goes where
+  // only the queue's own jobs receive it, and the queue's older tokens are
+  // revoked; a refusal says what GitLab needs.
+  it("creates the queue's token and keeps it masked, protected and scoped to the queue's jobs", async () => {
+    const sent: { method: string; path: string; body: unknown }[] = [];
+    let variable = false;
+    const fetcher = vi.fn<typeof fetch>(async (input, init) => {
+      const url = new URL(String(input));
+      const method = init?.method ?? "GET";
+      const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+      if (method !== "GET") sent.push({ method, path: url.pathname, body });
+      if (url.pathname === `/api/v4${PROJECT}/access_tokens` && method === "GET")
+        return Response.json([
+          { id: 3, name: "Infinitary queue", active: true, expires_at: "2026-12-01" },
+          { id: 2, name: "deploy", active: true, expires_at: "2026-12-01" },
+        ]);
+      if (url.pathname === `/api/v4${PROJECT}/access_tokens` && method === "POST")
+        return Response.json({
+          id: 4,
+          name: "Infinitary queue",
+          expires_at: body.expires_at,
+          token: "glpat-new-queue-token",
+        });
+      if (url.pathname === `/api/v4${PROJECT}/variables/INFINITARY_QUEUE_TOKEN` && method === "GET")
+        return variable
+          ? Response.json({ key: "INFINITARY_QUEUE_TOKEN" })
+          : Response.json({ message: "404 Variable Not Found" }, { status: 404 });
+      if (url.pathname === `/api/v4${PROJECT}/variables` && method === "POST") {
+        variable = true;
+        return Response.json({ key: "INFINITARY_QUEUE_TOKEN" });
+      }
+      if (method === "DELETE") return new Response(null, { status: 204 });
+      return Response.json({ message: "404 Not Found" }, { status: 404 });
+    });
+    const forge = new GitLabForge(
+      { kind: "gitlab", host: HOST, owner: "group/subgroup", name: "app", dir: "/r" },
+      { token: async () => KEY, apiBaseUrl: `https://${HOST}/api/v4`, fetch: fetcher },
+    );
+
+    expect(await forge.queueCredential()).toEqual({ state: "missing" });
+    const made = await forge.createQueueCredential();
+
+    expect(made).toMatchObject({ state: "ready" });
+    expect(sent.map((call) => `${call.method} ${call.path}`)).toEqual([
+      `POST /api/v4${PROJECT}/access_tokens`,
+      `POST /api/v4${PROJECT}/variables`,
+      `DELETE /api/v4${PROJECT}/access_tokens/3`,
+    ]);
+    expect(sent[0]?.body).toMatchObject({
+      name: "Infinitary queue",
+      scopes: ["api"],
+      access_level: 40,
+    });
+    expect(sent[1]?.body).toMatchObject({
+      key: "INFINITARY_QUEUE_TOKEN",
+      value: "glpat-new-queue-token",
+      masked: true,
+      protected: true,
+      environment_scope: "infinitary-queue",
+    });
+    expect(JSON.stringify(made)).not.toContain("glpat-new-queue-token");
+    expect(await forge.queueCredential()).toEqual({ state: "ready", expiresAt: "2026-12-01" });
+
+    const refusing = forgeAnswering((method) =>
+      method === "POST"
+        ? Response.json({ message: "403 Forbidden" }, { status: 403 })
+        : Response.json([]),
+    );
+    await expect(refusing.forge.createQueueCredential()).rejects.toThrow(
+      /Maintainer role on the project, and on gitlab.com a Premium or Ultimate plan/,
+    );
+  });
 });

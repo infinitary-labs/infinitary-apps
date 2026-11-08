@@ -2,12 +2,14 @@ import type { Card } from "@shared/cards";
 import type { QueueWorkflow, RepoPolicyPatch } from "@shared/repos";
 import { describe, expect, it } from "vitest";
 import type { CoreDispatch } from "../dispatcher";
-import { GITHUB_QUEUE_PART, QUEUE_VERSION } from "../queue/shipped";
+import { GITHUB_QUEUE_PART } from "../queue/shipped";
 import { openInMemoryDatabase } from "../storage/db";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import { seedProject } from "../workspace/seedProject";
 import { QUEUE_SETUP_WORDS, QueueChoice, queueSetupCardId } from "./queueChoice";
 import type { WakeFacts } from "./wakes";
+
+const QUEUE_VERSION = GITHUB_QUEUE_PART.version;
 
 /**
  * INF-2885, the captain's direction B: "Wake at the choice; switch on only

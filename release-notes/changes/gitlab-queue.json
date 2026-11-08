@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "gitlab-queue",
+      "kind": "feature",
+      "area": "projects",
+      "title": "The batched merge queue now runs on GitLab",
+      "body": "Projects on gitlab.com or your own GitLab server can now use the queue Infinitary ships for batched merge requests. Your first mate plans it with you, and Settings makes the key the queue needs with one press, kept in your project's CI settings and never on this computer. A merge waits for its batch the same way it does on GitHub, though a batch that fails on GitLab pauses without first running what failed once more, and a paused batch names each merge request as GitLab does. On gitlab.com the key needs a Premium or Ultimate plan.",
+      "picture": {
+        "dark": "gitlab-queue-dark.webp",
+        "light": "gitlab-queue-light.webp",
+        "alt": "Settings for a GitLab project whose batched merge requests are set by the project, with the queue's key in place and the button that makes a new one"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

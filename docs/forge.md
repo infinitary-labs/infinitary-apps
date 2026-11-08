@@ -631,11 +631,11 @@ Evidence: `tests/e2e/request-merge.spec.ts` ("a merge that skips the branch rule
 
 ## A project's queue
 
-A project whose host has a part of the shipped queue (GitHub today) may merge its pull requests through a queue, a job in the project that tests approved work together before it merges (INF-2430 piece 2).
+A project whose host has a part of the shipped queue (GitHub and GitLab) may merge its pull requests through a queue, a job in the project that tests approved work together before it merges (INF-2430 piece 2).
 It is off by default, and a project chooses it in Settings → Projects or through the first mate's project settings.
 A person reads it as "batched pull requests" in Settings and "Batched pull request" on a task (`PROJECT_DELIVERY_WORDS`, `POLICY_DELIVERY_WORDS`).
 The queue is either the one Infinitary ships ("The shipped queue" below) or one the project wrote itself.
-While a project has the choice and runs no shipped queue, Settings says the merge waits until the project has a queue and holds a short how-to behind "How to set one up": asking the first mate to set up the shipped queue, or the things a queue of the project's own does, and a link to GitHub's guide to commit statuses (`QUEUE_HOW_TO_WORDS`, `src/renderer/src/settings/projectsWords.ts`).
+While a project has the choice and runs no shipped queue, Settings says the merge waits until the project has a queue and holds a short how-to behind "How to set one up": asking the first mate to set up the shipped queue, or the things a queue of the project's own does, and a link to the host's guide to commit statuses (`queueHowTo`, `src/renderer/src/settings/projectsWords.ts`).
 The app's whole contract with any such queue is one commit status, `infinitary/queue` (`QUEUE_STATUS`, `src/shared/repos.ts`), on the pull request's version.
 Nothing writes it before the captain's merge click: the pull request's own checks still hold the merge card as they do today.
 The click publishes the story and checks the title as any merge does, keeps the captain's approval, and writes `infinitary/queue` as `pending` on the approved version with the words "Waiting for the batch check" (`GitHubForge.markQueued`).
@@ -691,14 +691,45 @@ A secret or a write a check needs is named in the queue's plan, and the team gra
 GitHub hands a called workflow only the secrets its caller passes, so each named secret is passed there by name and declared in the batch checks file; an environment's secret alone reaches no batch check, and the queue never passes `secrets: inherit`, which would hand down every secret.
 The queue's states are words on the `infinitary/queue` status: waiting, in batch run N, paused after batch run N, passed batch run N with the batch's tree, or failed with its reason (`queueKind`).
 A green batch passes every change still in it, and each approver's Infinitary merges its own; after the merge, whether through the merge card or a merge review, the app starts the queue again by hand (`ChangeMerge.startNextBatch`), because a merge's own push starts no workflow there.
-A red batch first confirms (`confirmPlan`): the queue reads the test files each failed job's log names and calls the batch checks once more on the same composed batch, in its `confirm` job, with the inputs `failed_jobs` (the failed jobs' names, one a line) and `failed_files` (the failed files, separated by spaces).
+The app starts it the same way after a mark on a host whose mark starts nothing.
+A start that fails is tried once more; when that fails too, the app notes it on the task and wakes the crewmate of a task still waiting in that queue (`queue-start-failed`), which starts the queue itself or reports what stops it.
+After a mark that is the marking task; after a merge it is another, since the merged task closes and its wakes with it, and with none the first mate hears it (`queue-stalled`) and starts a task to do it.
+On GitHub, a red batch first confirms (`confirmPlan`): the queue reads the test files each failed job's log names and calls the batch checks once more on the same composed batch, in its `confirm` job, with the inputs `failed_jobs` (the failed jobs' names, one a line) and `failed_files` (the failed files, separated by spaces).
 The project's batch checks file decides what the confirm runs, from only the failed jobs to only the failed files, so a check split into jobs never runs whole again; it declares both inputs, since GitHub refuses a call with an undeclared one.
 A green confirm passes the batch, and the run's summary names what failed, so a flaky test still gets an owner.
 A red confirm, or a failed job whose log named no test file, blames no change: every change in the batch pauses behind one issue labelled `infinitary-queue-paused`, which names the failed checks, the failed test files and the changes whose diffs touch each one.
 An approved change labelled `infinitary-queue-fix` ends the pause, and the next batch takes the paused changes, the waiting ones and the fix; a resume or a send-back by hand, each with a reason, also ends it.
-The files a project gets are generated from that source with a stamp line naming the queue's version (`QUEUE_VERSION`, `src/core/queue/shipped.ts`), and `node scripts/generate-shipped-queue.ts` writes them into the `queue` runbook's `queue-setup` skill; the version is how many source hashes `QUEUE_SOURCES` lists, and `pnpm check` refuses a source whose hash is not the last one listed, or a list that rewrites a hash the default branch already has, so every change to the queue ships as a new version.
+The files a project gets are generated from that source with a stamp line naming its host part's version (`GITHUB_QUEUE_PART`, `GITLAB_QUEUE_PART`, `src/core/queue/shipped.ts`), and `node scripts/generate-shipped-queue.ts` writes each part's into its folder of the `queue` runbook's `queue-setup` skill.
+Each part's version is how many source hashes its own list holds (`GITHUB_QUEUE_SOURCES`, `GITLAB_QUEUE_SOURCES`), hashing the rules and the files that part ships, so a change to one host's files moves only that host's version, and a change to the rules moves both.
+`pnpm check` refuses a source whose hash is not the last one its list holds, or a list that rewrites a hash the default branch already has, so every change to the queue ships as a new version.
 A project carries a copy, not a reference: a newer Infinitary offers the update as a pull request.
 Evidence: `src/core/queue/shipped/github.test.ts` and `src/core/queue/shipped/compose.test.ts`.
+
+### The shipped queue on GitLab
+
+GitLab's part runs the same rules in the project's GitLab CI, on gitlab.com and on a team's own server (`shipped/gitlab-queue.yml`, `shipped/gitlab-batch.yml`, `shipped/gitlab.mjs`).
+The project includes `.gitlab/infinitary-queue.yml` from its own CI file and lists the `infinitary-queue` stage; the queue's file is turned on when that CI file includes it (`GitLabForge.queueWorkflows`).
+Three GitLab facts shape it, and each was checked against GitLab's own code and documentation:
+- GitLab keeps one unfinished commit status per name and person, and refuses to set a waiting status waiting again, while the queue's waiting, in-batch and paused states are all waiting.
+  So the GitLab part writes those three as finished `skipped` statuses carrying the queue's words, each a new status, and the app reads a `skipped` `infinitary/queue` as still waiting, never as a pass (`GitLabQueue.check`); a pass is `success` and a failure `failed`.
+  A `skipped` status leaves the merge request's pipeline as it was, so GitLab itself does not hold a merge made there, and its free plans cannot require an outside status: only an Infinitary merge waits on the queue.
+- A status starts no pipeline, and new gitlab.com projects refuse pipeline variables, so nothing tells a pipeline it is the queue's but how it started.
+  The queue's jobs run only in a pipeline the API started on the default branch, the project's own jobs leave those pipelines out, and the app starts one after each mark (`markStartsQueue` is false) and after each merge.
+  A resume or a send-back from Settings runs in the app with the captain's sign-in (`GitLabQueue.start`, the same `answer` the queue's script exports), then starts that pipeline; a repairing crewmate makes the same writes itself through GitLab's API (the queue-repair skill).
+- GitLab gives a pipeline no key that may write a commit status, so the queue's form and verdict jobs write with a project access token, `INFINITARY_QUEUE_TOKEN`.
+  Settings → Projects shows "Make the queue's key" under a batched project on GitLab, one click that creates the token with the captain's sign-in (Maintainer role, scope `api`, the longest life GitLab allows), keeps it as a masked, protected CI variable scoped to the `infinitary-queue` environment, and revokes the queue's older tokens (`inf:repos:queue-credential-create`, `GitLabQueue.createCredential`).
+  Only the queue's two jobs name that environment, so the batch's child pipeline never receives the key; the token never reaches the app's records.
+  The batch runs on the protected default branch, so its jobs do receive the project's other protected variables, and anyone who may push may write a commit status.
+  So the form job counts a change in the queue - waiting, in a batch or paused - only when a Maintainer wrote the first queue status on its version since the last verdict, or approved the merge request after that version was pushed (GitLab may keep an approval across a push); any other change waits, its own status saying it waits for a Maintainer to approve that version.
+  Since only a start runs the form job, the captain's own merge click on a waiting version, on the merge card or a merge review, starts the queue again (`ChangeMerge.restartQueue`); a kept approval's unattended retry starts nothing, and nothing starts the queue on a timer.
+  So a held change never waits silently: when a reading of the task's checks shows the held words on its version's queue status, the task's crewmate hears them once for that version (`queue-held`, from `ProjectQueue.observe`) and puts its merge card up again saying a Maintainer must approve first.
+  A later mark does not admit a held version, since it lies over the Developer's in the same waiting stretch; the held change joins the next batch when a Maintainer has approved it after its last push and the captain clicks merge.
+  Project access tokens need a Premium or Ultimate plan on gitlab.com, and any plan on a team's own server; a refusal says so.
+  GitLab's part has no confirm yet: a red batch pauses at once, and its issue says nothing ran again.
+  The form job composes the batch with the same `compose.sh`, writes a child pipeline that includes the batch template and the project's `.gitlab/infinitary-batch-checks.yml`, and the checks job runs it; the verdict job reads that child pipeline's result, its failed jobs' logs and each merge request's diff.
+  `resource_group: infinitary-queue` keeps one form or verdict job at a time across pipelines, and a queue pipeline's id is its batch run.
+  Words the queue writes name a merge request `!N`, as GitLab does, and so do Settings and Activity for a project on GitLab (`changeNumberLabel`, `src/shared/forge.ts`).
+  Evidence: `src/core/queue/shipped/gitlab.test.ts`, `gitlabForge.test.ts` ("reads the queue's waiting mark ..." and "creates the queue's token ...") and `tests/e2e/gitlab-queue.spec.ts`.
 
 ### Every teammate's view
 
@@ -712,6 +743,7 @@ Only an Infinitary merge click puts a change in a batch.
 
 Batched pull requests are offered only where a host has a part of the shipped queue (`hostRunsQueue`, `src/shared/repos.ts`); Settings says why on a host with none.
 A forge with a part supplies all of `markQueued`, `queueWorkflows`, `queuePause` and `startQueue`, and a forge with none supplies none, so nothing outside the forge reads a host's name to find the queue.
+Two more facts are typed on the forge where a host needs them: `markStartsQueue`, true where the host's own event starts the queue on a mark (GitHub's status event), so elsewhere the app starts it after each mark; and `queueCredential` with `createQueueCredential`, on a host whose queue jobs get no key of their own (GitLab).
 A new host's part reuses the rules unchanged and adds its own script, CI file and the four forge methods.
 
 ### A paused batch
@@ -719,7 +751,8 @@ A new host's part reuses the rules unchanged and adds its own script, CI file an
 Each reading of a task's checks hears the queue status's state (`ProjectQueue.onState`), and a paused one whose run the app does not keep yet reads the project's open pause issue (`QueuePauses`, `src/core/orchestrator/queuePauses.ts`).
 While the app keeps a pause, the shared tick reads that issue again on every pass, so a claim, a resume, a send-back or a new push shows however long the pause outlasts the check watch.
 The app keeps the pause on the project's row (`queuePause`), puts one Activity line up when it starts and when it ends, notes on each paused task who is repairing it, and tells the first mate once per paused run through the `queue-paused` wake.
-The first mate starts one repair task with the `queue-repair` skill and no card, unless a teammate already took the issue; the issue's earliest `assigned` event holds the claim, and a crewmate that finds an earlier claim removes its own assignment and stops, so the assignee the app shows as repairing is that claim.
+The first mate starts one repair task with the `queue-repair` skill and no card, unless a teammate already took the issue; the issue's earliest assignment holds the claim, and a crewmate that finds an earlier claim takes its own back off and stops, so the assignee the app shows as repairing is that claim.
+On GitLab's free plans an issue keeps one assignee, so a later claim replaces the earlier one, and the later crewmate, reading the earliest "assigned to" note, puts the earlier assignee back before it stops.
 No card goes up for a pause: Settings → Projects shows it with who is repairing it, its issue, and Resume and Send back, each with a reason, which start the queue where the project lives (`inf:repos:queue-answer`).
 An answer names the paused batch run it answers; the app reads the pause again first and refuses an answer to a run that no longer holds it.
 When the issue cannot be read, as on a project with Issues turned off, the app keeps the pause from the paused statuses alone, marked `unread`: the paused changes it saw, the status's link to the run, no claim, and the same Resume and Send back.

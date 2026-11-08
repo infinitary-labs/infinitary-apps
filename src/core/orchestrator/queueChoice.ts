@@ -8,7 +8,7 @@ import {
 } from "@shared/repos";
 import { PROJECT_DELIVERY_WORDS } from "@shared/vocabulary";
 import type { CoreDispatch } from "../dispatcher";
-import { QUEUE_VERSION } from "../queue/shipped";
+import { queuePartFor } from "../queue/shipped";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import { escapeCardText } from "./cardText";
 import type { ProjectQueue } from "./projectQueue";
@@ -110,7 +110,7 @@ export class QueueChoice {
         offered: (repoId: string) => number | undefined;
         record: (repoId: string, version: number) => void;
       };
-      /** The shipped queue's version this Infinitary carries; `QUEUE_VERSION` unless a test names a later one. */
+      /** The shipped queue's version this Infinitary carries for every host; its host part's own unless a test names a later one. */
       version?: number;
       withdrawCard: (id: string, reason: string) => void;
       tell: (facts: Extract<WakeFacts, { kind: "queue-plan-asked" | "queue-offered" }>) => void;
@@ -245,8 +245,8 @@ export class QueueChoice {
       return;
     }
     const offers = this.options.offers;
-    const version = this.options.version ?? QUEUE_VERSION;
-    if (!offers || offers.offered(repo.id) === version) return;
+    const version = this.options.version ?? queuePartFor(repo.host?.kind)?.version;
+    if (!offers || version === undefined || offers.offered(repo.id) === version) return;
     const project = { id: repo.id, name: repo.name };
     if (shipped !== undefined && shipped < version) {
       offers.record(repo.id, version);

@@ -1,4 +1,5 @@
-import type { QueueAnswer, RepoView } from "@shared/repos";
+import { changeNumberLabel, type ForgeKind } from "@shared/forge";
+import type { QueueAnswer, QueueCredential, RepoView } from "@shared/repos";
 import type { Forge } from "../forge";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { QueueReading } from "./projectQueue";
@@ -20,10 +21,12 @@ export const QUEUE_PAUSE_WORDS = {
   ended: (run: number) =>
     `Batch run ${run} no longer holds the pause, so nothing was sent; Settings now shows the queue as it is.`,
   /** The Activity line after a by-hand answer is sent. */
-  answered: (name: string, answer: QueueAnswer) =>
+  answered: (name: string, answer: QueueAnswer, kind?: ForgeKind) =>
     answer.action === "resume"
       ? `Asked ${name}'s queue to resume: ${answer.reason}`
-      : `Asked ${name}'s queue to send #${answer.number} back: ${answer.reason}`,
+      : `Asked ${name}'s queue to send ${changeNumberLabel(kind, answer.number)} back: ${answer.reason}`,
+  /** The Activity line once the queue's key is made. */
+  credential: (name: string) => `Made ${name}'s queue key where the project lives.`,
 } as const;
 
 /**
@@ -53,7 +56,9 @@ export class QueuePauses {
   constructor(
     private readonly options: {
       repos: Pick<RepoRegistry, "get" | "list" | "recordQueue">;
-      forgeFor: (repo: RepoView) => Pick<Forge, "queuePause" | "startQueue">;
+      forgeFor: (
+        repo: RepoView,
+      ) => Pick<Forge, "queuePause" | "startQueue" | "queueCredential" | "createQueueCredential">;
       tell: (facts: Extract<WakeFacts, { kind: "queue-paused" }>) => void;
       note: (text: string) => void;
       taskNote: (taskId: string, text: string) => void;
@@ -122,7 +127,30 @@ export class QueuePauses {
     const forge = this.options.forgeFor(repo);
     if (!forge.startQueue) throw new Error("This project's host cannot start its queue.");
     await forge.startQueue(answer);
-    this.options.note(QUEUE_PAUSE_WORDS.answered(repo.name, answer));
+    this.options.note(QUEUE_PAUSE_WORDS.answered(repo.name, answer, repo.host?.kind));
+  }
+
+  /**
+   * The token the project's shipped queue writes with, where its host keeps
+   * one (GitLab): null on a host whose queue needs none.
+   */
+  async credential(repoId: string): Promise<QueueCredential | null> {
+    const repo = this.options.repos.get(repoId);
+    if (!repo) throw new Error("That project is not in your projects.");
+    const forge = this.options.forgeFor(repo);
+    return forge.queueCredential ? forge.queueCredential() : null;
+  }
+
+  /** Create the queue's token where the project lives, with the captain's own sign-in. */
+  async createCredential(repoId: string): Promise<QueueCredential> {
+    const repo = this.options.repos.get(repoId);
+    if (!repo) throw new Error("That project is not in your projects.");
+    const forge = this.options.forgeFor(repo);
+    if (!forge.createQueueCredential)
+      throw new Error("This project's host gives its queue its own credential.");
+    const made = await forge.createQueueCredential();
+    this.options.note(QUEUE_PAUSE_WORDS.credential(repo.name));
+    return made;
   }
 
   private async read(

@@ -15,6 +15,7 @@ import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { ChangePresentations } from "./changePresentations";
 import type { LineageFacts, LineageQuestion } from "./mergeAuthorization";
 import { reviewCoversHead } from "./reviewCarry";
+import type { TypedWake, WakeFacts } from "./wakes";
 
 /**
  * What every owner of a task's change shares (`./changeDelivery.ts`): the
@@ -36,6 +37,13 @@ export type ChangeDeliveryOptions = {
    * naming the task it is about.
    */
   onNote?: (text: string, taskId: string) => void;
+  /**
+   * A steer to the task's crewmate through the durable inbox: a fact it has
+   * to act on. A wake with `once` goes out once per task and name.
+   */
+  steer?: (taskId: string, wake: TypedWake) => void;
+  /** A notice to the first mate, when no crewmate is left to act on a fact. */
+  tell?: (facts: Extract<WakeFacts, { kind: "queue-stalled" }>) => void;
   /** Test seam for disposable forge fixtures without real remote heads. */
   validateRange?: (dir: string, branch: string, forge: Forge, head?: string) => Promise<void>;
   /** Test seam for a repair declaration's git facts (`lineageFacts`). */

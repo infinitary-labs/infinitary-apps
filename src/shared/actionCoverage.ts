@@ -31,6 +31,8 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:accounts:custom:cancel": "Sign-in cancellation",
   "inf:forges:cancel": "Sign-in cancellation",
   "inf:integrations:sign-in-cancel": "Sign-in cancellation",
+  "inf:repos:queue-credential-create":
+    "Makes the queue's key where the project lives on the captain's click in Settings: a credential the captain's sign-in creates, never set on the first mate's words",
   "inf:integrations:inbox-link":
     "Links the inbox's command into /usr/local/bin on the captain's click in Settings; no app setting changes",
   "inf:devices:stop": "Closes the captain's own open link; nothing is set",

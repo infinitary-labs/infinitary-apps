@@ -1,3 +1,4 @@
+import type { ForgeKind } from "@shared/forge";
 import {
   deliveryChoices,
   hostRunsQueue,
@@ -32,8 +33,10 @@ import {
   QUEUE_HOW_TO_WORDS,
   QUEUE_NO_HOST_WORDS,
   QUEUE_SHIPPED_WORDS,
+  queueHowTo,
   queueWaitingWords,
 } from "./projectsWords";
+import { QueueKeyPanel } from "./QueueKeyPanel";
 import { QueuePausePanel } from "./QueuePausePanel";
 import { RemoveProject } from "./RemoveProject";
 import { RunsOnControl, runsOnDescription, runsOnWhere, useWorkComputers } from "./RunsOn";
@@ -682,8 +685,15 @@ function ProjectRow({
             <QueueNote words={QUEUE_NO_HOST_WORDS} data="no-host" id={repo.id} />
           )}
           {!personal && repo.queuePause && <QueuePausePanel repo={repo} pause={repo.queuePause} />}
+          {!personal &&
+            repo.origin &&
+            (repo.delivery === "queue-pr" ||
+              repo.queuePendingAt !== undefined ||
+              shipped !== undefined) && <QueueKeyPanel key={repo.id} repo={repo} />}
           {!personal && <QueueWarning repo={repo} />}
-          {!personal && repo.delivery === "queue-pr" && shipped === undefined && <QueueHowTo />}
+          {!personal && repo.delivery === "queue-pr" && shipped === undefined && (
+            <QueueHowTo kind={repo.host?.kind} />
+          )}
           <PolicyRow
             title={AUTONOMY_SWITCH_NAME}
             description={
@@ -806,10 +816,11 @@ function QueueWarning({ repo }: { repo: RepoView }) {
 /**
  * What the batched choice needs, under "Where changes go" while the project
  * has it: one sentence in the open, and the how-to behind a disclosure with
- * a link to GitHub's own guide for the status the workflow writes.
+ * a link to the host's own guide for the status the queue writes.
  */
-function QueueHowTo() {
+function QueueHowTo({ kind }: { kind: ForgeKind | undefined }) {
   const [open, setOpen] = useState(false);
+  const howTo = queueHowTo(kind);
   return (
     <div
       data-queue-how-to
@@ -848,7 +859,7 @@ function QueueHowTo() {
                 gap: "var(--space-1)",
               }}
             >
-              {QUEUE_HOW_TO_WORDS.steps.map((step) => (
+              {howTo.steps.map((step) => (
                 <li key={step}>{step}</li>
               ))}
             </ol>
@@ -857,12 +868,10 @@ function QueueHowTo() {
               variant="secondary"
               size="sm"
               onClick={() =>
-                void window.infinitary.app
-                  .openExternal(QUEUE_HOW_TO_WORDS.guideLink)
-                  .catch(() => {})
+                void window.infinitary.app.openExternal(howTo.guideLink).catch(() => {})
               }
             >
-              {QUEUE_HOW_TO_WORDS.guide}
+              {howTo.guide}
             </Button>
           </div>
         ) : null}

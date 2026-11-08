@@ -237,7 +237,7 @@ export type RepoHost = z.infer<typeof repoHostSchema>;
  * A host with no part, such as a plain Git host with no CI, cannot hold a
  * shared queue, so batched pull requests is not offered there.
  */
-const QUEUE_PART_HOSTS: ReadonlySet<NonNullable<RepoHost>["kind"]> = new Set(["github"]);
+const QUEUE_PART_HOSTS: ReadonlySet<NonNullable<RepoHost>["kind"]> = new Set(["github", "gitlab"]);
 
 /** Why a project whose host has no part of the shipped queue cannot choose batched pull requests. */
 export const QUEUE_HOST_REFUSAL =
@@ -334,6 +334,22 @@ export const queueAnswerSchema = z.discriminatedUnion("action", [
   }),
 ]);
 export type QueueAnswer = z.infer<typeof queueAnswerSchema>;
+
+/**
+ * The token a project's shipped queue writes with, where its host keeps one
+ * in the project's CI settings rather than handing the queue's jobs a
+ * credential of their own (GitLab; docs/forge.md, "The shipped queue on
+ * GitLab"): `missing` until someone creates it, `ready` with the day it
+ * ends, and `unreadable` when this sign-in cannot read the project's
+ * tokens, such as without the Maintainer role. The token itself never
+ * leaves the host.
+ */
+export const queueCredentialSchema = z.object({
+  state: z.enum(["missing", "ready", "unreadable"]),
+  /** The day the token ends, as the host writes it (YYYY-MM-DD). */
+  expiresAt: z.string().optional(),
+});
+export type QueueCredential = z.infer<typeof queueCredentialSchema>;
 
 export const repoViewSchema = z.object({
   id: z.string(),

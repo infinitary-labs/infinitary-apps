@@ -1,3 +1,4 @@
+import { changeNumberLabel } from "@shared/forge";
 import type { QueueAnswer, RepoView } from "@shared/repos";
 import { useState } from "react";
 import { Button, Input } from "../design";
@@ -24,7 +25,7 @@ export function QueuePausePanel({
   repo,
   pause,
 }: {
-  repo: Pick<RepoView, "id">;
+  repo: Pick<RepoView, "id" | "host">;
   pause: NonNullable<RepoView["queuePause"]>;
 }) {
   const [reason, setReason] = useState("");
@@ -85,7 +86,7 @@ export function QueuePausePanel({
         <span style={{ fontSize: "var(--text-sm)", fontWeight: 500, color: "var(--fg-1)" }}>
           {QUEUE_PAUSE_WORDS.title}
         </span>
-        <span>{QUEUE_PAUSE_WORDS.summary(pause.run, pause.changes, since)}</span>
+        <span>{QUEUE_PAUSE_WORDS.summary(pause.run, pause.changes, since, repo.host?.kind)}</span>
         <span data-queue-pause-claim>
           {pause.unread
             ? QUEUE_PAUSE_WORDS.unread
@@ -133,7 +134,7 @@ export function QueuePausePanel({
             >
               {pause.changes.map((number) => (
                 <option key={number} value={String(number)}>
-                  #{number}
+                  {changeNumberLabel(repo.host?.kind, number)}
                 </option>
               ))}
             </select>

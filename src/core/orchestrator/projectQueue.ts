@@ -1,5 +1,6 @@
 import type { RepoView } from "@shared/repos";
 import { type ForgeCheck, QUEUE_STATUS } from "../forge";
+import { HELD } from "../queue/shipped/gitlab.mjs";
 import { type QueueKind, queueKind } from "../queue/shipped/rules.mjs";
 import type { QueueMark } from "../storage/taskStore";
 import type { ChangeDeliveryOptions } from "./changeContext";
@@ -108,6 +109,17 @@ export class ProjectQueue {
       ...(record.delivery?.prNumber !== undefined ? { number: record.delivery.prNumber } : {}),
     };
     for (const listener of [...this.stateListeners]) listener(reading);
+    // The queue held this version for a Maintainer (the GitLab part's held
+    // words): only a Maintainer's approval after its last push and then the
+    // captain's click start it again, so the task's crewmate hears it once
+    // per version.
+    if (queue.state === "pending" && queue.detail === HELD) {
+      const change = reading.number !== undefined ? `!${reading.number}` : "the change";
+      this.options.steer?.(taskId, {
+        facts: { kind: "queue-held", change, head, words: HELD },
+        once: `queue-held:${head}`,
+      });
+    }
     const mark = record.delivery?.queueMark;
     const ownMark = mark?.head === head ? mark : undefined;
     const answered =

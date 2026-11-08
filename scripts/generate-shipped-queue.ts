@@ -1,24 +1,25 @@
+import { execFileSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { execFileSync } from "node:child_process";
 import {
   GITHUB_QUEUE_PART,
-  QUEUE_SOURCES,
-  QUEUE_VERSION,
+  GITLAB_QUEUE_PART,
+  type QueueHostPart,
   shippedFiles,
   shippedSourceHash,
 } from "../src/core/queue/shipped.ts";
 
 // The shipped queue's files as the queue-setup skill hands them to a
-// crewmate (docs/forge.md, "The shipped queue"): each stamped file as plain
-// text, since a runbook holds no executable source, and files.md naming
-// where each one goes. It also writes this repository's own queue, the same
-// stamped files at their paths with this repository's grants (docs/testing.md,
-// "The swept batch"). `--check` refuses drift in either, and a source change
-// that keeps the old version.
+// crewmate (docs/forge.md, "The shipped queue"): for each host part, each
+// stamped file as plain text in the part's own folder, since a runbook holds
+// no executable source, and files.md naming where each one goes. It also
+// writes this repository's own queue, GitHub's stamped files at their paths
+// with this repository's grants (docs/testing.md, "The swept batch").
+// `--check` refuses drift in either, and a source change that keeps a part's
+// old version.
 const source = fileURLToPath(new URL("../src/core/queue/shipped/", import.meta.url));
-const out = fileURLToPath(new URL("../resources/runbooks/queue/skills/queue-setup/github/", import.meta.url));
+const skill = fileURLToPath(new URL("../resources/runbooks/queue/skills/queue-setup/", import.meta.url));
 const repoRoot = fileURLToPath(new URL("../", import.meta.url));
 
 // This repository's grants, the one edit a project makes to a stamped file
@@ -35,11 +36,13 @@ const withOwnGrants = (path: string, text: string) => {
   return text.replaceAll(GRANTS_AT, OWN_GRANTS);
 };
 
-const hash = shippedSourceHash(source);
-if (hash !== QUEUE_SOURCES.at(-1))
-  throw new Error(
-    `The shipped queue's source changed: append ${hash} to QUEUE_SOURCES in src/core/queue/shipped.ts, which moves the queue past version ${QUEUE_VERSION}.`,
-  );
+/** Each part's version list, by the name it is declared under in `shipped.ts`. */
+const PARTS: { part: QueueHostPart; list: string; was?: string }[] = [
+  // Before GitLab's part, GitHub's list was the one `QUEUE_SOURCES`.
+  { part: GITHUB_QUEUE_PART, list: "GITHUB_QUEUE_SOURCES", was: "QUEUE_SOURCES" },
+  { part: GITLAB_QUEUE_PART, list: "GITLAB_QUEUE_SOURCES" },
+];
+
 // A version once on the default branch keeps its hash: a change there
 // appends a version instead of rewriting one. A pull request's check runs on
 // its merge commit, whose first parent is the default branch; elsewhere the
@@ -48,67 +51,85 @@ if (hash !== QUEUE_SOURCES.at(-1))
 const base = process.env.GITHUB_BASE_REF ? "HEAD^1" : "origin/main";
 const released = (() => {
   try {
-    const text = execFileSync("git", ["show", `${base}:src/core/queue/shipped.ts`], {
+    return execFileSync("git", ["show", `${base}:src/core/queue/shipped.ts`], {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "ignore"],
     });
-    return [...text.matchAll(/^\s+"([0-9a-f]{64})",$/gm)].map((found) => found[1]);
   } catch {
-    return [];
+    return "";
   }
 })();
-if (released.some((sha, index) => QUEUE_SOURCES[index] !== sha))
-  throw new Error(
-    "QUEUE_SOURCES in src/core/queue/shipped.ts rewrote a version the default branch already has: restore it and append the new hash instead.",
+/** The hashes a named list holds in a version of `shipped.ts`. */
+function listed(text: string, name: string): string[] | undefined {
+  const found = new RegExp(`export const ${name}: readonly string\\[\\] = \\[([^\\]]*)\\]`).exec(text);
+  return found ? [...(found[1] as string).matchAll(/"([0-9a-f]{64})"/g)].map((hash) => hash[1] as string) : undefined;
+}
+
+const check = process.argv.includes("--check");
+for (const { part, list, was } of PARTS) {
+  const hash = shippedSourceHash(source, part);
+  if (hash !== part.sources.at(-1))
+    throw new Error(
+      `The shipped queue's ${part.name} source changed: append ${hash} to ${list} in src/core/queue/shipped.ts, which moves its queue past version ${part.version}.`,
+    );
+  const before = listed(released, list) ?? (was ? listed(released, was) : undefined) ?? [];
+  if (before.some((sha, index) => part.sources[index] !== sha))
+    throw new Error(
+      `${list} in src/core/queue/shipped.ts rewrote a version the default branch already has: restore it and append the new hash instead.`,
+    );
+
+  const out = join(skill, part.folder);
+  const files = shippedFiles(source, part);
+  const wanted = new Map<string, string>(files.map((file) => [`${basename(file.path)}.txt`, file.text]));
+  wanted.set(
+    "files.md",
+    [
+      "<!-- Generated by scripts/generate-shipped-queue.ts; edit src/core/queue/shipped/ instead. -->",
+      `# The shipped queue ${part.version} on ${part.name}`,
+      "",
+      "Copy each file, byte for byte, to its path in the project.",
+      "",
+      "| This file | Goes to |",
+      "| --- | --- |",
+      ...files.map((file) => `| \`${part.folder}/${basename(file.path)}.txt\` | \`${file.path}\` |`),
+      "",
+      `The project writes \`${part.checksFile}\` itself; it is never stamped.`,
+      "",
+    ].join("\n"),
   );
+  // This repository runs GitHub's part itself.
+  const own =
+    part === GITHUB_QUEUE_PART
+      ? files.map((file) => ({ path: join(repoRoot, file.path), text: withOwnGrants(file.path, file.text) }))
+      : [];
 
-const files = shippedFiles(source, GITHUB_QUEUE_PART);
-const wanted = new Map<string, string>(files.map((file) => [`${basename(file.path)}.txt`, file.text]));
-wanted.set(
-  "files.md",
-  [
-    "<!-- Generated by scripts/generate-shipped-queue.ts; edit src/core/queue/shipped/ instead. -->",
-    `# The shipped queue ${QUEUE_VERSION} on GitHub`,
-    "",
-    "Copy each file, byte for byte, to its path in the project.",
-    "",
-    "| This file | Goes to |",
-    "| --- | --- |",
-    ...files.map((file) => `| \`github/${basename(file.path)}.txt\` | \`${file.path}\` |`),
-    "",
-    `The project writes \`${GITHUB_QUEUE_PART.checksFile}\` itself; it is never stamped.`,
-    "",
-  ].join("\n"),
-);
-
-const own = files.map((file) => ({ path: join(repoRoot, file.path), text: withOwnGrants(file.path, file.text) }));
-
-if (process.argv.includes("--check")) {
-  const present = (() => {
-    try {
-      return readdirSync(out).sort();
-    } catch {
-      return [];
+  if (check) {
+    const read = (path: string) => {
+      try {
+        return readFileSync(path, "utf8");
+      } catch {
+        return undefined;
+      }
+    };
+    const present = (() => {
+      try {
+        return readdirSync(out).sort();
+      } catch {
+        return [];
+      }
+    })();
+    const drift =
+      present.join("\n") !== [...wanted.keys()].sort().join("\n") ||
+      [...wanted].some(([name, text]) => readFileSync(join(out, name), "utf8") !== text) ||
+      own.some((file) => read(file.path) !== file.text);
+    if (drift) throw new Error("Run node scripts/generate-shipped-queue.ts to refresh the shipped queue's files.");
+  } else {
+    rmSync(out, { recursive: true, force: true });
+    mkdirSync(out, { recursive: true });
+    for (const [name, text] of wanted) writeFileSync(join(out, name), text);
+    for (const file of own) {
+      mkdirSync(dirname(file.path), { recursive: true });
+      writeFileSync(file.path, file.text);
     }
-  })();
-  const read = (path: string) => {
-    try {
-      return readFileSync(path, "utf8");
-    } catch {
-      return undefined;
-    }
-  };
-  const drift =
-    present.join("\n") !== [...wanted.keys()].sort().join("\n") ||
-    [...wanted].some(([name, text]) => readFileSync(join(out, name), "utf8") !== text) ||
-    own.some((file) => read(file.path) !== file.text);
-  if (drift) throw new Error("Run node scripts/generate-shipped-queue.ts to refresh the shipped queue's files.");
-} else {
-  rmSync(out, { recursive: true, force: true });
-  mkdirSync(out, { recursive: true });
-  for (const [name, text] of wanted) writeFileSync(join(out, name), text);
-  for (const file of own) {
-    mkdirSync(dirname(file.path), { recursive: true });
-    writeFileSync(file.path, file.text);
   }
 }

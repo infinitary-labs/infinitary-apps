@@ -97,6 +97,18 @@ describe("a crewmate's start_program (INF-3022)", () => {
 
   it("files the program found on the task, which waits on it holding no merge, and steers the crewmate once at its end", async () => {
     const h = await started();
+    // What each commit shows once the program exists: a reader on another
+    // connection reads between commits, as the program journey's test
+    // process does (INF-3046, a merge batch's journey read no origin).
+    const commits: { origin?: string; waitsOn: string[] }[] = [];
+    const stopReading = h.tasks.onChange(() => {
+      const filed = h.tasks.list().find((row) => row.shape?.program);
+      if (!filed) return;
+      commits.push({
+        origin: h.tasks.crewFilingOrigin(filed.id)?.id,
+        waitsOn: h.tasks.graph.blockers(h.taskId).map((row) => row.id),
+      });
+    });
     const answer = await h.spec?.onStartProgram?.({
       title: "Cap each renderer",
       goal: "Cap the result each renderer draws at 4 KiB.",
@@ -104,6 +116,7 @@ describe("a crewmate's start_program (INF-3022)", () => {
       args: { files: ["src/meter.ts", "src/gauge.ts"] },
       bound: 2,
     });
+    stopReading();
     const program = h.tasks.list().find((row) => row.shape?.program);
     expect(program).toBeDefined();
     if (!program) return;
@@ -114,6 +127,8 @@ describe("a crewmate's start_program (INF-3022)", () => {
     );
     expect(h.tasks.crewFilingOrigin(program.id)?.id).toBe(h.taskId);
     expect(h.tasks.graph.blockers(h.taskId).map((row) => row.id)).toEqual([program.id]);
+    // The commit that files the program also finds it on the task, which waits on it.
+    expect(commits[0]).toEqual({ origin: h.taskId, waitsOn: [program.id] });
     await h.spec?.onReport?.("Started the program that caps each renderer.");
     await h.endTurn();
     // The first mate hears the start as a program's, never as a follow-up waiting on request.

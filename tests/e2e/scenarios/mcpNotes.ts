@@ -176,11 +176,15 @@ export const mcpNotesTwice: Scenario =
   };
 
 /**
- * A crewmate adds three reminders through the Notes server in one shell
- * command (INF-2993 piece 2): a brief carrying this marker calls `add_note`
- * three times, each kept for the captain, reports that it waits on the card
- * its first ask raised, and once it hears the captain's answer reports what
- * it heard after the usual prefix.
+ * A crewmate adds three reminders through the Notes server (INF-2993 piece
+ * 2): a brief carrying this marker calls `add_note` three times, each in its
+ * own shell once the call before it was kept for the captain, so the second
+ * and third arrive while the card the first raised waits. It reports that it
+ * waits on that card, and once it hears the captain's answer reports what it
+ * heard after the usual prefix. Three calls in one shell command shared that
+ * shell's time limit, so on a loaded computer a later call answered `running`
+ * and the next was not run (INF-3046); each call in its own shell, with a
+ * kept answer read by the bare command, holds on any computer.
  */
 export const MCP_NOTES_THREE_MARKER = "add three reminders through the Notes server";
 export const MCP_NOTES_THREE = [
@@ -199,26 +203,37 @@ export const mcpNotesThree: Scenario =
       return {
         calls: [{ name: "report", args: { text: `${MCP_NOTES_REPORT_PREFIX}${current.user}` } }],
       };
-    if (!calledTool(body, "bash"))
+    // The same reading of the shell as the change above, over every call so far.
+    const shell = browserShellMessages(providerMessages(body));
+    if (shell.pending) return { text: "The integrations command is still running." };
+    const readings = shell.readings
+      .filter((message) => message.role === "tool")
+      .map((message) => message.text);
+    const answer = readings.at(-1) ?? "";
+    if (/^running: /m.test(answer) || /^code: BUSY$/m.test(answer))
+      return { calls: [{ name: "bash", args: { command: INTEGRATIONS_COMMAND } }] };
+    // Each kept call names its ask: the first raised the card, the others joined it.
+    const asks = [
+      ...new Set(
+        readings.flatMap((text) =>
+          [...text.matchAll(/\bask (ia[a-f0-9]+)/g)].map((match) => match[1]),
+        ),
+      ),
+    ];
+    if (readings.length > 0 && !/\bask ia[a-f0-9]+/.test(answer))
+      return { calls: [{ name: "report", args: { text: `${MCP_NOTES_REPORT_PREFIX}${answer}` } }] };
+    const next = MCP_NOTES_THREE[asks.length];
+    if (next)
       return {
         calls: [
           {
             name: "bash",
             args: {
-              command: MCP_NOTES_THREE.map(
-                (note) =>
-                  `${INTEGRATIONS_COMMAND} call ${MCP_NOTES_NAME} add_note '${JSON.stringify({ text: note.text })}' --reason '${note.reason}'`,
-              ).join("; "),
+              command: `${INTEGRATIONS_COMMAND} call ${MCP_NOTES_NAME} add_note '${JSON.stringify({ text: next.text })}' --reason '${next.reason}'`,
             },
           },
         ],
       };
-    // The same reading of the shell as the change above.
-    const shell = browserShellMessages(providerMessages(body));
-    if (shell.pending) return { text: "The integrations command is still running." };
-    const answer = shell.readings.findLast((message) => message.role === "tool")?.text ?? "";
-    const ask = /approval card for ask (ia[a-f0-9]+)/.exec(answer)?.[1];
-    if (!ask) return { calls: [{ name: "bash", args: { command: INTEGRATIONS_COMMAND } }] };
     return {
       calls: [
         {
@@ -228,7 +243,7 @@ export const mcpNotesThree: Scenario =
             summary: "The app is asking for these actions.",
             waiting_on_captain: {
               reason: "Choose whether the actions may run",
-              card_id: `integration-ask-${ask}`,
+              card_id: `integration-ask-${asks[0]}`,
             },
           },
         },

@@ -56,30 +56,35 @@ export class CrewmatePrograms {
       return "Nothing was filed. Give the program a title and a goal, one sentence saying what it finds or does.";
     if (input.stop)
       return "Nothing was filed. stop needs program, the key of a program you started.";
-    const program = this.core.intake.plan({
-      title,
-      intent: { goal, userWords: origin.intent?.userWords || origin.title },
-      ...(origin.repoId ? { repoId: origin.repoId } : {}),
-      startPolicy: "when-ready",
-      blockedBy: [],
-      shape: {
-        program: {
-          script: input.script as string,
-          bound: input.bound as number,
-          ...(input.args !== undefined ? { args: input.args } : {}),
+    const program = this.core.intake.plan(
+      {
+        title,
+        intent: { goal, userWords: origin.intent?.userWords || origin.title },
+        ...(origin.repoId ? { repoId: origin.repoId } : {}),
+        startPolicy: "when-ready",
+        blockedBy: [],
+        shape: {
+          program: {
+            script: input.script as string,
+            bound: input.bound as number,
+            ...(input.args !== undefined ? { args: input.args } : {}),
+          },
+          // The captain's premium consent on this task is the program's (INF-3022, answer "inherit").
+          ...(origin.shape?.premium_ask ? { premium_ask: true } : {}),
         },
-        // The captain's premium consent on this task is the program's (INF-3022, answer "inherit").
-        ...(origin.shape?.premium_ask ? { premium_ask: true } : {}),
       },
-    });
-    tasks.graph.link(program.id, origin.id, "discovered-from", "crewmate");
-    tasks.graph.linkWaits(origin.id, [program.id], "crewmate");
-    tasks.note(program.id, `started while working on "${origin.title}" (${keyOf(origin)})`, {
-      news: true,
-      actor: "crewmate",
-      feed: false,
-      about: [origin.id],
-    });
+      // Found on the task, which waits on it, in the program's own commit (INF-3046).
+      (filed) => {
+        tasks.graph.link(filed.id, origin.id, "discovered-from", "crewmate");
+        tasks.graph.linkWaits(origin.id, [filed.id], "crewmate");
+        tasks.note(filed.id, `started while working on "${origin.title}" (${keyOf(origin)})`, {
+          news: true,
+          actor: "crewmate",
+          feed: false,
+          about: [origin.id],
+        });
+      },
+    );
     task.filedThisTurn.push({ key: keyOf(program), title, blocks: false, program: true });
     // The sweep starts it now, as it starts any when-ready task whose gates are clear.
     this.core.intake.graphChanged();

@@ -681,17 +681,23 @@ export class TaskIntake {
    * The row carries a shape the way a queued spawn does, so it dispatches
    * from what it was planned with: a basis named here is usually still
    * running, and its verdict is derived again when the row dispatches.
+   * `alongside` is the caller's own writes about the new row, such as a
+   * program's found-on link and its origin's wait: they commit with the
+   * row, so no reader ever sees it without them (INF-3046).
    */
-  plan(input: {
-    title: string;
-    intent: SpawnIntent;
-    repoId?: string;
-    parent?: string;
-    blockedBy?: string[];
-    startPolicy?: TaskStartPolicy;
-    priority?: number;
-    shape?: WorkShapeAsk;
-  }): TaskRecord {
+  plan(
+    input: {
+      title: string;
+      intent: SpawnIntent;
+      repoId?: string;
+      parent?: string;
+      blockedBy?: string[];
+      startPolicy?: TaskStartPolicy;
+      priority?: number;
+      shape?: WorkShapeAsk;
+    },
+    alongside?: (record: TaskRecord) => void,
+  ): TaskRecord {
     const placement = this.resolveGraphPlacement(input);
     const brief = renderIntentBrief(
       input.intent,
@@ -715,21 +721,27 @@ export class TaskIntake {
       },
       input.intent,
     );
-    const record = this.options.tasks.create({
-      id: taskId,
-      kind: "work",
-      title,
-      prompt: brief,
-      intent: input.intent,
-      repoId: placement.repoId,
-      difficulty: tierFor(shape).bucket ?? null,
-      shape,
-      ...(placement.parentId ? { parentId: placement.parentId } : {}),
-      ...(placement.blockedBy.length > 0 ? { blockedBy: placement.blockedBy } : {}),
-      startPolicy: input.startPolicy ?? "on-request",
-      ...(input.priority !== undefined ? { priority: input.priority } : {}),
-      status: "open",
-    });
+    const file = (): TaskRecord => {
+      const filed = this.options.tasks.create({
+        id: taskId,
+        kind: "work",
+        title,
+        prompt: brief,
+        intent: input.intent,
+        repoId: placement.repoId,
+        difficulty: tierFor(shape).bucket ?? null,
+        shape,
+        ...(placement.parentId ? { parentId: placement.parentId } : {}),
+        ...(placement.blockedBy.length > 0 ? { blockedBy: placement.blockedBy } : {}),
+        startPolicy: input.startPolicy ?? "on-request",
+        ...(input.priority !== undefined ? { priority: input.priority } : {}),
+        status: "open",
+      });
+      alongside?.(filed);
+      return filed;
+    };
+    // The feed line and the sweep below follow the one commit.
+    const record = alongside ? this.options.tasks.atomic(file, () => {}) : file();
     this.options.broadcastEvent({
       type: "firstmate_note",
       text: `Planned "${title}" (${record.key}) - ${this.plannedWaiting(record)}.`,

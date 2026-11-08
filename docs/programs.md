@@ -12,6 +12,7 @@ The tool is served to a crewmate whose task is in a project other than the perso
 Its rule for the crewmate is the Programs runbook's crew skill (`resources/runbooks/programs/skills/programs/SKILL.md`), opened when needed: the dialect, the five shapes and the bound.
 
 A start files the program in the crewmate's project, when-ready with no parent, with the crewmate's task's captain words and premium ask; a `discovered-from` link finds it on the crewmate's task, and the crewmate's task always waits on it with a `blocks` link that holds no merge (`linkWaits`).
+The program, both links and its found-on note commit together (`plan`'s `alongside`, `src/core/orchestrator/intake.ts`), so no reader ever sees the program without its origin or the origin not yet waiting on it.
 Nesting is refused: a program's part starts no program and says the need in its result.
 A work computer asks its home through the `inf:work:start-program` order (`src/shared/work.ts`), which an older home does not take (`src/shared/contract-changes/crewmate-programs.md`).
 

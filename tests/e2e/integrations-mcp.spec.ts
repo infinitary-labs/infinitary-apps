@@ -66,9 +66,10 @@ import { pressKey, runFromSearch, typeInto, untilFocused } from "./windowKeys";
  *   In the third, a crewmate's change card offers Allow for the rest of this
  *   task; that choice by keys runs its call, and the crewmate's next call of
  *   the same action runs with no card while the rule stays Ask (INF-2993).
- *   In the fourth, a crewmate's three calls in one command fold into one
- *   card that lists them; one unticked by keys is refused and two run, and
- *   the crewmate hears all three outcomes in one message (INF-2993 piece 2).
+ *   In the fourth, a crewmate's three calls, the second and third made
+ *   while the first one's card waits, fold into one card that lists them;
+ *   one unticked by keys is refused and two run, and the crewmate hears all
+ *   three outcomes in one message (INF-2993 piece 2).
  * - Data: the stand-in notes server (`tests/helpers/mcpStandIn.ts`) in the
  *   2026-07-28 protocol era, run as a program on this computer over stdio,
  *   reading a notes file in this test's folder.

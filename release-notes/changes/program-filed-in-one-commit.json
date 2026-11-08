@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "program-filed-in-one-commit",
+      "reason": "A crewmate's program, its found-on link, its origin's wait and its note now commit together, so a reader never sees the program without its origin; the unreleased crewmate-programs note already covers what a person sees."
+    }
+  ]
+}

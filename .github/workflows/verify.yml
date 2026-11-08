@@ -313,6 +313,8 @@ jobs:
       - uses: ./Application Support/firstmate/.github/actions/electron-download
         with:
           working-directory: Application Support/firstmate
+          # The universal package below reads both Mac zips.
+          zips: ${{ matrix.lane == 'mac' && 'darwin-arm64 darwin-x64' || '' }}
       - id: install
         run: pnpm install --frozen-lockfile
         # Scope Node headers to this install, never to Electron rebuilds.
@@ -522,9 +524,21 @@ jobs:
       # concern is a fork reaching a stored certificate; there is none here -
       # `pnpm codesign:local` generated this runner's own local certificate
       # (docs/local-code-signing.md) and it dies with the runner.
+      #
+      # electron-builder downloads both Mac zips the universal package reads,
+      # and Electron's SHASUMS256.txt for each, from GitHub's release server:
+      # main's check run 42463836430 failed on a 504 there. The zips come
+      # from the cache the Electron download step restored, each checked
+      # against Electron's bundled checksums first
+      # (.github/actions/electron-download/zips.mjs), so electron-builder
+      # reads them there and downloads no checksum file.
       - id: package
+        name: Package the universal app
         if: ${{ !cancelled() && matrix.lane == 'mac' && steps.build.outcome == 'success' && steps.dev-signing.outcome == 'success' }}
-        run: pnpm exec electron-builder --mac dir --universal --config electron-builder.dev.yml
+        run: |
+          node .github/actions/electron-download/zips.mjs darwin arm64 x64
+          pnpm exec electron-builder --mac dir --universal --config electron-builder.dev.yml \
+            -c.electronDownload.cache="$electron_config_cache" -c.electronDownload.isVerifyChecksum=false
         env:
           CSC_FOR_PULL_REQUEST: "true"
       - id: codesign

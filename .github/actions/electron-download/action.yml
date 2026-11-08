@@ -4,6 +4,9 @@ inputs:
   working-directory:
     description: Checkout whose package.json names the Electron version.
     default: .
+  zips:
+    description: Electron zips the job reads beyond the one its install downloads, as platform-arch words (a universal Mac package reads darwin-arm64 and darwin-x64); they join the cache key, so the cache keeps them too.
+    default: ""
 runs:
   using: composite
   steps:
@@ -20,13 +23,23 @@ runs:
     - id: electron
       shell: bash
       working-directory: ${{ inputs.working-directory }}
+      env:
+        ZIPS: ${{ inputs.zips }}
       run: |
         # electron's install.js reads its download cache from electron_config_cache.
         dir="$RUNNER_TEMP/electron-cache"
         printf 'electron_config_cache=%s\n' "$dir" >> "$GITHUB_ENV"
         printf 'dir=%s\n' "$dir" >> "$GITHUB_OUTPUT"
         printf 'version=%s\n' "$(node -p 'require("./package.json").devDependencies.electron')" >> "$GITHUB_OUTPUT"
+        # Every zip the job reads names its own key: a cache saved without one
+        # never gains it, since a restored key is never saved again.
+        read -ra zips <<< "$ZIPS"
+        suffix=""
+        for zip in "${zips[@]}"; do suffix="$suffix-$zip"; done
+        printf 'zips=%s\n' "$suffix" >> "$GITHUB_OUTPUT"
     - uses: actions/cache@v4
       with:
         path: ${{ steps.electron.outputs.dir }}
-        key: electron-${{ runner.os }}-${{ runner.arch }}-${{ steps.electron.outputs.version }}
+        key: electron-${{ runner.os }}-${{ runner.arch }}-${{ steps.electron.outputs.version }}${{ steps.electron.outputs.zips }}
+        # A key's first job starts from the install's own zip and keeps the rest it reads.
+        restore-keys: ${{ steps.electron.outputs.zips != '' && format('electron-{0}-{1}-{2}', runner.os, runner.arch, steps.electron.outputs.version) || '' }}

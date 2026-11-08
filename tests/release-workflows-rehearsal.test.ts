@@ -579,8 +579,13 @@ describe("the signed channel workflow", () => {
     // A rehearsal's publication job fetches the Linux packages through the
     // workflow's own package check too (INF-2879; tests/linux-package-sums.test.ts).
     const packageCheck = [".github/actions/linux-packages/", "scripts/linux-package-sums.ts"];
+    // The signing job's package step reads Electron's zips through the
+    // workflow's own reader, which that older commit may predate, after the
+    // alpha run 42464772458 failed on a 504 from GitHub's release server
+    // (tests/ensure-electron-installed.test.ts runs the step).
+    const zipsReader = ".github/actions/electron-download/zips.mjs";
     for (const [job, jobSteps, tooling] of [
-      ["release", signingSteps, gate],
+      ["release", signingSteps, [...gate, zipsReader]],
       ["publish", publishSteps, [...gate, ...packageCheck]],
     ] as const) {
       const fetched = jobSteps.findIndex(
@@ -601,9 +606,15 @@ describe("the signed channel workflow", () => {
       expect([jobSteps[fetched]?.if, jobSteps[placed]?.if], job).toEqual([undefined, undefined]);
       expect(jobSteps.findIndex(launches), job).toBeGreaterThan(placed);
     }
-    // The app it launches is the source's, packaged before the gate moves in.
+    // The app it launches is the source's, packaged before the gate moves in,
+    // with the workflow's own zips reader checked out before it packages.
+    const packaged = signingSteps.findIndex((candidate) => candidate.id === "package");
     expect(signingSteps.findIndex((candidate) => candidate.id === "launch-gate")).toBeGreaterThan(
-      signingSteps.findIndex((candidate) => candidate.id === "package"),
+      packaged,
     );
+    expect(signingSteps[packaged]?.run).toContain(`node .release-tooling/${zipsReader} `);
+    expect(
+      signingSteps.findIndex((candidate) => candidate.with?.path === ".release-tooling"),
+    ).toBeLessThan(packaged);
   });
 });

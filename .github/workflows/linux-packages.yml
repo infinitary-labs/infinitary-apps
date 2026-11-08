@@ -142,12 +142,22 @@ jobs:
         run: echo "version=${RELEASE_VERSION:-$(node -p 'require("./package.json").version')}" >> "$GITHUB_OUTPUT"
       # The logical version rides in the packaged package.json, which the
       # running app reports, as the Mac release's does.
+      #
+      # electron-builder downloads Electron's zip, and its SHASUMS256.txt,
+      # from GitHub's release server, past the one the install keeps in the
+      # Electron download step's cache: the alpha run 42464772458 failed on
+      # a 504 there. The workflow's own zip reader checks the cached zip
+      # against Electron's bundled checksums first
+      # (.github/actions/electron-download/zips.mjs), so electron-builder
+      # reads it there and downloads no checksum file.
       - name: Build the Ubuntu package, the Fedora package and the AppImage
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
+          node .release-tooling/.github/actions/electron-download/zips.mjs linux x64
           pnpm exec electron-builder --linux --config electron-builder.linux.yml --publish never \
-            -c.extraMetadata.version="$VERSION"
+            -c.extraMetadata.version="$VERSION" \
+            -c.electronDownload.cache="$electron_config_cache" -c.electronDownload.isVerifyChecksum=false
       - name: Verify the packaged release notes
         if: ${{ inputs.version }}
         env:

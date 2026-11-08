@@ -256,7 +256,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/orchestrator/firstmateAgent.seat.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/orchestrator/firstmateAgent.tools.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/orchestrator/firstmateAgent.turns.test.ts` | real git, at the run's own priority | 5 s default |
-| `tests/ensure-electron-installed.test.ts` | node | 5 s default |
+| `tests/ensure-electron-installed.test.ts` | node, a shell, electron-builder's own argument reader and Electron download against a local stand-in for GitHub's release server | 5 s default, 10 s on the package steps (Mac slowest case 1.0 s) |
 | `tests/typecheck.test.ts` | the pinned checker through its real command, a scratch copy of the settings words and incremental imports, missing/failed native executables | 20 s for the eleven-check incremental journey; 5 s default elsewhere |
 | `tests/install-clones.test.ts` | `cp -c`, tar, the installed ONNX runtime files, APFS's private size through koffi | 5 s default |
 | `src/core/claude/claudeLoginProbe.test.ts` | the installed Claude client | 5 s default |

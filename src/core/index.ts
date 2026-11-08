@@ -81,6 +81,7 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
       services.forges.recordApp("quit");
       services.jobs.disposeAll();
       services.ticker.stop();
+      services.stopWorkPresentation();
       services.scheduler.stop();
       services.firstmate.dispose();
       const crew = services.supervisor.disposeAll();

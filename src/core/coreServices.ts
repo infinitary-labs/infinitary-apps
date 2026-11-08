@@ -92,6 +92,12 @@ export type CoreServices = {
   /** The runtime catalog reads (docs/model-lists.md); never awaited on a user path. */
   servedModels: ServedModels;
   stopLivenessSweep: () => void;
+  /**
+   * Stops the presentation pass with the core: a write that lands after the
+   * quit, such as a background job's exit or a closed task's temporary-folder
+   * sweep, runs none.
+   */
+  stopWorkPresentation: () => void;
   supervisor: CrewSupervisor;
   /** The one task writer (task-system P0/P1); the record every surface reads. */
   tasks: TaskService;

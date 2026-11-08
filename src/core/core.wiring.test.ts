@@ -31,7 +31,8 @@ vi.mock("./utilityQos", async (importOriginal) =>
  * own, held through the whole booted core before the wiring is split into
  * its owners (INF-2625's plan): the boot notes for background jobs the last
  * run left, the open changes and projects read from every signed-in forge,
- * the names Usage gives what it counts, and the first mate's quota line.
+ * the names Usage gives what it counts, the first mate's quota line, and the
+ * core's stop taking the presentation pass with it.
  * Each is read the way the window or the first mate reads it, so the same
  * cases hold whichever module the logic moves to.
  */
@@ -302,4 +303,49 @@ describe("the app wiring's own answers, through the booted core", () => {
     }, 60_000);
     expect(quota).toBe("codex/work 62%; claude 40%");
   }, 120_000);
+});
+
+describe("the core's stop", () => {
+  // The bug this guards: the core's stop left the presentation pass live, so a write landing
+  // after a quit - a background job's exit, or a closed task's temporary-folder sweep finishing,
+  // whose note is written below - ran a pass whose timing line reached a test worker that had
+  // already closed, and failed that test file with every test passed.
+  it("runs no timed pass for a task written after the core stopped", async () => {
+    process.env.PI_OFFLINE = "1";
+    const userDataDir = scratchDir("infinitary-core-stop-");
+    const quotaDir = quotaFixture("infinitary-core-stop-quota-");
+    const db = openDatabase(userDataDir);
+    seedTask(new TaskService({ db }), {
+      id: "closed-task",
+      title: "Speed up the build",
+      status: "completed",
+    });
+    db.close();
+    const stopped = await startCore(fakeHost(userDataDir).host);
+    const info = vi.spyOn(console, "info");
+    try {
+      await stopped.dispose();
+      await new Promise((resolve) => setImmediate(resolve));
+      info.mockClear();
+      const reason = "its computer is out of reach";
+      stopped.services.tasks.note("closed-task", `temporary files kept: ${reason}`, {
+        news: false,
+        data: { tempPending: reason },
+      });
+      await new Promise((resolve) => setImmediate(resolve));
+      // Every pass the host times prints one `[ticker]` line (tests/e2e/main-thread-freeze.spec.ts reads them).
+      const passes = info.mock.calls
+        .map(([line]) => String(line))
+        .filter((line) => line.startsWith("[ticker] "));
+      expect(passes).toEqual([]);
+    } finally {
+      info.mockRestore();
+      await stopped.services.workspace.poolSettled();
+      await stopped.services.workspace.deletionsSettled();
+      await catalogRefreshesSettled();
+      delete process.env.INFINITARY_QUOTA_FIXTURE_DIR;
+      rmSync(userDataDir, { recursive: true, force: true });
+      rmSync(quotaDir, { recursive: true, force: true });
+    }
+  }, 60_000);
 });

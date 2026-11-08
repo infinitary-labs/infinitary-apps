@@ -1771,6 +1771,7 @@ export async function createServices(
     servedModels: served,
     decisions,
     stopLivenessSweep: () => clearInterval(livenessInterval),
+    stopWorkPresentation: () => workPresentation.dispose(),
     supervisor,
     tasks,
     taskProtocol,

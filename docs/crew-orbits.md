@@ -319,6 +319,7 @@ Only active work has a live posture, so its facts are gathered for active rows a
 One pass reads each live row's posture once, and the crew counts it announces reuse those readings (`WorkPresentation`, INF-1073).
 The pass's own effects ask for no further pass: its republish write changes no posture (`TaskChange.republish`), and its own counts event is not a crew change.
 Any other write or crew change, including one made while the pass runs, asks for the next pass; `workPresentation.test.ts` counts the passes and readings per change.
+The pass stops with the core, so a write that lands after the quit, such as a background job's exit or a closed task's temporary-folder sweep, runs none (`core.wiring.test.ts`).
 Boot derives the same answer; persisted job rows are history, not live jobs.
 Claude's complete background list replaces membership on each signal.
 Attachment/transport loss invalidates the previous membership.

@@ -34,6 +34,11 @@ export const CHANGE_RECOVERY: Partial<
     "it may already be filed",
     "Look for the follow-up with tasks before filing it again.",
   ],
+  "inf:work:start-program": [
+    "starting this program",
+    "it may already be started",
+    "Look for the program with tasks before starting it again.",
+  ],
   "inf:work:progress": [
     "recording your progress",
     "the line may already be recorded",

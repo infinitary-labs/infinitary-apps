@@ -30,7 +30,20 @@ import {
  * crew's state through `CrewCore`.
  */
 export class CrewSteer {
+  /**
+   * The lane rows that carry the captain's guidance (`isCaptainGuidance`):
+   * a turn that holds one carries his words (`carriesCaptainWords`). Kept in
+   * memory, so after a restart a row read again no longer counts and the
+   * crewmate asks again.
+   */
+  private readonly captainRows = new Set<number>();
+
   constructor(private readonly core: CrewCore) {}
+
+  /** Whether the turn running now holds a steer with the captain's words (his own, or the first mate's on his turn). */
+  carriesCaptainWords(task: TaskRuntime): boolean {
+    return task.inFlightInboxIds.some((id) => this.captainRows.has(id));
+  }
 
   /**
    * Something sent reached a crewmate (INF-759): words entered its turn,
@@ -158,7 +171,7 @@ export class CrewSteer {
         message = renderWake(marked);
         durable = withPictures(marked);
       }
-      return this.core.options.inbox.transaction(() => {
+      const id = this.core.options.inbox.transaction(() => {
         for (const id of response?.cancel ?? []) this.core.options.inbox.cancelResponse(id);
         if (response?.cancel?.length) {
           durable = {
@@ -189,6 +202,8 @@ export class CrewSteer {
         message = renderWake(durable);
         return requested.inboxId;
       });
+      if (guidance) this.captainRows.add(id);
+      return id;
     };
     const task = this.core.tasks.get(taskId);
     if (task?.session && !task.cancelled) {

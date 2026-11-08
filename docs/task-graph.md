@@ -166,6 +166,7 @@ Crewmates (`src/core/pi/crewmateTaskTools.ts`, the same pair over Claude's tool 
 The host stores `test_path` and answers with the existing key instead of filing a second open or active row for the same path; a test failure with no path is refused.
 A test that fails outside the crewmate's change is a follow-up only when it also fails on the untouched main line, otherwise one line in the report.
 A report's `waits_on` records an existing open task its work cannot go on without as a `blocks` link that holds no merge, on the task carrying its work when a `replaced-by` link moved it (`TaskService.graph.carrierOf`), refusing an unknown, closed, own or circular key (`TaskService.graph.linkWaits`; `docs/report-sort.md`, "A wait on work nobody has started is the first mate's turn").
+`start_program` (title, goal, script, `args`, bound; or `program` with a larger `bound` or `stop`) files a program in the crewmate's project, when-ready - never a child - joined to the crewmate's task by a `discovered-from` edge and a `blocks` link from it that holds no merge, so its close steers the crewmate (`docs/programs.md`, "Starting a program").
 `note_progress` writes one `progress` event on the crewmate's own timeline with `feed = 0`.
 Both register through `CrewmateSpec.onFollowup` / `onProgress`.
 

@@ -549,6 +549,7 @@ export class CrewSupervisor {
       notifyOp: (wake, origin, taskId) => this.hooks.notifyOp(wake, origin, taskId),
       broadcastCrewCounts: () => this.facts.broadcastCrewCounts(),
       sweepGates: (at) => this.watch.sweepGates(at),
+      steer: (taskId, wake) => this.steer.steerInternal(taskId, wake, SUPERVISOR_STEER),
     });
     this.programs = new ProgramRunner({
       tasks: options.tasks,

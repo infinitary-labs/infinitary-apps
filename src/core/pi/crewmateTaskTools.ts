@@ -44,6 +44,7 @@ import { keepValidationEvidence } from "./validationEvidence";
  */
 
 export const FILE_FOLLOWUP_TOOL_NAME = "file_followup";
+export const START_PROGRAM_TOOL_NAME = "start_program";
 export const NOTE_PROGRESS_TOOL_NAME = "note_progress";
 export const REPORT_TOOL_NAME = "report";
 export const REPLY_TOOL_NAME = "reply";
@@ -176,6 +177,50 @@ export const FILE_FOLLOWUP_TOOL = crewmateTool({
             ...(params.blocks_me ? { blocksMe: true } : {}),
             ...(params.test_failure ? { testFailure: true } : {}),
             ...(params.test_path ? { testPath: params.test_path } : {}),
+          },
+        ],
+        signal,
+      ),
+    })),
+});
+
+/**
+ * A crewmate starts a program its task needs (INF-3022's plan; the captain's
+ * Approve and build): the only way a program starts (docs/programs.md,
+ * "Starting a program"). The dialect and shapes are the Programs runbook's
+ * crew skill, opened on demand, so this says only how to call it.
+ */
+export const START_PROGRAM_TOOL_DESCRIPTION =
+  "Start a program, a script filing your task's parts as tasks; see the programs skill.";
+
+export const START_PROGRAM_TOOL = crewmateTool({
+  name: START_PROGRAM_TOOL_NAME,
+  label: "Program",
+  description: START_PROGRAM_TOOL_DESCRIPTION,
+  parameters: Type.Object({
+    title: Type.Optional(Type.String()),
+    goal: Type.Optional(Type.String()),
+    script: Type.Optional(Type.String()),
+    // The script's args: a JSON object, as its shapes read them (args.rounds, args.goal).
+    args: Type.Optional(Type.Unsafe<Record<string, unknown>>({ type: "object" })),
+    bound: Type.Optional(Type.Integer()),
+    program: Type.Optional(Type.String()),
+    stop: Type.Optional(Type.Boolean()),
+  }),
+  bind: ({ onStartProgram }) =>
+    onStartProgram &&
+    (async (params, signal) => ({
+      text: await callWithSignal(
+        onStartProgram,
+        [
+          {
+            ...(params.title !== undefined ? { title: params.title } : {}),
+            ...(params.goal !== undefined ? { goal: params.goal } : {}),
+            ...(params.script !== undefined ? { script: params.script } : {}),
+            ...(params.args !== undefined ? { args: params.args } : {}),
+            ...(params.bound !== undefined ? { bound: params.bound } : {}),
+            ...(params.program !== undefined ? { program: params.program } : {}),
+            ...(params.stop ? { stop: true } : {}),
           },
         ],
         signal,
@@ -564,6 +609,7 @@ export const CREWMATE_TOOLS = [
   EMIT_CARD_TOOL,
   CLOSE_CARD_TOOL,
   FILE_FOLLOWUP_TOOL,
+  START_PROGRAM_TOOL,
   NOTE_PROGRESS_TOOL,
   REPORT_TOOL,
   REPLY_TOOL,

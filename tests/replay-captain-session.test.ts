@@ -254,27 +254,24 @@ describe("the fixtures replay against the current code", () => {
 });
 
 /**
- * INF-799 piece 3: a loop toward a goal lands as one program task. The
- * recording (`tests/fixtures/replay/README.md`, `oct22-program`) holds the
- * first mate answering that ask with the served guide's loop shape in
- * one `create_task program`; the replay files it through today's tool and
- * the host's runner starts it, with no parent.
+ * INF-3022: a loop toward a goal goes to one crewmate, which starts the
+ * program itself. The recording (`tests/fixtures/replay/README.md`,
+ * `oct22-program`) holds the first mate answering that ask with one
+ * `spawn_crewmate` whose constraint says "use start_program to do this", the
+ * captain's direction that the first mate never write the script; the
+ * replay files it through today's tool, and the first mate files no program.
  */
-describe("a program the first mate files", () => {
-  it("replays the loop ask as one program task the runner starts", () => {
+describe("a program ask the first mate hands to a crewmate", () => {
+  it("replays the loop ask as one crewmate task and no program of the first mate's", () => {
     expect(oct22Program.fidelity).toMatchObject({
       recorded_captain_turns: 1,
       replayed_captain_turns: 1,
       missing_tools: [],
       settle_timeouts: 0,
     });
-    expect(oct22Program.details.programs).toEqual([
-      {
-        title: "Fix the flaky checkout tests until the suite passes",
-        parent: false,
-        bound: 8,
-        started: true,
-      },
+    expect(oct22Program.details.programs).toEqual([]);
+    expect(oct22Program.details.task_shapes.map((shape) => shape.title)).toEqual([
+      "Fix the flaky checkout tests until the suite passes",
     ]);
   });
 });

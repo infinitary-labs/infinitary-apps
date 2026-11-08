@@ -242,6 +242,22 @@ export type FollowupInput = {
   testPath?: string;
 };
 
+/**
+ * A crewmate's program call (docs/programs.md, "Starting a program"): a new
+ * program found on its task, or, with `program`, a new bound for or a stop
+ * of one it started.
+ */
+export type StartProgramInput = {
+  title?: string;
+  goal?: string;
+  script?: string;
+  args?: unknown;
+  bound?: number;
+  /** A program this task started, by key: its bound changes, or it stops. */
+  program?: string;
+  stop?: boolean;
+};
+
 /** A callback's answer, now or later. */
 type Awaitable<T> = T | Promise<T>;
 
@@ -341,6 +357,12 @@ export type CrewmateToolDelegate = {
   ) => Awaitable<string>;
   /** File a follow-up under this crewmate's task (P2). Returns the tool text. */
   onFollowup?: (input: FollowupInput, signal?: AbortSignal) => Awaitable<string>;
+  /**
+   * Start a program from this crewmate's task, or change one it started
+   * (docs/programs.md). Absent where a program cannot run: the tool is not
+   * served. Returns the tool text.
+   */
+  onStartProgram?: (input: StartProgramInput, signal?: AbortSignal) => Awaitable<string>;
   /**
    * One progress line onto this crewmate's own timeline (P2), with the
    * whole plan when the note carries one (FI3-734). Returns the tool text.

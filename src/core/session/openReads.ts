@@ -12,6 +12,7 @@ export const APP_TOOL_REQUESTS = {
   emit_card: "inf:work:card",
   close_card: "inf:work:close-card",
   file_followup: "inf:work:followup",
+  start_program: "inf:work:start-program",
   note_progress: "inf:work:progress",
   report: "inf:work:report",
   reply: "inf:work:reply",

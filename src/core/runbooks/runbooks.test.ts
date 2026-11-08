@@ -371,9 +371,10 @@ describe("runbooks over existing prompt and skill doors", () => {
       readFileSync(join(root, "lessons/skills/lessons/parts/quiz.html"), "utf8"),
     );
     books.set("lessons", false);
-    // A skill rides its runbook, not a care: the care runbook's and the queue's stay.
+    // A skill rides its runbook, not a care: the care runbook's, the programs' and the queue's stay.
     expect(books.crew(code).skills.map((skill) => skill.name)).toEqual([
       "careful-change",
+      "programs",
       "queue-repair",
       "queue-setup",
     ]);

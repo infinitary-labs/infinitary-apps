@@ -190,7 +190,6 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       // Their rule is said once, in the served sequences guide (INF-799).
       result_schema: Type.Optional(RESULT_SCHEMA_PARAM),
       branch_from: Type.Optional(Type.String()),
-      program: Type.Optional(RESULT_SCHEMA_PARAM),
     }),
     run: async (params) => {
       // Automatic creation must not turn an undeclared graph into independent work (INF-143).
@@ -210,8 +209,6 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           ? { result_schema: params.result_schema as Record<string, unknown> }
           : {}),
         ...(params.branch_from?.trim() ? { branch_from: params.branch_from.trim() } : {}),
-        // Checked whole by the supervisor before anything is filed (INF-799 piece 2).
-        ...(params.program ? { program: params.program as WorkShapeAsk["program"] } : {}),
       };
       const intent = parseSpawnIntent({
         goal: params.goal,

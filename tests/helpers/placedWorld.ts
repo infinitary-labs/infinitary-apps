@@ -161,7 +161,14 @@ export function startHome(
   forgeFor?: ForgeFor,
   extra: Pick<
     Parameters<typeof startPlacedHome>[0],
-    "routing" | "runsForAnotherFirstmate" | "github" | "google" | "browsers" | "knowledge" | "files"
+    | "routing"
+    | "runsForAnotherFirstmate"
+    | "github"
+    | "google"
+    | "browsers"
+    | "knowledge"
+    | "files"
+    | "programProcess"
   > & {
     /** A task that moves home runs its conversation here on real Pi. */
     runsHere?: boolean;
@@ -192,6 +199,7 @@ export function startHome(
     ...(extra.browsers ? { browsers: extra.browsers } : {}),
     ...(extra.knowledge ? { knowledge: true } : {}),
     ...(extra.files ? { files: extra.files } : {}),
+    ...(extra.programProcess ? { programProcess: extra.programProcess } : {}),
     ...(extra.runsHere
       ? { here: createPiSessionFactory({ agentDir: join(userData, "pi-agent") }) }
       : {}),
@@ -297,6 +305,8 @@ export async function world(
     browsers?: Parameters<typeof startPlacedHome>[0]["browsers"];
     /** The home's files command, over a scratch home folder (docs/files.md). */
     files?: Parameters<typeof startPlacedHome>[0]["files"];
+    /** The program process the home's crew runs programs in (docs/programs.md). */
+    programProcess?: Parameters<typeof startPlacedHome>[0]["programProcess"];
     /**
      * The computer's task channel, as the work mode opens it
      * (`ComputerBrowsers`), over the command process bundled at this path;

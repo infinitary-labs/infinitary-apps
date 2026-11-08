@@ -340,6 +340,7 @@
         "!src/core/orchestrator/captainOverrides.checks.test.ts",
         "!src/core/orchestrator/crewBrief.context.test.ts",
         "!src/core/orchestrator/crewPrograms.test.ts",
+        "!src/core/orchestrator/crewmatePrograms.test.ts",
         "!src/core/orchestrator/crewTurns.whoseTurn.test.ts",
         "!src/core/orchestrator/crewTurns.workspace.test.ts",
         "!src/core/orchestrator/crewWatch.git.test.ts",

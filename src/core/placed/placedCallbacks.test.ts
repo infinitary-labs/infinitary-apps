@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, lstatSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { describe, expect, it, vi } from "vitest";
 import { projectFontBytes } from "../../../tests/helpers/fontFixture";
@@ -32,6 +33,7 @@ import {
   crewmateSessionsDir,
 } from "../paths";
 import { crewmateComputersNote } from "../pi/piResources";
+import { forkChildProcess } from "../sql/forkChildProcess";
 import { CrewTranscripts } from "../tasks/crewTranscript";
 import { handoverFileName } from "../tasks/handoverFiles";
 import { seedTask } from "../tasks/seedTask";
@@ -604,6 +606,56 @@ describe("a task that runs on a computer that runs work", () => {
       .split("\n")
       .map((line) => JSON.parse(line) as { channel: string });
     expect(calls.map((call) => call.channel)).toEqual(["inf:work:progress", "inf:work:report"]);
+  });
+
+  // INF-3022's plan, "a crewmate on a work computer reaches the same tool":
+  // its start_program call travels to the home, which files the program on
+  // its record, found on the task there and waited on.
+  it("starts a program at the home from a crewmate there (INF-3022)", async () => {
+    const project = await gitProject();
+    const at = await world(undefined, {
+      programProcess: forkChildProcess(
+        fileURLToPath(new URL("../program/programProcess.ts", import.meta.url)),
+      ),
+    });
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    model([
+      {
+        tools: [
+          {
+            name: "start_program",
+            args: {
+              title: "Read the website",
+              goal: "Say what the website's README holds.",
+              script: 'return { read: "README.md" };',
+              bound: 1,
+            },
+          },
+        ],
+      },
+      { text: "Started it." },
+    ]);
+    await at.start("t-program", "Read the website; use start_program to do this.", repo.id);
+    await expect
+      .poll(() => home.tasks.list().find((row) => row.shape?.program)?.title)
+      .toBe("Read the website");
+    const program = home.tasks.list().find((row) => row.shape?.program);
+    if (!program) throw new Error("no program was filed");
+    expect(home.tasks.crewFilingOrigin(program.id)?.id).toBe("t-program");
+    expect(home.tasks.graph.blockers("t-program").map((row) => row.id)).toContain(program.id);
+    await expect.poll(() => home.tasks.get(program.id)?.status).toBe("done");
+    expect(home.tasks.latestResult(program.id)?.value).toEqual({ read: "README.md" });
+    // The call was answered here once, kept by its id.
+    await expect
+      .poll(() =>
+        readFileSync(join(crewmatePlacedDir(home.paths, "t-program"), "calls.jsonl"), "utf8")
+          .trim()
+          .split("\n")
+          .map((line) => (JSON.parse(line) as { channel: string }).channel)
+          .filter((channel) => channel === "inf:work:start-program"),
+      )
+      .toHaveLength(1);
   });
 
   // INF-378's two divergent-record cases now belong to pi/placedMigration.test.ts.

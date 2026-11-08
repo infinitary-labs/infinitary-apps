@@ -132,7 +132,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/folderMove/move.test.ts` | real git, the system's copier, SQLite, a vite build and the Electron binary: the one-time move of a scratch data folder | 10 s (Mac slowest per-case minimum 0.588 s) |
 | `src/core/tasks/taskTemp.integration.test.ts` | a vite build and the Electron binary: a closed task's temporary folder and leftover files on a scratch work folder | 5 s default (Mac fastest per case 0.12 s, the bundle 0.55 s) |
 | `src/core/helper/workingCopies.test.ts` | real git: a computer's clones, working copies and bundles, at the run's own priority | 10 s |
-| `src/core/placed/placedCallbacks.test.ts` | real git on both sides of a placed task's working copy, at the run's own priority | 10 s |
+| `src/core/placed/placedCallbacks.test.ts` | real git on both sides of a placed task's working copy, at the run's own priority, and a forked program process for a program started from the computer | 10 s |
 | `src/core/placed/placedReach.test.ts` | real git on both sides of a placed task's working copy, at the run's own priority | 10 s |
 | `src/core/placed/placedJobs.test.ts` | real git on both sides of a placed task's working copy, at the run's own priority | 10 s |
 | `src/core/placed/placedWorkingCopies.test.ts` | real git on both sides of a placed task's working copy, at the run's own priority | 10 s |
@@ -178,6 +178,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/orchestrator/captainOverrides.checks.test.ts` | real git in the kept merge fixture's project folder, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/crewBrief.context.test.ts` | real git in scratch projects for the brief's directions and knowledge, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/crewPrograms.test.ts` | real git and each program's own child process, at the run's own priority | 5 s default (Mac slowest case 0.8 s) |
+| `src/core/orchestrator/crewmatePrograms.test.ts` | real git and each program's own child process, at the run's own priority | 5 s default (Mac slowest case 1.0 s) |
 | `src/core/orchestrator/crewTurns.whoseTurn.test.ts` | real git for a few cases, at the run's own priority, and a local HTTP server whose stream one case cuts for Pi's own retry | 5 s default; 30 s on the cut stream case, kept (Mac slowest case 1.0 s, the cut stream 0.1 s) |
 | `src/core/orchestrator/crewTurns.workspace.test.ts` | real git in the personal workspace's folder, at the run's own priority | 5 s default (Mac slowest case 0.6 s) |
 | `src/core/orchestrator/crewWatch.git.test.ts` | real git and `chmod` for closed tasks' working copies and the check watch, at the run's own priority | 60 s on the working copies describe, kept; 5 s default elsewhere (Mac slowest case 0.6 s) |

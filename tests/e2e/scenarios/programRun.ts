@@ -3,14 +3,24 @@ import { calledTool, latestServedTurn, sinceLastUser } from "../providerRequest"
 
 /**
  * A program run to its result in the launched app (INF-799 piece 2, the
- * captain's "Keep it held for a journey" on INF-812). Hermetic replay, not
- * a claim that a live model writes programs: the captain's words name the
- * project, the stand-in first mate files one program with create_task, and
- * each part's stand-in crewmate reports its answer - the finder with a
- * typed result, the two parts after it with text.
+ * captain's "Keep it held for a journey" on INF-812; INF-3022, a crewmate
+ * starts it). Hermetic replay, not a claim that a live model writes
+ * programs: the captain's words name the project, the stand-in first mate
+ * spawns one crewmate with the nudge "use start_program to do this", that
+ * crewmate starts the program with start_program, each part's stand-in
+ * crewmate reports its answer - the finder with a typed result, the two
+ * parts after it with text - and the crewmate that started it reports once
+ * the program's end steers it.
  */
 export const PROGRAM_RUN_PROMPT = "run the meter capping program";
+/** The crewmate's task the first mate spawns. */
+export const CREW_TITLE = "Cap the meter's results with a program";
+const CREW_GOAL = "Cap what the meter renders, through one program.";
+/** The first mate's nudge: it names the tool and writes no script (INF-3022). */
+export const NUDGE = "Use start_program to do this.";
 export const PROGRAM_TITLE = "Cap the meter's rendered results";
+/** What the crewmate reports once its program's end steers it. */
+export const CREW_REPORT = "The program capped both renderers at 4 KiB.";
 /** Each part is told apart by its own goal, the script's prompt, which only its brief carries. */
 export const FIND_PROMPT = "Find where the meter renders a result, for the program journey.";
 export const CAP_PROMPT = "Cap the result rendered in";
@@ -33,7 +43,7 @@ await phase("cap");
 const done = await Promise.all(found.files.map((file) => task(${JSON.stringify(CAP_PROMPT)} + " " + file + ".", { after: ["find"], intelligence: ${JSON.stringify(CAP_INTELLIGENCE)} })));
 return { files: found.files, capped: done };
 `;
-/** The bound the first mate proposes: one finder and one part per file. */
+/** The bound the crewmate proposes: one finder and one part per file. */
 export const PROGRAM_BOUND = FILES.length + 1;
 
 /**
@@ -59,29 +69,52 @@ export const programRun: Scenario = () => {
     if (isFirstmate) {
       const { user, results } = sinceLastUser(body);
       if (!user.includes("[user]") || !user.includes(PROGRAM_RUN_PROMPT)) return undefined;
-      if (results.length > 0) return { text: "Filed the capping program." };
+      if (results.length > 0) return { text: "A crewmate starts the capping program." };
       return {
         calls: [
           {
-            name: "create_task",
+            name: "spawn_crewmate",
             args: {
-              title: PROGRAM_TITLE,
-              goal: "Cap what the meter renders, part by part.",
+              title: CREW_TITLE,
+              goal: CREW_GOAL,
               user_words: PROGRAM_RUN_PROMPT,
               repo_id: captainProject(body),
-              start_policy: "when-ready",
-              blocked_by: [],
-              program: { script: PROGRAM_SCRIPT, bound: PROGRAM_BOUND },
+              constraints: [{ kind: "free", text: NUDGE }],
             },
           },
         ],
       };
     }
     if (!body.includes(PROGRAM_RUN_PROMPT)) return undefined;
-    if (calledTool(latestUserTail, "report")) return { text: "Reported my part." };
-    if (body.includes(`Goal: ${FIND_PROMPT}`))
+    if (body.includes(`Goal: ${FIND_PROMPT}`)) {
+      if (calledTool(latestUserTail, "report")) return { text: "Reported my part." };
       return report("Found two renderers.", { files: FILES });
+    }
     const file = FILES.find((name) => body.includes(`Goal: ${CAP_PROMPT} ${name}.`));
-    return file ? report(capped(file)) : undefined;
+    if (file) {
+      if (calledTool(latestUserTail, "report")) return { text: "Reported my part." };
+      return report(capped(file));
+    }
+    if (!body.includes(`Goal: ${CREW_GOAL}`)) return undefined;
+    // The program's end steers the crewmate that started it: it reads the result and reports.
+    if (sinceLastUser(body).user.includes("Your program")) {
+      if (calledTool(latestUserTail, "report")) return { text: "Reported the program's result." };
+      return report(CREW_REPORT);
+    }
+    if (calledTool(latestUserTail, "start_program"))
+      return { text: "Started the program; its end steers me." };
+    return {
+      calls: [
+        {
+          name: "start_program",
+          args: {
+            title: PROGRAM_TITLE,
+            goal: "Cap what the meter renders, part by part.",
+            script: PROGRAM_SCRIPT,
+            bound: PROGRAM_BOUND,
+          },
+        },
+      ],
+    };
   };
 };

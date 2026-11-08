@@ -30,6 +30,8 @@ export type StartFacts =
       bound: number;
       /** The parts it filed so far. */
       calls: number;
+      /** Told to the crewmate that started it, whose task is open (INF-3022). */
+      to?: "crewmate";
     }
   | {
       /**
@@ -230,7 +232,9 @@ function leftOutReasonWords(reason: LeftOutReason, name: string, system?: Device
 /** Starting work, worded. */
 export const START_WORDS: KindWords<StartFacts> = {
   "program-bound": (facts) =>
-    `[fm-op] the program on task ${facts.key} "${facts.task.title}" filed ${facts.calls} parts and reached the bound you proposed, ${facts.bound} task() calls: its next call is held and nothing more is filed. Ask the captain on a card whether it may go on, saying what has run and the new bound you propose; on the captain's words raise it with update_task program_bound, or drop the program. ${softHoldWords("program-bound", "firstmate")}`,
+    facts.to === "crewmate"
+      ? `Your program ${facts.key} "${facts.task.title}" filed ${facts.calls} parts and reached its bound of ${facts.bound} task() calls: its next call is held and nothing more is filed. Ask the captain on a card whether it may go on, saying what has run and the new bound you propose; on their words raise it with start_program program and bound, or stop it with start_program program and stop.`
+      : `[fm-op] the program on task ${facts.key} "${facts.task.title}" filed ${facts.calls} parts and reached its bound of ${facts.bound} task() calls: its next call is held and nothing more is filed. Ask the captain on a card whether it may go on, saying what has run and the new bound you propose; on the captain's words raise it with update_task program_bound, or drop the program. ${softHoldWords("program-bound", "firstmate")}`,
   "program-ended": (facts) =>
     facts.error
       ? `[fm-op] the program on task ${facts.key} "${facts.task.title}" stopped after ${facts.parts} parts: ${facts.error}. Nothing more of it runs; tell the captain what stopped it.`

@@ -83,6 +83,11 @@ export type ReportFacts =
       needsFirstmate?: string;
       /** The work built on its task, open or closed, when there is any (INF-976). */
       builtOn?: WakeBuiltOn[];
+      /**
+       * The finished programs its crewmate started that returned a branch:
+       * each by key and title, and the part a shipping task branches from.
+       */
+      programBranches?: { key: string; title: string; branch: string }[];
       /** The report's typed result, as the host checked it against the task's shape (INF-799). */
       result?: Record<string, unknown>;
       /** The CI reading the app last recorded on its task, when there is one. */
@@ -147,7 +152,7 @@ export type WakeCard = { id: string; word: string; title: string };
 export type WakeWithdrawn = { id: string; title: string };
 
 /** A task a crewmate filed during its turn (cards/tasks/agents P0, WI-4). */
-export type WakeFiled = { key: string; title: string; blocks: boolean };
+export type WakeFiled = { key: string; title: string; blocks: boolean; program?: boolean };
 
 /**
  * A task built on the woken one - its basis names it - open or closed, with
@@ -262,14 +267,25 @@ export function openReviewText(review: WakeOpenReview): string {
  * nothing when the turn filed nothing.
  */
 function filedText(filed: WakeFiled[]): string {
-  if (filed.length === 0) return "";
-  const named = filed
+  const followups = filed.filter((entry) => !entry.program);
+  const programs = filed.filter((entry) => entry.program);
+  const named = followups
     .map(
       (entry) =>
         `${entry.key} "${entry.title}" (${entry.blocks ? "blocks this task" : "not blocking"})`,
     )
     .join(", ");
-  return ` Filed this turn: ${named}. Each waits on request, discovered from this task.`;
+  const started = programs.map((entry) => `${entry.key} "${entry.title}"`).join(", ");
+  return [
+    ...(named
+      ? [` Filed this turn: ${named}. Each waits on request, discovered from this task.`]
+      : []),
+    ...(started
+      ? [
+          ` Programs started this turn: ${started}. Each runs now, and this task waits on it; update_task drop stops one.`,
+        ]
+      : []),
+  ].join("");
 }
 
 /** The work built on a task, as a wake carries it (INF-976). */
@@ -282,6 +298,20 @@ export function wakeBuiltOn(rows: readonly TaskQueryBuiltOn[]): WakeBuiltOn[] | 
     ...(row.closed_reason ? { closedReason: row.closed_reason } : {}),
     ...(row.change?.label ? { change: row.change.label } : {}),
   }));
+}
+
+/** The branches of the programs a task's crewmate started; shipping one is the first mate's. */
+function programBranchesText(
+  branches: { key: string; title: string; branch: string }[] | undefined,
+): string {
+  if (!branches?.length) return "";
+  const named = branches
+    .map(
+      (entry) =>
+        `${entry.key} "${entry.title}" returned ${entry.branch}'s last commit: work that ships it names ${entry.branch} in branch_from`,
+    )
+    .join("; ");
+  return ` Programs this task started that returned a branch: ${named}.`;
 }
 
 /**
@@ -379,7 +409,7 @@ export const REPORT_WORDS: KindWords<ReportFacts> = {
   "response-missing": (facts) =>
     `${RESPONSE_MISSING_OPENING}task ${facts.taskId} completed turn ${facts.turnId} after consuming request ${facts.requestId} without submitting a matching response. The request remains pending: ${facts.question}${facts.report ? `\nThat turn's report (not treated as an answer): ${facts.report}` : ""}\nRecorded turn references: ${JSON.stringify(facts.references)}. Read that report event and the session's report/reply calls before deciding whether to wait, request a repost, or reassign. This fact does not authorize new work or a captain action.`,
   report: (facts) =>
-    `[fm-op] ${facts.crewmate} reported on task ${facts.task.id} "${facts.task.title}": ${facts.excerpt}${filedText(facts.filed)}${waitsText(facts.waits)}${waitingText(facts.waiting)}${refusedText(facts.refused, facts.cards)}${withdrawnText(facts.withdrawn)}${cardsText(facts.cards)}${facts.captainWait ? ` It waits on the captain to ${facts.captainWait}, and no card of its is on their screen.` : ""}${facts.ci ? ciFactWords(facts.ci) : ""}${facts.finished ? ` ${FINISHED_REPORT_WORDS}: the captain has read its outcome and nothing is left for it.` : ""}${facts.needsFirstmate ? ` It asks the first mate to act: ${facts.needsFirstmate}. The ask authorizes nothing by itself; the captain's own words do.` : ""}${builtOnText(facts.builtOn)}${facts.result ? ` ${RESULT_WORDS} ${resultText(facts.result)}` : ""}${facts.review ? openReviewText(facts.review) : ""}${facts.workWait ? ` Work wait: ${JSON.stringify(facts.workWait)}.` : ""}${facts.stall ? ` Typed stall: ${JSON.stringify(facts.stall)}.` : ""}${facts.recoveryWays?.length ? ` Recovery ways (labels grant no permission): ${JSON.stringify(facts.recoveryWays)}.` : ""}${facts.stall || facts.recoveryWays?.length ? ` ${STALL_RECOVERY_GUIDANCE}` : ""}`,
+    `[fm-op] ${facts.crewmate} reported on task ${facts.task.id} "${facts.task.title}": ${facts.excerpt}${filedText(facts.filed)}${waitsText(facts.waits)}${waitingText(facts.waiting)}${refusedText(facts.refused, facts.cards)}${withdrawnText(facts.withdrawn)}${cardsText(facts.cards)}${facts.captainWait ? ` It waits on the captain to ${facts.captainWait}, and no card of its is on their screen.` : ""}${facts.ci ? ciFactWords(facts.ci) : ""}${facts.finished ? ` ${FINISHED_REPORT_WORDS}: the captain has read its outcome and nothing is left for it.` : ""}${facts.needsFirstmate ? ` It asks the first mate to act: ${facts.needsFirstmate}. The ask authorizes nothing by itself; the captain's own words do.` : ""}${builtOnText(facts.builtOn)}${programBranchesText(facts.programBranches)}${facts.result ? ` ${RESULT_WORDS} ${resultText(facts.result)}` : ""}${facts.review ? openReviewText(facts.review) : ""}${facts.workWait ? ` Work wait: ${JSON.stringify(facts.workWait)}.` : ""}${facts.stall ? ` Typed stall: ${JSON.stringify(facts.stall)}.` : ""}${facts.recoveryWays?.length ? ` Recovery ways (labels grant no permission): ${JSON.stringify(facts.recoveryWays)}.` : ""}${facts.stall || facts.recoveryWays?.length ? ` ${STALL_RECOVERY_GUIDANCE}` : ""}`,
   "review-orphan": (facts) =>
     `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}", but the task it reviewed is no longer on record: ${facts.excerpt}`,
   "review-unstated": (facts) =>

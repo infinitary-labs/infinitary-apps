@@ -11,8 +11,8 @@ It opens an ask that takes more than one step as a parent task with each step a 
 The parent stays on request, so no crewmate starts on it; the first mate talks to each step's crewmate directly.
 Every hand-off is a decision the first mate makes on a wake it already receives.
 Nothing in the host advances a sequence: there is no new runner or card effect, and the words "sequence" and "step" reach no user surface.
-A program (`docs/programs.md`) is the agent's reach, not a sequence runner: the first mate may write the steps a script can decide as one script the host runs, and sequences themselves stay guidance.
-The separate Programs runbook says how, with the loop and the audit, deep research and migrate shapes written in the program's own names, so "use a workflow" or a loop toward a goal is one program task rather than a parent with steps (`docs/programs.md`, "The shapes the first mate is served").
+A program (`docs/programs.md`) is the agent's reach, not a sequence runner: a crewmate may write the steps a script can decide as one script the host runs, and sequences themselves stay guidance.
+The separate Programs runbook says how, so "use a workflow" or a loop toward a goal goes to one crewmate that starts one program rather than a parent with steps; its crew skill holds the loop and the audit, deep research and migrate shapes in the program's own names (`docs/programs.md`, "The shapes a crewmate is served").
 The task's shape gained facts the first mate declares and the host only stores and honours - `internal_step` and `skipped_plan_because` - and two it declares and the host checks - `result_schema` and `branch_from` (`src/shared/routingPolicy.ts`).
 
 A read-only answer from what the app can already read - a fact, or how or why something is so - is retrieval, with its question stated faithfully and the captain's words preserved verbatim; it is not broadened into an investigation by default.

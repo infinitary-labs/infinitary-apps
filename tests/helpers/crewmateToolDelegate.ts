@@ -35,6 +35,7 @@ export function crewmateToolDelegate(): Required<
     },
     onCloseCard: answer("onCloseCard", "closed"),
     onFollowup: answer("onFollowup", "filed"),
+    onStartProgram: answer("onStartProgram", "started"),
     onProgress: answer("onProgress", "noted"),
     onReport: answer("onReport", "reported"),
     onReply: answer("onReply", "replied"),

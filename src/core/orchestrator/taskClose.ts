@@ -54,7 +54,8 @@ export type TaskClose = {
     | "cancelled"
     | "finished"
     | "superseded";
-  actor: "captain" | "firstmate" | "host";
+  /** Who closed it; a crewmate closes only the parts of a program it stopped. */
+  actor: "captain" | "firstmate" | "crewmate" | "host";
   text?: string;
   /** Delivery facts learned by the close; a live close carries its posture. */
   delivery?: {

@@ -382,7 +382,8 @@ describe("ipc contract", () => {
    * the integrations pair, which the integrations command asks, the files
    * pair, which the files command asks (docs/files.md), and the
    * shared-card pair that reads one card and corrects a required action's
-   * words (INF-2214, docs/card-threads.md "Shared cards") - a card picture, a
+   * words (INF-2214, docs/card-threads.md "Shared cards"), the start of a
+   * program its crewmate needs (INF-3022, docs/programs.md) - a card picture, a
    * job's end, the numbered events and what a task's browser there tells the
    * home, and nothing a view or the window asks.
    */
@@ -422,6 +423,7 @@ describe("ipc contract", () => {
       "inf:work:sign-ins",
       "inf:work:speed",
       "inf:work:speed-note",
+      "inf:work:start-program",
       "inf:work:tasks",
       "inf:work:typeface",
       "inf:work:use-integration",

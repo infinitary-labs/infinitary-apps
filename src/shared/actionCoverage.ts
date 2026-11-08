@@ -96,6 +96,7 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:work:card-refused": WORK_REQUEST,
   "inf:work:close-card": WORK_REQUEST,
   "inf:work:followup": WORK_REQUEST,
+  "inf:work:start-program": WORK_REQUEST,
   "inf:work:progress": WORK_REQUEST,
   "inf:work:speed-note": WORK_REQUEST,
   "inf:work:report": WORK_REQUEST,

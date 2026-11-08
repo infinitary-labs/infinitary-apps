@@ -36,6 +36,7 @@ import {
   workRequests,
 } from "@shared/work";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
+import { contractChange, listsChange } from "../connection/contractChanges";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { filesAskedOfHome, type TaskFiles } from "../files/taskFiles";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
@@ -87,6 +88,9 @@ import type { MovedFolders } from "../workspace/workMove";
 import type { PlacedJob, PlacedTaskState, PlacedTasks } from "./placedTasks";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
 import type { WorkingCopies } from "./workingCopies";
+
+/** A crewmate here starts programs only through a home that answers them (`crewmate-programs.md`). */
+const CREWMATE_PROGRAMS = contractChange("crewmate-programs");
 
 /**
  * A crewmate's conversation held on a computer that runs work, for its home
@@ -1359,6 +1363,14 @@ export class SessionHost {
       },
       onCloseCard: (input, signal) => ask("inf:work:close-card", input, signal),
       onFollowup: (input, signal) => ask("inf:work:followup", { input }, signal),
+      onStartProgram: (input, signal) => {
+        // An older home has no such order: nothing is sent.
+        if (!listsChange(this.options.homeChanges?.(), CREWMATE_PROGRAMS))
+          throw new Error(
+            `${HOME.the} runs an older Infinitary that cannot start a program; nothing was started. Say the need in your report.`,
+          );
+        return ask("inf:work:start-program", { input }, signal);
+      },
       onProgress: (note, plan, signal) =>
         ask("inf:work:progress", { text: note, ...(plan !== undefined ? { plan } : {}) }, signal),
       onReport: (report, summary, declared, toolSignal) =>

@@ -14,6 +14,7 @@ import type { HandoverFile } from "@shared/work";
 import { renderDirections } from "../knowledge/directions";
 import { capWithOverflow } from "../overflow";
 import { crewmateHandoverDir } from "../paths";
+import { startedProgramBranches } from "../program/programRunner";
 import {
   type ControlProfile,
   LOCAL_MACHINE_ID,
@@ -952,6 +953,7 @@ export class CrewTurns {
     }));
     const review = record ? this.core.reviewToReread(record) : undefined;
     const builtOn = wakeBuiltOn(builtOnRows(this.core.options.tasks, task.id));
+    const programBranches = startedProgramBranches(this.core.options.tasks, task.id);
     const witnesses = this.core.ladder.witnesses(task.id, this.core.now());
     // A wait it declared with nothing on the captain's screen to answer is
     // the card the Firstmate owes (INF-11): the wake says what he must decide.
@@ -962,7 +964,12 @@ export class CrewTurns {
         task: { id: task.id, title: task.title },
         crewmate: task.crewmate,
         excerpt: capWithOverflow(kept?.text ?? report, "task-report"),
-        filed: filed.map(({ key, title, blocks }) => ({ key, title, blocks })),
+        filed: filed.map(({ key, title, blocks, program }) => ({
+          key,
+          title,
+          blocks,
+          ...(program ? { program } : {}),
+        })),
         ...(waits.length > 0 ? { waits } : {}),
         ...(waiting.length > 0 ? { waiting } : {}),
         cards: this.core.cards.shownCards(task.id),
@@ -975,6 +982,7 @@ export class CrewTurns {
         ...(recoveryWays ? { recoveryWays } : {}),
         ...(workWait ? { workWait } : {}),
         ...(builtOn ? { builtOn } : {}),
+        ...(programBranches.length > 0 ? { programBranches } : {}),
         ...(declared?.result ? { result: declared.result } : {}),
         ...(ci ? { ci } : {}),
         ...(review ? { review } : {}),

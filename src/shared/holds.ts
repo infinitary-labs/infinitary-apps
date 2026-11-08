@@ -57,7 +57,7 @@ export const HOLDS = {
     level: "soft",
     restsOn: "consent",
     name: "the program's bound",
-    way: "the first mate raises it with update_task program_bound on the captain's words",
+    way: "on the captain's words the crewmate that started it raises it with start_program, or the first mate with update_task program_bound",
   },
   "start-waits": {
     level: "soft",

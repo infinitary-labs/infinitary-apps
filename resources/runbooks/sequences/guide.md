@@ -1,6 +1,7 @@
 # Common workflows
 
-An ask that takes one step is that step alone, without a parent; a programs ask is a program.
+An ask that takes one step is that step alone, without a parent; a programs ask goes to
+one crewmate (Programs).
 Open an ask that takes more than one step as a parent task, left on
 request, and its steps as child tasks: spawn the step that runs now under it, and file the
 next step on request pending approval; approved pieces follow feature/pieces. Each step is one kind (plan, retrieval, research,

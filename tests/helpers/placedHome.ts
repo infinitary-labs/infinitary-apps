@@ -190,6 +190,8 @@ export function startPlacedHome(options: {
    * Absent, the crew has no files command.
    */
   files?: { home: string; name: string };
+  /** The program process the crew's programs run in; absent, no crewmate here is served start_program. */
+  programProcess?: import("../../src/core/orchestrator/crewSupervisorOptions").CrewSupervisorOptions["programProcess"];
   /**
    * This Mac's own subscriptions, for a home that routes as `createServices`
    * composes it: the models its own sign-ins serve, their allowance as read
@@ -479,6 +481,7 @@ export function startPlacedHome(options: {
     ...(knowledge ? { knowledge } : {}),
     ...(options.reachOf ? { reachOf: options.reachOf } : {}),
     ...(files ? { files } : {}),
+    ...(options.programProcess ? { programProcess: options.programProcess } : {}),
     ...(composed
       ? {
           integrations: composed,

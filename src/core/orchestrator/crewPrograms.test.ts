@@ -209,12 +209,12 @@ describe("programs (INF-799 piece 2)", () => {
     await h.report(0, "Capped meter.ts.");
     await vi.waitFor(
       () =>
-        expect(
-          h.ops.some((line) => line.includes("reached the bound you proposed, 1 task() calls")),
-        ).toBe(true),
+        expect(h.ops.some((line) => line.includes("reached its bound of 1 task() calls"))).toBe(
+          true,
+        ),
       PROGRAM_WAIT,
     );
-    const bound = h.ops.filter((line) => line.includes("reached the bound you proposed"));
+    const bound = h.ops.filter((line) => line.includes("reached its bound of"));
     expect(bound).toHaveLength(1);
     expect(bound[0]).toContain(
       "on the captain's words raise it with update_task program_bound, or drop the program",

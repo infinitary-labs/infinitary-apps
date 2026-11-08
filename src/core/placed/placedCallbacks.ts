@@ -139,6 +139,10 @@ export async function answerCall(
       const { input } = request as InvokeRequest<"inf:work:followup">[0];
       return { text: await (callbacks?.onFollowup ?? missing())(input) };
     }
+    case "inf:work:start-program": {
+      const { input } = request as InvokeRequest<"inf:work:start-program">[0];
+      return { text: await (callbacks?.onStartProgram ?? missing())(input) };
+    }
     case "inf:work:progress": {
       const { text, plan } = request as InvokeRequest<"inf:work:progress">[0];
       return { text: await (callbacks?.onProgress ?? missing())(text, plan) };

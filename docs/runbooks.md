@@ -118,6 +118,7 @@ No panel is installed just because a runbook holds panel source or parts; panels
 Common workflows is the single switch for planning, features, bugfixes, refactors and explanations.
 Its retrieval line follows INF-1441: a fact or how/why answer from what the app can read now is retrieval; comparing past runs, a reproduction, a measurement or the web is research.
 Programs has its own switch, so turning Common workflows off does not remove the programs guidance.
+Its first-mate guide sends a programs ask to one crewmate nudged to use `start_program`, and its `programs` skill holds the dialect, the shapes and the bound for that crewmate; turning it off serves neither, and no crewmate is served `start_program` (`docs/programs.md`, "Starting a program").
 Casual projects holds the small-project setup guidance.
 Lessons holds its first-mate section and the lesson skill with its tested card parts and warm voice.
 Its guide points to the workspace-owned `personal-panel/parts/lesson/` template; executable panel source is not inside the runbook's guidance skill.

@@ -12,6 +12,8 @@ import { promptInput } from "./prompt";
 import {
   CAP_INTELLIGENCE,
   CAP_PROMPT,
+  CREW_REPORT,
+  CREW_TITLE,
   capped,
   FILES,
   FIND_INTELLIGENCE,
@@ -24,11 +26,13 @@ import {
 /**
  * A program runs to its result in the launched app (INF-799 piece 2; the
  * captain chose "Keep it held for a journey" on INF-812's missing in-app
- * proof). The first mate files one program in a project; the app runs its
+ * proof; INF-3022, only a crewmate starts one). The first mate spawns one
+ * crewmate in a project, nudged to use start_program; that crewmate starts
+ * the program, found on its task, which waits on it; the app runs its
  * script in the program process it bundles, files each task() call as a
  * child task, hands the finder's typed result to the two parts after it,
- * and closes the program done with the script's returned value. The served
- * words are the unit tests' to own.
+ * closes the program done with the script's returned value, and steers the
+ * crewmate, which reports. The served words are the unit tests' to own.
  */
 
 /** A project with one commit on main, the folder the app adopts. */
@@ -42,7 +46,7 @@ function project(): string {
   return dir;
 }
 
-test("a program files its parts as child tasks, hands each result on, and closes done with its result", async () => {
+test("a crewmate's program files its parts as child tasks, hands each result on, closes done with its result and steers the crewmate", async () => {
   const userDataDir = scratchDir("infinitary-program-run-");
   const db = openDatabase(userDataDir);
   // TaskService performs boot recovery in its constructor, so construct it
@@ -55,8 +59,9 @@ test("a program files its parts as child tasks, hands each result on, and closes
   const app = await launchApp({ withMockProvider: true, userDataDir, scenarios: [programRun] });
   const { page } = app;
   let programId = "";
+  let crewId = "";
   try {
-    // Section 1: the captain asks, and the first mate files the program in the captain's project.
+    // Section 1: the captain asks, the first mate spawns a crewmate, and it starts the program in the captain's project.
     const path = project();
     const { repo } = await page.evaluate(
       (path) => window.infinitary.repos.setup({ kind: "adopt", path, name: "meterlab" }),
@@ -74,6 +79,10 @@ test("a program files its parts as child tasks, hands each result on, and closes
         { timeout: 30_000 },
       )
       .not.toBe("");
+    crewId = tasks.list().find((task) => task.title === CREW_TITLE)?.id ?? "";
+    expect(tasks.crewFilingOrigin(programId)?.id).toBe(crewId);
+    expect(tasks.get(programId)?.parentId).toBeNull();
+    expect(tasks.graph.blockers(crewId).map((row) => row.id)).toEqual([programId]);
 
     // Section 2: the script's three task() calls run as child tasks, the
     // finder first and both parts after it on its result.
@@ -122,6 +131,10 @@ test("a program files its parts as child tasks, hands each result on, and closes
         })),
       }),
     );
+    // Section 4: the program's end steers the crewmate that started it, which reports.
+    await expect
+      .poll(() => tasks.reportEntries(crewId).map((entry) => entry.text), { timeout: 30_000 })
+      .toContain(CREW_REPORT);
     // INF-1137 friction 8: live part updates occupy one program row,
     // while the parts and their full timelines still exist above.
     const feed = await page.evaluate(() => window.infinitary.feed.recent());
@@ -138,6 +151,8 @@ test("a program files its parts as child tasks, hands each result on, and closes
       evidence("program-run-record.json"),
       JSON.stringify(
         {
+          crewmate: crewId ? tasks.get(crewId) : null,
+          crewmateTimeline: crewId ? tasks.timeline(crewId) : [],
           program: programId ? tasks.get(programId) : null,
           timeline: programId ? tasks.timeline(programId) : [],
           parts: programId ? tasks.graph.children(programId) : [],

@@ -78,7 +78,8 @@ const PLAN_STEP = `a read-only step. Research the code and the field, then propo
 /** The built-in text: the document's body as seeded, and the fallback when the file is unusable. */
 export const SEQUENCES_SEED = `# Sequences
 
-An ask that takes one step is that step alone, without a parent; a programs ask is a program.
+An ask that takes one step is that step alone, without a parent; a programs ask goes to
+one crewmate (Programs).
 Open an ask that takes more than one step as a parent task, left on
 request, and its steps as child tasks: spawn the step that runs now under it, and file the
 next step on request pending approval; approved pieces follow feature/pieces. Each step is one kind (plan, retrieval, research,
@@ -167,20 +168,9 @@ the missing source.
 
 ## programs
 "Use a workflow", "loop/iterate/keep at it until <stop condition>", "audit", "deep
-research" (not a research step), "migrate each / one at a time": create_task program
-{script, args, bound}, never spawn; when-ready, no parent. integer bound caps task() calls;
-ask by card if large. JS globals: task, ask, log, phase, args (= program.args).
-task(prompt, {label, schema, from, after, intelligence}) returns result/null; from:
-prior label; after: awaited labels; ask(prompt, schema); return {branch: label} ships it.
-intelligence: low/medium/high/premium; omitted: default routing; premium needs
-captain premium_ask on program. Medium for narrowed work; high for open or final work.
-- workflow: high plan, medium build, high check; from previous; return check branch.
-- loop: up to args.rounds, await each, from previous label, schema {done, stuck, learned},
-  prompt args.goal + last learned; high first and after stuck, else medium; stop on done;
-  return last branch.
-- audit: Promise.all high finders per area, medium verify per finding; one high recheck if unsettled.
-- deep research: Promise.all medium per question, high writer after all.
-- migrate: medium per item, from previous; return last branch.
+research" (not a research step), "migrate each / one at a time": spawn one crewmate in
+the project with a constraint like "use start_program to do this"; it reads the code,
+writes the script and sizes its bound. Never write the script yourself.
 
 ## personal projects and panels
 A game or anything else to play or use on its own belongs in its own project.

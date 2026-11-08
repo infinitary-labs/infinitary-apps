@@ -630,6 +630,33 @@ const CASES: WordsCases<CrewmateWakeKind> = {
       words:
         'INF-2695 "Restructure the app wiring", which your task could not merge before, was dropped and no longer holds it. Carry on from where you stopped.',
     },
+    {
+      // INF-3022, the captain's answer "always-wait": the crewmate that started a program hears its end.
+      name: "a program it started, finished",
+      wake: {
+        facts: {
+          kind: "dependency-closed",
+          dependency: { key: "INF-3031", title: "Audit the meter", program: true },
+          closed: "done",
+          wait: "blocks",
+        },
+      },
+      words:
+        'Your program INF-3031 "Audit the meter" finished. Read its result with tasks key INF-3031, then carry on from where you stopped.',
+    },
+    {
+      name: "a program it started, stopped",
+      wake: {
+        facts: {
+          kind: "dependency-closed",
+          dependency: { key: "INF-3031", title: "Audit the meter", program: true },
+          closed: "dropped",
+          wait: "blocks",
+        },
+      },
+      words:
+        'Your program INF-3031 "Audit the meter" stopped. Read why with tasks key INF-3031, then carry on from where you stopped.',
+    },
   ],
   "wait-moved": [
     {

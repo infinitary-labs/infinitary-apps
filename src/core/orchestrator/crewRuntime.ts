@@ -165,9 +165,10 @@ export type TaskRuntime = {
   /**
    * The follow-ups this turn filed (cards/tasks/agents P0, WI-4): a filing
    * is a row, a link and a feed line, never a wake of its own; the report
-   * wake that ends the turn names them, and the list clears with it.
+   * wake that ends the turn names them, and the list clears with it. A
+   * program the turn started is named as one (`program`).
    */
-  filedThisTurn: { key: string; title: string; blocks: boolean }[];
+  filedThisTurn: { key: string; title: string; blocks: boolean; program?: boolean }[];
   /**
    * The decisions its crewmate withdrew itself this turn (INF-2828): the
    * captain chose none of their actions, and the report wake that ends

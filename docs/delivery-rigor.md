@@ -525,7 +525,7 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 | `checks` | soft | record | a merge card or merge while the checks failed or are running | Merge anyway on the merge card, or the override |
 | `story` | soft | consent | a GitHub or GitLab pull request opened, or merged, without its current published story | the override |
 | `escalation` | soft | made-up number | a stronger model past the ladder's top | the captain names the model |
-| `program-bound` | soft | consent | a program's task() call past the bound the first mate proposed | the first mate raises the bound with `update_task program_bound` on the captain's words |
+| `program-bound` | soft | consent | a program's task() call past its bound | on the captain's words the crewmate that started it raises the bound with `start_program`, or the first mate with `update_task program_bound` |
 | `start-waits` | soft | record | starting a task that waits on other work | the first mate removes the wait on the captain's words |
 | `load-line` | soft | record | a declared heavy run waiting for its computer's capacity or pressure reading | the override |
 | `host-rules` | fixed | outside fact | a merge the rules or readiness where the project lives hold | no one |

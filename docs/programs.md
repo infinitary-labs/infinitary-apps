@@ -1,13 +1,23 @@
 # Programs
 
-A program is a task whose steps a script decides: the first mate writes plain JavaScript, and the host runs it, filing each part as a child task and handing the script each part's checked result (INF-799 piece 2).
-It is the agent's reach, not a sequence runner: sequences stay guidance (`docs/sequences.md`), and a program is one more way the first mate may carry out the steps a script can decide - a loop, a fan-out, retries.
-The host learns no workflow's name; it runs what the first mate wrote and checks only typed facts.
+A program is a task whose steps a script decides: a crewmate writes plain JavaScript, and the host runs it, filing each part as a child task and handing the script each part's checked result (INF-799 piece 2).
+It is the agent's reach, not a sequence runner: sequences stay guidance (`docs/sequences.md`), and a program is one more way a crewmate may carry out the steps a script can decide - a loop, a fan-out, retries.
+The host learns no workflow's name; it runs what the crewmate wrote and checks only typed facts.
+
+## Starting a program
+
+A crewmate starts a program with `start_program` (`src/core/pi/crewmateTaskTools.ts`, answered by `CrewmatePrograms`, `src/core/orchestrator/crewmatePrograms.ts`), the only way one starts (INF-3022).
+The first mate writes no script: a programs ask goes to one crewmate in the project, nudged with a constraint such as "use start_program to do this", and that crewmate reads the code, writes the script and sizes its bound (`resources/runbooks/programs/guide.md`).
+The tool is served to a crewmate whose task is in a project other than the personal workspace and is not a program's part, while the Programs runbook is on and the app has a program process; elsewhere it is not served at all.
+Its rule for the crewmate is the Programs runbook's crew skill (`resources/runbooks/programs/skills/programs/SKILL.md`), opened when needed: the dialect, the five shapes and the bound.
+
+A start files the program in the crewmate's project, when-ready with no parent, with the crewmate's task's captain words and premium ask; a `discovered-from` link finds it on the crewmate's task, and the crewmate's task always waits on it with a `blocks` link that holds no merge (`linkWaits`).
+Nesting is refused: a program's part starts no program and says the need in its result.
+A work computer asks its home through the `inf:work:start-program` order (`src/shared/work.ts`), which an older home does not take (`src/shared/contract-changes/crewmate-programs.md`).
 
 ## Filing a program
 
-`create_task` takes `program`, `{script, args?, bound}`, as a fact of the task's shape (`shape.program`, `src/shared/routingPolicy.ts`).
-The rule for it has one home, the Programs runbook (`resources/runbooks/programs/guide.md`); the parameter is served bare to keep the first mate's fixed context inside its boundary.
+`start_program` files `{script, args?, bound}` as a fact of the task's shape (`shape.program`, `src/shared/routingPolicy.ts`), through the same intake as any task.
 The host refuses, as tool text with nothing filed (`programRefusal`, `src/core/program/programScript.ts`, and `programShape`, `src/core/program/programRunner.ts`):
 
 - a script that is not a non-empty string, that does not compile as the body of an async function, or that imports code;
@@ -16,8 +26,8 @@ The host refuses, as tool text with nothing filed (`programRefusal`, `src/core/p
 - a program with no project, on the personal workspace, or with its own `branch_from` (it has no working copy; its parts do);
 - an app with no program process.
 
-Filing is consent like a spawn: the captain's ask that led to the program is its consent, and no card is put up per run.
-A program task stays open, on the graph like any task, and starts when its start policy says (when-ready, or the captain's start for one on request).
+Filing is consent like a follow-up: the captain's ask that led to the crewmate's task is its consent, and no card is put up per run.
+A program task stays open, on the graph like any task, and starts at once when its gates are clear; a program filed on request before this rule starts on the captain's Start.
 
 ## The dialect
 
@@ -37,12 +47,11 @@ The script's host functions use Infinitary's own names; a Claude workflow script
 
 The script returns the program's result, and its `branch`, a part's label, names the program's branch (see "The end").
 
-## The shapes the first mate is served
+## The shapes a crewmate is served
 
-The Programs runbook (`resources/runbooks/programs/guide.md`) is the one home of the dialect's rule and of five shapes written in it (INF-799 piece 3).
-It names the asks that are programs - "use a workflow", a loop, iteration or "keep at it" until a stop condition, an audit, deep research (never a research step) and a migration of each item or one at a time - and says each is one `create_task program` in the project, when-ready with no parent, never a spawn even when one crewmate could try.
-The script's globals are named there too, since a script that reads `bound` or another name `args` does not carry fails when it runs.
-The first mate adapts a shape to the ask; the host learns no shape's name and reads nothing of the script beyond what "Filing a program" refuses.
+The Programs runbook's guide (`resources/runbooks/programs/guide.md`) names the asks that are programs - "use a workflow", a loop, iteration or "keep at it" until a stop condition, an audit, deep research (never a research step) and a migration of each item or one at a time - and tells the first mate to spawn one crewmate for each with the nudge to use `start_program`, never writing the script itself.
+Its crew skill (`skills/programs/SKILL.md`) is the one home of the dialect's rule and of five shapes written in it (INF-799 piece 3), with the script's globals, since a script that reads `bound` or another name `args` does not carry fails when it runs.
+The crewmate adapts a shape to the ask; the host learns no shape's name and reads nothing of the script beyond what "Filing a program" refuses.
 
 - Workflow: a high planner resolves ambiguity, a medium builder follows the plan, and a high checker challenges the result; each continues the previous branch, and the checker is the returned branch.
 - The loop: one part a round up to `args.rounds`, awaited, each `from` the last round's label so it continues that round's commits, its schema `done` and `stuck` flags and what it `learned`; each round's prompt carries the last round's learned note, and earlier rounds' reports stay on their parts for a round to look up, until a round reports done; the first round requests high to choose an approach, later rounds request medium because earlier work narrowed the task, and the round after one that reports `stuck` requests high to reconsider it; it returns the last round as its `branch`.
@@ -50,9 +59,9 @@ The first mate adapts a shape to the ask; the host learns no shape's name and re
 - Deep research: medium researchers per question in parallel gather and cite sources for one narrow question, then one high writer `after` them all reconciles conflicting evidence.
 - Migrate: a medium part per item applies an established recipe, each `from` the previous item's label, returning the last as its `branch`.
 
-These levels are recommendations the first mate adapts and writes into each `task()` call, never rules the host applies by playbook name.
+These levels are recommendations the crewmate adapts and writes into each `task()` call, never rules the host applies by playbook name.
 
-The guide is served in the first mate's fixed context, whose size is bounded (`tests/firstmate-fixed-context.test.ts`), so each shape is one line; a longer shape is paid for by trimming a repeat elsewhere, recorded in that test's ledger, or by saying a rule in fewer words.
+The guide is served in the first mate's fixed context, whose size is bounded (`tests/firstmate-fixed-context.test.ts`), so it says only where a programs ask goes; the skill is read on demand and is outside the crewmate's fixed context.
 
 ## The runner
 
@@ -100,10 +109,12 @@ Log and phase lines fold like any other line, so a long or looping script keeps 
 ## Bounds
 
 Parts open at once follow this Mac's processors (`PROGRAM_PARTS_CAP`, a physical limit); a call past it waits until one of the program's open parts closes.
-The total is the captain's consent: before the program starts, the first mate proposes `bound`, its upper bound on the script's `task()` calls, and when that number is large it asks the captain on a card first - how large is the first mate's judgment, never the host's.
+The total is the captain's consent: before the program starts, the crewmate proposes `bound`, its upper bound on the script's `task()` calls, and when that number is large it asks the captain on its own card first - how large is the crewmate's judgment, never the host's.
 A call past the bound is held and nothing is filed: the `program-bound` soft hold (`src/shared/holds.ts`, `docs/delivery-rigor.md` "The holds").
-The program's timeline says it is held, and the first mate hears it once per bound value (the `program-bound` wake), to ask the captain on a card.
-On the captain's words it raises the bound with `update_task program_bound`, which the host takes only on a turn that carries the captain's words, and the held call is filed; or it drops the program.
+The program's timeline says it is held, and the crewmate that started it hears it once per bound value (the `program-bound` wake, `to: "crewmate"`), to ask the captain on a card, while its task is active and out of the backlog; otherwise, or for one filed before this rule, the first mate hears it instead.
+The crewmate raises the bound with `start_program` `program` and a larger `bound`, and the held call is filed, only in a turn that holds the captain's words: a steer of the captain's, or the first mate's on the captain's turn (`CrewSteer.carriesCaptainWords`); otherwise the raise is refused in words, as `update_task program_bound` is off a captain turn.
+It may stop a program it started with `stop`, and the record names the crewmate as the one who dropped it.
+The first mate keeps `update_task program_bound`, taken only on a turn that carries the captain's words, and `update_task drop`.
 
 ## The end
 
@@ -111,12 +122,14 @@ When the script returns, the parts it never waited for are dropped - only its pa
 Its branch is only the part its script names by label in the returned object's `branch`, such as `return { branch: "cap", ... }`: a shipping task names that part in `branch_from` to start at its saved work.
 A script that returns no `branch`, or an empty one (`null` or `""`), leaves nothing to ship and keeps its result, and the `program-ended` wake says so; the host never picks a part for it.
 A thrown error, a result that does not fit, or a non-empty `branch` naming no part that finished done closes the program dropped as failed, with the reason.
-Either way the first mate hears it once (the `program-ended` wake, naming the result and the branch).
+Either way the crewmate whose task waits on it hears it once: its end runs the sweep, which ends that wait as the `dependency-closed` steer naming the program and asking it to read the result with `tasks key` (`deliveryWakes.ts`); the first mate hears nothing then, and hears the crewmate's report as usual.
+Every report wake of the starter names each finished program it started that returned a branch, with the branch part's key and that a shipping task names it in `branch_from` (`startedProgramBranches`), so shipping it rests on a typed fact, not the report's words.
+A program with no waiting crewmate, one filed before this rule or one whose starter is no longer active or is back in the backlog, tells the first mate once (the `program-ended` wake, naming the result and the branch).
 
 Dropping a program with `update_task drop` stops its process, drops its started parts with their work saved, and drops the program; a drop the host refuses leaves the program running.
 
 ## Tests
 
-`src/core/program/programScript.test.ts` (what is refused, the digest), `programRunner.test.ts` (through the forked process: answers, the realm's missing clock, replay after a quit, the bound and its raise, `from: null`), `programAsk.test.ts` (parse and the retry), `src/core/orchestrator/reportSort.test.ts` (row 2b), and `crewPrograms.test.ts` (a program files its parts, reads their results, finishes and wakes the first mate; the bound wake).
-`tests/e2e/program-run.spec.ts` runs a program in the launched app: the first mate files it in a project, its three parts run as child tasks, and it closes done with the script's result.
-The replay fixture `oct22-program` (`tests/fixtures/replay/README.md`) holds the first mate answering a loop ask with the loop shape, and `tests/replay-captain-session.test.ts` replays it as one program task the runner starts; the replay runs no script (`docs/replay-harness.md`).
+`src/core/program/programScript.test.ts` (what is refused, the digest), `programRunner.test.ts` (through the forked process: answers, the realm's missing clock, replay after a quit, the bound and its raise, `from: null`), `programAsk.test.ts` (parse and the retry), `src/core/orchestrator/reportSort.test.ts` (row 2b), `crewPrograms.test.ts` (a program files its parts, reads their results, finishes and wakes the first mate; the bound wake), and `crewmatePrograms.test.ts` (a crewmate starts one: the links, the steer at its end, the bound, raise and stop, the refusals, the runbook switch).
+`tests/e2e/program-run.spec.ts` runs a program in the launched app: the first mate spawns a crewmate nudged to use `start_program`, the crewmate starts the program, its three parts run as child tasks, it closes done with the script's result, and the crewmate reports once its end steers it.
+The replay fixture `oct22-program` (`tests/fixtures/replay/README.md`) holds the first mate answering a loop ask by spawning one crewmate with that nudge, and `tests/replay-captain-session.test.ts` replays it as one crewmate task and no program of the first mate's (`docs/replay-harness.md`).

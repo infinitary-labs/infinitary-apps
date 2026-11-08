@@ -664,6 +664,46 @@ describe("a conversation held on a computer that runs work", () => {
     expect(asked).toEqual([input]);
   });
 
+  // INF-3022's plan: a home that does not list `crewmate-programs` cannot
+  // answer a start_program call, so the computer refuses it in words and
+  // sends nothing; a home that lists it is sent the call.
+  it.each([
+    { changes: [] as string[], sent: false },
+    { changes: ["crewmate-programs"], sent: true },
+  ])(
+    "sends start_program to its home only when the home lists crewmate-programs ($changes)",
+    async ({ changes, sent }) => {
+      const at = await placed({ homeChanges: changes });
+      await at.order("inf:session:open", [
+        {
+          orderId: `open:${TASK}:1`,
+          task: TASK,
+          spec: { ...at.spec, tools: [...at.spec.tools, "start_program"] },
+        },
+      ]);
+      const input = {
+        title: "Read the website",
+        goal: "Say what the README holds.",
+        script: "return 1;",
+        bound: 1,
+      };
+      model([{ tools: [{ name: "start_program", args: input }] }, { text: "Done." }]);
+      await at.order("inf:session:prompt", [
+        { orderId: "rows:program", task: TASK, text: "Use start_program to do this." },
+      ]);
+      await at.ended(1);
+      const asked = at.home.effects.filter((effect) => effect.channel === "inf:work:start-program");
+      if (sent) {
+        expect(asked.map((effect) => effect.request.input)).toEqual([input]);
+      } else {
+        expect(asked).toEqual([]);
+        expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
+          "runs an older Infinitary that cannot start a program; nothing was started",
+        );
+      }
+    },
+  );
+
   // INF-497: a home before `STORY_AROUND_SINCE` strips around from open_change and
   // would answer as if the words had been changed; the computer refuses first.
   it("refuses to change the words around a story through a home too old to keep the story, sending nothing", async () => {

@@ -39,6 +39,7 @@ import { cardMutationText } from "./cardMutationText";
 import { declareRunCheck } from "./checkRepair";
 import type { CrewCore } from "./crewCore";
 import { heardDirections } from "./crewDirections";
+import { CrewmatePrograms } from "./crewmatePrograms";
 import type { TaskRuntime } from "./crewRuntime";
 import type { CrewmateSpec } from "./crewSession";
 import type { PersonalLiveDelegate } from "./crewSupervisorOptions";
@@ -53,7 +54,11 @@ import { deliverableOf } from "./workShape";
  * feed. Shares the crew's state through `CrewCore`.
  */
 export class CrewToolHooks {
-  constructor(private readonly core: CrewCore) {}
+  private readonly programs: CrewmatePrograms;
+
+  constructor(private readonly core: CrewCore) {
+    this.programs = new CrewmatePrograms(core);
+  }
 
   /** What a crewmate's tools run on: this task's callbacks into the host. */
   crewmateHooks(
@@ -93,6 +98,10 @@ export class CrewToolHooks {
       onCloseCard: (input) =>
         this.core.closeCard(input.cardId, { kind: "crewmate", taskId: task.id }, input.reason),
       onFollowup: (input) => this.core.reportIntake.fileFollowup(task, input),
+      // Served only where a program can run (docs/programs.md, "Starting a program").
+      ...(this.programs.servedTo(task.id)
+        ? { onStartProgram: (input) => this.programs.start(task, input) }
+        : {}),
       onProgress: (text, plan) => this.core.reportIntake.noteProgress(task, text, plan),
       onReport: (text, summary, declared) =>
         this.core.turns.recordReportFromSession(task, text, summary, declared),

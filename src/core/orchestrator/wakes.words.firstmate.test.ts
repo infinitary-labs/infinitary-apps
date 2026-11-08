@@ -680,7 +680,23 @@ const CASES: WordsCases<FirstmateWakeKind> = {
       name: "its one wording",
       wake: { facts: { kind: "program-bound", task: TASK, key: "INF-2604", bound: 29, calls: 29 } },
       words:
-        "[fm-op] the program on task INF-2604 \"Restructure the wakes file\" filed 29 parts and reached the bound you proposed, 29 task() calls: its next call is held and nothing more is filed. Ask the captain on a card whether it may go on, saying what has run and the new bound you propose; on the captain's words raise it with update_task program_bound, or drop the program. Soft hold program-bound: it passes when the first mate raises it with update_task program_bound on the captain's words.",
+        "[fm-op] the program on task INF-2604 \"Restructure the wakes file\" filed 29 parts and reached its bound of 29 task() calls: its next call is held and nothing more is filed. Ask the captain on a card whether it may go on, saying what has run and the new bound you propose; on the captain's words raise it with update_task program_bound, or drop the program. Soft hold program-bound: it passes when on the captain's words the crewmate that started it raises it with start_program, or the first mate with update_task program_bound.",
+    },
+    {
+      // INF-3022, the captain's answer "crewmate-then-first-mate": its starter hears it first.
+      name: "told to the crewmate that started it, whose task is open",
+      wake: {
+        facts: {
+          kind: "program-bound",
+          task: TASK,
+          key: "INF-2604",
+          bound: 29,
+          calls: 29,
+          to: "crewmate",
+        },
+      },
+      words:
+        'Your program INF-2604 "Restructure the wakes file" filed 29 parts and reached its bound of 29 task() calls: its next call is held and nothing more is filed. Ask the captain on a card whether it may go on, saying what has run and the new bound you propose; on their words raise it with start_program program and bound, or stop it with start_program program and stop.',
     },
   ],
   "program-ended": [
@@ -735,6 +751,26 @@ const CASES: WordsCases<FirstmateWakeKind> = {
       },
       words:
         '[fm-op] crewmate 61 reported on task 479823ee "Restructure the wakes file": Pushed the guardrail branch.',
+    },
+    {
+      // INF-3022: a crewmate starts a program, and the branch a finished one
+      // returned rides its starter's report as a typed fact (INF-3029's review).
+      name: "a program it started this turn, and one that returned a branch",
+      wake: {
+        facts: {
+          kind: "report",
+          task: TASK,
+          crewmate: "crewmate 61",
+          excerpt: "Started the migration; the audit capped the meter.",
+          filed: [
+            { key: "INF-3032", title: "Migrate each renderer", blocks: false, program: true },
+          ],
+          cards: [],
+          programBranches: [{ key: "INF-3031", title: "Cap the meter", branch: "INF-3033" }],
+        },
+      },
+      words:
+        '[fm-op] crewmate 61 reported on task 479823ee "Restructure the wakes file": Started the migration; the audit capped the meter. Programs started this turn: INF-3032 "Migrate each renderer". Each runs now, and this task waits on it; update_task drop stops one. Programs this task started that returned a branch: INF-3031 "Cap the meter" returned INF-3033\'s last commit: work that ships it names INF-3033 in branch_from.',
     },
     {
       name: "carrying every fact a report can",

@@ -7,6 +7,7 @@ import type { CrewSupervisorOptions, FirstmateHooks } from "../orchestrator/crew
 import type { TaskIntake } from "../orchestrator/intake";
 import { parseSpawnIntent, renderIntentBrief, type SpawnIntent } from "../orchestrator/intentBrief";
 import type { SettleOwners } from "../orchestrator/settleOwners";
+import type { TypedWake } from "../orchestrator/wakes";
 import { handOffShape, withDeliverable, workShape } from "../orchestrator/workShape";
 import { tierFor } from "../routing/policy";
 import type { TaskRecord } from "../storage/taskStore";
@@ -40,9 +41,10 @@ import { callDigest, programRefusal } from "./programScript";
  *
  * Two bounds, neither a number the host made up. The parts open at once
  * follow this Mac's processors, Claude's own rule. The total rests on the
- * captain's consent: the first mate proposes it with the program, and a
- * call past it is held - nothing filed - until the first mate raises it on
- * the captain's words or the program is dropped (the `program-bound` hold).
+ * captain's consent: the crewmate that starts the program proposes it, and a
+ * call past it is held - nothing filed - until it is raised on the
+ * captain's words, by that crewmate while its task is active or else by the
+ * first mate, or the program is dropped (the `program-bound` hold).
  *
  * The crew's side lives here too: `programShape` checks the program a new
  * task declares, and `CrewPrograms` is the host this runner calls - it
@@ -90,9 +92,9 @@ export type ProgramHost = {
     prompt: string,
     schema: Record<string, unknown> | null,
   ): Promise<unknown>;
-  /** The program ended: the host records it, drops what is still open and tells the first mate. */
+  /** The program ended: the host records it, drops what is still open and tells its starter, else the first mate. */
   finish(program: TaskRecord, end: ProgramEnd): Promise<void>;
-  /** A call reached the program's bound and is held; the first mate hears it once per bound. */
+  /** A call reached the program's bound and is held; its starter, else the first mate, hears it once per bound. */
   bounded(program: TaskRecord, calls: number): void;
   /** Parts one program keeps open at once, when not this computer's processors (`PROGRAM_PARTS_CAP`). */
   partsAtOnce?: number;
@@ -587,6 +589,32 @@ export function programShape(
   };
 }
 
+/**
+ * The branches of the finished programs this task's crewmate started
+ * (docs/programs.md, "Starting a program"): each program by key and title,
+ * and the part whose saved work a shipping task branches from. Its
+ * starter's report wake names them, so shipping one rests on this typed
+ * fact rather than the report's words.
+ */
+export function startedProgramBranches(
+  tasks: TaskService,
+  taskId: string,
+): { key: string; title: string; branch: string }[] {
+  return tasks.graph.linksTo(taskId).flatMap((link) => {
+    if (link.type !== "discovered-from" || link.actor !== "crewmate") return [];
+    const program = tasks.get(link.fromId);
+    if (program?.status !== "done" || !program.shape?.program) return [];
+    const label = tasks.latestResult(program.id)?.value.branch;
+    if (typeof label !== "string" || !label.trim()) return [];
+    const part = tasks.graph
+      .children(program.id)
+      .find((child) => child.status === "done" && child.shape?.program_part?.label === label);
+    return part
+      ? [{ key: program.key || program.id, title: program.title, branch: part.key || part.id }]
+      : [];
+  });
+}
+
 /** A finished program's report: how many parts ran, its result and the branch it leaves. */
 function programReportText(
   parts: number,
@@ -615,6 +643,8 @@ export type CrewProgramsHost = {
   broadcastCrewCounts(): void;
   /** Run the ready sweep now. */
   sweepGates(now: number): Promise<void>;
+  /** Steer a task's crewmate: the one that started a program hears it first. */
+  steer(taskId: string, wake: TypedWake): Promise<unknown>;
 };
 
 /**
@@ -623,7 +653,7 @@ export type CrewProgramsHost = {
  * composes it and wires the runner to it.
  */
 export class CrewPrograms {
-  /** The bound each program last told the first mate it reached, so it hears it once per bound. */
+  /** The bound each program last told of reaching, so it is heard once per bound. */
   private readonly boundTold = new Map<string, number>();
 
   constructor(
@@ -755,9 +785,21 @@ export class CrewPrograms {
   }
 
   /**
-   * A program's call reached the bound the first mate proposed (the
-   * `program-bound` hold, resting on the captain's consent): nothing more
-   * is filed, and the first mate hears it once per bound, to ask the captain.
+   * The crewmate that started a program, while its task is active, hears
+   * the program's bound and end first (INF-3022, the captain's answer
+   * "crewmate-then-first-mate"). A started task back in the backlog, or a
+   * closed one, leaves them to the first mate.
+   */
+  private starter(program: TaskRecord): TaskRecord | undefined {
+    const origin = this.options.tasks.crewFilingOrigin(program.id);
+    return origin?.status === "active" && origin.backlogSince == null ? origin : undefined;
+  }
+
+  /**
+   * A program's call reached its bound (the `program-bound` hold, resting
+   * on the captain's consent): nothing more is filed, and it is heard once
+   * per bound, to ask the captain - by the crewmate that started it while
+   * its task is active, else by the first mate.
    */
   programBounded(program: TaskRecord, calls: number): void {
     const bound = program.shape?.program?.bound ?? 0;
@@ -768,19 +810,27 @@ export class CrewPrograms {
       actor: "host",
       feed: true,
     });
-    this.host.notifyOp(
-      {
-        facts: {
-          kind: "program-bound",
-          task: { id: program.id, title: program.title },
-          key: program.key || program.id,
-          bound,
-          calls,
-        },
-      },
-      "agent",
-      program.id,
-    );
+    const facts = {
+      kind: "program-bound" as const,
+      task: { id: program.id, title: program.title },
+      key: program.key || program.id,
+      bound,
+      calls,
+    };
+    const toFirstmate = () => {
+      this.host.notifyOp({ facts }, "agent", program.id);
+    };
+    const starter = this.starter(program);
+    if (!starter) {
+      toFirstmate();
+      return;
+    }
+    this.host
+      .steer(starter.id, { facts: { ...facts, to: "crewmate" } })
+      .catch((caught: unknown) => {
+        console.warn("[program] its starter did not hear the bound:", caught);
+        toFirstmate();
+      });
   }
 
   /**
@@ -794,7 +844,8 @@ export class CrewPrograms {
    * work a shipping task branches from; a script that names none - or an
    * empty one, null or "" - leaves nothing to ship. A thrown error, a result that does not fit, or a
    * `branch` naming no part that finished done closes it dropped as failed.
-   * Either way the first mate hears it once.
+   * Either way it is heard once: by the active crewmate whose task waits on
+   * it, as that wait's end, else by the first mate.
    */
   async finishProgram(program: TaskRecord, end: ProgramEnd): Promise<void> {
     const tasks = this.options.tasks;
@@ -866,6 +917,18 @@ export class CrewPrograms {
     }
     this.boundTold.delete(program.id);
     this.host.broadcastCrewCounts();
+    // The crewmate whose task waits on it hears its close as that wait's end (always-wait).
+    const starter = this.starter(program);
+    if (
+      starter &&
+      tasks.graph
+        .linksFrom(program.id)
+        .some((link) => link.type === "blocks" && link.toId === starter.id)
+    ) {
+      // The sweep ends that wait now, not at the next minute pass.
+      void this.host.sweepGates(this.host.now());
+      return;
+    }
     this.host.notifyOp(
       {
         facts: {

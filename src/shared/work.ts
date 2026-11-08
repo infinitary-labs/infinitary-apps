@@ -605,6 +605,21 @@ export const workRequests = {
     }),
     response: toolTextSchema,
   },
+  "inf:work:start-program": {
+    effect: "change",
+    request: asked({
+      input: z.object({
+        title: z.string().optional(),
+        goal: z.string().optional(),
+        script: z.string().optional(),
+        args: z.unknown().optional(),
+        bound: z.number().optional(),
+        program: z.string().optional(),
+        stop: z.boolean().optional(),
+      }),
+    }),
+    response: toolTextSchema,
+  },
   "inf:work:progress": {
     effect: "change",
     request: asked({

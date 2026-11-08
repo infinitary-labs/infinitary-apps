@@ -1119,8 +1119,15 @@ export class TaskIntake {
    */
   dropTask(
     taskRef: string,
-    input: { reason: string; confirm?: boolean; replacedBy?: string },
+    input: {
+      reason: string;
+      confirm?: boolean;
+      replacedBy?: string;
+      /** Who drops it: the crewmate that started a program stops its own. */
+      actor?: "firstmate" | "crewmate";
+    },
   ): string {
+    const actor = input.actor ?? "firstmate";
     const record = this.resolveTaskRef(taskRef, "task");
     const replacement = input.replacedBy
       ? this.resolveTaskRef(input.replacedBy, "replaced_by")
@@ -1148,7 +1155,7 @@ export class TaskIntake {
             await this.host.settling.closing.closeTask(part.id, {
               status: "dropped",
               reason: "superseded",
-              actor: "firstmate",
+              actor,
               text: "superseded - its program was dropped",
             });
           this.dropTask(record.id, { ...input, confirm: true });
@@ -1170,7 +1177,7 @@ export class TaskIntake {
     const dropped = this.host.settling.closing.closeAndPurge(affected, () =>
       this.options.tasks.dropWithChildren(record.id, {
         reason: input.reason,
-        actor: "firstmate",
+        actor,
         ...(replacement ? { replacedBy: replacement.id } : {}),
       }),
     );

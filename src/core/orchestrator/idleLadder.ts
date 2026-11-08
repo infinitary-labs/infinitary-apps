@@ -1574,6 +1574,8 @@ export class IdleLadder {
           { ...ended.task, ...(pullRequest ? { pullRequest } : {}) },
           ended.kind,
           carried,
+          ended.task.shape?.program !== undefined &&
+            this.host.tasks.crewFilingOrigin(ended.task.id)?.id === taskId,
         ),
       )
       .catch((caught: unknown) => {

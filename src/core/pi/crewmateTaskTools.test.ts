@@ -46,6 +46,13 @@ function normalized(schema: unknown): unknown {
   }
   // An empty required list and no required list say the same thing.
   if (Array.isArray(out.required) && out.required.length === 0) delete out.required;
+  // Any JSON object, such as start_program's args: zod spells it with no declared fields.
+  if (
+    out.type === "object" &&
+    out.properties &&
+    Object.keys(out.properties as Record<string, unknown>).length === 0
+  )
+    delete out.properties;
   // An integer bound is the same bound whichever way the library spells it.
   if (out.type === "integer") {
     delete out.maximum;
@@ -98,6 +105,16 @@ const CALLS: Record<string, { params: Record<string, unknown>; callback: string 
   file_followup: {
     params: { title: "Fix the flake", goal: "It passes", why: "It failed twice", blocks_me: true },
     callback: "onFollowup",
+  },
+  start_program: {
+    params: {
+      title: "Audit the meter",
+      goal: "Every defect in the meter is found and checked.",
+      script: 'return await task("Find a defect in the meter.");',
+      args: { areas: ["src/meter.ts"] },
+      bound: 2,
+    },
+    callback: "onStartProgram",
   },
   note_progress: { params: { text: "Reproduced it" }, callback: "onProgress" },
   report: {

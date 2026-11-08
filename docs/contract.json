@@ -46828,6 +46828,71 @@
         ]
       }
     },
+    "inf:work:start-program": {
+      "effect": "change",
+      "reach": "work",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              },
+              "callId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "input": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "goal": {
+                    "type": "string"
+                  },
+                  "script": {
+                    "type": "string"
+                  },
+                  "args": {},
+                  "bound": {
+                    "type": "number"
+                  },
+                  "program": {
+                    "type": "string"
+                  },
+                  "stop": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "required": [
+              "task",
+              "callId",
+              "input"
+            ]
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ]
+      }
+    },
     "inf:work:progress": {
       "effect": "change",
       "reach": "work",

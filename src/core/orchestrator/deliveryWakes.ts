@@ -62,7 +62,7 @@ export type DeliveryFacts =
       /** Work an active task waited on closed (FI3-250): its one steer. */
       kind: "dependency-closed";
       /** The work that closed, by its key and title, and its pull request when it had one. */
-      dependency: { key: string; title: string; pullRequest?: number };
+      dependency: { key: string; title: string; pullRequest?: number; program?: boolean };
       closed: "done" | "dropped";
       /** How the wait was declared: a baseline wait on its checks, or a blocks link holding its merge. */
       wait: "baseline" | "blocks";
@@ -276,6 +276,11 @@ function renderMainCheckPassed(facts: Extract<WakeFacts, { kind: "main-check-pas
 function renderDependencyClosed(facts: Extract<WakeFacts, { kind: "dependency-closed" }>): string {
   const { key, title, pullRequest } = facts.dependency;
   const name = `${key} "${title}"${pullRequest ? ` (PR #${pullRequest})` : ""}`;
+  // A program the crewmate started (docs/programs.md, "Starting a program"): its end is its answer.
+  if (facts.dependency.program)
+    return facts.closed === "done"
+      ? `Your program ${name} finished. Read its result with tasks key ${key}, then carry on from where you stopped.`
+      : `Your program ${name} stopped. Read why with tasks key ${key}, then carry on from where you stopped.`;
   if (facts.wait === "baseline") {
     return facts.closed === "done"
       ? `${name}, the separately owned work your failing checks waited on, is done. Bring your change up to date and read the checks again.`
@@ -303,9 +308,17 @@ export function dependencyClosedOnce(task: { id: string }): string {
  * the tasks whose work it took over (INF-1826).
  */
 export function dependencyClosedWake(
-  task: { id: string; key: string; title: string; status: string; pullRequest?: number },
+  task: {
+    id: string;
+    key: string;
+    title: string;
+    status: string;
+    pullRequest?: number;
+  },
   wait: "baseline" | "blocks",
   carried: readonly string[] = [],
+  /** The waiter started this program itself: its end is the program's answer. */
+  started = false,
 ): TypedWake {
   return {
     facts: {
@@ -314,6 +327,7 @@ export function dependencyClosedWake(
         key: task.key || task.id,
         title: task.title,
         ...(task.pullRequest ? { pullRequest: task.pullRequest } : {}),
+        ...(started ? { program: true } : {}),
       },
       closed: task.status === "done" ? "done" : "dropped",
       wait,

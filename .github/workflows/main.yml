@@ -1,12 +1,13 @@
 name: main
 
 # Main's desktop release check (INF-2146, the captain's approved plan, direction
-# B): every push to main starts the full check. It checks the desktop app's
-# release (INF-2498, the captain: "the main check should be clarified to be
-# specifically about the desktop app's release"): its passing run is what the
-# desktop app's alpha is cut from. The workflow's name, main, stays, since the
-# Automation rule reads it; its job names lead with their trigger, and the
-# alpha's proof reader and stable promotion read them through
+# B): every push to main starts this run, which runs the full check only for
+# files no merge batch built (INF-3052; its sort job says how). It checks the
+# desktop app's release (INF-2498, the captain: "the main check should be
+# clarified to be specifically about the desktop app's release"): its passing
+# run is what the desktop app's alpha is cut from. The workflow's name, main,
+# stays, since the Automation rule reads it; its job names lead with their
+# trigger, and the alpha's proof reader and stable promotion read them through
 # scripts/ci-job-names.mjs. It replaces the nightly full check. Main runs no old
 # journey set (INF-2480, the captain: "old set at the release check only, from
 # the first piece on"): its full check is the Linux checks and the Mac lanes
@@ -68,9 +69,12 @@ jobs:
     with:
       trigger: ${{ (github.event_name == 'push' && 'Main push' || 'Manual request') }}
   # Sorts the push first (docs/testing.md, "The swept batch"): files that are
-  # exactly a green batch's are already checked, so the full check is
-  # skipped; a batch partly merged ends this run at once, cutting no alpha
-  # and leaving no failed run; anything else gets the full check.
+  # exactly a passed batch's are already checked, so the full check is
+  # skipped, whether the batch passed in its own run or on its confirm; a
+  # push before a batch's files, which main has reached or can still reach,
+  # ends this run at once, cutting no alpha and leaving no failed run; only
+  # files no batch built get the full check (the captain's pick on INF-3052,
+  # "A: keep a fallback full check on main for versions no batch built").
   sort:
     name: ${{ format('{0} · Compare with checked batches', (github.event_name == 'push' && 'Main push' || 'Manual request')) }}
     runs-on: ubuntu-24.04
@@ -109,10 +113,10 @@ jobs:
             core.setOutput('kind', sorted.kind);
             core.setOutput('batch', String(sorted.run ?? ''));
             if (sorted.kind === 'landing') {
-              core.notice(`Batch run ${sorted.run} is still merging; its last merge's check reads it.`);
+              core.notice(`Main reaches batch run ${sorted.run}'s files at a later push, whose check reads it.`);
               await github.rest.actions.cancelWorkflowRun({...context.repo, run_id: context.runId});
             }
-  # A push whose files are a green batch's. The alpha's proof follows its
+  # A push whose files are a passed batch's. The alpha's proof follows its
   # name to the batch run (scripts/main-alpha-proof.mjs).
   covered:
     needs: [alpha-wait, sort]
@@ -140,10 +144,11 @@ jobs:
       # Main's Linux jobs run on GitHub's hosted machines
       # (docs/testing.md, "Main's desktop release check").
       hosted: true
-  # The Linux automatic startup fixtures, once per main check, beside it, on
-  # GitHub's hosted Ubuntu (linux-startup.yml names it: main is its only caller).
+  # The Linux automatic startup fixtures, beside the full check, on GitHub's
+  # hosted Ubuntu; a covered push's batch ran them (infinitary-batch-checks.yml).
   startup:
-    needs: alpha-wait
+    needs: [alpha-wait, sort]
+    if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' && needs.sort.outputs.kind != 'landing' }}
     name: ${{ format('{0} · Linux startup', (github.event_name == 'push' && 'Main push' || 'Manual request')) }}
     uses: ./.github/workflows/linux-startup.yml
     with:

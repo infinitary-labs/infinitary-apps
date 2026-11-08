@@ -493,8 +493,8 @@ The first mate's and a crewmate's fixed prompts each have a budget derived from 
 
 Main's check is the desktop app's release check (INF-2498, the captain: "the main check should be clarified to be specifically about the desktop app's release").
 Its passing run is what the desktop app's alpha is cut from; the phone app releases through its own checks (`ios-release.yml`).
-Every push to `main` starts `main.yml` (INF-2146, the captain's approved plan, direction B), which calls the full check.
-Beside it it calls `linux-startup.yml`, the Linux automatic startup fixtures, once per main check (INF-2441).
+Every push to `main` starts `main.yml` (INF-2146, the captain's approved plan, direction B), which calls the full check for files no merge batch built ("The swept batch").
+Beside the full check it calls `linux-startup.yml`, the Linux automatic startup fixtures (INF-2441); a push the swept batch covered runs neither, since the batch ran both.
 A push whose every changed file is in the phone app or the docs starts no run (INF-2492, the captain's decision "Skip pushes that change only the phone app or the docs"): its `paths-ignore` lists `ios/`, `docs/` except the generated `docs/contract.json`, `primitives/` and `release-notes/changes/`, since a change file rides with every change.
 Phone check helpers in `scripts/` and `tests/helpers/` are not the phone app, so a push that touches them runs.
 A docs break that a unit test reads, such as `tests/reflow-docs.test.ts` or `tests/served-boundary.test.ts`, surfaces at the next push that runs, and a skipped push leaves main's green mark on the older version.
@@ -529,7 +529,7 @@ Its Linux jobs run on GitHub's hosted Ubuntu, whatever `LINUX_RUNNER` says, so t
 There one two-processor machine ran every vitest project past its step's 60-minute limit, so the Linux checks run on nine machines at once (INF-2646, the captain's approved split): `linux-checks` runs the typecheck, the lints and the build, and `linux-tests` runs the tests in eight groups, `pure`, `unit` and `unit-isolated` in three, `integration` in two, `probe` in two and `browser` in one, each group a set of vitest's own `--shard`.
 Each group keeps the 60-minute limit and reports whatever another did, and the alpha's proof requires every group's complete set (`scripts/main-alpha-proof.mjs`).
 `tests/release-workflows-main-check.test.ts` holds the trigger, the skipped paths against real merges, the queue, the calls and the phone release's call of every part.
-Beside the wait, its `sort` job reads each push against the swept batch ("The swept batch"): a push whose files are exactly a green batch's skips the full check once the wait ends, a push while a green batch is still merging cancels its own run, and every other push gets the full check.
+Beside the wait, its `sort` job reads each push against the swept batch ("The swept batch"): a push whose files are exactly a passed batch's skips the full check once the wait ends, a push before a batch's files that main has reached or can still reach cancels its own run, and only files no batch built get the full check (the captain's pick on INF-3052, "A: keep a fallback full check on main for versions no batch built").
 
 ## The swept batch
 
@@ -543,18 +543,21 @@ The sweep is `verify.yml` with every journey and without the phone check, the wh
 A sweep without every journey's complete set still lends its Linux checks and Mac lanes, and the alpha then runs every journey itself (INF-2480; `scripts/main-alpha-proof.mjs`).
 Its Linux jobs run on GitHub's hosted machines and its Mac lanes on the `release_split` queue ("Each Mac job's kind and size").
 Beside it, the `critical-path` job runs the critical path on the same composed commit on GitHub's hosted Linux ("The critical path"), so the batch's check runs it whatever part of the full check the sweep runs (the captain, on INF-2508: "the e2e journey + browser tests should all run during the sweep batch").
+The `startup` job runs the Linux automatic startup fixtures, `linux-startup.yml`, on the same composed commit on GitHub's hosted Ubuntu, so they run before a merge (the captain's pick on INF-3052, "In the batch check, beside the critical-path journey").
 Every job composes the batch with the shipped compose script, `.github/actions/infinitary-batch/compose.sh apply`, in its own checkout, and fails if its tree differs from the one the queue composed.
-The last job, `Merge batch · Batch passed (tree T)`, passes only once both did and names the tree they built.
-When they fail, the queue's confirm calls the same file again with the failed jobs and files, and only its `confirm` job runs: each failed test file three rounds with no retries, on hosted Linux when a Linux job failed and on the `release_split` Mac when a Mac job did, while the sweep, the critical path and the tree's job skip (`scripts/batch-confirm.ts`; the captain's pick on INF-3012, "A only: the confirm step").
+The last job, `Merge batch · Batch passed (tree T; base B)`, passes only once all three did and names the tree they built and the main version B the batch composed onto.
+When they fail, the queue's confirm calls the same file again with the failed jobs and files, and only its `confirm` job runs: each failed test file three rounds with no retries, on hosted Linux when a Linux job failed and on the `release_split` Mac when a Mac job did, while the sweep, the critical path and the startup fixtures skip (`scripts/batch-confirm.ts`; the captain's pick on INF-3012, "A only: the confirm step").
+The last job then passes once the confirm did, and names the same tree and base.
 A green confirm passes the batch; its run's summary names what failed, and that flaky test still needs an owner who fixes its root cause.
 A red confirm fixes forward (INF-2948, the captain: "whenever we meet a failure, we pause the sweeps until a fix arrives, then we rerun the sweep with everything queued + the fix, if there's another error, repeat"): the queue pauses its changes behind one issue, and the app starts the repair ("A paused batch's repair").
 
 `main.yml`'s `sort` job reads the pushed commit's pull request with the queue's own rules (`scripts/batch.mjs`).
-When that change passed batch run N on exactly the pushed files, the push is covered: a job named `Main push · Covered by batch run N` replaces the full check.
-A batch that passed only on its confirm ran the failed files again, not the whole check, so its last merge gets main's full check, which the alpha then follows.
-While another change of batch N is still open and green, the push is landing: the run cancels itself, cuts no alpha and leaves no failed run, and the batch's last merge is read in full.
-Anything else gets the full check, a merge outside the queue and a batch merged in an order that changed its files included.
-The alpha's proof follows a covered run to its queue run and reads its batch checks and the tree their last job names (`scripts/main-alpha-proof.mjs`, `docs/alpha.md` "Cutting an alpha").
+When that change passed batch run N on exactly the pushed files, the push is covered: a job named `Main push · Covered by batch run N` replaces the full check and the startup fixtures.
+That holds for a batch that passed on its confirm too, since the batch's run and its confirm together passed every test (the captain's pick on INF-3052, "Nothing more: the batch's run and its recheck together passed every test").
+When main's newest files are already batch N's, or another change of batch N is still open and passed while every commit main has since the base its last job names is a change of batch N, the push is landing: main has reached or can still reach the batch's files, so the run cancels itself, cuts no alpha and leaves no failed run, and the push with the batch's files is covered.
+A batch run from before its last job named the base is landing on an open change of it alone.
+Anything else gets the full check: files no batch built, such as a merge outside the queue, a batch merged in an order that changed its files, or a batch composed onto an older main than the one its changes merged onto.
+The alpha's proof follows a covered run to its queue run and reads its batch checks, and the tree their last job names in the batch's run or its confirm; after a passed confirm it counts each failed job of the checks as passed, since the confirm ran its failed files again (`scripts/main-alpha-proof.mjs`, `docs/alpha.md` "Cutting an alpha").
 The fleet never cancels a running batch or a running main check unless the captain asks.
 `tests/batch.test.ts` holds the batch checks, their compose step and main's sort.
 
@@ -590,8 +593,8 @@ The cost is GitHub's per-minute bill for those jobs.
 - `verify.yml`, whose `request` job, `linux-checks` lane, every Linux test group and every `linux-e2e` journey job (`source-journeys.yml`, through the same input) take it;
 - `linux-packages.yml`, whose build and every package check take it, the Ubuntu 26.04 machine check on `ubuntu-26.04`.
 
-`linux-startup.yml`'s job and `alpha-wait.yml`'s jobs name `ubuntu-24.04`, since `main.yml` is their only caller; the alpha wait bills no minutes while its `wait` job is pending in an alpha's group ("Main's desktop release check").
-`infinitary-batch-checks.yml` passes `hosted: true` to its sweep and its critical path, and its own job and `main.yml`'s `sort` and `covered` jobs name `ubuntu-24.04`; the shipped queue's own jobs run where it names ("The swept batch").
+`linux-startup.yml`'s job and `alpha-wait.yml`'s jobs name `ubuntu-24.04`, since `main.yml` and, for the startup fixtures, `infinitary-batch-checks.yml` are their only callers; the alpha wait bills no minutes while its `wait` job is pending in an alpha's group ("Main's desktop release check").
+`infinitary-batch-checks.yml` passes `hosted: true` to its sweep and its critical path, its startup fixtures name hosted Ubuntu themselves, and its own job and `main.yml`'s `sort` and `covered` jobs name `ubuntu-24.04`; the shipped queue's own jobs run where it names ("The swept batch").
 
 `ios-release.yml`'s two Linux jobs, `resolve` and `availability`, name `ubuntu-24.04` for every dispatch, since each one checks or releases a phone build.
 A requested check and a pull request keep `LINUX_RUNNER`: `hosted` is an input only a call takes, never a request's.
@@ -692,7 +695,7 @@ Its paths step, `scripts/pr-paths.ts`, reads the change against the merge commit
 The build and the critical path run unless every changed path is a test (under `tests/`, or a `.test` or `.spec` file), docs (`docs/`, `primitives/` or any Markdown file), a release note or the phone app (`ios/`).
 The browser tests run only when a path is under `src/renderer/` or `tests/browser/`, or is a browser test helper (`tests/helpers/browser*`).
 An empty change or an unreadable diff runs everything.
-No pull request runs the Linux startup fixtures, the node-headers proof or the adherence lint: none caught a problem on a pull request, main's check runs all three, and `pnpm check:changed` runs the adherence lint before each push.
+No pull request runs the Linux startup fixtures, the node-headers proof or the adherence lint: none caught a problem on a pull request, the swept batch or main's full check runs all three, and `pnpm check:changed` runs the adherence lint before each push.
 `tests/pr-paths.test.ts` holds the two decisions to real changes on main, and `tests/release-workflows-pr-checks.test.ts` holds the check's steps to them.
 
 ### The weekly audit of the pull request check

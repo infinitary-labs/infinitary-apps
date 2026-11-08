@@ -301,6 +301,125 @@ describe("an alpha from a swept batch", () => {
   });
 });
 
+// The captain's pick on INF-3052, "Nothing more: the batch's run and its
+// recheck together passed every test". The jobs follow batch run
+// 42456966779's reading: its checks failed one Linux journey group, its
+// confirm ran that group's failed file three rounds and passed, and the run
+// ended failed. Its confirm's last job, which then skipped, passes since
+// INF-3052 and names the tree and base as the batch checks file now does.
+const recheckTree = "7b9afd34b68fe3837ccb676cd2cdfbdd606036ea";
+const recheckBase = "80d25e5dd6e80f5c6a6cdc60c33bffbf7195b769";
+function recheckedBatch() {
+  const run = {
+    id: 42456966779,
+    run_attempt: 1,
+    path: ".github/workflows/infinitary-queue.yml",
+    event: "status",
+    head_branch: "main",
+    head_sha: recheckBase,
+    status: "completed",
+    conclusion: "failure",
+    head_repository: { full_name: repository },
+    repository: { full_name: repository },
+    html_url: "https://github.com/infinitary-labs/infinitary/actions/runs/42456966779",
+  };
+  const checks = "Batch checks / Merge batch · ";
+  const desktop = `${checks}Desktop checks / Merge batch · `;
+  const linux = `${desktop}Linux journeys / Merge batch · App journeys (Linux; `;
+  const read: [string, string][] = [
+    ["Form the batch", "success"],
+    ["Answer the pause", "skipped"],
+    [
+      `${checks}Critical-path journey / Merge batch · Selected app journeys (Linux; serial)`,
+      "success",
+    ],
+    [`${desktop}Check verification request`, "success"],
+    [
+      `${checks}Confirm failed tests (\${{ (((matrix.platform == 'mac') && 'Mac') || 'Linux') }})`,
+      "skipped",
+    ],
+    [`${desktop}Code checks and build (Linux)`, "success"],
+    ...[1, 2].map((n): [string, string] => [
+      `${desktop}Integration tests (Linux; group ${n}/2)`,
+      "success",
+    ]),
+    ...[1, 2, 3].map((n): [string, string] => [
+      `${desktop}Unit tests (Linux; group ${n}/3)`,
+      "success",
+    ]),
+    ...[1, 2].map((n): [string, string] => [
+      `${desktop}Environment checks (Linux; group ${n}/2)`,
+      "success",
+    ]),
+    [`${desktop}Browser tests (Linux)`, "success"],
+    [`${desktop}Native tests, replay and package (Mac)`, "success"],
+    [`${desktop}Parallel journeys (Mac)`, "success"],
+    [`${desktop}Desktop journeys (Mac)`, "success"],
+    ...[1, 2, 3, 4, 5, 6].map((n): [string, string] => [
+      `${linux}parallel group ${n}/6)`,
+      n === 1 ? "failure" : "success",
+    ]),
+    ...[1, 2, 3].map((n): [string, string] => [`${linux}serial group ${n}/3)`, "success"]),
+    [`${desktop}Signed installer checks`, "skipped"],
+    ["Read the failures", "success"],
+    [`${checks}Batch passed (tree \${{ inputs.tree }})`, "skipped"],
+    ["Batch confirm / Merge batch · Confirm failed tests (Linux)", "success"],
+    ["Batch confirm / Merge batch · Critical-path journey", "skipped"],
+    [
+      `Batch confirm / Merge batch · Batch passed (tree ${recheckTree}; base ${recheckBase})`,
+      "success",
+    ],
+    ["Batch confirm / Merge batch · Desktop checks", "skipped"],
+    ["Batch verdict", "success"],
+  ];
+  const jobs = read.map(([name, conclusion]) => ({
+    name,
+    run_id: run.id,
+    run_attempt: 1,
+    head_sha: recheckBase,
+    status: "completed",
+    conclusion,
+  }));
+  return { run, jobs };
+}
+
+describe("an alpha from a batch that passed on its confirm (INF-3052)", () => {
+  it("accepts its checks and every journey, which the run and its confirm passed together", () => {
+    const { run, jobs } = recheckedBatch();
+    expect(verifyBatchEvidence(run, jobs, repository, recheckTree)).toEqual({
+      runId: run.id,
+      attempt: 1,
+      url: run.html_url,
+      journeys: true,
+    });
+  });
+
+  it("refuses it when the confirm did not pass, or passed on other files", () => {
+    const { run, jobs } = recheckedBatch();
+    expect(() => verifyBatchEvidence(run, jobs, repository, "0".repeat(40))).toThrow(
+      "successful batch run",
+    );
+    // Batch run 42456966779 as it ran: its confirm's last job skipped.
+    const asRun = jobs.map((job) =>
+      job.name.startsWith("Batch confirm / Merge batch · Batch passed")
+        ? { ...job, conclusion: "skipped" }
+        : job,
+    );
+    expect(() => verifyBatchEvidence(run, asRun, repository, recheckTree)).toThrow(
+      "successful batch run",
+    );
+    // A failure the confirm did not answer, such as a cancelled owner, still refuses.
+    const cancelled = jobs.map((job) =>
+      job.name.endsWith("(Mac)") && job.name.includes("Native")
+        ? { ...job, conclusion: "cancelled" }
+        : job,
+    );
+    expect(() => verifyBatchEvidence(run, cancelled, repository, recheckTree)).toThrow(
+      "every full-check owner",
+    );
+  });
+});
+
 // What a published alpha's own release run proved, for its stable. Names
 // follow alpha run 41685154411's reading (run 86), whose verify call skipped
 // and is listed as one job named `verify`, beside its release jobs.

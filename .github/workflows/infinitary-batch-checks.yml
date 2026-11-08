@@ -5,16 +5,19 @@ name: Infinitary batch checks
 # docs/forge.md, "The shipped queue") composes the approved changes onto main
 # and calls this file on the result. It runs the alpha's full check - every
 # Linux journey on GitHub's hosted machines and every journey on the mini's
-# release check line, without the phone check - and the critical path in a
-# job of its own (INF-2507). Every job composes the same batch with the
-# shipped compose step. The last job names the batch's tree, which main's
-# check and the alpha's proof follow (scripts/main-alpha-proof.mjs).
+# release check line, without the phone check - and the critical path and
+# the Linux startup fixtures in jobs of their own (INF-2507, INF-3052). Every
+# job composes the same batch with the shipped compose step. The last job
+# names the batch's tree and the main version it composed onto, which main's
+# check and the alpha's proof follow (scripts/batch.mjs,
+# scripts/main-alpha-proof.mjs).
 #
 # When they fail, the queue calls this file once more on the same batch to
 # confirm, with failed_jobs and failed_files: then only the confirm job runs,
 # each failed test file three rounds on the platform whose job failed, and
 # every other job skips itself (the captain's pick on INF-3012, "A only: the
-# confirm step").
+# confirm step"), but the last job, which names the tree once the confirm
+# passed.
 #
 # Its jobs lead with the Merge batch trigger (scripts/ci-job-names.mjs); the
 # queue names its own jobs.
@@ -86,16 +89,33 @@ jobs:
       files: tests/e2e/critical-path.spec.ts
       artifact-suffix: critical-path
 
-  # Passes only once the sweep and the critical path both passed, and names
-  # the tree they built, which the alpha's proof reads.
+  # The Linux automatic startup fixtures on the composed batch (the captain's
+  # pick on INF-3052, "In the batch check, beside the critical-path journey"),
+  # so they run before a merge; main's own full check still runs them for
+  # files no batch built.
+  startup:
+    if: inputs.failed_jobs == ''
+    name: Merge batch · Linux startup
+    uses: ./.github/workflows/linux-startup.yml
+    with:
+      trigger: Merge batch
+      ref: ${{ inputs.base }}
+      batch: ${{ inputs.batch }}
+      batch_tree: ${{ inputs.tree }}
+
+  # Passes once the sweep, the critical path and the startup fixtures all
+  # passed, or, in the confirm, once the confirm passed, and names the tree
+  # they built and the base it composed onto, which main's sort and the
+  # alpha's proof read.
   passed:
-    needs: [sweep, critical-path]
-    name: ${{ format('Merge batch · Batch passed (tree {0})', inputs.tree) }}
+    needs: [sweep, critical-path, startup, confirm]
+    if: ${{ !cancelled() && (inputs.failed_jobs == '' && needs.sweep.result == 'success' && needs.critical-path.result == 'success' && needs.startup.result == 'success' || inputs.failed_jobs != '' && needs.confirm.result == 'success') }}
+    name: ${{ format('Merge batch · Batch passed (tree {0}; base {1})', inputs.tree, inputs.base) }}
     runs-on: ubuntu-24.04
     steps:
       - env:
           TREE: ${{ inputs.tree }}
-        run: echo "The sweep and the critical path passed on tree $TREE."
+        run: echo "The batch checks passed on tree $TREE."
 
   # The confirm: each failed test file three rounds on the composed batch,
   # on Linux when a Linux job failed and on the Mac when a Mac job did, the

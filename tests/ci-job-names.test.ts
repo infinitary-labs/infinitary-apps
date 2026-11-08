@@ -68,6 +68,13 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     scenario: {
       github: { event_name: "status", event: { context: "infinitary/queue", state: "pending" } },
       inputs: { batch: `917:${"a".repeat(40)}`, base: "c".repeat(40), tree: "b".repeat(40) },
+      // A batch whose checks passed, so its last job runs (INF-3052).
+      needs: {
+        sweep: { result: "success" },
+        "critical-path": { result: "success" },
+        startup: { result: "success" },
+        confirm: { result: "skipped" },
+      },
     },
   },
   {
@@ -440,7 +447,10 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
       ),
       "Batch verdict",
     ];
-    expect(names).toContain(`Batch checks / Merge batch · Batch passed (tree ${tree})`);
+    // INF-3052: the last job names the base too, which main's sort reads.
+    expect(names).toContain(
+      `Batch checks / Merge batch · Batch passed (tree ${tree}; base ${"c".repeat(40)})`,
+    );
     const run = {
       id: 2,
       run_attempt: 1,

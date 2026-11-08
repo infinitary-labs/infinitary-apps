@@ -1,7 +1,8 @@
 name: Linux automatic startup
 
-# Called by main.yml once per main check (INF-2441), never started by a push
-# of its own: the pull request already ran the same fixtures on its version.
+# Called by the batch checks on each composed batch, and by main.yml's full
+# check for files no batch built (INF-2441, INF-3052), never started by a
+# push of its own.
 on:
   workflow_call:
     inputs:
@@ -10,9 +11,17 @@ on:
         type: string
         required: true
       ref:
-        description: The commit to check
+        description: The commit to check, or the main version a batch composes onto
         type: string
         required: true
+      batch:
+        description: The batch checks' changes as number:version words, composed onto ref
+        type: string
+        default: ""
+      batch_tree:
+        description: The tree the composed batch must have
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -20,15 +29,24 @@ permissions:
 jobs:
   runtime-facts:
     name: ${{ format('{0} · Automatic startup checks (Linux)', inputs.trigger) }}
-    # main.yml is the only caller, and main's Linux jobs run on GitHub's
-    # hosted Ubuntu (docs/testing.md, "Main's desktop release check"), a fresh
-    # machine with systemd and Docker. The pull request's copy in ci.yml
-    # keeps LINUX_RUNNER.
+    # Both callers run their Linux jobs on GitHub's hosted Ubuntu
+    # (docs/testing.md, "A release's hosted machines"), a fresh machine with
+    # systemd and Docker.
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.ref }}
+      # The batch's changes, composed onto ref by the shipped queue's own
+      # compose step (docs/forge.md, "The shipped queue").
+      - name: Compose the batch
+        if: inputs.batch != ''
+        env:
+          HEADS: ${{ inputs.batch }}
+          BASE: ${{ inputs.ref }}
+          TREE: ${{ inputs.batch_tree }}
+        # shellcheck disable=SC2086 # one word per change
+        run: bash .github/actions/infinitary-batch/compose.sh apply "$BASE" "$TREE" $HEADS
       - uses: actions/setup-node@v4
         with:
           node-version: 24

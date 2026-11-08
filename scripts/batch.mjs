@@ -6,12 +6,13 @@
  * approved change's state as the commit status infinitary/queue. A change
  * whose batch passed reads "Passed batch run N; tree T", and the app merges
  * it. This module reads that state, with the queue's own rules, for
- * main.yml's first job: a push whose files are exactly a green batch's needs
- * no check run again, unless the batch passed only on its confirm, which ran
- * the failed files again and not the whole check: then main's full check
- * runs, and the alpha follows it.
+ * main.yml's first job: a push whose files are exactly a passed batch's
+ * needs no check run again, whether the batch passed in its own run or on
+ * its confirm (the captain's pick on INF-3052, "Nothing more: the batch's
+ * run and its recheck together passed every test"). Main's own full check
+ * runs only for files no batch built.
  */
-import { CONFIRM_JOB, QUEUE, readQueueState } from "../.github/infinitary/rules.mjs";
+import { QUEUE, readQueueState } from "../.github/infinitary/rules.mjs";
 
 /**
  * The change's queue state from its version's statuses, newest first as
@@ -30,22 +31,56 @@ export function readQueueStatus(statuses) {
   );
 }
 
+// The batch checks' last job (infinitary-batch-checks.yml), in the batch's
+// own run or its confirm, names the tree it passed and the main version it
+// composed onto. A batch run from before the base was named has none.
+const PASSED_JOB = /Batch passed \(tree ([0-9a-f]{40,64})(?:; base ([0-9a-f]{40,64}))?\)$/;
+
+/** The main version a passed batch run composed onto, from its jobs, or null when no job names it. */
+export function batchBase(jobs) {
+  for (const job of jobs) {
+    const match = PASSED_JOB.exec(job.name);
+    if (match?.[2] && job.conclusion === "success") return match[2];
+  }
+  return null;
+}
+
 /**
- * How main's check treats a push (main.yml's first job): covered when its
- * files are exactly a green batch's, so nothing runs again; landing while
- * that batch's other changes are still open and green, so the run ends at
- * once; full otherwise, a merge outside the queue included.
+ * How main's check treats a push (main.yml's first job), from the pushed
+ * files' `tree`, its change's `queue` state, main's newest files `main`,
+ * the `open` changes' queue states, and `between`: the queue state of each
+ * commit main has between the batch's base and the push, or null when the
+ * push does not sit on that base, or undefined when the batch named no base.
+ * - covered: the files are exactly a passed batch's, so nothing runs again;
+ * - landing: main has reached the batch's files with a later push, or can
+ *   still reach them, since every commit since the batch's base is one of
+ *   its changes and another is still open and passed: the run ends at once,
+ *   and the push with the batch's files is covered;
+ * - full otherwise: files no batch built, a merge outside the queue included.
  */
-export function sortMainPush({ tree, queue, open }) {
+export function sortMainPush({ tree, queue, main, open, between }) {
   if (queue?.kind !== "passed") return { kind: "full" };
   if (queue.tree === tree) return { kind: "covered", run: queue.run };
-  if (open.some((entry) => entry.queue?.kind === "passed" && entry.queue.run === queue.run))
-    return { kind: "landing", run: queue.run };
+  const landing = { kind: "landing", run: queue.run };
+  if (main === queue.tree) return landing;
+  const member = (state) => state?.kind === "passed" && state.run === queue.run;
+  if (!open.some((entry) => member(entry.queue))) return { kind: "full" };
+  if (between === undefined || between?.every(member)) return landing;
   return { kind: "full" };
 }
 
 const statusesOf = (github, repo, ref) =>
   github.paginate(github.rest.repos.listCommitStatusesForRef, { ...repo, ref, per_page: 100 });
+
+/** A commit's queue state: that of the pull request it merged, or null when it merged none. */
+async function commitQueue(github, repo, sha) {
+  const { data: pulls } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+    ...repo,
+    commit_sha: sha,
+  });
+  const pull = pulls.find((candidate) => candidate.merge_commit_sha === sha);
+  return pull ? readQueueStatus(await statusesOf(github, repo, pull.head.sha)) : null;
+}
 
 /** Every open pull request with its current version and queue state. */
 async function readOpenQueue(github, repo) {
@@ -59,31 +94,34 @@ async function readOpenQueue(github, repo) {
   );
 }
 
-/** Whether a batch run passed on its confirm: its confirm's jobs ran. */
-async function confirmed(github, repo, run) {
+/** The queue state of each commit from the batch run's base to the push, or null off that base. */
+async function readBetween(github, repo, run, sha) {
   const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
     ...repo,
     run_id: run,
     per_page: 100,
   });
-  return jobs.some(
-    (job) =>
-      (job.name === CONFIRM_JOB || job.name.startsWith(`${CONFIRM_JOB} / `)) &&
-      job.conclusion !== "skipped",
-  );
+  const base = batchBase(jobs);
+  if (!base) return undefined;
+  const { data: compared } = await github.rest.repos.compareCommits({
+    ...repo,
+    base,
+    head: sha,
+    per_page: 100,
+  });
+  if (!["ahead", "identical"].includes(compared.status) || compared.total_commits > compared.commits.length)
+    return null;
+  return Promise.all(compared.commits.map((commit) => commitQueue(github, repo, commit.sha)));
 }
 
-/** main.yml's sort: reads the pushed commit's pull request and its queue state. */
+/** main.yml's sort: reads the pushed commit's pull request, its queue state and main's newest files. */
 export async function readMainPush(github, repo, { sha, tree }) {
-  const { data: pulls } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
-    ...repo,
-    commit_sha: sha,
-  });
-  const pull = pulls.find((candidate) => candidate.merge_commit_sha === sha);
-  if (!pull) return { kind: "full" };
-  const queue = readQueueStatus(await statusesOf(github, repo, pull.head.sha));
+  const queue = await commitQueue(github, repo, sha);
   if (queue?.kind !== "passed") return { kind: "full" };
-  const sorted = sortMainPush({ tree, queue, open: await readOpenQueue(github, repo) });
-  if (sorted.kind === "covered" && (await confirmed(github, repo, queue.run))) return { kind: "full" };
-  return sorted;
+  if (queue.tree === tree) return { kind: "covered", run: queue.run };
+  const { data: branch } = await github.rest.repos.getBranch({ ...repo, branch: "main" });
+  const main = branch.commit.commit.tree.sha;
+  const open = await readOpenQueue(github, repo);
+  const between = main === queue.tree ? [] : await readBetween(github, repo, queue.run, sha);
+  return sortMainPush({ tree, queue, main, open, between });
 }

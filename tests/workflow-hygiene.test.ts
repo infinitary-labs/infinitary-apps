@@ -17,6 +17,7 @@ const actions = readdirSync(join(root, ".github/actions"));
 type Step = {
   name?: string;
   id?: string;
+  if?: string;
   run?: string;
   uses?: string;
   with?: Record<string, unknown>;
@@ -201,6 +202,29 @@ describe("every workflow", () => {
     }
     // The workflow whose journey groups failed in that run.
     expect(recorders).toContain("source-journeys.yml:source-desktop");
+  });
+
+  // Alpha run 42477283672, sent by the same watch, missed that cache in every
+  // Linux journey group, and its demo journeys took the 504 or hung until
+  // their test timed out: actions/cache saved the encoder only after a job
+  // passed every step, and only a run on main writes the key every branch
+  // reads, so no job whose demo journey failed ever filled it. So the action
+  // fetches a missed build itself and saves it in a step of its own, whatever
+  // the job's journeys do after.
+  it("saves a fetched demo encoder in its own step, not after the job passes", () => {
+    const { runs } = loadYamlFile(".github/actions/demo-encoder/action.yml") as {
+      runs: { steps: Step[] };
+    };
+    const uses = runs.steps.map((step) => step.uses?.split("@")[0]);
+    // actions/cache's own save is a step that runs only once the job passed.
+    expect(uses).not.toContain("actions/cache");
+    const restore = uses.indexOf("actions/cache/restore");
+    const fetch = runs.steps.findIndex((step) => /\bdemoEncoder\(\)/.test(step.run ?? ""));
+    const save = uses.indexOf("actions/cache/save");
+    expect(restore).toBeGreaterThanOrEqual(0);
+    expect(fetch).toBeGreaterThan(restore);
+    expect(save).toBeGreaterThan(fetch);
+    expect(runs.steps[save]?.if).toBe(`steps.${runs.steps[fetch]?.id}.outcome == 'success'`);
   });
 
   // A value a shell step reads comes through its environment, never pasted

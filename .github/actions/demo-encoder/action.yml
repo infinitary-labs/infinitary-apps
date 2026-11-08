@@ -29,8 +29,32 @@ runs:
             console.log(`kept=${existsSync(cache.binary)}`);
           }
         ' >> "$GITHUB_OUTPUT"
-    - if: steps.encoder.outputs.key != '' && steps.encoder.outputs.kept != 'true'
-      uses: actions/cache@v4
+    - id: restore
+      if: steps.encoder.outputs.key != '' && steps.encoder.outputs.kept != 'true'
+      uses: actions/cache/restore@v4
+      with:
+        path: ${{ steps.encoder.outputs.dir }}
+        key: ${{ steps.encoder.outputs.key }}
+    # A miss fetches the build here, before any journey, and saves it at once.
+    # actions/cache saved only after a job passed every step, and only a run
+    # on main writes the cache every branch reads, so the key stayed empty:
+    # alpha run 42477283672 missed it in every Linux journey group, and each
+    # demo journey fetched mid-test and took GitHub's 504, or hung until its
+    # test timed out. Saved in its own step, one fetch fills the key whatever
+    # the journeys do next. A failed fetch leaves the journeys to fetch it as
+    # they always have, so the journeys that record no demo still report.
+    - id: fetch
+      if: steps.restore.outcome == 'success' && steps.restore.outputs.cache-hit != 'true'
+      continue-on-error: true
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        node --input-type=module -e '
+          const { demoEncoder } = await import("./tests/e2e/demoEncoder.ts");
+          console.log(`The pinned encoder runs from ${await demoEncoder()}`);
+        '
+    - if: steps.fetch.outcome == 'success'
+      uses: actions/cache/save@v4
       with:
         path: ${{ steps.encoder.outputs.dir }}
         key: ${{ steps.encoder.outputs.key }}

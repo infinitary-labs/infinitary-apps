@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import type { FiledAfterMergeStep } from "@shared/afterMerge";
+import type { FiledAfterMergeStep, FirstmateAfterMergeStep } from "@shared/afterMerge";
 import { isRoutineMergeCard, isStoryNote, keepsTaskOpen } from "@shared/cards";
 import { readyPresentation } from "@shared/changePresentation";
 import { currentCheckStatus } from "@shared/checkSnapshot";
@@ -831,10 +831,14 @@ export class SettleService {
     this.recordRefusal(taskId, mode, result);
     // The first mate's own merge hears what it filed in its tool result, as
     // the captain's click's wake says it (INF-2796).
-    const afterMerge =
-      result.ok && mode !== "discard" ? this.host.tasks.delivery.filedAfterMergeSteps(taskId) : [];
+    const merged = result.ok && mode !== "discard";
+    const afterMerge = merged ? this.host.tasks.delivery.filedAfterMergeSteps(taskId) : [];
+    const firstmateSteps = merged ? this.host.tasks.delivery.firstmateAfterMergeSteps(taskId) : [];
     return {
-      text: afterMerge.length ? `${result.text} ${afterMergeWords(afterMerge)}` : result.text,
+      text:
+        afterMerge.length || firstmateSteps.length
+          ? `${result.text} ${afterMergeWords(afterMerge, firstmateSteps)}`
+          : result.text,
       ...(result.refusal ? { refusal: result.refusal } : {}),
     };
   }
@@ -1215,12 +1219,17 @@ export class SettleService {
     // captain's Oct 22 audit: 45 of 62 merge wakes were idle turns).
     // It also wakes once when the merge filed its story's after-merge steps
     // (INF-2796), so the first mate can drop one another task already covers.
-    const afterMerge =
-      result.ok && mode !== "discard" ? this.host.tasks.delivery.filedAfterMergeSteps(taskId) : [];
+    // A step its story left to the first mate, a change in the app, wakes it
+    // too: no task holds that step, so the wake is its one hand-over.
+    const wentThrough = result.ok && mode !== "discard";
+    const afterMerge = wentThrough ? this.host.tasks.delivery.filedAfterMergeSteps(taskId) : [];
+    const firstmateSteps = wentThrough
+      ? this.host.tasks.delivery.firstmateAfterMergeSteps(taskId)
+      : [];
     if (
-      result.ok &&
-      mode !== "discard" &&
+      wentThrough &&
       afterMerge.length === 0 &&
+      firstmateSteps.length === 0 &&
       !this.freesWorkAwaitingStart(taskId)
     )
       return;
@@ -1231,6 +1240,7 @@ export class SettleService {
       { ...result, text: result.text },
       afterMerge,
       clicked,
+      firstmateSteps,
     );
   }
 
@@ -1298,6 +1308,7 @@ export class SettleService {
     result: SettleOutcome,
     afterMerge: FiledAfterMergeStep[] = [],
     clicked = true,
+    firstmateSteps: FirstmateAfterMergeStep[] = [],
   ): void {
     if (result.contention) return;
     this.host.notifyOp(
@@ -1314,6 +1325,7 @@ export class SettleService {
             : {}),
           ...(result.refusal ? { refusal: result.refusal } : {}),
           ...(afterMerge.length ? { afterMerge } : {}),
+          ...(firstmateSteps.length ? { firstmateSteps } : {}),
         },
       },
       "agent",

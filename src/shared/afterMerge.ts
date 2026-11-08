@@ -14,7 +14,21 @@ const AFTER_MERGE_TITLE_ROOM = 64 - AFTER_MERGE_TITLE_PREFIX.length;
  * went through. A story may list none, and that is the same as not listing.
  */
 const taskRef = z.string().trim().min(1).max(64);
+
+/**
+ * Who does a step (finding 4 of INF-3060, the captain's "an after-merge step
+ * names its doer, and app changes go to the first mate"): a crewmate in a
+ * project's working copy, the default, or the first mate, for a change in
+ * the app itself - an Automation rule, a setting, a direction - which no
+ * crewmate can reach. A first-mate step files no task: the merge hands it to
+ * the first mate in its settled wake.
+ */
+export const AFTER_MERGE_DOERS = ["crewmate", "firstmate"] as const;
+export type AfterMergeDoer = (typeof AFTER_MERGE_DOERS)[number];
+
 export const afterMergeStepSchema = z.object({
+  /** Who does it: a crewmate (the default) or the first mate, for a change in the app itself. */
+  doer: z.enum(AFTER_MERGE_DOERS).optional(),
   /** An existing open task the merge starts, in place of a new one (title, goal, why). */
   task: taskRef.optional(),
   title: z.string().min(1).max(AFTER_MERGE_TITLE_ROOM).optional(),
@@ -36,6 +50,8 @@ export type AfterMergeStep = z.infer<typeof afterMergeStepSchema>;
  */
 export function afterMergeShapeRefusal(step: AfterMergeStep, index: number): string | undefined {
   const at = `afterMerge step ${index + 1}`;
+  if (step.doer === "firstmate" && (step.task || step.project || step.blockedBy?.length))
+    return `${at} is the first mate's change in the app, which files no task: give it a title, a goal and why, with no task, project or blockedBy.`;
   if (step.task)
     return step.title || step.goal || step.project
       ? `${at} names an existing task, which keeps its own title, goal and project.`
@@ -49,8 +65,16 @@ export function afterMergeShapeRefusal(step: AfterMergeStep, index: number): str
  * A step as its merge card draws it: a new step's title and goal, or an
  * existing task's key with its own title and goal, read when the card is shown.
  */
-export type AfterMergeShown = { title: string; goal?: string; key?: string; waitsFor?: string[] };
+export type AfterMergeShown = {
+  title: string;
+  goal?: string;
+  key?: string;
+  waitsFor?: string[];
+  /** Who does it; a crewmate when absent. */
+  doer?: AfterMergeDoer;
+};
 export const afterMergeShownSchema = z.object({
+  doer: z.enum(AFTER_MERGE_DOERS).optional(),
   title: z.string().min(1).max(500),
   goal: z.string().max(4000).optional(),
   key: z.string().max(64).optional(),
@@ -64,10 +88,19 @@ export const afterMergeShownListSchema = z.array(afterMergeShownSchema).max(10);
  */
 export type FiledAfterMergeStep = { key: string; title: string; skipped?: string };
 
+/** A first-mate step a merge hands over, as its settled wake names it: no task holds it. */
+export type FirstmateAfterMergeStep = { title: string; goal: string; why?: string };
+
 /** The line under a step that waits for other work to merge first. */
 export function afterMergeWaitWords(keys: readonly string[]): string {
   return `Starts once ${keys.join(" and ")} ${keys.length > 1 ? "merge" : "merges"} too`;
 }
+
+/** The line under each step on its merge card, naming who does it. */
+export const AFTER_MERGE_DOER_WORDS: Record<AfterMergeDoer, string> = {
+  crewmate: "A crewmate does this in a working copy",
+  firstmate: "Your first mate does this in the app; no crewmate starts",
+};
 
 /** What leads a merge card's after-merge steps (`AfterMergeSteps.tsx`). */
 export const AFTER_MERGE_LEAD = "After merging, the crew starts";

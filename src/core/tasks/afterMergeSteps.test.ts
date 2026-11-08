@@ -338,6 +338,57 @@ describe("after-merge steps at the merge", () => {
     );
   });
 
+  // INF-3060's finding 4, the captain's "an after-merge step names its
+  // doer, and app changes go to the first mate": INF-2959's merge card
+  // listed deleting an Automation rule, which started a crewmate (INF-3014)
+  // that could only report it had no access to Automation.
+  const INF2959_RULE_STEP = {
+    doer: "firstmate",
+    title: "Delete the Automation rule that repaired batches",
+    goal: "Automation no longer has the rule that started a repair when a merge batch failed.",
+    why: "The shipped queue now starts its own repair, so the old rule would start a second one.",
+  } satisfies AfterMergeStep;
+
+  it("files no task for the first mate's app change and hands it over in the settled wake", () => {
+    const { tasks, origin } = setup([INF2959_RULE_STEP, ...DOP299_STEP]);
+    expect(tasks.delivery.afterMergeRefusal(origin.id, [INF2959_RULE_STEP])).toBeUndefined();
+    expect(tasks.delivery.afterMergeShown([INF2959_RULE_STEP])).toEqual([
+      { title: INF2959_RULE_STEP.title, goal: INF2959_RULE_STEP.goal, doer: "firstmate" },
+    ]);
+
+    tasks.close(origin.id, { status: "done", reason: "merged", actor: "host" });
+
+    // Only the crewmate's step is filed; nothing holds the rule's deletion.
+    const filed = continueTasks(tasks);
+    expect(filed.map((record) => record.title)).toEqual([
+      "Continue: Pull the split setup onto the Mac mini, set MAC_QUEUES",
+    ]);
+    expect(tasks.list().some((record) => record.title.includes(INF2959_RULE_STEP.title))).toBe(
+      false,
+    );
+    const crew = tasks.delivery.filedAfterMergeSteps(origin.id);
+    const firstmate = tasks.delivery.firstmateAfterMergeSteps(origin.id);
+    expect(firstmate).toEqual([
+      { title: INF2959_RULE_STEP.title, goal: INF2959_RULE_STEP.goal, why: INF2959_RULE_STEP.why },
+    ]);
+    const words = afterMergeWords(crew, firstmate);
+    expect(words).toContain(`${filed[0]?.key} "${filed[0]?.title}"`);
+    expect(words).toContain(`"${INF2959_RULE_STEP.title}": ${INF2959_RULE_STEP.goal}`);
+    expect(words).toContain("no task was filed for them");
+  });
+
+  it("refuses a first mate's step that names a task, a project or a wait", () => {
+    const { tasks, origin, split } = setup();
+    const refusal = (step: AfterMergeStep) => tasks.delivery.afterMergeRefusal(origin.id, [step]);
+    const firstMates = "is the first mate's change in the app";
+    expect(refusal({ doer: "firstmate", task: split.key })).toContain(firstMates);
+    expect(refusal({ ...INF2959_RULE_STEP, project: "INF" })).toContain(firstMates);
+    expect(refusal({ ...INF2959_RULE_STEP, blockedBy: [split.key] })).toContain(firstMates);
+    expect(refusal({ doer: "firstmate", title: INF2959_RULE_STEP.title })).toContain(
+      "needs a title, a goal and why",
+    );
+  });
+
   it("files nothing when the change is discarded", () => {
     const { tasks, origin } = setup(DOP299_STEP);
     tasks.close(origin.id, { status: "dropped", reason: "discarded", actor: "host" });

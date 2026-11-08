@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "after-merge-doer",
+      "kind": "improvement",
+      "title": "A merge card says who does each step after it",
+      "body": "Each step a merge card lists for after the merge now says who does it. A change in the app itself, such as removing an Automation rule, goes straight to your first mate when the merge goes through, instead of starting a crewmate that cannot reach it.",
+      "area": "cards",
+      "picture": {
+        "dark": "after-merge-doer-dark.webp",
+        "light": "after-merge-doer-light.webp",
+        "alt": "A merge card whose after-merge step reads that your first mate does it in the app and no crewmate starts"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

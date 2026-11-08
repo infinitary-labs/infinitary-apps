@@ -8006,6 +8006,13 @@
               "items": {
                 "type": "object",
                 "properties": {
+                  "doer": {
+                    "type": "string",
+                    "enum": [
+                      "crewmate",
+                      "firstmate"
+                    ]
+                  },
                   "title": {
                     "type": "string",
                     "minLength": 1,
@@ -9224,6 +9231,13 @@
                 "items": {
                   "type": "object",
                   "properties": {
+                    "doer": {
+                      "type": "string",
+                      "enum": [
+                        "crewmate",
+                        "firstmate"
+                      ]
+                    },
                     "title": {
                       "type": "string",
                       "minLength": 1,
@@ -10237,6 +10251,13 @@
                 "items": {
                   "type": "object",
                   "properties": {
+                    "doer": {
+                      "type": "string",
+                      "enum": [
+                        "crewmate",
+                        "firstmate"
+                      ]
+                    },
                     "title": {
                       "type": "string",
                       "minLength": 1,
@@ -11524,6 +11545,13 @@
                 "items": {
                   "type": "object",
                   "properties": {
+                    "doer": {
+                      "type": "string",
+                      "enum": [
+                        "crewmate",
+                        "firstmate"
+                      ]
+                    },
                     "title": {
                       "type": "string",
                       "minLength": 1,
@@ -12300,6 +12328,13 @@
             "items": {
               "type": "object",
               "properties": {
+                "doer": {
+                  "type": "string",
+                  "enum": [
+                    "crewmate",
+                    "firstmate"
+                  ]
+                },
                 "title": {
                   "type": "string",
                   "minLength": 1,
@@ -49241,6 +49276,13 @@
                     "items": {
                       "type": "object",
                       "properties": {
+                        "doer": {
+                          "type": "string",
+                          "enum": [
+                            "crewmate",
+                            "firstmate"
+                          ]
+                        },
                         "task": {
                           "type": "string",
                           "minLength": 1,
@@ -56482,6 +56524,13 @@
               "items": {
                 "type": "object",
                 "properties": {
+                  "doer": {
+                    "type": "string",
+                    "enum": [
+                      "crewmate",
+                      "firstmate"
+                    ]
+                  },
                   "title": {
                     "type": "string",
                     "minLength": 1,

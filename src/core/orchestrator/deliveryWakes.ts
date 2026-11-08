@@ -7,7 +7,7 @@
  * kind's words, are in `wakes.ts`.
  */
 
-import type { FiledAfterMergeStep } from "@shared/afterMerge";
+import type { FiledAfterMergeStep, FirstmateAfterMergeStep } from "@shared/afterMerge";
 import { formatDurationShort } from "@shared/quotaSignals";
 import type { SettleRefusal } from "../tasks/taskGraph";
 import type { KindWords, TypedWake, WakeFacts, WakeTask } from "./wakes";
@@ -26,6 +26,8 @@ export type DeliveryFacts =
       refusal?: SettleRefusal;
       /** The Continue tasks the merge filed from its story's after-merge steps (INF-2796). */
       afterMerge?: FiledAfterMergeStep[];
+      /** The steps its story left to the first mate, a change in the app (INF-3060's finding 4). */
+      firstmateSteps?: FirstmateAfterMergeStep[];
     }
   | {
       /**
@@ -421,8 +423,13 @@ export const UNSEEN_STOP_WORDS =
 /**
  * The after-merge steps a merge filed, as its settled wake names them: each
  * starts on its own, so the first mate reads them only to drop a repeat.
+ * The steps the story left to the first mate, a change in the app, file no
+ * task: the wake hands them over to be done (finding 4 of INF-3060).
  */
-export function afterMergeWords(steps: readonly FiledAfterMergeStep[]): string {
+export function afterMergeWords(
+  steps: readonly FiledAfterMergeStep[],
+  firstmate: readonly FirstmateAfterMergeStep[] = [],
+): string {
   const named = (list: readonly FiledAfterMergeStep[]) =>
     list.map((step) => `${step.key} "${step.title}"`).join(", ");
   const started = steps.filter((step) => !step.skipped);
@@ -433,6 +440,11 @@ export function afterMergeWords(steps: readonly FiledAfterMergeStep[]): string {
       : "",
     skipped.length
       ? `It started nothing for ${named(skipped)}, closed before the merge; decide whether its work still needs a task.`
+      : "",
+    firstmate.length
+      ? `Its merge card left these after-merge steps to you, changes in the app that no crewmate can reach; no task was filed for them, so do each now with your own tools: ${firstmate
+          .map((step) => `"${step.title}": ${step.goal}${step.why ? ` (why: ${step.why})` : ""}`)
+          .join("; ")}.`
       : "",
   ]
     .filter(Boolean)
@@ -458,7 +470,7 @@ function writeAnsweredWords(facts: Omit<WriteAnswered, "kind" | "also">): string
 /** A change's delivery wakes, worded. */
 export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
   settled: (facts) =>
-    `[fm-op] the captain chose ${facts.chose} for task ${facts.task.id} "${facts.task.title}"; the host settled it and the outcome was: ${facts.outcome}${facts.unseen ? ` ${UNSEEN_STOP_WORDS}` : ""}${facts.afterMerge?.length ? ` ${afterMergeWords(facts.afterMerge)}` : ""}${facts.refusal ? `\n\`\`\`json\n${JSON.stringify(facts.refusal, null, 2)}\n\`\`\`` : ""}`,
+    `[fm-op] the captain chose ${facts.chose} for task ${facts.task.id} "${facts.task.title}"; the host settled it and the outcome was: ${facts.outcome}${facts.unseen ? ` ${UNSEEN_STOP_WORDS}` : ""}${facts.afterMerge?.length || facts.firstmateSteps?.length ? ` ${afterMergeWords(facts.afterMerge ?? [], facts.firstmateSteps)}` : ""}${facts.refusal ? `\n\`\`\`json\n${JSON.stringify(facts.refusal, null, 2)}\n\`\`\`` : ""}`,
   "external-merge": (facts) =>
     `The project's host confirms ${facts.change} merged at ${facts.head}. This task remains open because ${facts.open ?? "no merge card declared that this merge closes it, or work still remains"}. Read its remaining work and instructions; continue them, or, when this merge finished all your work, put up your merge card for this pull request with after close, and the app closes the task as merged. Do not ask for a discard.`,
   "merge-continued": (facts) =>

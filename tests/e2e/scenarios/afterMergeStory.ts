@@ -13,6 +13,7 @@ import { MOCK_GITHUB_STORY, preparedRevision, prepareMockStory } from "./changeS
 export const AFTER_MERGE_STORY_MARKER = "offer the meter fix with what comes after";
 export const NO_AFTER_MERGE_STORY_MARKER = "offer the meter fix with nothing after";
 export const WAITING_AFTER_MERGE_STORY_MARKER = "offer the meter fix with work that waits";
+export const FIRSTMATE_AFTER_MERGE_STORY_MARKER = "offer the meter fix with an app change after";
 export const AFTER_MERGE_STORY_TITLE = "fix: the meter reads on time";
 
 /** The work the meter fix leaves for after its merge: the dashboard corrects for the old lag. */
@@ -36,6 +37,18 @@ export const WAITING_AFTER_MERGE_STEPS = [
   { task: DASHBOARD_EXISTING_KEY, blockedBy: [DASHBOARD_FEED_KEY] },
 ] satisfies AfterMergeStep[];
 
+/**
+ * INF-3060's finding 4: the meter fix also leaves an Automation rule behind,
+ * a change in the app that no crewmate can reach, so its story names the
+ * first mate as the one who removes it once the fix merges.
+ */
+export const FIRSTMATE_AFTER_MERGE_STEP = {
+  doer: "firstmate",
+  title: "Delete the meter lag Automation rule",
+  goal: "Automation no longer runs the rule that adds a lag correction to each meter reading.",
+  why: "That rule made up for the meter's old lag; once this fix reads on time, it double-counts.",
+} satisfies AfterMergeStep;
+
 export function afterMergeStory(): Scenario {
   return () =>
     ({ body, isFirstmate, wantsStream }) => {
@@ -46,9 +59,11 @@ export function afterMergeStory(): Scenario {
       const waiting = body.includes(WAITING_AFTER_MERGE_STORY_MARKER);
       const steps = waiting
         ? WAITING_AFTER_MERGE_STEPS
-        : body.includes(AFTER_MERGE_STORY_MARKER)
-          ? [METER_AFTER_MERGE_STEP]
-          : undefined;
+        : body.includes(FIRSTMATE_AFTER_MERGE_STORY_MARKER)
+          ? [FIRSTMATE_AFTER_MERGE_STEP]
+          : body.includes(AFTER_MERGE_STORY_MARKER)
+            ? [METER_AFTER_MERGE_STEP]
+            : undefined;
       if (!steps && !body.includes(NO_AFTER_MERGE_STORY_MARKER)) return undefined;
       const messages = providerMessages(body);
       if (calledTool(body, "emit_card")) return { text: "Waiting for the merge." };

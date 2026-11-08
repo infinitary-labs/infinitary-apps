@@ -5,6 +5,7 @@ import {
   type AfterMergeStep,
   afterMergeShapeRefusal,
   type FiledAfterMergeStep,
+  type FirstmateAfterMergeStep,
 } from "@shared/afterMerge";
 import type { ChangePresentationRecord } from "@shared/changePresentation";
 import type { KeptValidationInput } from "@shared/liveValidation";
@@ -792,6 +793,13 @@ export class TaskDeliveries {
           : [keyOrId(blocker ?? { id: ref, key: ref })];
       });
       const waits = waitsFor.length ? { waitsFor } : {};
+      // The first mate's change in the app files no task, so it has no Continue title.
+      if (step.doer === "firstmate")
+        return {
+          title: (step.title ?? "").trim(),
+          ...(step.goal ? { goal: step.goal } : {}),
+          doer: "firstmate",
+        };
       const named = step.task ? this.tasks.resolve(step.task) : undefined;
       if (named)
         return {
@@ -818,7 +826,8 @@ export class TaskDeliveries {
    * into its task, so it starts only once those merge. A story that declared
    * none does nothing, the same as before. A new step's id is derived from
    * the story's change, revision and the step's place, so a restart or a
-   * second activation answers the task already filed.
+   * second activation answers the task already filed. A first-mate step
+   * files nothing: the settled wake hands it over (`firstmateAfterMergeSteps`).
    */
   activateAfterMergeSteps(sourceId: string): FiledAfterMergeStep[] {
     const source = this.writer.mustGet(sourceId);
@@ -853,7 +862,7 @@ export class TaskDeliveries {
         }
       }
     };
-    return this.afterMergeSteps(sourceId).map(({ id, step }): FiledAfterMergeStep => {
+    return this.crewmateAfterMergeSteps(sourceId).map(({ id, step }): FiledAfterMergeStep => {
       const why = step.why?.trim();
       if (step.task) {
         const named = this.tasks.resolve(step.task);
@@ -916,7 +925,7 @@ export class TaskDeliveries {
 
   /** The tasks a merge filed from its story's after-merge steps, as the settled wake names them. */
   filedAfterMergeSteps(sourceId: string): FiledAfterMergeStep[] {
-    return this.afterMergeSteps(sourceId).flatMap(({ id, step }) => {
+    return this.crewmateAfterMergeSteps(sourceId).flatMap(({ id, step }) => {
       const record = step.task ? this.tasks.resolve(step.task) : this.tasks.get(id);
       if (!record) return [];
       const closed = step.task && (record.status === "done" || record.status === "dropped");
@@ -924,6 +933,30 @@ export class TaskDeliveries {
         { key: keyOrId(record), title: record.title, ...(closed ? { skipped: "closed" } : {}) },
       ];
     });
+  }
+
+  /**
+   * The merged story's steps that are the first mate's change in the app
+   * (finding 4 of INF-3060): no task is filed or started for them, and the
+   * merge's settled wake hands them to the first mate.
+   */
+  firstmateAfterMergeSteps(sourceId: string): FirstmateAfterMergeStep[] {
+    return this.afterMergeSteps(sourceId).flatMap(({ step }) =>
+      step.doer === "firstmate"
+        ? [
+            {
+              title: (step.title ?? "").trim(),
+              goal: (step.goal ?? "").trim(),
+              ...(step.why?.trim() ? { why: step.why.trim() } : {}),
+            },
+          ]
+        : [],
+    );
+  }
+
+  /** The steps a crewmate does, each with the id its filing takes. */
+  private crewmateAfterMergeSteps(sourceId: string): { id: string; step: AfterMergeStep }[] {
+    return this.afterMergeSteps(sourceId).filter(({ step }) => step.doer !== "firstmate");
   }
 
   /** The merged story's after-merge steps, each with the id its filing takes. */

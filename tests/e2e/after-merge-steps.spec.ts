@@ -2,10 +2,12 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { afterMergeWords } from "../../src/core/orchestrator/deliveryWakes";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import {
+  AFTER_MERGE_DOER_WORDS,
   AFTER_MERGE_LEAD,
   AFTER_MERGE_TITLE_PREFIX,
   afterMergeWaitWords,
@@ -18,6 +20,7 @@ import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
+import { providerMessages } from "./providerRequest";
 import {
   AFTER_MERGE_STORY_MARKER,
   AFTER_MERGE_STORY_TITLE,
@@ -25,6 +28,8 @@ import {
   DASHBOARD_EXISTING_KEY,
   DASHBOARD_FEED_KEY,
   DASHBOARD_PROJECT_KEY,
+  FIRSTMATE_AFTER_MERGE_STEP,
+  FIRSTMATE_AFTER_MERGE_STORY_MARKER,
   METER_AFTER_MERGE_STEP,
   NO_AFTER_MERGE_STORY_MARKER,
   WAITING_AFTER_MERGE_STORY_MARKER,
@@ -48,6 +53,11 @@ import { cardScroller, shownCard, stageAtRest } from "./stack";
  * step may name a task already on the board. Its own dashboard project holds
  * the feed task both steps wait for and the existing task the second names;
  * after the merge both are set to start on their own and stay held by the feed.
+ *
+ * The fourth test is INF-3060's finding 4, the captain's "an after-merge step
+ * names its doer, and app changes go to the first mate": a step that removes
+ * an Automation rule names the first mate, the card says so, and the merge
+ * files no task for it; the first mate's next turn is handed the step.
  */
 
 const DASHBOARD_FEED_TITLE = "Send the meter feed to the dashboard";
@@ -66,10 +76,14 @@ const VARIANTS = {
     name: "lists steps that wait for other work, in another project and on the board",
     marker: WAITING_AFTER_MERGE_STORY_MARKER,
   },
+  firstmate: {
+    name: "hands an app change to the first mate with no task",
+    marker: FIRSTMATE_AFTER_MERGE_STORY_MARKER,
+  },
 } as const;
 
-for (const variant of ["steps", "none", "waits"] as const) {
-  const steps = variant !== "none";
+for (const variant of ["steps", "none", "waits", "firstmate"] as const) {
+  const steps = variant === "steps" || variant === "waits";
   test(`a merge card ${VARIANTS[variant].name}`, async () => {
     test.setTimeout(3 * 60_000);
     const userDataDir = scratchDir("infinitary-after-merge-");
@@ -150,6 +164,14 @@ for (const variant of ["steps", "none", "waits"] as const) {
       if (steps) {
         await expect(listed).toContainText(continueTitle);
         await expect(listed).toContainText(METER_AFTER_MERGE_STEP.goal);
+        await expect(listed).toContainText(AFTER_MERGE_DOER_WORDS.crewmate);
+      }
+      if (variant === "firstmate") {
+        // The step names the first mate as its doer, with no Continue title.
+        await expect(listed).toContainText(FIRSTMATE_AFTER_MERGE_STEP.title);
+        await expect(listed).toContainText(FIRSTMATE_AFTER_MERGE_STEP.goal);
+        await expect(listed).toContainText(AFTER_MERGE_DOER_WORDS.firstmate);
+        await expect(listed).not.toContainText(AFTER_MERGE_TITLE_PREFIX);
       }
       if (variant === "waits") {
         // The existing task leads with its key and its own words, and each
@@ -158,7 +180,7 @@ for (const variant of ["steps", "none", "waits"] as const) {
         await expect(listed).toContainText(DASHBOARD_EXISTING.goal);
         await expect(listed.getByText(afterMergeWaitWords([DASHBOARD_FEED_KEY]))).toHaveCount(2);
       }
-      if (!steps) {
+      if (variant === "none") {
         await expect(listed).toHaveCount(0);
       }
       const board = () => page.evaluate(() => window.infinitary.tasks.board());
@@ -175,6 +197,8 @@ for (const variant of ["steps", "none", "waits"] as const) {
         await regionShot(card, join(evidence, `merge-card-${variant}.png`));
         if (variant === "steps")
           await heroShot(launched.app, page, { region: card, name: "after-merge-steps" });
+        if (variant === "firstmate")
+          await heroShot(launched.app, page, { region: card, name: "after-merge-doer" });
       }
 
       const origin = (await board()).tasks.find((row) => row.title === title);
@@ -242,6 +266,25 @@ for (const variant of ["steps", "none", "waits"] as const) {
           goal: METER_AFTER_MERGE_STEP.goal,
           startPolicy: "when-ready",
         });
+      } else if (variant === "firstmate") {
+        // The merge hands the step to the first mate in its settled wake,
+        // and files no task, so no crewmate starts for it.
+        const handed = afterMergeWords([], [FIRSTMATE_AFTER_MERGE_STEP]);
+        await expect
+          .poll(
+            () =>
+              (launched.mockProvider?.requestBodies() ?? []).some((body) =>
+                providerMessages(body).some((message) => message.text.includes(handed)),
+              ),
+            { timeout: 45_000 },
+          )
+          .toBe(true);
+        expect(
+          (await board()).tasks.filter((row) => row.title.startsWith(AFTER_MERGE_TITLE_PREFIX)),
+        ).toEqual([]);
+        expect((await board()).tasks.map((row) => row.title)).not.toContain(
+          FIRSTMATE_AFTER_MERGE_STEP.title,
+        );
       } else {
         expect(
           (await board()).tasks.filter((row) => row.title.startsWith(AFTER_MERGE_TITLE_PREFIX)),

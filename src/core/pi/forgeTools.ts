@@ -97,7 +97,7 @@ export const SKIP_RULES_DESCRIPTION = [
  * a crewmate writes them; the card draws them, so no prose repeats them.
  */
 export const AFTER_MERGE_STORY_RULE =
-  "Optional afterMerge: work started once this merges, never repeated in prose; task: an unstarted task's key.";
+  "Optional afterMerge: work started once this merges, never repeated in prose; task: an unstarted task's key; doer firstmate for a change in the app itself, such as Automation, settings or directions, which no crewmate reaches: the first mate does it at the merge and no task is filed.";
 
 export const PREPARE_CHANGE_STORY_DESCRIPTION = [
   "why holds 1 or 2 short sentences, whatChanged 1 to 5 short bullets, before and after one short sentence each, checked 1 to 6 observed {check, result} facts.",

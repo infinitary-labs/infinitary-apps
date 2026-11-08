@@ -50,6 +50,7 @@ import {
 import type { CheckChangeInput } from "@shared/checkRepair";
 import type { FmEvent } from "@shared/events";
 import type { KeptValidationInput } from "@shared/liveValidation";
+import type { RequiredAction } from "@shared/requiredActions";
 import type { RiskDeclaration } from "@shared/risk";
 import type { WorkShape } from "@shared/routingPolicy";
 import { signInPlace } from "@shared/signIns";
@@ -755,6 +756,18 @@ export const METER_RISK: RiskDeclaration = {
   sensitivity: { level: "low", why: "No sign-in, data or release code" },
   novelty: { level: "low", why: "Edits the existing reading" },
   deps: { level: "low", why: "Nothing added" },
+};
+
+/** A step the person takes after the meter change merges, for a story's required actions. */
+export const METER_ACTION: RequiredAction = {
+  id: "reconnect-meter",
+  target: "the meter",
+  title: "Reconnect the meter after the update",
+  consequence: "Until then the meter shows no new readings.",
+  instructions: ["Open Settings and press Reconnect beside the meter."],
+  criterion: "The meter shows a reading newer than the update.",
+  prerequisites: [],
+  completion: { kind: "manual", label: "I reconnected it" },
 };
 
 /** The settle effects a card action carries (cards/tasks/agents P1): the host resolves merge by posture. */

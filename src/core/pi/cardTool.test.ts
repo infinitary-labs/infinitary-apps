@@ -277,7 +277,11 @@ describe("createEmitCardTool", () => {
   });
 
   // INF-92: a saved story is resolved at the home, never reconstructed by a second tool call.
-  it("hands a saved-story merge card to the home without accepting competing body or risk (INF-2744)", async () => {
+  // INF-3060: three saved-story merge cards in a day repeated the story's
+  // risk or required actions and were refused; the tool hands such a copy to
+  // the home, which leaves out an exact repeat and refuses a differing one
+  // (crewmateCards.completion.test.ts).
+  it("hands a saved-story merge card and a copy of its risk or required actions to the home, refusing a body (INF-2744, INF-3060)", async () => {
     const onCard = vi.fn(() => "card-task-story");
     const tool = piToolOf(bindTool(EMIT_CARD_TOOL, { onCard })) as unknown as AnyTool;
     const params = {
@@ -292,10 +296,25 @@ describe("createEmitCardTool", () => {
       presentationRevision: 2,
       actions: params.actions,
     });
-    await expect(tool.execute("t2", { ...params, body: "A different account" })).rejects.toThrow(
-      /without body/,
+    const repeated = await tool.execute("t2", { ...params, required_actions: [] });
+    expect(repeated.content[0]?.text).toBe(
+      "Card shown from presentation 2 (card-task-story). The required_actions you passed repeats the saved revision exactly, so the copy was left out.",
     );
-    await expect(tool.execute("t3", { ...params, risk: {} })).rejects.toThrow(/without body/);
+    expect(onCard).toHaveBeenLastCalledWith({
+      title: params.title,
+      body: "",
+      presentationRevision: 2,
+      actions: params.actions,
+      requiredActions: [],
+    });
+    // A body is refused as before, and so is a risk that does not read.
+    for (const competing of [
+      { body: "<p>The story.</p>" },
+      { body_file: "story.html" },
+      { risk: {} },
+      { browser_button: "Try it" },
+    ])
+      await expect(tool.execute("t3", { ...params, ...competing })).rejects.toThrow(/without body/);
     for (const actions of [
       [{ id: "reply", label: "Reply", default: true }],
       [{ id: "discard", effect: { kind: "settle", mode: "discard" } }],
@@ -304,7 +323,7 @@ describe("createEmitCardTool", () => {
     ]) {
       await expect(tool.execute("t4", { ...params, actions })).rejects.toThrow(/one merge action/);
     }
-    expect(onCard).toHaveBeenCalledTimes(1);
+    expect(onCard).toHaveBeenCalledTimes(2);
   });
 
   // INF-961: INF-899's crewmate left presentation out and was told only to give a body.

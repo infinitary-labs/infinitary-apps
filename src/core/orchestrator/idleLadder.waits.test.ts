@@ -18,6 +18,7 @@ import {
   fakeCrewTimersEachTest,
   intentOf,
   reboot,
+  syncCardId,
 } from "../../../tests/helpers/crewHarness";
 import {
   failTurn,
@@ -1004,6 +1005,50 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         ref: note.id,
         reason: "read the release note",
       });
+    });
+
+    // INF-3060: five reports in a day named a card of the crewmate's own that
+    // the app had already closed, and each was refused with "omit card_id".
+    it("takes a wait naming its own closed card, dropping the card, and says so (INF-3060)", async () => {
+      const { supervisor, crewmate, specs, tasks, taskId, note } =
+        await withOutcomeNote("release-note");
+      supervisor.closeCard(note.id, { kind: "crewmate", taskId }, "superseded by the release page");
+      await settle();
+      const receipt = specs[0]?.onReport?.(
+        "Version 1.2 is released and the release page says so.",
+        undefined,
+        { wait: { reason: "read the release page", cardId: "release-note" } },
+      );
+      expect(receipt).toContain("waits on the captain");
+      expect(receipt).toContain(
+        `Your card "release-note" is already closed, so the wait names no card.`,
+      );
+      await endTurn(crewmate, taskId);
+      expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", reason: "read the release page" });
+    });
+
+    // INF-3060, the captain's "we should not take any guesses here": with a
+    // card of its own still open, the wait may have meant that card, so a
+    // closed card's name is refused with the open card's full id.
+    it("refuses a wait naming its own closed card while another card of its is open, naming the open one (INF-3060)", async () => {
+      const { supervisor, specs, tasks, taskId, note } = await withOutcomeNote("release-note");
+      const page = syncCardId(
+        specs[0]?.onCard?.({
+          id: "release-page",
+          title: "The release page is live",
+          body: "<p>The release page lists version 1.2.</p>",
+          actions: [],
+        }),
+      );
+      await settle();
+      supervisor.closeCard(note.id, { kind: "crewmate", taskId }, "superseded by the release page");
+      await settle();
+      expect(() =>
+        specs[0]?.onReport?.("Version 1.2 is released and the release page says so.", undefined, {
+          wait: { reason: "read the release page", cardId: "release-note" },
+        }),
+      ).toThrow(`Your open card is "${page}"`);
+      expect(tasks.get(taskId)?.delivery?.captainWait).toBeUndefined();
     });
   });
 

@@ -55,6 +55,7 @@ import {
   crewmateResumeToken,
 } from "../orchestrator/crewSession";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
+import { SAVED_STORY_REFUSAL } from "../pi/cardTool";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { verifyKeptValidationEvidenceSync } from "../pi/validationEvidence";
 import { type SelfSourceReader, sourceContext } from "../selfSource/resolve";
@@ -91,6 +92,9 @@ import type { WorkingCopies } from "./workingCopies";
 
 /** A crewmate here starts programs only through a home that answers them (`crewmate-programs.md`). */
 const CREWMATE_PROGRAMS = contractChange("crewmate-programs");
+
+/** A saved-story card's copy of its story's facts goes only to a home that holds it against the story (`story-fact-copies.md`). */
+const STORY_FACT_COPIES = contractChange("story-fact-copies");
 
 /**
  * A crewmate's conversation held on a computer that runs work, for its home
@@ -1318,6 +1322,14 @@ export class SessionHost {
               const typeface = parseCardTypefaceFileName(name);
               return typeface?.taskId === held.task ? [typeface] : [];
             });
+            // An older home would drop a copy of the story's facts unread, so
+            // the tool's answer that it repeated the story would be a guess.
+            if (
+              card.presentationRevision !== undefined &&
+              (card.riskDeclaration !== undefined || card.requiredActions !== undefined) &&
+              !listsChange(this.options.homeChanges?.(), STORY_FACT_COPIES)
+            )
+              throw new Error(SAVED_STORY_REFUSAL);
             const home = this.options.homeVersion?.() ?? null;
             if (typefaces.length > 0 && home !== null && !keepsCardTypefaces(home)) {
               throw new Error(

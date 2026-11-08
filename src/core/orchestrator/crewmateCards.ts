@@ -1,5 +1,6 @@
 import { rm } from "node:fs/promises";
 import { dirname } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { cardPictureFiles } from "@shared/cardPictures";
 import {
   type Card,
@@ -32,6 +33,7 @@ import {
 import { NEVER_SENT_AGAIN, type WriteAsk } from "@shared/writeAsk";
 import { crewmateCardPicturesDir } from "../paths";
 import { lintCrewmateCard } from "../pi/cardLint";
+import { SAVED_STORY_REFUSAL } from "../pi/cardTool";
 import { verifyKeptValidationEvidence } from "../pi/validationEvidence";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import {
@@ -229,6 +231,18 @@ export class CrewmateCards {
       return this.options.completionPresentation(task.id, revision).then(async (presented) => {
         const { revision: shownRevision, ...story } = presented;
         try {
+          // A copy of the story's risk or required actions the call repeated
+          // is left out only when it is exactly the story's; one that differs
+          // competes with it and is refused (INF-3060, the captain's "we
+          // should not take any guesses here"). Inside the try, so the story
+          // media copied for this card go with the refusal.
+          if (
+            (input.riskDeclaration !== undefined &&
+              !isDeepStrictEqual(input.riskDeclaration, story.riskDeclaration)) ||
+            (input.requiredActions !== undefined &&
+              !isDeepStrictEqual(input.requiredActions, story.requiredActions ?? []))
+          )
+            throw new Error(SAVED_STORY_REFUSAL);
           const ledger = this.options.tasks.get(task.id)?.delivery?.presentation;
           const head = ledger?.completion?.head ?? ledger?.published?.head;
           if (!head)

@@ -704,6 +704,47 @@ describe("a conversation held on a computer that runs work", () => {
     },
   );
 
+  // INF-3060: an older home ignores a saved-story card's copy of its story's
+  // risk or required actions, so the tool's "repeats the saved revision
+  // exactly" would be a guess; the computer sends such a copy only to a home
+  // that lists story-fact-copies, and otherwise refuses as before.
+  it.each([
+    { changes: [] as string[], sent: false },
+    { changes: ["story-fact-copies"], sent: true },
+  ])(
+    "sends a saved-story card's copy of its story facts only to a home that lists story-fact-copies ($changes)",
+    async ({ changes, sent }) => {
+      const at = await placed({ homeChanges: changes });
+      await at.order("inf:session:open", [
+        { orderId: `open:${TASK}:1`, task: TASK, spec: at.spec },
+      ]);
+      const input = {
+        title: "fix(meter): keep the confirmed receipt",
+        presentation: 1,
+        actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
+        required_actions: [],
+      };
+      model([{ tools: [{ name: "emit_card", args: input }] }, { text: "Done." }]);
+      await at.order("inf:session:prompt", [
+        { orderId: "story-copy", task: TASK, text: "Show the merge card." },
+      ]);
+      await at.ended(1);
+      const shown = at.home.effects.filter((effect) => effect.channel === "inf:work:card");
+      if (sent) {
+        expect(
+          shown.map(
+            (effect) => (effect.request.card as { requiredActions?: unknown }).requiredActions,
+          ),
+        ).toEqual([[]]);
+      } else {
+        expect(shown).toEqual([]);
+        expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
+          "those facts come from its saved revision",
+        );
+      }
+    },
+  );
+
   // INF-497: a home before `STORY_AROUND_SINCE` strips around from open_change and
   // would answer as if the words had been changed; the computer refuses first.
   it("refuses to change the words around a story through a home too old to keep the story, sending nothing", async () => {

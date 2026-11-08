@@ -623,6 +623,42 @@ export function riskDeclarationOf(raw: unknown): RiskDeclaration {
 }
 
 /**
+ * Why a saved-story merge card is refused: its story is the saved
+ * revision's, and a copy of its facts that differs from it competes with it
+ * (INF-2744). The tool says it for the call's shape; the home says it for a
+ * copy that differs from the story it holds (`CrewmateCards`).
+ */
+export const SAVED_STORY_REFUSAL =
+  "A saved-story merge card gives presentation and one merge action for your task's current change, without body, risk, required_actions or browser controls; those facts come from its saved revision.";
+
+/**
+ * The copies of a saved story's risk and required actions a merge card's
+ * call passed, read as the home compares them; one that does not read is
+ * no copy of the story, so it is the saved-story refusal (INF-3060).
+ */
+function savedStoryCopies(params: EmitCardParams): {
+  facts: Pick<DeclaredCard, "riskDeclaration" | "requiredActions">;
+  names: string[];
+} {
+  try {
+    return {
+      facts: {
+        ...(params.risk !== undefined ? { riskDeclaration: riskDeclarationOf(params.risk) } : {}),
+        ...(params.required_actions !== undefined
+          ? { requiredActions: requiredActionsSchema.parse(params.required_actions) }
+          : {}),
+      },
+      names: [
+        ...(params.risk !== undefined ? ["risk"] : []),
+        ...(params.required_actions !== undefined ? ["required_actions"] : []),
+      ],
+    };
+  } catch {
+    throw new Error(SAVED_STORY_REFUSAL);
+  }
+}
+
+/**
  * One emit_card call, whichever role and runtime made it: the size bound,
  * the stable id, the pictures, then the host, which reads the card as
  * declared. Thrown errors are the loud refusals the tool reports.
@@ -644,12 +680,17 @@ async function emitCard(
     const actions = params.actions ?? [];
     const merges =
       actions.length === 1 && actions[0]?.effect?.kind === "merge" && !actions[0].effect.review;
+    // The risk and required actions of a saved-story merge card are the
+    // saved revision's facts. A copy is handed on for the home to hold
+    // against the story, which leaves out one that repeats it exactly and
+    // refuses one that differs (INF-3060: three repeats refused in a day;
+    // the captain's "we should not take any guesses here"). A body is
+    // refused here as before: the story's body carries media names the home
+    // mints as it shows the card, so no copy could match it.
     if (
       !merges ||
       params.body !== undefined ||
       params.body_file !== undefined ||
-      params.risk !== undefined ||
-      params.required_actions !== undefined ||
       params.browser_button ||
       params.browser_handoff ||
       params.browser_page ||
@@ -657,9 +698,8 @@ async function emitCard(
       params.design_only ||
       params.continues
     )
-      throw new Error(
-        "A saved-story merge card gives presentation and one merge action for your task's current change, without body, risk, required_actions or browser controls; those facts come from its saved revision.",
-      );
+      throw new Error(SAVED_STORY_REFUSAL);
+    const copies = savedStoryCopies(params);
     const id = parseStableCardId(params.id);
     const shown = await options.onCard({
       title: params.title,
@@ -672,9 +712,15 @@ async function emitCard(
       ...(params.holds_place ? { holdsPlace: true } : {}),
       ...(params.answering ? { answering: true } : {}),
       ...(params.width ? { width: params.width } : {}),
+      ...copies.facts,
     });
-    if (typeof shown === "object") return cardMutationText(shown);
-    return `Card shown from presentation ${params.presentation}${shown ? ` (${shown})` : ""}`;
+    const dropped = copies.names.length
+      ? `The ${copies.names.join(", ")} you passed repeats the saved revision exactly, so the copy was left out.`
+      : "";
+    if (typeof shown === "object")
+      return [cardMutationText(shown), dropped].filter(Boolean).join(" ");
+    const said = `Card shown from presentation ${params.presentation}${shown ? ` (${shown})` : ""}`;
+    return dropped ? `${said}. ${dropped}` : said;
   }
   if ((params.body !== undefined) === (params.body_file !== undefined)) {
     // INF-961: a merge card given neither may have meant its saved story.

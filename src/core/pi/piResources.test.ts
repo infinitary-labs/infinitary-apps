@@ -26,6 +26,7 @@ import {
 } from "../prompts/cardContract";
 import { FLEET_WORK } from "../prompts/fleetWork";
 import { PUBLIC_WRITING } from "../prompts/publicWriting";
+import { CLAUDE_SEAT_TOOL_PREFIX } from "../storage/sessionReader";
 import { CREWMATE_TOOLS } from "./crewmateTaskTools";
 import { createCrewTools, SHAPE_GROUP_DESCRIPTION } from "./crewTools";
 import {
@@ -1790,6 +1791,19 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
       "never sleep waiting on the checks on your pull request",
     );
     expect(crewmateBackendNote("claude")).not.toContain("after a pause");
+  });
+
+  // INF-3060: ten Claude crewmates in a day called report, emit_card,
+  // note_progress or tasks by the short name the note listed, and the client
+  // answered "No such tool available".
+  it("names the app's tools to a Claude crewmate as its client serves them", () => {
+    const served = new Set(CREWMATE_TOOLS.map((tool) => `${CLAUDE_SEAT_TOOL_PREFIX}${tool.name}`));
+    const note = crewmateBackendNote("claude");
+    const listed = note.match(/Your outputs are the app's tools - (.*?) - /)?.[1]?.split(", ");
+    expect(listed?.length).toBeGreaterThan(0);
+    for (const name of listed ?? []) expect(served).toContain(name);
+    expect(note).toContain(`call it as ${CLAUDE_SEAT_TOOL_PREFIX}<name>`);
+    expect(crewmateBackendNote("pi")).not.toContain(CLAUDE_SEAT_TOOL_PREFIX);
   });
 });
 

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "crew-fills-typed-facts",
+      "reason": "Crewmates on Claude are told each app tool's full name, and the app takes a closed card's name and an exact copy of a saved story's risk or required actions instead of refusing the crewmate's call; this changes how crewmates' calls are checked, and nothing a person sees changes."
+    }
+  ]
+}

@@ -360,6 +360,9 @@ export class ReportIntake {
       receipt.push(
         "Your task now waits on the captain: nothing nudges you, and you hear when they act or you are steered.",
       );
+      const named = declared?.wait?.cardId?.trim();
+      if (named && !declaration.wait.cardId)
+        receipt.push(`Your card "${named}" is already closed, so the wait names no card.`);
       // He answers what is on his screen; with nothing there the Firstmate asks (INF-11).
       if (!declaration.wait.cardId && this.host.cards.openCardsFor(task.id).length === 0) {
         receipt.push(
@@ -526,15 +529,23 @@ export class ReportIntake {
   /**
    * The open card of its own a report's wait names: by the id emit_card
    * returned, or by the id the crewmate gave emit_card, which names the
-   * same card (`crewmateCardId`). Any other name is refused with the full
-   * id of each card it has open, so the next report can name one (INF-2835).
+   * same card (`crewmateCardId`). A card of its own that is already closed,
+   * with no card of its open, is a fact the app holds, so the wait drops it
+   * and names no card (INF-3060: five reports in a day were refused for
+   * it). With a card of its open the wait may have meant that one, and the
+   * app guesses nothing, so any other name is refused with the full id of
+   * each card it has open, so the next report can name one (INF-2835).
    */
-  private ownOpenCard(task: TaskRuntime, named: string): string {
+  private ownOpenCard(task: TaskRuntime, named: string): string | undefined {
     const open = this.host.cards.openCardsFor(task.id).map((card) => card.id);
-    const id = [named, crewmateCardId(task.id, named)].find((candidate) =>
-      open.includes(candidate),
-    );
+    const candidates = [named, crewmateCardId(task.id, named)];
+    const id = candidates.find((candidate) => open.includes(candidate));
     if (id) return id;
+    if (
+      open.length === 0 &&
+      candidates.some((candidate) => this.options.cardStore.get(candidate)?.taskId === task.id)
+    )
+      return undefined;
     const ids = open.map((full) => `"${full}"`).join(", ");
     throw new Error(
       open.length === 0

@@ -23,6 +23,7 @@ import { FLEET_WORK } from "../prompts/fleetWork";
 import { PUBLIC_WRITING } from "../prompts/publicWriting";
 import { RIGOR_SAFETY } from "../prompts/validationResources";
 import { deliveryGuide, namingGuide, testingGuide } from "../runbooks/fallback.generated";
+import { CLAUDE_SEAT_TOOL_PREFIX } from "../storage/sessionReader";
 
 export { RIGOR_SAFETY } from "../prompts/validationResources";
 
@@ -33,6 +34,21 @@ export { RIGOR_SAFETY } from "../prompts/validationResources";
  */
 const WAIT_LOOP_GUIDANCE =
   "Circular-wait refusal: the crewmate reports the full task-key loop, no retry or wait. The first mate picks an existing owner, combines attributed patches, removes only obsolete waits, verifies combined work and all failed checks, reconciles after merge. Keep permissions and repair allowances.";
+
+/**
+ * The Claude client serves each of the app's tools under the app's server
+ * (`mcp__infinitary__<name>`), while every other served instruction names
+ * it as Pi serves it. INF-3060: ten Claude crewmates in a day called a tool
+ * by the short name they read, got "No such tool available" and lost the
+ * call to the hint (INF-2835), so the Claude note names its output tools in
+ * full and says how every short name in the instructions maps.
+ */
+const CLAUDE_TOOL_NAMES = {
+  outputs: ["report", "emit_card", "note_progress", "file_followup", "tasks"]
+    .map((name) => `${CLAUDE_SEAT_TOOL_PREFIX}${name}`)
+    .join(", "),
+  rule: `Your client serves each of the app's tools under its full name: wherever these instructions name one by its short name, such as report, tasks or emit_card, call it as ${CLAUDE_SEAT_TOOL_PREFIX}<name>, such as ${CLAUDE_SEAT_TOOL_PREFIX}report.`,
+};
 
 /** The backends a crewmate runs on; each placement renders its own note. */
 export type CrewmateBackend = "pi" | "claude";
@@ -48,7 +64,7 @@ export function crewmateBackendNote(backend: CrewmateBackend): string {
     case "pi":
       return "Your bash never blocks a turn: a command that finishes within 3 seconds returns now; anything longer continues as a background job and its result arrives as your next message, so keep working or end your turn instead of waiting. Pass background true for known-long commands like builds and full test suites; a blocking waiter is a fine way to be woken by an outside event.";
     case "claude":
-      return "You run inside Infinitary, not a terminal, and nothing you write is shown to a person: the guidance above about output to the user, markdown summaries, clarifying questions, and todo tracking does not apply. Your outputs are the app's tools - report, emit_card, note_progress, file_followup, tasks - and a turn's final text is read as a report only when you made none. Your bash blocks until the command returns, so never sleep waiting on the checks on your pull request: the app wakes you once when the first check fails and once when they finish, so end your turn and wait for that message.";
+      return `You run inside Infinitary, not a terminal, and nothing you write is shown to a person: the guidance above about output to the user, markdown summaries, clarifying questions, and todo tracking does not apply. Your outputs are the app's tools - ${CLAUDE_TOOL_NAMES.outputs} - and a turn's final text is read as a report only when you made none. Your bash blocks until the command returns, so never sleep waiting on the checks on your pull request: the app wakes you once when the first check fails and once when they finish, so end your turn and wait for that message. ${CLAUDE_TOOL_NAMES.rule}`;
   }
 }
 

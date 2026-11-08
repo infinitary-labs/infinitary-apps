@@ -116,8 +116,10 @@ async function appToolDescriptions(): Promise<Map<string, string>> {
 // INF-968, re-typed by INF-2744: a saved-story merge card reaches the home
 // the same way through both session backends, which alone knows the task's
 // autonomy, and neither accepts content that competes with the saved story.
+// INF-3060: a copy of the story's risk or required actions goes to the home,
+// which holds it against the story (crewmateCards.completion.test.ts).
 it.each(["Pi", "Claude"] as const)(
-  "forwards saved-story merge cards through %s without accepting competing content",
+  "forwards saved-story merge cards and copies of their risk or required actions through %s, refusing competing content",
   async (backend) => {
     const onCard = vi.fn(() => "card-task-story");
     const bound = bindTool(EMIT_CARD_TOOL, { onCard });
@@ -142,12 +144,21 @@ it.each(["Pi", "Claude"] as const)(
         expect.objectContaining({ id: "merge", effect: { kind: "merge", after: "close" } }),
       ],
     });
+    const copied = await run({ ...params, required_actions: [] });
+    expect(copied.content).toEqual([
+      {
+        type: "text",
+        text: "Card shown from presentation 2 (card-task-story). The required_actions you passed repeats the saved revision exactly, so the copy was left out.",
+      },
+    ]);
+    expect(onCard).toHaveBeenLastCalledWith(
+      expect.objectContaining({ body: "", requiredActions: [] }),
+    );
     for (const competing of [
       { actions: [] },
       { body: "A different story" },
       { body_file: "story.html" },
       { risk: {} },
-      { required_actions: [] },
       { browser_button: "View" },
       { browser_page: "index.html" },
       { browser_handoff: { site: "example.com", reason: "Sign in", after: "Check" } },
@@ -157,7 +168,7 @@ it.each(["Pi", "Claude"] as const)(
     ]) {
       await expect(run({ ...params, ...competing })).rejects.toThrow(/without body/);
     }
-    expect(onCard).toHaveBeenCalledTimes(1);
+    expect(onCard).toHaveBeenCalledTimes(2);
   },
 );
 

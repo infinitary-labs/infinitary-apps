@@ -29,6 +29,7 @@ import {
   fakeCrewmate,
   fakeCrewTimersEachTest,
   intentOf,
+  METER_ACTION,
   METER_RISK,
   reboot,
   reportTurn,
@@ -466,8 +467,9 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     expect(cards().map((card) => card.title)).not.toContain("Ready to merge");
   });
 
-  it.each(["unpublished", "unreadable change"])(
-    "removes completion copies after %s refuse the card (INF-228 F3)",
+  // INF-3060: a refused differing risk copy takes the story's media copies with it.
+  it.each(["unpublished", "unreadable change", "a differing risk copy"])(
+    "removes completion copies after %s refuse the card (INF-228 F3, INF-3060)",
     async (refusal) => {
       let taskId = "";
       let dir = "";
@@ -507,7 +509,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       // An earlier card's independent copy must survive this later refusal.
       const earlier = `${taskId}-${"c".repeat(32)}.mp4`;
       writeFileSync(join(dir, earlier), DEMO_RECORDING.bytes);
-      if (refusal === "unreadable change")
+      if (refusal !== "unpublished")
         tasks.delivery.updateChangePresentation(taskId, () => ({
           revisions: [],
           receipts: [],
@@ -526,9 +528,16 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
           body: "",
           presentationRevision: 1,
           actions: [{ id: "merge", effect: SETTLE_MERGE }],
+          ...(refusal === "a differing risk copy"
+            ? { riskDeclaration: { ...METER_RISK, blast: { level: "high", why: "Every file" } } }
+            : {}),
         }),
       ).rejects.toThrow(
-        refusal === "unpublished" ? /not been published/ : /The proposed change could not be read/,
+        refusal === "unpublished"
+          ? /not been published/
+          : refusal === "unreadable change"
+            ? /The proposed change could not be read/
+            : /those facts come from its saved revision/,
       );
       expect(cards()).toHaveLength(0);
       expect(readdirSync(dir)).toEqual([earlier]);
@@ -917,11 +926,35 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     expect(completionPresentation).not.toHaveBeenCalled();
     // With autonomy on, the app approves the merge from the merge card as it
     // goes up and shows it without buttons, as the story note.
-    const note = { title: "Ignored", presentation: 1, actions: [MERGE_ACTION] };
+    // INF-3060, "we should not take any guesses here": a copy that differs
+    // from the saved story is refused, and an exact repeat is left out.
+    for (const differing of [
+      { body: "<p>My own account of the change.</p>" },
+      { risk: { ...METER_RISK, blast: { level: "sometimes" } } },
+      { risk: { ...METER_RISK, blast: { level: "high", why: "Every upload path" } } },
+      {
+        required_actions: [] as unknown[],
+        risk: { ...METER_RISK, deps: { level: "high", why: "A new package" } },
+      },
+      { required_actions: [METER_ACTION] },
+    ])
+      await expect(
+        emitCard.run({ title: "Ignored", presentation: 1, actions: [MERGE_ACTION], ...differing }),
+      ).rejects.toThrow(/those facts come from its saved revision/);
+    expect(cards()).toHaveLength(0);
+    const note = {
+      title: "Ignored",
+      presentation: 1,
+      actions: [MERGE_ACTION],
+      risk: METER_RISK,
+      required_actions: [],
+    };
     const result = await emitCard.run(note);
     await tick();
     const card = cards().find((entry) => entry.taskId === taskId);
-    expect(result.text).toBe(`Card shown from presentation 1 (${card?.id})`);
+    expect(result.text).toBe(
+      `Card shown from presentation 1 (${card?.id}). The risk, required_actions you passed repeats the saved revision exactly, so the copy was left out.`,
+    );
     expect(completionPresentation).toHaveBeenCalledWith(taskId, note.presentation);
     expect(card).toMatchObject({ author: "crewmate", title: story.title, actions: [] });
     expect(card?.body).toContain(presentationCardBody(story));

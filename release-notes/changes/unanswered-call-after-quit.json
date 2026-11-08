@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "unanswered-call-after-quit",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "The first mate answers again after the app quits while it is starting a crewmate",
+      "body": "When the app quit while the first mate or a crewmate was in the middle of a request, such as starting a crewmate, it could refuse every later message on a custom provider and blame the connection. The app now notes that the interrupted request's outcome is unknown, so the conversation continues and the first mate checks whether the crewmate started before starting another.",
+      "noPicture": "The fix is in how a reopened conversation is read; the screen looks the same, and the first mate now answers instead of showing an error.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

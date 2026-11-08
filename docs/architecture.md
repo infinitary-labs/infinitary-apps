@@ -334,6 +334,7 @@ Persistence:
   The published views' SQL, and the ledger's three read-only views, is `views.ts` alone.
 - **Sessions**: Pi's file-backed `SessionManager` in app-scoped dirs - each crewmate's `userData/crewmates/<taskId>/sessions/` and the first mate's rolling dir - resumable (the supervision session retired with S7c, `docs/report-sort.md`); a Claude crewmate's record is the app's copy of its client's transcript in that same `sessions/` dir, beside a served sidecar (the session contract's step 6).
   The first mate's own transcripts are `firstmate/sessions/` on Pi and `firstmate/claude/` on Claude, copies and sidecars together.
+  A Pi record reopens with an answer for a tool call the process ended in the middle of (a quit, restart or crash before the tool returned): the answer says its outcome is unknown, so the model checks before repeating it, and turns a provider refused since are written again after it (`src/core/pi/unansweredCalls.ts`, INF-3089).
   A retired `supervision/sessions/` directory stays readable until the Settings purge removes it with those.
   `task_execution.session_file` is the backend's resume token, not always a path (`src/core/observe/transcriptSource.ts`).
 - `userData/settings.json` (schema-versioned, zod-validated, atomic writes) · `userData/auth/` (0600) · `userData/accounts/` (one 0700 store per account) · `userData/models/` (voice model manifest) · `userData/web-sign-ins/` (the website sign-ins saved for task browsers, 0700 with one 0600 file per site; `docs/task-browser.md`, "Saved sign-ins").

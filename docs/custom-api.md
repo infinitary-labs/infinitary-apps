@@ -200,6 +200,7 @@ The connection sends them on every request it makes - the model list, all check 
 All three protocols use text, pictures on models whose check proved picture input, ordinary function calls, plain system instructions, locally paired tool results and completed terminal replies.
 Pi builds requests directly from its transcript and reads complete assistant messages and events, including thinking signatures, tool arguments, error flags and cache usage.
 The wrapper retains paired-history checks, safe names, checked input/output limits and all pictures in the current uncompacted conversation without rewriting the saved transcript.
+A tool call the app quit in the middle of reaches the paired-history check already answered as unknown, because the session answers it when the record reopens (`docs/architecture.md`, "Sessions").
 Chat requests usage and a terminal finish reason; Responses keeps the checked output cap.
 A narrow payload policy enforces storage consent and refuses remote continuation, background requests and service-tier changes.
 The connection transport remains the only sender and ignores Pi's URL, headers and availability marker except for validating the expected operation.

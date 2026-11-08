@@ -1,7 +1,8 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { Message } from "@earendil-works/pi-ai";
+import { SessionManager } from "@earendil-works/pi-coding-agent";
 import type { CustomApiInput } from "@shared/customApi";
 import { Type } from "typebox";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -28,6 +29,7 @@ import { COMPACTED_PICTURES_NOTICE } from "./customPictureContext";
 import { catalogRefreshesSettled } from "./modelRuntime";
 import { usageFromMessage } from "./piEvents";
 import { createPiSessionFactory } from "./session";
+import { UNANSWERED_CALL_TEXT } from "./unansweredCalls";
 
 const servers: Server[] = [];
 const vaults: AccountVault[] = [];
@@ -1681,7 +1683,12 @@ function englishPaste(bytes: number): string {
   return text.slice(0, bytes);
 }
 
-async function smallWindowSession(limits: { context: number; output: number }) {
+type SessionOpen = Parameters<ReturnType<typeof createPiSessionFactory>["open"]>[0];
+type SessionResume = Extract<SessionOpen["shape"], { turns: "rolling" }>["record"]["resume"];
+async function smallWindowSession(
+  limits: { context: number; output: number },
+  tools: SessionOpen["tools"] = [],
+) {
   const api = await fixture();
   const world = vault();
   const draft = world.vault.customPrepare({
@@ -1692,21 +1699,24 @@ async function smallWindowSession(limits: { context: number; output: number }) {
   const account = await world.vault.customSave(draft.draftId ?? "", false);
   const runtime = await world.vault.runtimeFor(account.id);
   const factory = createPiSessionFactory({ agentDir: join(world.paths.userData, "agent") });
-  const session = await factory.open({
-    machine: "local",
-    owner: "synthetic-session",
-    cwd: world.paths.userData,
-    binding: { backend: "pi", accountId: account.id, runtime },
-    model: { provider: account.providerId, id: "operator-model" },
-    thinking: { level: "off" },
-    instructions: { base: "Synthetic session instruction" },
-    builtins: "none",
-    tools: [],
-    shape: { turns: "rolling", record: { dir: join(world.paths.userData, "sessions") } },
-  });
+  const dir = join(world.paths.userData, "sessions");
+  const open = (resume?: SessionResume) =>
+    factory.open({
+      machine: "local",
+      owner: "synthetic-session",
+      cwd: world.paths.userData,
+      binding: { backend: "pi", accountId: account.id, runtime },
+      model: { provider: account.providerId, id: "operator-model" },
+      thinking: { level: "off" },
+      instructions: { base: "Synthetic session instruction" },
+      builtins: "none",
+      tools,
+      shape: { turns: "rolling", record: { dir, ...(resume ? { resume } : {}) } },
+    });
+  const session = await open();
   const events: SessionEvent[] = [];
   session.subscribe((event) => events.push(event));
-  return { api, session, events };
+  return { api, session, events, open };
 }
 
 it("sends a paste the old context check refused, and answers it", async () => {
@@ -1920,3 +1930,70 @@ it("compacts a small window from the character estimate when the server sends no
     await session.closed();
   }
 });
+
+// INF-3089: a quit while a tool runs saves the call with no result, and a
+// custom connection refused every later turn of that record.
+it.each([0, 3])(
+  "answers a call a quit left unanswered as unknown, and sends the next turn after %i refused",
+  async (refusedTurns) => {
+    let started: () => void = () => {};
+    const running = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    let finish: () => void = () => {};
+    const echo = boundTool({
+      name: "session_echo",
+      label: "Synthetic echo",
+      description: "Echo a synthetic value in memory",
+      parameters: Type.Object({ text: Type.String() }),
+      run: ({ text }) => {
+        started();
+        return new Promise<{ text: string }>((resolve) => {
+          finish = () => resolve({ text });
+        });
+      },
+    });
+    const limits = { context: 65_536, output: 1_024 };
+    const { api, session, events, open } = await smallWindowSession(limits, [echo]);
+    api.tools();
+    void session.prompt("Synthetic tool work");
+    await running;
+    // The app's quit disposes the session, and the process ends before the tool returns.
+    const resume = session.resume();
+    session.dispose();
+    const file = resume?.backend === "pi" ? resume.sessionFile : "";
+    const record = SessionManager.open(file, dirname(file));
+    const call = record.getLeafEntry();
+    if (call?.type !== "message" || call.message.role !== "assistant") throw new Error("No call");
+    // Each turn the old check refused saved its message and a failed reply.
+    for (let turn = 0; turn < refusedTurns; turn++) {
+      record.appendMessage({ role: "user", content: `Refused ${turn}`, timestamp: turn });
+      record.appendMessage({ ...call.message, content: [], stopReason: "error", timestamp: turn });
+    }
+    const reopened = await open(resume);
+    reopened.subscribe((event) => events.push(event));
+    try {
+      const before = api.requests.length;
+      await reopened.prompt("Synthetic continuation after the quit");
+      expect(events.filter((event) => event.type === "turn_failed")).toEqual([]);
+      expect(api.requests).toHaveLength(before + 1);
+      const sent = (api.requests.at(-1)?.body.messages ?? []) as Record<string, unknown>[];
+      expect(sent.filter((message) => message.role === "tool")).toEqual([
+        { role: "tool", tool_call_id: "work_call", content: UNANSWERED_CALL_TEXT },
+      ]);
+      const answer = sent.findIndex((message) => message.role === "tool");
+      // The refused messages stay after the answer; their failed replies never reach the model.
+      expect(JSON.stringify(sent.slice(answer + 1).map((message) => message.content))).toBe(
+        JSON.stringify([
+          ...Array.from({ length: refusedTurns }, (_, turn) => `Refused ${turn}`),
+          [{ type: "text", text: "Synthetic continuation after the quit" }],
+        ]),
+      );
+      expect(readFileSync(reopened.recordPath() ?? "", "utf8")).toContain(UNANSWERED_CALL_TEXT);
+    } finally {
+      reopened.dispose();
+      finish();
+      await Promise.all([reopened.closed(), session.closed()]);
+    }
+  },
+);

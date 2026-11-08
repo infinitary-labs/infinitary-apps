@@ -65,6 +65,7 @@ import { piSessionEvents, usageFromMessage } from "./piEvents";
 import { createCrewmateResourceLoader } from "./piResourceLoader";
 import { piToolsOf } from "./toolSpec";
 import type { ModelRuntime } from "./types";
+import { answerUnansweredCalls } from "./unansweredCalls";
 
 /**
  * Pi's implementation of the one session contract (`src/core/session/`):
@@ -1159,6 +1160,8 @@ async function openRolling(
   const sessionManager = sessionFile
     ? SessionManager.open(sessionFile, record.dir, spec.cwd)
     : SessionManager.create(spec.cwd, record.dir);
+  // A quit in the middle of a tool call leaves it unanswered (INF-3089).
+  if (sessionFile) answerUnansweredCalls(sessionManager);
 
   const settingsManager = SettingsManager.inMemory({
     ...(custom ? { cacheWarming: "off" as const } : {}),
@@ -1238,6 +1241,8 @@ async function openCoding(
   const sessionManager = sessionFile
     ? SessionManager.open(sessionFile, record.dir, spec.cwd)
     : SessionManager.create(spec.cwd, record.dir);
+  // A quit in the middle of a tool call leaves it unanswered (INF-3089).
+  if (sessionFile) answerUnansweredCalls(sessionManager);
 
   const custom = Boolean(spec.model && isCustomApiProvider(spec.model.provider));
   const settingsManager = SettingsManager.inMemory({

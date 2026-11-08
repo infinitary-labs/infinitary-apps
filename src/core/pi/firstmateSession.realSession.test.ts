@@ -18,6 +18,7 @@ const piMocks = vi.hoisted(() => {
   const sessionEntries = (entries: unknown[]) => ({
     entries,
     getEntries: () => entries,
+    getBranch: () => entries,
     appendCustomEntry: vi.fn((customType: string, data?: unknown) => {
       entries.push({ type: "custom", customType, data });
       return `entry-${entries.length}`;

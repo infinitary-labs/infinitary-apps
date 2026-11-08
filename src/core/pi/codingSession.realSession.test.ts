@@ -26,7 +26,7 @@ const piMocks = vi.hoisted(() => {
     agentSession,
     createAgentSession: vi.fn(async () => ({ session: agentSession })),
     sessionManagerCreate: vi.fn(() => ({ kind: "created" })),
-    sessionManagerOpen: vi.fn(() => ({ kind: "opened" })),
+    sessionManagerOpen: vi.fn(() => ({ kind: "opened", getBranch: () => [] })),
     settingsInMemory: vi.fn(() => ({ kind: "settings" })),
   };
 });

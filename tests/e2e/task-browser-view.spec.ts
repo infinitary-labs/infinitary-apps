@@ -24,10 +24,12 @@ import { promptInput } from "./prompt";
 import { expandDock, expectRecordBody, pressRow, recordCard, taskFact } from "./rails";
 import {
   MOCK_BROWSER_BUTTON,
+  MOCK_BROWSER_CARD_DEFAULT,
   MOCK_BROWSER_CARD_REPORT,
   MOCK_BROWSER_CARD_TITLE,
   MOCK_BROWSER_WATCH_REPORT_PREFIX,
   MOCK_PAGES_REPORT_PREFIX,
+  MOCK_PAGES_SAID,
   TASK_BROWSER_APPROVE_WORDS,
   TASK_BROWSER_CARD_MARKER,
   TASK_BROWSER_PAGES_MARKER,
@@ -398,7 +400,9 @@ test("a crewmate's card opens its task's browser and answers nothing", async () 
       await view(page, task.id).getByRole("button", { name: "Hide" }).click();
       await expect(page.locator(`[data-task-browser="${task.id}"]`)).toHaveCount(0);
       await expect(cardRegion).toBeVisible();
-      await expect(cardRegion.getByRole("button", { name: "Looks right" })).toBeEnabled();
+      await expect(
+        cardRegion.getByRole("button", { name: MOCK_BROWSER_CARD_DEFAULT }),
+      ).toBeEnabled();
     });
 
     await test.step("once its browser is replaced, the card says so, and so does the view it opens", async () => {
@@ -595,11 +599,11 @@ test("a page's second page opens inside the task's browser, named by its own sit
       expect(outcome).toContain(
         `The page opened a second page at ${bankSite}, page 2, and your commands act on it now.`,
       );
-      expect(outcome).toContain('The check: "page 2 of 2"');
+      expect(outcome).toContain(`${MOCK_PAGES_SAID.check} "page 2 of 2"`);
       expect(outcome).toContain(
         `Page 2 (${bankSite}) closed itself; your commands act on page 1 again.`,
       );
-      expect(outcome).toContain(`The shop: "Paid with the bank's approval"`);
+      expect(outcome).toContain(`${MOCK_PAGES_SAID.shop} "Paid with the bank's approval"`);
       // The second page's tab goes with it; the view is on the shop.
       await expect(view(page, task.id).locator("[data-browser-page-tab]")).toHaveCount(1);
       await expect(view(page, task.id).locator("[data-browser-site]")).toHaveText(shopSite);

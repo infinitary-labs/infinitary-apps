@@ -54,6 +54,8 @@ export const SEQ_BUG_SHOWN = {
 /** The captain's later word to start the fix while the repro card is still up. */
 export const SEQ_START_SHOWN_FIX = "start the clock drift fix now";
 export const SEQ_SHOWN_REPRO_TITLE = "The clock drift reproduces";
+/** The shown reproduction card's default choice. */
+export const SEQ_SHOWN_FIX_LABEL = "Fix it";
 export const SEQ_BUG_NO = {
   parent: "Fix the dock flicker",
   reproduce: "Reproduce: the dock flicker",
@@ -75,13 +77,14 @@ export const SEQ_IMPLEMENT_AMENDED_GOAL =
 export const SEQ_IMPLEMENT_LINE =
   stepLineOf(WORKFLOW_GUIDE, "feature", "implement") ?? "the guide has no feature implement line";
 export const SEQ_PLAN_GOAL = "Propose two or three directions for the settings page as one card";
-const SEQ_IMPLEMENT_GOAL = "Implement the accepted direction for the settings page";
+export const SEQ_IMPLEMENT_GOAL = "Implement the accepted direction for the settings page";
 const SEQ_SMALL_GOAL = "The settings page title reads Settings";
 const SEQ_FIX_GOAL = "at its root; the failing check passes";
 export const SEQ_PLAN_CARD_TITLE = "Two ways to declutter settings";
 export const SEQ_PLAN_CHOICE = APPROVE_AND_BUILD;
-export const SEQ_PLAN_CARD_BODY =
-  '<p>Two directions for the settings page.</p><ul><li>Hide the rarely used rows behind one disclosure.</li><li>Group every row into three labelled sections.</li></ul><fieldset><legend>How many records?</legend><label><input type="radio" name="q2_count" value="one" checked>One record</label><label><input type="radio" name="q2_count" value="many">One per task</label><label><input type="radio" name="q2_count" value="other" data-inf-write-in>Something else</label></fieldset><label for="sample-count">Demo sample count</label><input id="sample-count" name="sample-count" type="number" value="3">';
+/** The plan card's second record answer, the one the captain picks. */
+export const SEQ_PLAN_MANY_LABEL = "One per task";
+export const SEQ_PLAN_CARD_BODY = `<p>Two directions for the settings page.</p><ul><li>Hide the rarely used rows behind one disclosure.</li><li>Group every row into three labelled sections.</li></ul><fieldset><legend>How many records?</legend><label><input type="radio" name="q2_count" value="one" checked>One record</label><label><input type="radio" name="q2_count" value="many">${SEQ_PLAN_MANY_LABEL}</label><label><input type="radio" name="q2_count" value="other" data-inf-write-in>Something else</label></fieldset><label for="sample-count">Demo sample count</label><input id="sample-count" name="sample-count" type="number" value="3">`;
 export const SEQ_PLAN_REPORT =
   "Two directions for the settings page; grouping the rows into sections is the one I would take.";
 export const SEQ_THREAD_REPLY = "B, but keep the gear icon where it is";
@@ -109,11 +112,12 @@ export const SEQ_SAVED = {
   build: "Build the saved plan: a calmer about page",
 } as const;
 const SEQ_SAVED_PLAN_GOAL = "Propose a calmer about page as one card";
-const SEQ_SAVED_BUILD_GOAL = "Build the calmer about page the saved plan agreed";
+export const SEQ_SAVED_BUILD_GOAL = "Build the calmer about page the saved plan agreed";
 export const SEQ_SAVED_CARD_TITLE = "A calmer about page";
 export const SEQ_SAVED_CHOICE = SAVE_AND_DEFER;
-export const SEQ_SAVED_CARD_BODY =
-  '<p>The about page keeps one paragraph and the version line, and the credits list goes.</p><ul><li>One paragraph says what the app is.</li><li>The credits list moves to the project page.</li></ul><fieldset><legend>Where does the version line sit?</legend><label><input type="radio" name="version_line" value="top">At the top</label><label><input type="radio" name="version_line" value="bottom" data-inf-recommended>At the bottom</label><label><input type="radio" name="version_line" value="other" data-inf-write-in>Something else</label></fieldset>';
+/** The saved plan's recommended version line answer. */
+export const SEQ_SAVED_BOTTOM_LABEL = "At the bottom";
+export const SEQ_SAVED_CARD_BODY = `<p>The about page keeps one paragraph and the version line, and the credits list goes.</p><ul><li>One paragraph says what the app is.</li><li>The credits list moves to the project page.</li></ul><fieldset><legend>Where does the version line sit?</legend><label><input type="radio" name="version_line" value="top">At the top</label><label><input type="radio" name="version_line" value="bottom" data-inf-recommended>${SEQ_SAVED_BOTTOM_LABEL}</label><label><input type="radio" name="version_line" value="other" data-inf-write-in>Something else</label></fieldset>`;
 export const SEQ_SAVED_SPEC =
   "Agreed spec: the about page keeps one paragraph and the version line, and drops the credits list.";
 
@@ -250,6 +254,14 @@ const SEQ_ASKS: SeqAsk[] = [
     later: { title: SEQ_BUG_NO.fix, goal: `Fix the dock flicker ${SEQ_FIX_GOAL}.` },
   },
 ];
+
+/** The goal the scripted Firstmate files for the step titled `title`. */
+export function seqGoal(title: string): string {
+  for (const ask of SEQ_ASKS) {
+    for (const step of [ask.now, ask.later]) if (step?.title === title) return step.goal;
+  }
+  throw new Error(`No scripted step is titled ${title}.`);
+}
 
 /**
  * The mock Firstmate's moves for the sequences asks: the legs of opening an
@@ -655,7 +667,7 @@ function sequencesCrewmateMove(
               body: "<p>The clock loses a minute over a sleep.</p><ul><li>Seen on three sleeps.</li></ul>",
               actions: [
                 { id: "leave", label: "Leave it" },
-                { id: "fix", label: "Fix it", default: true },
+                { id: "fix", label: SEQ_SHOWN_FIX_LABEL, default: true },
               ],
             },
           },

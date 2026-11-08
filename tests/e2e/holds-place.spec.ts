@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { scratchDir } from "../helpers/scratchDirs";
-import { FM_THREAD_CARD_TITLE } from "./crewCards";
+import { FM_THREAD_CARD_TITLE, FM_THREAD_DEFAULT_LABEL } from "./crewCards";
 import { THREAD_PROSE_REPLY } from "./crewScripts";
 import { emitContinuityCard } from "./holdsPlace";
 import { launchApp } from "./launch";
@@ -50,7 +50,7 @@ test("a declared continuity card keeps replies, closes choices, returns forward 
     await expect(shownEntry(page).getByText(FM_THREAD_PROSE_ANSWER)).toBeVisible();
     await expect(shownCard(page, FM_THREAD_CARD_TITLE)).toBeVisible();
     await pressKey(
-      page.getByRole("button", { name: "Lead with the caption", exact: true }),
+      page.getByRole("button", { name: FM_THREAD_DEFAULT_LABEL, exact: true }),
       "Enter",
     );
     await expectNoCard(page, FM_THREAD_CARD_TITLE);

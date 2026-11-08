@@ -11,6 +11,9 @@ import {
 const prompt = "Keep working on the installation guide while I update Infinitary.";
 const modelId = "installer-verification";
 
+/** The phase the fixture reaches once the app has taken its active-work message. */
+export const RUNNING_WORK_ACCEPTED = "Active-work message accepted";
+
 /** INF-640: a real streamed turn must stop before native replacement, retaining the captain's message. */
 export async function runningWorkFixture(
   installedVersion: () => string,
@@ -69,7 +72,7 @@ export async function runningWorkFixture(
         note(next);
       });
       await page.evaluate(
-        async ({ baseUrl, modelId, prompt }) => {
+        async ({ accepted, baseUrl, modelId, prompt }) => {
           const checkpoint = (next: string) =>
             (
               window as unknown as { __installerWorkPhase: (next: string) => Promise<void> }
@@ -109,9 +112,14 @@ export async function runningWorkFixture(
           await api.settings.setFirstmateAccount(saved.accountId);
           await checkpoint("Submitting the active-work message");
           await api.conversation.send(prompt);
-          await checkpoint("Active-work message accepted");
+          await checkpoint(accepted);
         },
-        { baseUrl: `http://127.0.0.1:${address.port}/v1`, modelId, prompt },
+        {
+          accepted: RUNNING_WORK_ACCEPTED,
+          baseUrl: `http://127.0.0.1:${address.port}/v1`,
+          modelId,
+          prompt,
+        },
       );
     },
     messageSurvived(root: string): boolean {

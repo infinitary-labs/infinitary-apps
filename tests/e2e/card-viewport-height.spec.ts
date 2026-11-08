@@ -4,7 +4,7 @@ import { expectFrameSettles } from "./frameSizing";
 import { cardBody, cardBodyElement } from "./frames";
 import { launchApp } from "./launch";
 import { settled, within } from "./layout";
-
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import {
   CARD_VIEWPORT_BODY,
@@ -34,7 +34,7 @@ test("min-height:100vh stops resizing in an emitted scripted card, and still gro
   try {
     const { page } = launched;
     const input = promptInput(page);
-    await input.fill(`commission a crewmate: ${CARD_VIEWPORT_PROMPT_MARKER}`);
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${CARD_VIEWPORT_PROMPT_MARKER}`);
     await input.press("Enter");
     await expect(shownCard(page, CARD_VIEWPORT_TITLE)).toBeVisible({ timeout: 30_000 });
     const emitted = (await page.evaluate(() => window.infinitary.cards.list())).find(

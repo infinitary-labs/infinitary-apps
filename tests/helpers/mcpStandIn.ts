@@ -44,7 +44,12 @@ export const SAMPLE_NOTES = [
   "Mia's birthday is on the 14th - she wanted the blue raincoat",
 ];
 
-const LIST = { title: "List notes", description: "Lists every note with its number." };
+/** The list tool's title, the adding tool's name, and what adding answers once the book holds `count` notes. */
+export const NOTES_LIST_TITLE = "List notes";
+export const NOTES_ADD_TOOL = "add_note";
+export const addedNote = (count: number) => `Added note ${count}.`;
+
+const LIST = { title: NOTES_LIST_TITLE, description: "Lists every note with its number." };
 const GET = { title: "Read a note", description: "Reads one note by its number." };
 const ADD = { description: "Adds a note to the end of the list." };
 
@@ -77,12 +82,12 @@ function modernNotes(book: NotesBook, added: () => void, notebooks: string[] = [
     async ({ id }) => ({ content: [{ type: "text", text: noteOf(book, id) }] }),
   );
   server.registerTool(
-    "add_note",
+    NOTES_ADD_TOOL,
     { ...ADD, inputSchema: z.object({ text: z.string() }) },
     async ({ text }) => {
       book.notes.push(text);
       added();
-      return { content: [{ type: "text", text: `Added note ${book.notes.length}.` }] };
+      return { content: [{ type: "text", text: addedNote(book.notes.length) }] };
     },
   );
   // INF-1408: a notes workspace can expose one reader per notebook.
@@ -128,12 +133,12 @@ function legacyNotes(
     async ({ id }) => ({ content: [{ type: "text", text: noteOf(book, id) }] }),
   );
   server.registerTool(
-    "add_note",
+    NOTES_ADD_TOOL,
     { ...ADD, inputSchema: { text: z.string() } },
     async ({ text }) => {
       book.notes.push(text);
       added();
-      return { content: [{ type: "text", text: `Added note ${book.notes.length}.` }] };
+      return { content: [{ type: "text", text: addedNote(book.notes.length) }] };
     },
   );
   // INF-1408: a notes workspace can expose one reader per notebook.
@@ -247,7 +252,7 @@ export async function serveNotesHttp(
         method?: string;
         params?: { name?: string; arguments?: { text?: string } };
       };
-      if (dropAdd && call?.method === "tools/call" && call.params?.name === "add_note") {
+      if (dropAdd && call?.method === "tools/call" && call.params?.name === NOTES_ADD_TOOL) {
         dropAdd = false;
         book.notes.push(call.params.arguments?.text ?? "");
         request.socket.destroy();

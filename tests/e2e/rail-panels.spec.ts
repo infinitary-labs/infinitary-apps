@@ -3,7 +3,7 @@ import { ActivityStore } from "../../src/core/storage/activityStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { type FeedLine, feedLineFrom, reportSummary } from "../../src/shared/feed";
 import { type LaunchedApp, launchApp } from "./launch";
-import { MOCK_COMPLETION_TEXT } from "./mockProvider";
+import { MOCK_COMPLETION_TEXT, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { measured, PERF_TAG } from "./perf";
 import { promptInput } from "./prompt";
 import { activityFrame, feedLine, feedLineOf, reportLine, startedLine, taskKey } from "./rails";
@@ -99,7 +99,7 @@ test("every feed line the core writes reaches the frame, in order, with the newe
   await input.fill("hello there");
   await input.press("Enter");
   await expect(feedLineOf(page, { type: "user_turn", text: "hello there" })).toBeVisible();
-  const asked = "commission a crewmate: write a short status note";
+  const asked = `${SPAWN_PROMPT_MARKER} write a short status note`;
   await input.click();
   await input.fill(asked);
   await input.press("Enter");

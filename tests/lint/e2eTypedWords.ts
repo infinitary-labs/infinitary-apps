@@ -1,5 +1,5 @@
 import { existsSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import ts from "typescript";
 
 export const TYPED_WORDS_RULE = "e2e-typed-words";
@@ -23,7 +23,14 @@ export type TypedWordsDiagnostic = { file: string; line: number; column: number;
  *   product also types: a run of three or more words found in a string,
  *   template or JSX text under src/;
  * - a contract or protocol version typed as a number (`protocolVersion`,
- *   `INFINITARY_CONTRACT_VERSION`), which moves with the contract's own constants.
+ *   `INFINITARY_CONTRACT_VERSION`), which moves with the contract's own constants;
+ * - in a spec, any literal that copies a stand-in's words: the text of a
+ *   string constant of three or more words that a mock, scenario, stub or
+ *   helper under tests/e2e/ exports (`standInWords`), typed again where the
+ *   spec fills, sends or expects them instead of imported from that owner.
+ *   The owner is one the spec runs: a module it imports, or the mock
+ *   provider every launch starts; a test's or step's own title is its name,
+ *   not a copy.
  * A word is a whitespace-separated run holding a letter; `${…}` holes and a
  * regular expression's escapes are not words.
  */
@@ -73,9 +80,45 @@ export function productWords(src: string): string[] {
   return [...words];
 }
 
+/** A stand-in's exported words: the phrase, the constant that owns it and its file. */
+export type StandInWords = ReadonlyMap<string, { name: string; file: string }>;
+/** The stand-in every launch starts, whether or not a spec imports it (tests/e2e/launch.ts). */
+const ALWAYS_RUNNING = /\/mockProvider\.ts$/;
+/** `test(…)`, `test.step(…)`, `test.describe(…)`: their first argument is the test's name. */
+const TITLED = /^(test|describe|it)(\.\w+)*$/;
+
+/**
+ * Every exported string constant of three words or more in the stand-ins
+ * under tests/e2e/ - a mock, a scenario, a stub or a helper, any file that is
+ * not a spec or a unit test - keyed by its words and naming its owner.
+ */
+export function standInWords(files: readonly string[]): StandInWords {
+  const words = new Map<string, { name: string; file: string }>();
+  for (const file of files) {
+    if (/\.(spec|test)\.ts$/.test(file)) continue;
+    const text = ts.sys.readFile(file);
+    if (text === undefined) continue;
+    const source = ts.createSourceFile(file, text, ts.ScriptTarget.ESNext, true);
+    for (const statement of source.statements) {
+      if (!ts.isVariableStatement(statement)) continue;
+      if (!statement.modifiers?.some((mod) => mod.kind === ts.SyntaxKind.ExportKeyword)) continue;
+      for (const declaration of statement.declarationList.declarations) {
+        if (!declaration.initializer || !ts.isIdentifier(declaration.name)) continue;
+        const literal = unwrap(declaration.initializer);
+        if (!ts.isStringLiteral(literal) && !ts.isNoSubstitutionTemplateLiteral(literal)) continue;
+        const phrase = literal.text.trim();
+        if (wordCount(phrase) >= MIN_WORDS && !words.has(phrase))
+          words.set(phrase, { name: declaration.name.text, file: resolve(file) });
+      }
+    }
+  }
+  return words;
+}
+
 export function lintTypedWords(
   files: string[],
   product: readonly string[],
+  standIns: StandInWords = new Map(),
 ): TypedWordsDiagnostic[] {
   const corpus = `\n${product.join("\n")}\n`;
   const longer = product.filter((words) => wordCount(words) >= MIN_PRODUCT_WORDS);
@@ -85,6 +128,7 @@ export function lintTypedWords(
     if (text === undefined) continue;
     const source = ts.createSourceFile(file, text, ts.ScriptTarget.ESNext, true);
     const lines = text.split("\n");
+    const running = file.endsWith(".spec.ts") ? ranOwners(source, file) : undefined;
     const report = (node: ts.Node, message: string) => {
       const at = source.getLineAndCharacterOfPosition(node.getStart(source));
       const from = source.getLineAndCharacterOfPosition(statementOf(node).getStart(source)).line;
@@ -101,6 +145,14 @@ export function lintTypedWords(
               "A text assertion with typed words breaks the day the product rewords them. Read the words from the module that owns them - the product's exported words or composer, the mock's constant, or this spec's own named constant for words it put there itself (docs/e2e-contracts.md, \"Words come from their owner\").",
             );
         }
+      }
+      if (running) {
+        const copied = standInCopy(node, standIns, running);
+        if (copied)
+          report(
+            node,
+            `A spec types the words a stand-in owns ("${copied[0]}", ${copied[1]}). Import that constant where the spec fills, sends or expects them, so the stand-in's next wording moves the spec with it (docs/e2e-contracts.md, "Words come from their owner").`,
+          );
       }
       const bound = boundLiteral(node);
       if (bound) {
@@ -122,6 +174,64 @@ export function lintTypedWords(
     visit(source);
   }
   return diagnostics;
+}
+
+/** The stand-ins a spec runs: the modules it imports by a relative path, at its top or inline, as files. */
+function ranOwners(source: ts.SourceFile, file: string): (owner: string) => boolean {
+  const imported = new Set<string>();
+  const add = (path: string) => {
+    if (!path.startsWith(".")) return;
+    const target = resolve(dirname(file), path);
+    imported.add(target.endsWith(".ts") ? target : `${target}.ts`);
+  };
+  const visit = (node: ts.Node): void => {
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier))
+      add(node.moduleSpecifier.text);
+    if (
+      ts.isCallExpression(node) &&
+      node.expression.kind === ts.SyntaxKind.ImportKeyword &&
+      node.arguments[0] &&
+      ts.isStringLiteral(node.arguments[0])
+    )
+      add(node.arguments[0].text);
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return (owner) => imported.has(owner) || ALWAYS_RUNNING.test(owner);
+}
+
+/** The stand-in phrase a string or template part copies, with the constant that owns it. */
+function standInCopy(
+  node: ts.Node,
+  standIns: StandInWords,
+  running: (owner: string) => boolean,
+): [string, string] | undefined {
+  if (!ts.isStringLiteral(node) && !ts.isNoSubstitutionTemplateLiteral(node)) {
+    if (!ts.isTemplateHead(node) && !ts.isTemplateMiddle(node) && !ts.isTemplateTail(node))
+      return undefined;
+  }
+  let literal: ts.Node = node;
+  while (
+    !ts.isStringLiteral(literal) &&
+    !ts.isNoSubstitutionTemplateLiteral(literal) &&
+    !ts.isTemplateExpression(literal)
+  )
+    literal = literal.parent;
+  if (isTitle(literal)) return undefined;
+  for (const [phrase, owner] of standIns)
+    if (running(owner.file) && containsPhrase(node.text, phrase))
+      return [phrase, `${owner.name} in ${basename(owner.file)}`];
+  return undefined;
+}
+
+/** A test's, step's or group's own name: the first argument of `test(…)` and its kin. */
+function isTitle(node: ts.Node): boolean {
+  const call = node.parent;
+  return (
+    ts.isCallExpression(call) &&
+    call.arguments[0] === node &&
+    TITLED.test(call.expression.getText())
+  );
 }
 
 /** The statement, or the object's property, a node sits in: where its reason may stand. */

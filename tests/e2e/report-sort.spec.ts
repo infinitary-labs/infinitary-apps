@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { activityFrame, reportLine, startedLine, taskKey } from "./rails";
 
@@ -31,7 +32,7 @@ test("a report is one quiet feed line, sorted in code, with no card and no secon
   const { page } = launched;
   const input = promptInput(page);
   await input.click();
-  await input.fill("commission a crewmate: write a short status note");
+  await input.fill(`${SPAWN_PROMPT_MARKER} write a short status note`);
   await input.press("Enter");
   const key = await taskKey(page, "write a short status note");
   await expect(startedLine(page, key)).toBeVisible({ timeout: 30_000 });

@@ -12,7 +12,13 @@ import {
   MOCK_CLAUDE_REFUSAL_OVER_REPORT,
 } from "./crewScripts";
 import type { LaunchedApp } from "./launch";
-import { type MockProviderServer, startMockProvider } from "./mockProvider";
+import {
+  type MockProviderServer,
+  mockSpawnGoal,
+  SPAWN_PROMPT_MARKER,
+  STEER_PROMPT_MARKER,
+  startMockProvider,
+} from "./mockProvider";
 import { reportLine, taskKey } from "./rails";
 
 /**
@@ -86,12 +92,12 @@ test("a crewmate its organisation refuses waits without a turn, is told once, an
     const input = taskPrompt(launched.page);
     await expect(input).toBeEnabled({ timeout: 30_000 });
     await input.click();
-    await input.fill(`commission a crewmate: ${TITLE}`);
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${TITLE}`);
     await input.press("Enter");
     await expect.poll(() => heard(CUT_OFF_WAKE), { timeout: 30_000 }).toBe(true);
     // The captain's word while it waits is kept on its lane, not attempted.
     await input.click();
-    await input.fill(`steer the task ${TITLE}: ${CLAUDE_REFUSAL_OVER_MARKER}`);
+    await input.fill(`${STEER_PROMPT_MARKER}${TITLE}: ${CLAUDE_REFUSAL_OVER_MARKER}`);
     await input.press("Enter");
     // What `steer_crewmate` answers for guidance a held lane keeps.
     const keptSteer = heldSteerText(await taskId(launched.page, TITLE));
@@ -135,7 +141,7 @@ test("a crewmate its organisation refuses waits without a turn, is told once, an
     expect(refused).toBeDefined();
     const messages: { role: string }[] = JSON.parse(resumed ?? "{}").messages ?? [];
     const kept = JSON.stringify(messages.filter((message) => message.role === "user").at(-1));
-    expect(kept).toContain("Complete the task");
+    expect(kept).toContain(JSON.stringify(mockSpawnGoal(TITLE)).slice(1, -1));
     expect(occurrences(kept, CLAUDE_REFUSAL_OVER_MARKER)).toBe(1);
     // Told once each across all three runs: the Firstmate's own history,
     // which its session keeps across restarts, holds each wake once.

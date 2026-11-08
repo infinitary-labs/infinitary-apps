@@ -26,6 +26,7 @@ import {
   EMIT_CARDS_PROMPT_MARKER,
   everyCardKind,
   MOCK_CHOICE_CARD_TITLE,
+  MOCK_CHOICE_DEFAULT_LABEL,
   MOCK_LONG_ACTION_LABEL,
 } from "./scenarios/everyCardKind";
 import { cardLeave, cardReply, cardSurface, pager, showCard, shownEntry } from "./stack";
@@ -118,7 +119,7 @@ for (const size of UI_SIZES) {
         "",
       );
       const input = promptInput(page);
-      await input.fill(`commission a crewmate: ${CARD_WIDTH_PROMPT_MARKER}`);
+      await input.fill(`${SPAWN_PROMPT_MARKER} ${CARD_WIDTH_PROMPT_MARKER}`);
       await input.press("Enter");
       await expect(pager(page, 4)).toBeVisible({ timeout: 30_000 });
       await expect(page.locator('[data-side-panel="now"]')).not.toHaveAttribute(
@@ -355,7 +356,7 @@ test("a card in a short window at a larger size keeps its reading room and every
     const controls = [
       cardLeave(page, card),
       card.getByRole("button", { name: MOCK_LONG_ACTION_LABEL, exact: true }),
-      card.getByRole("button", { name: "Await the queue", exact: true }),
+      card.getByRole("button", { name: MOCK_CHOICE_DEFAULT_LABEL, exact: true }),
       cardReply(page).field,
     ];
 
@@ -366,7 +367,7 @@ test("a card in a short window at a larger size keeps its reading room and every
     await chooseSize(page, 150);
     await resizeWindow(app, page, await minimumWindowSize(app));
     const input = promptInput(page);
-    await input.fill(`commission a crewmate: ${EMIT_CARDS_PROMPT_MARKER}`);
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${EMIT_CARDS_PROMPT_MARKER}`);
     await input.press("Enter");
     await expect(pager(page, 3)).toBeVisible({ timeout: 30_000 });
     await showCard(page, DECISION_TITLE);

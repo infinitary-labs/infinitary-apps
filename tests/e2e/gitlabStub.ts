@@ -63,6 +63,8 @@ import { join } from "node:path";
  */
 export const GITLAB_STUB_KEY = "glpat-hermetic-sign-in-key";
 export const GITLAB_STUB_LOGIN = "octo";
+/** The code a device sign-in shows, as GitLab writes it. */
+export const GITLAB_STUB_USER_CODE = "WDJBMJHT";
 export const GITLAB_STUB_PROJECT = "group/subgroup/field-notes";
 
 /**
@@ -472,9 +474,9 @@ export async function startGitLabStub(host: string) {
         } else {
           send(200, {
             device_code: "stub-device-code",
-            user_code: "WDJBMJHT",
+            user_code: GITLAB_STUB_USER_CODE,
             verification_uri: `http://127.0.0.1:${port}/oauth/device`,
-            verification_uri_complete: `http://127.0.0.1:${port}/oauth/device?user_code=WDJBMJHT`,
+            verification_uri_complete: `http://127.0.0.1:${port}/oauth/device?user_code=${GITLAB_STUB_USER_CODE}`,
             expires_in: 300,
             interval: 5,
           });

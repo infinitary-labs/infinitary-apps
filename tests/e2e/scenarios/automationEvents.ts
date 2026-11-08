@@ -10,6 +10,9 @@ import { sinceLastUser } from "../providerRequest";
  */
 export type AutomationEventsSeen = { turns: string[] };
 
+/** The scripted first mate's one-line answer to each event turn. */
+export const AUTOMATION_EVENTS_ANSWER = "Triaged the new items.";
+
 /** The words a served event rule's prompt opens with (`renderWake`, docs/automation.md "Events"). */
 const EVENT_RUN = /\[fm-op\] scheduled by automation \S+ "[^"]*" on \d+ new event/;
 
@@ -20,6 +23,6 @@ export function automationEvents(seen: AutomationEventsSeen): Scenario {
       const { user, results } = sinceLastUser(body);
       if (!EVENT_RUN.test(user) || results.length > 0) return undefined;
       seen.turns.push(user);
-      return { text: "Triaged the new items." };
+      return { text: AUTOMATION_EVENTS_ANSWER };
     };
 }

@@ -13,7 +13,12 @@ import { COMPUTER } from "../../src/shared/deviceNames";
 import { standInDnsSd } from "../helpers/dnsSdStandIn";
 import { scratchDir } from "../helpers/scratchDirs";
 import { SSH_SERVER_AVAILABLE, startSshServer } from "../helpers/sshServer";
-import { addStandInPayload, standInFirstmate, standInRecord } from "../helpers/standInFirstmate";
+import {
+  addStandInPayload,
+  STAND_IN_RECORD,
+  standInFirstmate,
+  standInRecord,
+} from "../helpers/standInFirstmate";
 import { waitForFirstmateIdle } from "./crew";
 import { addByAddress, ask, BUILDER, openDevices } from "./deviceFixtures";
 import { launchApp } from "./launch";
@@ -94,7 +99,7 @@ test("the captain asks Firstmate to add a Mac at its address: Devices reaches it
     );
     await expect(page.locator("[data-device-adding]")).toHaveCount(0);
     // The link went on the other Mac's input, never in its words.
-    expect(readFileSync(record, "utf8")).toContain("link on its input");
+    expect(readFileSync(record, "utf8")).toContain(STAND_IN_RECORD.link);
 
     // + A Mac, by its address: an address nothing answers at says so, here and in the feed.
     await page.locator('[data-device-add="mac"]').click();
@@ -243,7 +248,7 @@ test("a Mac whose user runs another Firstmate's work: Add it asks once, Cancel c
     const [device] = await page.evaluate(() => window.infinitary.devices.list());
     expect(device).toMatchObject({ kind: "work", remoteLogin: sshd.address });
     await expect(question).toHaveCount(0);
-    expect(started()).toContain("leave on its input");
+    expect(started()).toContain(STAND_IN_RECORD.leave);
     if (!device) throw new Error("Nothing joined.");
     await expect(devices.locator(`[data-device-row="${device.id}"]`)).toBeVisible();
     await page.keyboard.press("Escape");
@@ -326,7 +331,7 @@ test("the first reach shows the check line and sends nothing until this is the M
       .poll(async () => (await page.evaluate(() => window.infinitary.devices.list())).length)
       .toBe(1);
     await expect(check).toHaveCount(0);
-    expect(readFileSync(record, "utf8")).toContain("link on its input");
+    expect(readFileSync(record, "utf8")).toContain(STAND_IN_RECORD.link);
   } finally {
     await app.close();
     await sshd.stop();
@@ -397,7 +402,7 @@ test("adding a Mac by its address says how far the copy has gone: preparing it, 
     await expect(feedLineOf(page, last)).toBeVisible();
     await expect(feedLineOf(page, said[states.indexOf("starting")] as FmEvent)).toBeVisible();
     await expect(feedLineOf(page, sending[0] as FmEvent)).toHaveCount(0);
-    expect(readFileSync(record, "utf8")).toContain("link on its input");
+    expect(readFileSync(record, "utf8")).toContain(STAND_IN_RECORD.link);
   } finally {
     await app.close();
     await sshd.stop();

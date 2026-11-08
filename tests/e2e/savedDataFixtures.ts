@@ -46,10 +46,13 @@ export function seedRetiredTranscripts(userDataDir: string): {
   return { claudeDir, supervisionDir, supervisionHome };
 }
 
+/** The sign-in file the retired Cursor store keeps, exactly as it was written. */
+export const RETIRED_CURSOR_AUTH = '{"accessToken":"left-behind"}';
+
 /** Cursor is deliberately no longer offered; its old store must remain untouched. */
 export function seedRetiredCursorStore(userDataDir: string, accountId: string): string {
   const store = join(userDataDir, "accounts", "cursor", accountId, ".cursor");
   mkdirSync(store, { recursive: true, mode: 0o700 });
-  writeFileSync(join(store, "auth.json"), '{"accessToken":"left-behind"}', { mode: 0o600 });
+  writeFileSync(join(store, "auth.json"), RETIRED_CURSOR_AUTH, { mode: 0o600 });
   return store;
 }

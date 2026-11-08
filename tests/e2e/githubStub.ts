@@ -248,6 +248,16 @@ export type GitHubStub = {
 
 export const STUB_USER_CODE = "WDJB-MJHT";
 export const STUB_LOGIN = "octo";
+/** The notification `/notifications` answers with, and the pull request on a listing's second page. */
+export const STUB_NOTIFICATION_TITLE = "Release 0.4.0 is out";
+export const STUB_SECOND_PAGE_TITLE = "Second page";
+/** What the REST API answers, with its 401, a call whose sign-in it does not take. */
+export const STUB_BAD_CREDENTIALS = "Bad credentials";
+/** The line of the failed job's log that says why it failed. */
+export const STUB_JOB_FAILURE_LINE = "Missing measurement input";
+/** The Nth refresh token a short-lived sign-in is handed, and the Nth access token a renewal answers. */
+export const stubRefreshToken = (n: number) => `ghr_e2e_refresh_${n}`;
+export const stubRenewedToken = (n: number) => `gho_e2e_renewed_${n}`;
 
 export async function startGitHubStub(
   options: {
@@ -319,7 +329,7 @@ export async function startGitHubStub(
     access = token;
     if (!shortLived) return { access_token: token, token_type: "bearer", scope: "repo,workflow" };
     refreshSerial += 1;
-    liveRefresh = `ghr_e2e_refresh_${refreshSerial}`;
+    liveRefresh = stubRefreshToken(refreshSerial);
     return {
       access_token: token,
       token_type: "bearer",
@@ -406,7 +416,7 @@ export async function startGitHubStub(
             // The refresh token works once and retires the access token it came with.
             ended.add(access);
             renewals += 1;
-            send(200, issue(`gho_e2e_renewed_${renewals}`));
+            send(200, issue(stubRenewedToken(renewals)));
             return;
           }
           if (device.mode === "approved") {
@@ -443,13 +453,13 @@ export async function startGitHubStub(
             return;
           }
           res.writeHead(200, { "content-type": "text/plain" });
-          res.end("Prepare data\nMeasure pairs: exit 1\nMissing measurement input\n");
+          res.end(`Prepare data\nMeasure pairs: exit 1\n${STUB_JOB_FAILURE_LINE}\n`);
           return;
         }
         // The REST API: every call carries the app's sign-in as a bearer.
         const auth = req.headers.authorization ?? "";
         if (!auth.startsWith("Bearer ") || rejected || ended.has(auth.slice("Bearer ".length))) {
-          send(401, { message: "Bad credentials" });
+          send(401, { message: STUB_BAD_CREDENTIALS });
           return;
         }
         // INF-285 F4: native evidence uses the same local endpoint override as the API.
@@ -552,12 +562,12 @@ export async function startGitHubStub(
           return;
         }
         if (method === "GET" && path === "/notifications") {
-          send(200, [{ id: "1", subject: { title: "Release 0.4.0 is out", type: "Release" } }]);
+          send(200, [{ id: "1", subject: { title: STUB_NOTIFICATION_TITLE, type: "Release" } }]);
           return;
         }
         // GitHub names a repository listing's next page by the repository's id.
         if (method === "GET" && path === "/repositories/77/pulls") {
-          send(200, [{ number: 2, title: "Second page" }]);
+          send(200, [{ number: 2, title: STUB_SECOND_PAGE_TITLE }]);
           return;
         }
         const repo = /^\/repos\/([^/]+)\/([^/]+)(\/.*)?$/.exec(path);

@@ -41,7 +41,9 @@ import { promptInput } from "./prompt";
 import { providerMessages } from "./providerRequest";
 import { atRest, expandDock, expectRecordBody, pressRow, recordCard, taskFact } from "./rails";
 import {
+  MOCK_BROWSER_BLOCKED,
   MOCK_BROWSER_REPORT_PREFIX,
+  mockBrowserSaw,
   TASK_BROWSER_PROMPT_MARKER,
   taskBrowser,
 } from "./scenarios/taskBrowser";
@@ -61,6 +63,8 @@ import {
   MOCK_LOST_CHECK_ACTION,
   MOCK_LOST_NOT_BOOKED_ACTION,
   MOCK_LOST_REPORT_PREFIX,
+  MOCK_LOST_SAID,
+  MOCK_REVIEW_FACTS,
   MOCK_REVIEW_PAY_ACTION,
   MOCK_REVIEW_REPORT_PREFIX,
   MOCK_REVIEW_STOP_ACTION,
@@ -360,10 +364,12 @@ for (const runtime of RUNTIMES) {
           // The page's own words through the Claude client's tool protocol:
           // real input, its site data across a reload, and no way into the app.
           expect(task.outcome).toContain(
-            `"Not signed up yet" first, "Thanks, Sam" after Send and "Signed up as Sam" after a reload`,
+            mockBrowserSaw("Not signed up yet", "Thanks, Sam", "Signed up as Sam"),
           );
           expect(task.outcome).toContain('"This page cannot reach the app"');
-          expect(task.outcome).toContain(`localhost:${new URL(siteUrl).port} on this Mac.`);
+          expect(task.outcome).toContain(
+            `localhost:${new URL(siteUrl).port} ${MOCK_BROWSER_BLOCKED.local}.`,
+          );
           expect(task.browser).toMatchObject({ state: "stopped", stopped: "crewmate" });
           expect(servedBy(launched, `${siteUrl} as Sam`, runtime)).toBe(true);
         } finally {
@@ -491,16 +497,7 @@ for (const runtime of RUNTIMES) {
             expect(card?.attachment).toMatchObject({ kind: "browser", handoff: true });
             await showCard(page, reviewTitle);
             const body = shownCardFrame(page);
-            for (const fact of [
-              "Route",
-              "Dates",
-              "Passenger",
-              "Seller",
-              "Total",
-              "Baggage",
-              "Fare rules",
-              "Still uncertain",
-            ]) {
+            for (const fact of MOCK_REVIEW_FACTS) {
               await expect(body.getByRole("cell", { name: fact, exact: true })).toBeVisible();
             }
             await expect(body.locator("mark")).toHaveText(fareRoseWords(SEARCH_FARE, PAY_TOTAL));
@@ -748,14 +745,14 @@ for (const runtime of RUNTIMES) {
           // both are shortened above.
           const current = await reported(detail, MOCK_LOST_REPORT_PREFIX, 240_000);
           expect(current.outcome).toContain(
-            'My bookings said "No bookings yet. A payment may still be processing."',
+            `${MOCK_LOST_SAID.bookings} "No bookings yet. A payment may still be processing."`,
           );
-          expect(current.outcome).toContain("and I did not pay again.");
+          expect(current.outcome).toContain(MOCK_LOST_SAID.notAgain);
           expect(current.outcome).toContain(
-            'Reloading the unconfirmed page said: "Did not reload: this page is the answer to a form that was sent',
+            `${MOCK_LOST_SAID.reload} "Did not reload: this page is the answer to a form that was sent`,
           );
           expect(current.outcome).toContain(
-            'After the restart my browser was gone: "No browser is open for this task.',
+            `${MOCK_LOST_SAID.restart} "No browser is open for this task.`,
           );
           expect(current.outcome).not.toContain(CARD_REFUSED);
           expect(airline.payments).toHaveLength(1);

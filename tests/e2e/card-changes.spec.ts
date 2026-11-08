@@ -8,8 +8,13 @@ import { pseudoBox } from "./layout";
 import { promptInput } from "./prompt";
 import { readSavedData } from "./savedData";
 import {
+  CHANGE_MARKS_NEXT_RUN,
+  CHANGE_MARKS_PLAYABLE_NAME,
   CHANGE_MARKS_PROMPT_MARKER,
+  CHANGE_MARKS_RUNS,
+  CHANGE_MARKS_SIGNS,
   CHANGE_MARKS_TITLE,
+  changeMarksRunsLabel,
   changeMarkVersions,
 } from "./scenarios/changeMarkVersions";
 import { changeMarks, revisedLine } from "./stack";
@@ -75,7 +80,9 @@ test("a revised card says what is new since the captain last saw it, and marks i
     const { page, userDataDir, mockProvider } = launched;
     const frame = cardBody(page, CHANGE_MARKS_TITLE);
     const marks = changeMarks(frame);
-    const show = async (version: number, text: string) => {
+    // Each version is on the stage once the words only it shows are.
+    const show = async (version: keyof typeof CHANGE_MARKS_SIGNS) => {
+      const text = CHANGE_MARKS_SIGNS[version];
       const input = promptInput(page);
       await input.fill(`${CHANGE_MARKS_PROMPT_MARKER}${version}`);
       await input.press("Enter");
@@ -102,7 +109,7 @@ test("a revised card says what is new since the captain last saw it, and marks i
       });
 
     // Section 1: the first version goes up and is seen. Nothing is revised yet.
-    await show(1, "Rewrite the uploader: 200 lines");
+    await show(1);
     await recordedSeen();
     await expect(revisedLine(page)).toHaveCount(0);
     await expect(marks.bars).toHaveCount(0);
@@ -110,7 +117,7 @@ test("a revised card says what is new since the captain last saw it, and marks i
 
     // Section 2: a small revision. The line counts it, and a bar stands
     // beside each new part - a paragraph, a list item, a table row.
-    await show(2, "Await the queue: 40 lines, touches the uploader");
+    await show(2);
     await expect(revisedLine(page)).toHaveText(revisedPattern({ added: 3, removed: 1 }, CLOCK));
     await expect(marks.parts).toHaveCount(3);
     await expect(marks.bars).toHaveCount(await marks.parts.count());
@@ -128,8 +135,8 @@ test("a revised card says what is new since the captain last saw it, and marks i
     // Section 3: two revisions land while the window is away - a question,
     // then a new drawing. Coming back, both are marked from the version seen.
     await away();
-    await show(3, "Which route?");
-    await show(4, "Ten runs after the fix, all passed");
+    await show(3);
+    await show(4);
     expect(seenOffers(userDataDir).at(-1)).not.toBe(await shownOffer(page));
     await back();
     await recordedSeen();
@@ -144,7 +151,7 @@ test("a revised card says what is new since the captain last saw it, and marks i
 
     // Section 4: more than half new is a rewrite - the line says so, and
     // nothing is marked.
-    await show(5, "Ten runs passed on the Mac and in CI.");
+    await show(5);
     await expect(revisedLine(page)).toHaveText(
       revisedPattern({ added: 0, removed: 0, rewritten: true }, CLOCK),
     );
@@ -155,7 +162,7 @@ test("a revised card says what is new since the captain last saw it, and marks i
 
     // Section 5: a playable preview gets the line and no bars: its own
     // script draws it.
-    await show(6, "Drag to replay the ten runs.");
+    await show(6);
     await expect(revisedLine(page)).toHaveText(revisedPattern({ added: 2, removed: 0 }));
     await expect(marks.parts).toHaveCount(0);
     await expect(marks.bars).toHaveCount(0);
@@ -166,18 +173,18 @@ test("a revised card says what is new since the captain last saw it, and marks i
     // Section 6: a figure that moves. Its script sits inside the figure, so
     // the card is still prose: the new paragraph and the figure are marked
     // like any other parts, and the figure still answers a press.
-    await show(7, "Press Next run to replay the ten runs one at a time.");
+    await show(7);
     await expect(revisedLine(page)).toHaveText(revisedPattern({ added: 2, removed: 2 }));
     const runs = frame.getByRole("figure", {
-      name: "Ten runs after the fix, one more on each press",
+      name: CHANGE_MARKS_PLAYABLE_NAME,
     });
     if (evidence) await runs.scrollIntoViewIfNeeded();
     await shot("change-marks-6-moving-figure");
     // The scripted frame draws the bars as the srcdoc one does.
     await expect(marks.bars).toHaveCount(await marks.parts.count());
-    await expect(runs.getByText("10 of 10 passed")).toBeVisible();
-    await runs.getByRole("button", { name: "Next run" }).dispatchEvent("click");
-    await expect(runs.getByText("1 of 10 passed")).toBeVisible();
+    await expect(runs.getByText(changeMarksRunsLabel(CHANGE_MARKS_RUNS))).toBeVisible();
+    await runs.getByRole("button", { name: CHANGE_MARKS_NEXT_RUN }).dispatchEvent("click");
+    await expect(runs.getByText(changeMarksRunsLabel(1))).toBeVisible();
     await expect(marks.bars).toHaveCount(2);
     transcript.push(`v7 moving figure: ${await revisedLine(page).textContent()}`);
     await shot("change-marks-7-moving-figure-pressed");
@@ -196,8 +203,18 @@ test("a revised card says what is new since the captain last saw it, and marks i
 // Revision navigation is separate from the last-seen bars above: every
 // row carries the list for its own write, and navigates only the current card.
 test("each revision keeps its own links and reveals folded current content without changing a draft", async () => {
-  const { seedRevisionCard, revisionRows, revisionLinks, revisionFrame, cardScroller } =
-    await import("./revisions");
+  const {
+    seedRevisionCard,
+    revisionRows,
+    revisionLinks,
+    revisionFrame,
+    cardScroller,
+    REVISION_ACCOUNT_AFTER,
+    REVISION_NOTE_LABEL,
+    REVISION_TITLE,
+  } = await import("./revisions");
+  // The captain's own unsent words in the card's field.
+  const unsent = "My unsent review";
   const fixture = seedRevisionCard();
   const app = await launchApp({
     withMockProvider: true,
@@ -210,15 +227,15 @@ test("each revision keeps its own links and reveals folded current content witho
       frame = revisionFrame(page);
     await expect(revisionRows(page)).toHaveCount(2);
     await expect(links).toHaveCount(2);
-    const draft = frame.getByRole("textbox", { name: "Review note" });
-    await draft.fill("My unsent review");
+    const draft = frame.getByRole("textbox", { name: REVISION_NOTE_LABEL });
+    await draft.fill(unsent);
     await cardScroller(page).evaluate((el) => (el.scrollTop = 0));
     const thread = page.locator("[data-thread-messages]");
     const threadTop = await thread.evaluate((el) => el.scrollTop);
     const messages = await page.evaluate((id) => window.infinitary.cards.thread(id), fixture.id);
     await links.first().click();
-    await expect(frame.getByText("Use your connected account.", { exact: true })).toBeInViewport();
-    await expect(draft).toHaveValue("My unsent review");
+    await expect(frame.getByText(REVISION_ACCOUNT_AFTER, { exact: true })).toBeInViewport();
+    await expect(draft).toHaveValue(unsent);
     await focusOn(links.last());
     await links.last().press("Enter");
     await expect(frame.locator("[data-check-result]")).toBeInViewport();
@@ -227,16 +244,13 @@ test("each revision keeps its own links and reveals folded current content witho
     await frame.locator("[data-check-result]").press("Escape");
     await expect(links.last()).toBeFocused();
     expect(await thread.evaluate((el) => el.scrollTop)).toBe(threadTop);
-    await expect(draft).toHaveValue("My unsent review");
+    await expect(draft).toHaveValue(unsent);
     expect(
       (await page.evaluate((id) => window.infinitary.cards.thread(id), fixture.id)).messages,
     ).toHaveLength(messages.messages.length);
     await page.reload();
     await (await import("./windowKeys")).untilWindowCommands(page);
-    await expect(cardBodyElement(page, "Review the project checks")).toHaveAttribute(
-      "data-frame-drawn",
-      "",
-    );
+    await expect(cardBodyElement(page, REVISION_TITLE)).toHaveAttribute("data-frame-drawn", "");
     await expect(revisionRows(page)).toHaveCount(2);
     await links.last().click();
     await expect(frame.locator("[data-check-result]")).toBeInViewport();

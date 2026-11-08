@@ -5,6 +5,7 @@ import { PICTURE_STRIP_SHOWN } from "../../src/shared/plugins/bridge";
 import { cardBody, cardBodyElement, cardBodySelector } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { pseudoBox, within } from "./layout";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import {
   encodeInBrowser,
   FIRST_GROUP,
@@ -93,7 +94,7 @@ test.beforeAll(async () => {
   await encodeInBrowser(page, WORKING_COPY_PICTURES);
   const input = promptInput(page);
   await input.click();
-  await input.fill(`commission a crewmate: ${CARD_PICTURES_PROMPT_MARKER}`);
+  await input.fill(`${SPAWN_PROMPT_MARKER} ${CARD_PICTURES_PROMPT_MARKER}`);
   await input.press("Enter");
   await expect(pager(page, 4)).toBeVisible({ timeout: 30_000 });
 });

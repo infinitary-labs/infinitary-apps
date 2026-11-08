@@ -7,7 +7,7 @@ import {
 import { FRAME_BRIDGE_SHA256 } from "../../src/shared/plugins/frameScript";
 import { cardBody, cardBodyElement, cardBodySelector } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
-import { SCRIPT_CARD_TITLES } from "./mockProvider";
+import { SCRIPT_CARD_TITLES, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { measured, PERF_TAG } from "./perf";
 import { promptInput } from "./prompt";
 import { SCRIPT_CANVAS, SCRIPT_CARDS_PROMPT_MARKER, scriptCards } from "./scenarios/scriptCards";
@@ -34,7 +34,7 @@ test.beforeAll(async () => {
   const { page } = launched;
   const input = promptInput(page);
   await input.click();
-  await input.fill(`commission a crewmate: ${SCRIPT_CARDS_PROMPT_MARKER}`);
+  await input.fill(`${SPAWN_PROMPT_MARKER} ${SCRIPT_CARDS_PROMPT_MARKER}`);
   await input.press("Enter");
   await expect(pager(page, 4)).toBeVisible({ timeout: 30_000 });
 });

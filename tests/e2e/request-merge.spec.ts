@@ -26,7 +26,7 @@ import { heroShot, regionShot } from "./pictures";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { expandDock, taskKey, taskLine } from "./rails";
-import { skipRules } from "./scenarios/skipRules";
+import { SKIP_RULES_ASKING_AGAIN, skipRules } from "./scenarios/skipRules";
 import { expectNoCard, showCard, shownCard } from "./stack";
 import { pressKey } from "./windowKeys";
 
@@ -636,7 +636,7 @@ test("a merge that skips the branch rules is prepared by its crewmate, named on 
         },
         { timeout: 45_000 },
       )
-      .toMatch(new RegExp(`Asking again: Card refused[^\\n]*${NEVER_SENT_AGAIN}`));
+      .toMatch(new RegExp(`${SKIP_RULES_ASKING_AGAIN} Card refused[^\\n]*${NEVER_SENT_AGAIN}`));
     expect(github.asyncMerges()).toEqual(once);
     // The adopted pull request merged; the task stays open with its working copy.
     await expect

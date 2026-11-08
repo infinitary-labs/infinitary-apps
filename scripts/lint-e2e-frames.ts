@@ -4,7 +4,12 @@ import { CLAUDE_STORE_RULE, lintClaudeStore } from "../tests/lint/e2eClaudeStore
 import { FIXTURE_OWNER_RULE, lintFixtureOwners } from "../tests/lint/e2eFixtureOwners.ts";
 import { FRAME_ACTION_RULE, lintFrameActions } from "../tests/lint/e2eFrameActions.ts";
 import { lintMacTag, MAC_TAG_RULE } from "../tests/lint/e2eMacTag.ts";
-import { lintTypedWords, productWords, TYPED_WORDS_RULE } from "../tests/lint/e2eTypedWords.ts";
+import {
+  lintTypedWords,
+  productWords,
+  standInWords,
+  TYPED_WORDS_RULE,
+} from "../tests/lint/e2eTypedWords.ts";
 import { lintWriters, WRITER_RULE } from "../tests/lint/e2eWriters.ts";
 
 const root = resolve(process.argv[2] ?? ".");
@@ -18,7 +23,7 @@ const found = [
   ...lintFrameActions(files).map((diagnostic) => ({ ...diagnostic, rule: FRAME_ACTION_RULE })),
   ...lintWriters(specs).map((diagnostic) => ({ ...diagnostic, rule: WRITER_RULE })),
   ...lintMacTag(specs).map((diagnostic) => ({ ...diagnostic, rule: MAC_TAG_RULE })),
-  ...lintTypedWords(files, productWords(resolve(root, "src"))).map((diagnostic) => ({
+  ...lintTypedWords(files, productWords(resolve(root, "src")), standInWords(files)).map((diagnostic) => ({
     ...diagnostic,
     rule: TYPED_WORDS_RULE,
   })),

@@ -29,6 +29,16 @@ export const LESSON_FRACTIONS_GOAL_TITLE = "Fractions: what do you want to be ab
 export const LESSON_FRACTIONS_ROUND_TITLE = "Halves and quarters on a number line";
 export const LESSON_LEARNER_LINE = "Likes short steps and pictures.";
 export const LESSON_GOAL_ANSWER = "beat my dad at chess";
+/** The goal card's one field, as both subjects ask it. */
+export const LESSON_GOAL_LABEL = "What do you want to be able to do?";
+/** The footer choices the teacher's cards carry. */
+export const LESSON_CHOICES = {
+  start: "Let's start",
+  nextRound: "Next round",
+  stopToday: "Stop for today",
+  startToday: "Start today's lesson",
+  stopLessons: "Stop these lessons",
+} as const;
 export const LESSON_NEXT_GOAL = "the rook along a rank";
 
 export type LessonItem = {
@@ -90,11 +100,9 @@ export function lessonRoundBody(items: LessonItem[], nextGoal: string, aim: stri
 }
 
 /** The goal card: a text field named goal, and the warm voice a lesson card may use. */
-export const LESSON_GOAL_BODY =
-  '<p>Let\'s find out what you want to do with chess! ♟</p><p>Tell me in your own words, and I will point every round at it.</p><label for="goal">What do you want to be able to do?</label><input id="goal" name="goal" type="text">';
+export const LESSON_GOAL_BODY = `<p>Let's find out what you want to do with chess! ♟</p><p>Tell me in your own words, and I will point every round at it.</p><label for="goal">${LESSON_GOAL_LABEL}</label><input id="goal" name="goal" type="text">`;
 
-export const LESSON_FRACTIONS_GOAL_BODY =
-  '<p>Let\'s find out what you want to do with fractions!</p><p>Tell me in your own words.</p><label for="goal">What do you want to be able to do?</label><input id="goal" name="goal" type="text">';
+export const LESSON_FRACTIONS_GOAL_BODY = `<p>Let's find out what you want to do with fractions!</p><p>Tell me in your own words.</p><label for="goal">${LESSON_GOAL_LABEL}</label><input id="goal" name="goal" type="text">`;
 
 /** The welcome-back card: the goal, then each skill as practising, learned or next. */
 export const LESSON_WELCOME_BODY =

@@ -39,8 +39,10 @@ import {
   MOCK_REVIEW_AUTOFIX_FINDING,
   MOCK_REVIEW_CAP_CARD_TITLE,
   MOCK_REVIEW_CAP_RETRY_LABEL,
+  MOCK_REVIEW_FINDINGS_RISK,
   MOCK_REVIEW_KEEP_LABEL,
   MOCK_REVIEW_KEEP_STEER,
+  MOCK_REVIEW_PASS_RISK,
   MOCK_REVIEW_REFIX_STEER,
   MOCK_REVIEWED_BUILDER_REPORT,
   MOCK_REVIEWED_CARD_TITLE,
@@ -282,7 +284,7 @@ test("a reviewed task's review passes before its completion card, which merges w
   const findingFacts = factsStrip(cardBody(page, MOCK_REVIEW_ASK_CARD_TITLE));
   await expect(findingFacts.project).toContainText(REPO_NAME);
   await expect(findingFacts.review).toContainText(HEAD_SHA.slice(0, 7));
-  await expect(findingFacts.review).toContainText("risk medium");
+  await expect(findingFacts.review).toContainText(`risk ${MOCK_REVIEW_FINDINGS_RISK.level}`);
   await expect(page.getByRole("button", { name: MOCK_REVIEW_KEEP_LABEL })).toBeVisible();
   await expect(
     reportLine(page, builder.key).filter({ hasText: reportSummary(MOCK_REVIEWED_FIX_REPORT) }),
@@ -290,7 +292,10 @@ test("a reviewed task's review passes before its completion card, which merges w
   await expect
     .poll(() => page.evaluate((id) => window.infinitary.tasks.detail(id), builder.id))
     .toMatchObject({
-      delivery: expect.objectContaining({ reviewVerdict: "findings", reviewRisk: "medium" }),
+      delivery: expect.objectContaining({
+        reviewVerdict: "findings",
+        reviewRisk: MOCK_REVIEW_FINDINGS_RISK.level,
+      }),
     });
 
   for (const theme of ["dark", "light"] as const) {
@@ -353,7 +358,9 @@ test("a reviewed task's review passes before its completion card, which merges w
   await input.press("Enter");
   // The pass is the builder's review line carrying the risk it recorded;
   // the findings rounds' lines carry none.
-  await expect(taskLine(page, builder.key, "review").filter({ hasText: "low" })).toBeVisible({
+  await expect(
+    taskLine(page, builder.key, "review").filter({ hasText: MOCK_REVIEW_PASS_RISK.level }),
+  ).toBeVisible({
     timeout: 30_000,
   });
   await expect
@@ -367,8 +374,8 @@ test("a reviewed task's review passes before its completion card, which merges w
       delivery: expect.objectContaining({
         reviewVerdict: "pass",
         reviewSha: FINAL_SHA,
-        reviewRisk: "low",
-        reviewRiskNote: "one test file changed.",
+        reviewRisk: MOCK_REVIEW_PASS_RISK.level,
+        reviewRiskNote: MOCK_REVIEW_PASS_RISK.why,
       }),
     });
   // The review task's own close is silent: no status line for it.
@@ -393,8 +400,8 @@ test("a reviewed task's review passes before its completion card, which merges w
   // The review cell names the head it read and the risk; the risk note
   // rides the cell's title, never a line of its own.
   await expect(facts.review).toContainText(FINAL_SHA.slice(0, 7));
-  await expect(facts.review).toContainText("low");
-  await expect(facts.cell("review")).toHaveAttribute("title", "one test file changed.");
+  await expect(facts.review).toContainText(MOCK_REVIEW_PASS_RISK.level);
+  await expect(facts.cell("review")).toHaveAttribute("title", MOCK_REVIEW_PASS_RISK.why);
   // While the ask-user card stands, the merge would leave the task open for
   // that question, and the card says so (INF-2525, docs/forge.md "A
   // requested merge").

@@ -3,6 +3,7 @@ import { UI_SIZES } from "../../src/shared/preferences";
 import { chooseSize } from "./captureMarkers";
 import { launchApp } from "./launch";
 import { settled } from "./layout";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import {
   activityFrame,
@@ -130,7 +131,7 @@ for (const deviceScaleFactor of [1, 2]) {
       expect(await page.evaluate(() => window.devicePixelRatio)).toBe(deviceScaleFactor);
       const input = promptInput(page);
       await input.click();
-      await input.fill(`commission a crewmate: ${TITLE}`);
+      await input.fill(`${SPAWN_PROMPT_MARKER} ${TITLE}`);
       await input.press("Enter");
       const key = await taskKey(page, TITLE);
       await expect(startedLine(page, key)).toBeVisible({ timeout: 30_000 });

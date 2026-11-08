@@ -18,6 +18,7 @@ import {
   GITLAB_STUB_KEY,
   GITLAB_STUB_LOGIN,
   GITLAB_STUB_PROJECT,
+  GITLAB_STUB_USER_CODE,
   startGitLabStub,
 } from "./gitlabStub";
 import { redirectGitClone } from "./homeFixtures";
@@ -203,7 +204,7 @@ test("browser sign-in to gitlab.com names the setting GitLab refused and then sh
     );
     await application.fill(GITLAB_STUB_APPLICATION);
     await pressKey(start, "Enter");
-    await expect(page.locator("[data-forge-code]")).toHaveText("WDJBMJHT");
+    await expect(page.locator("[data-forge-code]")).toHaveText(GITLAB_STUB_USER_CODE);
     expect(
       stub.requests().filter((request) => request.endsWith("/oauth/authorize_device")),
     ).toHaveLength(3);

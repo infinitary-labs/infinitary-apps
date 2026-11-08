@@ -18,7 +18,7 @@ import {
   setLevelInPanel,
 } from "./modelsBoard";
 import { type QuotaFixtureSnapshot, seedQuotaFixture } from "./quotaFixtures";
-import { seedRetiredCursorStore } from "./savedDataFixtures";
+import { RETIRED_CURSOR_AUTH, seedRetiredCursorStore } from "./savedDataFixtures";
 import { settingsSection } from "./settings";
 import { starterFor } from "./starters";
 
@@ -385,7 +385,7 @@ test("a Cursor account from an earlier version is skipped, and its store is kept
   // And nothing was deleted: the store and its registry row stay on disk.
   const authFile = join(userDataDir, "accounts", "cursor", LEFTOVER_CURSOR, ".cursor", "auth.json");
   expect(existsSync(authFile)).toBe(true);
-  expect(readFileSync(authFile, "utf8")).toBe('{"accessToken":"left-behind"}');
+  expect(readFileSync(authFile, "utf8")).toBe(RETIRED_CURSOR_AUTH);
   const registry = JSON.parse(
     readFileSync(join(userDataDir, "accounts", "registry.json"), "utf8"),
   ) as { accounts: { id: string }[] };

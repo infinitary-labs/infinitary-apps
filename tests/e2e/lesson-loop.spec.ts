@@ -13,9 +13,13 @@ import { resizeWindow } from "./layout";
 import {
   chessItems,
   LESSON_CHESS_ASK,
+  LESSON_CHESS_TITLE,
+  LESSON_CHOICES,
   LESSON_FRACTIONS_ASK,
   LESSON_FRACTIONS_GOAL_TITLE,
+  LESSON_FRACTIONS_TITLE,
   LESSON_GOAL_ANSWER,
+  LESSON_GOAL_LABEL,
   LESSON_GOAL_TITLE,
   LESSON_LEARNER_LINE,
   LESSON_NEXT_GOAL,
@@ -108,7 +112,7 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
       await expect(shownCard(page, OTHER)).toBeVisible();
       await askFirstmate(page, LESSON_CHESS_ASK);
       await expect(shownCard(page, LESSON_GOAL_TITLE)).toBeVisible({ timeout: 60_000 });
-      const chess = tasksOf(userDataDir).filter((task) => task.title === "Teach chess");
+      const chess = tasksOf(userDataDir).filter((task) => task.title === LESSON_CHESS_TITLE);
       expect(chess).toHaveLength(1);
       const shape = JSON.parse(chess[0]?.shape ?? "{}");
       expect(shape).toMatchObject({ ongoing: true, intelligence: "high", deliverable: "change" });
@@ -119,9 +123,7 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
       );
       expect(routing.at(-1)).toMatchObject({ rule: "R11", bucket: "high" });
       // The first card asks for the goal, in the warm voice a lesson card may use.
-      await expect(
-        cardBody(page, LESSON_GOAL_TITLE).getByLabel("What do you want to be able to do?"),
-      ).toBeVisible();
+      await expect(cardBody(page, LESSON_GOAL_TITLE).getByLabel(LESSON_GOAL_LABEL)).toBeVisible();
       if (evidence) await regionShot(shownEntry(page), join(evidence, "goal.png"));
     });
 
@@ -129,12 +131,12 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
       const { page } = launched;
       await showCard(page, LESSON_GOAL_TITLE);
       await cardBody(page, LESSON_GOAL_TITLE)
-        .getByLabel("What do you want to be able to do?")
+        .getByLabel(LESSON_GOAL_LABEL)
         .evaluate((field: HTMLInputElement, value) => {
           field.value = value;
           field.dispatchEvent(new Event("input", { bubbles: true }));
         }, LESSON_GOAL_ANSWER);
-      await choose(page, "Let's start");
+      await choose(page, LESSON_CHOICES.start);
       await expect(shownCard(page, LESSON_ROUND_ONE_TITLE)).toBeVisible({ timeout: 60_000 });
       expect(readFileSync(join(workspace, "lessons", "learner.md"), "utf8")).toContain(
         LESSON_LEARNER_LINE,
@@ -214,18 +216,19 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
 
     await test.step("Next round closes the card at once and the next round comes forward, carrying the result", async () => {
       const { page } = launched;
-      await choose(page, "Next round");
+      await choose(page, LESSON_CHOICES.nextRound);
       await expect(shownCard(page, LESSON_ROUND_TWO_TITLE)).toBeVisible({ timeout: 60_000 });
       await expectNoCard(page, LESSON_ROUND_ONE_TITLE);
       const sent = teacherRequests().some(
-        (body) => /chose \\"Next round\\"/.test(body) && /firstTry\\+":5/.test(body),
+        (body) =>
+          body.includes(`chose \\"${LESSON_CHOICES.nextRound}\\"`) && /firstTry\\+":5/.test(body),
       );
       expect(sent).toBe(true);
     });
 
     await test.step("Stop for today saves committed progress and leaves a welcome-back card", async () => {
       const { page } = launched;
-      await choose(page, "Stop for today");
+      await choose(page, LESSON_CHOICES.stopToday);
       await expect(shownCard(page, LESSON_WELCOME_TITLE)).toBeVisible({ timeout: 60_000 });
       // The host commits the turn when it ends, after the commits of the turns
       // before it (INF-539): the committed file is the saved one once that work is done.
@@ -234,7 +237,7 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
         .toBe(readFileSync(join(workspace, "lessons", "chess", "progress.md"), "utf8").trim());
       await expect.poll(() => git(workspace, "status", "--porcelain")).toBe("");
       const progress = readFileSync(join(workspace, "lessons", "chess", "progress.md"), "utf8");
-      expect(progress).toContain("Goal: beat my dad at chess");
+      expect(progress).toContain(`Goal: ${LESSON_GOAL_ANSWER}`);
       expect(progress).not.toMatch(/\| learned/);
       expect(existsSync(join(workspace, "lessons", "manifest.json"))).toBe(false);
       if (evidence) await regionShot(shownEntry(page), join(evidence, "welcome-back.png"));
@@ -255,7 +258,7 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
         (await window.infinitary.cards.list()).map((card) => card.title).sort(),
       );
       expect(titles).toEqual([LESSON_WELCOME_TITLE, OTHER].sort());
-      const chess = tasksOf(userDataDir).find((task) => task.title === "Teach chess");
+      const chess = tasksOf(userDataDir).find((task) => task.title === LESSON_CHESS_TITLE);
       expect(chess?.status).toBe("active");
       // A nudge the restart owed the teacher would reach it before anything
       // the captain sends it later; the review's request below is that later
@@ -268,7 +271,10 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
       await askFirstmate(page, LESSON_FRACTIONS_ASK);
       await expect(shownCard(page, LESSON_FRACTIONS_GOAL_TITLE)).toBeVisible({ timeout: 60_000 });
       const taught = tasksOf(userDataDir).filter((task) => /^Teach /.test(task.title));
-      expect(taught.map((task) => task.title)).toEqual(["Teach chess", "Teach fractions"]);
+      expect(taught.map((task) => task.title)).toEqual([
+        LESSON_CHESS_TITLE,
+        LESSON_FRACTIONS_TITLE,
+      ]);
       expect(new Set(taught.map((task) => task.id)).size).toBe(2);
       expect(existsSync(join(workspace, "lessons", "fractions", "progress.md"))).toBe(true);
       expect(existsSync(join(workspace, "lessons", "chess", "progress.md"))).toBe(true);
@@ -280,18 +286,21 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
     await test.step("Start today's lesson reviews, and Stop these lessons closes the task and keeps the records", async () => {
       const { page } = launched;
       await showCard(page, LESSON_WELCOME_TITLE);
-      await choose(page, "Start today's lesson");
+      await choose(page, LESSON_CHOICES.startToday);
       await expect(shownCard(page, LESSON_ROUND_REVIEW_TITLE)).toBeVisible({ timeout: 60_000 });
       // No nudge came first: the teacher's first request since the restart
       // carries this choice, which reached it after anything the restart owed.
-      expect(teacherRequests()[0]).toMatch(/chose \\"Start today's lesson\\"/);
-      await choose(page, "Stop for today");
+      expect(teacherRequests()[0]).toContain(`chose \\"${LESSON_CHOICES.startToday}\\"`);
+      await choose(page, LESSON_CHOICES.stopToday);
       await expect(shownCard(page, LESSON_WELCOME_TITLE)).toBeVisible({ timeout: 60_000 });
-      await choose(page, "Stop these lessons");
+      await choose(page, LESSON_CHOICES.stopLessons);
       await expect
-        .poll(() => tasksOf(userDataDir).find((task) => task.title === "Teach chess")?.status, {
-          timeout: 60_000,
-        })
+        .poll(
+          () => tasksOf(userDataDir).find((task) => task.title === LESSON_CHESS_TITLE)?.status,
+          {
+            timeout: 60_000,
+          },
+        )
         .toBe("done");
       expect(existsSync(join(workspace, "lessons", "chess", "progress.md"))).toBe(true);
       await expect.poll(() => git(workspace, "status", "--porcelain")).toBe("");

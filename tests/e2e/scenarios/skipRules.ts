@@ -12,6 +12,9 @@ import { sinceLastUser } from "../providerRequest";
  * as a merge past the rules at the version read, then asks on a card; after
  * the click, the same review on a revised card sends nothing again.
  */
+/** How the crewmate's report opens when it hands on the card tool's answer to its second card. */
+export const SKIP_RULES_ASKING_AGAIN = "Asking again:";
+
 export const skipRules: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, latestUserTail }) => {
@@ -92,7 +95,7 @@ export const skipRules: Scenario =
             {
               name: "report",
               args: {
-                text: `Asking again: ${results[0]}`,
+                text: `${SKIP_RULES_ASKING_AGAIN} ${results[0]}`,
                 summary: "The release pull request merged past its rules.",
               },
             },

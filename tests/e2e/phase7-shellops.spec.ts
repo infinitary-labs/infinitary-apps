@@ -4,6 +4,7 @@ import { expect, test } from "@playwright/test";
 import { purgedTasksText } from "../../src/renderer/src/settings/generalWords";
 import { waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { reportLine, taskKey } from "./rails";
 import { readSavedData } from "./savedData";
@@ -30,7 +31,7 @@ test("the purge control removes every task and its data", async () => {
   // An idle task still holds its worktree, so the purge has one to remove.
   const input = promptInput(page);
   await input.click();
-  await input.fill("commission a crewmate: write a purge probe note");
+  await input.fill(`${SPAWN_PROMPT_MARKER} write a purge probe note`);
   await input.press("Enter");
   await expect(reportLine(page, await taskKey(page, "write a purge probe note"))).toBeVisible({
     timeout: 30_000,

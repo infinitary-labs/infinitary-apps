@@ -27,6 +27,7 @@ import { promptInput } from "./prompt";
 import { isTaskRequest, providerMessages, providerToolCalls } from "./providerRequest";
 import { expandDock, expectRecordBody, hideRecord, pressRow, recordCard, taskFact } from "./rails";
 import {
+  MOCK_BROWSER_SAID,
   MOCK_HANDOFF_ACTION,
   MOCK_HANDOFF_ASKED_REPORT,
   MOCK_HANDOFF_CARD_TITLE,
@@ -178,7 +179,7 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
         const current = (await detail()) as TaskDetail;
         // Its browser refused it the moment its card went up.
         expect(current.outcome).toContain(
-          "My browser then said: \"You asked the captain to take over this task's browser, so it is paused:",
+          `${MOCK_BROWSER_SAID.before} "You asked the captain to take over this task's browser, so it is paused:`,
         );
         expect(current.browser).toMatchObject({
           state: "open",
@@ -339,17 +340,17 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
       expect(outcome).toContain(REF_FROM_BEFORE_HANDBACK);
       // Its first look says control came back, and reads what he signed in to.
       expect(outcome).toContain(
-        'The fresh look said "The captain returned control of this browser:',
+        `${MOCK_BROWSER_SAID.freshLook} "The captain returned control of this browser:`,
       );
-      expect(outcome).toContain('the page said "Signed in as sam@example.com"');
+      expect(outcome).toContain(`${MOCK_BROWSER_SAID.page} "Signed in as sam@example.com"`);
       // What the page logged and asked for while he held it never reached it.
-      expect(outcome).toContain("It kept nothing from the captain's time.");
+      expect(outcome).toContain(`It kept ${MOCK_BROWSER_SAID.keptNothing}.`);
       // The page may show his account now: a picture only for a reason the
       // task has, and his record says so.
       expect(outcome).toContain(
-        "A picture without a reason: \"The captain handed this browser back, so its pages may show the captain's account: a picture is taken only when the task needs one.",
+        `${MOCK_BROWSER_SAID.noReason} "The captain handed this browser back, so its pages may show the captain's account: a picture is taken only when the task needs one.`,
       );
-      expect(outcome).toContain('With one: "Saved the visible page as ');
+      expect(outcome).toContain(`${MOCK_BROWSER_SAID.withReason} "Saved the visible page as `);
       expect(
         existsSync(
           join(
@@ -449,10 +450,10 @@ test("the captain takes a task's browser while its crewmate's command runs, and 
       const outcome = (await detail()).outcome ?? "";
       // The wait in flight ran to its end and answered; the one after it refused as it started.
       expect(outcome).toContain(
-        `The command before it answered "Waited 10 seconds; "${TASK_BROWSER_HANDOFF_READY_WORDS}" did not appear.`,
+        `${MOCK_BROWSER_SAID.commandBefore} "Waited 10 seconds; "${TASK_BROWSER_HANDOFF_READY_WORDS}" did not appear.`,
       );
       expect(outcome).toContain(
-        "Then my browser said \"The captain has control of this task's browser:",
+        `${MOCK_BROWSER_SAID.refusal} "The captain has control of this task's browser:`,
       );
       // The wait ran past its Pi shell's 3-second limit: the command said it
       // was still running, the crewmate's next looks read its answer, and no
@@ -539,9 +540,9 @@ test("the captain takes a task's browser while its crewmate's command runs, and 
         .toContain(MOCK_TAKE_RETURNED_REPORT);
       const outcome = (await detail()).outcome ?? "";
       expect(outcome).toContain(
-        'The fresh look said "The captain returned control of this browser:',
+        `${MOCK_BROWSER_SAID.freshLook} "The captain returned control of this browser:`,
       );
-      expect(outcome).toContain('the page said "Signed in as sam@example.com"');
+      expect(outcome).toContain(`${MOCK_BROWSER_SAID.page} "Signed in as sam@example.com"`);
       const woken = providerMessages(crewmateCalls().at(-1) ?? "{}").filter(
         (message) => message.role === "user" && message.text.includes(BROWSER_RETURNED_OPENING),
       );

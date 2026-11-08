@@ -12,6 +12,8 @@ import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import {
+  STALE_OFFER_BODY_LINE,
+  STALE_OFFER_CHOICE_ID,
   STALE_OFFER_CHOICE_LABEL,
   STALE_OFFER_PROMPT_MARKER,
   STALE_OFFER_REVISED_TITLE,
@@ -119,7 +121,7 @@ test("a choice names the offer the stage showed, not the head its crewmate wrote
   expect(pack.status, pack.printed).toBe(0);
   // The command prints counts, never a card's words.
   expect(pack.printed).toContain("human supervision: ");
-  expect(pack.printed).not.toContain("Ten runs in a row");
+  expect(pack.printed).not.toContain(STALE_OFFER_BODY_LINE);
   const episode = pack.episodes().find((entry) => entry.card_id === cardId);
   expect(episode?.basis).toBe("captured");
   expect(episode?.task_id).toBe(taskId);
@@ -143,7 +145,7 @@ test("a choice names the offer the stage showed, not the head its crewmate wrote
     offer_id: first?.offer_id,
     actor: "captain",
     source: "chrome",
-    actionId: "retry-flush",
+    actionId: STALE_OFFER_CHOICE_ID,
     recognized: true,
     label: STALE_OFFER_CHOICE_LABEL,
     closes: true,

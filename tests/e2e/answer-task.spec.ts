@@ -45,6 +45,7 @@ import {
   MOCK_ANSWER_ACTION_LABEL,
   MOCK_ANSWER_CARD_TITLE,
   MOCK_ANSWER_FINISHED_AGAIN,
+  MOCK_ANSWER_LEAVE_LABEL,
   MOCK_ANSWER_REPORT,
 } from "./scenarios/answerTask";
 import { OWN_RENT_CARD_TITLE, OWN_RENT_TITLE, ownRentAnswer } from "./scenarios/ownRentAnswer";
@@ -137,7 +138,7 @@ test("an answer task is briefed as shipping nothing, waits on its card, and clos
   // the card boundary refuses on an answer task.
   await expect(shownCard(page, MOCK_ANSWER_CARD_TITLE)).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("button", { name: MOCK_ANSWER_ACTION_LABEL })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Leave it for now" })).toBeVisible();
+  await expect(page.getByRole("button", { name: MOCK_ANSWER_LEAVE_LABEL })).toBeVisible();
   for (const shipped of [...Object.values(MERGE_WORDS), "Discard"]) {
     await expect(page.getByRole("button", { name: shipped })).toHaveCount(0);
   }

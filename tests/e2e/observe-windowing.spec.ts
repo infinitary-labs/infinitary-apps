@@ -8,7 +8,11 @@ import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
 import { observeBody } from "./frames";
 import { launchApp } from "./launch";
-import { observeTranscriptEntries, seedTranscript } from "./transcriptFixtures";
+import {
+  observeTranscriptEntries,
+  observeTranscriptRow,
+  seedTranscript,
+} from "./transcriptFixtures";
 
 // Dogfood scale, through the real storage -> IPC -> Tier-2 frame path.
 // Vary heights: a row is never assumed to be one line or one fixed size.
@@ -22,7 +26,9 @@ test("Observe reaches every row of a long history and crew, and never lists the 
   const userDataDir = scratchDir("infinitary-observe-scale-");
   const file = join(userDataDir, "main.jsonl");
   const retired = join(userDataDir, "supervision.jsonl");
-  seedTranscript(file, observeTranscriptEntries(6581), false);
+  // Dogfood's history length; its last row is the one the end of the list shows.
+  const rows = 6581;
+  seedTranscript(file, observeTranscriptEntries(rows), false);
   seedTranscript(retired, observeTranscriptEntries(1), false);
   const db = openDatabase(userDataDir);
   const settings = new SettingsStore(db);
@@ -47,7 +53,7 @@ test("Observe reaches every row of a long history and crew, and never lists the 
     const frame = observeBody(page);
     const scroller = frame.locator("[data-observe-transcript]");
     const list = frame.locator("[data-observe-session-list]");
-    await expect(scroller.getByText("Transcript row 6580")).toBeInViewport();
+    await expect(scroller.getByText(observeTranscriptRow(rows - 1))).toBeInViewport();
     await expect(frame.locator('[data-observe-group="supervision"]')).toHaveCount(0);
     expect(await page.evaluate(() => window.infinitary.observe.sessions())).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ id: "supervision" })]),
@@ -59,7 +65,7 @@ test("Observe reaches every row of a long history and crew, and never lists the 
     await scroller.evaluate((el) => {
       el.scrollTop = 0;
     });
-    await expect(scroller.getByText("Transcript row 0", { exact: true })).toBeInViewport();
+    await expect(scroller.getByText(observeTranscriptRow(0), { exact: true })).toBeInViewport();
     await scroller.evaluate((el) => {
       el.scrollTop = el.scrollHeight / 2;
     });
@@ -77,7 +83,7 @@ test("Observe reaches every row of a long history and crew, and never lists the 
     await scroller.evaluate((el) => {
       el.scrollTop = el.scrollHeight;
     });
-    await expect(scroller.getByText("Transcript row 6580")).toBeInViewport();
+    await expect(scroller.getByText(observeTranscriptRow(rows - 1))).toBeInViewport();
 
     // The last crew row remains reachable and selectable.
     await list.evaluate((el) => {

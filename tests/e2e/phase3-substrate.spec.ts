@@ -7,7 +7,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
-import { DISCARD_PROMPT_MARKER, LAND_PROMPT_MARKER } from "./mockProvider";
+import { DISCARD_PROMPT_MARKER, LAND_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { addedProjects, addFromSetupCard, projectRow, projectRowWords } from "./projects";
 import { promptInput } from "./prompt";
 import { putInLine, startedLine, taskKey } from "./rails";
@@ -175,13 +175,13 @@ test("two commissioned tasks get separate worktrees; discarding one and landing 
 
     const input = promptInput(page);
     await input.click();
-    await input.fill(`commission a crewmate: first parallel task in ${repoName}`);
+    await input.fill(`${SPAWN_PROMPT_MARKER} first parallel task in ${repoName}`);
     await input.press("Enter");
     await expect(
       startedLine(page, await taskKey(page, `first parallel task in ${repoName}`)),
     ).toBeVisible({ timeout: 30_000 });
     await input.click();
-    await input.fill(`commission a crewmate: second parallel task in ${repoName}`);
+    await input.fill(`${SPAWN_PROMPT_MARKER} second parallel task in ${repoName}`);
     await input.press("Enter");
     await expect(
       startedLine(page, await taskKey(page, `second parallel task in ${repoName}`)),

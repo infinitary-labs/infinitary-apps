@@ -6,6 +6,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody, frameGesturesDecided } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { pressPointer } from "./layout";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import {
   LOCAL_LINK_CARD_TITLES,
@@ -44,7 +45,7 @@ test("local-subdomain links in notes, decisions and scripted cards reach the hos
     await recordOpens(launched);
     const input = promptInput(page);
     await input.click();
-    await input.fill(`commission a crewmate: ${LOCAL_LINK_CARDS_PROMPT_MARKER}`);
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${LOCAL_LINK_CARDS_PROMPT_MARKER}`);
     await input.press("Enter");
     await expect(pager(page, 3)).toBeVisible({ timeout: 30_000 });
 

@@ -13,6 +13,7 @@ import {
   savedCaption,
   savedSignInLabel,
 } from "../../src/shared/taskBrowser";
+import { MOCK_LEAVE_WAITING } from "./browserScript";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
@@ -26,6 +27,7 @@ import {
   MOCK_SAVED_FAILED_CARD_TITLE,
   MOCK_SAVED_FAILED_REPORT,
   MOCK_SAVED_REPORT_PREFIX,
+  MOCK_SAVED_WAKE_SAID,
   TASK_BROWSER_SAVED_MARKER,
   taskBrowserJourneys,
 } from "./scenarios/taskBrowserJourneys";
@@ -232,7 +234,7 @@ test("without future-task permission a saved sign-in reaches a later task only o
       await test.step("with nothing saved, the request offers only the captain's own sign-in", async () => {
         const task = await askToSignIn(first);
         expect((await savedCardOf(task.id))?.actions.map((action) => action.label)).toEqual([
-          "Leave waiting",
+          MOCK_LEAVE_WAITING,
           MOCK_SAVED_ACTION,
         ]);
         expect(await page.evaluate(() => window.infinitary.browser.signIns())).toEqual({
@@ -331,7 +333,7 @@ test("without future-task permission a saved sign-in reaches a later task only o
             savedSignIn: action.effect?.kind === "open" && action.effect.savedSignIn === true,
           })),
         ).toEqual([
-          { label: "Leave waiting", default: false, savedSignIn: false },
+          { label: MOCK_LEAVE_WAITING, default: false, savedSignIn: false },
           { label: SIGN_IN_MYSELF_LABEL, default: false, savedSignIn: false },
           { label: savedSignInLabel(site), default: true, savedSignIn: true },
         ]);
@@ -359,7 +361,7 @@ test("without future-task permission a saved sign-in reaches a later task only o
         .toContain(`${MOCK_SAVED_REPORT_PREFIX} "Signed in as sam@example.com"`);
       const current = (await detailTitled(second)) as TaskDetail;
       expect(current.outcome).toContain(
-        `The wake said "The captain let this task use the sign-in saved on ${HERE.this} for ${site}, and your browser is yours again:"`,
+        `${MOCK_SAVED_WAKE_SAID} "The captain let this task use the sign-in saved on ${HERE.this} for ${site}, and your browser is yours again:"`,
       );
       expect(current.browser).toMatchObject({ state: "open", saved: [site] });
       expect(current.browser).not.toHaveProperty("control");
@@ -543,7 +545,7 @@ test("a site that keeps its sign-in in its own page storage is saved, used and r
             default: action.default === true,
           })),
         ).toEqual([
-          { label: "Leave waiting", default: false },
+          { label: MOCK_LEAVE_WAITING, default: false },
           { label: SIGN_IN_MYSELF_LABEL, default: false },
           { label: savedSignInLabel(site), default: true },
         ]);
@@ -734,7 +736,7 @@ test("a site that keeps its sign-in in its page's session storage is saved at th
             default: action.default === true,
           })),
         ).toEqual([
-          { label: "Leave waiting", default: false },
+          { label: MOCK_LEAVE_WAITING, default: false },
           { label: SIGN_IN_MYSELF_LABEL, default: false },
           { label: savedSignInLabel(site), default: true },
         ]);
@@ -874,7 +876,7 @@ test("a saved sign-in the site turned away is marked by the crewmate, and the ne
         sessions.clear();
         const task = await askToSignIn(second);
         expect(await buttons(MOCK_SAVED_CARD_TITLE, task.id)).toEqual([
-          { label: "Leave waiting", default: false },
+          { label: MOCK_LEAVE_WAITING, default: false },
           { label: SIGN_IN_MYSELF_LABEL, default: false },
           { label: savedSignInLabel(site), default: true },
         ]);
@@ -903,7 +905,7 @@ test("a saved sign-in the site turned away is marked by the crewmate, and the ne
         );
         // Its browser uses the save already, so its own card offers only the captain's sign-in.
         expect(await buttons(MOCK_SAVED_FAILED_CARD_TITLE, task.id)).toEqual([
-          { label: "Leave waiting", default: false },
+          { label: MOCK_LEAVE_WAITING, default: false },
           { label: MOCK_SAVED_ACTION, default: true },
         ]);
         return task;
@@ -912,7 +914,7 @@ test("a saved sign-in the site turned away is marked by the crewmate, and the ne
     await test.step("a later task's request leads with Sign in myself and keeps the save as a second choice", async () => {
       const task = await askToSignIn(third);
       expect(await buttons(MOCK_SAVED_CARD_TITLE, task.id)).toEqual([
-        { label: "Leave waiting", default: false },
+        { label: MOCK_LEAVE_WAITING, default: false },
         { label: SAVED_SIGN_IN_FAILED_LABEL, default: false },
         { label: SIGN_IN_MYSELF_LABEL, default: true },
       ]);

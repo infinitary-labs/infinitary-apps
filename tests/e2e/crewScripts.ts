@@ -32,6 +32,8 @@ export type CrewScriptAnswer = ScenarioAnswer | { threadHeld: ScriptedCall[] };
 export const THREAD_PROMPT_MARKER = "keep a thread open";
 export const THREAD_CARD_TITLE = "Two ways to fix the flaky test";
 export const THREAD_CARD_REVISED_TITLE = "Await the queue, not the clock";
+/** The thread card's default action, on every version of it. */
+export const THREAD_CARD_DEFAULT_LABEL = "Await the queue";
 /** The captain's reply that changes what the card should say: a revision. */
 export const THREAD_REVISE_REPLY = "the second option is wrong";
 /** The crewmate's short answer, passed as the revision's `reply`. */
@@ -323,7 +325,7 @@ export function crewScriptAnswer(request: CrewScriptRequest): CrewScriptAnswer |
                 body: "<p>Awaiting the job queue removes the race on every platform.</p><p>The windows retry waits on the same queue flush.</p>",
                 actions: [
                   { id: "mock-clock", label: "Mock the clock" },
-                  { id: "await-queue", label: "Await the queue", default: true },
+                  { id: "await-queue", label: THREAD_CARD_DEFAULT_LABEL, default: true },
                 ],
               },
             },
@@ -350,7 +352,7 @@ export function crewScriptAnswer(request: CrewScriptRequest): CrewScriptAnswer |
               body: "<p>Awaiting the job queue removes the race entirely.</p><p>Mocking the clock leaves write order uncertain, which is what you spotted.</p>",
               actions: [
                 { id: "mock-clock", label: "Mock the clock" },
-                { id: "await-queue", label: "Await the queue", default: true },
+                { id: "await-queue", label: THREAD_CARD_DEFAULT_LABEL, default: true },
               ],
             },
           },
@@ -383,7 +385,7 @@ export function crewScriptAnswer(request: CrewScriptRequest): CrewScriptAnswer |
               body: "<p>Awaiting the job queue removes the race entirely.</p><p>Mocking the clock is quicker but leaves write order uncertain.</p>",
               actions: [
                 { id: "mock-clock", label: "Mock the clock" },
-                { id: "await-queue", label: "Await the queue", default: true },
+                { id: "await-queue", label: THREAD_CARD_DEFAULT_LABEL, default: true },
               ],
             },
           },

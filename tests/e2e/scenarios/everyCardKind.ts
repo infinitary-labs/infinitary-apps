@@ -4,6 +4,10 @@ import type { Scenario } from "../mockProvider";
 /** Marker prompt: the mock crewmate answers with emit_card tool calls first. */
 export const EMIT_CARDS_PROMPT_MARKER = "show every card kind";
 
+/** The working preview's own first button and the decision's default action, as the card-kinds crewmate labels them. */
+export const MOCK_PREVIEW_HOLD_LABEL = "Hold course";
+export const MOCK_CHOICE_DEFAULT_LABEL = "Await the queue";
+
 /** The class the preview's own stylesheet lays its row of choices out by. */
 const MOCK_PROTOTYPE_ROW_CLASS = "course-row";
 /**
@@ -16,7 +20,7 @@ export const MOCK_PROTOTYPE_HTML = [
   "<h2>Course options</h2>",
   '<p class="inf-muted">Pick a heading; this preview is sandboxed.</p>',
   `<div class="${MOCK_PROTOTYPE_ROW_CLASS}">`,
-  '<button type="button" data-inf-action="hold-course">Hold course</button>',
+  `<button type="button" data-inf-action="hold-course">${MOCK_PREVIEW_HOLD_LABEL}</button>`,
   '<button type="button" data-inf-action="new-course">Plot new course</button>',
   "</div>",
 ].join("");
@@ -64,7 +68,7 @@ const MOCK_CHOICE_CARD = {
       "<p>Awaiting the queue adds 40ms to the run.</p></details>",
     actions: [
       { id: "mock-clock", label: MOCK_LONG_ACTION_LABEL },
-      { id: "await-queue", label: "Await the queue", default: true },
+      { id: "await-queue", label: MOCK_CHOICE_DEFAULT_LABEL, default: true },
     ],
   },
 } satisfies ScriptedCall;
@@ -94,7 +98,7 @@ const EVERY_CARD_KIND = [
       title: MOCK_PREVIEW_CARD_TITLE,
       body: MOCK_PROTOTYPE_HTML,
       actions: [
-        { id: "hold-course", label: "Hold course" },
+        { id: "hold-course", label: MOCK_PREVIEW_HOLD_LABEL },
         { id: "new-course", label: "Plot new course", default: true },
       ],
     },

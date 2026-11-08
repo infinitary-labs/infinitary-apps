@@ -33,7 +33,11 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp, SHORT_TICK } from "./launch";
 import { readSavedData } from "./savedData";
-import { type AutomationEventsSeen, automationEvents } from "./scenarios/automationEvents";
+import {
+  AUTOMATION_EVENTS_ANSWER,
+  type AutomationEventsSeen,
+  automationEvents,
+} from "./scenarios/automationEvents";
 import { settingRow, settingsSection } from "./settings";
 import { focusOn, pressKey, runFromSearch, typeInto } from "./windowKeys";
 
@@ -367,7 +371,7 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
     expect(after).toContain(note);
     // The rest of the conversation stays: the rule's own words and the first mate's answer.
     expect(after).toContain("Sort these by urgency:");
-    expect(after).toContain("Triaged the new items.");
+    expect(after).toContain(AUTOMATION_EVENTS_ANSWER);
     const [prompt = ""] = await runs();
     expect(prompt).not.toContain(subject);
     expect(prompt).toContain(note);

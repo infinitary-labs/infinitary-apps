@@ -5,6 +5,7 @@ import {
   LESSON_CHESS_ASK,
   LESSON_CHESS_GOAL,
   LESSON_CHESS_TITLE,
+  LESSON_CHOICES,
   LESSON_FRACTIONS_ASK,
   LESSON_FRACTIONS_GOAL,
   LESSON_FRACTIONS_GOAL_BODY,
@@ -101,8 +102,8 @@ export const lessons: Scenario =
       return `lessons-${subject}-${Math.max(0, ...used.map((match) => Number(match[1]))) + 1}`;
     };
     const roundActions = [
-      { id: "next-round", label: "Next round", default: true },
-      { id: "stop-today", label: "Stop for today" },
+      { id: "next-round", label: LESSON_CHOICES.nextRound, default: true },
+      { id: "stop-today", label: LESSON_CHOICES.stopToday },
     ];
     // The served body is JSON, so the choice's quotes arrive escaped.
     const choseOnCard = (label: string) => latestUserTail.includes(`chose \\"${label}\\"`);
@@ -129,8 +130,8 @@ export const lessons: Scenario =
               LESSON_FRACTIONS_GOAL_TITLE,
               LESSON_FRACTIONS_GOAL_BODY,
               [
-                { id: "start", label: "Let's start", default: true },
-                { id: "stop-today", label: "Stop for today" },
+                { id: "start", label: LESSON_CHOICES.start, default: true },
+                { id: "stop-today", label: LESSON_CHOICES.stopToday },
               ],
             ),
             ready,
@@ -140,12 +141,12 @@ export const lessons: Scenario =
       return { text: "Round ready." };
     }
     if (hasToolResults) return { text: "Round ready." };
-    if (choseOnCard("Stop these lessons")) {
+    if (choseOnCard(LESSON_CHOICES.stopLessons)) {
       return {
         calls: [{ name: "report", args: { text: LESSONS_STOPPED_REPORT, finished: true } }],
       };
     }
-    if (choseOnCard("Start today's lesson")) {
+    if (choseOnCard(LESSON_CHOICES.startToday)) {
       return {
         calls: [
           lessonCard(
@@ -162,7 +163,7 @@ export const lessons: Scenario =
         ],
       };
     }
-    if (choseOnCard("Stop for today")) {
+    if (choseOnCard(LESSON_CHOICES.stopToday)) {
       return {
         calls: [
           {
@@ -170,14 +171,14 @@ export const lessons: Scenario =
             args: { path: "lessons/chess/progress.md", content: LESSON_PROGRESS_STOP },
           },
           lessonCard(nextCard("chess"), LESSON_WELCOME_TITLE, LESSON_WELCOME_BODY, [
-            { id: "start-lesson", label: "Start today's lesson", default: true },
-            { id: "stop-lessons", label: "Stop these lessons" },
+            { id: "start-lesson", label: LESSON_CHOICES.startToday, default: true },
+            { id: "stop-lessons", label: LESSON_CHOICES.stopLessons },
           ]),
           ready,
         ],
       };
     }
-    if (choseOnCard("Next round")) {
+    if (choseOnCard(LESSON_CHOICES.nextRound)) {
       return {
         calls: [
           lessonCard(
@@ -194,7 +195,7 @@ export const lessons: Scenario =
         ],
       };
     }
-    if (choseOnCard("Let's start")) {
+    if (choseOnCard(LESSON_CHOICES.start)) {
       return {
         calls: [
           {
@@ -242,8 +243,8 @@ export const lessons: Scenario =
     return {
       calls: [
         lessonCard(nextCard("chess"), LESSON_GOAL_TITLE, LESSON_GOAL_BODY, [
-          { id: "start", label: "Let's start", default: true },
-          { id: "stop-today", label: "Stop for today" },
+          { id: "start", label: LESSON_CHOICES.start, default: true },
+          { id: "stop-today", label: LESSON_CHOICES.stopToday },
         ]),
         ready,
       ],

@@ -10,7 +10,7 @@ import {
   MOCK_CLAUDE_HELD_CARD_TITLE,
 } from "./crewScripts";
 import type { LaunchedApp } from "./launch";
-import { type MockProviderServer, startMockProvider } from "./mockProvider";
+import { type MockProviderServer, SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
 import { cardReply, showCard } from "./stack";
 
 /**
@@ -59,7 +59,7 @@ test("a reply kept behind a refused sign-in says so in its thread, across a rest
     const input = taskPrompt(launched.page);
     await expect(input).toBeEnabled({ timeout: 30_000 });
     await input.click();
-    await input.fill(`commission a crewmate: ${TITLE}`);
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${TITLE}`);
     await input.press("Enter");
     await expect
       .poll(

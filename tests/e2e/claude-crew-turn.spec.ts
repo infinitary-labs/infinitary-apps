@@ -18,6 +18,7 @@ import {
   MOCK_CLAUDE_API_KEY,
   mockClaudeKeychainLookups,
 } from "./mockClaudeClient";
+import { SPAWN_PROMPT_MARKER, STEER_PROMPT_MARKER } from "./mockProvider";
 import { reportLine, taskKey } from "./rails";
 import { shownCard } from "./stack";
 import { claudeStarter } from "./starters";
@@ -81,7 +82,7 @@ test("a Claude crew turn shows its card, takes a mid-turn steer, and remains rea
     const input = page.getByRole("textbox", { name: "Task prompt" });
     await expect(input).toBeEnabled({ timeout: 30_000 });
     await input.click();
-    await input.fill(`commission a crewmate: ${TITLE}`);
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${TITLE}`);
     await input.press("Enter");
 
     // The card came through the real client's in-process tool protocol. It
@@ -103,7 +104,7 @@ test("a Claude crew turn shows its card, takes a mid-turn steer, and remains rea
     await expect(page.locator("[data-card-layer]")).toHaveCount(0);
 
     await input.click();
-    await input.fill(`steer the task ${TITLE}: ${CLAUDE_STEER_MARKER}`);
+    await input.fill(`${STEER_PROMPT_MARKER}${TITLE}: ${CLAUDE_STEER_MARKER}`);
     await input.press("Enter");
 
     // The client queued the steer into the running session - an order, never

@@ -39,6 +39,15 @@ import { scratchDir } from "./scratchDirs";
  * and one the home removed since joins anew. The real work mode is
  * `tests/e2e/run-work.spec.ts`.
  */
+/** What the stand-in writes in its record when its join's message carries a link, a socket, or the word to leave another home. */
+export const STAND_IN_RECORD = {
+  link: "link on its input",
+  socket: "socket on its input",
+  leave: "leave on its input",
+} as const;
+/** The stand-in's answer to a join that went through, as it prints it. */
+export const STAND_IN_JOINED = '"firstmate":"joined"';
+
 export function standInFirstmate(
   record: string,
   uid: number,
@@ -141,8 +150,8 @@ export function standInFirstmate(
       "IFS= read -r M",
       String.raw`L="$(printf '%s' "$M" | sed -n 's/.*"link":"\([^"]*\)".*/\1/p')"`,
       String.raw`SOCK="$(printf '%s' "$M" | sed -n 's/.*"socket":"\([^"]*\)".*/\1/p')"`,
-      'case "$L" in infinitary://* | firstmate3000://*) echo "link on its input" >> "$R";; esac',
-      '[ -n "$SOCK" ] && echo "socket on its input" >> "$R"',
+      `case "$L" in infinitary://* | firstmate3000://*) echo "${STAND_IN_RECORD.link}" >> "$R";; esac`,
+      `[ -n "$SOCK" ] && echo "${STAND_IN_RECORD.socket}" >> "$R"`,
       "Q=\"$(printf '%s' \"$L\" | sed 's/^[^?]*?//')\"",
       "get() { printf '%s' \"$Q\" | tr '&' '\\n' | sed -n \"s/^$1=//p\"; }",
       'AT="$(get at | sed "s/%3A/:/g")"; KEY="$(get key)"; CODE="$(get code)"; VIA="$(get via)"; AS="$(get as)"',
@@ -159,7 +168,7 @@ export function standInFirstmate(
       // it and it does not answer; leaving keeps one working copy, as the
       // work mode keeps one holding unmerged work.
       'LEFT=""',
-      `case "$M" in *'"leave":true'*) LEAVE=yes; echo "leave on its input" >> "$R";; *) LEAVE="";; esac`,
+      `case "$M" in *'"leave":true'*) LEAVE=yes; echo "${STAND_IN_RECORD.leave}" >> "$R";; *) LEAVE="";; esac`,
       'if [ -z "$AGAIN" ] && [ -n "$W" ] && [ -f "$W/home.json" ]; then',
       `  if [ -z "$LEAVE" ] || [ -n ${shellWord(background.otherAnswers ? "yes" : "")} ]; then rm -rf "$D"; echo '{"firstmate":"refused","reason":"joined"}'; exit 1; fi`,
       '  rm -rf "$W/stand-in" "$W/home.json"; echo "left the other home" >> "$R"',
@@ -195,7 +204,7 @@ export function standInFirstmate(
       'if [ "$VIA" = ssh ]; then V=\',\n    "via": "ssh"\'; else V=""; fi',
       String.raw`    printf '{\n  "version": 1,\n  "grant": {\n    "at": "%s",\n    "homeKey": "%s",\n    "deviceId": "%s",\n    "kind": "%s",\n    "key": "%s",\n    "cert": "%s"%s\n  },\n  "name": null,\n  "joinedAt": 0\n}\n' "$AT" "$KEY" "$ID" "$KIND" "$(esc "$W/stand-in/k")" "$(esc "$W/stand-in/c")" "$V" > "$W/home.json"`,
       "  fi",
-      `  rm -rf "$D"; echo '{"firstmate":"joined","background":"${background.joined}"'"$LEFT"'}'; exit 0`,
+      `  rm -rf "$D"; echo '{${STAND_IN_JOINED},"background":"${background.joined}"'"$LEFT"'}'; exit 0`,
       "fi",
       'WHY="$(sed -n \'s/.*"refused":"\\([a-z-]*\\)".*/\\1/p\' "$D/a" 2>/dev/null)"',
       'rm -rf "$D"',

@@ -19,8 +19,10 @@ import {
   recordCard,
 } from "./rails";
 import {
+  DEPENDENCY_RESUMED_REPORT,
   DEPENDENCY_WAIT_MARKER,
   DEPENDENCY_WAIT_PROMPT,
+  DEPENDENCY_WAIT_REPORT,
   DEPENDENCY_WAIT_TITLE,
   dependencyWait,
 } from "./scenarios/dependencyWait";
@@ -93,7 +95,7 @@ test("a task waiting on work underway stays waiting past every idle rung and res
       .toEqual([owner.id]);
     await expect
       .poll(() => tasks.get(waitingId)?.outcome, { timeout: 30_000 })
-      .toBe("Waiting for the fixture fix to merge first.");
+      .toBe(DEPENDENCY_WAIT_REPORT);
     await expect.poll(() => tasks.get(waitingId)?.activity, { timeout: 30_000 }).toBe("idle");
     requests.push(...(app.mockProvider?.requestBodies() ?? []));
     await app.close();
@@ -156,7 +158,10 @@ test("a task waiting on work underway stays waiting past every idle rung and res
         () =>
           tasks
             .timeline(waitingId)
-            .some((event) => event.kind === "report" && event.text.startsWith("Resumed after")),
+            .some(
+              (event) =>
+                event.kind === "report" && event.text.startsWith(DEPENDENCY_RESUMED_REPORT),
+            ),
         { timeout: 30_000 },
       )
       .toBe(true);

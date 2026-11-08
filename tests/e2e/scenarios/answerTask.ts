@@ -15,6 +15,8 @@ export const ANSWER_READ_MARKER = "I read the answer; finish without starting a 
 export const ANSWER_TASK_PROMPT_MARKER = "find out and answer:";
 export const MOCK_ANSWER_CARD_TITLE = "The meter idles because the claim query filters on repo_id";
 export const MOCK_ANSWER_ACTION_LABEL = "Fix the claim query";
+/** The answer card's second action, beside its default. */
+export const MOCK_ANSWER_LEAVE_LABEL = "Leave it for now";
 const MOCK_ANSWER_CARD_BODY =
   "<p>The meter idles because the claim query filters on repo_id, and seven rows carry none.</p>" +
   "<p>Every idle row shares an empty repo_id; the sweep skips each one, so nothing is ever claimed.</p>" +
@@ -103,7 +105,7 @@ export const answerTask: Scenario = () => {
               body: MOCK_ANSWER_CARD_BODY,
               actions: [
                 { id: "fix-it", label: MOCK_ANSWER_ACTION_LABEL, default: true },
-                { id: "leave-it", label: "Leave it for now" },
+                { id: "leave-it", label: MOCK_ANSWER_LEAVE_LABEL },
               ],
             },
           },

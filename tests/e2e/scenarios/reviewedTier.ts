@@ -69,7 +69,12 @@ export const MOCK_REVIEW_AUTOFIX_FINDING = renderFinding(AUTOFIX_FINDING);
 export const MOCK_REVIEW_ASK_FINDING = renderFinding(ASK_FINDING);
 export const MOCK_REVIEW_FINDINGS_REPORT =
   "Two findings: the flush is awaited after the read, and the empty-state copy says Later.";
-const MOCK_REVIEW_FINDINGS_RISK = { level: "medium", why: "one production line moves." } as const;
+export const MOCK_REVIEW_FINDINGS_RISK = {
+  level: "medium",
+  why: "one production line moves.",
+} as const;
+/** The risk the passing review declares. */
+export const MOCK_REVIEW_PASS_RISK = { level: "low", why: "one test file changed." } as const;
 export const MOCK_REVIEW_PASS_REPORT = "No findings; the flush is awaited before the read now.";
 export const MOCK_REVIEWED_FIX_REPORT =
   "Fixed F1: the flush is awaited before the read; pushed a new head and the checks passed again.";
@@ -454,7 +459,7 @@ function proofAt(head: string) {
 export function liveReviewAnswer(body: string, hasToolResults: boolean): ScenarioAnswer {
   return reviewAnswer(body, hasToolResults, MOCK_REVIEW_PASS_REPORT, {
     code: "clear",
-    risk: { level: "low", why: "one test file changed." },
+    risk: MOCK_REVIEW_PASS_RISK,
   });
 }
 

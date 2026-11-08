@@ -6,7 +6,14 @@ import {
 } from "../../../src/core/orchestrator/captainWakes";
 import { BROWSER_PAY_STEP, BROWSER_SIGN_IN_STEP } from "../../../src/core/pi/cardTool";
 import type { ScriptedCall } from "../../helpers/scriptedCalls";
-import { browser, firstSentence, lookingAgain, refOf, toolAnswers } from "../browserScript";
+import {
+  browser,
+  firstSentence,
+  lookingAgain,
+  MOCK_LEAVE_WAITING,
+  refOf,
+  toolAnswers,
+} from "../browserScript";
 import type { Scenario } from "../mockProvider";
 import { providerMessages } from "../providerRequest";
 
@@ -47,6 +54,17 @@ export const MOCK_REVIEW_STOP_ACTION = "Stop here";
 export const MOCK_REVIEW_REPORT_PREFIX = "I prepared the booking and stopped before paying.";
 export const MOCK_BOOKED_BUTTON = "View booking";
 export const MOCK_BOOKED_REPORT_PREFIX = "Booked:";
+/** The facts the review card names, one row each, in its order. */
+export const MOCK_REVIEW_FACTS = [
+  "Route",
+  "Dates",
+  "Passenger",
+  "Seller",
+  "Total",
+  "Baggage",
+  "Fare rules",
+  "Still uncertain",
+] as const;
 /** The review card's title: the total and the site, as the payment page shows them. */
 export const reviewCardTitle = (total: string, site: string): string =>
   `Ready to pay ${total} on ${site}`;
@@ -90,14 +108,21 @@ function reviewCard(
       body:
         "<p>I filled in the booking and stopped before paying: the payment is yours to make on Aurora Air's page.</p>" +
         "<table>" +
-        "<tr><td>Route</td><td>London Heathrow (LHR) to Lisbon (LIS), nonstop both ways</td></tr>" +
-        "<tr><td>Dates</td><td>Sat 18 Oct, 07:40 London time · return Sat 25 Oct, 18:05 Lisbon time</td></tr>" +
-        `<tr><td>Passenger</td><td>${passenger}, 1 adult</td></tr>` +
-        `<tr><td>Seller</td><td>Aurora Air, ${site}</td></tr>` +
-        `<tr><td>Total</td><td>${total} EUR</td></tr>` +
-        "<tr><td>Baggage</td><td>1 cabin bag, no checked bag</td></tr>" +
-        "<tr><td>Fare rules</td><td>Non-refundable, changes €60</td></tr>" +
-        "<tr><td>Still uncertain</td><td>Seats are assigned at check-in</td></tr>" +
+        MOCK_REVIEW_FACTS.map(
+          (fact) =>
+            `<tr><td>${fact}</td><td>${
+              {
+                Route: "London Heathrow (LHR) to Lisbon (LIS), nonstop both ways",
+                Dates: "Sat 18 Oct, 07:40 London time · return Sat 25 Oct, 18:05 Lisbon time",
+                Passenger: `${passenger}, 1 adult`,
+                Seller: `Aurora Air, ${site}`,
+                Total: `${total} EUR`,
+                Baggage: "1 cabin bag, no checked bag",
+                "Fare rules": "Non-refundable, changes €60",
+                "Still uncertain": "Seats are assigned at check-in",
+              }[fact]
+            }</td></tr>`,
+        ).join("") +
         "</table>" +
         changed +
         "<p>You enter the card details on Aurora Air's page. Infinitary records none of them.</p>",
@@ -192,7 +217,7 @@ function taskBrowserBookingStep(body: string): ScriptedCall[] | undefined {
                 after: "fill in the passenger details",
               },
               actions: [
-                { id: "leave", label: "Leave waiting" },
+                { id: "leave", label: MOCK_LEAVE_WAITING },
                 {
                   id: "sign-in",
                   label: MOCK_AIRLINE_SIGN_IN_ACTION,
@@ -304,6 +329,13 @@ export const MOCK_LOST_ASKED_REPORT = "I prepared the payment and stopped before
 export const MOCK_LOST_CHECK_ACTION = "Open browser and check";
 export const MOCK_LOST_NOT_BOOKED_ACTION = "Treat as not booked";
 export const MOCK_LOST_REPORT_PREFIX = "The payment's outcome on Aurora Air is unknown.";
+/** The words the lost payment's report puts before each answer it quotes. */
+export const MOCK_LOST_SAID = {
+  bookings: "My bookings said",
+  notAgain: "and I did not pay again.",
+  reload: "Reloading the unconfirmed page said:",
+  restart: "After the restart my browser was gone:",
+} as const;
 export const MOCK_LOST_ASKED_AGAIN_REPORT =
   "My browser was gone when the captain chose to check, so I opened My bookings again and asked anew.";
 /** The decision that says the outcome is unknown. */
@@ -419,7 +451,7 @@ function taskBrowserLostStep(body: string): ScriptedCall[] | undefined {
         .find((line) => line.startsWith("Did not reload"));
       const listed = answers[1]?.match(/text "(No bookings yet[^"]*)"/)?.[1];
       return report(
-        `${MOCK_LOST_REPORT_PREFIX} My bookings said "${listed}", and I did not pay again.${reload ? ` Reloading the unconfirmed page said: "${reload}"` : ""} After the restart my browser was gone: "${firstSentence(answers[0])}"${answers[2]?.startsWith("Card refused") ? ` ${answers[2]}` : ""}`,
+        `${MOCK_LOST_REPORT_PREFIX} ${MOCK_LOST_SAID.bookings} "${listed}", ${MOCK_LOST_SAID.notAgain}${reload ? ` ${MOCK_LOST_SAID.reload} "${reload}"` : ""} ${MOCK_LOST_SAID.restart} "${firstSentence(answers[0])}"${answers[2]?.startsWith("Card refused") ? ` ${answers[2]}` : ""}`,
       );
     }
     default:

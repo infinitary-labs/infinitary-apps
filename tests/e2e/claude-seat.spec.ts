@@ -18,6 +18,7 @@ import {
   FM_SEAT_STEERED_TITLE,
   MOCK_ANSWER_TITLE,
   type MockProviderServer,
+  SPAWN_PROMPT_MARKER,
   startMockProvider,
 } from "./mockProvider";
 import { shownCard } from "./stack";
@@ -121,7 +122,7 @@ test("a captain turn is answered with a card, on Claude", async ({ seat }) => {
 test("a crewmate is spawned through spawn_crewmate from the Claude seat", async ({ seat }) => {
   const { page, mockProvider } = seat;
   const title = `count the rivets ${CLAUDE_CREW_PROMPT_MARKER}`;
-  await say(page, `commission a crewmate: ${title}`);
+  await say(page, `${SPAWN_PROMPT_MARKER} ${title}`);
   // The crewmate's own card lands on the stack: the Firstmate's spawn
   // reached the crew.
   await expect.poll(() => cardTitles(page), { timeout: 45_000 }).toContain(MOCK_CLAUDE_CARD_TITLE);

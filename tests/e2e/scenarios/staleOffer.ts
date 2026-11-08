@@ -15,6 +15,10 @@ export const STALE_OFFER_TITLE = "Retry on the queue flush";
 export const STALE_OFFER_REVISED_TITLE = "Retry on the clock instead";
 
 export const STALE_OFFER_CHOICE_LABEL = "Retry on the flush";
+export const STALE_OFFER_CHOICE_ID = "retry-flush";
+/** A line of the first offer's body: card words a count-only export never prints. */
+export const STALE_OFFER_BODY_LINE =
+  "Ten runs in a row passed with the retry waiting on the flush.";
 
 /**
  * Card evidence: the card goes up with the report, then a revision of it
@@ -38,9 +42,9 @@ export const staleOffer: Scenario =
               args: {
                 id: "stale-offer",
                 title: STALE_OFFER_TITLE,
-                body: "<p>Retrying on the queue flush removes the race.</p><p>Ten runs in a row passed with the retry waiting on the flush.</p>",
+                body: `<p>Retrying on the queue flush removes the race.</p><p>${STALE_OFFER_BODY_LINE}</p>`,
                 actions: [
-                  { id: "retry-flush", label: STALE_OFFER_CHOICE_LABEL, default: true },
+                  { id: STALE_OFFER_CHOICE_ID, label: STALE_OFFER_CHOICE_LABEL, default: true },
                   { id: "leave-it", label: "Leave it as it is" },
                 ],
               },

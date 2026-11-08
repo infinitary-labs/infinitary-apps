@@ -7,7 +7,11 @@ import { feedLineFrom } from "../../src/shared/feed";
 import { FIRSTMATE_SESSION_ID } from "../../src/shared/observe";
 import { PLAIN_PROBLEM_FALLBACK } from "../../src/shared/plainProblem";
 import { type LaunchedApp, launchApp } from "./launch";
-import { FAIL_AUTH_PROMPT_MARKER, FAIL_PROVIDER_PROMPT_MARKER } from "./mockProvider";
+import {
+  FAIL_AUTH_PROMPT_MARKER,
+  FAIL_PROVIDER_PROMPT_MARKER,
+  MOCK_PROVIDER_FAILURE,
+} from "./mockProvider";
 
 /**
  * A turn that fails AT THE PROVIDER must be user-visible (scout report
@@ -91,7 +95,7 @@ test("a non-auth provider failure raises the retryable error card, never the sig
 
   const cards = await page.evaluate(() => window.infinitary.cards.list());
   const errorCard = cards.find((card) => card.title === FIRSTMATE_FAILURE_TITLE);
-  expect(errorCard?.body).toContain("mock deterministic provider failure");
+  expect(errorCard?.body).toContain(MOCK_PROVIDER_FAILURE);
   // The retry is the host's own effect on the host's own card (cards/tasks/agents P1).
   expect(errorCard?.author).toBe("host");
   expect(errorCard?.actions.map((action) => action.effect)).toEqual([

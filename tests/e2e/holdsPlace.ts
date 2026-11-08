@@ -1,7 +1,7 @@
 import { expect } from "@playwright/test";
 import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
 import { waitForFirstmateIdle } from "./crew";
-import { FM_THREAD_CARD_TITLE } from "./crewCards";
+import { FM_THREAD_CARD_TITLE, FM_THREAD_DEFAULT_LABEL } from "./crewCards";
 import { askFirstmate } from "./lastTurn";
 import type { LaunchedApp } from "./launch";
 import { served } from "./providerRequest";
@@ -31,7 +31,7 @@ export async function emitContinuityCard(
           actions: asks
             ? [
                 { id: "chips-first", label: "Lead with the chips" },
-                { id: "caption-first", label: "Lead with the caption", default: true },
+                { id: "caption-first", label: FM_THREAD_DEFAULT_LABEL, default: true },
               ]
             : [],
         },

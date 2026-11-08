@@ -7,6 +7,7 @@ import {
   firstSentence,
   knownRefOf,
   lookingAgain,
+  MOCK_LEAVE_WAITING,
   refOf,
   toolAnswers,
 } from "../browserScript";
@@ -23,6 +24,15 @@ import { calledTool, providerMessages } from "../providerRequest";
 export const TASK_BROWSER_READING_MARKER = "read the release page at ";
 export const MOCK_BROWSER_READING_REPORT_PREFIX = "The release page said";
 export const MOCK_BROWSER_READING_PICTURE = "release-page";
+/** What the reading report says when every check holds, in its order. */
+export const MOCK_BROWSER_READING_PASSES = [
+  "moved",
+  "new title",
+  "exact time",
+  "title tooltip",
+  "notes in full",
+  "feed in full",
+] as const;
 
 function taskBrowserReadingStep(body: string): ScriptedCall[] | undefined {
   const ask = body.match(/read the release page at (http:\/\/127\.0\.0\.1:\d+\/reading)/);
@@ -78,16 +88,15 @@ function taskBrowserReadingStep(body: string): ScriptedCall[] | undefined {
       const stale = answers[2] ?? "";
       const notes = answers[3] ?? "";
       const feed = answers[6] ?? "";
-      const moved = click.includes("/reading/one") ? "moved" : "stayed";
+      const [movedOk, titleOk, timeOk, tipOk, tailOk, atomOk] = MOCK_BROWSER_READING_PASSES;
+      const moved = click.includes("/reading/one") ? movedOk : "stayed";
       const title = click.includes('heading "Firstmate 3000 0.2.1-alpha.52"')
-        ? "new title"
+        ? titleOk
         : "old title";
-      const time = listed.includes("2026-10-08T21:52:52Z") ? "exact time" : "no time";
-      const tip = listed.includes("Oct 8, 2026, 2:52 PM PDT") ? "title tooltip" : "no tooltip";
-      const tail = notes.includes("anything stays secret in the notes")
-        ? "notes in full"
-        : "notes cut";
-      const atom = feed.includes("feed ends with the atom tail") ? "feed in full" : "feed cut";
+      const time = listed.includes("2026-10-08T21:52:52Z") ? timeOk : "no time";
+      const tip = listed.includes("Oct 8, 2026, 2:52 PM PDT") ? tipOk : "no tooltip";
+      const tail = notes.includes("anything stays secret in the notes") ? tailOk : "notes cut";
+      const atom = feed.includes("feed ends with the atom tail") ? atomOk : "feed cut";
       return [
         {
           name: "report",
@@ -115,6 +124,14 @@ export const MOCK_BROWSER_LONG_REPORT_PREFIX = "The long changelog said";
 export const TASK_BROWSER_LONG_LAST_WORDS = "the last release ends here";
 /** The picture of the visible page taken after the scroll (INF-2375). */
 export const MOCK_BROWSER_LONG_PICTURE = "scrolled-changelog";
+/** What the long changelog report says when every check holds, in its order. */
+export const MOCK_BROWSER_LONG_PASSES = [
+  "a map",
+  "folded repeats",
+  "found the end",
+  "read on",
+  "scrolled past the top",
+] as const;
 
 /** The first outline line an answer shows, from its `outline:` line. */
 function firstShownLine(answer: string | undefined): number | undefined {
@@ -144,20 +161,19 @@ function taskBrowserLongStep(body: string): ScriptedCall[] | undefined {
       return [browser("stop")];
     case 6: {
       const [opened = "", found = "", read = "", scrolled = ""] = answers;
+      const [mapOk, foldsOk, endOk, readOk, scrollOk] = MOCK_BROWSER_LONG_PASSES;
       const facts = [
-        /^map\[\d+\]:$/m.test(opened) && opened.includes('region "Release 40"')
-          ? "a map"
-          : "no map",
-        opened.includes("(same as line ") ? "folded repeats" : "no folds",
+        /^map\[\d+\]:$/m.test(opened) && opened.includes('region "Release 40"') ? mapOk : "no map",
+        opened.includes("(same as line ") ? foldsOk : "no folds",
         (firstShownLine(found) ?? 1) > 1 &&
         found.includes(`text "And ${TASK_BROWSER_LONG_LAST_WORDS}."`)
-          ? "found the end"
+          ? endOk
           : "did not find the end",
         readOn !== undefined && firstShownLine(read) === Number(readOn)
-          ? "read on"
+          ? readOk
           : "did not read on",
         (firstShownLine(scrolled) ?? 1) > 1 && scrolled.includes(", those on screen")
-          ? "scrolled past the top"
+          ? scrollOk
           : "scrolled to the same top",
       ];
       const sizes = answers
@@ -195,6 +211,8 @@ function taskBrowserLongStep(body: string): ScriptedCall[] | undefined {
  */
 export const TASK_BROWSER_PAGES_MARKER = "pay at the shop page at ";
 export const MOCK_PAGES_REPORT_PREFIX = "The shop and its bank said";
+/** The words the shop report puts before what it read of the bank's check and the shop. */
+export const MOCK_PAGES_SAID = { check: "The check:", shop: "The shop:" } as const;
 /** The words the bank's check shows once the spec lets the crewmate approve. */
 export const TASK_BROWSER_APPROVE_WORDS = "Ready to approve";
 
@@ -245,7 +263,7 @@ function taskBrowserPagesStep(body: string): ScriptedCall[] | undefined {
   const closed = all.match(/Page 2 \([^)]+\) closed itself[^.]*\./)?.[0] ?? "it never closed";
   const paid = last.match(/text "(Paid[^"]*)"/)?.[1];
   return report(
-    `"${firstSentence(answers[0])}" Then: "${opened}" The check: "${answers.some((text) => /^\s*page: 2 of 2$/m.test(text)) ? "page 2 of 2" : "one page"}". After Approve: "${closed}" The shop: "${paid}".`,
+    `"${firstSentence(answers[0])}" Then: "${opened}" ${MOCK_PAGES_SAID.check} "${answers.some((text) => /^\s*page: 2 of 2$/m.test(text)) ? "page 2 of 2" : "one page"}". After Approve: "${closed}" ${MOCK_PAGES_SAID.shop} "${paid}".`,
   );
 }
 
@@ -308,6 +326,8 @@ export const TASK_BROWSER_CARD_MARKER = "show the sign-up page at ";
 export const MOCK_BROWSER_CARD_TITLE = "The sign-up page thanks the name after Send";
 export const MOCK_BROWSER_BUTTON = "Try it";
 export const MOCK_BROWSER_CARD_REPORT = "I left the sign-up page open for the captain to try.";
+/** The sign-up card's default choice. */
+export const MOCK_BROWSER_CARD_DEFAULT = "Looks right";
 
 /**
  * A crewmate asks the captain to sign in (docs/task-browser.md, "Asking for
@@ -329,6 +349,17 @@ export const MOCK_HANDOFF_ACTION = BROWSER_SIGN_IN_STEP;
 export const MOCK_HANDOFF_ASKED_REPORT = "I asked the captain to sign in.";
 export const MOCK_HANDOFF_RETURNED_REPORT = "The captain returned my browser.";
 export const TASK_BROWSER_HANDOFF_READY_WORDS = "Ready to go on";
+/** The words the handoff and take-over reports put before each answer they quote. */
+export const MOCK_BROWSER_SAID = {
+  before: "My browser then said:",
+  freshLook: "The fresh look said",
+  page: "the page said",
+  keptNothing: "nothing from the captain's time",
+  noReason: "A picture without a reason:",
+  withReason: "With one:",
+  commandBefore: "The command before it answered",
+  refusal: "Then my browser said",
+} as const;
 /** The picture it takes of the signed-in page, once with a reason (docs/task-browser.md, "A signed-in page"). */
 export const MOCK_SIGNED_IN_PICTURE = "signed-in-account";
 export const MOCK_SIGNED_IN_PICTURE_REASON = "the task needs to show which account is signed in";
@@ -363,7 +394,7 @@ function taskBrowserHandoffStep(body: string): ScriptedCall[] | undefined {
                 after: "read the account page and report what it says",
               },
               actions: [
-                { id: "leave", label: "Leave waiting" },
+                { id: "leave", label: MOCK_LEAVE_WAITING },
                 {
                   id: "sign-in",
                   label: MOCK_HANDOFF_ACTION,
@@ -381,7 +412,7 @@ function taskBrowserHandoffStep(body: string): ScriptedCall[] | undefined {
           {
             name: "report",
             args: {
-              text: `${MOCK_HANDOFF_ASKED_REPORT} My browser then said: "${firstSentence(before[2])}"`,
+              text: `${MOCK_HANDOFF_ASKED_REPORT} ${MOCK_BROWSER_SAID.before} "${firstSentence(before[2])}"`,
             },
           },
         ];
@@ -423,7 +454,7 @@ function taskBrowserHandoffStep(body: string): ScriptedCall[] | undefined {
     {
       name: "report",
       args: {
-        text: `${MOCK_HANDOFF_RETURNED_REPORT} The old ref: "${firstSentence(after[0])}" The fresh look said "${firstSentence(after[1])}" and the page said "${state}". It kept ${kept.length ? kept.join(" and ") : "nothing from the captain's time"}. A picture without a reason: "${refused.split("\n")[0]}" With one: "${saved.match(/^did: (.*?) \(/m)?.[1]}".`,
+        text: `${MOCK_HANDOFF_RETURNED_REPORT} The old ref: "${firstSentence(after[0])}" ${MOCK_BROWSER_SAID.freshLook} "${firstSentence(after[1])}" and ${MOCK_BROWSER_SAID.page} "${state}". It kept ${kept.length ? kept.join(" and ") : MOCK_BROWSER_SAID.keptNothing}. ${MOCK_BROWSER_SAID.noReason} "${refused.split("\n")[0]}" ${MOCK_BROWSER_SAID.withReason} "${saved.match(/^did: (.*?) \(/m)?.[1]}".`,
       },
     },
   ];
@@ -447,6 +478,8 @@ export const MOCK_SAVED_CARD_TITLE = "Sign in to the club page to continue";
 export const MOCK_SAVED_ACTION = BROWSER_SIGN_IN_STEP;
 export const MOCK_SAVED_ASKED_REPORT = "I asked the captain to sign in to the club page.";
 export const MOCK_SAVED_REPORT_PREFIX = "The club page said";
+/** The words the saved sign-in report puts before the wake it quotes. */
+export const MOCK_SAVED_WAKE_SAID = "The wake said";
 export const MOCK_SAVED_FAILED_CARD_TITLE = "Sign in to the club page again";
 export const MOCK_SAVED_FAILED_REPORT = "The saved sign-in left the club page signed out.";
 const SAVED_WAKES = [
@@ -483,7 +516,7 @@ function taskBrowserSavedStep(body: string): ScriptedCall[] | undefined {
               after: "read the club page and report what it says",
             },
             actions: [
-              { id: "leave", label: "Leave waiting" },
+              { id: "leave", label: MOCK_LEAVE_WAITING },
               {
                 id: "sign-in",
                 label: MOCK_SAVED_ACTION,
@@ -520,7 +553,7 @@ function taskBrowserSavedStep(body: string): ScriptedCall[] | undefined {
               saved_failed: true,
             },
             actions: [
-              { id: "leave", label: "Leave waiting" },
+              { id: "leave", label: MOCK_LEAVE_WAITING },
               {
                 id: "sign-in",
                 label: MOCK_SAVED_ACTION,
@@ -542,7 +575,7 @@ function taskBrowserSavedStep(body: string): ScriptedCall[] | undefined {
   return [
     {
       name: "report",
-      args: { text: `${MOCK_SAVED_REPORT_PREFIX} "${state}". The wake said "${woken}"` },
+      args: { text: `${MOCK_SAVED_REPORT_PREFIX} "${state}". ${MOCK_SAVED_WAKE_SAID} "${woken}"` },
     },
   ];
 }
@@ -580,7 +613,7 @@ function taskBrowserCardStep(body: string): ScriptedCall[] | undefined {
               "<p>Its browser is still open on this Mac, so you can try the page yourself.</p>",
             actions: [
               { id: "change-words", label: "Change the words" },
-              { id: "looks-right", label: "Looks right", default: true },
+              { id: "looks-right", label: MOCK_BROWSER_CARD_DEFAULT, default: true },
             ],
             browser_button: MOCK_BROWSER_BUTTON,
           },
@@ -628,13 +661,13 @@ function taskBrowserTakeStep(body: string): ScriptedCall[] | undefined {
       return [browser("wait", TASK_BROWSER_HANDOFF_READY_WORDS)];
     }
     return report(
-      `${MOCK_TAKE_REFUSED_REPORT} The command before it answered "${firstSentence(answers[refused - 1])}" Then my browser said "${firstSentence(answers[refused])}"`,
+      `${MOCK_TAKE_REFUSED_REPORT} ${MOCK_BROWSER_SAID.commandBefore} "${firstSentence(answers[refused - 1])}" ${MOCK_BROWSER_SAID.refusal} "${firstSentence(answers[refused])}"`,
     );
   }
   if (answers.length === 0) return [browser("snapshot")];
   const state = answers[0]?.match(/text "((?:Not signed in|Signed in as [^"]+))"/)?.[1];
   return report(
-    `${MOCK_TAKE_RETURNED_REPORT} The fresh look said "${firstSentence(answers[0])}" and the page said "${state}".`,
+    `${MOCK_TAKE_RETURNED_REPORT} ${MOCK_BROWSER_SAID.freshLook} "${firstSentence(answers[0])}" and ${MOCK_BROWSER_SAID.page} "${state}".`,
   );
 }
 
@@ -655,6 +688,13 @@ export const MOCK_FENCE_A_REPORT = "Task A's page said";
 export const MOCK_FENCE_B_REPORT = "Task B's browser said";
 /** The card task B asks to take over the other task's site with, which the host refuses. */
 export const MOCK_FENCE_B_HANDOFF_TITLE = "Sign in to the other task's page";
+/** The words task B's report puts before each answer it quotes. */
+export const MOCK_FENCE_B_SAID = {
+  request: "The request:",
+  publicName: "The redirect to a public name:",
+  privateAddress: "The redirect to a private address:",
+  otherPage: "The other task's page:",
+} as const;
 
 /** The fence journey's next scripted step, from the browser answers so far. */
 function taskBrowserFenceStep(body: string): ScriptedCall[] | undefined {
@@ -695,7 +735,7 @@ function taskBrowserFenceStep(body: string): ScriptedCall[] | undefined {
               after: "read the other page",
             },
             actions: [
-              { id: "leave", label: "Leave waiting" },
+              { id: "leave", label: MOCK_LEAVE_WAITING },
               {
                 id: "sign-in",
                 label: "Open browser and sign in",
@@ -716,7 +756,7 @@ function taskBrowserFenceStep(body: string): ScriptedCall[] | undefined {
       const line = (text: string | undefined, start: string) =>
         text?.split("\n").find((each) => each.startsWith(start));
       return report(
-        `${MOCK_FENCE_B_REPORT}: "${line(answers[0], `Blocked what the page asked for from other servers on ${HERE.this}`)}" The request: "${answers[1]?.split("\n")[0]}" The redirect to a public name: "${line(answers[2], `Blocked what the page asked for on ${HERE.this}'s network`)}" The redirect to a private address: "${line(answers[3], `Blocked what the page asked for on ${HERE.this}'s network`)}" The other task's page: "${visits(answers[4])}".`,
+        `${MOCK_FENCE_B_REPORT}: "${line(answers[0], `Blocked what the page asked for from other servers on ${HERE.this}`)}" ${MOCK_FENCE_B_SAID.request} "${answers[1]?.split("\n")[0]}" ${MOCK_FENCE_B_SAID.publicName} "${line(answers[2], `Blocked what the page asked for on ${HERE.this}'s network`)}" ${MOCK_FENCE_B_SAID.privateAddress} "${line(answers[3], `Blocked what the page asked for on ${HERE.this}'s network`)}" ${MOCK_FENCE_B_SAID.otherPage} "${visits(answers[4])}".`,
       );
     }
   }

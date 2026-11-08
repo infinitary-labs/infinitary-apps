@@ -12,19 +12,24 @@ import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { providerMessages } from "./providerRequest";
 import {
+  MOCK_BROWSER_BLOCKED,
   MOCK_BROWSER_PICTURE,
   MOCK_BROWSER_REPORT_PREFIX,
+  mockBrowserSaw,
   TASK_BROWSER_PROMPT_MARKER,
   taskBrowser,
 } from "./scenarios/taskBrowser";
 import {
+  MOCK_BROWSER_LONG_PASSES,
   MOCK_BROWSER_LONG_PICTURE,
   MOCK_BROWSER_LONG_REPORT_PREFIX,
+  MOCK_BROWSER_READING_PASSES,
   MOCK_BROWSER_READING_PICTURE,
   MOCK_BROWSER_READING_REPORT_PREFIX,
   MOCK_FENCE_A_REPORT,
   MOCK_FENCE_B_HANDOFF_TITLE,
   MOCK_FENCE_B_REPORT,
+  MOCK_FENCE_B_SAID,
   TASK_BROWSER_FENCE_MARKER,
   TASK_BROWSER_LONG_LAST_WORDS,
   TASK_BROWSER_LONG_MARKER,
@@ -214,7 +219,7 @@ test("a crewmate checks a local page in its task's own browser, and the next tas
     // The page's own words, step by step: empty, then a real click's
     // answer, then the name kept in the browser's site data across a reload.
     expect(task.outcome).toContain(
-      `"Not signed up yet" first, "Thanks, Sam" after Send and "Signed up as Sam" after a reload`,
+      mockBrowserSaw("Not signed up yet", "Thanks, Sam", "Signed up as Sam"),
     );
     // The page has no way into the app: no bridge, no Node.
     expect(task.outcome).toContain('"This page cannot reach the app"');
@@ -223,9 +228,11 @@ test("a crewmate checks a local page in its task's own browser, and the next tas
     // task's browser reaches none of them, the first refused by its
     // connection guard, since the address itself names a public host.
     expect(task.outcome).toContain(
-      "It blocked rebind.example on a private network at the connection, plain.example over plain http,",
+      `It blocked rebind.example ${MOCK_BROWSER_BLOCKED.privately}${MOCK_BROWSER_BLOCKED.atConnection}, plain.example ${MOCK_BROWSER_BLOCKED.plain},`,
     );
-    expect(task.outcome).toContain(`and localhost:${new URL(siteUrl).port} on this Mac.`);
+    expect(task.outcome).toContain(
+      `and localhost:${new URL(siteUrl).port} ${MOCK_BROWSER_BLOCKED.local}.`,
+    );
     if (evidence)
       writeFileSync(join(evidence, "task-browser-change-answers.txt"), task.outcome ?? "");
     return task;
@@ -266,7 +273,7 @@ test("a crewmate checks a local page in its task's own browser, and the next tas
 
   await test.step("the next task's browser starts with nothing the first one kept", async () => {
     const second = await check("Robin");
-    expect(second.outcome).toContain(`"Not signed up yet" first, "Thanks, Robin" after Send`);
+    expect(second.outcome).toContain(mockBrowserSaw("Not signed up yet", "Thanks, Robin"));
     if (evidence) {
       writeFileSync(join(evidence, "task-browser-second-report.txt"), `${second.outcome}\n`);
     }
@@ -292,9 +299,7 @@ test("a click that opens a page without a full reload reads that page, refuses a
     .poll(async () => (await detail())?.outcome ?? "", { timeout: 90_000 })
     .toContain(MOCK_BROWSER_READING_REPORT_PREFIX);
   const task = (await detail()) as TaskDetail;
-  expect(task.outcome).toContain(
-    "moved, new title, exact time, title tooltip, notes in full, feed in full",
-  );
+  expect(task.outcome).toContain(MOCK_BROWSER_READING_PASSES.join(", "));
   // The release link's ref from before the move is refused, never used on
   // the link that took its place at the top of the release's page.
   expect(task.outcome).toContain(REF_FROM_EARLIER_PAGE);
@@ -352,9 +357,7 @@ test("a crewmate reads a page too long for one answer by its map, finds words pa
       `${task.outcome}\n${answers.join("\n")}\n`,
     );
   }
-  expect(task.outcome).toContain(
-    "a map, folded repeats, found the end, read on, scrolled past the top",
-  );
+  expect(task.outcome).toContain(MOCK_BROWSER_LONG_PASSES.join(", "));
   // The picture taken after the scroll shows the rows on screen, never the
   // rows above them as a blank band (INF-2375): every release fills its row
   // with color, so a row that is white from edge to edge was not drawn.
@@ -488,7 +491,7 @@ test("one task's browser reaches nothing of another's, nor a private address a r
       );
       // A request to take over the other task's site is refused, and nothing paused.
       expect(outcome).toContain(
-        `The request: "Card refused: browser_handoff names ${otherSite}, but this task's browser is on ${ownSite}. Name the site it is on."`,
+        `${MOCK_FENCE_B_SAID.request} "Card refused: browser_handoff names ${otherSite}, but this task's browser is on ${ownSite}. Name the site it is on."`,
       );
       expect(
         (await page.evaluate(() => window.infinitary.cards.list())).some(
@@ -498,14 +501,14 @@ test("one task's browser reaches nothing of another's, nor a private address a r
       expect(task.browser).not.toHaveProperty("control");
       // A redirect to a public name that leads to this Mac is refused at the connection.
       expect(outcome).toContain(
-        `The redirect to a public name: "Blocked what the page asked for on ${HERE.this}'s network or another private one: rebind.example.`,
+        `${MOCK_FENCE_B_SAID.publicName} "Blocked what the page asked for on ${HERE.this}'s network or another private one: rebind.example.`,
       );
       // One to a private address is refused before it leaves.
       expect(outcome).toContain(
-        `The redirect to a private address: "Blocked what the page asked for on ${HERE.this}'s network or another private one: 10.1.2.3.`,
+        `${MOCK_FENCE_B_SAID.privateAddress} "Blocked what the page asked for on ${HERE.this}'s network or another private one: 10.1.2.3.`,
       );
       // Opening the other task's page itself starts with none of that task's site data.
-      expect(outcome).toContain('The other task\'s page: "Visited 1 time in this browser"');
+      expect(outcome).toContain(`${MOCK_FENCE_B_SAID.otherPage} "Visited 1 time in this browser"`);
       // The first task's browser is where it was.
       expect((await detail(first.title))?.browser).toMatchObject({
         state: "open",

@@ -4,7 +4,7 @@ import { renderWake } from "../../src/core/orchestrator/wakes";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { launchClaudeCrew } from "./claudeCrew";
 import type { LaunchedApp } from "./launch";
-import { CLAUDE_CREWMATE_MARKER, MOCK_COMPLETION_TEXT } from "./mockProvider";
+import { CLAUDE_CREWMATE_MARKER, MOCK_COMPLETION_TEXT, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { reportLine, taskKey } from "./rails";
 
 /**
@@ -51,7 +51,7 @@ test("a Claude crewmate that stops with no card up wakes the Firstmate with its 
   const input = page.getByRole("textbox", { name: "Task prompt" });
   await expect(input).toBeEnabled({ timeout: 30_000 });
   await input.click();
-  await input.fill(`commission a crewmate: ${TITLE}`);
+  await input.fill(`${SPAWN_PROMPT_MARKER} ${TITLE}`);
   await input.press("Enter");
   const key = await taskKey(page, TITLE);
   await expect(reportLine(page, key)).toBeVisible({ timeout: 45_000 });

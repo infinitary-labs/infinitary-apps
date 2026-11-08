@@ -5,7 +5,7 @@ import { firstmateClipDrawn, waitForFirstmateIdle } from "./crew";
 import { DICTATION_KEY } from "./dictation";
 import { type LaunchedApp, launchApp } from "./launch";
 import { writeMockClaudeClient } from "./mockClaudeClient";
-import { MOCK_COMPLETION_TEXT } from "./mockProvider";
+import { MOCK_COMPLETION_TEXT, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { reportLine, startedLine, taskKey } from "./rails";
 import { cardLeave } from "./stack";
@@ -96,7 +96,7 @@ for (const theme of themes) {
       await waitForFirstmateIdle(page);
       const input = promptInput(page);
       await input.click();
-      await input.fill("commission a crewmate: refactor the auth middleware");
+      await input.fill(`${SPAWN_PROMPT_MARKER} refactor the auth middleware`);
       await input.press("Enter");
       // Thinking: the Firstmate agent heats up while it decides and spawns.
       await expect(page.getByRole("img", { name: "First mate - working" })).toBeVisible();

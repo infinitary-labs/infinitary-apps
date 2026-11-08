@@ -14,7 +14,7 @@ import {
   integrationTaskAllowLine,
   NOT_ALLOWED_WHY,
 } from "../../src/shared/integrations";
-import { SAMPLE_NOTES } from "../helpers/mcpStandIn";
+import { addedNote, NOTES_ADD_TOOL, NOTES_LIST_TITLE, SAMPLE_NOTES } from "../helpers/mcpStandIn";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -153,7 +153,7 @@ test("an MCP server added from Settings by keys alone shows its own tools, and a
       actions.locator(`[data-integration-action="${MCP_NOTES_ACTION}"] [data-integration-rule]`),
     ).toHaveText(INTEGRATION_RULE_WORDS.ask);
     await expect(
-      actions.locator('[data-integration-action="add_note"] [data-integration-rule]'),
+      actions.locator(`[data-integration-action="${NOTES_ADD_TOOL}"] [data-integration-rule]`),
     ).toHaveText(INTEGRATION_RULE_WORDS.ask);
     await expect(actions.locator('[data-integration-event="resource_changed"]')).toContainText(
       INTEGRATIONS_MCP_WORDS.events,
@@ -185,7 +185,7 @@ test("an MCP server added from Settings by keys alone shows its own tools, and a
     await input.click();
     await input.fill(`${SPAWN_PROMPT_MARKER} ${title}`);
     await input.press("Enter");
-    const approvalTitle = integrationApprovalTitle("List notes", MCP_NOTES_NAME);
+    const approvalTitle = integrationApprovalTitle(NOTES_LIST_TITLE, MCP_NOTES_NAME);
     const approval = await approvalFor(approvalTitle);
     await expect(cardBody(page, approvalTitle).locator("body")).toContainText(MCP_NOTES_REASON);
     const evidenceDir = process.env.INFINITARY_TASK_EVIDENCE_DIR;
@@ -220,7 +220,7 @@ test("an MCP server added from Settings by keys alone shows its own tools, and a
     ).toBe("allow");
     await input.fill(`${SPAWN_PROMPT_MARKER} ${MCP_NOTES_CHANGE_MARKER}`);
     await input.press("Enter");
-    const outwardTitle = integrationApprovalTitle("add_note", MCP_NOTES_NAME);
+    const outwardTitle = integrationApprovalTitle(NOTES_ADD_TOOL, MCP_NOTES_NAME);
     let outward = await approvalFor(outwardTitle);
     // A refusal runs nothing and does not turn this action into Always allowed.
     await pressKey(
@@ -261,9 +261,9 @@ test("an MCP server added from Settings by keys alone shows its own tools, and a
     await expect
       .poll(async () => JSON.parse(readFileSync(notes, "utf8")).notes)
       .toContain(MCP_NOTES_REMINDER);
-    expect((await view()).integrations[0]?.actions.find((a) => a.name === "add_note")?.rule).toBe(
-      "ask",
-    );
+    expect(
+      (await view()).integrations[0]?.actions.find((a) => a.name === NOTES_ADD_TOOL)?.rule,
+    ).toBe("ask");
     if (evidenceDir) await resizeWindow(app, page, { width: 1280, height: 800 });
     await runFromSearch(app, page, "settings.integrations");
     const settings = settingsSection(page, "integrations");
@@ -300,7 +300,7 @@ test("the first mate's own change on an MCP server waits for the app's card, the
     name: MCP_NOTES_NAME,
     runs,
   });
-  expect((await view()).integrations[0]?.actions.find((a) => a.name === "add_note")?.rule).toBe(
+  expect((await view()).integrations[0]?.actions.find((a) => a.name === NOTES_ADD_TOOL)?.rule).toBe(
     "ask",
   );
 
@@ -308,7 +308,7 @@ test("the first mate's own change on an MCP server waits for the app's card, the
   await input.click();
   await input.fill(MCP_NOTES_FIRSTMATE_MARKER);
   await input.press("Enter");
-  const title = integrationApprovalTitle("add_note", MCP_NOTES_NAME);
+  const title = integrationApprovalTitle(NOTES_ADD_TOOL, MCP_NOTES_NAME);
   const card = await approval(page, title);
   await expect(cardBody(page, title).locator("body")).toContainText(MCP_NOTES_FIRSTMATE_REASON);
   const held = (await page.evaluate(() => window.infinitary.cards.list())).find(
@@ -330,8 +330,8 @@ test("the first mate's own change on an MCP server waits for the app's card, the
   const kept: string[] = JSON.parse(readFileSync(notes, "utf8")).notes;
   expect(firstmateSeen.wakes[0]).toContain(WRITE_ANSWERED_LEAD);
   // The stand-in's own answer to the call, carried back to the first mate.
-  expect(firstmateSeen.wakes[0]).toContain(`Added note ${kept.length}.`);
-  expect((await view()).integrations[0]?.actions.find((a) => a.name === "add_note")?.rule).toBe(
+  expect(firstmateSeen.wakes[0]).toContain(addedNote(kept.length));
+  expect((await view()).integrations[0]?.actions.find((a) => a.name === NOTES_ADD_TOOL)?.rule).toBe(
     "ask",
   );
 });
@@ -355,7 +355,7 @@ test("a crewmate's change allowed for the rest of its task runs its next call wi
   await input.click();
   await input.fill(`${SPAWN_PROMPT_MARKER} ${MCP_NOTES_TWICE_MARKER}`);
   await input.press("Enter");
-  const title = integrationApprovalTitle("add_note", MCP_NOTES_NAME);
+  const title = integrationApprovalTitle(NOTES_ADD_TOOL, MCP_NOTES_NAME);
   const card = await approval(page, title);
   // An MCP server's action is covered whole (src/core/integrations/scopes.ts).
   await expect(cardBody(page, title).locator("body")).toContainText(
@@ -398,14 +398,14 @@ test("a crewmate's change allowed for the rest of its task runs its next call wi
     }, MCP_NOTES_TWICE_MARKER);
   await expect.poll(outcome, { timeout: 60_000 }).toContain(MCP_NOTES_REPORT_PREFIX);
   // The stand-in's own answer to the second call, which raised no card.
-  expect(await outcome()).toContain(`Added note ${SAMPLE_NOTES.length + 2}.`);
+  expect(await outcome()).toContain(addedNote(SAMPLE_NOTES.length + 2));
   expect(
     (await page.evaluate(() => window.infinitary.cards.list())).filter(
       (shown) => shown.title === title,
     ),
   ).toEqual([]);
   // The choice kept nothing in Settings: the action still asks.
-  expect((await view()).integrations[0]?.actions.find((a) => a.name === "add_note")?.rule).toBe(
+  expect((await view()).integrations[0]?.actions.find((a) => a.name === NOTES_ADD_TOOL)?.rule).toBe(
     "ask",
   );
 });
@@ -488,8 +488,8 @@ test("a crewmate's asks to one connection fold into one card, and a row unticked
   // One message carries the refusal of the unticked row and both answers.
   const report = await outcome();
   expect(report).toContain(NOT_ALLOWED_WHY);
-  expect(report).toContain(`Added note ${SAMPLE_NOTES.length + 1}.`);
-  expect(report).toContain(`Added note ${SAMPLE_NOTES.length + 2}.`);
+  expect(report).toContain(addedNote(SAMPLE_NOTES.length + 1));
+  expect(report).toContain(addedNote(SAMPLE_NOTES.length + 2));
   if (evidenceDir) writeFileSync(join(evidenceDir, "fold-report.txt"), `${report}\n`);
   expect(
     (await page.evaluate(() => window.infinitary.cards.list())).filter(

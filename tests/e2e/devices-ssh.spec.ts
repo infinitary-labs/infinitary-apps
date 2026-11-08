@@ -9,7 +9,7 @@ import { remoteLoginWords } from "@shared/remoteLogin";
 import { sshConnectionWords } from "@shared/sshConnection";
 import { COMPUTER } from "../../src/shared/deviceNames";
 import { SSH_SERVER_AVAILABLE } from "../helpers/sshServer";
-import { standInProgram } from "../helpers/standInFirstmate";
+import { STAND_IN_JOINED, standInProgram } from "../helpers/standInFirstmate";
 import {
   addByAddress,
   linkInTab,
@@ -217,7 +217,7 @@ test("a Mac a command added that macOS holds on the local network: Devices says 
         encoding: "utf8",
       },
     );
-    expect(joined).toContain('"firstmate":"joined"');
+    expect(joined).toContain(STAND_IN_JOINED);
     const [device] = await app.page.evaluate(() => window.infinitary.devices.list());
     if (!device) throw new Error("Nothing joined.");
     expect(device).not.toHaveProperty("remoteLogin");

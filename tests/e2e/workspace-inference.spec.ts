@@ -14,7 +14,7 @@ import {
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
-import { LAND_PROMPT_MARKER, MOCK_FM_CHAT_TEXT } from "./mockProvider";
+import { LAND_PROMPT_MARKER, MOCK_FM_CHAT_TEXT, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { addedProjects, addFromSetupCard, projectRow, projectRowWords } from "./projects";
 import { promptInput } from "./prompt";
 import { latestContext, servedContext } from "./providerRequest";
@@ -150,7 +150,7 @@ test("a request naming repo B lands in repo B with no picker anywhere, and landi
 
     const input = promptInput(page);
     await input.click();
-    await input.fill(`commission a crewmate: bump the deps in ${betaName}`);
+    await input.fill(`${SPAWN_PROMPT_MARKER} bump the deps in ${betaName}`);
     await input.press("Enter");
 
     const key = await taskKey(page, `bump the deps in ${betaName}`);

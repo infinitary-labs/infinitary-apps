@@ -80,6 +80,7 @@ import { reasoningLabel } from "../../src/renderer/src/settings/reasoningWords";
 import { offeringKey, type SlotModelView } from "../../src/shared/modelSlots";
 import { servedModelKey } from "../../src/shared/quota";
 import type { LaunchedApp } from "./launch";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { closeModelPanel, modelPill, openModelPanel, setLevelInPanel } from "./modelsBoard";
 import { refuseNext } from "./settings";
 import { focusOn, pressKey } from "./windowKeys";
@@ -232,7 +233,7 @@ test("new Quick crew conversations use the saved level while running conversatio
     await pressKey(control, "Escape");
     const input = promptInput(app.page);
     const firstTitle = `reasoning first ${CLAUDE_CREW_PROMPT_MARKER}`;
-    await input.fill(`commission a crewmate: ${firstTitle}`);
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${firstTitle}`);
     await pressKey(input, "Enter");
     const findTask = async (title: string) =>
       (await app.page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
@@ -254,7 +255,7 @@ test("new Quick crew conversations use the saved level while running conversatio
     await expect(next).toHaveValue("");
     await pressKey(next, "Escape");
     const secondTitle = `reasoning second ${CLAUDE_CREW_PROMPT_MARKER}`;
-    await input.fill(`commission a crewmate: ${secondTitle}`);
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${secondTitle}`);
     await pressKey(input, "Enter");
     await expect.poll(async () => (await findTask(secondTitle))?.id).toBeTruthy();
     const second = await findTask(secondTitle);

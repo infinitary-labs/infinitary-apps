@@ -1,6 +1,6 @@
 import { resolveFirstmateCardId } from "../../../src/core/pi/cardTool";
 import type { ScriptedArgs } from "../../helpers/scriptedCalls";
-import { FM_THREAD_CARD_TITLE } from "../crewCards";
+import { FM_THREAD_CARD_TITLE, FM_THREAD_DEFAULT_LABEL } from "../crewCards";
 import { THREAD_PROSE_REPLY, THREAD_REVISE_REPLY } from "../crewScripts";
 import type { Scenario } from "../mockProvider";
 import { answering, providerToolCalls } from "../providerRequest";
@@ -27,7 +27,7 @@ const ORIGINAL_CARD = {
   body: '<p>Lead with the caption, not the chips.</p><p>The chips are still there; they just are not the first thing you read.</p><label for="tone">Tone</label><input id="tone" name="tone" value="calm">',
   actions: [
     { id: "chips-first", label: "Lead with the chips" },
-    { id: "caption-first", label: "Lead with the caption", default: true },
+    { id: "caption-first", label: FM_THREAD_DEFAULT_LABEL, default: true },
   ],
 };
 
@@ -37,7 +37,7 @@ const REVISED_CARD = {
   body: '<p>Lead with the caption, not the chips.</p><p>The chips stay underneath once the caption has said what this is.</p><label for="tone">Tone</label><input id="tone" name="tone" value="calm">',
   actions: [
     { id: "chips-first", label: "Keep the chips first" },
-    { id: "caption-first", label: "Lead with the caption", default: true },
+    { id: "caption-first", label: FM_THREAD_DEFAULT_LABEL, default: true },
   ],
 };
 

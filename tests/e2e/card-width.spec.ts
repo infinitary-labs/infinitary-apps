@@ -2,7 +2,7 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { cardBody, cardBodyElement } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { minimumWindowSize, overflows, type Rect, resizeWindow, settled, within } from "./layout";
-
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { expandDock } from "./rails";
 import { CARD_WIDTH_PROMPT_MARKER, cardWidths, WIDTH_CARD_TITLES } from "./scenarios/cardWidths";
@@ -32,7 +32,7 @@ test.beforeAll(async () => {
   const { page } = launched;
   const input = promptInput(page);
   await input.click();
-  await input.fill(`commission a crewmate: ${CARD_WIDTH_PROMPT_MARKER}`);
+  await input.fill(`${SPAWN_PROMPT_MARKER} ${CARD_WIDTH_PROMPT_MARKER}`);
   await input.press("Enter");
   await expect(pager(page, 4)).toBeVisible({ timeout: 30_000 });
   await expandDock(page, "activity");

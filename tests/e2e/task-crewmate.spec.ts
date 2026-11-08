@@ -31,6 +31,7 @@ import {
   MOCK_CLAUDE_STEERED_REPORT,
 } from "./crewScripts";
 import { launchApp } from "./launch";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { encodePng } from "./pictureFixtures";
 import { heroShot, regionShot } from "./pictures";
 import { expandDock, openGroup, pressRow, recordCard, recordFrame, taskKey } from "./rails";
@@ -393,7 +394,7 @@ test("a line typed in the Crewmate tab steers a Claude crewmate mid-turn, queued
     const input = page.getByRole("textbox", { name: "Task prompt" });
     await expect(input).toBeEnabled({ timeout: 30_000 });
     await input.click();
-    await input.fill(`commission a crewmate: ${TYPING_TITLE}`);
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${TYPING_TITLE}`);
     await input.press("Enter");
     await expect.poll(() => mockProvider?.heldRequests(), { timeout: 30_000 }).toBe(1);
     const task = await boardTask(page, TYPING_TITLE);
@@ -492,7 +493,7 @@ test("⌃C in the Crewmate tab stops the crewmate's turn and leaves it steerable
     const input = page.getByRole("textbox", { name: "Task prompt" });
     await expect(input).toBeEnabled({ timeout: 30_000 });
     await input.click();
-    await input.fill(`commission a crewmate: ${STOP_TITLE}`);
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${STOP_TITLE}`);
     await input.press("Enter");
     await expect.poll(() => mockProvider?.heldRequests(), { timeout: 30_000 }).toBe(1);
     const task = await boardTask(page, STOP_TITLE);

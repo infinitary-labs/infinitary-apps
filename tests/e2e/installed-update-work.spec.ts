@@ -2,7 +2,10 @@ import { once } from "node:events";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { chromium, expect, test } from "@playwright/test";
-import { runningWorkFixture } from "../fixtures/installed-updates/runningWork";
+import {
+  RUNNING_WORK_ACCEPTED,
+  runningWorkFixture,
+} from "../fixtures/installed-updates/runningWork";
 import { launchApp } from "./launch";
 
 // INF-643: the signed-update probe must reach its update while a provider stream remains open.
@@ -29,7 +32,7 @@ test("the installed-update probe prepares live work without waiting for it to fi
       .poll(() => ({ phase: work.phase, problem: problem ? String(problem) : null }), {
         timeout: 20_000,
       })
-      .toEqual({ phase: "Active-work message accepted", problem: null });
+      .toEqual({ phase: RUNNING_WORK_ACCEPTED, problem: null });
     await preparing;
     await expect.poll(() => work.started).toBe(true);
     expect(work.closedAtVersion).toBeUndefined();

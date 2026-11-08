@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { type LaunchedApp, launchApp } from "./launch";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import {
   dockFrameElement,
@@ -52,7 +53,7 @@ test.afterEach(async () => {
 async function commissionFirstTask(page: Page): Promise<string> {
   const input = promptInput(page);
   await input.click();
-  await input.fill(`commission a crewmate: ${TITLE}`);
+  await input.fill(`${SPAWN_PROMPT_MARKER} ${TITLE}`);
   await input.press("Enter");
   const key = await taskKey(page, TITLE);
   await expect(startedLine(page, key)).toBeVisible({ timeout: 20_000 });

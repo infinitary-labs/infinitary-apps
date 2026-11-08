@@ -3,6 +3,7 @@ import { CARE_WORDS, DEFAULT_WORKSPACE_WORD, MERGE_WORDS } from "../../src/share
 import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { MOCK_MODEL_ID } from "./mockModels";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import {
   ESCAPED_CARD_PROMPT_MARKER,
@@ -15,7 +16,9 @@ import {
   EMIT_CARDS_PROMPT_MARKER,
   everyCardKind,
   MOCK_CHOICE_CARD_TITLE,
+  MOCK_CHOICE_DEFAULT_LABEL,
   MOCK_PREVIEW_CARD_TITLE,
+  MOCK_PREVIEW_HOLD_LABEL,
   MOCK_QUOTA_NOTE_TITLE,
 } from "./scenarios/everyCardKind";
 import { expectNoCard, factsStrip, pager, showCard, shownCard } from "./stack";
@@ -37,7 +40,7 @@ test.beforeAll(async () => {
   const { page } = launched;
   const input = promptInput(page);
   await input.click();
-  await input.fill(`commission a crewmate: ${EMIT_CARDS_PROMPT_MARKER}`);
+  await input.fill(`${SPAWN_PROMPT_MARKER} ${EMIT_CARDS_PROMPT_MARKER}`);
   await input.press("Enter");
   // The crewmate emits three cards through its tool and then reports. Two of
   // them are decisions, so the stack is three cards and which one tops it is
@@ -67,7 +70,7 @@ test("a click inside the preview rounds the declared action back, and resolving 
     // from the bridge listener onward (postMessage, validation, orchestrator
     // round-trip) runs exactly as a real click would.
     await frame
-      .getByRole("button", { name: "Hold course" })
+      .getByRole("button", { name: MOCK_PREVIEW_HOLD_LABEL })
       .evaluate((el) => (el as HTMLButtonElement).click());
     // The orchestrator resolves the card: it leaves the stack (the pager
     // keeps its position, so only the count shrinks).
@@ -77,7 +80,7 @@ test("a click inside the preview rounds the declared action back, and resolving 
 
   await test.step("resolving the decision keeps the choice and shrinks the stack", async () => {
     await showCard(page, MOCK_CHOICE_CARD_TITLE);
-    await page.getByRole("button", { name: "Await the queue" }).click();
+    await page.getByRole("button", { name: MOCK_CHOICE_DEFAULT_LABEL }).click();
     await expectNoCard(page, MOCK_CHOICE_CARD_TITLE, { timeout: 10_000 });
     await expect(shownCard(page, MOCK_QUOTA_NOTE_TITLE)).toBeVisible();
     await expect(pager(page, 2)).toHaveCount(0);
@@ -93,7 +96,7 @@ test("an entity-escaped body is refused by name and the raw-tag retry renders as
   const before = (await page.evaluate(() => window.infinitary.cards.list())).length;
   const input = promptInput(page);
   await input.click();
-  await input.fill(`commission a crewmate: ${ESCAPED_CARD_PROMPT_MARKER}`);
+  await input.fill(`${SPAWN_PROMPT_MARKER} ${ESCAPED_CARD_PROMPT_MARKER}`);
   await input.press("Enter");
   await expect(pager(page, before + 1)).toBeVisible({ timeout: 30_000 });
   await showCard(page, MOCK_ESCAPED_CARD_TITLE);

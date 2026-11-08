@@ -8,7 +8,7 @@ import { waitForFirstmateIdle } from "./crew";
 import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import { DISCARD_PROMPT_MARKER, MOCK_CLOSING_SENTENCES } from "./mockProvider";
+import { DISCARD_PROMPT_MARKER, MOCK_CLOSING_SENTENCES, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { expandDock, feedLine, startedLine, taskKey } from "./rails";
@@ -57,7 +57,7 @@ test("a first mate's drop of started work leaves its note until the captain clos
       const input = promptInput(page);
       await waitForFirstmateIdle(page);
       await input.click();
-      await input.fill(`commission a crewmate: ${title}`);
+      await input.fill(`${SPAWN_PROMPT_MARKER} ${title}`);
       await input.press("Enter");
       key = await taskKey(page, title);
       await expandDock(page, "activity");

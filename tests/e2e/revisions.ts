@@ -14,7 +14,13 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 
 export const REVISION_TITLE = "Review the project checks";
-export const REVISION_BASE = `<h2>What you asked</h2><p>Review the project before starting work.</p><h2>What stays the same</h2>${Array.from({ length: 6 }, (_, i) => `<p>The review keeps your project and your connected accounts unchanged. Item ${i + 1} stays as it was.</p>`).join("")}<h2 id="signin">Sign-in</h2><p>Use another account.</p><h2 id="checks">Checks</h2><details data-checks><summary>What I will check</summary><p data-check-result>Check the account after starting work.</p></details><h2>Next</h2><p>Nothing starts until you choose.</p><label>Review note <input name="note" value="Keep this draft"></label><details data-unrelated><summary>Other information</summary><p>Unrelated disclosure stays closed.</p></details>`;
+/** The base card's draft field, and the sign-in line its first revision rewrites. */
+export const REVISION_NOTE_LABEL = "Review note";
+const REVISION_ACCOUNT_BEFORE = "Use another account.";
+export const REVISION_ACCOUNT_AFTER = "Use your connected account.";
+/** The heading and line of each new area the many-revisions card adds, from 1. */
+export const revisionArea = (n: number) => ({ heading: `Area ${n}`, line: `New area ${n}` });
+export const REVISION_BASE = `<h2>What you asked</h2><p>Review the project before starting work.</p><h2>What stays the same</h2>${Array.from({ length: 6 }, (_, i) => `<p>The review keeps your project and your connected accounts unchanged. Item ${i + 1} stays as it was.</p>`).join("")}<h2 id="signin">Sign-in</h2><p>${REVISION_ACCOUNT_BEFORE}</p><h2 id="checks">Checks</h2><details data-checks><summary>What I will check</summary><p data-check-result>Check the account after starting work.</p></details><h2>Next</h2><p>Nothing starts until you choose.</p><label>${REVISION_NOTE_LABEL} <input name="note" value="Keep this draft"></label><details data-unrelated><summary>Other information</summary><p>Unrelated disclosure stays closed.</p></details>`;
 
 /** Seed through the real producer, storage and publication seams; a launch reads its saved result. */
 export function seedRevisionCard(
@@ -37,10 +43,10 @@ export function seedRevisionCard(
     broadcastCards: () => {},
   });
   const base = options.simple
-    ? REVISION_BASE.replace('<h2 id="signin">Sign-in</h2><p>Use another account.</p>', "")
+    ? REVISION_BASE.replace(`<h2 id="signin">Sign-in</h2><p>${REVISION_ACCOUNT_BEFORE}</p>`, "")
         .replace(" data-checks", "")
         .replace(" data-check-result", "")
-        .replace(/<label>Review note[\s\S]*$/, "")
+        .replace(new RegExp(`<label>${REVISION_NOTE_LABEL}[\\s\\S]*$`), "")
     : REVISION_BASE;
   const initial = {
     id: "revision-demo",
@@ -54,7 +60,7 @@ export function seedRevisionCard(
   // naming it: only a line that names the captain's message answers it.
   const revise = (card: Parameters<typeof service.addFirstmateCard>[0]) =>
     service.addFirstmateCard({ ...card, reply: "Done.", answersMessage: asked.id });
-  const account = base.replace("Use another account.", "Use your connected account.");
+  const account = base.replace(REVISION_ACCOUNT_BEFORE, REVISION_ACCOUNT_AFTER);
   if (!options.simple) revise({ ...initial, body: account });
   const checks = account.replace(
     "Check the account after starting work.",
@@ -66,9 +72,9 @@ export function seedRevisionCard(
       ...initial,
       body:
         checks +
-        Array.from({ length: 5 }, (_, i) => `<h2>Area ${i + 1}</h2><p>New area ${i + 1}</p>`).join(
-          "",
-        ),
+        Array.from({ length: 5 }, (_, i) => revisionArea(i + 1))
+          .map(({ heading, line }) => `<h2>${heading}</h2><p>${line}</p>`)
+          .join(""),
     });
   if (options.preview)
     revise({

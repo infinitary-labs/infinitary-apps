@@ -46,10 +46,15 @@ import {
 import { cardBody } from "./frames";
 import {
   type GitHubStub,
+  STUB_JOB_FAILURE_LINE,
   STUB_LOGIN,
+  STUB_NOTIFICATION_TITLE,
+  STUB_SECOND_PAGE_TITLE,
   STUB_USER_CODE,
   seedGitHubSignIn,
   startGitHubStub,
+  stubRefreshToken,
+  stubRenewedToken,
 } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
 import { minimumWindowSize, overflows, resizeWindow, within } from "./layout";
@@ -820,11 +825,11 @@ test("a crewmate on a project kept on this computer reads past the old list thro
     (await launched.page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id))
       ?.outcome ?? "";
   // The person's notifications, which the old list kept closed, come back as GitHub answered.
-  expect(outcome).toContain("Release 0.4.0 is out");
+  expect(outcome).toContain(STUB_NOTIFICATION_TITLE);
   // A repository listing's next page by repository id is a path the crewmate reads.
   const next = `/repositories/${PAGED_REPOSITORY.id}/pulls?per_page=1&page=2`;
   expect(outcome).toContain(`"nextPath": "${next}"`);
-  expect(outcome).toContain("Second page");
+  expect(outcome).toContain(STUB_SECOND_PAGE_TITLE);
   expect(outcome).toContain(graphqlRefusal());
   // Every read went to GitHub with the app's sign-in; GraphQL never left the app.
   expect(github.requests()).toEqual(
@@ -1018,7 +1023,7 @@ test("a crewmate reads a failed job and downloads measurement evidence with the 
     (taskId) => window.infinitary.tasks.detail(taskId),
     id,
   );
-  expect(detail?.outcome).toContain("Missing measurement input");
+  expect(detail?.outcome).toContain(STUB_JOB_FAILURE_LINE);
   expect(detail?.outcome).toContain(headSha);
   expect(detail?.outcome).toContain('"controlSeconds":88.41,"candidateSeconds":86.41,"pairs":5');
   expect(detail?.outcome).not.toMatch(/gho_|signed=disposable/);
@@ -1309,7 +1314,9 @@ test("a sign-in GitHub makes short-lived renews itself when its eight hours run 
   await openIntegrations(page);
   await page.getByRole("button", { name: "Sign in to GitHub", exact: true }).click();
   await expect(page.locator("[data-forge-code]")).toHaveText(STUB_USER_CODE, { timeout: 15_000 });
-  github.device.approve("gho_e2e_short_lived");
+  // The access token GitHub hands this sign-in, eight hours long.
+  const shortLived = "gho_e2e_short_lived";
+  github.device.approve(shortLived);
   const row = page.locator('[data-forge-row="github.com"]');
   await expect(row).toHaveAttribute("data-forge-state", "ok", { timeout: 15_000 });
   await page.keyboard.press("Escape");
@@ -1318,8 +1325,8 @@ test("a sign-in GitHub makes short-lived renews itself when its eight hours run 
   const file = join(userDataDir, "forges", "github.com", "sign-in.json");
   const stored = () => JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>;
   expect(stored()).toMatchObject({
-    token: "gho_e2e_short_lived",
-    refreshToken: "ghr_e2e_refresh_1",
+    token: shortLived,
+    refreshToken: stubRefreshToken(1),
   });
   expect(Number(stored().expiresAt)).toBeGreaterThan(Date.now() + 7 * 60 * 60 * 1000);
 
@@ -1327,9 +1334,9 @@ test("a sign-in GitHub makes short-lived renews itself when its eight hours run 
   // request GitHub refuses renews it - the owner's "sign in again" never comes.
   github.endAccess();
   await page.evaluate(() => window.infinitary.forges.changes());
-  await expect.poll(() => stored().token, { timeout: 15_000 }).toBe("gho_e2e_renewed_1");
-  expect(stored().refreshToken).toBe("ghr_e2e_refresh_2");
-  expect(github.refreshes()).toEqual(["ghr_e2e_refresh_1"]);
+  await expect.poll(() => stored().token, { timeout: 15_000 }).toBe(stubRenewedToken(1));
+  expect(stored().refreshToken).toBe(stubRefreshToken(2));
+  expect(github.refreshes()).toEqual([stubRefreshToken(1)]);
   await openIntegrations(page);
   await expect(row).toHaveAttribute("data-forge-state", "ok");
   await page.keyboard.press("Escape");
@@ -1343,7 +1350,7 @@ test("a sign-in GitHub makes short-lived renews itself when its eight hours run 
       env: { PATH: process.env.PATH ?? "", INFINITARY_GIT_SIGNIN_DIR: join(userDataDir, "forges") },
     },
   ).toString();
-  expect(answer).toBe("gho_e2e_renewed_1\n");
+  expect(answer).toBe(`${stubRenewedToken(1)}\n`);
   expect(healthLines()).toContainEqual(
     expect.stringMatching(/^github\.com sign-in renewed, short-lived until \d{4}-\d\d-\d\dT/),
   );

@@ -13,6 +13,9 @@ import { providerMessages } from "./providerRequest";
  * limit read again with the next look, and the refs an outline names.
  */
 
+/** The choice beside a scripted browser request that leaves its task waiting. */
+export const MOCK_LEAVE_WAITING = "Leave waiting";
+
 /**
  * A crewmate's browser command, as it runs it in its shell
  * (docs/axi-commands.md): `infinitary-browser-axi` and its arguments, each one

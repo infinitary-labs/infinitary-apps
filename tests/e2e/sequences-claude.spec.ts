@@ -9,6 +9,7 @@ import {
   SEQ_BUG_YES_ASK,
   SEQ_CLAUDE_STEP_MARKER,
   SEQ_REPRODUCED_YES,
+  seqGoal,
   sequences,
 } from "./scenarios/sequences";
 
@@ -52,13 +53,12 @@ test("a cardless reproduction on Claude starts its fix without a captain turn", 
   // arrived. Wait for the consumer to receive the grounded brief.
   const fixBriefReceived = () =>
     (mockProvider?.requestBodies() ?? []).find(
-      (body) =>
-        !body.includes(FIRSTMATE_PERSONA) && body.includes("Fix the meter reset at its root"),
+      (body) => !body.includes(FIRSTMATE_PERSONA) && body.includes(seqGoal(SEQ_BUG_YES.fix)),
     );
   await expect.poll(fixBriefReceived, { timeout: 30_000 }).toBeDefined();
   const bodies = mockProvider?.requestBodies() ?? [];
   const crewBrief = bodies.find(
-    (body) => !body.includes(FIRSTMATE_PERSONA) && body.includes("Reproduce the meter reset"),
+    (body) => !body.includes(FIRSTMATE_PERSONA) && body.includes(seqGoal(SEQ_BUG_YES.reproduce)),
   );
   expect(crewBrief).toMatch(/"model"\s*:\s*"claude-/);
   expect(

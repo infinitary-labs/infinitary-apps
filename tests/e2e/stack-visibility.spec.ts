@@ -2,7 +2,7 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { cardBody } from "./frames";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
-import { ANSWER_PROMPT_MARKER, MOCK_ANSWER_TITLE } from "./mockProvider";
+import { ANSWER_PROMPT_MARKER, MOCK_ANSWER_TITLE, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import {
   EMIT_CARDS_PROMPT_MARKER,
   everyCardKind,
@@ -34,7 +34,7 @@ const dots = (page: Page) => page.locator("[data-unread-dot]");
 test.beforeAll(async () => {
   launched = await launchApp({ withMockProvider: true, scenarios: [reviseNote, everyCardKind] });
   const { page } = launched;
-  await askFirstmate(page, `commission a crewmate: ${EMIT_CARDS_PROMPT_MARKER}`);
+  await askFirstmate(page, `${SPAWN_PROMPT_MARKER} ${EMIT_CARDS_PROMPT_MARKER}`);
   await expect(pager(page, 3)).toBeVisible({ timeout: 30_000 });
 });
 

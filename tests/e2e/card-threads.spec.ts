@@ -19,12 +19,13 @@ import { applyTaskBoardDelta, type TaskBoard, type TaskBoardDelta } from "../../
 import { MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
-import { FM_THREAD_CARD_TITLE, THREAD_IMAGE_PNG } from "./crewCards";
+import { FM_THREAD_CARD_TITLE, FM_THREAD_DEFAULT_LABEL, THREAD_IMAGE_PNG } from "./crewCards";
 import {
   THREAD_ACK_ANSWER,
   THREAD_ACK_REPLY,
   THREAD_ACK_REVISED_TITLE,
   THREAD_ACK_TEXT,
+  THREAD_CARD_DEFAULT_LABEL,
   THREAD_CARD_REVISED_TITLE,
   THREAD_CARD_TITLE,
   THREAD_PROMPT_MARKER,
@@ -222,7 +223,7 @@ test("a captain reply revises the card in place, or is answered in the thread", 
   await expect(page.getByRole("button", { name: "Next card" })).toHaveCount(0);
 
   // A reply resolves nothing: the decision's buttons are still there.
-  await expect(page.getByRole("button", { name: "Await the queue" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: THREAD_CARD_DEFAULT_LABEL })).toBeEnabled();
 
   // The edge tab remains a way back to the panels while the thread is open.
   const rail = page.locator('[data-rail="left"]');
@@ -400,6 +401,8 @@ test('"merge it" typed under a completion card closes it and lands as the Firstm
 });
 
 test("a captain reply on a Firstmate card revises it or lands as prose in the thread", async () => {
+  // The captain's own two settings on the card's Tone field, one with each reply.
+  const TONES = ["plain", "brief"] as const;
   const { page } = launched;
   await closeOpenCards(page);
   await sendPrompt(page, FM_THREAD_PROMPT_MARKER);
@@ -426,7 +429,7 @@ test("a captain reply on a Firstmate card revises it or lands as prose in the th
   await box.fill("");
   await expect(limit).toHaveCount(0);
 
-  await cardBody(page, FM_THREAD_CARD_TITLE).locator("#tone").fill("plain");
+  await cardBody(page, FM_THREAD_CARD_TITLE).locator("#tone").fill(TONES[0]);
   const cardLeft = await watchCardLeaves(page);
   await sendReply(page, THREAD_REVISE_REPLY);
 
@@ -449,12 +452,12 @@ test("a captain reply on a Firstmate card revises it or lands as prose in the th
       .slice(0, 3)
       .map((message) => message.who),
   ).toEqual(["captain", "host", "firstmate"]);
-  await expect(page.getByRole("button", { name: "Lead with the caption" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: FM_THREAD_DEFAULT_LABEL })).toBeEnabled();
 
   // The Firstmate's prose answer lands in the thread this time.
   // The reply is typed as keystrokes over two lines: Shift+Enter adds the
   // line, Enter sends, and the thread keeps the line break.
-  await cardBody(page, FM_THREAD_CARD_REVISED_TITLE).locator("#tone").fill("brief");
+  await cardBody(page, FM_THREAD_CARD_REVISED_TITLE).locator("#tone").fill(TONES[1]);
   const cardLeftAgain = await watchCardLeaves(page);
   const threadBox = cardReply(page).field;
   await threadBox.click();
@@ -477,12 +480,14 @@ test("a captain reply on a Firstmate card revises it or lands as prose in the th
     captainMessages.map(
       (message) => message.answers?.find((answer) => answer.name === "tone")?.values,
     ),
-  ).toEqual([["plain"], ["brief"]]);
+  ).toEqual(TONES.map((tone) => [tone]));
   expect(
     launched.mockProvider
       ?.requestBodies()
       .some((body) =>
-        JSON.stringify(JSON.parse(body)).includes(JSON.stringify('tone: "brief"').slice(1, -1)),
+        JSON.stringify(JSON.parse(body)).includes(
+          JSON.stringify(`tone: "${TONES[1]}"`).slice(1, -1),
+        ),
       ),
   ).toBe(true);
   // Rendered with its lines: the message's own text breaks where it was typed.
@@ -496,7 +501,7 @@ test("a captain reply on a Firstmate card revises it or lands as prose in the th
   await expect(multiLine.locator("[data-thread-settings]")).toHaveCount(0);
   await settings.click();
   await expect(settings).toHaveAttribute("aria-expanded", "true");
-  await expect(multiLine.locator("[data-thread-settings]")).toContainText("brief");
+  await expect(multiLine.locator("[data-thread-settings]")).toContainText(TONES[1]);
   // INF-1879: putting the revised decision away keeps its sent settings and open choices.
   await cardLeave(page, shownEntry(page)).click();
   await expect(closeQuestion(page)).toHaveCount(0);
@@ -984,7 +989,9 @@ test("a large paste in a card reply becomes a file and reaches the author with i
 });
 
 test("command search follows the chosen revision list and a row expands its own remaining links", async () => {
-  const { seedRevisionCard, revisionRows, revisionFrame } = await import("./revisions");
+  const { seedRevisionCard, revisionRows, revisionFrame, revisionArea } = await import(
+    "./revisions"
+  );
   const fixture = seedRevisionCard({ many: true });
   const local = await launchApp({
     withMockProvider: true,
@@ -1002,13 +1009,20 @@ test("command search follows the chosen revision list and a row expands its own 
     const links = row.locator("[data-revision-link]");
     await focusOn(links.first());
     await links.first().press("Enter");
-    await expect(revisionFrame(page).getByText("New area 1", { exact: true })).toBeInViewport();
+    await expect(
+      revisionFrame(page).getByText(revisionArea(1).line, { exact: true }),
+    ).toBeInViewport();
     await runFromSearch(app, page, "cards.next-revision");
     // Area 2 sits under Area 1, already in view: the command has arrived
     // once its area holds the keyboard.
-    const area = revisionFrame(page).getByRole("heading", { name: "Area 2", exact: true });
+    const area = revisionFrame(page).getByRole("heading", {
+      name: revisionArea(2).heading,
+      exact: true,
+    });
     await expect(area).toBeFocused();
-    await expect(revisionFrame(page).getByText("New area 2", { exact: true })).toBeInViewport();
+    await expect(
+      revisionFrame(page).getByText(revisionArea(2).line, { exact: true }),
+    ).toBeInViewport();
     await area.press("Escape");
     await expect(links.nth(1)).toBeFocused();
   } finally {

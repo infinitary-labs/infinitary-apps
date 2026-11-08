@@ -37,6 +37,9 @@ export function seedCrewTranscript(
   );
 }
 
+/** The first line of the long-history journey's row `i`. */
+export const observeTranscriptRow = (i: number) => `Transcript row ${i}`;
+
 /** The long-history journey's real message rows; generation stays beside its format owner. */
 export function observeTranscriptEntries(count: number): unknown[] {
   return Array.from({ length: count }, (_, i) => ({
@@ -45,7 +48,7 @@ export function observeTranscriptEntries(count: number): unknown[] {
     timestamp: new Date(1_790_000_000_000 + i * 1000).toISOString(),
     message: {
       role: "user",
-      content: `Transcript row ${i}\n${"A wrapped line of local debugging evidence. ".repeat(i % 13)}`,
+      content: `${observeTranscriptRow(i)}\n${"A wrapped line of local debugging evidence. ".repeat(i % 13)}`,
     },
   }));
 }

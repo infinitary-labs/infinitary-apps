@@ -4,10 +4,12 @@ import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { launchClaudeCrew } from "./claudeCrew";
 import { CLAUDE_CREW_PROMPT_MARKER } from "./crewScripts";
 import type { LaunchedApp } from "./launch";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import {
   CLAUDE_RELAY_APPROVAL,
   CLAUDE_RELAY_MARKER,
   claudeRelay,
+  MOCK_CLAUDE_PLAN_ACTIONS,
   MOCK_CLAUDE_PLAN_CARD_TITLE,
   MOCK_CLAUDE_RELAY_ANSWER,
   MOCK_CLAUDE_RELAY_ASK,
@@ -72,7 +74,7 @@ test("an approval given by reply under a crewmate's plan card wakes the Firstmat
   const input = page.getByRole("textbox", { name: "Task prompt" });
   await expect(input).toBeEnabled({ timeout: 30_000 });
   await input.click();
-  await input.fill(`commission a crewmate: ${TITLE}`);
+  await input.fill(`${SPAWN_PROMPT_MARKER} ${TITLE}`);
   await input.press("Enter");
 
   // The plan card is on the stage once its crewmate reported.
@@ -89,7 +91,7 @@ test("an approval given by reply under a crewmate's plan card wakes the Firstmat
       },
       { timeout: 45_000 },
     )
-    .toEqual(["Approve and build", "Not now"]);
+    .toEqual([...MOCK_CLAUDE_PLAN_ACTIONS]);
   await showCard(page, MOCK_CLAUDE_PLAN_CARD_TITLE);
 
   // The captain approves it by reply, not by its button.
@@ -119,7 +121,7 @@ test("an approval given by reply under a crewmate's plan card wakes the Firstmat
   writeFileSync(test.info().outputPath("firstmate-wake.txt"), `${served.at(-1) ?? ""}\n`);
 
   // His reply chose nothing: the plan card is still up with both buttons.
-  expect(actionLabels(await planCard())).toEqual(["Approve and build", "Not now"]);
+  expect(actionLabels(await planCard())).toEqual([...MOCK_CLAUDE_PLAN_ACTIONS]);
   await page.locator("[data-card-layer]").screenshot({
     path: test.info().outputPath("relayed-decision-thread.png"),
   });

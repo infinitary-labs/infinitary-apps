@@ -13,6 +13,9 @@ import { sinceLastUser } from "../providerRequest";
 export const DEPENDENCY_WAIT_PROMPT = "exercise a dependency wait";
 export const DEPENDENCY_WAIT_MARKER = "shared fixture fix";
 export const DEPENDENCY_WAIT_TITLE = "Ship the gauge";
+/** The waiting crewmate's report while it waits, and the start of its report once the wait ends. */
+export const DEPENDENCY_WAIT_REPORT = "Waiting for the fixture fix to merge first.";
+export const DEPENDENCY_RESUMED_REPORT = "Resumed after the wait ended:";
 
 function dependencyWaitMove(
   body: string,
@@ -50,7 +53,7 @@ function dependencyWaitMove(
           calls: [
             {
               name: "report",
-              args: { text: `Resumed after the wait ended: ${user.trim().split("\n").at(-1)}` },
+              args: { text: `${DEPENDENCY_RESUMED_REPORT} ${user.trim().split("\n").at(-1)}` },
             },
           ],
         };
@@ -59,7 +62,7 @@ function dependencyWaitMove(
   return results.length
     ? { text: "Reported." }
     : {
-        calls: [{ name: "report", args: { text: "Waiting for the fixture fix to merge first." } }],
+        calls: [{ name: "report", args: { text: DEPENDENCY_WAIT_REPORT } }],
       };
 }
 

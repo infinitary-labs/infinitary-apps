@@ -39,6 +39,7 @@ import {
   SEQ_FEATURE_ASK,
   SEQ_IMPLEMENT_AMENDED_GOAL,
   SEQ_IMPLEMENT_CARD_TITLE,
+  SEQ_IMPLEMENT_GOAL,
   SEQ_IMPLEMENT_LINE,
   SEQ_NOT_REPRODUCED_TITLE,
   SEQ_NOT_REPRODUCED_WAYS,
@@ -47,6 +48,7 @@ import {
   SEQ_PLAN_CHOICE,
   SEQ_PLAN_FINAL_SPEC,
   SEQ_PLAN_LINE,
+  SEQ_PLAN_MANY_LABEL,
   SEQ_PROTOTYPE,
   SEQ_PROTOTYPE_ASK,
   SEQ_PROTOTYPE_BUILD_GOAL,
@@ -58,10 +60,13 @@ import {
   SEQ_REPRODUCED_YES,
   SEQ_SAVED,
   SEQ_SAVED_ASK,
+  SEQ_SAVED_BOTTOM_LABEL,
+  SEQ_SAVED_BUILD_GOAL,
   SEQ_SAVED_CARD_BODY,
   SEQ_SAVED_CARD_TITLE,
   SEQ_SAVED_CHOICE,
   SEQ_SAVED_SPEC,
+  SEQ_SHOWN_FIX_LABEL,
   SEQ_SHOWN_REPRO_TITLE,
   SEQ_SMALL,
   SEQ_SMALL_ASK,
@@ -69,6 +74,7 @@ import {
   SEQ_START_SHOWN_FIX,
   SEQ_THREAD_ANSWER,
   SEQ_THREAD_REPLY,
+  seqGoal,
   sequences,
 } from "./scenarios/sequences";
 import { cardReply, showCard, shownCard, shownCardFrame, shownEntry } from "./stack";
@@ -237,7 +243,7 @@ test("a feature ask: plan, the captain's choice, the grounded implement step, an
     (card) => card.title === SEQ_PLAN_CARD_TITLE,
   )?.id;
   if (!offeredCardId) throw new Error("plan offer disappeared");
-  const answers = shownCardFrame(page).getByLabel("One per task");
+  const answers = shownCardFrame(page).getByLabel(SEQ_PLAN_MANY_LABEL);
   await answers.evaluate((element) => (element as HTMLInputElement).click());
   const evidenceDir = testInfo.outputPath("approval-handoff");
   mkdirSync(evidenceDir, { recursive: true });
@@ -252,7 +258,7 @@ test("a feature ask: plan, the captain's choice, the grounded implement step, an
   // The Firstmate started the implement step on that wake, grounded: its
   // basis answered, so the served brief carries what the plan established.
   await expect.poll(implementDetail, { timeout: 30_000 }).toMatchObject({ status: "active" });
-  const brief = await servedBrief("Implement the accepted direction for the settings page");
+  const brief = await servedBrief(SEQ_IMPLEMENT_GOAL);
   expect(brief).toContain("q2_count:");
   expect(brief).toContain("many");
   // A repeated delivered click has no remaining card; no extra implementation starts.
@@ -354,7 +360,7 @@ test("a plan saved for later: Save and defer files its build on request, and Sta
   // keeps the plan for later.
   await cardShown(page, SEQ_SAVED_CARD_TITLE);
   await shownCardFrame(page)
-    .getByLabel("At the bottom")
+    .getByLabel(SEQ_SAVED_BOTTOM_LABEL)
     .evaluate((element) => (element as HTMLInputElement).click());
   await page.screenshot({ path: testInfo.outputPath("saved-plan-card.png") });
   await page.getByRole("button", { name: SEQ_SAVED_CHOICE, exact: true }).click();
@@ -392,12 +398,14 @@ test("a plan saved for later: Save and defer files its build on request, and Sta
 
   // The builder starts from the saved plan: its recorded spec, the card
   // whole, the answer picked and the choice, under the captain's words.
-  const brief = await servedBrief("Build the calmer about page the saved plan agreed");
+  const brief = await servedBrief(SEQ_SAVED_BUILD_GOAL);
   writeFileSync(testInfo.outputPath("saved-build-brief.json"), brief);
   expect(brief).toContain(`grounded in ${plan.key}`);
   expect(brief).toContain(SEQ_SAVED_SPEC);
   expect(brief).toContain(`The captain closed it by choosing \\"${SEQ_SAVED_CHOICE}\\".`);
-  expect(brief).toContain(JSON.stringify('version_line: "At the bottom" (bottom)').slice(1, -1));
+  expect(brief).toContain(
+    JSON.stringify(`version_line: "${SEQ_SAVED_BOTTOM_LABEL}" (bottom)`).slice(1, -1),
+  );
   expect(handedCard(brief).body).toBe(SEQ_SAVED_CARD_BODY);
   const words = brief.indexOf(
     `outrank every elaboration below, including your own:\\n${SEQ_SAVED_ASK}`,
@@ -516,7 +524,7 @@ test("a bug that reproduces: the fix starts on the reproduction, and the reprodu
     status: "active",
     parentId: parent.id,
   });
-  const brief = await servedBrief("Fix the meter reset at its root");
+  const brief = await servedBrief(seqGoal(SEQ_BUG_YES.fix));
   expect(brief).toContain(`grounded in ${reproduce.key}`);
   expect(brief).toContain(SEQ_REPRODUCED_YES);
   // An answer's scratch copy holds nothing of its answer: no branch is named.
@@ -539,7 +547,7 @@ test("a bug that reproduces: the fix starts on the reproduction, and the reprodu
   // Closing state above proves the answer was retained; a pinned brief may
   // legitimately explain that the answer task's scratch copy is discarded.
   // A step the Firstmate runs was told its report is the answer handed on.
-  expect(await servedBrief("Reproduce the meter reset")).toContain(
+  expect(await servedBrief(seqGoal(SEQ_BUG_YES.reproduce))).toContain(
     "Your report is that answer and is handed to the next step verbatim",
   );
   // The ask itself lives on with its fix.
@@ -588,7 +596,7 @@ test("a repro the captain asked to see is his: the Firstmate leaves it, and his 
   const fix = await rowTitled(page, SEQ_BUG_SHOWN.fix);
   const reproduceDetail = detailOf(page, reproduce.id);
   // His own ask lands as a card, the way his questions always have.
-  expect(await servedBrief("Reproduce the clock drift")).toContain("it lands as one card");
+  expect(await servedBrief(seqGoal(SEQ_BUG_SHOWN.reproduce))).toContain("it lands as one card");
   await cardShown(page, SEQ_SHOWN_REPRO_TITLE);
 
   // He says to start the fix before choosing: the fix starts, and the
@@ -602,7 +610,7 @@ test("a repro the captain asked to see is his: the Firstmate leaves it, and his 
   await expect(shownCard(page, SEQ_SHOWN_REPRO_TITLE)).toBeVisible();
 
   // His click is its close.
-  await page.getByRole("button", { name: "Fix it", exact: true }).click();
+  await page.getByRole("button", { name: SEQ_SHOWN_FIX_LABEL, exact: true }).click();
   await expect.poll(reproduceDetail, { timeout: 30_000 }).toMatchObject({
     status: "done",
     closedReason: "answered",
@@ -610,7 +618,7 @@ test("a repro the captain asked to see is his: the Firstmate leaves it, and his 
   const close = (await reproduceDetail()).events.find(
     (event) => (event.data as { reason?: string } | null)?.reason === "answered",
   );
-  expect(close).toMatchObject({ actor: "captain", text: 'chose "Fix it"' });
+  expect(close).toMatchObject({ actor: "captain", text: `chose "${SEQ_SHOWN_FIX_LABEL}"` });
 });
 
 test("a bug that does not reproduce: the owner shows the decision and no fix starts", async () => {

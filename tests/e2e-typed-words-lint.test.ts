@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "./helpers/scratchDirs";
-import { lintTypedWords, productWords } from "./lint/e2eTypedWords";
+import { lintTypedWords, productWords, standInWords } from "./lint/e2eTypedWords";
 
 /**
  * Words come from their owner (docs/e2e-contracts.md): a spec reads the words
@@ -132,6 +132,58 @@ describe("the e2e typed-words lint", () => {
     ].join("\n");
     expect(lint(source, product(), "observe-frame.spec.ts")).toEqual([2]);
     expect(lint(source, product(), "dev-observe.spec.ts")).toEqual([1, 2]);
+  });
+
+  // INF-2417's ledger class "stand-in words typed": a journey typed the words its mock or
+  // scenario authors (the spawn marker, a scenario's card title), so a rewording in the
+  // stand-in left the journey asserting or sending the old words.
+  it("refuses a spec's literal that copies a stand-in's exported words, wherever it stands", () => {
+    const dir = join(scratchDir("infinitary-e2e-stand-in-words-"), "tests/e2e");
+    mkdirSync(join(dir, "scenarios"), { recursive: true });
+    const mock = join(dir, "mockProvider.ts");
+    const scenario = join(dir, "scenarios/releaseCard.ts");
+    const scenarioTest = join(dir, "scenarios/releaseCard.test.ts");
+    writeFileSync(
+      mock,
+      [
+        'export const SPAWN_PROMPT_MARKER = "commission a crewmate:";',
+        'export const SHORT_MARKER = "Leave waiting";',
+        'const UNEXPORTED = "Await the job queue";',
+      ].join("\n"),
+    );
+    writeFileSync(scenario, "export const RELEASE_CARD_TITLE = `Merge the release pull request`;");
+    writeFileSync(scenarioTest, 'export const OWN = "a unit test owns nothing here";');
+    const standIns = standInWords([mock, scenario, scenarioTest]);
+    expect([...standIns]).toEqual([
+      ["commission a crewmate:", { name: "SPAWN_PROMPT_MARKER", file: mock }],
+      ["Merge the release pull request", { name: "RELEASE_CARD_TITLE", file: scenario }],
+    ]);
+    const spec = join(dir, "journey.spec.ts");
+    const helper = join(dir, "journeyHelper.ts");
+    const body = [
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: the fixture's own template literal, as source text.
+      "await input.fill(`commission a crewmate: ${TITLE}`);",
+      'const card = shownCard(page, "Merge the release pull request");',
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: the fixture's own template literal, as source text.
+      "await input.fill(`${SPAWN_PROMPT_MARKER} ${TITLE}`);",
+      'await card.getByRole("button", { name: "Leave waiting" }).click();',
+      'await card.getByRole("button", { name: "Await the job queue" }).click();',
+      'test("commission a crewmate: and Merge the release pull request", async () => {});',
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: the fixture's own template literal, as source text.
+      "await test.step(`commission a crewmate: ${TITLE}`, async () => {});",
+      "// e2e-typed-words: the captain's own words, which only share the stand-in's",
+      'await say(page, "please commission a crewmate: now");',
+    ];
+    const lines = (file: string, imports: string[]) => {
+      writeFileSync(file, [...imports, ...body].join("\n"));
+      return lintTypedWords([file], [], standIns).map((diagnostic) => diagnostic.line);
+    };
+    const marker = 'import { SPAWN_PROMPT_MARKER } from "./mockProvider";';
+    const running = [marker, 'const { releaseCard } = await import("./scenarios/releaseCard");'];
+    expect(lines(spec, running)).toEqual([3, 4]);
+    // A spec that runs no such scenario typed its own words, which only share the scenario's.
+    expect(lines(spec, [marker, ""])).toEqual([3]);
+    expect(lines(helper, running)).toEqual([]);
   });
 
   it("sees no product words where there is no src/", () => {

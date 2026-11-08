@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 import { clock, revisedLine as revisedWords } from "../../src/renderer/src/cards/revisedLine";
 import { cardBody, cardBodyElement } from "./frames";
 import { launchApp } from "./launch";
-
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import {
   FILE_CARD_INITIAL,
@@ -42,7 +42,7 @@ test("a crewmate emits a file snapshot and shows an edit only on its next explic
   try {
     const { page, userDataDir } = launched;
     const input = promptInput(page);
-    await input.fill(`commission a crewmate: ${FILE_CARD_PROMPT_MARKER}`);
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${FILE_CARD_PROMPT_MARKER}`);
     await input.press("Enter");
     const frame = cardBody(page, FILE_CARD_TITLE);
     await expect(frame.locator("body")).toContainText(ORIGINAL_ANSWER);

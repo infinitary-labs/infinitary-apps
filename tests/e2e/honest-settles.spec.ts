@@ -15,7 +15,7 @@ import {
 import { forgeSignInTitle } from "../../src/shared/forges";
 import { plainProblem } from "../../src/shared/plainProblem";
 import { scratchDir } from "../helpers/scratchDirs";
-import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
+import { STUB_BAD_CREDENTIALS, seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { launchApp } from "./launch";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { projectRow, projectRowWords } from "./projects";
@@ -204,7 +204,7 @@ test("a put-in the project's host refuses reads plainly in the feed, and the raw
         .map((event) => String(event.data?.problem ?? ""))
         .find(
           (problem) =>
-            problem.includes("GitHub answered 401") && problem.includes("Bad credentials"),
+            problem.includes("GitHub answered 401") && problem.includes(STUB_BAD_CREDENTIALS),
         );
     await expect.poll(refusal, { timeout: 20_000 }).toBeDefined();
     // The feed says what that refusal means, never the host's raw words.
@@ -217,7 +217,9 @@ test("a put-in the project's host refuses reads plainly in the feed, and the raw
     // Nothing went in; the task stays open, its work kept.
     expect(github.merges()).toEqual([]);
     const feed = (await feedTexts(page)).join("\n");
-    expect(feed).not.toMatch(/Bad credentials|\b401\b|PR merge blocked|\bgh\b|token/);
+    expect(feed).not.toMatch(
+      new RegExp(`${STUB_BAD_CREDENTIALS}|\\b401\\b|PR merge blocked|\\bgh\\b|token`),
+    );
     expect(await page.evaluate((id) => window.infinitary.tasks.detail(id), taskId)).toMatchObject({
       status: "active",
     });

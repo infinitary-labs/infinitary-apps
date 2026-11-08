@@ -140,6 +140,8 @@ export const MOCK_STANDARD_MERGE_ONLY_ACTIONS: ScriptedCardAction[] = [
  * prose in the thread - it has no reply tool.
  */
 export const FM_THREAD_CARD_TITLE = "Two ways to phrase the welcome";
+/** That card's default action, on every version of it. */
+export const FM_THREAD_DEFAULT_LABEL = "Lead with the caption";
 /** Tiny PNG the image-on-steer e2e pastes. */
 export const THREAD_IMAGE_PNG =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";

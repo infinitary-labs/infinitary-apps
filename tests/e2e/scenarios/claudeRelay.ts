@@ -13,6 +13,8 @@ import { answering } from "../providerRequest";
  */
 export const CLAUDE_RELAY_MARKER = "with a plan to approve";
 export const MOCK_CLAUDE_PLAN_CARD_TITLE = "Raise the rivet threshold";
+/** The plan card's two actions, in their order. */
+export const MOCK_CLAUDE_PLAN_ACTIONS = ["Approve and build", "Not now"] as const;
 export const MOCK_CLAUDE_PLAN_REPORT = "The plan to raise the rivet threshold is on its card.";
 export const CLAUDE_RELAY_APPROVAL =
   "for decision 5, raise the threshold from 8 to 32. now approve to build";
@@ -54,8 +56,8 @@ export const claudeRelay: Scenario =
             title: MOCK_CLAUDE_PLAN_CARD_TITLE,
             body: "<p>Raise the rivet threshold before the next inspection.</p><p>Decision 5 sets it to 8 today.</p>",
             actions: [
-              { id: "build", label: "Approve and build", default: true },
-              { id: "later", label: "Not now" },
+              { id: "build", label: MOCK_CLAUDE_PLAN_ACTIONS[0], default: true },
+              { id: "later", label: MOCK_CLAUDE_PLAN_ACTIONS[1] },
             ],
           },
         },

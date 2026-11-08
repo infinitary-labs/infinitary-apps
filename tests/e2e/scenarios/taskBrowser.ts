@@ -16,6 +16,18 @@ import { calledTool, providerMessages } from "../providerRequest";
 export const TASK_BROWSER_PROMPT_MARKER = "check the sign-up page at ";
 export const MOCK_BROWSER_REPORT_PREFIX = "The sign-up page said";
 export const MOCK_BROWSER_PICTURE = "signed-up";
+/** What the report says the page showed first, after Send and, when given, after a reload. */
+export function mockBrowserSaw(first: string, sent: string, reloaded?: string): string {
+  const words = `"${first}" first, "${sent}" after Send`;
+  return reloaded === undefined ? words : `${words} and "${reloaded}" after a reload`;
+}
+/** The words the report puts after each address the browser blocked. */
+export const MOCK_BROWSER_BLOCKED = {
+  privately: "on a private network",
+  atConnection: " at the connection",
+  plain: "over plain http",
+  local: "on this Mac",
+} as const;
 
 /** The task browser's next scripted step, from the browser answers so far. */
 function taskBrowserStep(body: string): ScriptedCall[] | undefined {
@@ -82,13 +94,13 @@ function taskBrowserStep(body: string): ScriptedCall[] | undefined {
         )
         .find((host) => host !== undefined);
       const atConnection = answers[0]?.includes("refused at the connection")
-        ? " at the connection"
+        ? MOCK_BROWSER_BLOCKED.atConnection
         : "";
       return [
         {
           name: "report",
           args: {
-            text: `${MOCK_BROWSER_REPORT_PREFIX} "${first}" first, "${after}" after Send and "${reloaded}" after a reload, and "${reach}". It blocked ${privately} on a private network${atConnection}, ${plain} over plain http, and ${local} on this Mac. Browser answers:\n${answers.slice(0, 5).join("\n\n")}`,
+            text: `${MOCK_BROWSER_REPORT_PREFIX} ${mockBrowserSaw(`${first}`, `${after}`, `${reloaded}`)}, and "${reach}". It blocked ${privately} ${MOCK_BROWSER_BLOCKED.privately}${atConnection}, ${plain} ${MOCK_BROWSER_BLOCKED.plain}, and ${local} ${MOCK_BROWSER_BLOCKED.local}. Browser answers:\n${answers.slice(0, 5).join("\n\n")}`,
           },
         },
       ];

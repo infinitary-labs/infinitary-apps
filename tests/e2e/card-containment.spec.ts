@@ -95,7 +95,7 @@ test.beforeAll(async () => {
   const { page } = launched;
   const input = promptInput(page);
   await input.click();
-  await input.fill(`commission a crewmate: ${ATTACK_CARDS_PROMPT_MARKER}`);
+  await input.fill(`${SPAWN_PROMPT_MARKER} ${ATTACK_CARDS_PROMPT_MARKER}`);
   await input.press("Enter");
   await expect(pager(page, 4)).toBeVisible({ timeout: 30_000 });
 });

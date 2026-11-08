@@ -197,6 +197,11 @@ type ClaudeSeatCut =
  */
 // e2e-typed-words: the captain's own words that start a scripted spawn; they only share a phrase with the product's
 export const SPAWN_PROMPT_MARKER = "commission a crewmate:";
+/** The error the mock answers a non-auth failure turn with (`FAIL_PROVIDER_PROMPT_MARKER`). */
+export const MOCK_PROVIDER_FAILURE = "mock deterministic provider failure";
+/** The goal the mock Firstmate gives the crewmate it spawns for "commission a crewmate: <title>". */
+export const mockSpawnGoal = (title: string) =>
+  `Complete the task "${title}" and report the outcome.`;
 // e2e-typed-words: the captain's own words that ask the mock for an answer card; they only share a phrase with the product's
 export const ANSWER_PROMPT_MARKER = "answer with a card";
 export const TALL_ANSWER_PROMPT_MARKER = `a tall ${ANSWER_PROMPT_MARKER}`;
@@ -758,7 +763,7 @@ export async function startMockProvider(
           res.writeHead(400, { "Content-Type": "application/json" });
           res.end(
             JSON.stringify({
-              error: { message: "mock deterministic provider failure", type: "mock_error" },
+              error: { message: MOCK_PROVIDER_FAILURE, type: "mock_error" },
             }),
           );
           return;
@@ -1040,7 +1045,9 @@ export async function startMockProvider(
             return;
           }
           if (!hasToolResults && latestUserTail.includes(SPAWN_PROMPT_MARKER)) {
-            const titleMatches = [...latestUserTail.matchAll(/commission a crewmate: ([^"\\]+)/g)];
+            const titleMatches = [
+              ...latestUserTail.matchAll(new RegExp(`${SPAWN_PROMPT_MARKER} ([^"\\\\]+)`, "g")),
+            ];
             const title = titleMatches[0]?.[1]?.trim() ?? "Mock task";
             const repoMatches = contextRepos(body);
             const bound = repoMatches.find(([name]) => title.includes(name));
@@ -1052,8 +1059,8 @@ export async function startMockProvider(
                 name: "spawn_crewmate",
                 args: {
                   title,
-                  goal: `Complete the task "${title}" and report the outcome.`,
-                  user_words: `commission a crewmate: ${title}`,
+                  goal: mockSpawnGoal(title),
+                  user_words: `${SPAWN_PROMPT_MARKER} ${title}`,
                   ...(bound ? { repo_id: bound[1] } : {}),
                   // A task that only answers, in its project (FI3-1571 piece 4).
                   ...(title.includes(WRITE_ASK_ANSWER_MARKER)

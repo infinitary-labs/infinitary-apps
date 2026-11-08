@@ -464,7 +464,8 @@ export class TaskPlacement {
    * Where a task runs in words, as its Tasks row, its summary and its status
    * read it (docs/helper.md, "Runs on"): the computer it started on, or the
    * one it would start on now, and whether open or underway work's computer
-   * is out of reach or not yet caught up. Absent for a task this Mac runs.
+   * is out of reach, or connected and still catching up. Absent for a task
+   * this Mac runs.
    */
   taskPlace(record: TaskRecord): TaskPlace | undefined {
     return this.options.tasks.projectedFact(record, this.placeFact, () =>
@@ -480,7 +481,10 @@ export class TaskPlacement {
     if (!device) return undefined;
     const { label, where } = machines.placeOf(device);
     const live = record.status === "open" || record.status === "active";
-    const away = live && machines.ready(device, record.id) !== true;
+    const behind = live && machines.ready(device, record.id) !== true;
+    // Connected but not yet caught up is in reach, with since when (INF-1810 finding 7).
+    const catchingUpSince = behind ? machines.catchingUpSince?.(device, record.id) : undefined;
+    const away = behind && catchingUpSince === undefined;
     const older = away && this.options.takesNoWorkUntilUpdated?.(device) === true;
     return {
       name: label,
@@ -491,6 +495,7 @@ export class TaskPlacement {
           : "out-of-reach"
         : "in-reach",
       ...(older ? { noNewWork: true as const } : {}),
+      ...(catchingUpSince !== undefined ? { catchingUpSince } : {}),
     };
   }
 

@@ -12,6 +12,7 @@ import {
   projectNameOf,
   rowStartOf,
   rowsOf,
+  rowTrailing,
   summaryOf,
   trailingOf,
   wordOf,
@@ -415,6 +416,24 @@ describe("what a row says after its title about its computer", () => {
       reach: "connecting",
     });
     expect(reach(task({ place }))).toMatchObject({ outOfReach: false, connecting: false });
+  });
+
+  // INF-1810 finding 7: connected and catching up is not out of reach.
+  it("says catching up, in the quiet color, while its connected computer is catching up", () => {
+    const place = { name: "Mac mini", where: "on Mac mini", reach: "in-reach" as const };
+    const catching = rowTrailing(task({ place: { ...place, catchingUpSince: 1_000 } }), "");
+    expect(catching).toEqual({
+      name: "",
+      place: "on Mac mini",
+      outOfReach: true,
+      connecting: false,
+      catchingUp: true,
+      reach: "catching up",
+    });
+    // Caught up: the row says only where it runs.
+    const caught = rowTrailing(task({ place }), "");
+    expect(caught).toMatchObject({ outOfReach: false });
+    expect(caught).not.toHaveProperty("catchingUp");
   });
 });
 

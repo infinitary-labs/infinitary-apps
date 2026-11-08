@@ -309,6 +309,49 @@ describe("a task that runs on a computer that runs work", () => {
     expect(home.inbox.allFor("t-restart")).toEqual([]);
   });
 
+  it("reads a task whose connected computer the home is catching up with after a restart as in reach, catching up since that contact, then caught up (INF-1810 finding 7)", async () => {
+    const at = await world();
+    model([{ text: "The footer is fixed." }]);
+    await at.start("t-catch");
+    await expect.poll(() => at.home().tasks.get("t-catch")?.activity).toBe("idle");
+
+    // The home restarts, and the computer answers hello but has not yet said what it holds.
+    const roster = gate();
+    const restarted = now();
+    await at.restartHome(undefined, (home) => {
+      const ask = home.devices.ask.bind(home.devices);
+      home.devices.ask = (deviceId, channel, args, options) =>
+        channel === "inf:session:roster"
+          ? roster.held.then(() => ask(deviceId, channel, args, options))
+          : ask(deviceId, channel, args, options);
+    });
+    const home = at.home();
+    const place = () => {
+      const record = home.tasks.get("t-catch");
+      if (!record) throw new Error("no task");
+      return home.supervisor.placement.taskPlace(record);
+    };
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(true);
+    expect(home.placed.ready(at.deviceId, "t-catch")).toBe(false);
+    // Connected is in reach: the place says since when it is catching up, never out of reach.
+    const catching = place();
+    expect(catching).toMatchObject({ reach: "in-reach" });
+    expect(catching?.catchingUpSince).toBeGreaterThanOrEqual(restarted);
+    expect(catching?.catchingUpSince).toBeLessThanOrEqual(now());
+
+    // Caught up: the place reads in reach with nothing more.
+    roster.open();
+    await expect.poll(() => home.placed.ready(at.deviceId, "t-catch")).toBe(true);
+    expect(place()).toMatchObject({ reach: "in-reach" });
+    expect(place()).not.toHaveProperty("catchingUpSince");
+
+    // A computer the home cannot reach is out of reach, never catching up.
+    await home.drop();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+    expect(place()).toMatchObject({ reach: "out-of-reach" });
+    expect(place()).not.toHaveProperty("catchingUpSince");
+  });
+
   // Captain's INF-352 W1: the helper owns the ending of a continuation its restart cut off.
   it.each(["copy-loop", "home-turn"] as const)(
     "ends a Claude continuation after a helper restart: %s",

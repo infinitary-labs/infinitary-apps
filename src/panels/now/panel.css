@@ -250,9 +250,9 @@
   min-width: 0;
 }
 /* A task another computer runs: its project, where, and that its computer
-   is out of reach. Drawn last first from the right, a part that does not
-   fit wraps onto the hidden second line whole - the project's name first,
-   then the place - so "out of reach" always shows. */
+   is out of reach, connecting or catching up. Drawn last first from the
+   right, a part that does not fit wraps onto the hidden second line whole -
+   the project's name first, then the place - so the reach words always show. */
 .key[data-now-place] {
   display: flex;
   flex-direction: row-reverse;
@@ -266,8 +266,10 @@
 .reach {
   color: var(--warn);
 }
-/* Still connecting is not a warning: the word reads in the quiet color. */
-[data-now-connecting] .reach {
+/* Still connecting, or connected and catching up, is not a warning: the
+   words read in the quiet color. */
+[data-now-connecting] .reach,
+[data-now-catching-up] .reach {
   color: var(--fg-3);
 }
 [data-now-row] > .key {

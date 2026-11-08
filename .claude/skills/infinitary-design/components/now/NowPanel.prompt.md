@@ -19,8 +19,8 @@ A finished part - a done review, plan or piece of work - stays under done · 7d,
 
 A row is a shared task status mark, the task key in dim mono at the start of the title, the title (one line, ellipsized), and, when space permits, the project name in dim mono at the end (ellipsized; the trailing track is `fit-content(40%)` so short names size to content and long names cap at 40%).
 Hide the project name and its grid track when the panel content is 320px wide or less, or when exactly one registered, non-archived repo project exists (Scratch and archived projects do not count).
-A task another computer runs adds where after the project name, `website · on Mac mini`, and while that computer is out of reach the line ends `out of reach` in `--warn`, and while its connection is being made it ends `connecting` in `--fg-3` with no warn mark (`../devices/RunsOn.prompt.md`).
-A part that does not fit leaves whole, the project name first and then the place; `out of reach` always stays, so the narrow panel keeps the track for those words alone.
+A task another computer runs adds where after the project name, `website · on Mac mini`, and while that computer is out of reach the line ends `out of reach` in `--warn`, while its connection is being made it ends `connecting` in `--fg-3` with no warn mark, and while it is connected and the app is still catching up with the task it ends `catching up` in `--fg-3` with no warn mark, its time left to the status reason the row's summary shows (`../devices/RunsOn.prompt.md`).
+A part that does not fit leaves whole, the project name first and then the place; `out of reach` or `catching up` always stays, so the narrow panel keeps the track for those words alone.
 Count from the full board, not the visible-task filter.
 Only an unstarted row in the Queued section adds one quiet mono line below its title: what it waits for and since when, supplied by the home and shared with the first mate.
 Backlog keeps its compact row without that extra line, since it normally waits for an explicit go; the task's record and first-mate reads retain the wait fact.
@@ -92,7 +92,7 @@ Starting is the still open cyan ring, used only while a start is being prepared,
 A confirmed manual start that did not begin reads Backlog · Could not start, and the Tasks row adds the dim word could not start.
 Open work reads by its start policy, as the panel groups it: Backlog waits for Start, Queued starts by itself.
 A blocker, a hold or a parent's parts is the reason beside the word, never another word: `Queued · Blocked by another task`, `Queued · Held`, `Backlog · Its 2 parts do the work`.
-Open, working or idle work whose computer is out of reach keeps its mark's shape in `--warn` and reads `Idle · Mac mini is out of reach`; while its connection is being made it keeps its mark as it was and reads `Idle · Mac mini is connecting`, with no warn mark; either way, unless a blocker, a hold or its parts give the reason (`../devices/RunsOn.prompt.md`); Interrupted, Starting and Waiting on you keep their own.
+Open, working or idle work whose computer is out of reach keeps its mark's shape in `--warn` and reads `Idle · Mac mini is out of reach`; while its connection is being made it keeps its mark as it was and reads `Idle · Mac mini is connecting`, with no warn mark; while it is connected and catching up it keeps its mark as it was and reads `Idle · Catching up with Mac mini since 12:57 PM`; in each case, unless a blocker, a hold or its parts give the reason (`../devices/RunsOn.prompt.md`); Interrupted, Starting and Waiting on you keep their own.
 Keep rows otherwise minimal.
 
 ### Naming a wait (INF-38)

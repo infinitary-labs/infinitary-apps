@@ -290,14 +290,16 @@ declare module "@infinitary/contracts" {
      * Where it runs when another computer runs it: that computer's name as the
      * feed says it, where as the row says it after the project (\`on <name>\`,
      * or \`as <user>\` for another user of this computer), and, on open or
-     * underway work, the core's single reach reading.
-     * Absent for a task this computer runs.
+     * underway work, the core's single reach reading; \`catchingUpSince\`
+     * (epoch ms) while that computer is connected and still catching up with
+     * the task. Absent for a task this computer runs.
      */
     place?: {
       name: string;
       where: string;
       reach?: "in-reach" | "connecting" | "reconnecting" | "out-of-reach";
       noNewWork?: true;
+      catchingUpSince?: number;
     };
     assignee: string | null;
     model: string | null;

@@ -199,4 +199,54 @@ describe("one task status", () => {
       "Mac mini is connecting",
     );
   });
+
+  // INF-1810 finding 7: a restart's catching up is in reach, not out of it.
+  it("says a task whose connected computer it is catching up with is catching up since then, with no warn mark", () => {
+    const since = new Date(2026, 10, 7, 12, 57).getTime();
+    const later = new Date(2026, 10, 7, 13, 5).getTime();
+    const place = { name: "Mac mini", where: "on Mac mini", reach: "in-reach" as const };
+    const at = (time: string) => `Catching up with Mac mini since ${time}`;
+    const time = new Date(since).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    const idle = taskStatusOf(
+      { ...base, status: "active", activity: "idle", place: { ...place, catchingUpSince: since } },
+      later,
+    );
+    expect(idle).toMatchObject({ mark: "idle", word: "Idle", reason: at(time) });
+    expect(idle.outOfReach).toBeUndefined();
+    const working = taskStatusOf(
+      {
+        ...base,
+        status: "active",
+        activity: "running",
+        place: { ...place, catchingUpSince: since },
+      },
+      later,
+    );
+    expect(working).toMatchObject({ mark: "working", reason: at(time) });
+    expect(working.outOfReach).toBeUndefined();
+    // Open work keeps its blocker as the reason, and its mark as it was.
+    const held = taskStatusOf(
+      {
+        ...base,
+        startPolicy: "when-ready",
+        flags: { ...base.flags, held: true },
+        place: { ...place, catchingUpSince: since },
+      },
+      later,
+    );
+    expect(held).toMatchObject({ mark: "queued", reason: "Held" });
+    expect(held.outOfReach).toBeUndefined();
+    // A day later the time names its date.
+    const nextDay = taskStatusOf(
+      { ...base, status: "active", activity: "idle", place: { ...place, catchingUpSince: since } },
+      later + 24 * 60 * 60 * 1000,
+    );
+    const day = new Date(since).toLocaleDateString([], { month: "short", day: "numeric" });
+    expect(nextDay.reason).toBe(at(`${day}, ${time}`));
+    // Caught up: an in-reach place reads as any task here.
+    expect(read({ status: "active", activity: "idle", place })).toMatchObject({
+      mark: "idle",
+      reason: "No continuing work",
+    });
+  });
 });

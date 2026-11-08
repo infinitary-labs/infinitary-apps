@@ -11,6 +11,7 @@ import {
 import {
   EARLIER_LABEL,
   foundOnWords,
+  ROW_CATCHING_UP,
   ROW_REACH_WORDS,
   ROW_START_LABEL,
   ROW_TRY_AGAIN_LABEL,
@@ -122,7 +123,8 @@ export function projectNameOf(board: Pick<PanelTaskBoard, "projects">, task: Pan
  * What a row says after its title (the design skill's RunsOn): the
  * project's name - left out where only one project could be meant - then,
  * for a task another computer runs, where ("on Mac mini"); and whether that
- * computer is out of reach, which the row says last.
+ * computer is out of reach, connecting, or connected and still catching up
+ * with the task, which the row says last.
  */
 export function trailingOf(
   board: PanelTaskBoard,
@@ -135,8 +137,11 @@ export function trailingOf(
 export type RowTrailing = {
   name: string;
   place: string;
+  /** The row says its reach word: out of reach, connecting or catching up. */
   outOfReach: boolean;
   connecting: boolean;
+  /** Its computer is connected and this Mac is still catching up with the task; absent otherwise. */
+  catchingUp?: true;
   reach: string;
 };
 
@@ -147,17 +152,22 @@ export type RowTrailing = {
  */
 export function rowTrailing(task: PanelTaskRow, name: string): RowTrailing {
   const connecting = task.place?.reach === "connecting";
+  // Connected and catching up is in reach: the row says catching up, never out of reach.
+  const catchingUp = task.place?.reach === "in-reach" && task.place.catchingUpSince !== undefined;
   return {
     name,
     place: task.place?.where ?? "",
-    // The row says why its computer cannot take work now: out of reach, or connecting.
-    outOfReach: task.place?.reach !== undefined && task.place.reach !== "in-reach",
+    // The row says why its computer cannot take work now: out of reach, connecting or catching up.
+    outOfReach: catchingUp || (task.place?.reach !== undefined && task.place.reach !== "in-reach"),
     connecting,
-    reach: connecting
-      ? ROW_REACH_WORDS.connecting
-      : task.place?.noNewWork
-        ? ROW_REACH_WORDS.noNewWork
-        : ROW_REACH_WORDS.away,
+    ...(catchingUp ? { catchingUp: true as const } : {}),
+    reach: catchingUp
+      ? ROW_CATCHING_UP
+      : connecting
+        ? ROW_REACH_WORDS.connecting
+        : task.place?.noNewWork
+          ? ROW_REACH_WORDS.noNewWork
+          : ROW_REACH_WORDS.away,
   };
 }
 

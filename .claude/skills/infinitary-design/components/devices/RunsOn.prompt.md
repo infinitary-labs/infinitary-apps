@@ -67,6 +67,7 @@ Feed lines, never cards:
   Then: "Running as Builder is back. api's next task started as Builder."
 
 While its device is out of reach a task's Tasks mark keeps its shape in `warn`, its mono line ends "out of reach" (those words alone in the narrow panel, which hides the project name), its status reason reads "Mac mini is out of reach" on its summary and its record; for a computer connected on an older Infinitary both read "takes no new work" and "Mac mini takes no new work" instead, and the first mate neither nudges it nor calls it stuck (`../now/NowPanel.prompt.md`).
+A device that is connected while the app is still catching up with a task - after either side restarted - is in reach, never out of reach: the task's mark stays as it was, its mono line ends "catching up" in `--fg-3`, and its status reason, which the row's summary shows, reads "Catching up with Mac mini since 12:57 PM"; its crewmate stays on the orbit.
 Never the words away, offline, disconnected, assigned, placed, helper or runner (`copy/Vocabulary.prompt.md`).
 
 **Automatic explanations.**

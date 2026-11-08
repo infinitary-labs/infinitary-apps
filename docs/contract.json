@@ -27491,6 +27491,9 @@
                     "noNewWork": {
                       "type": "boolean",
                       "const": true
+                    },
+                    "catchingUpSince": {
+                      "type": "number"
                     }
                   },
                   "required": [
@@ -29168,6 +29171,9 @@
               "noNewWork": {
                 "type": "boolean",
                 "const": true
+              },
+              "catchingUpSince": {
+                "type": "number"
               }
             },
             "required": [
@@ -33754,6 +33760,9 @@
                 "noNewWork": {
                   "type": "boolean",
                   "const": true
+                },
+                "catchingUpSince": {
+                  "type": "number"
                 }
               },
               "required": [
@@ -57941,6 +57950,9 @@
                     "noNewWork": {
                       "type": "boolean",
                       "const": true
+                    },
+                    "catchingUpSince": {
+                      "type": "number"
                     }
                   },
                   "required": [
@@ -59618,6 +59630,9 @@
                     "noNewWork": {
                       "type": "boolean",
                       "const": true
+                    },
+                    "catchingUpSince": {
+                      "type": "number"
                     }
                   },
                   "required": [

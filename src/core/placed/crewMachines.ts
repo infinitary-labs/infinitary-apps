@@ -60,6 +60,13 @@ export type CrewMachines = {
   /** The task's computer is in reach and caught up, so its lane may go on. */
   ready(machine: string, taskId: string): boolean;
   /**
+   * Since when the task's computer, in reach, has been catching up with it:
+   * from the contact that brought the computer back, or from when its
+   * conversation began opening on this Mac, whichever is later. Undefined
+   * while the computer is out of reach or the task is caught up.
+   */
+  catchingUpSince?(machine: string, taskId: string): number | undefined;
+  /**
    * Asks the task's computer, while in reach, whether its conversation is
    * working, and ends a turn the home still holds as running there once that
    * computer says it is not and every event it counted is in (INF-2332).

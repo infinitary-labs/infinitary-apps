@@ -145,7 +145,7 @@ export type PlacedSessionsOptions = {
    */
   browsers?: () => PlacedBrowserSink | undefined;
   /**
-   * A computer went out of reach, or came back and caught up: whether its
+   * A computer went out of reach, came back, or caught up: whether its
    * tasks wait on it moved, which their Tasks rows say (`TaskView.place`).
    */
   reachMoved?: () => void;
@@ -173,6 +173,8 @@ type Device = {
   contact: number;
   /** Since when it has been out of reach, or since this Mac started without it. */
   goneSince: number;
+  /** When the contact that brought it back came; undefined while it is out of reach. */
+  reachedAt: number | undefined;
   /** The feed said it went, so it says when its work caught up. */
   saidGone: boolean;
   /** Resolves once this contact's roster is read: what it asks first waits for it. */
@@ -192,6 +194,8 @@ type Placed = {
   session: PlacedSession | undefined;
   /** The conversation is being opened on this Mac for an ask that came first. */
   adopting: Promise<void> | undefined;
+  /** When that opening began. */
+  adoptingSince: number | undefined;
   /** What the home keeps of it: each callback's answer, each change begun, its place. */
   readonly ledger: PlacedLedger;
   calling: Map<string, Promise<unknown>>;
@@ -505,6 +509,12 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return (placed ?? this.load(taskId, machine)).through >= there.seq;
   }
 
+  catchingUpSince(machine: string, taskId: string): number | undefined {
+    if (!this.options.devices.inReach(machine) || this.ready(machine, taskId)) return undefined;
+    const back = this.devices.get(machine)?.reachedAt ?? this.startedAt;
+    return Math.max(back, this.placed.get(taskId)?.adoptingSince ?? back);
+  }
+
   // ---- the work requests ------------------------------------------------------
 
   async answer<C extends WorkInvokeChannel>(
@@ -771,6 +781,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     if (contact.contact === "gone") {
       device.roster = undefined;
       device.goneSince = this.options.now();
+      device.reachedAt = undefined;
       for (const placed of this.placed.values())
         if (placed.deviceId === contact.deviceId) {
           placed.released = false;
@@ -779,6 +790,9 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       this.options.reachMoved?.();
       return;
     }
+    // In reach is not caught up: its tasks say since when they catch up.
+    device.reachedAt ??= this.options.now();
+    this.options.reachMoved?.();
     void this.reach(device, device.contact).catch((caught: unknown) =>
       this.log(`could not read what ${contact.deviceId} holds: ${errorText(caught)}`),
     );
@@ -883,8 +897,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         if (owed) placed.reopenOwed = true;
         this.log(`could not open ${placed.task} there again: ${errorText(caught)}`);
       });
+    placed.adoptingSince = this.options.now();
     placed.adopting = reopening.finally(() => {
       placed.adopting = undefined;
+      placed.adoptingSince = undefined;
     });
     return placed.adopting;
   }
@@ -954,9 +970,13 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         throw new NotHeldHere("That computer is out of reach.");
       await device.rostered;
     }
-    placed.adopting ??= host.adopt(placed.task).finally(() => {
-      placed.adopting = undefined;
-    });
+    if (!placed.adopting) {
+      placed.adoptingSince = this.options.now();
+      placed.adopting = host.adopt(placed.task).finally(() => {
+        placed.adopting = undefined;
+        placed.adoptingSince = undefined;
+      });
+    }
     try {
       await placed.adopting;
     } catch (caught) {
@@ -1320,6 +1340,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         roster: undefined,
         contact: 0,
         goneSince: this.startedAt,
+        reachedAt: undefined,
         saidGone: false,
         rostered: Promise.resolve(),
         rosterRead: () => {},
@@ -1343,6 +1364,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       ended: kept.ended,
       session: undefined,
       adopting: undefined,
+      adoptingSince: undefined,
       said: undefined,
       reopenOwed: false,
       ledger,

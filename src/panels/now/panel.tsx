@@ -923,6 +923,7 @@ const Row = memo(function Row({
       data-now-trailing={trailing.name || trailing.place ? "" : undefined}
       data-now-out-of-reach={trailing.outOfReach ? "" : undefined}
       data-now-connecting={trailing.connecting ? "" : undefined}
+      data-now-catching-up={trailing.catchingUp ? "" : undefined}
       data-now-nav={rowNavKey(task.id)}
       tabIndex={isStop ? 0 : -1}
       style={{ "--depth": String(depth) } as CSSProperties}
@@ -956,7 +957,7 @@ const Row = memo(function Row({
       )}
       {trailing.place ? (
         // Last first: what does not fit leaves whole, the project's
-        // name before the place, never "out of reach".
+        // name before the place, never "out of reach" or "catching up".
         <span className="key" data-now-project="" data-now-place="">
           {trailing.outOfReach && (
             <span className="reach" data-now-reach="">

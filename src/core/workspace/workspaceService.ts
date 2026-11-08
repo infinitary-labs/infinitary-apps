@@ -282,7 +282,7 @@ export class WorkspaceService {
 
   /**
    * Every `fm/task-*` branch in a repo, with the task id it names. Read-only:
-   * boot reconciliation reports leftovers and never deletes one.
+   * boot reconciliation retires each leftover with `retireTaskBranch`.
    */
   async listTaskBranches(repoDir: string): Promise<{ branch: string; taskId: string }[]> {
     let out: string;
@@ -300,6 +300,27 @@ export class WorkspaceService {
       .map((line) => line.trim())
       .filter((branch) => branch.startsWith(TASK_BRANCH_PREFIX))
       .map((branch) => ({ branch, taskId: branch.slice(TASK_BRANCH_PREFIX.length) }));
+  }
+
+  /**
+   * A leftover task branch with no working copy goes the way a closed
+   * task's does: whatever it holds that never landed is first saved on the
+   * task's hidden kept ref (`keepUnlandedWork`), then the branch is deleted.
+   * Answers why it stayed when the save or the delete failed - a branch
+   * still checked out somewhere is refused by git and stays.
+   */
+  async retireTaskBranch(
+    repoDir: string,
+    branch: string,
+    taskId: string,
+  ): Promise<{ outcome: "removed" } | { outcome: "kept"; reason: string }> {
+    try {
+      await this.keepUnlandedWork({ cwd: "", repoDir, branch, taskId });
+      await git(repoDir, ["branch", "-D", branch]);
+      return { outcome: "removed" };
+    } catch (caught) {
+      return { outcome: "kept", reason: gitFailure(caught) };
+    }
   }
 
   /**

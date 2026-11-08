@@ -411,6 +411,7 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ensureDefaultRepo: vi.fn(async () => paths.defaultWorkspaceDir),
     installDependencies: vi.fn(async () => ({ outcome: "skipped" as const })),
     listTaskBranches: vi.fn(async () => [] as { branch: string; taskId: string }[]),
+    retireTaskBranch: vi.fn(async () => ({ outcome: "removed" as const })),
     branchHead: vi.fn(async () => null as string | null),
     reviewChangedFiles: vi.fn(async () => ["src/meter.ts", "tests/meter.test.ts"]),
     reviewChangeReading: vi.fn(async () => "a".repeat(64)),

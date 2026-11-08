@@ -17,6 +17,10 @@ const view = (
     cpuCores?: number;
   }[] = TASK_SHARES,
   label = "This computer",
+  other: { processCount: number; residentBytes: number; cpuCores?: number } = {
+    processCount: 0,
+    residentBytes: 0,
+  },
 ): ComputerResourcesView => ({
   computers: [
     {
@@ -40,7 +44,7 @@ const view = (
             status: "sampled",
             processCount: 1,
             tasks,
-            other: { processCount: 0, residentBytes: 0 },
+            other,
           },
         },
       },
@@ -132,6 +136,27 @@ describe("a memory warning in the feed", () => {
     ]);
     expect(wakes[0]?.facts).toMatchObject({ kind: "resource-pressure" });
     expect(wakes[0]?.facts).toHaveProperty("tasks.length", shares.length);
+  });
+
+  // INF-3060 finding 6: a warning named HEAD-11, holding 268 MB and almost
+  // no processor, while the pressure came from outside the crew. The outside
+  // share is a reading of the Mac mini's own processes at the time of the fix.
+  it("names the programs outside the tasks when they hold more than any task", () => {
+    const activity: string[] = [];
+    const pressure = new ResourcePressure({
+      taskKey: (id) => id,
+      notify: () => {},
+      activity: (fact) => activity.push(fact.text),
+    });
+    const idle = [
+      { taskId: "HEAD-11", cpuCores: 0.04, residentBytes: Math.round(268 * MB), processCount: 9 },
+      { taskId: "INF-3060", cpuCores: 0, residentBytes: Math.round(141.2 * MB), processCount: 4 },
+    ];
+    const outside = { processCount: 977, residentBytes: Math.round(39685.3 * MB), cpuCores: 1.62 };
+    pressure.observe(view("warning", 1, idle, "Kun's Mac mini", outside));
+    expect(activity).toEqual([
+      "Kun's Mac mini · Memory pressure warning · Programs outside your tasks use the most: 1.62 processors · 38.76 GB resident · 977 processes",
+    ]);
   });
 
   it("says task use is unavailable when no processes were sampled", () => {

@@ -176,7 +176,7 @@ describe("CrewSupervisor", () => {
 describe("the quiet-crewmate watchdog (P4)", () => {
   const MIN = 60_000;
 
-  it("escalates a quiet streaming turn: feed line at 10 minutes, one wake at 20, never a card", async () => {
+  it("escalates a quiet streaming turn: a record line at 10 minutes, one wake at 20, never a card", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events, cards, ops, tasks } = setup(crewmate);
     const { taskId } = await supervisor.intake.commission({
@@ -190,14 +190,15 @@ describe("the quiet-crewmate watchdog (P4)", () => {
     supervisor.watch.checkQuietTasks(start + 9 * MIN);
     expect(events.filter((e) => e.type === "firstmate_note")).toHaveLength(0);
 
-    // Eleven: one feed line, once - the next tick does not repeat it.
+    // Eleven: one line on the task's record, once - the next tick does not
+    // repeat it - and nothing in the feed, which offers the captain nothing
+    // to do yet (INF-3060 finding 6).
     supervisor.watch.checkQuietTasks(start + 11 * MIN);
     supervisor.watch.checkQuietTasks(start + 12 * MIN);
-    const notes = events.filter((e) => e.type === "firstmate_note");
-    expect(notes).toHaveLength(1);
-    expect(notes[0] && "text" in notes[0] ? notes[0].text : "").toContain(
-      "quiet: 11 minutes without an update",
-    );
+    expect(events.filter((e) => e.type === "firstmate_note")).toHaveLength(0);
+    expect(
+      tasks.timeline(taskId).filter((event) => event.text === "quiet for 11 minutes"),
+    ).toHaveLength(1);
 
     // Twenty-one: one [fm-op] naming the tools, a timeline note, no card
     // (cards/tasks/agents P0, WI-3) - and the next tick does not repeat it.
@@ -448,7 +449,12 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "landed" });
   });
 
-  it("boot reconciliation reports leftover task branches in one feed line and deletes nothing", async () => {
+  // INF-3060 finding 6: the same leftover branches were a feed line at every
+  // start with nothing to click. The captain: "we should not bother users
+  // with things that the crew can take care of and doesn't really need user
+  // judgment" - boot retires them, each saved first, and names only one
+  // that could not be deleted.
+  it("boot reconciliation retires leftover task branches and names only one it could not delete", async () => {
     const { supervisor, tasks, workspace, events, paths } = setup(fakeCrewmate());
     mkdirSync(join(paths.defaultWorkspaceDir, ".git"), { recursive: true });
     seedTask(tasks, { id: "gone", title: "Gone", status: "cancelled" });
@@ -461,14 +467,25 @@ describe("fleet hygiene (interaction P0, WI-7)", () => {
 
     await supervisor.watch.reconcileFleetHygiene();
 
-    const notes = events.filter((event) => event.type === "firstmate_note");
-    expect(notes).toHaveLength(1);
-    const text = notes[0]?.type === "firstmate_note" ? notes[0].text : "";
-    expect(text).toMatch(/^2 leftover working copies kept, not deleted: /);
-    expect(text).toContain('fm/task-gone in default workspace ("Gone"');
-    expect(text).toContain("fm/task-ghost in default workspace (no task record)");
-    expect(text).not.toContain("fm/task-live");
-    expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
+    expect(vi.mocked(workspace.retireTaskBranch).mock.calls).toEqual([
+      [paths.defaultWorkspaceDir, "fm/task-gone", "gone"],
+      [paths.defaultWorkspaceDir, "fm/task-ghost", "ghost"],
+    ]);
+    expect(events.filter((event) => event.type === "firstmate_note")).toEqual([]);
+    expect(supervisor.cards.snapshot()).toEqual([]);
+
+    vi.mocked(workspace.retireTaskBranch).mockImplementation(async (_repo, branch) =>
+      branch === "fm/task-ghost"
+        ? { outcome: "kept", reason: "branch is checked out" }
+        : { outcome: "removed" },
+    );
+    await supervisor.watch.reconcileFleetHygiene();
+    expect(events).toEqual([
+      {
+        type: "firstmate_note",
+        text: "1 leftover task branch is kept because it could not be deleted: fm/task-ghost in default workspace (branch is checked out).",
+      },
+    ]);
   });
 
   it("boot reconciliation retires every closed row's worktree, keeping only one whose work could not be saved", async () => {

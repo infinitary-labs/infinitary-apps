@@ -33,6 +33,17 @@ type LocalUpdate = {
 /** A paused task's timeline line while this computer is updated. */
 const UPDATE_PAUSE_NOTE = "paused while Infinitary is updated";
 
+/**
+ * The feed's one line for a turn an update paused: another computer's
+ * update names that computer, and this computer's own names none, since
+ * its pause carries no computer (INF-3060 finding 6: it read "undefined").
+ */
+export function updatePauseLine(title: string, computer: string | undefined): string {
+  return computer === undefined
+    ? `${title} paused while Infinitary is updated. It carries on after the update.`
+    : `${title} paused while Infinitary on ${computer} is updated. It carries on once ${computer} is back.`;
+}
+
 /** What the crew's updates reach of the supervisor beyond its options. */
 export type CrewUpdatesHost = {
   now(): number;

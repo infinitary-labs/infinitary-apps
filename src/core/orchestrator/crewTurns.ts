@@ -35,6 +35,7 @@ import type { CrewCore } from "./crewCore";
 import { handedDirections, servesDirections } from "./crewDirections";
 import { SUPERVISOR_STEER, type TaskRuntime } from "./crewRuntime";
 import type { PersonalLiveDelegate } from "./crewSupervisorOptions";
+import { updatePauseLine } from "./crewUpdates";
 import { JOB_BOUND_MS } from "./idleLadder";
 import { type BriefPart, briefText } from "./intentBrief";
 import { checkBackAsk, checkBackAskOnce } from "./jobWakes";
@@ -814,7 +815,7 @@ export class CrewTurns {
       // computer is back, and the feed says so once.
       this.core.options.broadcastEvent({
         type: "firstmate_note",
-        text: `${task.title} paused while Infinitary on ${paused.computer} is updated. It carries on once ${paused.computer} is back.`,
+        text: updatePauseLine(task.title, paused.computer),
       });
     } else if (report && isRepairAssessment(this.core.options.tasks.get(task.id)?.shape)) {
       // An independent repair assessment's one report decides the kept

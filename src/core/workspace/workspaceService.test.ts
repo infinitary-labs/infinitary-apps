@@ -734,6 +734,40 @@ describe("retireTaskWorktree (always clean, work saved first)", () => {
   });
 });
 
+// INF-3060 finding 6: a leftover task branch's card deletes it on the
+// captain's click, the branch's commits saved first; one still checked out
+// stays and says why.
+describe("retireTaskBranch (a leftover branch, work saved first)", () => {
+  it("saves a leftover branch's unlanded commit on the kept ref, then deletes the branch", async () => {
+    const { workspace, paths } = await service();
+    const repo = paths.defaultWorkspaceDir;
+    const task = await workspace.createTaskWorktree("left1111");
+    writeFileSync(join(task.cwd, "draft.txt"), "draft\n");
+    await git(task.cwd, ["add", "-A"]);
+    await git(task.cwd, ["commit", "-m", "feat: draft"]);
+    const tip = await git(task.cwd, ["rev-parse", "HEAD"]);
+    // The working copy goes the way a crash leaves it: only the branch stays.
+    await git(repo, ["worktree", "remove", "--force", task.cwd]);
+
+    expect(await workspace.retireTaskBranch(repo, task.branch, "left1111")).toEqual({
+      outcome: "removed",
+    });
+    expect(await workspace.branchHead(repo, task.branch)).toBeNull();
+    expect(await git(repo, ["show", `${keptRefFor("left1111")}:draft.txt`])).toBe("draft");
+    expect(await git(repo, ["merge-base", "--is-ancestor", tip, keptRefFor("left1111")])).toBe("");
+  });
+
+  it("keeps a branch still checked out in a working copy and says why", async () => {
+    const { workspace, paths } = await service();
+    const repo = paths.defaultWorkspaceDir;
+    const task = await workspace.createTaskWorktree("left2222");
+
+    const outcome = await workspace.retireTaskBranch(repo, task.branch, "left2222");
+    expect(outcome.outcome).toBe("kept");
+    expect(await workspace.branchHead(repo, task.branch)).not.toBeNull();
+  });
+});
+
 describe("refreshManagedCheckout", () => {
   it("fast-forwards a clean default checkout from origin", async () => {
     const { workspace } = await service();

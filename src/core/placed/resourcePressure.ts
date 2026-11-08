@@ -37,7 +37,12 @@ export class ResourcePressure {
         computerId,
         label,
         pressure,
-        text: pressureLine(label, pressure, tasks, processes?.status === "sampled"),
+        text: pressureLine(
+          label,
+          pressure,
+          tasks,
+          processes?.status === "sampled" ? processes.other : undefined,
+        ),
       });
       this.options.notify({
         facts: {
@@ -61,25 +66,32 @@ export class ResourcePressure {
 
 /**
  * One feed line per pressure notice (INF-2299 finding 5): the computer, the
- * level and the task holding the most memory. Every task's share still goes
- * to the first mate in the wake.
+ * level and what holds the most memory - the task holding the most, or the
+ * programs outside every task when they hold more (INF-3060 finding 6: a
+ * warning blamed an idle task while the pressure came from elsewhere).
+ * Every task's share still goes to the first mate in the wake.
  */
 export function pressureLine(
   label: string,
   pressure: "warning" | "critical",
   tasks: PressureTaskShare[],
-  sampled: boolean,
+  /** Everything outside the tasks' process trees; absent when nothing was sampled. */
+  other: ProcessShare | undefined,
 ): string {
   const heading = `${label} · Memory pressure ${pressure}`;
-  if (!sampled) return `${heading} · Task use unavailable`;
+  if (!other) return `${heading} · Task use unavailable`;
   const top = tasks.reduce<PressureTaskShare | undefined>(
     (most, task) => (most && most.residentBytes >= task.residentBytes ? most : task),
     undefined,
   );
+  if (other.residentBytes > (top?.residentBytes ?? 0))
+    return `${heading} · Programs outside your tasks use the most: ${taskResourceWords(other)}`;
   if (!top) return heading;
   const who = tasks.length === 1 ? top.key : `${top.key} uses the most of ${tasks.length} tasks`;
   return `${heading} · ${who}: ${taskResourceWords(top)}`;
 }
+
+type ProcessShare = Extract<ProcessResources, { status: "sampled" }>["other"];
 
 export type PressureTaskShare = Extract<
   ProcessResources,

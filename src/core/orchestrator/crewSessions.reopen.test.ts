@@ -37,6 +37,7 @@ import { TaskService } from "../tasks/taskService";
 import type { WorkspaceService } from "../workspace/workspaceService";
 import { type CrewmateSpec, crewmateRenewedNote, crewmateRestartText } from "./crewSession";
 import type { AccountAttachment } from "./crewSupervisorOptions";
+import { updatePauseLine } from "./crewUpdates";
 import { RESTART_REPLAY_NOTE, renderWake } from "./wakes";
 
 fakeCrewTimersEachTest();
@@ -635,6 +636,16 @@ describe("CrewSupervisor", () => {
         expect(waiting.at(-1)).toEqual([]);
         expect(updateRows(h, taskId)).toEqual([{ kind: "turn-resumed", stopped: "update" }]);
         expect(h.supervisor.updates.resumingAfterUpdate()).toEqual(["Release notes"]);
+        // INF-3060 finding 6: this computer's own update names no computer,
+        // so the feed's one line says so instead of "on undefined".
+        await tick();
+        const paused = h.events.flatMap((event) =>
+          event.type === "firstmate_note" && event.text.startsWith("Release notes paused")
+            ? [event.text]
+            : [],
+        );
+        expect(paused).toEqual([updatePauseLine("Release notes", undefined)]);
+        expect(paused[0]).not.toContain("undefined");
         // A second ask for the same update joins the first.
         expect(await h.supervisor.updates.saveForUpdate()).toBe("saved");
         expect(crewmate.stops).toHaveLength(1);

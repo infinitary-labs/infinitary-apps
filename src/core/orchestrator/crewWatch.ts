@@ -1,5 +1,4 @@
-import { existsSync } from "node:fs";
-import { join, resolve as resolvePath } from "node:path";
+import { resolve as resolvePath } from "node:path";
 import { reportSummary } from "@shared/feed";
 import { formatDurationShort } from "@shared/quotaSignals";
 import { capWithOverflow } from "../overflow";
@@ -19,17 +18,17 @@ import { CheckWatcher } from "./checkWatch";
 import type { CrewCore } from "./crewCore";
 import { SUPERVISOR_STEER, type TaskRuntime } from "./crewRuntime";
 import { JOB_BOUND_MS } from "./idleLadder";
+import { retireLeftoverBranches } from "./leftoverBranches";
 import { MainCheckWatcher } from "./mainCheckWake";
 import { RunWatcher } from "./runWatch";
-import { describeStatus } from "./settleService";
 import type { Ticker } from "./ticker";
 import type { OpenCallFact } from "./turnWakes";
 import { laneText, laneTurnText, type WakeBody } from "./wakes";
 
 /**
  * The quiet-crewmate watchdog (P4): conservative thresholds, no settings
- * surface. Ten silent minutes on a streaming turn earns one feed line,
- * twenty a check with the live session that runs it and a wake to the
+ * surface. Ten silent minutes on a streaming turn earns one line on the
+ * task's own record, twenty a check with the live session that runs it and a wake to the
  * Firstmate unless that check ended the turn; the generous wall-clock bound
  * escalates a turn that never ends. The watchdog never stops a turn that
  * still runs (firstmate's rule: the bound demands inspection, never an
@@ -145,8 +144,8 @@ export class CrewWatch {
    * saved on a hidden kept ref first, and only a failed save keeps a tree.
    * Every `fm/task-*` branch that no live row explains - no record at all,
    * or a row that is closed without a worktree, or open and not yet
-   * started - is REPORTED as one feed line and never deleted: a branch can
-   * carry work only a person should throw away.
+   * started - is deleted too, its work saved on the kept ref first
+   * (`leftoverBranches.ts`); only one that could not be deleted is named.
    */
   async reconcileFleetHygiene(): Promise<void> {
     const kept: TaskRecord[] = [];
@@ -162,31 +161,8 @@ export class CrewWatch {
         kept.push(record);
     }
     const orphansKept = await this.retireOrphanWorktrees();
-    const repoDirs = new Map<string, string>();
-    if (existsSync(join(this.core.options.paths.defaultWorkspaceDir, ".git"))) {
-      repoDirs.set(this.core.options.paths.defaultWorkspaceDir, "default workspace");
-    }
-    for (const repo of this.core.options.repos.list()) repoDirs.set(repo.path, repo.name);
-    const leftovers: string[] = [];
-    for (const [repoDir, repoName] of repoDirs) {
-      for (const { branch, taskId } of await this.core.options.workspace.listTaskBranches(
-        repoDir,
-      )) {
-        const record = this.core.options.tasks.get(taskId);
-        const explained =
-          record && (record.status === "active" || record.workspaceState === "present");
-        if (explained) continue;
-        leftovers.push(
-          `${branch} in ${repoName} (${record ? `"${record.title}", ${describeStatus(record)}` : "no task record"})`,
-        );
-      }
-    }
+    const branchesKept = await retireLeftoverBranches(this.core);
     const parts: string[] = [];
-    if (leftovers.length > 0) {
-      parts.push(
-        `${leftovers.length} leftover working ${leftovers.length === 1 ? "copy" : "copies"} kept, not deleted: ${listSome(leftovers)}`,
-      );
-    }
     if (kept.length > 0) {
       parts.push(
         `${kept.length} closed ${kept.length === 1 ? "task keeps its working copy because its work could not be saved first" : "tasks keep their working copies because their work could not be saved first"}: ${listSome(kept.map((record) => `"${record.title}"`))}`,
@@ -195,6 +171,11 @@ export class CrewWatch {
     if (orphansKept.length > 0) {
       parts.push(
         `${orphansKept.length} ${orphansKept.length === 1 ? "working copy with no task is kept because its work" : "working copies with no task are kept because their work"} could not be saved first: ${listSome(orphansKept)}`,
+      );
+    }
+    if (branchesKept.length > 0) {
+      parts.push(
+        `${branchesKept.length} leftover task ${branchesKept.length === 1 ? "branch is" : "branches are"} kept because ${branchesKept.length === 1 ? "it" : "they"} could not be deleted: ${listSome(branchesKept)}`,
       );
     }
     if (parts.length > 0) {
@@ -798,12 +779,11 @@ export class CrewWatch {
         "agent",
       );
     } else if (quietFor >= QUIET_FEED_MS && task.quietLevel < 1) {
+      // The task's own timeline says so; the feed stays silent, since a
+      // quiet turn gives the captain nothing to do yet (INF-3060 finding
+      // 6) and the first mate hears it at QUIET_CARD_MS.
       task.quietLevel = 1;
       this.core.options.tasks.note(task.id, `quiet for ${minutes} minutes`, { news: true });
-      this.core.options.broadcastEvent({
-        type: "firstmate_note",
-        text: `Task ${task.title} quiet: ${minutes} minutes without an update`,
-      });
     }
   }
 

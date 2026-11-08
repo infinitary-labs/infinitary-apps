@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "feed-lines-act-or-stay-quiet",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Activity no longer shows lines that give you nothing to do",
+      "body": "Leftover task branches from earlier work are now cleaned up when Infinitary starts, with their work saved first, instead of a line listing them at every start. A task that has gone quiet for ten minutes no longer adds a line to Activity; its own record still says so. A memory warning now names the programs outside your tasks when they hold more memory than any task. A task paused while Infinitary itself updates no longer names a computer called \"undefined\".",
+      "noPicture": "The change removes or rewords Activity lines; leftover branches go with nothing on screen.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

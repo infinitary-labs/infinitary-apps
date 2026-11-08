@@ -121,6 +121,7 @@ The Mac updater asks once the download is done and before native installation; t
   The save waits as long as the calls run, and the update panel names each task whose running work it waits for: Waiting for “Release notes” to finish what it is running.
 - **What it records.**
   Each turn it stops gets one `turn-resumed` lane row, `stopped: "update"` with no computer, written before the stop (`docs/inbox.md`, "A turn a quit or crash cut").
+  The feed says once that the task paused while Infinitary is updated and carries on after the update, naming no computer (`updatePauseLine`).
   Nothing else is copied: the conversation, the task, its files, its approvals and its pause stay with their owners, and an idle or separately paused task gets no row.
 - **Closing.**
   Once every turn has stopped, the shutdown waits, with no bound, until every conversation's client is gone (`disposeAll`), so each transcript is written before the new copy reads it.

@@ -16,7 +16,7 @@ import { withoutRunnerSession } from "../helpers/runnerSession";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedMockModelCatalog } from "./accountFixtures";
 import { launchDiagnostics } from "./launchDiagnostics";
-import { readInMain } from "./mainProcess";
+import { readInMain, rememberApp } from "./mainProcess";
 import { type MockClaudeTurns, writeMockClaudeClient } from "./mockClaudeClient";
 import { mockModelsJson } from "./mockModels";
 import { type MockProviderServer, type Scenario, startMockProvider } from "./mockProvider";
@@ -573,6 +573,7 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
   });
   const launchedAt = performance.now();
   diagnostics.watch(watch(app).child);
+  rememberApp(app);
   let page: Page;
   try {
     page = await app.firstWindow();

@@ -1098,6 +1098,9 @@ This project's recipe uses `regionShot` in `tests/e2e/pictures.ts`:
    When the change is the window itself, `windowShot(page, path)` photographs the whole window the same way, at any Size.
    Playwright's own `page.screenshot` shows only the window's top-left at a larger Size ("A hero picture" below says why), so a whole-window picture never comes from it.
    `tests/e2e/window-shot.spec.ts` checks `windowShot` at every Size by decoding synthetic markers in the window's corners, with a recording running alongside that must keep every frame whole.
+   Chromium already waits for the page's next drawn frame, and for a frame at the window's current size, before it copies, so none of these pictures waits or tries again.
+   When Chromium refuses one all the same, the picture fails and its error names what the window showed just after: the page and the window, the app's processes and when each started, whether the page still draws, and whether the same copy and a fresh one work now.
+   The same journey checks that error with a stand-in refusal.
 5. Save the files with `testInfo.outputPath(name)`, then copy them into your task's evidence folder with a name that carries the view and the state (`rail-panel-before.png`).
    They stay out of the working copy, the commit and the PR.
 

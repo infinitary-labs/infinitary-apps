@@ -1,4 +1,4 @@
-import type { ElectronApplication } from "@playwright/test";
+import type { BrowserContext, ElectronApplication, Page } from "@playwright/test";
 
 const COLLECTED = "Resulting promise was garbage collected";
 
@@ -45,4 +45,20 @@ export async function mainProcessSettled(app: ElectronApplication, rounds = 5): 
       answered = 0;
     }
   }
+}
+
+/** Each launched app, by the context its windows' pages belong to. */
+const launchedApps = new WeakMap<BrowserContext, ElectronApplication>();
+
+/**
+ * Remembers which app a launch started, so a helper handed only a page can
+ * read that page's main process (`appOf`). The launcher calls it once per app.
+ */
+export function rememberApp(app: ElectronApplication): void {
+  launchedApps.set(app.context(), app);
+}
+
+/** The app whose window shows `page`, when the launcher started it; otherwise none. */
+export function appOf(page: Page): ElectronApplication | undefined {
+  return launchedApps.get(page.context());
 }

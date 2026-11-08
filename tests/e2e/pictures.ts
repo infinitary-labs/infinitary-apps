@@ -1,11 +1,18 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { type ElectronApplication, expect, type Locator, type Page } from "@playwright/test";
+import {
+  type CDPSession,
+  type ElectronApplication,
+  expect,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 import { readPicture } from "../../src/core/pictureFormat";
 import { MAX_HERO_BYTES, MAX_HERO_WIDTH, PICTURES_DIR } from "../../src/core/releaseNotes/catalog";
 import type { PushChannel } from "../../src/shared/ipc";
 import type { ShellPreferences, Theme } from "../../src/shared/preferences";
 import { atRest, within } from "./layout";
+import { appOf, readInMain } from "./mainProcess";
 
 /**
  * A whole region, after its reveal, wholly inside the window and every
@@ -300,20 +307,191 @@ async function holdStill(page: Page, motion: boolean): Promise<() => Promise<voi
  * Chromium's drawing surface, which a recording running alongside catches,
  * and Playwright's own screenshot always hands one, in page pixels where
  * Chromium reads window pixels.
+ *
+ * Chromium already waits for the page's next drawn frame, and for a frame at
+ * the window's current size, before it copies, so the capture needs no wait
+ * of its own. When Chromium refuses it all the same, the picture fails with
+ * what the window showed just after (`refusedPicture`), never a second try.
  */
 async function drawnWindow(page: Page, motion: "still" | "allow"): Promise<Buffer> {
   const session = await page.context().newCDPSession(page);
   try {
     const release = await holdStill(page, motion === "still");
+    const asked = performance.now();
+    let refusal: unknown;
     try {
       const { data } = await session.send("Page.captureScreenshot", { format: "png" });
       return Buffer.from(data, "base64");
+    } catch (error) {
+      refusal = error;
     } finally {
       await release();
     }
+    throw await refusedPicture(page, session, refusal, performance.now() - asked);
   } finally {
     await session.detach();
   }
+}
+
+/** The words a refused picture's error is made of; its check reads them here. */
+export const REFUSED_PICTURE = {
+  refused: "Chromium refused the window picture",
+  drew: "drew two frames",
+  sameCopy: "same copy now",
+  freshCopy: "fresh copy now",
+  works: "works",
+} as const;
+
+/**
+ * How long a refused picture's error waits for the page to draw two frames.
+ * A shown window draws them at the display's rate; a hidden Linux window
+ * draws about one a second (`paintLikeAMac` in launch.ts), so two seconds
+ * tell a slow page from one that has stopped drawing.
+ */
+const DRAWING_READ_MS = 2_000;
+
+/**
+ * The error a refused picture fails with: Chromium's refusal and how long it
+ * took, then what the window showed just after, so a rare refusal names its
+ * cause where it happens instead of needing a reproduction. Each line
+ * separates causes the copy path allows: the window hidden or minimized,
+ * the page no longer drawing, a page or graphics process that started again,
+ * a refusal that lasts or one already over, and whether a fresh surface (a
+ * clip makes Chromium draw one) copies where the held one did not. Its copies
+ * answer only whether one works now; neither becomes the picture.
+ */
+async function refusedPicture(
+  page: Page,
+  session: CDPSession,
+  refusal: unknown,
+  tookMs: number,
+): Promise<Error> {
+  const said = (error: unknown) =>
+    (error instanceof Error ? error.message : String(error)).split("\n")[0];
+  const ms = (from: number) => `${Math.round(performance.now() - from)} ms`;
+  const read = async (name: string, reading: () => Promise<string>) => {
+    try {
+      return `${name}: ${await reading()}`;
+    } catch (error) {
+      return `${name}: unread (${said(error)})`;
+    }
+  };
+  let size = { width: 0, height: 0 };
+  let pagePid: number | undefined;
+  const launched = appOf(page);
+  const lines = [
+    await read("page", async () => {
+      const asked = performance.now();
+      const state = await page.evaluate(() => ({
+        visibility: document.visibilityState,
+        focused: document.hasFocus(),
+        width: innerWidth,
+        height: innerHeight,
+        ratio: devicePixelRatio,
+        age: Math.round(performance.now()),
+      }));
+      size = { width: state.width, height: state.height };
+      return [
+        state.visibility,
+        state.focused ? "focused" : "unfocused",
+        `${state.width} × ${state.height} page pixels at ${state.ratio}×`,
+        `answered in ${ms(asked)}`,
+        `its document began ${state.age} ms ago`,
+      ].join(", ");
+    }),
+    await read("window", async () => {
+      if (!launched) return "unread (the launcher did not start this app)";
+      const state = await readInMain(async () =>
+        (await launched.browserWindow(page)).evaluate((win) => ({
+          visible: win.isVisible(),
+          minimized: win.isMinimized(),
+          focused: win.isFocused(),
+          content: win.getContentSize(),
+          captured: win.webContents.isBeingCaptured(),
+          crashed: win.webContents.isCrashed(),
+          zoom: win.webContents.getZoomFactor(),
+          pid: win.webContents.getOSProcessId(),
+        })),
+      );
+      pagePid = state.pid;
+      return [
+        state.visible ? "shown" : "hidden",
+        ...(state.minimized ? ["minimized"] : []),
+        state.focused ? "focused" : "unfocused",
+        ...(state.captured ? ["being captured"] : []),
+        ...(state.crashed ? ["its page crashed"] : []),
+        `content ${state.content.join(" × ")}`,
+        `zoom ${state.zoom}`,
+      ].join(", ");
+    }),
+    await read("processes", async () => {
+      if (!launched) return "unread (the launcher did not start this app)";
+      const metrics = await readInMain(() =>
+        launched.evaluate(({ app }) => {
+          const now = Date.now();
+          return app.getAppMetrics().map((metric) => ({
+            type: metric.type,
+            pid: metric.pid,
+            age: Math.round(now - metric.creationTime),
+          }));
+        }),
+      );
+      return metrics
+        .map(
+          (metric) =>
+            `${metric.type}${metric.pid === pagePid ? " (this page)" : ""} started ${metric.age} ms ago`,
+        )
+        .join(", ");
+    }),
+    await read("drawing", async () => {
+      const drew = await page.evaluate(
+        (quietMs) =>
+          new Promise<number | undefined>((resolve) => {
+            const start = performance.now();
+            const quiet = setTimeout(() => resolve(undefined), quietMs);
+            requestAnimationFrame(() =>
+              requestAnimationFrame(() => {
+                clearTimeout(quiet);
+                resolve(Math.round(performance.now() - start));
+              }),
+            );
+          }),
+        DRAWING_READ_MS,
+      );
+      return drew === undefined
+        ? `drew fewer than two frames in ${DRAWING_READ_MS} ms`
+        : `${REFUSED_PICTURE.drew} in ${drew} ms`;
+    }),
+  ];
+  const copy = async (clip?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    scale: number;
+  }) => {
+    const asked = performance.now();
+    try {
+      await session.send("Page.captureScreenshot", { format: "png", ...(clip ? { clip } : {}) });
+      return `${REFUSED_PICTURE.works} in ${ms(asked)}`;
+    } catch (error) {
+      return `refused in ${ms(asked)} (${said(error)})`;
+    }
+  };
+  lines.push(`${REFUSED_PICTURE.sameCopy}: ${await copy()}`);
+  lines.push(
+    size.width && size.height
+      ? `${REFUSED_PICTURE.freshCopy}, the whole page as a clip: ${await copy({ x: 0, y: 0, ...size, scale: 1 })}`
+      : `${REFUSED_PICTURE.freshCopy}: unread (the page's size is unknown)`,
+  );
+  return new Error(
+    [
+      `${REFUSED_PICTURE.refused} after ${Math.round(tookMs)} ms: ${said(refusal)}`,
+      "What the window showed just after:",
+      ...lines.map((line) => `  ${line}`),
+    ].join("\n"),
+    { cause: refusal },
+  );
 }
 
 /**

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "refused-picture-names-its-window",
+      "reason": "A test window picture that Chromium refuses now fails with what the window showed just after it, so the rare refusal explains its cause; test-only, nothing a person sees changes."
+    }
+  ]
+}

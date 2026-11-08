@@ -5,6 +5,7 @@ import type {
   PanelIntegrationAnswer,
   PanelIntegrationEventItem,
   PanelIntegrations,
+  PanelKeys,
   PanelMoveResult,
   PanelOpenCard,
   PanelPoint,
@@ -57,8 +58,9 @@ import {
  *   document was born with is an earlier ask, never a new one.
  * - `point` and `tasks` are actions the host declared from what the panel
  *   asked for; the host checks each again, and answers whether it happened.
- *   `view` and whether the panel is collapsed ride view state (`frameView`,
- *   `frameRail`), so the runtime hands them in on every render.
+ *   `view`, whether the panel is collapsed and the keys its commands have
+ *   now ride view state (`frameView`, `frameRail`, `frameKeys`), so the
+ *   runtime hands them in on every render.
  * - `integrations` asks the host's `integrations` action, which the core
  *   answers over what the panel's own manifest names (docs/integrations.md,
  *   "Panels"); `on` reads the store key the app writes each event's arrivals
@@ -68,7 +70,7 @@ export function framePanelProps(
   config: PanelFrameConfig,
   bridge: FrameBridgeApi,
   warn: (...args: unknown[]) => void = (...args) => console.warn(...args),
-): Omit<PanelProps, "theme" | "card" | "view" | "rail"> {
+): Omit<PanelProps, "theme" | "card" | "view" | "keys" | "rail"> {
   return {
     id: config.id,
     store: frameStore(bridge),
@@ -223,6 +225,25 @@ export function frameView(state: unknown): PanelView {
   const focusedProjectId =
     typeof view?.focusedProjectId === "string" ? view.focusedProjectId : null;
   return { openTaskIds, shownTaskId, litTaskId, focusedProjectId };
+}
+
+/**
+ * The keys the panel's own commands have now, as the host last pushed them
+ * (`keys`): each entry a drawn key and, where it has one, its
+ * `aria-keyshortcuts`; anything else is left out. Empty before it does.
+ */
+export function frameKeys(state: unknown): PanelKeys {
+  const pushed = (state as { keys?: unknown } | null)?.keys;
+  if (!pushed || typeof pushed !== "object") return {};
+  const keys: Record<string, PanelKeys[string]> = {};
+  for (const [command, entry] of Object.entries(pushed)) {
+    const drawn = (entry as { keys?: unknown } | null)?.keys;
+    if (typeof drawn !== "string" || drawn === "") continue;
+    const named = (entry as { "aria-keyshortcuts"?: unknown })["aria-keyshortcuts"];
+    keys[command] =
+      typeof named === "string" ? { keys: drawn, "aria-keyshortcuts": named } : { keys: drawn };
+  }
+  return keys;
 }
 
 /**

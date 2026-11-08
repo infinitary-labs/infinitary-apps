@@ -62,10 +62,19 @@
   border-color: var(--accent);
 }
 
-.fm-board-find {
+/* Find, and the key of Find on task board at its far end while it is empty
+   and has no focus, as a card's empty reply field shows its key. */
+.fm-board-find-field {
+  position: relative;
+  display: flex;
   flex: 0 1 220px;
   min-width: 120px;
   margin-left: auto;
+}
+
+.fm-board-find {
+  flex: 1;
+  min-width: 0;
   font-family: var(--font-ui);
   font-size: var(--text-sm);
   color: var(--fg-1);
@@ -79,6 +88,32 @@
 .fm-board-find:focus {
   border-color: var(--line-2);
   box-shadow: var(--focus-ring);
+}
+
+.fm-board-find-field > .fm-board-key {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: var(--space-2);
+  display: flex;
+  align-items: center;
+  color: var(--fg-3);
+  pointer-events: none;
+}
+
+.fm-board-find:focus + .fm-board-key,
+.fm-board-find:not(:placeholder-shown) + .fm-board-key {
+  display: none;
+}
+
+/* A command's key inside a control, after its words: quiet mono in the
+   control's own color at six tenths, as a text button's key is. */
+.fm-board-key {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: color-mix(in srgb, currentColor 60%, transparent);
+  white-space: nowrap;
 }
 
 /* The views: Board, Backlog, Done · 7d, and Earlier matches while Find has
@@ -619,6 +654,9 @@
 }
 
 .fm-board-dropped-toggle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
   padding: 0;
   border: 0;
   background: none;

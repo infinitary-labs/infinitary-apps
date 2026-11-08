@@ -1161,6 +1161,23 @@ declare module "@infinitary/contracts" {
     focusedProjectId: string | null;
   };
 
+  /**
+   * The key one of the panel's own commands has now (its manifest's
+   * \`commands\`), as this computer draws it - \`⌘J\` on a Mac, \`Ctrl+J\` on
+   * Linux - and as \`aria-keyshortcuts\` names it: spread it onto the control
+   * that does what the command does, \`<Button {...keys.find}>\`, and the
+   * control shows the key after its words. A two-key shortcut has no
+   * \`aria-keyshortcuts\`.
+   */
+  export type PanelCommandKeys = { keys: string; "aria-keyshortcuts"?: string };
+
+  /**
+   * The panel's own commands that have a key now, by the command's id in the
+   * manifest; a command with no key is not listed. The app pushes it again
+   * whenever a key changes in Keyboard settings.
+   */
+  export type PanelKeys = Readonly<Record<string, PanelCommandKeys>>;
+
   // --- moving tasks -----------------------------------------------------------------
 
   /** The effects of Drop task the captain reviewed: the keys \`tasks.detail\`'s \`dropEffects\` listed. */
@@ -1313,6 +1330,8 @@ declare module "@infinitary/contracts" {
     point: PanelPoint;
     /** What the captain has open, for a panel that reads \`tasks.board\`. */
     view: PanelView;
+    /** The keys its own commands have now, by command id, for the controls that do the same. */
+    keys: PanelKeys;
     /** Set only for a panel whose manifest asks for \`moves\`, and one from elsewhere the captain agreed to. */
     tasks?: PanelTasks;
     /** Set only in the panel itself, never in a card view: the panel on its rail. */

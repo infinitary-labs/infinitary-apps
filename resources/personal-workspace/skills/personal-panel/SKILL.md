@@ -30,7 +30,8 @@ An extension is one directory `<id>/` (kebab-case: `open-prs`, `tokyo-clock`) ho
   extension's `id`, its `store` (already bound to the extension), `invoke` for its own
   server actions, `reads` for the app's own data the manifest declared, the current
   `theme`, `cards` for its cards on the stack, `asks` for its header buttons' presses,
-  `point` and `view` for the captain's tasks, `tasks` when it asks for moves, and `rail`.
+  `point` and `view` for the captain's tasks, `keys` for its own commands' keys, `tasks`
+  when it asks for moves, and `rail`.
 - `cards/<view>.tsx` (optional, any number) - card views: each default-exports a component
   the host renders as one of the extension's cards on the main card stack (below). A view
   gets the same `PanelProps` plus `card`, the card it draws, and no `rail`.
@@ -201,6 +202,11 @@ and reaches it through `asks.subscribe((button, via) => ...)` with the button's 
 person starts in it. `key` suggests a shortcut as a Mac writes it
 (`"⌘J"`); the app gives it only when no other command already uses it. A name in the manifest
 that points at nothing it has is reported and its cards, buttons and commands are left out.
+`keys` holds the key each of its commands has now, by command id, as this computer draws it
+(`{ keys: "⌃⌘J", "aria-keyshortcuts": "Control+Meta+J" }`), and changes when the captain
+changes one in Settings → Keyboard: spread it onto the control that does the same, as
+`<Button {...keys.find}>`, `<IconButton {...keys.find}>` or `<RowMenu {...keys.move}>`, so
+the control names its key. A command with no key is not listed.
 Reach every control with Tab, or the arrows inside a list, and draw the focus ring.
 
 ## Presence and what the host owns

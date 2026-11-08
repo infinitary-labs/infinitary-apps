@@ -18,6 +18,7 @@ import {
   cardRevision,
   firstState,
   frameKeep,
+  frameKeys,
   framePanelProps,
   frameRail,
   frameView,
@@ -37,7 +38,8 @@ import {
  * the host how its body fared (`panel.body`): drawn once it committed, or
  * stopped and why, for the window's answer about its panels. The theme follows the bridge's
  * `onTheme`, so the panel re-renders on a theme change the way an
- * in-process panel does when the shell's theme moves.
+ * in-process panel does when the shell's theme moves; the keys its
+ * commands have ride view state, so it re-renders when one changes.
  */
 export type ModuleLoader = (url: string) => Promise<unknown>;
 
@@ -93,7 +95,7 @@ function FramePanel({
   bridge,
 }: {
   Panel: ComponentType<PanelProps>;
-  props: Omit<PanelProps, "theme" | "card" | "view" | "rail">;
+  props: Omit<PanelProps, "theme" | "card" | "view" | "keys" | "rail">;
   /** Set when this document draws one of the panel's cards. */
   cardId: string | null;
   bridge: FrameBridgeApi;
@@ -123,6 +125,9 @@ function FramePanel({
   // new value only when it moved, so the panel re-renders only then.
   const viewKey = JSON.stringify(frameView(state));
   const view = useMemo(() => JSON.parse(viewKey) as PanelProps["view"], [viewKey]);
+  // The keys its commands have now, a new value only when one changed.
+  const keysKey = JSON.stringify(frameKeys(state));
+  const keys = useMemo(() => JSON.parse(keysKey) as PanelProps["keys"], [keysKey]);
   const collapsed = cardId === null && frameRail(state, bridge).collapsed;
   const rail = useMemo(
     () => (cardId === null ? frameRail({ collapsed }, bridge) : undefined),
@@ -140,6 +145,7 @@ function FramePanel({
         {...props}
         theme={theme}
         view={view}
+        keys={keys}
         {...(card ? { card } : {})}
         {...(rail ? { rail } : {})}
       />

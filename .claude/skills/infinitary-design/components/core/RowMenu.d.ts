@@ -27,4 +27,7 @@ export interface RowMenuProps {
   triggerTabIndex?: number;
   /** Where focus returns on Escape or a pick; the kebab by default (the tile it belongs to). */
   restoreFocus?: () => HTMLElement | null;
+  /** The key of the command that opens the menu too, drawn after the kebab's label (Move the selected task). */
+  keys?: string;
+  "aria-keyshortcuts"?: string;
 }

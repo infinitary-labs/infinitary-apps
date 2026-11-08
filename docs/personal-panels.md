@@ -354,6 +354,7 @@ In the frame realm: a sandboxed frame at a host of its own, loading the app's ow
 | `asks` | its header buttons' presses, with how each came (`click` or `key`), and F6 into it (`onFocus`) | the same, counted in its view state |
 | `card` (a card view) | the card it draws, its data as last put up, how many times it was put up (`revision`), and the place it kept (`kept`, `keep`) | the same, its data, revision and kept place pushed as view state |
 | `point`, `view` | pointing at tasks and the stack's open tasks, with `tasks.board`; `point.draft`, starting the captain's next message, whatever it reads | the same, through the actions declared for it, at work only while its frame holds the captain's focus |
+| `keys` | the keys its own commands have now, by command id, drawn as this computer draws them with their `aria-keyshortcuts`, for the controls that do the same (`docs/keyboard.md`, "A panel's commands"); none in a crewmate's draft | the same, pushed as view state again whenever a key changes |
 | `tasks` | its moves, when its manifest asks | the moves the captain agreed to, the same way |
 | `integrations` | `list`, `show`, `call` and `on` over the integrations its manifest names, each action under its rule in Settings | the integrations the captain agreed to, the same way |
 | `rail` (the panel itself) | whether it is collapsed, what it says it holds, and with `presence` `{ "code": true }` whether it shows and, off its rail, why | the same, its page running while collapsed or off its rail |

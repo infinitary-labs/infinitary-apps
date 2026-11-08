@@ -299,7 +299,14 @@ function newestWrite(board: PanelTaskBoard, tiles: ReadonlyMap<BoardLane, BoardT
 /** One lane as its view draws it: the page shown, and how many a page holds. */
 type DrawnLane = { lane: BoardLane; page: BoardPage; size: number };
 
-export default function TaskBoardCard({ card, reads, point, tasks, view: windowView }: PanelProps) {
+export default function TaskBoardCard({
+  card,
+  reads,
+  point,
+  tasks,
+  view: windowView,
+  keys,
+}: PanelProps) {
   const [board, setBoard] = useState<PanelTaskBoard | null>(null);
   // The place this page was born with, then the board's own as it moves.
   const born = useMemo(() => placeOf(card?.kept ?? null), [card?.kept]);
@@ -1143,6 +1150,7 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
           <span className="fm-board-more" data-board-more={task.id}>
             <RowMenu
               label={`${task.key} actions`}
+              {...keys["board-move"]}
               items={items}
               size={24}
               triggerTabIndex={-1}
@@ -1333,23 +1341,34 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
     );
   };
 
-  /** A view's button: Board, Backlog · N, Done · 7d · N, Earlier matches · N. */
-  const viewTab = (target: BoardView, label: string, extra?: string) => (
-    <button
-      type="button"
-      className="fm-board-view"
-      data-board-view-tab={target}
-      aria-pressed={view === target ? "true" : "false"}
-      onClick={() => showView(target)}
-    >
-      {label}
-      {extra && (
-        <span className="fm-board-n" data-board-view-count={target}>
-          {extra}
-        </span>
-      )}
-    </button>
-  );
+  /**
+   * A view's button: Board, Backlog · N, Done · 7d · N, Earlier matches · N,
+   * with the key of the command that shows the same list after its count.
+   */
+  const viewTab = (target: BoardView, label: string, extra?: string) => {
+    const command = VIEW_COMMANDS[target];
+    const key = command === undefined ? undefined : keys[command];
+    return (
+      <button
+        type="button"
+        className="fm-board-view"
+        data-board-view-tab={target}
+        aria-pressed={view === target ? "true" : "false"}
+        aria-keyshortcuts={key?.["aria-keyshortcuts"]}
+        onClick={() => showView(target)}
+      >
+        {label}
+        {extra && (
+          <span className="fm-board-n" data-board-view-count={target}>
+            {extra}
+          </span>
+        )}
+        {key && <CommandKey target={target} drawn={key.keys} />}
+      </button>
+    );
+  };
+  const findKey = keys["board-find"];
+  const droppedKey = keys["board-dropped"];
   const earlierCount = earlier ? `${earlier.tiles.length}${earlier.capped ? "+" : ""}` : undefined;
 
   return (
@@ -1383,23 +1402,29 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
             ))}
           </div>
         )}
-        <input
-          ref={findRef}
-          type="search"
-          className="fm-board-find"
-          data-board-find=""
-          placeholder="Find a task"
-          aria-label="Find on task board"
-          autoComplete="off"
-          value={place.query}
-          onChange={(event) => patch({ query: event.currentTarget.value, pages: {} })}
-          onKeyDown={(event) => {
-            // ↓ from Find goes to the first tile it left.
-            if (event.key !== "ArrowDown" || event.nativeEvent.isComposing || !stop) return;
-            event.preventDefault();
-            tileOf(stop)?.focus();
-          }}
-        />
+        <span className="fm-board-find-field">
+          <input
+            ref={findRef}
+            type="search"
+            className="fm-board-find"
+            data-board-find=""
+            placeholder="Find a task"
+            aria-label="Find on task board"
+            aria-keyshortcuts={findKey?.["aria-keyshortcuts"]}
+            autoComplete="off"
+            value={place.query}
+            onChange={(event) => patch({ query: event.currentTarget.value, pages: {} })}
+            onKeyDown={(event) => {
+              // ↓ from Find goes to the first tile it left.
+              if (event.key !== "ArrowDown" || event.nativeEvent.isComposing || !stop) return;
+              event.preventDefault();
+              tileOf(stop)?.focus();
+            }}
+          />
+          {/* The key that brings the caret here, at the empty field's far end as
+              the placeholder is; the stylesheet lets it go once Find has focus or words. */}
+          {findKey && <CommandKey target="find" drawn={findKey.keys} />}
+        </span>
       </div>
       <nav className="fm-board-views" data-board-views="" aria-label="Task board views">
         {viewTab("board", "Board")}
@@ -1471,9 +1496,11 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
           className="fm-board-dropped-toggle"
           data-board-dropped-toggle=""
           aria-pressed={view === "dropped" ? "true" : "false"}
+          aria-keyshortcuts={droppedKey?.["aria-keyshortcuts"]}
           onClick={() => showView(view === "dropped" ? "board" : "dropped")}
         >
           {`Dropped · ${dropped.length}`}
+          {droppedKey && <CommandKey target="dropped" drawn={droppedKey.keys} />}
         </button>
         {/* The Drop task tray: there only while a tile is in the air. */}
         {dragging && (
@@ -1508,6 +1535,28 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
         </div>
       )}
     </section>
+  );
+}
+
+/**
+ * The panel commands that show the same list as a view's button: Show the
+ * backlog and Show done tasks (docs/task-board.md, "Keys").
+ */
+const VIEW_COMMANDS: Partial<Record<BoardView, string>> = {
+  backlog: "board-backlog",
+  landed: "board-done",
+};
+
+/**
+ * The key of the command that does what a control does, drawn inside it
+ * after its words as a text button's key is (docs/keyboard.md, "Key
+ * hints"): decoration, since the control names it in `aria-keyshortcuts`.
+ */
+function CommandKey({ target, drawn }: { target: string; drawn: string }) {
+  return (
+    <span className="fm-board-key" data-board-command-key={target} aria-hidden="true">
+      {drawn}
+    </span>
   );
 }
 

@@ -7,6 +7,7 @@ import {
   cardRevision,
   firstState,
   frameKeep,
+  frameKeys,
   framePanelProps,
   frameRail,
   frameView,
@@ -293,5 +294,24 @@ describe("pointing, moves, the view and the rail in the frame realm", () => {
       { text: "2 waiting", strong: true },
     ]);
     expect(bridge.api.action).toHaveBeenCalledWith("rail.show", true);
+  });
+
+  it("reads the keys its commands have now from view state, leaving out an entry with no drawn key", () => {
+    expect(
+      frameKeys({
+        keys: {
+          "board-find": { keys: "⌃⌘F", "aria-keyshortcuts": "Control+Meta+F" },
+          "board-move": { keys: "⌘K ⌘M" },
+          "board-done": { keys: "" },
+          "board-dropped": { "aria-keyshortcuts": "F9" },
+          broken: null,
+        },
+      }),
+    ).toEqual({
+      "board-find": { keys: "⌃⌘F", "aria-keyshortcuts": "Control+Meta+F" },
+      "board-move": { keys: "⌘K ⌘M" },
+    });
+    expect(frameKeys(null)).toEqual({});
+    expect(frameKeys({ keys: "⌃⌘F" })).toEqual({});
   });
 });

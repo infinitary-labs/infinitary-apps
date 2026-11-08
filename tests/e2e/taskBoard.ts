@@ -197,6 +197,13 @@ export function boardMenu(page: Page, key: string, panel = BOARD_PANEL) {
   return { menu, entry: (id: string) => menu.locator(`[data-menu-item="${id}"]`) };
 }
 
+/** A tile's ⋯, the button that opens its menu, by the tile's task key. */
+export function boardMore(page: Page, key: string, panel = BOARD_PANEL): Locator {
+  return boardEntry(page, panel).locator(
+    `[data-board-card]:has([data-board-tile][data-board-key="${key}"]) [data-board-more] button`,
+  );
+}
+
 /** A point in the board's own page, in its CSS pixels. */
 type PagePoint = { x: number; y: number };
 

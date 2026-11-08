@@ -38,6 +38,13 @@ export type RowMenuProps = {
   triggerTabIndex?: number;
   /** Where focus returns when the menu closes on Escape or a pick; the kebab by default. */
   restoreFocus?: () => HTMLElement | null;
+  /**
+   * The key of the command that opens this menu too (the task board's Move
+   * the selected task), drawn after the kebab's words in its label, or
+   * inside the word's button; pass `aria-keyshortcuts` with it.
+   */
+  keys?: string | undefined;
+  "aria-keyshortcuts"?: string | undefined;
 };
 
 /** Space between the kebab and the panel, and the minimum kept from the window edge. */
@@ -78,6 +85,8 @@ export function RowMenu({
   className,
   triggerTabIndex,
   restoreFocus,
+  keys,
+  "aria-keyshortcuts": ariaKeys,
 }: RowMenuProps) {
   const [open, setOpen] = useState(false);
   const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(null);
@@ -175,6 +184,7 @@ export function RowMenu({
           ref={trigger}
           variant="ghost"
           size="sm"
+          {...(keys ? { keys, "aria-keyshortcuts": ariaKeys } : {})}
           aria-haspopup="menu"
           aria-expanded={open}
           tabIndex={triggerTabIndex}
@@ -186,6 +196,8 @@ export function RowMenu({
         <IconButton
           ref={trigger}
           label={label}
+          keys={keys}
+          aria-keyshortcuts={ariaKeys}
           size={size}
           aria-haspopup="menu"
           aria-expanded={open}

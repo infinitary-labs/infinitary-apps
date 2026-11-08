@@ -11,8 +11,8 @@ A button may show the key that presses it (`keys`), inside the button after its 
 The key sits on the label's own baseline near the button's right edge; the label moves left to make most of the room, and the button widens by six pixels, the air the key needs: ten before the label, six before the key and eight after it.
 A key too long for that room, such as Ctrl+1 on Linux, widens the button only by what it still needs.
 It is not a control and is hidden from assistive technology; the button names the key in `aria-keyshortcuts`.
-Only a card's footer choices opt in.
-Other buttons stay bare.
+A button opts in where a command does what it does: a card's footer choices, and text buttons such as Pause all, Refresh, Done, and the task board's Backlog, Done · 7d and Dropped (`TaskBoard.prompt.md`).
+A button no command matches stays bare, and one whose command has no key shows none.
 The key reads the installed map, in this computer's key words.
 A pending button shows its pending label alone.
 

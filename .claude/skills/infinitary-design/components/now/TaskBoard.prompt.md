@@ -24,8 +24,10 @@ The surface is the card stack's own, as tall as a card may be, under the panel c
 - **Its row**, over a `--line-1` hairline: the count of every task in Waiting on you and the four lanes of work in mono `--text-xs` `--fg-3`, the project chips, and Find at the right.
   Chips are pills in mono `--text-xs`: All projects, then each project's key, shown only when two or more projects have tiles; the pressed one is `--accent-dim` with an `--accent` border.
   Find is a small input ("Find a task") that narrows this board alone by key or title, never the panel; the chip and Find narrow every lane before it is paged.
+  While Find on task board has a key, the key sits at the empty field's far end in mono `--text-sm` `--fg-3`, as the placeholder's partner, and goes once the field has focus or words.
 - **The views**, over a `--line-1` hairline: Board, Backlog, Done · 7d, and Earlier matches only while Find has words - text buttons in `--text-sm` `--fg-2`, each list's whole count after it in mono `--text-xs` `--fg-3` (Backlog also `· N new` for crew filings not yet opened, Earlier matches a `+` when the search may have been cut); the pressed one is `--accent-dim` with an `--accent` border, `--fg-1`.
   Board opens first.
+  Backlog and Done · 7d show the key of Show the backlog and Show done tasks after their count while it has one, as a text button's key is drawn (`Button.prompt.md`): quiet mono `--text-sm` at six tenths of the button's color; Board has no command, so no key.
 - **Waiting on you**, above every view: its micro label and count, "Cards waiting for you" in `--text-sm` `--fg-3` at the right, and Show all N while more than three wait; then at most three one-line rows (as a list's rows), or "Nothing waits on you".
   Show all N opens its own list, where these rows are not drawn again.
 - A `--line-1` hairline.
@@ -38,7 +40,7 @@ The surface is the card stack's own, as tall as a card may be, under the panel c
 - **A list** - Backlog, Done · 7d, Waiting on you, Dropped · 7d (with "Read-only"), Earlier matches: its micro label and count with Previous and Next at the right, a page of twenty one-line rows, then over a hairline its range ("21–40 of 300") and Previous and Next again; the rows scroll between head and foot while the list has the room.
   Earlier matches may carry one `--text-sm` `--fg-3` line under its head: looking for earlier tasks, that the search stops at its newest matches and narrower words help, or that earlier results are unavailable right now.
 - Previous, Next and Show all are small quiet buttons, `--text-sm` `--fg-2` with a `--line-1` border and `--radius-m`, `--bg-3` on hover; at a lane's end Previous or Next stays, at half opacity, so focus stays on it.
-- **Foot**, over a hairline: Dropped · N at the left (a quiet text button, `--fg-1` while its list is shown), the Drop task tray beside it only while a tile is in the air, and the key hint at the right, "Arrows move · `Enter` opens · `Space` menu", in `--text-sm` `--fg-3`.
+- **Foot**, over a hairline: Dropped · N at the left (a quiet text button, `--fg-1` while its list is shown, Show dropped tasks' key after it while it has one), the Drop task tray beside it only while a tile is in the air, and the key hint at the right, "Arrows move · `Enter` opens · `Space` menu", in `--text-sm` `--fg-3`.
 - **Live line**, under the foot: what the last move did or why it was refused, `--text-sm` `--fg-2`, `--warn` for a refusal (`role="status"`, read once); no height while empty.
 
 ## A tile
@@ -73,6 +75,7 @@ The tiles and rows are one Tab stop after the board's own row and views: ↑ ↓
 Space opens the tile's ⋯ menu.
 Esc closes the menu or the summary, then lets go of a move that asks, then clears Find, then hides the board.
 Find on task board, Show the backlog, Show done tasks, Show dropped tasks and Move the selected task are found by name in command search.
+Once a person gives one a key in Settings → Keyboard, the control that does the same shows it (Find, the views and Dropped above), and every tile's ⋯ names Move the selected task's key after its words in its label, since the command opens the selected tile's menu.
 When a live change takes the focused tile away, focus goes to the task where the view draws it, or the nearest row, and the live line says where it went.
 
 ## Moves

@@ -16,6 +16,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { usePanelKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
 import type { PanelCardBodyProps, PanelSource } from "../plugins/contributions";
 import { FrameMount, PANEL_UNRESPONSIVE_LINE } from "../plugins/frames/FrameMount";
@@ -52,7 +53,8 @@ import { PanelStoppedLine } from "./panelBoundary";
  * Its gestures are declared from what it asked for (`framePanelActions`):
  * the card actions every panel has, pointing for one that reads the board,
  * its moves, and its rail; the asks its header buttons press and F6's ask
- * for focus, the view and whether it is collapsed reach it as view state.
+ * for focus, the view, whether it is collapsed and the keys its commands
+ * have now reach it as view state.
  * Its watchdog is armed: a panel that wedges its own process while it is
  * showing is torn down to a quiet line with a Retry, and its header stops
  * showing the counts that page last sent. A collapsed panel, one off its
@@ -270,9 +272,11 @@ export function FramedPanelBody({ content }: { content: FramedPanelContent }) {
   const view = usePanelView(content.reads.includes("tasks.board"));
   // A draft is never collapsed: there is nothing of the captain's to fold.
   const collapsed = usePanelCollapsed(id) && !draft;
+  // The keys its commands have now; a draft's commands reach nothing, so it has none.
+  const keys = usePanelKeys(draft ? null : id);
   const state = useMemo(
-    () => ({ asks: asks.counts, askedBy: asks.via, focus, view, collapsed }),
-    [asks, focus, view, collapsed],
+    () => ({ asks: asks.counts, askedBy: asks.via, focus, view, collapsed, keys }),
+    [asks, focus, view, collapsed, keys],
   );
   return (
     <div
@@ -381,9 +385,10 @@ function FramedCard({
   // Its data, revision and kept place ride view state: the runtime hands the
   // page the place it finds at its birth, so a page born again finds the latest.
   const view = usePanelView(content.reads.includes("tasks.board"));
+  const keys = usePanelKeys(id);
   const state = useMemo(
-    () => ({ card: { data: card.data, kept: card.kept, revision: card.revision }, view }),
-    [card.data, card.kept, card.revision, view],
+    () => ({ card: { data: card.data, kept: card.kept, revision: card.revision }, view, keys }),
+    [card.data, card.kept, card.revision, view, keys],
   );
   const fill = card.height === "fill";
   return (

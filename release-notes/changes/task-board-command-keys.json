@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "task-board-command-keys",
+      "kind": "improvement",
+      "title": "The task board shows the keys you gave its commands",
+      "body": "When you give the task board's commands a key in Settings → Keyboard, the board now shows it on the control that does the same thing: Find a task, Backlog, Done · 7d and Dropped show the key inside them, and a task's ⋯ names the Move the selected task key when you rest on it. Each follows the key when you change or remove it. Panels you make can show their own commands' keys the same way.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-board-command-keys-dark.webp",
+        "light": "task-board-command-keys-light.webp",
+        "alt": "The task board with Find a task, Backlog and Done · 7d each showing the key given to its command"
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

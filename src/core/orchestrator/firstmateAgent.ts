@@ -5,7 +5,7 @@ import { type CutOff, isAuthFailureMessage } from "@shared/authFailure";
 import type { TurnImage } from "@shared/cards";
 import type { TurnFailureReason, TurnTrigger } from "@shared/diagnostics";
 import { AUTOMATIC_EMOTE_WORDS, type HostReplyEmote } from "@shared/emotes";
-import type { FmEvent, FmUsage } from "@shared/events";
+import { type FmEvent, type FmUsage, PROGRESS_TOOL_NAMES } from "@shared/events";
 import type { ForgeSignInState } from "@shared/forges";
 import type { LastTurnReply } from "@shared/lastTurn";
 import { isRunawayProviderError, plainProblem } from "@shared/plainProblem";
@@ -65,6 +65,8 @@ import { appendDigest, digestEntry, digestFor } from "./seatDigest";
 import { turnOriginOf } from "./turnOrigins";
 import { captainTurn, drainWakes, renderWake, rowAttachments, type TypedWake } from "./wakes";
 
+/** The progress a shortening of the conversation reports itself by. */
+const [FOLD_TOOL] = PROGRESS_TOOL_NAMES;
 /**
  * The Firstmate agent: one persistent embedded Pi session that takes every
  * user turn and decides answer vs ask vs steer vs spawn (the orchestrator
@@ -1876,6 +1878,13 @@ export class FirstmateAgent {
       return;
     }
     if (event.type === "tool_start") this.turn.tools.push(event.toolName);
+    // A shortening's start and end, on Pi or Claude, is the character's cinch.
+    if ((event.type === "tool_start" || event.type === "tool_end") && event.toolName === FOLD_TOOL)
+      this.options.broadcastEvent({
+        type: "firstmate_state",
+        busy: this.running,
+        folding: event.type === "tool_start",
+      });
     if (event.type !== "turn_failed") {
       this.options.broadcastEvent(event);
     }

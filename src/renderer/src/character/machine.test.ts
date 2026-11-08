@@ -173,6 +173,22 @@ describe("FirstmateMachine crystalActive parameter", () => {
   });
 });
 
+describe("FirstmateMachine folding parameter", () => {
+  // INF-3011: the cinch is a look over working, so the canvas's name stays the state.
+  it("never changes the state: folding only rides the snapshot", () => {
+    const m = machine();
+    m.setInputs({ listening: false, busy: true }, 0);
+    expect(m.update(0)).toMatchObject({ state: "working", folding: false });
+    m.setInputs({ listening: false, busy: true, folding: true }, 100);
+    expect(m.update(100)).toMatchObject({ state: "working", clip: "engage", folding: true });
+    m.setInputs({ listening: false, busy: true, folding: false }, 4000);
+    expect(m.update(4000)).toMatchObject({ state: "working", folding: false });
+    const idle = machine();
+    idle.setInputs({ listening: false, busy: false, folding: true }, 0);
+    expect(idle.update(0)).toMatchObject({ state: "idle", folding: true });
+  });
+});
+
 describe("FirstmateMachine fidget pool", () => {
   it("draws the variant, honors its duration, and never repeats", () => {
     // random() = 0 always picks the first eligible variant, so consecutive

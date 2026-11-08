@@ -68,6 +68,8 @@ export const HomeMate = memo(function HomeMate() {
   const listening = useListening();
   const submitted = useShellStore((s) => s.submitted);
   const firstmateBusy = useShellStore((s) => s.firstmateBusy);
+  const firstmateFolding = useShellStore((s) => s.firstmateFolding);
+  const firstmateFoldStarts = useShellStore((s) => s.firstmateFoldStarts);
   const showCards = useCardUp();
   const { names, facts } = useCrewBoard();
   // The project in light (docs/project-focus.md): the pill a pointer or the
@@ -145,6 +147,8 @@ export const HomeMate = memo(function HomeMate() {
           <Firstmate
             listening={listening}
             busy={firstmateBusy}
+            folding={firstmateFolding}
+            foldStarts={firstmateFoldStarts}
             size={300}
             kick={readKick}
             submitSignal={submitted}

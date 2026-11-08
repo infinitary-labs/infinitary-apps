@@ -141,15 +141,23 @@ export type MachineSnapshot = {
   blendT: number;
   /** Preserved crystal-animation parameter, carried for the renderer only. */
   crystalActive: boolean;
+  /** The first mate is shortening its conversation (./cinch), carried for the renderer only. */
+  folding: boolean;
 };
 
-export type MachineInputs = { listening: boolean; busy: boolean; crystalActive?: boolean };
+export type MachineInputs = {
+  listening: boolean;
+  busy: boolean;
+  crystalActive?: boolean;
+  folding?: boolean;
+};
 
 export class FirstmateMachine {
   private state: FirstmateState = "idle";
   private listening = false;
   private busy = false;
   private crystalActive = false;
+  private folding = false;
   private enteredAt: number;
   private clip: TransitionClip = "none";
   private clipStart: number;
@@ -208,6 +216,8 @@ export class FirstmateMachine {
     // Crystal activation is a parameter like busy, and unlike busy it never moves
     // the state: nothing below reads it.
     this.crystalActive = inputs.crystalActive ?? false;
+    // So is folding: the cinch is a look over working, never a state.
+    this.folding = inputs.folding ?? false;
     this.listening = inputs.listening;
 
     if (inputs.listening) {
@@ -341,6 +351,7 @@ export class FirstmateMachine {
       clip: this.clip,
       blendT: Math.min(1, (now - this.clipStart) / (CLIP_BLEND_MS[this.clip] ?? 1)),
       crystalActive: this.crystalActive,
+      folding: this.folding,
     };
   }
 }

@@ -52494,6 +52494,9 @@
                                 },
                                 "busy": {
                                   "type": "boolean"
+                                },
+                                "folding": {
+                                  "type": "boolean"
                                 }
                               },
                               "required": [
@@ -56065,6 +56068,9 @@
                 "const": "firstmate_state"
               },
               "busy": {
+                "type": "boolean"
+              },
+              "folding": {
                 "type": "boolean"
               }
             },

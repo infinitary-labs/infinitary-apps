@@ -1145,6 +1145,50 @@ describe("the client's own continuations", () => {
     unsubscribe();
   });
 
+  /**
+   * INF-3011, captain's pick: the character shows the whole shortening on
+   * Claude, read from the client's status message; one heard only by its
+   * boundary still shows, as a start and an end together. The messages are
+   * the real client's, in the order it sent them during a shortening.
+   */
+  it("INF-3011: reports the client's own shortening as its progress, start and end", async () => {
+    const { session, harness } = await continuing();
+    const events: SessionEvent[] = [];
+    const unsubscribe = session.subscribe((event) => events.push(event));
+    const emit = harness().emit;
+    const folds = () =>
+      events.flatMap((event) =>
+        (event.type === "tool_start" || event.type === "tool_end") &&
+        event.toolName === "compact_context"
+          ? [event.type]
+          : [],
+      );
+    emit({ type: "system", subtype: "status", status: "requesting" });
+    emit({ type: "system", subtype: "status", status: "compacting" });
+    await vi.waitFor(() => expect(folds()).toEqual(["tool_start"]));
+    emit({ type: "system", subtype: "status", status: null, compact_result: "success" });
+    emit({
+      type: "system",
+      subtype: "compact_boundary",
+      compact_metadata: { trigger: "auto", pre_tokens: 507, post_tokens: 698 },
+    });
+    emit({ type: "system", subtype: "status", status: "requesting" });
+    await vi.waitFor(() =>
+      expect(events).toContainEqual({ type: "context_compacted", turn: "unknown" }),
+    );
+    expect(folds()).toEqual(["tool_start", "tool_end"]);
+    // A boundary with no start heard: the short version.
+    emit({
+      type: "system",
+      subtype: "compact_boundary",
+      compact_metadata: { trigger: "auto", pre_tokens: 160000 },
+    });
+    await vi.waitFor(() =>
+      expect(folds()).toEqual(["tool_start", "tool_end", "tool_start", "tool_end"]),
+    );
+    unsubscribe();
+  });
+
   it("replaces background membership and invalidates it when the client transport ends", async () => {
     const { session, harness } = await continuing();
     const counts: Array<number | undefined> = [];

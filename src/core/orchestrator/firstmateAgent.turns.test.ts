@@ -553,6 +553,30 @@ describe("FirstmateAgent", () => {
     expect(usages).toHaveLength(2);
   });
 
+  /** INF-3011, captain's pick: the character's cinch lasts as long as the shortening does. */
+  it("INF-3011: tells the window the conversation is shortening from its start to its end", async () => {
+    const { agent, session, events } = setup();
+    await agent.converse("check usage");
+    const fold = {
+      taskId: "firstmate",
+      callId: "firstmate:compaction",
+      toolName: "compact_context",
+    };
+    session.emit({ type: "tool_start", ...fold });
+    expect(events).toContainEqual({ type: "firstmate_state", busy: true, folding: true });
+    session.emit({ type: "tool_end", ...fold, isError: false });
+    expect(events).toContainEqual({ type: "firstmate_state", busy: true, folding: false });
+    session.emitTurnEnd("checked", { input: 10, output: 2, cost: 0.01 });
+    session.resolveNextPrompt();
+    await tick();
+    expect(events.filter((event) => event.type === "firstmate_state")).toEqual([
+      { type: "firstmate_state", busy: true },
+      { type: "firstmate_state", busy: true, folding: true },
+      { type: "firstmate_state", busy: true, folding: false },
+      { type: "firstmate_state", busy: false },
+    ]);
+  });
+
   it("names the captain's time zone with its offset on the host's clock in every turn's context (FI3-1006)", async () => {
     // A January afternoon: the offset is winter's wherever the Mac is.
     const january = Date.parse("2026-01-15T19:11:00Z");

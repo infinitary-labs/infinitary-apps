@@ -12,6 +12,14 @@ import {
   placeBlackholeVertices,
 } from "./blackhole";
 import {
+  CinchClock,
+  cinchBody,
+  cinchMotes,
+  cinchStill,
+  drawCinchOver,
+  drawCinchUnder,
+} from "./cinch";
+import {
   BIG_DIPPER,
   type Constellation,
   drawConstellationOver,
@@ -111,8 +119,9 @@ import {
 // ./crew/warp) overlay the base states and return home on their own, and so
 // do the reply emotes (./replies: nod, salute, tick, tuck, aww), which play
 // as the Firstmate's own turn ends. A preserved crystal parameter folds the
-// working character into the crystal (./crystal); like
-// busy it never changes the state, so the canvas's aria-label stays the
+// working character into the crystal (./crystal), and folding draws a ring
+// tight round it while the first mate shortens its conversation (./cinch);
+// like busy neither changes the state, so the canvas's aria-label stays the
 // state name.
 //
 // The composited halo (./glow) is unchanged: every glow-contributing
@@ -159,6 +168,10 @@ export type FirstmateProps = {
   busy?: boolean;
   /** Preserved animation input that folds the working form into the crystal. */
   crystalActive?: boolean;
+  /** The first mate is shortening its conversation: the cinch over working (./cinch). */
+  folding?: boolean;
+  /** Monotonic count of shortenings begun; each increment plays a cinch, even one heard only ending. */
+  foldStarts?: number;
   /** Canvas size in px. Null state is 280-320; docked is 56-72. */
   size?: number;
   /** 0-1 live voice level; scales the structure and spin while listening. */
@@ -439,9 +452,12 @@ type Sim = {
   /** When the last token flicker began, and its strength (usage-mapped). */
   flickerAt: number;
   flickerBoost: number;
+  /** The cinch's own clock (./cinch), and how far the working state lets it show. */
+  cinch: CinchClock;
+  cinchGate: number;
 };
 
-function createSim(size: number, canvas: HTMLCanvasElement, kick: number): Sim {
+function createSim(size: number, canvas: HTMLCanvasElement, kick: number, foldStarts: number): Sim {
   const dpr = window.devicePixelRatio || 1;
   canvas.width = size * dpr;
   canvas.height = size * dpr;
@@ -486,6 +502,8 @@ function createSim(size: number, canvas: HTMLCanvasElement, kick: number): Sim {
     answerAt: Number.NEGATIVE_INFINITY,
     flickerAt: Number.NEGATIVE_INFINITY,
     flickerBoost: 0,
+    cinch: new CinchClock(foldStarts),
+    cinchGate: 0,
   };
 }
 
@@ -703,6 +721,19 @@ function drawFrame(
   // The ember rides the machine's busy parameter, easing so a turn ending
   // mid-listening cools the character in place without a state change.
   sim.heat += ((snap.busy ? 1 : 0) - sim.heat) * Math.min(dt * 3, 1);
+  // The cinch (./cinch) is a parameter over working like the crystal:
+  // attention and emotes ease it out, and it comes back while the
+  // shortening still runs. A reduced-motion still stands in the tight pose.
+  const cinchF = reduced ? cinchStill(snap.folding) : sim.cinch.frame(now);
+  const cinchTarget = state === "working" ? 1 : 0;
+  sim.cinchGate = reduced
+    ? cinchTarget
+    : sim.cinchGate + (cinchTarget - sim.cinchGate) * Math.min(dt * 3, 1);
+  const cinchK = cinchF ? cinchF.k * sim.cinchGate : 0;
+  const cinchB = cinchBody(cinchK);
+  const cinchKz = clamp01(cinchK);
+  const cinchLift = cinchF ? cinchF.lift * sim.cinchGate : 0;
+  const cinchFlight = cinchF && !reduced ? cinchMotes(cinchF) : { motes: [], arrival: 0 };
   // The token flicker (./flicker): a completed request's usage lands as a
   // brightness wave on the wires - fast rise, damped waver, gone. It never
   // changes the state, and a reduced-motion still never catches one.
@@ -718,13 +749,14 @@ function drawFrame(
     sim.lastKick = kick;
   }
   sim.vel += (0.5 + (level || 0) * 6 - sim.vel) * Math.min(dt * 1.5, 1);
-  sim.a += (cur.sa + (wp?.sa ?? 0)) * dt;
-  sim.b += (cur.sb + (wp?.sb ?? 0)) * dt;
+  sim.a += (cur.sa * cinchB.spin + (wp?.sa ?? 0)) * dt;
+  sim.b += (cur.sb * cinchB.spin + (wp?.sb ?? 0)) * dt;
   sim.hs += dt * sim.vel * cur.flat;
 
   // The gaze: directed by state and emote, wandering when idle.
   if (state === "listening") sim.gaze.look(0, 0);
-  else if (state === "working") sim.gaze.look(0.12 * (1 - ck), 0.4 - 0.75 * ck);
+  else if (state === "working")
+    sim.gaze.look(cinchB.look[0] * (1 - ck), cinchB.look[1] - 0.75 * ck);
   else if (state === "ponder") sim.gaze.look(-0.8, -0.9);
   else if (state === "confused") sim.gaze.look(noise1(tSec * 6) * 0.8, noise1(tSec * 5 + 9) * 0.5);
   else if (state === "fidget") {
@@ -769,6 +801,10 @@ function drawFrame(
     ),
   );
   if (reply) sim.lid = Math.max(sim.lid, reply.lid);
+  // The cinch narrows the eyes, and its end gives one slow blink.
+  sim.lid = Math.max(sim.lid, cinchB.lid);
+  if (cinchF?.phase === "out")
+    sim.lid = Math.max(sim.lid, pulse(cinchF.u, 0.1, 0.65) * sim.cinchGate);
   // Variant lids: the roll closes its eyes through the turn; the yawn droops
   // them with the stretch; the black hole squints with effort.
   if (fv === "roll") sim.lid = Math.max(sim.lid, band(et, 0.3, 0.15, 0.6, 0.22));
@@ -806,7 +842,9 @@ function drawFrame(
   const breathe =
     (1 + cur.breath * Math.sin(now / 650) + (level || 0) * cur.breath * 1.6) *
     (1 + 0.035 * sendoff.exhale);
-  const R = size * 0.27 * breathe * cur.scale * (wp?.scale ?? 1);
+  const R0 = size * 0.27 * breathe * cur.scale * (wp?.scale ?? 1);
+  // The cinch draws the body tight, and it springs back past its size.
+  const R = R0 * cinchB.scale;
 
   // Emote choreography factors, baked into the projected points below so the
   // glow mask and crisp pass stay consistent by construction.
@@ -867,6 +905,8 @@ function drawFrame(
       sendoff.glow * 0.22 +
       receive.glow * 0.2 +
       (reply?.glow ?? 0) * 0.18 +
+      cinchKz * 0.08 * (0.4 + 0.6 * cinchFlight.arrival) +
+      cinchLift * 0.3 +
       spill * 0.5);
   const g = ctx.createRadialGradient(c, c, 0, c, c, size / 2);
   g.addColorStop(0, fmRgba(glowCol, glowA));
@@ -993,6 +1033,9 @@ function drawFrame(
       alpha += (Math.min(1, 0.85 * boost) - alpha) * f;
     }
     alpha *= wireFade;
+    // The cinch dims the outer cell and lifts every wire at its end.
+    if (P[3] > 0 && Q[3] > 0) alpha *= cinchB.outer;
+    alpha *= 1 + 0.5 * cinchLift;
     if (alpha < 0.02) {
       edgeSkip[i] = 1;
       continue;
@@ -1034,7 +1077,8 @@ function drawFrame(
       Math.min(1, Math.max(0.65, Math.min(1, 0.6 + (P[2] - 0.9) * 0.5)) * boost) *
       fade *
       (skyDots.fade[i] as number) *
-      dim;
+      dim *
+      (1 + 0.4 * cinchLift);
     // A token flicker lights the dot cores too, weaker than the wires.
     const cored = (heatCore > 0.02 || flick > 0.2) && m > 0.4 && fade > 0.5;
     const apexCore = apex ? ck : 0;
@@ -1101,6 +1145,22 @@ function drawFrame(
     sinceAnswerMs: snap.crystalActive ? Number.POSITIVE_INFINITY : now - sim.answerAt,
     colors: { dim: dimRgbUse, cool: coolRgb, coolCore: coolCoreRgb, boost },
   });
+  // The cinch's centre and ring, under the wires.
+  const cinchEnv = cinchF
+    ? {
+        ctx,
+        frame: cinchF,
+        k: cinchK,
+        gate: sim.cinchGate,
+        c,
+        R0,
+        size,
+        pts,
+        still: reduced,
+        colors: { dim: dimRgbUse, bright: briRgb, boost },
+      }
+    : null;
+  if (cinchEnv) drawCinchUnder(cinchEnv, cinchFlight.arrival);
   // The halo takes the stronger of the ember and the crystal's cool light;
   // a flicker is a filament on the wires, so only a whisper of it spills
   // here (./flicker `glowSpill`).
@@ -1135,6 +1195,8 @@ function drawFrame(
     drawConstellationOver({ ctx, k: skyK, et, con, c, R, size, colors: skyColors });
   }
   if (sat > 0.001) drawSaturnOver({ ctx, k: sat, c, R, size, colors: skyColors });
+  // The cinch's motes streaming in to the centre, under the eyes.
+  if (cinchEnv) drawCinchOver(cinchEnv, cinchFlight.motes);
 
   // ---- emote garnish: loose dots and sparks, line-art only ----
   if (state === "ponder") {
@@ -1316,6 +1378,8 @@ export function Firstmate({
   listening = false,
   busy = false,
   crystalActive = false,
+  folding = false,
+  foldStarts = 0,
   size = 280,
   level = 0,
   kick = 0,
@@ -1333,6 +1397,10 @@ export function Firstmate({
   busyRef.current = busy;
   const crystalActiveRef = useRef(crystalActive);
   crystalActiveRef.current = crystalActive;
+  const foldingRef = useRef(folding);
+  foldingRef.current = folding;
+  const foldStartsRef = useRef(foldStarts);
+  foldStartsRef.current = foldStarts;
   const levelRef = useRef(level);
   levelRef.current = level;
   const kickRef = useRef(kick);
@@ -1423,7 +1491,7 @@ export function Firstmate({
     const machine = machineRef.current;
     if (fitBacking(canvas, size)) pictureRef.current = false;
     if (!simRef.current || simRef.current.size !== size) {
-      simRef.current = createSim(size, canvas, readKick());
+      simRef.current = createSim(size, canvas, readKick(), foldStartsRef.current);
     }
     if (submitRef.current !== lastSubmit.current) {
       lastSubmit.current = submitRef.current;
@@ -1437,9 +1505,11 @@ export function Firstmate({
         listening: listeningRef.current,
         busy: busyRef.current,
         crystalActive: crystalActiveRef.current,
+        folding: foldingRef.current,
       },
       now,
     );
+    simRef.current.cinch.update(now, foldingRef.current, foldStartsRef.current);
     for (let e = takeCharacterEmote(); e; e = takeCharacterEmote()) {
       machine.requestEmote(e, now);
     }

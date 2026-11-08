@@ -46,6 +46,10 @@ type ShellCore = {
   view: ShellView;
   /** The Firstmate agent is mid-turn: the character thinks while no entry is on the stack. */
   firstmateBusy: boolean;
+  /** The Firstmate agent is shortening its conversation: the character's cinch. */
+  firstmateFolding: boolean;
+  /** Shortenings begun, counted: each one plays a cinch, even one heard only ending. */
+  firstmateFoldStarts: number;
   /** Active work-task activity, keyed for card-thread indicators. */
   crewActivity: Record<string, import("@shared/tasks").TaskView["activity"]>;
   /** Keyboard settings is recording a key: the window's keys run nothing (docs/keyboard.md). */
@@ -206,6 +210,8 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   ...cardSlice(set, get),
   view: "home",
   firstmateBusy: false,
+  firstmateFolding: false,
+  firstmateFoldStarts: 0,
   crewActivity: {},
   recordingKeys: false,
   releaseNotes: null,
@@ -255,7 +261,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         .catch(() => {});
     readReleaseNotes();
     // A turn that ended while this Mac was away said so to nobody here.
-    set({ firstmateBusy: false });
+    set({ firstmateBusy: false, firstmateFolding: false });
     readBoard();
     void get().loadFirstRun();
     void get().loadLastTurn();
@@ -482,7 +488,12 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       }));
     }
     if (event.type === "firstmate_state") {
-      set({ firstmateBusy: event.busy });
+      const folding = event.folding === true;
+      set((s) => ({
+        firstmateBusy: event.busy,
+        firstmateFolding: folding,
+        firstmateFoldStarts: s.firstmateFoldStarts + (folding && !s.firstmateFolding ? 1 : 0),
+      }));
     }
   },
 }));

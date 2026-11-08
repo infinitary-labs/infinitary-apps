@@ -69,6 +69,10 @@ public struct PhoneNotice: Equatable, Sendable {
     /// An older home keeps event-only activity; there is still no phone dictation/listening signal.
     public private(set) var firstmateBusy = false
     public private(set) var firstmateObserved = false
+    /// INF-3011: the first mate is shortening its conversation (`firstmate_state` folding), heard live only;
+    /// `firstmateFoldStarts` counts each start, so one heard starting and ending at once still plays the cinch.
+    public private(set) var firstmateFolding = false
+    public private(set) var firstmateFoldStarts = 0
     public private(set) var computers: [PhoneComputerPresence] = []
     /// Every welcome settles its initial roster rather than replaying arrivals or packets.
     public private(set) var sceneGeneration = 0
@@ -265,7 +269,7 @@ public struct PhoneNotice: Equatable, Sendable {
     private func clearContent() {
         computers = []
         held = nil
-        syncedCards = []; activity = []; syncedBoard = nil; syncedTurn = nil; notice = nil; firstmateBusy = false; firstmateObserved = false
+        syncedCards = []; activity = []; syncedBoard = nil; syncedTurn = nil; notice = nil; firstmateBusy = false; firstmateObserved = false; firstmateFolding = false
         syncedThreads = [:]; pastCards = []; showCardID = nil; threadRevisions = [:]; seenCards = []
         ledger.clear(); restorers = [:]; changeNotice = nil; takenBack = [:]; refold()
         notified = [:]; awaited = []; primed = false; workRevision += 1
@@ -639,7 +643,7 @@ public struct PhoneNotice: Equatable, Sendable {
         replacing?.cancel(); replacing = nil; doubted = nil
         replacement?.transport.close(); replacement = nil
         finishLeave(PhoneError.unavailable)
-        failCalls(); notice = nil; access = "read"; firstmateBusy = false; firstmateObserved = false
+        failCalls(); notice = nil; access = "read"; firstmateBusy = false; firstmateObserved = false; firstmateFolding = false
         socket?.cancel(with: .goingAway, reason: nil); socket = nil; serving = nil
         transport?.close(); transport = nil
         // A deliberate close has nothing to be patient about: the words follow at once, so a reopen reads Reaching
@@ -690,7 +694,7 @@ public struct PhoneNotice: Equatable, Sendable {
         while alive(current) {
             failCalls()
             pending.removeAll(); waitingSince.removeAll(); dirty.removeAll(); ready.removeAll()
-            access = "read"; firstmateBusy = false; firstmateObserved = false
+            access = "read"; firstmateBusy = false; firstmateObserved = false; firstmateFolding = false
             // Out of reach stays while later rounds try again on their own; a reopen says it is reaching.
             if attempt == 0 || woken { contact = "reaching" }
             woken = false
@@ -845,7 +849,7 @@ public struct PhoneNotice: Equatable, Sendable {
         }
         if current == generation { showHeld() }
         owed.formUnion(pending.values)
-        failCalls(); firstmateBusy = false; firstmateObserved = false
+        failCalls(); firstmateBusy = false; firstmateObserved = false; firstmateFolding = false
         transport.close()
         guard current == generation else { return reached }
         self.socket = nil; self.transport = nil; serving = nil; checking = nil
@@ -977,6 +981,10 @@ public struct PhoneNotice: Equatable, Sendable {
             if frame["channel"] as? String == "inf:event", let event = frame["payload"] as? [String: Any], let type = event["type"] as? String {
                 if type == "firstmate_state", let busy = event["busy"] as? Bool {
                     if holding { held?.busy = busy } else { firstmateBusy = busy; firstmateObserved = true }
+                    // A shortening replayed while reconnecting is over by now, so only a live one plays.
+                    let folding = !replayed && event["folding"] as? Bool == true
+                    if folding && !firstmateFolding { firstmateFoldStarts += 1 }
+                    firstmateFolding = folding
                     if sceneObservations { supersede(PhoneRequest.conversationState.rawValue) }
                 }
                 // A reaction replayed while reconnecting is not played (INF-2773: a caught-up replay is in reach).

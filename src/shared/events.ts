@@ -508,8 +508,16 @@ export const fmEventSchema = z.discriminatedUnion("type", [
      */
     reached: z.literal(true).optional(),
   }),
-  /** The Firstmate agent's own busy state (drives the thinking phase). */
-  z.object({ type: z.literal("firstmate_state"), busy: z.boolean() }),
+  /**
+   * The Firstmate agent's own busy state (drives the thinking phase), and
+   * whether it is shortening its conversation now (the character's cinch);
+   * absent means not.
+   */
+  z.object({
+    type: z.literal("firstmate_state"),
+    busy: z.boolean(),
+    folding: z.boolean().optional(),
+  }),
   /** Live crew strip counts: runtimes plus queued work. */
   z.object({
     type: z.literal("crew_counts"),

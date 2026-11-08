@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { type Query, query as sdkQuery } from "@anthropic-ai/claude-agent-sdk";
+import { PROGRESS_TOOL_NAMES } from "@shared/events";
 import type { Reasoning } from "@shared/reasoning";
 import type { ServedInstructions, ServedState } from "../orchestrator/seat";
 import { TICK_PERIOD_MS } from "../orchestrator/ticker";
@@ -46,6 +47,9 @@ import { ClaudeSessionRecord, type Pushed, sha256 } from "./claudeSessionRecord"
 import { acquireSessionLease } from "./claudeStoreLease";
 import type { ClaudeTranscriptLookup } from "./claudeTranscript";
 import { claudeCodingReasoning } from "./reasoning";
+
+/** The progress a shortening of the conversation reports itself by, as Pi's does. */
+const [FOLD_TOOL] = PROGRESS_TOOL_NAMES;
 
 /**
  * The rolling Claude session: one conversation across prompts, steers and
@@ -121,6 +125,12 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
   private ran = false;
   /** The client reports its session state; without it a result settles. */
   private statesSeen = false;
+  /**
+   * Where the client's own shortening of the conversation stands: running
+   * from its compacting status, ended once one of its two end signals (the
+   * status's result or the compact boundary) is heard and until the other.
+   */
+  private folding: "idle" | "running" | "ended" = "idle";
   private acksSeen = false;
   /** This prompt already reported a failure. */
   private failed = false;
@@ -662,18 +672,63 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
       });
   }
 
+  /**
+   * The client's status says when it starts shortening the conversation
+   * (`compacting`) and when it stops (another status, with or without a
+   * result). Reported the way Pi reports its own: as the shortening's
+   * progress.
+   */
+  private foldStatus(record: { status?: unknown; compact_result?: unknown }): void {
+    if (record.status === "compacting") {
+      if (this.folding !== "running") this.foldProgress("start");
+      this.folding = "running";
+      return;
+    }
+    if (this.folding === "running") {
+      this.foldProgress("end", record.compact_result === "failed");
+      this.folding = "ended";
+    } else if (this.folding === "ended" && record.compact_result !== undefined) {
+      this.folding = "idle";
+    }
+  }
+
+  private foldProgress(edge: "start" | "end", failed = false): void {
+    const callId = `${this.taskId}:compaction`;
+    if (edge === "start")
+      this.emit({ type: "tool_start", taskId: this.taskId, callId, toolName: FOLD_TOOL });
+    else
+      this.emit({
+        type: "tool_end",
+        taskId: this.taskId,
+        callId,
+        toolName: FOLD_TOOL,
+        isError: failed,
+      });
+  }
+
   protected observe(message: unknown, result: ClaudeNormalizeResult): void {
     const record = message as {
       type?: unknown;
       subtype?: unknown;
       model?: unknown;
       state?: unknown;
+      status?: unknown;
+      compact_result?: unknown;
       isReplay?: unknown;
       uuid?: unknown;
       event?: { type?: unknown };
     };
     this.safeStop.track(message);
+    if (record.type === "system" && record.subtype === "status") this.foldStatus(record);
     if (record.type === "system" && record.subtype === "compact_boundary") {
+      // A boundary ends a running shortening; one heard with no start is
+      // reported as a start and an end together, so it still shows.
+      if (this.folding === "ended") this.folding = "idle";
+      else {
+        if (this.folding === "idle") this.foldProgress("start");
+        this.foldProgress("end");
+        this.folding = "ended";
+      }
       // Claude's client folds between its own requests; whether more follow
       // is not said.
       this.emit({ type: "context_compacted", turn: "unknown" });

@@ -99,6 +99,7 @@
     // from it, and the rush reads the black hole's schedule.
     "src/renderer/src/character/crew/rush.ts",
     "src/renderer/src/character/blackhole.ts",
+    "src/renderer/src/character/cinch.ts",
     "src/renderer/src/character/warp.ts",
     "src/renderer/src/character/crew/warp.ts",
     // The stage clock is pure too; the crew hover e2e reads its slow rate,

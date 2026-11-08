@@ -34,6 +34,30 @@ describe("the first mate's turn, the card stack and a recording move apart", () 
   });
 });
 
+describe("the first mate shortening its conversation", () => {
+  beforeEach(resetShell);
+
+  // INF-3011: the character plays the cinch once per shortening, even one heard only ending.
+  it("counts each start of a shortening once and keeps whether one runs", () => {
+    const state = () => useShellStore.getState();
+    const starts = state().firstmateFoldStarts;
+    state().applyEvent({ type: "firstmate_state", busy: true });
+    expect(state()).toMatchObject({ firstmateFolding: false, firstmateFoldStarts: starts });
+    state().applyEvent({ type: "firstmate_state", busy: true, folding: true });
+    state().applyEvent({ type: "firstmate_state", busy: true, folding: true });
+    expect(state()).toMatchObject({ firstmateFolding: true, firstmateFoldStarts: starts + 1 });
+    state().applyEvent({ type: "firstmate_state", busy: true, folding: false });
+    expect(state()).toMatchObject({ firstmateFolding: false, firstmateFoldStarts: starts + 1 });
+    state().applyEvent({ type: "firstmate_state", busy: true, folding: true });
+    state().applyEvent({ type: "firstmate_state", busy: false });
+    expect(state()).toMatchObject({
+      firstmateBusy: false,
+      firstmateFolding: false,
+      firstmateFoldStarts: starts + 2,
+    });
+  });
+});
+
 describe("emotes on task_changed (task-system P5)", () => {
   const drain = () => {
     const taken: string[] = [];

@@ -46,6 +46,7 @@ try {
   const { ALGOL } = await runner.import<typeof import("../src/renderer/src/character/algol.ts")>(join(character, "algol.ts"));
   const { TRAVEL_PER_SECOND, WARP, WARP_LEAD, WARP_SCHEDULE, WARP_STARS, WARP_TRAVEL } = await runner.import<typeof import("../src/renderer/src/character/warp.ts")>(join(character, "warp.ts"));
   const { WARP_RELEASE_MS } = await runner.import<typeof import("../src/renderer/src/character/crew/warp.ts")>(join(character, "crew/warp.ts"));
+  const { CINCH, cinchFrame, cinchMotes } = await runner.import<typeof import("../src/renderer/src/character/cinch.ts")>(join(character, "cinch.ts"));
   const { FLICKER_TUNING } = await runner.import<typeof import("../src/renderer/src/character/flicker.ts")>(join(character, "flicker.ts"));
   const { REPLY_EMOTES, replyFrame } = await runner.import<typeof import("../src/renderer/src/character/replies.ts")>(join(character, "replies.ts"));
   const { CAPTAIN_BREATH_MS, CrewOrbit, DEFAULT_ORBIT, PLANES_GLYPH_PX, REMOTE_TRIP, WAIT_ARC_RATE } = await runner.import<typeof import("../src/renderer/src/character/crew/orbit.ts")>(join(character, "crew/orbit.ts"));
@@ -89,18 +90,33 @@ try {
       solids: TIER_SOLIDS, planes: CROWDED_PLANES,
       ring: { startRadiusPx: GROWING_RING.startRadiusPx, remoteShare: CLUSTER_LAYOUT.sizeShare, glyphPx: PLANES_GLYPH_PX,
         remoteGlyphPx: CLUSTER_LAYOUT.crewGlyphPx, crowdedGlyphPx: CLUSTER_LAYOUT.crowdedGlyphPx, crowdedCrew: CLUSTER_LAYOUT.crowdedCrew }, constellations: { orion: ORION, dipper: BIG_DIPPER },
-      saturn: SATURN, galaxy: GALAXY, algol: ALGOL, flicker: FLICKER_TUNING, warp: warpData(),
+      saturn: SATURN, galaxy: GALAXY, algol: ALGOL, flicker: FLICKER_TUNING, cinch: CINCH, warp: warpData(),
       captain: { ...CAPTAIN_LIGHT, breathMs: CAPTAIN_BREATH_MS },
       wait: { ...WAIT_LIGHT, arcRate: WAIT_ARC_RATE },
     },
     "ios/Infinitary/InfinitaryTests/PhoneSceneTraces.generated.json": REPLY_EMOTES.flatMap((emote) =>
       [0, 0.05, 0.15, 0.25, 0.4, 0.55, 0.7, 0.85, 1].map((progress) => ({ emote, progress, frame: replyFrame(emote, progress) }))),
+    "ios/Infinitary/InfinitaryTests/PhoneCinchTraces.generated.json": cinchTraces(),
     "ios/Infinitary/InfinitaryTests/PhoneOrbitSeats.generated.json": orbitSeats(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskFacts.generated.json": taskFactReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskList.generated.json": taskListReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskRecord.generated.json": taskRecordReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneRowMoves.generated.json": taskMoveReadings(),
   };
+  /** INF-3011: the desktop cinch's frames and motes through a shortening that runs and one only heard ending, for the phone's to replay. */
+  function cinchTraces() {
+    const fixed = (n: number) => Math.round(n * 1e9) / 1e9;
+    const spans: Array<number | null> = [null, 4300, 0];
+    return spans.flatMap((endedAt) => [0, 120, 450, 899, 900, 1500, 2100, 3300, 4300, 4700, 5100, 5390, 1000, 1700].map((t) => {
+      const frame = cinchFrame(t, endedAt);
+      const flight = frame ? cinchMotes(frame) : null;
+      return {
+        endedAt, t,
+        frame: frame && { phase: frame.phase, k: fixed(frame.k), vis: fixed(frame.vis), lift: fixed(frame.lift), holdS: fixed(frame.holdS), u: fixed(frame.u) },
+        motes: flight?.motes.map((mote) => ({ slot: mote.slot, u: fixed(mote.u) })) ?? [], arrival: fixed(flight?.arrival ?? 0),
+      };
+    }));
+  }
   /** INF-1755: the warps' settings, schedule, travel and the very stars the desktop draws, only the ones it reads. */
   function warpData() {
     const fixed = (n: number) => Math.round(n * 1e6) / 1e6;

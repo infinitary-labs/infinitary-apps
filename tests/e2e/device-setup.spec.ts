@@ -9,8 +9,10 @@ import { startSignIns } from "../../src/core/helper/signIns";
 import { configureGitSignIn } from "../../src/core/hostEnv";
 import { catalogRefreshesSettled } from "../../src/core/pi/modelRuntime";
 import {
+  DEVICE_SETUP_ACTIONS,
   deviceForgeSignInTitle,
   deviceForgeWaitLine,
+  deviceSetupCardId,
   deviceSetupDoneLine,
   deviceSetupTitle,
 } from "../../src/shared/deviceSetup";
@@ -129,6 +131,23 @@ async function rows(page: Page): Promise<string[]> {
   );
 }
 
+/** The computer's setup card as the stack holds it, by its id (`deviceSetupCardId`). */
+async function setupCard(page: Page, deviceId: string) {
+  const id = deviceSetupCardId(deviceId);
+  const card = (await page.evaluate(() => window.infinitary.cards.list())).find(
+    (entry) => entry.id === id,
+  );
+  if (!card) throw new Error(`No setup card ${id} is up`);
+  return card;
+}
+
+/** One of the setup card's actions by its typed id, with the words the host gave it. */
+async function setupAction(page: Page, deviceId: string, id: string) {
+  const action = (await setupCard(page, deviceId)).actions.find((entry) => entry.id === id);
+  if (!action) throw new Error(`The setup card has no ${id} action`);
+  return action;
+}
+
 /** Adopts the GitHub project and sets it to run on the computer, from Settings -> Projects' Runs on. */
 async function runProjectThere(page: Page, deviceId: string): Promise<void> {
   const { repo } = await page.evaluate(
@@ -160,7 +179,8 @@ test("a computer that joins gets its setup card, whose buttons open each step, r
   });
 
   await test.step("Add a subscription opens Intelligence; a sign-in there marks the row done", async () => {
-    await page.getByRole("button", { name: "Add a subscription", exact: true }).click();
+    const { label } = await setupAction(page, deviceId, DEVICE_SETUP_ACTIONS.subscription);
+    await page.getByRole("button", { name: label, exact: true }).click();
     await expect(page.getByRole("tab", { name: "Intelligence", exact: true })).toHaveAttribute(
       "aria-selected",
       "true",
@@ -176,9 +196,12 @@ test("a computer that joins gets its setup card, whose buttons open each step, r
     // The card is back, revised: the subscription row done, the others open.
     await expect(shownCard(page, CARD)).toBeVisible();
     expect(await rows(page)).toEqual(["subscription:true", "github:false", "project:false"]);
-    await expect(page.getByRole("button", { name: "Add a subscription", exact: true })).toHaveCount(
-      0,
+    // The revised card no longer asks for it: its action is gone, and so is
+    // the button that drew its words.
+    expect((await setupCard(page, deviceId)).actions.map((action) => action.id)).not.toContain(
+      DEVICE_SETUP_ACTIONS.subscription,
     );
+    await expect(page.getByRole("button", { name: label, exact: true })).toHaveCount(0);
   });
 
   await test.step("Sign in to GitHub opens Projects with the computer's sign-in started; its code approved marks the row done", async () => {

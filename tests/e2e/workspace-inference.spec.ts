@@ -28,7 +28,7 @@ import {
   UNREGISTER_REPO_PROMPT_MARKER,
   workspaceInference,
 } from "./scenarios/workspaceInference";
-import { cardMeta, shownCard } from "./stack";
+import { cardMeta, expectNoCard, shownCard } from "./stack";
 import { focusOn, pressKey } from "./windowKeys";
 
 /**
@@ -115,6 +115,18 @@ test("an ambiguous request yields one clarifying card whose answer reaches First
   await expect(page.getByText(MOCK_FM_CHAT_TEXT)).toHaveCount(0);
 });
 
+/**
+ * No project picker is up: no card asks which project, and no card offers a
+ * project by its name as a choice, the way the which-project card does.
+ */
+async function expectNoProjectPicker(page: Page, projects: readonly string[]): Promise<void> {
+  await expectNoCard(page, MOCK_WHICH_PROJECT_TITLE);
+  const offered = (await page.evaluate(() => window.infinitary.cards.list())).flatMap((card) =>
+    card.actions.map((action) => action.label),
+  );
+  for (const project of projects) expect(offered).not.toContain(project);
+}
+
 /** Repo beta's standing autonomy flag, returning its id. */
 async function setBetaAutonomy(page: Page, autonomy: boolean): Promise<string> {
   const name = repoBeta.split("/").at(-1) as string;
@@ -131,9 +143,10 @@ async function setBetaAutonomy(page: Page, autonomy: boolean): Promise<string> {
 
 test("a request naming repo B lands in repo B with no picker anywhere, and landing it cleans everything up (Q5)", async () => {
   const { page } = launched;
+  const alphaName = repoAlpha.split("/").at(-1) as string;
   const betaName = repoBeta.split("/").at(-1) as string;
   await test.step("a request naming repo B lands in repo B with no picker anywhere", async () => {
-    await expect(page.getByRole("button", { name: /Task repository/ })).toHaveCount(0);
+    await expectNoProjectPicker(page, [alphaName, betaName]);
 
     const input = promptInput(page);
     await input.click();
@@ -144,6 +157,9 @@ test("a request naming repo B lands in repo B with no picker anywhere, and landi
     await expect(startedLine(page, key)).toBeVisible({ timeout: 30_000 });
     await expect(reportLine(page, key)).toBeVisible({ timeout: 30_000 });
     await waitForFirstmateIdle(page, 20_000);
+    // No picker anywhere: no card asks which project, and no card offers a
+    // project as a choice, the way the which-project card above does.
+    await expectNoProjectPicker(page, [alphaName, betaName]);
 
     // The worktree landed on repo B; repo A stayed untouched.
     const betaTrees = execFileSync("git", ["-C", repoBeta, "worktree", "list"]).toString();

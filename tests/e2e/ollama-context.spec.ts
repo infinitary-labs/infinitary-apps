@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, test } from "@playwright/test";
 import { FIRSTMATE_FAILURE_TITLE } from "../../src/core/orchestrator/hostCards";
 import {
   DEFAULT_LOCAL_ORCHESTRATOR_SETTING,
@@ -12,6 +12,22 @@ import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
 import { mockProviderOverrideModelsJson } from "./mockModels";
 import { expectNoCard, noteDone, shownCard } from "./stack";
+
+/**
+ * The hidden alias never reaches a person: no name the app asked the
+ * server to create shows, nor the prefix those names share, read from the
+ * names themselves (`aliasFor` in ollamaProfile.ts) up to their content hash.
+ */
+async function expectNoAliasName(region: Locator, asked: readonly string[]): Promise<void> {
+  expect(asked).not.toEqual([]);
+  for (const alias of asked) {
+    const name = alias.split(":")[0] ?? alias;
+    const prefix = name.slice(0, name.lastIndexOf("-") + 1);
+    expect(prefix).not.toBe("");
+    await expect(region).not.toContainText(name);
+    await expect(region).not.toContainText(prefix);
+  }
+}
 
 test("selecting a base Ollama model creates a hidden alias and serves a visible card", async () => {
   const model = await startOllamaFixture((request) =>
@@ -62,7 +78,7 @@ test("selecting a base Ollama model creates a hidden alias and serves a visible 
         problem: null,
       }),
     );
-    await expect(app.page.locator("body")).not.toContainText("fm3000-context-");
+    await expectNoAliasName(app.page.locator("body"), model.asked);
   } finally {
     await app.close();
     await model.close();
@@ -204,7 +220,7 @@ for (const mode of [
                 ? "unreadable action"
                 : "without showing an answer",
       );
-      await expect(body.locator("body")).not.toContainText("fm3000-context-");
+      await expectNoAliasName(body.locator("body"), model.asked);
     } finally {
       await app.close();
       await model.close();

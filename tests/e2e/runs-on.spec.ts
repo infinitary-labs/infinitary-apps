@@ -5,11 +5,13 @@ import { join } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { joinHome } from "../../src/core/helper/join";
 import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
+import { NOTHING_SPAWNED } from "../../src/core/pi/crewTools";
 import { catalogRefreshesSettled } from "../../src/core/pi/modelRuntime";
 import { HERE } from "../../src/shared/deviceNames";
 import { runsHereOnly, runsOnLine } from "../../src/shared/repos";
 import { signInPlace } from "../../src/shared/signIns";
 import { RUNS_ON_SOURCE_WORDS } from "../../src/shared/taskPolicies";
+import { resolveWorkComputer } from "../../src/shared/workComputer";
 import { scratchDir } from "../helpers/scratchDirs";
 import type { ScriptedCall } from "../helpers/scriptedCalls";
 import { waitForFirstmateIdle } from "./crew";
@@ -303,6 +305,16 @@ test("asking Firstmate sets where one filed task runs, its record says so, and i
   });
 });
 
+/** The words a refusing owner throws, so a journey checks its answer against them. */
+function refusalOf(refuse: () => unknown): string {
+  try {
+    refuse();
+  } catch (error) {
+    if (error instanceof Error && error.message) return error.message;
+  }
+  throw new Error("The owner refused nothing");
+}
+
 // INF-1582: a first mate names a work computer without a failed call and a second lookup.
 test("computer names place projects, filed tasks and new work using stable device IDs", async () => {
   const { app, page, deviceId } = await homeAndComputer();
@@ -318,7 +330,7 @@ test("computer names place projects, filed tasks and new work using stable devic
       },
     },
   ]);
-  expect(projectResult).not.toContain("No computer");
+  expect(projectResult).not.toContain(refusalOf(() => resolveWorkComputer("no such computer", [])));
   expect(
     (await page.evaluate(() => window.infinitary.repos.list())).find((row) => row.id === repo.id)
       ?.runsOn,
@@ -349,7 +361,7 @@ test("computer names place projects, filed tasks and new work using stable devic
       },
     },
   ]);
-  expect(spawned).not.toContain("Nothing was spawned");
+  expect(spawned).not.toContain(NOTHING_SPAWNED);
   const { tasks } = await page.evaluate(() => window.infinitary.tasks.board());
   const header = tasks.find((task) => task.title === "Named computer header");
   expect(header).toBeDefined();

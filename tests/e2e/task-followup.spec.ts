@@ -3,8 +3,10 @@ import {
   FOLLOWUP_PROVENANCE_OPENING,
   renderAnswerShapeSection,
 } from "../../src/core/orchestrator/intentBrief";
+import { REPORT_WORDS } from "../../src/core/orchestrator/reportWakes";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { taskReadTable } from "../../src/core/storage/taskRecordFields";
+import { parseServedInput } from "../../src/shared/servedFrame";
 import { waitForFirstmateIdle } from "./crew";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -29,6 +31,22 @@ import {
   MOCK_PROGRESS_TEXT,
 } from "./scenarios/fileFollowup";
 import { SPAWNED_TASK_START } from "./taskTimeline";
+
+/**
+ * The words a report wake puts between the crewmate and its task, read from
+ * the report's own wording (`REPORT_WORDS.report`).
+ */
+const REPORTED_ON_TASK = (() => {
+  const crewmate = "crewmate-named-here";
+  const task = "task-named-here";
+  const text = REPORT_WORDS.report(
+    { kind: "report", crewmate, task: { id: task, title: "" }, excerpt: "", filed: [], cards: [] },
+    { ways: [], text: "" },
+  );
+  const words = text.slice(text.indexOf(crewmate) + crewmate.length, text.indexOf(task));
+  if (!words.trim()) throw new Error("A report wake names its crewmate and task in no words");
+  return words;
+})();
 
 /**
  * The task graph (task-system P2) from the crewmate's side: a crewmate on
@@ -184,10 +202,27 @@ test("a crewmate's follow-up is its own task, not a child, and the Firstmate hea
       { timeout: 30_000 },
     )
     .toBe(true);
+  // No wake of its own: every first mate turn whose wake names the follow-up
+  // is the crewmate's report, worded by its owner (`REPORT_WORDS.report`).
   const requests = mockProvider?.requestBodies() ?? [];
-  expect(requests.some((body) => body.includes("filed a follow-up while working on task"))).toBe(
-    false,
-  );
+  const followupWakes = requests
+    .filter((body) => body.includes(FIRSTMATE_PERSONA))
+    .map((body) => {
+      // The turn's own input, less the context snapshot that lists the board.
+      const input = providerMessages(body)
+        .filter((message) => message.role === "user")
+        .at(-1);
+      const segments = parseServedInput(input?.text ?? "");
+      return segments
+        ? segments
+            .filter((segment) => segment.kind !== "context")
+            .map((segment) => segment.body)
+            .join("\n")
+        : (input?.text ?? "");
+    })
+    .filter((wake) => wake.includes(MOCK_FOLLOWUP_TITLE));
+  expect(followupWakes).not.toEqual([]);
+  for (const wake of followupWakes) expect(wake).toContain(REPORTED_ON_TASK);
   // The Firstmate's next turn counts the follow-up in its project's
   // backlog, waiting on request; the context lists only started work, and
   // the tasks read names where it was found (INF-1712).

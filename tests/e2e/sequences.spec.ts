@@ -1,5 +1,8 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
+import { renderBasisSection } from "../../src/core/orchestrator/intentBrief";
+import { droppedLine, settlingText } from "../../src/core/orchestrator/settleWords";
+import { DISCARDED_LINE } from "../../src/core/tasks/taskFeed";
 import { planSkippedText } from "../../src/shared/routingPolicy";
 import type { TaskDetail, TaskView } from "../../src/shared/tasks";
 import { MERGE_WORDS } from "../../src/shared/vocabulary";
@@ -69,6 +72,25 @@ import {
   sequences,
 } from "./scenarios/sequences";
 import { cardReply, showCard, shownCard, shownCardFrame, shownEntry } from "./stack";
+
+/**
+ * The basis section's sentences that name work to start from, each up to
+ * the ref it names (`renderBasisSection`): a live branch, a kept ref, or
+ * starting work copied in. A brief grounded in an answer names none.
+ */
+const START_FROM_WORDS = (["branch", "keptRef", "startingRef"] as const).map((field) => {
+  const ref = "ref-this-check-names";
+  const line =
+    renderBasisSection({ key: "K", title: "T", [field]: ref })
+      .split("\n")
+      .find((text) => text.includes(ref)) ?? "";
+  const words = line.slice(0, Math.max(0, line.indexOf(ref)));
+  if (!words) throw new Error(`The basis section names no ${field}`);
+  return words;
+});
+
+/** What a discard or a drop says on the feed (`taskFeed`, `settleWords`), in any case. */
+const DISCARD_WORDS = [DISCARDED_LINE, settlingText("discard", undefined, false), droppedLine("")];
 
 /**
  * Sequences (docs/sequences.md, contracts v4.6 and v4.19): an ask of more
@@ -283,8 +305,7 @@ test("a feature ask: plan, the captain's choice, the grounded implement step, an
   expect(relayed).toBeGreaterThan(words);
   // The plan step was an answer: its scratch copy is gone and nothing was
   // saved from it, so the brief names no working copy to start from.
-  expect(brief).not.toContain("Its work is on branch");
-  expect(brief).not.toContain("its work is saved in the repository");
+  for (const words of START_FROM_WORDS) expect(brief).not.toContain(words);
 
   // The implement step's completion card; the captain puts the work in.
   await cardShown(page, SEQ_IMPLEMENT_CARD_TITLE);
@@ -501,7 +522,7 @@ test("a bug that reproduces: the fix starts on the reproduction, and the reprodu
   expect(brief).toContain(`grounded in ${reproduce.key}`);
   expect(brief).toContain(SEQ_REPRODUCED_YES);
   // An answer's scratch copy holds nothing of its answer: no branch is named.
-  expect(brief).not.toContain("Its work is on branch");
+  for (const words of START_FROM_WORDS) expect(brief).not.toContain(words);
 
   // ...and the reproduce step, a step the Firstmate ran, closes as answered:
   // its answer was used, never thrown away.
@@ -513,7 +534,8 @@ test("a bug that reproduces: the fix starts on the reproduction, and the reprodu
   await expect(statusLine(page, reproduce.key)).toContainText(fix.key, { timeout: 30_000 });
   const feed = await page.evaluate(() => window.infinitary.feed.recent());
   for (const line of feed.filter((entry) => entry.text.includes(SEQ_BUG_YES.reproduce))) {
-    expect(line.text).not.toMatch(/discard/i);
+    for (const words of DISCARD_WORDS)
+      expect(line.text.toLowerCase()).not.toContain(words.toLowerCase());
     expect(line.kind).not.toBe("warn");
   }
   // Closing state above proves the answer was retained; a pinned brief may
@@ -549,7 +571,8 @@ test("a check the build waits on closes answered into the build, and the build i
   await expect(statusLine(page, check.key)).toContainText(build.key, { timeout: 30_000 });
   const feed = await page.evaluate(() => window.infinitary.feed.recent());
   for (const line of feed.filter((entry) => entry.text.includes(SEQ_CHECKED.check))) {
-    expect(line.text).not.toMatch(/discard/i);
+    for (const words of DISCARD_WORDS)
+      expect(line.text.toLowerCase()).not.toContain(words.toLowerCase());
     expect(line.kind).not.toBe("warn");
   }
   // The wait cleared as done: the build carries on and nothing holds its merge.

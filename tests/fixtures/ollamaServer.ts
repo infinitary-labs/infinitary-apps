@@ -32,6 +32,8 @@ export async function startOllamaFixture(
 ) {
   const requests: NativeRequest[] = [];
   const aliases = new Map<string, number>();
+  /** Every alias the app asked to create, in order, refused ones included. */
+  const asked: string[] = [];
   let denyCreate = false;
   let allocated = "";
   const server = createServer(async (req, res) => {
@@ -63,6 +65,7 @@ export async function startOllamaFixture(
           : send({ error: "missing model" }, 404);
       }
       case "/api/create": {
+        asked.push(body.model);
         if (denyCreate) return send({ error: "creation forbidden" }, 403);
         aliases.set(body.model, body.parameters.num_ctx);
         return send({ status: "success" });
@@ -101,6 +104,7 @@ export async function startOllamaFixture(
     port,
     requests,
     aliases,
+    asked,
     denyCreate: () => {
       denyCreate = true;
     },

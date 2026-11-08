@@ -503,9 +503,10 @@ test("a computer's Claude row says why its allowance is not read there when macO
   await expect(claudeRow).toHaveCount(1);
 
   // Never "reading" with no end: the row says why, and offers no Retry that
-  // would have to ask on a screen nobody may be at.
+  // would have to ask on a screen nobody may be at: its one button is its menu.
   await expect(claudeRow).toHaveAttribute("data-row-kind", "unavailable");
-  await expect(claudeRow.getByRole("button", { name: "Retry", exact: true })).toHaveCount(0);
+  await expect(claudeRow.getByRole("button")).toHaveCount(1);
+  await expect(claudeRow.getByRole("button", { name: /actions$/ })).toHaveCount(1);
   expect(saved.queries.filter((query) => query.interactive === true)).toEqual([]);
 
   // That login was there before Firstmate: Disconnect leaves it, and the feed says so.

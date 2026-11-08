@@ -4,7 +4,7 @@ import { userInfo } from "node:os";
 import { dirname, join } from "node:path";
 import { ownNetworkNames } from "@core/devices/computerName";
 import { OWN_KEY_COMMENT } from "@core/devices/ownKey";
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, test } from "@playwright/test";
 import { deviceJoinedLine, deviceLabel, PAIRING_LINK_PREFIX } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import { nearbyMacsWords } from "@shared/nearbyMacs";
@@ -27,6 +27,20 @@ import { focusOn, pressKey, typeInto } from "./windowKeys";
  * its check line, its count, Macs nearby, the password asked once, and a Mac
  * another first mate uses.
  */
+
+/**
+ * The check aside says only its owner's words (`remoteLoginWords.confirmQuestion`):
+ * the question, what to compare and the check line, beside its two buttons.
+ * Nothing else is there, such as a step to take in Terminal.
+ */
+async function expectOnlyCheckWords(check: Locator, address: string): Promise<void> {
+  const line = (await check.locator("[data-device-check-line]").textContent()) ?? "";
+  expect(line).not.toBe("");
+  const buttons = check.getByRole("button");
+  await expect(buttons).toHaveCount(2);
+  const words = [...remoteLoginWords.confirmQuestion(address), line];
+  expect(await check.textContent()).toBe([...words, ...(await buttons.allTextContents())].join(""));
+}
 
 test("the captain asks Firstmate to add a Mac at its address: Devices reaches it over SSH and sets it up, and a refusal says what to do", async () => {
   test.skip(!SSH_SERVER_AVAILABLE, "needs the Mac's own SSH server and client");
@@ -67,7 +81,7 @@ test("the captain asks Firstmate to add a Mac at its address: Devices reaches it
     // The first reach shows the check line and sends nothing until this is the Mac.
     const check = page.locator("[data-device-confirm-question]");
     await expect(check).toBeVisible();
-    await expect(check).not.toContainText("Terminal");
+    await expectOnlyCheckWords(check, sshd.address);
     await check.getByRole("button", { name: `This is the ${COMPUTER.one}`, exact: true }).click();
     // It joins and stands in the list, named as it joined.
     await expect
@@ -291,7 +305,7 @@ test("the first reach shows the check line and sends nothing until this is the M
     await expect(check).toContainText(asked);
     await expect(check).toContainText(compare);
     await expect(check.locator("[data-device-check-line]")).toContainText("ED25519 SHA256:");
-    await expect(check).not.toContainText("Terminal");
+    await expectOnlyCheckWords(check, sshd.address);
     await expect(page.locator("[data-device-adding]")).toHaveCount(0);
     const cancel = check.getByRole("button", { name: "Cancel", exact: true });
     const yes = check.getByRole("button", { name: `This is the ${COMPUTER.one}`, exact: true });

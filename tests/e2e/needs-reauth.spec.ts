@@ -1,5 +1,6 @@
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { firstmatePauseTitle } from "../../src/core/orchestrator/hostCards";
 import { KEYCHAIN_VALUE_FAILURE_DETAIL, type QuotaProviderView } from "../../src/shared/quota";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountRegistry, seedAccountStore } from "./accountFixtures";
@@ -90,12 +91,18 @@ test("a locked store says so, offers Retry, and never asks for Always Allow", as
     await expect(row.getByText(KEYCHAIN_VALUE_FAILURE_DETAIL.keychain_locked)).toBeVisible({
       timeout: 15_000,
     });
-    await expect(row.getByText(/Always Allow/)).toHaveCount(0);
+    // No other failure's words are said, among them every one a grant fixes
+    // that asks for Always Allow.
+    const otherFailures = Object.values(KEYCHAIN_VALUE_FAILURE_DETAIL).filter(
+      (detail) => detail !== KEYCHAIN_VALUE_FAILURE_DETAIL.keychain_locked,
+    );
+    for (const detail of otherFailures) await expect(row.getByText(detail)).toHaveCount(0);
     await expect(row.getByText(/keychain/i)).toHaveCount(0);
     await expect(row.getByRole("button", { name: "Retry" })).toBeVisible();
-    await expect(row.getByRole("button", { name: "Sign in" })).toHaveCount(0);
+    // No Sign in beside Retry: Retry and the row's menu are its only buttons.
+    await expect(row.getByRole("button")).toHaveCount(2);
     const titles = await cardTitles(app.page);
-    expect(titles.some((title) => /needs you to sign in again/i.test(title))).toBe(false);
+    expect(titles).not.toContain(firstmatePauseTitle("signed_out", "Claude"));
     await row.screenshot({ path: test.info().outputPath("dark-settings-claude-locked-store.png") });
   } finally {
     await app.close();

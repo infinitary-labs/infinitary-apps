@@ -1,6 +1,7 @@
 import { createServer, type Server } from "node:http";
 import { expect, type Page, test } from "@playwright/test";
 import {
+  firstmatePauseCard,
   firstmatePauseTitle,
   RECHECK_ALLOWANCE_LABEL,
 } from "../../src/core/orchestrator/hostCards";
@@ -152,8 +153,20 @@ test("a refusal pauses the seat on its own card, and Try Claude again answers th
   await expect(shownCard(page, title)).toBeVisible({ timeout: 45_000 });
   const body = cardBody(page, title);
   await expect(feedLine(page, seatPausedLine("refused", `${title}.`, "Claude"))).toBeVisible();
-  // Signing in again does not clear a refusal, so the card never says it does.
-  await expect(body.getByText(/sign in/i)).toHaveCount(0);
+  // Signing in again does not clear a refusal, so the card never says it
+  // does: none of a sign-out pause card's own words are on it.
+  const signedOut = firstmatePauseCard("signed-out", {
+    pause: "signed_out",
+    providerName: "Claude",
+    accountId: "claude",
+    body: "",
+  });
+  const signIn = signedOut.actions?.[0]?.label ?? "";
+  expect(signIn).not.toBe("");
+  // getByText with words matches them anywhere, in any case.
+  await expect(body.getByText(signIn)).toHaveCount(0);
+  await expect(body.getByText(signedOutSentence("").trim())).toHaveCount(0);
+  await expect(body.getByText(signedOut.title)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Try Claude again" })).toBeVisible();
   // A designed path, not a problem: no failure line beside the pause.
   await expect(failureLines(page)).toHaveCount(0);

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { WELCOME_TITLE } from "@shared/welcome";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
+import { placeCustomApiFailure } from "../../src/renderer/src/accounts/customApiFailures";
 import { customApiCaFixture } from "../helpers/customApiCaFixture";
 import { scratchDir } from "../helpers/scratchDirs";
 import {
@@ -578,10 +579,14 @@ for (const mode of [
     const models = [{ id: "operator-model", context: 200000, output: 4096 }];
     if (plainHttp) {
       // A metadata address is refused at the address, before anything is sent.
-      await fillCustomApi(page, { name, address: "http://169.254.169.254/v1", models });
+      const metadataAddress = "http://169.254.169.254/v1";
+      await fillCustomApi(page, { name, address: metadataAddress, models });
       expect(await saveCustomApi(page)).toBe("failed");
-      await expect(f.error("address")).toBeVisible();
-      await expect(f.error("address")).not.toContainText("remote method");
+      // Its words are the refused destination's, whole: nothing of the
+      // request that carried the refusal reads through.
+      await expect(f.error("address")).toHaveText(
+        placeCustomApiFailure("destination", { address: metadataAddress, stage: "address" }).text,
+      );
       expect(api.requests).toHaveLength(0);
       await f.row("operator-model").getByRole("button", { name: "Remove operator-model" }).click();
     }

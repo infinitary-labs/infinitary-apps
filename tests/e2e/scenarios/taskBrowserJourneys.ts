@@ -653,6 +653,8 @@ function taskBrowserTakeStep(body: string): ScriptedCall[] | undefined {
 export const TASK_BROWSER_FENCE_MARKER = "fence the page at ";
 export const MOCK_FENCE_A_REPORT = "Task A's page said";
 export const MOCK_FENCE_B_REPORT = "Task B's browser said";
+/** The card task B asks to take over the other task's site with, which the host refuses. */
+export const MOCK_FENCE_B_HANDOFF_TITLE = "Sign in to the other task's page";
 
 /** The fence journey's next scripted step, from the browser answers so far. */
 function taskBrowserFenceStep(body: string): ScriptedCall[] | undefined {
@@ -685,7 +687,7 @@ function taskBrowserFenceStep(body: string): ScriptedCall[] | undefined {
           name: "emit_card",
           args: {
             id: "other-task-sign-in",
-            title: "Sign in to the other task's page",
+            title: MOCK_FENCE_B_HANDOFF_TITLE,
             body: "<p>The other page needs your sign-in.</p><p>I paused my browser for you.</p>",
             browser_handoff: {
               site: new URL(other).host,

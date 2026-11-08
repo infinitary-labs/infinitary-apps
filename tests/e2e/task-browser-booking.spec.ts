@@ -10,6 +10,7 @@ import {
   BROWSER_RETURNED_OPENING,
 } from "../../src/core/orchestrator/captainWakes";
 import { CREWMATE_BROWSER_LINE } from "../../src/core/pi/piResources";
+import { CardRefusedError, labeledActions } from "../../src/core/session/tools";
 import {
   DRIVER_WORDS,
   RETURN_CONTROL_LABEL,
@@ -85,6 +86,21 @@ import {
   typeOnPage,
   browserView as view,
 } from "./taskBrowser";
+
+/**
+ * The words every card refusal opens with, read from one the host words
+ * (`labeledActions` refusing an action with no label): a crewmate's answer
+ * that carries them had a card refused.
+ */
+const CARD_REFUSED = (() => {
+  try {
+    labeledActions([{ id: "unlabeled" }]);
+  } catch (error) {
+    if (error instanceof CardRefusedError && error.message.endsWith(error.why))
+      return error.message.slice(0, -error.why.length);
+  }
+  throw new Error("A card with an unlabeled action was not refused");
+})();
 
 /**
  * A final submission in a task's browser (docs/task-browser.md, "A final
@@ -370,7 +386,7 @@ for (const runtime of RUNTIMES) {
         const task =
           await test.step("it compares the fares and asks which to prepare, the search a click away", async () => {
             const current = await reported(detail, MOCK_FARES_ASKED_REPORT);
-            expect(current.outcome).not.toContain("Card refused");
+            expect(current.outcome).not.toContain(CARD_REFUSED);
             expect(await cardTitled(page, current.id, MOCK_FARES_CARD_TITLE)).toMatchObject({
               attachment: { kind: "browser", label: MOCK_FARES_BUTTON, taskId: current.id },
             });
@@ -385,7 +401,7 @@ for (const runtime of RUNTIMES) {
 
         await test.step("the airline needs a sign-in: the crewmate asks, and closing its card leaves the request reachable", async () => {
           const current = await reported(detail, MOCK_AIRLINE_SIGN_IN_REPORT);
-          expect(current.outcome).not.toContain("Card refused");
+          expect(current.outcome).not.toContain(CARD_REFUSED);
           expect(current.browser).toMatchObject({
             state: "open",
             site: airline.site,
@@ -450,7 +466,7 @@ for (const runtime of RUNTIMES) {
             expect(current.outcome).toContain(
               `The total is ${PAY_TOTAL}; the search said ${SEARCH_FARE}.`,
             );
-            expect(current.outcome).not.toContain("Card refused");
+            expect(current.outcome).not.toContain(CARD_REFUSED);
             // One wake for the one return.
             const last = crewmateCalls(launched, title).at(-1) ?? "{}";
             expect(
@@ -512,7 +528,7 @@ for (const runtime of RUNTIMES) {
         await test.step("handed back, it reads the confirmation and keeps only the reference", async () => {
           const current = await reported(detail, MOCK_BOOKED_REPORT_PREFIX);
           expect(current.outcome).toContain(`reference ${BOOKING_REFERENCE}`);
-          expect(current.outcome).not.toContain("Card refused");
+          expect(current.outcome).not.toContain(CARD_REFUSED);
           const note = await cardTitled(page, current.id, bookedNoteTitle(BOOKING_REFERENCE));
           expect(note?.actions).toEqual([]);
           expect(note?.attachment).toMatchObject({ kind: "browser", label: MOCK_BOOKED_BUTTON });
@@ -563,7 +579,7 @@ for (const runtime of RUNTIMES) {
         const task =
           await test.step("it prepares the payment and stops on a review card", async () => {
             const current = await reported(detail, MOCK_UNPAID_ASKED_REPORT);
-            expect(current.outcome).not.toContain("Card refused");
+            expect(current.outcome).not.toContain(CARD_REFUSED);
             expect(current.browser).toMatchObject({ control: "waiting", title: "Review and pay" });
             return current;
           });
@@ -588,7 +604,7 @@ for (const runtime of RUNTIMES) {
 
         await test.step("its fresh look knows each field is filled, and nothing he typed reaches a model call, a file or a picture", async () => {
           const current = await reported(detail, MOCK_UNPAID_REPORT_PREFIX);
-          expect(current.outcome).not.toContain("Card refused");
+          expect(current.outcome).not.toContain(CARD_REFUSED);
           const evidence = process.env.INFINITARY_TASK_EVIDENCE_DIR;
           if (evidence) {
             writeFileSync(
@@ -653,7 +669,7 @@ for (const runtime of RUNTIMES) {
         const task =
           await test.step("it prepares the payment and stops on a review card", async () => {
             const current = await reported(detail, MOCK_LOST_ASKED_REPORT);
-            expect(current.outcome).not.toContain("Card refused");
+            expect(current.outcome).not.toContain(CARD_REFUSED);
             expect(current.browser).toMatchObject({ control: "waiting", title: "Review and pay" });
             expect(airline.payments).toEqual([]);
             return current;
@@ -741,7 +757,7 @@ for (const runtime of RUNTIMES) {
           expect(current.outcome).toContain(
             'After the restart my browser was gone: "No browser is open for this task.',
           );
-          expect(current.outcome).not.toContain("Card refused");
+          expect(current.outcome).not.toContain(CARD_REFUSED);
           expect(airline.payments).toHaveLength(1);
           expect(servedBy(app, title, runtime)).toBe(true);
           const card = await cardTitled(app.page, current.id, unknownCardTitle(airline.site));
@@ -780,7 +796,7 @@ for (const runtime of RUNTIMES) {
           );
           // Its crewmate hears the choice and that its browser was gone, once, and asks anew.
           const current = await reported(detail, MOCK_LOST_ASKED_AGAIN_REPORT, 120_000);
-          expect(current.outcome).not.toContain("Card refused");
+          expect(current.outcome).not.toContain(CARD_REFUSED);
           const last = crewmateCalls(app, title).at(-1) ?? "{}";
           expect(
             providerMessages(last).filter(

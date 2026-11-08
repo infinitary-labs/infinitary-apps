@@ -23,6 +23,7 @@ import {
   MOCK_BROWSER_READING_PICTURE,
   MOCK_BROWSER_READING_REPORT_PREFIX,
   MOCK_FENCE_A_REPORT,
+  MOCK_FENCE_B_HANDOFF_TITLE,
   MOCK_FENCE_B_REPORT,
   TASK_BROWSER_FENCE_MARKER,
   TASK_BROWSER_LONG_LAST_WORDS,
@@ -491,7 +492,7 @@ test("one task's browser reaches nothing of another's, nor a private address a r
       );
       expect(
         (await page.evaluate(() => window.infinitary.cards.list())).some(
-          (card) => card.title === "Sign in to the other task's page",
+          (card) => card.title === MOCK_FENCE_B_HANDOFF_TITLE,
         ),
       ).toBe(false);
       expect(task.browser).not.toHaveProperty("control");

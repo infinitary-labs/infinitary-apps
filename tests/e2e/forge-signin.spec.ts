@@ -3,7 +3,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { cardLabelKey, parsePlainLabelRows } from "../../scripts/interaction-metrics";
-import { presentationCommitMessage } from "../../src/core/forge";
+import { presentationCommitMessage, presentationMarkdown } from "../../src/core/forge";
 import { MERGE_WRITE_REFUSAL } from "../../src/core/forge/apiWriteGuard";
 import { SYNC_CAP_MS } from "../../src/core/jobs/jobManager";
 import { PERSONAL_WORKSPACE_NAME } from "../../src/core/paths";
@@ -617,8 +617,17 @@ test("a crewmate opens its change on GitHub with its own tools, and the captain'
   const published = presentation?.published?.region ?? "";
   expect(published).toContain(`- [x] ${MOCK_GITHUB_STORY.checked[0]?.check}`);
   expect(published).not.toContain(sentUp);
-  expect(published).not.toContain("Checks are pending");
-  expect(published).not.toContain("Required actions");
+  // A version-two story publishes in two tiers, never the version-one form:
+  // no paragraph only that form writes (its checks line, its required
+  // actions and not-done headings) is in the description.
+  const story = presentation?.revisions.at(-1);
+  if (!story) throw new Error("No saved story revision");
+  const tiered = presentationMarkdown(story, new Map(), "pending");
+  const legacyOnly = presentationMarkdown({ ...story, version: 1 }, new Map(), "pending")
+    .split("\n\n")
+    .filter((paragraph) => paragraph.trim() && !tiered.includes(paragraph));
+  expect(legacyOnly).not.toEqual([]);
+  for (const paragraph of legacyOnly) expect(published).not.toContain(paragraph);
   await expect(frame.locator("li").last()).toContainText(
     MOCK_GITHUB_STORY.checked[0]?.result ?? "",
   );

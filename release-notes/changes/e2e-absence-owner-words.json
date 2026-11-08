@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "e2e-absence-owner-words",
+      "reason": "Journeys that checked an absence by typing the words now read those words from their owner; only tests and the typecheck's file list change, so nothing a person sees changes."
+    }
+  ]
+}

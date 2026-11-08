@@ -89,9 +89,12 @@ test("Connect Claude on a machine with no account is the first-run chip", async 
       timeout: 15_000,
     });
     await expect(app.page.getByText(CLAUDE_FIRST_RUN_TEXT)).toHaveCount(0);
-    await expect(app.page.getByRole("button", { name: "Add another Claude account" })).toHaveCount(
-      0,
-    );
+    // Every Claude chip is that first-run chip, never the one that adds
+    // another account: the chip is found by its provider, not its words.
+    const claudeChips = app.page.locator('[data-connect-provider="anthropic-claude"]');
+    await expect(claudeChips).not.toHaveCount(0);
+    for (const chip of await claudeChips.all())
+      await expect(chip).toHaveAccessibleName("Connect Claude");
     // Claude can run the Firstmate, but not without a login: picking a
     // Claude model says so, and pins nothing.
     const refusal = await app.page.evaluate(

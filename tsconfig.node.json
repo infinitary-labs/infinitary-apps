@@ -62,6 +62,7 @@
     "src/renderer/src/design/cards/pictureViewerWords.ts",
     // The Intelligence tab's words and the Models board's drop plans; their e2e reads them here.
     "src/renderer/src/settings/subscriptionsWords.ts",
+    "src/renderer/src/accounts/customApiFailures.ts",
     "src/renderer/src/settings/modelsWords.ts",
     "src/renderer/src/settings/reasoningWords.ts",
     "src/renderer/src/settings/levelDrops.ts",

@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import {
   FIRSTMATE_FAILURE_TITLE,
   firstmatePauseTitle,
+  PROVIDER_SIGN_IN_TITLE,
 } from "../../src/core/orchestrator/hostCards";
 import { CLAUDE_FIRST_RUN_TEXT } from "../../src/renderer/src/settings/subscriptionsWords";
 import {
@@ -83,15 +84,18 @@ test("a signed-in Claude account on a Mac with no Claude Code is not ready, not 
     const row = app.page.locator(`[data-account-row="${CLAUDE_PERSONAL}"]`);
     await expect(row.getByText(CLAUDE_CLIENT_MISSING_TEXT)).toBeVisible({ timeout: 15_000 });
     await expect(row.getByRole("img", { name: "not ready" })).toBeVisible();
-    // Never a sign-out: no sign-in affordance, no error copy, no meter.
-    await expect(row.getByRole("button", { name: "Sign in" })).toHaveCount(0);
-    await expect(row.getByText("Sign in again.")).toHaveCount(0);
+    // Never a sign-out: no hold, no meter, and no button beside the words.
+    // Every sign-out state draws a Sign in button beside its words, so a row
+    // whose one button is its menu shows no sign-out and no Retry.
+    await expect(row).not.toHaveAttribute("data-hold", /.+/);
     await expect(row.getByText(CLAUDE_FIRST_RUN_TEXT)).toHaveCount(0);
     await expect(row.getByTestId("quota-micro-meter")).toHaveCount(0);
+    await expect(row.getByRole("button")).toHaveCount(1);
     const titles = await app.page.evaluate(async () =>
       (await window.infinitary.cards.list()).map((card) => card.title),
     );
-    expect(titles.some((title) => /sign in again/i.test(title))).toBe(false);
+    expect(titles).not.toContain(firstmatePauseTitle("signed_out", "Claude"));
+    expect(titles).not.toContain(PROVIDER_SIGN_IN_TITLE);
 
     // The account serves no model: a spawn could only fail.
     const available = await app.page.evaluate(() => window.infinitary.models.available());
@@ -131,7 +135,8 @@ test("a Claude Code older than the SDK's own is named with both versions", async
     expect(floor).toBeTruthy();
     expect(text).toBe(claudeClientOutdatedText("1.0.0", floor ?? ""));
     await expect(row.getByRole("img", { name: "not ready" })).toBeVisible();
-    await expect(row.getByRole("button", { name: "Sign in" })).toHaveCount(0);
+    await expect(row).not.toHaveAttribute("data-hold", /.+/);
+    await expect(row.getByRole("button")).toHaveCount(1);
     const available = await app.page.evaluate(() => window.infinitary.models.available());
     expect(
       available.filter((model: { provider: string }) => model.provider === "anthropic-claude"),

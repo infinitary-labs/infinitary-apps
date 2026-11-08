@@ -370,7 +370,10 @@ test("a computer on another version of Firstmate: Devices says so, Update brings
     run({ appVersion: thisVersion });
     await expect(row).not.toHaveAttribute("data-other-version", /.+/);
     await expect(row).toContainText(SEEN_WORDS.now);
-    await expect(row.getByRole("button", { name: "Update Running as Builder" })).toHaveCount(0);
+    // Its Update button, named as the row names it (`Update ${deviceLabel}`),
+    // is gone on the same version; it comes back below for one too old.
+    const update = row.getByRole("button", { name: `Update ${deviceLabel(builder)}`, exact: true });
+    await expect(update).toHaveCount(0);
     const devices = await page.evaluate(() => window.infinitary.devices.list());
     expect(devices.find((device) => device.id === deviceId)?.otherVersion).toBeUndefined();
     // The card is down, and it stays down.
@@ -393,7 +396,7 @@ test("a computer on another version of Firstmate: Devices says so, Update brings
       }),
     );
     await expect(row).toContainText(NO_NEW_WORK);
-    await row.getByRole("button", { name: "Update Running as Builder", exact: true }).click();
+    await update.click();
     await expect(
       page.locator('[data-panel-state="open"][data-panel-holds="command"]'),
     ).toContainText(PANEL_WORDS["user-command"].say[0]);

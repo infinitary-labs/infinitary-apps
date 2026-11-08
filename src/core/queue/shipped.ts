@@ -37,9 +37,11 @@ type ShippedSource = (typeof SHIPPED_SOURCES)[number];
 export const GITHUB_QUEUE_SOURCES: readonly string[] = [
   "1159b9f2fb307e12e2c42b53138621070b9c16059dffa9d7572d4499c7451e52",
   "ea521b053773608a62f541f5f4ed9bda15a9d576dcf82ed08e1cec174260ee17",
+  "1cba7c9d4711c1ded5cf42737d867927a4849142dc1a51ee77390810d1f87d6c",
 ];
 export const GITLAB_QUEUE_SOURCES: readonly string[] = [
   "b41bb2e51bccbe8ec5285463ce6ffe6aa58bbe3f0cd1a48c0d1b169dd7d91cc5",
+  "c001b31292be9fb70b410b4a5a3ba91e0d0ed624b975511ef2e1b426a98bc3b6",
 ];
 
 /** The stamp's words after its comment mark, on each shipped file's first line (the second under a shebang). */

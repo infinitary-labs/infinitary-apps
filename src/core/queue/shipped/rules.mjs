@@ -391,6 +391,9 @@ export function readPauseMarker(body) {
 
 // A test file's path as common runners print it, from the project's root.
 const TEST_FILE = /(?:^|\s)((?:[\w.@-]+\/)*[\w.@-]+\.(?:test|spec)\.[cm]?[jt]sx?)(?=[\s:[]|$)/;
+// Vitest's line naming the test file an unhandled error came from: such an
+// error fails the run even when every test passed, and prints no FAIL line.
+const UNHANDLED_IN = /^\s*This error originated in "((?:[\w.@-]+\/)*[\w.@-]+)" test file\./;
 // A CI log's timestamp before each line, and a terminal's colors.
 const LOG_PREFIX = /^\d{4}-\d\d-\d\dT[\d:.]+Z /;
 // biome-ignore lint/suspicious/noControlCharactersInRegex: a terminal's color codes start with ESC
@@ -398,8 +401,9 @@ const COLORS = /\u001b\[[0-9;]*m/g;
 
 /**
  * The test files a failed job's log names as failed, in the order it names
- * them: Vitest and Jest's FAIL lines, and the tests listed under
- * Playwright's closing "N failed" line.
+ * them: Vitest and Jest's FAIL lines, the tests listed under Playwright's
+ * closing "N failed" line, and the test file Vitest says an unhandled error
+ * originated in.
  */
 export function failedTestFiles(log) {
   const files = [];
@@ -412,8 +416,8 @@ export function failedTestFiles(log) {
     }
     const listed = inFailedList && /^\s{4}\S/.test(line);
     inFailedList = listed;
-    if (!listed && !/^\s*FAIL\s/.test(line)) continue;
-    const file = TEST_FILE.exec(line)?.[1];
+    const file =
+      listed || /^\s*FAIL\s/.test(line) ? TEST_FILE.exec(line)?.[1] : UNHANDLED_IN.exec(line)?.[1];
     if (file && !files.includes(file)) files.push(file);
   }
   return files;

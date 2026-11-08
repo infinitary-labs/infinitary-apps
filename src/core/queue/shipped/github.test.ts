@@ -378,6 +378,76 @@ describe("the shipped queue on GitHub", () => {
     );
   });
 
+  // A batch run in this repository failed with every test passed: Vitest
+  // failed the job on an unhandled error it said came from one test file,
+  // and printed no FAIL line, so the queue named no file and paused. These
+  // are that job's own closing lines, colors and all.
+  it("confirms a red batch whose only failure is an unhandled error Vitest says came from a test file", async () => {
+    const project = new Project();
+    project.open(67);
+    project.approve(67);
+    const { members } = await formRun(project, 522);
+    const linux =
+      "Batch checks / Merge batch · Desktop checks / Merge batch · Integration tests (Linux; group 2/2)";
+    project.jobs = [{ id: 3, name: linux, conclusion: "failure", html_url: `${server}/j/3` }];
+    project.logs.set(
+      3,
+      [
+        "2026-11-08T08:05:33.8316852Z  \u001b[32m✓\u001b[39m \u001b[30m\u001b[45m integration \u001b[49m\u001b[39m tests/replay-gate-catches-lint.test.ts \u001b[2m(\u001b[22m\u001b[2m1 test\u001b[22m\u001b[2m)\u001b[22m\u001b[33m 5615\u001b[2mms\u001b[22m\u001b[39m",
+        "2026-11-08T08:05:48.8700969Z Vitest caught 1 unhandled error during the test run.",
+        "2026-11-08T08:05:48.8723285Z \u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m81 passed\u001b[39m\u001b[22m\u001b[2m | \u001b[22m\u001b[33m6 skipped\u001b[39m\u001b[90m (87)\u001b[39m",
+        '2026-11-08T08:05:48.8764393Z \u001b[31m\u001b[1mEnvironmentTeardownError\u001b[22m: [vitest-worker]: Closing rpc while "onUserConsoleLog" was pending\u001b[39m',
+        '2026-11-08T08:05:48.8766094Z \u001b[31mThis error originated in "\u001b[1mtests/phone-scene-projection.test.ts\u001b[22m" test file. It doesn\'t mean the error was thrown inside the file itself, but while it was running.\u001b[39m',
+        "2026-11-08T08:05:48.9690171Z ##[error]Process completed with exit code 1.",
+        "",
+      ].join("\n"),
+    );
+
+    const read = runOf(project, 522);
+    await failures(read.args);
+    expect(read.outputs.get("jobs")).toBe(linux.slice("Batch checks / ".length));
+    expect(read.outputs.get("files")).toBe("tests/phone-scene-projection.test.ts");
+
+    const verdict = runOf(project, 522);
+    await decide({ ...verdict.args, result: "failure", confirm: "success", members, tree: TREE });
+    expect(project.queueOf(67)).toMatchObject({ kind: "passed", run: 522, tree: TREE });
+    expect(project.issues).toEqual([]);
+    expect(verdict.summary.join(" ")).toContain(
+      "tests/phone-scene-projection.test.ts failed in its checks and passed",
+    );
+  });
+
+  // The files go to the batch checks as one list separated by spaces, so a
+  // path with other characters is named nowhere rather than split or passed on.
+  it("names no file for an unhandled error Vitest ties to no test file, or to a path with a space", async () => {
+    const project = new Project();
+    project.open(68);
+    project.approve(68);
+    await formRun(project, 523);
+    project.jobs = [
+      { id: 2, name: "Batch checks / unit", conclusion: "failure", html_url: `${server}/j/2` },
+      {
+        id: 3,
+        name: "Batch checks / integration",
+        conclusion: "failure",
+        html_url: `${server}/j/3`,
+      },
+    ];
+    project.logs.set(
+      2,
+      "2026-11-08T08:05:48.8700969Z Vitest caught 1 unhandled error during the test run.\n2026-11-08T08:05:48.8764393Z Error: setup failed\n",
+    );
+    project.logs.set(
+      3,
+      '2026-11-08T08:05:48.8766094Z This error originated in "tests/my file.test.ts" test file. It doesn\'t mean the error was thrown inside the file itself, but while it was running.\n',
+    );
+
+    const read = runOf(project, 523);
+    await failures(read.args);
+    expect(read.outputs.get("jobs")).toBe("");
+    expect(read.outputs.get("files")).toBe("");
+  });
+
   it("runs nothing again when a failed job's log names no test file, and pauses", async () => {
     const project = new Project();
     project.open(66);

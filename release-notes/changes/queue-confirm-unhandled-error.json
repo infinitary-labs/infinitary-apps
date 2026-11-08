@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "queue-confirm-unhandled-error",
+      "kind": "fix",
+      "area": "projects",
+      "title": "A batch that fails on an error after its tests pass runs that test file again",
+      "body": "Sometimes every test in a batch of approved changes passes, but the checks still fail on an error that came up while one test file ran. The queue now runs that test file again on the same batch, as it does for a test that failed, instead of pausing every change. Your first mate offers a project's queue the update.",
+      "noPicture": "The change is in how a project's queue reads a failed check; no screen in the app looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

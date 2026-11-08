@@ -479,6 +479,41 @@ describe("the shipped queue on GitLab", () => {
     expect(project.queueOf(73)).toMatchObject({ kind: "waiting" });
   });
 
+  // GitLab's part reads failed jobs' logs with the same rules: a job Vitest
+  // failed on an unhandled error, with every test passed and no FAIL line,
+  // still names the test file Vitest says the error came from.
+  it("names the test file an unhandled error came from in the pause's issue and statuses", async () => {
+    const project = new Project();
+    project.open(74);
+    project.diffs.set(74, ["tests/phone-scene-projection.test.ts"]);
+    project.approve(74);
+    const { members } = await formRun(project, 506);
+    project.checks.set(506, { id: 606, status: "failed", web_url: `${server}/p/606` });
+    project.jobs.set(606, [
+      { id: 3, name: "unit", status: "failed", web_url: `${server}/acme/shop/-/jobs/3` },
+    ]);
+    project.traces.set(
+      3,
+      [
+        "Vitest caught 1 unhandled error during the test run.",
+        " Test Files  81 passed (81)",
+        '\u001b[31mThis error originated in "\u001b[1mtests/phone-scene-projection.test.ts\u001b[22m" test file. It doesn\'t mean the error was thrown inside the file itself, but while it was running.\u001b[39m',
+        "",
+      ].join("\n"),
+    );
+
+    await decideRun(project, 506, members);
+
+    const [issue] = project.issues;
+    expect(issue?.description).toContain(
+      "Failed test files:\n- `tests/phone-scene-projection.test.ts` (touched by !74)",
+    );
+    expect(project.queueOf(74)).toMatchObject({ kind: "paused", run: 506 });
+    expect(project.queueOf(74)?.description).toContain(
+      "tests/phone-scene-projection.test.ts failed; touched by !74",
+    );
+  });
+
   it("pauses a red batch whose checks never started, naming the checks job", async () => {
     const project = new Project();
     project.open(74);

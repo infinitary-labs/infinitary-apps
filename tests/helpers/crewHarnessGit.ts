@@ -203,6 +203,8 @@ export async function approved(
     internalStep?: boolean;
     /** Serve the bundled runbooks, so a care edit's notice carries the guidance it selects. */
     guidance?: boolean;
+    /** Run the app's own check watch, so the shared tick reads the pull request as the app does. */
+    checkWatch?: boolean;
   } = {},
 ) {
   const forge = new KeptForge(where.kind);
@@ -226,6 +228,7 @@ export async function approved(
     readPull: (id, prNumber) => service().merges.pullState(id, prNumber),
     openChange: (id, input) => service().publication.open(id, input),
     checkChange: (id, input) => service().checkTool.checkForCrew(id, input),
+    ...(where.checkWatch ? { readCheckWatch: (id) => service().checks.readWatched(id) } : {}),
     ...(where.guidance ? { runbooks: bundledRunbooks() } : {}),
   });
   delivery = createChangeDelivery({

@@ -785,6 +785,7 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
   A reading that changes none of them adds no CI event; it advances the reading time and retains observation-forwarding bookkeeping (`changesCheckState`).
   Raw readings retain named failure history without settling repairs or counting attempts.
 - **Quiet refresh** continues every five minutes (`CHECK_REFRESH_MS`) for live tasks with a recorded open pull request, even after a watch ends, using the same reading and delivery facts.
+  It also reads on the first tick after the crewmate's turn ends (`idleSince` later than the last reading), since that turn may have pushed a new version from its shell, which tells the app nothing (INF-3092).
   It runs on the shared tick after a restart too and backs off unreadable checks.
   Changed raw readings retain a durable `ciObservation` identity until a crew tool response or the existing inbox forwards them.
   The quiet reader forwards changed observations once, including across a restart; only the crew's declaration changes readiness.

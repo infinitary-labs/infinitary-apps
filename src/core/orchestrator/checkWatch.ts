@@ -27,7 +27,9 @@ import type { TypedWake, WakeFacts } from "./wakes";
  * - Bounded: it reads on the shared tick, every minute for ten minutes
  *   and then every two, and stops at `CHECK_WATCH_BOUND_MS`.
  * - Finished checks on live pull requests refresh quietly every five minutes
- *   through the same reader. Changed observations reach the crew for judgment.
+ *   through the same reader, and on the first tick after the crewmate's
+ *   turn ends, since that turn may have pushed a new version.
+ *   Changed observations reach the crew for judgment.
  *   Only a running new head arms another watch.
  *   A task idle behind another task is not refreshed while it waits.
  *
@@ -154,10 +156,15 @@ export class CheckWatcher {
       // A named pull request stays monitored until the task closes. Only
       // its checks skip refresh behind another task (INF-721 friction 6);
       // its merge can still be confirmed without starting a model turn.
+      if (delivery?.prNumber === undefined) return false;
+      const lastRead = Math.max(delivery.ciAt ?? 0, this.refreshAfter.get(record.id) ?? 0);
+      // A crewmate's turn that ended after the last read may have pushed a
+      // new version from its shell, which tells the app nothing (INF-3092):
+      // the next tick reads it, so an open merge card never stands on the
+      // earlier version's checks until the quiet refresh comes due.
+      const turnSince = record.idleSince != null && record.idleSince > lastRead;
       return (
-        delivery?.prNumber !== undefined &&
-        now >=
-          Math.max(delivery.ciAt ?? 0, this.refreshAfter.get(record.id) ?? 0) + CHECK_REFRESH_MS &&
+        (turnSince || now >= lastRead + CHECK_REFRESH_MS) &&
         (this.host.reconcileMerged !== undefined || this.refreshesChecks(record))
       );
     });

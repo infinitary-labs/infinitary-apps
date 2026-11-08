@@ -15,6 +15,7 @@ import { join } from "node:path";
 import { type Card, MERGE_CLOSES_WORDS, splitSettleFacts } from "@shared/cards";
 import { REPAIR_ASSESSMENT_SOURCE } from "@shared/checkRepair";
 import type { MergeReview } from "@shared/mergeReview";
+import { CHECK_WORDS, MERGE_WHEN_CHECKS_PASS_WORDS, MERGE_WORDS } from "@shared/vocabulary";
 import { describe, expect, it, vi } from "vitest";
 import {
   completionBody,
@@ -1261,6 +1262,37 @@ describe("CrewSupervisor", () => {
       await tick();
       expect(tasks.get("legacy")?.delivery?.mergeOrder).toBeUndefined();
       expect(ops.join("\n")).toContain("could not be carried forward");
+    });
+  });
+
+  // The captain's report (INF-3092): a crewmate pushed a new version under an
+  // open merge card, and the card still showed the earlier version's checks
+  // passed with Merge the pull request, because nothing read the push.
+  describe("a push under an open merge card", () => {
+    const checksCell = (card: Card | undefined) =>
+      splitSettleFacts(card?.body ?? "")?.facts.match(
+        /data-fact="checks"[\s\S]*?<\/span><\/span>/,
+      )?.[0] ?? "";
+    const mergeWords = (card: Card | undefined) =>
+      card?.actions.find((action) => action.effect?.kind === "merge" && !action.passes)?.label;
+
+    it("reads the pushed version on the next tick after the crewmate's turn, so the card shows its running checks", async () => {
+      const h = await approved({ checkWatch: true });
+      const shown = () => h.cards().find((card) => card.id === h.card.id);
+      expect(checksCell(shown())).toContain(CHECK_WORDS.green);
+      expect(mergeWords(shown())).toBe(MERGE_WORDS["merge-pr"]);
+      // The crewmate's plain git push from its shell: the pull request is at
+      // a new version whose checks run, and nothing tells the app.
+      await repairTurn(h, async () => {
+        h.forge.headSha = REPAIRED;
+        h.forge.states = ["pending"];
+      });
+      // The next minute's tick, well inside the five-minute quiet refresh.
+      await h.supervisor.watch.pollCheckWatches(Date.now() + 60_000);
+      await tick();
+      expect(h.tasks.get(h.taskId)?.delivery?.headSha).toBe(REPAIRED);
+      expect(checksCell(shown())).toContain(CHECK_WORDS.pending);
+      expect(mergeWords(shown())).toBe(MERGE_WHEN_CHECKS_PASS_WORDS);
     });
   });
 });

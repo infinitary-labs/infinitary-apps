@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "merge-card-reads-a-push-sooner",
+      "kind": "fix",
+      "title": "A merge card shows a crewmate's new push within a minute",
+      "body": "When a crewmate pushes a new version under a merge card you have not answered yet, the card now shows that version's checks within a minute of the crewmate finishing, rather than keeping the earlier version's passed checks for up to five minutes.",
+      "area": "cards",
+      "noPicture": "The card looks as it always did; what changed is how soon it picks up a push.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

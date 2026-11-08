@@ -120,16 +120,29 @@ test("a Mac controlling another changes things across majors the view floor cove
         (window as unknown as { __boards: TaskBoard[] }).__boards = seen;
         window.infinitary.tasks.onBoard((next) => seen.push(next));
       });
-      // A status no list leaves open, a kind no version names yet, then the board as it is.
-      for (const pushed of [withTask({ status: "paused" }), withTask({ kind: "inquiry" }), board])
-        await air.app.evaluate(({ BrowserWindow }, payload) => {
-          BrowserWindow.getAllWindows()[0]?.webContents.send("inf:tasks", payload);
-        }, pushed);
-      const seen = () =>
-        air.page.evaluate(() => (window as unknown as { __boards: TaskBoard[] }).__boards);
-      await expect.poll(async () => (await seen()).length).toBeGreaterThanOrEqual(2);
+      // A status no list leaves open, a kind no version names yet, then the board as it is. The
+      // home's own pushes reach this window too - answering its card above republishes its board
+      // - so each stand-in carries a seq past the home's, and only those are counted.
+      const first = board.seq + 1_000;
+      const pushes = [withTask({ status: "paused" }), withTask({ kind: "inquiry" }), board];
+      for (const [n, pushed] of pushes.entries())
+        await air.app.evaluate(
+          ({ BrowserWindow }, payload) => {
+            BrowserWindow.getAllWindows()[0]?.webContents.send("inf:tasks", payload);
+          },
+          { ...pushed, seq: first + n },
+        );
+      const seen = async () =>
+        (
+          await air.page.evaluate(() => (window as unknown as { __boards: TaskBoard[] }).__boards)
+        ).filter((next) => next.seq >= first);
+      // Pushes arrive in order, so once the last is in, every earlier one that was kept is too.
+      await expect.poll(async () => (await seen()).at(-1)?.seq).toBe(first + 2);
+      expect((await seen()).map((next) => next.seq)).toEqual([first + 1, first + 2]);
       const [kept, plain] = await seen();
-      expect((await seen()).length).toBe(2);
+      // No board the home pushed meanwhile reached the stand-ins' seqs.
+      const home = (await pro.page.evaluate(() => window.infinitary.tasks.board())) as TaskBoard;
+      expect(home.seq).toBeLessThan(first);
       const standIn = VIEW_OPEN_LISTS.find(({ list }) => list === taskKindSchema)?.unknown;
       expect(kept?.tasks.find((task) => task.id === TASK)?.kind).toBe(standIn);
       expect(plain?.tasks.find((task) => task.id === TASK)?.kind).toBe("work");

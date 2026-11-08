@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "view-floor-own-boards",
+      "reason": "Test-only: the view floor journey counts only the boards it stands in, marked by their sequence number, because the controlled Mac's own board push after a card is answered can reach the view in the same moment. Nothing in the app changes."
+    }
+  ]
+}

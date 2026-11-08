@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "queue-batch-fresh-base",
+      "kind": "fix",
+      "area": "projects",
+      "title": "A batch no longer leaves out a change that merged while it formed",
+      "body": "When an approved change merged just as the next batch formed, a project's queue could check that batch without it, and once the batch's changes merged the project held files no batch had checked. The queue now builds each batch on the project as it stands after it gathers the waiting changes. Your first mate offers a project's queue the update.",
+      "noPicture": "The change is in how a project's queue builds each batch; no screen in the app looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

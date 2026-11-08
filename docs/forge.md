@@ -685,6 +685,9 @@ Evidence: `queueChoice.test.ts` and the second test of `tests/e2e/queue-merge.sp
 
 Infinitary ships one fix-forward queue that a project carries in its own CI, so batched pull requests work the same for everyone on the project (`src/core/queue/`).
 Its rules are written once and name no host (`shipped/rules.mjs`): which waiting changes form the next batch, in approval order; what a composed batch's result writes on each change; when a red batch pauses; and what ends a pause.
+A batch forms only once the last green batch has merged, and it composes onto the default branch as the compose step fetches it after the form job read the queue, never the version the job checked out or its pipeline started on (`compose.sh compose`, INF-3053).
+A change that merged in between is no longer open, so the read does not wait for it, and only that later version carries it; so once a passed batch's changes merge, the default branch has the batch's tree unless something merged outside the queue.
+The form job names that version as the batch's `base`, which every check job composes onto.
 A host part runs those rules where the project lives; GitHub's is an Actions workflow, a composite step that composes the batch and a script that reads and writes through GitHub's API (`shipped/workflow.yml`, `shipped/action.yml`, `shipped/compose.sh`, `shipped/github.mjs`).
 The project writes one file of its own, `.github/workflows/infinitary-batch-checks.yml`, which runs the checks the captain chose on the composed batch.
 As shipped, the queue calls it with only a read of the project and hands down no secret, so the batch's own code cannot write the queue's statuses or issues.
@@ -728,7 +731,7 @@ Three GitLab facts shape it, and each was checked against GitLab's own code and 
   A later mark does not admit a held version, since it lies over the Developer's in the same waiting stretch; the held change joins the next batch when a Maintainer has approved it after its last push and the captain clicks merge.
   Project access tokens need a Premium or Ultimate plan on gitlab.com, and any plan on a team's own server; a refusal says so.
   GitLab's part has no confirm yet: a red batch pauses at once, and its issue says nothing ran again.
-  The form job composes the batch with the same `compose.sh`, writes a child pipeline that includes the batch template and the project's `.gitlab/infinitary-batch-checks.yml`, and the checks job runs it; the verdict job reads that child pipeline's result, its failed jobs' logs and each merge request's diff.
+  The form job composes the batch with the same `compose.sh`, onto the default branch as it fetches it after reading the queue rather than the pipeline's own version, which may be older, writes a child pipeline that includes the batch template and the project's `.gitlab/infinitary-batch-checks.yml`, and the checks job runs it; the verdict job reads that child pipeline's result, its failed jobs' logs and each merge request's diff.
   `resource_group: infinitary-queue` keeps one form or verdict job at a time across pipelines, and a queue pipeline's id is its batch run.
   Words the queue writes name a merge request `!N`, as GitLab does, and so do Settings and Activity for a project on GitLab (`changeNumberLabel`, `src/shared/forge.ts`).
   Evidence: `src/core/queue/shipped/gitlab.test.ts`, `gitlabForge.test.ts` ("reads the queue's waiting mark ..." and "creates the queue's token ...") and `tests/e2e/gitlab-queue.spec.ts`.

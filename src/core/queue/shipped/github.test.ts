@@ -23,6 +23,8 @@ const name = "shop";
 const server = "https://github.com";
 const sha = (n: number) => n.toString(16).padStart(40, "a");
 const TREE = "be6452e81a110b0c50d7354add8d59a231807cce";
+/** The default branch's version the compose step fetched after the queue read. */
+const BASE = "9f2c4e1d0b8a7c6e5f4d3c2b1a0918273645abcd";
 
 type Status = {
   id: number;
@@ -207,9 +209,9 @@ function runOf(project: Project, runId: number) {
   return { args, outputs, notices, summary };
 }
 
-/** The compose step's output for these members: each merged, then the tree. */
+/** The compose step's output for these members: the base, each merged, then the tree. */
 const composed = (members: Member[], conflicts: Record<number, string> = {}) =>
-  `${members.map((member) => `${conflicts[member.number] ?? "merged"} ${member.number}`).join("\n")}\ntree ${TREE}\n`;
+  `base ${BASE}\n${members.map((member) => `${conflicts[member.number] ?? "merged"} ${member.number}`).join("\n")}\ntree ${TREE}\n`;
 
 /** Form and mark one batch run, as the form job does; answers the members in it. */
 async function formRun(project: Project, runId: number, conflicts: Record<number, string> = {}) {
@@ -258,6 +260,8 @@ describe("the shipped queue on GitHub", () => {
     expect(project.queueOf(51)?.description).toMatch(/bring the branch up to date/);
     expect(project.queueOf(52)).toMatchObject({ kind: "waiting" });
     expect(run.outputs.get("tree")).toBe(TREE);
+    // The checks compose onto the version the compose step fetched, never the checkout's.
+    expect(run.outputs.get("base")).toBe(BASE);
   });
 
   it("passes every change of a green batch with the batch's tree, and starts nothing", async () => {

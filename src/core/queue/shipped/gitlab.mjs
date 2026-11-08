@@ -341,8 +341,10 @@ export function noBatchPipeline(reason) {
  * change that conflicts with the default branch alone goes back to be
  * brought up to date, one that conflicts only with an earlier change here
  * waits for the next batch, and the rest are in this pipeline's run.
- * Answers what the checks compose and the batch's tree; `run` is false when
- * no batch formed.
+ * Answers what the checks compose, the default branch's version they
+ * compose onto (fetched by the compose step after this read, never the
+ * pipeline's own version, which may be older) and the batch's tree; `run`
+ * is false when no batch formed.
  */
 export async function form({ api, env, log, compose }) {
   const entries = await admitted(api, env, await readOpenQueue(api, env), log);
@@ -363,7 +365,8 @@ export async function form({ api, env, log, compose }) {
       `${fixes.map((entry) => `#${entry.number}`).join(", ")} was approved as the fix, so the pause ended and [batch run ${env.pipelineId}](${env.pipelineUrl}) takes every paused and waiting change.`,
     );
   }
-  if (!plan.members.length) return { run: false, reason: plan.reason, members: [], tree: "" };
+  if (!plan.members.length)
+    return { run: false, reason: plan.reason, members: [], base: "", tree: "" };
   const composed = readComposition(await compose(plan.members), plan.members);
   for (const member of composed.conflictsMain)
     await writeStatus(api, env, conflictsWithMain(member, env.pipelineUrl));
@@ -382,6 +385,7 @@ export async function form({ api, env, log, compose }) {
     run: composed.merged.length > 0,
     reason: composed.merged.length ? plan.reason : "Every change in the batch conflicted.",
     members: composed.merged,
+    base: composed.base,
     tree: composed.tree,
   };
 }
@@ -573,8 +577,12 @@ function ciEnv(vars) {
   };
 }
 
-/** Each member's merge request head, fetched so the compose step can merge it, then the compose step's output. */
-function composeInCi(members) {
+/**
+ * Each member's merge request head, fetched so the compose step can merge
+ * it, then the compose step's output onto the default branch as it stands
+ * now, after the form job read the queue.
+ */
+function composeInCi(members, branch) {
   for (const member of members)
     try {
       execFileSync(
@@ -593,7 +601,7 @@ function composeInCi(members) {
     }
   return execFileSync(
     "bash",
-    [".gitlab/infinitary/compose.sh", "compose", ...headList(members).split(" ")],
+    [".gitlab/infinitary/compose.sh", "compose", branch, ...headList(members).split(" ")],
     {
       encoding: "utf8",
       stdio: ["ignore", "pipe", "inherit"],
@@ -615,12 +623,17 @@ export async function run(command, vars = process.env) {
   const env = ciEnv(vars);
   const log = (text) => console.log(text);
   if (command === "form") {
-    const formed = await form({ api, env, log, compose: composeInCi });
+    const formed = await form({
+      api,
+      env,
+      log,
+      compose: (members) => composeInCi(members, env.defaultBranch),
+    });
     const heads = headList(formed.members);
     writeFileSync(
       BATCH_PIPELINE_FILE,
       formed.run
-        ? batchPipeline({ heads, base: vars.CI_COMMIT_SHA, tree: formed.tree })
+        ? batchPipeline({ heads, base: formed.base, tree: formed.tree })
         : noBatchPipeline(formed.reason),
     );
     writeFileSync(

@@ -43,7 +43,7 @@ export function readOpenQueue(api: GitLabQueueApi, env: GitLabQueueEnv): Promise
 export function startForm(api: GitLabQueueApi, env: GitLabQueueEnv): Promise<unknown>;
 export function form(
   args: GitLabQueueArgs & { compose(members: Member[]): string | Promise<string> },
-): Promise<{ run: boolean; reason: string; members: Member[]; tree: string }>;
+): Promise<{ run: boolean; reason: string; members: Member[]; base: string; tree: string }>;
 export function decide(
   args: GitLabQueueArgs & { members: Member[]; tree: string },
 ): Promise<{ summary: string; next: string | null }>;

@@ -242,11 +242,14 @@ export async function form({ github, context, core }) {
  * After the compose step: a change that conflicts with the default branch
  * alone goes back to be brought up to date, one that conflicts only with
  * an earlier change here waits for the next batch, and the rest are in this
- * run. Its outputs name what the checks compose and the batch's tree.
+ * run. Its outputs name what the checks compose, the default branch's
+ * version they compose onto (fetched after `form` read the queue, never
+ * the job's own checkout) and the batch's tree.
  */
 export async function mark({ github, context, core, output, members }) {
   const repo = context.repo;
   const composed = readComposition(output, members);
+  core.notice(`The batch composes onto ${defaultBranch(context)} at ${composed.base}.`);
   for (const member of composed.conflictsMain)
     await writeStatus(github, repo, conflictsWithMain(member, runUrl(context)));
   for (const member of composed.merged)
@@ -263,6 +266,7 @@ export async function mark({ github, context, core, output, members }) {
   core.setOutput("run", composed.merged.length ? "true" : "false");
   core.setOutput("members", JSON.stringify(composed.merged));
   core.setOutput("heads", headList(composed.merged));
+  core.setOutput("base", composed.base);
   core.setOutput("tree", composed.tree);
 }
 

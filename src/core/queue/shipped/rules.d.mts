@@ -62,7 +62,13 @@ export function headList(members: readonly Member[]): string;
 export function readComposition(
   output: string,
   members: readonly Member[],
-): { tree: string; merged: Member[]; conflictsMain: Member[]; conflictsBatch: Member[] };
+): {
+  base: string;
+  tree: string;
+  merged: Member[];
+  conflictsMain: Member[];
+  conflictsBatch: Member[];
+};
 export function conflictsWithMain(member: Member, url: string): StatusWrite;
 export function confirmPlan(
   failedJobs: readonly FailedJob[],

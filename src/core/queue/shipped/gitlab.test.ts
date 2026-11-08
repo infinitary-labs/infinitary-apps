@@ -33,6 +33,8 @@ const DEVELOPER_ID = 8;
 const server = "https://gitlab.example.com";
 const sha = (n: number) => n.toString(16).padStart(40, "a");
 const TREE = "be6452e81a110b0c50d7354add8d59a231807cce";
+/** The default branch's version the compose step fetched after the queue read. */
+const BASE = "9f2c4e1d0b8a7c6e5f4d3c2b1a0918273645abcd";
 
 type Status = {
   id: number;
@@ -280,9 +282,9 @@ const envOf = (pipelineId: number): GitLabQueueEnv => ({
   pipelineUrl: `${server}/acme/shop/-/pipelines/${pipelineId}`,
 });
 
-/** The compose step's output for these members: each merged, then the tree. */
+/** The compose step's output for these members: the base, each merged, then the tree. */
 const composed = (members: Member[], conflicts: Record<number, string> = {}) =>
-  `${members.map((member) => `${conflicts[member.number] ?? "merged"} ${member.number}`).join("\n")}\ntree ${TREE}\n`;
+  `base ${BASE}\n${members.map((member) => `${conflicts[member.number] ?? "merged"} ${member.number}`).join("\n")}\ntree ${TREE}\n`;
 
 /** One queue pipeline's form job; answers what it put in the batch and what it said. */
 async function formRun(
@@ -382,10 +384,13 @@ describe("the shipped queue on GitLab", () => {
     project.approve(41);
     project.approve(43);
 
-    const { members, tree } = await formRun(project, 501);
+    const { members, base, tree } = await formRun(project, 501);
 
     expect(members.map((member) => member.number)).toEqual([42, 41]);
     expect(tree).toBe(TREE);
+    // The child pipeline composes onto the version the compose step fetched
+    // after this read, never the pipeline's own, which may be older.
+    expect(base).toBe(BASE);
     expect(project.queueOf(42)).toMatchObject({ kind: "in-batch", run: 501, status: "skipped" });
     expect(project.queueOf(43)).toMatchObject({ kind: "waiting" });
     expect(project.queueOf(44)).toBeUndefined();

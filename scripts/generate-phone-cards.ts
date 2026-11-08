@@ -3,7 +3,10 @@ import { join } from "node:path";
 import { build } from "vite";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 
-/** INF-64 piece 4: bundle the actual desktop bridge/styles, not a second form implementation. */
+/**
+ * INF-64 piece 4: bundle the actual desktop bridge/styles, not a second form implementation.
+ * The bundle stays unminified (INF-3066): a readable file lets parallel changes to the card code merge line by line instead of conflicting on one long line.
+ */
 const directory = join(REPO_ROOT, "ios/Infinitary/InfinitaryApp/CardAssets");
 const check = process.argv.includes("--check");
 function keep(name: string, contents: string | Buffer) {
@@ -16,7 +19,7 @@ function keep(name: string, contents: string | Buffer) {
 const result = await build({
   configFile: false, root: REPO_ROOT, logLevel: "error",
   resolve: { alias: { "@shared": join(REPO_ROOT, "src/shared") } },
-  build: { write: false, minify: true, target: "safari18", lib: {
+  build: { write: false, minify: false, target: "safari18", lib: {
     entry: join(REPO_ROOT, "ios/Infinitary/CardRuntime/cardHost.ts"), name: "PhoneCardHost", formats: ["iife"],
   } },
 });

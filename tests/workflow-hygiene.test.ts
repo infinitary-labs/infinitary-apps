@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -18,6 +18,7 @@ type Step = {
   name?: string;
   id?: string;
   if?: string;
+  "continue-on-error"?: boolean | string;
   run?: string;
   uses?: string;
   with?: Record<string, unknown>;
@@ -77,6 +78,28 @@ function permissionGaps(grant: Permissions | undefined, callee: Workflow): strin
 }
 
 const load = (file: string) => loadYamlFile(`.github/workflows/${file}`) as Workflow;
+/**
+ * Whether a shell script runs electron-builder to make more than an unpacked
+ * folder - the targets whose tools it downloads (an AppImage, a package, a
+ * disk image) - itself or through a script of this project it runs.
+ */
+function packagesBeyondFolder(script: string, seen = new Set<string>()): boolean {
+  const lines = script
+    .replace(/\\\n\s*/g, " ")
+    .split("\n")
+    .map((line) => line.replace(/(^|\s)#.*$/, ""));
+  for (const line of lines) {
+    const call = /(?:^|[\s;&|(])electron-builder(?=\s|$)(.*)$/.exec(line);
+    if (call && !/(^|\s)(--dir\b|--(mac|linux|win)\s+dir\b)/.test(call[1] ?? "")) return true;
+    for (const [, path] of line.matchAll(/(?:^|[\s;&|(])(?:\.\/)?(scripts\/[\w.-]+\.sh)\b/g)) {
+      if (!path || seen.has(path)) continue;
+      seen.add(path);
+      if (packagesBeyondFolder(readFileSync(join(root, path), "utf8"), seen)) return true;
+    }
+  }
+  return false;
+}
+
 const LOCAL = "./.github/workflows/";
 /** Every job that calls one of this project's workflows, with the token it grants. */
 const calls = workflows.flatMap((file) => {
@@ -145,30 +168,98 @@ describe("every workflow", () => {
   // Main's check run 42287797114 failed at its install, which the captain's
   // watch on main check failures sent to be fixed at its cause: Electron's
   // own installer took a 504 from GitHub's release server, the one download
-  // an install still made after setup-node restored its packages. So every
-  // install that restores the package cache restores Electron's download
-  // first (.github/actions/electron-download).
-  it("restores Electron's download before every install that restores the package cache", () => {
-    const cached: string[] = [];
+  // an install still made after setup-node restored its packages. A phone
+  // check's install later took the same 504 on Electron's zip and on the app's
+  // own git, on a fresh virtual Mac whose setup-node keeps no package cache.
+  // So every install restores what it downloads from that server first
+  // (.github/actions/electron-download; docs/testing.md, "Downloads from
+  // GitHub's release server").
+  it("restores Electron's and git's downloads before every install", () => {
+    const covered: string[] = [];
     for (const file of workflows) {
       for (const [id, job] of Object.entries(load(file).jobs)) {
         const steps = job.steps ?? [];
-        const packages = steps.some(
-          (step) => step.uses?.startsWith("actions/setup-node@") && step.with?.cache !== undefined,
-        );
-        if (!packages) continue;
-        cached.push(`${file}:${id}`);
         const install = steps.findIndex((step) => /\bpnpm install\b/.test(step.run ?? ""));
+        if (install < 0) continue;
+        const where = `${file}:${id}`;
+        // An install allowed to fail fails no check by a download.
+        if (steps[install]?.["continue-on-error"] === true) continue;
+        // The signing job runs on the project's own Mac, whose home keeps both
+        // downloads between jobs, and restores nothing from the Actions cache
+        // into the app it signs.
+        if (where === "release.yml:release") continue;
+        covered.push(where);
         const download = steps.findIndex((step) =>
           step.uses?.endsWith("/.github/actions/electron-download"),
         );
-        expect(install, `${file}:${id} installs`).toBeGreaterThanOrEqual(0);
-        expect(download, `${file}:${id} restores Electron first`).toBeGreaterThanOrEqual(0);
-        expect(download, `${file}:${id} restores Electron first`).toBeLessThan(install);
+        expect(download, `${where} restores the downloads first`).toBeGreaterThanOrEqual(0);
+        expect(download, `${where} restores the downloads first`).toBeLessThan(install);
       }
     }
-    // The job whose install failed in that run.
-    expect(cached).toContain("verify.yml:lane");
+    // The jobs whose installs failed on that server: main's check, and the phone check.
+    expect(covered).toEqual(expect.arrayContaining(["verify.yml:lane", "phone.yml:native-phone"]));
+  });
+
+  // Linux package run 42470282200 failed at its package step on a 504 from
+  // GitHub's release server, where electron-builder downloads its packaging
+  // tools: the AppImage tools, 7-Zip and fpm, and dmgbuild for a disk image.
+  // So every step that packages beyond an unpacked folder restores those
+  // tools before it and keeps them after it, even when it failed partway
+  // (.github/actions/electron-builder-tools).
+  it("restores electron-builder's tools around every step that packages beyond a folder", () => {
+    const packaging: string[] = [];
+    for (const file of workflows) {
+      for (const [id, job] of Object.entries(load(file).jobs)) {
+        const steps = job.steps ?? [];
+        const where = `${file}:${id}`;
+        steps.forEach((step, index) => {
+          if (!packagesBeyondFolder(step.run ?? "")) return;
+          packaging.push(where);
+          // The signing job's own Mac keeps electron-builder's cache in its home.
+          if (where === "release.yml:release") return;
+          const tools = (from: number, to: number) =>
+            steps
+              .slice(from, to)
+              .filter((other) => other.uses?.endsWith("/.github/actions/electron-builder-tools"));
+          const before = tools(0, index);
+          expect(before.length, `${where} restores the tools before "${step.name}"`).toBe(1);
+          expect(before[0]?.with?.save, `${where} restores, never saves, before`).toBeUndefined();
+          const after = tools(index + 1, steps.length);
+          expect(after.length, `${where} keeps the tools after "${step.name}"`).toBe(1);
+          expect(after[0]?.with?.save).toBe("true");
+          expect(after[0]?.if, `${where} keeps them whatever the step did`).toContain(
+            "!cancelled()",
+          );
+        });
+      }
+    }
+    expect(packaging.sort()).toEqual([
+      "linux-packages.yml:build",
+      "mac-installer.yml:build",
+      "release.yml:release",
+    ]);
+  });
+
+  it("reads a step as packaging beyond a folder only when electron-builder makes more than one", () => {
+    expect(
+      packagesBeyondFolder(
+        "pnpm exec electron-builder --linux --config electron-builder.linux.yml",
+      ),
+    ).toBe(true);
+    expect(packagesBeyondFolder("pnpm exec electron-builder \\\n  --mac dmg --universal")).toBe(
+      true,
+    );
+    expect(packagesBeyondFolder("pnpm exec electron-builder --mac dir --universal")).toBe(false);
+    expect(packagesBeyondFolder("pnpm exec electron-builder \\\n  --mac dir --universal")).toBe(
+      false,
+    );
+    expect(packagesBeyondFolder("pnpm exec electron-builder --dir")).toBe(false);
+    expect(packagesBeyondFolder("# electron-builder --linux, in a comment\nnode -p 1")).toBe(false);
+    expect(packagesBeyondFolder("cp electron-builder.yml out/")).toBe(false);
+    // A script it runs, and a script that script runs.
+    expect(packagesBeyondFolder("scripts/build-mac-dmg.sh app 1.0.0 out")).toBe(true);
+    expect(packagesBeyondFolder("scripts/build-installer-fixtures.sh")).toBe(true);
+    expect(packagesBeyondFolder("scripts/check-user-data-dir.sh app infinitary-dev")).toBe(false);
   });
 
   // Queue run 42464252348's merge batch failed its demo journeys in every

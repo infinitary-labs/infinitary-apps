@@ -286,14 +286,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   That setting belongs only to the install, so later Electron rebuilds keep their own headers.
   `ci.yml` also forces a better-sqlite3 source build with an empty header cache and an unreachable header server, then writes and reads a database.
   The same workflow contract test evaluates the cache input for both runners.
-  Every install that restores setup-node's package cache runs `.github/actions/electron-download` first: it restores Electron's downloaded binary from the Actions cache, under a key naming the Electron version `package.json` pins, and points Electron's own installer at it through `electron_config_cache`.
-  It does so on every runner, since a GitHub-hosted runner and each virtual machine the placement service makes fresh for one job start without Electron, so an install reaches GitHub's release server only for a version's first download, never on every job.
-  `tests/workflow-hygiene.test.ts` holds every such install to it, and `tests/ensure-electron-installed.test.ts` runs its step and Electron's own installer.
-  The action's `zips` input names the Electron zips a job reads beyond its install's own, which join the cache key: the Mac check's lane names both Mac zips for its universal package.
-  Every step that packages the app with electron-builder in the release path - the Mac check's universal package, and a release's Mac and Linux packages - first runs `.github/actions/electron-download/zips.mjs`.
-  It checks each zip the package reads against the checksums Electron's own package ships, in the cache electron-builder reads, and downloads only a zip that cache lacks.
-  The package step then has electron-builder read that cache with its own checksum download off, since otherwise it fetches Electron's `SHASUMS256.txt` from GitHub's release server for every zip, and a 504 there failed both main's check and an alpha.
-  A release's jobs run the workflow's own copy of the reader, since a stable builds an older alpha's commit (`docs/alpha.md`), and `tests/ensure-electron-installed.test.ts` runs each of those steps against a stand-in for the release server.
+  Every install restores what it downloads from GitHub's release server from the Actions cache first, and every package step restores electron-builder's tools ("Downloads from GitHub's release server").
   A new test file joins its cohort's job on its own; a new kind of check joins one of the jobs, never a step with a condition.
   The retained PR jobs have no release-branch exemption: they must actually run to provide the required project verification, even though the generic forge verdict accepts conditional skipped checks.
   CI green means every check on the exact head commit SHA reports status=completed and conclusion=success or skipped (`gh pr checks`); a project that runs no checks reads green with the empty list, but on GitHub an empty list where workflow runs exist or have run for earlier pull requests reads pending ("checks have not started yet"), and so does a pull request's list with none of its own workflow runs on the version yet where the project runs them (`docs/forge.md`, "The green rule").
@@ -317,6 +310,31 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 - Test ports: a test that gives a home, a stand-in server or any other listener a loopback port takes it from `claimedPort` (`tests/helpers/claimedPort.ts`), in vitest and Playwright alike.
   A port found by listening on port 0 and closing again is free only for that moment: another worker can be handed the same one, and the home that listens second fails while its join reaches the other worker's home, refused as not that Mac (INF-698).
   A claimed port lies below every ephemeral range and stays claimed by its worker until the worker exits, so no other worker, run or port-0 listener on the computer takes it, and a home that quits can open again where it was.
+
+## Downloads from GitHub's release server
+
+An install and a package step download files from GitHub's release server, and that server answers with a 504 often enough to fail a check before it reaches anything the check is for.
+A GitHub-hosted runner, and each virtual machine the placement service makes fresh for one job, starts with none of those files, so each job reads them from the Actions cache instead and reaches the release server only for a version's first download.
+A retry would not do it: electron-builder already retries a server error three times within about twelve seconds, and the server's outages last longer.
+
+- **Every install** runs `.github/actions/electron-download` before `pnpm install`.
+  It restores Electron's downloaded binary under a key naming the Electron version `package.json` pins, and points Electron's own installer at it through `electron_config_cache`.
+  On macOS it also restores the app's own git archives for both chips (`scripts/ensure-bundled-git.ts`, dugite-native's archives) under a key naming the `dugite` version, through `INFINITARY_BUNDLED_GIT_CACHE` (`docs/forge.md`, "The app's own git").
+  The script checks each restored archive against dugite's checksum and downloads again only one that differs.
+  The action's `zips` input names the Electron zips a job reads beyond its install's own, which join the cache key: the Mac check's lane names both Mac zips for its universal package.
+  Two installs go without it: `release.yml`'s signing job, which runs on the project's own Mac, whose home keeps both downloads between jobs, and restores nothing from the Actions cache into the app it signs; and an install allowed to fail (`continue-on-error`).
+- **Every step that packages the app with electron-builder in the release path** - the Mac check's universal package, and a release's Mac and Linux packages - first runs `.github/actions/electron-download/zips.mjs`.
+  It checks each zip the package reads against the checksums Electron's own package ships, in the cache electron-builder reads, and downloads only a zip that cache lacks.
+  The package step then has electron-builder read that cache with its own checksum download off, since otherwise it fetches Electron's `SHASUMS256.txt` from GitHub's release server for every zip, and a 504 there failed both main's check and an alpha.
+  A release's jobs run the workflow's own copy of the reader, since a stable builds an older alpha's commit (`docs/alpha.md`).
+- **Every step that packages beyond an unpacked folder** runs `.github/actions/electron-builder-tools` before it, and again after it with `save: 'true'` under `!cancelled()`.
+  The packaging tools electron-builder downloads from GitHub's release server go to `ELECTRON_BUILDER_CACHE`: the AppImage tools, 7-Zip and fpm for the Linux packages (`linux-packages.yml`), and dmgbuild for a disk image (`mac-installer.yml`).
+  The first use restores the newest set saved for that electron-builder version, on that system and processor.
+  The second saves the archives under a key naming their checksums, so a build that failed partway keeps what it fetched, and a set the cache already holds is not saved again.
+  On a restored archive, electron-builder checks the checksum it pins and downloads again one that differs.
+  An unpacked folder (`--dir`, `--mac dir`) needs no tool, and `release.yml`'s signing job keeps electron-builder's cache in its Mac's home.
+- `tests/workflow-hygiene.test.ts` holds every install and every package step to these.
+  `tests/ensure-electron-installed.test.ts` runs the download action's steps with Electron's own installer and the app's git script, and each zips reader step, against a stand-in server, and `tests/electron-builder-tools.test.ts` runs the tools action's steps with electron-builder's own downloader.
 
 ## Tests that need a Mac
 

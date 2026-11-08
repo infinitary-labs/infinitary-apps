@@ -127,6 +127,12 @@ jobs:
       - id: release_request
         name: Refuse release-job reruns before installing or signing
         run: node scripts/phone-release.ts resolve
+      # The install's home is fresh for each job, so it would fetch Electron and the app's git
+      # from GitHub's release server every time (docs/testing.md, "Downloads from GitHub's
+      # release server").
+      - uses: ./Application Support/infinitary/.github/actions/electron-download
+        with:
+          working-directory: Application Support/infinitary
       - name: Install without reading this Mac's signing material
         run: |
           store="$(pnpm store path --silent)"

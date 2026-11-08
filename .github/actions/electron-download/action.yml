@@ -1,8 +1,8 @@
 name: Electron's download
-description: Keep Electron's downloaded binary in the Actions cache, so a dependency install reads it there instead of from Electron's release server.
+description: Keep what a dependency install downloads from GitHub's release server - Electron's binary and, on macOS, the app's own git - in the Actions cache, so the install reads it there instead.
 inputs:
   working-directory:
-    description: Checkout whose package.json names the Electron version.
+    description: Checkout whose package.json names the Electron and dugite versions.
     default: .
   zips:
     description: Electron zips the job reads beyond the one its install downloads, as platform-arch words (a universal Mac package reads darwin-arm64 and darwin-x64); they join the cache key, so the cache keeps them too.
@@ -20,6 +20,13 @@ runs:
     # a batch's Mac journeys on a fresh virtual Mac. Restored here, a job
     # reaches that server only on a version's first download, on every kind of
     # runner; one that kept Electron's own cache reads the cached copy instead.
+    #
+    # On macOS the same install also fetches the app's own git for both chips
+    # (scripts/ensure-bundled-git.ts, dugite-native's archives, also on
+    # GitHub's release server; one 504 there failed an iPad check before any
+    # test ran). Its archives are kept the same way, under a key naming the
+    # dugite version that pins them; the script checks each restored archive
+    # against dugite's checksum and downloads again only one that differs.
     - id: electron
       shell: bash
       working-directory: ${{ inputs.working-directory }}
@@ -37,9 +44,20 @@ runs:
         suffix=""
         for zip in "${zips[@]}"; do suffix="$suffix-$zip"; done
         printf 'zips=%s\n' "$suffix" >> "$GITHUB_OUTPUT"
+        # The install's git script (ensure-bundled-git.ts) reads its archive folder from INFINITARY_BUNDLED_GIT_CACHE.
+        git="$RUNNER_TEMP/bundled-git"
+        printf 'INFINITARY_BUNDLED_GIT_CACHE=%s\n' "$git" >> "$GITHUB_ENV"
+        printf 'git-dir=%s\n' "$git" >> "$GITHUB_OUTPUT"
+        printf 'dugite=%s\n' "$(node -p 'require("./package.json").dependencies.dugite')" >> "$GITHUB_OUTPUT"
     - uses: actions/cache@v4
       with:
         path: ${{ steps.electron.outputs.dir }}
         key: electron-${{ runner.os }}-${{ runner.arch }}-${{ steps.electron.outputs.version }}${{ steps.electron.outputs.zips }}
         # A key's first job starts from the install's own zip and keeps the rest it reads.
         restore-keys: ${{ steps.electron.outputs.zips != '' && format('electron-{0}-{1}-{2}', runner.os, runner.arch, steps.electron.outputs.version) || '' }}
+    # Only the archives: the unpacked trees beside them are rebuilt from them.
+    - if: runner.os == 'macOS'
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.electron.outputs.git-dir }}/*.tar.gz
+        key: bundled-git-${{ runner.os }}-${{ steps.electron.outputs.dugite }}

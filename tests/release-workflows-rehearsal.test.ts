@@ -584,9 +584,14 @@ describe("the signed channel workflow", () => {
     // alpha run 42464772458 failed on a 504 from GitHub's release server
     // (tests/ensure-electron-installed.test.ts runs the step).
     const zipsReader = ".github/actions/electron-download/zips.mjs";
+    // The publish job's install restores Electron's and git's downloads
+    // through the workflow's own action as well, which an older alpha's
+    // commit may predate (docs/testing.md, "Downloads from GitHub's release
+    // server").
+    const downloads = [".github/actions/electron-download/"];
     for (const [job, jobSteps, tooling] of [
       ["release", signingSteps, [...gate, zipsReader]],
-      ["publish", publishSteps, [...gate, ...packageCheck]],
+      ["publish", publishSteps, [...gate, ...packageCheck, ...downloads]],
     ] as const) {
       const fetched = jobSteps.findIndex(
         (candidate) => candidate.with?.path === ".release-tooling",

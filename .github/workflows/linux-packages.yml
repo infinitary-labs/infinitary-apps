@@ -140,6 +140,10 @@ jobs:
         env:
           RELEASE_VERSION: ${{ inputs.version }}
         run: echo "version=${RELEASE_VERSION:-$(node -p 'require("./package.json").version')}" >> "$GITHUB_OUTPUT"
+      # The AppImage tools, 7-Zip and fpm electron-builder downloads from
+      # GitHub's release server, from the Actions cache (docs/testing.md,
+      # "Downloads from GitHub's release server").
+      - uses: ./.release-tooling/.github/actions/electron-builder-tools
       # The logical version rides in the packaged package.json, which the
       # running app reports, as the Mac release's does.
       #
@@ -158,6 +162,12 @@ jobs:
           pnpm exec electron-builder --linux --config electron-builder.linux.yml --publish never \
             -c.extraMetadata.version="$VERSION" \
             -c.electronDownload.cache="$electron_config_cache" -c.electronDownload.isVerifyChecksum=false
+      # Whatever the build did, so a build that failed partway keeps the tools it fetched.
+      - name: Keep electron-builder's tools
+        if: ${{ !cancelled() }}
+        uses: ./.release-tooling/.github/actions/electron-builder-tools
+        with:
+          save: 'true'
       - name: Verify the packaged release notes
         if: ${{ inputs.version }}
         env:

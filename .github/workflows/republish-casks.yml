@@ -85,6 +85,8 @@ jobs:
         with:
           node-version: 24
 
+      - uses: ./.github/actions/electron-download
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

@@ -13,7 +13,9 @@
 //
 // Each archive is verified against that checksum before anything is
 // unpacked, cached under ~/Library/Caches so a second checkout or a
-// reinstall costs no download, and unpacked once, beside it, into a tree
+// reinstall costs no download (or in the folder INFINITARY_BUNDLED_GIT_CACHE
+// names, which CI keeps in its own cache: .github/actions/electron-download),
+// and unpacked once, beside it, into a tree
 // that every working copy then clones (scripts/clone-or-copy.ts): on APFS
 // the copies share that tree's blocks instead of each holding its own 55 MB,
 // and a disk that cannot clone gets a plain copy. Both the cached tree and
@@ -169,7 +171,8 @@ export function cachedTreeDir(entry: ManifestEntry, cacheDir: string): string {
 
 export async function ensureBundledGit({
   vendorDir = join(root, "vendor", "git"),
-  cacheDir = join(homedir(), "Library", "Caches", "infinitary", "bundled-git"),
+  cacheDir = process.env.INFINITARY_BUNDLED_GIT_CACHE ||
+    join(homedir(), "Library", "Caches", "infinitary", "bundled-git"),
   entryFor = manifestEntry,
 }: {
   vendorDir?: string;

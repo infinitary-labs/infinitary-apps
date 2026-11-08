@@ -1,8 +1,9 @@
 import { spawn, spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   copyFileSync,
   existsSync,
+  globSync,
   mkdirSync,
   readFileSync,
   realpathSync,
@@ -15,7 +16,14 @@ import { createRequire } from "node:module";
 import type { AddressInfo } from "node:net";
 import { basename, delimiter, dirname, join, sep } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import {
+  ARCHES,
+  type Arch,
+  ensureBundledGit,
+  type ManifestEntry,
+} from "../scripts/ensure-bundled-git.ts";
 import { hostEnv } from "../src/core/hostEnv";
+import { claimedPort } from "./helpers/claimedPort";
 import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWorkflows";
 import { scratchDir } from "./helpers/scratchDirs";
 
@@ -125,9 +133,9 @@ describe(".github/actions/electron-download", () => {
     with?: Record<string, string>;
   };
   const { runs } = loadYamlFile(".github/actions/electron-download/action.yml") as {
-    runs: { steps: [record: Step, cache: Step] };
+    runs: { steps: [record: Step, cache: Step, git: Step] };
   };
-  const [record, cache] = runs.steps;
+  const [record, cache, git] = runs.steps;
   let folder: string;
 
   beforeEach(() => {
@@ -171,9 +179,10 @@ describe(".github/actions/electron-download", () => {
   // and electron's installer failed when its download from the release server
   // stalled for five minutes. A self-hosted runner restores it too.
   it("runs on a self-hosted runner as on a GitHub-hosted one", () => {
-    for (const step of [record, cache]) {
+    for (const step of [record, cache, git]) {
       for (const environment of ["github-hosted", "self-hosted"]) {
-        const runs = step.if === undefined || workflowValue(step.if, { runner: { environment } });
+        const runner = { environment, os: "macOS" };
+        const runs = step.if === undefined || workflowValue(step.if, { runner });
         expect(runs, `${step.id ?? "actions/cache"} on ${environment}`).toBe(true);
       }
     }
@@ -250,6 +259,92 @@ describe(".github/actions/electron-download", () => {
     const own = `electron-macOS-ARM64-${lockfile.importers["."].devDependencies.electron.version}`;
     expect(keys("mac")).toEqual([`${own}-darwin-arm64-darwin-x64`, own]);
     expect(keys("parallel")).toEqual([own, ""]);
+  });
+
+  // INF-1109's phone run 42469734595 failed on an iPad before any test ran:
+  // the install's other download from GitHub's release server, dugite-native's
+  // macOS git (scripts/ensure-bundled-git.ts), took a 504. These run the app's
+  // own script against a stand-in for that server, and carry to the next
+  // runner only the files the cache step's path names, as actions/cache does.
+  it("keeps the app's git archives a Mac install fetches, so the next fresh runner fetches neither", async () => {
+    const { env, outputs } = runRecordStep();
+    const lockfile = loadYamlFile("pnpm-lock.yaml") as {
+      importers: { ".": { dependencies: { dugite: { version: string } } } };
+    };
+    const dugite = lockfile.importers["."].dependencies.dugite.version;
+    const contexts = {
+      runner: { os: "macOS", arch: "ARM64" },
+      steps: { [record.id ?? ""]: { outputs } },
+    };
+    expect(workflowValue(git.if ?? "", contexts)).toBe(true);
+    expect(workflowValue(git.if ?? "", { ...contexts, runner: { os: "Linux" } })).toBe(false);
+    expect(workflowString(git.with?.key ?? "", contexts)).toBe(`bundled-git-macOS-${dugite}`);
+    const pattern = workflowString(git.with?.path ?? "", contexts);
+    const folder = env.INFINITARY_BUNDLED_GIT_CACHE as string;
+    expect(folder).toBeTypeOf("string");
+    expect(dirname(pattern)).toBe(folder);
+
+    // A stand-in archive for each chip, served by a stand-in release server.
+    const archives = new Map<Arch, ManifestEntry & { body: Buffer }>();
+    for (const arch of ARCHES) {
+      const tree = join(scratchDir("infinitary-git-tree-"), "tree");
+      mkdirSync(join(tree, "bin"), { recursive: true });
+      mkdirSync(join(tree, "libexec", "git-core"), { recursive: true });
+      writeFileSync(join(tree, "bin", "git"), randomBytes(1024));
+      writeFileSync(join(tree, "libexec", "git-core", "git-remote-http"), "remote\n");
+      const file = join(dirname(tree), `stand-in-git-${arch}.tar.gz`);
+      const packed = spawnSync("tar", ["-czf", file, "-C", tree, "."], { env: hostEnv() });
+      expect(packed.status, String(packed.stderr)).toBe(0);
+      const body = readFileSync(file);
+      const checksum = createHash("sha256").update(body).digest("hex");
+      archives.set(arch, { name: basename(file), url: "", checksum, body });
+    }
+    const asked: string[] = [];
+    const server = createServer((request, response) => {
+      asked.push(request.url ?? "");
+      const archive = [...archives.values()].find((each) => request.url === `/${each.name}`);
+      if (archive) response.writeHead(200).end(archive.body);
+      else response.writeHead(404).end();
+    });
+    const port = await claimedPort();
+    await new Promise<void>((resolve) => server.listen(port, "127.0.0.1", resolve));
+    const entryFor = (arch: Arch) => {
+      const archive = archives.get(arch);
+      if (!archive) throw new Error(`no stand-in for ${arch}`);
+      return { ...archive, url: `http://127.0.0.1:${port}/${archive.name}` };
+    };
+    // A scratch home too, so a script that ignored the folder would miss it here, never write home.
+    const before = { cache: process.env.INFINITARY_BUNDLED_GIT_CACHE, home: process.env.HOME };
+    process.env.INFINITARY_BUNDLED_GIT_CACHE = folder;
+    process.env.HOME = scratchDir("infinitary-git-home-");
+    try {
+      // The first runner fetches both, into the folder the step names.
+      await ensureBundledGit({ vendorDir: join(scratchDir("infinitary-copy-"), "git"), entryFor });
+      expect(asked.sort()).toEqual(ARCHES.map((arch) => `/${entryFor(arch).name}`).sort());
+      const kept = globSync(pattern).sort();
+      expect(kept.map((file) => basename(file))).toEqual(
+        ARCHES.map((arch) => entryFor(arch).name).sort(),
+      );
+
+      // The next fresh runner starts with only what the cache restored.
+      const saved = scratchDir("infinitary-saved-");
+      for (const file of kept) copyFileSync(file, join(saved, basename(file)));
+      rmSync(folder, { recursive: true, force: true });
+      mkdirSync(folder, { recursive: true });
+      for (const file of kept) copyFileSync(join(saved, basename(file)), file);
+      asked.length = 0;
+      const vendorDir = join(scratchDir("infinitary-copy-"), "git");
+      await ensureBundledGit({ vendorDir, entryFor });
+      expect(asked).toEqual([]);
+      for (const arch of ARCHES) {
+        expect(existsSync(join(vendorDir, `darwin-${arch}`, "bin", "git"))).toBe(true);
+      }
+    } finally {
+      if (before.cache === undefined) delete process.env.INFINITARY_BUNDLED_GIT_CACHE;
+      else process.env.INFINITARY_BUNDLED_GIT_CACHE = before.cache;
+      process.env.HOME = before.home;
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
   });
 });
 

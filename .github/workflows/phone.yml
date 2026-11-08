@@ -190,6 +190,13 @@ jobs:
         with:
           dest: ${{ runner.temp }}/setup-pnpm
           package_json_file: Application Support/firstmate/package.json
+      # A phone Mac starts fresh for each job, so the install below would fetch Electron and
+      # the app's git from GitHub's release server every time; this restores them from the
+      # Actions cache first (docs/testing.md, "Downloads from GitHub's release server").
+      - if: ${{ steps.scope.outputs.gate == 'true' }}
+        uses: ./Application Support/firstmate/.github/actions/electron-download
+        with:
+          working-directory: Application Support/firstmate
       - name: Install without reading this Mac's signing material
         if: ${{ steps.scope.outputs.gate == 'true' }}
         run: |

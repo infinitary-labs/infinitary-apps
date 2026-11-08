@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "ci-release-server-downloads-cached",
+      "reason": "This change keeps CI's downloads from GitHub's release server in the Actions cache; it does not change the app."
+    }
+  ]
+}

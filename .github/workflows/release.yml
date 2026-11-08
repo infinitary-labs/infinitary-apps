@@ -1641,6 +1641,7 @@ jobs:
             scripts/app-runtime-version.mjs
             .github/actions/linux-packages/
             scripts/linux-package-sums.ts
+            .github/actions/electron-download/
 
       - name: Use the workflow's own launch gate
         id: publish-launch-gate
@@ -1653,6 +1654,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+
+      # The workflow's own copy, as the launch gate above: a stable runs its alpha's source.
+      - uses: ./.release-tooling/.github/actions/electron-download
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

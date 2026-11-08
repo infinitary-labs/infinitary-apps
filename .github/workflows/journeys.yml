@@ -269,6 +269,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - uses: ./Application Support/firstmate/.github/actions/electron-download
+        with:
+          working-directory: Application Support/firstmate
       - run: pnpm install --frozen-lockfile
       # No development signing: running on the Mac, or running every named
       # test there (mac_all), never asks for a custom signature. Every journey

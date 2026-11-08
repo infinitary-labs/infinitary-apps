@@ -451,6 +451,7 @@
         "!tests/journey-groups.test.ts",
         "!tests/checks-mode.test.ts",
         "!tests/ensure-electron-installed.test.ts",
+        "!tests/electron-builder-tools.test.ts",
         "!tests/typecheck.test.ts",
         "!tests/export-tasks.test.ts",
         "!tests/corpus-tools-plain-node.test.ts",

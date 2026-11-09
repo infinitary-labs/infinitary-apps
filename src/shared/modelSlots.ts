@@ -125,10 +125,9 @@ export const STARTER_SLOTS: StarterMap = {
   "anthropic-claude": {
     // The id Claude's own client serves Fable under, which is what the model
     // probe checks CLAUDE_MODELS against (docs/claude-model-probe.md):
-    // Fable 5.1 on Claude Code 2.1.278 (2026-09-20), where 2.1.234 had
-    // served "claude-fable-5" - a row the client no longer answers is inert
-    // rather than premium (FI3-74's shape).
-    "claude-fable-5-1": ["premium"],
+    // Fable 5.2 is served by Claude Code 2.1.321; existing placements
+    // stay as the person chose them when the new starter arrives.
+    "claude-fable-5-2": ["premium"],
     "claude-opus-5-5": ["high"],
     "claude-sonnet-5-5": ["medium"],
     "claude-haiku-5-5": ["low"],

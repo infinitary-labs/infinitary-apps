@@ -24,12 +24,13 @@ It runs under the same boundary a crewmate run does (`claudeEnvFor`, see `docs/c
 ## How the two catalogs are compared
 
 The client's rows are aliases as much as models, so they are normalized to the runnable id Infinitary would name.
-These rows illustrate the current Sonnet family and earlier Opus/Fable catalog reads, not one historical snapshot:
+These rows illustrate the current Fable and Sonnet families and earlier Opus/Fable catalog reads, not one historical snapshot:
 
 | Client row (`value` → `resolvedModel`) | Canonical id |
 | --- | --- |
 | `default` → `claude-opus-5-5[1m]` | `claude-opus-5-5` |
 | `opus[1m]` → `claude-opus-5-5[1m]` | `claude-opus-5-5` (deduplicated) |
+| `claude-fable-5-2` → `claude-fable-5-2` (2.1.321) | `claude-fable-5-2` |
 | `claude-fable-5-1[1m]` → `claude-fable-5-1` | `claude-fable-5-1` |
 | `sonnet` → `claude-sonnet-5-5` | `claude-sonnet-5-5` |
 | `haiku` → `claude-haiku-5-5` (2.1.293 onward) | `claude-haiku-5-5` |

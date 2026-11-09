@@ -25,7 +25,7 @@ import { claudeStarter } from "./starters";
  * Lean model lists (captain, 2026-09-23; docs/model-lists.md), end to end
  * against the app's real runtime read of a Claude account's catalog - the
  * stand-in client answers the SDK's model list with the current four
- * models and eight older generations, plus what each test adds.
+ * models and nine older generations, plus what each test adds.
  *
  * The two rules under test are the captain's: nothing waits on a read, and
  * a failed read falls back to the shipped catalog silently. And the lean
@@ -53,7 +53,9 @@ const MEDIUM_STARTER = claudeStarter("medium");
 
 type Row = { value: string; displayName: string };
 
+// The approved Fable 5.2 update follows the installed 2.1.321 client's listing.
 const CLAUDE_CURRENT: Row[] = [
+  { value: "claude-fable-5-2", displayName: "Fable 5.2" },
   { value: "claude-fable-5-1", displayName: "Fable 5.1" },
   { value: "claude-opus-5-5", displayName: "Opus 5.5" },
   { value: "claude-sonnet-5-5", displayName: "Sonnet 5.5" },
@@ -176,7 +178,7 @@ test("a Claude account read at runtime: the newest generations, a kept model tha
     try {
       await expectClaudeConnected(app.page, CLAUDE_ACCOUNT);
       // One line for the new generation once the read lands, and none for
-      // the eight older ones.
+      // the nine older ones.
       await expect(feedLine(app.page, modelAddedNote(CLAUDE, "claude-sonnet-5-6", []))).toBeVisible(
         { timeout: 25_000 },
       );
@@ -189,7 +191,7 @@ test("a Claude account read at runtime: the newest generations, a kept model tha
           .locator('[data-slot-group="off"]')
           .getByRole("button", { name: "Claude Sonnet 5.6", exact: true }),
       ).toBeVisible({ timeout: 25_000 });
-      // Five rows for thirteen served ids: each family's newest, plus the
+      // Five rows for fourteen served ids: each family's newest, plus the
       // Sonnet 5.5 starter it has not replaced yet.
       expect(await claudeRows(app.page)).toEqual(
         [...SHIPPED_ROWS, rowKey("claude-sonnet-5-6")].sort(),

@@ -54,7 +54,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
    There is deliberately NO failure/incident ledger; the captain cut it.
  - **Premium** (`PREMIUM_SLOT` / `AUTO_ROUTABLE_SLOTS` in `src/shared/modelSlots.ts`): a fourth slot above high that crewmate automatic selection NEVER picks - not in `route()` or the cheap-first candidate walk (`src/core/routing/candidates.ts`, including its uncatalogued tail).
    The first mate's Auto instead tries high → medium → premium → low across Pi and Claude in one pool; premium is its automatic fallback before low.
-   A premium starter row (`claude-fable-5-1` on Claude, `gpt-6-astra` on Codex) is pinnable without a settings trip; crew never auto-picks it.
+   A premium starter row (`claude-fable-5-2` on Claude, `gpt-6-astra` on Codex) is pinnable without a settings trip; crew never auto-picks it.
    GPT-6.1 Sol is the high default, GPT-6.1 Terra the medium default and GPT-6 Luna the low default on Codex (`STARTER_SLOTS`; migration 39 moves a saved GPT-5.6 pick onto the GPT-6 Sol and Luna rows).
  - **Slots** (`src/core/routing/modelSlots.ts` + `src/shared/modelSlots.ts`): a per-OFFERING record (decision C - the same id can sit in two slots on two providers; never dedupe ids across providers).
    Seeded from `STARTER_SLOTS` on first activation only; a LISTED newcomer from a successful read arrives off unless the map names them, and is announced once, and a listed or kept model a later successful read no longer serves is announced once as gone (`ModelSlots.departures`).

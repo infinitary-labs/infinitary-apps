@@ -65,7 +65,7 @@ Changing the starting levels is a commit to that file in the tap; a development 
 | Copilot | Pi's catalog, which Pi itself narrows at sign-in to the models the account may use (it stores their ids with the sign-in) | - |
 | OpenRouter | Pi's catalog | - |
 
-Claude ships Haiku 5.5 (`claude-haiku-5-5`) as its low starter; Sonnet 5.5 remains medium, Opus 5.5 high and Fable 5.1 premium.
+Claude ships Haiku 5.5 (`claude-haiku-5-5`) as its low starter; Sonnet 5.5 remains medium, Opus 5.5 high and Fable 5.2 premium.
 Copilot's starters are the same Claude rows as Copilot serves them - Fable 5.1 premium, Opus 5.5 high, Sonnet 5.5 medium - with no low row: the captain left out Haiku 4.5 (INF-560).
 Reconciliation seeds only unseen models, preserving saved Sonnet or Haiku 4.5 placements and leaving an already-seen, turned-off Haiku 5.5 off.
 A pre-2.1.293 client can run the explicit Haiku 5.5 id while omitting it from a successful picker catalog.

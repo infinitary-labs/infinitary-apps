@@ -81,11 +81,13 @@ describe("normalizing the client's catalog rows", () => {
 });
 
 /**
- * Current Haiku 5.5 and Sonnet 5.5 with the earlier generations a client
+ * Current Fable 5.2, Haiku 5.5 and Sonnet 5.5 with the earlier generations a client
  * may re-list. A composite fixture, not one historical catalog snapshot
  * (docs/claude-model-probe.md).
  */
+// Fable 5.2 row: the installed 2.1.321 client's live listing, verified for the catalog update.
 const RELISTED_ROWS: ClaudeModelRow[] = [
+  { value: "claude-fable-5-2", resolvedModel: "claude-fable-5-2", displayName: "Fable 5.2" },
   { value: "haiku", resolvedModel: "claude-haiku-5-5", displayName: "Haiku 5.5" },
   { value: "default", resolvedModel: "claude-opus-5-5", displayName: "Default (recommended)" },
   { value: "opus", resolvedModel: "claude-opus-5-5", displayName: "Opus 5.5" },
@@ -139,7 +141,7 @@ describe("the Claude catalog check (docs/model-lists.md)", () => {
     // remain reachable by name, without making the current starter stale.
     const result = check(canonicalClaudeModelIds(RELISTED_ROWS));
     expect(result.failures).toEqual([]);
-    expect(result.digest).toContain("8 more by name only");
+    expect(result.digest).toContain("9 more by name only");
   });
 
   it("fails when a family's newest generation is missing from CLAUDE_MODELS", () => {
@@ -164,7 +166,7 @@ describe("the Claude catalog check (docs/model-lists.md)", () => {
     const served = ["claude-fable-5", "claude-opus-5-5", "claude-sonnet-5", "claude-haiku-4-5"];
     const failures = check(served).failures.join("\n");
     expect(failures).toContain("Dead default");
-    expect(failures).toContain("claude-fable-5-1");
+    expect(failures).toContain("claude-fable-5-2");
   });
 
   it("names each served model as CLAUDE_MODELS does, else by the client's own label", () => {
@@ -173,7 +175,7 @@ describe("the Claude catalog check (docs/model-lists.md)", () => {
     expect(served).toContainEqual({ id: "claude-opus-4-8", name: "Claude Opus 4.8" });
     // The "default" alias row never names a model.
     expect(served.some((model) => /default/i.test(model.name))).toBe(false);
-    expect(served).toHaveLength(12);
+    expect(served).toHaveLength(new Set(canonicalClaudeModelIds(RELISTED_ROWS)).size);
   });
 });
 

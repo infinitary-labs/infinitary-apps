@@ -70,14 +70,15 @@ describe("the starter map", () => {
 });
 
 describe("ModelSlots.reconcile - first activation only", () => {
-  it("seeds Claude's low starter without moving its other levels", () => {
+  // Captain's approved Fable 5.2 catalog update keeps each Claude starter in its level.
+  it("seeds Claude's current starters in their levels", () => {
     const { slots } = build([claude]);
     slots.reconcile();
     for (const [id, slot] of [
       ["claude-haiku-5-5", "low"],
       ["claude-sonnet-5-5", "medium"],
       ["claude-opus-5-5", "high"],
-      ["claude-fable-5-1", "premium"],
+      ["claude-fable-5-2", "premium"],
     ] as const) {
       expect(slots.slotsOf({ provider: "anthropic-claude", id })).toEqual([slot]);
     }

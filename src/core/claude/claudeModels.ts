@@ -16,7 +16,7 @@ import { CLAUDE_PROVIDER_ID } from "@shared/providers";
  * runtime read has them, and never listed on their own.
  */
 export const CLAUDE_MODELS: ReadonlyArray<{ id: string; name: string }> = [
-  { id: "claude-fable-5-1", name: "Claude Fable 5.1" },
+  { id: "claude-fable-5-2", name: "Claude Fable 5.2" },
   { id: "claude-opus-5-5", name: "Claude Opus 5.5" },
   { id: "claude-sonnet-5-5", name: "Claude Sonnet 5.5" },
   { id: "claude-haiku-5-5", name: "Claude Haiku 5.5" },

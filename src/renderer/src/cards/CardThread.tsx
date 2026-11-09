@@ -14,6 +14,7 @@ import {
   limitBand,
   type PastedText,
 } from "@shared/composer";
+import { ENDED_CLOSE_CARD_LABEL } from "@shared/endedCard";
 import {
   type CSSProperties,
   type MouseEvent,
@@ -507,7 +508,7 @@ export function CardThread({
 }: {
   cardId: string;
   /** The card's author and hold, which the waiting line reads (`useThreadWait`). */
-  card: Pick<Card, "author" | "awaiting" | "taskId">;
+  card: ThreadCard;
   working?: boolean;
   /** The head's Collapse thread; `byKey` when a key pressed it. */
   onCollapse?: (byKey: boolean) => void;
@@ -657,7 +658,7 @@ export function LiveMessageList({
   messages,
   working,
 }: {
-  card: Pick<Card, "author" | "awaiting" | "taskId">;
+  card: ThreadCard;
   messages: readonly CardMessage[];
   working?: boolean;
 }) {
@@ -670,7 +671,73 @@ export function LiveMessageList({
       doing={doing}
       waiting={waiting}
       own={card.taskId}
+      ended={card.ended && card.id ? <EndedLine card={{ ...card, id: card.id }} /> : undefined}
     />
+  );
+}
+
+/** What a thread reads of its card; an ended card's line needs its id and offer too. */
+type ThreadCard = Pick<Card, "author" | "awaiting" | "taskId"> &
+  Partial<Pick<Card, "id" | "ended" | "lifecycleId" | "offerId">>;
+
+/**
+ * An ended card's app line (INF-3071): who ended it, its reason and that
+ * nothing on it waits, with Close card under it - the same close as the
+ * card's own Close. The core wrote the words; the thread keeps no row.
+ */
+function EndedLine({ card }: { card: Pick<Card, "id" | "ended" | "lifecycleId" | "offerId"> }) {
+  const pressNote = useShellStore((s) => s.pressNote);
+  const pending = useShellStore((s) => s.pendingCardActions[card.id] !== undefined);
+  if (!card.ended) return null;
+  return (
+    <div
+      data-thread-message="host"
+      data-thread-ended=""
+      style={{
+        display: "grid",
+        gridTemplateColumns: "34px minmax(0,1fr)",
+        gap: 8,
+        fontSize: "var(--text-xs)",
+        lineHeight: "var(--leading-body)",
+        color: "var(--fg-3)",
+      }}
+    >
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", paddingTop: 1 }}>
+        {WHO.host.label}
+      </span>
+      <div
+        style={{
+          minWidth: 0,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          gap: 6,
+        }}
+      >
+        <span style={{ alignSelf: "stretch", overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}>
+          {card.ended.line}
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "var(--text-xs)",
+              marginLeft: 6,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {timeOf(card.ended.at)}
+          </span>
+        </span>
+        <Button
+          size="sm"
+          variant="secondary"
+          data-thread-ended-close=""
+          disabled={pending}
+          onClick={() => void pressNote(card.id, card)}
+        >
+          {ENDED_CLOSE_CARD_LABEL}
+        </Button>
+      </div>
+    </div>
   );
 }
 
@@ -684,6 +751,7 @@ export function MessageList({
   doing,
   waiting,
   own,
+  ended,
 }: {
   messages: readonly CardMessage[];
   working?: boolean;
@@ -693,6 +761,8 @@ export function MessageList({
   waiting?: ThreadWaitLine;
   /** The id of the card's own task, whose key stays text in its lines (FI3-1271). */
   own?: string | undefined;
+  /** An ended card's app line, after every message and in place of any wait (INF-3071). */
+  ended?: ReactNode;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
   const count = messages.length;
@@ -700,7 +770,7 @@ export function MessageList({
   const waitingText = working ? undefined : waiting?.text;
   // The list's live tail: the working row with what it names, or the
   // waiting line.
-  const tail = working ? `working ${doing ?? ""}` : waitingText;
+  const tail = working ? `working ${doing ?? ""}` : ended ? "ended" : waitingText;
   useEffect(() => {
     // Hold at the bottom as messages arrive, as the working row comes (the
     // first mate's busy flag can land a render after the captain's reply,
@@ -729,8 +799,10 @@ export function MessageList({
       {working ? (
         <WorkingRow entrance={workingEntrance} doing={doing} />
       ) : (
+        !ended &&
         waiting && <WaitingRow key={waiting.text} waiting={waiting} entrance={workingEntrance} />
       )}
+      {ended}
       <div ref={endRef} />
     </div>
   );

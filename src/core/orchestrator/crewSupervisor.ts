@@ -1293,12 +1293,16 @@ export class CrewSupervisor {
 
   /** The corner only puts a card aside (INF-2794); it never reaches the card's author. */
   close(cardId: string): void {
+    // An ended card's minus closes it: nothing on it can wait (INF-3071).
+    if (this.cards.ended.close(cardId)) return;
     const card = this.cards.shown(cardId);
     if (card) this.cards.dismiss(card);
   }
 
   /** A live note's own button (INF-2794): only Got it tells the note's author. */
   pressNote(cardId: string, submission?: unknown): void {
+    // An ended card's one button is Close, which tells nobody (INF-3071).
+    if (this.cards.ended.close(cardId)) return;
     const card = this.cards.shown(cardId);
     if (card && this.cards.pressNote(card, submission) === "got-it")
       this.cardActions.tellCardClosed(card);

@@ -42,7 +42,15 @@ import {
   KEPT_MERGE_TITLE,
   keptMerge,
 } from "./scenarios/keptMerge";
-import { cardLeave, cardReply, completionAction, expectNoCard, showCard, shownCard } from "./stack";
+import {
+  cardLeave,
+  cardReply,
+  closeEndedCard,
+  completionAction,
+  expectNoCard,
+  showCard,
+  shownCard,
+} from "./stack";
 
 /**
  * Cards/tasks/agents P1 exit check: a completion card carries ONE merge
@@ -835,6 +843,9 @@ for (const backend of CREW_BACKENDS) {
         guidance: { latest: 2, declared: 2 },
         receipt: { head: repaired },
       });
+      // The captain had seen the question card, so it stays up, ended, until
+      // he closes it (INF-3071); its open thread folds the side panels meanwhile.
+      await closeEndedCard(page, GUIDED_MERGE_QUESTION);
       await expect(putInLine(page, await taskKey(page, title))).toBeVisible({ timeout: 20_000 });
       await regionShot(
         dockRegion(page, "activity"),

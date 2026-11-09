@@ -111,8 +111,10 @@ export const MIGRATION_71_TABLE =
 /** INF-1296 piece 2's relationship rows, lent to an older schema for today's writer. */
 export const TASK_REFERENCES_TABLE =
   "CREATE TABLE task_references (task_id TEXT NOT NULL, kind TEXT NOT NULL, ref TEXT NOT NULL, target_id TEXT, actor TEXT, recorded_at INTEGER, PRIMARY KEY (task_id, kind));";
-/** INF-2796's after-merge steps on a merge card, undone. */
-export const REVERSE_AFTER_MERGE = "ALTER TABLE cards DROP COLUMN after_merge_json;\n";
+/** INF-3071's ended card kept on the stack, undone. */
+export const REVERSE_ENDED = "DROP INDEX cards_ended;\nALTER TABLE cards DROP COLUMN ended_json;\n";
+/** INF-2796's after-merge steps on a merge card, with the later card column undone. */
+export const REVERSE_AFTER_MERGE = `${REVERSE_ENDED}ALTER TABLE cards DROP COLUMN after_merge_json;\n`;
 /** INF-1670's answerer of a card whose author cannot answer, with the later card column undone. */
 export const REVERSE_ANSWERED_BY = `${REVERSE_AFTER_MERGE}ALTER TABLE cards DROP COLUMN answered_by;\n`;
 /** INF-1610's declaration that a card answers the captain's message, with the later card column undone. */

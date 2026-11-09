@@ -2,6 +2,7 @@ import { z } from "zod";
 import { afterMergeShownListSchema } from "./afterMerge.ts";
 import { cardCornerSchema, noteDoneSchema } from "./cardLeave.ts";
 import { SPELLINGS } from "./codeNames.ts";
+import { cardEndedSchema } from "./endedCard.ts";
 import { requiredActionsSchema } from "./requiredActions.ts";
 import { rigorSchema } from "./rigor.ts";
 
@@ -641,7 +642,26 @@ export function mergeClosesLine(
       ? MERGE_CLOSES_WORDS.closes
       : MERGE_CLOSES_WORDS.continues
     : undefined;
-  return words ? `<p class="inf-merge-closes" ${MERGE_CLOSES_MARK}>${words}</p>` : undefined;
+  return words ? mergeClosesMarkup(words) : undefined;
+}
+
+/** The merge line as a card's body carries it. */
+function mergeClosesMarkup(words: string): string {
+  return `<p class="inf-merge-closes" ${MERGE_CLOSES_MARK}>${words}</p>`;
+}
+
+/**
+ * A card's body without its merge line, and without the strip that held
+ * only that line: for a card that no longer merges, such as one its author
+ * ended (INF-3071).
+ */
+export function withoutMergeClosesLine(body: string): string {
+  let next = body;
+  for (const words of Object.values(MERGE_CLOSES_WORDS)) {
+    const line = mergeClosesMarkup(words);
+    next = next.replace(`${SETTLE_FACTS_OPEN}${line}</div>`, "").replace(line, "");
+  }
+  return next;
 }
 
 /**
@@ -1253,6 +1273,13 @@ export const cardSchema = z.strictObject({
   currentUpdateId: z.string().max(64).optional(),
   /** An accepted sighting of that exact update, shared by every updated view. */
   currentUpdateSeen: z.boolean().optional(),
+  /**
+   * Its author ended it while the captain had seen it (INF-3071): the record
+   * has closed it, and the stack keeps drawing it with no actions, one Close
+   * and this app line until the captain closes it. Host stamp, never an
+   * author's; absent on every live card.
+   */
+  ended: cardEndedSchema.optional(),
 });
 export type Card = z.infer<typeof cardSchema>;
 

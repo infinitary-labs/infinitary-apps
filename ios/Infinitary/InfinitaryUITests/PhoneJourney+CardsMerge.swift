@@ -16,6 +16,7 @@ extension PhoneJourney {
         try await verifyAskedLine()
         try await verifyCardReadiness()
         try await verifySharedSeen()
+        try await verifyEndedCard()
     }
 
     /// INF-1610: a card about the captain's message names it under its title, as on the Mac.
@@ -224,6 +225,33 @@ extension PhoneJourney {
         showCard(leader)
         XCTAssertTrue(app.buttons["card-new"].waitForAbsence(timeout: 10), app.debugDescription)
         picture("shared-seen-relaunched")
+    }
+
+    /// INF-3071: a card its author ended after the captain saw it stays, as on the Mac, crewmates and the first mate
+    /// alike: its chip reads Ended, its thread ends with the computer's line, and its one Close takes it away.
+    private func verifyEndedCard() async throws {
+        let fixture = try await home("ended-card-fixture")
+        let id = try XCTUnwrap(fixture["id"] as? String)
+        let title = try XCTUnwrap(fixture["title"] as? String)
+        showCard(title)
+        XCTAssertTrue(app.staticTexts[try XCTUnwrap(fixture["chip"] as? String)].waitForPresence(timeout: 10), app.debugDescription)
+        let close = app.buttons["note-done"]
+        XCTAssertTrue(close.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(close.label, try XCTUnwrap(fixture["close"] as? String))
+        XCTAssertFalse(app.buttons["card-action-build"].exists, "An ended card keeps none of its choices")
+        let cue = app.buttons["thread-cue"]
+        reveal(cue); tapOnPhone(cue)
+        let back = app.descendants(matching: .any).matching(identifier: "card-back").firstMatch
+        XCTAssertTrue(back.staticTexts[try XCTUnwrap(fixture["line"] as? String)].waitForPresence(timeout: 10), app.debugDescription)
+        picture("ended-card-thread")
+        tapOnPhone(app.buttons["thread-return"])
+        XCTAssertTrue(back.waitForAbsence(timeout: 10), app.debugDescription)
+        picture("ended-card")
+        reveal(close); tapOnPhone(close)
+        XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
+        let state = try await home("ended-card-state", body: "{\"id\":\"\(id)\"}")
+        XCTAssertEqual(state["ended"] as? Bool, false, "Close took the ended card off the stack")
+        XCTAssertEqual(state["open"] as? Bool, false)
     }
 
     /// INF-1879: putting an answer aside never completes it; Done remains available on its record.

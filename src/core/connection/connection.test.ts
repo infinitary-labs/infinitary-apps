@@ -9,6 +9,7 @@ import { CONNECTION_CLOSE, PAIR_PATH } from "@shared/connection";
 import { PLACED_WORK_SINCE } from "@shared/contractFeatures";
 import { HOME } from "@shared/deviceNames";
 import { type DeviceGrant, type DeviceKind, parsePairingLink } from "@shared/devices";
+import { ENDED_CLOSE, ENDED_CORNER, endedLineWords } from "@shared/endedCard";
 import {
   type CoreInvokeChannel,
   HOME_CAPABILITIES,
@@ -698,6 +699,68 @@ describe("the home's connection", () => {
     expect((replay.payload as { currentUpdateId?: string }[])[0]?.currentUpdateId).toBeUndefined();
     await back.close();
     await newer.close();
+    await current.close();
+    await phone.close();
+  });
+
+  // INF-3071's ended cards: a major-14 desktop from before them decodes a
+  // card strictly, so it gets an ended card without `ended`, as the note
+  // whose one Close closes it; a desktop listing the change and the phone read it.
+  it("keeps an older desktop's card decoding when a card is ended, across lists, pushes and replay", async () => {
+    const card = cardSchema.parse({
+      id: "card-program-starts-plan",
+      taskId: "inf3020",
+      title: "Plan: how a program starts its crewmates",
+      author: "crewmate",
+      priority: 15,
+      meta: "Crewmate",
+      body: "<p>I recommend a program start each crewmate through the first mate.</p>",
+      actions: [],
+      status: "ready",
+      createdAt: 1000,
+      lifecycleId: "plan-life",
+      offerId: "plan-offer",
+      seen: true,
+      noteDone: ENDED_CLOSE,
+      corner: ENDED_CORNER,
+      ended: {
+        by: "crewmate",
+        reason: "Your words went to the first mate, who starts planning crewmates.",
+        at: 2000,
+        line: endedLineWords(
+          "crewmate",
+          "Your words went to the first mate, who starts planning crewmates.",
+        ),
+      },
+    });
+    const at = await home({
+      dispatch: (async (channel) => {
+        if (channel === "inf:cards:list") return [card];
+        throw new Error("Unexpected request");
+      }) as CoreDispatch,
+    });
+    const grant = await at.join();
+    const old = await connectClient(grant, { changes: [] });
+    const current = await connectClient(grant, { changes: ["ended-cards"] });
+    const phone = await connectClient(grant, { system: { system: "ios" }, changes: [] });
+    const legacyDecoder = cardSchema.omit({ ended: true });
+    const listed = await old.invoke("inf:cards:list", []);
+    expect(legacyDecoder.parse(listed[0])).toMatchObject({ id: card.id, noteDone: ENDED_CLOSE });
+    expect((await current.invoke("inf:cards:list", []))[0]).toEqual(card);
+    expect((await phone.invoke("inf:cards:list", []))[0]).toEqual(card);
+    at.events.emit("inf:cards", [card]);
+    const oldPush = await old.push((push) => push.channel === "inf:cards");
+    expect(legacyDecoder.parse((oldPush.payload as unknown[])[0])).toMatchObject({ id: card.id });
+    expect((await current.push((push) => push.channel === "inf:cards")).payload).toEqual([card]);
+    expect((await phone.push((push) => push.channel === "inf:cards")).payload).toEqual([card]);
+    const cursor = old.cursor();
+    await old.close();
+    at.events.emit("inf:cards", [{ ...card, seen: true }]);
+    const back = await connectClient(grant, { cursor, changes: [] });
+    expect(back.welcome.catchUp).toBe("replay");
+    const replay = await back.push((push) => push.seq > cursor.seq);
+    expect(legacyDecoder.parse((replay.payload as unknown[])[0])).toMatchObject({ id: card.id });
+    await back.close();
     await current.close();
     await phone.close();
   });

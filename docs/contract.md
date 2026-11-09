@@ -13,6 +13,12 @@ Any other home keeps the legacy path, and an older phone ignores the new fields.
 Older desktop card decoders are strict, so the connection omits the added snapshot fields for a desktop on an earlier major that did not advertise the named change, on list replies, live pushes and replay alike.
 This compatibility projection changes neither permissions nor access.
 
+## Ended cards
+
+`ended-cards` adds an optional `ended` snapshot field to a card its author withdrew after the captain had seen it, which the stack keeps, with no actions and one Close, until the captain closes it.
+The connection sends `ended` only to a desktop whose hello lists `ended-cards`, on list replies, live pushes and replay alike, the same projection as the card update fields above; a phone gets it always.
+An older desktop draws such a card as a note whose one button closes it.
+
 ## The file
 
 `docs/contract.json` is generated, never edited by hand: `pnpm generate:contract` writes it from `src/shared/publishedContract.ts`, which reads `src/shared/ipc.ts`, `src/shared/work.ts` and `src/shared/connection.ts`.

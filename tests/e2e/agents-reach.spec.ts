@@ -73,7 +73,7 @@ import {
   reviewedTier,
 } from "./scenarios/reviewedTier";
 import { settingsSection } from "./settings";
-import { factsStrip, showCard, shownCard } from "./stack";
+import { closeEndedCard, factsStrip, showCard, shownCard } from "./stack";
 import { pressKey } from "./windowKeys";
 
 /**
@@ -361,6 +361,9 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
       (await detail(builder.id)).activityLog.filter((row) => row.id === overrideRow),
     ).toHaveLength(1);
     await expect(feedLine(page, rows[0]?.text ?? "")).toHaveCount(1);
+    // The captain had seen the cap card, so it stays up, ended, until he
+    // closes it (INF-3071); its open thread folds the side panels meanwhile.
+    await closeEndedCard(page, MOCK_REVIEW_ASK_CARD_TITLE);
     await regionShot(dockRegion(page, "activity"), out("1-override-feed-line.png"));
 
     // The builder's completion card at the reviewed version: the strip

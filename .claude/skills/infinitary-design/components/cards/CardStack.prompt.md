@@ -66,6 +66,7 @@ A closed drawing drops away immediately with its peeks even when its successor c
 
 Cards sort by priority, oldest first within each band.
 Whenever the shown card leaves (close, Put aside, closing action, merge, withdrawal or task closure), reveal the first unread card in that order, else the first card - the captain's FI3-711 rule; a reply moves nothing.
+A withdrawal of a card the user had seen moves nothing: the card stays in its place, ended, until the user closes it (`ResponseCard.prompt.md`).
 The initial stack restores unread cards from the card owner's saved seen observations, without an arrival pulse or a continuity jump.
 Paging alone clears only a legacy window-local mark; an exact-update mark remains until the owner confirms its drawn foreground reading.
 The badge includes the shown update while it remains unread, but arrow dots count only updates before and after it.

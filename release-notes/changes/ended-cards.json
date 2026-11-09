@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "ended-cards",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "A card you have read stays up when its crewmate ends it",
+      "body": "When a crewmate or your first mate ends a card you have already seen, it no longer vanishes from in front of you. It stays where it was, marked Ended, and its thread says who ended it and why. Its choices give way to one Close button, and the thread has a Close card button too. Closing it tells nobody, and you can still reply under it first.",
+      "picture": {
+        "dark": "ended-cards-dark.webp",
+        "light": "ended-cards-light.webp",
+        "alt": "A card marked Ended, its thread ending with the line Its crewmate ended this card and a Close card button, and one Close button where its choices were."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

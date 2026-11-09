@@ -50,6 +50,7 @@ import {
   type ThreadActivity,
   type ThreadOwed,
 } from "./cardThreads";
+import { ENDED_STAYS, EndedCards } from "./endedCards";
 import {
   authDecisionCard,
   deviceForgeSignInCard,
@@ -236,6 +237,8 @@ export type CardStack = {
 export class CardService {
   /** The open cards as their authors last wrote them: the record. */
   private readonly cards = new Map<string, Card>();
+  /** Cards ended while the captain had seen them, which only the views' stack draws (INF-3071). */
+  readonly ended: EndedCards;
   /** Story notes `release` kept off the stack for their task's merge (INF-2533). */
   private readonly heldForMerge = new Set<string>();
   /**
@@ -285,6 +288,7 @@ export class CardService {
 
   constructor(private readonly host: CardServiceHost) {
     this.evidence = new CardEvidence(host, this.cards);
+    this.ended = new EndedCards(host.cardStore, this);
     const stack: CardStack = {
       cards: this.cards,
       staged: this.staged,
@@ -324,6 +328,7 @@ export class CardService {
       });
       this.cards.set(seeded.id, seeded);
     }
+    this.ended.restore();
     // A note whose merge came while the app was closed reads merged before
     // it shows (INF-2678).
     this.refreshSettleFacts();
@@ -349,7 +354,7 @@ export class CardService {
       }
     }
     this.unsubscribeTasks = host.tasks.onChange(({ taskIds }) => this.refreshSettleFacts(taskIds));
-    if (this.cards.size > 0) this.scheduleBroadcast();
+    if (this.cards.size > 0 || this.ended.size > 0) this.scheduleBroadcast();
   }
 
   dispose(): void {
@@ -621,6 +626,7 @@ export class CardService {
   /** A task that never started leaves no card rows behind. */
   deleteRowsForTask(taskId: string): void {
     this.host.cardStore.deleteForTask(taskId);
+    this.ended.drop(taskId);
   }
 
   /**
@@ -634,6 +640,7 @@ export class CardService {
   /** The purge (D-13): a task's card rows and its cards on the stack go. */
   purgeTask(taskId: string): void {
     this.host.cardStore.deleteForTask(taskId);
+    this.ended.drop(taskId);
     for (const [cardId, card] of this.cards) {
       if (card.taskId !== taskId) continue;
       this.cards.delete(cardId);
@@ -1130,9 +1137,12 @@ export class CardService {
       throw new Error(`Crewmate cannot close card "${id}" (not emitted by this task).`);
     }
     const why = reason?.trim() || "closed";
+    const shown = this.snapshot().find((entry) => entry.id === id);
     let observation: string | undefined;
+    let kept: Card | undefined;
     this.host.cardStore.transaction(() => {
       this.host.cardStore.resolve(id, why);
+      kept = this.ended.end(shown, actor.kind, reason, this.host.now());
       observation = this.evidence.noteExit(card, actor.kind, "tool", {
         reason: "author-withdrawal",
         ...(reason?.trim() ? { note: why } : {}),
@@ -1140,10 +1150,11 @@ export class CardService {
     });
     this.cards.delete(id);
     this.staged.delete(id);
+    this.ended.hold(id, kept);
     this.recordResolution(card, "closed", actor.kind, undefined, observation);
     this.scheduleBroadcast();
     const decision = card.actions.length > 0 ? ` ${WITHDRAWN_UNCHOSEN}` : "";
-    return `Closed card "${card.title}" (${id}).${decision}`;
+    return `Closed card "${card.title}" (${id}).${decision}${kept ? ` ${ENDED_STAYS}` : ""}`;
   }
 
   /** A closed card as the captain last saw it, read-only (FI3-579); never changes anything. */
@@ -1762,6 +1773,7 @@ export class CardService {
    * host's own asks too. A note places nothing.
    */
   private placed(card: Card): void {
+    this.ended.close(card.id); // Back under an ended card's id, it is open again.
     this.host.cardPlaced?.(card);
     if (card.taskId) {
       this.host.syncCaptainGate(card.taskId, this.host.now());
@@ -1940,7 +1952,7 @@ export class CardService {
   }
 
   private broadcastSnapshot(): void {
-    const snapshot = this.snapshot();
+    const snapshot = this.ended.stack();
     this.host.broadcastCards(snapshot);
     for (const card of snapshot) {
       if (this.threadOffers.get(card.id) === card.offerId) continue;
@@ -1949,7 +1961,7 @@ export class CardService {
         this.host.broadcastThread?.(this.thread(card.id));
     }
     for (const id of this.threadOffers.keys())
-      if (!this.cards.has(id)) this.threadOffers.delete(id);
+      if (!this.cards.has(id) && !this.ended.has(id)) this.threadOffers.delete(id);
   }
 
   scheduleBroadcast(): void {

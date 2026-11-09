@@ -117,7 +117,9 @@ export class CardActions {
     files?: { text: string; name?: string }[],
   ): CardThread {
     const id = cardId.trim();
-    const card = this.core.cards.get(id);
+    // An ended card keeps its reply field (INF-3071): the words reach its
+    // author, or the first mate once its task has closed, as on an open card.
+    const card = this.core.cards.get(id) ?? this.core.cards.ended.get(id);
     if (!card) {
       throw new Error(
         this.core.cards.stored(id)

@@ -70,10 +70,14 @@ export function entryView(
 ): EntryView {
   const pastCard = past?.state === "ready" ? past.card : undefined;
   const replyable = !isHeldEntry(entry) && cardTakesReplies(entry);
-  const count = (facts.threads[entry.id] ?? []).length;
+  // An ended card's thread opens on its app line (INF-3071), which the
+  // thread draws after its messages, whether or not it was collapsed.
+  const ended = !isHeldEntry(entry) && entry.ended !== undefined;
+  const count = (facts.threads[entry.id] ?? []).length + (ended ? 1 : 0);
   // A past card's thread is always beside it when it has one: read-only, so
   // there is nothing to collapse and no reply row (design skill, "Past card").
-  const collapsed = !pastCard && replyable && count > 0 && facts.closedThreadIds.includes(entry.id);
+  const collapsed =
+    !pastCard && !ended && replyable && count > 0 && facts.closedThreadIds.includes(entry.id);
   const threadOpen = pastCard ? pastCard.messages.length > 0 : replyable && count > 0 && !collapsed;
   const sized = {
     width: openingCardWidth(pastCard?.width ?? entry.width, facts.defaultCardSize),

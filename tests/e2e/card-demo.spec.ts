@@ -13,7 +13,15 @@ import { type LaunchedApp, launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { DEMO_PROMPT_MARKER, DEMO_WITHDRAW_MARKER, demoCard } from "./scenarios/demoCard";
-import { cardReply, clickInBody, SHOWN_ENTRY, showCard, shownCard } from "./stack";
+import {
+  cardReply,
+  clickInBody,
+  closeEndedCard,
+  expectCardSeen,
+  SHOWN_ENTRY,
+  showCard,
+  shownCard,
+} from "./stack";
 import { pressKey } from "./windowKeys";
 
 /**
@@ -269,8 +277,11 @@ test("the demo plays again after the app restarts and from the card once it is c
     await playFrom(page, body(page));
 
     // INF-1879: ask its author to withdraw the offer; putting it away would keep it open.
+    await expectCardSeen(page, DEMO_CARD_TITLE);
     await cardReply(page).field.fill(DEMO_WITHDRAW_MARKER);
     await cardReply(page).send.click();
+    // The captain had seen it, so it stays ended until they close it (INF-3071).
+    await closeEndedCard(page, DEMO_CARD_TITLE, { timeout: 30_000 });
     await expect
       .poll(async () => (await page.evaluate(() => window.infinitary.cards.list())).length)
       .toBe(0);

@@ -15,6 +15,7 @@ import { seedTask } from "@core/tasks/seedTask";
 import { CARD_LEAVE } from "@shared/cardLeave";
 import { ANYTHING_ELSE_ANSWER, PAST_CARD_WORDS_LEAD } from "@shared/cards";
 import { SCENE_OBSERVATIONS_SINCE } from "@shared/contractFeatures";
+import { ENDED_CHIP_LABEL, ENDED_CLOSE_LABEL, endedLineWords } from "@shared/endedCard";
 import type { FmEvent } from "@shared/events";
 import { PROTOCOL_VERSION, VIEW_FLOOR } from "@shared/ipc";
 import { pastEndingWords } from "@shared/pastCard";
@@ -1544,6 +1545,48 @@ export async function startPhoneHome(
             actions: [],
           });
           result = { leader: "Sampler result", target: "Latency findings" };
+          break;
+        }
+        case "POST ended-card-fixture": {
+          // INF-3071: the first mate ends its own card after the captain saw it, so it stays, ended.
+          for (const card of core.services.supervisor.cards.snapshot())
+            await core.dispatch(
+              card.noteDone && !card.noteDone.closesTask
+                ? "inf:cards:note-done"
+                : "inf:cards:close",
+              [card.id],
+            );
+          const supervisor = core.services.supervisor;
+          const reason = "The crewmate on this task answered it under its own card.";
+          const id = supervisor.addFirstmateCard({
+            id: "meter-plan",
+            title: "The meter reads kWh",
+            body: "<p>The meter reads kilowatt-hours.</p>",
+            actions: [
+              { id: "build", label: "Approve and build", default: true },
+              { id: "defer", label: "Save and defer" },
+            ],
+          });
+          const shown = supervisor.cards.shown(id)!;
+          supervisor.cards.seen(id, shown.offerId!);
+          supervisor.closeCard(id, { kind: "firstmate" }, reason);
+          result = {
+            id,
+            title: shown.title,
+            chip: ENDED_CHIP_LABEL,
+            close: ENDED_CLOSE_LABEL,
+            line: endedLineWords("firstmate", reason),
+          };
+          break;
+        }
+        case "POST ended-card-state": {
+          let body = "";
+          for await (const chunk of request) body += chunk.toString();
+          const { id } = JSON.parse(body) as { id: string };
+          result = {
+            ended: core.services.supervisor.cards.ended.has(id),
+            open: core.services.supervisor.cards.has(id),
+          };
           break;
         }
         case "POST shared-seen-mark": {

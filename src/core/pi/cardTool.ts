@@ -965,7 +965,8 @@ export const CLOSE_CARD_TOOL = crewmateTool({
     card_id: Type.String(),
     reason: Type.Optional(
       Type.String({
-        description: "Why this card is obsolete; one line",
+        description:
+          "Why you ended it, in one plain line for the captain: a card they have seen stays up, marked ended, with this line",
       }),
     ),
   }),

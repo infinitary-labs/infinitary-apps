@@ -122,3 +122,9 @@ Whole card covers rewrites or excessive part counts; a reworded line counts as e
 Preview updated covers interactive previews, and Title and Buttons target those actual regions.
 Go to the next revised area is in command search without a default shortcut, follows the selected revision's list and defaults to the newest released list.
 No incoming revision scrolls the card automatically; a collapsed thread keeps its existing opening control.
+
+## An ended card's line
+
+When its author ends a card the user has seen, the thread opens beside it and ends with one app line, in the app's quiet row: who ended it (`Its crewmate` or `Your first mate`), the reason it gave, and "Nothing on it waits on you.", with its time.
+Under it sits a small secondary `Close card` button, a Tab stop, which closes the card as the footer's Close does.
+No waiting or working line follows it, and the line is never saved on the thread: the card's past view reads "Withdrawn by its author".

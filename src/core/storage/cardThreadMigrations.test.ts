@@ -19,9 +19,11 @@ describe("clearing the answers interim lines kept", () => {
   it("clears only an interim line's answer, so the stuck card's next answer ends its wait", () => {
     const dir = tmpUserData();
     const older = openDatabase(dir, INTERIM_ANSWERS_VERSION - 1);
-    // Today's card writer names INF-2796's later `after_merge_json` column,
-    // lent to the older schema here; its own migration leaves it in place.
+    // Today's card service names INF-2796's later `after_merge_json` and
+    // INF-3071's `ended_json` columns, lent to the older schema here; their
+    // own migrations leave them in place.
     older.exec("ALTER TABLE cards ADD COLUMN after_merge_json TEXT");
+    older.exec("ALTER TABLE cards ADD COLUMN ended_json TEXT");
     const before = setup(older);
     seedTask(before.tasks, { id: "t1", title: "Fix the meter", status: "idle" });
     const cards = before.make();

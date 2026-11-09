@@ -76,6 +76,9 @@ import {
   cardReply,
   closeOpenCards,
   closeQuestion,
+  endedCloseCard,
+  expectCardSeen,
+  expectEndedCard,
   expectNoCard,
   pager,
   SHOWN_ENTRY,
@@ -382,11 +385,15 @@ test('"merge it" typed under a completion card closes it and lands as the Firstm
   await expect(page.getByRole("button", { name: MERGE_WORDS.land })).toBeVisible();
 
   await expandDock(page, "activity");
+  await expectCardSeen(page, THREAD_SETTLE_CARD_TITLE);
   await sendReply(page, THREAD_SETTLE_REPLY);
 
-  // The crewmate closes its own card - the captain's × was never clicked -
-  // and the Firstmate, woken by that report, runs the settle.
-  await expect(shownCard(page, THREAD_SETTLE_CARD_TITLE)).toHaveCount(0, { timeout: 45_000 });
+  // The crewmate ends its own card - the captain never closed it - and the
+  // Firstmate, woken by that report, runs the settle. The captain had seen
+  // it, so it stays marked ended, its merge gone, until they close it
+  // (INF-3071).
+  await expectEndedCard(page, THREAD_SETTLE_CARD_TITLE, { timeout: 45_000 });
+  await expect(shownEntry(page).getByRole("button", { name: MERGE_WORDS.land })).toHaveCount(0);
   // His words reached the Firstmate through the crewmate's report, and the
   // settle is the Firstmate's own - the same one he would have got by
   // typing "merge it" in the main input.
@@ -398,6 +405,16 @@ test('"merge it" typed under a completion card closes it and lands as the Firstm
   await expect(putInLine(page, await taskKey(page, THREAD_SETTLE_PROMPT_MARKER))).toBeVisible({
     timeout: 45_000,
   });
+
+  // The ended card by keys (INF-3071): Tab reaches its thread line's Close
+  // card, and ⌘1 presses its one Close, which takes it off the stack.
+  await showCard(page, THREAD_SETTLE_CARD_TITLE);
+  await pressKey(endedCloseCard(page), "Shift+Tab");
+  await expect(endedCloseCard(page)).not.toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(endedCloseCard(page)).toBeFocused();
+  await pressWindowKey(launched.app, "1", ["meta"]);
+  await expectNoCard(page, THREAD_SETTLE_CARD_TITLE);
 });
 
 test("a captain reply on a Firstmate card revises it or lands as prose in the thread", async () => {

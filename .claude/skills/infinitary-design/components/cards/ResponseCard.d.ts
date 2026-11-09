@@ -8,7 +8,7 @@ export interface ResponseCardProps {
    * in, Firstmate is down); working = mid-revision; record = a task's record (no card actions,
    * ever; its footer is the host's lifecycle toggles).
    */
-  kind?: "decision" | "note" | "attention" | "working" | "record";
+  kind?: "decision" | "note" | "attention" | "working" | "record" | "ended";
   title?: React.ReactNode;
   /** Small mono metadata, e.g. "2m ago · crewmate 4". */
   meta?: React.ReactNode;

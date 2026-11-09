@@ -1269,6 +1269,18 @@ export const MIGRATIONS: readonly Migration[] = [
     addColumn(db, "repos", "queue_pause_json", "TEXT");
     addColumn(db, "repos", "queue_offered", "INTEGER");
   },
+  // INF-3071: a card its author ended while the captain had seen it stays
+  // on the stack, marked ended, until the captain closes it. The ending as
+  // the stack draws it (`CardEnded`), on the card's resolved row; null on
+  // every existing card, which no stack keeps. A partial index finds them
+  // at boot without walking the cards. `CardStore` is the only writer and
+  // no published view reads it. Dropping the index and column reverses it.
+  (db) => {
+    addColumn(db, "cards", "ended_json", "TEXT");
+    db.exec(
+      "CREATE INDEX IF NOT EXISTS cards_ended ON cards(created_at) WHERE ended_json IS NOT NULL",
+    );
+  },
 ];
 
 export function addPluginKind(db: AppDatabase): void {

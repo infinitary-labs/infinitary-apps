@@ -314,7 +314,11 @@ private struct PhoneCardPane: View {
         return CardWebHost(card: card, session: session, fill: fill, keys: keys, heightLag: heightLag)
     }
     private static func messages(_ card: PhoneCard, _ session: ReadOnlySession) -> [PhoneJSON] {
-        card.isPast ? card.value["messages"].list : session.threads[card.id]?["messages"].list ?? []
+        if card.isPast { return card.value["messages"].list }
+        let thread = session.threads[card.id]?["messages"].list ?? []
+        // INF-3071: a card its author ended ends its thread with the computer's app line, as on the Mac.
+        guard let line = card.value["ended"]["line"].text else { return thread }
+        return thread + [.object(["who": .string("host"), "text": .string(line), "at": card.value["ended"]["at"]])]
     }
     private var messages: [PhoneJSON] { Self.messages(card, session) }
     /// What the face draws; a revision that changes it gives the card a new offer.
@@ -894,7 +898,8 @@ private struct PhoneCardPane: View {
 
     private var kind: some View {
         let attention = !card.isPast && card.author == "host"
-        return Text(card.isPast ? "Past" : attention ? "Attention" : card.actions.isEmpty ? "Note" : "Decision")
+        let ended = !card.isPast && card.value["ended"] != .null
+        return Text(card.isPast ? "Past" : ended ? "Ended" : attention ? "Attention" : card.actions.isEmpty ? "Note" : "Decision")
             .font(.custom("JetBrainsMono-Regular", size: 11, relativeTo: .caption2))
             .foregroundStyle(attention ? PhoneTheme.danger : card.actions.isEmpty || card.isPast ? PhoneTheme.secondary : PhoneTheme.accent)
             .padding(.horizontal, PhoneTheme.space2).padding(.vertical, 4)

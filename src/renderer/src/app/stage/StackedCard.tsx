@@ -388,7 +388,7 @@ export function StackedCard({
           choicesIn,
         )}
       <ResponseCard
-        kind={chrome}
+        kind={card.ended ? "ended" : chrome}
         bodyRef={bodyRef}
         title={card.title}
         titleWords={<KeyedText text={card.title} own={ownTaskId} />}

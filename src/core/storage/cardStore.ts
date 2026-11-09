@@ -26,6 +26,7 @@ import {
   type PastEnding,
   replyWithSettings,
 } from "@shared/cards";
+import { type CardEnded, cardEndedSchema } from "@shared/endedCard";
 import { pastCardEndingWords } from "@shared/pastCard";
 import { type RiskAssessment, riskAssessmentSchema } from "@shared/risk";
 import type { TaskCardRow } from "@shared/tasks";
@@ -83,6 +84,7 @@ type Row = {
   minimized: number | null;
   required_actions_json: string | null;
   after_merge_json: string | null;
+  ended_json: string | null;
 };
 
 /** One superseded version of a card revised in place (WI-12). */
@@ -495,6 +497,35 @@ export class CardStore {
     });
   }
 
+  /**
+   * A withdrawn card the stack keeps drawing, ended, until the captain
+   * closes it (INF-3071), with how it ended; `undefined` clears it.
+   */
+  markEnded(cardId: string, ended: CardEnded | undefined): void {
+    this.db
+      .prepare("UPDATE cards SET ended_json = ? WHERE id = ?")
+      .run(ended ? JSON.stringify(ended) : null, cardId);
+  }
+
+  /** The resolved cards the stack still draws, ended, restored on boot. */
+  listEnded(): { card: Card; ended: CardEnded }[] {
+    const rows = this.db
+      .prepare("SELECT * FROM cards WHERE ended_json IS NOT NULL ORDER BY created_at")
+      .all() as Row[];
+    return rows.flatMap((row) => {
+      if (row.resolved_at === null) return [];
+      const card = fromRow(row);
+      let ended: CardEnded | undefined;
+      try {
+        const parsed = cardEndedSchema.safeParse(JSON.parse(row.ended_json ?? "null"));
+        ended = parsed.success ? parsed.data : undefined;
+      } catch {
+        ended = undefined;
+      }
+      return card && ended ? [{ card, ended }] : [];
+    });
+  }
+
   resolve(cardId: string, chosenAction: string, answers?: readonly CardAnswer[]): void {
     this.db
       .prepare("UPDATE cards SET resolved_at = ?, chosen_action = ?, answers_json = ? WHERE id = ?")
@@ -726,7 +757,9 @@ export class CardStore {
    */
   reopen(cardId: string): void {
     this.db
-      .prepare("UPDATE cards SET resolved_at = NULL, chosen_action = NULL WHERE id = ?")
+      .prepare(
+        "UPDATE cards SET resolved_at = NULL, chosen_action = NULL, ended_json = NULL WHERE id = ?",
+      )
       .run(cardId);
   }
 

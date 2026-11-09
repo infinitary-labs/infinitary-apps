@@ -46,6 +46,9 @@ import {
   cardReply,
   cardSurface,
   completionAction,
+  endedCloseCard,
+  expectCardSeen,
+  expectEndedCard,
   expectNoCard,
   factsStrip,
   shownCard,
@@ -436,9 +439,14 @@ test("the first mate's merge card on a published story merges at the published v
     // The captain asks under that card for the first mate's own. Putting a
     // decision aside keeps it open (INF-1879), so the crewmate withdraws its
     // card and hands the words to the first mate, which puts up its own.
+    // The captain had read the withdrawn card, so it stays, ended, until
+    // they close it from its thread line (INF-3071).
+    await expectCardSeen(page, STORY_MERGE_TITLE);
     await cardReply(page).field.fill(`${FIRSTMATE_MERGE_ASK}${title}`);
     await pressKey(cardReply(page).field, "Enter");
-    await expectNoCard(page, STORY_MERGE_TITLE, { timeout: 30_000 });
+    await expectEndedCard(page, STORY_MERGE_TITLE, { timeout: 30_000 });
+    await pressKey(endedCloseCard(page), "Enter");
+    await expectNoCard(page, STORY_MERGE_TITLE);
     const card = shownCard(page, FIRSTMATE_MERGE_CARD);
     await expect(card).toBeVisible({ timeout: 30_000 });
     await expect(factsStrip(cardBody(page, FIRSTMATE_MERGE_CARD)).mergeLine).toHaveText(

@@ -753,6 +753,16 @@ Only the card's own author may close it: the first mate its own cards (`card-fm-
 Unknown ids fail loudly.
 Prefer closing an obsolete card over stacking a correction, and prefer revising it over either.
 
+### A card its author ended while the captain had seen it
+
+The record ends a withdrawn card at once, whoever ended it: its row resolves, its gate lifts, its question counts as unanswered, and every reader in the crew reads it as closed (INF-3071).
+When the captain had seen the card in its current lifecycle, and it was on the stage and not put aside, the stack keeps drawing it in its place, marked ended, until the captain closes it; one they never saw leaves as before.
+`EndedCards` (`src/core/orchestrator/endedCards.ts`) holds those cards, saved on the resolved row's `ended_json` so a restart keeps them, and only `EndedCards.stack`, the stack the views read and are pushed, adds them; `CardService.snapshot` never does.
+An ended card carries `ended` (who ended it, the reason, when and the thread's app line from `endedLineWords` in `src/shared/endedCard.ts`), no actions, a note's one button reading Close, and a corner that closes it too.
+Close tells nobody: the past card still reads "Withdrawn by its author".
+A reply under an ended card goes to its author, or to the first mate once its task has closed, as under an open card.
+`close_card`'s reason is the line the captain reads, so its parameter asks for one plain line written for them, and its answer says when the card stays up.
+
 ## A card places the gate
 
 A card with actions is a captain decision, so it is on the record the way every captain decision is (the owner's call 3 on the primitives review, 2026-09-26: "every card with actions places the captain gate on its task; host cards file an operation task").

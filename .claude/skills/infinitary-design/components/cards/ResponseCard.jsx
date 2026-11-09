@@ -5,7 +5,7 @@ import {IconButton} from "../core/IconButton.jsx";
 // one the app itself raised (a provider needs sign in, Firstmate is down) an attention.
 // `record` is a task's record (no card actions; its
 // footer is the host's lifecycle toggles, TaskRecord.prompt.md).
-const cardKinds={decision:{label:"Decision",tone:"accent"},note:{label:"Note",tone:"neutral"},attention:{label:"Attention",tone:"danger"},record:{label:"Task",tone:"neutral"}};
+const cardKinds={decision:{label:"Decision",tone:"accent"},note:{label:"Note",tone:"neutral"},attention:{label:"Attention",tone:"danger"},record:{label:"Task",tone:"neutral"},ended:{label:"Ended",tone:"neutral"}};
 const minimizeIco=<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14"/></svg>;
 export function ResponseCard({kind="note",title,meta,actions,onMinimize,children,width=560,minHeight=340,style}){
   const k=cardKinds[kind]||cardKinds.note;

@@ -42,7 +42,8 @@ export class CardNotifier {
    */
   observe(cards: Card[]): void {
     const live = new Set<string>();
-    for (const card of cards.filter(onStage)) {
+    // An ended card is not news: its author closed it (INF-3071).
+    for (const card of cards.filter((entry) => onStage(entry) && !entry.ended)) {
       live.add(card.id);
       const before = this.seen.get(card.id);
       this.seen.set(card.id, { waiting: card.awaiting !== undefined });

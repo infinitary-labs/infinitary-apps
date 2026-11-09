@@ -49,7 +49,14 @@ import {
   MOCK_ANSWER_REPORT,
 } from "./scenarios/answerTask";
 import { OWN_RENT_CARD_TITLE, OWN_RENT_TITLE, ownRentAnswer } from "./scenarios/ownRentAnswer";
-import { cardLeave, cardReply, expectNoCard, shownCard, shownEntry } from "./stack";
+import {
+  cardLeave,
+  cardReply,
+  closeEndedCard,
+  expectCardSeen,
+  shownCard,
+  shownEntry,
+} from "./stack";
 
 /**
  * The deliverable axis (crew-posture rationalization Task B, captain
@@ -390,9 +397,12 @@ test("a Firstmate note on an answer task stays up after settle_task answered", a
     const detail = async (): Promise<TaskDetail> =>
       page.evaluate((id) => window.infinitary.tasks.detail(id), row.id);
 
+    await expectCardSeen(page, MOCK_ANSWER_CARD_TITLE);
     await cardReply(page).field.fill(ANSWER_READ_MARKER);
     await cardReply(page).send.click();
-    await expectNoCard(page, MOCK_ANSWER_CARD_TITLE);
+    // Its crewmate ends the answer card the captain had read: it stays,
+    // ended, until they close it (INF-3071).
+    await closeEndedCard(page, MOCK_ANSWER_CARD_TITLE, { timeout: 30_000 });
     await expect(shownCard(page, OWN_RENT_CARD_TITLE)).toBeVisible({ timeout: 30_000 });
     await expect.poll(detail, { timeout: 30_000 }).toMatchObject({
       status: "done",

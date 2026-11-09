@@ -1,4 +1,5 @@
 import { REVIEW_FINDING_LABEL } from "@shared/cards";
+import { ENDED_CHIP_LABEL } from "@shared/endedCard";
 import type React from "react";
 import { Badge, type BadgeTone } from "../core/Badge";
 import { ModelChip } from "../core/ModelChip";
@@ -8,9 +9,10 @@ import { CardCorner } from "./CardSize";
  * The chrome a card wears, derived from what it is and never declared on
  * the wire (cards/tasks/agents P1, ruling D1 a): `decision` has actions,
  * `note` has none, `attention` is the host's own (the agent-down set);
- * `record` is a task's record.
+ * `record` is a task's record; `ended` is a card its author ended while the
+ * captain had it up, which stays until they close it (INF-3071).
  */
-export type ResponseCardKind = "decision" | "note" | "attention" | "record";
+export type ResponseCardKind = "decision" | "note" | "attention" | "record" | "ended";
 
 /**
  * The design skill's adherence lint (`_adherence.oxlintrc.json`) lists these
@@ -137,6 +139,8 @@ const cardKinds: Record<ResponseCardKind, { label: string; tone: BadgeTone }> = 
   attention: { label: "Attention", tone: "danger" },
   /** A task's record (task-system P4): never any card actions; its footer is the host's. */
   record: { label: "Task", tone: "neutral" },
+  /** Its author ended it; nothing on it waits (INF-3071). */
+  ended: { label: ENDED_CHIP_LABEL, tone: "neutral" },
 };
 
 /**

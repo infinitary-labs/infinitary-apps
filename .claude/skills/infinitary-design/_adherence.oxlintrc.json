@@ -148,8 +148,8 @@
         "message": "<ResponseCard> doesn't accept that prop. Declared props: kind, chrome, recordTaskId, title, titleWords, taskKey, reviewFinding, meta, place, model, actions, attachment, comment, facts, aside, closeRef, children, width, minHeight, surface, headExtra, revised, asked, footer, bare, style, bodyStyle, bodyRef."
       },
       {
-        "selector": "JSXOpeningElement[name.name='ResponseCard'] > JSXAttribute[name.name='kind'] > Literal[value!=/^(?:decision|note|attention|record)$/]",
-        "message": "<ResponseCard> kind must be one of 'decision' | 'note' | 'attention' | 'record'."
+        "selector": "JSXOpeningElement[name.name='ResponseCard'] > JSXAttribute[name.name='kind'] > Literal[value!=/^(?:decision|note|attention|record|ended)$/]",
+        "message": "<ResponseCard> kind must be one of 'decision' | 'note' | 'attention' | 'record' | 'ended'."
       },
       {
         "selector": "JSXOpeningElement[name.name='SubscriptionCard'] > JSXAttribute > JSXIdentifier[name!=/^(?:provider|plan|account|status|windows|models|onToggleModel|width|style|key|ref|className|style|children)$/]",

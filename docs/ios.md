@@ -226,6 +226,8 @@ A crewmate's browser on its card is a strip naming Browser, the page's site and 
 A lone or marked card stays; an ordinary reply with another card declares its departure to the core.
 Settings and browser doors name the computer where they must be used and send no action.
 The host’s saved-sign-in choice needs no local browser page and is sent like any other choice.
+A card its author ended after the captain had seen it stays on Home as the Mac draws it (INF-3071): its chip reads Ended, its thread ends with the computer's app line, and its one button and the minus both read Close, which the computer sends as the note's button and the card's close.
+A phone from before ended cards draws the same card as a note whose one button reads Close.
 The phone keeps recently closed cards in memory through `inf:cards:past` and also opens a past card the Mac points to with `past_card_shown`.
 A past card has its last-seen body, saved answers, inert choices with the chosen one at full contrast and an accent edge, the words sent with that choice, its thread and Hide; it has no reply or mutation path.
 Its ending words are generated from `src/shared/pastCard.ts`, so the captain, first mate and crewmate keep their own attribution, alongside withdrawn, taken-down and duplicate endings.

@@ -13,6 +13,7 @@ import {
   type SettleFact,
 } from "../../src/shared/cards";
 import type { ComposerNotice } from "../../src/shared/composer";
+import { ENDED_CLOSE_CARD_LABEL, ENDED_CLOSE_LABEL } from "../../src/shared/endedCard";
 import type { PushChannel, PushPayload } from "../../src/shared/ipc";
 import type { RiskDimension } from "../../src/shared/risk";
 import { drawnFrame } from "./frames";
@@ -41,6 +42,26 @@ export async function expectUpdateSeen(page: Page, cardId: string): Promise<void
           (await window.infinitary.cards.list()).find((card) => card.id === id)?.currentUpdateSeen,
         cardId,
       ),
+    )
+    .toBe(true);
+}
+
+/**
+ * Returns once the captain has seen the open card titled `title`: the stage
+ * drew it in the window in front of them and its owner recorded the reading.
+ * A card its author ends stays up, ended, only after this (INF-3071), so a
+ * journey waits here before the step that has its author end it.
+ */
+export async function expectCardSeen(page: Page, title: string): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          async (wanted) =>
+            (await window.infinitary.cards.list()).find((card) => card.title === wanted)?.seen,
+          title,
+        ),
+      { message: `the card titled "${title}" was seen` },
     )
     .toBe(true);
 }
@@ -413,6 +434,51 @@ export const cardLeave = (page: Page, scope: Locator = shownEntry(page)) =>
 /** A live note's one footer button, Done or Got it (INF-2794); the minus only puts it aside. */
 export const noteDone = (page: Page, scope: Locator = shownEntry(page)) =>
   scope.locator("[data-note-done]").and(shownEntry(page).locator("[data-note-done]"));
+
+/** The shown card's ended line in its thread (INF-3071), with its own Close card button. */
+export const endedLine = (page: Page) => shownEntry(page).locator("[data-thread-ended]");
+/** The ended line's own Close card button. */
+export const endedCloseCard = (page: Page) =>
+  endedLine(page).getByRole("button", { name: ENDED_CLOSE_CARD_LABEL, exact: true });
+
+/**
+ * Returns once the card titled `title`, ended by its author while the
+ * captain had seen it, is on the stack marked ended (INF-3071), shown, with
+ * its line and one Close: the record closed it, the stack keeps it.
+ */
+export async function expectEndedCard(
+  page: Page,
+  title: string,
+  options: { timeout?: number } = {},
+): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          async (wanted) =>
+            (await window.infinitary.cards.list()).some(
+              (card) => card.title === wanted && card.ended !== undefined,
+            ),
+          title,
+        ),
+      { message: `the card titled "${title}" is ended`, ...options },
+    )
+    .toBe(true);
+  await showCard(page, title);
+  await expect(endedLine(page)).toBeVisible();
+  await expect(noteDone(page)).toContainText(ENDED_CLOSE_LABEL);
+}
+
+/** Closes the ended card titled `title` with its one Close, and returns once it left. */
+export async function closeEndedCard(
+  page: Page,
+  title: string,
+  options: { timeout?: number } = {},
+): Promise<void> {
+  await expectEndedCard(page, title, options);
+  await noteDone(page).click();
+  await expectNoCard(page, title);
+}
 
 /** The shown card's answer summary, never a retained or outgoing card's copy. */
 export const cardAnswersLine = (page: Page) => shownEntry(page).locator("[data-card-answers]");

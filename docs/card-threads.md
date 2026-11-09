@@ -100,6 +100,7 @@ A click resolves against the version on the stage.
 What reads it: the renderer shows a card only when it is on the stage (`visibleCards`) and has no door of its own - a thread message never brings a card forward, and an ordinary card's return is an arrival: onto the stage when nothing else is shown, else without displacing the shown card, unread, with the notice pulse; a replied-under card is also an arrival when its `awaiting` clears, unread unless it is the shown card.
 A newly visible marked card instead becomes the shown card, already read, at its author's close-out.
 The core's push moves the stack: `reconcileStack` sees the shown card leave - a close, withdrawal or task closure - and `departureIndex` picks what comes up: the first unread card in stack order, else the first card.
+A withdrawal of a card the captain had seen moves nothing: the card stays in its place, marked ended, its thread ending in an app line with Close card, until the captain closes it (`docs/card-authoring.md`, "A card its author ended while the captain had seen it").
 A reply never moves the stack.
 The initial snapshot restores unread cards from the card owner's lifecycle `seen` observations, without an arrival pulse or a continuity jump.
 Paging clears the window's unread mark; the existing stage report records a look durably when the window is visible and focused.

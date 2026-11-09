@@ -489,7 +489,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:devices:custom:recheck": (deviceId, accountId) =>
       services.deviceSignIns.custom(deviceId, "inf:sign-ins:custom-recheck", [accountId]),
 
-    "inf:cards:list": () => services.supervisor.cards.snapshot(),
+    "inf:cards:list": () => services.supervisor.cards.ended.stack(),
 
     // INF-2553: a captain's choice or close goes out to every view before its
     // result does, so a view settling its prediction on the next snapshot

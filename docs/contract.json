@@ -8859,6 +8859,32 @@
             },
             "currentUpdateSeen": {
               "type": "boolean"
+            },
+            "ended": {
+              "type": "object",
+              "properties": {
+                "by": {
+                  "type": "string",
+                  "enum": [
+                    "crewmate",
+                    "firstmate"
+                  ]
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "at": {
+                  "type": "number"
+                },
+                "line": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "by",
+                "at",
+                "line"
+              ]
             }
           },
           "required": [
@@ -10085,6 +10111,32 @@
               },
               "currentUpdateSeen": {
                 "type": "boolean"
+              },
+              "ended": {
+                "type": "object",
+                "properties": {
+                  "by": {
+                    "type": "string",
+                    "enum": [
+                      "crewmate",
+                      "firstmate"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "at": {
+                    "type": "number"
+                  },
+                  "line": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "by",
+                  "at",
+                  "line"
+                ]
               }
             },
             "required": [
@@ -57470,6 +57522,32 @@
             },
             "currentUpdateSeen": {
               "type": "boolean"
+            },
+            "ended": {
+              "type": "object",
+              "properties": {
+                "by": {
+                  "type": "string",
+                  "enum": [
+                    "crewmate",
+                    "firstmate"
+                  ]
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "at": {
+                  "type": "number"
+                },
+                "line": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "by",
+                "at",
+                "line"
+              ]
             }
           },
           "required": [

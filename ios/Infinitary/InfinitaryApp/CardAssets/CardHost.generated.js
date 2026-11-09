@@ -4836,6 +4836,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       (spelling) => `data-${spelling}-${name}`
     );
   }
+  const cardEndedSchema = object({
+    /** Who ended it: the card's crewmate or the first mate. */
+    by: _enum(["crewmate", "firstmate"]),
+    /** The author's reason, written for the captain; absent when it gave none. */
+    reason: string().optional(),
+    at: number(),
+    /** The thread's app line, whole, so every view draws the same words. */
+    line: string()
+  });
   const requiredActionSchema = object({
     id: string().min(1).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
     sharedId: string().min(1).max(64).optional(),
@@ -5429,7 +5438,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     /** Snapshot-only: the exact released update, distinct from its historical offer. */
     currentUpdateId: string().max(64).optional(),
     /** An accepted sighting of that exact update, shared by every updated view. */
-    currentUpdateSeen: boolean().optional()
+    currentUpdateSeen: boolean().optional(),
+    /**
+     * Its author ended it while the captain had seen it (INF-3071): the record
+     * has closed it, and the stack keeps drawing it with no actions, one Close
+     * and this app line until the captain closes it. Host stamp, never an
+     * author's; absent on every live card.
+     */
+    ended: cardEndedSchema.optional()
   });
   const cardMessageWhoSchema = _enum(["captain", "crewmate", "firstmate", "host"]);
   const REVISION_TARGETS_MAX = 512;

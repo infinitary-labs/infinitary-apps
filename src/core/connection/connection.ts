@@ -63,7 +63,7 @@ import { copyStream, type FarBuild } from "../devices/farBuilds";
 import type { CoreActor, CoreDispatch } from "../dispatcher";
 import type { CoreEventBus } from "../events";
 import { listenAddresses, listenOn } from "./addresses";
-import { CONTRACT_CHANGES, listsChange } from "./contractChanges";
+import { CONTRACT_CHANGES, contractChange, listsChange } from "./contractChanges";
 import { FRAME_PARTS } from "./frameParts";
 import {
   DEFAULT_JOURNAL_LIMITS,
@@ -368,7 +368,7 @@ type Client = {
   /** The version of Firstmate its hello said it runs, when it said one. */
   appVersion: string | undefined;
   /** Older desktop card decoders are strict; only capable desktops receive the added fields. */
-  cardUpdates: boolean;
+  cardReads: CardReads;
   /** Whether it reads a thread line's contributor fields (`SHARED_CARDS_SINCE`). */
   sharedCards: boolean;
   /** Whether it reads Allow for the rest of this task (`INTEGRATION_TASK_ALLOW`). */
@@ -419,10 +419,23 @@ export function pushFrameIn(entry: JournalEntry, spelling: Spelling): string {
   return entry.frame.startsWith(was) ? head(channel) + entry.frame.slice(was.length) : entry.frame;
 }
 
-/** Keep old desktop strict card decoders working; phones already ignore optional JSON fields. */
-function legacyCardSnapshot(value: unknown): unknown {
-  if (!Array.isArray(value)) return value;
-  return value.map(({ currentUpdateId: _id, currentUpdateSeen: _seen, ...card }) => card);
+/** A view that reads an ended card's `ended` (`ended-cards.md`, INF-3071). */
+const ENDED_CARDS = contractChange("ended-cards");
+
+/** Which added card fields a view's card decoder reads. */
+type CardReads = { updates: boolean; ended: boolean };
+
+/**
+ * Keep old desktop strict card decoders working: a snapshot leaves out each
+ * added field the view does not read. Phones already ignore optional JSON fields.
+ */
+function legacyCardSnapshot(value: unknown, reads: CardReads): unknown {
+  if (!Array.isArray(value) || (reads.updates && reads.ended)) return value;
+  return value.map(({ currentUpdateId, currentUpdateSeen, ended, ...card }) => ({
+    ...card,
+    ...(reads.updates ? { currentUpdateId, currentUpdateSeen } : {}),
+    ...(reads.ended ? { ended } : {}),
+  }));
 }
 
 /**
@@ -471,7 +484,7 @@ const THREAD_CHANNELS = new Set([
 function cardPushFor(
   entry: JournalEntry,
   spelling: Spelling,
-  currentUpdates: boolean,
+  reads: CardReads,
   sharedCards = true,
   taskAllow = true,
 ): string {
@@ -482,9 +495,9 @@ function cardPushFor(
     const frame = JSON.parse(text);
     return JSON.stringify({ ...frame, payload: legacyThreadLines(frame.payload) });
   }
-  if (currentUpdates || entry.channel !== "inf:cards") return text;
+  if ((reads.updates && reads.ended) || entry.channel !== "inf:cards") return text;
   const frame = JSON.parse(text);
-  return JSON.stringify({ ...frame, payload: legacyCardSnapshot(frame.payload) });
+  return JSON.stringify({ ...frame, payload: legacyCardSnapshot(frame.payload, reads) });
 }
 
 /** What each refusal at `FETCH_APP_PATH` says; none echoes the code. */
@@ -708,7 +721,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
               cardPushFor(
                 entry,
                 client.spelling,
-                client.cardUpdates,
+                client.cardReads,
                 client.sharedCards,
                 client.taskAllow,
               ),
@@ -734,8 +747,10 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       client.speaks = hello.protocolVersion;
       client.spelling = spellingFor(readSpellings(hello.spellings), speaks);
       client.appVersion = hello.appVersion;
-      client.cardUpdates =
-        hello.system === "ios" || readsSeenUpdate(hello.protocolVersion, hello.changes);
+      client.cardReads = {
+        updates: hello.system === "ios" || readsSeenUpdate(hello.protocolVersion, hello.changes),
+        ended: hello.system === "ios" || listsChange(hello.changes, ENDED_CARDS),
+      };
       client.sharedCards =
         hello.system === "ios" || readsSharedCards(hello.protocolVersion, hello.changes);
       client.taskAllow = listsChange(hello.changes, INTEGRATION_TASK_ALLOW);
@@ -788,7 +803,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           cardPushFor(
             entry,
             client.spelling,
-            client.cardUpdates,
+            client.cardReads,
             client.sharedCards,
             client.taskAllow,
           ),
@@ -874,8 +889,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         reply({
           ok: true,
           value:
-            channel === "inf:cards:list" && !client.cardUpdates
-              ? legacyCardSnapshot(value)
+            channel === "inf:cards:list"
+              ? legacyCardSnapshot(value, client.cardReads)
               : THREAD_CHANNELS.has(channel) && !client.sharedCards
                 ? legacyThreadLines(value)
                 : value,
@@ -905,7 +920,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         speaks: "",
         spelling: FIRST_SPELLING,
         appVersion: undefined,
-        cardUpdates: false,
+        cardReads: { updates: false, ended: false },
         sharedCards: false,
         taskAllow: false,
         access: "read",

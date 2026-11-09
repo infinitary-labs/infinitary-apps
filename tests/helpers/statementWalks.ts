@@ -133,6 +133,11 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
       reason:
         "walks the feed-worthy events newest first through the partial task_events_feed index and stops once it holds the feed's groups; it runs only when the kept view goes stale, and later reads fold in only the events written since (feedProjection.ts, INF-2971)",
     },
+  "SELECT * FROM cards WHERE ended_json IS NOT NULL ORDER BY created_at": {
+    walks: ["SCAN cards USING INDEX cards_ended"],
+    reason:
+      "walks only the partial cards_ended index, which holds the cards ended while the captain had seen them and not yet closed; read once at start (EndedCards.restore, INF-3071)",
+  },
   "SELECT task_id FROM task_execution WHERE json_extract(placement_json, '$.reservation') = 'pending'":
     {
       walks: ["SCAN task_execution USING INDEX task_execution_pending_placement"],

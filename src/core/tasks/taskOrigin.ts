@@ -10,12 +10,14 @@ import type { TaskRecord } from "../storage/taskStore";
  * since a one-time automation leaves Settings once it has run and runs are
  * kept only 30 days; a click keeps the button's words and what the captain
  * wrote with it; a crewmate's report keeps the task that reported, whose own
- * origin the line then reads.
+ * origin the line then reads, and the captain's words the report passed on
+ * with when he typed them on that task, when its crewmate named where
+ * (INF-3202).
  */
 export type SavedOrigin =
   | { kind: "automation"; ruleId: string; name?: string }
   | { kind: "chose"; cardId: string; card: string; choice: string; written?: string }
-  | { kind: "report"; taskId: string };
+  | { kind: "report"; taskId: string; words?: { text: string; at: number } };
 
 /** The `note` event a saved origin rides: its data's one key. */
 export const ORIGIN_NOTE_KEY = "origin";
@@ -30,7 +32,7 @@ export function originNoteText(origin: SavedOrigin, reporter?: string): string {
     case "chose":
       return `Filed from your choice "${origin.choice}" on "${origin.card}"`;
     case "report":
-      return `Filed after ${reporter ?? "a crewmate"}'s report`;
+      return `Filed after ${reporter ?? "a crewmate"}'s report${origin.words ? ", which passed on your words" : ""}`;
   }
 }
 
@@ -42,7 +44,16 @@ export function savedOriginOf(event: TaskEvent): SavedOrigin | undefined {
   if (origin.kind === "automation" && typeof origin.ruleId === "string")
     return origin as SavedOrigin;
   if (origin.kind === "chose" && typeof origin.choice === "string") return origin as SavedOrigin;
-  if (origin.kind === "report" && typeof origin.taskId === "string") return origin as SavedOrigin;
+  if (origin.kind === "report" && typeof origin.taskId === "string") {
+    const words = origin.words;
+    return {
+      kind: "report",
+      taskId: origin.taskId,
+      ...(words && typeof words.text === "string" && typeof words.at === "number"
+        ? { words: { text: words.text, at: words.at } }
+        : {}),
+    };
+  }
   return undefined;
 }
 
@@ -95,12 +106,15 @@ function startedBy(event: TaskEvent): boolean {
 
 type Found =
   | { kind: "asked"; at: number; ask: AskRecord }
+  | { kind: "relayed"; text: string; at: number }
   | { kind: "saved"; at: number; origin: SavedOrigin };
 
 /**
  * A task's own origin: the oldest message that filed or started it, or the
  * oldest origin saved on it, whichever came first. A report origin is a
- * route, not a source: the walk follows it to the reporting task.
+ * route, not a source: the walk follows it to the reporting task. One that
+ * keeps the captain's words its report passed on is a source: those words,
+ * typed on the reporting task (INF-3202).
  */
 function ownOrigin(reader: OriginReader, id: string): Found | undefined {
   for (const event of reader.events(id)) {
@@ -109,6 +123,8 @@ function ownOrigin(reader: OriginReader, id: string): Found | undefined {
       if (ask) return { kind: "asked", at: ask.at, ask };
     }
     const saved = savedOriginOf(event);
+    if (saved?.kind === "report" && saved.words)
+      return { kind: "relayed", text: saved.words.text, at: saved.words.at };
     if (saved && saved.kind !== "report") return { kind: "saved", at: event.at, origin: saved };
   }
   return undefined;
@@ -178,6 +194,9 @@ export function originAbout(reader: OriginReader, id: string): TaskOriginLine | 
     if (!found) continue;
     if (found.kind === "asked")
       return { kind: "asked", at: found.ask.at, text: found.ask.text, through };
+    // The words sit on the reporting task, one further back.
+    if (found.kind === "relayed")
+      return { kind: "asked", at: found.at, text: found.text, through: through + 1 };
     const origin = found.origin;
     if (origin.kind === "automation")
       return { kind: "automation", at: found.at, name: origin.name ?? "", through };

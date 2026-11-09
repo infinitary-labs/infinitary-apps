@@ -352,6 +352,12 @@ export const REPORT_TOOL = crewmateTool({
           "Relay captain-approved builds by reply, merges, discards, stronger models or unrelated work, with exact words and final specification. Also coordinate checks you cannot run or work on another computer: name the computer, what is needed and where. Wakes at turn end, even with a card or wait, after any captain reply has your answer. It authorizes nothing. Requested answers use responses; never use this for progress or news.",
       }),
     ),
+    captain_words_from: Type.Optional(
+      Type.String({
+        description:
+          "Whenever this report passes on words the captain typed to you, name where: the id of your own card they replied under or clicked, or crewmate-tab for a line in your Crewmate tab. The app reads their newest words there, and work filed from this report quotes them as what the captain asked. A card on another task, or one with none of their words, refuses the report.",
+      }),
+    ),
     files: Type.Optional(
       Type.Array(Type.String(), {
         description:
@@ -420,6 +426,9 @@ export const REPORT_TOOL = crewmateTool({
             ...(params.waits_on && params.waits_on.length > 0 ? { waitsOn: params.waits_on } : {}),
             ...(params.needs_firstmate !== undefined
               ? { needsFirstmate: params.needs_firstmate }
+              : {}),
+            ...(params.captain_words_from !== undefined
+              ? { captainWordsFrom: params.captain_words_from }
               : {}),
             ...(params.result !== undefined
               ? { result: params.result as Record<string, unknown> }

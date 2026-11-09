@@ -507,6 +507,7 @@ export class CrewSupervisor {
       pokeInbox: () => this.hooks.pokeInbox?.(),
       clientJobStart: (taskId) => this.starts.clientJobStart(taskId),
       broadcastCrewCounts: () => this.facts.broadcastCrewCounts(),
+      relayedCaptainWords: (taskId, from) => this.overrides.relayedCaptainWords(taskId, from),
     });
     this.inPlaceWork = new InPlaceWork(options, {
       now: this.now,

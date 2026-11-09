@@ -210,6 +210,53 @@ describe("FirstmateAgent capture", () => {
     await tick();
   });
 
+  // INF-3202: the captain typed "ask first mate to separately investigate
+  // and fix this stale picture problem" under INF-3106's plan card, and its
+  // crewmate passed the words on; INF-3187 and INF-3188 were filed from that
+  // report and quoted INF-3106's earlier message instead. Work filed from a
+  // report that names where the words were typed keeps them.
+  it("keeps the captain's words a report passed on as the origin of work filed from it", async () => {
+    const { agent, session, specs, tasks, db } = setup({
+      seedTasks: [{ id: "plan", title: "Plan the keyboard trap fix", status: "idle" }],
+    });
+    const at = 1_794_189_223_422;
+    const words = "ask first mate to separately investigate and fix this stale picture problem";
+    new InboxStore(db).enqueueWake(
+      FIRSTMATE_RECIPIENT,
+      {
+        facts: {
+          kind: "report",
+          task: { id: "plan", title: "Plan the keyboard trap fix" },
+          crewmate: "crewmate",
+          excerpt: "Passed on the captain's request about the stale picture.",
+          filed: [],
+          cards: [],
+          needsFirstmate: `The captain asks: ${words}`,
+          captainWords: { text: words, at },
+        },
+      } as unknown as TypedWake,
+      "crewmate-report",
+      "plan",
+    );
+    agent.pokeInbox();
+    await tick();
+    await toolsOf(specs).get("create_task")?.execute("file", {
+      title: "Show when a card's pictures did not change",
+      goal: "A revised card never pairs a fixed claim with an unchanged picture.",
+      user_words: words,
+    });
+    const filed = tasks.list().find((task) => task.title.startsWith("Show when a card"));
+    expect(tasks.capture.originAbout(filed?.id ?? "")).toEqual({
+      kind: "asked",
+      at,
+      text: words,
+      through: 1,
+    });
+    session.emitTurnEnd("Filed the stale picture fix.");
+    session.resolveNextPrompt();
+    await tick();
+  });
+
   it("INF-2714: answers a question about running work on its own card, naming the task as related", async () => {
     // The captain's direction A (card-fm-12-ff4ccc): an answer about INF-2711
     // took INF-2711's head, its automation origin line and its run.

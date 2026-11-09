@@ -52,6 +52,11 @@ export type ReportIntakeHost = {
   clientJobStart(taskId: string): number | undefined;
   /** Tell the window the crew's counts changed. */
   broadcastCrewCounts(): void;
+  /** The captain's words a report passes on, read where he typed them (`CaptainOverrides.relayedCaptainWords`). */
+  relayedCaptainWords(
+    taskId: string,
+    from: string,
+  ): { ok: true; words: string; at: number } | { ok: false; text: string };
 };
 
 /**
@@ -520,6 +525,7 @@ export class ReportIntake {
         "Report refused: needs_firstmate needs a reason - what the first mate must do.",
       );
     }
+    const captainWords = this.relayedWords(task, declared?.captainWordsFrom);
     const workWait = declared?.workWait ? workWaitSchema.parse(declared.workWait) : undefined;
     const recoveryWays = declared?.recoveryWays?.length
       ? declared.recoveryWays.map((way) => keptRecoveryWaySchema.parse(way))
@@ -539,6 +545,7 @@ export class ReportIntake {
       ...(workWait ? { workWait } : {}),
       ...(recoveryWays ? { recoveryWays } : {}),
       ...(ask ? { needsFirstmate: ask.slice(0, 300) } : {}),
+      ...(captainWords ? { captainWordsFrom: captainWords.from, captainWords } : {}),
       ...(declared?.firstRelease ? { firstRelease: declared.firstRelease } : {}),
       ...(result ? { result } : {}),
       ...(checkBack ? { checkBack } : {}),
@@ -554,6 +561,24 @@ export class ReportIntake {
     const named = wait.cardId?.trim();
     const cardId = named ? this.ownOpenCard(task, named) : undefined;
     return { wait: { reason: reason.slice(0, 300), ...(cardId ? { cardId } : {}) }, ...needs };
+  }
+
+  /**
+   * The captain's words a report passes on (INF-3202): read where its
+   * crewmate says he typed them, on a card of its own task or in its
+   * Crewmate tab, or a refusal with the fix. The words are kept whole; the
+   * host reads none of them.
+   */
+  private relayedWords(task: TaskRuntime, from: string | undefined) {
+    if (from === undefined) return undefined;
+    const cited = from.trim();
+    if (!cited)
+      throw new Error(
+        "Report refused: captain_words_from is empty; name your card's id or crewmate-tab, or leave it out.",
+      );
+    const read = this.host.relayedCaptainWords(task.id, cited);
+    if (!read.ok) throw new Error(read.text);
+    return { from: cited, text: read.words, at: read.at };
   }
 
   /**

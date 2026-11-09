@@ -63,4 +63,27 @@ describe("the origin a served wake offers", () => {
       choice: "Approve and build",
     });
   });
+
+  // INF-3202: a report that names where the captain typed the words it
+  // passes on offers them, with when he typed them; one that names none
+  // offers its task alone, as before.
+  it("offers a report's task, with the captain's words it passed on when it named them", () => {
+    const report = {
+      kind: "report",
+      task: { id: "t-3106", title: "Plan the keyboard trap fix" },
+      crewmate: "crewmate",
+      excerpt: "Passed on the captain's request about the stale picture.",
+      filed: [],
+      cards: [],
+    } as unknown as WakeFacts;
+    const keyed = (id: string) => (id === "t-3106" ? "INF-3106" : undefined);
+    expect(turnOriginOf(row(report), keyed)).toEqual({
+      origin: { kind: "report", taskId: "t-3106" },
+      refs: ["t-3106", "INF-3106"],
+    });
+    const words = { text: "fix this stale picture problem", at: 1_794_189_223_422 };
+    expect(
+      turnOriginOf(row({ ...report, captainWords: words } as WakeFacts), keyed)?.origin,
+    ).toEqual({ kind: "report", taskId: "t-3106", words });
+  });
 });

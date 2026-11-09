@@ -81,6 +81,12 @@ export type ReportFacts =
       finished?: true;
       /** The report declared that the Firstmate must act, and what on (FI3-710). */
       needsFirstmate?: string;
+      /**
+       * The captain's words the report passes on, as the host read them where
+       * its crewmate said he typed them, with when (INF-3202): work filed
+       * from this report keeps them as its origin (`turnOriginOf`).
+       */
+      captainWords?: { text: string; at: number };
       /** The work built on its task, open or closed, when there is any (INF-976). */
       builtOn?: WakeBuiltOn[];
       /**

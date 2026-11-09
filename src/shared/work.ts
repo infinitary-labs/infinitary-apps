@@ -651,6 +651,8 @@ export const workRequests = {
           wait: z.object({ reason: z.string(), cardId: z.string().optional() }).optional(),
           finished: z.boolean().optional(),
           needsFirstmate: z.string().optional(),
+          /** Where the captain typed the words it passes on (`report-captain-words.md`); the home reads them. */
+          captainWordsFrom: z.string().optional(),
           /** When it looks at its running job again (`report-check-back.md`); the home keeps it. */
           checkBack: z.object({ minutes: z.number(), waitingFor: z.string() }).optional(),
           /** The report's typed result (`report-result.md`); the home checks it. */

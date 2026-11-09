@@ -7,7 +7,8 @@ import type { TurnOrigin } from "./askCapture";
  * (INF-2326): an automation run names its automation as it was named when
  * it ran; the captain's click on a first mate card, or the choice that
  * closed an answer task, names the card, the button's words and what they
- * wrote with it; a crewmate's report names its task. A script's click is not
+ * wrote with it; a crewmate's report names its task, and the captain's words
+ * it passes on with when he typed them (INF-3202). A script's click is not
  * the captain's, and every other wake offers none.
  */
 export function turnOriginOf(
@@ -51,7 +52,11 @@ export function turnOriginOf(
     case "report": {
       const key = keyOf(facts.task.id);
       return {
-        origin: { kind: "report", taskId: facts.task.id },
+        origin: {
+          kind: "report",
+          taskId: facts.task.id,
+          ...(facts.captainWords ? { words: facts.captainWords } : {}),
+        },
         refs: [facts.task.id, ...(key ? [key] : [])],
       };
     }

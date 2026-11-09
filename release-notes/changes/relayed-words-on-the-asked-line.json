@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "relayed-words-on-the-asked-line",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card quotes what you asked under another card",
+      "body": "When you ask a crewmate under its card for something new and it passes your words to the first mate, the work filed from them now shows your words and their time under each card's title. It used to quote the message that started the crewmate's own task instead.",
+      "noPicture": "The line under a card's title looks as before; only which of your messages it quotes changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

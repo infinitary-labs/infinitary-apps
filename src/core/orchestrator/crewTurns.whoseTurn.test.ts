@@ -14,6 +14,7 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { codingSpec } from "../../../tests/helpers/codingSession";
 import {
@@ -906,6 +907,45 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "needs-firstmate" });
       expect(reportWakes(ops)).toHaveLength(2);
       expect(reportWakes(ops)[1]).toContain(`It asks the first mate to act: ${ASK}.`);
+    });
+
+    // INF-3202: work filed from a relayed approval quoted the planner's
+    // first message, because the report named the captain's words in text
+    // only. A report that names the card he replied under keeps his words,
+    // so the filed work quotes the approval itself.
+    it("keeps the captain's approval words a relay names, with when he typed them", async () => {
+      const { supervisor, crewmate, card, ledgerFacts, specs, tasks, taskId } =
+        await plannerWithCard("client");
+      supervisor.cardActions.replyToCard(card.id, APPROVAL);
+      await tick();
+      const typed = supervisor.cards.messages(card.id).findLast((line) => line.who === "captain");
+      specs[0]?.onReply?.({
+        cardId: card.id,
+        text: "Firstmate starts the builder next.",
+        answersMessage: askedOn(supervisor, card.id),
+      });
+      // Where he typed nothing, the report is refused with the fix.
+      expect(() =>
+        specs[0]?.onReport?.(RELAY, undefined, {
+          needsFirstmate: ASK,
+          captainWordsFrom: CREWMATE_TAB_VIA,
+        }),
+      ).toThrow(
+        `Report refused: captain_words_from names ${CREWMATE_TAB_VIA}, but the record holds no words the captain typed in ${tasks.get(taskId)?.key}'s Crewmate tab`,
+      );
+      specs[0]?.onReport?.(RELAY, undefined, {
+        needsFirstmate: ASK,
+        captainWordsFrom: ` ${card.id} `,
+      });
+      await endTurn(crewmate, taskId);
+      const words = { text: APPROVAL, at: typed?.at };
+      expect(ledgerFacts.at(-1)).toMatchObject({ kind: "report", captainWords: words });
+      expect(
+        tasks
+          .timeline(taskId)
+          .filter((event) => event.kind === "report")
+          .at(-1)?.data?.captainWords,
+      ).toEqual({ from: card.id, ...words });
     });
 
     it("answers the captain's reply first: a request beside an unanswered reply says so and wakes nobody", async () => {

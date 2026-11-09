@@ -260,6 +260,7 @@ Observe stays in development and alpha builds only (`docs/dev-observe.md`).
 The crewmate's own instruction does the routing: it closes its card and carries the captain's words verbatim into its `report` and declares, in `needs_firstmate`, what the first mate must do.
 The whose-turn rule then wakes the first mate (`docs/report-sort.md`, row 0a) for the turn that runs the settle it would have run had the captain typed the same words in the main input.
 A build the captain approves by reply under an answer task's card is relayed the same way, with the card left up (`HANDOFF`).
+Whenever a report passes on the captain's words, it names where they were typed with `captain_words_from`, the card's id or `crewmate-tab`, so work filed from it quotes those words on its You asked line (`docs/card-authoring.md`, "The You asked line").
 Without the declaration the report sorts like any other, and on a backend the host cannot watch it wakes nobody.
 
 Words that pass one of the app's holds, or tell the crewmate to go on without asking, are relayed the same way, with the card left up (INF-1216).

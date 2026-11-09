@@ -48240,6 +48240,9 @@
                   "needsFirstmate": {
                     "type": "string"
                   },
+                  "captainWordsFrom": {
+                    "type": "string"
+                  },
                   "checkBack": {
                     "type": "object",
                     "properties": {

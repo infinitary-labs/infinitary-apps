@@ -164,6 +164,59 @@ describe("where a card's work came from", () => {
     });
   });
 
+  it("quotes the words a report passed on, counting back to the task they were typed on", () => {
+    // INF-3202 replays INF-3192's line, which read "You asked · 1:57 PM ·
+    // through 2 tasks" with INF-3106's first message. The captain had typed
+    // message 4280 under INF-3106's plan card at 5:53 PM; its crewmate passed
+    // it on, and INF-3188 was filed from that report, INF-3192 after
+    // INF-3188's own report.
+    const { tasks } = setup();
+    const started = 1_794_175_020_000; // 1:57 PM, the day of message 4280
+    const typed = 1_794_189_223_422; // message 4280, 5:53 PM
+    const first =
+      "two pieces of feedback for ios infinitary app. let's plan them in parallel, and don't constrain the solution to exactly what the user asked. understand their pain point and design a thoughtful solution for each: 1) Keyboard trap: replying to a card";
+    const relayed =
+      "ask first mate to separately investigate and fix this stale picture problem. that was super confusing";
+    seedTask(tasks, { id: "inf-3106", title: "Plan the keyboard trap fix", status: "idle" });
+    tasks.capture.openAsk({ id: "m-first", text: first, at: started });
+    tasks.capture.attachAsk("m-first", "inf-3106", "tool:spawn_crewmate", true);
+    tasks.capture.closeAsk("m-first", "closed");
+    seedTask(tasks, { id: "inf-3188", title: "Fix stale card pictures", status: "completed" });
+    expect(
+      tasks.capture.saveOrigin("inf-3188", {
+        kind: "report",
+        taskId: "inf-3106",
+        words: { text: relayed, at: typed },
+      }),
+    ).toBe(true);
+    seedTask(tasks, {
+      id: "inf-3192",
+      title: "Show the captain when a card's pictures did not change",
+      status: "idle",
+    });
+    tasks.capture.saveOrigin("inf-3192", { kind: "report", taskId: "inf-3188" });
+    expect(tasks.capture.originAbout("inf-3192")).toEqual({
+      kind: "asked",
+      at: typed,
+      text: relayed,
+      through: 2,
+    });
+    expect(tasks.capture.originAbout("inf-3188")).toMatchObject({ at: typed, through: 1 });
+    // The timeline says the report passed the captain's words on.
+    expect(tasks.timeline("inf-3188").at(-1)?.text).toBe(
+      `Filed after ${tasks.get("inf-3106")?.key}'s report, which passed on your words`,
+    );
+    // A report that named no words still leads on to the reporting task's own origin.
+    seedTask(tasks, { id: "inf-3187", title: "Plan the stale picture fix", status: "idle" });
+    tasks.capture.saveOrigin("inf-3187", { kind: "report", taskId: "inf-3106" });
+    expect(tasks.capture.originAbout("inf-3187")).toEqual({
+      kind: "asked",
+      at: started,
+      text: first,
+      through: 1,
+    });
+  });
+
   it("falls back to a message aimed at this work alone, then to the nearest task it came from", () => {
     // INF-2112's card had no line: its work came from a task nobody asked for in words.
     const { tasks, said } = setup();

@@ -1055,6 +1055,9 @@ export class CrewTurns {
         ...(unseenWait ? { captainWait: unseenWait.reason } : {}),
         ...(finished ? { finished: true } : {}),
         ...(needsFirstmate ? { needsFirstmate } : {}),
+        ...(declared?.captainWords
+          ? { captainWords: { text: declared.captainWords.text, at: declared.captainWords.at } }
+          : {}),
         ...(stall ? { stall } : {}),
         ...(recoveryWays ? { recoveryWays } : {}),
         ...(workWait ? { workWait } : {}),

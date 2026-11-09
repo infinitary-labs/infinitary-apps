@@ -231,6 +231,90 @@ export class CaptainOverrides {
             text: `Override refused: nothing was recorded. No override stands on ${handle} at this version, so there are no recorded words of the captain's to name more holds with.`,
           };
     }
+    const found = this.typedWords(taskId, cited);
+    if (found.ok) {
+      const { at: _at, ...words } = found;
+      return { ...words, ok: true };
+    }
+    switch (found.missing) {
+      case "tab":
+        return {
+          ok: false,
+          text: `Override refused: nothing was recorded. The record holds no words the captain typed in ${handle}'s Crewmate tab.`,
+        };
+      case "card":
+        return {
+          ok: false,
+          text: `Override refused: nothing was recorded. There is no card "${cited}"; pass from as the id of the card the captain replied under or clicked, ${CREWMATE_TAB_VIA}, or ${STANDING_WORDS_FROM}.`,
+        };
+      case "elsewhere":
+        return {
+          ok: false,
+          text: `Override refused: nothing was recorded. Card "${found.card}" is not on ${handle}, so the captain's words there pass nothing on it.`,
+        };
+      case "silent":
+        return {
+          ok: false,
+          text: `Override refused: nothing was recorded. The record holds no words of the captain's on card "${found.card}": no reply in its thread and no click on its buttons.`,
+        };
+    }
+  }
+
+  /**
+   * The captain's words a crewmate's report passes on (INF-3202,
+   * docs/card-authoring.md "The You asked line"): his newest words on a
+   * card of the crewmate's own task, or his newest line in its Crewmate
+   * tab, with when he typed them - read by the same reader an override
+   * citation uses. A card on another task, or one holding none of his
+   * words, is refused with the fix. The host reads none of the words.
+   */
+  relayedCaptainWords(
+    taskId: string,
+    from: string,
+  ): { ok: true; words: string; at: number } | { ok: false; text: string } {
+    const record = this.options.tasks.get(taskId);
+    if (!record) throw new Error(`Unknown task "${taskId}".`);
+    const handle = record.key || record.id;
+    const cited = from.trim();
+    const found = this.typedWords(taskId, cited);
+    if (found.ok) return { ok: true, words: found.words, at: found.at };
+    const fix = `name the id of your own card the captain replied under or clicked, or ${CREWMATE_TAB_VIA} for a line they typed in your Crewmate tab, or leave captain_words_from out.`;
+    switch (found.missing) {
+      case "tab":
+        return {
+          ok: false,
+          text: `Report refused: captain_words_from names ${CREWMATE_TAB_VIA}, but the record holds no words the captain typed in ${handle}'s Crewmate tab; ${fix}`,
+        };
+      case "card":
+        return {
+          ok: false,
+          text: `Report refused: there is no card "${cited}" for captain_words_from; ${fix}`,
+        };
+      case "elsewhere":
+        return {
+          ok: false,
+          text: `Report refused: card "${found.card}" is not on ${handle}, so captain_words_from cannot name it; ${fix}`,
+        };
+      case "silent":
+        return {
+          ok: false,
+          text: `Report refused: the record holds no words of the captain's on card "${found.card}" for captain_words_from: no reply in its thread and no click on its buttons; ${fix}`,
+        };
+    }
+  }
+
+  /**
+   * The captain's newest words on a card of this task, or in its Crewmate
+   * tab (`crewmate-tab`), read from the steer that carried it, with when he
+   * typed them; or what is missing.
+   */
+  private typedWords(
+    taskId: string,
+    cited: string,
+  ):
+    | { ok: true; words: string; at: number; mergeClick?: true }
+    | { ok: false; missing: "tab" | "card" }
+    | { ok: false; missing: "elsewhere" | "silent"; card: string } {
     if (cited === CREWMATE_TAB_VIA) {
       const message = this.options.tasks
         .timeline(taskId)
@@ -242,31 +326,13 @@ export class CaptainOverrides {
         );
       const span = message?.data?.words as { from: number; to: number } | undefined;
       const words = message && span ? message.text.slice(span.from, span.to).trim() : "";
-      return words
-        ? { ok: true, words }
-        : {
-            ok: false,
-            text: `Override refused: nothing was recorded. The record holds no words the captain typed in ${handle}'s Crewmate tab.`,
-          };
+      return message && words ? { ok: true, words, at: message.at } : { ok: false, missing: "tab" };
     }
     const card = this.host.cards.get(cited) ?? this.host.cards.stored(cited);
-    if (!card)
-      return {
-        ok: false,
-        text: `Override refused: nothing was recorded. There is no card "${cited}"; pass from as the id of the card the captain replied under or clicked, ${CREWMATE_TAB_VIA}, or ${STANDING_WORDS_FROM}.`,
-      };
-    if (card.taskId !== taskId)
-      return {
-        ok: false,
-        text: `Override refused: nothing was recorded. Card "${card.title}" is not on ${handle}, so the captain's words there pass nothing on it.`,
-      };
+    if (!card) return { ok: false, missing: "card" };
+    if (card.taskId !== taskId) return { ok: false, missing: "elsewhere", card: card.title };
     const words = this.captainWordsOnCard(card);
-    if (!words)
-      return {
-        ok: false,
-        text: `Override refused: nothing was recorded. The record holds no words of the captain's on card "${card.title}": no reply in its thread and no click on its buttons.`,
-      };
-    return { ok: true, ...words };
+    return words ? { ok: true, ...words } : { ok: false, missing: "silent", card: card.title };
   }
 
   /**
@@ -275,7 +341,9 @@ export class CaptainOverrides {
    * body's own script choosing is never his click. A click on a merge says
    * so (`clickApprovesMerge`).
    */
-  private captainWordsOnCard(card: Card): { words: string; mergeClick?: true } | undefined {
+  private captainWordsOnCard(
+    card: Card,
+  ): { words: string; at: number; mergeClick?: true } | undefined {
     const reply = this.host.cards
       .messages(card.id)
       .findLast((message) => message.who === "captain");
@@ -292,11 +360,8 @@ export class CaptainOverrides {
               : {}),
           }
         : undefined;
-    if (clicked && (!typed || !reply || clicked.at >= reply.at)) {
-      const { at: _at, ...words } = clicked;
-      return words;
-    }
-    return typed ? { words: typed } : undefined;
+    if (clicked && (!typed || !reply || clicked.at >= reply.at)) return clicked;
+    return typed && reply ? { words: typed, at: reply.at } : undefined;
   }
 
   /**

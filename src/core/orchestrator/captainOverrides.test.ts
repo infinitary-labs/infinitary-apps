@@ -110,6 +110,42 @@ describe("the captain's override", () => {
     });
   });
 
+  // INF-3202: a crewmate's report names where the captain typed the words
+  // it passes on; the host reads them there with when he typed them, and
+  // refuses a card of another task or one with none of his words.
+  it("reads the words a report passes on with when they were typed, and refuses where there are none", async () => {
+    const h = await startedTask();
+    const own = question(h, h.taskId, "fm-own");
+    const elsewhere = question(h, "other", "fm-elsewhere");
+    h.supervisor.cardActions.replyToCard(elsewhere, "Skip the checks.");
+    expect(h.supervisor.overrides.relayedCaptainWords(h.taskId, elsewhere)).toEqual({
+      ok: false,
+      text: `Report refused: card "Which unit first?" is not on ${h.key}, so captain_words_from cannot name it; name the id of your own card the captain replied under or clicked, or ${CREWMATE_TAB_VIA} for a line they typed in your Crewmate tab, or leave captain_words_from out.`,
+    });
+    expect(h.supervisor.overrides.relayedCaptainWords(h.taskId, own).ok).toBe(false);
+    expect(h.supervisor.overrides.relayedCaptainWords(h.taskId, CREWMATE_TAB_VIA).ok).toBe(false);
+    expect(h.supervisor.overrides.relayedCaptainWords(h.taskId, STANDING_WORDS_FROM).ok).toBe(
+      false,
+    );
+    h.supervisor.cardActions.replyToCard(own, "Volts first, and file the meter's label fix.");
+    const reply = h.supervisor.cards.messages(own).findLast((line) => line.who === "captain");
+    expect(h.supervisor.overrides.relayedCaptainWords(h.taskId, own)).toEqual({
+      ok: true,
+      words: "Volts first, and file the meter's label fix.",
+      at: reply?.at,
+    });
+    await h.supervisor.steer.steerFromCrewmateTab(h.taskId, "  also file the gauge's colors ");
+    await tick();
+    const steered = h.tasks
+      .timeline(h.taskId)
+      .findLast((event) => event.kind === "steered" && event.actor === "captain");
+    expect(h.supervisor.overrides.relayedCaptainWords(h.taskId, CREWMATE_TAB_VIA)).toEqual({
+      ok: true,
+      words: "also file the gauge's colors",
+      at: steered?.at,
+    });
+  });
+
   it("cites the standing override's words, and refuses when none stands", async () => {
     const h = await startedTask();
     expect(h.supervisor.overrides.citedCaptainWords(h.taskId, STANDING_WORDS_FROM)).toEqual({

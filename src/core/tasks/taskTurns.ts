@@ -35,6 +35,9 @@ export type KeptReport = {
  * facts until the next turn starts, like the others, so the idle ladder
  * can raise it again while the Firstmate leaves it unanswered (FI3-714).
  */
+/** The captain's words a report passes on, where he typed them and when (INF-3202). */
+export type RelayedCaptainWords = { from: string; text: string; at: number };
+
 export type ReportDeclaration = {
   /** Explicit individually correlated answers, saved immediately by the inbox owner. */
   responses?: CrewResponse[];
@@ -45,6 +48,17 @@ export type ReportDeclaration = {
   wait?: { reason: string; cardId?: string };
   finished?: boolean;
   needsFirstmate?: string;
+  /**
+   * Where the captain typed the words this report passes on (INF-3202,
+   * `captain_words_from`): a card of its own task by id, or `crewmate-tab`.
+   */
+  captainWordsFrom?: string;
+  /**
+   * Those words as the host read them there, with when he typed them: kept
+   * on the report's event, and offered to work filed from the report as
+   * its origin (docs/card-authoring.md "The You asked line").
+   */
+  captainWords?: RelayedCaptainWords;
   /**
    * The report's typed result (INF-799 piece 1), already checked against
    * the task's `result_schema` when it has one: kept on the report's event,
@@ -334,6 +348,7 @@ export class TaskTurns {
           ...(checkBack
             ? { checkBack: { until: checkBack.until, waitingFor: checkBack.waitingFor } }
             : {}),
+          ...(input.declared?.captainWords ? { captainWords: input.declared.captainWords } : {}),
           ...(result ? { result } : {}),
           ...(input.declared?.firstRelease ? { firstRelease: input.declared.firstRelease } : {}),
           ...(input.declared?.responses?.length ? { responses: input.declared.responses } : {}),

@@ -52,6 +52,11 @@ import { focusOn, pressKey, typeInto } from "./windowKeys";
  * waiting mark back, closes the issue with the reason and starts the queue,
  * and the pause ends.
  *
+ * Regression: Resume's confirmation and the fast sweep used to race. Hold
+ * only the host's post-close issue-list response until the confirmation is
+ * observed, then let that same sweep end the pause. Both facts remain
+ * required, independent of the polling interval or the computer's speed.
+ *
  * GitLab is a local stand-in (`./gitlabStub.ts`) the app reaches through
  * its real key sign-in and its real GitLab forge. Requires desktop Electron
  * and local git; no real account is asked.
@@ -288,25 +293,49 @@ for (const host of HOSTS) {
       const field = panel.getByRole("textbox", { name: QUEUE_PAUSE_WORDS.reason });
       await focusOn(field);
       await typeInto(field, reason);
-      await pressKey(resume, "Enter");
-      await expect(panel.getByText(QUEUE_PAUSE_WORDS.sent)).toBeVisible();
-      // The app answered with the captain's sign-in: the change waits again,
-      // the issue closed with the reason, and the queue started.
-      expect(gitlab.statuses(headSha).at(-1)).toMatchObject({
-        name: QUEUE_STATUS,
-        status: "skipped",
-        description: QUEUE_WAITING_WORDS,
-      });
-      expect(gitlab.pauseIssue()).toMatchObject({
-        state: "closed",
-        notes: [expect.stringContaining(reason)],
-      });
-      expect(gitlab.pipelineStarts()).toEqual([{ ref: "main" }, { ref: "main" }]);
+      const refresh = gitlab.holdClosedPauseReads();
+      let confirmation: string;
+      try {
+        await pressKey(resume, "Enter");
+        // Require the competing sweep to arrive before reading the message.
+        // It cannot remove the panel until the host answers that read.
+        await expect.poll(refresh.waiting).toBe(true);
+        await expect(panel.getByText(QUEUE_PAUSE_WORDS.sent)).toBeVisible();
+        confirmation = await panel.getByText(QUEUE_PAUSE_WORDS.sent).innerText();
+        // The app answered with the captain's sign-in: the change waits again,
+        // the issue closed with the reason, and the queue started.
+        expect(gitlab.statuses(headSha).at(-1)).toMatchObject({
+          name: QUEUE_STATUS,
+          status: "skipped",
+          description: QUEUE_WAITING_WORDS,
+        });
+        expect(gitlab.pauseIssue()).toMatchObject({
+          state: "closed",
+          notes: [expect.stringContaining(reason)],
+        });
+        expect(gitlab.pipelineStarts()).toEqual([{ ref: "main" }, { ref: "main" }]);
+      } finally {
+        refresh.release();
+      }
 
-      // The next pass ends the pause here.
+      // The already-arrived pass now reads the closed issue and ends the pause.
       await expect(panel).toHaveCount(0, { timeout: 30_000 });
-      expect((await notes())?.queuePause).toBeUndefined();
+      const after = await notes();
+      expect(after?.queuePause).toBeUndefined();
       expect(gitlab.merges()).toEqual([]);
+      await test.info().attach("resume-and-refresh", {
+        contentType: "application/json",
+        body: JSON.stringify({
+          host,
+          confirmation,
+          issue: gitlab.pauseIssue(),
+          status: gitlab.statuses(headSha).at(-1),
+          pipelines: gitlab.pipelineStarts(),
+          panelCount: await panel.count(),
+          pause: after?.queuePause ?? null,
+          merges: gitlab.merges(),
+        }),
+      });
     } finally {
       await launched.close();
       await gitlab.close();

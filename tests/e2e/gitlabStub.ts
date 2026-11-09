@@ -7,6 +7,7 @@ import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+import { deferred } from "../helpers/deferred";
 
 /**
  * A local stand-in for GitLab's REST API (`/api/v4`), on gitlab.com or a
@@ -267,6 +268,11 @@ export async function startGitLabStub(host: string) {
   const files = new Map<string, string>();
   /** The queue's one pause issue, open or closed, and every note written on it. */
   let pauseIssue: GitLabStubIssue | null = null;
+  // A journey may order the next issue-list response after its UI observation,
+  // without changing the issue, the writes, or the response GitLab sends.
+  let closedPauseReads:
+    | { response: Promise<void>; waiting: boolean; release: () => void }
+    | undefined;
   const notes: { iid: number; body: string }[] = [];
   /** The project's access tokens, and its CI variables by key. */
   const tokens: GitLabStubToken[] = [];
@@ -449,7 +455,7 @@ export async function startGitLabStub(host: string) {
   });
 
   const server = createServer((req, res) => {
-    void read(req).then((bytes) => {
+    void read(req).then(async (bytes) => {
       const multipart = /^multipart\/form-data/i.test(req.headers["content-type"] ?? "");
       const raw = multipart ? "" : bytes.toString("utf8");
       const url = new URL(req.url ?? "/", "http://localhost");
@@ -837,6 +843,10 @@ export async function startGitLabStub(host: string) {
         return;
       }
       if (method === "GET" && rest === "/issues") {
+        if (pauseIssue?.state === "closed" && closedPauseReads) {
+          closedPauseReads.waiting = true;
+          await closedPauseReads.response;
+        }
         const label = url.searchParams.get("labels");
         const state = url.searchParams.get("state");
         const listed =
@@ -1026,6 +1036,25 @@ export async function startGitLabStub(host: string) {
     servePauseIssue: (next: GitLabStubIssue | null) => {
       pauseIssue = next;
     },
+    /**
+     * Hold issue-list responses only after the pause issue closes. Resume's
+     * prerequisite reads and all writes still finish; the journey can see
+     * its confirmation before releasing the sweep's truthful empty list.
+     */
+    holdClosedPauseReads: () => {
+      if (closedPauseReads) throw new Error("Closed pause reads are already held.");
+      const { promise, resolve } = deferred<void>();
+      const held = {
+        response: promise,
+        waiting: false,
+        release: () => {
+          if (closedPauseReads === held) closedPauseReads = undefined;
+          resolve();
+        },
+      };
+      closedPauseReads = held;
+      return { waiting: () => held.waiting, release: held.release };
+    },
     /** The pause issue as GitLab holds it now, and every note written on it. */
     pauseIssue: () =>
       pauseIssue ? { ...pauseIssue, notes: notes.map((note) => note.body) } : null,
@@ -1038,6 +1067,7 @@ export async function startGitLabStub(host: string) {
     },
     close: () =>
       new Promise<void>((resolve, reject) => {
+        closedPauseReads?.release();
         server.closeAllConnections();
         server.close((err) => (err ? reject(err) : resolve()));
       }),

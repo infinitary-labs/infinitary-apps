@@ -25,20 +25,20 @@ export const CAPTURE_PANEL_TOOL_NAME = "capture_panel";
 
 export const LINT_PANEL_TOOL_DESCRIPTION = [
   "Check a personal panel's files against the design rules and the compiler.",
-  "Answers with findings: a refusal must be fixed before the panel is mountable, a warning names the nearest token to use instead, a note is a shape worth a review; then the compiler's verdict when the extension does not compile.",
+  "Answers with findings: a refusal must be fixed before the panel mounts, a warning names the nearest token, a note is worth a review; then the compiler's verdict when the extension does not compile.",
   "Pass id (the extension's directory name) to lint one; omit it to lint every extension you have changed this turn.",
   "Rewrites nothing. Run it before your report, and again after fixing.",
 ].join(" ");
 
 export const PLACE_PANEL_TOOL_DESCRIPTION = [
-  "Put the version of a personal panel you are building on the captain's own rail now, and read back what the window did with it.",
+  "Put the version of a personal panel you are building on the captain's rail, and read back what the window did.",
   "Until you place it or report, their rail keeps the panel's last commit and your version runs out of sight; a new panel is on no rail at all.",
-  "Answers per panel with the window's own word: drawn on which rail, collapsed to its header, folded for room or gathered into its rail's More row when the rail is too short, still loading, stopped drawing, off its rail, hidden by the captain, or refused, with the window's reason.",
+  "Answers per panel with the window's own word: drawn on which rail, collapsed, folded or in its rail's More row, loading, stopped drawing, off its rail, hidden by the captain, or refused, with the window's reason.",
   "The placed version shows with the running dot until your report commits it; a save after placing runs out of sight again until you place again.",
   "Pass id (the extension's directory name) to place one; omit it to place every extension you changed. An id you did not change is only looked at.",
   "Run it before every report, then capture_panel to photograph the panel docked.",
-  "When the window did not draw it and the panel's own files cannot change that, such as a panel they hid or their panels switched off, say so in your report and wait on the captain instead of calling it done; never move or hide their other panels yourself.",
-  "Folded for room or in the More row, the panel is built and on their rail, which is only too short to show it all: say where it sits in your report, and never collapse, move or hide their other panels to make room.",
+  "When the window did not draw it and the panel's files cannot change that, such as a hidden panel or panels switched off, say so in your report and wait on the captain; do not call it done; never move or hide their other panels yourself.",
+  "Folded or in the More row, the panel is built and on their rail, which is only too short: say where it sits in your report, and never collapse, move or hide their other panels.",
 ].join(" ");
 
 export const CAPTURE_PANEL_TOOL_DESCRIPTION = [

@@ -48,14 +48,14 @@ export const OPEN_CHANGE_TOOL_DESCRIPTION = [
 
 /** The around parameter's own words: no app tool describes a nested field, so from and to are explained here (INF-497). */
 export const OPEN_CHANGE_AROUND_DESCRIPTION = [
-  "Change one passage of the words around this task's saved story on its open pull or merge request, such as an outdated summary or a footer, while the story stays exactly as published. Pass the newest presentation revision with it.",
+  "Change one passage around this task's saved story on its open pull or merge request, such as a footer, leaving the story as published. Pass the newest presentation revision with it.",
   "from is that passage exactly as the description shows it now, found once above or below the story; to replaces it. An empty from adds to only when nothing surrounds the story.",
   "A passage someone changed since you read it is not found: nothing is sent and the answer quotes the current words. Change a person's words only when asked.",
 ].join(" ");
 
 export const CHECK_CHANGE_TOOL_DESCRIPTION = [
-  "Read typed facts on the newest pull request: each check's name, state, run, workflow and event where reported, mergeability, and whether the version moved. The host does not judge the work or settle repairs. facts.main is the default branch's newest run of a failed check: evidence on the cause, never a merge input.",
-  "Your merge card says the work is ready; record no separate ready or red verdict. Check facts still hold the merge, and only the captain's separate choice authorizes it. Use declaration only for flake, settled or answered, with headSha and evidence. Settle at the recorded repair's headSha with repairId and outcome; check may name a renamed job and evidence explains the link. Facts list repair checks absent from this reading without guessing replacements.",
+  "Read typed facts on the newest pull request: each check's name, state, run, workflow and event, mergeability, and whether the version moved. The host does not judge the work or settle repairs. facts.main is the default branch's newest run of a failed check: evidence on the cause, never a merge input.",
+  "Your merge card says the work is ready; record no separate ready or red verdict. Check facts still hold the merge; only the captain's separate choice authorizes it. Use declaration only for flake, settled or answered, with headSha and evidence. Settle at the recorded repair's headSha with repairId and outcome; check may name a renamed job and evidence explains the link. Facts list repair checks absent from this reading without guessing replacements.",
   "Read failed logs and record diagnosis with evidence; repair records your fix. Judge readiness, flakes, settlement and when to stop from your delivery guidance, not a host count. Raw check readings never settle a repair. An unclear write is never replayed.",
   "An empty hosted reading stays pending. absentChecks, with pull or alone for your own pull request, records positive no-CI evidence from trusted default-branch policy and the local gate; time, history or missing workflow files prove nothing.",
   "While checks run the app watches them and wakes you on the first failure and when they finish. End your turn until that wake. With no watchable checks no wake comes.",
@@ -70,21 +70,21 @@ export const CHECK_CHANGE_TOOL_DESCRIPTION = [
 export const QUEUE_ANSWER_DESCRIPTION = [
   "verdict answered: the project's queue failed or sent back headSha, your pull request's current version, and you judged nothing is left to change there, such as a send-back that names an earlier version while this one holds the fix.",
   "Name the queue status as check and say in evidence what the queue said and why it is answered.",
-  "Under the captain's kept merge approval the host marks that version waiting for the queue again once, with a feed line and no card: put up no merge card for it.",
+  "Under the captain's kept merge approval the host marks that version waiting for the queue again once, with a feed line and no card; put up no merge card.",
   "A version with something left to fix gets the fix, never an answer.",
 ].join(" ");
 
 /** The conflictRepair parameter's own words: the rule a Claude crewmate must see is here. */
 export const CONFLICT_REPAIR_DESCRIPTION = [
-  "The captain's merge approval is kept after the project's host refused their click: declare what each version you push did to the approved work, on its own, after you push.",
+  "Their merge approval is kept after the host refused their click: after each push, declare what that version did to the approved work.",
   "fromHead is the head their approval covers (the approved head, or your last accepted repair); toHead your pushed head; newBase the default branch commit it sits on.",
-  "none keeps their approval; after checks pass the host automatically republishes the unchanged story at the repaired version, then merges. End your turn with no new card; changed-work ends it - put up a new merge card; unknown holds the merge, and once your turn ends an independent crewmate assesses the repair and its verdict decides - do not declare that repair again.",
-  "changedPaths names every path that now differs from the approved change. Few lines, or editing only conflicted files, is not proof: compare the behavior.",
+  "none keeps their approval; after checks pass the host automatically republishes the unchanged story at the repaired version, then merges. End your turn with no new card; changed-work ends it - put up a new merge card; unknown holds the merge; once your turn ends an independent crewmate assesses the repair and its verdict decides - do not declare it again.",
+  "changedPaths names every path that now differs from the approved change. Few lines or only conflicted files is not proof: compare the behavior.",
 ].join(" ");
 
 /** The captainGuidance parameter's own words: the rule a Claude crewmate must see is here. */
 export const CAPTAIN_GUIDANCE_DESCRIPTION = [
-  "The captain sent you new words while their merge approval is kept: they hold its merge until you declare their impact.",
+  "The captain sent new words while their merge approval is kept: they hold its merge until you declare their impact.",
   "mark is the number their message named - the newest you read; marks you have not read stay held.",
   "none leaves the approved work as it was and the merge goes on; changed-work ends their approval - do the work and put up a new merge card.",
   "evidence says why.",
@@ -92,8 +92,8 @@ export const CAPTAIN_GUIDANCE_DESCRIPTION = [
 
 /** The skipRules parameter's own words: the rule a Claude crewmate must see is here (FI3-1571 piece 2). */
 export const SKIP_RULES_DESCRIPTION = [
-  "With pull, prepare a GitHub merge that skips the branch rules your sign-in may skip, failed checks included: headSha is the version you read, method squash.",
-  "It is stored only when a rule or a failed check holds that version, GitHub says the sign-in may skip every rule set holding the default branch, and the crew declared its exact-version judgment with evidence.",
+  "With pull, prepare a GitHub merge that skips the branch rules your sign-in may skip, failed checks included: headSha is the version read; method squash.",
+  "It is stored only when a rule or failed check holds that version, GitHub says the sign-in may skip every default-branch rule set, and the crew declared its exact-version judgment.",
   "The review names each rule and failed check, and the merge card shows them. Only the captain's click on that card sends it, once, at that version.",
 ].join(" ");
 
@@ -109,12 +109,12 @@ export const SKIP_RULES_DESCRIPTION = [
  * a crewmate writes them; the card draws them, so no prose repeats them.
  */
 export const AFTER_MERGE_STORY_RULE =
-  "Optional afterMerge: work started once this merges, never repeated in prose; task: an unstarted task's key; doer firstmate for a change in the app itself (Automation, settings, directions): it files no task.";
+  "Optional afterMerge: work started once this merges, not repeated in prose; task: an unstarted task's key; doer firstmate for a change in the app itself (Automation, settings, directions): it files no task.";
 
 export const PREPARE_CHANGE_STORY_DESCRIPTION = [
-  "why holds 1 or 2 short sentences, whatChanged 1 to 5 short bullets, before and after one short sentence each, checked 1 to 6 observed {check, result} facts.",
+  "why holds 1 or 2 short sentences, whatChanged 1 to 5 short bullets, before and after one sentence each, checked 1 to 6 observed {check, result} facts.",
   "base, head and every captureHead are full 40-character commit ids from git rev-parse, never short; a later revision keeps the first base and each kept view's Before media.",
-  "Before media name base, After media head; media taken on another version name that version with applicability, kept as data, not displayed; kind new has no Before.",
+  "Before media name base, After media head; media taken on another version name it with applicability, kept as data, not displayed; kind new has no Before.",
   "layout adjacent needs exactly two media in each shown state.",
   "Everyone who can see the project reads the story: write it for a stranger, naming the captain's setup only by its kind, with no computer, host, user or account names, keys and what they reach, addresses, paths, clock times, time zones, other projects, task keys or the captain's own words.",
   "publishable true is your declaration that you read the whole story once as that stranger and it holds nothing personal or local.",
@@ -125,7 +125,7 @@ export const PREPARE_CHANGE_TOOL = crewmateTool({
   name: "prepare_change",
   label: "Prepare change story",
   description:
-    "Prepare one two-tier change story, without showing a card or uploading. Commit the demonstrated code first. Use the same title on the story, pull request and merge card. Aim for 150 open words on the card, 250 on the pull request. Put commands, file names and counts in verification, which folds; nonempty unfinished work folds too. Risk is the card radar and one PR line with its table folded. Omit empty sections and boilerplate. Never write code versions, hashes or story revision numbers in any prose, captions, alt text, verification or projectText, even folded; keep versions only in base, head and captureHead. Ordered views pair Before and After pictures under one heading; recordings stack. Inspect the exact publishable pictures or MP4s and their posters before selecting them; no private threads or secrets. No visible change gives noPicture and no views. Keep public template text and issue references in projectText. No setting, new approval, upload fallback or evidence commit. Meaningful drawn figures need inspected raster exports. A private GitLab project uploads only while GitLab requires sign-in to view its media; report that refusal, never change the setting.",
+    "Prepare one two-tier change story, without showing a card or uploading. Commit the demonstrated code first. Use the same title on the story, pull request and merge card. Aim for 150 open words on the card, 250 on the pull request. Put commands, file names and counts in verification, which folds; nonempty unfinished work folds too. Risk is the card radar and one PR line with its table folded. Omit empty sections and boilerplate. Never write code versions, hashes or story revision numbers in any text, even folded; keep versions only in base, head and captureHead. Ordered views pair Before and After pictures under one heading; recordings stack. Inspect the exact publishable pictures or MP4s and posters before selecting them; no private threads or secrets. No visible change gives noPicture and no views. Keep public template text and issue references in projectText. No setting, new approval, upload fallback or evidence commit. Meaningful drawn figures need inspected raster exports. A private GitLab project uploads only while GitLab requires sign-in to view media; report that refusal, never change the setting.",
   parameters: Type.Object({
     story: zodParameter<ChangePresentationDraft>(changePresentationDraftSchema, {
       description: PREPARE_CHANGE_STORY_DESCRIPTION,
@@ -304,7 +304,7 @@ export const CHECK_CHANGE_TOOL = crewmateTool({
       Type.Integer({
         minimum: 1,
         description:
-          "Prepare a merge review of any open pull request number in the task's project, or in the project your current change is in when it is that change, whoever opened it: it becomes your task's current change. Grants no approval and merges nothing.",
+          "Prepare a merge review of any open pull request in the task's project, whoever opened it: it becomes your current change. Grants no approval and merges nothing.",
       }),
     ),
     skipRules: Type.Optional(
@@ -337,10 +337,10 @@ export const READ_WORKFLOW_TOOL = crewmateTool({
   label: "Read workflow evidence",
   description: [
     "Read CI evidence in your project through the app's own sign-in where it lives. Use this connection for your own GitHub work.",
-    "With runId alone, answers a short read: the run's name, state, version, link and attempt, then one line per job of the latest attempt (number, name, state, and where a failed job failed).",
+    "With runId alone, answers a short read: the run's name, state, version, link and attempt, then a line per job of the latest attempt (number, name, state, where it failed).",
     "A short read of a running run saves an app watch: reads every minute, up to 3 hours and 5 runs per task. It wakes you once on the first failed job and once when the run ends; if it has ended at the first failure read, only the end wake goes. End your turn; never sleep or loop on reads. A failure or outcome you read yourself sends no matching wake.",
     "More than 100 jobs are read to the end; if any are left out, the answer says how many.",
-    "With jobId, reads that job's log: the run/version, the job and its steps, and numbered log lines from offset (1-based, default 1), up to limit (default 200, max 500) and 20,000 characters; nextOffset continues.",
+    "With jobId, reads that job's log: the run/version, the job and its steps, and numbered lines from offset (1-based, default 1) up to limit (default 200, max 500) and 20,000 characters; nextOffset continues.",
     "Lines over 2,000 characters are clipped; logs over 8 MiB are refused. offset and limit apply only with jobId.",
     "On GitHub runId is an Actions run. On GitLab runId is the pipeline id and jobId the job id.",
     "Find a run for a version with github_read: GET /repos/{owner}/{repo}/actions/runs?head_sha=<full commit id> (use an untouched-main commit for a baseline), or on GitLab GET /projects/<url-encoded group/name>/pipelines?sha=<full commit id>.",
@@ -396,7 +396,7 @@ const GITHUB_READ_SCOPE =
   "A read reaches whatever the sign-in may read - any repository (/repos/{owner}/{repo}/..., including issues, pull requests, contents and Actions), your account, organizations, notifications and search - and the host's own answer comes back. A task with no project, or whose project lives where the app has no API (on this computer, a plain Git host), reads through the github.com sign-in.";
 
 const GITLAB_READ_SCOPE =
-  "On a GitLab project it is GitLab's API (/api/v4, the part after it): a project is /projects/{id}/..., {id} the number or URL-encoded path (group%2Fname).";
+  "On a GitLab project it is GitLab's API (/api/v4, the part after it): a project is /projects/{id}/..., {id} its number or URL-encoded path (group%2Fname).";
 
 const GITHUB_WRITE_SCOPE =
   "Your own project is /repos/{owner}/{repo}/... on GitHub, /projects/<url-encoded group/name>/... on GitLab: a task that ships a change sends those at once, including workflows, files on other branches, settings and permissions; a task that only answers sends only run starts and reruns there at once. Merges and default-branch moves or deletion are refused: use check_change pull and your merge card. Deleting a GitLab project is refused. Any other write - another project, your account, an organization, or of a task whose project has no API there (through the github.com sign-in) - is kept, not sent, and answered with an ask id: emit_card an action whose effect is {kind: request_write, ask} beside your own Not now, saying why. Only the captain's click sends it, once; you then hear the answer.";

@@ -120,14 +120,14 @@ export const FILE_FOLLOWUP_TOOL_DESCRIPTION = [
   "Not for an optional improvement (a refactor, extra assurance, a nicer wording): that is one line in your report, and the first mate decides whether the captain sees it.",
   "Not for work your own change needs to be finished, or documents it makes stale: those are yours.",
   "Search first with tasks (text, project): if a matching task already exists, file nothing and name its key in your report.",
-  "It becomes a separate planned task, recorded as discovered from yours - not a part of it - and waits until the first mate decides; nothing starts on its own and you keep working.",
+  "It becomes a separate planned task, discovered from yours, and waits until the first mate decides; nothing starts on its own and you keep working.",
   "The first mate hears about it with your report, not as a message of its own, and triages it there.",
   "Filing it does NOT hold your own task up: your work still stands on its own merits.",
   FOLLOWUP_AFTER_MERGE_RULE,
   "For a host-record takeover, file Take over: my branch in a fresh task, then needs_firstmate to start it now; no merge prerequisite, never to bypass consent or repeat an unknown effect.",
-  "The one exception is blocks_me, which is a real dependency - pass it true only when your task genuinely cannot merge until that work does, because it will then stop your task from closing.",
+  "The one exception is blocks_me, a real dependency: pass it true only when your task cannot merge until that work does; it then stops your task from closing.",
   "Give a sentence-case title, a one-sentence goal saying what done looks like, and why - what you found, in plain words.",
-  "When the follow-up is a test failure, pass test_failure true and test_path, the failing test's path: the host refuses a test failure with no path, stores the path, and answers with the existing key instead of filing a second open row for the same path.",
+  "For a test failure, pass test_failure true and test_path, the failing test's path: the host refuses one with no path and answers with the existing key instead of filing a second row.",
   "Never file progress, questions for the captain (emit a card), or work you are about to do yourself.",
 ].join(" ");
 
@@ -136,8 +136,8 @@ export const NOTE_PROGRESS_TOOL_DESCRIPTION = [
   "It is never shown as a card or a feed line; the captain can read it on the task's record.",
   "Call it as soon as a plan item finishes or the work moves to the next item, in the middle of your turn: the captain watches the plan move while you work, and a note held for the end of your turn leaves it standing still.",
   "Otherwise use it at real milestones, not every command, and never instead of your final report.",
-  "Pass plan with it to show where the work stands: the whole list of what the task takes, each item with a label, a short label of a word or two for its dot, and its state - done, current, next or skipped.",
-  "The captain sees it as dots on a line beside the task and as a list on its record, so keep it short and high level: under eight items in all, one current at a time.",
+  "Pass plan to show where the work stands: the whole list of what the task takes, each item with a label, a word or two for its dot, and its state - done, current, next or skipped.",
+  "The captain sees it as dots beside the task and a list on its record, so keep it short: under eight items, one current at a time.",
   "Send the first list with your brief, send the whole list with every later note, unchanged if nothing moved, and fold finished items into one item to make room; the final report leaves every item done or skipped.",
 ].join(" ");
 
@@ -245,7 +245,7 @@ export const REPORT_TOOL = crewmateTool({
         {
           additionalProperties: false,
           description:
-            "After verifying a published release, identify every merged task it contains in your project, including internal changes, and report each earliest release here: version, release page, tasks (keys or ids), and evidence proving membership and earliest publication. Collect all task keys with tasks skip before recording; group those with the same earliest release and report again for other groups. Arrange missing verification, never guess from merge time or call unknown unshipped. Existing attributions stay unless corrects names the previous version you read and evidence explains the correction. This records facts only, never publishes or merges.",
+            "After verifying a published release, report each merged task it contains in your project, internal changes included, with its earliest release: version, release page, tasks and evidence of membership and earliest publication. Collect all task keys with tasks skip before recording; group those with the same earliest release and report again for other groups. Arrange missing verification; never guess from merge time or call unknown unshipped. Existing attributions stay unless corrects names the previous version you read. This records facts only, never publishes or merges.",
         },
       ),
     ),
@@ -342,14 +342,14 @@ export const REPORT_TOOL = crewmateTool({
         }),
         {
           description:
-            "Explicit request/response identities: save this exact answer and notify now. Retry reuses response_id; corrections use a new one. Not-yet-answered leaves the request open.",
+            "Request/response identities: save this exact answer and notify now. Retry reuses response_id; corrections use a new one. Not-yet-answered leaves the request open.",
         },
       ),
     ),
     needs_firstmate: Type.Optional(
       Type.String({
         description:
-          "Relay captain-approved builds by reply, merges, discards, stronger models or unrelated work, with exact words and final specification. Also coordinate checks you cannot run or work on another computer: name the computer, what is needed and where. Wakes at turn end, even with a card or wait, after any captain reply has your answer. It authorizes nothing. Requested answers use responses; never use this for progress or news.",
+          "Relay captain-approved builds by reply, merges, discards, stronger models or unrelated work, with exact words and final specification. Also for checks you cannot run or work on another computer: name the computer, what is needed and where. Wakes at turn end, even with a card or wait, after any captain reply has your answer. It authorizes nothing. Requested answers use responses; never use this for progress or news.",
       }),
     ),
     captain_words_from: Type.Optional(
@@ -361,7 +361,7 @@ export const REPORT_TOOL = crewmateTool({
     files: Type.Optional(
       Type.Array(Type.String(), {
         description:
-          "Absolute paths of files on your computer this report hands to another task, such as a file the first mate asked you to find. The app keeps verified copies; the first mate's steer delivers them. Never paste a file's content anywhere: it may hold secrets.",
+          "Absolute paths of files on your computer this report hands to another task. The app keeps verified copies; the first mate's steer delivers them. Never paste a file's content anywhere: it may hold secrets.",
       }),
     ),
     result: Type.Optional(

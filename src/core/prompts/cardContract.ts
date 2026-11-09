@@ -305,8 +305,8 @@ export const CLAUDE_TOOL_DESCRIPTION_CAP = 2_048;
  * notes read (`RISK_WORDS`). Only a crewmate's schema carries it.
  */
 const RISK_PARAM = [
-  `Required on the merge card of your task's own change, allowed on a merge card that names a reviewed pull request, and nowhere else: your assessment of the change's risk, which the app draws as a radar at the card's top right, one dot per dimension, and keeps on the task.`,
-  `Give each of the seven dimensions a level - low, medium or high, rating the change itself, never how careful you were - and why: one plain line of at most ${RISK_WHY_MAX} characters naming the concrete reason, such as "Two files in the composer".`,
+  `Required on your own change's merge card, allowed on a merge card naming a reviewed pull request, nowhere else: your assessment of the change's risk, drawn as a radar at the card's top right and kept on the task.`,
+  `Give each of the seven dimensions a level - low, medium or high, rating the change itself, never how careful you were - and why: one plain line of at most ${RISK_WHY_MAX} characters naming the concrete reason, e.g. "Two files in the composer".`,
   "All seven levels and notes are yours alone; the app adds no measurements. The body never draws or repeats the assessment, and a revision of the card replaces it.",
   ...RISK_DIMENSIONS.map((dimension) => {
     const { label, ask, levels } = RISK_WORDS[dimension];

@@ -25,7 +25,7 @@ const ATTRIBUTING_TOOLS = new Set([
 const ASK_ID = Type.Optional(
   Type.String({
     description:
-      "The open message served (open_asks id), any step: name it on work from its card's click or its work's report. Empty if unrelated. Omit: latest read.",
+      "The open message (open_asks id) this answers, from a card click or report. Empty if unrelated; omit: latest.",
   }),
 );
 

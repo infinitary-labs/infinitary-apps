@@ -516,7 +516,7 @@ const crewmateCardParams = Type.Object({
   body_file: Type.Optional(
     Type.String({
       description:
-        "Write every card body as a UTF-8 HTML file in your task's card body folder, outside the working copy, then name it here (absolute path or relative to that folder). To revise, prefer editing the file in place - only the parts the captain's words changed, the rest word for word - so the app can mark what changed for them; a full rewrite is fine when the answer itself changed shape, and the opening sentence then says what changed. Then call emit_card again with the same id. Give exactly one of body_file or body; inline body is still accepted. The app reads the file only at this call and runs the usual checks; it does not watch edits.",
+        "Write every card body as a UTF-8 HTML file in your task's card body folder, outside the working copy, then name it here (absolute path, or relative to that folder). To revise, edit the file in place - only what the captain's words changed - so the app can mark what changed; a full rewrite is fine when the answer itself changed shape, and the opening sentence then says what changed. Then call emit_card again with the same id. Give exactly one of body_file or body; inline body is still accepted. The app reads the file only at this call and runs the usual checks; it does not watch edits.",
     }),
   ),
 });
@@ -528,7 +528,7 @@ const crewmateCardParams = Type.Object({
  * description, which a Claude model reads.
  */
 const BROWSER_BUTTON_DESCRIPTION = [
-  `Optional: a short label (at most ${LIVE_ATTACHMENT_LABEL_MAX} characters), such as Try it, View search or View booking, for a button the app adds under this card's body that opens this task's browser for the captain to watch, beside its site and who is driving.`,
+  `Optional: a short label (at most ${LIVE_ATTACHMENT_LABEL_MAX} characters), such as Try it, View search or View booking, for a button the app adds under this card's body that opens this task's browser for the captain to watch.`,
   "It only opens the view: it never answers or closes the card, and it changes no merge.",
   `It needs this task's browser, opened with ${browserCommand("open <url>")}; leave it open while the card is up, since a stopped browser opens stopped and a fresh one starts with nothing it had.`,
 ].join(" ");
@@ -539,9 +539,9 @@ const BROWSER_BUTTON_DESCRIPTION = [
  * description, which a Claude model reads.
  */
 const BROWSER_PAGE_DESCRIPTION = [
-  "Optional, only beside browser_button: an HTML file from your task's project, such as index.html, that the button opens in this task's browser with the captain in control.",
+  "Optional, only beside browser_button: an HTML file from your task's project, such as index.html, that the button opens in this task's browser.",
   "Give its path relative to your working copy, the same in the project folder: an .html or .htm file, with no .. and no link on the way.",
-  "The app checks it when the card goes up and serves only files inside the project folder locally, so before your work is merged the click opens the project's current file or says it is not there yet.",
+  "The app checks it when the card goes up and serves only files inside the project folder, so before your work merges the click opens the current file or says it is not there yet.",
   "It needs no browser open now, works after your task closes, never answers or closes the card, changes no merge; never beside browser_handoff.",
 ].join(" ");
 
@@ -556,10 +556,10 @@ export const BROWSER_PAY_STEP = "Open browser and pay";
  * ride the top-level description, which a Claude model reads.
  */
 const BROWSER_HANDOFF_DESCRIPTION = [
-  "Optional: ask the captain to take over this task's browser, for what only a person should do - a sign-in, a verification code, a payment - never in a card reply.",
+  "Optional: ask the captain to take over this task's browser for what only a person should do - a sign-in, a code, a payment - never in a card reply.",
   `Give site (the page's host), reason (why you need the captain) and after (what you will do once control comes back), each a short sentence of at most ${TASK_BROWSER_REQUEST_MAX} characters.`,
   `The card is an ordinary decision naming the site and why; give it exactly one action whose effect is { kind: "open", target: "browser" }, labeled as the captain's step, such as ${BROWSER_SIGN_IN_STEP}, beside one such as Leave waiting.`,
-  "The app pauses your browser before the card goes up: your browser commands refuse until the captain returns control, and nothing the captain types or sees reaches you.",
+  "The app pauses your browser before the card goes up: its commands refuse until the captain returns control, and nothing they do reaches you.",
   "Only the captain's Return control resumes you, once, with your earlier refs gone: take a fresh look.",
   `Returning control gives this task the signed-in site, never permission to buy, pay or submit something that matters. ${browserCommand("stop")} withdraws a waiting request.`,
   "A purchase, booking or other submission that commits the captain is the captain's to make: prepare it up to its last step and ask here, with the card as its review.",

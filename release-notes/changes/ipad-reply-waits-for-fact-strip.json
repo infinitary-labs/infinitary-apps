@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ipad-reply-waits-for-fact-strip",
+      "reason": "Tests only: the iPad keyboard-scrolling phone part waits for the merge card's fact strip to reveal before it taps the reply, with no app behavior change."
+    }
+  ]
+}

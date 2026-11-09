@@ -783,6 +783,8 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
         // The old task waits for its successor, never the other way round.
         await run("link_tasks", { from: next.key, to: h.first.key, type: "blocks" });
         const delivered = join(crewmateTempDir(h.paths, next.id), "handover", kept.file);
+        // The steer answers before the files cross, which they do next (INF-3060).
+        await vi.waitFor(() => expect(existsSync(delivered)).toBe(true), REAL_GIT_WAIT);
         expect(readFileSync(delivered)).toEqual(readFileSync(artifact));
         expect(git(next.worktreeDir!, "rev-parse", "HEAD")).toBe(h.head);
         expect(readFileSync(join(next.worktreeDir!, "meter.ts"), "utf8")).toBe(

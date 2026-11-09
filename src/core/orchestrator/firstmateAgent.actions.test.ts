@@ -927,7 +927,8 @@ describe("FirstmateAgent", () => {
     expect(tasks.get("t1")?.status).toBe("open");
     expect(session.prompts).toHaveLength(1);
     // update_task start_now inside the turn.
-    await supervisor.starts.startQueuedNow("t1");
+    expect(await supervisor.starts.startQueuedNow("t1")).toContain("is starting.");
+    await tick();
     expect(tasks.get("t1")?.status).toBe("active");
     session.emitTurnEnd("Started.");
     session.resolveNextPrompt();
@@ -1316,7 +1317,8 @@ describe("FirstmateAgent", () => {
         user_words: "Try a premium model",
         shape: { escalate_from: "attempt", premium_ask: true },
       });
-    expect(result?.content[0]?.text).toContain("Commissioned");
+    // Recorded at once, started behind the answer (INF-3060).
+    expect(result?.content[0]?.text).toContain("it is starting now");
     const fresh = tasks.list().find((task) => task.id !== "attempt");
     expect(fresh?.shape).toMatchObject({
       premium_ask: true,
@@ -1368,7 +1370,8 @@ describe("FirstmateAgent", () => {
         user_words: "Try a stronger model",
         shape: { escalate_from: "attempt" },
       });
-    expect(result?.content[0]?.text).toContain("Commissioned");
+    // Recorded at once, started behind the answer (INF-3060).
+    expect(result?.content[0]?.text).toContain("it is starting now");
     const fresh = tasks.list().find((task) => task.id !== "attempt");
     expect(fresh?.shape?.premium_ask).toBeUndefined();
     expect(fresh?.shape?.escalation).toMatchObject({ attempt: 1, floor: "high" });

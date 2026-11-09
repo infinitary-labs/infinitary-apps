@@ -167,7 +167,7 @@ function firstmateMove({
   if (
     reviewedReport &&
     latestUserTail.includes(`recorded checks: ${CHECK_WORDS.green}`) &&
-    !latestUserTail.includes("Commissioned")
+    !latestUserTail.includes("Recorded task")
   ) {
     const taskId = latestUserTail.match(/reported on task ([\w-]+)/)?.[1] ?? "missing";
     // The captain's own project, never the personal workspace the app keeps beside it.

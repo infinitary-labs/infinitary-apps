@@ -324,9 +324,8 @@ export class CrewSessions {
    * the return value says so - the guidance is neither dropped nor reported
    * as if the work in flight had heard it. A delivery that fails right now
    * returns `recorded-retrying`: the row is durable, the tick sweep retries
-   * it, and the ladder escalates loudly if it keeps failing. (`recorded-queued`
-   * was the supervision claim's outcome; nothing produces it since S7c
-   * retired the claim, and it stays in the vocabulary for the record.)
+   * it, and the ladder escalates loudly if it keeps failing. A message to a
+   * task that has not started yet is `recorded-queued` (INF-3060).
    */
   /**
    * Delivers one file into a task's hand-over folder on the computer it
@@ -404,16 +403,24 @@ export class CrewSessions {
    * words the steer carries: paths and sizes, never content.
    */
   async handFiles(fromTask: string, toTask: string): Promise<string> {
-    const from = this.core.options.tasks.resolve(fromTask);
+    return (await this.prepareHandFiles(fromTask, toTask)).copy();
+  }
+
+  /**
+   * The checks of a hand-over, answered at once, and the copy itself, which
+   * can take a minute to another computer, as a function to run after: the
+   * first mate's steer answers between the two (INF-3060). `copy` tells
+   * `arrived` how many files have reached the task so far, so a failure part
+   * way can say so.
+   */
+  async prepareHandFiles(
+    fromTask: string,
+    toTask: string,
+  ): Promise<{ files: number; copy: (arrived?: (count: number) => void) => Promise<string> }> {
+    const { from, kept } = await this.handSource(fromTask);
     const to = this.core.options.tasks.resolve(toTask);
-    if (!from) throw new Error(`There is no task ${fromTask} to hand files from.`);
     if (!to) throw new Error(`There is no task ${toTask} to hand files to.`);
     const handle = (record: TaskRecord) => record.key || record.id;
-    const kept = await keptHandoverFiles(crewmateHandoverDir(this.core.options.paths, from.id));
-    if (kept.length === 0)
-      throw new Error(
-        `${handle(from)} has no reported files to hand on: its crewmate passes them in report files.`,
-      );
     if (to.status !== "active")
       throw new Error(
         `${handle(to)} has not started, so there is no folder to hand files into yet.`,
@@ -424,6 +431,38 @@ export class CrewSessions {
       throw new Error(
         `${handle(to)} runs on ${machines?.nameOf(machine) ?? `another ${COMPUTER.one}`}, which needs an update to Infinitary before it can take handed files.`,
       );
+    return {
+      files: kept.length,
+      copy: (arrived) => this.copyHandFiles(from, to, kept, arrived),
+    };
+  }
+
+  /**
+   * The task files are handed from, and the files its reports kept; a
+   * hand-over to a task that has not started checks these at once (INF-3060).
+   */
+  async handSource(
+    fromTask: string,
+  ): Promise<{ from: TaskRecord; kept: Awaited<ReturnType<typeof keptHandoverFiles>> }> {
+    const from = this.core.options.tasks.resolve(fromTask);
+    if (!from) throw new Error(`There is no task ${fromTask} to hand files from.`);
+    const kept = await keptHandoverFiles(crewmateHandoverDir(this.core.options.paths, from.id));
+    if (kept.length === 0)
+      throw new Error(
+        `${from.key || from.id} has no reported files to hand on: its crewmate passes them in report files.`,
+      );
+    return { from, kept };
+  }
+
+  private async copyHandFiles(
+    from: TaskRecord,
+    to: TaskRecord,
+    kept: Awaited<ReturnType<typeof keptHandoverFiles>>,
+    arrived?: (count: number) => void,
+  ): Promise<string> {
+    const handle = (record: TaskRecord) => record.key || record.id;
+    const machine = to.deviceId;
+    const machines = this.core.options.machines;
     const lines: string[] = [];
     for (const file of kept) {
       const path =
@@ -435,6 +474,7 @@ export class CrewSessions {
               file.file,
             );
       lines.push(`${path} (${fileSizeWords(file.size)})`);
+      arrived?.(lines.length);
     }
     // Only a complete, verified delivery is a receipt; failed copies leave none.
     this.core.options.tasks.capture.recordResultHandoff(from.id, { taskId: to.id });
@@ -730,6 +770,13 @@ export class CrewSessions {
     mode: "interrupt" | "cancel",
     source: InterruptSource,
   ): Promise<void> {
+    // A start that runs behind the first mate's answer (INF-3060) has no
+    // crewmate to stop until it has run: the stop or cancel waits for it,
+    // then reaches the crewmate it started, or the record it left.
+    const behind = this.core.starts.startingBehind(
+      this.core.options.tasks.resolve(taskId)?.id ?? taskId,
+    );
+    if (behind && !this.core.tasks.get(taskId)) await behind.catch(() => undefined);
     const task = this.core.tasks.get(taskId);
     // A stop or a cancel reaches the crewmate: its spark flies first.
     this.core.steer.announceReach(taskId);

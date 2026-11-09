@@ -180,6 +180,47 @@ describe("CrewSupervisor", () => {
     expect(cards()).toEqual([]);
   });
 
+  // INF-3060's batch send-back: a spawn's start now runs behind the first
+  // mate's answer, so the captain's cancel can arrive before the crewmate
+  // exists; it was refused ("task still queued") and the task ran on.
+  it("cancels a spawn whose start still runs behind the answer", async () => {
+    let reached!: () => void;
+    const classifying = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, tasks } = setup(crewmate, {
+      classifier: {
+        classify: async () => {
+          reached();
+          await held;
+          return { kind: "fix", source: "classifier:test", version: "kc1" };
+        },
+      },
+    });
+    const { taskId, crewmate: answer } = await supervisor.intake.commission({
+      title: "long",
+      intent: intentOf("long running work"),
+    });
+    expect(answer).toBe("starting");
+    await classifying;
+    const cancelling = supervisor.sessions.interruptCrewmate(taskId, "cancel");
+    release();
+    await cancelling;
+    crewmate.failPrompt("aborted");
+    await tick();
+    expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
+    expect(events.filter((e) => e.type === "task_finished").at(-1)).toMatchObject({
+      type: "task_finished",
+      status: "cancelled",
+      title: "long",
+    });
+  });
+
   // The captain's cancel bug (Nov 3, 2026): INF-2298 kept working after a
   // cancel that reported success, and FIRS-6, whose turn had started on its
   // own on another computer, stayed running after two. An abort asks the turn

@@ -134,7 +134,9 @@ export class CrewFacts {
       move?.phase === "moving" ||
       move?.restartFrom !== undefined ||
       move?.preparing === true ||
-      this.core.moves.isCrossing(taskId)
+      this.core.moves.isCrossing(taskId) ||
+      // A hand-over of files still crossing: what is behind it waits for it (INF-3060).
+      this.core.steer.handingOver(taskId)
     )
       return true;
     const accountId = this.core.tasks.get(taskId)?.accountId ?? record?.accountId;

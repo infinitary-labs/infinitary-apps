@@ -455,14 +455,21 @@ describe("FirstmateAgent", () => {
         return pending;
       },
     });
-    const commissioning = f.supervisor.intake.commission({
-      title: "Plan the Tasks refresh check",
-      intent: {
-        goal: "Plan how to verify Tasks refreshes",
-        userWords: "Plan how to verify Tasks refreshes",
-      },
-      shape: { kind: "plan" },
-    });
+    // The answer comes before the start (INF-3060): the start is what reads the source.
+    let taskId = "";
+    const commissioning = f.supervisor.intake
+      .commission({
+        title: "Plan the Tasks refresh check",
+        intent: {
+          goal: "Plan how to verify Tasks refreshes",
+          userWords: "Plan how to verify Tasks refreshes",
+        },
+        shape: { kind: "plan" },
+      })
+      .then((handle) => {
+        taskId = handle.taskId;
+        return handle.started;
+      });
     const settled = commissioning.then(
       () => undefined,
       () => undefined,
@@ -484,6 +491,9 @@ describe("FirstmateAgent", () => {
         }),
       );
       expect(f.crewSpecs).toHaveLength(0);
+      // The quit stopped the start; it did not fail, so the task does not
+      // wait for start_now and the first mate is not told it could not start.
+      expect(f.tasks.get(taskId)?.startNotice ?? null).toBeNull();
     } finally {
       release(facts);
       await settled;

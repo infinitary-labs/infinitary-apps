@@ -19,19 +19,30 @@ import type { WakeWithdrawn } from "./reportWakes";
  * reached the work in flight. `recorded-retrying` is the durable-inbox
  * outcome for a delivery that failed right now: the message is recorded,
  * the ladder retries it, and it escalates loudly if it keeps failing.
- * `recorded-queued` (interaction P0, WI-4): the task's latest update is being
- * handled right now, so the message waits durably on the task's lane and is
- * delivered, in order, the moment that handling ends. `recorded-held`: a
+ * `recorded-queued` (INF-3060): the task has not started yet - its start
+ * runs behind the first mate's answer, it waits to start by itself, or its
+ * start failed and it waits open for update_task start_now - so
+ * the message waits durably on the task's lane and its crewmate reads it
+ * right after its brief once it starts. `after-files`: the first mate's
+ * message is recorded on the task's lane, which is held while its earlier
+ * message with files is still being handed over, so the crewmate reads them
+ * in the order they were sent. `recorded-held`: a
  * cut-off stands on the task's account, so the message is kept on its lane,
  * not attempted, and goes out when the account serves again - which the
  * Firstmate hears (docs/inbox.md, "A lane on a withheld account").
+ * `recorded-sending` (INF-3060): the first mate's message is recorded and
+ * its delivery - into the running turn, or by reopening the conversation -
+ * goes on behind the tool's answer; the timeline records what became of it,
+ * and a failed delivery is retried like `recorded-retrying`.
  */
 export type SteerDelivery =
   | "mid-turn"
   | "queued-next-turn"
   | "recorded-retrying"
   | "recorded-queued"
-  | "recorded-held";
+  | "recorded-held"
+  | "recorded-sending"
+  | "after-files";
 
 /** Who issued a steer, how it arrived, and the decision behind it (R2 capture). */
 export type SteerSource = {

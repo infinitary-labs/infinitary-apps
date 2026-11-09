@@ -74,6 +74,17 @@ function holdNext(placed: PlacedHome["placed"], read: "served" | "signInsOf") {
   return { reached: reached.held, release: release.open };
 }
 
+/**
+ * The wait the first mate hears after its start_now answered at once
+ * (INF-3060), when the task's tile does not name it.
+ */
+function askedStartWait(home: PlacedHome, taskId: string): string | undefined {
+  const facts = home.wakes.find(
+    (wake) => wake.facts?.kind === "asked-start-waits" && wake.facts.task.id === taskId,
+  )?.facts;
+  return facts?.kind === "asked-start-waits" ? facts.words : undefined;
+}
+
 describe("a project that runs on a computer that runs work", () => {
   it("waits for that computer, says so once and again after a day, and starts its next task there once it is back", async () => {
     const project = await gitProject();
@@ -98,9 +109,13 @@ describe("a project that runs on a computer that runs work", () => {
     expect(waits()).toEqual([
       "home's next task waits for Builder. It never runs on this computer instead.",
     ]);
-    expect(await home.supervisor.starts.startQueuedNow("t-next")).toBe(
-      `${home.tasks.get("t-next")?.key} "footer" waits for Builder, which is out of reach. It never runs on this computer instead.`,
+    // The first mate's start_now answers at once (INF-3060), then hears the wait.
+    expect(await home.supervisor.starts.startQueuedNow("t-next")).toContain(
+      `${home.tasks.get("t-next")?.key} "footer" is starting.`,
     );
+    await expect
+      .poll(() => askedStartWait(home, "t-next"))
+      .toBe("It waits for Builder, which is out of reach. It never runs on this computer instead.");
     expect(home.tasks.get("t-next")?.status).toBe("open");
 
     // A day later the feed says it once more, with the way to run it here.
@@ -159,12 +174,13 @@ describe("a project that runs on a computer that runs work", () => {
     await home.drop();
     await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
 
-    const { taskId, crewmate } = await home.supervisor.intake.commission({
+    const { taskId, started } = await home.supervisor.intake.commission({
       title: "footer",
       intent: { goal: "Make the footer blue.", userWords: "make the footer blue" },
       repoId: repo.id,
     });
-    expect(crewmate).toBe("queued");
+    // The spawn answers before its start runs (INF-3060); the start waits.
+    await started;
     expect(home.tasks.get(taskId)).toMatchObject({ status: "open", deviceId: at.deviceId });
     expect(feed(home)).toContain(
       "home's next task waits for Builder. It never runs on this computer instead.",
@@ -350,9 +366,13 @@ describe("a task's own Runs on", () => {
     expect(waits()).toEqual([
       '"footer" waits for Builder. It never runs on this computer instead.',
     ]);
-    expect(await home.supervisor.starts.startQueuedNow("t-own")).toBe(
-      `${recordOf(home, "t-own").key} "footer" waits for Builder, which is out of reach. It never runs on this computer instead.`,
+    // The first mate's start_now answers at once (INF-3060), then hears the wait.
+    expect(await home.supervisor.starts.startQueuedNow("t-own")).toContain(
+      `${recordOf(home, "t-own").key} "footer" is starting.`,
     );
+    await expect
+      .poll(() => askedStartWait(home, "t-own"))
+      .toBe("It waits for Builder, which is out of reach. It never runs on this computer instead.");
     ahead += 24 * 60 * 60 * 1000;
     await home.supervisor.starts.dispatchQueuedTask("t-own");
     await home.supervisor.starts.dispatchQueuedTask("t-own");
@@ -497,14 +517,15 @@ describe("a task's own Runs on", () => {
     // A part commissioned under it later waits for the same computer.
     await home.drop();
     await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
-    const { taskId, crewmate } = await home.supervisor.intake.commission({
+    const { taskId, started } = await home.supervisor.intake.commission({
       title: "nav",
       intent: { goal: "Fix the nav.", userWords: "fix the nav" },
       repoId: repo.id,
       parent: "t-parent",
     });
-    expect(crewmate).toBe("queued");
-    expect(home.tasks.get(taskId)?.deviceId).toBe(at.deviceId);
+    // The spawn answers before its start runs (INF-3060); the start waits.
+    await started;
+    expect(home.tasks.get(taskId)).toMatchObject({ status: "open", deviceId: at.deviceId });
   });
 
   it("forgets the captain's word for a computer being removed, so the task and its parts follow the project", async () => {
@@ -546,7 +567,22 @@ describe("a task's own Runs on", () => {
     const again = home.supervisor.starts.startAgain("t-dropped");
     if (!again.ok) throw new Error(again.text);
     expect(again.task.shape?.runs_on_ask).toBe(at.deviceId);
-    expect(await again.started).toContain("waits for Builder, which is out of reach");
+    // The first mate's answer waits for nothing more (INF-3060); the start
+    // then waits for Builder, never running here instead, and the first mate
+    // hears that wait, which the task's tile does not name.
+    expect(await again.started).toContain('"footer" is starting.');
+    await expect
+      .poll(
+        () =>
+          home.wakes.find(
+            (wake) =>
+              wake.facts?.kind === "asked-start-waits" && wake.facts.task.id === again.task.id,
+          )?.facts,
+      )
+      .toMatchObject({
+        words: expect.stringContaining("waits for Builder, which is out of reach"),
+      });
+    expect(home.tasks.starts.startAttemptOf(again.task.id)).toBeUndefined();
     expect(home.tasks.get(again.task.id)).toMatchObject({ status: "open", deviceId: at.deviceId });
 
     seedTask(home.tasks, {
@@ -562,8 +598,9 @@ describe("a task's own Runs on", () => {
       intent: { goal: "Make the header blue.", userWords: "not good enough, try a stronger one" },
       shape: { escalate_from: "t-tried" },
     });
-    expect(retry.crewmate).toBe("queued");
+    await retry.started;
     expect(home.tasks.get(retry.taskId)).toMatchObject({
+      status: "open",
       repoId: repo.id,
       deviceId: at.deviceId,
       shape: expect.objectContaining({ runs_on_ask: at.deviceId }),

@@ -1072,10 +1072,11 @@ describe("parent tasks with planned children", () => {
     await tick();
     expect(tasks.get(plan.taskId)).toMatchObject({ status: "done", closedReason: "answered" });
 
-    expect(await supervisor.starts.startQueuedNow(implement.key)).toBe(
-      `Started ${implement.key} "Implement the accepted direction".`,
+    expect(await supervisor.starts.startQueuedNow(implement.key)).toContain(
+      `${implement.key} "Implement the accepted direction" is starting.`,
     );
     await tick();
+    expect(tasks.get(implement.id)?.status).toBe("active");
     const shape = decideCalls.at(-1)?.shape as WorkShape;
     expect(shape).toMatchObject({ kind: "implement", basis: planKey, basis_verified: true });
     expect(tierFor(shape)).toMatchObject({ rule: "R4", bucket: "medium" });
@@ -1169,7 +1170,7 @@ describe("parent tasks with planned children", () => {
     cardStore.resolve(`${card.id}-merge`, "merge");
 
     // The Firstmate decides to start on acceptance; the generic host never parses "Agree".
-    expect(await supervisor.starts.startQueuedNow(implement.key)).toContain("Started");
+    expect(await supervisor.starts.startQueuedNow(implement.key)).toContain("is starting.");
     await tick();
     expect(builder.promptCalls[0]).toContain(`grounded in ${planKey}`);
     expect(builder.promptCalls[0]).toContain('q2_count: "One per task" (many), changed');

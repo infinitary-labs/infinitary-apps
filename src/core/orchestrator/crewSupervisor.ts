@@ -375,7 +375,9 @@ export class CrewSupervisor {
       runtime: (taskId) => this.tasks.get(taskId),
       outOfReach: (taskId) => this.facts.outOfReach(taskId),
       reviewBuilderOf: (record) => this.reviewBuilderOf(record),
-      dispatchQueuedTask: (taskId) => this.starts.dispatchQueuedTask(taskId),
+      dispatchQueuedTask: async (taskId) => {
+        await this.starts.dispatchQueuedTask(taskId);
+      },
     });
     this.moves = new TaskMoves(options, {
       now: this.now,
@@ -563,9 +565,9 @@ export class CrewSupervisor {
       taskDelivery: (taskId) => this.facts.taskDelivery(taskId),
       openReviewOf: (builderId) => this.openReviewOf(builderId),
       startTask: (spec) => this.starts.startTask(spec),
-      dispatchQueuedTask: (taskId, dispatch) => this.starts.dispatchQueuedTask(taskId, dispatch),
-      wakeReasoningWait: (taskId, title, routed) =>
-        this.starts.wakeReasoningWait(taskId, title, routed),
+      startBehind: (taskId, options) => this.starts.startBehind(taskId, options),
+      startTaskBehind: (taskId, title, start, named) =>
+        this.starts.startTaskBehind(taskId, title, start, named),
       announceReach: (taskId) => this.steer.announceReach(taskId),
       haltProgram: (programId) => this.programs.halt(programId),
       broadcastCrewCounts: () => this.facts.broadcastCrewCounts(),

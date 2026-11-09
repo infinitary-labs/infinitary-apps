@@ -1,6 +1,6 @@
 import { HELD_WORK_WORDS } from "../../../src/core/orchestrator/reportWakes";
 import type { Scenario, ScenarioAnswer } from "../mockProvider";
-import { calledTool, sinceLastUser } from "../providerRequest";
+import { calledTool, sinceLastUser, spawnedTaskOf } from "../providerRequest";
 
 /**
  * A hold on a task's finding ends when that task reports it (INF-735, from
@@ -27,7 +27,7 @@ const HELD_GOAL =
   "Rerun the iPad phone check once its failure is read, for the finding relay journey.";
 const ASK = "Report what you found in the iPad failure.";
 
-const taskOf = (result: string | undefined) => result?.match(/on task ([\w-]+)/)?.[1] ?? "missing";
+const taskOf = (result: string | undefined) => spawnedTaskOf(result) ?? "missing";
 const report = (text: string): ScenarioAnswer => ({ calls: [{ name: "report", args: { text } }] });
 
 export const findingRelay: Scenario = () => {

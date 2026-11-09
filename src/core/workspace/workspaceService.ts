@@ -403,21 +403,35 @@ export class WorkspaceService {
     }
   }
 
-  /** Lazily creates the default local-only repo with an initial commit. */
-  async ensureDefaultRepo(): Promise<string> {
+  /**
+   * Lazily creates the default local-only repo with an initial commit. Two
+   * starts at once (a start runs behind the first mate's answer, INF-3060)
+   * share one creation, so neither finds the other's half-made repository.
+   */
+  ensureDefaultRepo(): Promise<string> {
+    if (this.creatingDefaultRepo) return this.creatingDefaultRepo;
     const dir = this.paths.defaultWorkspaceDir;
-    if (!existsSync(join(dir, ".git"))) {
-      await mkdir(dir, { recursive: true });
-      await git(dir, ["init", "--initial-branch=main"]);
-      await git(dir, ["config", "user.name", "Infinitary"]);
-      await git(dir, ["config", "user.email", "infinitary@localhost"]);
-      await writeFile(
-        join(dir, "README.md"),
-        "# Infinitary workspace\n\nThe app-managed default workspace. Tasks not tied to a registered repo run here, one git worktree per task.\n",
-      );
-      await git(dir, ["add", "-A"]);
-      await git(dir, ["commit", "-m", "chore: initialize default workspace"]);
-    }
+    if (existsSync(join(dir, ".git"))) return Promise.resolve(dir);
+    const creating = this.createDefaultRepo(dir).finally(() => {
+      if (this.creatingDefaultRepo === creating) this.creatingDefaultRepo = undefined;
+    });
+    this.creatingDefaultRepo = creating;
+    return creating;
+  }
+
+  private creatingDefaultRepo: Promise<string> | undefined;
+
+  private async createDefaultRepo(dir: string): Promise<string> {
+    await mkdir(dir, { recursive: true });
+    await git(dir, ["init", "--initial-branch=main"]);
+    await git(dir, ["config", "user.name", "Infinitary"]);
+    await git(dir, ["config", "user.email", "infinitary@localhost"]);
+    await writeFile(
+      join(dir, "README.md"),
+      "# Infinitary workspace\n\nThe app-managed default workspace. Tasks not tied to a registered repo run here, one git worktree per task.\n",
+    );
+    await git(dir, ["add", "-A"]);
+    await git(dir, ["commit", "-m", "chore: initialize default workspace"]);
     return dir;
   }
 

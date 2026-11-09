@@ -91,6 +91,21 @@ export type TurnFacts =
     }
   | {
       /**
+       * A first mate steer with files_from, answered before the files
+       * crossed (INF-3060), whose files were not handed over; its message
+       * is kept on the lane. `arrived` counts the files that reached the
+       * task before the failure, of `files` when the hand-over's checks passed.
+       */
+      kind: "handover-failed";
+      task: WakeTask;
+      /** The task whose reported files were to be handed on, by key. */
+      from: string;
+      error: string;
+      arrived: number;
+      files?: number;
+    }
+  | {
+      /**
        * The app stopped the crewmate's turn part way and nothing else on
        * its lane carries it on (docs/inbox.md, "A turn a quit or crash
        * cut"): the computer it runs on was updated, or this Mac quit. Its
@@ -202,6 +217,8 @@ export const TURN_WORDS: KindWords<TurnFacts> = {
     `[fm-op] ${facts.crewmate} on task ${facts.task.id} "${facts.task.title}" has been on one turn for ${facts.hours} hours.${facts.job ? ` Its background job runs since ${isoOf(facts.job.since)}: ${facts.job.command}. A running job shows the job works, not the turn.` : ""}${openCallsText(facts.calls)}`,
   "steer-unread": (facts) =>
     `[fm-op] a steer handed to ${facts.crewmate} on task ${facts.task.id} "${facts.task.title}" at ${isoOf(facts.since)} is still unread after two quiet checks.${facts.calls.length > 0 ? ` It waits behind ${callsList(facts.calls)}, and the turn reads it only once that call returns.` : " The turn has no open call the app can see."} You can wait, or interrupt the turn so the steer goes into its next turn.`,
+  "handover-failed": (facts) =>
+    `[fm-op] the files from ${facts.from} for your message to task ${facts.task.id} "${facts.task.title}" were not handed over: ${facts.error} ${handoverArrivedText(facts.arrived, facts.files)} Your message is kept, and its crewmate reads it with a line saying the files did not arrive; hand them again with steer_crewmate files_from if they are still needed.`,
   "conversation-restart": (facts) =>
     crewmateRestartText({
       restart: facts.restart,
@@ -212,3 +229,11 @@ export const TURN_WORDS: KindWords<TurnFacts> = {
   "turn-resumed": (facts) =>
     `${facts.stopped === "cost-limit" ? "Your last turn stopped at a safe point when this task passed its cost limit, and the captain let it go on." : facts.stopped === "update" ? `Your last turn stopped part way while Infinitary${facts.computer ? ` on ${facts.computer}` : ""} was updated; it is back now.` : "Your last turn stopped part way when the app closed - a quit or an update; it is open again."} ${RESUME_CHECK}`,
 };
+
+/** What of a failed hand-over reached the task (INF-3060). */
+function handoverArrivedText(arrived: number, files: number | undefined): string {
+  if (arrived === 0) return "No file reached its hand-over folder.";
+  if (files !== undefined && arrived >= files)
+    return `All ${files} files reached its hand-over folder, verified, but its crewmate was not told about them.`;
+  return `${arrived}${files !== undefined ? ` of ${files}` : ""} files reached its hand-over folder before the failure, with no receipt; its crewmate was not told about them.`;
+}

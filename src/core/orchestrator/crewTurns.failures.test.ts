@@ -47,11 +47,13 @@ describe("CrewSupervisor", () => {
       new ForgeAuthRequiredError("could not read Username for GitHub"),
     );
 
-    const { taskId, crewmate: state } = await supervisor.intake.commission({
+    const { taskId, started } = await supervisor.intake.commission({
       title: "Update the GitHub project",
       intent: intentOf("update the project"),
     });
-    expect(state).toBe("queued");
+    // The spawn answers before its start runs (INF-3060); the start then
+    // waits for the sign-in.
+    await started;
     expect(tasks.get(taskId)).toMatchObject({
       status: "open",
       gate: { kind: "captain", ref: "forge-sign-in:github.com" },
@@ -181,10 +183,12 @@ describe("CrewSupervisor", () => {
       },
       modelName: (model) => (model.id === codex.id ? "GPT-6.1 Sol" : model.id),
     });
-    const { taskId } = await supervisor.intake.commission({
+    const { taskId, started } = await supervisor.intake.commission({
       title: "Promote the latest alpha",
       intent: intentOf("do something"),
     });
+    // Its branch and working copy are made behind the spawn's answer (INF-3060).
+    await started;
     const before = tasks.get(taskId);
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
     // INF-839's own words, thrown as its turn started.

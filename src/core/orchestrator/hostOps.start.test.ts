@@ -13,10 +13,12 @@ import {
   fakeCrewmate,
   fakeCrewTimersEachTest,
   intentOf,
+  reboot,
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
+import { TaskService } from "../tasks/taskService";
 import { CLOSE_AS_DONE_PRESS } from "./doneClose";
 import { IDLE_NUDGE_TEXT } from "./idleWakes";
 
@@ -53,8 +55,12 @@ describe("the task graph (R1)", () => {
       await supervisor.watch.sweepGates(Date.now());
       expect(tasks.get(task.id)?.status).toBe("open");
       expect(supervisor.hostOps.runTaskOp(task.id, "start-task")).toContain("already starting");
-      await supervisor.starts.startQueuedNow(task.id);
-      expect(tasks.get(task.id)?.status).toBe("active");
+      expect(await supervisor.starts.startQueuedNow(task.id)).toContain("is starting.");
+      await tick();
+      // Started, it stays on request as a started backlog task always did,
+      // though its start queued it while it ran (INF-3060).
+      expect(tasks.get(task.id)).toMatchObject({ status: "active", startPolicy: "on-request" });
+      expect(tasks.starts.startAttemptOf(task.id)).toBeUndefined();
       expect(tasks.taskCardClicksSince(0).map(({ op }) => op)).toEqual(["start-task"]);
     });
 
@@ -90,6 +96,100 @@ describe("the task graph (R1)", () => {
       supervisor.reconcileCutOffs();
       await tick();
       expect(tasks.get(lost.id)?.status).toBe("active");
+    });
+
+    // Intent: INF-3060's review (a quit is not a failed start). The first
+    // mate's start_now on a backlog task, and the captain's Start it
+    // finishes, return before the start; a quit during that start leaves the
+    // task for the next launch, which starts it, and tells nobody it failed.
+    // The quit stops the start either where it next reads, or by failing
+    // what it waited on, as a computer that is stopping does.
+    it.each([
+      ["the first mate's start_now", "where it next reads", false, false],
+      ["the first mate's start_now", "by failing its wait", false, true],
+      ["the captain's Start the first mate finishes", "where it next reads", true, false],
+      ["the captain's Start the first mate finishes", "by failing its wait", true, true],
+    ])(
+      "leaves %s on a backlog task that a quit stopped %s for the next launch",
+      async (_name, _how, captain, fails) => {
+        let reached!: () => void;
+        const classifying = new Promise<void>((resolve) => {
+          reached = resolve;
+        });
+        let release!: () => void;
+        const held = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        const ctx = setup(fakeCrewmate(), {
+          classifier: {
+            classify: async () => {
+              reached();
+              await held;
+              if (fails) throw new Error("This computer is stopping.");
+              return { kind: "fix", source: "classifier:test", version: "kc1" };
+            },
+          },
+        });
+        const wakes = () =>
+          ctx.inbox
+            .allFor(FIRSTMATE_RECIPIENT)
+            .map((row) => (row.facts as { kind?: string })?.kind);
+        ctx.supervisor.setFirstmateHooks({
+          notifyOp: (wake, origin, ref) =>
+            ctx.inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, origin, ref),
+          firstmateCannotAnswer: () => undefined,
+          retryConverse: vi.fn(),
+        });
+        const task = ctx.supervisor.intake.plan({
+          title: "Fix the test",
+          intent: intentOf("fix it"),
+        });
+        expect(task.startPolicy).toBe("on-request");
+        if (captain) {
+          expect(ctx.supervisor.hostOps.runTaskOp(task.id, "start-task")).toBeUndefined();
+          expect(wakes()).toEqual(["captain-start"]);
+        }
+        expect(await ctx.supervisor.starts.startQueuedNow(task.id)).toContain("is starting.");
+        // The first mate's turn that read the Start ended: its wake is spent.
+        ctx.inbox.ack(ctx.inbox.allFor(FIRSTMATE_RECIPIENT).map((row) => row.id));
+        await classifying;
+        const stopping = ctx.supervisor.disposeAll();
+        release();
+        await stopping;
+        expect(ctx.tasks.get(task.id)).toMatchObject({ status: "open", startNotice: null });
+        expect(wakes()).toEqual([]);
+
+        const tasks = new TaskService({ db: ctx.db, strict: true });
+        const restarted = reboot(ctx, async () => fakeCrewmate(), { tasks });
+        try {
+          await restarted.watch.sweepGates(Date.now());
+          await tick();
+          expect(tasks.get(task.id)?.status).toBe("active");
+        } finally {
+          await restarted.disposeAll();
+        }
+      },
+    );
+
+    // Intent: docs/task-board.md, "A confirmed failure returns it to Backlog
+    // with Could not start" - also for the captain's Start on a backlog task,
+    // which its start queues while it runs (INF-3060's review).
+    it("returns the captain's Start on a backlog task that failed once its crewmate was set up to Backlog with Could not start", async () => {
+      const { supervisor, tasks, task, sessions, workspace } = hooked();
+      vi.mocked(sessions.open).mockRejectedValueOnce(new Error("Claude is not signed in here."));
+      expect(task.startPolicy).toBe("on-request");
+      expect(supervisor.hostOps.runTaskOp(task.id, "start-task")).toBeUndefined();
+      expect(await supervisor.starts.startQueuedNow(task.id)).toContain("is starting.");
+      await vi.waitFor(() => expect(sessions.open).toHaveBeenCalledTimes(1));
+      await tick();
+      expect(tasks.get(task.id)).toMatchObject({
+        status: "open",
+        gate: null,
+        startPolicy: "on-request",
+        startNotice: JSON.stringify({ reason: "Claude is not signed in here." }),
+      });
+      expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
+      expect(tasks.graph.listReady().map((ready) => ready.id)).not.toContain(task.id);
     });
 
     it("shows a Start saved in the inbox as Starting again after a quit", async () => {

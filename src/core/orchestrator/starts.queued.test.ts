@@ -127,6 +127,50 @@ describe("the task graph (R1)", () => {
     expect(tasks.get(taskId)?.status).toBe("active");
   });
 
+  // The captain's answer on INF-3075's review of INF-3060: a failed spawn
+  // stays open, with its working copy kept for the retry.
+  it("keeps a spawn whose start failed open for start_now, with the working copy its retry starts on", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, sessions, workspace, ops } = setup(crewmate);
+    vi.mocked(sessions.open).mockRejectedValueOnce(new Error("Claude is not signed in here."));
+    const handle = await supervisor.intake.commission({
+      title: "Count presses",
+      intent: intentOf("make the meter count every press"),
+    });
+    await handle.started;
+    expect(tasks.get(handle.taskId)).toMatchObject({
+      status: "open",
+      gate: null,
+      startPolicy: "on-request",
+      startNotice: JSON.stringify({ reason: "Claude is not signed in here." }),
+    });
+    expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
+    expect(ops).toContain(
+      renderWake({
+        facts: {
+          kind: "queued-start-failed",
+          task: { id: handle.taskId, title: "Count presses" },
+          error: "Claude is not signed in here.",
+          asked: true,
+          open: true,
+        },
+      }),
+    );
+    // Nothing starts it again on its own: its tile asks for the first mate's go.
+    expect(tasks.graph.listReady().map((ready) => ready.id)).not.toContain(handle.taskId);
+
+    const key = tasks.get(handle.taskId)?.key;
+    expect(await supervisor.starts.startQueuedNow(handle.taskId)).toMatch(
+      new RegExp(`^${key} "Count presses" is starting\\.`),
+    );
+    await vi.waitFor(() => expect(tasks.get(handle.taskId)?.status).toBe("active"));
+    expect(vi.mocked(workspace.createTaskWorktree).mock.calls.map(([id]) => id)).toEqual([
+      handle.taskId,
+      handle.taskId,
+    ]);
+    expect(sessions.open).toHaveBeenCalledTimes(2);
+  });
+
   it("refuses a start_after gate on a task that does not exist", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor } = setup(crewmate);
@@ -329,6 +373,7 @@ describe("the task graph (R1)", () => {
     const starting = supervisor.starts.startQueuedNow(planned.key);
     tasks.updateFields(planned.id, { model: "" }, "firstmate");
     await starting;
+    await tick();
     // A named model skips the classifier; once cleared there is nothing to
     // skip, so the row is classified as it starts (docs/kind-classifier.md).
     expect(asked).toHaveLength(1);
@@ -544,7 +589,9 @@ describe("the task graph (R1)", () => {
     expect(legacyStateOf(tasks.get(taskId))).toBe("queued");
     const key = tasks.get(taskId)?.key;
 
-    expect(await supervisor.starts.startQueuedNow(key ?? "")).toBe(`Started ${key} "Tonight".`);
+    expect(await supervisor.starts.startQueuedNow(key ?? "")).toContain(
+      `${key} "Tonight" is starting.`,
+    );
     await tick();
     expect(tasks.get(taskId)).toMatchObject({ status: "active", gate: null });
     expect(tasks.timeline(taskId).some((event) => event.text.includes("started on request"))).toBe(
@@ -599,7 +646,7 @@ describe("the task graph (R1)", () => {
     expect(dead).not.toMatch(/drop the blocker/i);
     expect(tasks.get(b.id)?.status).toBe("open");
     // The captain's refusal says what is in the way, without the tool's way out.
-    const captain = await supervisor.starts.startQueuedNow(b.key, "captain");
+    const captain = await supervisor.starts.startQueuedNow(b.key, { audience: "captain" });
     expect(captain).toMatch(new RegExp(`^Cannot start ${b.key} "B" now: it waits on .*\\.$`));
     expect(captain).toContain(`${a.key} "A" (dropped)`);
     expect(captain).not.toContain("link_tasks");
@@ -616,7 +663,7 @@ describe("the task graph (R1)", () => {
     // The way out it names works: with the edges gone, the start goes through.
     expect(supervisor.intake.unlinkTasks(a.key, b.key, "blocks")).toMatch(/^Removed/);
     expect(supervisor.intake.unlinkTasks(c.key, b.key, "blocks")).toMatch(/^Removed/);
-    expect(await supervisor.starts.startQueuedNow(b.key)).toBe(`Started ${b.key} "B".`);
+    expect(await supervisor.starts.startQueuedNow(b.key)).toContain(`${b.key} "B" is starting.`);
     await tick();
     expect(tasks.get(b.id)?.status).toBe("active");
   });
@@ -624,7 +671,7 @@ describe("the task graph (R1)", () => {
   it("starts a filed task on the model the captain named, keeping its key, parent and links (FI3-436)", async () => {
     const crewmate = fakeCrewmate({ model: { provider: "openai-codex", id: "gpt-6-astra" } });
     const decideCalls: { shape: WorkShape }[] = [];
-    const { supervisor, tasks } = setup(crewmate, {
+    const { supervisor, tasks, ops } = setup(crewmate, {
       routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
       onRouteDecide: (args) => decideCalls.push(args),
     });
@@ -643,10 +690,14 @@ describe("the task graph (R1)", () => {
     expect(tasks.updateFields(filed.id, { model: "gpt-6-astra" }, "firstmate")).toEqual([
       "model gpt-6-astra",
     ]);
-    expect(await supervisor.starts.startQueuedNow(filed.key)).toBe(
-      `Started ${filed.key} "Calibrate the gauge" on openai-codex/gpt-6-astra.`,
+    expect(await supervisor.starts.startQueuedNow(filed.key)).toContain(
+      `${filed.key} "Calibrate the gauge" is starting.`,
     );
     await tick();
+    // The answer came before the start, so a wake says which model took it (FI3-444).
+    expect(ops).toContain(
+      `[fm-op] task ${filed.id} "Calibrate the gauge", which you started, is running now, on openai-codex/gpt-6-astra.`,
+    );
 
     expect(decideCalls.at(-1)?.shape).toMatchObject({
       override_model_id: "gpt-6-astra",
@@ -694,10 +745,11 @@ describe("the task graph (R1)", () => {
     expect(tasks.updateFields(filed.id, { reasoning: "xhigh" }, "firstmate")).toEqual([
       "reasoning extra high",
     ]);
-    expect(await supervisor.starts.startQueuedNow(filed.key)).toBe(
-      `Started ${filed.key} "Trim the log".`,
+    expect(await supervisor.starts.startQueuedNow(filed.key)).toContain(
+      `${filed.key} "Trim the log" is starting.`,
     );
     await tick();
+    expect(tasks.get(filed.id)?.status).toBe("active");
     expect(sessionSpecs[0]?.thinking).toEqual({ level: "xhigh" });
     expect(tasks.get(filed.id)?.shape).toMatchObject({ override_reasoning: "xhigh" });
     // A running conversation keeps the level it opened at.
@@ -709,30 +761,38 @@ describe("the task graph (R1)", () => {
   it("says which model took a filed task when the one the captain named could not", async () => {
     // Routing fell back to the model it could serve.
     const crewmate = fakeCrewmate();
-    const { supervisor, tasks } = setup(crewmate, {
+    const { supervisor, tasks, ops } = setup(crewmate, {
       routedModel: { provider: "fm-mock", id: "mock-1" },
     });
     const filed = supervisor.intake.plan({ title: "Trim the log", intent: intentOf("trim it") });
     tasks.updateFields(filed.id, { model: `${CLAUDE_PROVIDER_ID}/claude-fable-5-1` }, "firstmate");
 
-    expect(await supervisor.starts.startQueuedNow(filed.key)).toBe(
-      `Started ${filed.key} "Trim the log" on fm-mock/mock-1: ${CLAUDE_PROVIDER_ID}/claude-fable-5-1 was not available.`,
+    expect(await supervisor.starts.startQueuedNow(filed.key)).toContain(
+      `${filed.key} "Trim the log" is starting.`,
+    );
+    await tick();
+    expect(ops).toContain(
+      `[fm-op] task ${filed.id} "Trim the log", which you started, is running now, on fm-mock/mock-1: ${CLAUDE_PROVIDER_ID}/claude-fable-5-1 was not available.`,
     );
     // The captain's own Start in the record keeps its plain words.
     const other = supervisor.intake.plan({ title: "Trim the cache", intent: intentOf("trim it") });
     tasks.updateFields(other.id, { model: "claude-fable-5-1" }, "firstmate");
-    expect(await supervisor.starts.startQueuedNow(other.key, "captain")).toBe(
+    expect(await supervisor.starts.startQueuedNow(other.key, { audience: "captain" })).toBe(
       `Started ${other.key} "Trim the cache".`,
     );
   });
 
   it("never confirms the named model on a start with no model recorded (FI3-444)", async () => {
     const crewmate = fakeCrewmate({ model: undefined });
-    const { supervisor, tasks } = setup(crewmate);
+    const { supervisor, tasks, ops } = setup(crewmate);
     const filed = supervisor.intake.plan({ title: "Trim the log", intent: intentOf("trim it") });
     tasks.updateFields(filed.id, { model: "claude-fable-5-1" }, "firstmate");
-    expect(await supervisor.starts.startQueuedNow(filed.key)).toBe(
-      `Started ${filed.key} "Trim the log" with no model recorded, so claude-fable-5-1 is not confirmed.`,
+    expect(await supervisor.starts.startQueuedNow(filed.key)).toContain(
+      `${filed.key} "Trim the log" is starting.`,
+    );
+    await tick();
+    expect(ops).toContain(
+      `[fm-op] task ${filed.id} "Trim the log", which you started, is running now, with no model recorded, so claude-fable-5-1 is not confirmed.`,
     );
   });
 

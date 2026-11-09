@@ -117,6 +117,31 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     }
     return result;
   };
+  /** A first mate steer's source, read from this turn as it stands. */
+  const steerSource = (response?: import("@shared/crewResponses").ResponsePolicy) => ({
+    via: "tool" as const,
+    decision: host.decisions.current() ?? null,
+    response: {
+      mode: response?.mode ?? "expected",
+      sourceSession: host.sessionFile(),
+      ...(response?.card ? { card: response.card } : {}),
+      ...(response?.cancel ? { cancel: response.cancel } : {}),
+    },
+    // In a turn that carries the captain's own words, the steer is his
+    // guidance: it holds a kept merge until its crewmate declares it (FI3-662).
+    captainWords: host.turn.origin === "captain-turn",
+    ...steeredPictures(host.asks),
+  });
+  /** A steer the first mate's tool accepted. */
+  const steered = (taskId: string) => {
+    host.turn.delivered = true;
+    // A steer the app saved because the crewmate's account is held counts
+    // too (the captain's call; paused accounts are FI3-592's).
+    host.noteDelivery({ outcome: "action", kind: "work", tool: "steer_crewmate", ref: taskId });
+    // Every delivery outcome means the guidance is on its way (a refused
+    // steer throws before this): the captain gets a "got it".
+    host.replyEmote("nod");
+  };
   const delegate: CrewDelegate = {
     escalationEligible: (taskId) => supervisor.escalationEligible(taskId),
     premiumCanServe: () => premiumCanServe(host.options),
@@ -124,6 +149,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
       // The message's pictures ride the brief, which goes out before the
       // message attaches to the new task below.
       const attachments = host.asks.currentPictures();
+      // The answer waits for the record, never for the start (INF-3060).
       const handle = await supervisor.intake.commission({
         ...input,
         messageFiles: host.asks.current()?.messageFiles ?? [],
@@ -149,30 +175,22 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     // says about it - a refused settle is still about that task.
     steerCrewmate: async (taskId, message, response) => {
       host.asks.attach(taskId, "steer_crewmate");
+      // The answer waits for the message's record, never its delivery (INF-3060).
       const delivery = await supervisor.steer.steerCrewmate(taskId, message, "firstmate", {
-        via: "tool",
-        decision: host.decisions.current() ?? null,
-        response: {
-          mode: response?.mode ?? "expected",
-          sourceSession: host.sessionFile(),
-          ...(response?.card ? { card: response.card } : {}),
-          ...(response?.cancel ? { cancel: response.cancel } : {}),
-        },
-        // In a turn that carries the captain's own words, the steer is his
-        // guidance: it holds a kept merge until its crewmate declares it (FI3-662).
-        captainWords: host.turn.origin === "captain-turn",
-        ...steeredPictures(host.asks),
+        ...steerSource(response),
+        behind: true,
       });
-      host.turn.delivered = true;
-      // A steer the app saved because the crewmate's account is held counts
-      // too (the captain's call; paused accounts are FI3-592's).
-      host.noteDelivery({ outcome: "action", kind: "work", tool: "steer_crewmate", ref: taskId });
-      // Every delivery outcome means the guidance is on its way (a refused
-      // steer throws before this): the captain gets a "got it".
-      host.replyEmote("nod");
+      steered(taskId);
       return delivery;
     },
     handFiles: (fromTask, toTask) => supervisor.sessions.handFiles(fromTask, toTask),
+    // The hand-over's checks answer now; its copy and the steer after it go
+    // on behind the answer, read from this turn as it stands (INF-3060).
+    steerAfterFiles: async (fromTask, taskId, message, response) => {
+      host.asks.attach(taskId, "steer_crewmate");
+      await supervisor.steer.steerAfterFiles(fromTask, taskId, message, steerSource(response));
+      steered(taskId);
+    },
     interruptCrewmate: async (taskId, mode, closingSentence) => {
       host.asks.attach(taskId, "interrupt_crewmate");
       await supervisor.sessions.interruptCrewmate(

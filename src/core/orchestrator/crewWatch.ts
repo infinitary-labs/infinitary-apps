@@ -398,7 +398,11 @@ export class CrewWatch {
     if (spent.length > 0) this.escalateTaskGuidance(taskId, spent);
     // A started task in the backlog keeps its lane until a Start (INF-2062).
     if (this.core.facts.inBacklog(taskId)) return;
-    if (this.core.restarts.observing(taskId) && this.core.facts.laneHeld(taskId))
+    if (
+      this.core.restarts.observing(taskId) &&
+      this.core.facts.laneHeld(taskId) &&
+      !this.core.steer.handingOver(taskId)
+    )
       this.core.restarts.recordRestartOutcome(
         taskId,
         "waiting",

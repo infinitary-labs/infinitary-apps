@@ -309,13 +309,19 @@ describe("the task graph (R1)", () => {
       worktreeDir: "/w/attempt9",
       outcome: "wrong answer",
     });
-    const { taskId, crewmate: name } = await supervisor.intake.commission({
+    const {
+      taskId,
+      crewmate: name,
+      started,
+    } = await supervisor.intake.commission({
       title: "Nine again",
       intent: intentOf("no, smarter please"),
       shape: { escalate_from: previous.key },
     });
     await tick();
-    expect(name).toBe("queued");
+    // The answer comes before the start (INF-3060), which then waits.
+    expect(name).toBe("starting");
+    await started;
     expect(sessions.open).not.toHaveBeenCalled();
     expect(tasks.get(taskId)?.gate).toMatchObject({ kind: "quota-reset", ref: "bucket:high" });
     expect(ops.some((line) => line.includes("needs a high model"))).toBe(true);
@@ -511,12 +517,18 @@ describe("the task graph (R1)", () => {
     });
     // Premium is the one class Firstmate may only relay, never judge, so a
     // downgrade of it is the captain's to answer.
-    const { taskId, crewmate: name } = await supervisor.intake.commission({
+    const {
+      taskId,
+      crewmate: name,
+      started,
+    } = await supervisor.intake.commission({
       title: "Deep design",
       intent: intentOf("design it properly"),
       shape: { premium_ask: true },
     });
-    expect(name).toBe("queued");
+    // The answer comes before the start (INF-3060), which then waits.
+    expect(name).toBe("starting");
+    await started;
     expect(sessions.open).not.toHaveBeenCalled();
     // The safe default is already on the record: it waits for the premium
     // reset. The Firstmate hears once, with the two other ways out, and no
@@ -534,6 +546,9 @@ describe("the task graph (R1)", () => {
     // Facts only (v2.0): what could serve it now, not which tool to call.
     expect(wake).toContain("a high model could serve it now");
     expect(wake).not.toContain("update_task");
+    // That wake is the only one: the tile names the reset it waits on, so the
+    // start behind the answer adds no second wake (INF-3075's review of INF-3060).
+    expect(ops.filter((line) => line.includes(`task ${taskId}`))).toEqual([wake]);
   });
 
   it("starts a computed high on a lesser model with a feed line, never a card (P7)", async () => {
@@ -548,12 +563,16 @@ describe("the task graph (R1)", () => {
     });
     // High is what the table computed, not something the captain asked
     // for: its downgrade is a feed line, as it was under the heuristic.
-    const { taskId, crewmate: name } = await supervisor.intake.commission({
+    const {
+      taskId,
+      crewmate: name,
+      started,
+    } = await supervisor.intake.commission({
       title: "Ambiguous design",
       intent: intentOf("work out how the dock should behave"),
     });
-    await tick();
-    expect(name).not.toBe("queued");
+    expect(name).toBe("starting");
+    await started;
     expect(sessions.open).toHaveBeenCalled();
     expect(tasks.get(taskId)?.status).toBe("active");
     expect(cards().find((card) => card.id === `card-highwait-${taskId}`)).toBeUndefined();
@@ -605,12 +624,18 @@ describe("the task graph (R1)", () => {
     const { supervisor, tasks, cards, sessions, ops } = setup(crewmate, {
       routeResult: { bucket: "premium", unserveable: true, rule: "R1a" },
     });
-    const { taskId, crewmate: name } = await supervisor.intake.commission({
+    const {
+      taskId,
+      crewmate: name,
+      started,
+    } = await supervisor.intake.commission({
       title: "Deep design",
       intent: intentOf("design it properly"),
       shape: { premium_ask: true },
     });
-    expect(name).toBe("queued");
+    // The answer comes before the start (INF-3060), which then waits.
+    expect(name).toBe("starting");
+    await started;
     expect(sessions.open).not.toHaveBeenCalled();
     expect(tasks.get(taskId)).toMatchObject({
       status: "open",
@@ -622,7 +647,7 @@ describe("the task graph (R1)", () => {
     expect(wake).toContain("the default model could serve it now");
 
     // The explicit go-ahead starts it despite the shortage.
-    expect(await supervisor.starts.startQueuedNow(taskId)).toMatch(/^Started /);
+    expect(await supervisor.starts.startQueuedNow(taskId)).toContain("is starting.");
     await tick();
     expect(sessions.open).toHaveBeenCalled();
     expect(tasks.get(taskId)?.status).toBe("active");
@@ -666,7 +691,7 @@ describe("the task graph (R1)", () => {
     expect(cards()).toEqual([]);
     expect(ops.filter((line) => line.includes("needs a premium model"))).toHaveLength(1);
 
-    expect(await supervisor.starts.startQueuedNow(taskId)).toMatch(/^Started /);
+    expect(await supervisor.starts.startQueuedNow(taskId)).toContain("is starting.");
     await tick();
     expect(sessions.open).toHaveBeenCalled();
   });

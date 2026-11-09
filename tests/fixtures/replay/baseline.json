@@ -406,7 +406,7 @@
       "captain_reasks_10min": 0,
       "firstmate_cards_dismissed_60s": 0,
       "duplicate_card_pairs": 0,
-      "op_wakes_per_captain_turn": 0.2,
+      "op_wakes_per_captain_turn": 0.4,
       "escalation_precision": null,
       "lock_refusals": 0,
       "closed_rows_with_worktree": 0,

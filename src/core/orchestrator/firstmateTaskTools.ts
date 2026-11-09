@@ -394,8 +394,12 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
       const record = resolve(input.task);
       host.asks.attach(record.id, "update_task", true);
       const text = await supervisor.starts.startQueuedNow(record.id);
-      // A refusal comes back as text; only a task a crewmate now holds took effect.
-      if (record.status !== "active" && tasks.get(record.id)?.status === "active") {
+      // A refusal comes back as text; a start now running behind the
+      // answer (INF-3060), or a task a crewmate now holds, took effect.
+      if (
+        record.status !== "active" &&
+        (tasks.get(record.id)?.status === "active" || tasks.starts.startAttemptOf(record.id))
+      ) {
         tookEffect(record.id, startedReply(record.title));
       }
       return text;

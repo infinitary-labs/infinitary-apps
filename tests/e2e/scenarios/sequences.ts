@@ -12,6 +12,7 @@ import {
   lookUpTask,
   servedInstructions,
   sinceLastUser,
+  spawnedTaskOf,
 } from "../providerRequest";
 
 /**
@@ -398,8 +399,8 @@ function sequencesFirstmateMove(
         ],
       };
     }
-    const build = results[0]?.match(/on task ([\w-]+)/)?.[1];
-    const check = results[1]?.match(/on task ([\w-]+)/)?.[1];
+    const build = spawnedTaskOf(results[0]);
+    const check = spawnedTaskOf(results[1]);
     if (results.length === 2 && build && check) {
       return { calls: [{ name: "link_tasks", args: { from: check, to: build, type: "blocks" } }] };
     }
@@ -460,7 +461,7 @@ function sequencesFirstmateMove(
         ],
       };
     }
-    const nowId = results[1]?.match(/on task ([\w-]+)/)?.[1];
+    const nowId = spawnedTaskOf(results[1]);
     if (results.length === 2 && parentKey && nowId && script.later) {
       return {
         calls: [

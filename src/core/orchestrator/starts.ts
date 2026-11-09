@@ -57,6 +57,23 @@ import {
 } from "./workShape";
 
 /**
+ * A crewmate start that failed. Its message reads as it always has for a
+ * tool that waited on the start; `reason` is the cause alone, for a wake
+ * about a task that is still there.
+ */
+export class StartFailure extends Error {
+  constructor(readonly reason: string) {
+    super(`Could not commission a crewmate: ${reason}`);
+  }
+}
+
+/** What a failed start's wake says went wrong: the cause, never the tool's framing. */
+export function startFailureReason(caught: unknown): string {
+  if (caught instanceof StartFailure) return caught.reason;
+  return caught instanceof Error ? caught.message : String(caught);
+}
+
+/**
  * Why a start on request refuses a row that waits on blockers. Only a done
  * blocker clears its wait (`TaskService.blockerCleared`) and a dropped edge
  * keeps blocking until it is removed, so the tool's way out is removing the
@@ -133,6 +150,26 @@ export function downgradeLine(
   return `${held} right now.`;
 }
 
+/** How one queued row is dispatched (`CrewStarts.dispatchQueuedTask`). */
+type DispatchOptions = {
+  ignoreAsk?: boolean;
+  /**
+   * `behind` is a start the first mate's tool answered before it ran
+   * (`CrewStarts.startBehind`); `spawned` marks the start of a task it
+   * spawned just now, which posts no Starting line, as a spawn never has.
+   */
+  requested?: {
+    by: "firstmate" | "captain";
+    from?: typeof TASK_CARD_VIA;
+    panel?: string;
+    behind?: boolean;
+    spawned?: boolean;
+    /** The task was in the backlog when this start behind the answer queued it. */
+    backlog?: boolean;
+  };
+  message?: { attachments: readonly AttachmentRef[]; files: readonly MessageFile[] };
+};
+
 /**
  * Starting a task (docs/task-graph.md, docs/inbox.md): classifying a queued
  * row and its brief, dispatching it when it is ready, starting it on the
@@ -141,6 +178,13 @@ export function downgradeLine(
  * started crewmate runs. Shares the crew's state through `CrewCore`.
  */
 export class CrewStarts {
+  /** Dispatches running now, by task, so a sweep never starts the same row twice at once. */
+  private readonly dispatching = new Map<string, Promise<boolean | undefined>>();
+  /** Starts running behind the first mate's answer, until each has ended (INF-3060). */
+  private readonly behind = new Map<string, Promise<void>>();
+  /** Hand-overs waiting for a task's next start to run (`nextStart`). */
+  private readonly awaitingStart = new Map<string, Array<() => void>>();
+
   constructor(private readonly core: CrewCore) {}
 
   /** The commit a branching task's working copy starts at, or undefined when it names none. */
@@ -182,6 +226,17 @@ export class CrewStarts {
     placementAccount?: string;
     /** A record born this instant (immediate commission) vs a dispatched queued row. */
     fresh: boolean;
+    /**
+     * A start the first mate asked for (INF-3060): one that fails keeps its
+     * task open, and its working copy, for update_task start_now to retry.
+     */
+    asked?: boolean;
+    /**
+     * A start behind the first mate's answer that queued a backlog task
+     * (`startBehind`), such as the captain's held Start: one that fails goes
+     * back to the backlog with Could not start, as an asked one does.
+     */
+    backlog?: boolean;
     /** Pictures the brief carries beyond those the task's messages keep (`TaskIntake.commission`). */
     messageFiles?: readonly MessageFile[];
     attachments?: readonly AttachmentRef[];
@@ -527,9 +582,20 @@ export class CrewStarts {
         return { taskId, crewmate: "queued" };
       }
       if (this.core.tasks.get(taskId) !== task) {
-        throw new Error(`Could not commission a crewmate: ${message}`);
+        throw new StartFailure(message);
       }
-      if (!spec.fresh) {
+      if (spec.asked || spec.backlog) {
+        // Its answer named the task, or the captain started it from the
+        // backlog, so it stays: open, waiting for the first mate's go, with
+        // the working copy its retry starts on.
+        await task.unsubscribe?.();
+        task.session?.dispose();
+        this.core.tasks.delete(taskId);
+        this.core.cards.deleteRowsForTask(taskId);
+        this.core.options.tasks.starts.failManualStart(taskId, message, { onRequest: true });
+        this.core.cards.scheduleBroadcast();
+        this.core.facts.broadcastCrewCounts();
+      } else if (!spec.fresh) {
         // A failed dispatch returns the row to the queue behind a captain
         // gate - never deleted, never hot-retried by the sweep. Do not
         // requeue or delete when this attempt does not own the runtime.
@@ -550,7 +616,7 @@ export class CrewStarts {
       } else {
         await this.core.sessions.cleanupFailedSpawn(task);
       }
-      throw new Error(`Could not commission a crewmate: ${message}`);
+      throw new StartFailure(message);
     }
     this.core.options.broadcastEvent({
       type: "task_started",
@@ -665,7 +731,8 @@ export class CrewStarts {
    * delivery tools and so must not be told to ship.
    */
   private queuedBrief(record: TaskRecord, shape: WorkShape): string {
-    if (shape.escalation) return record.prompt;
+    // A review keeps the host's brief at its assigned head, through a retry.
+    if (shape.escalation || this.core.reviewBuilderOf(record)) return record.prompt;
     // A folder repair is rendered again from its facts as they stand now: a
     // later refusal may have moved the version the folder must reach.
     const repo = record.repoId ? this.core.options.repos.get(record.repoId) : undefined;
@@ -703,14 +770,194 @@ export class CrewStarts {
    * made before that message attaches to the task; a later start reads
    * them from the record.
    */
+  /** Resolves true when the start failed and its failure was told. */
   async dispatchQueuedTask(
     taskId: string,
-    options: {
-      ignoreAsk?: boolean;
-      requested?: { by: "firstmate" | "captain"; from?: typeof TASK_CARD_VIA; panel?: string };
-      message?: { attachments: readonly AttachmentRef[]; files: readonly MessageFile[] };
+    options: DispatchOptions = {},
+  ): Promise<boolean | undefined> {
+    // The ready sweep finds a row whose start is already running - one the
+    // first mate started behind its answer, or the captain's Start - and
+    // waits on that start instead of comparing computers for it again.
+    const running = this.dispatching.get(taskId);
+    if (running && !options.requested) return running;
+    const dispatch = this.dispatchOnce(taskId, options);
+    this.dispatching.set(taskId, dispatch);
+    try {
+      return await dispatch;
+    } finally {
+      if (this.dispatching.get(taskId) === dispatch) this.dispatching.delete(taskId);
+      this.startRan(taskId);
+    }
+  }
+
+  /**
+   * A start the first mate asked for, run behind its answer (INF-3060): the
+   * row is recorded and shows Starting at once, and the tool returns while
+   * classification, routing and the working copy, which can take minutes on
+   * another computer, go on. A wait for room shows on the task itself; a
+   * failure reaches the first mate as an [fm-op], and so does the model that
+   * took a task the captain named one for (FI3-444).
+   */
+  startBehind(
+    taskId: string,
+    options: Omit<DispatchOptions, "requested"> & {
+      requested?: Omit<NonNullable<DispatchOptions["requested"]>, "behind">;
     } = {},
   ): Promise<void> {
+    if (!this.core.options.tasks.starts.startAttemptOf(taskId))
+      this.core.options.tasks.starts.beginStartAttempt(taskId);
+    const record = this.core.options.tasks.get(taskId);
+    const audience = options.requested?.by === "captain" ? "captain" : "tool";
+    // A backlog task is queued while it starts, so a quit leaves it for the
+    // next launch's sweep; a failure puts it back in the backlog.
+    const backlog = record?.status === "open" && record.startPolicy === "on-request";
+    if (backlog) this.core.options.tasks.starts.queueForStart(taskId);
+    return this.runBehind(taskId, () =>
+      this.dispatchQueuedTask(taskId, {
+        ...options,
+        requested: {
+          by: "firstmate",
+          ...options.requested,
+          behind: true,
+          ...(backlog ? { backlog: true } : {}),
+        },
+      })
+        .then(async (failed) => {
+          if (!record || this.core.disposed()) return;
+          if (backlog && !failed) this.core.options.tasks.starts.keepOnRequest(taskId);
+          await this.settleStartAttempt(record, audience);
+          // A failed start already told the first mate (queued-start-failed).
+          if (failed) return;
+          // A wait the tile names, or a start, needs no word; any other wait
+          // is told to the first mate, whose answer no longer said it.
+          const outcome = await this.startOutcome(record.id, "It", audience);
+          if (outcome.shown || this.core.disposed()) return;
+          this.core.routeCrewEvent(
+            record.id,
+            {
+              facts: {
+                kind: "asked-start-waits",
+                task: { id: record.id, title: record.title },
+                words: outcome.text,
+              },
+            },
+            "agent",
+          );
+        })
+        .catch((caught: unknown) => {
+          console.warn("[crew] a start behind the first mate's answer failed:", caught);
+        }),
+    );
+  }
+
+  /**
+   * The start of a task that runs behind the first mate's answer, while it
+   * runs: a message or a hand-over of files to the task waits for it.
+   */
+  startingBehind(taskId: string): Promise<void> | undefined {
+    return this.behind.get(taskId);
+  }
+
+  private runBehind(taskId: string, start: () => Promise<void>): Promise<void> {
+    const running = start();
+    this.behind.set(taskId, running);
+    void running.finally(() => {
+      if (this.behind.get(taskId) === running) this.behind.delete(taskId);
+      this.startRan(taskId);
+    });
+    return running;
+  }
+
+  /**
+   * Resolves once a start of the task, the one running now or the next,
+   * has run, whatever came of it: a hand-over of files to a task that has
+   * not started waits on it (INF-3060).
+   */
+  nextStart(taskId: string): Promise<void> {
+    return new Promise((resolve) => {
+      this.awaitingStart.set(taskId, [...(this.awaitingStart.get(taskId) ?? []), resolve]);
+    });
+  }
+
+  private startRan(taskId: string): void {
+    const waiting = this.awaitingStart.get(taskId);
+    this.awaitingStart.delete(taskId);
+    for (const resolve of waiting ?? []) resolve();
+  }
+
+  /**
+   * A start the first mate asked for that failed before its crewmate and
+   * working copy began stays open for its go, update_task start_now, as
+   * `startTask`'s asked failure leaves one that got further.
+   */
+  private keepFailedAskedStart(taskId: string, reason: string): void {
+    const record = this.core.options.tasks.get(taskId);
+    if (!record || record.startNotice || this.core.tasks.has(taskId)) return;
+    if (
+      record.status === "open" ||
+      (record.status === "active" && !record.worktreeDir && !record.sessionFile)
+    )
+      this.core.options.tasks.starts.failManualStart(taskId, reason, { onRequest: true });
+  }
+
+  /**
+   * A record born active whose start the first mate's answer did not wait
+   * for (a review, INF-3060). One that could not start stays open, waiting
+   * for update_task start_now or a drop, and the first mate hears so.
+   */
+  startTaskBehind(
+    taskId: string,
+    title: string,
+    start: () => Promise<unknown>,
+    /** The model the first mate's words named; the review is routed on its own (FI3-444). */
+    named?: string,
+  ): Promise<void> {
+    return this.runBehind(taskId, () =>
+      start().then(
+        () => {
+          const took = this.core.options.tasks.get(taskId)?.model ?? null;
+          if (!named) return;
+          this.core.routeCrewEvent(
+            taskId,
+            {
+              facts: {
+                kind: "queued-started",
+                task: { id: taskId, title },
+                model: { named, took },
+                asked: true,
+              },
+            },
+            "agent",
+          );
+        },
+        (caught: unknown) => {
+          // A quit stopped it; it did not fail (`dispatchOnce`).
+          if (this.core.disposed()) return;
+          const reason = startFailureReason(caught);
+          this.keepFailedAskedStart(taskId, reason);
+          const open = this.core.options.tasks.get(taskId)?.status === "open";
+          this.core.routeCrewEvent(
+            taskId,
+            {
+              facts: {
+                kind: "queued-start-failed",
+                task: { id: taskId, title },
+                error: capWithOverflow(reason, "queue-start-failure"),
+                asked: true,
+                ...(open ? { open: true as const } : {}),
+              },
+            },
+            "agent",
+          );
+        },
+      ),
+    );
+  }
+
+  private async dispatchOnce(
+    taskId: string,
+    options: DispatchOptions,
+  ): Promise<boolean | undefined> {
     // The quit starts nothing; the next launch's sweep starts it.
     if (this.core.disposed()) return;
     // A Start waiting for the Firstmate's directions begins only through it.
@@ -724,6 +971,8 @@ export class CrewStarts {
     }
     const originalTitle = record.title;
     const gate = record.gate;
+    // A start the first mate asked for, which its answer already named.
+    const asked = options.requested?.behind === true && options.requested.by !== "captain";
     const blockers = this.core.options.tasks.graph.blockers(taskId);
     try {
       await this.classifyQueued(record);
@@ -783,7 +1032,7 @@ export class CrewStarts {
       if (automatic && !selected) {
         // Automatic declines a task that changed while computers were
         // compared, which is no wait for room.
-        if (moved()) return this.dispatchQueuedTask(taskId, options);
+        if (moved()) return this.dispatchOnce(taskId, options);
         // A wait whose computers were compared says why; another keeps what was said.
         const waiting = choice && "wait" in choice ? choice : undefined;
         const wait =
@@ -830,7 +1079,7 @@ export class CrewStarts {
       // tries nothing until that computer reports one.
       if (!selected && target !== null && ready && !this.core.tasks.has(taskId)) {
         const waitFor = await this.core.placement.placedWaitFor(target, record.repoId);
-        if (moved()) return this.dispatchQueuedTask(taskId, options);
+        if (moved()) return this.dispatchOnce(taskId, options);
         if (waitFor) {
           this.core.placement.waitForSetup(taskId, target, waitFor);
           this.core.facts.broadcastCrewCounts();
@@ -844,7 +1093,7 @@ export class CrewStarts {
           : undefined);
       // From here to the claim nothing waits; a quit that came meanwhile starts nothing.
       if (this.core.disposed()) return;
-      if (moved()) return this.dispatchQueuedTask(taskId, options);
+      if (moved()) return this.dispatchOnce(taskId, options);
       if (!routed?.choice && signInWait()) return;
       if (!ignoreAsk && routed && requiresReasoningWait(shape, routed)) {
         // The user's premium ask - or an escalation's rung (S4) - still
@@ -867,6 +1116,7 @@ export class CrewStarts {
           taskId,
           options.requested?.from,
           options.requested?.panel,
+          options.requested?.spawned ? { spawned: true } : {},
         )
       )
         return;
@@ -878,6 +1128,8 @@ export class CrewStarts {
         routed,
         placementAccount: selected?.accountId,
         fresh: false,
+        ...(asked ? { asked } : {}),
+        ...(options.requested?.backlog ? { backlog: true } : {}),
         ...(options.message?.attachments.length
           ? { attachments: options.message.attachments }
           : {}),
@@ -890,17 +1142,34 @@ export class CrewStarts {
         : blockers.length > 0
           ? `${blockers.map((blocker) => `task ${blocker.id}`).join(" and ")} finished`
           : undefined;
-      this.core.options.broadcastEvent({
-        type: "firstmate_note",
-        text: `Starting "${record.title}"${because ? ` - ${because}` : ""}.`,
-      });
-      // Only a start whose wait ended wakes the Firstmate. Its own start_now
-      // already answered "Started", and the captain's Start reaches its next
-      // context block the way the captain's card choices do (FI3-695). A program's
-      // part was started by its program, which is what waits on it (INF-799).
-      if (!options.requested && !record.shape?.program_part) {
-        const started = this.core.options.tasks.get(taskId);
-        const model = started && namedModelOf(started);
+      if (!options.requested?.spawned)
+        this.core.options.broadcastEvent({
+          type: "firstmate_note",
+          text: `Starting "${record.title}"${because ? ` - ${because}` : ""}.`,
+        });
+      // Only a start whose wait ended wakes the Firstmate with this line. The
+      // captain's Start reaches its next context block the way the captain's
+      // card choices do (FI3-695), and a program's part was started by its
+      // program, which is what waits on it (INF-799). A start behind the first
+      // mate's answer - which said only that it is starting - wakes it here
+      // only to say which model took a task the captain named one for; a
+      // failure or a wait its tile does not name wakes it from `startBehind`.
+      const started = this.core.options.tasks.get(taskId);
+      const model = started && namedModelOf(started);
+      if (options.requested?.behind && model) {
+        this.core.routeCrewEvent(
+          taskId,
+          {
+            facts: {
+              kind: "queued-started",
+              task: { id: taskId, title: record.title },
+              model,
+              asked: true,
+            },
+          },
+          "agent",
+        );
+      } else if (!options.requested && !record.shape?.program_part) {
         this.core.routeCrewEvent(
           taskId,
           {
@@ -914,20 +1183,31 @@ export class CrewStarts {
         );
       }
     } catch (caught) {
+      // A quit stops a start behind the first mate's answer; it did not fail.
+      // The row stays as the quit left it, queued, for the next launch's
+      // sweep, and nobody is told.
+      if (options.requested?.behind && this.core.disposed()) return;
       const message = caught instanceof Error ? caught.message : String(caught);
+      if (asked && !(caught instanceof ForgeAuthRequiredError))
+        this.keepFailedAskedStart(taskId, startFailureReason(caught));
+      const current = this.core.options.tasks.get(taskId);
       this.core.routeCrewEvent(
         taskId,
         {
           facts: {
             kind: "queued-start-failed",
             task: { id: taskId, title: record?.title ?? originalTitle },
-            error: capWithOverflow(message, "queue-start-failure"),
+            error: capWithOverflow(
+              options.requested?.behind ? startFailureReason(caught) : message,
+              "queue-start-failure",
+            ),
             ...(options.requested?.by === "captain" ? { by: "captain" as const } : {}),
+            ...(options.requested?.behind ? { asked: true as const } : {}),
+            ...(asked && current?.status === "open" ? { open: true as const } : {}),
           },
         },
         "agent",
       );
-      const current = this.core.options.tasks.get(taskId);
       if (
         caught instanceof ForgeAuthRequiredError &&
         current?.status === "active" &&
@@ -968,8 +1248,11 @@ export class CrewStarts {
         !current.worktreeDir &&
         !this.core.tasks.has(taskId)
       ) {
-        if (options.requested?.by === "captain" && current.startPolicy === "on-request") {
-          this.core.options.tasks.starts.failManualStart(taskId, message);
+        if (
+          options.requested?.by === "captain" &&
+          (current.startPolicy === "on-request" || options.requested.backlog)
+        ) {
+          this.core.options.tasks.starts.failManualStart(taskId, message, { onRequest: true });
         } else {
           this.core.options.tasks.starts.requeue(
             taskId,
@@ -978,6 +1261,8 @@ export class CrewStarts {
           );
         }
       }
+      this.core.facts.broadcastCrewCounts();
+      return true;
     }
     this.core.facts.broadcastCrewCounts();
   }
@@ -1023,7 +1308,9 @@ export class CrewStarts {
       return;
     }
     if (audience === "captain" && record.startPolicy === "on-request" && !now.startNotice) {
-      this.core.options.tasks.starts.failManualStart(now.id, "it did not start");
+      this.core.options.tasks.starts.failManualStart(now.id, "it did not start", {
+        onRequest: true,
+      });
       return;
     }
     this.core.options.tasks.starts.clearStartAttempt(now.id);
@@ -1039,11 +1326,16 @@ export class CrewStarts {
    */
   async startQueuedNow(
     taskRef: string,
-    audience: "tool" | "captain" = "tool",
-    from?: typeof TASK_CARD_VIA,
-    panel?: string,
-    direct = false,
+    options: {
+      audience?: "tool" | "captain";
+      from?: typeof TASK_CARD_VIA;
+      panel?: string;
+      /** The captain's Start that skips the first mate's directions. */
+      direct?: boolean;
+    } = {},
   ): Promise<string> {
+    const audience = options.audience ?? "tool";
+    let { from, panel } = options;
     const record = this.core.intake.resolveTaskRef(taskRef, "task");
     const handle = `${record.key || record.id} "${record.title}"`;
     if (record.status === "active" && record.backlogSince != null)
@@ -1065,7 +1357,7 @@ export class CrewStarts {
       panel = pending.panel;
     } else if (
       audience === "captain" &&
-      !direct &&
+      !options.direct &&
       this.core.hostOps.askFirstmateFirst(record, from, panel)
     ) {
       return `${handle} is starting. Your first mate applies your standing directions first.`;
@@ -1079,6 +1371,20 @@ export class CrewStarts {
       this.core.options.tasks.starts.beginStartAttempt(record.id);
     if (record.gate)
       this.core.options.tasks.placement.setGate(record.id, null, "started on request");
+    // The first mate's answer waits for nothing more: the task shows
+    // Starting, and then its wait or its crewmate, on its tile; a wait the
+    // tile does not name reaches the first mate as an [fm-op] (INF-3060).
+    if (audience === "tool" && !record.shape?.program) {
+      void this.startBehind(record.id, {
+        ignoreAsk: true,
+        requested: {
+          by: asCaptain ? "captain" : "firstmate",
+          ...(from ? { from } : {}),
+          ...(panel ? { panel } : {}),
+        },
+      });
+      return `${handle} is starting. Its tile shows any wait, such as for room on its computer; you hear an [fm-op] if it cannot start or waits for something its tile does not name.`;
+    }
     await this.dispatchQueuedTask(record.id, {
       ignoreAsk: true,
       requested: {
@@ -1097,16 +1403,33 @@ export class CrewStarts {
         : `${handle} could not start.`;
     }
     await this.settleStartAttempt(record, asCaptain ? "captain" : "tool");
-    const now = this.core.options.tasks.get(record.id);
-    if (this.core.options.tasks.starts.startAttemptOf(record.id)?.phase === "checking") {
-      return `${handle} is still starting. Checking whether it started.`;
+    return (await this.startOutcome(record.id, handle, audience)).text;
+  }
+
+  /**
+   * What a requested start came to, in words for whoever asked: started,
+   * still being checked, or the wait it holds on. `shown` says the task's
+   * tile already tells it - a start, a check, or a placement wait in its own
+   * words - so a start behind the first mate's answer tells it the rest.
+   */
+  private async startOutcome(
+    taskId: string,
+    handle: string,
+    audience: "tool" | "captain",
+  ): Promise<{ text: string; shown: boolean }> {
+    const told = (text: string) => ({ text, shown: false });
+    const now = this.core.options.tasks.get(taskId);
+    if (this.core.options.tasks.starts.startAttemptOf(taskId)?.phase === "checking") {
+      return { text: `${handle} is still starting. Checking whether it started.`, shown: true };
     }
-    if (now?.status !== "active" && now?.deviceId && this.core.facts.outOfReach(record.id)) {
+    if (now?.status !== "active" && now?.deviceId && this.core.facts.outOfReach(taskId)) {
       const place = this.core.options.machines?.placeOf(now.deviceId);
       const who = place?.who ?? "the computer it runs on";
       if (this.core.options.takesNoWorkUntilUpdated?.(now.deviceId))
-        return noNewWorkStartRefusal(handle, who, HERE.this);
-      return `${handle} waits for ${who}, which is out of reach. It never runs on ${HERE.this} instead.`;
+        return told(noNewWorkStartRefusal(handle, who, HERE.this));
+      return told(
+        `${handle} waits for ${who}, which is out of reach. It never runs on ${HERE.this} instead.`,
+      );
     }
     const signIn =
       now?.status !== "active" && now?.deviceId
@@ -1114,38 +1437,48 @@ export class CrewStarts {
         : undefined;
     if (now?.deviceId && signIn) {
       const place = this.core.options.machines?.placeOf(now.deviceId);
-      return placedCutOffStartRefusal(
-        handle,
-        place?.who ?? "the computer it runs on",
-        signIn,
-        this.core.now(),
+      return told(
+        placedCutOffStartRefusal(
+          handle,
+          place?.who ?? "the computer it runs on",
+          signIn,
+          this.core.now(),
+        ),
       );
     }
     if (now?.status !== "active" && now?.deviceId && !now.gate) {
       const waitFor = await this.core.placement.placedWaitFor(now.deviceId, now.repoId);
       if (waitFor?.kind === "no-sign-ins") {
         const place = this.core.options.machines?.placeOf(now.deviceId);
-        return noSignInsStartRefusal(handle, place?.who ?? "the computer it runs on");
+        return told(noSignInsStartRefusal(handle, place?.who ?? "the computer it runs on"));
       }
       if (waitFor?.kind === "update") {
         const place = this.core.options.machines?.placeOf(now.deviceId);
-        return updateStartRefusal(handle, place?.who ?? "the computer it runs on");
+        return told(updateStartRefusal(handle, place?.who ?? "the computer it runs on"));
       }
     }
     const automaticWait = now?.shape?.placement_wait?.words;
-    if (now?.status !== "active" && automaticWait) return `${handle}: ${automaticWait}`;
+    if (now?.status !== "active" && automaticWait)
+      return { text: `${handle}: ${automaticWait}`, shown: true };
     if (now?.status !== "active") {
       const notice = readStartNotice(now?.startNotice);
       const why = notice ?? now?.gate?.reason;
-      return `${handle} could not start${why ? `: ${why}` : ""}${audience === "tool" ? "; see the feed" : ""}.`;
+      const text = `${handle} could not start${why ? `: ${why}` : ""}${audience === "tool" ? "; see the feed" : ""}.`;
+      // A gate is named on the tile (`queueWaitOf`), and a gate with a wake
+      // of its own - a level's reset, a failed start - already sent it.
+      return now?.gate ? { text, shown: true } : told(text);
     }
     // A model the captain named routes only when it can serve; the tool's
     // answer says which model took the task, so the Firstmate never reports
     // the named one when routing fell back.
     const named = namedModelOf(now);
-    return audience === "tool" && named
-      ? `Started ${handle} ${namedModelWords(named)}.`
-      : `Started ${handle}.`;
+    return {
+      text:
+        audience === "tool" && named
+          ? `Started ${handle} ${namedModelWords(named)}.`
+          : `Started ${handle}.`,
+      shown: true,
+    };
   }
 
   /** Captain-requested dropped work starts as a fresh record, never an escalation. */
@@ -1177,7 +1510,7 @@ export class CrewStarts {
     this.core.hostOps.starting.add(fresh.id);
     const started = this.core.settling.closing
       .finishWorkspaceRetirement(old.id)
-      .then(() => this.startQueuedNow(fresh.id, audience))
+      .then(() => this.startQueuedNow(fresh.id, { audience }))
       .finally(() => this.core.hostOps.starting.delete(fresh.id));
     return { ok: true, task: fresh, started };
   }
@@ -1252,7 +1585,7 @@ export class CrewStarts {
    * for, and the wake says the wait ends when one is placed there.
    * Deduped by content on the task's ref.
    */
-  wakeReasoningWait(taskId: string, title: string, routed: RouteResult): void {
+  private wakeReasoningWait(taskId: string, title: string, routed: RouteResult): void {
     this.core.hooks().notifyOp(
       {
         facts: {

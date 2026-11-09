@@ -1,6 +1,6 @@
 import type { ScriptedCall } from "../../helpers/scriptedCalls";
 import type { Scenario } from "../mockProvider";
-import { sinceLastUser } from "../providerRequest";
+import { sinceLastUser, spawnedTaskOf } from "../providerRequest";
 
 /**
  * FI3-250's hermetic replay, not a claim that a live model obeys: the
@@ -39,7 +39,7 @@ function dependencyWaitMove(
           },
         ],
       };
-    const spawned = results[0]?.match(/on task ([\w-]+)/)?.[1] ?? "missing";
+    const spawned = spawnedTaskOf(results[0]) ?? "missing";
     if (results.length === 1)
       return {
         calls: [{ name: "link_tasks", args: { from: owner, to: spawned, type: "blocks" } }],

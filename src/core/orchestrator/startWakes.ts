@@ -57,6 +57,11 @@ export type StartFacts =
       task: WakeTask;
       /** The model the user named and the one that took the task (FI3-444). */
       model?: NamedModel;
+      /**
+       * A start the first mate asked for, answered before it ran
+       * (INF-3060): its wake says only which model took it.
+       */
+      asked?: true;
     }
   | {
       /** A queued task's start failed; `by` is the captain when he pressed Start. */
@@ -64,6 +69,19 @@ export type StartFacts =
       task: WakeTask;
       error: string;
       by?: "captain";
+      /** A start the first mate asked for, answered before it ran (INF-3060). */
+      asked?: true;
+      /** That task is still open, waiting for update_task start_now or a drop. */
+      open?: true;
+    }
+  | {
+      /**
+       * A start the first mate asked for, answered before it ran (INF-3060),
+       * ended in a wait its task's tile does not name: `words` say it.
+       */
+      kind: "asked-start-waits";
+      task: WakeTask;
+      words: string;
     }
   | {
       /**
@@ -240,11 +258,19 @@ export const START_WORDS: KindWords<StartFacts> = {
       ? `[fm-op] the program on task ${facts.key} "${facts.task.title}" stopped after ${facts.parts} parts: ${facts.error}. Nothing more of it runs; tell the captain what stopped it.`
       : `[fm-op] the program on task ${facts.key} "${facts.task.title}" finished after ${facts.parts} parts.${facts.result !== undefined ? ` ${RESULT_WORDS} ${resultText(facts.result)}` : ""}${facts.branch ? ` Its branch is ${facts.branch}'s last commit: work that ships it names ${facts.branch} in branch_from.` : " Its script returned no branch, so there is nothing to ship."}`,
   "queued-started": (facts) =>
-    `[fm-op] queued task ${facts.task.id} "${facts.task.title}" started - its wait ended. A crewmate is working on it now${facts.model ? `, ${namedModelWords(facts.model)}` : ""}.`,
+    facts.asked && facts.model
+      ? `[fm-op] task ${facts.task.id} "${facts.task.title}", which you started, is running now, ${namedModelWords(facts.model)}.`
+      : `[fm-op] queued task ${facts.task.id} "${facts.task.title}" started - its wait ended. A crewmate is working on it now${facts.model ? `, ${namedModelWords(facts.model)}` : ""}.`,
   "queued-start-failed": (facts) =>
     facts.by === "captain"
       ? `[fm-op] the captain pressed Start on task ${facts.task.id} "${facts.task.title}", and it could not start: ${facts.error}`
-      : `[fm-op] queued task ${facts.task.id} "${facts.task.title}" could not start: ${facts.error}`,
+      : facts.asked
+        ? facts.open
+          ? `[fm-op] task ${facts.task.id} "${facts.task.title}", which you started, could not start: ${facts.error.replace(/[.\s]+$/, "")}. It is still open with nothing running, so spawn no replacement: update_task start_now tries it again, or update_task drop removes it.`
+          : `[fm-op] task ${facts.task.id} "${facts.task.title}", which you started, could not start: ${facts.error}`
+        : `[fm-op] queued task ${facts.task.id} "${facts.task.title}" could not start: ${facts.error}`,
+  "asked-start-waits": (facts) =>
+    `[fm-op] task ${facts.task.id} "${facts.task.title}", which you started, has not started yet. ${facts.words}`,
   "captain-start": (facts) =>
     facts.move === "start"
       ? `[fm-op] the captain pressed Start on task ${facts.task.id} ${facts.task.key} "${facts.task.title}". It shows Starting and waits for you. Apply every standing direction that bears on it with update_task (merging, delivery, care, model, runs_on), passing direction with each direction's id, then update_task start_now. Never decline their Start; if no direction applies, just start_now.`

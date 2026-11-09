@@ -62,7 +62,7 @@ placedWorldHooks({
  * nowhere to go here.
  */
 describe("leftovers on a computer that runs work", () => {
-  it("removes the working copy and folder a fresh start left there when it failed after the copy was made", async () => {
+  it("keeps the working copy a failed start made there for the task, which its retry starts on", async () => {
     const project = await gitProject();
     const at = await world(() => project.forge(Buffer.alloc(0)));
     const home = at.home();
@@ -71,19 +71,35 @@ describe("leftovers on a computer that runs work", () => {
     at.refuseOpens(true);
 
     // That computer made the working copy, then refused the conversation:
-    // the start failed, and this Mac kept no record of it.
-    await expect(
-      home.supervisor.intake.commission({
-        title: "footer",
-        intent: { goal: "Make the footer blue.", userWords: "make the footer blue" },
-        repoId: repo.id,
-      }),
-    ).rejects.toThrow(`no sign-in for ${PROVIDER} here`);
-    expect(home.tasks.list()).toEqual([]);
+    // the start failed behind the spawn's answer (INF-3060), the first mate
+    // heard why, and the task waits here with no working copy of its own.
+    const handle = await home.supervisor.intake.commission({
+      title: "footer",
+      intent: { goal: "Make the footer blue.", userWords: "make the footer blue" },
+      repoId: repo.id,
+    });
+    await handle.started;
+    const failed = home.wakes.find(
+      (wake) => wake.facts?.kind === "queued-start-failed" && wake.facts.task.id === handle.taskId,
+    )?.facts;
+    expect(failed).toMatchObject({
+      asked: true,
+      error: expect.stringContaining(`no sign-in for ${PROVIDER} here`),
+    });
+    expect(home.tasks.get(handle.taskId)).toMatchObject({ status: "open", worktreeDir: "" });
     expect(feed(home)).toContain("Mac mini cloned home.");
 
-    // What it left there goes at once, without waiting for that computer to come back.
-    await expect.poll(() => at.holds()).toEqual({ tasks: [], workingCopies: [] });
+    // The task is still open, so what it left there is its own, never an
+    // orphan: once that computer takes the conversation, Start again starts
+    // there on the same working copy, and nothing else is left behind.
+    expect(at.holds()).toEqual({ tasks: [handle.taskId], workingCopies: [handle.taskId] });
+    at.refuseOpens(false);
+    model([{ text: "Started on the footer." }]);
+    expect(
+      await home.supervisor.starts.startQueuedNow(handle.taskId, { audience: "captain" }),
+    ).toBe(`Started ${home.tasks.get(handle.taskId)?.key} "footer".`);
+    expect(home.tasks.get(handle.taskId)?.status).toBe("active");
+    expect(at.holds()).toEqual({ tasks: [handle.taskId], workingCopies: [handle.taskId] });
   });
 
   it("brings a purged task's unmerged work home onto its kept ref in the project it was cloned from, then removes its working copy and folder there", async () => {

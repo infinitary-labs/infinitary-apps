@@ -766,11 +766,14 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
   it("a start someone asked for raises no started wake, and the captain's failed Start says he asked (FI3-695)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, workspace, ops, tasks } = setup(crewmate);
-    // The Firstmate's own start_now: the tool's answer is its receipt.
+    // The Firstmate's own start_now: the tool's answer is its receipt, and
+    // the start runs behind it (INF-3060) with no started wake.
     const own = supervisor.intake.plan({ title: "Own", intent: intentOf("do") });
-    expect(await supervisor.starts.startQueuedNow(own.key)).toBe(`Started ${own.key} "Own".`);
-    await tick();
-    expect(tasks.get(own.id)?.status).toBe("active");
+    expect(await supervisor.starts.startQueuedNow(own.key)).toBe(
+      `${own.key} "Own" is starting. Its tile shows any wait, such as for room on its computer; you hear an [fm-op] if it cannot start or waits for something its tile does not name.`,
+    );
+    await vi.waitFor(() => expect(tasks.get(own.id)?.status).toBe("active"));
+    await vi.waitFor(() => expect(tasks.starts.startAttemptOf(own.id)).toBeUndefined());
 
     // The captain's Start on the task card that could not start still wakes, in his words.
     const planned = supervisor.intake.plan({ title: "Planned", intent: intentOf("do") });

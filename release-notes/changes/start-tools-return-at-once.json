@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "start-tools-return-at-once",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Your first mate answers while a task starts",
+      "body": "When your first mate starts a task or sends a crewmate a message, it answers as soon as the request is saved, instead of waiting a minute or more for the crewmate to start. The tile shows Starting, then any wait. A task that cannot start, a review included, stays on your board saying why and keeps its working copy for the next try. A message is saved on its task when sent, so quitting while its files are handed over loses nothing. If a start or a hand-over fails, your first mate hears about it and tells you.",
+      "noPicture": "The views are the ones a task that could not start already shows; what changes is how soon the first mate's reply arrives and that the task stays.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

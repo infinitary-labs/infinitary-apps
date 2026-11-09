@@ -1011,8 +1011,9 @@ describe("the deliverable axis (Task B)", () => {
     const filed = tasks.graph.discoveredFrom(found.taskId)[0];
     if (!filed) throw new Error("no follow-up was filed");
 
-    expect(await supervisor.starts.startQueuedNow(filed.key)).toContain("Started");
+    expect(await supervisor.starts.startQueuedNow(filed.key)).toContain("is starting.");
     await tick();
+    expect(tasks.get(filed.id)?.status).toBe("active");
     const brief = fixer.promptCalls.at(-1) ?? "";
     const originKey = tasks.get(found.taskId)?.key ?? found.taskId;
     expect(brief).toContain(`Recorded origin ${originKey}`);
@@ -1083,8 +1084,9 @@ describe("the deliverable axis (Task B)", () => {
     // A file where the folder belongs: the save fails, nothing is lost.
     mkdirSync(join(paths.crewmatesDir, planned.id), { recursive: true });
     writeFileSync(join(paths.crewmatesDir, planned.id, "source-cards"), "in the way");
-    expect(await supervisor.starts.startQueuedNow(planned.key)).toContain("Started");
+    expect(await supervisor.starts.startQueuedNow(planned.key)).toContain("is starting.");
     await tick();
+    expect(tasks.get(planned.id)?.status).toBe("active");
     const brief = builder.promptCalls.at(-1) ?? "";
     expect(brief).toContain(`Its card, as the captain read it:\n${body}`);
     expect(brief).not.toContain("open it to read the card");

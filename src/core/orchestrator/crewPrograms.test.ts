@@ -301,11 +301,12 @@ describe("programs (INF-799 piece 2)", () => {
   it("drops only its own parts at its end, leaving a task filed under it running", async () => {
     const h = await programHarness(`return await task("Cap the meter.");`, 1);
     const part = await h.part(0);
-    const { taskId: other } = await h.supervisor.intake.commission({
+    const { taskId: other, started } = await h.supervisor.intake.commission({
       title: "Write the gauge's docs",
       intent: intentOf("Document the gauge."),
       parent: h.program.key,
     });
+    await started;
     expect(h.tasks.get(other)).toMatchObject({ parentId: h.program.id, status: "active" });
     await h.report(0, "Capped the meter.");
     await vi.waitFor(() => expect(h.tasks.get(h.program.id)?.status).toBe("done"), PROGRAM_WAIT);
@@ -388,9 +389,10 @@ describe("programs (INF-799 piece 2)", () => {
     );
     expect(h.tasks.get(h.program.id)?.status).toBe("open");
     // Still running: the captain starts the held part, and its answer ends the script.
-    expect(await h.supervisor.starts.startQueuedNow(part.key)).toBe(
-      `Started ${part.key} "Cap the meter.".`,
+    expect(await h.supervisor.starts.startQueuedNow(part.key)).toContain(
+      `${part.key} "Cap the meter." is starting.`,
     );
+    await vi.waitFor(() => expect(h.tasks.get(part.id)?.status).toBe("active"), PROGRAM_WAIT);
     // The failed open took the first crewmate spec; the started crewmate's is the last.
     await h.specs.at(-1)?.onReport?.("Capped the meter.");
     h.sessions[0]?.emit({ type: "turn_end", taskId: part.id });

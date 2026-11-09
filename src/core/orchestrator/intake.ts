@@ -13,7 +13,7 @@ import type { MessageFile } from "../overflow";
 import { NOTHING_SPAWNED, type ReviewAssigned } from "../pi/crewTools";
 import { programShape } from "../program/programRunner";
 import { tierFor } from "../routing/policy";
-import { type RouteResult, requiresReasoningWait } from "../routing/router";
+import type { RouteResult } from "../routing/router";
 import type { TaskLinkType } from "../storage/taskLinkStore";
 import type { TaskGate, TaskRecord, TaskStartPolicy } from "../storage/taskStore";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
@@ -30,14 +30,12 @@ import {
   renderReviewBrief,
   type SpawnIntent,
 } from "./intentBrief";
-import type { NamedModel } from "./namedModel";
 import type { Reviews } from "./reviews";
 import type { SettleOwners } from "./settleOwners";
 import { describeStatus } from "./settleService";
 import { workspaceOf } from "./taskClose";
-import type { PlacedWaitFor, TaskPlacement } from "./taskPlacement";
+import type { TaskPlacement } from "./taskPlacement";
 import {
-  classifyShape,
   type EscalationPlan,
   handOffShape,
   resolveEscalation,
@@ -84,19 +82,26 @@ export type TaskIntakeHost = {
     repoId: string | null;
     routed: RouteResult | undefined;
     fresh: boolean;
+    /** The first mate's spawn: a failed start keeps the review open (INF-3060). */
+    asked?: boolean;
     messageFiles?: readonly MessageFile[];
     attachments?: readonly AttachmentRef[];
   }): Promise<{ taskId: string; crewmate: string }>;
-  /** Dispatch one queued row through the shared start path. */
-  dispatchQueuedTask(
+  /** Start a recorded row behind the first mate's answer (`CrewStarts.startBehind`). */
+  startBehind(
     taskId: string,
     options: {
-      requested: { by: "firstmate" };
+      requested: { by: "firstmate"; spawned: true };
       message: { attachments: readonly AttachmentRef[]; files: readonly MessageFile[] };
     },
   ): Promise<void>;
-  /** The ask-first wake: the class the captain asked for cannot serve now, so the row waits for it. */
-  wakeReasoningWait(taskId: string, title: string, routed: RouteResult): void;
+  /** A started task the first mate's answer did not wait for; a failure wakes it. */
+  startTaskBehind(
+    taskId: string,
+    title: string,
+    start: () => Promise<unknown>,
+    named?: string,
+  ): Promise<void>;
   /** Something sent reached a crewmate: one push, and the center draws its spark. */
   announceReach(taskId: string): void;
   /** A program being dropped stops at once and never runs again. */
@@ -208,8 +213,11 @@ export class TaskIntake {
     attachments?: readonly AttachmentRef[];
   }): Promise<{
     taskId: string;
+    /** `starting` for a start behind the answer (INF-3060), or `queued` for a wait. */
     crewmate: string;
-    model?: NamedModel;
+    /** Settles once a start behind the answer has started, waited or failed. */
+    started?: Promise<void>;
+    /** A review ask's assigned version (INF-3141). */
     review?: ReviewAssigned;
   }> {
     assertDeliverableConstraints(input.intent, input.shape?.in_folder === true);
@@ -224,9 +232,15 @@ export class TaskIntake {
         throw new Error(
           `${NOTHING_SPAWNED} A review follows its builder's computer; omit runs_on_ask.`,
         );
-      return this.withNamedModel(
-        await this.commissionReview(input, input.shape.review_of.trim()),
-        input.shape,
+      return this.commissionReview(
+        {
+          ...input,
+          behind: true,
+          ...(input.shape.override_model_id?.trim()
+            ? { named: input.shape.override_model_id.trim() }
+            : {}),
+        },
+        input.shape.review_of.trim(),
       );
     }
     // A personal-ui ask is bound by the host (Step 4): the personal
@@ -357,154 +371,28 @@ export class TaskIntake {
       return { taskId, crewmate: "queued" };
     }
 
-    // The kind is established here, in the spawn path, before routing (S3,
-    // design section 3.4): a queued row is classified at its gate-open
-    // instead, so the cheap call happens as late as it can still matter.
-    // An escalation never reaches the classifier at all - its kind is
-    // inherited from the attempt it replaces.
-    const classified = withDeliverable(
-      await classifyShape(this.options, taskId, title, input.intent, boundRepoId, shape, true),
+    // The first mate's spawn is recorded now and starts behind its answer
+    // (INF-3060): classification, placement, routing and the working copy
+    // can take minutes on another computer, and the captain's reply waited
+    // on them. The row starts through the queue's own path with the
+    // message's pictures and files; `started` settles when that start has.
+    this.insertQueuedWork(
+      taskId,
+      title,
+      renderBrief(shape),
       input.intent,
+      boundRepoId,
+      shape,
+      graph,
     );
-    const brief = renderBrief(classified);
-    // Where it runs comes first, so its model is chosen among that
-    // computer's own subscriptions (docs/helper.md, "Its own sign-ins"). A
-    // computer that is out of reach chooses once it is back.
-    const placed = {
-      id: taskId,
-      title,
-      repoId: boundRepoId,
-      parentId: placement.parentId,
-      shape: classified,
-    };
-    if (this.host.placement.automaticFor(placed)) {
-      this.insertQueuedWork(taskId, title, brief, input.intent, boundRepoId, classified, graph);
-      if (escalation) await this.applyEscalation(escalation, taskId);
-      this.announcePlanSkip(classified);
-      // The message attaches to the task only once this returns, so a start
-      // made now carries its pictures and files itself (INF-2422).
-      await this.host.dispatchQueuedTask(taskId, {
-        requested: { by: "firstmate" },
-        message: { attachments: input.attachments ?? [], files: input.messageFiles ?? [] },
-      });
-      const started = this.options.tasks.get(taskId);
-      return this.withNamedModel({ taskId, crewmate: started?.assignee ?? "queued" }, input.shape);
-    }
-    const target = this.host.placement.placementOf(placed);
-    const waitsThere = target !== null && !this.options.machines?.ready(target, taskId);
-    // A computer whose only sign-in a cut-off withholds takes it once that
-    // sign-in serves: known before routing once that computer said so, and
-    // after routing found nothing there to take it.
-    const heldThere = () =>
-      target !== null && !waitsThere ? this.options.machines?.signInWait(target) : undefined;
-    const cutOffThere = heldThere();
-    let signInThere: PlacedWaitFor | undefined = cutOffThere
-      ? { ...cutOffThere, kind: "cut-off" }
-      : undefined;
-    // A computer with no sign-in at all, or none for where the project
-    // lives, is not tried: the task waits for the sign-in and starts by
-    // itself once that computer reports it.
-    if (target !== null && !waitsThere && !signInThere)
-      signInThere = await this.host.placement.placedWaitFor(target, boundRepoId);
-    const routed =
-      waitsThere || signInThere
-        ? undefined
-        : await this.host.placement.routeTask(taskId, brief, classified, target);
-    if (!signInThere && !routed?.choice) {
-      const held = heldThere();
-      if (held) signInThere = { ...held, kind: "cut-off" };
-    }
-    if (routed && requiresReasoningWait(classified, routed)) {
-      // Premium is the one class Firstmate may name only because the user
-      // did, so it is the one whose downgrade is never silent (P7 + R1):
-      // the work waits on the quota reset - the safe default - and one wake
-      // tells the Firstmate, which may start it lower with update_task
-      // start_now or drop it. An escalation's rung waits the same way (S4),
-      // since serving it from the tier that already failed is the one thing
-      // escalation exists to prevent. A computed high or low falls back with
-      // a feed line, as it always has.
-      this.insertQueuedWork(taskId, title, brief, input.intent, boundRepoId, classified, {
-        gate: reasoningWaitGate(routed.bucket),
-        ...graph,
-      });
-      if (escalation) await this.applyEscalation(escalation, taskId);
-      this.announcePlanSkip(classified);
-      this.host.wakeReasoningWait(taskId, title, routed);
-      this.host.broadcastCrewCounts();
-      return { taskId, crewmate: "queued" };
-    }
-
-    // Its project runs on a computer that is out of reach (docs/helper.md,
-    // "Runs on"), or whose own sign-in a cut-off withholds: the task waits
-    // there as queued work and starts once that computer is back, or that
-    // sign-in serves again, never on this Mac instead.
-    if (target && (waitsThere || signInThere)) {
-      this.insertQueuedWork(taskId, title, brief, input.intent, boundRepoId, classified, graph);
-      this.options.tasks.placement.setDevice(taskId, target);
-      if (signInThere?.kind === "forge")
-        this.host.placement.holdForDeviceForge(taskId, target, signInThere.host);
-      if (escalation) await this.applyEscalation(escalation, taskId);
-      this.announcePlanSkip(classified);
-      this.host.placement.sayPlacedWait(
-        this.host.placement.waitSubject(placed),
-        target,
-        waitsThere ? undefined : signInThere,
-      );
-      this.host.broadcastCrewCounts();
-      return { taskId, crewmate: "queued" };
-    }
-
-    // The record exists from the moment intent does (design principle 1);
-    // it is born active so the ready sweep never races the start below.
-    this.options.tasks.create({
-      id: taskId,
-      kind: "work",
-      title,
-      prompt: brief,
-      intent: input.intent,
-      repoId: boundRepoId,
-      difficulty: routed?.bucket ?? tierFor(classified).bucket ?? null,
-      shape: classified,
-      status: "active",
-      // Its computer rides the same write, so the stage places the crewmate
-      // on its own cluster from its first event (docs/crew-orbits.md).
-      deviceId: target,
-      ...graph,
-    });
-    this.announcePlanSkip(classified);
-    // The rejected attempt stops, keeps its branch and records the lineage
-    // before the fresh crewmate starts, so the two never run at once.
     if (escalation) await this.applyEscalation(escalation, taskId);
-    return this.withNamedModel(
-      await this.host.startTask({
-        taskId,
-        title,
-        brief,
-        repoId: boundRepoId,
-        routed,
-        fresh: true,
-        messageFiles: input.messageFiles ?? [],
-        ...(input.attachments?.length ? { attachments: input.attachments } : {}),
-      }),
-      input.shape,
-    );
-  }
-
-  /**
-   * A model the captain named routes only when it can serve, so a started
-   * commission's answer carries the model that took the task beside it
-   * (FI3-444). Read from the ask, since a review never routes on one.
-   */
-  private withNamedModel<T extends { taskId: string; crewmate: string }>(
-    handle: T,
-    ask: WorkShapeAsk | undefined,
-  ): T & { model?: NamedModel } {
-    const named = ask?.override_model_id?.trim();
-    if (!named || handle.crewmate === "queued") return handle;
-    return {
-      ...handle,
-      model: { named, took: this.options.tasks.get(handle.taskId)?.model ?? null },
-    };
+    this.announcePlanSkip(shape);
+    const started = this.host.startBehind(taskId, {
+      requested: { by: "firstmate", spawned: true },
+      message: { attachments: input.attachments ?? [], files: input.messageFiles ?? [] },
+    });
+    this.host.broadcastCrewCounts();
+    return { taskId, crewmate: "starting", started };
   }
 
   /** Presentation of the agent's declaration, never a host gate or inference. */
@@ -540,9 +428,18 @@ export class TaskIntake {
       intent: SpawnIntent;
       repoId?: string;
       priority?: number;
+      /** The first mate's spawn: answered once the review is recorded (INF-3060). */
+      behind?: boolean;
+      /** The model the first mate's words named, told beside the one that took it (FI3-444). */
+      named?: string;
     },
     reviewOf: string,
-  ): Promise<{ taskId: string; crewmate: string; review: ReviewAssigned }> {
+  ): Promise<{
+    taskId: string;
+    crewmate: string;
+    started?: Promise<void>;
+    review: ReviewAssigned;
+  }> {
     const builder = this.resolveTaskRef(reviewOf, "review_of");
     const handle = builder.key || builder.id;
     if (builder.kind !== "work") {
@@ -660,17 +557,25 @@ export class TaskIntake {
         data: { reviewTaskId: taskId },
       },
     );
-    const started = await this.host.startTask({
-      taskId,
-      title,
-      brief,
-      repoId: builder.repoId,
-      routed,
-      fresh: true,
-    });
+    const start = () =>
+      this.host.startTask({
+        taskId,
+        title,
+        brief,
+        repoId: builder.repoId,
+        routed,
+        fresh: true,
+        ...(input.behind ? { asked: true } : {}),
+      });
     // The answer names the version assigned, and whether the builder holds
     // edits not yet committed, which the review cannot see (INF-3141).
-    return { ...started, review: { head: headSha, uncommitted: await this.uncommitted(builder) } };
+    const review = { head: headSha, uncommitted: await this.uncommitted(builder) };
+    // The first mate's spawn answers once the review is recorded (INF-3060).
+    if (input.behind) {
+      const started = this.host.startTaskBehind(taskId, title, start, input.named);
+      return { taskId, crewmate: "starting", started, review };
+    }
+    return { ...(await start()), review };
   }
 
   /** Whether a builder's working copy holds edits not yet committed; null when unreadable. */

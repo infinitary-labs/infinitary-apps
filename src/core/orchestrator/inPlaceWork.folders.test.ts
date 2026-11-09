@@ -433,16 +433,29 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     });
     rmSync(h.folder, { recursive: true, force: true });
 
-    await expect(
-      h.supervisor.intake.commission({
-        title: "Update the shop folder",
-        intent,
-        repoId: h.repo.id,
-        shape: { in_folder: true },
-      }),
-    ).rejects.toThrow(
-      `Your project's folder ${h.folder} is missing, so this task cannot start on this computer. Infinitary started `,
-    );
+    // The spawn answers before its start runs (INF-3060): the refusal
+    // reaches the first mate in the same words, and the task stays open
+    // for its go, never behind the captain's decision (the captain's answer
+    // on INF-3075's review).
+    const refused = await h.supervisor.intake.commission({
+      title: "Update the shop folder",
+      intent,
+      repoId: h.repo.id,
+      shape: { in_folder: true },
+    });
+    await refused.started;
+    const missing = `Your project's folder ${h.folder} is missing, so this task cannot start on this computer. Infinitary started `;
+    expect(
+      h.ops.find(
+        (line) => line.includes(`task ${refused.taskId} `) && line.includes("could not start"),
+      ),
+    ).toContain(missing);
+    expect(h.tasks.get(refused.taskId)).toMatchObject({
+      status: "open",
+      gate: null,
+      startPolicy: "on-request",
+      startNotice: expect.stringContaining(JSON.stringify(missing).slice(1, -1)),
+    });
     const [repair] = folderRepairs();
     if (!repair) throw new Error("no repair task was filed");
     expect(repair).toMatchObject({ title: FOLDER_REPAIR_TITLE });
@@ -879,8 +892,9 @@ describe("work the first mate declares in a project's folder (INF-567, real git)
       intent: intent("Edit the one-pager."),
       repoId: h.repo.id,
     });
-    expect(ordinary.crewmate).toBe("queued");
-    expect(h.tasks.get(ordinary.taskId)?.deviceId).toBe(MINI);
+    // The spawn answers before its start runs (INF-3060); the start waits.
+    await ordinary.started;
+    expect(h.tasks.get(ordinary.taskId)).toMatchObject({ status: "open", deviceId: MINI });
 
     // Folder work starts here, in the folder itself.
     const folder = await h.supervisor.intake.commission({

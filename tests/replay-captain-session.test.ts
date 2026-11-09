@@ -290,7 +290,10 @@ describe("the plan-to-build handoff, on the real FI3-309 to FI3-310 recording", 
     expect(sep30HandoffAgree.fidelity).toMatchObject({
       recorded_captain_turns: 5,
       replayed_captain_turns: 5,
-      unrecorded_firstmate_wakes: 0,
+      // The recorded spawn named its model and read which model took the task
+      // in the tool's answer; that answer now returns before the start, so the
+      // model arrives in a wake the recording never answered (INF-3060).
+      unrecorded_firstmate_wakes: 1,
       crewmate_sessions: 1,
       missing_tools: [],
       settle_timeouts: 0,

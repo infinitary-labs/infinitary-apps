@@ -1,0 +1,9 @@
+# Start tools return at once
+
+INF-3060's product friction review found the first mate's reply held for 72 to 101 seconds while a crewmate started, and the captain chose to have the start, move and steer tools return at once and show the wait on the task.
+spawn_crewmate's answer for an immediate start, a review's included, now says the task is recorded and starting, that its tile shows any wait, and that an [fm-op] follows if it cannot start, if it waits for something its tile does not name, or, when the captain named a model, which model took it.
+update_task start_now and start_again answer that the task is starting, with the same promise.
+steer_crewmate answers once the message is recorded in the task's inbox, while delivery runs; with files_from it records the message at once, behind a line saying the files did not arrive, holds the task's inbox while the files cross, and then revises that line to say where they are.
+A message to a task that has not started, or whose start failed and waits for start_now, is kept and reaches its crewmate right after its brief, and files handed to it cross once it has started; a message sent while an earlier one with files is still crossing is kept and read right after it, in the order sent.
+Four wakes own the outcomes: `queued-started` and `queued-start-failed` say "which you started" for a start the first mate asked for, and a failed asked start's `queued-start-failed` says the task is still open with nothing running, that update_task start_now tries it again and update_task drop removes it; the new `asked-start-waits` names a wait the tile does not; and the new `handover-failed` says the files were not handed over, how many reached the task, and that the message is kept and read with the line saying the files did not arrive.
+The tool answers own the promise; the wakes own the outcome; nothing is added to the core.

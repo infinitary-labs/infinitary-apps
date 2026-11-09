@@ -459,9 +459,9 @@ describe("a task that runs on a computer that runs work", () => {
     await home.supervisor.watch.sweepGates(now());
     expect(home.tasks.get("t-none")?.status).toBe("open");
     expect(waits()).toHaveLength(1);
-    expect(await home.supervisor.starts.startQueuedNow("t-none", "captain")).toContain(
-      "has no sign-ins yet",
-    );
+    expect(
+      await home.supervisor.starts.startQueuedNow("t-none", { audience: "captain" }),
+    ).toContain("has no sign-ins yet");
 
     // Signed in there: the computer says so, and the task starts by itself.
     model([{ text: "Done." }]);

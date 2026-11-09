@@ -1,14 +1,19 @@
 import { execFileSync } from "node:child_process";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { runsHereOnly } from "@shared/repos";
 import { describe, expect, it, vi } from "vitest";
+import { deferred } from "../../../tests/helpers/deferred";
 import { decodeContext, fakeClockEachTest, setup } from "../../../tests/helpers/firstmateHarness";
 import { firstmateTools } from "../../../tests/helpers/firstmateTools";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { readTaskQueryText } from "../../../tests/helpers/taskQueryText";
+import { crewmateHandoverDir } from "../paths";
 import { toolsFingerprint } from "../pi/piResources";
 import { piToolsOf } from "../pi/toolSpec";
 import { FIRSTMATE_TOOLS } from "../session/tools";
 import { CardStore } from "../storage/cardStore";
+import { keepHandoverFiles } from "../tasks/handoverFiles";
 import { queueWaitOf } from "../tasks/queueWait";
 import { queryTasks, taskResolutionBody } from "../tasks/taskQuery";
 import { formatFlagshipError } from "./firstmateSeat";
@@ -21,6 +26,20 @@ vi.mock("../utilityQos", async (importOriginal) =>
 
 /** The first mate agent: the served tool surface and the graph tools (tests/helpers/firstmateHarness.ts). */
 fakeClockEachTest();
+
+/**
+ * A start the first mate's tool answered before it ran (INF-3060) has run:
+ * its crewmate holds it and the start it published is over.
+ */
+async function startedBehind(
+  tasks: ReturnType<typeof setup>["tasks"],
+  taskId: string,
+): Promise<void> {
+  await vi.waitFor(() => {
+    expect(tasks.get(taskId)?.status).toBe("active");
+    expect(tasks.starts.startAttemptOf(taskId)).toBeUndefined();
+  });
+}
 
 describe("the Firstmate's served tool surface", () => {
   it("serves the Pi seat the whole tool set", async () => {
@@ -209,9 +228,11 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     expect(await text("update_task", { task: "SCR-3", basis: "SCR-2" })).toContain("basis SCR-2");
     expect(tasks.get(build.id)?.shape?.basis).toBe("SCR-2");
     const amendedGoal = "Implement the full accepted specification and its amendment";
+    // start_now answers once the start is accepted, before it runs (INF-3060).
     expect(
       await text("update_task", { task: "SCR-3", goal: amendedGoal, start_now: true }),
-    ).toContain("Started");
+    ).toContain('SCR-3 "Existing implementation" is starting.');
+    await startedBehind(tasks, build.id);
     expect(tasks.get(build.id)?.intent?.goal).toBe(amendedGoal);
     const read = await text("tasks", { key: "SCR-3" });
     const receipt = JSON.parse(read.slice(read.indexOf("[")))[0];
@@ -240,7 +261,12 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     const replacement = tasks.graph.replacementOf("old-draft");
     expect(replacement).toBeTruthy();
     expect(answer.content[0]?.text).toContain(`${replacement} replaces`);
-    expect(tasks.resolve(replacement ?? "")?.status).toBe("active");
+    // The fresh attempt starts behind the answer (INF-3060).
+    await vi.waitFor(() => {
+      const fresh = tasks.resolve(replacement ?? "");
+      expect(fresh?.status).toBe("active");
+      expect(tasks.starts.startAttemptOf(fresh?.id ?? "")).toBeUndefined();
+    });
     expect(tasks.get("old-draft")?.status).toBe("dropped");
     const seq = tasks.boardSeq();
     const refused = await update.execute(
@@ -282,7 +308,9 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       start_now: true,
     });
     expect(answer).toContain("Updated SCR-2: model claude-fable-5-1.");
-    expect(answer).toContain('Started SCR-2 "Teach working colors"');
+    // start_now answers once the start is accepted, before it runs (INF-3060).
+    expect(answer).toContain('SCR-2 "Teach working colors" is starting.');
+    await startedBehind(tasks, filed.id);
     expect(tasks.get(filed.id)).toMatchObject({
       key: "SCR-2",
       status: "active",
@@ -304,7 +332,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
   it("answers a spawn on a named model through native tools without confirming a model nothing recorded (FI3-444)", async () => {
     // This harness routes nothing and its crew sessions name no model, so
     // nothing confirms the one the captain named.
-    const { agent, specs, tasks } = setup();
+    const { agent, session, specs, tasks } = setup();
     await agent.converse("start the color lesson with a fable crewmate");
     const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
     const spawn = tools.find((entry) => entry.name === "spawn_crewmate");
@@ -324,11 +352,133 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
           {},
         )
       ).content[0]?.text ?? "";
+    // The spawn answers once the task is recorded, before any model takes
+    // it (INF-3060), so the model reaches the first mate when it runs.
     const started = tasks.list().find((task) => task.title === "Teach working colors");
-    expect(started).toMatchObject({ status: "active", model: null });
     expect(answer).toBe(
-      `Commissioned crewmate 1 on task ${started?.id}; it runs with no model recorded, so claude-fable-5-1 is not confirmed.`,
+      `Recorded task ${started?.id}; it is starting now, and its tile shows any wait, such as for room on its computer. You hear an [fm-op] if it cannot start or waits for something its tile does not name, and which model took it once it runs.`,
     );
+    await startedBehind(tasks, started?.id ?? "");
+    expect(tasks.get(started?.id ?? "")).toMatchObject({ status: "active", model: null });
+    // The wake follows the turn that started it.
+    session.emitTurnEnd("Starting it.");
+    session.resolveNextPrompt();
+    await vi.waitFor(() =>
+      expect(session.prompts.join("\n")).toContain(
+        `[fm-op] task ${started?.id} "Teach working colors", which you started, is running now, with no model recorded, so claude-fable-5-1 is not confirmed.`,
+      ),
+    );
+  });
+
+  // INF-3060 finding 1: a start that took 91 seconds to prepare its working
+  // copy held the first mate's reply for all of it.
+  it("answers spawn_crewmate and start_now while the start itself is still running", async () => {
+    const { agent, specs, tasks, supervisor } = setup();
+    await agent.converse("start the color work");
+    const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
+    const text = async (name: string, params: Record<string, unknown>) => {
+      const tool = tools.find((entry) => entry.name === name);
+      if (!tool) throw new Error(`missing ${name}`);
+      return (await tool.execute("c", params, undefined, undefined, {})).content[0]?.text ?? "";
+    };
+    const held = deferred<void>();
+    const startTask = supervisor.starts.startTask.bind(supervisor.starts);
+    vi.spyOn(supervisor.starts, "startTask").mockImplementation(async (spec) => {
+      await held.promise;
+      return startTask(spec);
+    });
+
+    const spawned = await text("spawn_crewmate", {
+      title: "Color audit",
+      goal: "Audit the colors",
+      user_words: "start the color work",
+    });
+    const audit = tasks.list().find((task) => task.title === "Color audit");
+    expect(spawned).toContain(`Recorded task ${audit?.id}; it is starting now`);
+    await vi.waitFor(() => expect(supervisor.starts.startTask).toHaveBeenCalled());
+    // Its tile reads Starting for as long as the start runs.
+    expect(tasks.starts.startAttemptOf(audit?.id ?? "")?.phase).toBe("preparing");
+
+    await text("create_task", { title: "Color notes", goal: "Notes", user_words: "notes" });
+    const notes = tasks.list().find((task) => task.title === "Color notes");
+    const nudged = await text("update_task", { task: notes?.id ?? "", start_now: true });
+    expect(nudged).toContain('"Color notes" is starting.');
+    await vi.waitFor(() => expect(supervisor.starts.startTask).toHaveBeenCalledTimes(2));
+    expect(tasks.starts.startAttemptOf(notes?.id ?? "")?.phase).toBe("preparing");
+    expect(tasks.starts.startAttemptOf(audit?.id ?? "")?.phase).toBe("preparing");
+
+    held.resolve();
+    await startedBehind(tasks, audit?.id ?? "");
+    await startedBehind(tasks, notes?.id ?? "");
+  });
+
+  // INF-3075's review of INF-3060: the takeover flow - spawn_crewmate
+  // branch_from the blocked task, then steer_crewmate files_from it - sends
+  // the steer while the takeover is still starting behind the answer.
+  it("hands files and a message to a takeover still starting, once it has started", async () => {
+    const { agent, specs, tasks, supervisor, paths, crewSpecs, crewSessions } = setup({
+      seedTasks: [
+        {
+          id: "t-blocked",
+          title: "Fix the meter",
+          status: "idle",
+          branch: "fm/task-t-blocked",
+          worktreeDir: "/work/t-blocked",
+        },
+      ],
+    });
+    const picture = join(scratchDir("infinitary-takeover-"), "meter.png");
+    writeFileSync(picture, "the meter as it stood");
+    await keepHandoverFiles([picture], crewmateHandoverDir(paths, "t-blocked"));
+    await agent.converse("take over the meter fix");
+    const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
+    const text = async (name: string, params: Record<string, unknown>) => {
+      const tool = tools.find((entry) => entry.name === name);
+      if (!tool) throw new Error(`missing ${name}`);
+      return (await tool.execute("c", params, undefined, undefined, {})).content[0]?.text ?? "";
+    };
+    const held = deferred<void>();
+    const startTask = supervisor.starts.startTask.bind(supervisor.starts);
+    vi.spyOn(supervisor.starts, "startTask").mockImplementation(async (spec) => {
+      await held.promise;
+      return startTask(spec);
+    });
+
+    await text("spawn_crewmate", {
+      title: "Take over: fix the meter",
+      goal: "Fix the meter",
+      user_words: "take over the meter fix",
+      branch_from: "t-blocked",
+    });
+    const takeover = tasks.list().find((task) => task.title === "Take over: fix the meter");
+    const id = takeover?.id ?? "";
+    const handed = await text("steer_crewmate", {
+      task_id: id,
+      message: "the screenshot shows the clipped meter",
+      files_from: "t-blocked",
+    });
+    expect(handed).toContain("once the task has started");
+    // A source the hand-over cannot use is refused now, not after the start.
+    await expect(
+      text("steer_crewmate", { task_id: id, message: "and these", files_from: "t-none" }),
+    ).rejects.toThrow("There is no task t-none to hand files from.");
+    expect(await text("steer_crewmate", { task_id: id, message: "keep its colors" })).toContain(
+      "reads it right after your earlier message with files",
+    );
+
+    held.resolve();
+    await startedBehind(tasks, id);
+    const session = () => crewSessions[crewSpecs.findIndex((spec) => spec.owner === id)];
+    await vi.waitFor(() => expect(session()?.steers).toHaveLength(1));
+    // The files' line, then both messages, in the order the first mate sent them.
+    const read = session()?.steers[0]?.text ?? "";
+    const order = [
+      "Files handed to you from",
+      "the screenshot shows the clipped meter",
+      "keep its colors",
+    ].map((words) => read.indexOf(words));
+    expect(order[0]).toBe(0);
+    expect(order).toEqual([...order].sort((a, b) => a - b));
   });
 
   // INF-8: INF-3, moved from firstmate-3000's project into Infinitary's,
@@ -382,7 +532,8 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     });
     // infinitary runs on this Mac, so the task goes there before it starts.
     expect(tasks.get(step?.id as string)?.deviceId ?? null).toBeNull();
-    expect(await text("update_task", { task: "INF-1", start_now: true })).toContain("Started");
+    expect(await text("update_task", { task: "INF-1", start_now: true })).toContain("is starting.");
+    await startedBehind(tasks, step?.id as string);
     expect(tasks.get(step?.id as string)).toMatchObject({
       status: "active",
       repoId: infinitary.repo.id,
@@ -662,8 +813,9 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     };
     await text("create_task", { title: "Color audit", goal: "Audit", user_words: "audit" });
     expect(await text("update_task", { task: "SCR-1", start_now: true })).toContain(
-      "Started SCR-1",
+      'SCR-1 "Color audit" is starting.',
     );
+    await startedBehind(tasks, tasks.byKey("SCR-1")?.id ?? "SCR-1");
     const started = tasks.byKey("SCR-1");
     if (started?.status !== "active") throw new Error("The task did not start");
     const moving = vi.spyOn(supervisor.hostOps, "moveToBacklog");

@@ -168,8 +168,9 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       const followup = tasks.graph.discoveredFrom(taskId)[0];
       expect(followup?.status).toBe("open");
-      expect(await supervisor.starts.startQueuedNow(followup?.key ?? "")).toContain("Started");
+      expect(await supervisor.starts.startQueuedNow(followup?.key ?? "")).toContain("is starting.");
       await tick();
+      expect(tasks.get(followup?.id ?? "")?.status).toBe("active");
       expect(tasks.get(followup?.id ?? "")?.shape).toMatchObject({
         kind: "fix",
         rigor: "standard",
@@ -352,7 +353,7 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
     vi.useRealTimers();
     initOverflowDir(scratchDir("infinitary-task-text-"));
     const crewmate = fakeCrewmate();
-    const { supervisor } = setup(crewmate);
+    const { supervisor, ops, tasks } = setup(crewmate);
     const messageFiles: MessageFile[] = [];
     withPastedFiles(
       "Read this",
@@ -360,13 +361,21 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
       messageFiles,
     );
     writeFileSync(messageFiles[0]?.path ?? "", "Changed after acceptance.");
-    await expect(
-      supervisor.intake.commission({
-        title: "Read the notes",
-        intent: intentOf("Read the notes"),
-        messageFiles,
-      }),
-    ).rejects.toThrow("notes.txt changed");
+    // The answer comes before the start (INF-3060); the start refuses and
+    // the first mate hears why.
+    const { taskId, started } = await supervisor.intake.commission({
+      title: "Read the notes",
+      intent: intentOf("Read the notes"),
+      messageFiles,
+    });
+    await started;
+    expect(ops.find((line) => line.includes(`task ${taskId} "Read the notes"`))).toContain(
+      "could not start",
+    );
+    expect(ops.find((line) => line.includes(`task ${taskId} "Read the notes"`))).toContain(
+      "notes.txt changed",
+    );
+    expect(tasks.get(taskId)?.status).not.toBe("active");
     expect(crewmate.promptCalls).toEqual([]);
   });
 

@@ -9,7 +9,6 @@ import type { CiReadingFact } from "../orchestrator/ciFact";
 import type { SteerDelivery } from "../orchestrator/crewRuntime";
 import { crewHoldWays, type HoldRefusal, renderHold } from "../orchestrator/holds";
 import { parseSpawnIntent, type SpawnIntent } from "../orchestrator/intentBrief";
-import { type NamedModel, namedModelWords } from "../orchestrator/namedModel";
 import { boundTool, stringEnum } from "../session/tools";
 import type { CardRefusalReason } from "../storage/taskStore";
 import type { SettleRefusal } from "../tasks/taskGraph";
@@ -36,8 +35,9 @@ export const PLACEMENT_REQUIREMENTS_PARAM = Type.Object(
  * in the default workspace.
  *
  * spawn_crewmate follows the admission-handle discipline: it returns a
- * small handle (task id + crewmate name) as soon as the session starts;
- * results arrive later as [fm-op] inbox messages, never as the tool result.
+ * small handle (the task id) as soon as the task is recorded, before its
+ * crewmate starts (INF-3060); results arrive later as [fm-op] inbox
+ * messages, never as the tool result.
  */
 
 export type CrewStatusEntry = {
@@ -204,9 +204,8 @@ export type CrewDelegate = {
     priority?: number;
   }): Promise<{
     taskId: string;
+    /** `queued` for work that waits, otherwise starting behind the answer (INF-3060). */
     crewmate: string;
-    /** The model the user named beside the one that took the task (FI3-444). */
-    model?: NamedModel;
     /** A review ask's assigned version (INF-3141). */
     review?: ReviewAssigned;
   }>;
@@ -225,6 +224,17 @@ export type CrewDelegate = {
    * hand-over folder (INF-992); answers the words its steer carries.
    */
   handFiles?(fromTask: string, toTask: string): Promise<string>;
+  /**
+   * The same hand-over with the steer after it, answered once its checks
+   * pass and before the files cross (INF-3060); a failure after that wakes
+   * the first mate.
+   */
+  steerAfterFiles?(
+    fromTask: string,
+    taskId: string,
+    message: string,
+    response?: import("@shared/crewResponses").ResponsePolicy,
+  ): Promise<void>;
   interruptCrewmate(
     taskId: string,
     mode: "interrupt" | "cancel",
@@ -634,7 +644,7 @@ export function createCrewTools(delegate: CrewDelegate) {
         ...(params.delivery_note !== undefined ? { delivery_note: params.delivery_note } : {}),
         ...(params.personal_ui ? { kind: "personal-ui" } : {}),
       });
-      const { taskId, crewmate, model, review } = await delegate.commission({
+      const { taskId, crewmate, review } = await delegate.commission({
         title: params.title,
         intent,
         ...(params.repo_id ? { repoId: params.repo_id } : {}),
@@ -649,15 +659,17 @@ export function createCrewTools(delegate: CrewDelegate) {
       const queued = crewmate === "queued";
       const fromCard = params.from_card?.trim();
       const line = fromCard ? (delegate.startedFrom?.(fromCard, taskId, queued) ?? "") : "";
-      // A named model routes only when it can serve, so the answer says
-      // which model took the task, never the named one on its own (FI3-444).
+      // A named model routes only when it can serve, so which model took
+      // the task is told once it runs, never the named one on its own
+      // (FI3-444).
       if (queued) {
         return {
           text: `Queued task ${taskId}; it starts when its wait ends and you will hear about it as [fm-op] messages.${shape?.override_model_id ? " Which model takes it is known only once it starts." : ""}${line}`,
         };
       }
+      // Recorded, and starting behind this answer (INF-3060).
       return {
-        text: `Commissioned ${crewmate} on task ${taskId}${model ? `; it runs ${namedModelWords(model)}` : ""}.${review ? reviewAssignedWords(review) : ""}${line}`,
+        text: `Recorded task ${taskId}; it is starting now, and its tile shows any wait, such as for room on its computer. You hear an [fm-op] if it cannot start or waits for something its tile does not name${shape?.override_model_id ? ", and which model took it once it runs" : ""}.${review ? reviewAssignedWords(review) : ""}${line}`,
       };
     },
   });
@@ -700,25 +712,33 @@ export function createCrewTools(delegate: CrewDelegate) {
       files_from: Type.Optional(Type.String()),
     }),
     run: async (params) => {
-      const handed = params.files_from?.trim()
-        ? await (delegate.handFiles ?? missingHandFiles)(params.files_from.trim(), params.task_id)
+      const response: import("@shared/crewResponses").ResponsePolicy = {
+        mode: params.response_mode ?? "expected",
+        ...(params.response_context
+          ? {
+              card: {
+                id: params.response_context.card_id,
+                lifecycle: params.response_context.lifecycle,
+                messageId: params.response_context.captain_message_id,
+              },
+            }
+          : {}),
+        ...(params.cancel_response_requests ? { cancel: params.cancel_response_requests } : {}),
+      };
+      const from = params.files_from?.trim();
+      if (from && delegate.steerAfterFiles) {
+        await delegate.steerAfterFiles(from, params.task_id, params.message, response);
+        return {
+          text: `Task ${params.task_id} has your message, recorded; its crewmate reads it as soon as the files from ${from} are handed over, verified, once the task has started if it has not yet. You hear an [fm-op] only if the files do not arrive. Do not resend.`,
+        };
+      }
+      const handed = from
+        ? await (delegate.handFiles ?? missingHandFiles)(from, params.task_id)
         : undefined;
       const delivery = await delegate.steerCrewmate(
         params.task_id,
         handed ? `${params.message}\n\n${handed}` : params.message,
-        {
-          mode: params.response_mode ?? "expected",
-          ...(params.response_context
-            ? {
-                card: {
-                  id: params.response_context.card_id,
-                  lifecycle: params.response_context.lifecycle,
-                  messageId: params.response_context.captain_message_id,
-                },
-              }
-            : {}),
-          ...(params.cancel_response_requests ? { cancel: params.cancel_response_requests } : {}),
-        },
+        response,
       );
       // A queued steer is reported as queued. The crewmate this task runs on
       // cannot take guidance mid-turn, so saying "steered" would tell the
@@ -732,8 +752,12 @@ export function createCrewTools(delegate: CrewDelegate) {
               : delivery === "recorded-held"
                 ? heldSteerText(params.task_id)
                 : delivery === "recorded-queued"
-                  ? `Task ${params.task_id}'s latest update is being handled right now, so your message is durably queued and will be delivered right after, in order. Do not resend.`
-                  : `Steered task ${params.task_id}.`,
+                  ? `Task ${params.task_id} has not started yet; your message is recorded and its crewmate reads it right after its brief once it starts. Do not resend.`
+                  : delivery === "recorded-sending"
+                    ? `Task ${params.task_id} has your message, recorded; it is being delivered now and is retried automatically if delivery fails. Do not resend.`
+                    : delivery === "after-files"
+                      ? `Task ${params.task_id} has your message, recorded; its crewmate reads it right after your earlier message with files, once those are handed over, in the order you sent them. Do not resend.`
+                      : `Steered task ${params.task_id}.`,
       };
     },
   });

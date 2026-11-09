@@ -324,16 +324,19 @@ describe("capture: every captain ask lands in a task", () => {
         expect(detail.brief.length).toBeGreaterThan(0);
         expect(detail.intent?.userWords).toContain(title);
         const kinds = detail.events.map((event) => event.kind);
-        // The dispatch's quiet line about its working copy follows `dispatched`.
+        // The spawn answers once the task is recorded, so its ask attaches
+        // before the start that runs behind the answer (INF-3060), which
+        // records no starting line; the dispatch's quiet line about its
+        // working copy follows `dispatched`.
         expect(kinds.slice(0, 6)).toEqual([
           "created",
+          "ask",
           "dispatched",
           "note",
           "briefed",
-          "ask",
           "report",
         ]);
-        expect(detail.events[2]?.text).toBe(
+        expect(detail.events[3]?.text).toBe(
           "a new working copy was made, starting from the project's current commit",
         );
         // The landing close, then its clean worktree retiring (WI-7), then the probe.

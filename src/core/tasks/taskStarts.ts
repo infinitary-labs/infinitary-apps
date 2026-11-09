@@ -348,6 +348,36 @@ export class TaskStarts {
     return run();
   }
 
+  /**
+   * A start begun behind the first mate's answer on a backlog task queues it
+   * (INF-3060): a quit before the start finishes leaves it for the next
+   * launch's sweep, as it leaves a spawn. A failure puts it back in the
+   * backlog (`failManualStart` with `onRequest`), and a start puts it back
+   * on request (`keepOnRequest`).
+   */
+  queueForStart(id: string): void {
+    const run = this.writer.write(() => {
+      const record = this.writer.store.get(id);
+      if (record?.status !== "open" || record.startPolicy !== "on-request") return;
+      this.writer.patch(id, { startPolicy: "when-ready", updatedAt: this.writer.now() });
+    });
+    run();
+  }
+
+  /**
+   * A backlog task that `queueForStart` queued has started: it goes back on
+   * request, as a started backlog task always stayed, so nothing starts it
+   * again on its own if it later waits.
+   */
+  keepOnRequest(id: string): void {
+    const run = this.writer.write(() => {
+      const record = this.writer.store.get(id);
+      if (record?.status !== "active" || record.startPolicy !== "when-ready") return;
+      this.writer.patch(id, { startPolicy: "on-request", updatedAt: this.writer.now() });
+    });
+    run();
+  }
+
   /** The attempt is claimed, refused, or no longer the thing the board should preview. */
   clearStartAttempt(id: string): void {
     if (!this.startAttempts.has(id)) return;
@@ -430,9 +460,11 @@ export class TaskStarts {
 
   /**
    * A confirmed manual start did not begin. Back to open, start policy kept,
-   * the reason stored so a reopened view still says why.
+   * the reason stored so a reopened view still says why. A start the first
+   * mate asked for (INF-3060) also waits for its go, `onRequest`: the sweep
+   * never starts it again on its own, and update_task start_now does.
    */
-  failManualStart(id: string, reason: string): void {
+  failManualStart(id: string, reason: string, options: { onRequest?: true } = {}): void {
     const at = this.writer.now();
     const run = this.writer.write(() => {
       const record = this.writer.store.get(id);
@@ -449,6 +481,7 @@ export class TaskStarts {
         model: null,
         startedAt: null,
         startNotice: JSON.stringify({ reason }),
+        ...(options.onRequest ? { startPolicy: "on-request" as const } : {}),
         updatedAt: at,
       });
       this.writer.addEvent({
@@ -464,7 +497,12 @@ export class TaskStarts {
     run();
   }
 
-  claimForDispatch(id: string, from?: typeof TASK_CARD_VIA, panel?: string): boolean {
+  claimForDispatch(
+    id: string,
+    from?: typeof TASK_CARD_VIA,
+    panel?: string,
+    options: { spawned?: true } = {},
+  ): boolean {
     const run = this.writer.write(() => {
       const record = this.writer.mustGet(id);
       if (record.status !== "open" || record.kind !== "work") return false;
@@ -476,6 +514,9 @@ export class TaskStarts {
         startedAt: record.startedAt ?? at,
         updatedAt: at,
       });
+      // A task spawned just now (INF-3060) shows Starting on its tile and
+      // records no starting line, as a spawn never has.
+      if (options.spawned) return true;
       // The captain's Start on the task card is his, and says where it came from.
       this.writer.addEvent({
         taskId: id,

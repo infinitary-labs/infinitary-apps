@@ -1237,10 +1237,13 @@ class Replay {
           /verbatim[^\n]*\n(.*)$/m.exec(brief)?.[1] ?? goal;
         this.pendingSpawnAlias = event.alias;
         try {
-          await this.supervisor.intake.commission({
+          // The production spawn answers before its start; the replay plays
+          // on once that start has run, as the recording did (INF-3060).
+          const handle = await this.supervisor.intake.commission({
             title: goal.slice(0, 64),
             intent: { goal, userWords: words },
           });
+          await handle.started;
         } finally {
           this.pendingSpawnAlias = null;
         }

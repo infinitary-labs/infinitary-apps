@@ -347,7 +347,8 @@ describe("FirstmateAgent answer delivery", () => {
       user_words: "Find what's using the memory",
       ask_id: ask?.id,
     });
-    expect(started?.content[0]?.text).toContain("Commissioned");
+    // Recorded at once; its crewmate starts behind the answer (INF-3060).
+    expect(started?.content[0]?.text).toContain("it is starting now");
     await vi.waitFor(() => expect(f.crewSpecs).toHaveLength(1));
     await finish(f, "Started.");
     expect(retries(f)).toEqual([]);

@@ -484,6 +484,8 @@ export function setup(
     specs,
     /** What each crewmate session was opened with: its card and reply outputs. */
     crewSpecs: crew.specs,
+    /** Each crewmate session, in the order of `crewSpecs`. */
+    crewSessions: crew.sessions,
     events,
     cards: () => cards,
     db,

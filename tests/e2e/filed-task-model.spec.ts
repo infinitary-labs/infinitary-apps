@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
+import { START_WORDS } from "../../src/core/orchestrator/startWakes";
 import type { TaskDetail, TaskView } from "../../src/shared/tasks";
 import { crewSummary, pointAtCrewmate } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -105,13 +106,21 @@ test("a filed task starts on the model the captain names, keeping its key and pa
     expect(await detail(page, id)).toMatchObject({ key, status: "active", parentId: parent?.id });
     // It routed by the captain's named model (R0), and only so.
     expect(routingRules(launched.userDataDir, id)).toEqual(["R0"]);
-    // The Firstmate's one call named the model and started the row, and its
-    // answer says which model took it.
-    // As it rides the next request: a string inside the JSON body.
-    const answered = JSON.stringify(`Started ${key} "${FILED_MODEL_TITLE}" on ${named}.`).slice(
-      1,
-      -1,
-    );
+    // The Firstmate's one call named the model and started the row; its
+    // answer returns while the start runs (INF-3060), and the wake once it
+    // runs says which model took it (FI3-444).
+    // As it rides a later request: a string inside the JSON body.
+    const answered = JSON.stringify(
+      START_WORDS["queued-started"](
+        {
+          kind: "queued-started",
+          task: { id, title: FILED_MODEL_TITLE },
+          model: { named, took: named },
+          asked: true,
+        },
+        {},
+      ),
+    ).slice(1, -1);
     const carrying = () =>
       (launched.mockProvider?.requestBodies() ?? []).find((body) => body.includes(answered));
     await expect.poll(() => carrying() ?? null, { timeout: 30_000 }).not.toBeNull();

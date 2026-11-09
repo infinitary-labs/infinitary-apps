@@ -42,6 +42,47 @@ import { RESTART_REPLAY_NOTE, renderWake } from "./wakes";
 
 fakeCrewTimersEachTest();
 
+/**
+ * What the first mate hears of a start its spawn answered before it ran
+ * (INF-3060): every wake that names the task, once the start has run.
+ */
+async function startWakes(
+  ops: readonly string[],
+  handle: { taskId: string; started?: Promise<void> },
+): Promise<string[]> {
+  await handle.started;
+  return ops.filter((line) => line.includes(`task ${handle.taskId} `));
+}
+
+/** The words of the wake naming the model that took a start the first mate asked for (FI3-444). */
+function startedOn(taskId: string, model: { named: string; took: string | null }): string {
+  return renderWake({
+    facts: {
+      kind: "queued-started",
+      task: { id: taskId, title: "Teach the colors" },
+      model,
+      asked: true,
+    },
+  });
+}
+
+/**
+ * The words of the wake a failed start behind the first mate's answer sends:
+ * the refusal itself, and that the task is still open for start_now or a
+ * drop (the captain's answer on INF-3075's review of INF-3060).
+ */
+function startFailed(taskId: string, title: string, error: string): string {
+  return renderWake({
+    facts: {
+      kind: "queued-start-failed",
+      task: { id: taskId, title },
+      error,
+      asked: true,
+      open: true,
+    },
+  });
+}
+
 describe("CrewSupervisor", () => {
   // INF-1381: Dynamic routing off must still bind a signed-in model/account,
   // or explain why none serves, before a coding session can ask Pi for a key.
@@ -80,7 +121,7 @@ describe("CrewSupervisor", () => {
     "explains routing-off startup with %s without opening an account-less session",
     async (scenario) => {
       const model = { provider: "openai-codex", id: "gpt-5.5" };
-      const { supervisor, sessionSpecs } = setup(fakeCrewmate(), {
+      const { supervisor, sessionSpecs, ops } = setup(fakeCrewmate(), {
         realRouter: (db) => routingOffRouter(db, scenario === "empty-pool" ? [] : [model]),
         accounts: {
           selectForSpawn: () => undefined,
@@ -88,16 +129,21 @@ describe("CrewSupervisor", () => {
           labelOf: () => undefined,
         },
       });
-      await expect(
-        supervisor.intake.commission({
-          title: "Read the project",
-          intent: intentOf("read the project"),
-        }),
-      ).rejects.toThrow(
-        scenario === "empty-pool"
-          ? "No signed-in model can take this task now. Check your accounts and their allowance in Settings → Intelligence."
-          : "No eligible account can serve the selected model now. Check your accounts and their allowance in Settings → Intelligence.",
-      );
+      const handle = await supervisor.intake.commission({
+        title: "Read the project",
+        intent: intentOf("read the project"),
+      });
+      // The spawn answers before the start runs (INF-3060); the refusal
+      // reaches the first mate as the start-failed wake, in the same words.
+      expect(await startWakes(ops, handle)).toEqual([
+        startFailed(
+          handle.taskId,
+          "Read the project",
+          scenario === "empty-pool"
+            ? "No signed-in model can take this task now. Check your accounts and their allowance in Settings → Intelligence."
+            : "No eligible account can serve the selected model now. Check your accounts and their allowance in Settings → Intelligence.",
+        ),
+      ]);
       expect(sessionSpecs).toHaveLength(0);
     },
   );
@@ -133,18 +179,21 @@ describe("CrewSupervisor", () => {
   });
 
   it("refuses in words a start no model can take when the account-less runtime serves none", async () => {
-    const { supervisor, sessionSpecs } = setup(fakeCrewmate(), {
+    const { supervisor, sessionSpecs, ops } = setup(fakeCrewmate(), {
       realRouter: (db) => catalogLessRouter(db, []),
       accountlessServes: () => false,
     });
-    await expect(
-      supervisor.intake.commission({
-        title: "Read the project",
-        intent: intentOf("read the project"),
-      }),
-    ).rejects.toThrow(
-      "No signed-in model can take this task now. Check your accounts and their allowance in Settings → Intelligence.",
-    );
+    const handle = await supervisor.intake.commission({
+      title: "Read the project",
+      intent: intentOf("read the project"),
+    });
+    expect(await startWakes(ops, handle)).toEqual([
+      startFailed(
+        handle.taskId,
+        "Read the project",
+        "No signed-in model can take this task now. Check your accounts and their allowance in Settings → Intelligence.",
+      ),
+    ]);
     expect(sessionSpecs).toHaveLength(0);
   });
 
@@ -249,42 +298,51 @@ describe("CrewSupervisor", () => {
   it("hands spawn_crewmate the model that took new work the captain named one for (FI3-444)", async () => {
     const fable = { provider: CLAUDE_PROVIDER_ID, id: "claude-fable-5-1" };
     const spawn = async (crewmate: FakeCrewmate, named?: string) => {
-      const { supervisor, tasks } = setup(crewmate, { routedModel: fable });
+      const { supervisor, tasks, ops } = setup(crewmate, { routedModel: fable });
       const handle = await supervisor.intake.commission({
         title: "Teach the colors",
         intent: intentOf("start it with a fable crewmate"),
         ...(named ? { shape: { override_model_id: named } } : {}),
       });
+      // The spawn answers before the start runs (INF-3060): the model that
+      // took it reaches the first mate on the started wake.
+      const wakes = await startWakes(ops, handle);
       await tick();
-      return { handle, model: tasks.get(handle.taskId)?.model };
+      return { handle, wakes, model: tasks.get(handle.taskId)?.model };
     };
 
-    // The named model took it: the handle carries it beside the record's.
+    // The named model took it: the wake carries it beside the record's.
     const served = await spawn(fakeCrewmate({ model: fable }), "claude-fable-5-1");
-    expect(served.handle.model).toEqual({
-      named: "claude-fable-5-1",
-      took: `${CLAUDE_PROVIDER_ID}/claude-fable-5-1`,
-    });
+    expect(served.wakes).toEqual([
+      startedOn(served.handle.taskId, {
+        named: "claude-fable-5-1",
+        took: `${CLAUDE_PROVIDER_ID}/claude-fable-5-1`,
+      }),
+    ]);
     expect(served.model).toBe(`${CLAUDE_PROVIDER_ID}/claude-fable-5-1`);
     // The session runs on another model than the one named: that one is what took it.
     const fellBack = await spawn(fakeCrewmate(), "claude-fable-5-1");
-    expect(fellBack.handle.model).toEqual({ named: "claude-fable-5-1", took: "fm-mock/mock-1" });
+    expect(fellBack.wakes).toEqual([
+      startedOn(fellBack.handle.taskId, { named: "claude-fable-5-1", took: "fm-mock/mock-1" }),
+    ]);
     expect(fellBack.model).toBe("fm-mock/mock-1");
-    // Nothing named: the handle stays as it was.
+    // Nothing named: no wake names a model.
     const plain = await spawn(fakeCrewmate({ model: fable }));
-    expect(plain.handle).toEqual({ taskId: plain.handle.taskId, crewmate: "crewmate 1" });
+    expect(plain.wakes).toEqual([]);
   });
 
   it("hands spawn_crewmate no model when none is recorded, never the named one (FI3-444)", async () => {
     const crewmate = fakeCrewmate({ model: undefined });
-    const { supervisor, tasks } = setup(crewmate);
+    const { supervisor, tasks, ops } = setup(crewmate);
     const handle = await supervisor.intake.commission({
       title: "Teach the colors",
       intent: intentOf("start it with a fable crewmate"),
       shape: { override_model_id: "claude-fable-5-1" },
     });
+    expect(await startWakes(ops, handle)).toEqual([
+      startedOn(handle.taskId, { named: "claude-fable-5-1", took: null }),
+    ]);
     expect(tasks.get(handle.taskId)?.model).toBeNull();
-    expect(handle.model).toEqual({ named: "claude-fable-5-1", took: null });
   });
 
   it("re-checks the account at a resume attachment point and moves to a sibling", async () => {
@@ -1138,7 +1196,7 @@ describe("CrewSupervisor", () => {
 
   it("refuses to start a crewmate on a backend nothing serves, rather than guessing", async () => {
     const crewmate = fakeCrewmate();
-    const { supervisor, sessions } = setup(crewmate, {
+    const { supervisor, sessions, ops } = setup(crewmate, {
       accounts: {
         selectForSpawn: () => "acct_claude",
         reselectForResume: () => ({ changed: false }),
@@ -1148,9 +1206,10 @@ describe("CrewSupervisor", () => {
       // The account binds to Claude, and this supervisor has only Pi's factory.
       bind: async (accountId) => ({ backend: "claude", accountId: accountId ?? "" }),
     });
-    await expect(
-      supervisor.intake.commission({ title: "Job", intent: intentOf("Start") }),
-    ).rejects.toThrow('No backend is registered to serve account "acct_claude".');
+    const handle = await supervisor.intake.commission({ title: "Job", intent: intentOf("Start") });
+    expect(await startWakes(ops, handle)).toEqual([
+      startFailed(handle.taskId, "Job", 'No backend is registered to serve account "acct_claude".'),
+    ]);
     expect(sessions.open).not.toHaveBeenCalled();
   });
 

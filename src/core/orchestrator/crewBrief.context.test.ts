@@ -409,13 +409,11 @@ describe("finding context is not starting code (INF-1964)", () => {
     capture();
     const detach = tasks.onChange(capture);
     try {
-      const reply = await supervisor.starts.startQueuedNow(
-        filing.id,
-        "captain",
-        "task-card",
-        undefined,
-        true,
-      );
+      const reply = await supervisor.starts.startQueuedNow(filing.id, {
+        audience: "captain",
+        from: "task-card",
+        direct: true,
+      });
       await tick();
       capture();
       console.log(

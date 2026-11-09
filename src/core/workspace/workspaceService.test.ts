@@ -216,6 +216,19 @@ describe("WorkspaceService", () => {
     expect((await git(repo, ["log", "--oneline"])).split("\n")).toHaveLength(1);
   });
 
+  // INF-3060's starts run behind the first mate's answer, so two spawns in a
+  // fresh default workspace start at once; before they shared one creation,
+  // the second git init failed on the first one's locked config.
+  it("makes the default repo once when two starts ask for it at once", async () => {
+    const { workspace } = emptyService();
+    const [first, second] = await Promise.all([
+      workspace.ensureDefaultRepo(),
+      workspace.ensureDefaultRepo(),
+    ]);
+    expect(second).toBe(first);
+    expect((await git(first, ["log", "--oneline"])).split("\n")).toHaveLength(1);
+  });
+
   it("creates one worktree per task on its own branch", async () => {
     const { paths, workspace } = await service();
     const a = await workspace.createTaskWorktree("aaaa1111");

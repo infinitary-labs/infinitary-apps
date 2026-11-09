@@ -647,6 +647,18 @@ function kinds(at: World): string[] {
   return at.home.wakes.map((wake) => (wake.facts as { kind: string }).kind);
 }
 
+/**
+ * The waits the first mate hears for a task after its start_now answered at
+ * once (INF-3060), when the task's tile does not name them.
+ */
+function askedStartWaits(at: World, taskId: string): string[] {
+  return at.home.wakes.flatMap((wake) =>
+    wake.facts?.kind === "asked-start-waits" && wake.facts.task.id === taskId
+      ? [wake.facts.words]
+      : [],
+  );
+}
+
 function feed(at: World): string[] {
   return at.home.events.flatMap((event) => (event.type === "firstmate_note" ? [event.text] : []));
 }
@@ -719,9 +731,13 @@ describe("a task on another Mac while that Mac's own sign-in is cut off", () => 
     expect(feed(at)).toContain(
       "website header's next task waits for Mac mini's own Claude sign-in.",
     );
+    // The first mate's start_now answers at once (INF-3060), then hears the wait.
     expect(await home.supervisor.starts.startQueuedNow("t2")).toContain(
-      "waits for Mac mini's own Claude sign-in",
+      '"website header" is starting.',
     );
+    await expect
+      .poll(() => askedStartWaits(at, "t2").at(-1))
+      .toContain("waits for Mac mini's own Claude sign-in");
 
     // INF-1879: two hours with the card up, then put away, two hours more:
     // nothing is tried or decided, and the sign-in card stays put away.
@@ -732,7 +748,8 @@ describe("a task on another Mac while that Mac's own sign-in is cut off", () => 
     expect(at.claude.turns).toHaveLength(1);
     expect(signInCards(at)).toEqual(["card-auth-t1"]);
     expect(home.cards().find((card) => card.id === "card-auth-t1")?.minimized).toBe(true);
-    expect(kinds(at)).toEqual(["queued-started", "provider-cut-off"]);
+    // Only the wait the first mate's start_now heard before those hours.
+    expect(kinds(at)).toEqual(["queued-started", "provider-cut-off", "asked-start-waits"]);
     expect(home.tasks.get("t2")?.status).toBe("open");
     // The captain's word meanwhile is kept for it.
     expect(await home.supervisor.steer.steerCrewmate("t1", "Also fix the header.", "captain")).toBe(
@@ -827,7 +844,10 @@ describe("a task on another Mac while that Mac's own sign-in is cut off", () => 
     expect(home.tasks.get("t2")?.status).toBe("open");
     expect(feed(at).join("\n")).toContain("Mac mini's Claude plan's allowance");
     expect(feed(at).join("\n")).not.toContain("own Claude sign-in");
-    expect(await home.supervisor.starts.startQueuedNow("t2")).toContain("plan's allowance");
+    expect(await home.supervisor.starts.startQueuedNow("t2")).toContain(
+      '"website header" is starting.',
+    );
+    await expect.poll(() => askedStartWaits(at, "t2").at(-1)).toContain("plan's allowance");
 
     // Nothing goes there before the reset; at it, both go on by themselves.
     await at.ticks(55 * MINUTE, 5 * MINUTE);

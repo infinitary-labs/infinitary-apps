@@ -18,7 +18,9 @@ import {
 
 /**
  * New work on a model the captain names answers with the model that took it
- * (FI3-444). A named model routes only when it can serve and otherwise falls
+ * (FI3-444). The spawn answers once the task is recorded, before any model
+ * takes it (INF-3060), so that answer is the wake telling the Firstmate the
+ * task it started is running. A named model routes only when it can serve and otherwise falls
  * back without a word, so before this the Firstmate read only "Commissioned
  * crewmate N on task X" and could tell the captain the named model ran it.
  * The mock Firstmate follows the served tool contract by script; the record,
@@ -60,6 +62,35 @@ type ChatMessage = {
   tool_calls?: { function: { name: string; arguments: string } }[];
 };
 
+/** A message's text, whether the request carries it as a string or as parts. */
+function textOf(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return content
+    .map((part) => (typeof part?.text === "string" ? (part.text as string) : ""))
+    .join("\n");
+}
+
+/** The wake that told the Firstmate a task it started is running, off its requests. */
+function startedWake(taskId: string): string | undefined {
+  for (const body of launched.mockProvider?.requestBodies() ?? []) {
+    if (!body.trimStart().startsWith("{")) continue;
+    const messages = (JSON.parse(body) as { messages?: ChatMessage[] }).messages ?? [];
+    for (const message of messages) {
+      if (message.role !== "user") continue;
+      const line = textOf(message.content)
+        .split("\n")
+        .find(
+          (entry) =>
+            entry.includes(`[fm-op] task ${taskId} `) &&
+            entry.includes("which you started, is running now"),
+        );
+      if (line) return line;
+    }
+  }
+  return undefined;
+}
+
 /** The spawn_crewmate call for a task and the answer the Firstmate read back, off its requests. */
 function spawnExchange(
   title: string,
@@ -76,7 +107,8 @@ function spawnExchange(
       ),
     );
     const answer = messages.slice(at + 1).find((message) => message.role === "tool")?.content;
-    if (at < 0 || typeof answer !== "string" || !answer.includes(`on task ${taskId}`)) continue;
+    if (at < 0 || typeof answer !== "string" || !answer.includes(`Recorded task ${taskId}`))
+      continue;
     const call = messages[at]?.tool_calls?.find(
       (entry) => entry.function.name === "spawn_crewmate",
     );
@@ -98,7 +130,8 @@ function routingRules(userDataDir: string, taskId: string): string[] {
 
 /**
  * The captain asks for new work on a named model; the task starts, and the
- * Firstmate's spawn answer names the model the record says took it.
+ * wake that follows the Firstmate's spawn names the model the record says
+ * took it.
  */
 async function spawnOnNamedModel(
   page: Page,
@@ -127,12 +160,14 @@ async function spawnOnNamedModel(
   const exchange = spawnExchange(title, taskId);
   if (!exchange || !model) throw new Error(`${title} has no spawn answer or model`);
   expect(exchange.call).toMatchObject({ shape: { override_model_id: named } });
+  await expect.poll(() => startedWake(taskId) ?? null, { timeout: 30_000 }).not.toBeNull();
+  const wake = startedWake(taskId) ?? "";
   mkdirSync(test.info().outputPath("spawn-model"), { recursive: true });
   writeFileSync(
     test.info().outputPath(`spawn-model/${taskId}.json`),
-    JSON.stringify({ ...exchange, record: { id: taskId, model } }, null, 2),
+    JSON.stringify({ ...exchange, wake, record: { id: taskId, model } }, null, 2),
   );
-  return { id: taskId, model, answer: exchange.answer };
+  return { id: taskId, model, answer: wake };
 }
 
 test("new work on a model the app serves answers with that model", async () => {

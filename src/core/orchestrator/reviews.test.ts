@@ -40,6 +40,7 @@ import {
   reviewFindingsNext,
 } from "./reportWakes";
 import { renderReviewHistory } from "./reviewHistory";
+import { renderWake } from "./wakes";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -403,7 +404,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     try {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate({ model: { provider: "openai-codex", id: "gpt-5.5" } });
-      const { supervisor, repos, workspace } = setup(builder, {
+      const { supervisor, repos, workspace, ops } = setup(builder, {
         routedModel: { provider: "openai-codex", id: "gpt-5.5" },
         crewmates: [reviewer],
       });
@@ -424,7 +425,86 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         intent: intentOf("review it on fable"),
         shape: { review_of: taskId, override_model_id: "claude-fable-5-1" },
       });
-      expect(review.model).toEqual({ named: "claude-fable-5-1", took: "openai-codex/gpt-5.5" });
+      // The spawn answers before the review starts (INF-3060); the model that
+      // took it reaches the first mate on the started wake.
+      await review.started;
+      expect(ops.filter((line) => line.includes(`task ${review.taskId} `))).toEqual([
+        renderWake({
+          facts: {
+            kind: "queued-started",
+            task: { id: review.taskId, title: "Review: Fix the meter test" },
+            model: { named: "claude-fable-5-1", took: "openai-codex/gpt-5.5" },
+            asked: true,
+          },
+        }),
+      ]);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  // The captain's answer on INF-3075's review of INF-3060: a review whose
+  // start failed stays open with its working copy, as a failed spawn does.
+  it("keeps a review whose start failed open for start_now, which starts it at the same head", async () => {
+    const repo = gitRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const { supervisor, tasks, repos, workspace, sessions, ops } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId } = await supervisor.intake.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      await reportTurn(builder, taskId, BUILDER_REPORT);
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
+      vi.mocked(sessions.open).mockRejectedValueOnce(new Error("Claude is not signed in here."));
+
+      const review = await supervisor.intake.commission({
+        title: "Review",
+        intent: intentOf("review it"),
+        shape: { review_of: taskId },
+      });
+      await review.started;
+      expect(tasks.get(review.taskId)).toMatchObject({
+        status: "open",
+        gate: null,
+        startPolicy: "on-request",
+        parentId: taskId,
+        startNotice: JSON.stringify({ reason: "Claude is not signed in here." }),
+      });
+      expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
+      expect(ops.filter((line) => line.includes(`task ${review.taskId} `))).toEqual([
+        renderWake({
+          facts: {
+            kind: "queued-start-failed",
+            task: { id: review.taskId, title: "Review: Fix the meter test" },
+            error: "Claude is not signed in here.",
+            asked: true,
+            open: true,
+          },
+        }),
+      ]);
+      // It is still the builder's open review, so no second one is spawned.
+      await expect(
+        supervisor.intake.commission({
+          title: "Review",
+          intent: intentOf("review it"),
+          shape: { review_of: taskId },
+        }),
+      ).rejects.toThrow("already has a review open");
+
+      await supervisor.starts.startQueuedNow(review.taskId);
+      await vi.waitFor(() => expect(reviewer.promptCalls).toHaveLength(1));
+      expect(tasks.get(review.taskId)?.status).toBe("active");
+      expect(reviewer.promptCalls[0]).toContain(`at head ${HEAD}`);
     } finally {
       repo.dispose();
     }
@@ -742,31 +822,29 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       const { supervisor, tasks, repos, specs, cards } = setup(builder, { realWorkspace: true });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId } = await supervisor.intake.commission({
+      const { taskId, started } = await supervisor.intake.commission({
         title: "Explain the meter fixture",
         intent: intentOf("Document the meter fixture."),
         repoId: view.id,
         shape: { rigor_ask: "reviewed" },
       });
+      // Its working copy is made behind the spawn's answer (INF-3060).
+      await started;
       await tick();
       await reportTurn(builder, taskId, BUILDER_REPORT);
       const task = tasks.get(taskId)!;
+      // An empty folder would run git in the folder the tests run from and
+      // commit there, so the fixture refuses one.
+      const worktree = task.worktreeDir;
+      if (!worktree) throw new Error(`${taskId} has no working copy yet.`);
       const run = (...args: string[]) =>
         execFileSync(
           "git",
-          [
-            "-C",
-            task.worktreeDir!,
-            "-c",
-            "user.name=Test",
-            "-c",
-            "user.email=test@localhost",
-            ...args,
-          ],
+          ["-C", worktree, "-c", "user.name=Test", "-c", "user.email=test@localhost", ...args],
           { encoding: "utf8" },
         ).trim();
       writeFileSync(
-        join(task.worktreeDir!, "fixture.txt"),
+        join(worktree, "fixture.txt"),
         "This lifecycle fixture has no running product.\n",
       );
       run("add", "fixture.txt");

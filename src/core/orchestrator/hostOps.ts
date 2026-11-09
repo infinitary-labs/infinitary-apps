@@ -598,7 +598,12 @@ export class HostOps {
     this.sayStartedAsIs(taskId, why);
     this.starting.add(taskId);
     void this.core.starts
-      .startQueuedNow(taskId, "captain", pending.from, pending.panel, true)
+      .startQueuedNow(taskId, {
+        audience: "captain",
+        ...(pending.from ? { from: pending.from } : {}),
+        ...(pending.panel ? { panel: pending.panel } : {}),
+        direct: true,
+      })
       .finally(() => this.starting.delete(taskId))
       .then((result) => {
         if (this.core.options.tasks.get(taskId)?.status === "active") return;
@@ -698,7 +703,11 @@ export class HostOps {
     }
     this.starting.add(taskId);
     void this.core.starts
-      .startQueuedNow(taskId, "captain", from, panel)
+      .startQueuedNow(taskId, {
+        audience: "captain",
+        ...(from ? { from } : {}),
+        ...(panel ? { panel } : {}),
+      })
       .finally(() => {
         this.starting.delete(taskId);
       })

@@ -26,7 +26,7 @@ type AnyTool = {
 
 function toolset(overrides: Partial<CrewDelegate> = {}) {
   const delegate: CrewDelegate = {
-    commission: vi.fn(async () => ({ taskId: "ab12cd34", crewmate: "crewmate 1" })),
+    commission: vi.fn(async () => ({ taskId: "ab12cd34", crewmate: "starting" })),
     steerCrewmate: vi.fn(async () => "mid-turn" as const),
     interruptCrewmate: vi.fn(async () => {}),
     crewStatus: vi.fn(() => []),
@@ -81,7 +81,10 @@ describe("crew tools", () => {
       repoId: "r1",
       shape: { kind: "fix" },
     });
-    expect(result?.content[0]?.text).toBe("Commissioned crewmate 1 on task ab12cd34.");
+    // INF-3060: the answer comes once the task is recorded; its start runs behind it.
+    expect(result?.content[0]?.text).toBe(
+      "Recorded task ab12cd34; it is starting now, and its tile shows any wait, such as for room on its computer. You hear an [fm-op] if it cannot start or waits for something its tile does not name.",
+    );
   });
 
   it("carries a declared skip reason into the commission without judging it", async () => {
@@ -165,7 +168,7 @@ describe("crew tools", () => {
   it("answers a review ask with the version it assigned", async () => {
     const review = { head: "0123456789abcdef0123456789abcdef01234567", uncommitted: true };
     const { byName } = toolset({
-      commission: vi.fn(async () => ({ taskId: "ab12cd34", crewmate: "crewmate 2", review })),
+      commission: vi.fn(async () => ({ taskId: "ab12cd34", crewmate: "starting", review })),
     });
     const result = await byName.get("spawn_crewmate")?.execute("t1", {
       title: "Review",
@@ -173,9 +176,11 @@ describe("crew tools", () => {
       user_words: "fix the meter",
       shape: { review_of: "INF-7" },
     });
-    expect(result?.content[0]?.text).toBe(
-      `Commissioned crewmate 2 on task ab12cd34.${reviewAssignedWords(review)}`,
-    );
+    // The answer returns while the review starts (INF-3060) and ends with
+    // the version it assigned (INF-3141).
+    const text = result?.content[0]?.text ?? "";
+    expect(text.startsWith("Recorded task ab12cd34;")).toBe(true);
+    expect(text.endsWith(reviewAssignedWords(review))).toBe(true);
     expect(reviewAssignedWords(review)).toContain("0123456");
     expect(reviewAssignedWords(review)).toContain("edits not yet committed");
   });
@@ -280,30 +285,18 @@ describe("crew tools", () => {
     );
   });
 
-  it("answers with the model that took the work when the user named one (FI3-444)", async () => {
-    const spawn = async (model: { named: string; took: string | null }) => {
-      const { byName } = toolset({
-        commission: vi.fn(async () => ({ taskId: "ab12cd34", crewmate: "crewmate 1", model })),
-      });
-      const result = await byName.get("spawn_crewmate")?.execute("t1", {
-        title: "Teach the colors",
-        goal: "First run teaches the working and idle colors",
-        user_words: "start it with a fable crewmate",
-        shape: { override_model_id: model.named },
-      });
-      return result?.content[0]?.text;
-    };
-    expect(
-      await spawn({ named: "claude-fable-5-1", took: "anthropic-claude/claude-fable-5-1" }),
-    ).toBe(
-      "Commissioned crewmate 1 on task ab12cd34; it runs on anthropic-claude/claude-fable-5-1.",
-    );
-    // Routing fell back: the answer never lets the named model stand alone.
-    expect(await spawn({ named: "claude-fable-5-1", took: "openai-codex/gpt-6-astra" })).toBe(
-      "Commissioned crewmate 1 on task ab12cd34; it runs on openai-codex/gpt-6-astra: claude-fable-5-1 was not available.",
-    );
-    expect(await spawn({ named: "claude-fable-5-1", took: null })).toBe(
-      "Commissioned crewmate 1 on task ab12cd34; it runs with no model recorded, so claude-fable-5-1 is not confirmed.",
+  // FI3-444: a named model is never confirmed before the start says which
+  // model took it; since INF-3060 that is the started wake, not the answer.
+  it("tells the first mate it hears which model took the work when the user named one (FI3-444)", async () => {
+    const { byName } = toolset();
+    const result = await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Teach the colors",
+      goal: "First run teaches the working and idle colors",
+      user_words: "start it with a fable crewmate",
+      shape: { override_model_id: "claude-fable-5-1" },
+    });
+    expect(result?.content[0]?.text).toBe(
+      "Recorded task ab12cd34; it is starting now, and its tile shows any wait, such as for room on its computer. You hear an [fm-op] if it cannot start or waits for something its tile does not name, and which model took it once it runs.",
     );
   });
 
@@ -340,7 +333,7 @@ describe("crew tools", () => {
     expect(delegate.commission).toHaveBeenCalledWith(
       expect.objectContaining({ shape: { escalate_from: "FM3K-12" } }),
     );
-    expect(result?.content[0]?.text).toContain("Commissioned");
+    expect(result?.content[0]?.text).toContain("Recorded task ab12cd34");
   });
 
   it("refuses escalate_from on a turn that is not the captain's (Q2)", async () => {
@@ -485,15 +478,23 @@ describe("crew tools", () => {
     expect(refused.delegate.steerCrewmate).not.toHaveBeenCalled();
   });
 
-  it("steer says a message queued behind in-flight handling is recorded, not lost", async () => {
-    const { byName } = toolset({ steerCrewmate: vi.fn(async () => "recorded-queued" as const) });
-    const result = await byName
-      .get("steer_crewmate")
-      ?.execute("t1", { task_id: "ab12", message: "change course" });
-    const text = JSON.stringify(result?.content ?? []);
-    expect(text).toContain("durably queued");
-    expect(text).toContain("Do not resend");
-    expect(text).not.toMatch(/try again|supervision/i);
+  // INF-3075's review of INF-3060: a steer to a task still starting is kept
+  // for it, and one behind a hand-over goes out after it, in order.
+  it("steer says a message to a task not started yet, or behind a hand-over, is recorded, not lost", async () => {
+    const answer = async (delivery: "recorded-queued" | "after-files") => {
+      const { byName } = toolset({ steerCrewmate: vi.fn(async () => delivery) });
+      const result = await byName
+        .get("steer_crewmate")
+        ?.execute("t1", { task_id: "ab12", message: "change course" });
+      return JSON.stringify(result?.content ?? []);
+    };
+    const queued = await answer("recorded-queued");
+    expect(queued).toContain("has not started yet");
+    expect(queued).toContain("right after its brief once it starts");
+    expect(queued).toContain("Do not resend");
+    const after = await answer("after-files");
+    expect(after).toContain("right after your earlier message with files");
+    expect(after).toContain("Do not resend");
   });
 
   it("interrupt carries the lifecycle mode", async () => {

@@ -1280,7 +1280,84 @@ const CASES: WordsCases<FirstmateWakeKind> = {
         '[fm-op] a steer handed to crewmate 61 on task 479823ee "Restructure the wakes file" at 2026-11-05T18:32:08.000Z is still unread after two quiet checks. The turn has no open call the app can see. You can wait, or interrupt the turn so the steer goes into its next turn.',
     },
   ],
+  // A steer with files_from answered before the files crossed (INF-3060).
+  "handover-failed": [
+    {
+      name: "the copy failed before any file arrived",
+      wake: {
+        facts: {
+          kind: "handover-failed",
+          task: TASK,
+          from: "INF-1109",
+          error: "Kun’s Mac mini is out of reach.",
+          arrived: 0,
+          files: 2,
+        },
+      },
+      words:
+        '[fm-op] the files from INF-1109 for your message to task 479823ee "Restructure the wakes file" were not handed over: Kun’s Mac mini is out of reach. No file reached its hand-over folder. Your message is kept, and its crewmate reads it with a line saying the files did not arrive; hand them again with steer_crewmate files_from if they are still needed.',
+    },
+    {
+      name: "the copy failed part way",
+      wake: {
+        facts: {
+          kind: "handover-failed",
+          task: TASK,
+          from: "INF-1109",
+          error: "Kun’s Mac mini is out of reach.",
+          arrived: 1,
+          files: 2,
+        },
+      },
+      words:
+        '[fm-op] the files from INF-1109 for your message to task 479823ee "Restructure the wakes file" were not handed over: Kun’s Mac mini is out of reach. 1 of 2 files reached its hand-over folder before the failure, with no receipt; its crewmate was not told about them. Your message is kept, and its crewmate reads it with a line saying the files did not arrive; hand them again with steer_crewmate files_from if they are still needed.',
+    },
+    {
+      name: "every file arrived and the hand-over did not finish",
+      wake: {
+        facts: {
+          kind: "handover-failed",
+          task: TASK,
+          from: "INF-1109",
+          error: "Its receipt could not be recorded.",
+          arrived: 2,
+          files: 2,
+        },
+      },
+      words:
+        '[fm-op] the files from INF-1109 for your message to task 479823ee "Restructure the wakes file" were not handed over: Its receipt could not be recorded. All 2 files reached its hand-over folder, verified, but its crewmate was not told about them. Your message is kept, and its crewmate reads it with a line saying the files did not arrive; hand them again with steer_crewmate files_from if they are still needed.',
+    },
+  ],
+  // A start the first mate asked for ended in a wait its tile does not name (INF-3060).
+  "asked-start-waits": [
+    {
+      name: "its computer is out of reach",
+      wake: {
+        facts: {
+          kind: "asked-start-waits",
+          task: TASK,
+          words: "It waits for Builder, which is out of reach. It never runs on this Mac instead.",
+        },
+      },
+      words:
+        '[fm-op] task 479823ee "Restructure the wakes file", which you started, has not started yet. It waits for Builder, which is out of reach. It never runs on this Mac instead.',
+    },
+  ],
   "queued-started": [
+    {
+      // A start behind the first mate's answer (INF-3060).
+      name: "one the first mate started, on the model named",
+      wake: {
+        facts: {
+          kind: "queued-started",
+          task: TASK,
+          model: { named: "claude-opus-5-5", took: "claude-opus-5-5" },
+          asked: true,
+        },
+      },
+      words:
+        '[fm-op] task 479823ee "Restructure the wakes file", which you started, is running now, on claude-opus-5-5.',
+    },
     {
       name: "on the model named",
       wake: {
@@ -1301,6 +1378,35 @@ const CASES: WordsCases<FirstmateWakeKind> = {
     },
   ],
   "queued-start-failed": [
+    {
+      // A start behind the first mate's answer (INF-3060).
+      name: "one the first mate started",
+      wake: {
+        facts: {
+          kind: "queued-start-failed",
+          task: TASK,
+          error: "no account can run it",
+          asked: true,
+        },
+      },
+      words:
+        '[fm-op] task 479823ee "Restructure the wakes file", which you started, could not start: no account can run it',
+    },
+    {
+      // Still open, waiting for its go (the captain's answer on INF-3075's review).
+      name: "one the first mate started, still open",
+      wake: {
+        facts: {
+          kind: "queued-start-failed",
+          task: TASK,
+          error: "No eligible account can serve the selected model now.",
+          asked: true,
+          open: true,
+        },
+      },
+      words:
+        '[fm-op] task 479823ee "Restructure the wakes file", which you started, could not start: No eligible account can serve the selected model now. It is still open with nothing running, so spawn no replacement: update_task start_now tries it again, or update_task drop removes it.',
+    },
     {
       name: "on the captain's Start",
       wake: {

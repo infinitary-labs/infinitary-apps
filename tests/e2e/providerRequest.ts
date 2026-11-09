@@ -450,6 +450,14 @@ export function sinceLastUser(body: string): { user: string; results: string[]; 
   };
 }
 
+/**
+ * The task a spawn_crewmate answer names (`crewTools.ts`): it is recorded
+ * and starting, or queued behind a wait. Undefined for any other answer.
+ */
+export function spawnedTaskOf(result: string | undefined): string | undefined {
+  return result?.match(/^(?:Recorded|Queued) task ([\w-]+);/)?.[1];
+}
+
 /** The instructions a request carries (system or developer), whichever dialect. */
 export function servedInstructions(body: string): string {
   if (!body.trimStart().startsWith("{")) return "";

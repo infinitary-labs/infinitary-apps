@@ -379,6 +379,7 @@ export async function approvalHost(
     // Dispatch opens only the inert crew factory, preserving the production callbacks/preset.
     const build = tasks.get(ids.BUILD!)!;
     await host.supervisor.starts.startQueuedNow(build.id);
+    await host.supervisor.starts.startingBehind(build.id);
     if (!reviewSpec) throw new Error("Production builder preset did not open");
     spec = reviewSpec;
     const plan = test.tasks.PLAN!;
@@ -392,7 +393,10 @@ export async function approvalHost(
     })}\nTask autonomy: false. No captain merge authorization.`;
   }
   for (const [alias, task] of Object.entries(test.tasks)) {
-    if (task.availableOwner) await host.supervisor.starts.startQueuedNow(ids[alias]!);
+    if (task.availableOwner) {
+      await host.supervisor.starts.startQueuedNow(ids[alias]!);
+      await host.supervisor.starts.startingBehind(ids[alias]!);
+    }
   }
   // Setup is not an evaluation effect.
   if (Object.values(test.tasks).some((task) => task.availableOwner)) starts.length = 0;
@@ -476,11 +480,20 @@ export async function approvalHost(
           : value,
       ]),
     );
+  // A start the first mate's tool answered before it ran (INF-3060) ends
+  // before the call returns, so an effect reads the record it left.
+  const settled = async (): Promise<void> => {
+    for (const task of tasks.list()) await host.supervisor.starts.startingBehind(task.id);
+  };
   const tools = spec.tools
     .filter((tool) => allowed.includes(tool.name))
     .map((tool) => ({
       ...tool,
-      run: (args: unknown) => tool.run(actualArgs(args)),
+      run: async (args: unknown) => {
+        const answer = await tool.run(actualArgs(args));
+        await settled();
+        return answer;
+      },
     }));
   if (test.role === "firstmate" && spec.shape.turns === "rolling")
     spec.shape.record.stamp = firstmateContractStamp(tools);

@@ -6,6 +6,7 @@ import type { CrewSendResult } from "@shared/crewTranscript";
 import { CREWMATE_TAB_VIA, type TASK_CARD_VIA } from "@shared/provenance";
 import { capWithOverflow } from "../overflow";
 import type { ModelSession } from "../session/session";
+import type { TaskRecord } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
 import type { CrewCore } from "./crewCore";
 import type { SteerDelivery, SteerSource, TaskRuntime, UnreadSteer } from "./crewRuntime";
@@ -38,6 +39,13 @@ export class CrewSteer {
    * crewmate asks again.
    */
   private readonly captainRows = new Set<number>();
+
+  /**
+   * A task's hand-overs of files still crossing (INF-3060), the last of
+   * them: its lane is held until it ends (`handingOver`), so every message
+   * recorded on it meanwhile is read after the files, in the order sent.
+   */
+  private readonly handing = new Map<string, Promise<void>>();
 
   constructor(private readonly core: CrewCore) {}
 
@@ -84,8 +92,61 @@ export class CrewSteer {
       attachments?: AttachmentRef[];
       /** First mate tool messages expect answers; host/captain steers do not. */
       response?: ResponsePolicy;
+      /**
+       * The first mate's tool answers once the message is recorded and
+       * delivers it behind that answer (INF-3060): `recorded-sending`.
+       */
+      behind?: boolean;
     } = {},
   ): Promise<SteerDelivery> {
+    this.checkSteer(taskId, actor, source);
+    // A first mate message after one still waiting on its files is recorded
+    // now and read after it, in the order the first mate sent them.
+    if (actor === "firstmate" && this.handingOver(taskId)) {
+      await this.sendSteer(taskId, message, actor, source, true);
+      return "after-files";
+    }
+    return this.sendSteer(taskId, message, actor, source);
+  }
+
+  /** Whether a hand-over of files to the task is still crossing, which holds its lane. */
+  handingOver(taskId: string): boolean {
+    return this.handing.has(taskId);
+  }
+
+  private sendSteer(
+    taskId: string,
+    message: WakeBody,
+    actor: "firstmate" | "captain",
+    source: NonNullable<Parameters<CrewSteer["steerCrewmate"]>[3]>,
+    held = false,
+  ): Promise<SteerDelivery> {
+    const steer: SteerSource = {
+      actor,
+      via: source.via ?? "tool",
+      decision: source.decision ?? null,
+      cardId: source.cardId ?? null,
+      ...(source.panel ? { panel: source.panel } : {}),
+      ...(source.captainWords ? { captainWords: true } : {}),
+    };
+    return this.steerInternal(
+      taskId,
+      message,
+      steer,
+      source.images,
+      source.attachments,
+      source.response,
+      source.behind,
+      held,
+    );
+  }
+
+  /** The refusals a steer answers before anything is recorded or copied. */
+  private checkSteer(
+    taskId: string,
+    actor: "firstmate" | "captain",
+    source: NonNullable<Parameters<CrewSteer["steerCrewmate"]>[3]>,
+  ): void {
     const record = this.core.options.tasks.get(taskId);
     if (source.response && actor !== "firstmate")
       throw new Error("Only a first mate message creates or cancels its response expectations.");
@@ -105,22 +166,169 @@ export class CrewSteer {
         throw new Error(`Response request ${id} does not belong to this task. Nothing was sent.`);
     }
     if (source.response?.card) this.core.reportIntake.checkResponseCard(source.response.card);
-    const steer: SteerSource = {
-      actor,
-      via: source.via ?? "tool",
-      decision: source.decision ?? null,
-      cardId: source.cardId ?? null,
-      ...(source.panel ? { panel: source.panel } : {}),
-      ...(source.captainWords ? { captainWords: true } : {}),
-    };
-    return this.steerInternal(
-      taskId,
-      message,
-      steer,
-      source.images,
-      source.attachments,
-      source.response,
+  }
+
+  /**
+   * A hand-over ended: its lane goes on, and what waited on it is read now
+   * as any message on the lane is - by the idle crewmate, steered into the
+   * turn running, or by the crewmate resumed for it (`sweepTaskLane`). A
+   * started task in the backlog, whose lane the sweep leaves, is resumed
+   * for it as for any first mate message. A task that has not started
+   * reads it after its brief.
+   */
+  private handOverEnded(taskId: string, crossing: Promise<void>): void {
+    if (this.handing.get(taskId) !== crossing) return;
+    this.handing.delete(taskId);
+    if (this.core.disposed()) return;
+    const task = this.core.tasks.get(taskId);
+    if (task?.session && !task.cancelled && task.state === "idle") {
+      this.core.turns.deliverPendingToTask(task, { sent: true });
+      return;
+    }
+    const record = this.core.options.tasks.get(taskId);
+    if (
+      !task?.session &&
+      record &&
+      this.core.facts.inBacklog(taskId) &&
+      TaskService.isResumable(record) &&
+      record.sessionFile &&
+      !this.core.facts.laneHeld(taskId)
+    ) {
+      void this.core.sessions
+        .resumeTask(taskId)
+        .then((resumed) => this.core.turns.deliverPendingToTask(resumed, { sent: true }))
+        .catch(() => {
+          // The rows are durable; the next first mate message or Start delivers them.
+        });
+      return;
+    }
+    void this.core.watch.sweepTaskLane(taskId, this.core.now());
+  }
+
+  /**
+   * A task that has not started but will - its start runs behind the first
+   * mate's answer, it starts by itself once its wait ends, or its start
+   * failed and it waits open for update_task start_now - takes a message on
+   * its lane, which its crewmate reads right after its brief (INF-3060).
+   */
+  private waitsToStart(record: TaskRecord): boolean {
+    if (record.kind !== "work" || TaskService.isClosed(record)) return false;
+    if (this.core.starts.startingBehind(record.id)) return true;
+    return (
+      record.status === "open" &&
+      (record.startPolicy === "when-ready" || record.startNotice != null)
     );
+  }
+
+  /**
+   * Why a task with no crewmate running cannot be told anything now, or
+   * undefined when a message to it is kept: on its lane while it waits to
+   * start (`waitsToStart`), or by resuming its idle crewmate.
+   */
+  private steerRefusal(taskId: string, actor: SteerSource["actor"]): string | undefined {
+    const task = this.core.tasks.get(taskId);
+    if (task?.session && !task.cancelled) return undefined;
+    const record = this.core.options.tasks.get(taskId);
+    if (!record) return `Unknown task "${taskId}". Check crew_status for live task ids.`;
+    if (actor !== "supervisor" && this.waitsToStart(record)) return undefined;
+    if (!TaskService.isResumable(record))
+      return `Task ${taskId} is ${describeStatus(record)} and no longer steerable. ${record.status === "dropped" ? "On the captain’s request, use update_task start_again to create a replacement." : "Spawn a follow-up crewmate instead."}`;
+    if (!record.sessionFile)
+      return `Task ${taskId} has no session to resume. Spawn a follow-up instead.`;
+    if (this.core.sessions.retiredProviderOf(taskId)) return retiredResumeText(taskId);
+    return undefined;
+  }
+
+  /**
+   * The first mate's steer with files_from (INF-3060): the steer's and the
+   * hand-over's checks answer now, and the message is recorded on the
+   * task's lane now, after a line about the files, so a quit loses
+   * neither. The lane is held while the copy, which can take a minute to
+   * another computer, goes on behind the tool's answer; the line then says
+   * where the files are, and the crewmate reads it and every message
+   * behind it. A task that has not started - its start runs behind an
+   * earlier answer, it waits for its turn, or its start failed and it waits
+   * open for its retry - takes the files once it has started. A hand-over that fails leaves the line
+   * saying the files did not arrive, and the first mate hears so in one
+   * [fm-op].
+   */
+  async steerAfterFiles(
+    fromTask: string,
+    taskId: string,
+    message: string,
+    source: Parameters<CrewSteer["steerCrewmate"]>[3] = {},
+  ): Promise<void> {
+    this.checkSteer(taskId, "firstmate", source);
+    const refused = this.steerRefusal(taskId, "firstmate");
+    if (refused) throw new Error(refused);
+    // What only the source task decides answers now, even while the target
+    // waits to start; its folder is there only once it has started.
+    const { from } = await this.core.sessions.handSource(fromTask);
+    const fromHandle = from.key || from.id;
+    const target = this.core.options.tasks.get(taskId);
+    const ready =
+      target && this.waitsToStart(target)
+        ? undefined
+        : await this.core.sessions.prepareHandFiles(from.id, taskId);
+    let files: number | undefined = ready?.files;
+    let arrived = 0;
+    let resolveLine: (inboxId: number) => void = () => {};
+    const line = new Promise<number>((resolve) => {
+      resolveLine = resolve;
+    });
+    const before = this.handing.get(taskId) ?? Promise.resolve();
+    const crossing = before.then(async () => {
+      const lineId = await line;
+      // The message was refused as it was recorded: nothing to hand on.
+      if (lineId < 0) return;
+      try {
+        // A start that fails leaves the task open for its retry, which the
+        // files wait for too.
+        for (
+          let record = this.core.options.tasks.get(taskId);
+          !ready && record && this.waitsToStart(record) && !this.core.disposed();
+          record = this.core.options.tasks.get(taskId)
+        )
+          await this.core.starts.nextStart(taskId);
+        const handover = ready ?? (await this.core.sessions.prepareHandFiles(from.id, taskId));
+        files = handover.files;
+        const handed = await handover.copy((count) => {
+          arrived = count;
+        });
+        // The line was held with the lane, so no turn has it yet.
+        if (!this.core.options.inbox.revise(lineId, handed))
+          this.core.options.inbox.enqueue(taskId, handed);
+      } catch (caught) {
+        const record = this.core.options.tasks.resolve(taskId);
+        this.core.hooks().notifyOp(
+          {
+            facts: {
+              kind: "handover-failed",
+              task: { id: record?.id ?? taskId, title: record?.title ?? taskId },
+              from: fromHandle,
+              error: caught instanceof Error ? caught.message : String(caught),
+              arrived,
+              ...(files !== undefined ? { files } : {}),
+            },
+          },
+          "agent",
+          record?.id ?? taskId,
+        );
+      }
+    });
+    // Held from here: nothing recorded on the lane is read before the files.
+    this.handing.set(taskId, crossing);
+    void crossing.then(() => this.handOverEnded(taskId, crossing));
+    // Until the files arrive, the line says what is true if they never do.
+    const lineId = this.core.options.inbox.enqueue(taskId, handoverMissingLine(fromHandle));
+    try {
+      await this.sendSteer(taskId, message, "firstmate", source, true);
+    } catch (caught) {
+      this.core.options.inbox.withdraw([lineId]);
+      resolveLine(-1);
+      throw caught;
+    }
+    resolveLine(lineId);
   }
 
   /**
@@ -135,6 +343,12 @@ export class CrewSteer {
     images?: TurnImage[],
     attachments?: readonly AttachmentRef[],
     response?: ResponsePolicy,
+    behind = false,
+    /**
+     * Recorded on the lane and kept there while a hand-over of files before
+     * it crosses (`handingOver`), which delivers it when it ends.
+     */
+    held = false,
   ): Promise<SteerDelivery> {
     let message = renderWake(body);
     // A reply the captain typed under a card: the record reads the captain's words in the message.
@@ -207,6 +421,15 @@ export class CrewSteer {
       return id;
     };
     const task = this.core.tasks.get(taskId);
+    if (held) {
+      if (!task?.session || task.cancelled) {
+        const refused = this.steerRefusal(taskId, given.actor);
+        if (refused) throw new Error(refused);
+      }
+      const id = enqueue();
+      this.recordSteer(taskId, message, source, "recorded-held", id);
+      return "recorded-held";
+    }
     if (task?.session && !task.cancelled) {
       if (task.state === "streaming" || task.state === "starting") {
         // Its computer is out of reach, or this one is being updated: kept
@@ -225,16 +448,20 @@ export class CrewSteer {
         const id = enqueue();
         this.core.options.inbox.markDelivered([id]);
         this.announceReach(taskId);
-        try {
-          // Handled when the turn it landed in ends: ack rides turnComplete.
-          await this.steerIntoTurn(task, task.session, message, [id], liveImages);
-          this.recordSteer(taskId, message, source, "mid-turn", id);
-          return "mid-turn";
-        } catch {
-          this.core.options.inbox.release([id]);
-          this.recordSteer(taskId, message, source, "recorded-retrying", id);
-          return "recorded-retrying";
-        }
+        // Handled when the turn it landed in ends: ack rides turnComplete.
+        const steered = this.steerIntoTurn(task, task.session, message, [id], liveImages)
+          .then((): SteerDelivery => {
+            this.recordSteer(taskId, message, source, "mid-turn", id);
+            return "mid-turn";
+          })
+          .catch((): SteerDelivery => {
+            this.core.options.inbox.release([id]);
+            this.recordSteer(taskId, message, source, "recorded-retrying", id);
+            return "recorded-retrying";
+          });
+        if (!behind) return steered;
+        void steered;
+        return "recorded-sending";
       }
       const pending = enqueue();
       if (this.core.facts.laneHeld(taskId) || (sentByHost && this.core.facts.inBacklog(taskId))) {
@@ -247,35 +474,35 @@ export class CrewSteer {
       this.core.turns.deliverPendingToTask(task, { sent: true });
       return "mid-turn";
     }
+    const refused = this.steerRefusal(taskId, given.actor);
     const record = this.core.options.tasks.get(taskId);
-    if (!record) {
-      throw new Error(`Unknown task "${taskId}". Check crew_status for live task ids.`);
+    if (refused || !record) throw new Error(refused);
+    if (given.actor !== "supervisor" && this.waitsToStart(record)) {
+      const queued = enqueue();
+      this.recordSteer(taskId, message, source, "recorded-queued", queued);
+      return "recorded-queued";
     }
-    if (!TaskService.isResumable(record)) {
-      throw new Error(
-        `Task ${taskId} is ${describeStatus(record)} and no longer steerable. ${record.status === "dropped" ? "On the captain’s request, use update_task start_again to create a replacement." : "Spawn a follow-up crewmate instead."}`,
-      );
-    }
-    if (!record.sessionFile) {
-      throw new Error(`Task ${taskId} has no session to resume. Spawn a follow-up instead.`);
-    }
-    if (this.core.sessions.retiredProviderOf(taskId)) throw new Error(retiredResumeText(taskId));
     const resumeId = enqueue();
     if (this.core.facts.laneHeld(taskId) || (sentByHost && this.core.facts.inBacklog(taskId))) {
       this.recordSteer(taskId, message, source, "recorded-held", resumeId);
       if (sentByHost) this.tellBacklogNews(taskId, message);
       return "recorded-held";
     }
-    try {
-      const resumed = await this.core.sessions.resumeTask(record.id);
-      this.recordSteer(taskId, message, source, "mid-turn", resumeId);
-      this.core.turns.deliverPendingToTask(resumed, { sent: true });
-      return "mid-turn";
-    } catch {
-      // The row is durable; the tick sweep retries the resume.
-      this.recordSteer(taskId, message, source, "recorded-retrying", resumeId);
-      return "recorded-retrying";
-    }
+    const resumed = this.core.sessions
+      .resumeTask(record.id)
+      .then((runtime): SteerDelivery => {
+        this.recordSteer(taskId, message, source, "mid-turn", resumeId);
+        this.core.turns.deliverPendingToTask(runtime, { sent: true });
+        return "mid-turn";
+      })
+      .catch((): SteerDelivery => {
+        // The row is durable; the tick sweep retries the resume.
+        this.recordSteer(taskId, message, source, "recorded-retrying", resumeId);
+        return "recorded-retrying";
+      });
+    if (!behind) return resumed;
+    void resumed;
+    return "recorded-sending";
   }
 
   /**
@@ -439,4 +666,12 @@ export class CrewSteer {
       return { ok: false, text: caught instanceof Error ? caught.message : String(caught) };
     }
   }
+}
+
+/**
+ * The line a hand-over's message is read after while its files cross, as it
+ * stands if they never arrive: a quit or a failure leaves it so.
+ */
+function handoverMissingLine(from: string): string {
+  return `Files from ${from} were to come with the message below, but they did not arrive. If you need them, say so in your report.`;
 }

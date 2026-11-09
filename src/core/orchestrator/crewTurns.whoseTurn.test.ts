@@ -57,11 +57,18 @@ describe("CrewSupervisor", () => {
   it("streams a commissioned turn without a task card and leaves the task idle and steerable", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, events, cards, ops, tasks } = setup(crewmate);
-    const { taskId, crewmate: name } = await supervisor.intake.commission({
+    const {
+      taskId,
+      crewmate: name,
+      started,
+    } = await supervisor.intake.commission({
       title: "Refactor auth",
       intent: intentOf("refactor the auth middleware; acceptance: tests green"),
     });
-    expect(name).toBe("crewmate 1");
+    // The answer is the recorded task; its start runs behind it (INF-3060).
+    expect(name).toBe("starting");
+    await started;
+    expect(tasks.get(taskId)?.assignee).toBe("crewmate 1");
     await tick();
 
     expect(events.some((e) => e.type === "task_started")).toBe(true);

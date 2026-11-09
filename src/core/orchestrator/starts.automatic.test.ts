@@ -20,14 +20,17 @@ import { describe, expect, it, vi } from "vitest";
 import {
   fakeCrewmate,
   fakeCrewTimersEachTest,
+  intentOf,
   reboot,
   setup,
+  tick,
 } from "../../../tests/helpers/crewHarness";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { AutomaticPlacement } from "../placed/automaticPlacement";
 import type { CrewMachines } from "../placed/crewMachines";
 import { FIRSTMATE_RECIPIENT, INBOX_DEDUPE_WINDOW_MS } from "../storage/inboxStore";
 import type { TaskRecord } from "../storage/taskStore";
+import { queueWaitOf } from "../tasks/queueWait";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { renderWake } from "./wakes";
@@ -86,7 +89,9 @@ describe("the task graph (R1)", () => {
     await comparing;
     tasks.updateFields(task.id, { model: "mock-2" }, "firstmate");
     release();
-    await starting;
+    expect(await starting).toContain("is starting.");
+    await tick();
+    expect(tasks.starts.startAttemptOf(task.id)).toBeUndefined();
     // Compared again on the model named, and started on it: the captain's
     // Start is not turned into a wait for room.
     expect(asked.map((shape) => shape.override_model_id)).toEqual([undefined, "mock-2"]);
@@ -150,7 +155,11 @@ describe("the task graph (R1)", () => {
     );
     supervisor.placement.runsOnChanged(task.id);
     release();
-    expect(await starting).toBe(`Started ${tasks.get(task.id)?.key} "Fix the ledger footer".`);
+    expect(await starting).toBe(
+      `${tasks.get(task.id)?.key} "Fix the ledger footer" is starting. Its tile shows any wait, such as for room on its computer; you hear an [fm-op] if it cannot start or waits for something its tile does not name.`,
+    );
+    await tick();
+    expect(tasks.starts.startAttemptOf(task.id)).toBeUndefined();
     // It no longer runs on Automatic: never compared again, never told to
     // wait for room, and routed among this Mac's own subscriptions.
     expect(asked).toBe(1);
@@ -189,7 +198,7 @@ describe("an Automatic wait in Activity", () => {
       }),
     ];
     let next = 0;
-    const { supervisor, repos, tasks, events } = setup(fakeCrewmate(), {
+    const { supervisor, repos, tasks, events, ops } = setup(fakeCrewmate(), {
       // A later comparison reads as the last one did.
       automatic: {
         choose: async () => ({ wait: waits[Math.min(next++, waits.length - 1)] as PlacementWait }),
@@ -243,9 +252,46 @@ describe("an Automatic wait in Activity", () => {
     await supervisor.starts.dispatchQueuedTask(task.id);
     expect(lines()).toHaveLength(2);
     expect(details()).toBe(held.words);
-    // Start now answers with the latest words too, and says nothing new in Activity.
-    expect(await supervisor.starts.startQueuedNow(task.id)).toContain(`: ${held.words}`);
+    // Start now answers at once; the task's tile reads the latest words, so
+    // the first mate hears no wake, and Activity says nothing new (INF-3060).
+    expect(await supervisor.starts.startQueuedNow(task.id)).toContain("is starting.");
+    await tick();
+    expect(tasks.starts.startAttemptOf(task.id)).toBeUndefined();
+    expect(tasks.get(task.id)?.shape?.placement_wait?.words).toBe(held.words);
+    expect(ops.some((line) => line.includes("has not started yet"))).toBe(false);
     expect(lines()).toHaveLength(2);
+  });
+
+  // INF-3075's review of INF-3060 (F7): the captain's pick, "the wait shows
+  // on the task" - a spawn answered before its start finds no room on any
+  // computer, and its tile, not a wake, says so.
+  it("shows a room wait on the tile of a spawn whose start ran behind the answer", async () => {
+    const dir = scratchDir("infinitary-automatic-behind-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    execFileSync("git", ["-C", dir, "remote", "add", "origin", "https://github.com/o/ledger.git"]);
+    const room = compared({
+      rejections: ["cpu-busy", "memory-busy"],
+      capacity: { cpu: 0.2, memoryBytes: 1024 ** 3 },
+    });
+    expect(room.kind).toBe("room");
+    const { supervisor, repos, tasks, ops } = setup(fakeCrewmate(), {
+      automatic: { choose: async () => ({ wait: room }) },
+    });
+    const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "ledger" });
+    repos.setRunsOn(repo.id, AUTOMATIC_COMPUTER);
+
+    const handle = await supervisor.intake.commission({
+      title: "Fix the ledger footer",
+      intent: intentOf("fix the ledger footer"),
+      repoId: repo.id,
+    });
+    expect(handle.crewmate).toBe("starting");
+    await handle.started;
+    const record = tasks.get(handle.taskId) as TaskRecord;
+    expect(record.status).not.toBe("active");
+    expect(tasks.starts.startAttemptOf(record.id)).toBeUndefined();
+    expect(queueWaitOf(record, [], [])?.line.startsWith(`${room.words} · `)).toBe(true);
+    expect(ops.some((line) => line.includes("has not started yet"))).toBe(false);
   });
 
   // INF-67's R1: under load the quarter-second processor reading flickers,

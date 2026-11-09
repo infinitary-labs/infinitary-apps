@@ -81,8 +81,9 @@ function legacyEndOnce(watch: CiWatch): string {
 export type WatchedCheck = { name: string; state: string };
 
 /**
- * What one read of a watched change found (`ChangeChecks.readWatched`). A
- * settled reading is already recorded on the task, as every reading is.
+ * What one read of a watched change found (`ChangeChecks.readWatched`).
+ * Every reading but a failed read is already recorded on the task; a
+ * failed read says so when it was (`recorded`).
  */
 export type WatchedReading =
   | {
@@ -118,6 +119,8 @@ export type WatchedReading =
        */
       retryAt?: number;
       observationId?: string;
+      /** The reading was recorded on the task before its checks proved unreadable. */
+      recorded?: boolean;
     };
 
 export type CheckWatcherHost = {
@@ -142,7 +145,13 @@ type SettledFacts = Omit<Extract<WakeFacts, { kind: "checks-settled" }>, "kind">
 export class CheckWatcher {
   /** Tasks whose read is out now: a slow read is never doubled by the next tick. */
   private readonly reading = new Set<string>();
-  /** Failed quiet reads back off too; a restart may try again on its first tick. */
+  /**
+   * When a pass last read a task without recording a reading: a failed
+   * read, an allowance wait or a merge confirmation alone backs off here,
+   * and a restart may try again on its first tick. A pass whose read
+   * recorded a reading drops its mark, so that reading's own time is the
+   * one clock the quiet refresh counts from.
+   */
   private readonly refreshAfter = new Map<string, number>();
 
   constructor(private readonly host: CheckWatcherHost) {}
@@ -214,6 +223,7 @@ export class CheckWatcher {
   private async refreshTask(taskId: string, now: number): Promise<void> {
     const head = this.host.tasks.get(taskId)?.delivery?.headSha;
     const read = await this.host.read(taskId);
+    this.readRecorded(taskId, read);
     const after = this.host.tasks.get(taskId);
     if (!after || TaskService.isClosed(after) || after.delivery?.ciWatch) return;
     if (read.kind === "failed" && read.retryAt !== undefined) {
@@ -259,6 +269,15 @@ export class CheckWatcher {
     }
   }
 
+  /**
+   * A read that recorded its reading on the task needs no back-off of its
+   * own: the reading's time, written as it was read, is never earlier than
+   * this pass's mark, and a later write to it is what the next pass reads.
+   */
+  private readRecorded(taskId: string, read: WatchedReading): void {
+    if (read.kind !== "failed" || read.recorded === true) this.refreshAfter.delete(taskId);
+  }
+
   private forwardedObservation(taskId: string, id: string | undefined): void {
     const current = this.host.tasks.get(taskId)?.delivery?.ciObservation;
     if (id && current?.id === id && !current.forwarded)
@@ -302,6 +321,7 @@ export class CheckWatcher {
     let read: WatchedReading;
     try {
       read = await this.host.read(taskId);
+      this.readRecorded(taskId, read);
     } catch (caught) {
       const retryAt = allowanceResetOf(caught);
       read = {

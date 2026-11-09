@@ -164,7 +164,13 @@ export class ChangeChecks {
         main,
       );
       if (checks.problem)
-        return { kind: "failed", transient: false, problem: checks.problem, observationId };
+        return {
+          kind: "failed",
+          transient: false,
+          problem: checks.problem,
+          observationId,
+          recorded: true,
+        };
       if (this.checksPending(record, { change, forge }, checks)) {
         const failing = named(checks.items.filter((check) => isRedCheckState(check.state)));
         const queue = this.queueWake(taskId, change.headSha, checks.items);

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "quiet-refresh-one-clock",
+      "reason": "The check watcher's quiet refresh now counts only from a recorded reading's saved time, and the check-refresh journey waits for the turn-end read before turning checks red, which ends that journey's intermittent failure; what a person sees does not change."
+    }
+  ]
+}

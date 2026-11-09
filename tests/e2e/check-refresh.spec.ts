@@ -62,9 +62,12 @@ import { pressKey } from "./windowKeys";
  * while its existing merge offer supplies the crew's judgment; no second verdict is recorded.
  * The quiet refresh reads finished checks once they are
  * `CHECK_REFRESH_MS` old, on the host's tick, which this journey shortens to
- * seconds (`SHORT_TICK`). The spec records the green reading as that old - an
- * overdue clock, as idle-ladder.spec.ts seeds - and waits for the read, never
- * for five minutes of wall clock or the rest of a minute's tick.
+ * seconds (`SHORT_TICK`). The host also reads them on the first tick after
+ * the crewmate's turn ends; the spec waits for that reading first, so no read
+ * is out while the checks change. It then records the green reading as one
+ * refresh interval old - an overdue clock, as idle-ladder.spec.ts seeds - and
+ * waits for the read, never for five minutes of wall clock or the rest of a
+ * minute's tick.
  */
 // INF-1555 F12/F14: the offer means ready; checks alone hold it, including a known read refusal.
 for (const kind of ["failed", "empty", "unreadable"] as const) {
@@ -140,6 +143,18 @@ for (const kind of ["failed", "empty", "unreadable"] as const) {
 
       // The crewmate reported and waits on the captain: its work is complete.
       await expect.poll(() => ledger()?.activity, { timeout: 30_000 }).toBe("idle");
+      // The host reads the pull request on the first tick after that turn ends,
+      // since the turn may have pushed: wait until that reading is recorded, so
+      // it neither reads the checks below as green nor stamps over their age.
+      await expect
+        .poll(
+          () => {
+            const record = ledger();
+            return record?.idleSince != null && (record.delivery?.ciAt ?? 0) >= record.idleSince;
+          },
+          { timeout: 30_000 },
+        )
+        .toBe(true);
 
       // GitHub's checks turn red on the same pull request.
       github.setChecks(

@@ -6,6 +6,7 @@ import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import {
   armWatch,
+  CHECK_REFRESH_MS,
   CHECK_WATCH_BOUND_MS,
   CheckWatcher,
   checkWatchOnce,
@@ -197,6 +198,32 @@ describe("CheckWatcher", () => {
     tasks.close("t1", { status: "dropped", reason: "discarded", actor: "captain", text: "gone" });
     await at(minutes(20));
     expect(reads).toHaveLength(2);
+  });
+
+  // The merge batch's check-refresh journey (tests/e2e/check-refresh.spec.ts)
+  // aged a reading the turn-end read had just recorded, and the quiet refresh
+  // waited five more minutes: that pass's own mark outlived the reading.
+  it("counts the quiet refresh from a recorded reading's own time, whichever pass read it", async () => {
+    const { tasks, reads, at, start, answer } = setup();
+    seedDelivery(tasks, "t1", { ciWatch: undefined, ci: "green", ciAt: start, prNumber: 7 });
+    // Each read records its time on the task, as `ChangeChecks.readWatched` does.
+    answer(() => {
+      seedDelivery(tasks, "t1", { ciAt: start + (reads.at(-1) ?? 0) });
+      return {
+        kind: "finished",
+        head: HEAD,
+        change: "PR #7",
+        checks: [{ name: "linux-checks", state: "success" }],
+      };
+    });
+    tasks.turns.markIdle("t1", { at: start + minutes(1) });
+    await at(minutes(1) + 1_000);
+    expect(reads).toEqual([minutes(1) + 1_000]);
+    const readAt = tasks.get("t1")?.delivery?.ciAt ?? 0;
+    expect(readAt).toBe(start + minutes(1) + 1_000);
+    seedDelivery(tasks, "t1", { ciAt: readAt - CHECK_REFRESH_MS });
+    await at(minutes(1) + 2_000);
+    expect(reads).toEqual([minutes(1) + 1_000, minutes(1) + 2_000]);
   });
 
   it("reads every minute for 10 minutes, then every 2, writing nothing but its clock", async () => {

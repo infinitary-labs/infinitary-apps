@@ -131,6 +131,10 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
     The shared seat box owns every session it opens, registered tool gates and transcript watchers, and raw-query drains: `seatBoxesFlushed` aborts abandoned work, disposes sessions, advances their existing client-hygiene clock, awaits exits and consumers, then flushes sidecars and removes scratch homes and client folders before the next case.
     A real-client regression abandons an inference and a held tool at that boundary and checks that their requests, leases and homes are gone.
     `INFINITARY_CLAUDE_SEAT_EVIDENCE=1 pnpm exec vitest run src/core/claude/claudeFirstmateSession.integration.test.ts` prints credential-free request and transcript evidence for output caps, priority and cleanup.
+  - **One turn and one life state** (`claudeRollingSession.ts`) own the rolling session: a turn is idle, starting (with early steers and a remembered stop), or running by prompt or continuation; life is open, disposing, disposed or retired.
+    The starting turn's object identity rejects a late attachment, and one `settle()` returns unread steers and ends either kind of turn.
+    The query core reads the session's interrupt and disposal state; it stores neither.
+    A stop asked while the client is starting waits for the prompt to enter its input, then interrupts it; a safe stop still keeps an unstarted prompt out of the client entirely.
   - **A prompt settles when the client says it is idle** (`session_state_changed: idle`, emitted once every queued turn is done, which the environment variable turns on), not on a result: a steer answered in a turn of its own still settles the prompt once.
     A client that never reports its state settles on the result that follows the last acknowledged message.
   - **Every pushed message carries a uuid**, and the client acknowledges each by it (`isReplay`) as a turn takes it in.

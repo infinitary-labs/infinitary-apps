@@ -18,9 +18,9 @@ import {
  * (`claudeRollingSession.ts`) and the one-shot (`claudeOneShotSession.ts`),
  * which the factory (`session.ts`) opens: what they run on, the push-to-pull
  * input queue, the user message the client reads, and the pump that reads
- * the client's messages, normalizes them and settles the awaited turn. They
- * differ only in WHEN a turn is over and what a failed one says, so each
- * supplies those decisions and nothing else is written twice.
+ * the client's messages and normalizes them. Each session owns its turn
+ * and life state, including when a turn ends and what a failed one says;
+ * the pump reads that state but never keeps a second copy.
  */
 
 /**
@@ -186,7 +186,7 @@ export function userMessage(
 export const INTERRUPTED_MESSAGE = "The turn was interrupted.";
 
 /**
- * The pump / apply / settle core. `E` is what the session tells its
+ * The pump / apply core. `E` is what the session tells its
  * subscribers: the session contract's events.
  *
  * Every message is normalized once (`fmEventsFromClaudeMessage`). A result
@@ -203,10 +203,9 @@ export abstract class ClaudeQueryCore<E extends { type: string }> {
   private pending: E[] = [];
   /** The normalizer's running state; a session that swaps clients starts it over per client. */
   protected normalizer: ClaudeNormalizerState = createNormalizerState();
-  protected turn: { resolve: () => void; reject: (error: Error) => void } | undefined;
-  /** An interrupt is in flight; the turn it cuts short settles as interrupted. */
-  protected interrupting = false;
-  protected disposed = false;
+  /** The session's life and current turn, read without owning either. */
+  protected abstract get disposed(): boolean;
+  protected abstract get interrupted(): boolean;
 
   constructor(protected readonly taskId: string) {}
 
@@ -241,12 +240,10 @@ export abstract class ClaudeQueryCore<E extends { type: string }> {
       this.emitAll(result.events);
       return;
     }
-    const interruptLanded = this.interrupting && !result.failure?.cutOff;
+    const interruptLanded = this.interrupted && !result.failure?.cutOff;
     if (result.failure && !interruptLanded) {
-      this.interrupting = false;
       this.resultFailed(result, result.failure);
-    } else if (this.interrupting) {
-      this.interrupting = false;
+    } else if (this.interrupted) {
       this.resultInterrupted(result);
     } else {
       this.resultClean(result);
@@ -291,19 +288,5 @@ export abstract class ClaudeQueryCore<E extends { type: string }> {
           : event;
       this.emit(spoken as unknown as E);
     }
-  }
-
-  protected settleTurn(): void {
-    const turn = this.turn;
-    if (!turn) return;
-    this.turn = undefined;
-    turn.resolve();
-  }
-
-  protected rejectTurn(caught: unknown): void {
-    const turn = this.turn;
-    if (!turn) return;
-    this.turn = undefined;
-    turn.reject(caught instanceof Error ? caught : new Error(String(caught)));
   }
 }

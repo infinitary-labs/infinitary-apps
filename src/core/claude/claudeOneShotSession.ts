@@ -27,6 +27,11 @@ const ONE_QUESTION_TEXT = "A one-shot session answers one question.";
 export class ClaudeOneShotSession extends ClaudeQueryCore<SessionEvent> implements ModelSession {
   readonly sessionId = randomUUID();
   readonly controlProfile = CLAUDE_CONTROL_PROFILE;
+  protected disposed = false;
+  protected get interrupted(): boolean {
+    return false;
+  }
+  private turn: { resolve: () => void; reject: (error: Error) => void } | undefined;
   private query: Query | undefined;
   private input: MessageQueue | undefined;
   private asked = false;
@@ -231,6 +236,18 @@ export class ClaudeOneShotSession extends ClaudeQueryCore<SessionEvent> implemen
   private release(): void {
     this.releaseLease();
     this.markClosed();
+  }
+
+  private settleTurn(): void {
+    const turn = this.turn;
+    this.turn = undefined;
+    turn?.resolve();
+  }
+
+  private rejectTurn(caught: unknown): void {
+    const turn = this.turn;
+    this.turn = undefined;
+    turn?.reject(caught instanceof Error ? caught : new Error(String(caught)));
   }
 
   /** The one answer: its events, the closing words, and the client let go. */

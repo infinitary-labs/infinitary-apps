@@ -82,6 +82,27 @@ type Connection = {
   release: () => void;
 };
 
+/** One prompt's caller, owned by its starting or running turn. */
+type Completion = { resolve: () => void; reject: (error: Error) => void };
+type Steer = { text: string; images?: SessionImage[] };
+type Interrupt = { at: number; cut?: string };
+type Starting = {
+  kind: "starting";
+  completion: Completion;
+  early: Steer[];
+  stopAsked?: Interrupt;
+};
+type Running = {
+  kind: "running";
+  pushed: Pushed[];
+  ran: boolean;
+  failed: boolean;
+  interrupt?: Interrupt;
+} & ({ by: "prompt"; completion: Completion } | { by: "continuation" });
+/** Idle keeps the last inputs only for a replay acknowledgement arriving after the boundary. */
+type Turn = { kind: "idle"; pushed: Pushed[] } | Starting | Running;
+type Life = "open" | "disposing" | "disposed" | "retired";
+
 /** What a rolling session runs on, resolved at open. */
 type RollingConfig = {
   accountId: string;
@@ -108,21 +129,10 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
   /** New instructions wait for the next prompt's attachment. */
   private reopen = false;
   private wantedEffort: ThinkingLevel | "off";
-  /** A prompt is in flight, from its call until the client is idle again. */
-  private promptOpen = false;
-  /** The client is running a turn no prompt asked for, until it is idle again. */
-  private continuing = false;
-  /** The prompt's message or a continuation is in the client's hands: a steer can join it. */
-  private accepting = false;
-  private pushed: Pushed[] = [];
-  /** Steers that arrived while the client was starting, pushed after the prompt. */
-  private early: { text: string; images?: SessionImage[] }[] = [];
-  /** Each prompt's number, so a late start of an abandoned one pushes nothing. */
-  private generation = 0;
+  private turn: Turn = { kind: "idle", pushed: [] };
+  private life: Life = "open";
   /** Steers that arrived while no prompt could take them, for the next one. */
   private held: string[] = [];
-  /** The client has said something since the prompt was pushed. */
-  private ran = false;
   /** The client reports its session state; without it a result settles. */
   private statesSeen = false;
   /**
@@ -132,19 +142,10 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
    */
   private folding: "idle" | "running" | "ended" = "idle";
   private acksSeen = false;
-  /** This prompt already reported a failure. */
-  private failed = false;
-  /** The failure an `abort(failure)` asked the cut turn to report, and when it asked. */
-  private cut: { message: string; at: number } | undefined;
-  /** When the client was first asked to interrupt the running turn, until that turn answers. */
-  private interruptedAt: number | undefined;
-  /** Run once the open prompt settles: a dispose or a detach waiting for it. */
+  /** Run once the open turn settles: a dispose or a detach waiting for it. */
   private afterSettle: (() => void)[] = [];
-  private disposing = false;
   /** The last settled prompt's messages, where `servedState` locates them. */
   private served: Pushed[] | undefined;
-  /** The session is gone: its client has exited and its store is free. */
-  private retired = false;
   /** The session this one started over from, until the owner takes it. */
   private renewal: SessionRenewal | undefined;
   /** The client took a prompt under the current id: a reattach resumes it. */
@@ -202,7 +203,7 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
   }
 
   isStreaming(): boolean {
-    return this.promptOpen || this.continuing;
+    return this.turn.kind !== "idle";
   }
 
   modelRef(): { provider: string; id: string } | undefined {
@@ -215,60 +216,64 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
   }
 
   prompt(text: string, images?: SessionImage[]): Promise<void> {
-    if (this.disposing) return Promise.reject(new Error(ENDED_TEXT));
+    if (this.life !== "open") return Promise.reject(new Error(ENDED_TEXT));
     if (this.isStreaming()) {
       // Overwriting the running turn would orphan whoever awaits it; work
       // for a running turn belongs in steer().
       return Promise.reject(new Error("This session is still working on its current turn."));
     }
-    this.promptOpen = true;
-    this.generation += 1;
-    this.pushed = [];
-    this.early = [];
-    this.ran = false;
-    this.failed = false;
-    this.cut = undefined;
-    this.interruptedAt = undefined;
     this.served = undefined;
     return new Promise<void>((resolve, reject) => {
-      this.turn = { resolve, reject };
-      void this.start(this.generation, text, images);
+      const mine: Starting = { kind: "starting", completion: { resolve, reject }, early: [] };
+      this.turn = mine;
+      void this.start(mine, text, images);
     });
   }
 
   /** Attach, set the turn's effort, then hand the client the prompt and any steer that waited. */
-  private async start(generation: number, text: string, images?: SessionImage[]): Promise<void> {
+  private async start(mine: Starting, text: string, images?: SessionImage[]): Promise<void> {
     let connection: Connection;
     try {
-      connection = await this.attach(generation);
+      connection = await this.attach(mine);
       await this.applyEffort(connection);
     } catch (caught) {
-      if (generation === this.generation) this.finish(caught);
+      if (this.turn === mine) this.settle(caught);
       return;
     }
-    // An abort may have given up on this prompt while the client started.
-    if (generation !== this.generation || !this.promptOpen) return;
-    // A safe stop came while the client started: the client never takes
-    // the prompt, whose input goes again.
+    // A late attach never hands an abandoned prompt to the client.
+    if (this.turn !== mine) return;
     if (this.safeStop.cut) {
-      this.finish(new StoppedBeforeStartError());
+      this.settle(new StoppedBeforeStartError());
       return;
     }
-    this.accepting = true;
+    const running: Running = {
+      kind: "running",
+      by: "prompt",
+      completion: mine.completion,
+      pushed: [],
+      ran: false,
+      failed: false,
+    };
+    this.turn = running;
     this.push(connection, "prompt", text, images);
-    for (const steer of this.early.splice(0)) {
-      this.push(connection, "steer", steer.text, steer.images);
-    }
-    // A dispose that came while the client started ends this turn early too.
-    if (this.disposing) void this.interrupt();
-    else void this.readAhead();
+    for (const steer of mine.early) this.push(connection, "steer", steer.text, steer.images);
+    // Keep a stop asked before attachment; only interrupt after the prompt
+    // and its early steers are in the client's input.
+    if (mine.stopAsked || this.life === "disposing") {
+      // A bound watches from its request; a plain stop watches from send.
+      if (mine.stopAsked?.cut !== undefined) running.interrupt = mine.stopAsked;
+      void this.interrupt();
+    } else void this.readAhead();
   }
 
   /** A seat's record is read ahead of its turns' ends (`ClaudeSessionRecord.readAhead`); a coding session's owner never asks. */
   async readAhead(): Promise<void> {
     if (this.spec.builtins === "coding") return;
     const sessionId = this.sessionId;
-    await this.record.readAhead(sessionId, () => sessionId === this.sessionId && !this.retired);
+    await this.record.readAhead(
+      sessionId,
+      () => sessionId === this.sessionId && this.life !== "retired",
+    );
   }
 
   /** Honored when the spec asked for a per-turn level (WI-13). */
@@ -353,16 +358,16 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
    * step; with no turn to join, held for the owner to take back.
    */
   steer(text: string, images?: SessionImage[]): Promise<void> {
-    if (this.disposing) return Promise.reject(new Error(ENDED_TEXT));
+    if (this.life !== "open") return Promise.reject(new Error(ENDED_TEXT));
     const connection = this.connection;
     if (this.safeStop.stopping) {
       // A stopping turn takes nothing more: the owner has it back at its end.
       this.held.push(text);
-    } else if (this.accepting && connection) {
+    } else if (this.turn.kind === "running" && connection) {
       this.push(connection, "steer", text, images);
-    } else if (this.promptOpen) {
+    } else if (this.turn.kind === "starting") {
       // The client is still starting: the steer follows the prompt in.
-      this.early.push({ text, ...(images ? { images } : {}) });
+      this.turn.early.push({ text, ...(images ? { images } : {}) });
     } else {
       this.held.push(text);
     }
@@ -380,10 +385,7 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
    * interrupt within a tick is stopped, and the turn ends anyway.
    */
   async abort(failure?: string): Promise<void> {
-    if (failure !== undefined && this.isStreaming() && !this.cut) {
-      this.cut = { message: failure, at: this.config.clock.now() };
-    }
-    await this.interrupt();
+    await this.interrupt(failure);
   }
 
   /** The safe stop (`ModelSession.stopSafely`, `ClaudeSafeStop`); a steer from now on is held for the owner. */
@@ -391,12 +393,30 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     return this.safeStop.ask(options, this.isStreaming());
   }
 
-  /** Interrupt the turn the client runs: a prompt's once it holds it, or a continuation. */
-  private async interrupt(): Promise<void> {
+  protected get disposed(): boolean {
+    return this.life === "disposed" || this.life === "retired";
+  }
+
+  protected get interrupted(): boolean {
+    return this.turn.kind === "running" && this.turn.interrupt !== undefined;
+  }
+
+  /** Remember a starting turn's stop; send a running turn's interrupt. */
+  private async interrupt(failure?: string): Promise<void> {
+    const turn = this.turn;
+    if (turn.kind === "idle") return;
+    const previous = turn.kind === "starting" ? turn.stopAsked : turn.interrupt;
+    const interrupt =
+      failure !== undefined && previous?.cut === undefined
+        ? { at: this.config.clock.now(), cut: failure }
+        : (previous ?? { at: this.config.clock.now() });
+    if (turn.kind === "starting") {
+      turn.stopAsked = interrupt;
+      return;
+    }
     const connection = this.connection;
-    if (!this.accepting || !connection || connection.closing) return;
-    this.interrupting = true;
-    this.interruptedAt ??= this.config.clock.now();
+    if (!connection || connection.closing) return;
+    turn.interrupt = interrupt;
     try {
       await connection.query.interrupt();
     } catch (caught) {
@@ -411,10 +431,10 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
    * it has.
    */
   dispose(): void {
-    if (this.disposing) return;
-    this.disposing = true;
+    if (this.life !== "open") return;
+    this.life = "disposing";
     const finish = () => {
-      this.disposed = true;
+      this.life = "disposed";
       const connection = this.connection;
       if (connection) this.close(connection);
       else this.retire();
@@ -494,7 +514,15 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
       this.close(connection, true);
     }
     // The interrupt never landed within a tick: the client is wedged.
-    const asked = this.cut?.at ?? this.interruptedAt;
+    const turn = this.turn;
+    const asked =
+      turn.kind === "starting"
+        ? turn.stopAsked?.cut !== undefined
+          ? turn.stopAsked.at
+          : undefined
+        : turn.kind === "running" && !connection?.closing
+          ? turn.interrupt?.at
+          : undefined;
     if (this.isStreaming() && asked !== undefined && now - asked >= TICK_PERIOD_MS) this.abandon();
   }
 
@@ -525,13 +553,13 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
 
   /**
    * The live attachment, reopened when it ended or new instructions wait,
-   * for the prompt numbered `generation`. An attach can outlive its prompt
+   * for the starting turn `mine`. An attach can outlive its prompt
    * (the bounds give up on it while it waits for a sign-in to finish), so
    * after every wait it checks the prompt is still the one it serves and
    * spawns nothing otherwise: a later attach, a detach or a dispose never
    * has an orphaned client beside it.
    */
-  private async attach(generation: number): Promise<Connection> {
+  private async attach(mine: Starting): Promise<Connection> {
     const current = this.connection;
     if (current && !current.closing && !this.reopen) return current;
     if (current) {
@@ -540,19 +568,19 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     }
     // Whatever the client wrote since the last boundary, before it runs again.
     await this.record.refreshMirror(this.id);
-    this.stillServing(generation);
+    this.stillServing(mine);
     this.reopen = false;
     const env = this.config.env;
     // The machine's own client (F14), checked at every attachment: refuse
     // with its sentence, before anything is leased, when it is gone or old.
     await refuseMissingClient(this.deps, env);
-    this.stillServing(generation);
+    this.stillServing(mine);
     // This client holds the account's store for as long as it runs: it
     // refreshes its own login inside the run, and the refresh token behind
     // it is single use. A sign-in in progress is waited out first.
     const release = await acquireSessionLease(this.deps.configDir);
     try {
-      this.stillServing(generation);
+      this.stillServing(mine);
     } catch (caught) {
       release();
       throw caught;
@@ -608,9 +636,9 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
   }
 
   /** Throws, spawning nothing, when the prompt an attach serves is no longer the open one. */
-  private stillServing(generation: number): void {
+  private stillServing(mine: Starting): void {
     if (this.disposed) throw new Error(ENDED_TEXT);
-    if (generation !== this.generation || !this.promptOpen) {
+    if (this.turn !== mine) {
       throw new Error("The turn ended before Claude attached.");
     }
   }
@@ -635,7 +663,8 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     images: SessionImage[] | undefined,
   ): void {
     const uuid = randomUUID();
-    this.pushed.push({ uuid, kind, text, acked: false });
+    if (this.turn.kind !== "running") return;
+    this.turn.pushed.push({ uuid, kind, text, acked: false });
     connection.input.push(
       userMessage(text, kind === "steer" ? CLAUDE_STEER_PRIORITY : undefined, images, uuid),
     );
@@ -657,8 +686,8 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
 
   /** The session is gone: its record is final, the store is free, the clock forgets it. */
   private retire(): void {
-    if (this.retired) return;
-    this.retired = true;
+    if (this.life === "retired") return;
+    this.life = "retired";
     this.unregister();
     // Its client has exited: the next session of the task removes the folder.
     this.staging?.release();
@@ -752,21 +781,21 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
       this.statesSeen = true;
       if (record.state === "running") {
         // Running with no prompt open is the client resuming on its own.
-        if (this.promptOpen) this.ran = true;
-        else this.beginContinuation();
+        if (this.turn.kind === "running" && this.turn.by === "prompt") this.turn.ran = true;
+        else if (this.turn.kind === "idle") this.beginContinuation();
       }
       if (record.state === "idle") {
-        if (this.promptOpen) {
-          if (this.accepting && this.ran) this.finish();
-        } else {
-          this.endContinuation();
-        }
+        const turn = this.turn;
+        if (turn.kind === "running" && (turn.by === "continuation" || turn.ran)) this.settle();
       }
       return;
     }
     if (record.type === "user" && record.isReplay === true && typeof record.uuid === "string") {
       this.acksSeen = true;
-      const pushed = this.pushed.find((entry) => entry.uuid === record.uuid);
+      const pushed =
+        this.turn.kind === "starting"
+          ? undefined
+          : this.turn.pushed.find((entry) => entry.uuid === record.uuid);
       if (pushed && !pushed.acked) {
         pushed.acked = true;
         this.emit({
@@ -783,7 +812,7 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
   }
 
   protected resultFailed(result: ClaudeNormalizeResult, failure: ClaudeTurnFailure): void {
-    this.failed = true;
+    if (this.turn.kind === "running") this.turn.failed = true;
     // An answer that kept running past the spec's output cap is the cap's
     // failure, said in the session's words rather than the client's.
     const cap = this.spec.bounds?.request?.maxOutputTokens;
@@ -801,10 +830,10 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     // An abort with a failure (a watched bound's) interrupted the turn: say
     // it, the way the Pi session rewrites its cut turn. A plain abort ends
     // quietly.
-    const cut = this.cut;
-    if (cut && !this.failed) {
-      this.failed = true;
-      this.emit({ type: "turn_failed", taskId: this.taskId, error: cut.message });
+    const turn = this.turn;
+    if (turn.kind === "running" && turn.interrupt?.cut !== undefined && !turn.failed) {
+      turn.failed = true;
+      this.emit({ type: "turn_failed", taskId: this.taskId, error: turn.interrupt.cut });
     }
     this.closeTurn(result, undefined);
   }
@@ -820,13 +849,9 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     const message = caught instanceof Error ? caught.message : String(caught);
     this.note(`the client stopped: ${message}`);
     // The failure was already told; the throw is the same failure ending the stream.
-    if (this.continuing) {
-      this.endContinuation(this.failed ? undefined : message);
-      return;
-    }
-    if (!this.promptOpen) return;
-    if (this.failed) this.finish();
-    else this.finish(caught);
+    const turn = this.turn;
+    if (turn.kind === "idle") return;
+    this.settle(turn.kind === "running" && turn.failed ? undefined : caught);
   }
 
   protected streamEnded(stream: AsyncIterable<unknown>): void {
@@ -835,125 +860,97 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     this.connection = undefined;
     if (this.spec.builtins === "coding")
       this.emit({ type: "background_work_changed", count: undefined });
-    // The client has exited: its store is free, and its transcript is
-    // complete up to here.
     connection.release();
     this.record.mirror(connection.sessionId);
-    this.endContinuation(STOPPED_TEXT);
+    if (this.turn.kind === "running" && this.turn.by === "continuation") this.settle(STOPPED_TEXT);
     if (connection.closing) {
-      if (this.disposing) this.retire();
+      if (this.life !== "open") this.retire();
       return;
     }
-    if (this.promptOpen) this.finish(new Error(STOPPED_TEXT));
+    this.settle(new Error(STOPPED_TEXT));
   }
 
   /** One result: its events, then the session's closing text for it. */
   private closeTurn(result: ClaudeNormalizeResult, text: string | undefined): void {
-    this.ran = true;
+    const turn = this.turn;
+    if (turn.kind === "running") turn.ran = true;
     this.emitAll(result.events);
     this.emit({ type: "turn_closed", ...(text ? { text } : {}) });
-    if (this.cut) {
-      // The cut's interrupt landed. A steer the client still holds is
-      // answered in a turn of its own, under bounds of its own: the wedge
-      // watch stands down, and a bound that cuts that turn is reported as
-      // this one was.
-      this.cut = undefined;
-      this.failed = false;
-    }
-    // The client answered: it is not wedged.
-    this.interruptedAt = undefined;
-    // A client that never reports its state settles on the result that
-    // follows the last acknowledged message.
-    if (!this.statesSeen && (!this.acksSeen || this.pushed.every((entry) => entry.acked))) {
-      this.finish();
+    if (turn.kind !== "running") return;
+    // A result answers the interrupt. A queued steer can have its own
+    // result and its own bound before this prompt reaches idle.
+    if (turn.interrupt?.cut !== undefined) turn.failed = false;
+    turn.interrupt = undefined;
+    if (!this.statesSeen && (!this.acksSeen || turn.pushed.every((entry) => entry.acked))) {
+      this.settle();
     }
   }
 
-  /**
-   * The client did not answer its interrupt: end it, and the turn with it -
-   * failed when a failing abort cut it, quietly as a plain interrupt ends
-   * otherwise. A continuation ends once the stopped client's stream does.
-   */
+  /** The client did not answer: stop it and settle the prompt; a continuation ends on stream exit. */
   private abandon(): void {
-    const cut = this.cut;
-    this.cut = undefined;
-    this.interruptedAt = undefined;
-    if (this.promptOpen && !this.failed) {
-      if (cut) {
-        this.failed = true;
-        this.emit({ type: "turn_failed", taskId: this.taskId, error: cut.message });
-      }
+    const turn = this.turn;
+    const cut =
+      turn.kind === "starting"
+        ? turn.stopAsked?.cut
+        : turn.kind === "running"
+          ? turn.interrupt?.cut
+          : undefined;
+    const prompt = turn.kind === "starting" || (turn.kind === "running" && turn.by === "prompt");
+    if (prompt && !(turn.kind === "running" && turn.failed)) {
+      if (cut !== undefined) this.emit({ type: "turn_failed", taskId: this.taskId, error: cut });
       this.emit({ type: "turn_end", taskId: this.taskId });
       this.emit({ type: "turn_closed" });
     }
+    // A continuation can still drain an interrupted result before stream
+    // exit. Keep its interrupt classification, but spend the bound's cut.
+    if (turn.kind === "running" && turn.interrupt) {
+      turn.interrupt = { at: turn.interrupt.at };
+    }
     const connection = this.connection;
     if (connection) this.close(connection, true);
-    this.finish();
+    if (prompt) this.settle();
   }
 
-  /** The prompt is over: record where it landed, then settle it. */
-  private finish(caught?: unknown): void {
-    if (!this.promptOpen) return;
-    this.promptOpen = false;
-    this.accepting = false;
-    this.interrupting = false;
-    this.interruptedAt = undefined;
-    this.holdUnacknowledgedSteers();
-    for (const steer of this.early.splice(0)) this.held.push(steer.text);
-    this.record.mirror(this.id);
-    this.served = this.pushed;
-    if (this.pushed.some((entry) => entry.acked)) {
-      this.tookPrompt = true;
-      this.record.stampServed(this.sessionId, this.pushed, this.personalDigests);
-    }
-    this.safeStop.turnOver();
-    if (caught === undefined) this.settleTurn();
-    else this.rejectTurn(caught);
-    for (const after of this.afterSettle.splice(0)) after();
-  }
-
-  /** A steer the client never took in goes back to the owner. */
-  private holdUnacknowledgedSteers(): void {
-    for (const entry of this.pushed) {
+  /** One exit for a prompt or continuation: return inputs, record, then notify its owner. */
+  private settle(caught?: unknown): void {
+    const turn = this.turn;
+    if (turn.kind === "idle") return;
+    const pushed = turn.kind === "running" ? turn.pushed : [];
+    this.turn = { kind: "idle", pushed };
+    for (const entry of pushed) {
       if (entry.kind === "steer" && !entry.acked) this.held.push(entry.text);
     }
-  }
-
-  /**
-   * The client said it is running with no prompt open: it resumed on its
-   * own (a background command it started finished), and the owner gets the
-   * same turn boundary a prompt has. A client whose input is ending is not
-   * starting work for anyone.
-   */
-  private beginContinuation(): void {
-    const connection = this.connection;
-    if (this.continuing || this.disposing || !connection || connection.closing) return;
-    this.continuing = true;
-    this.accepting = true;
-    this.pushed = [];
-    this.failed = false;
-    this.cut = undefined;
-    this.interruptedAt = undefined;
-    this.emit({ type: "continuation_started" });
-  }
-
-  /**
-   * The continuation is over: the client is idle again, or it exited
-   * (`error`). Its own failure, when it had one, was already told as its
-   * turn's `turn_failed`.
-   */
-  private endContinuation(error?: string): void {
-    if (!this.continuing) return;
-    this.continuing = false;
-    this.accepting = false;
-    this.interrupting = false;
-    this.cut = undefined;
-    this.interruptedAt = undefined;
-    this.holdUnacknowledgedSteers();
+    if (turn.kind === "starting") {
+      for (const steer of turn.early) this.held.push(steer.text);
+    }
     this.record.mirror(this.id);
     this.safeStop.turnOver();
-    this.emit({ type: "continuation_ended", ...(error !== undefined ? { error } : {}) });
+    if (turn.kind === "running" && turn.by === "continuation") {
+      this.emit({
+        type: "continuation_ended",
+        ...(caught !== undefined
+          ? { error: caught instanceof Error ? caught.message : String(caught) }
+          : {}),
+      });
+    } else {
+      this.served = pushed;
+      if (pushed.some((entry) => entry.acked)) {
+        this.tookPrompt = true;
+        this.record.stampServed(this.sessionId, pushed, this.personalDigests);
+      }
+      if (caught === undefined) turn.completion.resolve();
+      else turn.completion.reject(caught instanceof Error ? caught : new Error(String(caught)));
+    }
     for (const after of this.afterSettle.splice(0)) after();
+  }
+
+  /** The client resumed on its own; a closing client cannot start a continuation. */
+  private beginContinuation(): void {
+    const connection = this.connection;
+    if (this.turn.kind !== "idle" || this.life !== "open" || !connection || connection.closing)
+      return;
+    this.turn = { kind: "running", by: "continuation", pushed: [], ran: false, failed: false };
+    this.emit({ type: "continuation_started" });
   }
 
   /**

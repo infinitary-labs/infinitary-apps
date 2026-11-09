@@ -47,6 +47,8 @@ const isolatedUnit = [
   "src/core/claude/claudeClassifierSession.test.ts",
   "src/core/claude/claudeFirstmateSession.test.ts",
   "src/core/claude/claudeModelCatalog.test.ts",
+  // Importing the Claude SDK writes a process environment variable.
+  "src/core/claude/claudeRollingSession.test.ts",
   "src/core/claude/claudeSession.contract.test.ts",
   "src/core/claude/claudeSession.test.ts",
   "src/core/claude/claudeStoreLease.test.ts",

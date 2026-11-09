@@ -442,6 +442,15 @@ export class TaskGraph {
     return { key: keyOrId(carrier), state: state as "running" | "done" | "dropped" };
   }
 
+  /**
+   * The attempts a stronger-model move retried as this task, by id: the
+   * `escalated_from` side of its `escalated` rows, read without decoding
+   * the rest of its timeline.
+   */
+  escalatedFrom(id: string): string[] {
+    return this.writer.events.escalationRefs(id, "escalated_from");
+  }
+
   /** Predecessors are work to recover, never a spec or a routing discount. */
   replacedPredecessors(id: string): TaskRecord[] {
     return this.writer.links

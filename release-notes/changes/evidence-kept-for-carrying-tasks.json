@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "evidence-kept-for-carrying-tasks",
+      "kind": "fix",
+      "title": "Evidence stays for a task that carries work on",
+      "body": "A closed task's evidence folder is kept past its week while another task carries its work on, or retries it with a stronger model, so that task can still read the earlier pictures and logs. It goes a week after the earlier task closed, once no open task still needs it.",
+      "area": "tasks",
+      "noPicture": "Nothing on screen changes; the evidence folder simply stays on disk for longer.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

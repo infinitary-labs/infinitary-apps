@@ -277,6 +277,61 @@ describe("a closed task's leftover files", () => {
     for (const id of [origin.id, follow.id, blocker.id]) expect(entries(paths, id)).toEqual(KEPT);
   });
 
+  // INF-3169 piece 1: a task carrying another's work on, or retrying it on a
+  // stronger model, reads that task's evidence in place, so the week waits for it.
+  it("stays while live work carries it on or retries it on a stronger model, through closed intermediates", async () => {
+    const { paths, tasks, workspace, files, pass, closed } = setup();
+    const earliest = closed("carry-earliest");
+    const carried = closed("carried");
+    tasks.graph.link(earliest.id, carried.id, "replaced-by", "firstmate");
+    const carrier = tasks.create({
+      id: "carrier",
+      title: "Carry the work on",
+      prompt: "Pick up where the carried task stopped",
+      repoId: null,
+      startPolicy: "on-request",
+    });
+    tasks.graph.link(carried.id, carrier.id, "replaced-by", "firstmate");
+    const rejected = closed("rejected");
+    const retry = tasks.create({
+      id: "retry",
+      title: "Retry on a stronger model",
+      prompt: "Retry the rejected attempt",
+      repoId: null,
+      startPolicy: "on-request",
+      shape: { kind: "fix", escalate_from: rejected.key },
+    });
+    // An older stronger-model move recorded only its two escalated rows.
+    const older = closed("older-attempt");
+    const olderRetry = tasks.create({
+      id: "older-retry",
+      title: "Older retry",
+      prompt: "Retry the older attempt",
+      repoId: null,
+      startPolicy: "on-request",
+    });
+    tasks.turns.recordEscalation({
+      from: { id: older.id, key: older.key },
+      to: { id: olderRetry.id, key: olderRetry.key },
+      attempt: 2,
+      tier: "premium",
+    });
+    const unrelated = closed("carry-unrelated");
+    pass(8 * DAY);
+    await files.sweep();
+    await workspace.deletionsSettled();
+    for (const id of [earliest.id, carried.id, rejected.id, older.id])
+      expect(entries(paths, id)).toContain("evidence");
+    expect(entries(paths, unrelated.id)).toEqual(KEPT);
+
+    for (const live of [carrier.id, retry.id, olderRetry.id])
+      tasks.close(live, { status: "dropped", reason: "cancelled", actor: "captain" });
+    await files.sweep();
+    await workspace.deletionsSettled();
+    for (const id of [earliest.id, carried.id, rejected.id, older.id])
+      expect(entries(paths, id)).toEqual(KEPT);
+  });
+
   it("starts a pass when a task closes, and not on a later write to an older closed task", async () => {
     const { paths, tasks, closed } = setup();
     closed("old");

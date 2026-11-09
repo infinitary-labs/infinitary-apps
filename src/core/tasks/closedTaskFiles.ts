@@ -12,8 +12,9 @@ import { TaskService } from "./taskService";
  * leftover files"; the captain's FI3-1199 answer): a week after a task
  * closes, its evidence folder and everything else its crewmate left in
  * `crewmates/<taskId>/` go, unless a live task still builds on it, was
- * filed from it or waits on it, directly or through earlier tasks. The
- * parts the app keeps for itself stay.
+ * filed from it, waits on it, carries its work on or retries it on a
+ * stronger model, directly or through earlier tasks. The parts the app
+ * keeps for itself stay.
  */
 
 /** How long a closed task's leftover files stay after its close. */
@@ -30,7 +31,7 @@ type TasksReader = Pick<
   | "onChange"
   | "timeline"
 > & {
-  graph: Pick<TaskService["graph"], "linksFrom" | "linksTo">;
+  graph: Pick<TaskService["graph"], "linksFrom" | "linksTo" | "escalatedFrom">;
 };
 
 export type ClosedTaskFilesOptions = {
@@ -49,6 +50,9 @@ export type ClosedTaskFilesOptions = {
  * Every task live work builds on, including through closed intermediates:
  * read outward from the live set, one task's links and basis at a time,
  * so it costs the live work's ancestry, never the whole record (INF-3032).
+ * Carrying a task's work on (a `replaced-by` link) and retrying it on a
+ * stronger model (its `retry-of` reference, or the older `escalated` row)
+ * hold it too, since the carrier reads its evidence in place (INF-3169).
  */
 function heldByLiveWork(tasks: TasksReader): Set<string> {
   const held = new Set<string>();
@@ -70,10 +74,12 @@ function heldByLiveWork(tasks: TasksReader): Set<string> {
         .map((link) => link.toId),
       ...tasks.graph
         .linksTo(record.id)
-        .filter((link) => link.type === "blocks")
+        .filter((link) => link.type === "blocks" || link.type === "replaced-by")
         .map((link) => link.fromId),
+      ...tasks.graph.escalatedFrom(record.id),
     ];
     if (record.shape?.basis) refs.push(record.shape.basis);
+    if (record.shape?.escalate_from) refs.push(record.shape.escalate_from);
     for (const ref of refs) {
       const ancestor = named(ref.trim());
       if (ancestor && !held.has(ancestor.id)) pending.push(ancestor);

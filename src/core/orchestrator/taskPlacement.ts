@@ -262,7 +262,7 @@ export class TaskPlacement {
 
   /** A current runtime/remote continuation, never a saved activity flag alone. */
   placementRunning(record: TaskRecord): boolean {
-    return this.host.runtime(record.id)?.state === "streaming" && !this.host.outOfReach(record.id);
+    return this.host.runtime(record.id)?.turn.running === true && !this.host.outOfReach(record.id);
   }
 
   /** Where a task would start now: its own Runs on, else its parent's, else its project's. */

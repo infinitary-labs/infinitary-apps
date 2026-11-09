@@ -33,7 +33,7 @@ import type { DependencyInstall } from "../workspace/workspaceService";
 import { ciFactOf } from "./ciFact";
 import type { CrewCore } from "./crewCore";
 import { handedDirections, servesDirections } from "./crewDirections";
-import { SUPERVISOR_STEER, type TaskRuntime } from "./crewRuntime";
+import { type MoveAsk, SUPERVISOR_STEER, type TaskRuntime } from "./crewRuntime";
 import type { PersonalLiveDelegate } from "./crewSupervisorOptions";
 import { updatePauseLine } from "./crewUpdates";
 import { JOB_BOUND_MS } from "./idleLadder";
@@ -148,6 +148,7 @@ export class CrewTurns {
     inboxIds: number[],
     images?: TurnImage[],
   ): Promise<void> {
+    task.turn.prepare(inboxIds);
     const cwd = task.workspace?.cwd;
     const machine = this.core.facts.machineOf(task.id);
     // On a computer that runs work, that computer installs its own copy's.
@@ -181,11 +182,20 @@ export class CrewTurns {
     // the brief row. Cancelled while installing: no turn is running to end,
     // so the cancel finishes here.
     if (this.core.tasks.get(task.id) !== task) return;
-    if (task.cancelled) {
+    if (task.turn.closing) {
       this.core.sessions.finish(task, "cancelled");
       return;
     }
     this.core.options.tasks.recordBrief(task.id, brief);
+    if (task.turn.takeStop()) {
+      this.core.options.inbox.reparkUndelivered(task.turn.takeRows());
+      const move = task.turn.rest("stopped");
+      this.core.options.tasks.turns.setActivity(task.id, "idle");
+      this.core.facts.broadcastCrewCounts();
+      this.turnOver(task.id);
+      this.afterTurn(task, move);
+      return;
+    }
     await this.runTurn(task, briefText(brief), inboxIds, images);
   }
 
@@ -287,7 +297,7 @@ export class CrewTurns {
       // This computer is being updated: the turn never reaches its model,
       // and its rows go again once the update is over (`saveForUpdate`).
       if (this.core.updates.heldForUpdate(task.id)) {
-        task.paused ??= {};
+        if (!task.turn.pause) task.turn.hold({});
         throw new StoppedBeforeStartError();
       }
       // Held once the session reads this input (`heardDirections`).
@@ -298,28 +308,27 @@ export class CrewTurns {
       else if (order) await task.session?.prompt(served, undefined, order);
       else await task.session?.prompt(served);
       if (this.core.disposed()) return;
-      if (task.cancelled) {
+      if (task.turn.closing) {
         this.core.sessions.finish(task, "cancelled");
       } else {
         // A session settles the turn an interrupt cut short (Pi and Claude
         // alike); the interrupt the host asked for is what makes it one.
-        const interrupted = task.interruptRequested;
-        task.interruptRequested = false;
+        const interrupted = task.turn.takeStop();
         this.turnComplete(task, { interrupted });
       }
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       if (this.core.disposed()) return;
-      if (!task.paused) this.core.restarts.recordRestartOutcome(task.id, "stopped", message);
-      if (task.cancelled) {
+      if (!task.turn.pause) this.core.restarts.recordRestartOutcome(task.id, "stopped", message);
+      if (task.turn.closing) {
         this.core.sessions.finish(task, "cancelled");
-      } else if (task.interruptRequested) {
-        task.interruptRequested = false;
+      } else if (task.turn.takeStop()) {
         this.turnComplete(task, { interrupted: true });
-      } else if (task.paused) {
+      } else if (task.turn.pause) {
         // The update the app stopped it for ended it there: a pause. One
         // its model never took sends its words again.
-        if (caught instanceof StoppedBeforeStartError) task.paused.unstarted = true;
+        if (caught instanceof StoppedBeforeStartError)
+          task.turn.hold({ ...task.turn.pause, unstarted: true });
         task.lastTurnError ??= message;
         this.turnComplete(task);
       } else if (isSignInFailure(task.session?.controlProfile, message)) {
@@ -336,10 +345,8 @@ export class CrewTurns {
   }
 
   /** Reset every per-turn buffer before either host- or provider-initiated work. */
-  private beginTurn(task: TaskRuntime, inboxIds: number[] = []): void {
-    task.inFlightInboxIds = inboxIds;
-    task.steeredInboxIds = [];
-    task.state = "streaming";
+  private beginTurn(task: TaskRuntime, inboxIds: number[] = [], continuation = false): void {
+    task.turn.begin(inboxIds, continuation);
     task.currentTurnText = "";
     task.turnReport = undefined;
     task.explicitReport = undefined;
@@ -408,10 +415,7 @@ export class CrewTurns {
    * turn is never counted against the next one's.
    */
   undeliveredSteerRows(task: TaskRuntime): number[] {
-    const steered = task.steeredInboxIds;
-    task.steeredInboxIds = [];
-    const left = task.session?.takeUndeliveredSteers().length ?? 0;
-    return left === 0 ? [] : steered.slice(-left).flat();
+    return task.turn.takeUnheard(task.session?.takeUndeliveredSteers().length ?? 0);
   }
 
   /** Whether a turn delivers nothing but the idle ladder's own nudge. */
@@ -433,7 +437,7 @@ export class CrewTurns {
     summary?: string,
     declared?: ReportDeclaration,
   ): string | Promise<string> {
-    if (task.state === "idle") this.startAutonomousTurn(task);
+    if (!task.turn.busy) this.startAutonomousTurn(task);
     // Handed files are checked whole here before the report counts, and
     // named in it by kept name and size only, never content (INF-992).
     if (declared?.files && declared.files.length > 0) {
@@ -488,9 +492,8 @@ export class CrewTurns {
    * rows it delivers, which its end acknowledges.
    */
   startAutonomousTurn(task: TaskRuntime, inboxIds: number[] = []): void {
-    if (this.core.tasks.get(task.id) !== task || task.cancelled || task.state !== "idle") return;
-    task.autonomousTurn = true;
-    this.beginTurn(task, inboxIds);
+    if (this.core.tasks.get(task.id) !== task || task.turn.closing || task.turn.busy) return;
+    this.beginTurn(task, inboxIds, true);
     // Its computer is being updated: the turn it began there stops too.
     this.core.updates.turnBegan(task);
   }
@@ -503,15 +506,13 @@ export class CrewTurns {
    * ladder takes the task from there (INF-2332).
    */
   endAutonomousTurn(task: TaskRuntime, error?: string, cutOff?: CutOff, unheard?: boolean): void {
-    if (!task.autonomousTurn || this.core.tasks.get(task.id) !== task) return;
-    task.autonomousTurn = false;
+    if (task.turn.stage !== "continuation" || this.core.tasks.get(task.id) !== task) return;
     if (error && !task.lastTurnError) {
       task.lastTurnError = error;
       task.lastTurnCutOff = cutOff;
     }
     if (unheard) this.core.options.tasks.note(task.id, UNHEARD_END_NOTE, { news: true });
-    const interrupted = task.interruptRequested || unheard === true;
-    task.interruptRequested = false;
+    const interrupted = task.turn.takeStop() || unheard === true;
     this.turnComplete(task, { interrupted });
   }
 
@@ -524,9 +525,9 @@ export class CrewTurns {
    * every event it counted is in. Nothing that still runs is stopped.
    */
   confirmTurn(task: TaskRuntime, answered?: (ended: boolean) => void): void {
-    if (task.state !== "streaming" && task.state !== "starting") return;
+    if (!task.turn.busy) return;
     if (this.core.facts.machineOf(task.id) === LOCAL_MACHINE_ID) {
-      if (task.autonomousTurn && task.session && !task.session.isStreaming())
+      if (task.turn.stage === "continuation" && task.session && !task.session.isStreaming())
         this.endAutonomousTurn(task, undefined, undefined, true);
       return;
     }
@@ -563,8 +564,7 @@ export class CrewTurns {
     // A turn the app stopped for its computer's update ends as a pause
     // (`pauseForUpdate`): whatever cut it there is the update, never the
     // provider, so it fails nothing and wakes nobody.
-    const paused = task.paused;
-    task.paused = undefined;
+    const paused = task.turn.takePause();
     // Another computer's update cut the turn there, or this one's own
     // stopped it before its model took it: its words go again. A turn this
     // computer's own update stopped safely kept what it read.
@@ -651,9 +651,8 @@ export class CrewTurns {
       isSignInFailure(task.session?.controlProfile, providerError, cutOff);
     const outage = this.core.options.inbox.outage(task.id);
     const unread = new Set(this.undeliveredSteerRows(task));
-    const inFlight = task.inFlightInboxIds;
+    const inFlight = task.turn.takeRows();
     const consumed = inFlight.filter((id) => !unread.has(id));
-    task.inFlightInboxIds = [];
     if (inFlight.length > 0) {
       if (recoverContext) {
         // Its words never reached a conversation that goes on: they go
@@ -707,7 +706,7 @@ export class CrewTurns {
     // Nor does one its model never took: its own rows carry it.
     if (paused?.row !== undefined && (report || paused.unstarted))
       this.core.options.inbox.withdraw([paused.row]);
-    task.state = "idle";
+    const move = task.turn.rest();
     this.turnOver(task.id);
     if (report) task.lastCompleteText = report;
     // The record carries the report (task-system P0): crew_status reads the
@@ -905,10 +904,13 @@ export class CrewTurns {
       this.sortReport(task, report, { filed, withdrawn }, declared);
     }
     if (!turnError && !options.interrupted && !paused) this.askForCheckBack(task, declared);
+    this.afterTurn(task, move, recoverContext);
+  }
+
+  /** Every idle boundary hands off its deferred work through this one exit. */
+  private afterTurn(task: TaskRuntime, move?: MoveAsk, recoverContext = false): void {
     // A captured settle owns this idle boundary. Do not start another queued
     // guidance turn before its normal close/CI gates run.
-    const move = task.pendingMove;
-    task.pendingMove = undefined;
     if (this.core.options.tasks.get(task.id)?.pendingSettle) {
       this.core.settling.locks.releaseSettleBoundary(task.id);
     } else if (recoverContext) {
@@ -1176,7 +1178,7 @@ export class CrewTurns {
       // new conversation still takes its turn, on the restart's words.
       if (this.core.facts.deliverableRows(task.id, this.core.now()).length > 0)
         this.deliverPendingToTask(resumed);
-      else if (resumed.state === "idle" && !resumed.cancelled)
+      else if (!resumed.turn.busy && !resumed.turn.closing)
         void this.runTurn(resumed, CONTEXT_CONTINUE_TEXT);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
@@ -1293,7 +1295,8 @@ export class CrewTurns {
     task: TaskRuntime,
     options: { announce?: boolean; sent?: boolean } = {},
   ): void {
-    if (task.cancelled || !task.session || task.state !== "idle") return;
+    if (task.turn.closing || !task.session || task.turn.busy) return;
+    if (task.turn.stage === "stopped" && !options.sent) return;
     if (this.core.facts.laneHeld(task.id)) return;
     // A started task in the backlog (INF-2062) takes a turn only for words
     // the captain or the first mate sent, told it stays there.
@@ -1468,7 +1471,7 @@ export class CrewTurns {
 
   /** Resolves once the task's running turn here has ended, at once when none runs. */
   untilTurnOver(task: TaskRuntime): Promise<void> {
-    if (this.core.tasks.get(task.id) !== task || task.state === "idle") return Promise.resolve();
+    if (this.core.tasks.get(task.id) !== task || !task.turn.busy) return Promise.resolve();
     return new Promise((resolve) => {
       const waiters = this.turnWaiters.get(task.id) ?? new Set<() => void>();
       waiters.add(resolve);

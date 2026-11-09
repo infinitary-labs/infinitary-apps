@@ -35,6 +35,7 @@ import {
   crewmateResumeToken,
   crewmateSessionSpec,
 } from "./crewSession";
+import { CrewTurn } from "./crewTurn";
 import { describeStatus } from "./settleService";
 import { conversationRestartWake } from "./turnWakes";
 
@@ -513,8 +514,7 @@ export class CrewSessions {
     const opening = this.resuming.get(taskId);
     if (opening && !replaces) return opening;
     const live = this.core.tasks.get(taskId);
-    if (!opening && !replaces && live?.session && !live.cancelled && !live.settling)
-      return Promise.resolve(live);
+    if (!opening && !replaces && live?.session && !live.turn.closing) return Promise.resolve(live);
     const resuming = opening
       ? opening.then(
           () => this.openResumed(taskId, move, restart),
@@ -541,7 +541,7 @@ export class CrewSessions {
     if (held) {
       const state = !held.session
         ? " that is starting"
-        : held.cancelled || held.settling
+        : held.turn.closing
           ? " that is stopping"
           : "";
       throw new Error(`This task already has a crewmate${state}, so a second one is not opened.`);
@@ -628,18 +628,14 @@ export class CrewSessions {
       currentTurnText: "",
       // The durable record remembers the last report across the restart.
       lastCompleteText: record.outcome ?? "",
-      state: "idle",
+      turn: new CrewTurn("idle"),
       ...(attachment.accountId ? { accountId: attachment.accountId } : {}),
-      cancelled: false,
-      interruptRequested: false,
       filedThisTurn: [],
       withdrawnThisTurn: [],
       lastEventAt: this.core.now(),
       turnStartedAt: this.core.now(),
       quietLevel: 0,
       wallClockEscalated: false,
-      inFlightInboxIds: [],
-      steeredInboxIds: [],
       clientTasks: new Map(),
       openCalls: new Map(),
       unreadSteers: [],
@@ -693,7 +689,7 @@ export class CrewSessions {
     livePersonal?.beginLiveTask(record.id);
     // A conversation on another computer may be in a turn this Mac follows
     // from here (`continuation_started`), which is no idle boundary.
-    if (task.state === "idle") {
+    if (!task.turn.busy) {
       this.core.options.tasks.turns.setActivity(record.id, "idle");
       // A resume that went idle is an idle boundary: the record's own clock
       // carries across the restart, and a record a quit interrupted mid-turn
@@ -811,20 +807,20 @@ export class CrewSessions {
       throw new Error(`Task ${taskId} is already ${describeStatus(record)}.`);
     }
     if (mode === "cancel") {
-      if (task.state === "idle") {
+      if (!task.turn.busy) {
         this.recordInterrupt(taskId, mode, source, "cancelled-idle");
         this.finish(task, "cancelled");
       } else if (!task.session) {
-        task.cancelled = true;
+        task.turn.request("cancel");
         this.recordInterrupt(taskId, mode, source, "no-turn");
       } else {
         this.recordInterrupt(taskId, mode, source, "requested");
-        task.cancelled = true;
+        const undo = task.turn.request("cancel");
         try {
           await task.session.abort();
           this.recordInterrupt(taskId, mode, source, "aborted-turn");
         } catch (caught) {
-          task.cancelled = false;
+          undo();
           const error = caught instanceof Error ? caught.message : String(caught);
           this.recordInterrupt(taskId, mode, source, "abort-failed", error);
           throw caught;
@@ -839,13 +835,18 @@ export class CrewSessions {
       }
       return;
     }
-    if (task.state === "streaming" || task.state === "starting") {
+    if (task.turn.busy && !task.turn.running) {
+      task.turn.request("stop");
+      this.recordInterrupt(taskId, mode, source, "requested");
+      return;
+    }
+    if (task.turn.busy) {
       if (!task.session) {
         this.recordInterrupt(taskId, mode, source, "no-turn");
         return;
       }
       this.recordInterrupt(taskId, mode, source, "requested");
-      task.interruptRequested = true;
+      const undo = task.turn.request("stop");
       try {
         await task.session.abort();
         this.recordInterrupt(taskId, mode, source, "aborted-turn");
@@ -853,7 +854,7 @@ export class CrewSessions {
         // live session is asked at once (INF-2332).
         this.core.turns.confirmTurn(task);
       } catch (caught) {
-        task.interruptRequested = false;
+        undo();
         const error = caught instanceof Error ? caught.message : String(caught);
         this.recordInterrupt(taskId, mode, source, "abort-failed", error);
         throw caught;
@@ -902,7 +903,7 @@ export class CrewSessions {
     // the first mate - so this end neither closes the record cancelled nor
     // purges what is queued about it (INF-721: a choice outranks a cancel).
     // The settle releases the runtime once the abort returns.
-    if (task.settling) return;
+    if (task.turn.end === "settle") return;
     // A runtime no longer in the crew has ended already: a cancel ended it
     // when its abort returned, before the turn it stopped came to an end.
     // Ending it again would announce a second finish, and could close or
@@ -916,11 +917,13 @@ export class CrewSessions {
     // "never delivered" even when that turn failed - the failure op above
     // already reports it. What was still waiting on the lane is, and so is
     // a steer the session accepted that no turn took in.
-    const unread = this.core.turns.undeliveredSteerRows(task);
-    if (task.inFlightInboxIds.length > 0) {
-      this.core.options.inbox.ack(task.inFlightInboxIds.filter((id) => !unread.includes(id)));
+    const unread = task.turn.running
+      ? this.core.turns.undeliveredSteerRows(task)
+      : [...task.turn.rows];
+    const rows = task.turn.takeRows();
+    if (rows.length > 0) {
+      this.core.options.inbox.ack(rows.filter((id) => !unread.includes(id)));
       this.core.options.inbox.reparkUndelivered(unread);
-      task.inFlightInboxIds = [];
     }
     const undeliveredRows = this.core.options.inbox.allFor(task.id);
     if (undeliveredRows.length > 0) {
@@ -984,8 +987,7 @@ export class CrewSessions {
   stopRuntime(taskId: string): Promise<void> | undefined {
     const runtime = this.core.tasks.get(taskId);
     if (!runtime) return undefined;
-    runtime.cancelled = true;
-    runtime.settling = true;
+    runtime.turn.request("settle");
     return (async () => {
       await runtime.session?.abort().catch(() => {});
       this.releaseSession(runtime);
@@ -1048,10 +1050,9 @@ export class CrewSessions {
     if (this.core.moves.isMoving(taskId)) return true;
     if (!runtime) return false;
     return (
-      runtime.state !== "idle" ||
+      runtime.turn.busy ||
       !runtime.session ||
       runtime.session.isStreaming() ||
-      runtime.settling === true ||
       runtime.clientTasks.size > 0
     );
   }
@@ -1079,9 +1080,7 @@ export class CrewSessions {
   /** Candidate credentials may replace a connection only between matching turns. */
   accountHasActiveTurns(accountId: string): boolean {
     return [...this.core.tasks.values()].some(
-      (task) =>
-        task.accountId === accountId &&
-        (task.state === "starting" || task.state === "streaming" || task.session?.isStreaming()),
+      (task) => task.accountId === accountId && (task.turn.busy || task.session?.isStreaming()),
     );
   }
 

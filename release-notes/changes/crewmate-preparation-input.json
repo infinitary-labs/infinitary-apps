@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "crewmate-preparation-input",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crewmates keep your guidance while getting ready",
+      "body": "Guidance sent while a crewmate prepares its project reaches its next turn instead of getting stuck. Stopping it during preparation now prevents its first turn from starting; your next message continues with its brief kept.",
+      "noPicture": "This corrects input delivery and cancellation during dependency preparation without changing any view.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -241,13 +241,13 @@ export class CrewToolHooks {
           return;
         }
         if (
-          !task.paused &&
+          !task.turn.pause &&
           (event.type === "input_read" ||
             event.type === "request_started" ||
             event.type === "continuation_started")
         )
           this.core.restarts.recordRestartOutcome(task.id, "resumed");
-        if (event.type === "turn_failed" && !task.paused)
+        if (event.type === "turn_failed" && !task.turn.pause)
           this.core.restarts.recordRestartOutcome(task.id, "stopped", event.error);
         // A steer is read once its session says so, or once a model request
         // begins after it was handed over (INF-2603).
@@ -292,7 +292,7 @@ export class CrewToolHooks {
         }
         // A turn its computer's update cut is paused, never failed: its end
         // carries it on (`turnComplete`), and the feed says no failure.
-        if (event.type === "turn_failed" && task.paused) {
+        if (event.type === "turn_failed" && task.turn.pause) {
           task.lastTurnError ??= event.error;
           return;
         }
@@ -336,7 +336,7 @@ export class CrewToolHooks {
    * stopped has nobody waiting.
    */
   private clientEnded(task: TaskRuntime): void {
-    if (!task.cancelled)
+    if (!task.turn.closing)
       for (const [id, run] of task.clientTasks)
         this.core.watch.deliverJobResult(task.id, this.clientTaskEnd(task, id, run, "client"));
     task.clientTasks.clear();

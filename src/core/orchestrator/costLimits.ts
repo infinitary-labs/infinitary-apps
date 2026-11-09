@@ -302,7 +302,7 @@ export class CostLimits {
   /** Every turn running in a held task's family stops at a safe point. */
   private stopFamily(rootId: string): void {
     for (const task of [...this.host.runtimes()]) {
-      if (task.state !== "streaming" || task.cancelled || task.paused) continue;
+      if (!task.turn.running || task.turn.closing || task.turn.pause) continue;
       if (!this.chain(task.id).some((record) => record.id === rootId)) continue;
       this.stopSafely(task);
     }
@@ -320,7 +320,7 @@ export class CostLimits {
     const row = this.options.inbox.enqueue(task.id, {
       facts: { kind: "turn-resumed", stopped: "cost-limit" },
     });
-    task.paused = { row, cost: true };
+    task.turn.hold({ row, cost: true });
     const stopped = session.stopSafely ? session.stopSafely() : session.abort();
     void Promise.resolve(stopped).catch((caught: unknown) => {
       console.warn("[crew] a turn at its cost limit could not be stopped:", caught);

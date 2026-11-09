@@ -229,8 +229,8 @@ export class TaskMoves {
     if (this.moving.has(taskId)) return { ok: false, text: `${handle} is already moving.` };
     const to = `${this.host.modelName(choice)} on ${this.providerName(choice.provider)}`;
     const runtime = this.host.runtime(taskId);
-    if (runtime && runtime.state !== "idle") {
-      runtime.pendingMove = ask;
+    if (runtime && runtime.turn.busy) {
+      runtime.turn.queueMove(ask);
       return { ok: true, text: `${handle} moves to ${to} once its crewmate's turn ends.` };
     }
     void this.runMove(taskId, ask);
@@ -253,8 +253,8 @@ export class TaskMoves {
     this.moving.add(taskId);
     try {
       const runtime = this.host.runtime(taskId);
-      if (runtime && runtime.state !== "idle") {
-        runtime.pendingMove = ask;
+      if (runtime && runtime.turn.busy) {
+        runtime.turn.queueMove(ask);
         return;
       }
       const plan = this.planMove(taskId, ask.model);
@@ -564,12 +564,7 @@ export class TaskMoves {
     if (!record) return [];
     const runtime = this.host.runtime(taskId);
     const blockers: string[] = [];
-    if (
-      runtime &&
-      (runtime.state !== "idle" ||
-        runtime.settling === true ||
-        runtime.session?.isStreaming() === true)
-    )
+    if (runtime && (runtime.turn.busy || runtime.session?.isStreaming() === true))
       blockers.push("its crewmate's current turn ends");
     if (
       this.options.hasRunningJobs?.(taskId) === true ||

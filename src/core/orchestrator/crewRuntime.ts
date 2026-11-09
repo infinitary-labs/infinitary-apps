@@ -8,6 +8,7 @@ import type { ReportDeclaration } from "../tasks/taskTurns";
 import type { TaskWorkspace } from "../workspace/workspaceService";
 import type { HeldDirections } from "./crewDirections";
 import type { CrewmateSpec } from "./crewSession";
+import type { CrewTurn } from "./crewTurn";
 import type { WakeWithdrawn } from "./reportWakes";
 
 /**
@@ -162,22 +163,10 @@ export type TaskRuntime = {
   keptReportTold?: number;
   /** The typed review this turn's report recorded (INF-1875): a reviewer's verdict, read at the turn's end. */
   turnReview?: Extract<KeptValidationInput, { kind: "review" }>;
-  /** Streaming while a prompt runs; idle between turns, still steerable. */
-  state: "starting" | "streaming" | "idle";
-  /** This boundary was opened by the provider rather than runTurn(). */
-  autonomousTurn?: boolean;
+  /** The phase owner carries input from preparation through its one exit. */
+  turn: CrewTurn;
   /** The vault account serving this crewmate; absent = base runtime. */
   accountId?: string;
-  cancelled: boolean;
-  /**
-   * A settle stopped this runtime to close the task with its own reason
-   * (`closeTask`): the captain's choice on an answer, a discard. That close
-   * owns the record and what is queued about it, so the end of the turn it
-   * stopped is not a cancel (INF-721).
-   */
-  settling?: boolean;
-  /** Set by interrupt mode "interrupt": the abort keeps the task steerable. */
-  interruptRequested: boolean;
   /**
    * The follow-ups this turn filed (cards/tasks/agents P0, WI-4): a filing
    * is a row, a link and a feed line, never a wake of its own; the report
@@ -233,21 +222,6 @@ export type TaskRuntime = {
   /** The twenty-minute check answered an app read: the quiet alert waits for the next check, which finds the turn moving or names it. */
   readsAnsweredAt?: number;
   /**
-   * Durable-inbox rows delivered into the current turn (the brief, steers,
-   * job results). Acknowledged when the turn ends clean; released for a
-   * grace-spaced retry when it fails. Guidance for a backend that cannot
-   * take it mid-turn simply stays pending on the task's lane until the turn
-   * ends - the lane IS the followup queue, and it survives a quit.
-   */
-  inFlightInboxIds: number[];
-  /**
-   * The rows each live steer carried into the current turn, oldest first
-   * (a sweep's steer can carry several). A steer the session accepted but no
-   * turn took in comes back from `takeUndeliveredSteers` at the turn's end,
-   * newest first to be left over, and its rows go back on the lane.
-   */
-  steeredInboxIds: number[][];
-  /**
    * The provider error the current turn ended with (turn_failed), consumed
    * by turnComplete: Pi resolves such turns instead of rejecting, so
    * without this the failure would report as an empty "(no report)".
@@ -263,19 +237,6 @@ export type TaskRuntime = {
    * yet: a second context-limit failure is not recovered again.
    */
   contextRecovered?: true;
-  /** A move asked for mid-turn, run once the turn ends (INF-849). */
-  pendingMove?: MoveAsk;
-  /**
-   * The app stopped this turn because the computer it runs on is updated
-   * (`pauseForUpdate`, `saveForUpdate`): its end is a pause, never a failed
-   * turn, and `row` is the lane row that carries it on once that computer
-   * is back. A turn this computer's own update held before it reached its
-   * model has no row: its own rows go again. `computer` names another
-   * computer; this one's own update names none. `cost` says its task's cost
-   * limit stopped it instead (`CostLimits`), and its row waits on the
-   * captain's answer.
-   */
-  paused?: { computer?: string; row?: number; unstarted?: true; cost?: true };
 };
 
 /** A steer handed into a running turn, by its words' digest and when it was handed over. */

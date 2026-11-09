@@ -145,6 +145,7 @@ The per-turn project index and focus hint do not repeat them, and the host never
 
 **Crewmates** are multi-turn model sessions opened from the crewmate preset on the same session factories (only when the agent commissions work): worktree per task, the backend's full coding toolset including bash (`builtins: "coding"`; isolation is social, §4), quota-routed model and account, on Pi or Claude by the account's provider.
 A completed turn leaves the task idle and steerable - follow-ups continue the same crewmate; Done on the task card decommissions it.
+Each runtime's `CrewTurn` owns one phase for opening, preparing, prompted work, provider continuations, idle or stopped preparation, together with the inbox batch and any requested end or move that phase carries (`docs/inbox.md`, "Preparing a crewmate's first turn").
 A local-only finish goes in with `land` (`WorkspaceService.landTaskWork`): a local git merge, fast-forward when possible, a merge commit otherwise, and a conflict refuses with a card.
 A direct-pr finish on GitHub goes in with `merge-pr` (`GitHubForge.putIn`), which calls GitHub's merge endpoint (`PUT /repos/{owner}/{repo}/pulls/{n}/merge`, squash); a plain host pushes the checked head to the default branch instead (`PlainGitForge.putIn`).
 The session factory is the seam a session placed on another computer opens through, without rearchitecting (decision D-11, §9).

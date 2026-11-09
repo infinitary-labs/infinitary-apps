@@ -51,7 +51,7 @@ export class CrewSteer {
 
   /** Whether the turn running now holds a steer with the captain's words (his own, or the first mate's on his turn). */
   carriesCaptainWords(task: TaskRuntime): boolean {
-    return task.inFlightInboxIds.some((id) => this.captainRows.has(id));
+    return task.turn.rows.some((id) => this.captainRows.has(id));
   }
 
   /**
@@ -181,7 +181,7 @@ export class CrewSteer {
     this.handing.delete(taskId);
     if (this.core.disposed()) return;
     const task = this.core.tasks.get(taskId);
-    if (task?.session && !task.cancelled && task.state === "idle") {
+    if (task?.session && !task.turn.closing && !task.turn.busy) {
       this.core.turns.deliverPendingToTask(task, { sent: true });
       return;
     }
@@ -227,7 +227,7 @@ export class CrewSteer {
    */
   private steerRefusal(taskId: string, actor: SteerSource["actor"]): string | undefined {
     const task = this.core.tasks.get(taskId);
-    if (task?.session && !task.cancelled) return undefined;
+    if (task?.session && !task.turn.closing) return undefined;
     const record = this.core.options.tasks.get(taskId);
     if (!record) return `Unknown task "${taskId}". Check crew_status for live task ids.`;
     if (actor !== "supervisor" && this.waitsToStart(record)) return undefined;
@@ -422,7 +422,7 @@ export class CrewSteer {
     };
     const task = this.core.tasks.get(taskId);
     if (held) {
-      if (!task?.session || task.cancelled) {
+      if (!task?.session || task.turn.closing) {
         const refused = this.steerRefusal(taskId, given.actor);
         if (refused) throw new Error(refused);
       }
@@ -430,8 +430,13 @@ export class CrewSteer {
       this.recordSteer(taskId, message, source, "recorded-held", id);
       return "recorded-held";
     }
-    if (task?.session && !task.cancelled) {
-      if (task.state === "streaming" || task.state === "starting") {
+    if (task?.session && !task.turn.closing) {
+      if (task.turn.busy && !task.turn.running) {
+        const id = enqueue();
+        this.recordSteer(taskId, message, source, "queued-next-turn", id);
+        return "queued-next-turn";
+      }
+      if (task.turn.busy) {
         // Its computer is out of reach, or this one is being updated: kept
         // on the lane, and steered into the turn once it is back and caught
         // up, or served by the turn that carries it on.
@@ -557,8 +562,7 @@ export class CrewSteer {
     ids: number[],
     images?: TurnImage[],
   ): Promise<void> {
-    task.inFlightInboxIds.push(...ids);
-    task.steeredInboxIds.push(ids);
+    const undo = task.turn.carrySteer(ids);
     const handed: UnreadSteer = {
       sha: createHash("sha256").update(text).digest("hex"),
       since: this.core.now(),
@@ -570,8 +574,7 @@ export class CrewSteer {
       else if (order) await session.steer(text, undefined, order);
       else await session.steer(text);
     } catch (caught) {
-      task.inFlightInboxIds = task.inFlightInboxIds.filter((id) => !ids.includes(id));
-      task.steeredInboxIds = task.steeredInboxIds.filter((steered) => steered !== ids);
+      undo();
       task.unreadSteers = task.unreadSteers.filter((steer) => steer !== handed);
       throw caught;
     }
@@ -652,7 +655,7 @@ export class CrewSteer {
    */
   async interruptFromCrewmateTab(taskId: string): Promise<CrewSendResult> {
     const task = this.core.tasks.get(taskId);
-    if (!task || (task.state !== "streaming" && task.state !== "starting")) {
+    if (!task || !task.turn.busy) {
       return { ok: false, text: "Its turn is not running." };
     }
     try {

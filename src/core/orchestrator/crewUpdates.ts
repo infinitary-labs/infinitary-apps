@@ -134,7 +134,7 @@ export class CrewUpdates {
     const computer = this.options.machines?.nameOf(deviceId) ?? deviceId;
     this.updating.set(deviceId, computer);
     const stopping = [...this.host.runtimes()]
-      .filter((task) => task.state === "streaming" && this.host.machineOf(task.id) === deviceId)
+      .filter((task) => task.turn.running && this.host.machineOf(task.id) === deviceId)
       .map((task) => this.pauseTurn(task, computer));
     if (stopping.length === 0) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -166,11 +166,11 @@ export class CrewUpdates {
    * approval stands.
    */
   private async pauseTurn(task: TaskRuntime, computer: string): Promise<void> {
-    if (task.paused || task.cancelled || !task.session) return;
+    if (task.turn.pause || task.turn.closing || !task.session) return;
     const row = this.options.inbox.enqueue(task.id, {
       facts: { kind: "turn-resumed", stopped: "update", computer },
     });
-    task.paused = { computer, row };
+    task.turn.hold({ computer, row });
     this.host.restarts.observe(task.id);
     this.host.restarts.recordRestartOutcome(
       task.id,
@@ -214,8 +214,7 @@ export class CrewUpdates {
     const update: LocalUpdate = { turns, report, saved: false, saving: Promise.resolve("saved") };
     this.localUpdate = update;
     for (const task of [...this.host.runtimes()])
-      if (task.state === "streaming" && this.heldForUpdate(task.id))
-        this.stopForUpdate(task, update);
+      if (task.turn.running && this.heldForUpdate(task.id)) this.stopForUpdate(task, update);
     update.saving = this.saveTurns(update, options.signal);
     return update.saving;
   }
@@ -254,11 +253,11 @@ export class CrewUpdates {
    */
   private stopForUpdate(task: TaskRuntime, update: LocalUpdate): void {
     const session = task.session;
-    if (update.turns.has(task.id) || task.cancelled || !session) return;
+    if (update.turns.has(task.id) || task.turn.closing || !session) return;
     const row = this.options.inbox.enqueue(task.id, {
       facts: { kind: "turn-resumed", stopped: "update" },
     });
-    task.paused = { row };
+    task.turn.hold({ row });
     this.host.restarts.observe(task.id);
     this.host.restarts.recordRestartOutcome(task.id, "waiting", "Infinitary is being updated");
     this.options.tasks.note(task.id, UPDATE_PAUSE_NOTE, { news: true });
@@ -283,8 +282,8 @@ export class CrewUpdates {
         turn.running = 0;
         if (outcome === "stopped") return this.host.untilTurnOver(task);
         // Let go before it was cut: the turn goes on as if never asked.
-        if (task.paused?.row === row) {
-          task.paused = undefined;
+        if (task.turn.pause?.row === row) {
+          task.turn.takePause();
           this.options.inbox.withdraw([row]);
           this.host.restarts.forget(task.id);
         }

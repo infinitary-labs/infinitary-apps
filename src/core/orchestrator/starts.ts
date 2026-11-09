@@ -33,6 +33,7 @@ import type { DispatchBase, WorktreeAcquisition } from "../workspace/workspaceSe
 import type { CrewBrief } from "./crewBrief";
 import type { CrewCore } from "./crewCore";
 import type { TaskRuntime } from "./crewRuntime";
+import { CrewTurn } from "./crewTurn";
 import type { RunningJob } from "./idleLadder";
 import { reasoningWaitGate } from "./intake";
 import {
@@ -261,17 +262,13 @@ export class CrewStarts {
       crewmate,
       currentTurnText: "",
       lastCompleteText: "",
-      state: "starting",
-      cancelled: false,
-      interruptRequested: false,
+      turn: new CrewTurn("opening"),
       filedThisTurn: [],
       withdrawnThisTurn: [],
       lastEventAt: this.core.now(),
       turnStartedAt: this.core.now(),
       quietLevel: 0,
       wallClockEscalated: false,
-      inFlightInboxIds: [],
-      steeredInboxIds: [],
       clientTasks: new Map(),
       openCalls: new Map(),
       unreadSteers: [],

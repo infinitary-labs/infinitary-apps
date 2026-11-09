@@ -349,8 +349,8 @@ export class InPlaceWork {
       const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
       if (!facts || isFolderWork(facts) || !repo || this.closingFolders.has(record.id)) continue;
       if (isPullRepair(facts) && !this.options.readPull) continue;
-      const state = this.host.runtime(record.id)?.state;
-      if (state !== undefined && state !== "idle") continue;
+      const state = this.host.runtime(record.id)?.turn.busy;
+      if (state) continue;
       if (this.host.cards.snapshot().some((card) => card.taskId === record.id)) continue;
       this.closingFolders.add(record.id);
       try {
@@ -358,8 +358,8 @@ export class InPlaceWork {
         if (!line) continue;
         const now = this.options.tasks.get(record.id);
         if (!now || TaskService.isClosed(now)) continue;
-        const after = this.host.runtime(record.id)?.state;
-        if (after !== undefined && after !== "idle") continue;
+        const after = this.host.runtime(record.id)?.turn.busy;
+        if (after) continue;
         this.options.tasks.note(record.id, line, {
           news: true,
           feed: true,

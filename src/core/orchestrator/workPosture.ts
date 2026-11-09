@@ -101,7 +101,7 @@ export class WorkPostures {
       const hold = this.holdOf(record);
       return {
         ...this.host.witnesses(record.id, this.host.now()),
-        turnRunning: runtime !== undefined && runtime.state !== "idle",
+        turnRunning: runtime !== undefined && runtime.turn.busy,
         liveJobs: this.options.hasRunningJobs?.(record.id) === true,
         clientJobs: runtime?.session ? runtime.clientJobs : undefined,
         observable: runtime?.session?.controlProfile.backgroundWork === "host",

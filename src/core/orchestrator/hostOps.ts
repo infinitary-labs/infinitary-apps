@@ -517,8 +517,8 @@ export class HostOps {
     this.core.steer.announceReach(record.id);
     this.core.options.inbox.enqueue(record.id, backlogLeftLine(actor));
     const task = this.core.tasks.get(record.id);
-    if (task?.session && !task.cancelled) {
-      this.core.turns.deliverPendingToTask(task);
+    if (task?.session && !task.turn.closing) {
+      this.core.turns.deliverPendingToTask(task, { sent: true });
     } else {
       const now = this.core.options.tasks.get(record.id);
       if (

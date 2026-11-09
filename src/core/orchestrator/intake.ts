@@ -840,7 +840,7 @@ export class TaskIntake {
     this.options.personal?.endLiveTask(taskId);
     const runtime = this.host.runtime(taskId);
     if (runtime) {
-      runtime.cancelled = true;
+      runtime.turn.request("cancel");
       await runtime.session?.abort().catch(() => {});
       this.host.releaseSession(runtime);
       this.host.forgetRuntime(taskId);

@@ -49,11 +49,21 @@ Sessions deliver steers oldest first, so what comes back is the newest.
 - **The first mate's lane.**
   `FirstmateAgent.redeliverUndeliveredSteers` parks the captain's words the session gave back on the lane as theirs, and the drain serves them as the next turn.
 - **A crewmate's lane.**
-  The supervisor records the inbox rows of each push it steered (`steeredInboxIds`) and maps the count the session gave back to the newest of them, which assumes a session gives back a suffix of what it was sent.
+  The runtime's `CrewTurn` owns its phase and the inbox batch each turn carries, including the rows of each live steer, and maps the count the session gave back to the newest pushes, which assumes a session gives back a suffix of what it was sent.
   Those rows are re-parked, not acked (`InboxStore.reparkUndelivered`): due at once with the attempt given back, so the next turn reads them.
   A task that finishes re-parks them before it lists anything as never delivered.
 - **Known tail race.**
   A steer pushed after the Claude client said `idle` but before the session read that `idle` can be delivered twice - the inbox's at-least-once, never a silent loss.
+
+## Preparing a crewmate's first turn
+
+`CrewTurn` carries the first brief's rows while dependencies install, before any model prompt exists.
+A steer sent then stays pending on the durable lane, including when the inbox sweep runs, and follows the brief as the next turn.
+Stopping preparation puts its brief back on the lane without spending an attempt and leaves the runtime stopped, so a sweep cannot start its prompt anyway.
+A new captain or first mate message, or Start, resumes it with that brief and the pending guidance.
+The idle witnesses do not count that deliberately stopped lane as deliverable work.
+A cancel instead closes the task and records its unserved brief and guidance as never delivered.
+Every turn exit takes its carried batch through the same phase owner before acknowledging or releasing its rows; no runtime field independently holds a second copy.
 
 ## A turn a quit or crash cut
 

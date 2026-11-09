@@ -408,7 +408,10 @@ export class CrewSupervisor {
       cards: this.cards,
       askEnding: this.askEnding,
       asksMoved: () => this.hooks.asksMoved?.(),
-      runtimeState: (taskId) => this.tasks.get(taskId)?.state,
+      runtimeState: (taskId) => {
+        const turn = this.tasks.get(taskId)?.turn;
+        return !turn ? undefined : !turn.busy ? "idle" : turn.running ? "streaming" : "starting";
+      },
       stopRuntime: (taskId) => this.sessions.stopRuntime(taskId),
       hasRunningJobs: (taskId) =>
         options.hasRunningJobs?.(taskId) === true ||
@@ -1105,7 +1108,7 @@ export class CrewSupervisor {
     // A native running turn hears the change now. Other sessions keep it on
     // their durable lane until work next continues, including after a quit.
     const runtime = this.tasks.get(taskId);
-    if (runtime?.state === "streaming") void this.watch.sweepTaskLane(taskId, this.now());
+    if (runtime?.turn.running) void this.watch.sweepTaskLane(taskId, this.now());
     if (edits.autonomy !== undefined && policies.autonomy.value && !mergeHold(record.delivery)) {
       // The app merges from the task's open merge cards itself (INF-2744),
       // through the same gate as a card that goes up under autonomy; the
@@ -1213,7 +1216,7 @@ export class CrewSupervisor {
       // computer could not say so, under the session held here: its next
       // turn is told the project's directions again (`crewDirections.ts`).
       task.directions = undefined;
-      if (task.state !== "idle" && !this.restarts.observing(taskId)) {
+      if (task.turn.busy && !this.restarts.observing(taskId)) {
         this.restarts.observe(taskId);
         this.restarts.recordRestartOutcome(
           taskId,
@@ -1252,7 +1255,7 @@ export class CrewSupervisor {
       if (this.options.tasks.get(taskId)?.status !== "active") continue;
       // Rows a restart here left in flight that no turn there took: the
       // computer never started them, so they go again.
-      const holding = new Set(this.tasks.get(taskId)?.inFlightInboxIds ?? []);
+      const holding = new Set(this.tasks.get(taskId)?.turn.rows ?? []);
       const stranded = this.options.inbox
         .inFlight(taskId)
         .filter((row) => !holding.has(row.id))
@@ -1285,7 +1288,7 @@ export class CrewSupervisor {
       this.options.killJobs?.(record.id);
       const runtime = this.tasks.get(record.id);
       if (runtime) {
-        runtime.cancelled = true;
+        runtime.turn.request("cancel");
         await runtime.session?.abort().catch(() => {});
         this.sessions.releaseSession(runtime);
         this.tasks.delete(record.id);
@@ -1358,7 +1361,7 @@ export class CrewSupervisor {
       // A Claude client's background tasks end with it here: each waits on
       // the crewmate's lane as its `[job]` turn, which the next start's
       // sweep delivers once (`sweepInbox`).
-      if (!task.cancelled)
+      if (!task.turn.closing)
         for (const [id, run] of task.clientTasks)
           this.options.inbox.enqueue(task.id, this.toolHooks.clientTaskEnd(task, id, run, "quit"));
       task.clientTasks.clear();
@@ -1366,10 +1369,10 @@ export class CrewSupervisor {
       // Claude client's own continuation - is carried on by the next
       // start's sweep; a turn's rows go again on their own (`resetInFlight`).
       if (
-        !task.cancelled &&
-        task.state === "streaming" &&
-        task.inFlightInboxIds.length === 0 &&
-        task.paused?.row === undefined &&
+        !task.turn.closing &&
+        task.turn.running &&
+        task.turn.rows.length === 0 &&
+        task.turn.pause?.row === undefined &&
         this.facts.machineOf(task.id) === LOCAL_MACHINE_ID
       )
         this.options.inbox.enqueue(task.id, { facts: { kind: "turn-resumed", stopped: "quit" } });

@@ -15,6 +15,7 @@ import { builtOnRows } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
 import { cardEmitter } from "./cardEmit";
 import { escapeCardText } from "./cardText";
+import type { CrewTurn } from "./crewTurn";
 import {
   dependencyClosedOnce,
   dependencyClosedWake,
@@ -179,9 +180,7 @@ export type IdleLadderHost = {
   tasks: TaskService;
   inbox: InboxStore;
   /** The task's live crewmate, when a runtime holds it. */
-  runtime(
-    taskId: string,
-  ): { state: "starting" | "streaming" | "idle"; crewmate: string } | undefined;
+  runtime(taskId: string): { turn: CrewTurn; crewmate: string } | undefined;
   hasRunningJobs?: (taskId: string) => boolean;
   oldestRunningJob?: (taskId: string) => RunningJob | undefined;
   /** The cards on the stack now. */
@@ -311,7 +310,9 @@ export class IdleLadder {
       askedFirstmate: record ? this.unansweredAsk(record) !== undefined : false,
       captainGateOwed:
         gate?.kind === "captain" && !cardUp && !gateCardUp && !captainWait && !answerReady,
-      deliverable: this.host.inbox.hasDeliverable(taskId, INBOX_ATTEMPT_MAX),
+      deliverable:
+        this.host.runtime(taskId)?.turn.stage !== "stopped" &&
+        this.host.inbox.hasDeliverable(taskId, INBOX_ATTEMPT_MAX),
       jobsRunning: this.jobInBound(taskId, now),
       pendingSettle: Boolean(record?.pendingSettle),
       // A due one is the sweep's, on this same tick: counting it until then
@@ -636,7 +637,7 @@ export class IdleLadder {
     if (this.host.bypassesSupervision(taskId)) return;
     this.checkStillDown(record, now);
     const runtime = this.host.runtime(taskId);
-    if (runtime ? runtime.state !== "idle" : !TaskService.isResumable(record)) return;
+    if (runtime ? runtime.turn.busy : !TaskService.isResumable(record)) return;
     const witnesses = this.witnesses(taskId, now);
     const turn = idleTurn(witnesses);
     if (turn !== "asked" && this.endAnsweredAsk(record, now)) {
@@ -691,7 +692,7 @@ export class IdleLadder {
     // A started task in the backlog waits for a Start; it is not stalled (INF-2062).
     if (record.backlogSince != null) return undefined;
     const runtime = this.host.runtime(record.id);
-    if (runtime && runtime.state !== "idle") return undefined;
+    if (runtime && runtime.turn.busy) return undefined;
     // A request the Firstmate left unanswered stalls it once the ladder has
     // raised it again, whatever card is up (FI3-714).
     const witnesses = this.witnesses(record.id, now);
@@ -1042,7 +1043,7 @@ export class IdleLadder {
     const ask = record ? this.askOf(record) : undefined;
     if (!record || !ask || !("finished" in ask)) return;
     const runtime = this.host.runtime(taskId);
-    if (runtime && runtime.state !== "idle") return;
+    if (runtime && runtime.turn.busy) return;
     this.wake(record, runtime, now, 1, "asked");
   }
 

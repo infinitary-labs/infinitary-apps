@@ -253,13 +253,13 @@ export class CrewWatch {
    */
   deliverJobResult(taskId: string, result: WakeBody): void {
     const task = this.core.tasks.get(taskId);
-    if (task?.session && !task.cancelled) {
+    if (task?.session && !task.turn.closing) {
       this.noteTaskActivity(task);
       this.core.options.inbox.enqueue(taskId, result);
       // A started task in the backlog keeps it on its lane until a Start.
       if (this.core.facts.inBacklog(taskId))
         this.core.steer.tellBacklogNews(taskId, renderWake(result));
-      else if (task.state === "idle") this.core.turns.deliverPendingToTask(task);
+      else if (!task.turn.busy) this.core.turns.deliverPendingToTask(task);
       return;
     }
     const record = this.core.options.tasks.get(taskId);
@@ -414,12 +414,13 @@ export class CrewWatch {
     if (due.length === 0) return;
     const task = this.core.tasks.get(taskId);
     if (task) {
-      if (task.cancelled || !task.session) return;
+      if (task.turn.closing || !task.session) return;
       if (this.core.facts.laneHeld(taskId)) return;
-      if (task.state === "idle") {
+      if (!task.turn.busy) {
         this.core.turns.deliverPendingToTask(task);
         return;
       }
+      if (!task.turn.running) return;
       // Streaming: a due row here is a failed native steer past its grace.
       // A followup-queue backend's rows simply wait for the turn to end.
       if (task.session.controlProfile.steer !== "native") return;
@@ -571,7 +572,7 @@ export class CrewWatch {
    */
   checkQuietTasks(now: number): void {
     for (const task of this.core.tasks.values()) {
-      if (task.state !== "streaming" && task.state !== "starting") continue;
+      if (!task.turn.busy) continue;
       // A turn on a computer out of reach goes on there, unseen here: not stuck.
       if (this.core.facts.outOfReach(task.id)) continue;
       // Quiet this long, the live session is asked whether the turn still
@@ -598,10 +599,9 @@ export class CrewWatch {
           });
         } else {
           this.core.turns.confirmTurn(task);
-          if (task.state === "streaming" || task.state === "starting")
-            this.nameWait(task, now, task.openReads.answer(now - QUIET_CARD_MS));
+          if (task.turn.busy) this.nameWait(task, now, task.openReads.answer(now - QUIET_CARD_MS));
         }
-        if (task.state !== "streaming" && task.state !== "starting") continue;
+        if (!task.turn.busy) continue;
       }
       this.quietAlerts(task, now);
     }
@@ -635,7 +635,7 @@ export class CrewWatch {
    * unless the answered reads were all it waited on.
    */
   private nameWait(task: TaskRuntime, now: number, answered: readonly AnsweredRead[]): void {
-    if (task.state !== "streaming" && task.state !== "starting") return;
+    if (!task.turn.busy) return;
     task.waitNamed = true;
     task.readsAnsweredAt = answered.length > 0 ? now : undefined;
     for (const read of answered)
@@ -689,8 +689,7 @@ export class CrewWatch {
     taskId: string,
   ): { words?: string; calls: OpenCallFact[]; steers: number; steersSince?: number } | undefined {
     const task = this.core.tasks.get(taskId);
-    if (!task?.waitNamed || (task.state !== "streaming" && task.state !== "starting"))
-      return undefined;
+    if (!task?.waitNamed || !task.turn.busy) return undefined;
     const calls = this.openCallFacts(task);
     const steers = task.unreadSteers.length;
     if (calls.length === 0 && steers === 0) return undefined;
@@ -715,7 +714,7 @@ export class CrewWatch {
 
   /** The quiet watchdog's alerts for one turn, as quiet as it is at `now`. */
   private quietAlerts(task: TaskRuntime, now: number): void {
-    if (task.state !== "streaming" && task.state !== "starting") return;
+    if (!task.turn.busy) return;
     // Two hours on one turn escalates whatever runs (INF-2603): a job
     // proves the job works, not that the turn does. The wake names the job
     // and what the turn has open.

@@ -49,7 +49,7 @@ export class CrewFacts {
   deliverableRows(taskId: string, now: number): InboxRow[] {
     const rows = this.core.options.inbox.pending(taskId, now, { maxAttempts: INBOX_ATTEMPT_MAX });
     const task = this.core.tasks.get(taskId);
-    const running = task !== undefined && task.state !== "idle";
+    const running = task !== undefined && task.turn.busy;
     // A renewed conversation's reason rides the next full turn (`runTurn`),
     // never a turn of its own and never a mid-turn steer; why the app
     // stopped a turn part way is a turn of its own, never a mid-turn steer.
@@ -60,7 +60,7 @@ export class CrewFacts {
     );
     // A policy or override notice alone is guidance, not permission to resume or start.
     if (
-      this.core.tasks.get(taskId)?.state !== "streaming" &&
+      !this.core.tasks.get(taskId)?.turn.running &&
       rest.every(
         (row) =>
           row.facts?.kind === "task-policies-changed" ||
@@ -352,7 +352,7 @@ export class CrewFacts {
         status: backlog
           ? "backlog"
           : runtime
-            ? runtime.state === "idle"
+            ? !runtime.turn.busy
               ? "idle"
               : "running"
             : record.status === "open"
@@ -543,7 +543,7 @@ export class CrewFacts {
   /** When the crewmate's running turn began; null while none runs (the Crewmate tab's clock). */
   turnStartedAt(taskId: string): number | null {
     const task = this.core.tasks.get(taskId);
-    return task && task.state !== "idle" ? task.turnStartedAt : null;
+    return task && task.turn.busy ? task.turnStartedAt : null;
   }
 }
 

@@ -194,7 +194,7 @@ export class CaptainOverrides {
       },
       once: `task-override:${withdrawn ? "withdrawn" : "standing"}:${override.at}`,
     });
-    if (this.host.runtime(taskId)?.state === "streaming")
+    if (this.host.runtime(taskId)?.turn.running)
       void this.host.sweepTaskLane(taskId, this.host.now());
   }
 
@@ -227,7 +227,7 @@ export class CaptainOverrides {
           ? `task-allowed:taken:${takenBack.card}:${takenBack.at}`
           : `task-allowed:given:${newest}:${allowed.allowances.length}`,
       });
-      if (this.host.runtime(record.id)?.state === "streaming")
+      if (this.host.runtime(record.id)?.turn.running)
         void this.host.sweepTaskLane(record.id, this.host.now());
     }
   }

@@ -50,6 +50,8 @@ const isolatedUnit = [
   "src/core/claude/claudeSession.contract.test.ts",
   "src/core/claude/claudeSession.test.ts",
   "src/core/claude/claudeStoreLease.test.ts",
+  // Its artifact-expiry fixture pins Date.now while real HTTP timers keep running.
+  "src/core/forge/providers/gitlab/workflows.test.ts",
   "src/core/helper/sessionHost.test.ts",
   "src/core/helper/sessionHostCardFiles.test.ts",
   "src/core/helper/sessionHostDeadlines.test.ts",

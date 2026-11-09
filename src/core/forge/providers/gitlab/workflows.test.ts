@@ -3,7 +3,7 @@ import { readFileSync, statSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import { GithubGatewayService } from "../../../orchestrator/githubGateway";
 import { WorkflowEvidenceService } from "../../../orchestrator/workflowEvidence";
@@ -67,8 +67,17 @@ const TRACE = [
 ].join("\n");
 
 const cleanup: (() => Promise<void> | void)[] = [];
+beforeEach(() => {
+  // Regression: missing and expired archives must not change meaning with the real date.
+  // Keep the fixture's default expiry ahead of its clock without faking HTTP timers.
+  vi.spyOn(Date, "now").mockReturnValue(Date.parse(JOB.artifacts_expire_at) - 1);
+});
 afterEach(async () => {
-  for (const close of cleanup.splice(0)) await close();
+  try {
+    for (const close of cleanup.splice(0)) await close();
+  } finally {
+    vi.restoreAllMocks();
+  }
 });
 
 async function fixture(

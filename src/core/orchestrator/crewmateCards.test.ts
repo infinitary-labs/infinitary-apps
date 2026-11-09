@@ -391,6 +391,55 @@ describe("a crewmate's write on a card", () => {
     expect(h.supervisor.cards.cardRead(theirs)).toEqual(before);
   });
 
+  it.each([
+    [
+      "is cancelled",
+      (h: Awaited<ReturnType<typeof crewmateOn>>) =>
+        h.supervisor.sessions.interruptCrewmate(h.taskId, "cancel"),
+    ],
+    [
+      "fails",
+      async (h: Awaited<ReturnType<typeof crewmateOn>>) => {
+        h.crewmate.failPrompt("Client exited unexpectedly.");
+      },
+    ],
+    [
+      "is settled",
+      (h: Awaited<ReturnType<typeof crewmateOn>>) =>
+        h.supervisor.settling.closing.closeTask(h.taskId, {
+          status: "dropped",
+          reason: "discarded",
+          actor: "host",
+        }),
+    ],
+  ])("shows its held revision of another task's card once its task %s", async (_how, end) => {
+    // INF-3307's audit, row 2: the writer's turn ended with no close-out,
+    // so the stage kept the old version until a restart.
+    const h = await crewmateOn();
+    seedTask(h.tasks, { id: "author", title: "Inspect the level", status: "idle" });
+    const cards = h.supervisor.cards;
+    const id = cards.emitCrewmateCard(
+      "author",
+      { title: "The level", body: "<p>The forest.</p>", actions: [] },
+      "m",
+    );
+    cards.closeOut({ kind: "crewmate", taskId: "author" }, "idle");
+    await h.emitCard.run({
+      id,
+      expected_revision: cards.cardRead(id)?.revision,
+      contribution_reason: "The cave is built too.",
+      title: "The level",
+      body: "<p>The forest and the cave.</p>",
+      actions: [],
+    });
+    expect(cards.shown(id)?.body).toBe("<p>The forest.</p>");
+
+    await end(h);
+    await tick();
+    expect(h.tasks.get(h.taskId)?.status).toBe("dropped");
+    expect(cards.shown(id)?.body).toBe("<p>The forest and the cave.</p>");
+  });
+
   it("reads a card as it stands, and names an unknown id in words", async () => {
     const h = await crewmateOn();
     const id = h.supervisor.cards.addFirstmateCard({

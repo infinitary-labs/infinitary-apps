@@ -88,7 +88,9 @@ A card an older version sent away on a reply carries no stamp and stays off the 
 `CardService` is its one writer: the captain's line sets `answer` (`addMessage`), a later line naming that message in `answers_message` ends it, every crewmate write holds a new or hidden card for its close-out, and `closeOut` - called from the crewmate's `report` and its resumable turn's end, and the first mate's turn end - releases what waited on that author.
 A report passes over every card with an `available` offer in its lifecycle (`CardStore.lastAvailableOffer`): only the turn's end releases those.
 `snapshot()` is the stage: a card on it whose author has written again is pushed as the version the stage showed until the close-out.
-A crewmate's answer or revision on a card the captain put aside (`Card.minimized`, "Put a card aside" in `docs/card-authoring.md`), never its interim line or a line or revision that leaves the captain's question waiting, saves the card as no longer aside, while `snapshot()` keeps it aside until that crewmate's turn ends (`asideUntilTurnEnd`, memory only), so a restart, itself a close-out, brings it back too.
+What the stage holds back on a card beyond its saved columns is one value, `StageHold` (`cardStage.ts`): the version still shown, another writer whose close-out releases it, an aside kept until the author's turn ends, the author's answer this turn, and a story note's wait for its merge.
+It is kept for the card's current lifecycle in memory only, and a card leaving the stack takes it along (`CardStage.leave`).
+A crewmate's answer or revision on a card the captain put aside (`Card.minimized`, "Put a card aside" in `docs/card-authoring.md`), never its interim line or a line or revision that leaves the captain's question waiting, saves the card as no longer aside, while `snapshot()` keeps it aside until that crewmate's turn ends (`StageHold.aside`, memory only), so a restart, itself a close-out, brings it back too.
 The columns are `cards.awaiting` (migration 52) and `cards.sent_back_at` (migration 59), so the hold survives a restart and a reload; the restart is itself every author's close-out, so a card that only waited on one reaches the stage at boot.
 `sentBackAt` is the reply's time; it no longer moves the card in the stack's order (`compareStack`).
 The optional declaration lives in `cards.holds_place` (migration 77); null means an ordinary arrival, and a revision without it removes it.
@@ -194,7 +196,7 @@ While a captain reply waits on the author, `emit_card` under that card's id with
 While one of a crewmate's cards waits on its answer, a new card carrying `reply` - a new id, or none - is refused naming the card that waits, since the reply rides only a revision of that card and would otherwise be lost (INF-990 friction 4).
 A `reply` under another of its cards succeeds, and its receipt names the card that still waits.
 A revision's `reply` lands right after its `revised:` line whenever the card has a thread, whether or not a reply still waits, so an earlier line that ended the wait never makes the answer vanish (INF-1623).
-Every revision made while answering carries its own answer (the captain's "every"): an author that answered, with `reply(card_id, text)` or a revision's `reply` naming the message, and revises again before its close-out without `reply` is refused, card and thread unchanged (`answeringUntilCloseOut`, memory only).
+Every revision made while answering carries its own answer (the captain's "every"): an author that answered, with `reply(card_id, text)` or a revision's `reply` naming the message, and revises again before its close-out without `reply` is refused, card and thread unchanged (`StageHold.answering`, memory only).
 After the close-out, a revision nobody asked about needs no `reply`.
 The app reads only that typed state, never the words of the answer.
 
@@ -494,7 +496,8 @@ A closed card takes a dated clarification alone: a reply that is marked as writt
 A revision or an `answers_message` on a closed card is refused.
 
 A write the stage holds from someone else, a revision of a card the stage shows or an answer that names the captain's question, reaches the captain with its writer's own turn.
-The host keeps that writer (`contributedUntilCloseOut`) and releases the card when it closes out, as an author's own revision waits for its close-out, never with an unrelated turn of the card's author.
+The host keeps that writer (`StageHold.writer`) and releases the card when it closes out, as an author's own revision waits for its close-out, never with an unrelated turn of the card's author.
+A crewmate whose task closes - cancelled, failed or settled - has no turn end of its own, so its task's close releases what it wrote on other cards (`retireTaskCards`).
 It keeps the writer for the card's current lifecycle alone, so a card that leaves the stack and comes back under its id starts a lifecycle no writer holds.
 The author's own close-out still ends what its turn held, so its next turn revises without a reply, and the writer's close-out then releases everything the card holds, the author's answer with it.
 A revision the stage takes at once, such as the first mate's on a card that waits on nobody, holds nothing and waits for no one's turn.

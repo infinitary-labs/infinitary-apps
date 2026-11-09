@@ -334,6 +334,33 @@ describe("shared cards", () => {
     expect(f.cards.get(id)?.awaiting).toBeUndefined();
   });
 
+  it("holds another writer's revision and its named answer together until that writer's turn ends", () => {
+    // docs/card-threads.md, "Shared cards": another writer's write reaches
+    // the stage when that writer's turn ends, never the author's; one write
+    // that revises the card and answers the captain moves as one.
+    const f = setup();
+    const id = noteOnT1(f.cards);
+    const before = f.cards.get(id) as Card;
+    const asked = f.cards.addMessage(id, "captain", "Where is the remover?");
+    const body = `<p>Run ${REMOVER}.</p>`;
+    const result = f.cards.contribute(
+      t2,
+      { id, title: before.title, body, actions: [], reply: `It is at ${REMOVER}.` },
+      { expectedRevision: f.cards.get(id)?.offerId, answersMessage: asked.id },
+    );
+    expect(result).toMatchObject({ effect: "revised", display: "held", answered: asked.id });
+    expect(f.cards.get(id)?.awaiting).toBe("close-out");
+    expect(f.cards.shown(id)?.body).toBe(before.body);
+
+    f.cards.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
+    expect(f.cards.get(id)?.awaiting).toBe("close-out");
+    expect(f.cards.shown(id)?.body).toBe(before.body);
+
+    f.cards.closeOut({ kind: "crewmate", taskId: "t2" }, "idle");
+    expect(f.cards.get(id)?.awaiting).toBeUndefined();
+    expect(f.cards.shown(id)?.body).toBe(body);
+  });
+
   it("leaves the author's turn end alone when another writer's revision is not held", () => {
     // INF-2555: the first mate's revision of an idle card shows at once, so
     // nothing waits for its turn end and the author's answer comes back

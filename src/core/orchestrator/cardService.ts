@@ -37,6 +37,7 @@ import type { TaskOriginLine } from "../tasks/taskOrigin";
 import { CardEmits, cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import { CardEvidence, type CardInteractionEvidence } from "./cardEvidence";
 import type { CardAuthorRef, CardServiceHost, CardStack, CloseOut } from "./cardStackTypes";
+import { CardStage } from "./cardStage";
 import {
   authorKey,
   type CardCaller,
@@ -104,44 +105,10 @@ export class CardService {
   private readonly cards = new Map<string, Card>();
   /** Cards ended while the captain had seen them, which only the views' stack draws (INF-3071). */
   readonly ended: EndedCards;
-  /** Story notes `release` kept off the stack for their task's merge (INF-2533). */
-  private readonly heldForMerge = new Set<string>();
-  /**
-   * The version the stage still shows of a card on it whose author has
-   * written it again and not yet closed out (a revision waiting on its
-   * author's turn end). Memory only: a restart closes every author out.
-   */
-  private readonly staged = new Map<string, Card>();
-  /**
-   * Cards the captain put aside that their crewmate has since written on,
-   * by card, with the lifecycle written on (INF-926): the head no longer
-   * says aside, so the card comes back, but the stage keeps it aside until
-   * that crewmate's turn ends. Memory only: a restart closes every author
-   * out, and the card comes back with it.
-   */
-  private readonly asideUntilTurnEnd = new Map<string, string>();
-  /**
-   * Cards their author answered the captain on and has not closed out
-   * since, by card, with the lifecycle answered on (INF-1623): every
-   * revision in that turn carries its own answer, as one while the reply
-   * waits does. Memory only: a restart closes every author out.
-   */
-  private readonly answeringUntilCloseOut = new Map<string, string>();
+  /** What the stage holds back on each open card (`CardStage`). */
+  private readonly stage = new CardStage();
   /** The newest `sentBackAt` handed out: stamps stay distinct inside one millisecond. */
   private lastSentBack = 0;
-  /**
-   * Cards holding a write from someone other than their author - a
-   * revision the stage holds back, or an answer it named - whose writer has
-   * not closed out since, by card, with that writer (`authorKey`) and the
-   * lifecycle written on: that writer's turn end releases what the card
-   * holds, never an unrelated turn of the card's own author. A card that
-   * left the stack comes back under a new lifecycle, which no writer holds.
-   * Memory only: a restart closes every author out.
-   */
-  private readonly contributedUntilCloseOut = new Map<
-    string,
-    { writer: string; lifecycleId: string }
-  >();
   private presentation = "";
   private readonly threadOffers = new Map<string, string | undefined>();
   /** The record's evidence, the threads and the agents' emits, each over this stack. */
@@ -163,10 +130,7 @@ export class CardService {
     this.ended = new EndedCards(host.cardStore, this);
     const stack: CardStack = {
       cards: this.cards,
-      staged: this.staged,
-      asideUntilTurnEnd: this.asideUntilTurnEnd,
-      answeringUntilCloseOut: this.answeringUntilCloseOut,
-      contributedUntilCloseOut: this.contributedUntilCloseOut,
+      stage: this.stage,
       evidence: this.evidence,
       shown: (id) => this.shown(id),
       snapshot: () => this.snapshot(),
@@ -253,7 +217,7 @@ export class CardService {
   releaseMerged(taskIds: readonly string[]): void {
     this.refreshSettleFacts(taskIds);
     let released = false;
-    for (const id of [...this.heldForMerge]) {
+    for (const id of this.stage.forMerge()) {
       const card = this.cards.get(id);
       if (!card?.taskId || !taskIds.includes(card.taskId)) continue;
       if (card.awaiting !== "close-out" || !this.host.mergedLine?.(card)) continue;
@@ -300,11 +264,11 @@ export class CardService {
         this.host.cardStore.upsert(next);
         changed = true;
       }
-      const staged = this.staged.get(id);
-      if (staged) {
-        const nextStage = refreshed(staged);
-        if (nextStage !== staged) {
-          this.staged.set(id, nextStage);
+      const { shown } = this.stage.of(next);
+      if (shown) {
+        const nextShown = refreshed(shown);
+        if (nextShown !== shown) {
+          this.stage.hold(next, { shown: nextShown });
           changed = true;
         }
       }
@@ -415,8 +379,7 @@ export class CardService {
       alongside?.();
       if (by === "captain") this.host.captainResponded?.(card, "choice", action);
     });
-    this.cards.delete(card.id);
-    this.staged.delete(card.id);
+    this.drop(card.id);
     const closedAnswer = this.recordResolution(card, action, by, answers, observation);
     this.scheduleBroadcast();
     return closedAnswer;
@@ -461,8 +424,7 @@ export class CardService {
       );
       if (acknowledge) this.host.captainResponded?.(card, "close");
     });
-    this.cards.delete(card.id);
-    this.staged.delete(card.id);
+    this.drop(card.id);
     this.scheduleBroadcast();
   }
 
@@ -504,8 +466,7 @@ export class CardService {
     this.ended.drop(taskId);
     for (const [cardId, card] of this.cards) {
       if (card.taskId !== taskId) continue;
-      this.cards.delete(cardId);
-      this.staged.delete(cardId);
+      this.drop(cardId);
     }
     this.scheduleBroadcast();
   }
@@ -565,16 +526,8 @@ export class CardService {
    * the captain replied under keeps its place (`compareStack`).
    */
   taskSnapshot(): Card[] {
-    this.pruneStage(); // Task flags need only the shown version and order.
+    this.evidence.pruneChanges(); // Task flags need only the shown version and order.
     return this.stagedVersions().map((card) => withAppDecline(card));
-  }
-
-  /** Drops change marks and asides that no longer name a shown card. */
-  private pruneStage(): void {
-    this.evidence.pruneChanges();
-    for (const [id, lifecycleId] of this.asideUntilTurnEnd) {
-      if (this.cards.get(id)?.lifecycleId !== lifecycleId) this.asideUntilTurnEnd.delete(id);
-    }
   }
 
   /** Each card's shown version in stack order, as its author wrote it. */
@@ -585,7 +538,7 @@ export class CardService {
   /** The stage's full presentation, including task, message and seen facts. */
   snapshot(): Card[] {
     const asked = new Map<string, CardAsked | undefined>();
-    this.pruneStage();
+    this.evidence.pruneChanges();
     return this.stagedVersions().map((staged) => {
       const shown = {
         // Corner words and Done belong to the public view, not graph-free task flags;
@@ -712,8 +665,8 @@ export class CardService {
   }
 
   private stageVersion(card: Card): Card {
-    const aside = !card.minimized && this.heldAside(card);
-    const version = this.staged.get(card.id);
+    const { shown: version, aside: heldAside } = this.stage.of(card);
+    const aside = !card.minimized && heldAside === true;
     if (!version) return aside ? { ...card, minimized: true } : card;
     const {
       awaiting: _awaiting,
@@ -727,13 +680,6 @@ export class CardService {
       ...(card.awaiting ? { awaiting: card.awaiting } : {}),
       ...(card.sentBackAt !== undefined ? { sentBackAt: card.sentBackAt } : {}),
     };
-  }
-
-  /** Whether the stage keeps a card aside until its author's turn ends (`asideUntilTurnEnd`). */
-  private heldAside(card: Card): boolean {
-    return (
-      card.lifecycleId !== undefined && this.asideUntilTurnEnd.get(card.id) === card.lifecycleId
-    );
   }
 
   /**
@@ -813,7 +759,7 @@ export class CardService {
     let moved = false;
     const released: string[] = [];
     const key = authorKey(author);
-    for (let card of [...this.cards.values()]) {
+    for (const card of [...this.cards.values()]) {
       const mine =
         author.kind === "firstmate"
           ? this.threads.firstmateAnswers(card)
@@ -823,60 +769,88 @@ export class CardService {
       // unrelated turn of the card's author (docs/card-threads.md, "Shared
       // cards"). The author's turn end still ends what it held for that
       // turn, and the writer's then releases everything the card holds.
-      const held = this.contributedUntilCloseOut.get(card.id);
-      const contributor =
-        held !== undefined && held.lifecycleId === card.lifecycleId ? held.writer : undefined;
-      const writer = contributor === key;
-      if (!mine && !writer) continue;
+      const { writer } = this.stage.of(card);
+      if (!mine && writer !== key) continue;
       if (reason === "report" && this.reachedStage(card)) continue;
       if (mine) {
-        this.answeringUntilCloseOut.delete(card.id);
-        if (this.asideUntilTurnEnd.delete(card.id)) moved = true;
+        this.stage.release(card, "answering");
+        if (this.stage.release(card, "aside")) moved = true;
       }
-      if (contributor !== undefined && !writer) continue;
-      this.contributedUntilCloseOut.delete(card.id);
-      let wrote = false;
-      if (card.awaiting !== "answer" && card.lifecycleId) {
-        if (this.host.cardStore.releaseRevisions(card.id, card.lifecycleId)) {
-          moved = true;
-          wrote = true;
-          released.push(card.id);
-        }
-      }
-      const answer =
-        card.lifecycleId !== undefined &&
-        this.host.cardStore.unreleasedAnswer(card.id, card.lifecycleId);
-      const staged = this.staged.has(card.id);
-      // The captain put the card aside while its author's newer write - a
-      // revision or an answer - waited here, so he never saw it: it comes
-      // back with it, the same as a write on a card already aside (INF-1472).
-      const written = wrote || staged || answer || card.awaiting === "close-out";
-      if (card.minimized && card.awaiting !== "answer" && written) {
-        const { minimized: _aside, ...back } = card;
-        this.host.cardStore.upsert(back);
-        this.cards.set(card.id, back);
-        card = back;
+      if (writer !== undefined && writer !== key) continue;
+      if (this.releaseWrites(card, reason, released)) moved = true;
+    }
+    if (moved) this.broadcastReleased(released);
+  }
+
+  /**
+   * A crewmate's task left (`retireTaskCards`): what it wrote on other
+   * cards reaches the stage now, as its turn's end would have released it.
+   * A cancelled, failed or settled turn ends with no close-out of its own,
+   * and the card's author can never release it (INF-3307's audit, row 2).
+   */
+  private writerLeft(taskId: string): void {
+    const writer = authorKey({ kind: "crewmate", taskId });
+    const released: string[] = [];
+    for (const id of this.stage.heldBy(writer)) {
+      const card = this.cards.get(id);
+      if (card && this.stage.of(card).writer === writer) this.releaseWrites(card, "idle", released);
+    }
+    this.broadcastReleased(released);
+  }
+
+  /**
+   * Release what a card holds for a close-out: its revisions reach the
+   * record's offers, and the stage moves from the version it held to the
+   * newest write. Whether the stage moved; a released thread is named in
+   * `released`.
+   */
+  private releaseWrites(held: Card, reason: CloseOut, released: string[]): boolean {
+    let card = held;
+    const { shown } = this.stage.of(card);
+    this.stage.release(card, "writer");
+    let moved = false;
+    let wrote = false;
+    if (card.awaiting !== "answer" && card.lifecycleId) {
+      if (this.host.cardStore.releaseRevisions(card.id, card.lifecycleId)) {
         moved = true;
+        wrote = true;
+        released.push(card.id);
       }
-      if (card.awaiting === "close-out") this.release(card, reason);
-      else if (card.awaiting === "answer") continue;
-      else if (staged || answer) {
-        // The stage moves from the version it held to the author's newest.
-        this.host.cardStore.transaction(() =>
-          this.evidence.noteStage({ head: card, shown: card }, "close-out", {
-            source: "host",
-            closeOut: reason,
-            answer,
-          }),
-        );
-      } else continue;
-      this.staged.delete(card.id);
+    }
+    const answer =
+      card.lifecycleId !== undefined &&
+      this.host.cardStore.unreleasedAnswer(card.id, card.lifecycleId);
+    // The captain put the card aside while its author's newer write - a
+    // revision or an answer - waited here, so he never saw it: it comes
+    // back with it, the same as a write on a card already aside (INF-1472).
+    const written = wrote || shown !== undefined || answer || card.awaiting === "close-out";
+    if (card.minimized && card.awaiting !== "answer" && written) {
+      const { minimized: _aside, ...back } = card;
+      this.host.cardStore.upsert(back);
+      this.cards.set(card.id, back);
+      card = back;
       moved = true;
     }
-    if (moved) {
-      this.scheduleBroadcast();
-      for (const id of released) this.host.broadcastThread?.(this.thread(id));
-    }
+    if (card.awaiting === "close-out") this.release(card, reason);
+    else if (card.awaiting === "answer") return moved;
+    else if (shown || answer) {
+      // The stage moves from the version it held to the author's newest.
+      this.host.cardStore.transaction(() =>
+        this.evidence.noteStage({ head: card, shown: card }, "close-out", {
+          source: "host",
+          closeOut: reason,
+          answer,
+        }),
+      );
+    } else return moved;
+    this.stage.release(card, "shown");
+    return true;
+  }
+
+  /** Push the stage, and each thread a close-out released revisions on. */
+  private broadcastReleased(released: readonly string[]): void {
+    this.scheduleBroadcast();
+    for (const id of released) this.host.broadcastThread?.(this.thread(id));
   }
 
   /** Whether the stage has shown the captain this lifecycle of a card. */
@@ -897,10 +871,10 @@ export class CardService {
     // A story note waits for its task's merge, not its author (INF-2533):
     // `releaseMerged` shows it once a settle merged it.
     if (card.awaiting === "close-out" && this.host.holdsUntilMerge?.(card)) {
-      this.heldForMerge.add(card.id);
+      this.stage.hold(card, { forMerge: true });
       return;
     }
-    this.heldForMerge.delete(card.id);
+    this.stage.release(card, "forMerge");
     const { awaiting: _awaiting, sentBackAt: _sentBackAt, ...shown } = card;
     this.host.cardStore.transaction(() => {
       this.host.cardStore.upsert(shown);
@@ -1019,8 +993,7 @@ export class CardService {
         ...(reason?.trim() ? { note: why } : {}),
       });
     });
-    this.cards.delete(id);
-    this.staged.delete(id);
+    this.drop(id);
     this.ended.hold(id, kept);
     this.recordResolution(card, "closed", actor.kind, undefined, observation);
     this.scheduleBroadcast();
@@ -1112,21 +1085,11 @@ export class CardService {
       return message;
     });
     if (who === "captain" || answered) this.applyHold(cardId, held);
-    if (
-      answered &&
-      !contributed &&
-      card?.lifecycleId &&
-      (who === "crewmate" || who === "firstmate")
-    ) {
-      this.answeringUntilCloseOut.set(cardId, card.lifecycleId);
-    }
+    if (answered && !contributed && card && (who === "crewmate" || who === "firstmate"))
+      this.stage.hold(card, { answering: true });
     // Another writer's answer reaches the stage when that writer's turn ends.
-    if (answered && facts.contributor && card?.lifecycleId) {
-      this.contributedUntilCloseOut.set(cardId, {
-        writer: authorKey(facts.contributor),
-        lifecycleId: card.lifecycleId,
-      });
-    }
+    if (answered && facts.contributor && card)
+      this.stage.hold(card, { writer: authorKey(facts.contributor) });
     this.host.broadcastThread?.(this.thread(cardId));
     // An author's answer is a row on the card's task too (FI3-1189's rule
     // 1); the captain's reply already is one, through its steer or its ask.
@@ -1219,8 +1182,7 @@ export class CardService {
     });
     if (result.status !== "flagged") return result;
     if (open) {
-      this.cards.delete(open.id);
-      this.staged.delete(open.id);
+      this.drop(open.id);
       this.recordResolution(open, "closed", "captain", undefined, observation);
       this.scheduleBroadcast();
     }
@@ -1362,12 +1324,12 @@ export class CardService {
   /**
    * INF-476: saved presentation only, not a close, reply, gate or ladder
    * interaction. It reads and moves what the stage shows, so bringing a card
-   * back also ends a wait for its author's turn end (`asideUntilTurnEnd`).
+   * back also ends a wait for its author's turn end (`StageHold.aside`).
    */
   setMinimized(cardId: string, minimized: boolean): void {
     const card = this.cards.get(cardId);
-    if (!card || Boolean(card.minimized || this.heldAside(card)) === minimized) return;
-    this.asideUntilTurnEnd.delete(cardId);
+    if (!card || Boolean(card.minimized || this.stage.of(card).aside) === minimized) return;
+    this.stage.release(card, "aside");
     if (Boolean(card.minimized) !== minimized) {
       const { minimized: _previous, ...rest } = card;
       const updated: Card = { ...rest, ...(minimized ? { minimized: true } : {}) };
@@ -1385,11 +1347,11 @@ export class CardService {
    */
   private backAtTurnEnd(cardId: string): void {
     const card = this.cards.get(cardId);
-    if (!card?.minimized || !card.lifecycleId) return;
+    if (!card?.minimized) return;
     const { minimized: _aside, ...rest } = card;
     this.host.cardStore.upsert(rest);
     this.cards.set(cardId, rest);
-    this.asideUntilTurnEnd.set(cardId, card.lifecycleId);
+    this.stage.hold(rest, { aside: true });
   }
 
   /** Publish a newly reopened card before asking either the local or paired view to focus it. */
@@ -1442,7 +1404,7 @@ export class CardService {
       this.evidence.write(stamped, { revise: true, basis: "put", source: "host", cause: "put" });
     });
     this.cards.set(id, stamped.card);
-    this.staged.delete(id);
+    this.stage.release(stamped.card, "shown");
     this.scheduleBroadcast();
   }
 
@@ -1475,6 +1437,12 @@ export class CardService {
     return this.host.otherChangeOpen?.(taskId) === true;
   }
 
+  /** A card leaves the stack, and with it everything the stage held of it. */
+  private drop(id: string): void {
+    this.cards.delete(id);
+    this.stage.leave(id);
+  }
+
   /** Take a card down unanswered: the question it asked is gone. */
   takeDown(id: string, resolution: string): void {
     const card = this.cards.get(id);
@@ -1483,8 +1451,7 @@ export class CardService {
       this.host.cardStore.resolve(id, resolution);
       this.evidence.noteExit(card, "host", "host", { reason: "host-withdrawal", note: resolution });
     });
-    this.cards.delete(id);
-    this.staged.delete(id);
+    this.drop(id);
     this.left(card);
     this.scheduleBroadcast();
   }
@@ -1576,18 +1543,16 @@ export class CardService {
       if (options.keepNotes && card.author !== "host" && card.actions.length === 0) {
         // The crewmate is gone: a note still waiting on it reaches the stage
         // once the close wrote its outcome on it (`releaseNotes`).
-        this.staged.delete(cardId);
-        this.asideUntilTurnEnd.delete(cardId);
+        this.stage.release(card, "shown", "aside");
         continue;
       }
       this.host.cardStore.transaction(() => {
         this.host.cardStore.resolve(cardId, reason);
         this.evidence.noteExit(card, "host", "host", { reason: "task-retired", note: reason });
       });
-      this.cards.delete(cardId);
-      this.staged.delete(cardId);
+      this.drop(cardId);
     }
-    this.scheduleBroadcast();
+    this.writerLeft(taskId);
   }
 
   /** Every card whose thread moved since `since`, newest first (`CardThreads`). */

@@ -6,6 +6,7 @@ import type { TaskService } from "../tasks/taskService";
 import type { AskEnding } from "./askEnding";
 import type { CardEvidence } from "./cardEvidence";
 import type { CardService } from "./cardService";
+import type { CardStage } from "./cardStage";
 
 export type CardActor = "captain" | "firstmate" | "crewmate";
 type CardResponse = Parameters<AskEnding["captainResponded"]>[1];
@@ -101,16 +102,13 @@ export type CardServiceHost = {
 
 /**
  * The open stack as its owners share it (`CardThreads`, `CardEmits`): the
- * cards and what the stage holds back, the one evidence writer, and the
+ * cards and what the stage holds back (`CardStage`), the one evidence writer, and the
  * stack's own moves, so a write from any owner lands, places and broadcasts
  * the way every other write does.
  */
 export type CardStack = {
   cards: Map<string, Card>;
-  staged: Map<string, Card>;
-  asideUntilTurnEnd: Map<string, string>;
-  answeringUntilCloseOut: Map<string, string>;
-  contributedUntilCloseOut: Map<string, { writer: string; lifecycleId: string }>;
+  stage: CardStage;
   evidence: CardEvidence;
   shown(id: string): Card | undefined;
   snapshot(): Card[];

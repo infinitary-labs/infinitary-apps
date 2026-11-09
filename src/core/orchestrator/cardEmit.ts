@@ -380,12 +380,7 @@ export class CardEmits {
       // Every revision made while answering the captain carries its own
       // answer (INF-1623, the captain's "every"): one after the turn's
       // answer would otherwise follow it with no word on what it changed.
-      if (
-        changed &&
-        !answer &&
-        existing.lifecycleId !== undefined &&
-        this.stack.answeringUntilCloseOut.get(resolved) === existing.lifecycleId
-      ) {
+      if (changed && !answer && this.stack.stage.of(existing).answering) {
         throw new Error(
           `Card refused: you answered the captain's reply under card "${resolved}" in this turn, and this revision changes the card again without saying how. Call emit_card again with the same id and the same card plus reply: one to three sentences saying what you changed on the card and under which heading. The card and its thread are unchanged.`,
         );
@@ -408,7 +403,7 @@ export class CardEmits {
       });
       const updated = stamped.card;
       const staged =
-        this.stack.staged.get(resolved) ??
+        this.stack.stage.of(existing).shown ??
         (onStage(existing) && (context.author === "crewmate" || existing.awaiting !== undefined)
           ? existing
           : undefined);
@@ -422,12 +417,12 @@ export class CardEmits {
           ...(staged ? { shown: staged } : {}),
         });
       });
-      if (staged) this.stack.staged.set(resolved, staged);
+      if (staged) this.stack.stage.hold(updated, { shown: staged });
       this.stack.cards.set(resolved, updated);
       // A crewmate's revision of a card the captain put aside brings it back
       // when that crewmate's turn ends, never mid-turn (INF-926).
-      if (existing.minimized && !aside && context.author === "crewmate" && updated.lifecycleId)
-        this.stack.asideUntilTurnEnd.set(resolved, updated.lifecycleId);
+      if (existing.minimized && !aside && context.author === "crewmate")
+        this.stack.stage.hold(updated, { aside: true });
       this.stack.placed(updated);
       // The preferred answer to a thread message is a revision of the head
       // (cards-as-threads phase 1): the card re-renders above, and the
@@ -488,7 +483,6 @@ export class CardEmits {
       this.stack.evidence.write(stamped, { basis: "emitted", source: "tool", cause: "emit" });
     });
     this.stack.cards.set(id, card);
-    this.stack.staged.delete(id);
     this.stack.placed(card);
     this.stack.scheduleBroadcast();
     return id;

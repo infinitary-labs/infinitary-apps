@@ -594,7 +594,7 @@ export class CardThreads {
     // crewmate's always, the first mate's while the card waits on its
     // author. A card not yet on the stage takes the write with it.
     const staged =
-      this.stack.staged.get(card.id) ??
+      this.stack.stage.of(card).shown ??
       (onStage(card) && (caller.actor === "crewmate" || card.awaiting !== undefined)
         ? card
         : undefined);
@@ -640,15 +640,7 @@ export class CardThreads {
       this.recordContribution(facts, card.id, caller, result);
       return result;
     });
-    if (staged) {
-      this.stack.staged.set(card.id, staged);
-      if (updated.lifecycleId) {
-        this.stack.contributedUntilCloseOut.set(card.id, {
-          writer: authorKey(caller),
-          lifecycleId: updated.lifecycleId,
-        });
-      }
-    }
+    if (staged) this.stack.stage.hold(updated, { shown: staged, writer: authorKey(caller) });
     this.stack.placed(updated);
     this.stack.scheduleBroadcast();
     return mutation;
@@ -1082,7 +1074,7 @@ function answersFor(
   return caller.actor === "firstmate" ? firstmateAnswers(card) : card.taskId === caller.taskId;
 }
 
-/** A writer's key in the stack's `contributedUntilCloseOut`, matched by `CardService.closeOut`. */
+/** A writer's key in a card's `StageHold`, matched by `CardService.closeOut`. */
 export function authorKey(author: CardCaller | CardAuthorRef | CardContributor): string {
   const kind = "actor" in author ? author.actor : author.kind;
   return kind === "firstmate" ? "firstmate" : `crewmate:${(author as { taskId: string }).taskId}`;

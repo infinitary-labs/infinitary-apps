@@ -334,6 +334,8 @@ A retry would not do it: electron-builder already retries a server error three t
   The second saves the archives under a key naming their checksums, so a build that failed partway keeps what it fetched, and a set the cache already holds is not saved again.
   On a restored archive, electron-builder checks the checksum it pins and downloads again one that differs.
   An unpacked folder (`--dir`, `--mac dir`) needs no tool, and `release.yml`'s signing job keeps electron-builder's cache in its Mac's home.
+- **The publication job's keyless fetch-backs** must ask the release server for the taps' copies, since the copy they check is the one Homebrew fetches, so they wait out its outages instead: each keyless download, Cloudflare's too, goes through the workflow's own `scripts/fetch-without-credential.sh`, which tries a server error or a lost connection again for up to 30 minutes a file and fails on any other answer, such as a 404, after five more tries (`docs/alpha.md`, "The signed channel workflow").
+  `tests/release-workflows-handoff.test.ts` runs each of those steps against a stand-in server that answers 504 first.
 - `tests/workflow-hygiene.test.ts` holds every install and every package step to these.
   `tests/ensure-electron-installed.test.ts` runs the download action's steps with Electron's own installer and the app's git script, and each zips reader step, against a stand-in server, and `tests/electron-builder-tools.test.ts` runs the tools action's steps with electron-builder's own downloader.
 

@@ -1721,7 +1721,8 @@ jobs:
       # The workflow's own launch gate, as in the signing job (INF-1768):
       # every fetch-back launches the app through it. Nothing is packaged here.
       # A rehearsal's Linux fetch takes the workflow's own package check too,
-      # as the upload job does.
+      # as the upload job does, and every keyless fetch-back the workflow's own
+      # fetcher, which waits out a host that is not answering (INF-3224).
       - name: Check out the workflow's own launch gate and package check
         uses: actions/checkout@v4
         with:
@@ -1735,6 +1736,7 @@ jobs:
             .github/actions/linux-packages/
             scripts/linux-package-sums.ts
             .github/actions/electron-download/
+            scripts/fetch-without-credential.sh
 
       - name: Use the workflow's own launch gate
         id: publish-launch-gate
@@ -1842,8 +1844,8 @@ jobs:
           rm -rf "$PUBLIC_DIR" && mkdir -p "$PUBLIC_DIR"
           BASE="${DOWNLOAD_URL%/*}"
           while read -r _ NAME; do
-            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$NAME" "$BASE/$NAME"
-            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$NAME.sha256" "$BASE/$NAME.sha256"
+            .release-tooling/scripts/fetch-without-credential.sh "$BASE/$NAME" "$PUBLIC_DIR/$NAME"
+            .release-tooling/scripts/fetch-without-credential.sh "$BASE/$NAME.sha256" "$PUBLIC_DIR/$NAME.sha256"
             (cd "$PUBLIC_DIR" && shasum -a 256 -c "$NAME.sha256")
             grep -qxF -- "$(cd "$PUBLIC_DIR" && shasum -a 256 "$NAME")" "$EXPECTED" \
               || { echo "::error title=A copy differs::Cloudflare's $NAME is not the file the upload job uploaded." >&2; exit 1; }
@@ -1872,8 +1874,8 @@ jobs:
           BASE="${DOWNLOAD_URL%/*}"
           while read -r _ NAME; do
             [[ "$NAME" != "$DMG_NAME" ]] || continue
-            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$NAME" "$BASE/$NAME"
-            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$NAME.sha256" "$BASE/$NAME.sha256"
+            .release-tooling/scripts/fetch-without-credential.sh "$BASE/$NAME" "$PUBLIC_DIR/$NAME"
+            .release-tooling/scripts/fetch-without-credential.sh "$BASE/$NAME.sha256" "$PUBLIC_DIR/$NAME.sha256"
             (cd "$PUBLIC_DIR" && shasum -a 256 -c "$NAME.sha256")
             grep -qxF -- "$(cd "$PUBLIC_DIR" && shasum -a 256 "$NAME")" "$EXPECTED" \
               || { echo "::error title=A copy differs::The tap's $NAME is not the file the upload job uploaded." >&2; exit 1; }
@@ -1898,8 +1900,8 @@ jobs:
           BASE="${OLD_DOWNLOAD_URL%/*}"
           while read -r _ NAME; do
             [[ "$NAME" != "$DMG_NAME" ]] || continue
-            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$OLD_DIR/$NAME" "$BASE/$NAME"
-            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$OLD_DIR/$NAME.sha256" "$BASE/$NAME.sha256"
+            .release-tooling/scripts/fetch-without-credential.sh "$BASE/$NAME" "$OLD_DIR/$NAME"
+            .release-tooling/scripts/fetch-without-credential.sh "$BASE/$NAME.sha256" "$OLD_DIR/$NAME.sha256"
             (cd "$OLD_DIR" && shasum -a 256 -c "$NAME.sha256")
             grep -qxF -- "$(cd "$OLD_DIR" && shasum -a 256 "$NAME")" "$EXPECTED" \
               || { echo "::error title=A copy differs::Firstmate 3000's $NAME is not the file the upload job uploaded." >&2; exit 1; }

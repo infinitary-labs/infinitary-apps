@@ -1,4 +1,4 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   cpSync,
@@ -9,9 +9,12 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, join } from "node:path";
+import { createServer, type Server } from "node:http";
+import type { AddressInfo } from "node:net";
+import { basename, dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { hostEnv } from "../src/core/hostEnv";
 import {
   loadYamlFile,
   PUBLICATION_TOKEN,
@@ -959,5 +962,199 @@ describe("the signed channel workflow", () => {
       expect(result.status).not.toBe(0);
       expect(result.stderr).toMatch(/names f{40}, not this release's source/);
     });
+  });
+});
+
+/**
+ * The publication job's keyless fetch-backs as the virtual Mac runs them
+ * (INF-3224). Alpha run 42565170037 failed its tap check when GitHub,
+ * during its own incident, answered six keyless requests for the tap's
+ * Ubuntu package 504 in a row, though every copy was right. Each step runs
+ * here in a scratch checkout whose Mac gates are recorded stand-ins, with the
+ * workflow's own fetcher where the job's tooling checkout keeps it and the
+ * real curl and shasum, against a stand-in release server that answers a
+ * file the way GitHub did before it serves it.
+ */
+describe("the publication job's keyless fetch-backs", () => {
+  const release = loadYamlFile(".github/workflows/release.yml") as Workflow;
+  const verify = loadYamlFile(".github/workflows/verify.yml") as Workflow;
+  const { jobOf, step } = signedChannel(release, verify);
+  // Alpha run 42565170037's names and the places it fetched back from.
+  const version = "0.6.5-alpha.378";
+  const zipName = `Infinitary-${version}-universal.zip`;
+  const dmgName = `Infinitary-${version}-mac-universal.dmg`;
+  const debName = `infinitary-${version}-linux-amd64.deb`;
+  const files: Record<string, string> = {
+    [zipName]: "the signed zip",
+    [dmgName]: "the disk image",
+    [debName]: "the Ubuntu package",
+    SHA256SUMS: "the Linux packages' sums",
+  };
+  const shaOf = (body: string) => createHash("sha256").update(body).digest("hex");
+  /** A published file, or its checksum sidecar as the upload job writes it. */
+  const bodyOf = (name: string) => {
+    const file = name.replace(/\.sha256$/, "");
+    const body = files[file];
+    if (body === undefined || file === name) return body;
+    return `${shaOf(body)}  ${file}\n`;
+  };
+  const places = {
+    "public-fetch-back": `/releases/v${version}`,
+    "homebrew-fetch-back": `/infinitary-labs/homebrew-tap/releases/download/infinitary-alpha-v${version}`,
+    "old-public-fetch-back": `/kunchenguid/homebrew-tap/releases/download/firstmate-3000-alpha-v${version}`,
+  } as const;
+  type Place = keyof typeof places;
+
+  let server: Server;
+  let asked: string[];
+  // What the server answers a path before it serves the file, in order.
+  let answers: Record<string, number[]>;
+
+  beforeEach(async () => {
+    asked = [];
+    answers = {};
+    server = createServer((request, response) => {
+      const path = request.url ?? "";
+      asked.push(path);
+      const body = bodyOf(basename(path));
+      response.statusCode = answers[path]?.shift() ?? (body === undefined ? 404 : 200);
+      response.end(response.statusCode === 200 ? body : "");
+    });
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  });
+
+  afterEach(async () => {
+    await new Promise((resolve) => server.close(resolve));
+  });
+
+  /** One fetch-back step as its job runs it, with the job's and the step's own environment. */
+  async function fetchBack(id: Place, pauses: Record<string, string>) {
+    const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const resolve = {
+      channel: "alpha",
+      dry_run: "false",
+      version,
+      tag_name: `v${version}`,
+      zip_name: zipName,
+      download_base: `${origin}/`,
+      download_url: `${origin}${places["homebrew-fetch-back"]}/${zipName}`,
+      old_download_url: `${origin}${places["old-public-fetch-back"]}/${zipName}`,
+    };
+    const contexts = { needs: { resolve: { outputs: resolve } } };
+    const env = (values: Record<string, string> | undefined) =>
+      Object.fromEntries(
+        Object.entries(values ?? {}).map(([name, value]) => [
+          name,
+          workflowString(value, contexts),
+        ]),
+      );
+    const folder = scratchDir("infinitary-keyless-fetch-back-");
+    const checkout = join(folder, "checkout");
+    const temp = join(folder, "temp");
+    const gates = join(folder, "gates.log");
+    mkdirSync(join(checkout, "scripts"), { recursive: true });
+    mkdirSync(join(checkout, ".release-tooling", "scripts"), { recursive: true });
+    mkdirSync(join(temp, "expected"), { recursive: true });
+    mkdirSync(join(folder, "bin"));
+    cpSync(
+      join(root, "scripts", "fetch-without-credential.sh"),
+      join(checkout, ".release-tooling", "scripts", "fetch-without-credential.sh"),
+    );
+    for (const gate of ["verify-app.sh", "check-app-launch.sh", "verify-mac-dmg.sh"])
+      writeFileSync(
+        join(checkout, "scripts", gate),
+        `#!/bin/bash\necho "${gate} $*" >> "${gates}"\n`,
+        { mode: 0o755 },
+      );
+    // ditto unpacks the zip's app for the gates.
+    writeFileSync(join(folder, "bin", "ditto"), '#!/bin/bash\nmkdir -p "$4/Infinitary.app"\n', {
+      mode: 0o755,
+    });
+    // The upload job's list, as the job's earlier step writes it.
+    writeFileSync(
+      join(temp, "expected", "files.sha256"),
+      Object.entries(files)
+        .map(([name, body]) => `${shaOf(body)}  ${name}\n`)
+        .join(""),
+    );
+    const found = step(id);
+    const child = spawn("bash", ["--noprofile", "--norc", "-e", "-c", found.run ?? ""], {
+      cwd: checkout,
+      env: {
+        ...hostEnv(),
+        PATH: `${join(folder, "bin")}:${hostEnv().PATH}`,
+        HOME: folder,
+        ...env(jobOf(release, "publish").env),
+        ...env(found.env),
+        APP_NAME: "Infinitary.app",
+        RUNNER_TEMP: temp,
+        ...pauses,
+      },
+    });
+    let output = "";
+    child.stdout.on("data", (chunk) => (output += chunk));
+    child.stderr.on("data", (chunk) => (output += chunk));
+    const status = await new Promise<number | null>((done) => child.on("close", done));
+    const gated = existsSync(gates) ? readFileSync(gates, "utf8").trim().split("\n") : [];
+    return { status, output, gated, fetched: (name: string) => join(temp, name) };
+  }
+
+  const fetchedFiles = (id: Place) =>
+    Object.keys(files).filter((name) => id === "public-fetch-back" || name !== dmgName);
+
+  it.each(Object.keys(places) as Place[])(
+    "%s waits out the release server's 504s and still checks every copy",
+    async (id) => {
+      // GitHub's reading in run 42565170037: the Ubuntu package's first try
+      // and its five retries all answered 504.
+      const deb = `${places[id]}/${debName}`;
+      answers[deb] = [504, 504, 504, 504, 504, 504];
+      const { status, output, gated } = await fetchBack(id, { FETCH_PAUSE_SECONDS: "0" });
+      expect(status, output).toBe(0);
+      expect(asked.filter((path) => path === deb)).toHaveLength(7);
+      expect(output.match(/gave HTTP 504 after \d+s; the host is not answering/g)).toHaveLength(6);
+      // Every copy was fetched with its sidecar and checked against the list.
+      for (const name of fetchedFiles(id)) {
+        expect(asked).toContain(`${places[id]}/${name}`);
+        expect(asked).toContain(`${places[id]}/${name}.sha256`);
+        expect(output).toContain(`${name}: OK`);
+      }
+      // The Mac gates still ran on what came back.
+      const gates = {
+        "public-fetch-back": ["verify-app.sh", "check-app-launch.sh", "verify-mac-dmg.sh"],
+        "homebrew-fetch-back": ["verify-app.sh", "check-app-launch.sh"],
+        "old-public-fetch-back": [],
+      }[id];
+      expect(gated.map((line) => line.split(" ")[0])).toEqual(gates);
+    },
+  );
+
+  it("fails on an answer about the file, and on a host still not answering once its patience is spent", async () => {
+    // A 404 is the answer a private or missing asset gets: no patience covers it.
+    const deb = `${places["homebrew-fetch-back"]}/${debName}`;
+    answers[deb] = [404, 404, 404, 404, 404, 404, 404];
+    const refused = await fetchBack("homebrew-fetch-back", {
+      FETCH_PATIENCE_SECONDS: "3600",
+      FETCH_PAUSE_SECONDS: "0",
+      FETCH_REFUSAL_PAUSE_SECONDS: "0",
+    });
+    expect(refused.status).not.toBe(0);
+    expect(refused.output).toContain(`${deb} answered HTTP 404 on six tries`);
+    expect(asked.filter((path) => path === deb)).toHaveLength(6);
+    expect(refused.gated).toEqual([]);
+
+    // A server error past the patience fails, and names the file unchecked.
+    asked = [];
+    answers = { [deb]: [504, 504] };
+    const unanswered = await fetchBack("homebrew-fetch-back", {
+      FETCH_PATIENCE_SECONDS: "0",
+      FETCH_PAUSE_SECONDS: "0",
+    });
+    expect(unanswered.status).not.toBe(0);
+    expect(unanswered.output).toMatch(
+      /still gave HTTP 504 after \d+s of waiting; the host is not answering, so the file is unchecked/,
+    );
+    expect(asked.filter((path) => path === deb)).toHaveLength(1);
+    expect(unanswered.gated).toEqual([]);
   });
 });

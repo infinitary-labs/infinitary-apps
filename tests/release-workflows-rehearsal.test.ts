@@ -592,9 +592,12 @@ describe("the signed channel workflow", () => {
     // commit may predate (docs/testing.md, "Downloads from GitHub's release
     // server").
     const downloads = [".github/actions/electron-download/"];
+    // Its keyless fetch-backs go through the workflow's own fetcher, which an
+    // older alpha's commit predates (INF-3224; tests/release-workflows-handoff.test.ts).
+    const fetcher = "scripts/fetch-without-credential.sh";
     for (const [job, jobSteps, tooling] of [
       ["release", signingSteps, [...gate, zipsReader]],
-      ["publish", publishSteps, [...gate, ...packageCheck, ...downloads]],
+      ["publish", publishSteps, [...gate, ...packageCheck, ...downloads, fetcher]],
     ] as const) {
       const fetched = jobSteps.findIndex(
         (candidate) => candidate.with?.path === ".release-tooling",

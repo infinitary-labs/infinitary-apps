@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "view-add-subscription-empty-argument",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Adding a subscription from a Mac that controls another now works",
+      "body": "On a Mac that controls a first mate started on another computer, Connect in Settings → Subscriptions no longer stops with “malformed request”. Other requests from that Mac that leave their last choice empty go through the same way.",
+      "noPicture": "The Subscriptions screen looks as before; the change only stops an error message from appearing.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

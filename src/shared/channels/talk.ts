@@ -134,7 +134,9 @@ export const talkChannels = {
     request: z.tuple([
       z.string().min(1).max(64),
       taskLifecycleOpSchema,
-      dropTaskReviewSchema.optional(),
+      // Null is no review: over the connection, JSON writes an empty review
+      // before a panel's name as null (INF-3159).
+      dropTaskReviewSchema.nullish(),
       taskMoveFromSchema.optional(),
     ]),
     response: z.discriminatedUnion("ok", [

@@ -13,6 +13,7 @@ import {
   type ConnectionCursor,
   type HomeFrame,
   homeFrameSchema,
+  invokeArgs,
 } from "@shared/connection";
 import type { ContractAccess } from "@shared/contractFeatures";
 import { COMPUTER } from "@shared/deviceNames";
@@ -603,7 +604,7 @@ export class HomeLink {
           t: "invoke",
           id: asked.wireId,
           channel: channelIn(asked.channel, this.spelling),
-          args: asked.args,
+          args: invokeArgs(asked.args),
         }),
       );
     } catch {
@@ -662,7 +663,12 @@ export class HomeLink {
       this.pending.set(id, { resolve, reject });
       try {
         socket.send(
-          JSON.stringify({ t: "invoke", id, channel: channelIn(channel, this.spelling), args }),
+          JSON.stringify({
+            t: "invoke",
+            id,
+            channel: channelIn(channel, this.spelling),
+            args: invokeArgs(args),
+          }),
         );
       } catch {
         this.pending.delete(id);

@@ -271,6 +271,21 @@ const invokeFrameSchema = z.object({
   args: z.unknown(),
 });
 
+/**
+ * A request's arguments as an `invoke` frame carries them. JSON writes an
+ * empty (undefined) array item as null, and a contract's optional last
+ * argument refuses null, so the empty ones at the end are left off, as the
+ * window's own call leaves them off (INF-3153). An empty argument before a
+ * given one still goes as null, which JSON has no other way to write, so
+ * that request's contract reads null there as absent (INF-3159).
+ */
+export function invokeArgs(args: unknown): unknown {
+  if (!Array.isArray(args)) return args;
+  let end = args.length;
+  while (end > 0 && args[end - 1] === undefined) end -= 1;
+  return end === args.length ? args : args.slice(0, end);
+}
+
 /** One answer per request id, either way: the answer, or why there is none. */
 const resultFrameSchemas = [
   z.object({

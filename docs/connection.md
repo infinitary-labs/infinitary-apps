@@ -84,6 +84,8 @@ Pushes made while nothing listens are not kept.
 ## Requests
 
 A device asks with `invoke` (`id`, `channel`, `args`) and gets one `result` per `id`, either `ok: true` with the answer or `ok: false` with the reason, in whatever order the answers finish.
+`args` leaves off empty arguments at its end (`invokeArgs` in `src/shared/connection.ts`), since JSON would write each as null and a request's optional last argument refuses null.
+An empty argument before a given one still goes as null, so a request that can have one reads null there as absent, as `inf:task:run` does for a panel's move with no review.
 
 - A view's request for a core channel whose `reach` is `views` is forwarded.
   It goes to `core.dispatch` as the captain - the same actor the window's adapter stamps, because a paired view is the captain at another Mac - and the core parses the arguments itself, so its own refusals (a malformed request, a refused action) come back as the reason.

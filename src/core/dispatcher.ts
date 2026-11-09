@@ -290,7 +290,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:task:interrupt": (taskId) => services.supervisor.steer.interruptFromCrewmateTab(taskId),
 
     "inf:task:run": (taskId, op, review, from) => {
-      const refusal = services.supervisor.hostOps.runTaskOp(taskId, op, review, from);
+      const refusal = services.supervisor.hostOps.runTaskOp(taskId, op, review ?? undefined, from);
       return refusal ? { ok: false as const, text: refusal } : { ok: true as const };
     },
 

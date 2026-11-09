@@ -25,6 +25,7 @@ import {
   FETCH_APP_TYPES,
   type FetchAppRefusal,
   fetchAppRequestSchema,
+  invokeArgs,
   PAIR_BODY_MAX_BYTES,
   PAIR_PATH,
   PAIR_REFUSAL_STATUS,
@@ -1283,7 +1284,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           t: "invoke",
           id,
           channel: channelIn(channel, client.spelling),
-          args,
+          args: invokeArgs(args),
         });
       } catch (error) {
         return Promise.reject(error instanceof Error ? error : new Error(String(error)));

@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { cardSchema } from "@shared/cards";
 import type { Spelling } from "@shared/codeNames";
 import type { DeviceGrant, DeviceView } from "@shared/devices";
-import { HOME_CAPABILITIES, PROTOCOL_VERSION } from "@shared/ipc";
+import { HOME_CAPABILITIES, PROTOCOL_VERSION, parseInvokeRequest } from "@shared/ipc";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WebSocket } from "ws";
 import { claimedPort } from "../../../tests/helpers/claimedPort";
@@ -57,6 +57,9 @@ function standInCore() {
         capabilities: [...HOME_CAPABILITIES],
       };
     if (channel === "inf:cards:close") return { ok: true };
+    // A change the home reads against its real contract, as its dispatcher does.
+    if (channel === "inf:accounts:add" || channel === "inf:task:run")
+      return { added: parseInvokeRequest(channel, args) };
     // A work request the home holds until the test lets it answer.
     if (channel === "inf:work:progress") return held.then(() => ({ text: "Noted." }));
     throw new Error(`Rejected ${channel}: malformed request`);
@@ -331,6 +334,31 @@ describe("the device's side of the connection", () => {
     expect(air.pushes[0]).toEqual({ channel: "inf:models:changed", payload: { ok: true } });
     // Its hello said what this computer is, and the home keeps it beside its kind.
     expect(at.pairing.list()[0]).toMatchObject({ kind: "view", ...thisDeviceSystem() });
+  });
+
+  // INF-3153: Subscriptions asks `accounts.add(id, type, undefined)` with no
+  // enterprise host, and JSON wrote the empty argument as null, which the home refused.
+  it("sends a request whose last arguments are empty as the home's contract reads it", async () => {
+    // Only a home started by a command answers its view's Settings.
+    const at = await home({ startedByCommand: true });
+    const air = follow(await at.join());
+    air.link.start();
+    await air.until(() => air.link.state().contact === "in-reach");
+    await expect(
+      air.link.invoke("inf:accounts:add", ["claude", "oauth", undefined]),
+    ).resolves.toEqual({ added: ["claude", "oauth"] });
+  });
+
+  // INF-3159: a panel's move names its panel after an empty review, which no
+  // JSON array can leave off, so the home reads that null as no review.
+  it("sends a panel's task move with no review as the home's contract reads it", async () => {
+    const at = await home();
+    const air = follow(await at.join());
+    air.link.start();
+    await air.until(() => air.link.state().contact === "in-reach");
+    await expect(
+      air.link.invoke("inf:task:run", ["INF-1", "start-task", undefined, { panel: "Board" }]),
+    ).resolves.toEqual({ added: ["INF-1", "start-task", null, { panel: "Board" }] });
   });
 
   // INF-2832: a long frame comes in parts to a computer whose hello listed `frame-parts`, as this build's does.

@@ -1217,40 +1217,47 @@
             ]
           },
           {
-            "type": "object",
-            "properties": {
-              "parts": {
-                "maxItems": 64,
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 64
-                }
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "parts": {
+                    "maxItems": 64,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "waiting": {
+                    "maxItems": 64,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "underway": {
+                    "maxItems": 64,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  }
+                },
+                "required": [
+                  "parts",
+                  "waiting",
+                  "underway"
+                ]
               },
-              "waiting": {
-                "maxItems": 64,
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 64
-                }
-              },
-              "underway": {
-                "maxItems": 64,
-                "type": "array",
-                "items": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 64
-                }
+              {
+                "type": "null"
               }
-            },
-            "required": [
-              "parts",
-              "waiting",
-              "underway"
             ]
           },
           {

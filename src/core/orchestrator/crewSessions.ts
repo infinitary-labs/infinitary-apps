@@ -16,7 +16,7 @@ import { crewRunbookText } from "../runbooks/runbooks";
 import { OpenReads } from "../session/openReads";
 import { LOCAL_MACHINE_ID, type ModelSession, type SessionSpec } from "../session/session";
 import { INBOX_ATTEMPT_MAX, type InboxRow } from "../storage/inboxStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import {
   deliverHandoverFile,
   HANDOVER_IN_DIR_NAME,

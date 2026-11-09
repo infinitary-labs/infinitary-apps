@@ -31,7 +31,7 @@ import type { TaskPlace } from "@shared/tasks";
 import { resolveWorkComputer } from "@shared/workComputer";
 import type { RouteResult } from "../routing/router";
 import { LOCAL_MACHINE_ID, type SessionBinding } from "../session/session";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import type { CardService } from "./cardService";
 import type { PlacementRecord, TaskRuntime } from "./crewRuntime";

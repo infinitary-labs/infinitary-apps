@@ -1,6 +1,6 @@
 import { type CheckDiagnosis, failingRun } from "@shared/checkRepair";
 import { checksFailingOnMain } from "@shared/checkSnapshot";
-import type { TaskDelivery, TaskRecord } from "../storage/taskStore";
+import type { TaskDelivery, TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "./taskService";
 
 const STANDING_DEPENDENCIES = Symbol("standing dependency waits");

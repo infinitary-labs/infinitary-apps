@@ -25,7 +25,7 @@ import {
 } from "../../../tests/helpers/crewHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { Forge, ForgeChange, ForgeCheckState, ForgeError, ForgePull } from "../forge";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { git } from "../workspace/git";

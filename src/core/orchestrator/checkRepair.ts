@@ -1,7 +1,7 @@
 import { type CheckChangeInput, type CheckRepairLedger, failingRun } from "@shared/checkRepair";
 import { QUEUE_STATUS } from "@shared/repos";
 import { type ForgeCheck, isRedCheckState } from "../forge";
-import type { TaskDelivery, TaskRecord } from "../storage/taskStore";
+import type { TaskDelivery, TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import { liveWaitCycle, waitCycleWords } from "../tasks/waitCycles";
 

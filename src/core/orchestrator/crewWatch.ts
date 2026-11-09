@@ -11,7 +11,7 @@ import {
   type InboxRow,
   SUPERVISION_RECIPIENT,
 } from "../storage/inboxStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { carryOnWords } from "../tasks/recordActivity";
 import { TaskService } from "../tasks/taskService";
 import { CheckWatcher } from "./checkWatch";

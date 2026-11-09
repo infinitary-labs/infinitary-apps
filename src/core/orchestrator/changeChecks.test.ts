@@ -21,7 +21,7 @@ import {
   QUEUE_STATUS,
 } from "../forge";
 import { HELD } from "../queue/shipped/gitlab.mjs";
-import { TaskStore } from "../storage/taskStore";
+import { TaskStore } from "../storage/taskRecords";
 import { git } from "../workspace/git";
 import type { MergeGuard } from "./changeMerge";
 import { CheckWatcher } from "./checkWatch";

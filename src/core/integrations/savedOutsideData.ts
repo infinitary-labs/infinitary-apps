@@ -12,7 +12,7 @@ import {
   scrubText,
   scrubValue,
 } from "../storage/outsideDataScrub";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { HANDOVER_IN_DIR_NAME } from "../tasks/handoverFiles";
 import {
   ClaudeFiles,

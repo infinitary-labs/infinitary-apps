@@ -32,7 +32,7 @@ import {
 } from "@shared/vocabulary";
 import { queueKind } from "../queue/shipped/rules.mjs";
 import type { EmittedCardInput } from "../session/tools";
-import type { TaskDelivery, TaskRecord } from "../storage/taskStore";
+import type { TaskDelivery, TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import { escapeCardText } from "./cardText";
 import { checkVerdicts } from "./checkVerdicts";

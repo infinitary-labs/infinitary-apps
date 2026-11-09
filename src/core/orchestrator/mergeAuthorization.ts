@@ -19,7 +19,7 @@ import type {
   MergeWait,
   TaskDelivery,
   TaskRecord,
-} from "../storage/taskStore";
+} from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
 import type { WakeBody } from "./wakes";
 

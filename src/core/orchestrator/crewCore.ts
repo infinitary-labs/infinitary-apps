@@ -1,7 +1,7 @@
 import type { ServedWakeOrigin } from "@shared/servedFrame";
 import type { EffectiveTaskPolicies, TaskPolicyEdits } from "@shared/taskPolicies";
 import type { CrewPrograms, ProgramRunner } from "../program/programRunner";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { CaptainOverrides } from "./captainOverrides";
 import type { CardActions } from "./cardActions";
 import type { CardService } from "./cardService";

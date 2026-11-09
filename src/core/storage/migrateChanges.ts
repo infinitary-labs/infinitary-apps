@@ -1,6 +1,6 @@
 import { CHANGE_TABLES } from "./changeStore";
 import type { AppDatabase } from "./db";
-import { TaskStore } from "./taskStore";
+import { TaskStore } from "./taskRecords";
 
 /**
  * The change record's first migration (INF-1868 piece 1; `docs/saved-data-compatibility.md`,

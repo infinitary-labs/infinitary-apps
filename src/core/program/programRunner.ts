@@ -10,7 +10,7 @@ import type { SettleOwners } from "../orchestrator/settleOwners";
 import type { TypedWake } from "../orchestrator/wakes";
 import { handOffShape, withDeliverable, workShape } from "../orchestrator/workShape";
 import { tierFor } from "../routing/policy";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { resultRefusal } from "../tasks/taskResult";
 import { TaskService } from "../tasks/taskService";
 import { askJson } from "./programAsk";

@@ -11,7 +11,7 @@ import { hostedPresentation } from "@shared/presentationDestination";
 import { opensPullRequest } from "@shared/repos";
 import type { ForgePull } from "../forge";
 import { currentChange } from "../storage/changeProjection";
-import type { MergeWait, TaskRecord } from "../storage/taskStore";
+import type { MergeWait, TaskRecord } from "../storage/taskRecords";
 import { SETTLE_FOLD } from "../tasks/taskFeed";
 import type { SettleRefusal } from "../tasks/taskGraph";
 import { TaskService } from "../tasks/taskService";

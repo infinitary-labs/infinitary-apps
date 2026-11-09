@@ -1,6 +1,6 @@
 import { providerLabel } from "@shared/modelSlots";
 import type { TaskView } from "@shared/tasks";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 
 /** Only unstarted work reads a start wait; callers can avoid fetching its unused inputs. */
 export function hasStartQueueWait(

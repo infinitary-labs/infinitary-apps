@@ -10,7 +10,7 @@ import {
 import { crewRunbookText, Runbooks } from "../../src/core/runbooks/runbooks";
 import { openDatabase } from "../../src/core/storage/db";
 import { SettingsStore } from "../../src/core/storage/settingsStore";
-import { TaskStore } from "../../src/core/storage/taskStore";
+import { TaskStore } from "../../src/core/storage/taskRecords";
 import { RepoRegistry } from "../../src/core/workspace/repoRegistry";
 import { COMPLETION_CARD_HEADINGS } from "../../src/shared/cardHeadings";
 import { reportSummary } from "../../src/shared/feed";

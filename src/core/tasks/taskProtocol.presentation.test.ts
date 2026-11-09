@@ -29,7 +29,7 @@ describe("the task protocol (task-system P3)", () => {
       reach: reachable ? ("in-reach" as const) : ("out-of-reach" as const),
     }));
     const posture = vi.fn(
-      (record: import("../storage/taskStore").TaskRecord): WorkPosture =>
+      (record: import("../storage/taskRecords").TaskRecord): WorkPosture =>
         record.gate ? { state: "idle", reason: "captain" } : { state: "idle", reason: "inactive" },
     );
     const f = taskProtocolFixture({ place, workPosture: posture });
@@ -201,7 +201,7 @@ describe("the task protocol (task-system P3)", () => {
   it("reuses cached task records and derives their posture once during a board recheck", () => {
     let tasks: TaskService | undefined;
     let posture: WorkPosture = { state: "idle", reason: "captain" };
-    const readPosture = vi.fn((record: import("../storage/taskStore").TaskRecord) => {
+    const readPosture = vi.fn((record: import("../storage/taskRecords").TaskRecord) => {
       if (!tasks) throw new Error("Missing task reader");
       expect(tasks.get(record.id)).toBe(record);
       return posture;

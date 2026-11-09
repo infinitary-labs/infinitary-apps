@@ -10,7 +10,7 @@ import {
 } from "@shared/costLimit";
 import { overridePasses } from "@shared/holds";
 import type { CostHold, CostLimitStore } from "../storage/costLimitStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import type { InterruptSource, TaskRuntime } from "./crewRuntime";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";

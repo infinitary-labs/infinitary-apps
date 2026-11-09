@@ -9,7 +9,7 @@
 
 import type { recoveryWay, StallFact, WorkWait } from "@shared/recovery";
 import type { ReviewVerdict } from "@shared/rigor";
-import type { CardRefusal } from "../storage/taskStore";
+import type { CardRefusal } from "../storage/taskRecords";
 import type { TaskQueryBuiltOn } from "../tasks/taskQuery";
 import { RESULT_WORDS, resultText } from "../tasks/taskResult";
 import { type CiReadingFact, ciFactWords } from "./ciFact";

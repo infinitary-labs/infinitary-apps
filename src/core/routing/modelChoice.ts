@@ -1,7 +1,7 @@
 import { crewBandSchema, type ModelChoice, type ModelChoiceCandidate } from "@shared/modelChoice";
 import { compareBandRank } from "@shared/quotaSignals";
 import type { DecisionStore } from "../storage/decisionStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { chosen } from "./modelReason";
 
 /**

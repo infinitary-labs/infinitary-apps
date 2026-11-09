@@ -4,7 +4,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { candidateHead, standingAuthorization } from "../orchestrator/mergeAuthorization";
 import { openDatabase, openInMemoryDatabase, TASK_DELIVERY_RECORDS_VERSION } from "../storage/db";
-import { type MergeAuthorization, type TaskDelivery, TaskStore } from "../storage/taskStore";
+import { type MergeAuthorization, type TaskDelivery, TaskStore } from "../storage/taskRecords";
 import { seedTask } from "./seedTask";
 import { exportTaskRecords, parseTaskExport } from "./taskExport";
 import { TaskService } from "./taskService";

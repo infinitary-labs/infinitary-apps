@@ -10,7 +10,7 @@ import { DECISION_RECORD_SCHEMA, type DecisionRecord } from "../../shared/proven
 import type { WorkShape } from "../../shared/routingPolicy";
 import { initOverflowDir, MESSAGE_EXCERPT_LIMIT } from "../overflow";
 import { savedDeliveryReader } from "../storage/taskDeliveryFields";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { seedProject } from "../workspace/seedProject";
 import { reportEntryOf } from "./reportEntry";
 import { seedTask } from "./seedTask";

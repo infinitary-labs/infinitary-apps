@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { CHECK_REFRESH_MS } from "../../src/core/orchestrator/checkWatch";
 import { keptFeedLine } from "../../src/core/orchestrator/mergeAuthorization";
 import { openDatabase } from "../../src/core/storage/db";
-import { TaskStore } from "../../src/core/storage/taskStore";
+import { TaskStore } from "../../src/core/storage/taskRecords";
 import { TaskService } from "../../src/core/tasks/taskService";
 import {
   CHECKS_NOT_REPORTED_WORDS,

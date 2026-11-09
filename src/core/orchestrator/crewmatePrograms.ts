@@ -1,5 +1,5 @@
 import type { StartProgramInput } from "../session/tools";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import { TaskService } from "../tasks/taskService";
 import type { CrewCore } from "./crewCore";

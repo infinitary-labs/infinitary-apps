@@ -44,7 +44,7 @@ import {
   labeledActions,
 } from "../session/tools";
 import { currentChange } from "../storage/changeProjection";
-import type { CardRefusal, CompletionOffer, TaskRecord } from "../storage/taskStore";
+import type { CardRefusal, CompletionOffer, TaskRecord } from "../storage/taskRecords";
 import { recordValidation as checkValidationTransition } from "../tasks/liveValidation";
 import { TaskService } from "../tasks/taskService";
 import { CardBrowserActions } from "./cardBrowserActions";

@@ -18,7 +18,7 @@ import {
   QUEUE_STATUS,
   QUEUE_WAITING_WORDS,
 } from "../forge";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { requireConventional } from "../workspace/conventional";
 import type { ChangeChecks } from "./changeChecks";
 import {

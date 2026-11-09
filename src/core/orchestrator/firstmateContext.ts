@@ -29,7 +29,7 @@ import { timeZoneFact } from "../prompts/timeZone";
 import type { SelfSourceFacts } from "../selfSource/resolve";
 import type { CardResolution } from "../storage/cardStore";
 import type { ScheduleRecord } from "../storage/scheduleStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { standingDependencyWaits } from "../tasks/dependencyWaits";
 import { type TaskCardClick, TaskService } from "../tasks/taskService";
 import { cardEmitter } from "./cardEmit";

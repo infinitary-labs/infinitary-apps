@@ -18,7 +18,7 @@ import type { AppDatabase } from "../storage/db";
 import { DecisionStore, type RoutingDecision } from "../storage/decisionStore";
 import { sessionDialectOf } from "../storage/sessionReader";
 import type { SettingsStore } from "../storage/settingsStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { UsageStore } from "../storage/usageStore";
 import type { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";

@@ -21,7 +21,7 @@ import {
   QUEUE_STATUS,
 } from "../forge";
 import { currentChange } from "../storage/changeProjection";
-import type { CiWatch, TaskDelivery, TaskRecord } from "../storage/taskStore";
+import type { CiWatch, TaskDelivery, TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
 import {
   type ChangeContext,

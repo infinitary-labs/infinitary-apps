@@ -15,7 +15,7 @@ import {
   type MergeAuthorization,
   type TaskDelivery,
   TaskStore,
-} from "../../src/core/storage/taskStore";
+} from "../../src/core/storage/taskRecords";
 import { ACTIVITY_PLACES } from "../../src/core/tasks/recordActivity";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";

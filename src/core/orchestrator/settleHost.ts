@@ -8,7 +8,7 @@ import type { ServedWakeOrigin } from "@shared/servedFrame";
 import type { ForgePull } from "../forge";
 import type { EmittedCardInput } from "../session/tools";
 import type { InboxStore } from "../storage/inboxStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { SettleRefusal } from "../tasks/taskGraph";
 import type { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";

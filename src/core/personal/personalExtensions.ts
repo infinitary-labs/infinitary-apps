@@ -58,7 +58,7 @@ import {
 import type { PanelRuntimeKind, PanelStop } from "../panels/panelStops";
 import { checkPluginTree } from "../plugins/pluginInstaller";
 import { formatPanelLint, lintPanelSources, type PanelLintFinding } from "../plugins/pluginLint";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { APP_GIT_IDENTITY, git, isGitRepo } from "../workspace/git";
 import {
   type CompiledModule,

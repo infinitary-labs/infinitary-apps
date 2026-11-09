@@ -22,7 +22,7 @@ import {
   StoppedBeforeStartError,
 } from "../session/session";
 import type { InboxRow } from "../storage/inboxStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { verifyHandoverFiles } from "../tasks/handoverFiles";
 import { modelMoveWords } from "../tasks/recordActivity";
 import { builtOnRows } from "../tasks/taskQuery";

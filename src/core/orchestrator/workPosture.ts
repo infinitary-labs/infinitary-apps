@@ -1,5 +1,5 @@
 import type { AccountHold, WorkPosture } from "@shared/workPosture";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskRuntime } from "./crewRuntime";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import type { IdleLadder } from "./idleLadder";

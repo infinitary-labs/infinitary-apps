@@ -21,7 +21,7 @@ import {
   presentationLines,
 } from "../forge";
 import { currentChange } from "../storage/changeProjection";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { earlyPublication } from "../tasks/liveValidation";
 import { requireConventional, requireConventionalRange } from "../workspace/conventional";
 import { git, gitFailure } from "../workspace/git";

@@ -6,7 +6,7 @@ import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import { attachmentPath } from "../attachments";
 import type { CardResolution } from "../storage/cardStore";
 import type { TaskEventActor } from "../storage/taskEventStore";
-import type { TaskDelivery, TaskRecord, TaskStatus } from "../storage/taskStore";
+import type { TaskDelivery, TaskRecord, TaskStatus } from "../storage/taskRecords";
 import { alreadyAllowed } from "./alreadyAllowed";
 import { queueWaitOf } from "./queueWait";
 import { TaskService } from "./taskService";

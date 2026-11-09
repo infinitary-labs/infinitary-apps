@@ -1,7 +1,7 @@
 import { formatUsd } from "@shared/costLimit";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import type { TaskToolsDelegate } from "../pi/taskTools";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import { queryTasks } from "../tasks/taskQuery";
 import type { DeliveryNote } from "./answerDelivery";

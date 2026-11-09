@@ -1,6 +1,6 @@
 import { allowanceResetOf } from "../forge";
 import type { InboxStore } from "../storage/inboxStore";
-import type { CiWatch, TaskRecord } from "../storage/taskStore";
+import type { CiWatch, TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import type { TypedWake, WakeFacts } from "./wakes";
 

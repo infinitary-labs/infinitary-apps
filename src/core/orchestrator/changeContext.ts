@@ -7,7 +7,7 @@ import { MERGE_REVIEW_CAP, type MergeReview } from "@shared/mergeReview";
 import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repos";
 import type { NamingRule } from "../../shared/runbooks";
 import { type Forge, type ForgeChange, ForgeError, type ForgePull, type ForgeRepo } from "../forge";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
 import { requireConventionalRange } from "../workspace/conventional";
 import { git } from "../workspace/git";

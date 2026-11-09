@@ -10,7 +10,7 @@ import type { SteerDelivery } from "../orchestrator/crewRuntime";
 import { crewHoldWays, type HoldRefusal, renderHold } from "../orchestrator/holds";
 import { parseSpawnIntent, type SpawnIntent } from "../orchestrator/intentBrief";
 import { boundTool, stringEnum } from "../session/tools";
-import type { CardRefusalReason } from "../storage/taskStore";
+import type { CardRefusalReason } from "../storage/taskRecords";
 import type { SettleRefusal } from "../tasks/taskGraph";
 
 export const PLACEMENT_REQUIREMENTS_PARAM = Type.Object(

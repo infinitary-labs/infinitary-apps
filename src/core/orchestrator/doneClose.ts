@@ -2,7 +2,7 @@ import type { DeliveryFact, DoneWhy } from "@shared/deliveryFacts";
 import { type OverridableHold, overridePasses, softHoldWords } from "@shared/holds";
 import { TASK_CARD_VIA } from "@shared/provenance";
 import type { ForgePull } from "../forge/forge";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { type SettleRefusal, TaskGraphRefusal } from "../tasks/taskGraph";
 import { carriedOnClose, TaskService } from "../tasks/taskService";
 import { cardEmitter } from "./cardEmit";

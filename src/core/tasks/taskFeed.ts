@@ -4,7 +4,7 @@ import { CHECK_WORDS } from "@shared/vocabulary";
 import { droppedLine } from "../orchestrator/settleWords";
 import type { ActivityStore } from "../storage/activityStore";
 import type { TaskEvent } from "../storage/taskEventStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "./taskService";
 
 /**

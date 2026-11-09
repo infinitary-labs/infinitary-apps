@@ -22,7 +22,7 @@ import {
   QUEUE_STATUS,
   type QueueWorkflow,
 } from "../forge";
-import type { MergeAuthorization } from "../storage/taskStore";
+import type { MergeAuthorization } from "../storage/taskRecords";
 import type { TaskSeed } from "../tasks/seedTask";
 import type { MergeGuard } from "./changeMerge";
 import { CHECK_WATCH_BOUND_MS } from "./checkWatch";

@@ -1,4 +1,4 @@
-import type { TaskDelivery, TaskRecord } from "../storage/taskStore";
+import type { TaskDelivery, TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
 import { readChangeReading } from "../workspace/workspaceService";
 

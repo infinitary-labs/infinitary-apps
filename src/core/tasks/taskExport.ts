@@ -22,6 +22,7 @@ import {
   type TaskEvent,
 } from "../storage/taskEventStore";
 import type { TaskLink } from "../storage/taskLinkStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { type TaskReference, taskReferenceSchema } from "../storage/taskReferenceStore";
 import {
   type TaskSession,
@@ -30,7 +31,6 @@ import {
   taskSessionSchema,
 } from "../storage/taskSessionStore";
 import type { SavedSpecification } from "../storage/taskSpecificationStore";
-import type { TaskRecord } from "../storage/taskStore";
 
 /**
  * The task record as JSONL (task-system P5, design section 12): one line

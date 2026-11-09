@@ -48,11 +48,11 @@ export function taskProtocolFixture(
     deltaTrigger?: { rows: number; bytes: number };
     workPosture?: ConstructorParameters<typeof TaskProtocol>[0]["workPosture"];
     place?: (
-      record: import("../../src/core/storage/taskStore").TaskRecord,
+      record: import("../../src/core/storage/taskRecords").TaskRecord,
     ) => import("@shared/tasks").TaskPlace;
     modelLabel?: (model: string) => string | undefined;
     actions?: (
-      record: import("../../src/core/storage/taskStore").TaskRecord,
+      record: import("../../src/core/storage/taskRecords").TaskRecord,
     ) => readonly import("@shared/tasks").TaskActionLine[];
   } = {},
 ): TaskProtocolFixture {
@@ -91,7 +91,7 @@ export function taskProtocolFixture(
     },
     cards: { listOpen: () => cards, snapshot },
     tiers: (taskIds: readonly string[]) => servedSlots(new DecisionStore(db), taskIds),
-    modelReason: (record: import("../../src/core/storage/taskStore").TaskRecord) =>
+    modelReason: (record: import("../../src/core/storage/taskRecords").TaskRecord) =>
       modelReasonOf(record, {
         decisions: new DecisionStore(db),
         pins: () => [],

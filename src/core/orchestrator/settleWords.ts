@@ -6,7 +6,7 @@ import {
 } from "@shared/folderRefresh";
 import { forgePlace } from "@shared/forge";
 import { POLICY_MERGING_WORDS } from "@shared/taskPolicies";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import { escapeCardText } from "./cardText";
 import { FOLDER_REPAIR_TITLE, PULL_REPAIR_TITLE } from "./intentBrief";

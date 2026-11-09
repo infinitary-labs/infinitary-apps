@@ -10,7 +10,7 @@ import {
   sessionDialectAt,
   sessionFilesIn,
 } from "../storage/sessionReader";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 
 export type CrewActionsOptions = {
   /** Where the app keeps a task's sessions (`crewmates/<task>/sessions/`). */

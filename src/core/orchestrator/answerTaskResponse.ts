@@ -1,5 +1,5 @@
 import type { Card } from "@shared/cards";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { cardEmitter } from "./cardEmit";
 import { SIGNED_OFF_ACTION_ID } from "./cardSignOff";
 

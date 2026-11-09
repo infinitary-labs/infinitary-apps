@@ -1,7 +1,7 @@
 import { type ModelReason, modelReasonSchema } from "@shared/modelReason";
 import { type ModelPin, servedModelKey } from "@shared/quota";
 import type { DecisionStore, RoutingDecision } from "../storage/decisionStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 
 /** The newest decision of a task that chose a model, at or before `at`. */
 export function chosen(

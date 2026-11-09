@@ -12,7 +12,7 @@ import {
   openDatabase,
   openInMemoryDatabase,
 } from "../storage/db";
-import { type MergeAuthorization, type TaskDelivery, TaskStore } from "../storage/taskStore";
+import { type MergeAuthorization, type TaskDelivery, TaskStore } from "../storage/taskRecords";
 import { seedTask } from "./seedTask";
 import { TaskService } from "./taskService";
 

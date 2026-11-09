@@ -1,6 +1,6 @@
 import { type Card, mergeEffectOf } from "@shared/cards";
 import type { AskRecord } from "../storage/askStore";
-import type { TaskCoverageFields } from "../storage/taskStore";
+import type { TaskCoverageFields } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import { actionTookEffect, noticeAskId } from "./answerDelivery";
 import { answerTaskChoice } from "./answerTaskResponse";

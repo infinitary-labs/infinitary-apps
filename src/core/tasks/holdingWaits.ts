@@ -1,5 +1,5 @@
 import { overridePasses } from "@shared/holds";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { type DependencyWait, standingDependencyWaits } from "./dependencyWaits";
 
 /**

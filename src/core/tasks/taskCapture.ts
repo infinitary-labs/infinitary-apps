@@ -11,7 +11,7 @@ import {
 import type { MessageFile } from "../overflow";
 import type { AskAttachedVia, AskImage, AskRecord, AskTurnState } from "../storage/askStore";
 import type { TaskEventActor } from "../storage/taskEventStore";
-import type { TaskCoverageFields, TaskRecord } from "../storage/taskStore";
+import type { TaskCoverageFields, TaskRecord } from "../storage/taskRecords";
 import {
   ORIGIN_NOTE_KEY,
   originAbout,

@@ -2,7 +2,7 @@ import { taskFeedKind } from "@shared/feed";
 import { type SQL_VIEWS, SQL_VIEWS_MAJOR, SQL_VIEWS_MINOR } from "@shared/sql";
 import { taskFeedLine } from "../tasks/taskFeed";
 import type { TaskEvent } from "./taskEventStore";
-import type { TaskRecord } from "./taskStore";
+import type { TaskRecord } from "./taskRecords";
 
 /**
  * The published views of the app's record (plugin data surface, Phase B;

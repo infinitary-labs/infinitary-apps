@@ -16,7 +16,7 @@ import { crewmateCardPicturesDir, crewmateEvidenceDir, crewmateSourceCardsDir } 
 import { verifyKeptValidationEvidence } from "../pi/validationEvidence";
 import { tierFor } from "../routing/policy";
 import type { RouteResult } from "../routing/router";
-import type { MergeRepairAssessment, TaskRecord } from "../storage/taskStore";
+import type { MergeRepairAssessment, TaskRecord } from "../storage/taskRecords";
 import { alreadyAllowed } from "../tasks/alreadyAllowed";
 import { TaskService } from "../tasks/taskService";
 import type { CardService } from "./cardService";

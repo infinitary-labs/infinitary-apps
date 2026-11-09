@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { rowWrites } from "../../../tests/helpers/rowWrites";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { openInMemoryDatabase } from "../storage/db";
-import type { CardRefusal, CiWatch } from "../storage/taskStore";
+import type { CardRefusal, CiWatch } from "../storage/taskRecords";
 import { seedTask } from "./seedTask";
 import { TaskService } from "./taskService";
 

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { taskProtocolFixture } from "../../../tests/helpers/taskProtocol";
 import { DecisionStore } from "../storage/decisionStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { seedTask } from "./seedTask";
 import { queryTasks } from "./taskQuery";
 

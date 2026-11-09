@@ -1,5 +1,5 @@
 import { isHostRaisedShape } from "../storage/changeProjection";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { standingDependencyWaits } from "./dependencyWaits";
 
 export type WaitGraph = {

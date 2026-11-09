@@ -7,7 +7,7 @@ import {
   NO_LONGER_WANTED,
   sameDropReview,
 } from "@shared/recordDrop";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
 import type { SettleLocks } from "./settleLocks";
 import { closeGateRefusal, unlandedWorkRefusal, unreadableWorkRefusal } from "./settleRefusals";

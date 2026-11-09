@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { presentationCommitMessage } from "../../src/core/forge/presentation";
 import { openDatabase } from "../../src/core/storage/db";
-import { TaskStore } from "../../src/core/storage/taskStore";
+import { TaskStore } from "../../src/core/storage/taskRecords";
 import { MERGE_NOT_NOW_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedGitHubSignIn, startGitHubStub } from "./githubStub";

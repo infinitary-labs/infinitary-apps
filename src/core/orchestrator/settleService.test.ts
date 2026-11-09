@@ -6,7 +6,7 @@ import { freshDatabase } from "../../../tests/helpers/database";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { InboxStore } from "../storage/inboxStore";
-import type { MergeAuthorization } from "../storage/taskStore";
+import type { MergeAuthorization } from "../storage/taskRecords";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";

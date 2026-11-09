@@ -16,7 +16,7 @@ import {
   TASK,
 } from "../../../tests/helpers/settleHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
-import type { MergeAuthorization } from "../storage/taskStore";
+import type { MergeAuthorization } from "../storage/taskRecords";
 import type { MergeGuard, MergeStop } from "./changeMerge";
 import { PULL_NOT_THE_TASKS } from "./keptApproval";
 import { queueWakeWords } from "./projectQueue";

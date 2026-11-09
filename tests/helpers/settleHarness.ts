@@ -13,7 +13,7 @@ import type { SettleServiceHost } from "../../src/core/orchestrator/settleHost";
 import { createSettleOwners, type SettleOwners } from "../../src/core/orchestrator/settleOwners";
 import type { AppDatabase } from "../../src/core/storage/db";
 import { InboxStore } from "../../src/core/storage/inboxStore";
-import type { MergeAuthorization } from "../../src/core/storage/taskStore";
+import type { MergeAuthorization } from "../../src/core/storage/taskRecords";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import type { TaskService } from "../../src/core/tasks/taskService";
 import { RepoRegistry } from "../../src/core/workspace/repoRegistry";

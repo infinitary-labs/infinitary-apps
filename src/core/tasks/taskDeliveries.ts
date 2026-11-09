@@ -45,7 +45,7 @@ import {
   type PermissionField,
 } from "../storage/taskDeliveryFields";
 import { TURN_DECLARATION_FIELDS } from "../storage/taskExecutionStore";
-import type { CardRefusal, PendingSettleIntent, TaskDelivery } from "../storage/taskStore";
+import type { CardRefusal, PendingSettleIntent, TaskDelivery } from "../storage/taskRecords";
 import { decideValidation, recordValidation } from "./liveValidation";
 import { TaskGraphRefusal } from "./taskGraph";
 import { TaskService } from "./taskService";

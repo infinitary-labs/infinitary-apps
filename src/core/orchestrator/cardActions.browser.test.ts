@@ -24,7 +24,7 @@ import {
 import { BROWSER_SIGN_IN_STEP, EMIT_CARD_TOOL } from "../pi/cardTool";
 import { CREWMATE_BROWSER_LINE } from "../pi/piResources";
 import { bindTool } from "../session/tools";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { CrewmateSpec } from "./crewSession";
 import { renderWake } from "./wakes";
 

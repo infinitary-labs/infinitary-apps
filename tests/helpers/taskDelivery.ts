@@ -1,4 +1,4 @@
-import type { TaskDelivery } from "../../src/core/storage/taskStore";
+import type { TaskDelivery } from "../../src/core/storage/taskRecords";
 import type { TaskService } from "../../src/core/tasks/taskService";
 import type { DeliveryObservation, TaskWriter } from "../../src/core/tasks/taskWriter";
 

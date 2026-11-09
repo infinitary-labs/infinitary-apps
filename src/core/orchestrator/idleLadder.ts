@@ -9,7 +9,7 @@ import { withoutDigest, workWaitSchema } from "@shared/recovery";
 import type { ServedWakeOrigin } from "@shared/servedFrame";
 import { capWithOverflow } from "../overflow";
 import { FIRSTMATE_RECIPIENT, INBOX_ATTEMPT_MAX, type InboxStore } from "../storage/inboxStore";
-import type { FirstmateAsk, TaskDelivery, TaskGate, TaskRecord } from "../storage/taskStore";
+import type { FirstmateAsk, TaskDelivery, TaskGate, TaskRecord } from "../storage/taskRecords";
 import { type DependencyWait, standingDependencyWaits } from "../tasks/dependencyWaits";
 import { builtOnRows } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";

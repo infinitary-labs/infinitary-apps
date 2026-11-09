@@ -15,7 +15,7 @@ import { programShape } from "../program/programRunner";
 import { tierFor } from "../routing/policy";
 import type { RouteResult } from "../routing/router";
 import type { TaskLinkType } from "../storage/taskLinkStore";
-import type { TaskGate, TaskRecord, TaskStartPolicy } from "../storage/taskStore";
+import type { TaskGate, TaskRecord, TaskStartPolicy } from "../storage/taskRecords";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import { TaskService } from "../tasks/taskService";
 import type { CardService } from "./cardService";

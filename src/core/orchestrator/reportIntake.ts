@@ -16,7 +16,7 @@ import {
 } from "../pi/validationEvidence";
 import { ORDINARY_NOTE_READ_ACK } from "../prompts/cardContract";
 import type { FollowupInput } from "../session/tools";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import { resultRefusal } from "../tasks/taskResult";
 import { TaskService } from "../tasks/taskService";

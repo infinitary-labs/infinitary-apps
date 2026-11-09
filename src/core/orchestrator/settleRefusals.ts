@@ -3,7 +3,7 @@ import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
 import { opensPullRequest } from "@shared/repos";
 import { MERGE_WORDS } from "@shared/vocabulary";
 import { signInRefusal } from "../forge";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { SettleRefusal, SettleWay } from "../tasks/taskGraph";
 import { mergeHold } from "./mergeAuthorization";
 import type { OpenMergeAction, SettleServiceHost } from "./settleHost";

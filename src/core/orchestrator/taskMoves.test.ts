@@ -26,7 +26,7 @@ import {
 } from "../../../tests/helpers/crewHarness";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { CrewMachines } from "../placed/crewMachines";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { seedTask } from "../tasks/seedTask";
 import { seedProject } from "../workspace/seedProject";
 import { describeStatus } from "./settleService";

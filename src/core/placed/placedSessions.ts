@@ -44,7 +44,7 @@ import type {
   SessionSpec,
 } from "../session/session";
 import { sameNames } from "../session/workRecovery";
-import type { TaskRecord, TaskRetentionFields } from "../storage/taskStore";
+import type { TaskRecord, TaskRetentionFields } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import type { DependencyInstall } from "../workspace/workspaceService";
 import type { AnsweredWait, CrewMachines, PlacedBrowserSink, PlacedHost } from "./crewMachines";

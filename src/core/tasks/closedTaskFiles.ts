@@ -4,7 +4,7 @@ import { APP_KEPT_PARTS, removedWords, removeTaskLeftovers } from "./taskLeftove
 export { APP_KEPT_PARTS } from "./taskLeftovers";
 
 import type { AppPaths } from "../paths";
-import type { TaskRecord, TaskRetentionFields } from "../storage/taskStore";
+import type { TaskRecord, TaskRetentionFields } from "../storage/taskRecords";
 import { TaskService } from "./taskService";
 
 /**

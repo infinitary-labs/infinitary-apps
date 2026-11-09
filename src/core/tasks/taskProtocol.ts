@@ -51,7 +51,7 @@ import { currentChange, taskPullRequestsOf } from "../storage/changeProjection";
 import type { ProjectRecord } from "../storage/projectStore";
 import type { TaskEvent } from "../storage/taskEventStore";
 import type { TaskLink } from "../storage/taskLinkStore";
-import { oldestFirst, type TaskDelivery, type TaskRecord } from "../storage/taskStore";
+import { oldestFirst, type TaskDelivery, type TaskRecord } from "../storage/taskRecords";
 import { standingDependencyWaits } from "./dependencyWaits";
 import { holdingWaits, waitsSince } from "./holdingWaits";
 import { queueWaitOf } from "./queueWait";

@@ -19,7 +19,7 @@ import {
   stringEnum,
 } from "../session/tools";
 import type { TaskLinkType } from "../storage/taskLinkStore";
-import type { TaskStartPolicy, TaskStatus } from "../storage/taskStore";
+import type { TaskStartPolicy, TaskStatus } from "../storage/taskRecords";
 import type { TaskQueryInput, TaskQueryProject, TaskQueryRow } from "../tasks/taskQuery";
 import { CONSTRAINTS_PARAM, PLACEMENT_REQUIREMENTS_PARAM, RESULT_SCHEMA_PARAM } from "./crewTools";
 

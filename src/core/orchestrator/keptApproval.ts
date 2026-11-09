@@ -4,7 +4,7 @@ import { hasChangeRequests } from "@shared/forge";
 import { deliveryForRecord, opensPullRequest } from "@shared/repos";
 import { forgeLocationOf } from "../forge";
 import { currentChange } from "../storage/changeProjection";
-import type { MergeAuthorization, MergeWait, TaskRecord } from "../storage/taskStore";
+import type { MergeAuthorization, MergeWait, TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { MergeGuard, PrOutcome } from "./changeMerge";

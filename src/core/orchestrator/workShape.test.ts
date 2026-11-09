@@ -23,7 +23,7 @@ import {
 } from "../prompts/cardContract";
 import type { EmittedAction } from "../session/tools";
 import { FIRSTMATE_RECIPIENT, type InboxStore } from "../storage/inboxStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { seedTask } from "../tasks/seedTask";
 import { seedProject } from "../workspace/seedProject";
 import { isCardClosedSteer } from "./captainWakes";

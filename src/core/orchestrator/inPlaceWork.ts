@@ -16,7 +16,7 @@ import {
 } from "@shared/routingPolicy";
 import { KIND_SOURCE } from "../routing/kindClassifier";
 import { tierFor } from "../routing/policy";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import { nearestFolderAbove } from "../workspace/workspaceService";
 import type { CardService } from "./cardService";

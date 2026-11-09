@@ -8,7 +8,7 @@ import {
   placementSnapshotSchema,
 } from "@shared/placement";
 import { type HostStamp, stampOnto } from "@shared/routingPolicy";
-import type { TaskGate, TaskRecord } from "../storage/taskStore";
+import type { TaskGate, TaskRecord } from "../storage/taskRecords";
 import { TaskGraphRefusal } from "./taskGraph";
 import { TaskService } from "./taskService";
 import { type TaskWriter, withShapeKey } from "./taskWriter";

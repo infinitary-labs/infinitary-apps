@@ -3,7 +3,7 @@ import { isRepairAssessment } from "@shared/checkRepair";
 import { gapPermission, type LiveValidation } from "@shared/liveValidation";
 import { renderFinding } from "@shared/rigor";
 import type { TaskEvent } from "../storage/taskEventStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 
 /**
  * One decided fact of a reviewed change, as the record holds it (INF-993,

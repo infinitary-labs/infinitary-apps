@@ -31,7 +31,7 @@ import type { CrewMachines } from "../placed/crewMachines";
 import type { KindInput } from "../routing/kindClassifier";
 import { tierFor } from "../routing/policy";
 import type { TaskEvent } from "../storage/taskEventStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { taskFeedLine } from "../tasks/taskFeed";
 import { queryTasks } from "../tasks/taskQuery";

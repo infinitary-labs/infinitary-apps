@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type { AttachmentRef } from "@shared/attachments";
 import type { MessageFile } from "../overflow";
 import type { AskAttachedVia, AskImage, AskRecord } from "../storage/askStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { SavedOrigin } from "../tasks/taskOrigin";
 import type { TaskService } from "../tasks/taskService";
 

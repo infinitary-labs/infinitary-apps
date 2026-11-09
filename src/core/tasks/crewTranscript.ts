@@ -27,7 +27,7 @@ import {
   sessionFilesIn,
 } from "../storage/sessionReader";
 import type { TaskEvent } from "../storage/taskEventStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { actionText } from "./crewActions";
 
 type JsonRecord = Record<string, unknown>;

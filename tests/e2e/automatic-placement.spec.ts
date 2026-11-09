@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
 import { openDatabase } from "../../src/core/storage/db";
 import { SettingsStore } from "../../src/core/storage/settingsStore";
-import { TaskStore } from "../../src/core/storage/taskStore";
+import { TaskStore } from "../../src/core/storage/taskRecords";
 import { HERE } from "../../src/shared/deviceNames";
 import {
   AUTOMATIC_COMPUTER,

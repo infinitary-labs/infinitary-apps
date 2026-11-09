@@ -11,8 +11,8 @@ import type { HandoverFile } from "@shared/work";
 import { redactObserveText } from "../observe/redact";
 import { capWithOverflow, MESSAGE_EXCERPT_LIMIT } from "../overflow";
 import type { TaskEventActor } from "../storage/taskEventStore";
+import type { TaskActivity, TaskRecord } from "../storage/taskRecords";
 import { conversationOf, type TaskSession } from "../storage/taskSessionStore";
-import type { TaskActivity, TaskRecord } from "../storage/taskStore";
 import type { TaskService } from "./taskService";
 import type { TaskWriter } from "./taskWriter";
 

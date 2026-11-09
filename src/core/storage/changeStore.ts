@@ -19,7 +19,7 @@ import {
 } from "./changeProjection";
 import type { AppDatabase } from "./db";
 import { prepared } from "./statements";
-import type { TaskRecord } from "./taskStore";
+import type { TaskRecord } from "./taskRecords";
 
 export { carriesChange, isHostRaisedShape, projectChange } from "./changeProjection";
 

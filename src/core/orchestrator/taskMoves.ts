@@ -19,7 +19,7 @@ import {
 import { errorText } from "../personal/errorText";
 import type { RoutePreview } from "../routing/router";
 import { LOCAL_MACHINE_ID } from "../session/session";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { HANDOVER_IN_DIR_NAME } from "../tasks/handoverFiles";
 import { TaskService } from "../tasks/taskService";
 import { type MovedFolders, packWork, unpackWork } from "../workspace/workMove";

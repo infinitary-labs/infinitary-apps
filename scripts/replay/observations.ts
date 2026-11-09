@@ -8,7 +8,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import type { AppDatabase } from "../../src/core/storage/db.ts";
 import type { DecisionStore } from "../../src/core/storage/decisionStore.ts";
-import type { TaskRecord } from "../../src/core/storage/taskStore.ts";
+import type { TaskRecord } from "../../src/core/storage/taskRecords.ts";
 import {
   carriesEvidenceHeadings,
   reportEvidenceHeadings,

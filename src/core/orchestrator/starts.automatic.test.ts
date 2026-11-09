@@ -29,7 +29,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { AutomaticPlacement } from "../placed/automaticPlacement";
 import type { CrewMachines } from "../placed/crewMachines";
 import { FIRSTMATE_RECIPIENT, INBOX_DEDUPE_WINDOW_MS } from "../storage/inboxStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { queueWaitOf } from "../tasks/queueWait";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";

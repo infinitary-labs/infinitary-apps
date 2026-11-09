@@ -36,12 +36,6 @@ import type {
   TaskEvent,
   TaskEventActor,
 } from "../storage/taskEventStore";
-import {
-  REFERENCE_SHAPE_FIELDS,
-  TASK_REFERENCE_KINDS,
-  type TaskReferenceKind,
-} from "../storage/taskReferenceStore";
-import { TaskRepetitionStore } from "../storage/taskRepetitionStore";
 import type {
   TaskActivity,
   TaskClosedReason,
@@ -54,7 +48,13 @@ import type {
   TaskStartPolicy,
   TaskStatus,
   TaskStore,
-} from "../storage/taskStore";
+} from "../storage/taskRecords";
+import {
+  REFERENCE_SHAPE_FIELDS,
+  TASK_REFERENCE_KINDS,
+  type TaskReferenceKind,
+} from "../storage/taskReferenceStore";
+import { TaskRepetitionStore } from "../storage/taskRepetitionStore";
 import { compactBrief, expandBrief, reportHash } from "./briefReceipt";
 import { latestResultOf, type ReportEntry, reportEntryOf, type TaskResult } from "./reportEntry";
 import { TaskArchive } from "./taskArchive";

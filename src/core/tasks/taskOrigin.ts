@@ -1,6 +1,6 @@
 import type { AskRecord } from "../storage/askStore";
 import type { TaskEvent } from "../storage/taskEventStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 
 /**
  * Where a task's work began, when it was not a message of the captain's

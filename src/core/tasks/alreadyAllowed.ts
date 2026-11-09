@@ -1,6 +1,6 @@
 import type { AlreadyAllowed, ServedAllowance } from "@shared/captainAllowances";
 import { standingOverride } from "@shared/holds";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "./taskService";
 
 type AllowedReaderTasks = Pick<TaskService, "get" | "byKey"> & {

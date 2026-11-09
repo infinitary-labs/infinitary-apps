@@ -26,7 +26,7 @@ import {
 } from "@shared/taskQueue";
 import { isUnstartedWork } from "@shared/tasks";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import { CardChoiceUnavailableError } from "./cardActions";
 import type { CrewCore } from "./crewCore";

@@ -1,6 +1,6 @@
 import { currentCheckStatus } from "@shared/checkSnapshot";
 import type { ForgePull } from "../forge";
-import type { MergeAuthorization, MergeWait } from "../storage/taskStore";
+import type { MergeAuthorization, MergeWait } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import { mergedReceipt } from "./changeMerge";
 import type { KeptApproval } from "./keptApproval";

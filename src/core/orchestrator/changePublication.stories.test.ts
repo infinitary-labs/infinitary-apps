@@ -27,7 +27,7 @@ import {
   presentationMarkdown,
 } from "../forge";
 import { stageChangePresentation } from "../pi/changePresentation";
-import type { MergeAuthorization } from "../storage/taskStore";
+import type { MergeAuthorization } from "../storage/taskRecords";
 
 // Integration cohort (docs/test-cohorts.md): real git at the run's own
 // priority, the slowest test (a stale story merged under an override) 0.63 s

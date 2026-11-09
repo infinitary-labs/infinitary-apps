@@ -128,7 +128,7 @@ import { DecisionStore } from "./storage/decisionStore";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "./storage/inboxStore";
 import { ScheduleStore } from "./storage/scheduleStore";
 import { SettingsStore } from "./storage/settingsStore";
-import type { TaskRecord } from "./storage/taskStore";
+import type { TaskRecord } from "./storage/taskRecords";
 import { type UsageInput, UsageStore } from "./storage/usageStore";
 import { ClosedTaskFiles } from "./tasks/closedTaskFiles";
 import { CrewActions } from "./tasks/crewActions";

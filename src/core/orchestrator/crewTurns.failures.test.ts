@@ -29,7 +29,7 @@ import { holdingRecoverableAttempt } from "../pi/session";
 import type { SessionEvent } from "../session/session";
 import { ActivityStore } from "../storage/activityStore";
 import type { TaskEvent } from "../storage/taskEventStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { legacyStateOf } from "../tasks/seedTask";
 import { recentFeed, taskFeedLine } from "../tasks/taskFeed";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";

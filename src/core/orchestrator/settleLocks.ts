@@ -1,4 +1,4 @@
-import type { PendingSettleIntent } from "../storage/taskStore";
+import type { PendingSettleIntent } from "../storage/taskRecords";
 import type { SettleServiceHost } from "./settleHost";
 
 /**

@@ -1,4 +1,4 @@
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 
 /**
  * The model a task's user named (`override_model_id`) beside the model that

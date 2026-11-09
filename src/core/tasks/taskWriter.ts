@@ -13,9 +13,9 @@ import {
   TaskEventStore,
 } from "../storage/taskEventStore";
 import { type TaskLink, TaskLinkStore, type TaskLinkType } from "../storage/taskLinkStore";
+import { type TaskDelivery, type TaskRecord, TaskStore } from "../storage/taskRecords";
 import type { TaskReferenceStore } from "../storage/taskReferenceStore";
 import { TaskSessionStore } from "../storage/taskSessionStore";
-import { type TaskDelivery, type TaskRecord, TaskStore } from "../storage/taskStore";
 import type { BlockingEdge } from "./taskGraph";
 import type { TaskServiceOptions } from "./taskService";
 import { compactTimeline } from "./timelineCompaction";

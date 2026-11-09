@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { reportSummary } from "@shared/feed";
 import { moveLabel, PROVIDER_SIGN_IN_TITLE } from "../../src/core/orchestrator/hostCards";
-import { TaskStore } from "../../src/core/storage/taskStore";
+import { TaskStore } from "../../src/core/storage/taskRecords";
 import { modelNames } from "../../src/shared/modelDisplayName";
 import { catalogEntry } from "../../src/shared/providers";
 import { FIRSTMATE_MODEL_KEY, launchClaudeCrew } from "./claudeCrew";

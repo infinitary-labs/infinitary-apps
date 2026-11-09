@@ -26,7 +26,7 @@ import { type RouteResult, requiresReasoningWait } from "../routing/router";
 import { isDowngrade } from "../routing/routingEngine";
 import { OpenReads } from "../session/openReads";
 import { LOCAL_MACHINE_ID } from "../session/session";
-import type { TaskGate, TaskRecord } from "../storage/taskStore";
+import type { TaskGate, TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import type { DispatchBase, WorktreeAcquisition } from "../workspace/workspaceService";

@@ -4,7 +4,7 @@ import type { BackendId } from "@shared/providers";
 import { locateClaudeTranscript } from "../claude/claudeTranscript";
 import { sessionDialectAt } from "../storage/sessionReader";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 
 /**
  * Which file, if any, holds a crewmate's transcript. `tasks.session_file`

@@ -1,6 +1,6 @@
 import type { TaskLinkType } from "../storage/taskLinkStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskReferenceKind } from "../storage/taskReferenceStore";
-import type { TaskRecord } from "../storage/taskStore";
 
 /**
  * The checked relationships between tasks (INF-1296 piece 2,

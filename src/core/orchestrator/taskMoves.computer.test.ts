@@ -30,7 +30,7 @@ import { crewmateEvidenceDir } from "../paths";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
 import type { CrewMachines } from "../placed/crewMachines";
 import type { SessionSpec } from "../session/session";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
 import { git } from "../workspace/git";
 import { packWork, unpackWork } from "../workspace/workMove";

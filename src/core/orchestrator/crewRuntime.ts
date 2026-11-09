@@ -3,7 +3,7 @@ import type { KeptValidationInput } from "@shared/liveValidation";
 import type { InterruptEventData, SteerEventData } from "@shared/provenance";
 import type { OpenReads } from "../session/openReads";
 import type { BackgroundJobName, ModelSession } from "../session/session";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { ReportDeclaration } from "../tasks/taskTurns";
 import type { TaskWorkspace } from "../workspace/workspaceService";
 import type { HeldDirections } from "./crewDirections";

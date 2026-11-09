@@ -14,7 +14,7 @@ import { GITHUB_QUEUE_PART, shippedFiles } from "../../src/core/queue/shipped";
 import { pauseIssue, pauseWrites, verdict, WAITING } from "../../src/core/queue/shipped/rules.mjs";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
-import { TaskStore } from "../../src/core/storage/taskStore";
+import { TaskStore } from "../../src/core/storage/taskRecords";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import {

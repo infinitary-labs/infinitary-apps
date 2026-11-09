@@ -1,5 +1,5 @@
 import { type Card, mergeEffectOf, settleEffectOf } from "@shared/cards";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { cardEmitter } from "./cardEmit";
 
 /**

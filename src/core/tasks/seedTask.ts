@@ -2,7 +2,7 @@ import type { Reasoning } from "@shared/reasoning";
 import type { WorkShape } from "@shared/routingPolicy";
 import type { SpawnIntent } from "../orchestrator/intentBrief";
 import { mapLegacyStatus } from "../storage/taskRecordMigrations";
-import type { TaskGate, TaskKind, TaskRecord } from "../storage/taskStore";
+import type { TaskGate, TaskKind, TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "./taskService";
 
 /**

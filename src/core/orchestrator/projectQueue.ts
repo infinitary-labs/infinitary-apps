@@ -4,7 +4,7 @@ import type { QueueStatusFact, RepoView } from "@shared/repos";
 import { type ForgeCheck, QUEUE_STATUS } from "../forge";
 import { HELD } from "../queue/shipped/gitlab.mjs";
 import { type QueueKind, queueKind } from "../queue/shipped/rules.mjs";
-import type { QueueMark, TaskRecord } from "../storage/taskStore";
+import type { QueueMark, TaskRecord } from "../storage/taskRecords";
 import type { ChangeDeliveryOptions } from "./changeContext";
 import { CHECK_WATCH_BOUND_MS } from "./checkWatch";
 

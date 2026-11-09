@@ -6,7 +6,7 @@ import { hostEnv } from "../../src/core/hostEnv";
 import { SYNC_CAP_MS } from "../../src/core/jobs/jobManager";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { openDatabase } from "../../src/core/storage/db";
-import { TaskStore } from "../../src/core/storage/taskStore";
+import { TaskStore } from "../../src/core/storage/taskRecords";
 import automationManifest from "../../src/panels/automation/manifest.json" with { type: "json" };
 import { AUTOMATION_STATE_WORDS } from "../../src/shared/automationWords";
 import {

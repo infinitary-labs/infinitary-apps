@@ -21,9 +21,9 @@ import {
   type TaskEventKind,
   timelineEventIdentity,
 } from "../storage/taskEventStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskSessionObservationRecord } from "../storage/taskSessionStore";
 import type { SavedSpecification } from "../storage/taskSpecificationStore";
-import type { TaskRecord } from "../storage/taskStore";
 import type { SourcedAction } from "./crewActions";
 import {
   ACTIVITY_PLACES,

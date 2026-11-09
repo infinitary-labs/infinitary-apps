@@ -8,7 +8,7 @@ import {
   type WorkflowRun,
 } from "../forge";
 import type { InboxStore } from "../storage/inboxStore";
-import type { RunWatch, TaskDelivery } from "../storage/taskStore";
+import type { RunWatch, TaskDelivery } from "../storage/taskRecords";
 import type { ChangeEvidenceUpdate } from "../tasks/taskDeliveries";
 import { TaskService } from "../tasks/taskService";
 import { observeRunFailures } from "./checkRepair";

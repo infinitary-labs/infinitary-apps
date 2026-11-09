@@ -14,7 +14,7 @@ import { type ForgeKind, hasChangeRequests } from "@shared/forge";
 import type { MergeReview } from "@shared/mergeReview";
 import type { RepoKind } from "@shared/repos";
 import type { TaskPullRequest } from "@shared/tasks";
-import type { TaskDelivery, TaskRecord } from "./taskStore";
+import type { TaskDelivery, TaskRecord } from "./taskRecords";
 
 /**
  * What a task's delivery slot says about its changes, read as the change

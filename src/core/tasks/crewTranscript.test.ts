@@ -8,7 +8,7 @@ import { EMIT_CARD_TOOL_NAME } from "../pi/cardTool";
 import { NOTE_PROGRESS_TOOL_NAME, REPORT_TOOL_NAME } from "../pi/crewmateTaskTools";
 import { OPEN_CHANGE_TOOL_NAME } from "../pi/forgeTools";
 import type { TaskEvent } from "../storage/taskEventStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { CREW_BLOCK_TOOLS, CrewLiveText, CrewTranscripts, diffOf } from "./crewTranscript";
 
 type Line = Record<string, unknown>;

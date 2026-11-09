@@ -1,7 +1,7 @@
 import { providerLabel } from "@shared/modelSlots";
 import type { TaskWait } from "@shared/taskWaits";
 import type { AccountHold, WorkPosture } from "@shared/workPosture";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 
 /** The posture owner supplies these from the same snapshot, including simultaneous jobs and holds. */
 export type TaskWaitFacts = { job: boolean; timerOwned: boolean; hold?: AccountHold };

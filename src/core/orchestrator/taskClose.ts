@@ -9,7 +9,7 @@ import { opensPullRequest } from "@shared/repos";
 import type { TaskDeliveryMode } from "@shared/tasks";
 import { mergingClose } from "../storage/changeProjection";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import { keptWorkWords, type TaskWorkspace } from "../workspace/workspaceService";
 import { answersByShape, type ClosingPlace } from "./askEnding";

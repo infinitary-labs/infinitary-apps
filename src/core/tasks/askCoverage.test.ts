@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { TaskEventStore } from "../storage/taskEventStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { seedTask } from "./seedTask";
 import { TaskService } from "./taskService";
 

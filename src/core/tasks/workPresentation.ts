@@ -1,6 +1,6 @@
 import type { CrewCounts, FmEvent } from "@shared/events";
 import type { WorkPosture } from "@shared/workPosture";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskProtocol } from "./taskProtocol";
 import type { TaskService } from "./taskService";
 

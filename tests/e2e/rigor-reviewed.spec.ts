@@ -8,7 +8,7 @@ import {
 } from "../../src/core/orchestrator/reportWakes";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { openDatabase } from "../../src/core/storage/db";
-import { TaskStore } from "../../src/core/storage/taskStore";
+import { TaskStore } from "../../src/core/storage/taskRecords";
 import { COMPLETION_CARD_HEADINGS } from "../../src/shared/cardHeadings";
 import {
   cardMetaWords,

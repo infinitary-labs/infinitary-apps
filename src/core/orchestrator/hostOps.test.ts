@@ -22,7 +22,7 @@ import {
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { seedTask } from "../tasks/seedTask";
 import { backlogLeftLine } from "./hostOps";
 import { describeStatus } from "./settleService";

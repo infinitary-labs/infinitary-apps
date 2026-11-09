@@ -21,7 +21,7 @@ import type { TaskIntegrations } from "../integrations";
 import type { RecordInput } from "../knowledge/writes";
 import type { PanelCaptureResult, PanelPlaceResult } from "../personal/personalExtensions";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
-import type { CardRefusal, CardRefusalReason } from "../storage/taskStore";
+import type { CardRefusal, CardRefusalReason } from "../storage/taskRecords";
 import type { TaskQueryInput, TaskQueryProject, TaskQueryRow } from "../tasks/taskQuery";
 import type { ReportDeclaration } from "../tasks/taskTurns";
 

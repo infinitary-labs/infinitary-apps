@@ -34,7 +34,7 @@ import { workPostureSchema } from "./workPosture";
  * `task_event` as the feed's source.
  *
  * The enums mirror the record's own vocabulary in
- * `src/core/storage/taskStore.ts` and `taskEventStore.ts`; the core's view
+ * `src/core/storage/taskRecords.ts` and `taskEventStore.ts`; the core's view
  * builder (`src/core/tasks/taskProtocol.ts`) assigns record fields into
  * these types, so a value added on one side without the other fails
  * typecheck rather than a client's parse.

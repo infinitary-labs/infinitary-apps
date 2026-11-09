@@ -12,7 +12,7 @@ import {
 import { CLASSIFY_TIMEOUT_MS } from "../routing/decisionKindClassifier";
 import { KIND_SOURCE, type KindInput, resolveKind } from "../routing/kindClassifier";
 import { escalationFloor } from "../routing/policy";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { resultSchemaRefusal } from "../tasks/taskResult";
 import type { TaskService } from "../tasks/taskService";
 import { keptRefFor } from "../workspace/workspaceService";

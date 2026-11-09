@@ -6,7 +6,7 @@ import type { CrewSendResult } from "@shared/crewTranscript";
 import { CREWMATE_TAB_VIA, type TASK_CARD_VIA } from "@shared/provenance";
 import { capWithOverflow } from "../overflow";
 import type { ModelSession } from "../session/session";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import type { CrewCore } from "./crewCore";
 import type { SteerDelivery, SteerSource, TaskRuntime, UnreadSteer } from "./crewRuntime";

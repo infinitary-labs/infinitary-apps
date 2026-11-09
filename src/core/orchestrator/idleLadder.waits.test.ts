@@ -33,7 +33,7 @@ import type { ForgeCheckState } from "../forge";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
 import { ORDINARY_NOTE_READ_ACK } from "../prompts/cardContract";
 import { InboxStore } from "../storage/inboxStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { seedTask } from "../tasks/seedTask";
 import type { TaskService } from "../tasks/taskService";
 import { BASELINE_OBSERVATIONS_NEXT, declareCheckAction, observeCheckRepair } from "./checkRepair";

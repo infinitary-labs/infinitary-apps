@@ -17,7 +17,7 @@ import {
   ForgeWriteError,
   GITLAB_PRIVATE_MEDIA_REFUSAL,
 } from "../forge";
-import type { MergeAuthorization } from "../storage/taskStore";
+import type { MergeAuthorization } from "../storage/taskRecords";
 import { git } from "../workspace/git";
 import { readChangeReading } from "../workspace/workspaceService";
 import { reviewCoversHead } from "./reviewCarry";

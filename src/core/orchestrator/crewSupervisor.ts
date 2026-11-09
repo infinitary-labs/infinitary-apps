@@ -32,7 +32,7 @@ import { bindTools, type EmittedCardInput } from "../session/tools";
 import type { DuplicateResult } from "../storage/cardStore";
 import { currentChange, currentReceipt, mergingClose } from "../storage/changeProjection";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
-import type { CompletionOffer, TaskRecord } from "../storage/taskStore";
+import type { CompletionOffer, TaskRecord } from "../storage/taskRecords";
 import { carryOnWords } from "../tasks/recordActivity";
 import { TaskService } from "../tasks/taskService";
 import { compareSemver } from "../update/semver";

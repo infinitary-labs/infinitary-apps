@@ -16,7 +16,7 @@ import { capWithOverflow } from "../overflow";
 import type { CrewStatusEntry } from "../pi/crewTools";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { INBOX_ATTEMPT_MAX, type InboxRow } from "../storage/inboxStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { alreadyAllowed } from "../tasks/alreadyAllowed";
 import { hasStartQueueWait, queueWaitOf } from "../tasks/queueWait";
 import { TaskService } from "../tasks/taskService";

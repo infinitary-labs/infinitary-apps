@@ -1,5 +1,5 @@
 import { currentCheckSummary } from "@shared/checkSnapshot";
-import type { TaskDelivery } from "../storage/taskStore";
+import type { TaskDelivery } from "../storage/taskRecords";
 
 /**
  * The CI reading the app last recorded on a task's delivery facts, as the

@@ -5,7 +5,7 @@ import { presentationCommitMessage } from "../../src/core/forge/presentation";
 import { MERGE_CONTINUED_LEAD } from "../../src/core/orchestrator/deliveryWakes";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { openDatabase } from "../../src/core/storage/db";
-import { TaskStore } from "../../src/core/storage/taskStore";
+import { TaskStore } from "../../src/core/storage/taskRecords";
 import { MERGE_CLOSES_WORDS } from "../../src/shared/cards";
 import { MERGE_WORDS, PULL_REQUEST_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";

@@ -18,7 +18,7 @@ import {
 import { packagedPlanStepLines } from "../personal/sequencesSkill";
 import type { KindInput } from "../routing/kindClassifier";
 import type { TaskEvent } from "../storage/taskEventStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { taskFeedLine } from "../tasks/taskFeed";
 import { JOB_BOUND_MS } from "./idleLadder";

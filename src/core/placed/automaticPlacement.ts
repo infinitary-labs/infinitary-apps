@@ -34,7 +34,7 @@ import {
   unservedSystems,
 } from "../routing/placementEngine";
 import type { RouteResult, Router } from "../routing/router";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
 import type { ComputerResourceFeed } from "./computerResourceFeed";
 import { withoutSignIn } from "./placedCopies";

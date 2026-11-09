@@ -25,7 +25,7 @@ import {
 } from "@shared/taskQueue";
 import { isUnstartedWork } from "@shared/tasks";
 import type { TaskEventActor } from "../storage/taskEventStore";
-import type { TaskGate, TaskRecord } from "../storage/taskStore";
+import type { TaskGate, TaskRecord } from "../storage/taskRecords";
 import { TaskGraphRefusal } from "./taskGraph";
 import { TaskService } from "./taskService";
 import { keyOrId, type TaskWriter } from "./taskWriter";

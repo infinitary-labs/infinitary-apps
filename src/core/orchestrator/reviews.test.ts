@@ -26,7 +26,7 @@ import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { crewmateCardPicturesDir } from "../paths";
 import type { CrewMachines } from "../placed/crewMachines";
 import type { TaskEvent } from "../storage/taskEventStore";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { taskFeedLine } from "../tasks/taskFeed";
 import { readChangeReading } from "../workspace/workspaceService";
 import type { CrewmateSpec } from "./crewSession";

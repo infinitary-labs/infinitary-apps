@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { fileSizeWords } from "@shared/attachments";
 import type { AppPaths } from "../paths";
 import { lstat, mkdir, readdir, readFile, rename, rm } from "../plainFs";
-import type { TaskRetentionFields } from "../storage/taskStore";
+import type { TaskRetentionFields } from "../storage/taskRecords";
 import { HANDOVER_OUT_DIR_NAME, removeHandoverFiles } from "./handoverFiles";
 import { TaskService } from "./taskService";
 

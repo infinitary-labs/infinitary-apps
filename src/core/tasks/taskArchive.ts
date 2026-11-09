@@ -1,8 +1,8 @@
 import { sessionFilesIn } from "../storage/sessionReader";
 import type { TaskEvent } from "../storage/taskEventStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskReference, TaskReferenceKind } from "../storage/taskReferenceStore";
 import { conversationOf, type TaskSession } from "../storage/taskSessionStore";
-import type { TaskRecord } from "../storage/taskStore";
 import type { TaskExportBundle } from "./taskExport";
 import type { TaskService } from "./taskService";
 import { splitReferences } from "./taskService";

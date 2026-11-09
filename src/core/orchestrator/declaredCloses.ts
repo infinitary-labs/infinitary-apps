@@ -1,5 +1,5 @@
 import type { Card } from "@shared/cards";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import { taskResultResponse } from "./answerTaskResponse";
 import type { AnswerTaskClosedPayload } from "./captainWakes";

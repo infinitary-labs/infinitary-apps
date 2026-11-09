@@ -146,6 +146,16 @@ export class GithubGatewayService {
     return this.answer(taskId, ({ api }) => this.readOn(taskId, api, input), through);
   }
 
+  /** Transient failures reach the crewmate's bounded retry; refusals remain answers. */
+  readForCrew(taskId: string, input: GithubReadInput): Promise<string> {
+    return this.answer(
+      taskId,
+      ({ api }) => this.readOn(taskId, api, input),
+      undefined,
+      "transient",
+    );
+  }
+
   /**
    * The first mate's read through the github.com sign-in (the GitHub
    * integration, docs/integrations.md): it has no task, so its calls count
@@ -950,7 +960,7 @@ export class GithubGatewayService {
     taskId: string,
     run: (target: Target) => Promise<string>,
     through?: "account" | { host: string },
-    propagate = false,
+    propagate: boolean | "transient" = false,
   ): Promise<string> {
     return this.answerWith(() => this.targetOf(taskId, through), run, propagate);
   }
@@ -958,7 +968,7 @@ export class GithubGatewayService {
   private async answerWith(
     targetOf: () => Target,
     run: (target: Target) => Promise<string>,
-    propagate = false,
+    propagate: boolean | "transient" = false,
   ): Promise<string> {
     let place = "GitHub";
     try {
@@ -966,7 +976,13 @@ export class GithubGatewayService {
       place = target.api.place;
       return await run(target);
     } catch (caught) {
-      if (propagate) throw caught;
+      if (
+        propagate === true ||
+        (propagate === "transient" &&
+          caught instanceof ForgeError &&
+          caught.failure === "transient")
+      )
+        throw caught;
       if (caught instanceof ForgeError)
         return `Cannot call ${place} (${caught.failure}): ${caught.message}`;
       return `Cannot call ${place}: the request failed before ${place} answered.`;

@@ -1033,7 +1033,7 @@ export async function createServices(
     checkChange: (taskId, input) => changeDelivery.checkTool.checkForCrew(taskId, input),
     readWorkflow: (taskId, input) => workflowEvidence.read(taskId, input),
     downloadArtifact: (taskId, input) => workflowEvidence.download(taskId, input),
-    githubRead: (taskId, input) => githubGateway.read(taskId, input),
+    githubRead: (taskId, input) => githubGateway.readForCrew(taskId, input),
     githubWrite: (taskId, input) => githubGateway.write(taskId, input),
     readCheckWatch: (taskId) => changeDelivery.checks.readWatched(taskId),
     readMainChecks: (repoId) => changeDelivery.checks.readDefaultBranchChecks(repoId),

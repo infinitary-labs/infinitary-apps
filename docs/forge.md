@@ -400,7 +400,12 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
   A nonempty `temp_clone_token` field, which GitHub puts on a private repository's answer, is left out at any depth the same way, and the answer says the temporary clone tokens were removed; an empty one, as on a public repository, stays.
   Tokens already saved are left where they are.
   A GitHub refusal (422, 404, 403) is a status in the answer; a 401 asks the health service to look again.
-  Apart from a smaller page of an oversized list, nothing is retried for the crewmate.
+  A crewmate's `github_read` bounds the entire callback, including travel to the home computer, to 30 seconds per attempt and one retry (`src/core/session/githubRead.ts`).
+  A missing answer or transient transport failure gets that one retry; cancellation stops immediately, and a definite refusal, oversized object or rate-limit response is returned without retrying.
+  After both attempts fail, the crewmate hears that the request or answer may have been lost and that the read changed nothing.
+  The gateway lets only transient failures escape its crewmate entry point (`readForCrew`); its other entry points retain their own error handling.
+  Host-side list paging stays within each attempt, and its continuation path keeps the smaller page size.
+  Artifact downloads and release uploads keep their own longer deadlines; the quiet check remains the last resort for other lost app reads.
 - **Release files.**
   `github_write` takes an optional `file`: a regular file in the task's working copy, relative to it, never a link anywhere on the way.
   With `file` set, the method is POST and `body` stays out.

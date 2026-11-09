@@ -13,6 +13,7 @@ import {
   MERGE_REPAIR_IMPACTS,
 } from "@shared/checkRepair";
 import { Type } from "typebox";
+import { githubRead } from "../session/githubRead";
 import { callWithSignal, crewmateTool, stringEnum, zodParameter } from "../session/tools";
 import { cardPictureRoot } from "./cardImages";
 import { stageChangePresentation } from "./changePresentation";
@@ -413,7 +414,9 @@ export const GITHUB_READ_TOOL = crewmateTool({
   }),
   bind: ({ onGithubRead }) =>
     onGithubRead &&
-    (async (params, signal) => ({ text: await callWithSignal(onGithubRead, [params], signal) })),
+    (async (params, signal) => ({
+      text: await githubRead((attempt) => onGithubRead(params, attempt), signal),
+    })),
 });
 
 export const GITHUB_WRITE_TOOL = crewmateTool({

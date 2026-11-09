@@ -1257,11 +1257,14 @@ export class GitHubForge implements Forge {
         ...(body === undefined ? {} : { body }),
         signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
       });
+      return await this.readAnswer(response);
     } catch (caught) {
+      // A lost body is the same transport failure as lost headers. Definite
+      // refusals, including an oversized answer used for paging, keep their type.
+      if (caught instanceof ForgeError) throw caught;
       const message = caught instanceof Error ? caught.message : String(caught);
       throw new ForgeError("transient", `could not reach ${this.place}: ${message}`);
     }
-    return this.readAnswer(response);
   }
 
   /** Every status answers. A redirect is refused, and the answer stays within the JSON cap. */

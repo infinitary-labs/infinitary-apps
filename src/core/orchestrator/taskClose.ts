@@ -647,7 +647,7 @@ export class TaskClosing {
     // retired by INF-2913). It carries no task, so the card retire leaves
     // it: one still up from that version ends with its task here.
     for (const id of taskIds)
-      this.host.cards.withdrawHostCard(mergePendingCardId(id), "task-closed");
+      this.host.cards.hostCards.withdrawHostCard(mergePendingCardId(id), "task-closed");
     return this.host.inbox.transaction(() => {
       for (const id of taskIds) this.host.inbox.purgeTask(id);
       return close();

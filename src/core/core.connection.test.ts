@@ -106,7 +106,7 @@ describe("the connection serves the core to paired devices", () => {
     const shows = (id: string) => (push: ReceivedPush) =>
       push.channel === "inf:cards" && (push.payload as Card[]).some((card) => card.id === id);
     const { supervisor } = core.services;
-    supervisor.cards.addSystemNoteCard("card-connection-1", "Seen twice", "<p>One</p>");
+    supervisor.cards.hostCards.addSystemNoteCard("card-connection-1", "Seen twice", "<p>One</p>");
     const [fromA, fromB] = await Promise.all([
       a.push(shows("card-connection-1")),
       b.push(shows("card-connection-1")),
@@ -126,8 +126,8 @@ describe("the connection serves the core to paired devices", () => {
     // B drops; two cards arrive while it is away; it comes back with its cursor.
     const cursor = b.cursor();
     await b.close();
-    supervisor.cards.addSystemNoteCard("card-connection-2", "While away", "<p>Two</p>");
-    supervisor.cards.addSystemNoteCard("card-connection-3", "Still away", "<p>Three</p>");
+    supervisor.cards.hostCards.addSystemNoteCard("card-connection-2", "While away", "<p>Two</p>");
+    supervisor.cards.hostCards.addSystemNoteCard("card-connection-3", "Still away", "<p>Three</p>");
     await a.push(shows("card-connection-3"));
     const back = await connectClient(grantB, { cursor });
     expect(back.welcome).toMatchObject({ catchUp: "replay", epoch: cursor.epoch });
@@ -156,7 +156,7 @@ describe("the connection serves the core to paired devices", () => {
     const view = await connectClient(grant);
     const holds = (id: string) => (push: ReceivedPush) =>
       push.channel === "inf:cards" && (push.payload as Card[]).some((card) => card.id === id);
-    core.services.supervisor.cards.addSystemNoteCard(
+    core.services.supervisor.cards.hostCards.addSystemNoteCard(
       "card-close-first",
       "Closed from the phone",
       "<p>Gone at once</p>",

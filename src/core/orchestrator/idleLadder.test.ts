@@ -885,7 +885,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       {
         name: "a host card with actions",
         arrange: ({ supervisor, taskId }) =>
-          supervisor.cards.raiseHostCard({
+          supervisor.cards.hostCards.raiseHostCard({
             id: "card-host-consent",
             taskId,
             title: "Add a panel",
@@ -899,9 +899,14 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       {
         name: "the crewmate's sign-in card",
         arrange: ({ supervisor, taskId }) =>
-          supervisor.cards.addAuthDecisionCard(`card-auth-${taskId}`, "crewmate 1", "Sign in.", {
-            taskId,
-          }),
+          supervisor.cards.hostCards.addAuthDecisionCard(
+            `card-auth-${taskId}`,
+            "crewmate 1",
+            "Sign in.",
+            {
+              taskId,
+            },
+          ),
       },
       {
         name: "a young background job",
@@ -950,7 +955,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     // Cards are read by task, never by id: a card that only LOOKS like the
     // task's sign-in card, carrying no task, holds nothing.
     const named = await stopped();
-    named.supervisor.cards.addAuthDecisionCard(
+    named.supervisor.cards.hostCards.addAuthDecisionCard(
       `card-auth-${named.taskId}`,
       "crewmate 1",
       "Sign in.",

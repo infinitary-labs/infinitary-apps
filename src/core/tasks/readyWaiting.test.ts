@@ -561,7 +561,7 @@ describe("ready decisions and saved answers are the waiting facts", () => {
       h.cards.addFirstmateCard({ ...decision, id, actions: [] });
       await h.flush();
       h.assertWaiting("t", null);
-      h.cards.raiseHostCard({
+      h.cards.hostCards.raiseHostCard({
         id: "host",
         title: "Host choice",
         meta: "host",
@@ -570,7 +570,7 @@ describe("ready decisions and saved answers are the waiting facts", () => {
       });
       await h.flush();
       expect(h.protocol.projects()[0]?.counts.waitingOnYou).toBe(1);
-      h.cards.withdrawHostCard("host", "obsolete");
+      h.cards.hostCards.withdrawHostCard("host", "obsolete");
       await h.flush();
       h.assertWaiting("t", null);
       h.tasks.create({ id: "dead", title: "Dead", prompt: "p", repoId: null });

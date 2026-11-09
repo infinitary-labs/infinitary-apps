@@ -773,7 +773,7 @@ export async function startPhoneHome(
                 : "inf:cards:close",
               [card.id],
             );
-          core.services.supervisor.cards.raiseHostCard({
+          core.services.supervisor.cards.hostCards.raiseHostCard({
             id: "card-phone-readiness",
             title: "Keep the harbour entrance clear",
             meta: "Harbour survey",
@@ -800,7 +800,7 @@ export async function startPhoneHome(
             .find((card) => card.id === "card-phone-readiness");
           if (!card) throw new Error("The readiness fixture has no held card");
           const { awaiting: _awaiting, sentBackAt: _sentBackAt, ...released } = card;
-          core.services.supervisor.cards.raiseHostCard({
+          core.services.supervisor.cards.hostCards.raiseHostCard({
             ...released,
             body: "<p>The harbour survey is ready for your choice.</p>",
           });
@@ -813,7 +813,7 @@ export async function startPhoneHome(
             .snapshot()
             .find((card) => card.id === "card-phone-readiness");
           if (!card) throw new Error("The readiness fixture has no released card");
-          core.services.supervisor.cards.raiseHostCard({
+          core.services.supervisor.cards.hostCards.raiseHostCard({
             ...card,
             awaiting: "answer",
             sentBackAt: Date.now(),

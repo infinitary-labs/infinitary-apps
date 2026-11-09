@@ -139,8 +139,7 @@ describe("a kept merge carries a passed review across a pure update", () => {
       cards: {
         openMergeAction: () => undefined,
         get: () => undefined,
-        raiseHostCard: () => undefined,
-        withdrawHostCard: () => undefined,
+        hostCards: { raiseHostCard: () => undefined, withdrawHostCard: () => undefined },
         releaseMerged: () => undefined,
         drawsMergedLine: () => false,
       } as unknown as CardService,

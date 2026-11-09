@@ -31,8 +31,18 @@ fakeCrewTimersEachTest();
 describe("the sign-in where a project lives", () => {
   it("raises one host card on the host's refusal whose action starts the sign-in in Projects", () => {
     const { supervisor } = setup(fakeCrewmate());
-    supervisor.cards.addForgeSignInCard("card-forge-github.com", "github.com", "GitHub", 2);
-    supervisor.cards.addForgeSignInCard("card-forge-github.com", "github.com", "GitHub", 2);
+    supervisor.cards.hostCards.addForgeSignInCard(
+      "card-forge-github.com",
+      "github.com",
+      "GitHub",
+      2,
+    );
+    supervisor.cards.hostCards.addForgeSignInCard(
+      "card-forge-github.com",
+      "github.com",
+      "GitHub",
+      2,
+    );
     const raised = supervisor.cards
       .snapshot()
       .filter((card) => card.id === "card-forge-github.com");

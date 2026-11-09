@@ -435,7 +435,7 @@ describe("emit_card stable id revision", () => {
 
   it("does not overwrite an app-raised singleton unless the id matches", async () => {
     const { supervisor, cards } = setup(fakeCrewmate());
-    supervisor.cards.addFirstmatePauseCard({
+    supervisor.cards.hostCards.addFirstmatePauseCard({
       pause: "no_headroom",
       body: "Move the flagship.",
       providerName: "Grok",
@@ -515,7 +515,7 @@ describe("emit_card stable id revision", () => {
   // docs/card-threads.md "Shared cards").
   it("does not let a crewmate clobber an app-raised singleton", async () => {
     const { supervisor, cards, specs } = setup(fakeCrewmate());
-    supervisor.cards.addAuthDecisionCard("card-fm-auth", "firstmate", "Sign in needed.");
+    supervisor.cards.hostCards.addAuthDecisionCard("card-fm-auth", "firstmate", "Sign in needed.");
     await supervisor.intake.commission({ title: "proto", intent: intentOf("work") });
     await tick();
     const result = await specs[0]?.onCard?.({
@@ -544,7 +544,7 @@ describe("a card places the captain gate (cards as tasks)", () => {
 
   it("a host card with actions and no task files an open operation row that its answer closes", () => {
     const { supervisor, tasks } = setup(fakeCrewmate());
-    supervisor.cards.addFirstmatePauseCard({
+    supervisor.cards.hostCards.addFirstmatePauseCard({
       pause: "no_headroom",
       body: "<p>Move Firstmate?</p>",
       providerName: "Grok",
@@ -558,7 +558,7 @@ describe("a card places the captain gate (cards as tasks)", () => {
       gate: { kind: "captain", ref: "card-fm-flagship-move" },
     });
     // A revision or a second raise files nothing more.
-    supervisor.cards.addFirstmatePauseCard({
+    supervisor.cards.hostCards.addFirstmatePauseCard({
       pause: "no_headroom",
       body: "<p>Move Firstmate?</p>",
       providerName: "Grok",
@@ -576,26 +576,26 @@ describe("a card places the captain gate (cards as tasks)", () => {
 
   it("a host withdrawal drops its row; INF-1879 putting it away keeps it open", () => {
     const { supervisor, tasks } = setup(fakeCrewmate());
-    supervisor.cards.addAuthDecisionCard(
+    supervisor.cards.hostCards.addAuthDecisionCard(
       "card-auth-account-acct_cl1",
       "Claude",
       "Claude (Personal) needs you to sign in again.",
       { restoreAccountId: "acct_cl1" },
     );
     const [recovered] = hostRows(tasks, "card-auth-account-acct_cl1");
-    supervisor.cards.clearAuthDecisionCard("card-auth-account-acct_cl1");
+    supervisor.cards.hostCards.clearAuthDecisionCard("card-auth-account-acct_cl1");
     expect(tasks.get(recovered?.id ?? "")).toMatchObject({
       status: "dropped",
       closedReason: "superseded",
     });
 
-    supervisor.cards.addFirstmateFailureCard("<p>The turn failed.</p>");
+    supervisor.cards.hostCards.addFirstmateFailureCard("<p>The turn failed.</p>");
     const [failure] = hostRows(tasks, FIRSTMATE_FAILURE_CARD_ID);
     expect(failure?.status).toBe("open");
     supervisor.close(FIRSTMATE_FAILURE_CARD_ID);
     expect(tasks.get(failure?.id ?? "")).toMatchObject({ status: "open", closedReason: null });
     // A note asks nothing, so it files nothing.
-    supervisor.cards.addSystemNoteCard("card-note", "A note", "<p>FYI.</p>");
+    supervisor.cards.hostCards.addSystemNoteCard("card-note", "A note", "<p>FYI.</p>");
     expect(hostRows(tasks, "card-note")).toEqual([]);
   });
 
@@ -603,7 +603,7 @@ describe("a card places the captain gate (cards as tasks)", () => {
     const { supervisor, tasks } = setup(fakeCrewmate());
     // A card from a version that filed no row, or a crash between the two
     // writes: the card is up and nothing gates it.
-    supervisor.cards.addFirstmatePauseCard({
+    supervisor.cards.hostCards.addFirstmatePauseCard({
       pause: "no_headroom",
       body: "<p>Nothing has headroom.</p>",
       providerName: "Codex",
@@ -643,7 +643,7 @@ describe("a card places the captain gate (cards as tasks)", () => {
     expect(card?.taskId).toBe(taskId);
     expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: `card-auth-${taskId}` });
     expect(tasks.list().filter((record) => record.kind === "operation")).toEqual([]);
-    supervisor.cards.clearAuthDecisionCard(`card-auth-${taskId}`);
+    supervisor.cards.hostCards.clearAuthDecisionCard(`card-auth-${taskId}`);
     expect(tasks.get(taskId)?.gate).toBeNull();
   });
 

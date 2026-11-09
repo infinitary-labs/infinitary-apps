@@ -356,7 +356,7 @@ async function buildRecord() {
     tasks,
     inbox,
     now,
-    raiseNotice: (notice) => supervisor.cards.raiseHostCard(notice),
+    raiseNotice: (notice) => supervisor.cards.hostCards.raiseHostCard(notice),
     cardTitle: (cardId) => supervisor.cards.snapshot().find((shown) => shown.id === cardId)?.title,
     ending: supervisor.askEnding,
   });

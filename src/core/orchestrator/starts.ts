@@ -570,7 +570,7 @@ export class CrewStarts {
           },
           `waiting for ${caught.place} sign-in before starting`,
         );
-        this.core.cards.addForgeSignInCard(
+        this.core.cards.hostCards.addForgeSignInCard(
           forgeSignInCardId(caught.host),
           caught.host,
           caught.place,
@@ -1235,7 +1235,7 @@ export class CrewStarts {
           },
           `waiting for ${caught.place} sign-in before starting`,
         );
-        this.core.cards.addForgeSignInCard(
+        this.core.cards.hostCards.addForgeSignInCard(
           forgeSignInCardId(caught.host),
           caught.host,
           caught.place,

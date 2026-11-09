@@ -1108,7 +1108,10 @@ export async function createServices(
   // The microphone note an earlier version raised on the first hold to talk
   // is a line under the input now (docs/composer.md, "Voice"); one still on
   // the stack comes down.
-  supervisor.cards.withdrawHostCard("card-voice-mic-primer", "microphone line under the input");
+  supervisor.cards.hostCards.withdrawHostCard(
+    "card-voice-mic-primer",
+    "microphone line under the input",
+  );
   // Seed the notifier with the restored stack: cards surviving a restart are
   // old news, and only cards born after this moment ping.
   notifier.observe(supervisor.cards.ended.stack());
@@ -1123,8 +1126,8 @@ export async function createServices(
     checkCacheDir: join(paths.pluginsStagingDir, ".check"),
     store: personalStore,
     cards: {
-      raise: (card) => supervisor.cards.raiseHostCard(card),
-      withdraw: (id, reason) => supervisor.cards.withdrawHostCard(id, reason),
+      raise: (card) => supervisor.cards.hostCards.raiseHostCard(card),
+      withdraw: (id, reason) => supervisor.cards.hostCards.withdrawHostCard(id, reason),
       has: (id) => supervisor.cards.has(id),
     },
     broadcast: (event) => broadcastEvent(event),
@@ -1163,7 +1166,7 @@ export async function createServices(
   const projectSetups = new ProjectSetups({
     repos,
     devices: () => devices.list(),
-    raiseCard: (card) => supervisor.cards.raiseHostCard(card),
+    raiseCard: (card) => supervisor.cards.hostCards.raiseHostCard(card),
     tell: (facts) => firstmateForSeat?.notifyOp({ facts }, "agent"),
     broadcast: (event) => broadcastEvent(event),
   });
@@ -1181,7 +1184,7 @@ export async function createServices(
   const projectChanges = new ProjectChanges({
     repos,
     devices: () => devices.list(),
-    raiseCard: (card) => supervisor.cards.raiseHostCard(card),
+    raiseCard: (card) => supervisor.cards.hostCards.raiseHostCard(card),
     tell: (facts) => firstmateForSeat?.notifyOp({ facts }, "agent"),
   });
   // A batched choice before the project's queue exists (INF-2885 direction
@@ -1191,8 +1194,8 @@ export async function createServices(
   const queueChoice = new QueueChoice({
     repos,
     queue: changeDelivery.queue,
-    raiseCard: (card) => supervisor.cards.raiseHostCard(card),
-    withdrawCard: (id, reason) => supervisor.cards.withdrawHostCard(id, reason),
+    raiseCard: (card) => supervisor.cards.hostCards.raiseHostCard(card),
+    withdrawCard: (id, reason) => supervisor.cards.hostCards.withdrawHostCard(id, reason),
     tell: (facts) => firstmateForSeat?.notifyOp({ facts }, "agent"),
     note: (text) => broadcastEvent({ type: "firstmate_note", text }),
     offers: {

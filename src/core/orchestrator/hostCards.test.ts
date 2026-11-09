@@ -38,7 +38,7 @@ describe("CardService", () => {
   it("files an operation row for a host decision with no task, and drops it when the card goes", () => {
     const { tasks, make } = setup();
     const cards = make();
-    cards.raiseHostCard({
+    cards.hostCards.raiseHostCard({
       id: "card-consent",
       title: "Add the plugin?",
       meta: "firstmate",
@@ -47,7 +47,7 @@ describe("CardService", () => {
     });
     expect(tasks.capture.openCardTaskFor("card-consent")?.kind).toBe("operation");
 
-    cards.withdrawHostCard("card-consent", "gone");
+    cards.hostCards.withdrawHostCard("card-consent", "gone");
     expect(cards.has("card-consent")).toBe(false);
     expect(tasks.capture.openCardTaskFor("card-consent")).toBeUndefined();
   });
@@ -60,25 +60,25 @@ describe("CardService", () => {
       expect(row?.kind).toBe("operation");
       expect(row?.gate).toEqual({ kind: "captain", ref: id });
     };
-    cards.addFirstmatePauseCard({
+    cards.hostCards.addFirstmatePauseCard({
       pause: "refused",
       body: "Claude is not answering your first mate right now.",
       accountId: "acct_claude",
       providerName: "Claude",
     });
-    cards.addFirstmatePauseCard({
+    cards.hostCards.addFirstmatePauseCard({
       pause: "signed_out",
       body: "Claude needs you to sign in again.",
       accountId: "acct_claude",
       providerName: "Claude",
     });
-    cards.addFirstmatePauseCard({
+    cards.hostCards.addFirstmatePauseCard({
       pause: "no_headroom",
       body: "Move?",
       providerName: "Claude",
       move: { providerId: "openai-codex", providerName: "Codex" },
     });
-    cards.addFirstmateMoveBackCard({
+    cards.hostCards.addFirstmateMoveBackCard({
       providerId: "anthropic-claude",
       providerName: "Claude",
       body: "Claude can serve your first mate again.",
@@ -95,13 +95,13 @@ describe("CardService", () => {
     );
 
     // The pause is over: its three cards and their rows go; the way back's card stays.
-    cards.withdrawFirstmatePauseCards("serves again");
+    cards.hostCards.withdrawFirstmatePauseCards("serves again");
     for (const id of ids.slice(0, 3)) {
       expect(cards.has(id)).toBe(false);
       expect(tasks.capture.openCardTaskFor(id)).toBeUndefined();
     }
     gatedOn("card-fm-move-back");
-    cards.withdrawHostCard("card-fm-move-back", "moved");
+    cards.hostCards.withdrawHostCard("card-fm-move-back", "moved");
     expect(tasks.capture.openCardTaskFor("card-fm-move-back")).toBeUndefined();
   });
 
@@ -110,20 +110,24 @@ describe("CardService", () => {
   it("marks each paused-seat card's one primary as its default", () => {
     const { make } = setup();
     const cards = make();
-    cards.addFirstmatePauseCard({
+    cards.hostCards.addFirstmatePauseCard({
       pause: "refused",
       body: "Claude is not answering your first mate right now.",
       accountId: "acct_claude",
       providerName: "Claude",
     });
-    cards.addFirstmatePauseCard({
+    cards.hostCards.addFirstmatePauseCard({
       pause: "signed_out",
       body: "Move?",
       accountId: "acct_claude",
       providerName: "Claude",
       move: { providerId: "openai-codex", providerName: "Codex" },
     });
-    cards.addFirstmatePauseCard({ pause: "no_headroom", body: "Out.", providerName: "Codex" });
+    cards.hostCards.addFirstmatePauseCard({
+      pause: "no_headroom",
+      body: "Out.",
+      providerName: "Codex",
+    });
     const defaults = (id: string) =>
       cards
         .get(id)
@@ -137,9 +141,13 @@ describe("CardService", () => {
   it("revises a paused-seat card in place when its words change, and never re-raises a dismissed one on revise (review S3)", () => {
     const { tasks, make } = setup();
     const cards = make();
-    cards.addFirstmatePauseCard({ pause: "no_headroom", body: "Out.", providerName: "Codex" });
+    cards.hostCards.addFirstmatePauseCard({
+      pause: "no_headroom",
+      body: "Out.",
+      providerName: "Codex",
+    });
     const row = tasks.capture.openCardTaskFor("card-fm-no-headroom");
-    cards.addFirstmatePauseCard({
+    cards.hostCards.addFirstmatePauseCard({
       pause: "signed_out",
       body: "Personal needs you to sign in again.",
       accountId: "acct",
@@ -151,8 +159,8 @@ describe("CardService", () => {
     // One question, revised: its row is the same row.
     expect(tasks.capture.openCardTaskFor("card-fm-no-headroom")?.id).toBe(row?.id);
 
-    cards.withdrawFirstmatePauseCards("dismissed");
-    cards.addFirstmatePauseCard(
+    cards.hostCards.withdrawFirstmatePauseCards("dismissed");
+    cards.hostCards.addFirstmatePauseCard(
       { pause: "no_headroom", body: "Out.", providerName: "Codex" },
       { reviseOnly: true },
     );

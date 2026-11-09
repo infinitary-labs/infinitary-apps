@@ -515,7 +515,10 @@ export class FirstmateSeat {
     // The captain chose the seat outright: a pending way back is moot.
     if (this.options.settings.getFirstmateMovedFrom()) {
       this.options.settings.setFirstmateMovedFrom(null);
-      this.options.supervisor.cards.withdrawHostCard(FIRSTMATE_MOVE_BACK_CARD_ID, "model chosen");
+      this.options.supervisor.cards.hostCards.withdrawHostCard(
+        FIRSTMATE_MOVE_BACK_CARD_ID,
+        "model chosen",
+      );
     }
     if (!this.session || this.localSeat) return;
     if (this.host.running() || this.session.isStreaming()) {
@@ -644,16 +647,16 @@ export class FirstmateSeat {
     void this.session?.detach();
     // The pause card speaks for a lost sign-in: the generic sign-in card a
     // failed turn raised before the proof came is not a second card for it.
-    this.options.supervisor.cards.clearAuthDecisionCard(AUTH_CARD_ID);
+    this.options.supervisor.cards.hostCards.clearAuthDecisionCard(AUTH_CARD_ID);
     const card = this.pauseCard(accountId, pause);
     if (!fresh) {
       // The same pause: its card stands, revised in place if its words
       // moved, without recreating a card removed by a choice or withdrawal.
-      this.options.supervisor.cards.addFirstmatePauseCard(card, { reviseOnly: true });
+      this.options.supervisor.cards.hostCards.addFirstmatePauseCard(card, { reviseOnly: true });
       return;
     }
     // A changed pause is a new question: the old card's is gone.
-    if (previous) this.options.supervisor.cards.withdrawFirstmatePauseCards("superseded");
+    if (previous) this.options.supervisor.cards.hostCards.withdrawFirstmatePauseCards("superseded");
     const sentence = flagship.pauseSentence(accountId, pause);
     this.options.broadcastEvent({
       type: "firstmate_note",
@@ -663,7 +666,7 @@ export class FirstmateSeat {
       `${flagship.labelOf(accountId) ?? accountId}: ${pause.class}`,
       ...(other ? [`offered ${other.providerName}: it has headroom`] : ["nothing else can serve"]),
     ]);
-    this.options.supervisor.cards.addFirstmatePauseCard(card);
+    this.options.supervisor.cards.hostCards.addFirstmatePauseCard(card);
   }
 
   /** The pause card for the seat's account and its pause, as it stands now. */
@@ -754,13 +757,13 @@ export class FirstmateSeat {
   private servesAgain(): void {
     // Whatever pause card is up - one a previous run left, too - asks a
     // question that is gone. Taking one down is idempotent.
-    this.options.supervisor.cards.withdrawFirstmatePauseCards("serves again");
+    this.options.supervisor.cards.hostCards.withdrawFirstmatePauseCards("serves again");
     const paused = this.paused;
     if (!paused) return;
     this.paused = undefined;
     const flagship = this.options.flagship;
     if (!flagship || paused.accountId !== this.seatAccount()) return;
-    this.options.supervisor.cards.clearAuthDecisionCard(AUTH_CARD_ID);
+    this.options.supervisor.cards.hostCards.clearAuthDecisionCard(AUTH_CARD_ID);
     // What waited out the pause is due now, whatever its backoff said.
     this.options.inbox.endOutage(FIRSTMATE_RECIPIENT);
     const label = flagship.labelOf(paused.accountId) ?? "its account";
@@ -790,7 +793,7 @@ export class FirstmateSeat {
     if (!flagship.labelOf(movedFrom.accountId)) {
       // The account it left is gone: there is nowhere to move back to.
       this.options.settings.setFirstmateMovedFrom(null);
-      this.options.supervisor.cards.withdrawHostCard(
+      this.options.supervisor.cards.hostCards.withdrawHostCard(
         FIRSTMATE_MOVE_BACK_CARD_ID,
         "account removed",
       );
@@ -809,7 +812,7 @@ export class FirstmateSeat {
         type: "firstmate_note",
         text: `${label} can serve your first mate again.`,
       });
-      this.options.supervisor.cards.addFirstmateMoveBackCard({
+      this.options.supervisor.cards.hostCards.addFirstmateMoveBackCard({
         providerId: movedFrom.providerId,
         providerName,
         body: `${label} can serve your first mate again.${
@@ -819,7 +822,7 @@ export class FirstmateSeat {
     } else if (!back && movedFrom.offered) {
       // It stopped serving again before the captain chose: the offer is stale.
       this.options.settings.setFirstmateMovedFrom({ ...movedFrom, offered: false });
-      this.options.supervisor.cards.withdrawHostCard(
+      this.options.supervisor.cards.hostCards.withdrawHostCard(
         FIRSTMATE_MOVE_BACK_CARD_ID,
         "stopped serving",
       );
@@ -847,7 +850,7 @@ export class FirstmateSeat {
     }
     flagship.tryAgain(accountId);
     if (this.paused?.accountId === accountId) this.paused = undefined;
-    this.options.supervisor.cards.withdrawFirstmatePauseCards("trying again");
+    this.options.supervisor.cards.hostCards.withdrawFirstmatePauseCards("trying again");
     this.options.inbox.endOutage(FIRSTMATE_RECIPIENT);
     void this.host.drain();
   }
@@ -900,9 +903,12 @@ export class FirstmateSeat {
     if (!flagship || paused?.class !== "no_headroom") return;
     const pause = flagship.pause(paused.accountId);
     if (pause?.class !== "no_headroom") return;
-    this.options.supervisor.cards.addFirstmatePauseCard(this.pauseCard(paused.accountId, pause), {
-      reviseOnly: !this.recheckRaises,
-    });
+    this.options.supervisor.cards.hostCards.addFirstmatePauseCard(
+      this.pauseCard(paused.accountId, pause),
+      {
+        reviseOnly: !this.recheckRaises,
+      },
+    );
   }
 
   /**
@@ -970,8 +976,8 @@ export class FirstmateSeat {
       };
     }
     this.paused = undefined;
-    this.options.supervisor.cards.withdrawFirstmatePauseCards("moved");
-    this.options.supervisor.cards.withdrawHostCard(FIRSTMATE_MOVE_BACK_CARD_ID, "moved");
+    this.options.supervisor.cards.hostCards.withdrawFirstmatePauseCards("moved");
+    this.options.supervisor.cards.hostCards.withdrawHostCard(FIRSTMATE_MOVE_BACK_CARD_ID, "moved");
     this.options.settings.setFirstmateBinding(model, accountId ?? null);
     // Rows held for the account the seat leaves (a spent allowance's reset)
     // are due on the seat it goes to.
@@ -1007,7 +1013,7 @@ export class FirstmateSeat {
   /** Auth-vs-generic dispatch for every failure channel (create, throw, provider). */
   raiseSessionFailureCard(message: string): void {
     if (isAuthFailureMessage(message) || message.includes("No signed-in model")) {
-      this.options.supervisor.cards.addAuthDecisionCard(
+      this.options.supervisor.cards.hostCards.addAuthDecisionCard(
         AUTH_CARD_ID,
         "firstmate",
         this.signInCardBody(),
@@ -1065,7 +1071,7 @@ export class FirstmateSeat {
     const body = this.runawayRefused
       ? `${message}\n\nFirstmate will not try again until you press Retry.`
       : message;
-    this.options.supervisor.cards.addFirstmateFailureCard(body);
+    this.options.supervisor.cards.hostCards.addFirstmateFailureCard(body);
   }
 
   /**

@@ -61,8 +61,10 @@ describe("the app's own cards about a task", () => {
       broadcastCards: (stack) => pushes.push(stack),
       broadcastThread: () => {},
     });
-    cards.addAuthDecisionCard("card-auth-task", "Claude", "Sign in again.", { taskId: "t1" });
-    cards.addAuthDecisionCard("card-auth-account", "Claude", "Sign in again.");
+    cards.hostCards.addAuthDecisionCard("card-auth-task", "Claude", "Sign in again.", {
+      taskId: "t1",
+    });
+    cards.hostCards.addAuthDecisionCard("card-auth-account", "Claude", "Sign in again.");
     expect(cards.get("card-auth-task")?.taskId).toBe("t1");
     expect(cards.get("card-auth-account")?.taskId).toBeUndefined();
   });

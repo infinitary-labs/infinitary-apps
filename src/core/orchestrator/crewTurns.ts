@@ -852,7 +852,7 @@ export class CrewTurns {
                 arg: `${task.id}:${plan.from}:${offeringKey(plan.choice)}`,
                 modelName: this.modelName(plan.choice),
               };
-        this.core.cards.addAuthDecisionCard(
+        this.core.cards.hostCards.addAuthDecisionCard(
           crewSignInCardId(task.id),
           task.title,
           this.signInCardBody(task),

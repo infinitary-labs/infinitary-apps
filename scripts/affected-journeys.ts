@@ -99,7 +99,7 @@ export type Reasons = Map<string, string[]>;
 // These narrow fallbacks cover breaks that do not change a hook or copied
 // words. Union them with the existing selection, never replace it.
 const FALLBACKS = [
-  { paths: ["src/shared/cardLeave.ts", "src/shared/cards.ts", "src/core/orchestrator/cardService.ts", "src/core/orchestrator/cardEmit.ts", "src/core/orchestrator/cardEvidence.ts", "src/core/orchestrator/cardThreads.ts", "src/core/orchestrator/hostCards.ts", "src/core/orchestrator/settleCardFacts.ts", "src/core/orchestrator/crewSupervisor.ts", "src/core/orchestrator/cardActions.ts", "src/core/orchestrator/crewmateCards.ts", "src/renderer/src/design/cards/"], specs: ["card-leave.spec.ts"] },
+  { paths: ["src/shared/cardLeave.ts", "src/shared/cards.ts", "src/core/orchestrator/cardService.ts", "src/core/orchestrator/hostCardStack.ts", "src/core/orchestrator/cardStackTypes.ts", "src/core/orchestrator/cardEmit.ts", "src/core/orchestrator/cardEvidence.ts", "src/core/orchestrator/cardThreads.ts", "src/core/orchestrator/hostCards.ts", "src/core/orchestrator/settleCardFacts.ts", "src/core/orchestrator/crewSupervisor.ts", "src/core/orchestrator/cardActions.ts", "src/core/orchestrator/crewmateCards.ts", "src/renderer/src/design/cards/"], specs: ["card-leave.spec.ts"] },
   {
     paths: [
       "src/renderer/src/cards/",

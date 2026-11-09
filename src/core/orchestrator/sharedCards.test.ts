@@ -474,7 +474,9 @@ describe("shared cards", () => {
     expect(settle.refusal).toContain("carries an effect");
     expect(f.cards.get(id)?.actions).toEqual([]);
 
-    f.cards.addFirstmateQuietCard("<p>Your first mate has not answered for ten minutes.</p>");
+    f.cards.hostCards.addFirstmateQuietCard(
+      "<p>Your first mate has not answered for ten minutes.</p>",
+    );
     const quiet = f.cards.get("card-fm-quiet") as Card;
     const app = f.cards.contribute(
       t2,

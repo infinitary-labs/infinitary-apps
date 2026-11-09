@@ -571,8 +571,8 @@ export function startPlacedHome(options: {
       signInsOf: (deviceId) => signIns.signInsOf(deviceId),
     },
     cards: {
-      raise: (card) => supervisor.cards.raiseHostCard(card),
-      withdraw: (id, reason) => supervisor.cards.withdrawHostCard(id, reason),
+      raise: (card) => supervisor.cards.hostCards.raiseHostCard(card),
+      withdraw: (id, reason) => supervisor.cards.hostCards.withdrawHostCard(id, reason),
       has: (id) => supervisor.cards.has(id),
       stored: (id) => supervisor.cards.stored(id) !== undefined,
       chosenAction: (id) => supervisor.cards.chosenAction(id),

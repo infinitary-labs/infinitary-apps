@@ -55,11 +55,13 @@ export type SettleCards = {
   snapshot(): Card[];
   put(next: Card): void;
   reviseBody(id: string, body: string): void;
-  raiseHostCard(
-    card: Omit<Card, "author" | "priority" | "status" | "createdAt">,
-    options?: { note?: boolean },
-  ): void;
-  withdrawHostCard(id: string, reason: string): void;
+  hostCards: {
+    raiseHostCard(
+      card: Omit<Card, "author" | "priority" | "status" | "createdAt">,
+      options?: { note?: boolean },
+    ): void;
+    withdrawHostCard(id: string, reason: string): void;
+  };
   addFirstmateCard(input: EmittedCardInput): string;
   closedByCaptain(taskId: string): Card[];
   openMergeAction(taskId: string, scope?: { review?: string }): OpenMergeAction | undefined;

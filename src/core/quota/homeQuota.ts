@@ -69,7 +69,7 @@ export type HomeQuota = {
    */
   syncNeedsReauthCards: (
     snapshot: QuotaSnapshotView,
-    cards: Pick<CardService, "addAuthDecisionCard" | "snapshot" | "clearAuthDecisionCard">,
+    cards: Pick<CardService, "hostCards" | "snapshot">,
   ) => void;
 };
 
@@ -304,7 +304,7 @@ export function startHomeQuota(options: {
         wanted.add(target.cardId);
         const label =
           accounts.find((account) => account.id === target.accountId)?.label ?? target.accountLabel;
-        cards.addAuthDecisionCard(
+        cards.hostCards.addAuthDecisionCard(
           target.cardId,
           target.providerName,
           needsReauthCopy(target.providerName, label),
@@ -314,7 +314,7 @@ export function startHomeQuota(options: {
       for (const card of cards.snapshot()) {
         const accountId = accountIdFromNeedsReauthCard(card.id);
         if (accountId !== undefined && !wanted.has(card.id)) {
-          cards.clearAuthDecisionCard(card.id);
+          cards.hostCards.clearAuthDecisionCard(card.id);
         }
       }
     },

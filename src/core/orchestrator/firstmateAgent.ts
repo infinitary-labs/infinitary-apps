@@ -585,9 +585,9 @@ export class FirstmateAgent {
       tasks: options.tasks,
       inbox: options.inbox,
       now: () => this.now(),
-      raiseNotice: (card) => options.supervisor.cards.raiseHostCard(card),
+      raiseNotice: (card) => options.supervisor.cards.hostCards.raiseHostCard(card),
       withdrawNotice: (cardId) =>
-        options.supervisor.cards.withdrawHostCard(cardId, "an answering card went up"),
+        options.supervisor.cards.hostCards.withdrawHostCard(cardId, "an answering card went up"),
       cardTitle: (cardId) =>
         options.supervisor.cards.snapshot().find((card) => card.id === cardId)?.title,
       ending: options.supervisor.askEnding,
@@ -1408,7 +1408,10 @@ export class FirstmateAgent {
     } else if (!threw) {
       // A clean turn answered what it carried: nothing is left to retry.
       this.lastUserTurn = undefined;
-      this.options.supervisor.cards.withdrawHostCard(FIRSTMATE_FAILURE_CARD_ID, "recovered");
+      this.options.supervisor.cards.hostCards.withdrawHostCard(
+        FIRSTMATE_FAILURE_CARD_ID,
+        "recovered",
+      );
     }
     // The capture floor (P1): whatever no tool attached lands now - on
     // the hinted task, else as its own question task. A failed turn files
@@ -1615,7 +1618,7 @@ export class FirstmateAgent {
     const minutes = Math.round(quietFor / 60_000);
     if (quietFor >= QUIET_CARD_MS && this.quietLevel < 2) {
       this.quietLevel = 2;
-      this.options.supervisor.cards.addFirstmateQuietCard(
+      this.options.supervisor.cards.hostCards.addFirstmateQuietCard(
         `Your first mate has said nothing for ${minutes} minutes while working. It may be stuck; it recovers on its own when it finishes.`,
       );
     } else if (quietFor >= QUIET_FEED_MS && this.quietLevel < 1) {
@@ -1635,7 +1638,7 @@ export class FirstmateAgent {
 
   private clearQuiet(): void {
     this.quietLevel = 0;
-    this.options.supervisor.cards.clearFirstmateQuietCard();
+    this.options.supervisor.cards.hostCards.clearFirstmateQuietCard();
   }
 
   /**

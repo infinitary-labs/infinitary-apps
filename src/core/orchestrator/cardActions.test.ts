@@ -99,7 +99,7 @@ function taskless(
   id: string,
   effect: HostEffect | { kind: string; [k: string]: unknown },
 ) {
-  h.supervisor.cards.raiseHostCard({
+  h.supervisor.cards.hostCards.raiseHostCard({
     id,
     title: "A question the app asks",
     meta: "the app",

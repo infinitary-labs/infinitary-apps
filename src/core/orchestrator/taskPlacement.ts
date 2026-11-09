@@ -838,7 +838,7 @@ export class TaskPlacement {
       });
     }
     if (this.host.cards.has(deviceSetupCardId(deviceId))) return;
-    this.host.cards.addDeviceForgeSignInCard({
+    this.host.cards.hostCards.addDeviceForgeSignInCard({
       deviceId,
       host,
       name,
@@ -881,7 +881,7 @@ export class TaskPlacement {
    * GitHub card comes down, and every task held for that sign-in starts.
    */
   async resumeDeviceForgeSignInTasks(deviceId: string, host: string): Promise<void> {
-    this.host.cards.clearAuthDecisionCard(deviceForgeSignInCardId(host, deviceId));
+    this.host.cards.hostCards.clearAuthDecisionCard(deviceForgeSignInCardId(host, deviceId));
     const ref = deviceForgeGateRef(host, deviceId);
     for (const said of [...this.deviceForgeSaid])
       if (said.startsWith(`${ref}\n`)) this.deviceForgeSaid.delete(said);

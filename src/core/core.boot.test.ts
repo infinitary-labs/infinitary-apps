@@ -809,7 +809,7 @@ describe("a microphone card an earlier version left", () => {
     process.env.PI_OFFLINE = "1";
     const earlier = await startCore(fakeHost(userDataDir).host);
     core = earlier;
-    earlier.services.supervisor.cards.addSystemNoteCard(
+    earlier.services.supervisor.cards.hostCards.addSystemNoteCard(
       "card-voice-mic-primer",
       "Microphone access",
       "macOS will ask for microphone access the first time you hold to talk.",

@@ -123,7 +123,7 @@ describe("a merge card's facts", () => {
       taskId: "t1",
     });
     clock = 3000;
-    cards.raiseHostCard({
+    cards.hostCards.raiseHostCard({
       id: "card-host-t1",
       taskId: "t1",
       title: "Merging",

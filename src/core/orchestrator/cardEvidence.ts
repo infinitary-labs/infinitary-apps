@@ -23,7 +23,7 @@ import {
 import { z } from "zod";
 import { updateSightingId } from "../storage/cardStore";
 import { cardChanges } from "./cardChanges";
-import type { CardServiceHost, CloseOut } from "./cardService";
+import type { CardServiceHost, CloseOut } from "./cardStackTypes";
 
 /**
  * The card stack's evidence (docs/card-evidence.md): every observation the

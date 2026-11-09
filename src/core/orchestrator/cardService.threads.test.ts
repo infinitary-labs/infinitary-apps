@@ -165,14 +165,14 @@ describe("card threads", () => {
     const { cardStore, make } = fixture();
     const cards = make();
     const id = crewCard(cards);
-    cards.raiseHostCard({
+    cards.hostCards.raiseHostCard({
       id: "card-host-note",
       title: "Allow the microphone",
       meta: "",
       body: "<p>Your Mac asks first.</p>",
       actions: [],
     });
-    cards.raiseHostCard({
+    cards.hostCards.raiseHostCard({
       id: "card-host-quiet",
       title: "Nothing to say",
       meta: "",

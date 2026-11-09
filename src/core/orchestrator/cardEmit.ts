@@ -17,7 +17,7 @@ import { decidedCardWidth } from "../pi/cardWidth";
 import type { EmittedCardInput } from "../session/tools";
 import { TaskService } from "../tasks/taskService";
 import { revisionLinks } from "./cardNavigation";
-import type { CardServiceHost, CardStack } from "./cardService";
+import type { CardServiceHost, CardStack } from "./cardStackTypes";
 import type { CardThreads } from "./cardThreads";
 import { waitingCardWords } from "./idleWakes";
 import { emittedSettleFacts } from "./settleCardFacts";

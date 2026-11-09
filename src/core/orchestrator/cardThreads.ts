@@ -23,8 +23,8 @@ import { TaskService } from "../tasks/taskService";
 import { buildEmittedCard, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import { cardMutationText } from "./cardMutationText";
 import { resolveRevisionTargets, revisionLinks } from "./cardNavigation";
-import type { CardAuthorRef, CardServiceHost, CardStack } from "./cardService";
 import { SIGNED_OFF_ACTION_ID, signOffRefusal } from "./cardSignOff";
+import type { CardAuthorRef, CardServiceHost, CardStack } from "./cardStackTypes";
 import { waitingCardWords } from "./idleWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 

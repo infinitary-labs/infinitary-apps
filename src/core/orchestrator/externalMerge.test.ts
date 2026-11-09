@@ -99,7 +99,7 @@ function fixture() {
     releaseNotes: vi.fn(),
     releaseMerged: vi.fn(),
     drawsMergedLine: () => false,
-    withdrawHostCard: vi.fn(),
+    hostCards: { withdrawHostCard: vi.fn() },
     values: () => [],
     stored: () => undefined,
     shownAt: () => 0,

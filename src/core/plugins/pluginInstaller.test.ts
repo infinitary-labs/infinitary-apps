@@ -107,8 +107,8 @@ async function harness() {
     checkCacheDir: join(paths.pluginsStagingDir, ".check"),
     store,
     cards: {
-      raise: (card) => supervisor.cards.raiseHostCard(card),
-      withdraw: (id, reason) => supervisor.cards.withdrawHostCard(id, reason),
+      raise: (card) => supervisor.cards.hostCards.raiseHostCard(card),
+      withdraw: (id, reason) => supervisor.cards.hostCards.withdrawHostCard(id, reason),
       has: (id) => supervisor.cards.has(id),
     },
     broadcast: (event) => events.push(event),
@@ -656,7 +656,7 @@ describe("PluginInstaller", () => {
     const source = h.plugin("token-watch", { "manifest.json": manifest(), "panel.tsx": PANEL });
     try {
       await h.installer.install({ source: "path", spec: source });
-      h.supervisor.cards.withdrawHostCard(consentCardId("token-watch"), "lost");
+      h.supervisor.cards.hostCards.withdrawHostCard(consentCardId("token-watch"), "lost");
       await h.installer.reconcile();
       expect(h.records.get("token-watch")).toBeUndefined();
       expect(existsSync(join(h.paths.pluginsStagingDir, "token-watch"))).toBe(false);

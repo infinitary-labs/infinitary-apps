@@ -34,7 +34,7 @@ type Harness = ReturnType<typeof setup>;
 /** The app's own card carrying one action with this host effect, put up with no task. */
 function hostCard(h: Harness, id: string, effect: HostEffect): string {
   const action: CardAction = { id: "go", label: "Go", effect };
-  h.supervisor.cards.raiseHostCard({
+  h.supervisor.cards.hostCards.raiseHostCard({
     id,
     title: "A question the app asks",
     meta: "the app",
@@ -221,7 +221,7 @@ describe("the host's own operations, as HostOps runs them", () => {
   it("shows a task's open card on Show card, bringing it forward", () => {
     const h = setup(fakeCrewmate());
     seedTask(h.tasks, { id: "t1", title: "Fix the meter", status: "queued" });
-    h.supervisor.cards.raiseHostCard({
+    h.supervisor.cards.hostCards.raiseHostCard({
       id: "c-t1",
       taskId: "t1",
       title: "Pick a meter",

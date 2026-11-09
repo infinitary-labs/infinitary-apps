@@ -63,9 +63,14 @@ describe("CrewSupervisor", () => {
       await emit("hidden");
       ids.push(`card-${taskId}-hidden`);
       ids.push(supervisor.addFirstmateCard({ ...decision, taskId }));
-      supervisor.cards.addAuthDecisionCard("task-sign-in", "crewmate 1", "Sign in again.", {
-        taskId,
-      });
+      supervisor.cards.hostCards.addAuthDecisionCard(
+        "task-sign-in",
+        "crewmate 1",
+        "Sign in again.",
+        {
+          taskId,
+        },
+      );
       ids.push("task-sign-in");
       const other = supervisor.addFirstmateCard({ ...decision, title: "Another task's choice" });
       await tick();

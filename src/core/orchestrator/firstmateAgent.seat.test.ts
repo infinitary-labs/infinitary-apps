@@ -619,7 +619,7 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
 
   it("takes down a pause card a previous run left, even with no pause on record, once the seat serves (review S3)", async () => {
     const t = await claudeLoginSeat();
-    t.supervisor.cards.addFirstmatePauseCard({
+    t.supervisor.cards.hostCards.addFirstmatePauseCard({
       pause: "refused",
       body: "Claude is not answering your first mate right now.",
       accountId: CLAUDE_ACCOUNT,

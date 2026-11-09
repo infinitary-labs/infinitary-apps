@@ -1108,7 +1108,11 @@ describe("CrewSupervisor: the card thread", () => {
     const { card, taskId } = await withCard(harness);
 
     // The host's own agent-down cards answer to nobody.
-    harness.supervisor.cards.addSystemNoteCard("card-host-1", "Host note", "nothing to reply to");
+    harness.supervisor.cards.hostCards.addSystemNoteCard(
+      "card-host-1",
+      "Host note",
+      "nothing to reply to",
+    );
     await tick();
     expect(() => harness.supervisor.cardActions.replyToCard("card-host-1", "hello")).toThrow(
       /no author to reply to/,

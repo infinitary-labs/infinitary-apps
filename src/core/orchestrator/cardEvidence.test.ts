@@ -390,12 +390,12 @@ describe("CardService evidence", () => {
     });
     const withdrawn = cards.addFirstmateCard({ ...decision, id: "fm-w", taskId: "t1" });
     const duplicate = cards.addFirstmateCard({ ...decision, id: "fm-dup", taskId: "t1" });
-    cards.addAuthDecisionCard("card-auth-x", "Codex", "Sign in again.");
+    cards.hostCards.addAuthDecisionCard("card-auth-x", "Codex", "Sign in again.");
     const retired = cards.emitCrewmateCard("t2", decision, "m");
 
     cards.pressNote(cards.shown(dismissed) as Card, { id: "gesture-0007" });
     cards.close(withdrawn, { kind: "firstmate" }, "obsolete now");
-    cards.clearAuthDecisionCard("card-auth-x");
+    cards.hostCards.clearAuthDecisionCard("card-auth-x");
     cards.flagDuplicate({ cardId: duplicate, duplicateOf: dismissed, note: "same ask" });
     cards.retireTaskCards("t2", "merged");
 
@@ -472,7 +472,7 @@ describe("CardService evidence", () => {
   it("mints a new offer only when what a card shows changes", () => {
     const { cardStore, make } = setup();
     const cards = make();
-    const quiet = (body: string) => cards.addFirstmateQuietCard(body);
+    const quiet = (body: string) => cards.hostCards.addFirstmateQuietCard(body);
     quiet("<p>Nothing for a while.</p>");
     quiet("<p>Nothing for a while.</p>");
     quiet("<p>Still nothing.</p>");
@@ -488,9 +488,9 @@ describe("CardService evidence", () => {
   it("reopens the row of a host card raised again, so the stack and the row agree", () => {
     const { cardStore, make } = setup();
     let cards = make();
-    cards.addAuthDecisionCard("card-auth-y", "Codex", "Sign in again.");
-    cards.clearAuthDecisionCard("card-auth-y");
-    cards.addAuthDecisionCard("card-auth-y", "Codex", "Sign in again.");
+    cards.hostCards.addAuthDecisionCard("card-auth-y", "Codex", "Sign in again.");
+    cards.hostCards.clearAuthDecisionCard("card-auth-y");
+    cards.hostCards.addAuthDecisionCard("card-auth-y", "Codex", "Sign in again.");
     // A restart finds it open, as the stack showed it.
     cards = make();
     expect(cards.has("card-auth-y")).toBe(true);

@@ -394,7 +394,8 @@ export class CrewSupervisor {
       clientJobStart: (taskId) => this.starts.clientJobStart(taskId),
       modelName: (model) => this.turns.modelName(model),
       beingUpdated: (deviceId) => this.updates.isUpdating(deviceId),
-      clearSignInCard: (taskId) => this.cards.clearAuthDecisionCard(crewSignInCardId(taskId)),
+      clearSignInCard: (taskId) =>
+        this.cards.hostCards.clearAuthDecisionCard(crewSignInCardId(taskId)),
       disposed: () => this.disposed,
       broadcastCrewCounts: () => this.facts.broadcastCrewCounts(),
     });
@@ -618,7 +619,7 @@ export class CrewSupervisor {
       placedAccount: (deviceId, taskId) => options.machines?.accountOf(deviceId, taskId),
       outOfReach: (taskId) => this.facts.outOfReach(taskId),
       deliverLane: (taskId) => this.watch.deliverLane(taskId),
-      accountBack: (taskId) => this.cards.clearAuthDecisionCard(crewSignInCardId(taskId)),
+      accountBack: (taskId) => this.cards.hostCards.clearAuthDecisionCard(crewSignInCardId(taskId)),
       ...(options.quotaGateCleared ? { quotaGateCleared: options.quotaGateCleared } : {}),
       heldOnItsLevel: (record) => this.starts.heldOnItsLevel(record),
       wakeDeadGate: (record, dead) => this.starts.wakeDeadGate(record, dead),

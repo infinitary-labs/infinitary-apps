@@ -431,7 +431,7 @@ describe("CardService", () => {
     const cards = make();
     cards.addRecordedFirstmateNote({ title: "Plain note", body: "<p>A.</p>" }, () => {});
     cards.addFirstmateCard({ ...decision, title: "A decision" });
-    cards.raiseHostCard({
+    cards.hostCards.raiseHostCard({
       id: "card-host-attention",
       title: "Host attention",
       meta: "host",

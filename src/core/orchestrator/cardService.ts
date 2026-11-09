@@ -30,17 +30,13 @@ import {
   onStage,
   type PastCard,
 } from "@shared/cards";
-import type { CrewResponse } from "@shared/crewResponses";
-import { deviceForgeSignInCardId } from "@shared/deviceSetup";
-import type { FmEvent } from "@shared/events";
 import { decidedCardWidth } from "../pi/cardWidth";
 import type { EmittedCardInput } from "../session/tools";
-import type { CardResolution, CardStore, DuplicateResult } from "../storage/cardStore";
+import type { CardResolution, DuplicateResult } from "../storage/cardStore";
 import type { TaskOriginLine } from "../tasks/taskOrigin";
-import type { TaskService } from "../tasks/taskService";
-import type { AskEnding } from "./askEnding";
 import { CardEmits, cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import { CardEvidence, type CardInteractionEvidence } from "./cardEvidence";
+import type { CardAuthorRef, CardServiceHost, CardStack, CloseOut } from "./cardStackTypes";
 import {
   authorKey,
   type CardCaller,
@@ -52,23 +48,7 @@ import {
   type ThreadOwed,
 } from "./cardThreads";
 import { ENDED_STAYS, EndedCards } from "./endedCards";
-import {
-  authDecisionCard,
-  deviceForgeSignInCard,
-  FIRSTMATE_FAILURE_CARD_ID,
-  FIRSTMATE_MOVE_BACK_CARD_ID,
-  FIRSTMATE_PAUSE_CARD_IDS,
-  FIRSTMATE_QUIET_CARD_ID,
-  type FirstmatePauseCard,
-  firstmateFailureCard,
-  firstmateMoveBackCard,
-  firstmatePauseCard,
-  firstmatePauseCardId,
-  firstmateQuietCard,
-  forgeSignInCard,
-  hostCard,
-  systemNoteCard,
-} from "./hostCards";
+import { HostCardStack } from "./hostCardStack";
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
 import { settleCardFacts } from "./settleCardFacts";
@@ -111,9 +91,6 @@ import { withMergeLine } from "./settleWords";
  * (`settleCardFacts`).
  */
 
-type CardActor = "captain" | "firstmate" | "crewmate";
-type CardResponse = Parameters<AskEnding["captainResponded"]>[1];
-
 /**
  * What close_card tells an author who withdrew a decision (INF-2828): every
  * action closes its card, so an open one the author withdraws holds no
@@ -121,119 +98,6 @@ type CardResponse = Parameters<AskEnding["captainResponded"]>[1];
  */
 export const WITHDRAWN_UNCHOSEN =
   "The captain chose none of its actions: its record ends as your withdrawal.";
-
-/**
- * The author whose close-out releases its cards to the stage: a crewmate by
- * its task, or the Firstmate.
- */
-export type CardAuthorRef = { kind: "crewmate"; taskId: string } | { kind: "firstmate" };
-
-/**
- * What closed the author out: a crewmate's `report` or its idle (a turn
- * end, or the task ending), the Firstmate's turn end, or a restart, which
- * ended every author's turn.
- */
-export type CloseOut = "report" | "idle" | "turn-end" | "restart";
-
-/** What the card stack needs from the supervisor that composes it. */
-export type CardServiceHost = {
-  /** The host's one clock (the ticker's). */
-  now: () => number;
-  tasks: TaskService;
-  cardStore: CardStore;
-  /** A card placed, revised or gone on a task: the ladder's captain gate follows. */
-  syncCaptainGate(taskId: string, now: number): void;
-  /** An answer task closes on its card's resolution (Task B); whether it did. */
-  closeAnsweredTask(card: Card, action: string, by: CardActor): boolean;
-  /** The fact strip and the follow-ups a settle card carries (HTML fragments). */
-  settleFacts(taskId: string): string | undefined;
-  /** The words a settle card's merge reads now, when the host names it; undefined leaves it. */
-  mergeLabel?(card: Card): string | undefined;
-  /** Whether a settle card offers Merge anyway beside its merge now (INF-1137 friction 6). */
-  mergeAnyway?(card: Card): boolean;
-  /**
-   * Whether a story note stays off the stack until its task's merge has a
-   * result (INF-2533): the task merges on its own, is open, and its change
-   * has not merged. Read from typed facts, never the card's words.
-   */
-  holdsUntilMerge?(card: Card): boolean;
-  /**
-   * The merged line a story note carries once its change's receipt says
-   * merged (INF-2678); undefined while it has not, and for any other card.
-   */
-  mergedLine?(card: Card): string | undefined;
-  /**
-   * Another of the task's pull requests the record keeps that has not
-   * merged, besides the one its completion offer merges (INF-2525).
-   */
-  otherChangeOpen?(taskId: string): boolean;
-  followupNotice(taskId: string): string | undefined;
-  /**
-   * Whether the captain's choice on this card still waits on its author's
-   * lane, not yet handed to a turn (`InboxStore.holdsUndeliveredChoice`).
-   * Absent reads as heard.
-   */
-  choiceUnheard?(card: Card): boolean;
-  broadcastCrewCounts(): void;
-  broadcastEvent: (event: FmEvent) => void;
-  broadcastCards: (cards: Card[]) => void;
-  presentationChanged?: () => void;
-  /** One card's thread, whole, after any message lands on it (phase 1). */
-  broadcastThread?: (thread: CardThread) => void;
-  /**
-   * The captain chose an action on a card or closed it: the message it may
-   * answer hears it (INF-1610, `AskEnding.captainResponded`).
-   */
-  captainResponded?: (card: Card, response: CardResponse, action?: string) => void;
-  /**
-   * A card was placed, revised or released onto the stage from its
-   * close-out hold: a notice it answers may be taken back.
-   */
-  cardPlaced?: (card: Card) => void;
-  /** The app build every observation is stamped with (docs/card-evidence.md). */
-  build?: string;
-  /**
-   * A card answer carries a correlated response (INF-2222's one writer):
-   * check it names a live request, this card's lifecycle and the captain
-   * message the line answers, before anything is written; then save it in
-   * the same transaction as the line. Absent, a response is refused.
-   */
-  checkCardResponse?: (
-    taskId: string,
-    response: CrewResponse,
-    card: { id: string; lifecycleId?: string; messageId?: number },
-  ) => void;
-  submitCardResponse?: (
-    taskId: string,
-    response: CrewResponse,
-    text: string,
-    line: { cardId: string; messageId: number },
-  ) => void;
-};
-
-/**
- * The open stack as its owners share it (`CardThreads`, `CardEmits`): the
- * cards and what the stage holds back, the one evidence writer, and the
- * stack's own moves, so a write from any owner lands, places and broadcasts
- * the way every other write does.
- */
-export type CardStack = {
-  cards: Map<string, Card>;
-  staged: Map<string, Card>;
-  asideUntilTurnEnd: Map<string, string>;
-  answeringUntilCloseOut: Map<string, string>;
-  contributedUntilCloseOut: Map<string, { writer: string; lifecycleId: string }>;
-  evidence: CardEvidence;
-  shown(id: string): Card | undefined;
-  snapshot(): Card[];
-  addMessage: CardService["addMessage"];
-  placed(card: Card): void;
-  scheduleBroadcast(): void;
-  broadcastSnapshot(): void;
-  topPriority(floor: number): number;
-  othersOpen(taskId: string, except: string | undefined): boolean;
-  resolve: CardService["resolve"];
-};
 
 export class CardService {
   /** The open cards as their authors last wrote them: the record. */
@@ -284,10 +148,17 @@ export class CardService {
   private readonly evidence: CardEvidence;
   private readonly threads: CardThreads;
   private readonly emits: CardEmits;
+  readonly hostCards: HostCardStack;
   private broadcastTimer: ReturnType<typeof setTimeout> | undefined;
   private readonly unsubscribeTasks: () => void;
 
   constructor(private readonly host: CardServiceHost) {
+    this.hostCards = new HostCardStack(
+      host,
+      this.cards,
+      (card, options) => this.put(card, options),
+      (id, reason) => this.takeDown(id, reason),
+    );
     this.evidence = new CardEvidence(host, this.cards);
     this.ended = new EndedCards(host.cardStore, this);
     const stack: CardStack = {
@@ -1451,153 +1322,6 @@ export class CardService {
     return closedAnswer;
   }
 
-  /**
-   * The Firstmate's pause card (W1 S9; docs/architecture.md §16 "A paused
-   * seat"): one card for one pause, titled for what stopped the seat. With
-   * a place to move (rung 2) it asks to move - a cross-provider move is a
-   * model change, so it always asks - under `card-fm-flagship-move`;
-   * without one (rung 3) it says the seat waits, under `card-fm-refused`
-   * for a refusal and `card-fm-no-headroom` for the rest. Either way it
-   * carries the class's own way back: "Sign in" for a lost sign-in (a
-   * captain click only; nothing signs in on its own) and "Try again" for a
-   * refusal (`try-again`, the only way a refusal clears on the captain's
-   * word). Nothing moves or retries until a click. Its one primary is its
-   * default, so the footer draws it at the right edge. A card already up
-   * under the id is revised in place when its words or actions differ;
-   * `reviseOnly` never recreates a card removed by a choice or withdrawal.
-   * A card put aside remains pending rather than acquiring a refusal.
-   */
-  addFirstmatePauseCard(input: FirstmatePauseCard, options: { reviseOnly?: boolean } = {}): void {
-    const id = firstmatePauseCardId(input);
-    const previous = this.cards.get(id);
-    if (!previous && options.reviseOnly) return;
-    const next = firstmatePauseCard(id, input);
-    if (
-      previous &&
-      previous.title === next.title &&
-      previous.body === next.body &&
-      JSON.stringify(previous.actions) === JSON.stringify(next.actions)
-    ) {
-      return;
-    }
-    this.put({ ...next, createdAt: previous?.createdAt ?? this.host.now() });
-  }
-
-  /**
-   * The way back for a seat the captain moved (W1 S9): the account it left
-   * serves again, so ask - never move on its own. The action reuses the
-   * move, pointed back at the provider the seat left.
-   */
-  addFirstmateMoveBackCard(input: {
-    providerId: string;
-    providerName: string;
-    body: string;
-  }): void {
-    if (this.cards.has(FIRSTMATE_MOVE_BACK_CARD_ID)) return;
-    this.put({ ...firstmateMoveBackCard(input), createdAt: this.host.now() });
-  }
-
-  /** The seat serves again, or moved: every pause card's question is gone. */
-  withdrawFirstmatePauseCards(reason: string): void {
-    for (const id of FIRSTMATE_PAUSE_CARD_IDS) this.takeDown(id, reason);
-  }
-
-  /**
-   * An app-raised auth decision card (also used by the Firstmate agent). A
-   * crewmate's own sign-in card carries its task, so it holds that task's
-   * turn through the gate like any card; an account's files its own row.
-   * With `move`, its default moves the task to the model the app picked,
-   * by that model's name (INF-849), `arg` being the task, the provider it
-   * moves off and the model offered; Open settings stays beside it.
-   */
-  addAuthDecisionCard(
-    id: string,
-    meta: string,
-    body: string,
-    options?: {
-      restoreAccountId?: string;
-      taskId?: string;
-      move?: { arg: string; modelName: string };
-    },
-  ): void {
-    if (this.cards.has(id)) return;
-    this.put({ ...authDecisionCard(id, meta, body, options), createdAt: this.host.now() });
-  }
-
-  /**
-   * The one host card for a sign-in where projects live that the host
-   * refused (git integration PR 1.2): "Sign in to GitHub again", whose one
-   * action lands on Settings -> Projects with the sign-in already started.
-   * Raised only on the host's own refusal (needs_reauth) and cleared by
-   * `clearAuthDecisionCard` once the host answers again. A body names what
-   * waits on it; it never suggests the host is required.
-   */
-  addForgeSignInCard(
-    id: string,
-    host: string,
-    name: string,
-    waitingChanges: number,
-    options: { reauth?: boolean; cli?: boolean } = {},
-  ): void {
-    if (this.cards.has(id)) return;
-    this.put({
-      ...forgeSignInCard(id, host, name, waitingChanges, options),
-      createdAt: this.host.now(),
-    });
-  }
-
-  /**
-   * The one host card for a computer that runs a project living on a host
-   * it holds no sign-in for (design skill `components/devices/SignInOnAMac`,
-   * "GitHub on another device"; docs/forge.md, "A computer's own sign-in"):
-   * "Sign in to GitHub on Mac mini", whose one action lands on Settings ->
-   * Projects with that computer's sign-in started under its row. Raised
-   * when Runs on names such a computer, or when its clone there is refused
-   * for want of the sign-in; cleared once the computer reports one. Not
-   * raised while the computer's setup card already asks for it.
-   */
-  addDeviceForgeSignInCard(input: {
-    deviceId: string;
-    host: string;
-    name: string;
-    project: string;
-    place: { label: string; where: string; who: string };
-  }): void {
-    const id = deviceForgeSignInCardId(input.host, input.deviceId);
-    if (this.cards.has(id)) return;
-    this.put({ ...deviceForgeSignInCard(id, input), createdAt: this.host.now() });
-  }
-
-  /**
-   * Drop a recovered needs_reauth card without waking the Firstmate. The
-   * credential came back; the question is gone.
-   */
-  clearAuthDecisionCard(id: string): void {
-    this.takeDown(id, "recovered");
-  }
-
-  /**
-   * A card the host itself authors, put up (or revised in place under the
-   * same id) by a core service that owns the question, such as the plugin
-   * consent card (Phase A, A2a). The host stamps the author and the
-   * priority; the caller's actions carry host effects only the captain's
-   * click can run. A note (no choice to make) sits below every decision,
-   * so a question it accompanies - signing in again - stays in front.
-   */
-  raiseHostCard(
-    card: Omit<Card, "author" | "priority" | "status" | "createdAt">,
-    options: { note?: boolean } = {},
-  ): void {
-    const previous = this.cards.get(card.id);
-    this.put({ ...hostCard(card, options), createdAt: previous?.createdAt ?? this.host.now() });
-  }
-
-  /** Takes a host card down without an answer: the question it asked is gone. */
-  withdrawHostCard(id: string, reason: string): void {
-    if (this.cards.get(id)?.author !== "host") return;
-    this.takeDown(id, reason);
-  }
-
   /** Presentation state and the card commit together, so a crash cannot lose its first offer. */
   presentRequiredAction(taskId: string): boolean {
     if (!this.host.tasks.delivery.captainActionReady(taskId)) return false;
@@ -1864,41 +1588,6 @@ export class CardService {
       this.staged.delete(cardId);
     }
     this.scheduleBroadcast();
-  }
-
-  /**
-   * The Firstmate's own quiet card (P4 extension): informational only - the
-   * orchestrator is steer-only, so there is no interrupt to offer. A later
-   * escalation may re-raise over a dismissed one.
-   */
-  addFirstmateQuietCard(body: string): void {
-    this.put({ ...firstmateQuietCard(body), createdAt: this.host.now() });
-  }
-
-  /** Activity resumed or the turn ended: the quiet question answered itself. */
-  clearFirstmateQuietCard(): void {
-    this.takeDown(FIRSTMATE_QUIET_CARD_ID, "activity-resumed");
-  }
-
-  /**
-   * The Firstmate failure card (the agent-down set, ruling D6): the turn
-   * failed and no agent can answer, so the host offers the one way out -
-   * Retry, a host effect. One card under a stable id: a repeated failure
-   * (a provider outage across several turns) revises it in place rather
-   * than stacking copies.
-   */
-  addFirstmateFailureCard(body: string): void {
-    const existing = this.cards.get(FIRSTMATE_FAILURE_CARD_ID);
-    this.put(
-      { ...firstmateFailureCard(body), createdAt: existing?.createdAt ?? this.host.now() },
-      { revise: existing !== undefined },
-    );
-  }
-
-  /** An app-raised note card (for example the mic permission primer). */
-  addSystemNoteCard(id: string, title: string, body: string): void {
-    if (this.cards.has(id)) return;
-    this.put({ ...systemNoteCard(id, title, body), createdAt: this.host.now() });
   }
 
   /** Every card whose thread moved since `since`, newest first (`CardThreads`). */

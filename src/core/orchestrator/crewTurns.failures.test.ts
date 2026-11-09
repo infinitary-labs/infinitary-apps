@@ -718,7 +718,7 @@ describe("CrewSupervisor", () => {
 describe("needs_reauth card (CD-3=A)", () => {
   it("a proof-gated needs_reauth card is a singleton with a one-step Sign in restore", () => {
     const { supervisor } = setup(fakeCrewmate());
-    supervisor.cards.addAuthDecisionCard(
+    supervisor.cards.hostCards.addAuthDecisionCard(
       "card-auth-account-acct_cl1",
       "Claude",
       "Claude (Personal) needs you to sign in again.",
@@ -742,13 +742,13 @@ describe("needs_reauth card (CD-3=A)", () => {
 
   it("clears a recovered needs_reauth card without leaving it on the stack", () => {
     const { supervisor } = setup(fakeCrewmate());
-    supervisor.cards.addAuthDecisionCard(
+    supervisor.cards.hostCards.addAuthDecisionCard(
       "card-auth-account-acct_cl1",
       "Claude",
       "Claude (Personal) needs you to sign in again.",
       { restoreAccountId: "acct_cl1" },
     );
-    supervisor.cards.clearAuthDecisionCard("card-auth-account-acct_cl1");
+    supervisor.cards.hostCards.clearAuthDecisionCard("card-auth-account-acct_cl1");
     expect(
       supervisor.cards.snapshot().find((entry) => entry.id === "card-auth-account-acct_cl1"),
     ).toBeUndefined();

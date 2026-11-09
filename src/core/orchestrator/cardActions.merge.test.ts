@@ -752,7 +752,7 @@ describe("the task graph (R1)", () => {
   it("opens Settings on exactly the clicks `opensSettings` names, so a Mac controlling this one can tell before it asks (docs/view.md)", async () => {
     const { supervisor, cards } = setup(fakeCrewmate());
     // The host's own cards, as it builds them.
-    supervisor.cards.addAuthDecisionCard(
+    supervisor.cards.hostCards.addAuthDecisionCard(
       "auth-restore",
       "Codex",
       "Codex (Work) needs you to sign in again.",
@@ -760,8 +760,12 @@ describe("the task graph (R1)", () => {
         restoreAccountId: "acct_codex",
       },
     );
-    supervisor.cards.addAuthDecisionCard("auth-any", "Codex", `${PROVIDER_SIGN_IN_TITLE}.`);
-    supervisor.cards.addFirstmateMoveBackCard({
+    supervisor.cards.hostCards.addAuthDecisionCard(
+      "auth-any",
+      "Codex",
+      `${PROVIDER_SIGN_IN_TITLE}.`,
+    );
+    supervisor.cards.hostCards.addFirstmateMoveBackCard({
       providerId: "openai-codex",
       providerName: "Codex",
       body: "Codex serves again.",
@@ -802,7 +806,7 @@ describe("the task graph (R1)", () => {
   it("the agent-down singletons keep their host card, with only their own way out", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, cards } = setup(crewmate);
-    supervisor.cards.addFirstmatePauseCard({
+    supervisor.cards.hostCards.addFirstmatePauseCard({
       pause: "no_headroom",
       body: "No headroom anywhere.",
       providerName: "Codex",

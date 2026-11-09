@@ -5,7 +5,8 @@
  * same record, so a second call is a restart.
  */
 import type { Card, CardThread } from "@shared/cards";
-import { CardService, type CardServiceHost } from "../../src/core/orchestrator/cardService";
+import { CardService } from "../../src/core/orchestrator/cardService";
+import type { CardServiceHost } from "../../src/core/orchestrator/cardStackTypes";
 import { CardStore } from "../../src/core/storage/cardStore";
 import type { AppDatabase } from "../../src/core/storage/db";
 import { TaskService, type TaskServiceOptions } from "../../src/core/tasks/taskService";

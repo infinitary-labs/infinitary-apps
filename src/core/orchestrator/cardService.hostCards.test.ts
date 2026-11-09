@@ -50,18 +50,76 @@ describe("host cards", () => {
     vi.useRealTimers();
   });
 
+  // INF-3292: preserve host-card behavior when splitting the card service.
+  it("does not offer an unchanged pause card twice, but revises changed actions in place", () => {
+    let clock = 1000;
+    const { cardStore, make } = setup(undefined, () => clock);
+    const cards = make();
+    const pause = {
+      pause: "no_headroom" as const,
+      body: "Allowance spent.",
+      providerName: "Codex",
+    };
+    cards.hostCards.addFirstmatePauseCard(pause);
+    const id = "card-fm-no-headroom";
+    const offers = () => cardStore.observations(id).filter((entry) => entry.kind === "offer");
+    expect(offers()).toHaveLength(1);
+    clock = 2000;
+    cards.hostCards.addFirstmatePauseCard(pause);
+    expect(offers()).toHaveLength(1);
+    cards.hostCards.addFirstmatePauseCard({ ...pause, accountId: "acct-codex" });
+    expect(offers()).toHaveLength(2);
+    expect(cards.get(id)).toMatchObject({
+      createdAt: 1000,
+      actions: [{ id: "recheck-allowance" }, { id: "open-settings" }],
+    });
+    cards.dispose();
+  });
+
+  // INF-3292: moving host-card handling must keep the original move-back offer.
+  it("keeps the first move-back card when the host repeats the offer", () => {
+    const { cardStore, make } = setup();
+    const cards = make();
+    const offer = {
+      providerId: "anthropic-claude",
+      providerName: "Claude",
+      body: "Claude can serve again.",
+    };
+    cards.hostCards.addFirstmateMoveBackCard(offer);
+    cards.hostCards.addFirstmateMoveBackCard({ ...offer, body: "New words." });
+    expect(cards.get("card-fm-move-back")?.body).toBe(offer.body);
+    expect(
+      cardStore.observations("card-fm-move-back").filter((entry) => entry.kind === "offer"),
+    ).toHaveLength(1);
+    cards.dispose();
+  });
+
   it("asks a provider's sign-in with Open settings, a move to another model, or a restore of the account", () => {
     const { make } = setup();
     const cards = make();
-    cards.addAuthDecisionCard("card-auth-codex", "Codex", "<p>Codex refused the sign-in.</p>");
-    cards.addAuthDecisionCard("card-auth-move", "Codex", "<p>Codex refused the sign-in.</p>", {
-      taskId: "t1",
-      move: { arg: "t1:claude", modelName: "Claude Opus" },
-    });
-    cards.addAuthDecisionCard("card-auth-restore", "Claude", "Claude needs you to sign in", {
-      restoreAccountId: "acct-1",
-      move: { arg: "t1:codex", modelName: "Codex" },
-    });
+    cards.hostCards.addAuthDecisionCard(
+      "card-auth-codex",
+      "Codex",
+      "<p>Codex refused the sign-in.</p>",
+    );
+    cards.hostCards.addAuthDecisionCard(
+      "card-auth-move",
+      "Codex",
+      "<p>Codex refused the sign-in.</p>",
+      {
+        taskId: "t1",
+        move: { arg: "t1:claude", modelName: "Claude Opus" },
+      },
+    );
+    cards.hostCards.addAuthDecisionCard(
+      "card-auth-restore",
+      "Claude",
+      "Claude needs you to sign in",
+      {
+        restoreAccountId: "acct-1",
+        move: { arg: "t1:codex", modelName: "Codex" },
+      },
+    );
     expect(face(cards.get("card-auth-codex"))).toEqual({
       id: "card-auth-codex",
       taskId: undefined,
@@ -115,13 +173,13 @@ describe("host cards", () => {
   it("keeps the first sign-in card under its id and takes it down once the sign-in recovers", () => {
     const { cardStore, make } = setup();
     const cards = make();
-    cards.addAuthDecisionCard("card-auth-codex", "Codex", "<p>First words.</p>");
-    cards.addAuthDecisionCard("card-auth-codex", "Codex", "<p>Second words.</p>");
+    cards.hostCards.addAuthDecisionCard("card-auth-codex", "Codex", "<p>First words.</p>");
+    cards.hostCards.addAuthDecisionCard("card-auth-codex", "Codex", "<p>Second words.</p>");
     expect(cards.get("card-auth-codex")?.body).toBe("<p>First words.</p>");
     expect(
       cardStore.observations("card-auth-codex").filter((o) => o.kind === "offer"),
     ).toHaveLength(1);
-    cards.clearAuthDecisionCard("card-auth-codex");
+    cards.hostCards.clearAuthDecisionCard("card-auth-codex");
     expect(cards.has("card-auth-codex")).toBe(false);
     expect(cardStore.observations("card-auth-codex").at(-1)).toMatchObject({
       kind: "exit",
@@ -134,11 +192,13 @@ describe("host cards", () => {
   it("asks to sign in again where projects live, naming how many pull requests wait on it", () => {
     const { make } = setup();
     const cards = make();
-    cards.addForgeSignInCard("card-forge-0", "github.com", "GitHub", 0);
-    cards.addForgeSignInCard("card-forge-1", "github.com", "GitHub", 1);
-    cards.addForgeSignInCard("card-forge-3", "github.com", "GitHub", 3);
-    cards.addForgeSignInCard("card-forge-cli", "github.com", "GitHub", 1, { cli: true });
-    cards.addForgeSignInCard("card-forge-first", "gitlab.com", "GitLab", 2, { reauth: false });
+    cards.hostCards.addForgeSignInCard("card-forge-0", "github.com", "GitHub", 0);
+    cards.hostCards.addForgeSignInCard("card-forge-1", "github.com", "GitHub", 1);
+    cards.hostCards.addForgeSignInCard("card-forge-3", "github.com", "GitHub", 3);
+    cards.hostCards.addForgeSignInCard("card-forge-cli", "github.com", "GitHub", 1, { cli: true });
+    cards.hostCards.addForgeSignInCard("card-forge-first", "gitlab.com", "GitLab", 2, {
+      reauth: false,
+    });
     const signIn = (label: string, host = "github.com") => [
       {
         id: "sign-in",
@@ -175,7 +235,7 @@ describe("host cards", () => {
       body: `<p>A task for a project on GitLab is waiting for your sign-in. 2 pull requests are waiting on it.</p><p>Once you sign in, your first mate will retry starting the task. ${LOCAL_PROJECTS_UNAFFECTED}</p>`,
       actions: signIn("Sign in to GitLab", "gitlab.com"),
     });
-    cards.addForgeSignInCard("card-forge-0", "github.com", "GitHub", 5);
+    cards.hostCards.addForgeSignInCard("card-forge-0", "github.com", "GitHub", 5);
     expect(cards.get("card-forge-0")?.body).not.toContain("5 pull requests");
     cards.dispose();
   });
@@ -190,8 +250,8 @@ describe("host cards", () => {
       project: "meter",
       place: { label: "on Mac mini", where: "Mac mini", who: "your Mac mini" },
     };
-    cards.addDeviceForgeSignInCard(input);
-    cards.addDeviceForgeSignInCard({ ...input, project: "other" });
+    cards.hostCards.addDeviceForgeSignInCard(input);
+    cards.hostCards.addDeviceForgeSignInCard({ ...input, project: "other" });
     const id = deviceForgeSignInCardId("github.com", "dev-mini");
     expect(face(cards.get(id))).toEqual({
       id,
@@ -221,8 +281,8 @@ describe("host cards", () => {
   it("puts the first mate's quiet note below every decision and takes it down when activity resumes", () => {
     const { cardStore, make } = setup();
     const cards = make();
-    cards.addAuthDecisionCard("card-auth-codex", "Codex", "<p>Sign in.</p>");
-    cards.addFirstmateQuietCard("<p>No word for ten minutes.</p>");
+    cards.hostCards.addAuthDecisionCard("card-auth-codex", "Codex", "<p>Sign in.</p>");
+    cards.hostCards.addFirstmateQuietCard("<p>No word for ten minutes.</p>");
     expect(face(cards.get("card-fm-quiet"))).toEqual({
       id: "card-fm-quiet",
       taskId: undefined,
@@ -235,7 +295,7 @@ describe("host cards", () => {
       createdAt: 1000,
     });
     expect(cards.snapshot().map((card) => card.id)).toEqual(["card-auth-codex", "card-fm-quiet"]);
-    cards.clearFirstmateQuietCard();
+    cards.hostCards.clearFirstmateQuietCard();
     expect(cards.has("card-fm-quiet")).toBe(false);
     expect(cardStore.observations("card-fm-quiet").at(-1)).toMatchObject({
       kind: "exit",
@@ -248,9 +308,9 @@ describe("host cards", () => {
     let clock = 1000;
     const { cardStore, make } = setup(undefined, () => clock);
     let cards = make();
-    cards.addFirstmateFailureCard("<p>The provider refused the turn.</p>");
+    cards.hostCards.addFirstmateFailureCard("<p>The provider refused the turn.</p>");
     clock = 2000;
-    cards.addFirstmateFailureCard("<p>The provider refused the turn again.</p>");
+    cards.hostCards.addFirstmateFailureCard("<p>The provider refused the turn again.</p>");
     expect(face(cards.get(FIRSTMATE_FAILURE_CARD_ID))).toEqual({
       id: FIRSTMATE_FAILURE_CARD_ID,
       taskId: undefined,
@@ -288,9 +348,13 @@ describe("host cards", () => {
   it("puts an app note up once under its id, below every decision", () => {
     const { make } = setup();
     const cards = make();
-    cards.addSystemNoteCard("card-mic", "Allow the microphone", "<p>Your Mac asks first.</p>");
-    cards.addSystemNoteCard("card-mic", "Another title", "<p>Other words.</p>");
-    cards.addAuthDecisionCard("card-auth-codex", "Codex", "<p>Sign in.</p>");
+    cards.hostCards.addSystemNoteCard(
+      "card-mic",
+      "Allow the microphone",
+      "<p>Your Mac asks first.</p>",
+    );
+    cards.hostCards.addSystemNoteCard("card-mic", "Another title", "<p>Other words.</p>");
+    cards.hostCards.addAuthDecisionCard("card-auth-codex", "Codex", "<p>Sign in.</p>");
     expect(face(cards.get("card-mic"))).toEqual({
       id: "card-mic",
       taskId: undefined,
@@ -318,10 +382,13 @@ describe("host cards", () => {
       body: "<p>It asks to read your tasks.</p>",
       actions: [{ id: "add", label: "Add it", variant: "primary" as const }],
     };
-    cards.raiseHostCard(consent);
-    cards.raiseHostCard({ ...consent, id: "card-pending", actions: [] }, { note: true });
+    cards.hostCards.raiseHostCard(consent);
+    cards.hostCards.raiseHostCard({ ...consent, id: "card-pending", actions: [] }, { note: true });
     clock = 5000;
-    cards.raiseHostCard({ ...consent, body: "<p>It asks to read and write your tasks.</p>" });
+    cards.hostCards.raiseHostCard({
+      ...consent,
+      body: "<p>It asks to read and write your tasks.</p>",
+    });
     expect(face(cards.get("card-consent"))).toEqual({
       ...consent,
       taskId: undefined,
@@ -338,10 +405,10 @@ describe("host cards", () => {
       "model",
     );
     const crewFace = face(cards.get(crewCard));
-    cards.withdrawHostCard(crewCard, "gone");
+    cards.hostCards.withdrawHostCard(crewCard, "gone");
     expect(face(cards.get(crewCard))).toEqual(crewFace);
     expect(crewFace).toMatchObject({ id: crewCard, taskId: "t1", title: "Done" });
-    cards.withdrawHostCard("card-consent", "gone");
+    cards.hostCards.withdrawHostCard("card-consent", "gone");
     expect(cards.has("card-consent")).toBe(false);
     cards.dispose();
   });

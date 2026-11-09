@@ -365,7 +365,7 @@ describe("the core, driven with no Electron in the process", () => {
       off();
       for (const card of core.services.supervisor.cards.snapshot())
         if (card.id.startsWith("card-project-setup-"))
-          core.services.supervisor.cards.withdrawHostCard(card.id, "test over");
+          core.services.supervisor.cards.hostCards.withdrawHostCard(card.id, "test over");
       for (const repo of core.services.repos.list()) {
         if (repo.path === folder || repo.name === "catalog-setup")
           core.services.repos.unregister(repo.id);
@@ -502,7 +502,7 @@ describe("the core, driven with no Electron in the process", () => {
       told.mockRestore();
       for (const card of core.services.supervisor.cards.snapshot())
         if (card.id.startsWith("card-project-setup-"))
-          core.services.supervisor.cards.withdrawHostCard(card.id, "test over");
+          core.services.supervisor.cards.hostCards.withdrawHostCard(card.id, "test over");
       for (const repo of core.services.repos.list())
         if (repo.name === "keyed-setup") core.services.repos.unregister(repo.id);
     }
@@ -1084,7 +1084,11 @@ describe("the core, driven with no Electron in the process", () => {
       if (channel === "inf:cards") cardPushes.push(payload as Card[]);
     });
 
-    core.services.supervisor.cards.addSystemNoteCard("card-core-test", "Core test", "A note body.");
+    core.services.supervisor.cards.hostCards.addSystemNoteCard(
+      "card-core-test",
+      "Core test",
+      "A note body.",
+    );
     // Card broadcasts coalesce on a short timer, so wait for the push.
     await waitFor(() => cardPushes.length > 0);
     expect(cardPushes.at(-1)?.some((card) => card.id === "card-core-test")).toBe(true);

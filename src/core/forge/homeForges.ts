@@ -285,7 +285,7 @@ export function startHomeForges(options: {
       onForgeHealth = (change) => {
         const cardId = forgeSignInCardId(change.host);
         if (change.to === "needs_reauth") {
-          supervisor.cards.addForgeSignInCard(
+          supervisor.cards.hostCards.addForgeSignInCard(
             cardId,
             change.host,
             change.name,
@@ -293,7 +293,7 @@ export function startHomeForges(options: {
             { cli: forgeSignIns.wayOf(change.host) === "cli" },
           );
         } else if (change.to === "ok" || change.to === "none") {
-          supervisor.cards.clearAuthDecisionCard(cardId);
+          supervisor.cards.hostCards.clearAuthDecisionCard(cardId);
           if (change.to === "ok") void supervisor.resumeForgeSignInTasks(change.host);
         }
         const note = forgeHealthNote(change, projectsOnForge(change.host));
@@ -303,7 +303,7 @@ export function startHomeForges(options: {
       // above fires): a card a git refusal raised for the ended one comes
       // down, and the work it held goes again.
       onForgeRenewed = (forgeHost) => {
-        supervisor.cards.clearAuthDecisionCard(forgeSignInCardId(forgeHost));
+        supervisor.cards.hostCards.clearAuthDecisionCard(forgeSignInCardId(forgeHost));
         void supervisor.resumeForgeSignInTasks(forgeHost);
       };
       // The first read of every sign-in, at boot, below the UI - after the

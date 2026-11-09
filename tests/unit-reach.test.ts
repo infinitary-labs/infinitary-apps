@@ -134,6 +134,32 @@ describe("local direct unit reach", () => {
     ).toEqual(["src/core/runbooks/runbooks.test.ts", "tests/eval-host-runbooks.test.ts"]);
   });
 
+  // INF-3262's accepted repair: these real indirect contracts failed late;
+  // declare only their owners, without selecting arbitrary transitive readers.
+  it("selects the six audited contracts only for their declared indirect owners", () => {
+    const inventories = ["src/shared/actions.test.ts", "src/shared/ipc.test.ts"];
+    const migrations = [
+      "src/core/storage/decisionMigrations.test.ts",
+      "src/core/storage/inboxMigrations.test.ts",
+      "src/core/storage/retireKeepOpen.test.ts",
+    ];
+    const policy = ["src/core/orchestrator/settleService.boundary.test.ts"];
+    const readers = [...inventories, ...migrations, ...policy];
+    expect(directUnitReach(["src/shared/channels/settings.ts"], readers, root)).toEqual(
+      inventories,
+    );
+    expect(directUnitReach(["src/core/storage/migrations.ts"], readers, root)).toEqual(migrations);
+    // Other migration tests directly import taskService; this pins only the
+    // formerly missed policy consumer, not the existing direct readers.
+    expect(directUnitReach(["src/core/tasks/taskService.ts"], policy, root)).toEqual(policy);
+    expect(directUnitReach(["src/renderer/src/design/index.ts"], readers, root)).toEqual([]);
+    // The channel folder is an explicit owner, including a deleted definition.
+    expect(directUnitReach(["src/shared/channels/removed.ts"], readers, root)).toEqual(inventories);
+    expect(
+      directUnitReach(["src/shared/channels/settings.ts", ...inventories], readers, root),
+    ).toEqual([]);
+  });
+
   it("leaves edited tests to their three rounds rather than adding a fourth", () => {
     const reader = "tests/phone-order.test.ts";
     expect(directUnitReach(["src/shared/ipc.ts", reader], [reader], root)).toEqual([]);

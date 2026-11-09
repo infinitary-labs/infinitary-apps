@@ -31,6 +31,29 @@ export function unitFiles(root: string): string[] {
     .sort();
 }
 
+/** Explicit indirect contracts from the accepted weekly audit (INF-3262). */
+const CONTRACT_DEPENDENCIES: ReadonlyArray<{
+  owns: (path: string) => boolean;
+  readers: readonly string[];
+}> = [
+  {
+    owns: (path) => path.startsWith("src/shared/channels/"),
+    readers: ["src/shared/actions.test.ts", "src/shared/ipc.test.ts"],
+  },
+  {
+    owns: (path) => path === "src/core/storage/migrations.ts",
+    readers: [
+      "src/core/storage/decisionMigrations.test.ts",
+      "src/core/storage/inboxMigrations.test.ts",
+      "src/core/storage/retireKeepOpen.test.ts",
+    ],
+  },
+  {
+    owns: (path) => path === "src/core/tasks/taskService.ts",
+    readers: ["src/core/orchestrator/settleService.boundary.test.ts"],
+  },
+];
+
 /**
  * Read the compiler aliases, including renderer UI imports; never build a closure.
  *
@@ -129,6 +152,12 @@ export function directUnitReach(
   return files
     .filter((file) => {
       if (changed.includes(file)) return false;
+      if (
+        CONTRACT_DEPENDENCIES.some(
+          ({ owns, readers }) => readers.includes(file) && [...subjects].some(owns),
+        )
+      )
+        return true;
       const source = ts.createSourceFile(
         file,
         readFileSync(join(root, file), "utf8"),

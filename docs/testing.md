@@ -49,7 +49,9 @@ Record the version, selection reasons, files or parts, required platforms or dev
   A data file a module imports, such as a runbook's JSON in `src/core/pi/piResources.ts` or a stylesheet read as text, is part of that module's text, so a test that imports that module directly reads the data directly too (INF-2426).
   Served text, a runbook under `resources/runbooks/` or the generated runbook fallback `src/core/runbooks/fallback.generated.ts`, is carried the same way, so a change to it selects the tests that import `src/core/pi/piResources.ts`, among them the crew prompt's budget test and the prompt contract tests (INF-2925).
   A test naming a folder that holds a runbook, as the runbook loaders' tests do, reads that runbook too.
-  It reads each test file and, for a changed data file or served text, the modules that test imports; it never follows imports transitively, and does not execute dynamically computed paths to discover dependencies.
+  Six audited indirect contracts have explicit links in `scripts/unit-reach.ts`: channel definitions select the action and IPC inventories, `src/core/storage/migrations.ts` selects the decision, inbox and keep-open migration tests, and `src/core/tasks/taskService.ts` selects the settle boundary test.
+  These links add no readers for unrelated changes and leave edited tests to their local rounds.
+  Otherwise it reads each test file and, for a changed data file or served text, the modules that test imports; it never follows imports transitively, and does not execute dynamically computed paths to discover dependencies.
   Edited files remain disjoint from that once-only selection; a failed direct-reader round stops the edited-file rounds too.
   Ordinary coverage is included, so do not add a fourth run or duplicate local proof in PR CI.
   Declare the whole batch's processor and memory needs through the local load path, and bound Vitest workers to that declaration.

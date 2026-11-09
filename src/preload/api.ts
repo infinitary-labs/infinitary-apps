@@ -446,6 +446,11 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
         readableRequest("inf:settings:personal-resources:set", () =>
           invoke("inf:settings:personal-resources:set", enabled),
         ),
+      getCostLimit: () => invoke("inf:settings:cost-limit:get"),
+      setCostLimit: (limit) =>
+        readableRequest("inf:settings:cost-limit:set", () =>
+          invoke("inf:settings:cost-limit:set", limit),
+        ),
       getNotifications: () => invoke("inf:settings:notifications:get"),
       setNotifications: (enabled) =>
         readableRequest("inf:settings:notifications:set", () =>

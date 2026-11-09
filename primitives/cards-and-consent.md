@@ -108,6 +108,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 - Plan and preview approval: Approve and build, Save and defer and Abandon under `HANDOFF`.
 - The idle ladder's stall card (`card-stall-<task>`) with Nudge, Back to backlog and Discard, and a reply row the first mate answers (`Card.answeredBy`).
 - The first mate's closing note on started work it closed without the captain's click, at most one for each of the captain's messages (`TaskClosing.placeOutcome`, `docs/task-capture.md` "How a message ends"); work no message covers gets one only for a merge or a release.
+- The cost limit card `card-cost-<task>` with Allow more, No limit for this task and Stop here, a host card the first mate answers (`docs/usage.md`, "The cost limit").
 - The answer-delivery notice `card-ask-<message>` (`docs/task-capture.md`) and the project setup card `card-project-setup-<project>` (`docs/fleet.md`).
 - Required captain actions after a merge, confirmed by their host button (`docs/required-actions.md`).
 

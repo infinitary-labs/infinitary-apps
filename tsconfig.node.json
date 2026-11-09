@@ -51,6 +51,8 @@
     // of another Mac; the devices e2e specs read what they expect from them.
     "src/renderer/src/settings/devicesWords.ts",
     "src/renderer/src/settings/deviceForgeWords.ts",
+    // The cost limit row's words; its journey reads the row by them.
+    "src/renderer/src/settings/costLimitWords.ts",
     "src/renderer/src/devices/viewWords.ts",
     // The card words the card e2e specs read: the revised line, the answers
     // line and the picture viewer's.

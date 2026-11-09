@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { appCostLimitViewSchema, costLimitSchema } from "../costLimit";
 import { dictationSettingsSchema } from "../dictation";
 import {
   appearanceSchema,
@@ -174,6 +175,21 @@ export const settingsChannels = {
     reach: "home",
     request: z.tuple([z.boolean()]),
     response: z.boolean(),
+  },
+  // The app's own cost limit for each task, and how many recent tasks it would have asked about (docs/usage.md, "The cost limit").
+  "inf:settings:cost-limit:get": {
+    effect: "read",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([]),
+    response: appCostLimitViewSchema,
+  },
+  "inf:settings:cost-limit:set": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([costLimitSchema]),
+    response: appCostLimitViewSchema,
   },
   // A view of this Mac follows the switch for its own notifications (docs/view.md).
   "inf:settings:notifications:get": {

@@ -256,6 +256,12 @@ export type CrewSupervisorOptions = {
   latestUsage?: (
     taskId: string,
   ) => ReturnType<import("../storage/usageStore").UsageStore["latestForTask"]>;
+  /**
+   * Each task's cost limit below the app's, the holds it placed, and the
+   * app's own limit (docs/usage.md, "The cost limit"); absent, no task is
+   * held.
+   */
+  costLimits?: import("./costLimits").CostLimitFacts;
   /** Records per-turn usage for burn tracking (D-18), per account. */
   recordUsage?: (input: {
     taskId: string;

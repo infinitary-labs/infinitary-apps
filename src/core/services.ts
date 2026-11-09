@@ -1,5 +1,6 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
+import { type AppCostLimitView, limitUsd, RECENT_COST_DAYS } from "@shared/costLimit";
 import { emptyTranscript } from "@shared/crewTranscript";
 import { isCustomApiProvider } from "@shared/customApi";
 import { deviceRunsWork } from "@shared/devices";
@@ -116,6 +117,7 @@ import { SqlService } from "./sql/sqlService";
 import { readStandIns } from "./standIns";
 import { ActivityStore } from "./storage/activityStore";
 import { type CardResolution, CardStore } from "./storage/cardStore";
+import { CostLimitStore } from "./storage/costLimitStore";
 import { assertSavedDataCompatible, openDatabase } from "./storage/db";
 import { DecisionStore } from "./storage/decisionStore";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "./storage/inboxStore";
@@ -682,6 +684,17 @@ export async function createServices(
   // turn_end and model-powered tool_end usage (Pi's listed prices, Claude's
   // own estimate) - never a proxy - keyed by the serving account and model.
   const usageStore = new UsageStore(db);
+  // Each task's cost limit below the app's own, and the holds a limit placed
+  // (docs/usage.md, "The cost limit").
+  const costLimitStore = new CostLimitStore(db);
+  const appCostLimitView = (): AppCostLimitView => {
+    const limit = settings.getTaskCostLimit();
+    const since = Date.now() - RECENT_COST_DAYS * 24 * 60 * 60 * 1000;
+    return {
+      limit,
+      recent: { ...costLimitStore.recent(limitUsd(limit), since), days: RECENT_COST_DAYS },
+    };
+  };
   const recordUsage = (input: Omit<UsageInput, "at">) => {
     usageStore.record({ ...input, at: Date.now() });
   };
@@ -953,6 +966,10 @@ export async function createServices(
         const providerId = vault.get(accountId)?.providerId;
         return (providerId && catalogEntry(providerId)?.name) || providerId || "the provider";
       },
+    },
+    costLimits: {
+      store: costLimitStore,
+      appLimit: () => settings.getTaskCostLimit(),
     },
     recordUsage,
     latestUsage: (taskId) => usageStore.latestForTask(taskId),
@@ -1800,6 +1817,13 @@ export async function createServices(
         });
       },
       tasks: (query) => usageStore.tasks(query, { now: Date.now() }),
+    },
+    costLimit: {
+      view: () => appCostLimitView(),
+      set: (limit) => {
+        settings.setTaskCostLimit(limit);
+        return appCostLimitView();
+      },
     },
     pluginFetch: createMediatedFetch(),
     sql,

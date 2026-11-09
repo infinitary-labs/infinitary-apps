@@ -532,6 +532,7 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 | `program-bound` | soft | consent | a program's task() call past its bound | on the captain's words the crewmate that started it raises the bound with `start_program`, or the first mate with `update_task program_bound` |
 | `start-waits` | soft | record | starting a task that waits on other work | the first mate removes the wait on the captain's words |
 | `load-line` | soft | record | a declared heavy run waiting for its computer's capacity or pressure reading | the override |
+| `cost-limit` | soft | consent | a task, and everything under it, past its cost limit (docs/usage.md, "The cost limit") | the captain's click on its card, or the override |
 | `host-rules` | fixed | outside fact | a merge the rules or readiness where the project lives hold | no one |
 | `nothing-to-merge` | fixed | physical limit | a merge or merge policy for work that has no merge | no one |
 | `sign-in` | fixed | outside fact | work where the app is not signed in | no one |

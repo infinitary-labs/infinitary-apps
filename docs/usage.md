@@ -107,6 +107,30 @@ FI3-993 took the lines from between rows, grouped Where it went by project, and 
 - Usage is this Mac's own: a Mac that controls another has no Usage tab, and its two commands refuse there.
 - It re-reads after every model response and task change while it is open.
 
+## The cost limit
+
+A task, and everything under it, that passes its cost limit stops at a safe point and asks the captain before it spends more (INF-3112's plan, built by INF-3131).
+The limit is an amount in the same estimated dollars the ledger keeps, or no limit, and it is a ceiling, never a forecast.
+Three places set it, and the first that is set wins, read live: the task itself, its project, then the app (`effectiveCostLimit`, `src/shared/costLimit.ts`).
+The app's own limit starts at $50, the captain's choice drawn from their own ledger, and lives in Settings → Intelligence (`CostLimitRow.tsx`), whose row also says how many of the task families that spent anything in the last 30 days would have asked under it.
+
+| Piece | Where |
+| --- | --- |
+| The limit's shape, the default and the card's words | `src/shared/costLimit.ts` |
+| The app's limit | `SettingsStore.getTaskCostLimit`, served on `inf:settings:cost-limit:get` and `:set` |
+| Task and project limits, and the holds | `cost_limits` and `cost_holds`, `CostLimitStore` (`src/core/storage/costLimitStore.ts`) |
+| The crossing, the card and its answers | `CostLimits` (`src/core/orchestrator/costLimits.ts`) |
+
+- What a task spends is its own ledger records and those of every task under it, its parts, pieces and review included (`CostLimitStore.familySpend`); the first mate's own conversation counts against no task.
+- After each model response is recorded, `CostLimits.recorded` walks from the outermost open task down and holds the first whose family spend reached its limit.
+  A task whose limit is no limit, or whose captain's words passed the `cost-limit` hold (`docs/delivery-rigor.md`, "The holds"), is skipped.
+- A hold stops every running turn in the family at its next safe point, as an update does (`stopSafely`), and holds their lanes so nothing new is delivered (`CrewFacts.laneHeld`).
+  A turn already past its limit when the response arrives can spend up to one more turn's cost before it stops, and the card says so.
+- The host raises one card, `card-cost-<task>`, which the first mate answers: Allow more raises the task's own limit by one step, its project's or the app's limit, past what it has spent; No limit for this task lifts it; Stop here sends the family's started work to the backlog with its work kept.
+  The first two resume each stopped turn with a `turn-resumed` row.
+- The captain's words move it too: `update_task`'s `cost_limit` sets the task's own limit, `none` lifts it and `follow` returns it to its project's or the app's, and the `override` passes the hold for the task's current version.
+- Responses the ledger could not price add nothing to the spend, and the card counts them.
+
 ## Keys
 
 Usage works from the keyboard (`docs/keyboard.md`).
@@ -124,6 +148,7 @@ Tab reaches See more under the recent tasks, past their keys; Enter or Space add
 - `src/core/storage/settingsMigrations.test.ts` ("migration 66").
 - `src/renderer/src/settings/usageWords.test.ts`: every printed word and number.
 - `src/renderer/src/settings/UsageTab.test.tsx`: the recent tasks while a read is out, after one fails, with nothing to list, and with more to show.
+- `src/core/storage/costLimitStore.test.ts` and `src/core/orchestrator/costLimits.test.ts`: the cost limit's spend, its 30-day count, the crossing, the card and each of its answers.
 - `tests/e2e/usage.spec.ts`: a real first mate turn lands in the ledger, and the captain opens Usage, switches units, filters, opens and closes a model's details and finds the unit kept after a reload, all by keys; over a seeded ledger, Where it went lists the first mate, each project and other work, and See more adds ten tasks at a time by keys, kept across a unit switch and started over by a new period.
   `tests/e2e/usage.ts` holds its hooks and the seeded ledger.
 

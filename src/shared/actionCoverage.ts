@@ -8,6 +8,8 @@ const WORK_REQUEST =
 /** Operations which are not app settings, with the reason they stay outside the table. */
 export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:converse": "Conversation, not an app setting",
+  "inf:settings:cost-limit:set":
+    "The app's cost limit is set in Settings for now; the first mate's asked action for it comes with project limits (docs/usage.md, \"The cost limit\")",
   "inf:cards:act": "Captain card clicks",
   "inf:cards:close": "Captain card clicks",
   "inf:cards:note-done": "Captain card clicks",

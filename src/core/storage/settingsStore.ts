@@ -1,3 +1,4 @@
+import { type CostLimit, costLimitSchema, DEFAULT_COST_LIMIT } from "@shared/costLimit";
 import {
   DEFAULT_DECISIONS,
   type DecisionsSettings,
@@ -439,6 +440,20 @@ export class SettingsStore {
 
   setPersonalResourcesEnabled(enabled: boolean): void {
     this.set("personal-resources", enabled);
+  }
+
+  /**
+   * The app's own cost limit (docs/usage.md, "The cost limit"): the limit a
+   * task follows when neither it nor its project sets one, $50 until the
+   * captain changes it.
+   */
+  getTaskCostLimit(): CostLimit {
+    const parsed = costLimitSchema.safeParse(this.get("task-cost-limit"));
+    return parsed.success ? parsed.data : DEFAULT_COST_LIMIT;
+  }
+
+  setTaskCostLimit(limit: CostLimit): void {
+    this.set("task-cost-limit", costLimitSchema.parse(limit));
   }
 
   /** Notifications when the window is not front (P2): default on. */

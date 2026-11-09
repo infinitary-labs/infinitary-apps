@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import type { CostLimit } from "@shared/costLimit";
 import { HOME } from "@shared/deviceNames";
 import { HOLD_KINDS, isOverridable, type OverridableHold, overrideRefusal } from "@shared/holds";
 import { type ReasoningChoice, reasoningChoiceSchema } from "@shared/modelSlots";
@@ -101,6 +102,12 @@ export type TaskToolsDelegate = {
   withdrawOverride(input: { task: string }): string;
   /** The captain takes back a yes the app recorded from their click on a card (INF-3170 piece 2). */
   withdrawAllowance(input: { task: string; card: string }): string;
+  /**
+   * Set a task's own cost limit on the captain's words (docs/usage.md, "The
+   * cost limit"): an amount in estimated dollars, none, or null to follow
+   * its project's or the app's again.
+   */
+  costLimit?(input: { task: string; limit: CostLimit | null }): string;
   /** A queued row starts now, past any reasoning re-ask (P0, WI-3). Refusals are text. */
   startNow(input: { task: string }): Promise<string>;
   startAgain(input: { task: string }): Promise<string>;
@@ -377,6 +384,12 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           },
         ),
       ),
+      cost_limit: Type.Optional(
+        Type.String({
+          description:
+            "Captain's words only: this task's cost limit in estimated dollars, over it and everything under it, as a number such as 75; none for no limit, follow for its project's or the app's. Lifts a cost-limit hold it now clears.",
+        }),
+      ),
       withdraw_merge: Type.Optional(
         Type.Boolean({
           description: "The captain takes back a merge they clicked; the work stays",
@@ -451,6 +464,19 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
             card: params.take_back_yes.trim(),
           }),
         };
+      if (params.cost_limit !== undefined) {
+        if (!delegate.costLimit) return { text: "Cost limits are not available here." };
+        const value = params.cost_limit.trim();
+        const usd = Number(value.replace(/^\$/, ""));
+        if (value !== "none" && value !== "follow" && !(usd > 0 && Number.isFinite(usd)))
+          return { text: "cost_limit takes an amount in dollars above $0, none or follow." };
+        return {
+          text: delegate.costLimit({
+            task: params.task,
+            limit: value === "follow" ? null : value === "none" ? { none: true } : { usd },
+          }),
+        };
+      }
       if (params.revise_required_action) {
         const revision = params.revise_required_action;
         if (!delegate.reviseRequiredAction)

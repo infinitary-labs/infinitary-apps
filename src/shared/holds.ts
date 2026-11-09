@@ -75,6 +75,11 @@ export const HOLDS = {
     restsOn: "record",
     name: "the heavy-run line",
   },
+  "cost-limit": {
+    level: "soft",
+    restsOn: "consent",
+    name: "the cost limit",
+  },
   "host-rules": {
     level: "fixed",
     restsOn: "outside fact",

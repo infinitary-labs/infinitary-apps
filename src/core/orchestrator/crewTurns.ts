@@ -876,6 +876,9 @@ export class CrewTurns {
         type: "firstmate_note",
         text: `Task ${task.title} interrupted: it can still be told what to do`,
       });
+    } else if (paused?.cost && !report) {
+      // Its cost limit stopped it: the hold's card already asks the
+      // captain, and the lane carries it on once they answer.
     } else if (paused && !report) {
       // Nobody has anything to act on: the lane carries it on once the
       // computer is back, and the feed says so once.
@@ -1439,6 +1442,8 @@ export class CrewTurns {
       ...(model ? { model } : {}),
       usage,
     });
+    // Each recorded response is where a task meets its cost limit.
+    this.core.costLimits.recorded(task.id);
   }
 
   /**

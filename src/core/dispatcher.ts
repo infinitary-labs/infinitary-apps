@@ -77,6 +77,7 @@ import { customCapabilityProfiles } from "./pi/customApiModels";
 import { listSurfaces, type SurfaceView } from "./pi/personalizeTool";
 import type { AuthInteractionBridge } from "./pi/piAuth";
 import { releaseNotesView } from "./releaseNotes/shown";
+import { plainSettingsChannels } from "./settingsChannels";
 import type { PhoneDiagnosticEvent } from "./sharing/sharingService";
 import type { ScheduleRecord } from "./storage/scheduleStore";
 import { recordStartAtLogin } from "./storage/startAtLoginRecord";
@@ -895,9 +896,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       emit("inf:settings:dictation", services.settings.getDictation());
       return services.settings.getDictation();
     },
-    "inf:settings:runbooks:get": () => services.runbooks.list(),
-    "inf:settings:runbooks:copy": (id, copyId, name) => services.runbooks.copy(id, copyId, name),
-    "inf:settings:runbooks:set": (id, enabled) => services.runbooks.set(id, enabled),
+    ...plainSettingsChannels(services),
     "inf:settings:personal-resources:get": () => services.settings.getPersonalResourcesEnabled(),
     "inf:settings:personal-resources:set": (enabled) => {
       services.settings.setPersonalResourcesEnabled(enabled);

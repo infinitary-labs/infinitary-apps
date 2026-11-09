@@ -41,6 +41,7 @@ import { CaptainOverrides } from "./captainOverrides";
 import { CardActions } from "./cardActions";
 import { FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import { CardService } from "./cardService";
+import { CostLimits } from "./costLimits";
 import { CrewBrief } from "./crewBrief";
 import type { CrewCore } from "./crewCore";
 import { CrewFacts, serveabilityOf } from "./crewFacts";
@@ -127,6 +128,8 @@ export class CrewSupervisor {
   readonly overrides: CaptainOverrides;
   /** The crew's pause and save while a computer is updated. */
   readonly updates: CrewUpdates;
+  /** Each task's cost limit: the hold a task past it meets, and the captain's answer. */
+  readonly costLimits: CostLimits;
   /** The crew a restart or an update cut, watched until each carries on or stops. */
   private readonly restarts: RestartWatch;
   /** A crewmate's own cards: its emit_card, the completion card the host finishes, and its refusals. */
@@ -266,6 +269,9 @@ export class CrewSupervisor {
       get updates() {
         return supervisor.updates;
       },
+      get costLimits() {
+        return supervisor.costLimits;
+      },
       bypassesSupervision: (taskId) => this.bypassesSupervision(taskId),
       closeCard: (cardId, actor, reason) => this.closeCard(cardId, actor, reason),
       openReviewOf: (builderId) => this.openReviewOf(builderId),
@@ -294,6 +300,15 @@ export class CrewSupervisor {
     this.facts = facts;
     this.toolHooks = toolHooks;
     this.restarts = new RestartWatch(options, { now: this.now });
+    this.costLimits = new CostLimits(options, {
+      now: this.now,
+      runtimes: () => this.tasks.values(),
+      raiseCard: (card) => this.cards.put(card),
+      takeDown: (id, resolution) => this.cards.takeDown(id, resolution),
+      sweepTaskLane: (taskId, at) => this.watch.sweepTaskLane(taskId, at),
+      sweepGates: (at) => this.watch.sweepGates(at),
+      moveToBacklog: (taskId, source) => this.hostOps.moveToBacklog(taskId, source),
+    });
     this.updates = new CrewUpdates(options, {
       now: this.now,
       restarts: this.restarts,

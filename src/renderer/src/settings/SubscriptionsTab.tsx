@@ -36,6 +36,7 @@ import type { RowMenuItem, StatusDotTone } from "../design";
 import { Button, Input, QuotaMicroMeter, RowMenu, StatusDot, Switch } from "../design";
 import { useOverflowTitle } from "../design/core/overflowTitle";
 import { useRestLabel } from "../design/core/restLabel";
+import { CostLimitRow } from "./CostLimitRow";
 import { DeviceSignInGroups } from "./DeviceSignIns";
 import { FIRSTMATE_SELECT_STYLE, FirstmateModelRow, SettingRow } from "./GeneralTab";
 import { ModelsSection } from "./ModelsSection";
@@ -125,7 +126,12 @@ export function IntelligenceBoard({
       ) : null}
       {models ? <div data-intelligence-block="models">{models}</div> : null}
       {additionalSettings ? (
-        <div data-intelligence-block="additional-settings">{additionalSettings}</div>
+        <div
+          data-intelligence-block="additional-settings"
+          style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}
+        >
+          {additionalSettings}
+        </div>
       ) : null}
     </div>
   );
@@ -1407,24 +1413,27 @@ export function SubscriptionsTab() {
           ) : null
         }
         additionalSettings={
-          <SettingRow
-            id="personal-resources"
-            error={personalSave.error}
-            title={PERSONAL_RESOURCES_WORDS.title}
-            description={PERSONAL_RESOURCES_WORDS.description}
-            control={
-              <Switch
-                aria-label={PERSONAL_RESOURCES_WORDS.title}
-                checked={personalSave.value ?? false}
-                disabled={personalSave.value === null || personalSave.saving}
-                onChange={(enabled) =>
-                  void personalSave.save(() =>
-                    window.infinitary.settings.setPersonalResources(enabled),
-                  )
-                }
-              />
-            }
-          />
+          <>
+            <CostLimitRow />
+            <SettingRow
+              id="personal-resources"
+              error={personalSave.error}
+              title={PERSONAL_RESOURCES_WORDS.title}
+              description={PERSONAL_RESOURCES_WORDS.description}
+              control={
+                <Switch
+                  aria-label={PERSONAL_RESOURCES_WORDS.title}
+                  checked={personalSave.value ?? false}
+                  disabled={personalSave.value === null || personalSave.saving}
+                  onChange={(enabled) =>
+                    void personalSave.save(() =>
+                      window.infinitary.settings.setPersonalResources(enabled),
+                    )
+                  }
+                />
+              }
+            />
+          </>
         }
       />
       {editedAccountId !== null && accountsSave.error && !listed(editedAccountId) ? (

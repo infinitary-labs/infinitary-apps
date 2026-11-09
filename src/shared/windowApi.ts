@@ -13,6 +13,7 @@ import type {
   TaskMoveFrom,
 } from "./cards";
 import type { WindowControl, WindowState } from "./channels/shell";
+import type { AppCostLimitView, CostLimit } from "./costLimit";
 import type { CrewSpeed } from "./crewSpeed";
 import type { CrewPicture, CrewResultText, CrewSendResult } from "./crewTranscript";
 import type {
@@ -545,6 +546,9 @@ export type FirstmateApi = {
     setRunbook: (id: string, enabled: boolean) => Promise<RunbookView[]>;
     getPersonalResources: () => Promise<boolean>;
     setPersonalResources: (enabled: boolean) => Promise<boolean>;
+    /** The app's own cost limit for each task (docs/usage.md, "The cost limit"). */
+    getCostLimit: () => Promise<AppCostLimitView>;
+    setCostLimit: (limit: CostLimit) => Promise<AppCostLimitView>;
     getNotifications: () => Promise<boolean>;
     setNotifications: (enabled: boolean) => Promise<boolean>;
     /** Theme and the rest of how the app looks. */

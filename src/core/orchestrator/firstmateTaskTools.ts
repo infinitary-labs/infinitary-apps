@@ -1,3 +1,4 @@
+import { formatUsd } from "@shared/costLimit";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import type { TaskToolsDelegate } from "../pi/taskTools";
 import type { TaskRecord } from "../storage/taskStore";
@@ -334,8 +335,29 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         });
         if (declared.ok) {
           tookEffect(record.id, `Recorded your override on ${record.key}: ${record.title}`);
+          // Words that pass the cost limit lift the hold standing on it.
+          supervisor.costLimits.overrideChanged(record.id);
         }
         return declared.text;
+      }),
+    costLimit: (input) =>
+      asText(() => {
+        const record = resolve(input.task);
+        // A cost limit is the captain's consent to spend (docs/usage.md,
+        // "The cost limit"): set only on their words.
+        if (host.turn.origin !== "captain-turn")
+          return "cost_limit is set only on the captain's words: ask them on a card first.";
+        host.asks.attach(record.id, "update_task");
+        supervisor.costLimits.setTaskLimit(record.id, input.limit);
+        const limit = input.limit;
+        const words =
+          limit === null
+            ? "follows its project's or the app's cost limit again"
+            : "none" in limit
+              ? "has no cost limit"
+              : `has a cost limit of ${formatUsd(limit.usd)}`;
+        tookEffect(record.id, `${record.key} ${words}`);
+        return `${record.key} "${record.title}" now ${words}. A cost-limit hold it no longer passes is lifted and its work carries on.`;
       }),
     withdrawOverride: (input) =>
       asText(() => {

@@ -85,8 +85,12 @@ DROP TABLE task_delivery_evidence;
 const REVERSE_CHANGES = "DROP TABLE IF EXISTS change_versions; DROP TABLE IF EXISTS changes;\n";
 /** INF-2205 piece B's panel stops, undone: its one table. */
 const REVERSE_PANEL_STOPS = "DROP TABLE IF EXISTS panel_stops;\n";
-/** INF-1296 pieces 3 and 4's records, undone, newest first, after the change record over them. */
+/** INF-3131's cost limits and the holds they place, undone: its two tables. */
+export const REVERSE_COST_LIMITS =
+  "DROP TABLE IF EXISTS cost_holds; DROP TABLE IF EXISTS cost_limits;\n";
+/** INF-1296 pieces 3 and 4's records, undone, newest first, after the later tables over them. */
 export const REVERSE_RUNNING_WORK =
+  REVERSE_COST_LIMITS +
   REVERSE_PANEL_STOPS +
   REVERSE_CHANGES +
   taskRecordRetirementReverseSql() +

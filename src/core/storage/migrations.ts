@@ -1281,6 +1281,26 @@ export const MIGRATIONS: readonly Migration[] = [
       "CREATE INDEX IF NOT EXISTS cards_ended ON cards(created_at) WHERE ended_json IS NOT NULL",
     );
   },
+  // INF-3131: the per-task cost limit (docs/usage.md, "The cost limit"). A
+  // limit set on one task or one project, and the holds a limit placed on
+  // a task that passed it. Empty on every existing install, whose tasks
+  // follow the app's own limit (settings). `CostLimitStore` is the only
+  // writer; no published view reads them. Dropping the tables reverses it.
+  `
+  CREATE TABLE cost_limits (
+    scope TEXT NOT NULL,
+    owner_id TEXT NOT NULL,
+    limit_json TEXT NOT NULL,
+    at INTEGER NOT NULL,
+    PRIMARY KEY (scope, owner_id)
+  );
+  CREATE TABLE cost_holds (
+    task_id TEXT PRIMARY KEY,
+    limit_usd REAL NOT NULL,
+    spent_usd REAL NOT NULL,
+    at INTEGER NOT NULL
+  );
+  `,
 ];
 
 export function addPluginKind(db: AppDatabase): void {

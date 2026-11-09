@@ -8422,7 +8422,10 @@
                               "start-task",
                               "ask-again",
                               "confirm-required-action",
-                              "defer-required-action"
+                              "defer-required-action",
+                              "allow-cost",
+                              "lift-cost-limit",
+                              "stop-at-cost"
                             ]
                           },
                           "arg": {
@@ -9682,7 +9685,10 @@
                                 "start-task",
                                 "ask-again",
                                 "confirm-required-action",
-                                "defer-required-action"
+                                "defer-required-action",
+                                "allow-cost",
+                                "lift-cost-limit",
+                                "stop-at-cost"
                               ]
                             },
                             "arg": {
@@ -38674,6 +38680,179 @@
         "type": "boolean"
       }
     },
+    "inf:settings:cost-limit:get": {
+      "effect": "read",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "usd": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  }
+                },
+                "required": [
+                  "usd"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "none": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                },
+                "required": [
+                  "none"
+                ]
+              }
+            ]
+          },
+          "recent": {
+            "type": "object",
+            "properties": {
+              "asked": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "tasks": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "days": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "asked",
+              "tasks",
+              "days"
+            ]
+          }
+        },
+        "required": [
+          "limit",
+          "recent"
+        ]
+      }
+    },
+    "inf:settings:cost-limit:set": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "usd": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  }
+                },
+                "required": [
+                  "usd"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "none": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                },
+                "required": [
+                  "none"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "usd": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  }
+                },
+                "required": [
+                  "usd"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "none": {
+                    "type": "boolean",
+                    "const": true
+                  }
+                },
+                "required": [
+                  "none"
+                ]
+              }
+            ]
+          },
+          "recent": {
+            "type": "object",
+            "properties": {
+              "asked": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "tasks": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "days": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "asked",
+              "tasks",
+              "days"
+            ]
+          }
+        },
+        "required": [
+          "limit",
+          "recent"
+        ]
+      }
+    },
     "inf:settings:notifications:get": {
       "effect": "read",
       "reach": "views",
@@ -46434,7 +46613,10 @@
                                     "start-task",
                                     "ask-again",
                                     "confirm-required-action",
-                                    "defer-required-action"
+                                    "defer-required-action",
+                                    "allow-cost",
+                                    "lift-cost-limit",
+                                    "stop-at-cost"
                                   ]
                                 },
                                 "arg": {
@@ -57311,7 +57493,10 @@
                               "start-task",
                               "ask-again",
                               "confirm-required-action",
-                              "defer-required-action"
+                              "defer-required-action",
+                              "allow-cost",
+                              "lift-cost-limit",
+                              "stop-at-cost"
                             ]
                           },
                           "arg": {

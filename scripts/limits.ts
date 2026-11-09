@@ -385,6 +385,17 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     PAIR_BODY_MAX_BYTES: physical("answered 413; the app's own pairing body never comes close"),
     CONNECTION_MAX_FRAME_BYTES: physical("the socket closes on a larger frame; nothing names why"),
   },
+  "src/shared/costLimit.ts": {
+    // The captain chose $50 on INF-3112's plan, drawn from their own ledger.
+    COST_LIMIT_DEFAULT_USD: {
+      rests: "consent",
+      way: "the task asks on its card; the captain allows more, lifts it, or changes it in Settings",
+    },
+    DEFAULT_COST_LIMIT: {
+      rests: "consent",
+      way: "the task asks on its card; the captain allows more, lifts it, or changes it in Settings",
+    },
+  },
   "src/shared/crewTranscript.ts": {
     CREW_RESULT_TEXT_MAX: physical("clipped; the fold names how many characters were cut"),
     CREW_TEXT_MAX: physical("clipped with an ellipsis; the session file keeps the whole text"),

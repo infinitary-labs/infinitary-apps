@@ -210,6 +210,16 @@ export class HostOps {
       case "ask-again":
         if (effect.arg) this.core.hooks().askAgain?.(effect.arg);
         return {};
+      // A task's cost limit card (docs/usage.md, "The cost limit").
+      case "allow-cost":
+        if (effect.arg) this.core.costLimits.answer(effect.arg, "allow");
+        return {};
+      case "lift-cost-limit":
+        if (effect.arg) this.core.costLimits.answer(effect.arg, "lift");
+        return {};
+      case "stop-at-cost":
+        if (effect.arg) this.core.costLimits.answer(effect.arg, "stop");
+        return {};
     }
   }
 

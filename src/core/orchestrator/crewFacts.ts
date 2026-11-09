@@ -145,7 +145,10 @@ export class CrewFacts {
         deviceId: record?.deviceId ?? null,
       }) ||
       this.outOfReach(taskId) ||
-      this.core.updates.heldForUpdate(taskId)
+      this.core.updates.heldForUpdate(taskId) ||
+      // The task, or a task above it, passed its cost limit: nothing starts
+      // until the captain answers its card (docs/usage.md, "The cost limit").
+      this.core.costLimits.heldBy(taskId) !== undefined
     );
   }
 

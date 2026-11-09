@@ -4845,6 +4845,31 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     /** The thread's app line, whole, so every view draws the same words. */
     line: string()
   });
+  const HOST_OPS = [
+    "restore-account",
+    "move-flagship",
+    "retry-firstmate",
+    "try-again",
+    "add-plugin",
+    "decline-plugin",
+    "apply-project-change",
+    "decline-project-change",
+    "plan-queue",
+    "keep-delivery",
+    "add-project",
+    "decline-project",
+    "continue-task",
+    "backlog-task",
+    "move-task",
+    "stop-task",
+    "start-task",
+    "ask-again",
+    "confirm-required-action",
+    "defer-required-action",
+    "allow-cost",
+    "lift-cost-limit",
+    "stop-at-cost"
+  ];
   const requiredActionSchema = object({
     id: string().min(1).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
     sharedId: string().min(1).max(64).optional(),
@@ -4971,28 +4996,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     signInOn: signInOnSchema.optional(),
     forgeSignInOn: forgeSignInOnSchema.optional()
   });
-  const HOST_OPS = [
-    "restore-account",
-    "move-flagship",
-    "retry-firstmate",
-    "try-again",
-    "add-plugin",
-    "decline-plugin",
-    "apply-project-change",
-    "decline-project-change",
-    "plan-queue",
-    "keep-delivery",
-    "add-project",
-    "decline-project",
-    "continue-task",
-    "backlog-task",
-    "move-task",
-    "stop-task",
-    "start-task",
-    "ask-again",
-    "confirm-required-action",
-    "defer-required-action"
-  ];
   const TASK_LIFECYCLE_OPS = [
     "answer-done",
     "dismiss-question",

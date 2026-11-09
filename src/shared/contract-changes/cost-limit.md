@@ -1,0 +1,3 @@
+Two new settings channels read and set the app's own per-task cost limit: `inf:settings:cost-limit:get` answers the limit, an amount in estimated dollars or no limit, with how many of the task families that spent anything in the last 30 days would have asked under it, and `inf:settings:cost-limit:set` saves a new limit and answers the same view.
+Three new card host operations, `allow-cost`, `lift-cost-limit` and `stop-at-cost`, answer the app's card for a task that passed its cost limit: raise the task's limit by one more step and go on, lift its limit and go on, or stop it in the backlog with its work kept.
+An older side never raises the card and has no Settings row, so it neither sends nor reads them.

@@ -5,6 +5,7 @@ import type { TaskRecord } from "../storage/taskStore";
 import type { CaptainOverrides } from "./captainOverrides";
 import type { CardActions } from "./cardActions";
 import type { CardService } from "./cardService";
+import type { CostLimits } from "./costLimits";
 import type { CrewBrief } from "./crewBrief";
 import type { CrewFacts } from "./crewFacts";
 import type { CrewmateCards } from "./crewmateCards";
@@ -66,6 +67,7 @@ export type CrewCore = {
 
   readonly briefs: CrewBrief;
   readonly cards: CardService;
+  readonly costLimits: CostLimits;
   readonly crewmateCards: CrewmateCards;
   readonly crewPrograms: CrewPrograms;
   readonly inPlaceWork: InPlaceWork;

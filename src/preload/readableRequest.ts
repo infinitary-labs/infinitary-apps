@@ -197,6 +197,10 @@ export const REQUEST_COPY = {
     fallback: "Could not save your instructions and skills setting. Please try again.",
     prefix: "",
   },
+  "inf:settings:cost-limit:set": {
+    fallback: "Could not save the cost limit. Please try again.",
+    prefix: "",
+  },
   "inf:settings:notifications:set": {
     fallback: "Could not save notifications. Please try again.",
     prefix: "Could not save notifications: ",

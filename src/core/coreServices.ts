@@ -1,3 +1,4 @@
+import type { AppCostLimitView, CostLimit } from "@shared/costLimit";
 import type { DeviceChip, DeviceInvite, DeviceInviteRequest, DeviceSystem } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import type { ForgeChangesView } from "@shared/forges";
@@ -121,6 +122,11 @@ export type CoreServices = {
   usage: {
     summary: (query: UsageQuery) => UsageSummary;
     tasks: (query: UsageTasksQuery) => UsageTasks;
+  };
+  /** Settings → Intelligence's cost limit row: the app's own limit and what it would have asked about (docs/usage.md). */
+  costLimit: {
+    view: () => AppCostLimitView;
+    set: (limit: CostLimit) => AppCostLimitView;
   };
   /** The mediated fetch seam for plugin frames; serves no grant yet (D6). */
   pluginFetch: MediatedFetch;

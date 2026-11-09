@@ -66,6 +66,8 @@ describe("migration 73 retires saved keep-open choices", () => {
       ALTER TABLE inbox DROP COLUMN cuts;
       ALTER TABLE jobs DROP COLUMN stopped_by_quit;
       ALTER TABLE tasks DROP COLUMN start_notice;
+      DROP TABLE cost_holds;
+      DROP TABLE cost_limits;
       DROP TABLE change_versions;
       DROP TABLE changes;
       DROP TABLE keep_open_backfill;

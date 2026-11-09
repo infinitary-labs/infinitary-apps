@@ -260,9 +260,11 @@ export type TaskRuntime = {
    * turn, and `row` is the lane row that carries it on once that computer
    * is back. A turn this computer's own update held before it reached its
    * model has no row: its own rows go again. `computer` names another
-   * computer; this one's own update names none.
+   * computer; this one's own update names none. `cost` says its task's cost
+   * limit stopped it instead (`CostLimits`), and its row waits on the
+   * captain's answer.
    */
-  paused?: { computer?: string; row?: number; unstarted?: true };
+  paused?: { computer?: string; row?: number; unstarted?: true; cost?: true };
 };
 
 /** A steer handed into a running turn, by its words' digest and when it was handed over. */

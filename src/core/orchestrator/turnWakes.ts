@@ -98,7 +98,8 @@ export type TurnFacts =
        * steer.
        */
       kind: "turn-resumed";
-      stopped: "update" | "quit";
+      /** `cost-limit`: the task passed its cost limit and the captain let it go on (docs/usage.md). */
+      stopped: "update" | "quit" | "cost-limit";
       /** The computer that was updated, as Devices names it. */
       computer?: string;
     }
@@ -209,5 +210,5 @@ export const TURN_WORDS: KindWords<TurnFacts> = {
       ...(facts.earlier ? { earlier: facts.earlier } : {}),
     }),
   "turn-resumed": (facts) =>
-    `${facts.stopped === "update" ? `Your last turn stopped part way while Infinitary${facts.computer ? ` on ${facts.computer}` : ""} was updated; it is back now.` : "Your last turn stopped part way when the app closed - a quit or an update; it is open again."} ${RESUME_CHECK}`,
+    `${facts.stopped === "cost-limit" ? "Your last turn stopped at a safe point when this task passed its cost limit, and the captain let it go on." : facts.stopped === "update" ? `Your last turn stopped part way while Infinitary${facts.computer ? ` on ${facts.computer}` : ""} was updated; it is back now.` : "Your last turn stopped part way when the app closed - a quit or an update; it is open again."} ${RESUME_CHECK}`,
 };

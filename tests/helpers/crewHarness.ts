@@ -243,6 +243,10 @@ export type SetupExtras = {
     avoidProvider?: string;
   }) => void;
   recordUsage?: (input: RecordUsageInput) => void;
+  /** The cost limits, read off the harness's own database (docs/usage.md, "The cost limit"). */
+  costLimits?: (
+    db: ReturnType<typeof openInMemoryDatabase>,
+  ) => import("@core/orchestrator/costLimits").CostLimitFacts;
   /**
    * What the router evaluates for a move (INF-849): the model it would pick
    * for the shape with `withoutProvider` left out. Absent, nothing serves.
@@ -533,6 +537,7 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.programProcess ? { programProcess: extras.programProcess } : {}),
     ...(extras.answerJson ? { answerJson: extras.answerJson } : {}),
     ...(extras.recordUsage ? { recordUsage: extras.recordUsage } : {}),
+    ...(extras.costLimits ? { costLimits: extras.costLimits(db) } : {}),
     ...(extras.noteCutOff ? { noteCutOff: extras.noteCutOff } : {}),
     ...(extras.modelName ? { modelName: extras.modelName } : {}),
     ...(extras.serveability ? { serveability: extras.serveability } : {}),

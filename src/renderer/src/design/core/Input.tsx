@@ -18,6 +18,8 @@ export function Input({
   mono,
   size = "md",
   style,
+  onFocus,
+  onBlur,
   ...rest
 }: InputProps) {
   const [focus, setFocus] = useState(false);
@@ -27,8 +29,14 @@ export function Input({
       placeholder={placeholder}
       value={value}
       onChange={onChange}
-      onFocus={() => setFocus(true)}
-      onBlur={() => setFocus(false)}
+      onFocus={(event) => {
+        setFocus(true);
+        onFocus?.(event);
+      }}
+      onBlur={(event) => {
+        setFocus(false);
+        onBlur?.(event);
+      }}
       style={{
         fontFamily: mono ? "var(--font-mono)" : "var(--font-ui)",
         fontSize: size === "lg" ? "var(--text-md)" : "var(--text-base)",

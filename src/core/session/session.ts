@@ -386,7 +386,7 @@ export type SafeStopOutcome = "stopped" | "withdrawn";
  * read when its turn carries on (every backend's gate serves these words).
  */
 export const SAFE_STOP_BLOCKED_TEXT =
-  "Infinitary stopped this turn to update before this call started, so it did not run. Run it again if it is still needed.";
+  "Infinitary stopped this turn at a safe point before this call started, so it did not run. Run it again if it is still needed.";
 
 /**
  * A prompt a safe stop ended before its model took it: nothing of it

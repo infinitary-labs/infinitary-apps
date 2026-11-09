@@ -68,6 +68,7 @@ Sign in from Settings, under Intelligence, and it goes to crewmate 3."
 **GitHub on another device.**
 Settings → Projects' `WHERE YOUR PROJECTS LIVE` lists a row per device that runs work under this computer's own: "GitHub · <account>" with the mono line "Mac mini · clones and pushes its own work".
 A device not signed in reads its name over "not signed in to GitHub", with a secondary "Sign in" whose code to read opens in the aside under it.
+Where that device has GitHub CLI installed, the aside closes as GitHub's own does on this computer (`components/integrations/IntegrationRow.prompt.md`): below a `--line-1` hairline, one `--text-sm --fg-3` line, "If your organization blocks apps like Infinitary, use the GitHub sign-in that GitHub CLI already holds on Mac mini.", and a small "Use GitHub CLI" that asks that device's own GitHub CLI; its row then reads "Mac mini · through GitHub CLI · clones and pushes its own work".
 This computer's row reads "this computer · opens, checks and merges pull requests": pull requests are still opened, checked and merged from this computer, with its own sign-in.
 When a project is set to run on a device with no GitHub sign-in, the app raises its own card (chip "Attention"), "Sign in to GitHub on Mac mini": "website runs on Mac mini now.
 Mac mini needs its own GitHub sign-in to clone it and push." and "Its next task waits for it.

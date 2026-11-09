@@ -49,6 +49,8 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:devices:sign-out": "Signs a computer that runs work out of its own account",
   "inf:devices:forge-sign-in":
     "GitHub sign-in on a computer that runs work, started by the captain's click in Settings",
+  "inf:devices:forge-sign-in-cli":
+    "GitHub sign-in through a computer's own GitHub CLI, on the captain's click in Settings",
   "inf:devices:forge-sign-out": "Signs a computer that runs work out of its own GitHub sign-in",
   "inf:devices:custom:connect":
     "Sign-in preparation: the key and headers go to that computer once and are kept nowhere here",

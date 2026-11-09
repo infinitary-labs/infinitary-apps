@@ -360,6 +360,8 @@ export type FirstmateApi = {
     signOut: (deviceId: string, accountId: string) => Promise<{ ok: true }>;
     /** Starts that computer's own sign-in where projects live; its code to read arrives on `onSignIn`. */
     forgeSignIn: (deviceId: string, host: string) => Promise<{ signInId: string }>;
+    /** Signs that computer in through its own GitHub CLI's sign-in; the answer carries no token. */
+    forgeSignInWithCli: (deviceId: string, host: string) => Promise<ForgeCliSignInResult>;
     /** Signs that computer out where projects live. */
     forgeSignOut: (deviceId: string, host: string) => Promise<{ ok: true }>;
     /**

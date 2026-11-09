@@ -22,7 +22,7 @@ import { DeviceSignIns } from "../devices/deviceSignIns";
 import { DevicePairing } from "../devices/pairing";
 import type { CoreDispatch } from "../dispatcher";
 import { CoreEventBus } from "../events";
-import { ForgeSignInStore } from "../forge";
+import { ForgeSignInStore, type GitHubCli } from "../forge";
 import { absentKeychain, type HostKeychain, type HostKeychainQuery } from "../host";
 import { configureGitSignIn, hostEnv } from "../hostEnv";
 import { CODEX_MODELS_URL } from "../models/piAccountLists";
@@ -36,6 +36,7 @@ import { openInMemoryDatabase } from "../storage/db";
 import { SettingsStore } from "../storage/settingsStore";
 import { startComputerAccounts } from "./accounts";
 import { bindHere, noSignInHere } from "./conversations";
+import { startComputerForges } from "./forges";
 import { joinHome } from "./join";
 import { type HelperRun, startHelper } from "./run";
 import { type HeldSignIns, startSignIns } from "./signIns";
@@ -63,6 +64,9 @@ const CLAUDE_CODE_PAGE =
   "https://claude.com/cai/oauth/authorize?code=true&redirect_uri=https%3A%2F%2Fplatform.claude.com%2Foauth%2Fcode%2Fcallback&state=s0042";
 /** What GitHub hands the computer for an approved code: its own sign-in, never the home's. */
 const GITHUB_SIGN_IN = "gho_standin_computer_0042";
+
+/** What GitHub CLI there prints for github.com: its own sign-in, never one the app made. */
+const GITHUB_CLI_SIGN_IN = "gho_standin_githubcli_0042";
 
 /** An unsigned token whose claims Pi and the allowance read the account from. */
 function token(claims: Record<string, unknown>): string {
@@ -307,6 +311,8 @@ async function joined(
     claudeModels?: ClaudeModelRow[] | "no answer";
     /** What the Codex account's own model list answers there; unread unless named. */
     codexModels?: readonly string[];
+    /** GitHub CLI installed there; none by default, so no test finds the real one. */
+    githubCli?: GitHubCli;
   } = {},
 ) {
   const homeDir = scratchDir("infinitary-signins-home-");
@@ -404,6 +410,14 @@ async function joined(
     signIns: (start) => {
       held = startSignIns({
         ...start,
+        forges: (forgeOptions) =>
+          startComputerForges({
+            ...forgeOptions,
+            cli: options.githubCli ?? {
+              find: () => undefined,
+              token: async () => ({ problem: "missing", reason: "GitHub CLI is not installed" }),
+            },
+          }),
         accounts: async (accountsOptions) => {
           const accounts = await startComputerAccounts({
             ...accountsOptions,
@@ -1115,6 +1129,96 @@ describe("a computer that runs work signs in to its own subscriptions from its h
     await world.signIns.signOutForge(world.deviceId, "github.com");
     await expect.poll(() => world.group()?.signIns?.forges?.signIns).toEqual([]);
     expect(existsSync(join(forges, "github.com"))).toBe(false);
+  });
+
+  // The captain's ask (INF-3145): a separate computer's own GitHub sign-in
+  // offers what this Mac's does, the GitHub CLI sign-in already on it.
+  it("signs a computer in to GitHub through its own GitHub CLI, keeping only the way", async () => {
+    const github = standInGitHub();
+    // GitHub CLI there, as `gh auth token --hostname <host>` answers: signed in to github.com alone.
+    const gh = "/opt/homebrew/bin/gh";
+    let cliSignedIn = true;
+    const asked: string[] = [];
+    const githubCli: GitHubCli = {
+      find: () => gh,
+      token: async (program, host) => {
+        asked.push(`${program} ${host}`);
+        return cliSignedIn && host === "github.com"
+          ? { token: GITHUB_CLI_SIGN_IN }
+          : { problem: "none", reason: `GitHub CLI holds no sign-in for ${host}` };
+      },
+    };
+    const world = await joined({ githubCli });
+    world.signIns.read();
+    // It says GitHub CLI is there, and is not signed in yet.
+    await expect
+      .poll(() => world.group()?.signIns?.forges)
+      .toEqual({
+        signIns: [],
+        hosts: [{ host: "github.com", name: "GitHub" }],
+        githubCli: true,
+      });
+
+    expect(await world.signIns.forgeWithCli(world.deviceId, "github.com")).toEqual({
+      ok: true,
+      host: "github.com",
+    });
+    await expect
+      .poll(() => world.group()?.signIns?.forges?.signIns)
+      .toEqual([
+        {
+          host: "github.com",
+          name: "GitHub",
+          login: "octo-mini",
+          state: "ok",
+          since: expect.any(Number),
+          way: "cli",
+        },
+      ]);
+    // GitHub was asked who it is with GitHub CLI's sign-in, there.
+    expect(github.asked).toContainEqual({
+      url: "https://api.github.com/user",
+      auth: `Bearer ${GITHUB_CLI_SIGN_IN}`,
+    });
+    // The computer's store names the way and the program, never the token.
+    const forges = join(world.dataDir, "forges");
+    const file = readFileSync(join(forges, "github.com", "sign-in.json"), "utf8");
+    expect(JSON.parse(file)).toMatchObject({ way: "cli", program: gh, login: "octo-mini" });
+    expect(file).not.toContain(GITHUB_CLI_SIGN_IN);
+    // Only the program the store names was asked, for github.com; its git's helper reads the same file.
+    expect(new Set(asked)).toEqual(new Set([`${gh} github.com`]));
+    // Nothing the home said, pushed or saved holds it, nor the computer's log.
+    expect(
+      JSON.stringify([world.emitted, world.events, world.signIns.view(), world.logs]),
+    ).not.toContain(GITHUB_CLI_SIGN_IN);
+    expect(
+      savedText(world.homeDir).filter(({ text }) => text.includes(GITHUB_CLI_SIGN_IN)),
+    ).toEqual([]);
+
+    // A host GitHub CLI holds no sign-in for is not kept, and says why.
+    await world.signIns.signOutForge(world.deviceId, "github.com");
+    await expect.poll(() => world.group()?.signIns?.forges?.signIns).toEqual([]);
+    cliSignedIn = false;
+    expect(await world.signIns.forgeWithCli(world.deviceId, "github.com")).toEqual({
+      ok: false,
+      problem: "none",
+      host: "github.com",
+    });
+    expect(existsSync(join(forges, "github.com"))).toBe(false);
+  });
+
+  it("offers no GitHub CLI sign-in on a computer without GitHub CLI", async () => {
+    const world = await joined();
+    world.signIns.read();
+    await expect
+      .poll(() => world.group()?.signIns?.forges)
+      .toEqual({
+        signIns: [],
+        hosts: [{ host: "github.com", name: "GitHub" }],
+      });
+    await expect(world.signIns.forgeWithCli(world.deviceId, "github.com")).rejects.toThrow(
+      "does not offer GitHub CLI's sign-in there",
+    );
   });
 
   it("stops a GitHub sign-in when the home stops it, and says when its code ran out", async () => {

@@ -13,7 +13,7 @@ import {
 } from "./customApi";
 import { COMPUTER } from "./deviceNames";
 import { computerReachSchema, deviceLabel, userDisplayName } from "./devices";
-import { FORGE_HOST_NAME, forgeSignInStateSchema } from "./forges";
+import { FORGE_HOST_NAME, forgeCliSignInResultSchema, forgeSignInStateSchema } from "./forges";
 import { listedIds } from "./modelListing";
 import { reasoningCapabilitiesSchema } from "./modelSlots";
 import { authNoticeSchema, authPromptSchema, providerViewSchema } from "./providers";
@@ -73,9 +73,17 @@ export const computerForgesSchema = z.object({
       state: forgeSignInStateSchema,
       /** When the sign-in was made there. */
       since: z.number().int().nonnegative(),
+      /** Made through that computer's own GitHub CLI, which it asks for each sign-in. */
+      way: z.literal("cli").optional(),
     }),
   ),
   hosts: z.array(z.object({ host: forgeHostSchema, name: z.string().min(1).max(64) })),
+  /**
+   * GitHub CLI is installed there, so its GitHub row offers "Use GitHub CLI"
+   * (`inf:sign-ins:forge-cli`). Absent from a computer without the
+   * `computer-github-cli` change, which offers the code alone.
+   */
+  githubCli: z.boolean().optional(),
 });
 export type ComputerForges = z.infer<typeof computerForgesSchema>;
 
@@ -249,6 +257,18 @@ export const signInOrders = {
     effect: "change",
     request: z.tuple([z.object({ signInId: signInIdSchema, host: forgeHostSchema })]),
     response: okSchema,
+  },
+  /**
+   * Signs that computer in to a GitHub host through its own GitHub CLI's
+   * sign-in, there (docs/forge.md, "A computer's own sign-in"): it asks
+   * GitHub CLI and the host who that is, and keeps only the way and the
+   * program's path. No token crosses; the answer says only whether it was
+   * kept. Offered where its forges say `githubCli`.
+   */
+  "inf:sign-ins:forge-cli": {
+    effect: "change",
+    request: z.tuple([z.object({ host: forgeHostSchema })]),
+    response: forgeCliSignInResultSchema,
   },
   /** Signs that computer out where a project lives: its sign-in there is deleted. */
   "inf:sign-ins:forge-out": {

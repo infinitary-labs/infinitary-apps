@@ -19,6 +19,7 @@ import {
   joinOutcomeSchema,
   thisMacSchema,
 } from "../devices";
+import { forgeCliSignInResultSchema } from "../forges";
 import { joinAtAnswerSchema, joinAtOptionsSchema } from "../joinByAddress";
 import { nearbyMacsViewSchema } from "../nearbyMacs";
 import {
@@ -262,6 +263,15 @@ export const deviceChannels = {
     reach: "home",
     request: z.tuple([z.string().min(1).max(64), forgeHostSchema]),
     response: z.object({ signInId: signInIdSchema }),
+  },
+  // The same sign-in through that computer's own GitHub CLI, asked there;
+  // the answer says only whether it was kept, never a token.
+  "inf:devices:forge-sign-in-cli": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([z.string().min(1).max(64), forgeHostSchema]),
+    response: forgeCliSignInResultSchema,
   },
   "inf:devices:forge-sign-out": {
     effect: "change",

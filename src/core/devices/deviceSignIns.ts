@@ -3,6 +3,7 @@ import { speaksCustomApi } from "@shared/contractFeatures";
 import { HERE } from "@shared/deviceNames";
 import { type ComputerReach, type DeviceView, deviceRunsWork } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
+import type { ForgeCliSignInResult } from "@shared/forges";
 import { catalogEntry } from "@shared/providers";
 import {
   type ComputerSignIns,
@@ -209,6 +210,33 @@ export class DeviceSignIns {
       throw reachable(error, words.who);
     }
     return { signInId };
+  }
+
+  /**
+   * Signs that computer in where a project lives through its own GitHub
+   * CLI's sign-in, there; only a computer whose forges say `githubCli` is
+   * asked. Nothing crosses but the host and whether it was kept, so no
+   * token is here, in an event or a feed line; the rows it changed arrive as
+   * that computer's sign-ins.
+   */
+  async forgeWithCli(deviceId: string, host: string): Promise<ForgeCliSignInResult> {
+    const device = this.computer(deviceId);
+    const words = signInPlace({ ...device, onThisMac: device.onThisMac === true });
+    const forges = this.said.get(deviceId)?.signIns?.forges;
+    if (!forges?.githubCli || !forges.hosts.some((entry) => entry.host === host))
+      throw new Error(`${words.who} does not offer GitHub CLI's sign-in there.`);
+    if (!this.options.work.inReach(deviceId))
+      throw new Error(`${words.who} is out of reach, so nothing was asked.`);
+    let answer: unknown;
+    try {
+      answer = await this.options.work.ask(deviceId, "inf:sign-ins:forge-cli", [{ host }]);
+    } catch (error) {
+      throw reachable(error, words.who);
+    }
+    const parsed = signInOrders["inf:sign-ins:forge-cli"].response.safeParse(answer);
+    if (!parsed.success)
+      throw new Error(`${words.who} answered in a shape ${HERE.this} does not know.`);
+    return parsed.data;
   }
 
   /**

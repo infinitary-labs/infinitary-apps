@@ -81,7 +81,7 @@ export {
   QUEUE_STATUS,
   QUEUE_WAITING_WORDS,
 } from "./forge";
-export { githubCliFor } from "./githubCli";
+export { type GitHubCli, githubCliFor } from "./githubCli";
 export {
   NO_MISTAKES_ATTESTATION_PREFIX,
   NO_MISTAKES_SIGNATURE,

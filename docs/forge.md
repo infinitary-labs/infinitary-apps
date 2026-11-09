@@ -155,7 +155,8 @@ It is a third way inside the one sign-in store, so everything above `ForgeSignIn
   Only the person signs GitHub CLI in again, so the row reads "Sign in to GitHub CLI again, then Check now." with a Check now button, and the host card names GitHub CLI and opens Integrations without starting a code (`forgeCliRefusedText`).
 - **Its row** reads "as octo · through GitHub CLI · 2 actions"; "Sign out and remove" deletes the app's file only, and GitHub CLI stays signed in for the person's own use.
 - **The owner's earlier verdict**, "ignore any GitHub sign-in already on the Mac", stays the default: GitHub CLI is asked only for a host whose sign-in the person chose to make through it (`tests/e2e/forge-seam.spec.ts` keeps asserting that nothing else asks it).
-- **Not yet**: a computer that runs work keeps its own github.com sign-in and does not use GitHub CLI (`docs/helper.md`); the row does not say which of the app's three scopes GitHub CLI's sign-in lacks; and the app cannot tell a blocked organization from a missing repository.
+- **On a computer that runs work**: its own GitHub row offers the same line, and that computer asks its own GitHub CLI ("A computer's own sign-in" below).
+- **Not yet**: the row does not say which of the app's three scopes GitHub CLI's sign-in lacks; and the app cannot tell a blocked organization from a missing repository.
 
 ## GitLab sign-in and projects
 
@@ -256,6 +257,11 @@ A computer that runs work (`docs/helper.md`) signs in to GitHub for its own clon
   The computer asks GitHub for the code and sends it here as a step of the sign-in (`inf:work:sign-in`, a `device_code` notice); the captain enters it on GitHub's page here, and the computer asks GitHub until it says yes and keeps the sign-in.
   Each flow's end reaches whoever started it once (`signIn(host, { onEnd })`), so the computer says signed in, "The code expired.", "Could not reach GitHub - try again." or, for a no on GitHub's page or a Cancel, nothing.
   `inf:devices:forge-sign-out` deletes the sign-in there.
+- **Or GitHub CLI's sign-in there.**
+  A computer with GitHub CLI on its own search path says so with its forges (`githubCli`), and its GitHub aside in Projects then closes with the line "Use GitHub CLI", as this Mac's does ("GitHub CLI's sign-in" below), naming that computer.
+  The click asks `inf:devices:forge-sign-in-cli`, which asks the computer `inf:sign-ins:forge-cli` (`DeviceSignIns.forgeWithCli`); the computer asks its own GitHub CLI and GitHub who that is (`ForgeSignIns.signInWithCli`), keeps only the way and the program's path, and answers whether it kept it, so no token crosses or reaches a log.
+  Its row then reads "Mac mini · through GitHub CLI · clones and pushes its own work" (`way`), and its git's helper asks that computer's GitHub CLI at each push.
+  A computer without the `computer-github-cli` change sends no `githubCli`, so it is offered the code alone.
 - **What crosses.**
   The computer's sign-ins whole (`inf:work:sign-ins`) carry its `forges`: each host it is signed in to, who GitHub says it is, its health and since when, and each host it offers - never the sign-in.
   The feed says "Mac mini is signed in to GitHub."

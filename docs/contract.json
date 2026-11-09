@@ -5804,6 +5804,10 @@
                                 "type": "integer",
                                 "minimum": 0,
                                 "maximum": 9007199254740991
+                              },
+                              "way": {
+                                "type": "string",
+                                "const": "cli"
                               }
                             },
                             "required": [
@@ -5837,6 +5841,9 @@
                               "name"
                             ]
                           }
+                        },
+                        "githubCli": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -6358,6 +6365,86 @@
         },
         "required": [
           "signInId"
+        ]
+      }
+    },
+    "inf:devices:forge-sign-in-cli": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253,
+            "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*$"
+          }
+        ],
+        "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": true
+              },
+              "host": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "ok",
+              "host"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": false
+              },
+              "problem": {
+                "type": "string",
+                "enum": [
+                  "not-github",
+                  "missing",
+                  "none",
+                  "refused",
+                  "unreachable",
+                  "failed"
+                ]
+              },
+              "host": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "maxLength": 253
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "ok",
+              "problem",
+              "host"
+            ]
+          }
         ]
       }
     },
@@ -54546,6 +54633,10 @@
                           "type": "integer",
                           "minimum": 0,
                           "maximum": 9007199254740991
+                        },
+                        "way": {
+                          "type": "string",
+                          "const": "cli"
                         }
                       },
                       "required": [
@@ -54579,6 +54670,9 @@
                         "name"
                       ]
                     }
+                  },
+                  "githubCli": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -64913,6 +65007,10 @@
                                 "type": "integer",
                                 "minimum": 0,
                                 "maximum": 9007199254740991
+                              },
+                              "way": {
+                                "type": "string",
+                                "const": "cli"
                               }
                             },
                             "required": [
@@ -64946,6 +65044,9 @@
                               "name"
                             ]
                           }
+                        },
+                        "githubCli": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -65890,6 +65991,10 @@
                                 "type": "integer",
                                 "minimum": 0,
                                 "maximum": 9007199254740991
+                              },
+                              "way": {
+                                "type": "string",
+                                "const": "cli"
                               }
                             },
                             "required": [
@@ -65923,6 +66028,9 @@
                               "name"
                             ]
                           }
+                        },
+                        "githubCli": {
+                          "type": "boolean"
                         }
                       },
                       "required": [
@@ -69292,6 +69400,10 @@
                         "type": "integer",
                         "minimum": 0,
                         "maximum": 9007199254740991
+                      },
+                      "way": {
+                        "type": "string",
+                        "const": "cli"
                       }
                     },
                     "required": [
@@ -69325,6 +69437,9 @@
                       "name"
                     ]
                   }
+                },
+                "githubCli": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -69862,6 +69977,90 @@
           },
           "required": [
             "ok"
+          ]
+        }
+      },
+      "inf:sign-ins:forge-cli": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "host": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253,
+                  "pattern": "^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)*$"
+                }
+              },
+              "required": [
+                "host"
+              ]
+            }
+          ],
+          "minItems": 1,
+          "items": false
+        },
+        "response": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "ok": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "host": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              },
+              "required": [
+                "ok",
+                "host"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "ok": {
+                  "type": "boolean",
+                  "const": false
+                },
+                "problem": {
+                  "type": "string",
+                  "enum": [
+                    "not-github",
+                    "missing",
+                    "none",
+                    "refused",
+                    "unreachable",
+                    "failed"
+                  ]
+                },
+                "host": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 253
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "ok",
+                "problem",
+                "host"
+              ],
+              "additionalProperties": false
+            }
           ]
         }
       },

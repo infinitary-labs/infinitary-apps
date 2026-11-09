@@ -242,6 +242,8 @@ export function signedInTo(
   const forges = {
     view: () => forgesView?.() ?? { signIns: [], hosts: [] },
     start: async () => {},
+    // No GitHub CLI there.
+    signInWithCli: async (host) => ({ ok: false, problem: "missing", host }),
     cancel: () => {},
     signOut: () => {},
     checkHealth: async () => {},

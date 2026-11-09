@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import type { ForgeCliSignInResult } from "@shared/forges";
 import type { ComputerForges, SignInStep } from "@shared/signIns";
 import {
   type ForgeSignInEnding,
@@ -6,6 +7,8 @@ import {
   ForgeSignInStore,
   ForgeSignIns,
   forgeSignInProviders,
+  type GitHubCli,
+  githubCliFor,
 } from "../forge";
 import { configureGitSignIn } from "../hostEnv";
 
@@ -34,6 +37,8 @@ export type ComputerForgesOptions = {
   packaged: boolean;
   /** The hosts' sign-ins; the app's own (`forgeSignInProviders`) unless a test stands in its own. */
   providers?: ForgeSignInProvider[];
+  /** This computer's own GitHub CLI; the one on its search path unless a test stands in its own. */
+  cli?: GitHubCli;
   /** A sign-in made or gone, or a change of its health or of who the host says it is. */
   onChange: () => void;
   /** Starts the clock; tests read the health themselves. */
@@ -51,6 +56,12 @@ export type HeldForges = {
    * running here ends first, cancelled.
    */
   start: (host: string, step: (step: SignInStep) => void) => Promise<void>;
+  /**
+   * Signs a GitHub host in through this computer's own GitHub CLI: only the
+   * way and the program's path are kept, never its token, and the answer
+   * carries none (docs/forge.md, "GitHub CLI's sign-in").
+   */
+  signInWithCli: (host: string) => Promise<ForgeCliSignInResult>;
   /** Stops the flow running here, if any; its end goes to its `step` as cancelled. */
   cancel: () => void;
   /** Forgets a host's sign-in here: its folder is deleted. */
@@ -112,11 +123,13 @@ export function startComputerForges(options: ComputerForgesOptions): HeldForges 
     return {
       signIns: whole.signIns.map(({ projects: _here, ...row }) => row),
       hosts: whole.hosts,
+      ...(whole.githubCli ? { githubCli: true } : {}),
     };
   };
   const signIns: ForgeSignIns = new ForgeSignIns({
     store: new ForgeSignInStore(computerForgesDir(options.dataDir)),
     providers,
+    cli: options.cli ?? githubCliFor({ packaged: options.packaged }),
     // No project lives here: the home keeps the record of them.
     projectsOn: () => 0,
     // A code on screen is a step of its own; the home hears the rows only when they change.
@@ -171,6 +184,10 @@ export function startComputerForges(options: ComputerForgesOptions): HeldForges 
           userCode: flow.userCode,
         },
       });
+    },
+    signInWithCli: (host) => {
+      if (!signIns.nameOf(host)) throw new Error(`This computer offers no sign-in to ${host}.`);
+      return signIns.signInWithCli(`https://${host}`);
     },
     cancel: () => signIns.cancel(),
     signOut: (host) => {

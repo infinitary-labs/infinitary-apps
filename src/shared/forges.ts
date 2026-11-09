@@ -289,7 +289,7 @@ export type ForgeCliSignInResult = z.infer<typeof forgeCliSignInResultSchema>;
 
 /** The words for GitHub CLI's sign-in: GitHub's own name for the program, as the captain chose. */
 export const FORGE_CLI_WORDS = {
-  offer: `If your organization blocks apps like Infinitary, use the GitHub sign-in that GitHub CLI already holds on ${HERE.this}.`,
+  offer: forgeCliOffer(),
   use: "Use GitHub CLI",
   through: "through GitHub CLI",
   checking: "Asking GitHub CLI...",
@@ -297,14 +297,32 @@ export const FORGE_CLI_WORDS = {
   failed: "Could not ask GitHub CLI. Try again.",
 } as const;
 
-/** The words a sign-in through GitHub CLI says when it was not kept. */
-export function forgeCliProblemText(problem: ForgeCliProblem, host: string | null): string {
+/**
+ * The line over "Use GitHub CLI": on this computer, or `where` for a
+ * computer that runs work ("on Mac mini", "as Builder"), whose own GitHub CLI
+ * is asked (docs/forge.md, "A computer's own sign-in").
+ */
+export function forgeCliOffer(where = `on ${HERE.this}`): string {
+  return `If your organization blocks apps like Infinitary, use the GitHub sign-in that GitHub CLI already holds ${where}.`;
+}
+
+/**
+ * The words a sign-in through GitHub CLI says when it was not kept; `on`
+ * names a computer that runs work when its own GitHub CLI was asked.
+ */
+export function forgeCliProblemText(
+  problem: ForgeCliProblem,
+  host: string | null,
+  on?: string,
+): string {
   const where = host ?? "that address";
   switch (problem) {
     case "not-github":
       return `${where} is not a GitHub host.`;
     case "missing":
-      return `GitHub CLI is no longer on ${HERE.this}.`;
+      return on
+        ? `GitHub CLI is no longer found ${on}.`
+        : `GitHub CLI is no longer on ${HERE.this}.`;
     case "none":
       return `GitHub CLI is not signed in to ${where}. Sign in to GitHub CLI, then try again.`;
     case "refused":

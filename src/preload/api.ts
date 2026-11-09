@@ -285,6 +285,8 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       onSignIn: (listener) => subscribe("inf:devices:sign-in", listener),
       signOut: (deviceId, accountId) => invoke("inf:devices:sign-out", deviceId, accountId),
       forgeSignIn: (deviceId, host) => invoke("inf:devices:forge-sign-in", deviceId, host),
+      forgeSignInWithCli: (deviceId, host) =>
+        invoke("inf:devices:forge-sign-in-cli", deviceId, host),
       forgeSignOut: (deviceId, host) => invoke("inf:devices:forge-sign-out", deviceId, host),
       custom: {
         profiles: (deviceId) => invoke("inf:devices:custom:profiles", deviceId),

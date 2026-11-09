@@ -1,7 +1,6 @@
 import { hostOfAddress } from "@shared/forge";
 import {
   FORGE_BROWSER_WORDS,
-  FORGE_CLI_WORDS,
   FORGE_SECTION_WORDS,
   type ForgeHostView,
   type ForgeServerView,
@@ -9,7 +8,6 @@ import {
   type ForgeSignInView,
   type ForgesView,
   forgeAddressExample,
-  forgeCliProblemText,
   forgeKeyIntro,
   forgeKeyPage,
   forgeKeyProblemText,
@@ -27,6 +25,7 @@ import { useShellStore } from "../app/store";
 import { Button, Input, type InputProps, type StatusDotTone } from "../design";
 import { DeviceForgeRows } from "./DeviceForgeRows";
 import { ForgeBrowserAside } from "./ForgeBrowserAside";
+import { GitHubCliLine } from "./GitHubCliLine";
 import "../accounts/connectChips.css";
 import "./forges.css";
 
@@ -418,59 +417,6 @@ function KeyAside({
       </div>
       {githubCli && host && <GitHubCliLine address={host} onDone={onDone} />}
     </form>
-  );
-}
-
-/**
- * The one line under a GitHub sign-in (`docs/forge.md`, "GitHub CLI's
- * sign-in"), drawn only where GitHub CLI is on this computer: for a person
- * whose organization blocks apps like Infinitary, use the sign-in GitHub
- * CLI already holds. Nothing asks GitHub CLI until the click; what went
- * wrong reads in the status line.
- */
-export function GitHubCliLine({ address, onDone }: { address: string; onDone?: () => void }) {
-  const [asking, setAsking] = useState(false);
-  const [problem, setProblem] = useState("");
-  const use = async () => {
-    if (asking) return;
-    setAsking(true);
-    setProblem("");
-    try {
-      const result = await window.infinitary.forges.signInWithCli(address);
-      if (result.ok) onDone?.();
-      else setProblem(forgeCliProblemText(result.problem, result.host));
-    } catch {
-      setProblem(FORGE_CLI_WORDS.failed);
-    } finally {
-      setAsking(false);
-    }
-  };
-  return (
-    <div className="fm-forges-cli" data-forge-cli={address}>
-      <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
-        {FORGE_CLI_WORDS.offer}
-      </div>
-      <div className="fm-forges-aside-actions">
-        <Button
-          variant="secondary"
-          size="sm"
-          pending={asking}
-          pendingLabel={FORGE_CLI_WORDS.checking}
-          onClick={() => void use()}
-        >
-          {FORGE_CLI_WORDS.use}
-        </Button>
-      </div>
-      <span
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        data-forge-cli-problem=""
-        style={{ display: "block", fontSize: "var(--text-sm)", color: "var(--danger)" }}
-      >
-        {problem}
-      </span>
-    </div>
   );
 }
 

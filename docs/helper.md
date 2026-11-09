@@ -1044,7 +1044,7 @@ Nothing moves work on its own, to balance load or to fail over.
 ## Its own sign-ins
 
 A computer that runs work signs in to its own subscriptions, and a task it runs uses only those (design skill `components/devices/SignInOnAMac`).
-A computer also signs in to GitHub for its own clones and pushes.
+A computer also signs in to GitHub for its own clones and pushes, with a code or through its own GitHub CLI's sign-in (`docs/forge.md`, "A computer's own sign-in").
 Nothing of the home's sign-ins is sent here, and nothing of these goes to the home but the account rows, the allowance read here, and who GitHub says it is.
 
 - **The stores.**

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { userInfo } from "node:os";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
@@ -15,6 +15,7 @@ import type { QuotaHttp } from "../../src/core/quota/http";
 import { DEVICE_FORGE_ROLE } from "../../src/renderer/src/settings/deviceForgeWords";
 import { CLAUDE_CLIENT_MISSING_TEXT } from "../../src/shared/claudeClient";
 import { deviceSetupTitle } from "../../src/shared/deviceSetup";
+import { FORGE_CLI_WORDS, forgeCliOffer } from "../../src/shared/forges";
 import { INTEGRATIONS_WORDS } from "../../src/shared/integrations";
 import { signInPlace } from "../../src/shared/signIns";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -32,6 +33,7 @@ import {
   openModelsBoard,
   setLevelInPanel,
 } from "./modelsBoard";
+import { heroShot, regionShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { feedLineOf } from "./rails";
 import { savedText } from "./savedText";
@@ -66,6 +68,8 @@ const CLAUDE_CODE_PAGE =
   "https://claude.com/cai/oauth/authorize?code=true&redirect_uri=https%3A%2F%2Fplatform.claude.com%2Foauth%2Fcode%2Fcallback&state=s7731";
 /** GitHub's sign-in for the computer's approved code, never the home's own. */
 const COMPUTER_GITHUB = "gho_e2e_computer_7731";
+/** What GitHub CLI on the computer prints for github.com: its own sign-in, never one the app made. */
+const COMPUTER_GITHUB_CLI = "gho_e2e_computer_cli_7731";
 const ASKPASS = join(process.cwd(), "resources", "git-askpass");
 /** Another macOS user on this Mac, as the computer says it runs as. */
 const BUILDER = { name: "builder", uid: (process.getuid?.() ?? userInfo().uid) + 1000 };
@@ -282,9 +286,17 @@ test.afterEach(async () => {
 
 /** The home, and a computer joined to it as another user on this Mac, running. */
 async function homeAndComputer(
-  options: { claude?: ClaudeAuthBackendOptions; github?: GitHubStub; keychain?: HostKeychain } = {},
+  options: {
+    claude?: ClaudeAuthBackendOptions;
+    github?: GitHubStub;
+    keychain?: HostKeychain;
+    /** GitHub CLI on that computer, by its path; none otherwise, so the one on this Mac is never found. */
+    githubCli?: string;
+  } = {},
 ) {
   process.env.PI_OFFLINE = "1";
+  // The computer in this process finds GitHub CLI only where the test put one.
+  process.env.INFINITARY_GITHUB_CLI = options.githubCli ?? "none";
   // Codex's own callback page would listen on this Mac; the pasted code is the path here.
   process.env.PI_OAUTH_CALLBACK_HOST = "203.0.113.1";
   restoreFetch = standInProviders();
@@ -605,6 +617,71 @@ test("a computer signs in to GitHub for its own clones and pushes from Settings 
   await page.getByRole("menuitem", { name: "Sign out" }).click();
   await expect(row).toHaveAttribute("data-forge-state", "none");
   expect(savedText(dataDir).filter(({ text }) => text.includes(COMPUTER_GITHUB))).toEqual([]);
+});
+
+/** GitHub CLI on the computer, signed in to github.com with a sign-in of its own; it logs every call. */
+function standInGitHubCli(): { path: string; calls: () => string[] } {
+  const dir = scratchDir("infinitary-e2e-computer-gh-");
+  const log = join(dir, "gh-calls.log");
+  const path = join(dir, "gh");
+  writeFileSync(
+    path,
+    `#!/bin/sh\nprintf '%s\\n' "$*" >> '${log}'\nif [ "$1 $2 $3 $4" = "auth token --hostname github.com" ]; then echo ${COMPUTER_GITHUB_CLI}; exit 0; fi\necho "no oauth token found for $4" >&2\nexit 1\n`,
+    { mode: 0o755 },
+  );
+  return {
+    path,
+    calls: () => (existsSync(log) ? readFileSync(log, "utf8").trimEnd().split("\n") : []),
+  };
+}
+
+// INF-3145, the captain's user: registering a separate computer, its GitHub
+// sign-in "doesn't have the recent change where it allows to sign with GH via
+// already authenticated cli".
+test("a computer signs in to GitHub through its own GitHub CLI from Settings -> Projects here", async () => {
+  github = await startGitHubStub();
+  const cli = standInGitHubCli();
+  const { app, page, deviceId, dataDir } = await homeAndComputer({ github, githubCli: cli.path });
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("tab", { name: "Projects", exact: true }).click();
+  const row = page.locator(`[data-device-forge-row="${deviceId}"]`);
+  await expect(row).toHaveAttribute("data-forge-state", "none");
+
+  // The code stays first; GitHub CLI's line sits under it, naming that
+  // computer, and nothing asks GitHub CLI until the click.
+  await row.getByRole("button", { name: "Sign in", exact: true }).click();
+  const aside = page.locator('[data-device-sign-in-provider="github.com"]');
+  await expect(aside.locator("[data-device-sign-in-code]")).toHaveText(STUB_USER_CODE);
+  const line = page.locator(`[data-device-forge-cli="${deviceId}"]`);
+  await expect(line).toContainText(forgeCliOffer(PLACE.where));
+  expect(cli.calls()).toEqual([]);
+  await heroShot(app.app, page, {
+    region: line,
+    anchors: [row, aside],
+    name: "computer-github-cli-sign-in",
+  });
+  await line.getByRole("button", { name: FORGE_CLI_WORDS.use }).click();
+
+  // The row says it signs in through GitHub CLI; the code is gone.
+  await expect(row).toHaveAttribute("data-forge-state", "ok");
+  await expect(row).toContainText(
+    `${PLACE.label} · ${FORGE_CLI_WORDS.through} · ${DEVICE_FORGE_ROLE}`,
+  );
+  await expect(aside).toHaveCount(0);
+  await expect(line).toHaveCount(0);
+  await regionShot(row, test.info().outputPath("computer-github-cli-row.png"));
+  expect(cli.calls()).toContain("auth token --hostname github.com");
+
+  // Its git asks that computer's GitHub CLI each time; nobody keeps its sign-in.
+  const answer = (prompt: string) =>
+    execFileSync("sh", [ASKPASS, prompt], { env: hostEnv(), encoding: "utf8" }).trim();
+  expect(answer("Password for 'https://x-access-token@github.com':")).toBe(COMPUTER_GITHUB_CLI);
+  const file = readFileSync(join(dataDir, "forges", "github.com", "sign-in.json"), "utf8");
+  expect(JSON.parse(file)).toMatchObject({ way: "cli", program: cli.path });
+  expect(savedText(dataDir).filter(({ text }) => text.includes(COMPUTER_GITHUB_CLI))).toEqual([]);
+  expect(
+    savedText(app.userDataDir).filter(({ text }) => text.includes(COMPUTER_GITHUB_CLI)),
+  ).toEqual([]);
 });
 
 test("a custom API added on a computer is kept there and its model can be placed", async () => {

@@ -1,4 +1,6 @@
 import { awayWord } from "@shared/devices";
+import { kindByName } from "@shared/forge";
+import { FORGE_CLI_WORDS } from "@shared/forges";
 import type { ComputerForges, DeviceSignIns } from "@shared/signIns";
 import { signInPlace } from "@shared/signIns";
 import { useCallback, useEffect, useState } from "react";
@@ -7,6 +9,7 @@ import { Badge, Button, RowMenu, StatusDot, type StatusDotTone } from "../design
 import { useOverflowTitle } from "../design/core/overflowTitle";
 import { DeviceSignInAside, type Flow } from "./DeviceSignIns";
 import { DEVICE_FORGE_ROLE } from "./deviceForgeWords";
+import { GitHubCliLine } from "./GitHubCliLine";
 
 /**
  * Settings -> Projects, "Where your projects live", for each computer that
@@ -32,6 +35,8 @@ export type DeviceForgeRow = {
   connecting: boolean;
   /** Its sign-in there, or null when it has none. */
   signIn: ComputerForges["signIns"][number] | null;
+  /** That computer has GitHub CLI, so its GitHub sign-in may use GitHub CLI's (docs/forge.md, "A computer's own sign-in"). */
+  githubCli: boolean;
 };
 
 /** One row per computer and host it offers, from what each computer last said of itself. */
@@ -47,6 +52,7 @@ export function deviceForgeRows(devices: DeviceSignIns[]): DeviceForgeRow[] {
       inReach: device.reach === "in-reach",
       connecting: device.reach === "connecting",
       signIn: forges.signIns.find((entry) => entry.host === host.host) ?? null,
+      githubCli: forges.githubCli === true && kindByName(host.host) === "github",
     }));
   });
 }
@@ -69,7 +75,8 @@ export function deviceForgeRowView(row: DeviceForgeRow): {
       reauth: false,
     };
   const title = row.signIn.login ? `${row.hostName} · ${row.signIn.login}` : row.hostName;
-  const line = `${row.place.label} · ${DEVICE_FORGE_ROLE}${away}`;
+  const through = row.signIn.way === "cli" ? ` · ${FORGE_CLI_WORDS.through}` : "";
+  const line = `${row.place.label}${through} · ${DEVICE_FORGE_ROLE}${away}`;
   switch (row.signIn.state) {
     case "ok":
       return { tone: "ok", label: "signed in", title, line, reauth: false };
@@ -222,6 +229,19 @@ export function DeviceForgeRows({ onAny }: { onAny?: (any: boolean) => void } = 
                 onAnswer={() => {}}
                 onStop={() => stop(key, flow)}
               />
+            )}
+            {flow && row.githubCli && row.inReach && (
+              // The code's alternative, as this computer's own GitHub sign-in
+              // offers it: that computer asks its own GitHub CLI, and its row
+              // turns signed in once it kept the sign-in.
+              <div className="fm-connect-aside" data-device-forge-cli={row.deviceId}>
+                <GitHubCliLine
+                  address={row.host}
+                  where={row.place.where}
+                  ask={() => window.infinitary.devices.forgeSignInWithCli(row.deviceId, row.host)}
+                  onDone={() => stop(key, flow)}
+                />
+              </div>
             )}
           </div>
         );

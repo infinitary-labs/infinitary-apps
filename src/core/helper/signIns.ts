@@ -185,6 +185,11 @@ export class SignInHost {
         if (this.forging !== forge.signInId) this.forge(forge.signInId, forge.host);
         return { ok: true };
       }
+      case "inf:sign-ins:forge-cli": {
+        const [cli] = request as SignInOrderRequest<"inf:sign-ins:forge-cli">;
+        // The rows it changed reach the home as its sign-ins, whole; the answer carries no token.
+        return this.options.forges.signInWithCli(cli.host);
+      }
       case "inf:sign-ins:forge-out": {
         const [out] = request as SignInOrderRequest<"inf:sign-ins:forge-out">;
         // The rows it changed reach the home as its sign-ins, whole.

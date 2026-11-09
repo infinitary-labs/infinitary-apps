@@ -2,9 +2,15 @@ import { expect, test } from "@playwright/test";
 import { NO_SESSION_YET } from "../../src/shared/observe";
 import { observeBody, observeElement } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
-import { FINISH_PROMPT_MARKER, MOCK_COMPLETION_TEXT, SPAWN_PROMPT_MARKER } from "./mockProvider";
+import {
+  FINISH_PROMPT_MARKER,
+  MOCK_COMPLETION_TEXT,
+  REACT_PROMPT_MARKER,
+  SPAWN_PROMPT_MARKER,
+} from "./mockProvider";
 import { promptInput } from "./prompt";
 import { putInLine, reportLine, taskKey } from "./rails";
+import { noteDone, shownEntry } from "./stack";
 
 /**
  * Dev Observe (docs/dev-observe.md): unpackaged e2e always has the gate on.
@@ -59,13 +65,19 @@ test("exposes the Observe tab in unpackaged settings with the Firstmate row", as
 test("tells the main session and every crewmate apart, then opens the settled task's kept session", async () => {
   const { page } = launched;
   const input = promptInput(page);
+  let crewSessionId: string | null = null;
   await test.step("tells the main session and every crewmate apart, and shows each one's content", async () => {
     await input.click();
     await input.fill(`${SPAWN_PROMPT_MARKER} ${TITLE}`);
     await input.press("Enter");
-    await expect(reportLine(page, await taskKey(page, TITLE))).toBeVisible({
-      timeout: 30_000,
-    });
+    const key = await taskKey(page, TITLE);
+    await expect(reportLine(page, key)).toBeVisible({ timeout: 30_000 });
+    crewSessionId = await page.evaluate(
+      async (key) =>
+        (await window.infinitary.tasks.board()).tasks.find((task) => task.key === key)?.id ?? null,
+      key,
+    );
+    expect(crewSessionId).not.toBeNull();
 
     await page.getByRole("button", { name: "Settings" }).click();
     await page.getByRole("tab", { name: "Observe" }).click();
@@ -101,7 +113,9 @@ test("tells the main session and every crewmate apart, then opens the settled ta
     // The crewmate: brief, report, and a backend badge - never a blank pane.
     // Chromium drops native clicks into a sandboxed out-of-process frame
     // while the window is hidden, so the click is dispatched in-frame.
-    await crew.locator("[data-observe-session]").first().dispatchEvent("click");
+    const row = crew.locator(`[data-observe-session="${crewSessionId}"]`);
+    await expect(row).toHaveCount(1);
+    await row.dispatchEvent("click");
     await expect(detail.locator("[data-observe-detail-header]")).toContainText("crewmate");
     await expect(detail.locator("[data-observe-detail-header]")).toContainText("pi");
     await expect(detail.locator("[data-observe-turn]").first()).toBeVisible();
@@ -126,7 +140,20 @@ test("tells the main session and every crewmate apart, then opens the settled ta
       const board = await window.infinitary.tasks.board();
       return board.tasks.find((task) => task.key === key) ?? null;
     }, key);
-    expect(record).toMatchObject({ status: "done", closedReason: "landed" });
+    expect(record).toMatchObject({ id: crewSessionId, status: "done", closedReason: "landed" });
+
+    // The failed batch selected a newer, sessionless question whose title
+    // contained TITLE, not this task. Exercise that state through the real
+    // ask capture: a reaction answers the message without starting a crew.
+    // The promise remains D2/P5 above: read the same task's kept session.
+    // A message beside the merge note belongs to that note's task. Read
+    // and close it first so this unrelated ask becomes its own question.
+    await noteDone(page).click();
+    await expect(shownEntry(page)).toHaveCount(0);
+    const question = `${REACT_PROMPT_MARKER}: ${TITLE}`;
+    await input.fill(question);
+    await input.press("Enter");
+    await taskKey(page, question);
 
     await page.getByRole("button", { name: "Settings" }).click();
     await page.getByRole("tab", { name: "Observe" }).click();
@@ -134,7 +161,8 @@ test("tells the main session and every crewmate apart, then opens the settled ta
     const crew = frame
       .locator("[data-observe-session-list]")
       .locator('[data-observe-group="crewmate"]');
-    const row = crew.locator("[data-observe-session]").first();
+    await expect(crew.getByText(question, { exact: true })).toBeVisible();
+    const row = crew.locator(`[data-observe-session="${crewSessionId}"]`);
     await expect(row).toContainText(TITLE);
     await expect(row).toContainText("done");
     await row.dispatchEvent("click");
@@ -144,6 +172,16 @@ test("tells the main session and every crewmate apart, then opens the settled ta
       MOCK_COMPLETION_TEXT,
     );
     await expect(detail.locator("[data-observe-transcript-note]")).toHaveCount(0);
+    await test.info().attach("kept-session", {
+      contentType: "application/json",
+      body: JSON.stringify({
+        taskId: record?.id,
+        status: record?.status,
+        selectedSession: await row.getAttribute("data-observe-session"),
+        transcript: await detail.locator('[data-observe-turn="assistant"]').first().innerText(),
+        newerQuestion: await crew.getByText(question, { exact: true }).innerText(),
+      }),
+    });
     await page.keyboard.press("Escape");
   });
 });

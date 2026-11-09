@@ -336,6 +336,7 @@ An unregistered custom property computes to its own token stream, so `--rail-doc
 
 The captain asked for a thread that stops pulling them down while they reread a longer reply (INF-3124, direction B).
 The list follows the thread only while the captain is at its foot: within 24 pixels of it, the slack the task's Crewmate tab follows its transcript with.
+Only the captain's own scroll up ends following: the column settling around the list, as when a first reply opens the thread and the card's choices move under the reply field, keeps it at the foot.
 Once they scroll up, nothing but their own scroll moves it: no message, turn start or end, crewmate command or waiting line.
 At the foot, new messages taller than the list open at their first line instead, so a long answer reads down from its start; the list then holds there.
 The captain's own reply always takes the list to its foot, so they see the author take it up.

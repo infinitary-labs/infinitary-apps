@@ -802,6 +802,9 @@ export function MessageList({
   // message or a tail that grows the list leaves it true until the list
   // follows, so only the reader's own scroll ends following.
   const atFoot = useRef(true);
+  // Where the list stood when it last measured: a scroll that moved it up
+  // from there is the reader's own (`scrolled`).
+  const measuredTop = useRef(0);
   const [above, setAbove] = useState(false);
   const [unread, setUnread] = useState<Unread | null>(null);
   // How many messages the list has placed; it opens at its foot.
@@ -811,9 +814,24 @@ export function MessageList({
     if (!node) return;
     const foot = node.scrollHeight - node.scrollTop - node.clientHeight <= FOLLOW_SLACK_PX;
     atFoot.current = foot;
+    measuredTop.current = node.scrollTop;
     setAbove(!foot);
     if (foot) setUnread(null);
   }, []);
+  // A scroll that did not move the list up never ends following. The list's
+  // own follow fires one, which can arrive after the column settled around
+  // the list - the card's choices moving under the reply field as a first
+  // reply opens the thread - and before the resize observer follows again:
+  // read as it stands, it would put a reader who never scrolled above the
+  // foot. A following list goes back to its foot instead; a pixel of
+  // rounding is not a scroll.
+  const scrolled = useCallback(() => {
+    const node = listRef.current;
+    if (!node) return;
+    if (atFoot.current && node.scrollTop >= measuredTop.current - 1)
+      node.scrollTop = node.scrollHeight;
+    measure();
+  }, [measure]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: a message or the tail is the trigger; `messages` is read as it stands then.
   useLayoutEffect(() => {
     const node = listRef.current;
@@ -888,7 +906,7 @@ export function MessageList({
         ref={listRef}
         data-thread-messages=""
         tabIndex={-1}
-        onScroll={measure}
+        onScroll={scrolled}
         style={{
           // The messages' offsets are measured from the list (`topOf`).
           position: "relative",

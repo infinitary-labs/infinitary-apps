@@ -260,7 +260,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       start_policy: Type.Optional(
         stringEnum(START_POLICY_VALUES, {
           description:
-            "As create_task's start_policy. on-request on started work moves it back to the backlog: its turn stops, its work stays, nothing wakes it until start_now picks it up. When the captain asks to pause a task, do this with a reason; never steer it to stay idle.",
+            "As create_task's start_policy. on-request on started work moves it back to the backlog: its turn stops, its work stays, its stuck card comes down, nothing wakes it until start_now picks it up, and you hear once if news reaches it there. Do this with a reason when the captain asks to pause a task, or when a stall wake shows it stopped on a blocker no steer will change; never steer it to stay idle.",
         }),
       ),
       // What [] declares is said once, on create_task's blocked_by.

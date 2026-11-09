@@ -30,6 +30,7 @@ import { initOverflowDir } from "../overflow";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import { TaskProtocol } from "../tasks/taskProtocol";
 import { TIMELINE_CAP } from "../tasks/timelineCompaction";
+import { SUPERVISOR_STEER } from "./crewRuntime";
 import { IDLE_ANSWER_NUDGE_TEXT, IDLE_NUDGE_TEXT, idleNoteNudgeText } from "./idleWakes";
 
 fakeCrewTimersEachTest();
@@ -353,7 +354,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         expect(body).not.toContain("Let the crewmate finish step one.");
         expect(backstop(h)?.actions.map((action) => action.label)).toEqual([
           "Nudge",
-          "Keep waiting",
+          "Back to backlog",
           "Discard",
         ]);
         expect(h.sorts.at(-1)).toEqual({ taskId: h.taskId, verdict: "captain", rule: "idle-card" });
@@ -547,6 +548,8 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     );
     expect(idleWakes(ops)[0]).toContain('"held": "idle-stall"');
     expect(idleWakes(ops)[0]).toContain('"tool": "interrupt_crewmate"');
+    // INF-3143, direction A: the stall wake offers the park where the wait shows.
+    expect(idleWakes(ops)[0]).toContain('"tool": "update_task"');
     expect(idleWakes(ops)[0]).toContain("Its last report: Done with step one.");
     expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "idle-wake" });
     expect(supervisor.facts.crewStatus(taskId)[0]?.stalled).toBe("stalled 20m · 1 wake");
@@ -575,13 +578,13 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     expect(card && cardTakesReplies(card)).toBe(true);
     expect(card?.actions.map((action) => action.label)).toEqual([
       "Nudge",
-      "Keep waiting",
+      "Back to backlog",
       "Discard",
     ]);
     expect(card?.body).toBe(
       "<p>It stopped with nothing running and no question for you. It was nudged once, and your first mate was told twice, and nothing has moved since.</p>" +
         "<p>What it last said: Done with step one.</p>" +
-        "<p>Nudge tells it to finish or say what is in its way. Keep waiting closes this alert and leaves the task as it is. Discard ends it and throws its work away. For anything else, reply here.</p>",
+        "<p>Nudge tells it to finish or say what is in its way. Back to backlog parks it with its work kept until you start it, and your first mate hears once if news reaches it. Discard ends it and throws its work away. For anything else, reply here.</p>",
     );
     expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "idle-card" });
     // The card's row records what went up, a line with no wake to type.
@@ -663,7 +666,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     expect(supervisor.facts.crewStatus(taskId)[0]?.stalled).toBeUndefined();
   });
 
-  it("the card's Nudge nudges with the captain's authority, and Keep waiting keeps the task quietly", async () => {
+  it("the card's Nudge nudges with the captain's authority", async () => {
     const first = await stopped();
     await first.at(minutes(10));
     await endTurn(first.crewmate, first.taskId);
@@ -679,23 +682,97 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     expect(first.tasks.get(first.taskId)?.recoveryRung).toBe(0);
     // The stall card's click is a card choice, never also a task card click.
     expect(first.tasks.taskCardClicksSince(0)).toEqual([]);
+  });
 
-    const second = await stopped();
-    await second.at(minutes(10));
-    await endTurn(second.crewmate, second.taskId);
-    for (const step of [20, 50, 80]) await second.at(minutes(step));
-    // INF-1670, the captain's written-in answer: Keep waiting closes the
-    // alert like the captain's close, steering nobody and ending nothing.
-    const prompts = second.crewmate.promptCalls.length;
-    second.supervisor.cardActions.act(`card-stall-${second.taskId}`, "keep-waiting");
-    await settle();
-    expect(second.cards()).toEqual([]);
-    expect(second.crewmate.promptCalls).toHaveLength(prompts);
-    expect(second.tasks.get(second.taskId)).toMatchObject({ status: "active", recoveryRung: 3 });
-    const opsBefore = second.ops.length;
-    await second.at(minutes(400));
-    expect(second.ops).toHaveLength(opsBefore);
-    expect(second.cards()).toEqual([]);
+  // INF-3143, direction A ("Park it where it shows up", the captain's
+  // Approve and build): a blocked task whose blocker has not changed parks
+  // where its wait shows, instead of the supervision cycle starting again.
+  describe("parking a stuck task in the backlog (INF-3143, direction A)", () => {
+    const backlogNews = (ops: string[]) =>
+      ops.filter((line) => line.includes("waited in the backlog"));
+
+    // The captain's pick on this build: Back to backlog takes Keep waiting's place.
+    it("the card's Back to backlog parks it: the card comes down, nothing climbs again, and its work stays", async () => {
+      const h = await stopped();
+      await h.at(minutes(10));
+      await endTurn(h.crewmate, h.taskId);
+      for (const step of [20, 50, 80]) await h.at(minutes(step));
+      const prompts = h.crewmate.promptCalls.length;
+      h.supervisor.cardActions.act(`card-stall-${h.taskId}`, "backlog");
+      await settle();
+      expect(h.cards().some((card) => card.id === `card-stall-${h.taskId}`)).toBe(false);
+      const parked = h.tasks.get(h.taskId);
+      expect(parked?.status).toBe("active");
+      expect(parked?.backlogSince).toEqual(expect.any(Number));
+      expect(parked?.sessionFile).toBeTruthy();
+      // Parked, the task is the captain's: no nudge, wake or card, however long.
+      const opsBefore = h.ops.length;
+      for (const idle of [200, 600, 1_200]) await h.at(minutes(idle));
+      expect(h.ops).toHaveLength(opsBefore);
+      expect(h.crewmate.promptCalls).toHaveLength(prompts);
+      expect(h.cards()).toEqual([]);
+    });
+
+    it("the first mate's move to the backlog takes the stuck card down too", async () => {
+      const h = await stopped();
+      await h.at(minutes(10));
+      await endTurn(h.crewmate, h.taskId);
+      for (const step of [20, 50, 80]) await h.at(minutes(step));
+      expect(h.cards().some((card) => card.id === `card-stall-${h.taskId}`)).toBe(true);
+      const moved = h.supervisor.hostOps.moveToBacklog(
+        h.taskId,
+        { actor: "firstmate", via: "tool", decision: null },
+        "Blocked on an outside fix that has not changed.",
+      );
+      await settle();
+      expect(moved.ok).toBe(true);
+      expect(h.cards().some((card) => card.id === `card-stall-${h.taskId}`)).toBe(false);
+    });
+
+    it("news from the app wakes the first mate once per stay, and the parked crewmate takes no turn for it", async () => {
+      const h = await stopped();
+      await h.at(minutes(10));
+      await endTurn(h.crewmate, h.taskId);
+      for (const step of [20, 50, 80]) await h.at(minutes(step));
+      h.supervisor.cardActions.act(`card-stall-${h.taskId}`, "backlog");
+      await settle();
+      const prompts = h.crewmate.promptCalls.length;
+      await h.at(minutes(140));
+      // A dependency closed: the host's own steer, held on the lane.
+      const first = await h.supervisor.steer.steerInternal(
+        h.taskId,
+        "The task this one waits on has closed.",
+        SUPERVISOR_STEER,
+      );
+      await settle();
+      expect(first).toBe("recorded-held");
+      expect(backlogNews(h.ops)).toHaveLength(1);
+      expect(backlogNews(h.ops)[0]).toContain(
+        `task ${h.taskId} "Job" has waited in the backlog for 1h`,
+      );
+      expect(backlogNews(h.ops)[0]).toContain("The news: The task this one waits on has closed.");
+      // More news in the same stay - a job's exit - is held and wakes nobody again.
+      h.supervisor.watch.deliverJobResult(h.taskId, "[job] the background wait ended");
+      await h.supervisor.steer.steerInternal(h.taskId, "Checks passed.", SUPERVISOR_STEER);
+      await settle();
+      expect(backlogNews(h.ops)).toHaveLength(1);
+      expect(h.crewmate.promptCalls).toHaveLength(prompts);
+      expect(h.inbox.allFor(h.taskId).length).toBeGreaterThanOrEqual(3);
+    });
+
+    it("the first mate's own words to a parked task are not news", async () => {
+      const h = await stopped();
+      await endTurn(h.crewmate, h.taskId);
+      h.supervisor.hostOps.moveToBacklog(h.taskId, {
+        actor: "firstmate",
+        via: "tool",
+        decision: null,
+      });
+      await settle();
+      await h.supervisor.steer.steerCrewmate(h.taskId, "Note the outside fix's issue link.");
+      await settle();
+      expect(backlogNews(h.ops)).toEqual([]);
+    });
   });
 
   // INF-1670: the captain's "why is there no reply box to ask questions?",

@@ -23,7 +23,7 @@ import { MainCheckWatcher } from "./mainCheckWake";
 import { RunWatcher } from "./runWatch";
 import type { Ticker } from "./ticker";
 import type { OpenCallFact } from "./turnWakes";
-import { laneText, laneTurnText, type WakeBody } from "./wakes";
+import { laneText, laneTurnText, renderWake, type WakeBody } from "./wakes";
 
 /**
  * The quiet-crewmate watchdog (P4): conservative thresholds, no settings
@@ -256,7 +256,10 @@ export class CrewWatch {
     if (task?.session && !task.cancelled) {
       this.noteTaskActivity(task);
       this.core.options.inbox.enqueue(taskId, result);
-      if (task.state === "idle") this.core.turns.deliverPendingToTask(task);
+      // A started task in the backlog keeps it on its lane until a Start.
+      if (this.core.facts.inBacklog(taskId))
+        this.core.steer.tellBacklogNews(taskId, renderWake(result));
+      else if (task.state === "idle") this.core.turns.deliverPendingToTask(task);
       return;
     }
     const record = this.core.options.tasks.get(taskId);
@@ -264,7 +267,11 @@ export class CrewWatch {
       this.core.options.inbox.enqueue(taskId, result);
       // A held lane keeps it until its account serves again, or until a
       // started task in the backlog is started again.
-      if (this.core.facts.laneHeld(taskId) || this.core.facts.inBacklog(taskId)) return;
+      if (this.core.facts.laneHeld(taskId)) return;
+      if (this.core.facts.inBacklog(taskId)) {
+        this.core.steer.tellBacklogNews(taskId, renderWake(result));
+        return;
+      }
       void this.core.sessions
         .resumeTask(taskId)
         .then((resumed) => this.core.turns.deliverPendingToTask(resumed))

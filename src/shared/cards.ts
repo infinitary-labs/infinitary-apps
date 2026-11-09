@@ -184,8 +184,8 @@ export type OpenEffect = z.infer<typeof openEffectSchema>;
  * plugin id; one plugin vehicle, Phase A, A2a), add or turn down a project
  * Firstmate proposed on the setup card (`arg` = the card's offer as JSON,
  * `ProjectSetupOffer`; Add project also reads the card's answers), tell a stuck
- * crewmate to carry on or stop its task (`arg` = task id; idle crew
- * recovery), move a started task off the provider that failed it to the
+ * crewmate to carry on or stop its task, or park it in the backlog with its
+ * work kept (`arg` = task id; idle crew recovery, INF-3143), move a started task off the provider that failed it to the
  * app's pick (`arg` = task id and that provider, joined by a colon; INF-849),
  * start a charted task now (`arg` = task id), ask the first mate to plan
  * a project's queue workflow or keep where its changes go while its batched
@@ -214,6 +214,7 @@ export const HOST_OPS = [
   "add-project",
   "decline-project",
   "continue-task",
+  "backlog-task",
   "move-task",
   "stop-task",
   "start-task",

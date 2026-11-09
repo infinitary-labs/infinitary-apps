@@ -4975,6 +4975,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "add-project",
     "decline-project",
     "continue-task",
+    "backlog-task",
     "move-task",
     "stop-task",
     "start-task",

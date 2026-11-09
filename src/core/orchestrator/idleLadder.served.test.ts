@@ -49,13 +49,15 @@ fakeCrewTimersEachTest();
 
 function withConsentLabels(block: string): string {
   const read = JSON.parse(block.slice(block.indexOf("{"), block.lastIndexOf("}") + 1));
+  // A stall's steer and its park in the backlog (INF-3143) keep work and need no consent.
+  const free = (way: { tool: string }) =>
+    read.held === "idle-stall" && (way.tool === "steer_crewmate" || way.tool === "update_task");
   read.ways = read.ways.map((way: { tool: string }) => ({
     ...way,
-    hold: read.held === "idle-stall" && way.tool === "steer_crewmate" ? "waits" : "asks-first",
-    basis: read.held === "idle-stall" && way.tool === "steer_crewmate" ? "record" : "consent",
-    approach:
-      read.held === "idle-stall" && way.tool === "steer_crewmate" ? "workaround" : "pass-hold",
-    needsConsent: !(read.held === "idle-stall" && way.tool === "steer_crewmate"),
+    hold: free(way) ? "waits" : "asks-first",
+    basis: free(way) ? "record" : "consent",
+    approach: free(way) ? "workaround" : "pass-hold",
+    needsConsent: !free(way),
   }));
   return `\n\`\`\`json\n${JSON.stringify(read, null, 2)}\n\`\`\``;
 }
@@ -113,14 +115,17 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(h.cards().filter((card) => card.taskId === h.taskId)).toEqual([]);
       expect(h.crewmate.promptCalls).toHaveLength(prompts);
 
-      // A job that ends while it waits stays on its lane.
+      // A job that ends while it waits stays on its lane, and the first
+      // mate hears once that news reached it (INF-3143, direction A).
       h.supervisor.watch.deliverJobResult(
         h.taskId,
         '[job] background job j1 finished: "make" exited 0',
       );
       await threeHours(h);
       expect(h.crewmate.promptCalls).toHaveLength(prompts);
-      expect(h.ops).toEqual([]);
+      expect(h.ops).toEqual([
+        `[fm-op] task ${h.taskId} "Job" has waited in the backlog for 3h, and news from the app reached it there; its crewmate hears it only once it starts again. If the news means it can move, start it with update_task start_now; otherwise leave it parked. You are told this once per stay in the backlog. The news: [job] background job j1 finished: "make" exited 0`,
+      ]);
 
       // The captain's Start carries it on in the same conversation, the job result after one line.
       expect(h.supervisor.hostOps.runTaskOp(h.taskId, "start-task")).toBeUndefined();
@@ -786,6 +791,14 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       "tool": "steer_crewmate",
       "args": {
         "task_id": "${id}"
+      }
+    },
+    {
+      "label": "Park it in the backlog until something changes",
+      "tool": "update_task",
+      "args": {
+        "task": "${id}",
+        "start_policy": "on-request"
       }
     },
     {

@@ -21,12 +21,19 @@ import { DROP_TASK_LABEL } from "@shared/recordDrop";
 import { type RecoveryWay, recoveryConsent } from "@shared/recovery";
 import { escalationFloor } from "../routing/policy";
 
+/**
+ * The stall's park (INF-3143, direction A): a blocker no steer can change
+ * waits in the backlog, its work kept, instead of the idle ladder starting
+ * over on every steer.
+ */
+export const BACKLOG_PARK_LABEL = "Park it in the backlog until something changes";
+
 /** One way out of a hold: exactly what the Firstmate runs to take it. */
 export type HoldWay = {
   hold?: HoldKind;
   approach?: RecoveryWay["approach"];
   label: string;
-  tool: "steer_crewmate" | "spawn_crewmate" | "settle_task" | "interrupt_crewmate";
+  tool: "steer_crewmate" | "spawn_crewmate" | "settle_task" | "interrupt_crewmate" | "update_task";
   args: Record<string, unknown>;
 };
 
@@ -89,11 +96,14 @@ export function crewHoldWays(
 }
 
 /**
- * The three ways out of an idle stall (docs/report-sort.md, "The idle
- * ladder"): a crewmate that stopped with nothing running, no card up and
- * nothing queued, after the host's own nudge did not move it. The same
- * three its host card offers the captain if the Firstmate takes none:
- * tell it what to do, drop the task, or throw the work away.
+ * The ways out of an idle stall (docs/report-sort.md, "The idle ladder"):
+ * a crewmate that stopped with nothing running, no card up and nothing
+ * queued, after the host's own nudge did not move it. Tell it what to do,
+ * park it in the backlog with its work kept until news reaches it or a
+ * Start (INF-3143's direction A: a blocker no steer can change parks
+ * where its wait shows, rather than starting the cycle again), drop the
+ * task, or throw the work away. Its host card offers the captain the same
+ * steer, park and discard if the Firstmate takes none.
  */
 export function idleStallWays(taskId: string): HoldWay[] {
   return [
@@ -103,6 +113,13 @@ export function idleStallWays(taskId: string): HoldWay[] {
       label: "Tell it what to do next",
       tool: "steer_crewmate",
       args: { task_id: taskId },
+    },
+    {
+      hold: "waits",
+      approach: "workaround",
+      label: BACKLOG_PARK_LABEL,
+      tool: "update_task",
+      args: { task: taskId, start_policy: "on-request" },
     },
     {
       label: DROP_TASK_LABEL,

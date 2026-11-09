@@ -184,6 +184,23 @@ export class HostOps {
         // captain's authority - a new turn, which ends the episode.
         if (effect.arg) this.continueStuckTask(effect.arg, "card");
         return {};
+      case "backlog-task": {
+        // The stall card's Back to backlog (INF-3143, direction A): the
+        // captain parks a task stopped on a blocker nothing will change soon.
+        if (!effect.arg) return {};
+        const moved = this.moveToBacklog(effect.arg, {
+          actor: "captain",
+          via: "shell",
+          decision: null,
+        });
+        if (!moved.ok)
+          this.core.options.broadcastEvent({
+            type: "firstmate_note",
+            text: moved.text,
+            taskId: effect.arg,
+          });
+        return {};
+      }
       case "stop-task":
         if (effect.arg) this.core.sessions.stopTask(effect.arg, "shell");
         return {};
@@ -376,7 +393,10 @@ export class HostOps {
    * kept merge approval ends, as an interrupt does; its working copy,
    * branch, conversation, change and jobs stay. Nothing the host sends
    * wakes it there, and Start picks it up in the same conversation
-   * (`startFromBacklog`).
+   * (`startFromBacklog`). Its stuck card comes down with the move, since
+   * the backlog is now where its wait shows (INF-3143, direction A), and
+   * the first mate hears once if the host's news reaches it there
+   * (`CrewSteer.tellBacklogNews`).
    */
   moveToBacklog(
     taskId: string,
@@ -394,6 +414,7 @@ export class HostOps {
     });
     if (!result.ok) return result;
     if (!result.changed) return { ok: true, text: `${handle} already waits in the backlog.` };
+    this.core.ladder.withdrawStallCard(taskId);
     void this.core.sessions
       .interruptCrewmate(taskId, "interrupt", { ...source, backlog: true })
       .catch((caught: unknown) => {

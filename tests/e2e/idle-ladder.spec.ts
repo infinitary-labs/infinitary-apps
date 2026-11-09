@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { stallCardId, stallCardTitle } from "../../src/core/orchestrator/idleLadder";
@@ -30,13 +30,17 @@ import { cardReply, cardSurface, expectNoCard, shownCard, shownEntry } from "./s
  * ways out and a reply row. INF-1670, the captain's words: "i would remove
  * the "drop task" option and leave nuanced operations to the reply". His
  * question under it reaches the first mate, whose answer lands in the
- * card's thread, and Keep waiting closes the card and leaves the task open.
+ * card's thread. INF-3143, the captain's direction A ("Park it where it
+ * shows up"): Back to backlog, in Keep waiting's place, parks a task whose
+ * blocker nothing will change soon instead of a Nudge starting the cycle
+ * again - the card leaves, and the task stays started with its work kept.
  *
- * Promised result: the alert shows Nudge, Keep waiting and Discard and a
- * reply row; a reply is answered in its thread; Keep waiting ends nothing.
+ * Promised result: the alert shows Nudge, Back to backlog and Discard and a
+ * reply row; a reply is answered in its thread; Back to backlog parks the
+ * task in the backlog with its working copy kept.
  * Data: a task saved idle past both wakes, and the stand-in first mate.
- * Completion: the answer in the thread, then the card gone and the task
- * still open. Platform: Electron, the hermetic launcher and the stand-in
+ * Completion: the answer in the thread, then the card gone and the board
+ * reading the task as started in the backlog. Platform: Electron, the hermetic launcher and the stand-in
  * provider; no account, outside service or shared resource.
  */
 
@@ -105,10 +109,11 @@ test("a crewmate stuck past every nudge and wake is the app's own card, which ta
     await expect(body.getByText("What it last said: I updated the index.")).toBeVisible();
     await expect(body.getByText("For anything else, reply here.")).toBeVisible();
     const entry = shownEntry(page);
-    for (const label of ["Nudge", "Keep waiting", "Discard"]) {
+    for (const label of ["Nudge", "Back to backlog", "Discard"]) {
       await expect(entry.getByRole("button", { name: label, exact: true })).toBeVisible();
     }
-    await expect(entry.getByRole("button", { name: "Drop task", exact: true })).toHaveCount(0);
+    for (const gone of ["Drop task", "Keep waiting"])
+      await expect(entry.getByRole("button", { name: gone, exact: true })).toHaveCount(0);
     // The app's own card, and none of the machinery names itself.
     const cards = await page.evaluate(() => window.infinitary.cards.list());
     expect(
@@ -129,17 +134,18 @@ test("a crewmate stuck past every nudge and wake is the app's own card, which ta
     await expect(thread.getByText(STUCK_ALERT_ANSWER)).toBeVisible({ timeout: 30_000 });
     await expect(shownCard(page, title)).toBeVisible();
 
-    // Keep waiting closes the alert and ends nothing.
-    const status = () =>
+    // Back to backlog parks it: the alert leaves, the task stays started in
+    // the backlog, and its working copy stays.
+    await entry.getByRole("button", { name: "Back to backlog", exact: true }).click();
+    await expectNoCard(page, title);
+    const parked = () =>
       page.evaluate(async () => {
         const board = await window.infinitary.tasks.board();
-        return board.tasks.find((task) => task.id === "stuck-task")?.status;
+        const task = board.tasks.find((each) => each.id === "stuck-task");
+        return { status: task?.status, inBacklog: task?.backlogSince !== undefined };
       });
-    const before = await status();
-    expect(before).toBe("active");
-    await entry.getByRole("button", { name: "Keep waiting", exact: true }).click();
-    await expectNoCard(page, title);
-    expect(await status()).toBe(before);
+    await expect.poll(parked).toEqual({ status: "active", inBacklog: true });
+    expect(existsSync(worktreeDir)).toBe(true);
   } finally {
     await launched.close();
   }

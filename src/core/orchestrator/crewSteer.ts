@@ -4,6 +4,7 @@ import type { TurnImage } from "@shared/cards";
 import type { ResponsePolicy } from "@shared/crewResponses";
 import type { CrewSendResult } from "@shared/crewTranscript";
 import { CREWMATE_TAB_VIA, type TASK_CARD_VIA } from "@shared/provenance";
+import { capWithOverflow } from "../overflow";
 import type { ModelSession } from "../session/session";
 import { TaskService } from "../tasks/taskService";
 import type { CrewCore } from "./crewCore";
@@ -239,6 +240,7 @@ export class CrewSteer {
       if (this.core.facts.laneHeld(taskId) || (sentByHost && this.core.facts.inBacklog(taskId))) {
         // Kept on the lane until the account serves again, or the task leaves the backlog.
         this.recordSteer(taskId, message, source, "recorded-held", pending);
+        if (sentByHost) this.tellBacklogNews(taskId, message);
         return "recorded-held";
       }
       this.recordSteer(taskId, message, source, "mid-turn", pending);
@@ -261,6 +263,7 @@ export class CrewSteer {
     const resumeId = enqueue();
     if (this.core.facts.laneHeld(taskId) || (sentByHost && this.core.facts.inBacklog(taskId))) {
       this.recordSteer(taskId, message, source, "recorded-held", resumeId);
+      if (sentByHost) this.tellBacklogNews(taskId, message);
       return "recorded-held";
     }
     try {
@@ -273,6 +276,34 @@ export class CrewSteer {
       this.recordSteer(taskId, message, source, "recorded-retrying", resumeId);
       return "recorded-retrying";
     }
+  }
+
+  /**
+   * The host's news - a closed dependency, a check's result, a job's exit -
+   * reached a started task in the backlog, where it waits on the lane until
+   * a Start. The first mate hears it once per stay there (INF-3143,
+   * direction A): a parked blocker that changes is not missed, and news
+   * that changes nothing wakes nobody again. A task outside the backlog,
+   * or one already told about this stay, sends nothing.
+   */
+  tellBacklogNews(taskId: string, news: string): void {
+    const record = this.core.options.tasks.get(taskId);
+    if (record?.status !== "active" || record.backlogSince == null) return;
+    const once = `backlog-news:${record.backlogSince}`;
+    if (this.core.options.inbox.woken(taskId, once)) return;
+    this.core.routeCrewEvent(
+      taskId,
+      {
+        once,
+        facts: {
+          kind: "backlog-news",
+          task: { id: taskId, title: record.title },
+          waitedMs: Math.max(0, this.core.now() - record.backlogSince),
+          news: capWithOverflow(news, "backlog-news"),
+        },
+      },
+      "agent",
+    );
   }
 
   /**

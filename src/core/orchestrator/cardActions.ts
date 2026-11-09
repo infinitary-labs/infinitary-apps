@@ -704,8 +704,8 @@ export class CardActions {
     } else if (card.taskId && !closedAnswer && card.author !== "host") {
       // The action round-trip: a declared choice on a crewmate's card
       // reaches its still-running session as a steering message. A host
-      // card's choice with no effect - the stuck alert's Keep waiting - only
-      // closes that alert for this episode. The minus instead keeps it pending.
+      // card's choice with no effect only closes that card. The minus
+      // instead keeps it pending.
       this.steerChoice(card.taskId, card, source, choice);
     }
     return {};

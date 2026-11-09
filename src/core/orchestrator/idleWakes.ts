@@ -82,6 +82,19 @@ export type IdleFacts =
       last?: { kind: "report" | "failed"; excerpt: string };
     }
   | {
+      /**
+       * The host's news reached a started task in the backlog, where it waits
+       * on its lane until a Start (INF-3143, direction A): told once per stay
+       * there, so a parked blocker that changes is not missed.
+       */
+      kind: "backlog-news";
+      task: WakeTask;
+      /** How long it has waited in the backlog when the news reached it. */
+      waitedMs: number;
+      /** The news as its lane holds it, already capped for a wake. */
+      news: string;
+    }
+  | {
       /** Rung 2 (and its repeat) on a task a captain gate holds with no card up. */
       kind: "idle-owed";
       held: "ci-cap" | "review-cap" | "captain-gate";
@@ -286,6 +299,8 @@ export const IDLE_WORDS: KindWords<IdleFacts> = {
       return `[fm-op] ${crewmate} on task ${facts.task.id} "${facts.task.title}" declared its work finished ${formatDurationShort(facts.askedMs)} ago with no card of its own up, so nothing is left for it and it is not nudged. ${since}${builtOnText(facts.builtOn)}${reminder} Close the task if the record bears that out, or steer the crewmate with what is still missing.${last}`;
     return `[fm-op] ${crewmate} on task ${facts.task.id} "${facts.task.title}" asked you ${formatDurationShort(facts.askedMs)} ago to act: ${facts.request ?? ""}. ${since}${builtOnText(facts.builtOn)}${reminder} The ask authorizes nothing by itself; the captain's own words do. Act on it, or steer the crewmate to tell it why not.${last}`;
   },
+  "backlog-news": (facts) =>
+    `[fm-op] task ${facts.task.id} "${facts.task.title}" has waited in the backlog for ${formatDurationShort(facts.waitedMs)}, and news from the app reached it there; its crewmate hears it only once it starts again. If the news means it can move, start it with update_task start_now; otherwise leave it parked. You are told this once per stay in the backlog. The news: ${facts.news}`,
   "idle-owed": (facts, wake) => {
     if (facts.held !== "captain-gate") return retiredCountHold(facts.task);
     return renderHold(

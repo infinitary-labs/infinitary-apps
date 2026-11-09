@@ -31,6 +31,7 @@ export type FirstmateWakeKind =
   | "queue-stalled"
   | "validation-question-stale"
   | "idle-stall"
+  | "backlog-news"
   | "idle-asked"
   | "idle-owed"
   | "outage-failed"

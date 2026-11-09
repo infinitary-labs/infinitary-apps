@@ -1251,9 +1251,9 @@ export class IdleLadder {
    * raises its own card - the app's attention, like the sign-in card. Like
    * every card with actions it places the captain gate on its task, so it
    * holds the turn while it is up and nothing repeats; it leaves on a
-   * choice, including explicit Keep waiting (rung 3 stays, nothing more
-   * this episode), when the task moves - unless a reply under it still waits
-   * on the first mate, which answers it (INF-1670) - or when the task closes.
+   * choice (Back to backlog parks the task, INF-3143), when the task moves -
+   * unless a reply under it still waits on the first mate, which answers it
+   * (INF-1670) - when it goes back to the backlog, or when the task closes.
    * The minus only minimizes the alert and keeps its card and gate pending.
    */
   private raiseStallCard(record: TaskRecord, now: number): void {
@@ -1318,7 +1318,7 @@ export class IdleLadder {
         opening,
         recovery,
         lastLine,
-        `<p>${nudges} Keep waiting closes this alert and leaves the task as it is. Discard ends it and throws its work away. For anything else, reply here.</p>`,
+        `<p>${nudges} Back to backlog parks it with its work kept until you start it, and your first mate hears once if news reaches it. Discard ends it and throws its work away. For anything else, reply here.</p>`,
       ].join(""),
       // The captain's choice on INF-1670: a reply here goes to the first
       // mate, which can always answer, and nuanced operations ride it.
@@ -1332,11 +1332,14 @@ export class IdleLadder {
           effect: { kind: "host", op: "continue-task", arg: record.id },
         },
         {
-          // No effect: explicit Keep waiting closes the alert for this
-          // episode. The minus only puts it aside and keeps it pending.
-          id: "keep-waiting",
-          label: "Keep waiting",
+          // INF-3143's direction A: a blocker nothing will change soon parks
+          // where its wait shows, its work kept, instead of a Nudge starting
+          // the cycle again. It took Keep waiting's place (the captain's
+          // pick: a card holds three buttons).
+          id: "backlog",
+          label: "Back to backlog",
           variant: "secondary",
+          effect: { kind: "host", op: "backlog-task", arg: record.id },
         },
         {
           id: "discard",

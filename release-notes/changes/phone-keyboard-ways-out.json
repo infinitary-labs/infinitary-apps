@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "phone-keyboard-ways-out",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Close the keyboard from the reply on iPhone and iPad",
+      "body": "On iPhone and iPad, while you type a reply under a card or a message to your first mate, a keyboard-down button sits inside the field just before the send arrow, and a press closes the keyboard. Pulling down anywhere on the card, or tapping its head, closes it too. Your words and photos stay, and the card's choices stay where they are.",
+      "noPicture": "The phone check pictures the reply on iPhone and iPad upright, while a hero picture is a landscape pair cropped from the desktop app's window.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

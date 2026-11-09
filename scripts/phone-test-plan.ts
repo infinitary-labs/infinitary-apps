@@ -56,6 +56,8 @@ export const PHONE_PARTS = [
   // INF-2568: the message box and a card's reply with the keyboard up; each launches fresh and the merge fixture runs once a home.
   { name: "keyboard-pinned", test: "testKeyboardOverPinnedCard", photos: false },
   { name: "keyboard-scrolling", test: "testKeyboardOverScrollingCard", photos: false },
+  // INF-3106: each way out of a card's reply keyboard and the message box's, the keyboard-down button among them.
+  { name: "keyboard-ways-out", test: "testKeyboardWaysOut", photos: false },
   // INF-2989: the weak link checks (INF-2668, INF-2669) wait out real links and silences, about five minutes a
   // device, which doubled the rest part they joined. An app-hosted class of their own, so a change to the other
   // app-hosted tests repeats only the rest part and a change to these repeats only them.

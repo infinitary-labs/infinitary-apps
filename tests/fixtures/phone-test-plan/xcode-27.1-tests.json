@@ -63,6 +63,7 @@
   "InfinitaryUITests/PhoneJourney/testJoinByAddress",
   "InfinitaryUITests/PhoneJourney/testKeyboardOverPinnedCard",
   "InfinitaryUITests/PhoneJourney/testKeyboardOverScrollingCard",
+  "InfinitaryUITests/PhoneJourney/testKeyboardWaysOut",
   "InfinitaryUITests/PhoneJourney/testMenuPickSurvivesAWorkspaceRedraw",
   "InfinitaryUITests/PhoneJourney/testMergeCard",
   "InfinitaryUITests/PhoneJourney/testRelaunchPairsFirstTen",

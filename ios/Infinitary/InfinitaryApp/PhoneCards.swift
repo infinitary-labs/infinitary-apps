@@ -403,6 +403,11 @@ private struct PhoneCardPane: View {
             front.modifier(PhoneCardTurn(angle: turnAngle, back: false))
             if backMounted && !messages.isEmpty { back.modifier(PhoneCardTurn(angle: turnAngle, back: true)) }
         }
+        // INF-3106 direction B: a pull down that starts anywhere on the card, its head included, puts the keyboard away.
+        .simultaneousGesture(DragGesture(minimumDistance: 16).onEnded { value in
+            if messageContext.keyboardUp && value.translation.height > 30
+                && value.translation.height > abs(value.translation.width) { dismissPhoneKeyboard() }
+        })
         .coordinateSpace(.named(Self.paneSpace))
         .offset(y: -lift)
         // INF-2568: the pane is the room the stage offers, never the card's own height, so a card taller than the room the
@@ -584,6 +589,9 @@ private struct PhoneCardPane: View {
                     .padding(.bottom, PhoneTheme.space2).accessibilityIdentifier("thread-title")
             }
             .padding(.leading, PhoneTheme.space3).padding(.trailing, PhoneTheme.space4)
+            // INF-3106 direction B: a tap on the thread's head puts the keyboard away; Card still turns the card over.
+            .contentShape(Rectangle())
+            .onTapGesture { if messageContext.keyboardUp { dismissPhoneKeyboard() } }
             .fixedSize(horizontal: false, vertical: true)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { backHeadHeight = $0 }
             ScrollView {
@@ -706,6 +714,8 @@ private struct PhoneCardPane: View {
                 .accessibilityIdentifier("put-aside-card").disabled(host.changing || (!card.isPast && !session.canChange))
         }
         .contentShape(Rectangle())
+        // INF-3106 direction B: a tap on the card's head puts the keyboard away; the head's own buttons keep their taps.
+        .onTapGesture { if messageContext.keyboardUp { dismissPhoneKeyboard() } }
         .simultaneousGesture(DragGesture(minimumDistance: 44).onEnded { value in
             // Paging belongs to native chrome, never a body's slider, canvas or pinch gesture.
             if !card.isPast && abs(value.translation.width) > abs(value.translation.height) * 1.5 {
@@ -894,6 +904,7 @@ private struct PhoneCardPane: View {
                         .frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
                 }.accessibilityIdentifier("send-reply")
                     .disabled(!canSendReply)
+                    .hidesKeyboardBefore(replyFocus == side && messageContext.keyboardUp)
             }.phoneInput()
                 // INF-589 item 11: the line under the composer says why; the reply row only dims.
                 .opacity(session.canChange ? 1 : 0.5)

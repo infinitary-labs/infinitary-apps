@@ -110,6 +110,8 @@ export const PART_OWNERS: Record<string, readonly string[]> = {
     "ios/Infinitary/InfinitaryApp/PhoneCards.swift",
     "ios/Infinitary/InfinitaryApp/PhoneWorkspace.swift",
     "ios/Infinitary/InfinitaryApp/MessageComposer.swift",
+    // INF-3106: the keyboard-down button in the reply and the message box.
+    "ios/Infinitary/InfinitaryApp/PhoneHideKeyboard.swift",
   ],
   rest: ["ios/Infinitary/InfinitaryApp/PhoneCharacter.swift"],
 };

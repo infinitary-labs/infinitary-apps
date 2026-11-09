@@ -79,7 +79,18 @@ class Project {
 
   /** An approver's Infinitary marking the version waiting, as its merge click does. */
   approve(number: number): void {
-    this.write(sha(number), "pending", WAITING, "");
+    this.write(this.headOf(number), "pending", WAITING, "");
+  }
+
+  /** The pull request's current version. */
+  headOf(number: number): string {
+    return this.pulls.get(number)?.head.sha ?? sha(number);
+  }
+
+  /** A new version of the pull request, such as its crewmate's fix after a pause. */
+  push(number: number, head: string): void {
+    const pull = this.pulls.get(number);
+    if (pull) pull.head = { sha: head };
   }
 
   write(at: string, state: string, description: string, url: string, context = QUEUE): void {
@@ -97,7 +108,9 @@ class Project {
   }
 
   queueOf(number: number) {
-    const latest = this.statuses.get(sha(number))?.find((status) => status.context === QUEUE);
+    const latest = this.statuses
+      .get(this.headOf(number))
+      ?.find((status) => status.context === QUEUE);
     return latest ? { ...queueKind(latest.state, latest.description), ...latest } : undefined;
   }
 
@@ -584,6 +597,124 @@ describe("the shipped queue on GitHub", () => {
     await expect(
       answer({ ...runOf(project, 511).args, action: "resume", reason: " " }),
     ).rejects.toThrow(/Say why/);
+  });
+
+  // INF-3183's approved plan, piece three: "A by-hand send-back writes its
+  // failure only on the version that carried the paused status. When the
+  // pull request has moved on, it writes nothing, says so in the pause
+  // issue, and resumes the rest." The chain it replays: a batch pauses, the
+  // change's crewmate pushes the fix, and a repair then sends the change
+  // back by its number.
+  it("sends back nothing when the pull request moved on from its paused version, says so on the issue, and the next batch takes the fix", async () => {
+    const project = new Project();
+    for (const number of [91, 92, 93]) {
+      project.open(number);
+      project.approve(number);
+    }
+    const first = await formRun(project, 509);
+    await decide({
+      ...runOf(project, 509).args,
+      result: "failure",
+      members: first.members,
+      tree: TREE,
+    });
+    project.runs.set(509, { id: 509, status: "completed", conclusion: "failure" });
+    const fixed = sha(9_200);
+    project.push(92, fixed);
+
+    const sent = runOf(project, 510);
+    await answer({
+      ...sent.args,
+      action: "send-back",
+      number: "92",
+      reason: "it breaks the checkout page",
+    });
+
+    // Nothing is written on the fix, which no batch ran, nor on the paused
+    // version the pull request left.
+    expect(project.statuses.get(fixed)).toBeUndefined();
+    expect(project.statuses.get(sha(92))?.[0]).toMatchObject({ state: "pending" });
+    expect(queueKind("pending", project.statuses.get(sha(92))?.[0]?.description)).toMatchObject({
+      kind: "paused",
+      run: 509,
+    });
+    expect(project.queueOf(91)).toMatchObject({ kind: "waiting" });
+    expect(project.queueOf(93)).toMatchObject({ kind: "waiting" });
+    expect(project.issues[0]?.state).toBe("closed");
+    expect(project.issues[0]?.comments).toEqual([
+      "#92 was not sent back: its pull request moved on to a version no batch has run, so the queue wrote nothing on it and resumed the rest. The reason given: it breaks the checkout page",
+    ]);
+    expect(sent.notices).toEqual([
+      "#92 was not sent back, since its pull request moved on to a version no batch has run; 2 paused changes wait again.",
+    ]);
+    expect(project.dispatches).toHaveLength(1);
+
+    // Once the approver's Infinitary marks the fix waiting, it joins the
+    // next batch with the rest, after them in approval order.
+    project.approve(92);
+    const next = await formRun(project, 511);
+    expect(next.members).toEqual([
+      { number: 91, head: sha(91) },
+      { number: 93, head: sha(93) },
+      { number: 92, head: fixed },
+    ]);
+  });
+
+  it("sends back nothing on a version the approver marked waiting since the pause", async () => {
+    const project = new Project();
+    for (const number of [94, 95]) {
+      project.open(number);
+      project.approve(number);
+    }
+    const first = await formRun(project, 512);
+    await decide({
+      ...runOf(project, 512).args,
+      result: "failure",
+      members: first.members,
+      tree: TREE,
+    });
+    const fixed = sha(9_500);
+    project.push(95, fixed);
+    project.approve(95);
+
+    await answer({
+      ...runOf(project, 513).args,
+      action: "send-back",
+      number: "95",
+      reason: "the fix is pushed",
+    });
+
+    expect(project.queueOf(95)).toMatchObject({ kind: "waiting" });
+    expect(project.statuses.get(fixed)).toHaveLength(1);
+    expect(project.queueOf(94)).toMatchObject({ kind: "waiting" });
+    expect(project.issues[0]?.comments).toEqual([
+      '#95 was not sent back: its current version is not paused but reads "Waiting for the batch check", so the queue wrote nothing on it and resumed the rest. The reason given: the fix is pushed',
+    ]);
+  });
+
+  it("sends back a change in a batch run that is still running, which the run's verdict takes as its answer", async () => {
+    const project = new Project();
+    for (const number of [96, 97]) {
+      project.open(number);
+      project.approve(number);
+    }
+    const { members } = await formRun(project, 514);
+
+    await answer({
+      ...runOf(project, 515).args,
+      action: "send-back",
+      number: "97",
+      reason: "it breaks the cart",
+    });
+    expect(project.queueOf(97)).toMatchObject({
+      kind: "failed",
+      description: "Sent back: it breaks the cart",
+    });
+
+    const verdictRun = runOf(project, 514);
+    await decide({ ...verdictRun.args, result: "failure", members, tree: TREE });
+    expect(project.queueOf(96)).toMatchObject({ kind: "waiting" });
+    expect(project.issues).toEqual([]);
   });
 
   // The captain's answers on the review (checks-inherit-queue-writes, "Limit

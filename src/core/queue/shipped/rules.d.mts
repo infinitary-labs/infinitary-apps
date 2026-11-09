@@ -57,7 +57,18 @@ export function resume(
   entries: readonly QueueEntry[],
   options: { url: string; except?: number },
 ): StatusWrite[];
-export function sendBack(entry: Member, options: { reason: string; url: string }): StatusWrite;
+export function sendBack(
+  entry: Member & { queue?: QueueState | null },
+  options: { reason: string; url: string },
+): StatusWrite | null;
+export function answerWords(options: {
+  number?: number;
+  sent?: boolean;
+  queue?: QueueState | null;
+  reason: string;
+  resumed: number;
+  change?: string;
+}): { issue: string; log: string };
 export function headList(members: readonly Member[]): string;
 export function readComposition(
   output: string,

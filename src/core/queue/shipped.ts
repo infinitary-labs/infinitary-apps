@@ -39,11 +39,13 @@ export const GITHUB_QUEUE_SOURCES: readonly string[] = [
   "ea521b053773608a62f541f5f4ed9bda15a9d576dcf82ed08e1cec174260ee17",
   "1cba7c9d4711c1ded5cf42737d867927a4849142dc1a51ee77390810d1f87d6c",
   "524707ed5e64bbcdefd1d294a24f5f9a3f2f6cb9d7487950499776c7d5ba5a36",
+  "5d9f09b7625e3fb682d61c2792fe3df00fd643434ed4b079188eff9e5b0e525d",
 ];
 export const GITLAB_QUEUE_SOURCES: readonly string[] = [
   "b41bb2e51bccbe8ec5285463ce6ffe6aa58bbe3f0cd1a48c0d1b169dd7d91cc5",
   "c001b31292be9fb70b410b4a5a3ba91e0d0ed624b975511ef2e1b426a98bc3b6",
   "1b43786a46117544d2135b02691d758d6f4c4769c76efa2708e3a2640db53304",
+  "d10e6f4b32d908d677b196dd0b948514d53010e679e6ba956a07497478307f7b",
 ];
 
 /** The stamp's words after its comment mark, on each shipped file's first line (the second under a shebang). */

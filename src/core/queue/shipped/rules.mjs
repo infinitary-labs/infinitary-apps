@@ -173,15 +173,53 @@ export function resume(entries, { url, except }) {
     }));
 }
 
-/** A send-back's write: the change fails with the reason, at most the length hosts keep. */
+/**
+ * A send-back's write: the change fails with the reason, at most the length
+ * hosts keep, on the version the queue holds it at - its current version,
+ * while that version's queue state is paused, or in a batch run whose
+ * verdict then takes the send-back as its answer. A change whose pull
+ * request moved on since, such as a fix pushed after the pause, carries
+ * neither there, so there is nothing to send back (null): the host part
+ * writes nothing, and that version's own checks and approval decide it.
+ */
 export function sendBack(entry, { reason, url }) {
   if (!reason?.trim()) throw new Error("A send-back needs a reason.");
+  const kind = entry.queue?.kind;
+  if (kind !== "paused" && kind !== "in-batch") return null;
   return {
     number: entry.number,
     head: entry.head,
     state: "failure",
     description: `Sent back: ${reason.trim()}`.slice(0, DESCRIPTION_MAX),
     url,
+  };
+}
+
+/**
+ * What a by-hand answer says on the pause's issue and in its run: a resume,
+ * a send-back (`number`) that wrote its failure (`sent`), or one that wrote
+ * nothing, saying what the change's current version reads instead (`queue`,
+ * its queue state there). `change` is what the host calls a pull request.
+ */
+export function answerWords({ number, sent, queue, reason, resumed, change = "pull request" }) {
+  const why = reason.trim();
+  const rest = `${resumed} paused changes wait again.`;
+  if (number === undefined)
+    return {
+      issue: `The queue was resumed by hand: ${why}`,
+      log: `The queue was resumed; ${rest}`,
+    };
+  if (sent)
+    return {
+      issue: `#${number} was sent back by hand: ${why}`,
+      log: `#${number} was sent back; ${rest}`,
+    };
+  const read = queue
+    ? `its current version is not paused but reads "${queue.description}"`
+    : `its ${change} moved on to a version no batch has run`;
+  return {
+    issue: `#${number} was not sent back: ${read}, so the queue wrote nothing on it and resumed the rest. The reason given: ${why}`,
+    log: `#${number} was not sent back, since ${read}; ${rest}`,
   };
 }
 

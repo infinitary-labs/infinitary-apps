@@ -30,18 +30,22 @@ On GitLab the queue runs nothing again before it pauses, so read the logs for a 
   Once its approver approves it, the queue ends the pause and the next batch takes every paused change, every waiting change and the fix.
   Say in the issue which pull request is the fix.
 - **Send one change back.** When one change alone breaks the batch, start the queue's workflow by hand with `action` `send-back`, its number and a reason.
-  That change fails with the reason, its own crew repairs it, and the rest resume.
-  When the failure lands on a version that already holds the fix, that change's crewmate answers it with check_change, and the change goes back to waiting with no new version and no new click.
+  That change fails with the reason on the version the batch ran, its own crew repairs it, and the rest resume.
+  A change pushed again since the batch ran gets nothing written, and the issue says so: its new version goes in a later batch once it is marked waiting.
+  When a failure still lands on a version that needs no change, that change's crewmate answers it with check_change, and the change goes back to waiting with no new version and no new click.
 - **Resume after a flake.** When the failure does not come from any change in the batch, file the flaky test's owner first, then start the queue's workflow by hand with `action` `resume` and a reason that names that owner.
 
 Starting the workflow by hand is `POST /repos/{owner}/{repo}/actions/workflows/infinitary-queue.yml/dispatches` with `ref` the default branch and `inputs` `{ "action": ..., "number": ..., "reason": ... }`.
 On GitLab no pipeline takes an answer, so make the answer's writes yourself through GitLab's API, in this order, the same writes Settings makes:
 
-1. For a send-back, fail that merge request's head: `POST /projects/{id}/statuses/{sha}` with `name` `infinitary/queue`, `state` `failed` and `description` `Sent back: ` and the reason, at most 140 characters.
+1. For a send-back, read that merge request's head's newest `infinitary/queue` status first, the same read as step 2.
+   Only when it reads `Paused after batch run` or `In batch run`, fail that head: `POST /projects/{id}/statuses/{sha}` with `name` `infinitary/queue`, `state` `failed` and `description` `Sent back: ` and the reason, at most 140 characters.
+   When the merge request moved on, so its head has no such status, write nothing on it.
 2. Turn every other paused merge request back to waiting.
    A paused one is open and its head's newest `infinitary/queue` status reads `Paused after batch run` (`GET /projects/{id}/repository/commits/{sha}/statuses?name=infinitary/queue&all=true`).
    Post on its head `state` `skipped` and `description` `Waiting for the batch check`.
 3. Post a note on the issue, `The queue was resumed by hand: ` or `!N was sent back by hand: ` and the reason, then close it with `PUT /projects/{id}/issues/{iid}` and `state_event` `close`.
+   For a send-back that wrote nothing, the note says `!N was not sent back: ` and what its head reads, then that the queue wrote nothing on it and resumed the rest, and `The reason given: ` and the reason.
 4. Start the next batch: `POST /projects/{id}/pipeline` with `ref` the default branch.
 
 Write `!N`, never `#N`, for a merge request in a status or a note.

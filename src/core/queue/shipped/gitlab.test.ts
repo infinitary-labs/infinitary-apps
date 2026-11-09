@@ -618,6 +618,61 @@ describe("the shipped queue on GitLab", () => {
     ).rejects.toThrow(/Say why/);
   });
 
+  // INF-3183's approved plan, piece three, the same on GitLab: the send-back
+  // fails only the version that carried the paused status, and a merge
+  // request that moved on gets nothing written, which the issue's note says.
+  it("sends back nothing when the merge request moved on from its paused version, says so on the issue, and the next batch takes the fix", async () => {
+    const project = new Project();
+    for (const number of [91, 92, 93]) {
+      project.open(number);
+      project.approve(number);
+    }
+    const first = await formRun(project, 510);
+    project.checks.set(510, { id: 610, status: "failed", web_url: `${server}/p/610` });
+    await decideRun(project, 510, first.members);
+    project.pipelines.set(510, { id: 510, status: "failed" });
+    const fixed = sha(9_200);
+    project.push(92, fixed);
+
+    const said: string[] = [];
+    await answer({
+      api: project.api(),
+      env: envOf(0),
+      log: (text) => said.push(text),
+      action: "send-back",
+      number: "92",
+      reason: "it breaks the checkout page",
+    });
+
+    // Nothing is written on the fix, which no batch ran, nor on the paused
+    // version the merge request left.
+    expect(project.statuses.get(fixed)).toBeUndefined();
+    expect(queueKind("pending", project.statuses.get(sha(92))?.[0]?.description)).toMatchObject({
+      kind: "paused",
+      run: 510,
+    });
+    expect(project.queueOf(91)).toMatchObject({ kind: "waiting" });
+    expect(project.queueOf(93)).toMatchObject({ kind: "waiting" });
+    expect(project.issues[0]?.state).toBe("closed");
+    expect(project.issues[0]?.notes).toEqual([
+      "!92 was not sent back: its merge request moved on to a version no batch has run, so the queue wrote nothing on it and resumed the rest. The reason given: it breaks the checkout page",
+    ]);
+    expect(said).toEqual([
+      "!92 was not sent back, since its merge request moved on to a version no batch has run; 2 paused changes wait again.",
+    ]);
+    expect(project.started).toEqual([{ ref: "main" }]);
+
+    // Once the approver's Infinitary marks the fix waiting, it joins the
+    // next batch with the rest, after them in approval order.
+    project.approve(92);
+    const next = await formRun(project, 511);
+    expect(next.members).toEqual([
+      { number: 91, head: sha(91) },
+      { number: 93, head: sha(93) },
+      { number: 92, head: fixed },
+    ]);
+  });
+
   it("reads every page GitLab's next-page header names, with the token in GitLab's header", async () => {
     const asked: { url: string; token: string | null }[] = [];
     const api = gitlabApi({

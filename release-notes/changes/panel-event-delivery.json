@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "panel-event-delivery",
+      "kind": "fix",
+      "area": "other",
+      "title": "Panels keep arrivals beyond the first fifty",
+      "body": "Panels now receive integration arrivals in batches that fit their saved-data limit instead of silently keeping only fifty. Larger batches continue on following checks. If one arrival cannot fit, the app records how many it could not deliver.",
+      "noPicture": "This changes event delivery and loss reporting, not a panel's layout.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

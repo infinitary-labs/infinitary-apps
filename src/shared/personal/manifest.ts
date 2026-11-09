@@ -146,12 +146,14 @@ export const PANEL_EVENT_KEY_PREFIX = "integrations:";
 export function panelEventKey(integration: string, event: string): string {
   return `${PANEL_EVENT_KEY_PREFIX}${integration}/${event}`;
 }
-/** The most items one event entry keeps: the newest, when a look found more. */
-export const PANEL_EVENT_ITEMS_MAX = 50;
 /** What an event key holds: when the app looked, what arrived since the look before. */
 export type PanelEventEntry = {
   at: number;
   items: { id: string; summary: string }[];
+  /** Arrivals retained by the owner for subsequent ticks, before another look. */
+  remaining?: number;
+  /** Arrivals too large for one store value; the app also logs this loss. */
+  dropped?: number;
   /** The place could not answer from where the last look ended; what happened between is not known. */
   resynced?: true;
 };

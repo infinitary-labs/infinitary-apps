@@ -354,7 +354,11 @@ A panel the captain added from elsewhere has no background code, so it reaches i
 A panel's calls spend no task's or seat's allowance: GitHub's go through the gateway's `readAsPanel` and `writeAsPanel` under the same shape checks and caps.
 An action that saves a file into a task's hand-over folder is refused to a panel, as it is to the first mate.
 For each event a panel names, the app looks on the event's own cadence (`PanelEvents`, `src/core/personal/panelEvents.ts`), writes what arrived since the last look to the panel's store key `integrations:<connection>/<event>` (`panelEventKey`) and hands the same items to its background code; the drawing's `on` reads that key.
-The first look only marks where listening starts, and cursors are kept in memory, so after a restart a panel listens from then on.
+Each event entry fits the store value's UTF-8 JSON byte bound, with no item-count cutoff.
+When a look needs multiple entries, `remaining` counts the unread arrivals retained in memory; each following tick delivers another batch before looking again or advancing the cursor.
+A single arrival too large for an entry is omitted with an explicit `dropped` count and a log; `resynced` still reports an upstream cursor gap.
+A refused store write retains the batch for another tick.
+The first look only marks where listening starts, and cursors and pending batches are kept in memory, so after a restart a panel listens from then on.
 A panel that received words of a kind that keeps them for a while ("Data from outside") is held to the same days (`PanelOutsideData`, `src/core/personal/panelOutsideData.ts`, in `userData/integrations/panel-reads.json`): each sweep removes the keys of its store not rewritten within those days, and the captain's delete in Settings empties its store.
 The app cannot tell which keys hold those words, so it judges by when each key was written.
 A panel's manifest naming the retired `net` or `secrets` is refused, saying to name an integration instead (`retiredGrantWords`); the mediated fetch channel stays for older readers and refuses every call.

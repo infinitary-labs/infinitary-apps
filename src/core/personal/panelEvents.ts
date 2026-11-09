@@ -1,7 +1,7 @@
 import type { PanelIntegrationUse } from "@shared/personal/contracts";
 import {
-  PANEL_EVENT_ITEMS_MAX,
   type PanelEventEntry,
+  PERSONAL_STORE_VALUE_MAX_BYTES,
   panelEventKey,
 } from "@shared/personal/manifest";
 import type { PanelIntegrationsReach } from "../integrations";
@@ -36,7 +36,18 @@ export type PanelListening = {
   hand: (integration: string, event: string, items: PanelEventEntry["items"]) => void;
 };
 
-type Listening = { cursor: string | null; lookedAt: number; looking: boolean };
+type Pending = {
+  cursor: string;
+  items: PanelEventEntry["items"];
+  offset: number;
+  resynced?: true;
+};
+type Listening = {
+  cursor: string | null;
+  lookedAt: number;
+  looking: boolean;
+  pending?: Pending;
+};
 
 export class PanelEvents {
   private readonly state = new Map<string, Listening>();
@@ -76,7 +87,8 @@ export class PanelEvents {
           const every = panel.reach.every(use.integration, event);
           if (every === undefined) continue;
           const state = this.state.get(id);
-          if (state && (state.looking || now - state.lookedAt < every * 60_000)) continue;
+          if (state && (state.looking || (!state.pending && now - state.lookedAt < every * 60_000)))
+            continue;
           looks.push(this.look(id, panel, use.integration, event, state, now));
         }
       }
@@ -98,26 +110,88 @@ export class PanelEvents {
       cursor: state?.cursor ?? null,
       lookedAt: now,
       looking: true,
+      pending: state?.pending,
     };
     this.state.set(id, next);
     try {
-      const look = await panel.reach.look(integration, event, next.cursor);
-      if (!("cursor" in look)) {
-        this.options.log(`panel ${panel.slice}: "${integration}" ${event}: ${look.text}`);
-        return;
+      if (!next.pending) {
+        const look = await panel.reach.look(integration, event, next.cursor);
+        if (!("cursor" in look)) {
+          this.options.log(`panel ${panel.slice}: "${integration}" ${event}: ${look.text}`);
+          return;
+        }
+        if (next.cursor === null) {
+          next.cursor = look.cursor;
+          return;
+        }
+        if (look.items.length === 0 && !look.resynced) {
+          next.cursor = look.cursor;
+          return;
+        }
+        next.pending = {
+          cursor: look.cursor,
+          items: look.items.map(({ id, summary }) => ({ id, summary })),
+          offset: 0,
+          ...(look.resynced ? { resynced: true as const } : {}),
+        };
       }
-      const first = next.cursor === null;
-      next.cursor = look.cursor;
-      if (first || (look.items.length === 0 && !look.resynced)) return;
-      const items = look.items
-        .slice(-PANEL_EVENT_ITEMS_MAX)
-        .map(({ id: itemId, summary }) => ({ id: itemId, summary }));
+      const pending = next.pending;
+      // Measure UTF-8 JSON, including escaping and the actual continuation
+      // envelope, exactly as PersonalStore does. Keep packing linear in bytes.
+      const items: PanelEventEntry["items"] = [];
+      let itemBytes = 0;
+      let offset = pending.offset;
+      let dropped = 0;
+      const envelopeBytes = (remaining: number) =>
+        Buffer.byteLength(
+          JSON.stringify({
+            at: now,
+            items: [],
+            ...(remaining ? { remaining } : {}),
+            ...(pending.resynced ? { resynced: true } : {}),
+          }),
+        );
+      while (offset < pending.items.length) {
+        const item = pending.items[offset];
+        if (!item) break;
+        const size = Buffer.byteLength(JSON.stringify(item));
+        const remaining = pending.items.length - offset - 1;
+        const addition = size + (items.length ? 1 : 0);
+        if (envelopeBytes(remaining) + itemBytes + addition > PERSONAL_STORE_VALUE_MAX_BYTES) {
+          // An oversized arrival gets its own loss entry, leaving its neighbors
+          // for subsequent ticks. Never drop an arrival just to fill a batch.
+          if (!items.length) {
+            dropped = 1;
+            offset++;
+          }
+          break;
+        }
+        items.push(item);
+        itemBytes += addition;
+        offset++;
+      }
+      const remaining = pending.items.length - offset;
       panel.write(panelEventKey(integration, event), {
         at: now,
         items,
-        ...(look.resynced ? { resynced: true as const } : {}),
+        ...(remaining ? { remaining } : {}),
+        ...(dropped ? { dropped } : {}),
+        ...(pending.resynced ? { resynced: true as const } : {}),
       });
       panel.hand(integration, event, items);
+      if (dropped) {
+        this.options.log(
+          `panel ${panel.slice}: "${integration}" ${event}: ${dropped} arrivals exceeded the ${PERSONAL_STORE_VALUE_MAX_BYTES}-byte store value bound and were not delivered; see the event entry's dropped count.`,
+        );
+      }
+      // Commit progress only after delivery. A refused store write leaves the
+      // same batch pending, and no new provider look can skip unread arrivals.
+      pending.offset = offset;
+      delete pending.resynced;
+      if (!remaining) {
+        next.cursor = pending.cursor;
+        delete next.pending;
+      }
     } catch (error) {
       this.options.log(`panel ${panel.slice}: "${integration}" ${event}: ${errorText(error)}`);
     } finally {

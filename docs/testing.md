@@ -51,6 +51,10 @@ Record the version, selection reasons, files or parts, required platforms or dev
   A test naming a folder that holds a runbook, as the runbook loaders' tests do, reads that runbook too.
   Six audited indirect contracts have explicit links in `scripts/unit-reach.ts`: channel definitions select the action and IPC inventories, `src/core/storage/migrations.ts` selects the decision, inbox and keep-open migration tests, and `src/core/tasks/taskService.ts` selects the settle boundary test.
   These links add no readers for unrelated changes and leave edited tests to their local rounds.
+  An inventory test declares additional indirect files in an `inventoryFiles` literal array of project-relative file paths in its own test file, as `src/shared/actions.test.ts` does for its settings request schemas.
+  The existing literal-path reader selects it whenever a named file changes, including deletion; no new parser, transitive traversal or CI job is needed.
+  Name only files the inventory actually checks that direct imports or the six explicit links do not already cover, and add a real-file selector regression with unrelated nonselection.
+  Edited inventories still belong only to their local rounds; the PR check runs unedited selected inventories once through the same cohort routing and selected-versus-ran reconciliation.
   Otherwise it reads each test file and, for a changed data file or served text, the modules that test imports; it never follows imports transitively, and does not execute dynamically computed paths to discover dependencies.
   Edited files remain disjoint from that once-only selection; a failed direct-reader round stops the edited-file rounds too.
   Ordinary coverage is included, so do not add a fourth run or duplicate local proof in PR CI.

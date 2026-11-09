@@ -11,6 +11,19 @@ import { deviceUpdateBody } from "./deviceUpdateNudge";
 import { CORE_INVOKE_CHANNELS, type CoreInvokeChannel, invokeContract } from "./ipc";
 import { remoteLoginWords } from "./remoteLogin";
 
+// The action inventory checks these request schemas through ipc's channel groups.
+// Literal project-relative paths declare indirect coverage to directUnitReach;
+// channel definitions themselves already have explicit contract edges there.
+const inventoryFiles = [
+  "src/shared/decisions.ts",
+  "src/shared/preferences.ts",
+  "src/shared/quota.ts",
+  "src/shared/sharing.ts",
+  "src/shared/update.ts",
+] as const;
+// The selector reads this declaration statically, never by importing a test.
+void inventoryFiles;
+
 describe("action permissions and channel parity", () => {
   // INF-3116, answer A: the first mate only offers the app's Allow card for
   // a private site; the captain's click on it adds the checked name.

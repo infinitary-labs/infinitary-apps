@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { directUnitReach } from "../scripts/unit-reach.ts";
+import { selectLinuxReach } from "../scripts/unit-repeats.ts";
 
 // INF-2394 measure 3: exercise the actual consumers that motivated local
 // direct reach, without a synthetic graph or a transitive dependency sweep.
@@ -158,6 +159,27 @@ describe("local direct unit reach", () => {
     expect(
       directUnitReach(["src/shared/channels/settings.ts", ...inventories], readers, root),
     ).toEqual([]);
+  });
+
+  // The accepted daily velocity audit asks inventory tests to name their
+  // covered files, beyond the six explicit contract edges already installed.
+  it.each([
+    "src/shared/decisions.ts",
+    "src/shared/preferences.ts",
+    "src/shared/quota.ts",
+    "src/shared/sharing.ts",
+    "src/shared/update.ts",
+  ])("routes the action inventory to the PR check for its declared schema %s", (schema) => {
+    const inventory = "src/shared/actions.test.ts";
+    expect(directUnitReach([schema], [inventory], root)).toEqual([inventory]);
+    expect(selectLinuxReach([schema], root).run).toContain(inventory);
+    expect(directUnitReach([schema, inventory], [inventory], root)).toEqual([]);
+  });
+
+  it("does not broaden inventory coverage to unrelated files or the whole shared folder", () => {
+    const inventory = "src/shared/actions.test.ts";
+    expect(directUnitReach(["src/shared/voice.ts"], [inventory], root)).toEqual([]);
+    expect(selectLinuxReach(["src/shared/voice.ts"], root).run).not.toContain(inventory);
   });
 
   it("leaves edited tests to their three rounds rather than adding a fourth", () => {

@@ -68,6 +68,11 @@ export type TaskClose = {
   answerHandoff?: AnswerTaskClosedPayload;
   /** Extra facts the close records on its timeline event. */
   data?: Record<string, unknown>;
+  /**
+   * A drop of a task already closed whose copy was kept, because its work
+   * could not be saved: the one close that removes that copy (`TaskDrop`).
+   */
+  removeKept?: boolean;
 };
 
 /**
@@ -444,9 +449,9 @@ export class TaskClosing {
     this.host.cards.scheduleBroadcast();
     this.host.broadcastCrewCounts();
     if (record?.worktreeDir && record.workspaceState !== "removed") {
-      // A confirmed discard is the captain choosing to throw the work away:
-      // it is still saved when it can be, but a failed save never keeps it.
-      await this.retireWorktreeOf(record, { force: close.reason === "discarded" });
+      // Every close keeps a copy whose work cannot be saved (INF-3169's one
+      // drop); only dropping the closed task again removes it.
+      await this.retireWorktreeOf(record, { force: close.removeKept === true });
     }
     // Delivery machinery follows its parent out, whatever the direction
     // the parent closed in - a review must never outlive its builder.

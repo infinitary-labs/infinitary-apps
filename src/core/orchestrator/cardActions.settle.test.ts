@@ -278,35 +278,22 @@ describe("CrewSupervisor", () => {
     expect(actionOf(stray)).toBeUndefined();
   });
 
-  it("reports a dirty-discard refusal verbatim after dismissal and releases the guard for a later confirmation", async () => {
-    const { supervisor, tasks, workspace, events } = setup(fakeCrewmate());
-    seedTask(tasks, { id: "dirty", title: "Unlanded", status: "idle", worktreeDir: "/work" });
+  // INF-3169's piece 4, the captain's pick "Also fold the three into one
+  // drop": the captain's own Discard click is the one drop, which passes the work holds
+  // and keeps the unmerged work saved; the first mate alone still waits for
+  // that choice.
+  it("drops unmerged work on the captain's Discard click, keeping it saved, while the first mate's own discard waits for confirm", async () => {
+    const { supervisor, tasks, workspace, ops } = setup(fakeCrewmate());
+    for (const id of ["dirty", "alone"])
+      seedTask(tasks, { id, title: "Unlanded", status: "idle", worktreeDir: `/${id}` });
     vi.mocked(workspace.taskWorkStatus).mockResolvedValue({ dirty: true, unlandedCommits: 2 });
-    const id = supervisor.addFirstmateCard({
-      taskId: "dirty",
-      title: "Settle",
-      body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
-      actions: [{ id: "discard", label: "Discard", default: true, effect: SETTLE_DISCARD }],
-    });
-    supervisor.cardActions.act(id, "discard");
-    expect(supervisor.cards.snapshot()).toEqual([]);
-    await vi.waitFor(() =>
-      expect(settleLines(tasks, "dirty").some((line) => line.includes("never merged"))).toBe(true),
-    );
-    const refusal = await supervisor.settling.settle.settleTask("dirty", "discard");
+    const refusal = await supervisor.settling.settle.settleTask("alone", "discard");
     expect(refusal).toContain("2 commits and uncommitted edits that were never merged");
-    expect(settleLines(tasks, "dirty")).toContain(refusal);
-    expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
-    expect(tasks.get("dirty")?.status).toBe("active");
-    expect(await supervisor.settling.settle.settleTask("dirty", "discard", true)).toBe(
+    expect(tasks.get("alone")?.status).toBe("active");
+    expect(await supervisor.settling.settle.settleTask("alone", "discard", true)).toBe(
       discardedText(),
     );
-  });
 
-  it("wakes the Firstmate with a confirm-gated discard refusal, so the dead end is orchestratable", async () => {
-    const { supervisor, tasks, workspace, events, ops } = setup(fakeCrewmate());
-    seedTask(tasks, { id: "dirty", title: "Unlanded", status: "idle", worktreeDir: "/work" });
-    vi.mocked(workspace.taskWorkStatus).mockResolvedValue({ dirty: true, unlandedCommits: 2 });
     const id = supervisor.addFirstmateCard({
       taskId: "dirty",
       title: "Settle",
@@ -314,21 +301,14 @@ describe("CrewSupervisor", () => {
       actions: [{ id: "discard", label: "Discard", default: true, effect: SETTLE_DISCARD }],
     });
     supervisor.cardActions.act(id, "discard");
-
     await vi.waitFor(() => expect(settleWakes(ops)).toHaveLength(1));
-    // The refusal is a structured outcome (WI-12): its prose leads the wake,
-    // and its ways ride a fenced JSON block so the Firstmate can turn them
-    // into effect buttons instead of re-parsing prose.
-    expect(settleWakes(ops)[0]).toContain('the captain chose discard for task dirty "Unlanded"');
-    expect(settleWakes(ops)[0]).toContain("2 commits and uncommitted edits that were never merged");
-    expect(settleWakes(ops)[0]).toContain(
-      "Discard with confirm to abandon them, or merge the branch instead",
+    expect(settleWakes(ops)[0]).toContain(`the outcome was: ${discardedText()}`);
+    expect(tasks.get("dirty")).toMatchObject({ status: "dropped", closedReason: "discarded" });
+    // Its work is saved before its working copy goes, as every close saves it.
+    expect(workspace.retireTaskWorktree).toHaveBeenCalledWith(
+      expect.objectContaining({ taskId: "dirty", cwd: "/dirty" }),
+      expect.anything(),
     );
-    expect(settleWakes(ops)[0]).toContain('"refused": "unlanded-work"');
-    expect(settleWakes(ops)[0]).toContain('"tool": "settle_task"');
-    // The feed keeps its receipt either way: the captain sees the outcome
-    // whether or not the Firstmate has anything to say about it.
-    expect(settleLines(tasks, "dirty").some((line) => line.includes("never merged"))).toBe(true);
   });
 
   it("stays quiet on contention, which settles nothing and has no outcome to report", async () => {

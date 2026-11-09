@@ -654,8 +654,7 @@
             "text": "Only interrupted work continues."
           },
           "drop-task": {
-            "ok": false,
-            "text": "Its parts are still open. Drop those first."
+            "ok": true
           },
           "queue-task": {
             "ok": false,
@@ -697,8 +696,8 @@
         {
           "id": "drop",
           "label": "Drop task",
-          "detail": "Its parts are still open. Drop those first; nothing changes.",
-          "disabled": true,
+          "detail": "Asks once",
+          "disabled": false,
           "danger": true,
           "target": "drop"
         }
@@ -725,8 +724,10 @@
           "text": "No merge card is up for it, so nothing can finish it from here."
         },
         "drop": {
-          "kind": "refused",
-          "text": "Its parts are still open. Drop those first; nothing changes."
+          "kind": "ask",
+          "op": "drop-task",
+          "sentence": "Drop INF-3105? It won't start, and there is no unfinished work to keep. Its record stays.",
+          "confirm": "Drop task"
         }
       },
       "rowStart": {
@@ -3397,8 +3398,15 @@
         "underway": []
       },
       "ask": {
-        "kind": "refused",
-        "text": "Cannot drop INF-3201 while its part is still open: INF-3207 \"Sound the channel\". Handle that work separately first."
+        "kind": "ask",
+        "sentence": "Drop INF-3201? It won't start, and there is no unfinished work to keep. Its record stays. Its part INF-3207 stays planned.",
+        "review": {
+          "parts": [
+            "INF-3207"
+          ],
+          "waiting": [],
+          "underway": []
+        }
       }
     },
     {
@@ -3421,8 +3429,16 @@
         "underway": []
       },
       "ask": {
-        "kind": "refused",
-        "text": "Cannot drop INF-3201: INF-3208 \"Mark the reef\" has started. Handle that work separately first."
+        "kind": "ask",
+        "sentence": "Drop INF-3201? It won't start, and there is no unfinished work to keep. Its record stays. Its part INF-3207 stays planned. Its part INF-3208 has started and keeps working.",
+        "review": {
+          "parts": [
+            "INF-3207",
+            "INF-3208"
+          ],
+          "waiting": [],
+          "underway": []
+        }
       }
     }
   ]

@@ -666,7 +666,10 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     ]);
   });
 
-  it("a settle the captain chose: a refusal with its ways, and a success", async () => {
+  // INF-3169's piece 4, the captain's pick "Also fold the three into one
+  // drop": the captain's own Discard click passes the work holds, so unmerged work
+  // drops with its work saved, as a clean task does.
+  it("a settle the captain chose: a discard of unmerged work and of a clean task, each an outcome", async () => {
     const { supervisor, tasks, workspace, ops } = setup(fakeCrewmate());
     seedTask(tasks, { id: "dirty", title: "Unlanded", status: "idle", worktreeDir: "/work" });
     seedTask(tasks, { id: "clean", title: "Clean", status: "idle", worktreeDir: "/clean" });
@@ -684,7 +687,7 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
       );
     }
     expect(settleWakes(ops)).toEqual([
-      `[fm-op] the captain chose discard for task dirty "Unlanded"; the host settled it and the outcome was: Cannot discard SCR-1 "Unlanded" without confirm: 2 commits and uncommitted edits that were never merged. Discard with confirm to abandon them, or merge the branch instead.\n\`\`\`json\n{\n  "refused": "unlanded-work",\n  "task": {\n    "id": "dirty",\n    "key": "SCR-1",\n    "title": "Unlanded"\n  },\n  "tasks": [],\n  "ways": [\n    {\n      "label": "Discard anyway",\n      "tool": "settle_task",\n      "args": {\n        "task_id": "dirty",\n        "mode": "discard",\n        "confirm": true\n      }\n    },\n    {\n      "label": "Merge the branch instead",\n      "tool": "settle_task",\n      "args": {\n        "task_id": "dirty",\n        "mode": "land"\n      }\n    }\n  ],\n  "text": "Cannot discard SCR-1 \\"Unlanded\\" without confirm: 2 commits and uncommitted edits that were never merged. Discard with confirm to abandon them, or merge the branch instead."\n}\n\`\`\``,
+      `[fm-op] the captain chose discard for task dirty "Unlanded"; the host settled it and the outcome was: ${discardedText()}`,
       `[fm-op] the captain chose discard for task clean "Clean"; the host settled it and the outcome was: ${discardedText()}`,
     ]);
   });

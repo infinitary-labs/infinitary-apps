@@ -228,7 +228,7 @@ describe("the task graph (task-system P2)", () => {
     );
   });
 
-  it("drops never-started charted work for the captain, and refuses a start or open parts", async () => {
+  it("drops never-started charted work for the captain, keeps its open parts planned, and refuses a start", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, cards, cardStore, ops } = setup(crewmate);
     const planned = supervisor.intake.plan({
@@ -282,13 +282,16 @@ describe("the task graph (task-system P2)", () => {
       intent: intentOf("part"),
       parent: parent.id,
     });
-    const refused = supervisor.hostOps.runTaskOp(
-      parent.id,
-      "drop-task",
-      dropReviewKeys(tasks.dropEffects(parent.id)),
-    );
-    expect(refused).toContain(part.key);
-    expect(tasks.get(parent.id)?.status).toBe("open");
+    // The one drop (INF-3169's piece 4, the captain's pick "Also fold the
+    // three into one drop"): the parent drops and its open part stays planned.
+    expect(
+      supervisor.hostOps.runTaskOp(
+        parent.id,
+        "drop-task",
+        dropReviewKeys(tasks.dropEffects(parent.id)),
+      ),
+    ).toBeUndefined();
+    expect(tasks.get(parent.id)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
     expect(tasks.get(part.id)?.status).toBe("open");
 
     const racing = supervisor.intake.plan({ title: "Race", intent: intentOf("race") });

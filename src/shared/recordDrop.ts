@@ -2,9 +2,10 @@ import type { DropTaskReview } from "./cards";
 
 /**
  * The captain's Drop task (FI3-243, from the accepted plan FI3-242; in every
- * open state since FI3-565 piece 4). On never-started work it is the footer's
- * own drop: the record is dropped/cancelled, and a parent with open parts is
- * refused, not cascaded. On started work it is the stall card's stop. The
+ * open state since FI3-565 piece 4). Both are the one drop (INF-3169's piece
+ * 4, `TaskDrop`): on never-started work the record is dropped/cancelled and
+ * its open parts stay planned, never cascaded; on started work its crewmate
+ * stops and a copy of its unfinished work is kept. The
  * top-right minus only hides the record, so its name is not the action that
  * ends the task.
  */
@@ -48,21 +49,24 @@ export function dropUnderwayLine(underway: readonly { key: string }[]): string |
     : `${underway.length} tasks are already working (${keys}) and will not be stopped.`;
 }
 
-export function dropPartsRefusal(
-  taskKey: string,
+/**
+ * What a drop does to the task's open parts (INF-3169's one drop): they stay
+ * planned, and one that started keeps working.
+ */
+export function dropPartsLine(
   parts: readonly { key: string; title: string; started?: boolean }[],
-): string {
-  const started = parts.filter((part) => part.started);
-  const named = (list: readonly { key: string; title: string }[]) =>
-    list.map((part) => `${part.key} "${part.title}"`).join(", ");
-  if (started.length > 0) {
-    const be = started.length === 1 ? "has" : "have";
-    return `Cannot drop ${taskKey}: ${named(started)} ${be} started. Handle that work separately first.`;
-  }
-  const be = parts.length === 1 ? "is" : "are";
-  const which = parts.length === 1 ? "its part" : `${parts.length} parts`;
-  const them = parts.length === 1 ? "that work" : "them";
-  return `Cannot drop ${taskKey} while ${which} ${be} still open: ${named(parts)}. Handle ${them} separately first.`;
+): string | null {
+  if (parts.length === 0) return null;
+  const started = parts.filter((part) => part.started).map((part) => part.key);
+  const planned = parts.filter((part) => !part.started).map((part) => part.key);
+  const lines: string[] = [];
+  if (planned.length === 1) lines.push(`Its part ${planned[0]} stays planned.`);
+  else if (planned.length > 1)
+    lines.push(`Its ${planned.length} parts (${planned.join(", ")}) stay planned.`);
+  if (started.length === 1) lines.push(`Its part ${started[0]} has started and keeps working.`);
+  else if (started.length > 1)
+    lines.push(`Its ${started.length} parts that started (${started.join(", ")}) keep working.`);
+  return lines.join(" ");
 }
 
 export function dropStartedRefusal(taskKey: string): string {

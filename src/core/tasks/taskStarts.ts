@@ -6,7 +6,6 @@ import {
   DROP_REVIEW_STALE,
   dropIneligibleRefusal,
   dropMissingRefusal,
-  dropPartsRefusal,
   dropReviewKeys,
   NO_LONGER_WANTED,
   sameDropReview,
@@ -127,9 +126,10 @@ export class TaskStarts {
   }
 
   /**
-   * Drop never-started work the captain no longer wants. Refuses open
-   * parts, a row that has started, and a review that no longer matches.
-   * Does not touch descendants, links, or dependents. One transaction.
+   * The captain's drop of never-started work, as the one drop writes it
+   * (`TaskDrop`, INF-3169's piece 4). Refuses a row that has started and a
+   * review that no longer matches. Its open parts stay planned: it does not
+   * touch descendants, links, or dependents. One transaction.
    */
   dropUnstarted(
     id: string,
@@ -150,9 +150,6 @@ export class TaskStarts {
         return { ok: false, text: dropIneligibleRefusal(key) };
       }
       const effects = this.tasks.dropEffects(id);
-      if (effects.parts.length > 0) {
-        return { ok: false, text: dropPartsRefusal(key, effects.parts) };
-      }
       if (!sameDropReview(dropReviewKeys(effects), input.review)) {
         return { ok: false, text: DROP_REVIEW_STALE };
       }

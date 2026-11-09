@@ -12,7 +12,7 @@ import {
   DROP_REVIEW_STALE,
   DROP_TASK_LABEL,
   dropConfirmLead,
-  dropPartsRefusal,
+  dropPartsLine,
   dropUnderwayLine,
   dropWaitingLine,
 } from "@shared/recordDrop";
@@ -298,10 +298,6 @@ export function RecordPaneFooter({
         setError(DROP_REVIEW_STALE);
         return;
       }
-      if (effects.parts.length > 0) {
-        setError(dropPartsRefusal(taskKey, effects.parts));
-        return;
-      }
     }
     setError(null);
     setConfirming("drop");
@@ -382,9 +378,10 @@ export function RecordPaneFooter({
   if (askingDone) confirmLine = closeDoneConfirm(taskKey);
   else if (asking) {
     const unstarted = end === "drop-task" && effects;
+    const parts = unstarted ? dropPartsLine(effects.parts) : null;
     const waiting = unstarted ? dropWaitingLine(effects.waiting) : null;
     const underway = unstarted ? dropUnderwayLine(effects.underway) : null;
-    confirmLine = [dropConfirmLead(taskKey, end === "stop-task"), waiting, underway]
+    confirmLine = [dropConfirmLead(taskKey, end === "stop-task"), parts, waiting, underway]
       .filter(Boolean)
       .join(" ");
   }

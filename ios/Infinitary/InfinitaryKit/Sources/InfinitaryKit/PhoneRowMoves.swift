@@ -53,7 +53,6 @@ public enum PhoneRowMoves {
 
     private static func blocked(_ task: PhoneTask) -> Bool { task.flags?.blocked == true || !task.blockedBy.isEmpty }
     private static func hasParts(_ task: PhoneTask) -> Bool { (task.children?.total ?? 0) > 0 }
-    private static func openParts(_ task: PhoneTask) -> Bool { (task.children?.total ?? 0) > (task.children?.closed ?? 0) }
     /// The task's completion card while it is up: its waiting card settles with a merge (`moveContextOf`).
     private static func completionCard(_ task: PhoneTask) -> String? {
         task.waitingCardMerges == true ? task.waitingCardId : nil
@@ -131,7 +130,6 @@ public enum PhoneRowMoves {
     /// The Drop task tray: the record's own end, as the row says it - Drop task before the work starts, its stop once it
     /// has.
     private static func dropMove(_ task: PhoneTask) -> Move {
-        if openParts(task) { return .refused("Its parts are still open. Drop those first; nothing changes.") }
         if task.moves?["drop-task"]?.ok == true {
             return .ask(op: "drop-task", sentence: PhoneRecord.dropLead(task.key, started: false), confirm: PhoneRecordWords.dropTask)
         }
@@ -141,8 +139,8 @@ public enum PhoneRowMoves {
         return .refused("This task cannot be dropped here. Open its record instead.")
     }
 
-    /// The record's own question for never-started work, from the effects its record lists (`dropAskOf`): the sentence
-    /// and the review the host checks again, or why it cannot be dropped.
+    /// The record's own question for never-started work, from the effects its record lists (`dropAskOf`): the sentence,
+    /// saying its open parts stay planned, and the review the host checks again, or that the record changed.
     public enum DropAsk: Equatable, Sendable {
         case ask(sentence: String, review: [String: [String]])
         case refused(String)
@@ -150,8 +148,8 @@ public enum PhoneRowMoves {
 
     public static func dropAsk(_ key: String, effects: PhoneTask.DropEffects?) -> DropAsk {
         guard let effects else { return .refused("\(key) changed. Look at it again before dropping it.") }
-        if !effects.parts.isEmpty { return .refused(PhoneRecord.dropPartsRefusal(key, parts: effects.parts)) }
-        let sentence = [PhoneRecord.dropLead(key, started: false), PhoneRecord.dropWaiting(effects.waiting.map(\.key)),
+        let sentence = [PhoneRecord.dropLead(key, started: false), PhoneRecord.dropParts(effects.parts),
+                        PhoneRecord.dropWaiting(effects.waiting.map(\.key)),
                         PhoneRecord.dropUnderway(effects.underway.map(\.key))].compactMap(\.self).joined(separator: " ")
         return .ask(sentence: sentence, review: ["parts": effects.parts.map(\.key).sorted(),
                                                  "waiting": effects.waiting.map(\.key).sorted(),

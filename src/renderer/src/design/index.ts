@@ -38,7 +38,7 @@ export {
 export {
   DROP_TASK_LABEL,
   dropConfirmLead,
-  dropPartsRefusal,
+  dropPartsLine,
   dropReviewKeys,
   dropUnderwayLine,
   dropWaitingLine,

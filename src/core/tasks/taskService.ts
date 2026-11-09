@@ -183,10 +183,11 @@ export type TaskCardClick = {
 
 /**
  * Which button a task card history entry records, read from its typed kind:
- * the steer is Continue, the cancel request is Drop task on started work,
- * the drop before start is the footer's own drop, the start is Start, and
- * a start policy the captain set is the task board's queue or unqueue, and
- * a close as done is the record's Close as done.
+ * the steer is Continue, the close of started work is Drop task on it (a
+ * cancel request recorded before the one drop is too), the drop before
+ * start is the footer's own drop, the start is Start, a start policy the
+ * captain set is the task board's queue or unqueue, and a close as done is
+ * the record's Close as done.
  */
 function taskCardOp(event: TaskEvent): TaskCardClick["op"] | undefined {
   const data = event.data ?? {};
@@ -209,7 +210,10 @@ function taskCardOp(event: TaskEvent): TaskCardClick["op"] | undefined {
         : "stop-task";
     case "status":
       if (data.status === "done") return "close-done";
-      return data[DROP_BEFORE_START] === true ? "drop-task" : "start-task";
+      // Drop task closes the record by the one drop: before the work
+      // started it is the footer's own drop, after it the stop.
+      if (data[DROP_BEFORE_START] === true) return "drop-task";
+      return data.status === "dropped" ? "stop-task" : "start-task";
     default:
       return undefined;
   }

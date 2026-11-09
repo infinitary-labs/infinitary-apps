@@ -1107,16 +1107,6 @@ export class CrewSessions {
     }).catch(() => {});
   }
 
-  /** Drop task on started work: the captain's cancel, which keeps its unfinished work. */
-  stopTask(taskId: string, via: "shell" | typeof TASK_CARD_VIA, panel?: string): void {
-    void this.interruptCrewmate(taskId, "cancel", {
-      actor: "captain",
-      via,
-      decision: null,
-      ...(panel ? { panel } : {}),
-    }).catch((caught: unknown) => this.core.hostOps.reportCardEffectFailure(taskId, caught));
-  }
-
   /**
    * A computer that runs work is being removed (docs/devices.md, "Remove"):
    * each task started there stops, as the captain's Stop stops one, and

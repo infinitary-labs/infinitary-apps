@@ -17,7 +17,7 @@ import {
   DROP_TASK_LABEL,
   DROPPED_BEFORE_START_ACTIVITY,
   dropConfirmLead,
-  dropPartsRefusal,
+  dropPartsLine,
   dropWaitingLine,
   NO_LONGER_WANTED,
 } from "../../src/shared/recordDrop";
@@ -684,7 +684,7 @@ test("Drop task asks once, then hides the record, keeps the task on it and leave
   await closeRecord(page);
 });
 
-test("a blocked backlog task can be dropped, and a parent with an open part cannot", async () => {
+test("a blocked backlog task can be dropped, and so can a parent, whose open part stays planned", async () => {
   const { page } = launched;
   await openRecord(page, "rc-blocked");
   await expect(next(page)).toBeDisabled();
@@ -699,10 +699,16 @@ test("a blocked backlog task can be dropped, and a parent with an open part cann
   await openRecord(page, "rc-parent");
   expect(await expectRecordBar(page)).toMatchObject({ end: "drop-task", next: null });
   await end(page).click();
+  // INF-3169's one drop: the question names the part that stays planned,
+  // and the drop goes through.
   const partKey = keys["rc-part"] as string;
-  await expect(pane(page).getByRole("alert")).toContainText(
-    dropPartsRefusal(keys["rc-parent"] as string, [{ key: partKey, title: "Mark the bar" }]),
+  await expect(footer(page)).toHaveAttribute("data-record-footer", "confirm");
+  await expect(footer(page)).toContainText(
+    dropPartsLine([{ key: partKey, title: "Mark the bar" }]) as string,
   );
+  await page.screenshot({ path: test.info().outputPath("drop-parent-confirm.png") });
+  await next(page).click();
+  await reopenDropped(page, "rc-parent");
   await expect(
     page.evaluate(() =>
       Promise.all([
@@ -710,7 +716,7 @@ test("a blocked backlog task can be dropped, and a parent with an open part cann
         window.infinitary.tasks.detail("rc-part"),
       ]).then(([parent, part]) => [parent.status, part.status]),
     ),
-  ).resolves.toEqual(["open", "open"]);
+  ).resolves.toEqual(["dropped", "open"]);
   await closeRecord(page);
 
   // Queued work starts by itself: Drop task, and no Start now.

@@ -1,12 +1,13 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { type ElectronApplication, expect, test } from "@playwright/test";
-import { unlandedWorkText } from "../../src/core/orchestrator/settleWords";
+import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
+import { decisionDropRefusal } from "../../src/core/orchestrator/settleWords";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { keptRefFor } from "../../src/core/workspace/workspaceService";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
@@ -23,6 +24,8 @@ const REFUSAL_TITLE = "Review the next choice";
 const ANSWER_TITLE = "The setting is available";
 /** The task whose working copy holds edits that were never merged. */
 const UNLANDED_TASK_TITLE = "Keep the unlanded work";
+/** A decision, which holds no crew work for a discard to drop. */
+const DECISION_TASK_TITLE = "Pick the harbour";
 
 type HeldRequest = {
   calls: number;
@@ -71,33 +74,17 @@ async function reply(app: ElectronApplication, fail = false) {
   }, fail);
 }
 
-/** Real restored card, real dirty git worktree, real IPC, and the persisted feed. */
-test("a refused discard acknowledges the click and explains why after the card is gone", async () => {
-  const userDataDir = scratchDir("infinitary-action-");
-  const repoDir = join(userDataDir, "repo");
-  const worktreeDir = join(userDataDir, "worktree");
-  const git = (...args: string[]) => execFileSync("git", args);
-  git("init", "--initial-branch=main", repoDir);
-  git("-C", repoDir, "config", "user.name", "Test");
-  git("-C", repoDir, "config", "user.email", "test@localhost");
-  git("-C", repoDir, "commit", "--allow-empty", "-m", "init");
-  git("-C", repoDir, "worktree", "add", "-b", "fm/task-feedback", worktreeDir);
-  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
-  writeFileSync(join(worktreeDir, "unlanded.txt"), "Keep this work.\n");
-  const db = openDatabase(userDataDir);
-  const tasks = new TaskService({ db, strict: true });
-  seedTask(tasks, {
-    id: "feedback",
-    title: UNLANDED_TASK_TITLE,
-    status: "idle",
-    repoDir,
-    worktreeDir,
-    branch: "fm/task-feedback",
-  });
+/** A Discard settle card on a task, as the first mate declares it. */
+function discardCard(
+  db: ReturnType<typeof openDatabase>,
+  id: string,
+  taskId: string,
+  title: string,
+) {
   new CardStore(db).upsert({
-    id: "card-feedback",
-    taskId: "feedback",
-    title: SETTLE_TITLE,
+    id,
+    taskId,
+    title,
     author: "firstmate",
     priority: 50,
     meta: "firstmate",
@@ -115,42 +102,120 @@ test("a refused discard acknowledges the click and explains why after the card i
       },
     ],
   });
+}
+
+/**
+ * Click the card's Discard and wait for the acknowledgement. The pending
+ * state is set in the click, then React paints it. One animation frame is
+ * not enough when the renderer is busy: release run 37220724871 and a solo
+ * run on that commit both saw the button still enabled at that frame, while
+ * the outcome itself arrived. Wait for the acknowledgement, and fail if it
+ * never comes.
+ */
+async function clickDiscard(page: Page) {
+  const discard = page.getByRole("button", { name: "Discard", exact: true });
+  await expect(discard).toBeVisible();
+  await discard.evaluate((button) => (button as HTMLButtonElement).click());
+  await expect
+    .poll(async () => {
+      if ((await discard.count()) === 0) return true;
+      return discard.isDisabled();
+    })
+    .toBe(true);
+}
+
+/**
+ * The captain's Discard is the one drop (INF-3169's piece 4, the captain's
+ * "Also fold the three into one drop"): it passes the unmerged-work hold the
+ * first mate meets, drops the task, and saves the edits it never merged on
+ * the task's kept ref before the working copy goes. Real restored card, real
+ * dirty git worktree, real IPC, and the persisted record.
+ */
+test("the captain's Discard drops unmerged work and keeps its edits saved", async () => {
+  const userDataDir = scratchDir("infinitary-action-");
+  const repoDir = join(userDataDir, "repo");
+  const worktreeDir = join(userDataDir, "worktree");
+  const git = (...args: string[]) => execFileSync("git", args, { encoding: "utf8" });
+  git("init", "--initial-branch=main", repoDir);
+  git("-C", repoDir, "config", "user.name", "Test");
+  git("-C", repoDir, "config", "user.email", "test@localhost");
+  git("-C", repoDir, "commit", "--allow-empty", "-m", "init");
+  git("-C", repoDir, "worktree", "add", "-b", "fm/task-feedback", worktreeDir);
+  const work = "Keep this work.\n";
+  // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
+  writeFileSync(join(worktreeDir, "unlanded.txt"), work);
+  const db = openDatabase(userDataDir);
+  const tasks = new TaskService({ db, strict: true });
+  seedTask(tasks, {
+    id: "feedback",
+    title: UNLANDED_TASK_TITLE,
+    status: "idle",
+    repoDir,
+    worktreeDir,
+    branch: "fm/task-feedback",
+  });
+  discardCard(db, "card-feedback", "feedback", SETTLE_TITLE);
   db.close();
 
   let launched = await launchApp({ userDataDir });
   try {
     const { page } = launched;
-    const discard = page.getByRole("button", { name: "Discard", exact: true });
-    await expect(discard).toBeVisible();
-    // The pending state is set in the click, then React paints it. One
-    // animation frame is not enough when the renderer is busy: release run
-    // 37220724871 and a solo run on that commit both saw the button still
-    // enabled at that frame, while the refusal itself arrived. Wait for the
-    // acknowledgement, and fail if it never comes.
-    await discard.evaluate((button) => (button as HTMLButtonElement).click());
+    await clickDiscard(page);
+    await expectNoCard(page, SETTLE_TITLE);
+    const dropped = { status: "dropped", closedReason: "discarded" };
     await expect
       .poll(async () => {
-        if ((await discard.count()) === 0) return true;
-        return discard.isDisabled();
+        const task = await page.evaluate(() => window.infinitary.tasks.detail("feedback"));
+        return { status: task?.status, closedReason: task?.closedReason };
       })
-      .toBe(true);
+      .toEqual(dropped);
+    // The record closes first; the working copy is retired after it, and
+    // only once its work is saved. Its removal is that retirement's end.
+    await expect.poll(() => existsSync(worktreeDir)).toBe(false);
+    // The edits that were never merged are saved on the task's kept ref.
+    expect(git("-C", repoDir, "show", `${keptRefFor("feedback")}:unlanded.txt`)).toBe(work);
+
+    await launched.close();
+    launched = await launchApp({ userDataDir });
+    await expectNoCard(launched.page, SETTLE_TITLE);
+    const restored = await launched.page.evaluate(() => window.infinitary.tasks.detail("feedback"));
+    expect({ status: restored?.status, closedReason: restored?.closedReason }).toEqual(dropped);
+    expect(git("-C", repoDir, "show", `${keptRefFor("feedback")}:unlanded.txt`)).toBe(work);
+  } finally {
+    await launched.close();
+  }
+});
+
+/**
+ * A drop the one drop still refuses: a decision holds no crew work, so the
+ * captain's Discard on its card is refused, and the refusal is said on the
+ * feed after the card is gone. Real restored card, real IPC, and the
+ * persisted feed.
+ */
+test("a refused discard acknowledges the click and explains why after the card is gone", async () => {
+  const userDataDir = scratchDir("infinitary-action-refused-");
+  const db = openDatabase(userDataDir);
+  const tasks = new TaskService({ db, strict: true });
+  seedTask(tasks, { id: "choice", title: DECISION_TASK_TITLE, kind: "decision", status: "idle" });
+  discardCard(db, "card-choice", "choice", SETTLE_TITLE);
+  db.close();
+
+  let launched = await launchApp({ userDataDir });
+  try {
+    const { page } = launched;
+    const before = await page.evaluate(() => window.infinitary.tasks.detail("choice"));
+    await clickDiscard(page);
     await expectNoCard(page, SETTLE_TITLE);
-    // The working copy holds the spec's uncommitted file and no commit of
-    // its own, and no project ships it elsewhere, so the way on is a merge
-    // of the branch.
     const refusal = {
       type: "firstmate_note",
-      text: unlandedWorkText(
-        { key: await taskKey(page, UNLANDED_TASK_TITLE), title: UNLANDED_TASK_TITLE },
-        { dirty: true, unlandedCommits: 0 },
-        "land",
-      ),
+      text: decisionDropRefusal(await taskKey(page, DECISION_TASK_TITLE)),
     } as const;
-    await expect.soft(feedLineOf(page, refusal)).toBeVisible();
-    expect(existsSync(join(worktreeDir, "unlanded.txt"))).toBe(true);
-    expect((await page.evaluate(() => window.infinitary.tasks.detail("feedback")))?.status).toBe(
-      "active",
-    );
+    await expect(feedLineOf(page, refusal)).toBeVisible();
+    const after = await page.evaluate(() => window.infinitary.tasks.detail("choice"));
+    expect({ status: after?.status, closedAt: after?.closedAt }).toEqual({
+      status: before?.status,
+      closedAt: before?.closedAt,
+    });
 
     await launched.close();
     launched = await launchApp({ userDataDir });

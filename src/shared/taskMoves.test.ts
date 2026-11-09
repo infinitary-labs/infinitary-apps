@@ -87,13 +87,12 @@ describe("taskMovesOf", () => {
     });
   });
 
-  it("keeps a parent's parts as the work, and refuses its drop while they are open", () => {
+  // The one drop keeps open parts planned (INF-3169's piece 4, the
+  // captain's pick "Also fold the three into one drop").
+  it("keeps a parent's parts as the work, and drops it with its parts still open", () => {
     const parent = task({ children: { total: 2, closed: 1 } });
-    expect(allowed(parent)).toEqual([]);
-    expect(taskMovesOf(parent)?.["drop-task"]).toEqual({
-      ok: false,
-      text: "Its parts are still open. Drop those first.",
-    });
+    expect(allowed(parent)).toEqual(["drop-task"]);
+    expect(taskMovesOf(parent)?.["drop-task"]).toEqual({ ok: true });
   });
 
   it("offers dropped work only Start again, unless replaced or containing parts", () => {

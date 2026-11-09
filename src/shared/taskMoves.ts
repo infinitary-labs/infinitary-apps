@@ -67,7 +67,6 @@ export function taskMovesOf(task: TaskMovesInput): TaskMoves | undefined {
   const bar = recordBarOf(task);
   const unstarted = isUnstartedWork(task);
   const parts = task.children.total > 0;
-  const openParts = task.children.total > task.children.closed;
   const started = no("It has already started.");
 
   const starting = bar?.next === "starting";
@@ -98,9 +97,9 @@ export function taskMovesOf(task: TaskMovesInput): TaskMoves | undefined {
   const resume: TaskMoveAllowance =
     bar?.next === "continue" ? OK : no("Only interrupted work continues.");
 
-  const drop: TaskMoveAllowance = openParts
-    ? no("Its parts are still open. Drop those first.")
-    : bar?.end === "drop-task"
+  // The one drop keeps open parts planned (INF-3169's piece 4).
+  const drop: TaskMoveAllowance =
+    bar?.end === "drop-task"
       ? OK
       : task.status === "active"
         ? no("It has started. Stopping it drops it and keeps a copy of its work.")

@@ -42,6 +42,11 @@ export function discardedText(pullRequest = ""): string {
   return `Discarded.${pullRequest ? ` ${pullRequest}` : ""}`;
 }
 
+/** A drop refused because the task is a decision, which holds no crew work to drop. */
+export function decisionDropRefusal(key: string): string {
+  return `Task ${key} is a decision, not crew work, so there is nothing to drop.`;
+}
+
 /** A merge that did not go in, in what its failure means. */
 export function cannotMergeText(plain: string): string {
   return `Cannot merge: ${plain}`;

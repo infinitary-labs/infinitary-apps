@@ -68,7 +68,7 @@ try {
   const { boardLaneOf } = await runner.import<BoardTiles>(join(REPO_ROOT, "src/panels/now/boardTiles.ts"));
   const { taskMovesOf } = await runner.import<typeof import("../src/shared/taskMoves.ts")>(join(REPO_ROOT, "src/shared/taskMoves.ts"));
   const { rowStartOf } = await runner.import<{ rowStartOf: (task: PanelTaskRow) => { label: string; reason: string | null } | null }>(join(REPO_ROOT, "src/panels/now/rows.ts"));
-  const { DROP_REVIEW_STALE, dropConfirmLead, dropPartsRefusal, dropUnderwayLine, dropWaitingLine } = await runner.import<typeof import("../src/shared/recordDrop.ts")>(join(REPO_ROOT, "src/shared/recordDrop.ts"));
+  const { DROP_REVIEW_STALE, dropConfirmLead, dropPartsLine, dropUnderwayLine, dropWaitingLine } = await runner.import<typeof import("../src/shared/recordDrop.ts")>(join(REPO_ROOT, "src/shared/recordDrop.ts"));
   const { recordPillToneOf } = await runner.import<typeof import("../src/renderer/src/cards/recordFooter.ts")>(join(REPO_ROOT, "src/renderer/src/cards/recordFooter.ts"));
   // The record's tabs and head are renderer modules the scripts' project does not compile (a store behind the tabs,
   // JSX in the head), so these name only the shapes this reading takes from them.
@@ -448,8 +448,9 @@ try {
       // Drop task's first press, as RecordPaneFooter's `beginDrop` and its confirm line read the record.
       const end = bar?.end === "drop-task" || bar?.end === "stop-task" ? bar.end : null;
       const effects = row.dropEffects ?? null;
-      const refusal = end === "drop-task" ? (!effects ? DROP_REVIEW_STALE : effects.parts.length > 0 ? dropPartsRefusal(row.key, effects.parts) : null) : null;
-      const question = end && !refusal ? [dropConfirmLead(row.key, end === "stop-task"), end === "drop-task" && effects ? dropWaitingLine(effects.waiting) : null,
+      const refusal = end === "drop-task" ? (!effects ? DROP_REVIEW_STALE : null) : null;
+      const question = end && !refusal ? [dropConfirmLead(row.key, end === "stop-task"), end === "drop-task" && effects ? dropPartsLine(effects.parts) : null,
+        end === "drop-task" && effects ? dropWaitingLine(effects.waiting) : null,
         end === "drop-task" && effects ? dropUnderwayLine(effects.underway) : null].filter(Boolean).join(" ") : null;
       return { name, row, live: live ? { text: "", since: live.since } : null, bar, pillTone: recordPillToneOf(row),
         status: { mark: read.mark, word: read.word, reason },

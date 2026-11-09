@@ -318,7 +318,9 @@ describe("CrewSupervisor", () => {
       expect(events.filter((event) => event.type === "firstmate_note")).toEqual([]);
       expect(mergePullRequest).toHaveBeenCalledTimes(action === "merge-pr" ? 1 : 0);
       expect(workspace.landTaskWork).toHaveBeenCalledTimes(action === "land" ? 1 : 0);
-      expect(workspace.taskWorkStatus).toHaveBeenCalledTimes(action === "discard" ? 1 : 0);
+      // The captain's Discard click is the one drop (INF-3169's piece 4), which
+      // passes the work holds, so it reads no work status before it closes.
+      expect(workspace.taskWorkStatus).not.toHaveBeenCalled();
       operation.resolve();
       await vi.waitFor(() => expect(workspace.removeTaskWorktree).toHaveBeenCalledTimes(1));
       expect(await supervisor.settling.settle.settleTask("receipt", "discard")).toContain(

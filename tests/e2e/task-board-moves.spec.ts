@@ -6,7 +6,7 @@ import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
-import { dropConfirmLead, dropWaitingLine } from "../../src/shared/recordDrop";
+import { dropConfirmLead, dropPartsLine, dropWaitingLine } from "../../src/shared/recordDrop";
 import { STARTED_BACKLOG_REASON } from "../../src/shared/taskPresentation";
 import type { TaskDetail } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -381,7 +381,7 @@ test("the task board moves tasks by drag and by menu, asking on the tile and wri
       await expect.poll(() => focusedTileKey(page)).toBe("FM3K-12");
     });
 
-    await test.step("Drop task by tray and by menu asks in the record's words, and refuses open parts", async () => {
+    await test.step("Drop task by tray and by menu asks in the record's words, and keeps open parts planned", async () => {
       await toBoard();
       await dragTile(page, "FM3K-11", "drop");
       const byTray = boardConfirm(page, "FM3K-11");
@@ -407,7 +407,9 @@ test("the task board moves tasks by drag and by menu, asking on the tile and wri
       await expect.poll(() => laneKeys(page, "backlog")).not.toContain("FM3K-12");
       await expect.poll(() => focusedTileKey(page)).toBe("FM3K-13");
 
-      // A parent with an open part: the menu lists Drop task dim.
+      // A parent with an open part: the one drop (INF-3169's piece 4, the
+      // captain's "fold the three into one drop") drops it and keeps the
+      // part planned, and the ask says so before anything is written.
       await backlogMenu("FM3K-6", "open");
       await expect(page.locator(SHOWN_ENTRY)).toHaveAttribute(
         "data-stage-entry-id",
@@ -419,14 +421,31 @@ test("the task board moves tasks by drag and by menu, asking on the tile and wri
       // the card behind it again, as in task-board-pages.
       await stagePrepared(page);
       await pressKey(boardTile(page, "FM3K-6"), "Space");
-      await expect(boardMenu(page, "FM3K-6").entry("drop")).toHaveAttribute(
-        "aria-disabled",
-        "true",
+      const parentDrop = boardMenu(page, "FM3K-6").entry("drop");
+      await expect(parentDrop).not.toHaveAttribute("aria-disabled", "true");
+      await pressInBoard(parentDrop);
+      const byParent = boardConfirm(page, "FM3K-6");
+      await expect(byParent.card).toHaveAttribute("data-board-confirm", "drop-task");
+      await expect(byParent.card.locator("p")).toHaveText(
+        `${dropConfirmLead("FM3K-6")} ${dropPartsLine([{ key: "FM3K-7", title: "Part" }])}`,
       );
-      await page.keyboard.press("Escape");
-      await expect(boardMenu(page, "FM3K-6").menu).toHaveCount(0);
-      await expect.poll(() => focusedTileKey(page)).toBe("FM3K-6");
+      // Nothing is written until the confirm.
       expect((await detail(page, "parent")).status).toBe("open");
+      expect(await captainMoves(page, "parent")).toEqual([]);
+      await pressInBoard(byParent.go);
+      await expect
+        .poll(async () => {
+          const parent = await detail(page, "parent");
+          return { status: parent.status, closedReason: parent.closedReason };
+        })
+        .toEqual({ status: "dropped", closedReason: "cancelled" });
+      expect(await captainMoves(page, "parent")).toContain("status");
+      // Its part stays planned on the Backlog, and focus lands on it, the
+      // row now nearest where the parent was.
+      expect((await detail(page, "part")).status).toBe("open");
+      await expect.poll(() => laneKeys(page, "backlog")).not.toContain("FM3K-6");
+      expect(await laneKeys(page, "backlog")).toContain("FM3K-7");
+      await expect.poll(() => focusedTileKey(page)).toBe("FM3K-7");
     });
 
     await test.step("a live change under a confirmation cancels it and the live line says so", async () => {

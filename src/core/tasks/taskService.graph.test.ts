@@ -484,7 +484,7 @@ describe("the task graph (task-system P2)", () => {
       expect(tasks.graph.closeRefusal("parent")).toBeUndefined();
     });
 
-    it("drops never-started work for the captain and refuses open parts without writing", () => {
+    it("drops never-started work for the captain, keeping its open parts planned", () => {
       const { tasks, work } = setup();
       const leaf = work("leaf");
       const waiter = work("waiter");
@@ -522,27 +522,27 @@ describe("the task graph (task-system P2)", () => {
         ok: false,
       });
 
+      // The one drop (INF-3169's piece 4, the captain's pick "Also fold the
+      // three into one drop") keeps open parts planned and never cascades.
       const parent = work("parent");
       const openPart = work("part", { parentId: parent.id });
       const closedPart = work("done-part", { parentId: parent.id });
       tasks.close(closedPart.id, { status: "done", reason: "landed", actor: "host" });
-      const refused = tasks.starts.dropUnstarted(parent.id, {
-        actor: "captain",
-        review: dropReviewKeys(tasks.dropEffects(parent.id)),
-      });
-      expect(refused.ok).toBe(false);
-      if (!refused.ok) expect(refused.text).toContain(openPart.key);
-      expect(tasks.get(parent.id)?.status).toBe("open");
-      expect(tasks.get(openPart.id)?.status).toBe("open");
-      expect(tasks.get(closedPart.id)).toMatchObject({ status: "done", closedReason: "landed" });
-
-      tasks.close(openPart.id, { status: "dropped", reason: "cancelled", actor: "captain" });
+      const parentReview = dropReviewKeys(tasks.dropEffects(parent.id));
+      expect(parentReview.parts).toEqual([openPart.key]);
       expect(
         tasks.starts.dropUnstarted(parent.id, {
           actor: "captain",
-          review: dropReviewKeys(tasks.dropEffects(parent.id)),
+          review: { ...parentReview, parts: [] },
         }),
-      ).toEqual({ ok: true });
+      ).toEqual({ ok: false, text: DROP_REVIEW_STALE });
+      expect(
+        tasks.starts.dropUnstarted(parent.id, { actor: "captain", review: parentReview }),
+      ).toEqual({
+        ok: true,
+      });
+      expect(tasks.get(parent.id)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
+      expect(tasks.get(openPart.id)?.status).toBe("open");
       expect(tasks.get(closedPart.id)?.status).toBe("done");
     });
 

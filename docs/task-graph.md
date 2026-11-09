@@ -90,7 +90,7 @@ A task also does not close while something it waits on is still live work - open
 Its refusal names the ways out: the blocker's close (its merge, or `settle_task` done, why `answered`, when it is a step whose report was all the waiter needed), dropping work that is not wanted, or `link_tasks remove` only when the wait names the wrong task.
 That wait is a soft hold (`waits`): the captain's recorded override passes it, and a close refused on it says so (`docs/delivery-rigor.md`, "The holds").
 A **dropped** blocker clears a close, and only a close - for readiness it is a wait that can never end and the first mate answers the dead-gate wake, but that wake names open rows only, so an active task held by a dropped blocker would strand with no way out.
-A `discard` abandons the work rather than completing it, so a wait never forbids it; only containment does (`closeGateRefusal`, `settleRefusals.ts`).
+A `discard` abandons the work rather than completing it, so a wait never forbids it; only containment does, and only on the first mate's own drop (`closeGateRefusal`, `settleRefusals.ts`): the captain's own drop keeps open parts planned (`docs/task-record.md`, "One drop").
 A crewmate's merge card is refused at emit time while that same rule would refuse the click (`CrewmateCards.addCrewmateCard`; open children stay a click-time choice because the captain can override them).
 The `link_tasks` description says a blocks link holds the start and the merge until `from` closes.
 It says `related` is for work neither task is waiting on.
@@ -123,7 +123,7 @@ Consent, browser handoffs, continuing cards, invalid actions and dismissals reco
 Closing on its own, the first mate's close is held on a task still working or with guidance queued, one whose crewmate has not reported, one whose own pull request reads open, one whose commits are not merged when the close names nowhere else the work went, an answer the captain asked for and has not read, one whose own answer card is still up, one whose card still asks the captain something, and open children or dependencies.
 Each is a soft hold the captain's own words pass (`captain_words`).
 A first mate note on the task stays on the stack through the close, the same as a crewmate's note, until the captain closes it.
-Discard, cancel and `update_task drop` keep their own closes.
+Discard and Drop task close through the one drop (`docs/task-record.md`, "One drop"); `interrupt_crewmate` cancel and `update_task drop` keep their own closes.
 
 A **container completes with its children**.
 A parent that never started - on request, no crewmate, no working copy, no card of its own open - has nothing of its own to settle, so the ready sweep closes it.
@@ -178,7 +178,8 @@ Charted's header counts crew-filed rows not yet opened (`captain_opened_at`; ope
 The row's word is `found on <origin key>`.
 The record card shows the filing's why and the first mate's `verdict` (one line, `update_task verdict` when leaving it planned).
 Hide removes the shown record entry from the stack, without dropping the task.
-Drop task on never-started work drops that one record as cancelled ("No longer wanted", captain-attributed) and refuses while any part is still open (on started work the same button is the captain's cancel, `stop-task`, which keeps a copy of the unfinished work); `update_task drop` is unchanged and still cascades open children when confirmed.
+Drop task on never-started work drops that one record as cancelled ("No longer wanted", captain-attributed), and its open parts stay planned, which its question names; on started work the same button is the captain's drop of started work, `stop-task`; both run the one drop (`docs/task-record.md`, "One drop").
+`update_task drop` is unchanged and still cascades open children when confirmed.
 `verify.yml`'s lanes run their gate from a path with a space, the path every crewmate works under.
 
 The retired supervision session held the read-only `tasks` query beside `crew_status`, so a wake about a task could see its parent, blockers and follow-ups; it wrote nothing on the graph, and S7c retired both it and those tools (`docs/report-sort.md`).

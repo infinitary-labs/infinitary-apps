@@ -27,18 +27,16 @@ import {
   mergeGate,
   notSignedInRefusal,
   openCurrentMerge,
-  unlandedWorkRefusal,
-  unreadableWorkRefusal,
 } from "./settleRefusals";
 import {
   cannotMergeText,
   changeName,
-  discardedText,
   folderNotUpdatedText,
   placeOf,
   settlingText,
 } from "./settleWords";
-import { type TaskClose, type TaskClosing, workspaceOf } from "./taskClose";
+import type { TaskClose, TaskClosing } from "./taskClose";
+import type { TaskDrop } from "./taskDrop";
 
 /**
  * The feed line for a settle the captain clicked. An outcome with no raw
@@ -95,6 +93,7 @@ export class SettleService {
     private readonly locks: SettleLocks,
     private readonly approvals: KeptApproval,
     private readonly closing: TaskClosing,
+    private readonly drops: TaskDrop,
   ) {}
 
   /**
@@ -696,7 +695,7 @@ export class SettleService {
    */
   private folderNotUpdated(
     record: TaskRecord,
-    actor: TaskClose["actor"],
+    _actor: TaskClose["actor"],
     refusal: FolderRefreshRefusal,
     reach: string | undefined,
   ): string {
@@ -925,6 +924,14 @@ export class SettleService {
         }. ${fixedHoldWords("nothing-to-merge")}`,
       };
     }
+    // A discard is the one drop, by its rules (INF-3169's piece 4).
+    if (mode === "discard")
+      return this.drops.drop(taskId, {
+        actor: actor === "captain" ? "captain" : "firstmate",
+        reason: "discarded",
+        ...(confirm ? { confirm } : {}),
+        ...(proceedWithOpen ? { proceedWithOpen } : {}),
+      });
     // An answer task ships nothing (Task B): there is no branch to land and
     // no pull request to merge, because its brief told the crewmate to
     // commit nothing. Discard stays - it is the captain's cleanup of a
@@ -948,8 +955,7 @@ export class SettleService {
     // One owner across cards, the shell, and conversational tools. Claim
     // before the first await, and retain it through worktree cleanup.
     this.locks.settlingTasks.set(taskId, mode);
-    const boundary =
-      mode === "discard" ? undefined : this.mergeBoundary(taskId, mode, actor, proceedWithOpen);
+    const boundary = this.mergeBoundary(taskId, mode, actor, proceedWithOpen);
     try {
       if (mode === "merge-pr" || mode === "land") {
         const existing = this.host.tasks.get(taskId)?.pendingSettle;
@@ -994,7 +1000,7 @@ export class SettleService {
   private async settleTaskOnce(
     taskId: string,
     mode: "merge-pr" | "land" | "discard",
-    confirm: boolean | undefined,
+    _confirm: boolean | undefined,
     actor: MergeActor,
     proceedWithOpen: boolean,
     guard?: MergeGuard,
@@ -1052,49 +1058,7 @@ export class SettleService {
       return this.landTaskOnce(taskId, actor, boundary, after);
     }
 
-    if (
-      (record.status === "done" || record.status === "dropped") &&
-      !(record.worktreeDir && record.workspaceState === "present")
-    ) {
-      return {
-        ok: false,
-        text: `Task ${taskId} "${record.title}" is already ${describeStatus(record)}; there is nothing to discard.`,
-      };
-    }
-    if (this.locks.working(taskId) && !confirm) {
-      return {
-        ok: false,
-        text: `Cannot discard task ${taskId} "${record.title}" while it is still working. Interrupt it first, or pass confirm true after the captain chooses.`,
-      };
-    }
-    // On a computer that runs work, that computer reads its own working
-    // copy; while it is out of reach nobody can say it holds nothing.
-    const work = record.deviceId
-      ? await (this.host.placed?.workStatus(taskId) ?? Promise.resolve(null))
-      : await this.host.workspace.taskWorkStatus(workspaceOf(record));
-    if (!work && !confirm && record.workspaceState === "present") {
-      const refusal = unreadableWorkRefusal(record);
-      return { ok: false, text: refusal.text, refusal };
-    }
-    if (work && (work.dirty || work.unlandedCommits > 0) && !confirm) {
-      const refusal = unlandedWorkRefusal(this.host, record, work);
-      return { ok: false, text: refusal.text, refusal };
-    }
-    const prResult = await this.closing.closeOpenPullRequest(taskId, {
-      line: actor === "firstmate",
-    });
-    const problem = prResult.problem;
-    await this.closing.closeTask(taskId, {
-      status: "dropped",
-      reason: "discarded",
-      actor: closeActor(actor),
-    });
-    return {
-      ok: true,
-      text: discardedText(prResult.text),
-      ...(problem ? { problem } : {}),
-      ...(prResult.repair ? { followup: prResult.repair } : {}),
-    };
+    throw new Error(`Task ${taskId}: ${mode} is not a merge or a land.`);
   }
 
   /**

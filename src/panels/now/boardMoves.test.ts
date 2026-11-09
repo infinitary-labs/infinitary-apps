@@ -1,5 +1,5 @@
 import type { PanelTaskRow } from "@infinitary/contracts";
-import { DROP_TASK_LABEL, dropConfirmLead, dropPartsRefusal } from "@infinitary/ui";
+import { DROP_TASK_LABEL, dropConfirmLead } from "@infinitary/ui";
 import { taskMovesOf } from "@shared/taskMoves";
 import { describe, expect, it } from "vitest";
 import {
@@ -180,7 +180,7 @@ describe("the task board's moves", () => {
     expect(move(backlog, "landed").kind).toBe("refused");
   });
 
-  it("drops through the record's Drop task, asking once in its words, and refuses open parts", () => {
+  it("drops through the record's Drop task, asking once in its words, and keeps open parts planned", () => {
     expect(move(backlog, "drop")).toEqual({
       kind: "ask",
       op: "drop-task",
@@ -194,8 +194,9 @@ describe("the task board's moves", () => {
       confirm: DROP_TASK_LABEL,
     });
     expect(move(waiting, "drop")).toMatchObject({ kind: "ask", op: "stop-task" });
-    expect(move(parent, "drop").kind).toBe("refused");
-    // With the record's effects, the sentence is the record's own, and so is its refusal.
+    // The one drop (INF-3169's piece 4) keeps a parent's open parts planned.
+    expect(move(parent, "drop")).toMatchObject({ kind: "ask", op: "drop-task" });
+    // With the record's effects, the sentence is the record's own.
     const effects = {
       parts: [],
       waiting: [{ key: "FI3-20", title: "Use it" }],
@@ -208,8 +209,9 @@ describe("the task board's moves", () => {
     });
     const parts = [{ key: "FI3-13", title: "A part", started: false }];
     expect(dropAskOf("FI3-12", { parts, waiting: [], underway: [] })).toEqual({
-      kind: "refused",
-      text: dropPartsRefusal("FI3-12", parts),
+      kind: "ask",
+      sentence: `${dropConfirmLead("FI3-12")} Its part FI3-13 stays planned.`,
+      review: { parts: ["FI3-13"], waiting: [], underway: [] },
     });
   });
 
@@ -262,7 +264,11 @@ describe("a tile's ⋯ menu", () => {
     ]);
     expect(queuedEntries[1]).toMatchObject({ detail: "Waits for your word again · at once" });
     expect(queuedEntries[2]).toMatchObject({ disabled: true });
-    expect(boardMenuOf(parent, "backlog", NO_CARD).at(-1)).toMatchObject({ disabled: true });
+    // A parent's Drop task runs with its parts open, which stay planned (INF-3169's one drop).
+    expect(boardMenuOf(parent, "backlog", NO_CARD).at(-1)).toMatchObject({
+      label: "Drop task",
+      disabled: false,
+    });
   });
 
   it("offers Show the card on waiting work and Continue on interrupted work, and nothing on closed work", () => {

@@ -15,15 +15,16 @@ import {
 } from "@shared/recordCloseDone";
 import {
   DROP_REVIEW_STALE,
+  dropIneligibleRefusal,
   dropMissingRefusal,
   dropStartedRefusal,
-  NO_LONGER_WANTED,
 } from "@shared/recordDrop";
 import {
   queueMissingRefusal,
   queueStartedBacklogRefusal,
   queueStartedRefusal,
 } from "@shared/taskQueue";
+import { isUnstartedWork } from "@shared/tasks";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import type { TaskRecord } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
@@ -207,7 +208,7 @@ export class HostOps {
         return {};
       }
       case "stop-task":
-        if (effect.arg) this.core.sessions.stopTask(effect.arg, "shell");
+        if (effect.arg) this.dropStarted(effect.arg, "shell");
         return {};
       case "start-task":
         if (effect.arg) this.startOnRequest(effect.arg);
@@ -306,8 +307,7 @@ export class HostOps {
         this.continueStuckTask(taskId, TASK_CARD_VIA, panel);
         return undefined;
       case "stop-task":
-        this.core.sessions.stopTask(taskId, TASK_CARD_VIA, panel);
-        return undefined;
+        return this.dropStarted(taskId, TASK_CARD_VIA, panel);
     }
   }
 
@@ -330,9 +330,38 @@ export class HostOps {
   }
 
   /**
-   * Drop never-started work the captain no longer wants. Open parts are
-   * refused. A start already requested, or a review that no longer matches,
-   * refuses and writes nothing. Outstanding cards come down as obsolete.
+   * Drop task on started work: the captain's own drop, by the one drop's
+   * rules (`TaskDrop`), which stops its crewmate and keeps a copy of its
+   * unfinished work. A real limit answers at once; anything the drop says
+   * after its reads reaches the feed.
+   */
+  private dropStarted(
+    taskId: string,
+    via: typeof TASK_CARD_VIA | "shell",
+    panel?: string,
+  ): string | undefined {
+    const input = {
+      actor: "captain" as const,
+      reason: "cancelled" as const,
+      via,
+      ...(panel ? { panel } : {}),
+    };
+    const refused = this.core.settling.drops.refusal(taskId, input);
+    if (refused) return refused.text;
+    void this.core.settling.drops
+      .drop(taskId, input)
+      .then((result) => {
+        if (!result.ok) this.reportCardEffectFailure(taskId, new Error(result.text));
+      })
+      .catch((caught: unknown) => this.reportCardEffectFailure(taskId, caught));
+    return undefined;
+  }
+
+  /**
+   * Drop task on never-started work: the captain's own drop, by the one
+   * drop's rules (`TaskDrop`). Its open parts stay planned. A start already
+   * requested, or a review that no longer matches, refuses and writes
+   * nothing. Its record closes before this returns.
    */
   private dropFromRecord(
     taskId: string,
@@ -345,28 +374,21 @@ export class HostOps {
     if (!review) return DROP_REVIEW_STALE;
     if (this.starting.has(taskId) || this.pendingStarts.has(taskId) || this.core.tasks.has(taskId))
       return dropStartedRefusal(key);
-    try {
-      this.core.settling.closing.closeAndPurge([taskId], () => {
-        const result = this.core.options.tasks.starts.dropUnstarted(taskId, {
-          actor: "captain",
-          review,
-          reason: NO_LONGER_WANTED,
-          via: TASK_CARD_VIA,
-          ...(panel ? { panel } : {}),
-        });
-        if (!result.ok) {
-          const refused = new Error(result.text);
-          refused.name = "DropRefused";
-          throw refused;
-        }
-      });
-    } catch (caught) {
-      if (caught instanceof Error && caught.name === "DropRefused") return caught.message;
-      throw caught;
-    }
-    for (const card of [...this.core.cards.values()]) {
-      if (card.taskId === taskId) this.core.cards.takeDown(card.id, "obsolete");
-    }
+    if (!isUnstartedWork(record) || record.worktreeDir || record.assignee != null)
+      return dropIneligibleRefusal(key);
+    const input = {
+      actor: "captain" as const,
+      reason: "cancelled" as const,
+      review,
+      via: TASK_CARD_VIA as typeof TASK_CARD_VIA,
+      ...(panel ? { panel } : {}),
+    };
+    const refused = this.core.settling.drops.refusal(taskId, input);
+    if (refused) return refused.text;
+    // Never-started work closes in this call, before the drop first yields.
+    void this.core.settling.drops
+      .drop(taskId, input)
+      .catch((caught: unknown) => this.reportCardEffectFailure(taskId, caught));
     this.core.intake.graphChanged();
     return undefined;
   }

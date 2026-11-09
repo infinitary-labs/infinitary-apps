@@ -380,16 +380,17 @@ describe("the task graph (R1)", () => {
         .filter((event) => event.kind === "steered")
         .at(-1),
     ).toMatchObject({ actor: "captain", data: { via: "task-card", cardId: null } });
-    // Drop task mid-turn writes the request and its outcome: one click.
+    // Drop task mid-turn is the one drop (INF-3169's piece 4): it stops the
+    // turn and closes the record as the captain's, from the task card.
     supervisor.hostOps.runTaskOp(planned.id, "stop-task");
     crewmate.failPrompt("aborted");
     await tick();
+    expect(tasks.get(planned.id)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
     expect(
       tasks
         .timeline(planned.id)
-        .filter((event) => event.kind === "interrupted")
-        .map((event) => event.data?.effect),
-    ).toEqual(["requested", "aborted-turn"]);
+        .filter((event) => event.kind === "status" && event.data?.status === "dropped"),
+    ).toMatchObject([{ actor: "captain", data: { via: "task-card" } }]);
     const unstarted = supervisor.intake.plan({ title: "Never mind", intent: intentOf("nope") });
     expect(
       supervisor.hostOps.runTaskOp(unstarted.id, "drop-task", {

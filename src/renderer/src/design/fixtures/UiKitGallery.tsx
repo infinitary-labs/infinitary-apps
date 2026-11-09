@@ -71,7 +71,7 @@ export const HELPER_EXPORTS: readonly string[] = [
   "DEPENDENCY_VISUAL",
   "DROP_TASK_LABEL",
   "dropConfirmLead",
-  "dropPartsRefusal",
+  "dropPartsLine",
   "dropReviewKeys",
   "dropUnderwayLine",
   "dropWaitingLine",

@@ -6,6 +6,7 @@ import type { SettleServiceHost } from "./settleHost";
 import { SettleLocks } from "./settleLocks";
 import { SettleService } from "./settleService";
 import { TaskClosing } from "./taskClose";
+import { TaskDrop } from "./taskDrop";
 
 /**
  * Settling and closing a task, composed from its owners (the primitives
@@ -18,8 +19,10 @@ import { TaskClosing } from "./taskClose";
  *   (`./keptApproval.ts`).
  * - `closing`: how a task closes, its cards, worktree and delivery children
  *   (`./taskClose.ts`).
- * - `settle`: land, merge-pr and discard, and a merge made outside the app
- *   (`./settleService.ts`).
+ * - `drops`: the one drop - Discard and the captain's Drop task, on started
+ *   and on never-started work (`./taskDrop.ts`).
+ * - `settle`: land and merge-pr, a discard through the one drop, and a
+ *   merge made outside the app (`./settleService.ts`).
  * - `kept`: merges run under a kept approval (`./keptMerge.ts`).
  * - `declared`: closes declared on a typed fact (`./declaredCloses.ts`).
  * - `done`: the one close as done, with its holds and delivery facts
@@ -29,6 +32,7 @@ export type SettleOwners = {
   locks: SettleLocks;
   approvals: KeptApproval;
   closing: TaskClosing;
+  drops: TaskDrop;
   settle: SettleService;
   kept: KeptMerge;
   declared: DeclaredCloses;
@@ -40,7 +44,8 @@ export function createSettleOwners(host: SettleServiceHost): SettleOwners {
   const locks = new SettleLocks(host);
   const approvals = new KeptApproval(host, locks);
   const closing = new TaskClosing(host, locks);
-  const settle = new SettleService(host, locks, approvals, closing);
+  const drops = new TaskDrop(host, locks, closing);
+  const settle = new SettleService(host, locks, approvals, closing, drops);
   const kept = new KeptMerge(host, locks, approvals, closing, settle);
   const declared = new DeclaredCloses(host, closing);
   const done = new DoneClose(host, locks, closing, settle, declared);
@@ -49,5 +54,5 @@ export function createSettleOwners(host: SettleServiceHost): SettleOwners {
       console.warn("[settle] a kept merge approval could not run:", caught);
     });
   };
-  return { locks, approvals, closing, settle, kept, declared, done };
+  return { locks, approvals, closing, drops, settle, kept, declared, done };
 }

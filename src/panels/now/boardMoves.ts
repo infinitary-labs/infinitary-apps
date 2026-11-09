@@ -7,7 +7,7 @@ import type {
 import {
   DROP_TASK_LABEL,
   dropConfirmLead,
-  dropPartsRefusal,
+  dropPartsLine,
   dropReviewKeys,
   dropUnderwayLine,
   dropWaitingLine,
@@ -114,7 +114,6 @@ function keyList(keys: readonly string[]): string {
 
 const blockedOf = (task: PanelTaskRow) => task.flags.blocked || task.blockedBy.length > 0;
 const hasParts = (task: PanelTaskRow) => task.children.total > 0;
-const openParts = (task: PanelTaskRow) => task.children.total > task.children.closed;
 
 /** Whether a tile in `lane` can be picked up at all: Done and Dropped tiles never move. */
 export function boardMovable(lane: BoardLane): boolean {
@@ -283,12 +282,6 @@ export const STARTED_BACKLOG_TEXT = "Its turn stops and its work stays. It waits
 
 /** The Drop task tray: the record's own Drop task, which asks once. */
 function dropMoveOf(task: PanelTaskRow): BoardMove {
-  if (openParts(task)) {
-    return {
-      kind: "refused",
-      text: "Its parts are still open. Drop those first; nothing changes.",
-    };
-  }
   // The record's end, as the row says it: Drop task before the work
   // starts, its stop once it has.
   if (task.moves?.["drop-task"].ok) {
@@ -313,8 +306,8 @@ function dropMoveOf(task: PanelTaskRow): BoardMove {
 /**
  * The record's own confirmation for never-started work, read from the
  * effects its record lists (`tasks.detail`'s `dropEffects`): the sentence the
- * record asks with and the review the host checks again, or the record's
- * refusal while parts are open.
+ * record asks with, saying its open parts stay planned, and the review the
+ * host checks again.
  */
 export function dropAskOf(
   key: string,
@@ -322,12 +315,11 @@ export function dropAskOf(
 ): { kind: "ask"; sentence: string; review: PanelDropReview } | { kind: "refused"; text: string } {
   if (!effects)
     return { kind: "refused", text: `${key} changed. Look at it again before dropping it.` };
-  if (effects.parts.length > 0)
-    return { kind: "refused", text: dropPartsRefusal(key, effects.parts) };
   return {
     kind: "ask",
     sentence: [
       dropConfirmLead(key),
+      dropPartsLine(effects.parts),
       dropWaitingLine(effects.waiting),
       dropUnderwayLine(effects.underway),
     ]

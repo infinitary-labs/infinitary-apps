@@ -146,23 +146,84 @@ describe("the task browser's connection guard", () => {
     expect(refused).toEqual([]);
   });
 
-  it("refuses a public name that leads to this Mac or a private network, before any connection", async () => {
+  it("refuses a public name that leads only to this Mac or a private network, before any connection", async () => {
     const { guard, connects, refused } = await guarded({
       "rebind.example": ["127.0.0.1"],
       "router.example": ["192.168.1.1"],
-      "mixed.example": ["93.184.215.14", "10.0.0.7"],
       "mapped.example": ["::ffff:10.0.0.7"],
+      "wiki.corp.example": ["10.20.30.40", "fd00::5"],
     });
-    for (const host of ["rebind.example", "router.example", "mixed.example", "mapped.example"]) {
+    for (const host of [
+      "rebind.example",
+      "router.example",
+      "mapped.example",
+      "wiki.corp.example",
+    ]) {
       const text = await exchange(guard, connectTo(`${host}:443`, guard));
       expect(text, host).toMatch(/^HTTP\/1\.1 403 /);
     }
     expect(connects).toEqual([]);
     expect(refused).toEqual([
-      { host: "rebind.example", kind: "private" },
-      { host: "router.example", kind: "private" },
-      { host: "mixed.example", kind: "private" },
-      { host: "mapped.example", kind: "private" },
+      {
+        host: "rebind.example",
+        kind: "private",
+        answers: [{ address: "127.0.0.1", kind: "this-computer" }],
+      },
+      {
+        host: "router.example",
+        kind: "private",
+        answers: [{ address: "192.168.1.1", kind: "private" }],
+      },
+      {
+        host: "mapped.example",
+        kind: "private",
+        answers: [{ address: "::ffff:10.0.0.7", kind: "private" }],
+      },
+      {
+        host: "wiki.corp.example",
+        kind: "private",
+        answers: [
+          { address: "10.20.30.40", kind: "private" },
+          { address: "fd00::5", kind: "private" },
+        ],
+      },
+    ]);
+  });
+
+  // INF-3116, answer 1: a name with public and private answers connects
+  // through its public answers only; the private ones are never dialed.
+  it("tunnels a name with public and private answers to its public ones alone", async () => {
+    const { port } = await site();
+    const { guard, connects, refused } = await guarded(
+      { "mixed.example": ["10.0.0.7", "93.184.215.14", "127.0.0.1"] },
+      port,
+    );
+    const text = await exchange(guard, connectTo("mixed.example:443", guard), {
+      until: /pong/,
+      afterHead: (socket) => socket.write("ping"),
+    });
+    expect(text).toMatch(/^HTTP\/1\.1 200 Connection Established\r\n\r\n/);
+    expect(connects).toEqual(["93.184.215.14:443"]);
+    expect(refused).toEqual([]);
+  });
+
+  it("says which answers it skipped when a mixed name's public ones do not answer", async () => {
+    const { guard, connects, refused } = await guarded({
+      "portal.corp.example": ["2606:4700:10::6814:2011", "10.0.0.5"],
+    });
+    expect(await exchange(guard, connectTo("portal.corp.example:443", guard))).toMatch(
+      /^HTTP\/1\.1 502 /,
+    );
+    expect(connects).toEqual(["2606:4700:10::6814:2011:443"]);
+    expect(refused).toEqual([
+      {
+        host: "portal.corp.example",
+        kind: "unreachable",
+        answers: [
+          { address: "2606:4700:10::6814:2011", kind: "public" },
+          { address: "10.0.0.5", kind: "private" },
+        ],
+      },
     ]);
   });
 
@@ -183,8 +244,12 @@ describe("the task browser's connection guard", () => {
     );
     expect(await exchange(guard, connectTo("down.example:443", guard))).toMatch(/^HTTP\/1\.1 502 /);
     expect(refused).toEqual([
-      { host: "nowhere.example", kind: "unresolved" },
-      { host: "down.example", kind: "unreachable" },
+      { host: "nowhere.example", kind: "unresolved", answers: [] },
+      {
+        host: "down.example",
+        kind: "unreachable",
+        answers: [{ address: "93.184.215.14", kind: "public" }],
+      },
     ]);
   });
 

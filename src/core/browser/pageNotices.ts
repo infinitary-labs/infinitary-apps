@@ -1,9 +1,10 @@
 import { HERE } from "@shared/deviceNames";
 import { TASK_BROWSER_PAGES_MAX } from "@shared/taskBrowser";
 import type { HostBrowserRefusal } from "../host";
+import type { AddressKind } from "./addresses";
 import { quoted, siteOf } from "./browserRecord";
 import { browserCommand } from "./commandWords";
-import type { GuardRefusalKind } from "./connectionGuard";
+import type { GuardAnswer, GuardRefusal, GuardRefusalKind } from "./connectionGuard";
 import type { BlockKind } from "./destinations";
 
 /** Page errors and dialogs one answer lists before it counts the rest. */
@@ -65,6 +66,83 @@ export function refusalWords(refusal: HostBrowserRefusal): string {
   }
 }
 
+/** Addresses one refusal lists before it counts the rest. */
+const ANSWERS_SHOWN = 4;
+
+/** Each non-public kind of answer, as one address and as several, and what to do about it. */
+const ANSWER_WORDS: Record<Exclude<AddressKind, "public">, readonly [string, string, string]> = {
+  private: [
+    "an address on a private network such as an office or VPN network",
+    "addresses on a private network such as an office or VPN network",
+    `Task browsers reach public websites and the pages on ${HERE.this} you open; no setting lets them reach a private site yet.`,
+  ],
+  "this-computer": [
+    `an address on ${HERE.this}`,
+    `addresses on ${HERE.this}`,
+    `To open a page served on ${HERE.this}, open it by localhost instead, such as ${browserCommand("open http://localhost:<port>/")}.`,
+  ],
+  reserved: [
+    "a reserved address that is not on the internet",
+    "reserved addresses that are not on the internet",
+    "A proxy app or DNS filter usually gives such an address in place of a site's own.",
+  ],
+};
+
+const ANSWER_ORDER: readonly Exclude<AddressKind, "public">[] = [
+  "private",
+  "this-computer",
+  "reserved",
+];
+
+function listed(addresses: readonly string[]): string {
+  const shown = addresses.slice(0, ANSWERS_SHOWN);
+  const more = addresses.length - shown.length;
+  if (more > 0) return `${shown.join(", ")} and ${more} more`;
+  return shown.length > 1
+    ? `${shown.slice(0, -1).join(", ")} and ${shown[shown.length - 1]}`
+    : (shown[0] ?? "");
+}
+
+/** The non-public answers by kind, each as "addresses, what they are", and the sentences after. */
+function nonPublic(answers: readonly GuardAnswer[]): { named: string[]; after: string[] } {
+  const named: string[] = [];
+  const after: string[] = [];
+  for (const kind of ANSWER_ORDER) {
+    const addresses = answers.filter((answer) => answer.kind === kind).map((a) => a.address);
+    if (addresses.length === 0) continue;
+    const [one, many, then] = ANSWER_WORDS[kind];
+    named.push(`${listed(addresses)}, ${addresses.length === 1 ? one : many}`);
+    after.push(then);
+  }
+  return { named, after };
+}
+
+/**
+ * The lead of a crewmate's own load the connection guard refused or could
+ * not carry, naming what the name answered (docs/task-browser.md, "Where a
+ * page may go"); nothing for a refusal these words do not cover.
+ */
+export function guardRefusalLead(site: string, refusal: GuardRefusal): string | undefined {
+  switch (refusal.kind) {
+    case "private": {
+      const { named, after } = nonPublic(refusal.answers);
+      if (named.length === 0) {
+        return `${site} leads to an address that is not on the internet, so the browser refused it at the connection. ${ANSWER_WORDS.private[2]}`;
+      }
+      return `${site} leads to ${named.join("; and to ")}, so the browser refused it at the connection. ${after.join(" ")}`;
+    }
+    case "unresolved":
+      return `${site} was not found. Check the address.`;
+    case "unreachable": {
+      const tried = refusal.answers.filter((answer) => answer.kind === "public");
+      const { named, after } = nonPublic(refusal.answers);
+      if (named.length === 0)
+        return `${site} did not answer. Try again later, or carry on without it.`;
+      return `${site} did not answer at its public ${tried.length === 1 ? "address" : "addresses"}, ${listed(tried.map((a) => a.address))}. The browser skipped ${named.join("; and ")}, which it never dials. ${after.join(" ")}`;
+    }
+  }
+}
+
 export function clip(text: string, max = NOTICE_MAX): string {
   const flat = text.replace(/\s+/g, " ").trim();
   return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
@@ -86,7 +164,7 @@ export class PageNotices {
   /** Requests refused since the last answer, by host. */
   readonly blocked = new Map<string, Blocked>();
   /** Why the guard last carried no connection to each host, for a load's own words. */
-  readonly tunnels = new Map<string, GuardRefusalKind>();
+  readonly tunnels = new Map<string, GuardRefusal>();
   readonly dialogs: string[] = [];
   readonly errors: string[] = [];
   /**

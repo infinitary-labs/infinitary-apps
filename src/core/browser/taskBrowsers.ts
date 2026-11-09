@@ -877,10 +877,10 @@ export class TaskBrowsers {
     const notices = browser.notices;
     try {
       browser.guard = await (this.options.guard ?? startConnectionGuard)({
-        onRefused: ({ host, kind }) => {
+        onRefused: (refusal) => {
           if (captains()) return;
-          notices.tunnels.set(host, kind);
-          notices.block(host, kind);
+          notices.tunnels.set(refusal.host, refusal);
+          notices.block(refusal.host, refusal.kind);
         },
         ...(this.options.lookup ? { lookup: this.options.lookup } : {}),
       });

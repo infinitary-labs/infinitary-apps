@@ -32,7 +32,7 @@ import {
   type RefStanding,
   refusedRefWords,
 } from "./outline";
-import { clip } from "./pageNotices";
+import { clip, guardRefusalLead } from "./pageNotices";
 import { foundWords, nextBlock, type WindowAsk, windowOf } from "./window";
 
 /**
@@ -369,16 +369,10 @@ function loadLead(browser: Browser, outcome: HostLoadOutcome, done: string, href
       return `Nothing answered at ${href}. Start the project's server first (in the background), then run ${browserCommand("open <url>")} again.`;
     case "ERR_TUNNEL_CONNECTION_FAILED":
     case "ERR_PROXY_CONNECTION_FAILED":
-      switch (tunnel) {
-        case "private":
-          return `${host} leads to an address on ${HERE.this} or a private network, so the browser refused it at the connection. It reaches public websites and the pages on ${HERE.this} you open, never another device.`;
-        case "unresolved":
-          return `${host} was not found. Check the address.`;
-        case "unreachable":
-          return `${host} did not answer. Try again later, or carry on without it.`;
-        default:
-          return `The page did not load: the connection where it led was refused or failed (${outcome.code}).`;
-      }
+      return (
+        (tunnel && guardRefusalLead(host, tunnel)) ??
+        `The page did not load: the connection where it led was refused or failed (${outcome.code}).`
+      );
     case "ERR_BLOCKED_BY_CLIENT":
       return `The browser refused to load ${href}, or where it led: see what it blocked below.`;
     case "ERR_ABORTED":

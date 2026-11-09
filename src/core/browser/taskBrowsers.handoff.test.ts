@@ -107,7 +107,11 @@ describe('taking control and handing it back (docs/task-browser.md, "Taking cont
     // What the page says while he holds it is his: refused requests and
     // connections, errors, refusals, dialogs and its moves are kept for nobody.
     expect(page.opened.allow({ url: "http://bank.example/check", topLevel: false })).toBe(false);
-    guards[0]?.onRefused({ host: "bank-intranet.example", kind: "private" });
+    guards[0]?.onRefused({
+      host: "bank-intranet.example",
+      kind: "private",
+      answers: [{ address: "10.1.2.3", kind: "private" }],
+    });
     page.opened.onRefused({ kind: "sign-in-box", url: "https://bank-login.example/" });
     page.opened.onPageError("Uncaught TypeError: private");
     page.opened.onDialog("alert", "Welcome back, Sam");

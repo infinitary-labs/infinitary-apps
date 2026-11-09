@@ -107,6 +107,42 @@ export function isPublicAddress(address: string): boolean {
 }
 
 /**
+ * What kind of address a name answered, as a refusal names it
+ * (docs/task-browser.md, "Where a page may go"): public, this computer,
+ * a private network such as an office or VPN network (10/8, 172.16/12,
+ * 192.168/16, the shared range 100.64/10 that VPN services such as
+ * Tailscale give, and IPv6 unique local fc00::/7), or reserved - every
+ * other address that is not on the internet, such as the 0.0.0.0 a DNS
+ * filter answers or the 198.18/15 a proxy app gives. An IPv4 address mapped
+ * into IPv6 or translated by NAT64 is read by its IPv4 address.
+ */
+export type AddressKind = "public" | "this-computer" | "private" | "reserved";
+
+const IPV4_PRIVATE: readonly [string, number][] = [
+  ["10.0.0.0", 8],
+  ["100.64.0.0", 10],
+  ["172.16.0.0", 12],
+  ["192.168.0.0", 16],
+];
+
+export function addressKind(address: string): AddressKind {
+  if (isPublicAddress(address)) return "public";
+  const family = isIP(address);
+  if (family === 4) {
+    const value = ipv4Value(address);
+    if (inIpv4(value, ["127.0.0.0", 8])) return "this-computer";
+    return IPV4_PRIVATE.some((range) => inIpv4(value, range)) ? "private" : "reserved";
+  }
+  if (family !== 6) return "reserved";
+  const value = ipv6Value(address);
+  if (inIpv6(value, ["::ffff:0:0", 96]) || inIpv6(value, ["64:ff9b::", 96])) {
+    return addressKind(ipv4OfValue(value));
+  }
+  if (value === 1n) return "this-computer";
+  return inIpv6(value, ["fc00::", 7]) ? "private" : "reserved";
+}
+
+/**
  * The IP address a URL's hostname writes out, without an IPv6 address's
  * brackets; nothing when it names a host instead. `URL` has already turned
  * every other way of writing an IPv4 address into dotted decimal.

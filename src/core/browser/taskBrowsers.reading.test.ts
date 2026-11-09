@@ -8,7 +8,9 @@ import {
   openPopup,
   PNG,
 } from "../../../tests/helpers/taskBrowserStandIn";
+import { addressKind } from "./addresses";
 import { NOTHING_CHANGED_LINE } from "./changes";
+import type { GuardRefusal } from "./connectionGuard";
 import { TASK_BROWSER_COMMAND_MS } from "./crewmateCommands";
 import { type BrowserNode, REF_FROM_EARLIER_PAGE, REF_PATTERN, refusedRefWords } from "./outline";
 import { TASK_BROWSER_IDLE_MS } from "./taskBrowsers";
@@ -21,6 +23,17 @@ import { TASK_BROWSER_IDLE_MS } from "./taskBrowsers";
  * the desktop's (src/main/host/taskBrowser.ts), driven end to end by the task
  * browser journeys (tests/e2e/task-browser*.spec.ts).
  */
+
+/** What the guard reports of a name and the addresses it answered, each read by its kind. */
+const guardSaw = (
+  host: string,
+  kind: GuardRefusal["kind"],
+  ...addresses: string[]
+): GuardRefusal => ({
+  host,
+  kind,
+  answers: addresses.map((address) => ({ address, kind: addressKind(address) })),
+});
 
 describe("guarded diagnostic lists", () => {
   it("reads only the current page, does not consume notices or outlines, and refuses mixed reads", async () => {
@@ -152,9 +165,9 @@ describe("a task's own browser", () => {
     );
     expect(page.opened.allow({ url: "wss://live.skyfare.example/", topLevel: false })).toBe(true);
     // A public name that leads to a private address is refused at the connection.
-    guards[0]?.onRefused({ host: "rebind.skyfare.example", kind: "private" });
-    guards[0]?.onRefused({ host: "rebind.skyfare.example", kind: "private" });
-    guards[0]?.onRefused({ host: "ads.nowhere.example", kind: "unresolved" });
+    guards[0]?.onRefused(guardSaw("rebind.skyfare.example", "private", "127.0.0.1"));
+    guards[0]?.onRefused(guardSaw("rebind.skyfare.example", "private", "127.0.0.1"));
+    guards[0]?.onRefused(guardSaw("ads.nowhere.example", "unresolved"));
     const look = (await browser.inspect({})).text;
     expect(look).toContain(
       "Blocked what the page asked for on this computer's network or another private one: rebind.skyfare.example (2).",
@@ -163,13 +176,32 @@ describe("a task's own browser", () => {
     expect(look).toContain("Could not find what the page asked for: ads.nowhere.example.");
     // Its own load refused at the connection says why, by the guard's word.
     page.loadOutcome = { ok: false, code: "ERR_TUNNEL_CONNECTION_FAILED" };
-    guards[0]?.onRefused({ host: "intranet.example", kind: "private" });
-    const refused = await browser.navigate({ url: "https://intranet.example/" });
+    // INF-3116: it names the address and its kind, and that no setting allows it yet.
+    guards[0]?.onRefused(guardSaw("wiki.corp.example", "private", "10.20.30.40"));
+    const refused = await browser.navigate({ url: "https://wiki.corp.example/" });
     expect(refused.text).toContain(
-      "intranet.example leads to an address on this computer or a private network, so the browser refused it at the connection.",
+      "wiki.corp.example leads to 10.20.30.40, an address on a private network such as an office or VPN network, so the browser refused it at the connection. Task browsers reach public websites and the pages on this computer you open; no setting lets them reach a private site yet.",
     );
     // Its lead says it once; the summary does not say it again.
     expect(refused.text).not.toContain("Blocked what the page asked for");
+    guards[0]?.onRefused(guardSaw("rebind.skyfare.example", "private", "127.0.0.1"));
+    const here = await browser.navigate({ url: "https://rebind.skyfare.example/" });
+    expect(here.text).toContain(
+      "rebind.skyfare.example leads to 127.0.0.1, an address on this computer, so the browser refused it at the connection. To open a page served on this computer, open it by localhost instead",
+    );
+    guards[0]?.onRefused(guardSaw("filtered.example", "private", "0.0.0.0"));
+    const filtered = await browser.navigate({ url: "https://filtered.example/" });
+    expect(filtered.text).toContain(
+      "filtered.example leads to 0.0.0.0, a reserved address that is not on the internet, so the browser refused it at the connection. A proxy app or DNS filter usually gives such an address in place of a site's own.",
+    );
+    // A mixed name whose public answer did not respond names what it skipped.
+    guards[0]?.onRefused(
+      guardSaw("portal.corp.example", "unreachable", "2606:4700:10::6814:2011", "10.0.0.5"),
+    );
+    const portal = await browser.navigate({ url: "https://portal.corp.example/" });
+    expect(portal.text).toContain(
+      "portal.corp.example did not answer at its public address, 2606:4700:10::6814:2011. The browser skipped 10.0.0.5, an address on a private network such as an office or VPN network, which it never dials. Task browsers reach public websites",
+    );
     // The guard goes with the browser.
     await browser.close();
     expect(guards[0]?.closed).toBe(true);

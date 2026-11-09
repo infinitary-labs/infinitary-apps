@@ -4,7 +4,7 @@ import { createServer, type IncomingMessage } from "node:http";
 import { type AddressInfo, isIP, connect as netConnect, type Socket } from "node:net";
 import type { Duplex } from "node:stream";
 import { settingFrom } from "@shared/envSettings";
-import { isPublicAddress } from "./addresses";
+import { type AddressKind, addressKind } from "./addresses";
 
 /**
  * A task browser's connection guard (docs/task-browser.md, "Where a page
@@ -14,10 +14,10 @@ import { isPublicAddress } from "./addresses";
  *
  * The page's session sends every connection that is not to this Mac's own
  * loopback here as an HTTP `CONNECT`. The guard resolves the name itself,
- * refuses it unless every address it resolves to is public, and connects to
- * the address it checked - never resolving it again - so a public name that
- * leads to a private address, or changes to one between a check and a
- * connection, never reaches this Mac's network. A tunnel then carries the
+ * dials only the answers it checked are public - skipping any private one
+ * among them, and refusing a name with none - and never resolves it again,
+ * so a public name that leads to a private address, or changes to one
+ * between a check and a connection, never reaches this Mac's network. A tunnel then carries the
  * page's own TLS, end to end, which the guard neither reads nor ends.
  *
  * It listens on loopback alone, only while its browser is open, and answers
@@ -31,7 +31,18 @@ import { isPublicAddress } from "./addresses";
 
 /** Why the guard did not carry a connection, as the crewmate is told. */
 export type GuardRefusalKind = "private" | "unresolved" | "unreachable";
-export type GuardRefusal = { host: string; kind: GuardRefusalKind };
+/** One address a name answered, and its kind. */
+export type GuardAnswer = { address: string; kind: AddressKind };
+/**
+ * A refused or failed connection, with every address the name answered
+ * (none when it was not found): a private refusal's are all non-public, and
+ * an unreachable name's are the public ones it tried and any it skipped.
+ */
+export type GuardRefusal = {
+  host: string;
+  kind: GuardRefusalKind;
+  answers: readonly GuardAnswer[];
+};
 
 /** Every address a name resolves to. */
 export type GuardLookup = (host: string) => Promise<string[]>;
@@ -179,8 +190,8 @@ export async function startConnectionGuard(
         answer(socket, "204 No Content");
         return;
       }
-      const refuse = (kind: GuardRefusalKind): void => {
-        options.onRefused({ host: target.host, kind });
+      const refuse = (kind: GuardRefusalKind, answers: readonly GuardAnswer[] = []): void => {
+        options.onRefused({ host: target.host, kind, answers });
         answer(socket, kind === "private" ? "403 Forbidden" : "502 Bad Gateway");
       };
       let addresses: string[];
@@ -201,15 +212,20 @@ export async function startConnectionGuard(
         refuse("unresolved");
         return;
       }
-      // Every answer must be public: a name with one private address among
-      // public ones is refused whole, so no later pick can land on it.
-      if (!addresses.every(isPublicAddress)) {
-        refuse("private");
+      // Only a checked public answer is ever dialed: a private one among
+      // them is skipped, and a name with none is refused whole.
+      const answers = addresses.map((address) => ({ address, kind: addressKind(address) }));
+      const reachable = answers.filter((answer) => answer.kind === "public");
+      if (reachable.length === 0) {
+        refuse("private", answers);
         return;
       }
-      const upstream = await reach(addresses, target.port);
+      const upstream = await reach(
+        reachable.map((answer) => answer.address),
+        target.port,
+      );
       if (!upstream) {
-        if (!closed) refuse("unreachable");
+        if (!closed) refuse("unreachable", answers);
         else socket.destroy();
         return;
       }

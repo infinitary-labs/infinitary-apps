@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPublicAddress, literalAddress } from "./addresses";
+import { addressKind, isPublicAddress, literalAddress } from "./addresses";
 
 /**
  * Which addresses a task browser may connect to on the internet: public
@@ -79,5 +79,38 @@ describe("public addresses", () => {
     // URL writes every other form of an IPv4 address in dotted decimal.
     expect(literalAddress(new URL("http://0x7f.1/").hostname)).toBe("127.0.0.1");
     expect(literalAddress(new URL("http://2130706433/").hostname)).toBe("127.0.0.1");
+  });
+
+  // INF-3116: a refusal names each answer's kind, so a crewmate on a VPN
+  // reads that its site is on a private network, not on this computer.
+  it("names each address's kind: this computer, a private network, or reserved", () => {
+    const kinds = (addresses: string[]): string[] => addresses.map(addressKind);
+    expect(kinds(["93.184.215.14", "2606:4700:10::6814:2011", "64:ff9b::808:808"])).toEqual([
+      "public",
+      "public",
+      "public",
+    ]);
+    expect(kinds(["127.0.0.1", "127.8.9.10", "::1", "::ffff:127.0.0.1"])).toEqual([
+      "this-computer",
+      "this-computer",
+      "this-computer",
+      "this-computer",
+    ]);
+    // Office, home and VPN networks, Tailscale-style addresses included.
+    expect(
+      kinds([
+        "10.20.30.40",
+        "172.16.0.1",
+        "192.168.1.1",
+        "100.101.102.103",
+        "fd12:3456:789a::1",
+        "::ffff:10.0.0.1",
+        "64:ff9b::a00:1",
+      ]),
+    ).toEqual(["private", "private", "private", "private", "private", "private", "private"]);
+    // A DNS filter's 0.0.0.0, a proxy app's 198.18.x.x, links and multicast.
+    expect(
+      kinds(["0.0.0.0", "198.18.0.42", "169.254.169.254", "224.0.0.251", "::", "fe80::1"]),
+    ).toEqual(["reserved", "reserved", "reserved", "reserved", "reserved", "reserved"]);
   });
 });

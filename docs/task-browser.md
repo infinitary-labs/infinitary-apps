@@ -51,8 +51,11 @@ Everything else is refused: another server on this Mac, an address on a private 
 
 An address is only what it names, and a public name can resolve to a private address, or change to one between a check and a connection.
 So every connection off this Mac's loopback goes through the browser's own connection guard (`startConnectionGuard`, `src/core/browser/connectionGuard.ts`), its session's one proxy.
-The guard resolves the name itself, refuses it unless every address it resolves to is public (`isPublicAddress`, `src/core/browser/addresses.ts`), and connects to the address it checked, never resolving it again.
-A name that leads to this Mac or a private network is refused at the connection, before anything reaches it, and named in the next answer.
+The guard resolves the name itself, reads each answer's kind (`addressKind`, `src/core/browser/addresses.ts`): public, this computer, a private network such as an office or VPN network, or reserved.
+It dials only the answers it checked are public, in the order the name server gave them, and never resolves the name again.
+A name with public and private answers connects through its public ones alone; its private answers are skipped and never dialed.
+A name with no public answer is refused at the connection, before anything reaches it, and named in the next answer.
+No setting lets a task browser reach a private site yet.
 The guard carries only `CONNECT` tunnels, and the page's own TLS runs end to end through them; it neither reads nor ends it.
 Loopback never goes through the guard: the browser resolves those names to this Mac itself, never through a name server, and the policy above has already checked their origins.
 WebRTC reaches its peers only through the guard (`disable_non_proxied_udp`), so it never goes around it.
@@ -63,7 +66,9 @@ An unpackaged run may stand in its own resolver with `INFINITARY_TASK_BROWSER_HO
 
 The next answer names what was refused, by host and by why: a private network, plain http, another server on this Mac (open it with `infinitary-browser-axi open` to let the page reach it), or not a web address.
 A name the guard could not find, or whose server did not answer, is named too.
-A load of the crewmate's own that the guard refused says why in its lead: the name leads to a private address, was not found, or did not answer.
+A load of the crewmate's own that the guard refused says why in its lead (`guardRefusalLead`, `src/core/browser/pageNotices.ts`): the name was not found, did not answer, or leads to the addresses it names, each with its kind.
+A private network's answer says no setting lets task browsers reach a private site yet; this computer's says to open the page by localhost; a reserved one says a proxy app or DNS filter usually gives it.
+A mixed name whose public answers did not respond names them, and the private answers it skipped.
 
 The browser also refuses, and tells the crewmate once:
 
@@ -599,8 +604,8 @@ It also holds a cut passage naming a ref, a wait reading past that cut, a time e
 `reading.test.ts` holds the snapshot's marks, which elements the window shows, the whole-page picture's width and the navigation-payload error left out of an answer.
 `taskBrowsers.reading.test.ts` holds a click on a link, and a button click, whose address changes after the click, answering with the new page, a full read of a cut line, a long page read from its top, from a line, around words and on screen after a scroll, and a wait answered with the part that holds its words.
 It also holds a ref from before a move refused for every action and a full read, with nothing sent to the page, while the element that took its place keeps its own ref, and a ref from a browser the task had before refused.
-`addresses.test.ts` holds which addresses are public, however they are written, and `connectionGuard.test.ts` the guard against a stand-in site on loopback: only its own browser's sign-in is answered, a public name tunnels to the one address it checked and is resolved once, a name that leads to this Mac or a private network - or has one such answer among public ones - is refused before any connection, a private address written out is refused unresolved, a name not found and a server that does not answer are told apart, no plain request is carried, and closing ends its tunnels.
-`taskBrowsers.reading.test.ts` also holds public websites through the guard and its refusals' words, and the certificate, sign-in box and client certificate refusals.
+`addresses.test.ts` holds which addresses are public, however they are written, and each address's kind, and `connectionGuard.test.ts` the guard against a stand-in site on loopback: only its own browser's sign-in is answered, a public name tunnels to the one address it checked and is resolved once, a name that leads only to this Mac or a private network is refused before any connection with each answer's kind, a name with public and private answers tunnels to its public one alone, and one whose public answer does not respond reports what it skipped, a private address written out is refused unresolved, a name not found and a server that does not answer are told apart, no plain request is carried, and closing ends its tunnels.
+`taskBrowsers.reading.test.ts` also holds public websites through the guard and its refusals' words, each kind of answer's lead among them, and the certificate, sign-in box and client certificate refusals.
 `taskBrowsers.view.test.ts` holds a second page opening, taking the crewmate's commands, each page's refs refused on the other, switching back and closing itself, the two-page cap and a refused popup, the captain's pick of a page and the view following the current page.
 `taskBrowsers.signIns.test.ts` holds a browser handed back keeping only what the task needs: no query, no error words, no typed text the crewmate did not type and no picture of it, while what the crewmate types itself reads back until the captain holds the page again.
 `docs/axi-commands.md` ("Tests") holds the command, its channel and its process; `crewmateTaskTools.test.ts` that no crewmate is served a browser tool, and `cardActions.browser.test.ts` that a task on this Mac gets its own browser's command and prompt line and an app without one gives none.

@@ -19,10 +19,12 @@ On GitLab a pull request is a merge request, named `!N`.
 4. Green passes every change, and each approver's Infinitary merges its own.
 5. On GitHub, red first confirms: the queue calls the batch checks once more on the same batch, told which jobs and test files failed.
    A green confirm passes every change, so one flaky test does not hold the batch.
-6. A red confirm, a failure whose log named no test file, or a red batch on GitLab, which has no confirm yet, pauses every change behind one issue labelled `infinitary-queue-paused`, and no change is blamed.
-7. A change labelled `infinitary-queue-fix` ends the pause once it is approved, and the next batch takes the paused changes, the waiting ones and the fix.
-8. A resume or a send-back by hand, with a reason, also ends it.
-9. A successful send-back from a still-running batch that already has a failed check cancels that run and starts the next batch immediately with the remaining changes.
+6. On GitHub, a checks result other than success or failure, with no passing confirm, returns the changes to waiting and starts a fresh batch.
+   If a member's preceding batch also returned no verdict, it pauses instead; successful jobs alone never pass a batch without its verdict.
+7. A red confirm, a failure whose log named no test file, or a red batch on GitLab, which has no confirm yet, pauses every change behind one issue labelled `infinitary-queue-paused`, and no change is blamed.
+8. A change labelled `infinitary-queue-fix` ends the pause once it is approved, and the next batch takes the paused changes, the waiting ones and the fix.
+9. A resume or a send-back by hand, with a reason, also ends it.
+10. A successful send-back from a still-running batch that already has a failed check cancels that run and starts the next batch immediately with the remaining changes.
    On GitLab it cancels both the parent and its checks child pipeline.
    Without a failed check the run continues; failure alone also leaves it alone.
 

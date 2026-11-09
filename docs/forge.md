@@ -715,7 +715,16 @@ After a mark that is the marking task; after a merge it is another, since the me
 On GitHub, a red batch first confirms (`confirmPlan`): the queue reads the test files each failed job's log names and calls the batch checks once more on the same composed batch, in its `confirm` job, with the inputs `failed_jobs` (the failed jobs' names, one a line) and `failed_files` (the failed files, separated by spaces).
 A log names a failed test file in Vitest's or Jest's `FAIL` line, in Playwright's list under its closing "N failed" line, or in Vitest's "This error originated in" line, which names the test file an unhandled error came from when every test passed (`failedTestFiles`).
 The project's batch checks file decides what the confirm runs, from only the failed jobs to only the failed files, so a check split into jobs never runs whole again; it declares both inputs, since GitHub refuses a call with an undeclared one.
-A green confirm passes the batch, and the run's summary names what failed, so a flaky test still gets an owner.
+A green confirm passes a failed batch, and the run's summary names what failed, so a flaky test still gets an owner.
+It never passes an unknown aggregate such as `abandoned`: successful or skipped jobs cannot substitute for the batch verdict.
+On GitHub, a checks result other than `success` or `failure`, with no passing confirmation, returns the surviving members to `Waiting for the batch check` and starts a fresh batch.
+Only that fresh batch's successful verification can pass them; the prior job readings never manufacture a pass marker.
+If any surviving member's nearest earlier batch also ended without a verdict, the queue pauses instead of starting another batch.
+The queue records `No verdict from batch run N` as a pending status before the ordinary waiting or paused status, so the existing status history carries this typed outcome across workflow runs without a second store.
+An intervening batch with a known result ends this missing-verdict chain, and a new member joining a repeated missing-verdict batch cannot reset it for the older members.
+When no failed job is reported, the pause names the missing passing verdict rather than inventing a failed check, records the aggregate and confirmation results, and lists the available job readings.
+An empty or incomplete job reading is not passing evidence.
+Reading a verdict whose changes are already paused in that run starts nothing; a GitHub workflow rerun that marks them again reuses that run's open pause issue, preserving its claim and diagnosis.
 A red confirm, or a failed job whose log named no test file, blames no change: every change in the batch pauses behind one issue labelled `infinitary-queue-paused`, which names the failed checks, the failed test files and the changes whose diffs touch each one.
 An approved change labelled `infinitary-queue-fix` ends the pause, and the next batch takes the paused changes, the waiting ones and the fix; a resume or a send-back by hand, each with a reason, also ends it.
 A send-back fails the change only on the version the queue holds it at, its current version while that reads paused or in a batch run (`sendBack`).

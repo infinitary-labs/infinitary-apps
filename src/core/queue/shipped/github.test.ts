@@ -4,6 +4,7 @@ import { QUEUE_STATUS } from "@shared/repos";
 import { describe, expect, it } from "vitest";
 import type { ScriptArgs } from "./github.mjs";
 import { answer, decide, failures, form, mark } from "./github.mjs";
+import { abandonedBatch as abandoned, completedBatch } from "./githubReadings.fixture";
 import type { Member } from "./rules.mjs";
 import { FIX_LABEL, PAUSE_LABEL, QUEUE, queueKind, readPauseMarker, WAITING } from "./rules.mjs";
 
@@ -56,7 +57,13 @@ class Project {
     comments: string[];
   }[] = [];
   runs = new Map<number, { id: number; status: string; conclusion: string | null }>();
-  jobs: { id: number; name: string; conclusion: string | null; html_url: string }[] = [];
+  jobs: {
+    id: number;
+    name: string;
+    status?: string;
+    conclusion: string | null;
+    html_url: string;
+  }[] = [];
   logs = new Map<number, string>();
   files = new Map<number, string[]>();
   dispatches: unknown[] = [];
@@ -345,6 +352,182 @@ describe("the shipped queue on GitHub", () => {
     expect(later.members).toEqual([]);
     expect(later.run.notices.join(" ")).toMatch(/paused until its fix is approved/);
     expect(project.queueOf(73)).toMatchObject({ kind: "waiting" });
+  });
+
+  // Approved recovery behavior: one missing verdict starts a fresh batch,
+  // but a preceding missing verdict pauses instead. Real job readings own
+  // the fixture; this entry-point test owns statuses, issues and dispatches.
+  it("starts a fresh batch after one missing verdict, then pauses a second miss without restarting or duplicating its report", async () => {
+    const project = new Project();
+    const { run, tree, member, jobs } = abandoned;
+    project.open(member.number);
+    project.push(member.number, member.head);
+    project.write(member.head, "pending", `In batch run ${run}`, "");
+    project.jobs = jobs;
+    const invocation = runOf(project, run);
+    const input = {
+      ...invocation.args,
+      result: "abandoned",
+      confirm: "skipped",
+      members: [member],
+      tree,
+    };
+    await decide(input);
+    expect(project.queueOf(member.number)).toMatchObject({
+      kind: "waiting",
+      state: "pending",
+      description: WAITING,
+    });
+    expect(project.issues).toEqual([]);
+    expect(project.dispatches).toHaveLength(1);
+    expect(project.statuses.get(member.head)?.some((status) => status.state === "success")).toBe(
+      false,
+    );
+
+    // The next batch must run its own checks. A second incomplete result
+    // is an adverse reading, never an invented success from the 29 leaves.
+    const nextRun = completedBatch.run;
+    project.runs.set(run, { id: run, status: "completed", conclusion: "failure" });
+    // A newly approved member must not reset the prior member's bound.
+    project.open(1328);
+    project.approve(1328);
+    const second = runOf(project, nextRun);
+    await form(second.args);
+    const members = JSON.parse(second.outputs.get("members") ?? "[]") as Member[];
+    await mark({
+      ...second.args,
+      members,
+      output: `base ${abandoned.base}\n${members.map((member) => `merged ${member.number}`).join("\n")}\ntree ${tree}\n`,
+    });
+    const repeated = { ...input, ...second.args, members };
+    await decide(repeated);
+    const issue = project.issues[0];
+    expect(issue?.body).toContain("No failed job was reported");
+    expect(issue?.body).toContain("batch checks `abandoned`; confirmation `skipped`");
+    for (const job of jobs)
+      expect(issue?.body).toContain(
+        `[${job.name}](${job.html_url}): completed / ${job.conclusion}`,
+      );
+    expect(issue?.body).not.toContain("a failed job's log named no failed test file");
+    expect(project.queueOf(member.number)).toMatchObject({
+      kind: "paused",
+      run: nextRun,
+      state: "pending",
+      target_url: issue?.html_url,
+    });
+    expect(project.queueOf(member.number)?.description).toContain(
+      "batch verdict did not pass; no failed job reported",
+    );
+
+    expect(issue?.body).toContain(`a preceding batch also returned no verdict (${run})`);
+    expect(project.queueOf(1328)).toMatchObject({ kind: "paused", run: nextRun });
+    await decide(repeated);
+    expect(project.issues).toHaveLength(1);
+    expect(project.dispatches).toHaveLength(1);
+    expect(second.summary.at(-1)).toContain("already paused");
+
+    // An explicit workflow rerun keeps its id and marks the members again.
+    // It must preserve the existing issue, including the repairer's words.
+    if (issue) issue.body += "\nRepair investigation is in progress.";
+    project.write(member.head, "pending", `In batch run ${nextRun}`, "");
+    await decide(repeated);
+    expect(project.issues).toHaveLength(1);
+    expect(project.issues[0]?.body).toContain("Repair investigation is in progress.");
+    expect(project.statuses.get(member.head)?.some((status) => status.state === "success")).toBe(
+      false,
+    );
+    expect(project.dispatches).toHaveLength(1);
+  });
+
+  it("passes the recovered changes only when the fresh batch returns its own success", async () => {
+    const project = new Project();
+    const { run, tree, member, jobs } = abandoned;
+    project.open(member.number);
+    project.push(member.number, member.head);
+    project.write(member.head, "pending", `In batch run ${run}`, "");
+    project.jobs = jobs;
+    await decide({
+      ...runOf(project, run).args,
+      result: "abandoned",
+      confirm: "skipped",
+      members: [member],
+      tree,
+    });
+    expect(project.queueOf(member.number)).toMatchObject({ kind: "waiting", state: "pending" });
+    const next = runOf(project, completedBatch.run);
+    await form(next.args);
+    expect(JSON.parse(next.outputs.get("members") ?? "[]")).toEqual([member]);
+    await mark({
+      ...next.args,
+      members: [member],
+      output: `base ${abandoned.base}\nmerged ${member.number}\ntree ${tree}\n`,
+    });
+    // Actual successful marker from the later run, not added to the old one.
+    project.jobs = [completedBatch.marker];
+    await decide({ ...next.args, result: "success", confirm: "skipped", members: [member], tree });
+    expect(project.queueOf(member.number)).toMatchObject({
+      kind: "passed",
+      run: completedBatch.run,
+      tree,
+    });
+    expect(project.issues).toEqual([]);
+    expect(project.dispatches).toHaveLength(1);
+  });
+
+  it("ends the missing-verdict chain when an intervening batch has a known failed result", async () => {
+    const project = new Project();
+    const { run, tree, member } = abandoned;
+    project.open(member.number);
+    project.push(member.number, member.head);
+    project.write(member.head, "pending", `In batch run ${run}`, "");
+    await decide({ ...runOf(project, run).args, result: "abandoned", members: [member], tree });
+    // Project the recorded missing result across an ordinary red batch and
+    // a deliberate resume. A distant outage must not consume today's recovery.
+    const red = completedBatch.run;
+    project.write(member.head, "pending", `In batch run ${red}`, "");
+    await decide({
+      ...runOf(project, red).args,
+      result: "failure",
+      confirm: "skipped",
+      members: [member],
+      tree,
+    });
+    expect(project.queueOf(member.number)).toMatchObject({ kind: "paused" });
+    await answer({
+      ...runOf(project, red).args,
+      action: "resume",
+      reason: "The failed check has been repaired",
+    });
+    const startsBefore = project.dispatches.length;
+    // A new attempt of that batch has a known failure immediately before it.
+    project.write(member.head, "pending", `In batch run ${red}`, "");
+    await decide({ ...runOf(project, red).args, result: "abandoned", members: [member], tree });
+    expect(project.queueOf(member.number)).toMatchObject({
+      kind: "waiting",
+      state: "pending",
+      description: WAITING,
+    });
+    expect(project.dispatches).toHaveLength(startsBefore + 1);
+  });
+
+  it("does not infer success from absent job readings or a confirm beside an abandoned aggregate", async () => {
+    const project = new Project();
+    const { run, tree, member } = abandoned;
+    project.open(member.number);
+    project.push(member.number, member.head);
+    project.write(member.head, "pending", `In batch run ${run}`, "");
+    // The same incomplete host result, with its job reading unavailable.
+    await decide({
+      ...runOf(project, run).args,
+      result: "abandoned",
+      confirm: "success",
+      members: [member],
+      tree,
+    });
+    expect(project.queueOf(member.number)).toMatchObject({ kind: "paused", state: "pending" });
+    expect(project.issues[0]?.body).toContain("No job results were available");
+    expect(project.issues[0]?.body).not.toContain("failed again");
+    expect(project.dispatches).toEqual([]);
   });
 
   // The captain's pick on INF-3012, "A only: the confirm step": a red batch

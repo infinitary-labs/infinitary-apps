@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "queue-verdict-diagnostics",
+      "kind": "fix",
+      "area": "projects",
+      "title": "A batch can recover when GitHub loses its verdict",
+      "body": "When GitHub returns no verdict, the queue starts a fresh batch instead of immediately pausing your changes. A second missing verdict pauses with the recorded results, without inventing a failed check. Only successful verification can pass the new batch. Your first mate offers a project's queue the update.",
+      "noPicture": "This changes the queue's written diagnostic and restart behavior, not a screen in the app.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -22,7 +22,10 @@
  * A red one, or a failure no log named a test file for, fixes forward: it
  * pauses every change in it and blames none, and no batch forms until a
  * declared fix is approved, or a by-hand resume or send-back turns the
- * paused changes back to waiting.
+ * paused changes back to waiting. A checks result outside success/failure
+ * with no passing confirmation starts a fresh batch once; if a member's
+ * preceding batch also lacked a verdict, it pauses instead. The status
+ * history records that outcome before its ordinary waiting/paused status.
  */
 
 export const QUEUE = "infinitary/queue";
@@ -41,10 +44,13 @@ const DESCRIPTION_MAX = 140;
 const IN_BATCH = /^In batch run (\d+)$/;
 const PAUSED = /^Paused after batch run (\d+)(?:;|$)/;
 const PASSED = /^Passed batch run (\d+); tree ([0-9a-f]{40,64})$/;
+const NO_VERDICT = /^No verdict from batch run (\d+)$/;
 const PAUSE_MARKER = /<!-- infinitary-queue (\{.*?\}) -->/;
 
 export const inBatch = (run) => `In batch run ${run}`;
 export const passed = (run, tree) => `Passed batch run ${run}; tree ${tree}`;
+/** A pending observation kept before the ordinary waiting or paused status. */
+export const noVerdict = (run) => `No verdict from batch run ${run}`;
 
 /**
  * A change's queue state from the queue statuses on its version, newest
@@ -66,7 +72,35 @@ export function readQueueState(statuses) {
     url: latest.url ?? "",
     since,
   };
-  return { ...base, ...queueKind(base.state, base.description) };
+  const kind = queueKind(base.state, base.description);
+  const previousNoVerdict = priorMissingVerdict(
+    statuses,
+    kind.kind === "in-batch" ? kind.run : undefined,
+  );
+  return { ...base, ...kind, ...(previousNoVerdict === undefined ? {} : { previousNoVerdict }) };
+}
+
+/**
+ * Read the nearest earlier batch's recorded outcome, not a count of old
+ * outages. Skip this run's active marks; a completed attempt of the same
+ * run still counts. A known result in between ends the missing-verdict chain.
+ */
+function priorMissingVerdict(statuses, currentRun) {
+  let missing;
+  let outcome = false;
+  for (const status of statuses) {
+    const absent = status.state === "pending" && NO_VERDICT.exec(status.description ?? "");
+    if (absent) {
+      missing = Number(absent[1]);
+      outcome = true;
+    }
+    const kind = queueKind(status.state, status.description);
+    if (kind.kind === "paused" || status.state !== "pending") outcome = true;
+    if (kind.kind !== "in-batch") continue;
+    if (kind.run === currentRun && !outcome) continue;
+    return missing === kind.run ? kind.run : undefined;
+  }
+  return undefined;
 }
 
 /**
@@ -306,8 +340,9 @@ export function confirmPlan(failedJobs) {
  * batch whose confirm passed (`confirm`, the confirm's result: what failed
  * passed again on the same batch). Red with a change
  * sent back by hand during the run takes that send-back as its answer, and
- * the rest wait for a new batch without it. Any other red pauses every
- * change: `pause` names them for the host part, which opens the pause's
+ * the rest wait for a new batch without it. An incomplete result gets one
+ * fresh batch unless a preceding batch also lacked a verdict. Other red
+ * results pause every change: `pause` names them for the host part, which opens the pause's
  * issue and writes each one's paused status with its link.
  */
 export function verdict({
@@ -320,6 +355,7 @@ export function verdict({
   failed = [],
   failedFiles = [],
   confirm = "",
+  jobs = [],
 }) {
   const queueOf = (member) => {
     const now = current.get(member.number);
@@ -329,9 +365,21 @@ export function verdict({
     const queue = queueOf(member);
     return queue?.kind === "in-batch" && queue.run === run;
   });
-  if (!still.length)
-    return { writes: [], next: "form", pause: null, summary: "No change is still in this batch." };
-  if (result === "success" || confirm === "success")
+  if (!still.length) {
+    const paused = members.some((member) => {
+      const queue = queueOf(member);
+      return queue?.kind === "paused" && queue.run === run;
+    });
+    return {
+      writes: [],
+      next: paused ? null : "form",
+      pause: null,
+      summary: paused
+        ? "This batch is already paused; nothing starts again."
+        : "No change is still in this batch.",
+    };
+  }
+  if (result === "success" || (result === "failure" && confirm === "success"))
     return {
       writes: still.map((member) => ({
         ...member,
@@ -364,14 +412,66 @@ export function verdict({
       summary: `The batch failed and ${named} went back by hand, so the rest wait for a new batch without ${sentBack.length > 1 ? "them" : "it"}.`,
     };
   }
+  // A host result outside success/failure is incomplete verification, not a
+  // failing test. The captain-approved recovery tries a fresh batch once;
+  // any member whose preceding batch also lacked a verdict stops the chain.
+  // Record that typed fact before waiting/pausing, in the same status history
+  // read above. No job count or absence of failures can manufacture success.
+  const incomplete = result !== "failure" && confirm !== "success";
+  const observations = incomplete
+    ? still.map((member) => ({
+        ...member,
+        state: "pending",
+        description: noVerdict(run),
+        url: runUrl,
+      }))
+    : [];
+  const previousNoVerdict = [
+    ...new Set(
+      still.flatMap((member) => {
+        const previous = queueOf(member)?.previousNoVerdict;
+        return previous === undefined ? [] : [previous];
+      }),
+    ),
+  ];
+  if (incomplete && !previousNoVerdict.length)
+    return {
+      writes: [
+        ...observations,
+        ...still.map((member) => ({
+          ...member,
+          state: "pending",
+          description: WAITING,
+          url: runUrl,
+        })),
+      ],
+      next: "form",
+      pause: null,
+      summary:
+        "The batch returned no verdict. Its changes wait for a fresh batch; only that batch's own successful checks can pass them.",
+    };
   const description = pauseDescription(run, failed, failedFiles);
-  const confirmed = Boolean(confirm) && confirm !== "skipped";
+  const confirmed = confirm === "failure";
   return {
-    writes: [],
+    writes: observations,
     next: null,
-    pause: { run, description, members: still, failed, failedFiles, confirmed },
-    summary:
-      "The batch failed, so the queue is paused: these changes and every new approval wait until a fix is approved, or a resume or a send-back by hand.",
+    pause: {
+      run,
+      description,
+      members: still,
+      failed,
+      failedFiles,
+      confirmed,
+      result,
+      confirm,
+      jobs,
+      previousNoVerdict: incomplete ? previousNoVerdict : [],
+    },
+    summary: incomplete
+      ? "The preceding batch also returned no verdict, so the queue is paused instead of starting another batch. No incomplete result passes a change."
+      : failed.length
+        ? "The batch failed, so the queue is paused: these changes and every new approval wait until a fix is approved, or a resume or a send-back by hand."
+        : "The batch verdict did not pass, so the queue is paused. No failed job was reported; successful or skipped jobs cannot replace the missing verdict.",
   };
 }
 
@@ -401,7 +501,9 @@ function pauseDescription(run, failed, failedFiles) {
   const more = failedFiles.length > 1 ? ` (+${failedFiles.length - 1} more)` : "";
   const what = first
     ? `${first.file}${more} failed; ${touchedBy(first)}`
-    : `${failed[0]?.name ?? "a check"} failed`;
+    : failed.length
+      ? `${failed[0].name} failed`
+      : "batch verdict did not pass; no failed job reported";
   return `Paused after batch run ${run}; ${what}`.slice(0, DESCRIPTION_MAX);
 }
 
@@ -413,7 +515,7 @@ function pauseDescription(run, failed, failedFiles) {
 export function pauseIssue(pause, runUrl) {
   const failed = pause.failed.length
     ? pause.failed.map((check) => `- [${check.name}](${check.url || runUrl})`).join("\n")
-    : `- [Batch run ${pause.run}](${runUrl})`;
+    : "No failed job was reported. Successful or skipped jobs do not prove that the batch verdict passed.";
   const files = pause.failedFiles.length
     ? `\n\nFailed test files:\n${pause.failedFiles.map((entry) => `- \`${entry.file}\` (${touchedBy(entry)})`).join("\n")}`
     : "";
@@ -423,12 +525,41 @@ export function pauseIssue(pause, runUrl) {
     changes: pause.members.map((member) => member.number),
   });
   return {
-    title: `The batch is paused: batch run ${pause.run} failed`,
+    title: pause.failed.length
+      ? `The batch is paused: batch run ${pause.run} failed`
+      : `The batch is paused: batch run ${pause.run} has no passing verdict`,
     body: [
-      pause.confirmed
-        ? `Batch run ${pause.run} failed, and its failed checks failed again when they ran once more on the same batch, so the queue paused. No change is blamed.`
-        : `Batch run ${pause.run} failed, so the queue paused. No change is blamed, and nothing ran again: a failed job's log named no failed test file to run again.`,
+      !pause.failed.length
+        ? `Batch run ${pause.run} has no passing verdict, so the queue paused. No change is blamed, and no test retry is selected without a failed test.`
+        : pause.confirmed
+          ? `Batch run ${pause.run} failed, and its failed checks failed again when they ran once more on the same batch, so the queue paused. No change is blamed.`
+          : `Batch run ${pause.run} failed, so the queue paused. No change is blamed, and nothing ran again: a failed job's log named no failed test file to run again.`,
       `Failed checks:\n${failed}${files}`,
+      ...(pause.previousNoVerdict?.length
+        ? [
+            `No automatic restart: a preceding batch also returned no verdict (${pause.previousNoVerdict.join(", ")}).`,
+          ]
+        : []),
+      ...(pause.result !== undefined
+        ? [
+            `Workflow results: batch checks \`${pause.result || "not reported"}\`; confirmation \`${pause.confirm || "not reported"}\`.`,
+          ]
+        : []),
+      ...(!pause.failed.length
+        ? [
+            `Recorded jobs in [batch run ${pause.run}](${runUrl}):\n${
+              pause.jobs?.length
+                ? pause.jobs
+                    .map(
+                      (job) =>
+                        `- [${job.name}](${job.url || runUrl}): ${job.status ?? "status not reported"} / ${job.conclusion ?? "no conclusion"}`,
+                    )
+                    .join("\n")
+                : "No job results were available."
+            }`,
+            "Inspect the workflow result and its job records before resuming. The underlying cause is not established by an empty failure list.",
+          ]
+        : []),
       `Paused changes, which go in the next batch:\n${changes}`,
       "Whoever takes this issue repairs it. A change labelled `" +
         FIX_LABEL +

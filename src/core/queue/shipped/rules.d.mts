@@ -16,6 +16,8 @@ export type QueueState = QueueKind & {
   description: string;
   url: string;
   since: string;
+  /** The nearest earlier batch (or completed attempt) recorded no verdict. */
+  previousNoVerdict?: number;
 };
 export type Member = { number: number; head: string };
 /** An open change: its version, the branch it targets, whether it is a declared fix, and its queue state. */
@@ -25,6 +27,7 @@ export type QueueRun = { id: number; status: string; conclusion: string | null }
 export type StatusWrite = Member & { state: string; description: string; url: string };
 export type FailedCheck = { name: string; url: string };
 export type FailedFile = { file: string; touchedBy: number[] };
+export type JobResult = { name: string; status?: string; conclusion: string | null; url: string };
 export type Pause = {
   run: number;
   description: string;
@@ -33,6 +36,11 @@ export type Pause = {
   failedFiles: FailedFile[];
   /** Whether the batch checks ran once more to confirm the failure, and it failed again. */
   confirmed?: boolean;
+  /** The host's aggregate results, not inferred from its leaf jobs. */
+  result?: string;
+  confirm?: string;
+  jobs?: JobResult[];
+  previousNoVerdict?: number[];
 };
 /** A failed job of a batch run with the test files its log named. */
 export type FailedJob = { name: string; files: string[] };
@@ -45,6 +53,7 @@ export const CHECKS_JOB: string;
 export const CONFIRM_JOB: string;
 export function inBatch(run: number): string;
 export function passed(run: number, tree: string): string;
+export function noVerdict(run: number): string;
 export function readQueueState(statuses: readonly QueueStatus[]): QueueState | null;
 export function queueKind(state: string, description: string | null | undefined): QueueKind;
 export function ownsChanges(run: QueueRun | undefined): boolean;
@@ -94,8 +103,9 @@ export function verdict(input: {
   current: ReadonlyMap<number, CurrentMember>;
   failed?: FailedCheck[];
   failedFiles?: FailedFile[];
-  /** The confirm's result: success passes a red batch; empty or skipped when none ran. */
+  /** The confirm's result: success passes a failed batch, never an unknown aggregate. */
   confirm?: string;
+  jobs?: JobResult[];
 }): { writes: StatusWrite[]; next: "form" | null; pause: Pause | null; summary: string };
 export function pauseWrites(pause: Pause, issueUrl: string): StatusWrite[];
 export function pauseIssue(pause: Pause, runUrl: string): { title: string; body: string };

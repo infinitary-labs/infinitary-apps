@@ -125,6 +125,13 @@ No incoming revision scrolls the card automatically; a collapsed thread keeps it
 
 ## An ended card's line
 
-When its author ends a card the user has seen, the thread opens beside it and ends with one app line, in the app's quiet row: who ended it (`Its crewmate` or `Your first mate`), the reason it gave, and "Nothing on it waits on you.", with its time.
+When its author ends a card the user has seen, the thread opens beside it with one app line, in the app's quiet row: who ended it (`Its crewmate` or `Your first mate`), the reason it gave, and "Nothing on it waits on you.", with its time.
 Under it sits a small secondary `Close card` button, a Tab stop, which closes the card as the footer's Close does.
-No waiting or working line follows it, and the line is never saved on the thread: the card's past view reads "Withdrawn by its author".
+No waiting line follows it, and the line is never saved on the thread: the card's past view reads "Withdrawn by its author".
+The line sits among the messages by when the card ended, so a line written after it, such as the one below naming the work the reply started, reads under it.
+
+## The line naming the work a reply started
+
+When the first mate starts work from the user's reply under a card, the thread gets one app line in the quiet row: "Your first mate started INF-12 from your reply here."; for work that waits it says "filed" and adds "It starts when its wait ends."
+The task's key is a link to that task, as every key the window draws is.
+It is written on an open card, an ended one and a closed one alike, and it stays on the thread, so the past card shows it too.

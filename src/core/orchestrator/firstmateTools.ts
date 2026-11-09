@@ -53,6 +53,7 @@ import { premiumCanServe } from "./firstmateModelPick";
 import { type FirstmateTaskToolsHost, firstmateTaskTools } from "./firstmateTaskTools";
 import { readOpenWork } from "./openWork";
 import { startedReply } from "./replyLine";
+import { writeStartedLine } from "./startedFromCard";
 
 /**
  * The first mate's tools (docs/orchestrator-contract.md): cards, crew,
@@ -139,6 +140,10 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
         ref: handle.taskId,
       });
       return handle;
+    },
+    startedFrom: (cardId, taskId, queued) => {
+      const task = host.options.tasks.get(taskId);
+      return task ? writeStartedLine(supervisor.cards, cardId, task, queued) : "";
     },
     // The ask is about the task the captain named, whatever the tool then
     // says about it - a refused settle is still about that task.

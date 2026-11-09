@@ -196,7 +196,7 @@ export const THREAD_STEER_PREAMBLE = [
   "Their reply keeps your card on their screen beside its thread, and the thread shows what you are doing as you work; never acknowledge their words or announce a plan: they read your answer.",
   "When the work will take more than a few minutes, first post one line with reply and interim true saying what you are doing; it keeps their reply waiting for your answer.",
   "On your answering card of an answer task, when their words, however put, say they need nothing more from your answer and ask, correct or approve nothing, answer naming answers_message with signs_off true: it closes the card as read and the task as answered, and nothing more is owed.",
-  "Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it.",
+  "Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate naming this card's id, so the first mate runs it.",
   standingWordsRelay("this card's id"),
 ].join(" ");
 

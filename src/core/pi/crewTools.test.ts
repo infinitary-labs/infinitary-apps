@@ -768,9 +768,9 @@ describe("spawn_crewmate's groups (contract v4.12, primitives P7)", () => {
     return tools.find((tool) => tool.name === "spawn_crewmate")?.parameters as Schema;
   };
 
-  it("serves fifteen top-level parameters, the two groups one level deep", () => {
+  it("serves sixteen top-level parameters, the two groups one level deep", () => {
     const properties = spawnSchema().properties ?? {};
-    expect(Object.keys(properties)).toHaveLength(15);
+    expect(Object.keys(properties)).toHaveLength(16);
     expect(Object.keys(properties.shape?.properties ?? {})).toEqual([
       "ongoing",
       "intelligence",

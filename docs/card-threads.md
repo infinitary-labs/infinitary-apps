@@ -100,7 +100,7 @@ A click resolves against the version on the stage.
 What reads it: the renderer shows a card only when it is on the stage (`visibleCards`) and has no door of its own - a thread message never brings a card forward, and an ordinary card's return is an arrival: onto the stage when nothing else is shown, else without displacing the shown card, unread, with the notice pulse; a replied-under card is also an arrival when its `awaiting` clears, unread unless it is the shown card.
 A newly visible marked card instead becomes the shown card, already read, at its author's close-out.
 The core's push moves the stack: `reconcileStack` sees the shown card leave - a close, withdrawal or task closure - and `departureIndex` picks what comes up: the first unread card in stack order, else the card after where the shown card was, else the one before it (INF-3155), passing over any that left at the same time.
-A withdrawal of a card the captain had seen moves nothing: the card stays in its place, marked ended, its thread ending in an app line with Close card, until the captain closes it (`docs/card-authoring.md`, "A card its author ended while the captain had seen it").
+A withdrawal of a card the captain had seen moves nothing: the card stays in its place, marked ended, its thread carrying an app line with Close card, until the captain closes it (`docs/card-authoring.md`, "A card its author ended while the captain had seen it").
 A reply never moves the stack.
 The initial snapshot restores unread cards from the card owner's lifecycle `seen` observations, without an arrival pulse or a continuity jump.
 Paging clears the window's unread mark; the existing stage report records a look durably when the window is visible and focused.
@@ -267,6 +267,11 @@ The crewmate judges whether they are such words; if so, it reports them with `ne
 The first mate records them as the captain's override in that relay turn with `update_task override` and `from` naming the card, and the host takes the words from the captain's own reply on the task's record (`docs/delivery-rigor.md`, "The holds").
 A click on one of the card's buttons is relayed the same way, and the host takes the button's words from the card's record.
 A line the captain types in the task's Crewmate tab is relayed the same way, with `from` as `crewmate-tab`.
+
+The crewmate names the card's id in its `needs_firstmate` (`CARD_REPLY`, `THREAD_STEER_PREAMBLE`).
+When the first mate starts the work, it passes that id, or its own card's, as `spawn_crewmate`'s `from_card`, and the app writes one host line in the card's thread naming the task: "Your first mate started INF-12 from your reply here.", or "filed" with "It starts when its wait ends." for work that waits (`writeStartedLine`, `src/core/orchestrator/startedFromCard.ts`; the words are `startedLineWords`, `src/shared/threadLines.ts`).
+The line is written on an open card, an ended card still on the stack, or a closed one, since the card's thread outlives its place on the stack; the one fact the host checks is that the thread holds a reply from the captain, and the tool's answer says whether it wrote the line.
+The window links the key as it links every key it draws (`KeyedText`), and on an ended card the ended line sits among the messages by when the card ended, so the started line reads under it (INF-3071's plan, its second change; INF-3060's finding 5).
 
 That is the captain's Q2 as the captain corrected it: "crewmate should not answer the user with 'not mine'. it should just close the card and pass the decision to firstmate to execute."
 

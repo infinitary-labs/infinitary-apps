@@ -4,6 +4,7 @@ import type { EmittedAction } from "../../../src/core/session/tools";
 import { CardStore } from "../../../src/core/storage/cardStore";
 import { openDatabase } from "../../../src/core/storage/db";
 import { TaskService } from "../../../src/core/tasks/taskService";
+import { revisedLineWords } from "../../../src/shared/threadLines";
 import type { HomeRead } from "../browserFreshHome";
 
 /** The first mate's one card, revised in place under its stable id. */
@@ -16,7 +17,7 @@ type Write = { title: string; body: string; actions?: EmittedAction[] };
  * What a card-changes test's story reads back: the card's first write, the
  * captain's line under it, then either each revision the first mate wrote
  * with its answer to that line, or - a card from before revisions carried
- * their links - the host's plain note of an earlier revision.
+ * their links - the host's plain note of an earlier revision, by its title.
  */
 type Input = {
   first: Write;
@@ -52,7 +53,10 @@ export default function seed(userDataDir: string, input: Input): void {
       const first = { id: STABLE_ID, actions: [], ...input.first };
       const id = service.addFirstmateCard(first);
       const question = service.addMessage(id, "captain", input.captain);
-      if (input.earlier !== undefined) service.addMessage(id, "host", input.earlier);
+      // A revision saved before revisions kept their links: its line, as the
+      // host wrote it then, with no links.
+      if (input.earlier !== undefined)
+        service.addMessage(id, "host", revisedLineWords(input.earlier));
       // The captain's line waits on the first mate, so each revision answers it,
       // naming it: only a line that names the captain's message answers it.
       for (const { write, reply } of input.revisions ?? [])

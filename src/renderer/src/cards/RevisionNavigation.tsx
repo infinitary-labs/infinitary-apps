@@ -1,4 +1,5 @@
 import type { CardMessage, RevisionTarget } from "@shared/cards";
+import { isRevisedLine } from "@shared/threadLines";
 import {
   createContext,
   type ReactNode,
@@ -250,7 +251,7 @@ export function RevisionLinks({ message }: { message: CardMessage }) {
   const [missing, setMissing] = useState(false);
   const revision = message.revision;
   if (!revision)
-    return message.who === "host" ? (
+    return message.who === "host" && isRevisedLine(message.text) ? (
       <span data-revision-unavailable="">Change links unavailable</span>
     ) : null;
   if (!revision.released) return null;

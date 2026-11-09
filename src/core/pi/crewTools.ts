@@ -204,6 +204,11 @@ export type CrewDelegate = {
     /** A review ask's assigned version (INF-3141). */
     review?: ReviewAssigned;
   }>;
+  /**
+   * The work started from the captain's reply under a card (`from_card`):
+   * the app's line in that card's thread naming the task, answered in words.
+   */
+  startedFrom?(cardId: string, taskId: string, queued: boolean): string;
   steerCrewmate(
     taskId: string,
     message: string,
@@ -463,6 +468,14 @@ export const RESULT_SCHEMA_PARAM = Type.Unsafe<Record<string, unknown>>({ type: 
 
 export const NOTHING_SPAWNED = "Nothing was spawned.";
 
+/**
+ * spawn_crewmate's `from_card` (INF-3071's plan, its second change): the
+ * card whose thread holds the captain's reply this work answers, so the app
+ * writes a line there naming the task, ended cards included.
+ */
+export const FROM_CARD_DESCRIPTION =
+  "The card id whose thread reply from the captain this work answers, yours or one a crewmate's report names; the app writes a line there naming the task.";
+
 /** A first mate with no way to hand files on refuses files_from in words. */
 function missingHandFiles(): Promise<string> {
   return Promise.reject(new Error("Handing files between tasks is not available here."));
@@ -566,6 +579,7 @@ export function createCrewTools(delegate: CrewDelegate) {
           { description: START_AFTER_GROUP_DESCRIPTION },
         ),
       ),
+      from_card: Type.Optional(Type.String({ description: FROM_CARD_DESCRIPTION })),
     }),
     run: async (raw) => {
       // Grouped since v4.12; a flat call from before it reads the same.
@@ -626,15 +640,18 @@ export function createCrewTools(delegate: CrewDelegate) {
           : {}),
         ...(params.priority !== undefined ? { priority: params.priority } : {}),
       });
+      const queued = crewmate === "queued";
+      const fromCard = params.from_card?.trim();
+      const line = fromCard ? (delegate.startedFrom?.(fromCard, taskId, queued) ?? "") : "";
       // A named model routes only when it can serve, so the answer says
       // which model took the task, never the named one on its own (FI3-444).
-      if (crewmate === "queued") {
+      if (queued) {
         return {
-          text: `Queued task ${taskId}; it starts when its wait ends and you will hear about it as [fm-op] messages.${shape?.override_model_id ? " Which model takes it is known only once it starts." : ""}`,
+          text: `Queued task ${taskId}; it starts when its wait ends and you will hear about it as [fm-op] messages.${shape?.override_model_id ? " Which model takes it is known only once it starts." : ""}${line}`,
         };
       }
       return {
-        text: `Commissioned ${crewmate} on task ${taskId}${model ? `; it runs ${namedModelWords(model)}` : ""}.${review ? reviewAssignedWords(review) : ""}`,
+        text: `Commissioned ${crewmate} on task ${taskId}${model ? `; it runs ${namedModelWords(model)}` : ""}.${review ? reviewAssignedWords(review) : ""}${line}`,
       };
     },
   });

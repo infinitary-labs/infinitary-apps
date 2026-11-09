@@ -318,9 +318,13 @@ private struct PhoneCardPane: View {
     private static func messages(_ card: PhoneCard, _ session: ReadOnlySession) -> [PhoneJSON] {
         if card.isPast { return card.value["messages"].list }
         let thread = session.threads[card.id]?["messages"].list ?? []
-        // INF-3071: a card its author ended ends its thread with the computer's app line, as on the Mac.
+        // INF-3071: a card its author ended carries the computer's app line, as on the Mac, among the
+        // messages by when it ended, so a line written after it, naming the work a reply started, reads under it.
         guard let line = card.value["ended"]["line"].text else { return thread }
-        return thread + [.object(["who": .string("host"), "text": .string(line), "at": card.value["ended"]["at"]])]
+        let at = card.value["ended"]["at"]
+        let split = thread.firstIndex { ($0["at"].numeric ?? 0) > (at.numeric ?? .infinity) } ?? thread.count
+        return Array(thread[..<split]) + [.object(["who": .string("host"), "text": .string(line), "at": at])]
+            + Array(thread[split...])
     }
     private var messages: [PhoneJSON] { Self.messages(card, session) }
     /// What the face draws; a revision that changes it gives the card a new offer.

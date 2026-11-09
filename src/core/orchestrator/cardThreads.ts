@@ -16,6 +16,7 @@ import {
 import type { CrewResponse } from "@shared/crewResponses";
 import { FIRSTMATE_SESSION_ID } from "@shared/observe";
 import type { RequiredActionText } from "@shared/requiredActions";
+import { revisedLineWords } from "@shared/threadLines";
 import { decidedCardWidth } from "../pi/cardWidth";
 import type { EmittedCardInput } from "../session/tools";
 import { TaskService } from "../tasks/taskService";
@@ -610,7 +611,7 @@ export class CardThreads {
       this.stack.addMessage(
         card.id,
         "host",
-        `revised: ${updated.title}`,
+        revisedLineWords(updated.title),
         undefined,
         undefined,
         revisionLinks(card, updated),
@@ -834,7 +835,7 @@ export class CardThreads {
         this.stack.addMessage(
           card.id,
           "host",
-          `revised: ${card.title}`,
+          revisedLineWords(card.title),
           undefined,
           undefined,
           revisionLinks(shown, card),

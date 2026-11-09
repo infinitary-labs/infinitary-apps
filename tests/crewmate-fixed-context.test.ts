@@ -123,7 +123,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "a stronger model is the first mate's to arrange, never the crewmate's own switch",
     home: "prompt",
-    says: "For merging, discarding, a stronger model or unrelated work, close your card and report the captain's words verbatim with needs_firstmate; the first mate acts.",
+    says: "For merging, discarding, a stronger model or unrelated work, close your card and report the captain's words verbatim with needs_firstmate, naming the card's id; the first mate acts.",
   },
   {
     rule: "a blocker names the decision or access only the captain can give",

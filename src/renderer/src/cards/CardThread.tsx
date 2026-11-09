@@ -672,6 +672,7 @@ export function LiveMessageList({
       waiting={waiting}
       own={card.taskId}
       ended={card.ended && card.id ? <EndedLine card={{ ...card, id: card.id }} /> : undefined}
+      endedAt={card.ended?.at}
     />
   );
 }
@@ -752,6 +753,7 @@ export function MessageList({
   waiting,
   own,
   ended,
+  endedAt,
 }: {
   messages: readonly CardMessage[];
   working?: boolean;
@@ -761,8 +763,14 @@ export function MessageList({
   waiting?: ThreadWaitLine;
   /** The id of the card's own task, whose key stays text in its lines (FI3-1271). */
   own?: string | undefined;
-  /** An ended card's app line, after every message and in place of any wait (INF-3071). */
+  /** An ended card's app line, in place of any wait (INF-3071). */
   ended?: ReactNode;
+  /**
+   * When the card ended: its line sits among the messages in time, so a
+   * line written after it, such as the one naming the work the captain's
+   * reply started, reads below it.
+   */
+  endedAt?: number | undefined;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
   const count = messages.length;
@@ -771,6 +779,9 @@ export function MessageList({
   // The list's live tail: the working row with what it names, or the
   // waiting line.
   const tail = working ? `working ${doing ?? ""}` : ended ? "ended" : waitingText;
+  const split = ended && endedAt !== undefined ? messages.findIndex((m) => m.at > endedAt) : -1;
+  const earlier = split < 0 ? messages : messages.slice(0, split);
+  const later = split < 0 ? [] : messages.slice(split);
   useEffect(() => {
     // Hold at the bottom as messages arrive, as the working row comes (the
     // first mate's busy flag can land a render after the captain's reply,
@@ -793,7 +804,11 @@ export function MessageList({
         gap: 10,
       }}
     >
-      {messages.map((message) => (
+      {earlier.map((message) => (
+        <Message key={message.id} message={message} own={own} />
+      ))}
+      {ended}
+      {later.map((message) => (
         <Message key={message.id} message={message} own={own} />
       ))}
       {working ? (
@@ -802,7 +817,6 @@ export function MessageList({
         !ended &&
         waiting && <WaitingRow key={waiting.text} waiting={waiting} entrance={workingEntrance} />
       )}
-      {ended}
       <div ref={endRef} />
     </div>
   );

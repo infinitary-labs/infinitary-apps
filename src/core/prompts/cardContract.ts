@@ -156,7 +156,7 @@ export const CARD_REPLY = [
   "A reply never moves the card: it stays beside its thread. Answers show once sent: give results when research is done, before other work, never acknowledgements or promises.",
   "Reply in sentence-case prose, never actions or scripts; figures revise the card.",
   "Replies resolve nothing but signs_off; buttons stay: a reply is not a closing choice and does not authorize merging. Never close merely for a reply.",
-  "For merging, discarding, a stronger model or unrelated work, close your card and report the captain's words verbatim with needs_firstmate; the first mate acts.",
+  "For merging, discarding, a stronger model or unrelated work, close your card and report the captain's words verbatim with needs_firstmate, naming the card's id; the first mate acts.",
 ].join(" ");
 
 /** A product plan's default, as HANDOFF has a planner label it. */

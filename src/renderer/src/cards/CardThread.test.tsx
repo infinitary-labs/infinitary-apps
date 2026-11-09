@@ -104,6 +104,45 @@ describe("card thread messages", () => {
   });
 });
 
+// INF-3071's plan, its second change: the line naming the work the captain's
+// reply started is written after its crewmate ended the card, so it reads
+// below the ended line, in time, not above it.
+describe("an ended card's thread", () => {
+  it("places the ended line among the messages by when the card ended", () => {
+    const markup = renderToStaticMarkup(
+      <MessageList
+        messages={[
+          { id: 1, cardId: "c", who: "captain", text: "start a planning crewmate", at: 10 },
+          { id: 2, cardId: "c", who: "crewmate", text: "I passed your words on.", at: 20 },
+          { id: 3, cardId: "c", who: "host", text: "Your first mate started INF-9 here.", at: 40 },
+        ]}
+        ended={<p data-ended-line="">ended</p>}
+        endedAt={30}
+      />,
+    );
+    const at = (needle: string) => markup.indexOf(needle);
+    expect(at("I passed your words on.")).toBeLessThan(at("data-ended-line"));
+    expect(at("data-ended-line")).toBeLessThan(at("Your first mate started INF-9"));
+  });
+
+  // Only a revision's line carries change links, so only an old one says
+  // they are unavailable; the started line is no revision.
+  it("says change links are unavailable only under an old revision's line", () => {
+    const markup = renderToStaticMarkup(
+      <MessageList
+        messages={[
+          { id: 1, cardId: "c", who: "host", text: "revised: The meter plan", at: 1 },
+          { id: 2, cardId: "c", who: "host", text: "Your first mate started INF-9 here.", at: 2 },
+        ]}
+      />,
+    );
+    expect(markup.match(/data-revision-unavailable/g)).toHaveLength(1);
+    expect(markup.indexOf("data-revision-unavailable")).toBeLessThan(
+      markup.indexOf("Your first mate started INF-9"),
+    );
+  });
+});
+
 describe("card thread reply settings", () => {
   it("shows his words alone, with the settings as one collapsed line under them", () => {
     const markup = renderToStaticMarkup(

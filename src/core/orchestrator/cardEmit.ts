@@ -11,6 +11,7 @@ import {
   settleEffectOf,
 } from "@shared/cards";
 import { readyPresentation } from "@shared/changePresentation";
+import { revisedLineWords } from "@shared/threadLines";
 import { parseStableCardId, resolveFirstmateCardId } from "../pi/cardTool";
 import { decidedCardWidth } from "../pi/cardWidth";
 import type { EmittedCardInput } from "../session/tools";
@@ -436,7 +437,7 @@ export class CardEmits {
         this.stack.addMessage(
           resolved,
           "host",
-          `revised: ${updated.title}`,
+          revisedLineWords(updated.title),
           undefined,
           undefined,
           revisionLinks(existing, updated),

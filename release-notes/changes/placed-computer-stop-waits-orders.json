@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "placed-computer-stop-waits-orders",
+      "reason": "Test-only: the placed tests' stand-in computer now waits for the orders it is still answering when it stops, so none writes into its temporary folder after its test returns and fails the unit run's leftover check."
+    }
+  ]
+}

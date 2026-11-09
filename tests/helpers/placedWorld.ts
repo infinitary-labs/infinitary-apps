@@ -459,10 +459,25 @@ export async function world(
           log: (line) => process.env.PLACED_DEBUG && process.stderr.write(`[computer] ${line}\n`),
         });
         const held = host;
+        // The orders the computer is still answering when it stops, such as a
+        // keep running git in a working copy, whose answer is then written to
+        // its task's folder. Its own process ends with them; here that process
+        // is the test's, which goes on, so the computer's stop waits for them
+        // instead, and nothing writes into its folder after its test returns.
+        const answering = new Set<Promise<unknown>>();
+        const answer = held.answer.bind(held);
+        held.answer = (channel, args) => {
+          const answered = answer(channel, args);
+          answering.add(answered);
+          const settle = () => answering.delete(answered);
+          answered.then(settle, settle);
+          return answered;
+        };
         return {
           host: held,
           close: async () => {
             await held.close();
+            await Promise.allSettled(answering);
             channel?.closeAll();
             jobs?.disposeAll();
           },

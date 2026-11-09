@@ -4,6 +4,7 @@ import {
   currentCheckStatus,
   type MainCheckEvidence,
 } from "@shared/checkSnapshot";
+import { checksTimes } from "@shared/checksSpan";
 import { forgeOf, hasChangeRequests } from "@shared/forge";
 import type { RepoView } from "@shared/repos";
 import {
@@ -558,7 +559,7 @@ export class ChangeChecks {
         ci: actual === "none" ? undefined : actual,
         ciAt: at,
         checks: snapshot,
-        ...checksSpan(actual, checks),
+        ...checksTimes(actual, checks),
         ...(change ? { headSha: change.headSha } : {}),
         ...(change?.base ? { prBase: change.base } : {}),
         mainChecks: main,
@@ -660,37 +661,6 @@ export class ChangeChecks {
       this.options.tasks.delivery.recordChangeEvidence(taskId, { ciObservation: observation });
     return observation.id;
   }
-}
-
-/**
- * When this version's checks started and finished, by the host's own times
- * (INF-587): the first check's start; once green the last check's finish,
- * once red the first failure's. Both keys are always written, so a reading
- * without them clears an earlier version's times.
- */
-function checksSpan(
-  overall: PrCiOverall | "none",
-  items: readonly Pick<ForgeCheck, "state" | "startedAt" | "finishedAt">[],
-): { ciStartedAt: number | undefined; ciFinishedAt: number | undefined } {
-  const starts = items.flatMap((item) => (item.startedAt === undefined ? [] : [item.startedAt]));
-  if (starts.length === 0) return { ciStartedAt: undefined, ciFinishedAt: undefined };
-  const ends = (from: typeof items) =>
-    from.flatMap((item) => (item.finishedAt === undefined ? [] : [item.finishedAt]));
-  const finished =
-    overall === "green"
-      ? ends(items)
-      : overall === "red"
-        ? ends(items.filter((item) => isRedCheckState(item.state)))
-        : [];
-  return {
-    ciStartedAt: Math.min(...starts),
-    ciFinishedAt:
-      finished.length === 0
-        ? undefined
-        : overall === "green"
-          ? Math.max(...finished)
-          : Math.min(...finished),
-  };
 }
 
 /**

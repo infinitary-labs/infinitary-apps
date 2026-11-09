@@ -1,4 +1,4 @@
-import { checkSnapshotSummary } from "./checkSnapshot";
+import { checkSnapshotSummary, type ForgeCheckState, isRedCheckState } from "./checkSnapshot";
 import { feedRelativeAge } from "./relativeAge";
 import type { RunChecks, TaskDeliveryView } from "./tasks";
 
@@ -33,6 +33,37 @@ export function checksSpanOf(
   if (ci === "green") return { startedAt, finishedAt, joint: "in" };
   if (ci === "red") return { startedAt, finishedAt, joint: "after" };
   return null;
+}
+
+/**
+ * When a version's checks started and finished, by the host's own times
+ * (INF-587): the first check's start; once green the last check's finish,
+ * once red the first failure's. Both keys are always written, so a reading
+ * without them clears an earlier version's times.
+ */
+export function checksTimes(
+  overall: string,
+  items: readonly { state: ForgeCheckState; startedAt?: number; finishedAt?: number }[],
+): { ciStartedAt: number | undefined; ciFinishedAt: number | undefined } {
+  const starts = items.flatMap((item) => (item.startedAt === undefined ? [] : [item.startedAt]));
+  if (starts.length === 0) return { ciStartedAt: undefined, ciFinishedAt: undefined };
+  const ends = (from: typeof items) =>
+    from.flatMap((item) => (item.finishedAt === undefined ? [] : [item.finishedAt]));
+  const finished =
+    overall === "green"
+      ? ends(items)
+      : overall === "red"
+        ? ends(items.filter((item) => isRedCheckState(item.state)))
+        : [];
+  return {
+    ciStartedAt: Math.min(...starts),
+    ciFinishedAt:
+      finished.length === 0
+        ? undefined
+        : overall === "green"
+          ? Math.max(...finished)
+          : Math.min(...finished),
+  };
 }
 
 /** A hand-started run's span (INF-594): from the host's start, to its end once it ended. */

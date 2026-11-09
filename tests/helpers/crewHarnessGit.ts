@@ -12,6 +12,7 @@ import { rmSync } from "node:fs";
 import {
   type Forge,
   type ForgeChange,
+  type ForgeCheck,
   type ForgeCheckState,
   ForgeError,
   type ForgePull,
@@ -129,10 +130,12 @@ export class KeptForge implements Forge {
   }
   /** Runs inside each checks read: what else happens while the gates are read. */
   duringChecks: () => void = () => {};
+  /** The project's queue status on the pull request's version, once a test gives one. */
+  queue?: ForgeCheck;
   async checks() {
     this.duringChecks();
-    const items = this.states.map((state) => ({ name: "linux-checks", state }));
-    return { items };
+    const items: ForgeCheck[] = this.states.map((state) => ({ name: "linux-checks", state }));
+    return { items: this.queue ? [...items, this.queue] : items };
   }
   async putIn(_change: ForgeChange, headSha: string) {
     this.sends += 1;
@@ -205,6 +208,8 @@ export async function approved(
     guidance?: boolean;
     /** Run the app's own check watch, so the shared tick reads the pull request as the app does. */
     checkWatch?: boolean;
+    /** The project merges its pull requests through its queue. */
+    queue?: boolean;
   } = {},
 ) {
   const forge = new KeptForge(where.kind);
@@ -248,7 +253,10 @@ export async function approved(
     forge.kind === "gitlab" ? "https://gitlab.com/group/sub/r.git" : "https://github.com/o/r.git",
   ]);
   const { repo } = await harness.repos.setup({ kind: "adopt", path: dir, name: "meter" });
-  harness.repos.configure(repo.id, { delivery: "direct-pr", rigor: "quick" });
+  harness.repos.configure(repo.id, {
+    delivery: where.queue ? "queue-pr" : "direct-pr",
+    rigor: "quick",
+  });
   const { taskId } = await harness.supervisor.intake.commission({
     title: "Ship the meter",
     intent: intentOf("Ship the meter fix"),

@@ -1,8 +1,10 @@
-import type { RepoView } from "@shared/repos";
+import { checkSnapshotSummary } from "@shared/checkSnapshot";
+import { checksTimes } from "@shared/checksSpan";
+import type { QueueStatusFact, RepoView } from "@shared/repos";
 import { type ForgeCheck, QUEUE_STATUS } from "../forge";
 import { HELD } from "../queue/shipped/gitlab.mjs";
 import { type QueueKind, queueKind } from "../queue/shipped/rules.mjs";
-import type { QueueMark } from "../storage/taskStore";
+import type { QueueMark, TaskRecord } from "../storage/taskStore";
 import type { ChangeDeliveryOptions } from "./changeContext";
 import { CHECK_WATCH_BOUND_MS } from "./checkWatch";
 
@@ -108,6 +110,7 @@ export class ProjectQueue {
       ...(queue.link ? { link: queue.link } : {}),
       ...(record.delivery?.prNumber !== undefined ? { number: record.delivery.prNumber } : {}),
     };
+    this.keepStatus(record, record.repoId, head, items, queue, state);
     for (const listener of [...this.stateListeners]) listener(reading);
     // The queue held this version for a Maintainer (the GitLab part's held
     // words): only a Maintainer's approval after its last push and then the
@@ -133,6 +136,55 @@ export class ProjectQueue {
     this.options.repos.recordQueue(record.repoId, {
       answeredAt: queue.finishedAt ?? this.now(),
     });
+  }
+
+  /**
+   * Keep what the queue status says on this version for the merge card's
+   * Batch check cell (INF-3208): its words and link, the paused batch's
+   * issue, and the pull request's own checks' times without the status's.
+   * A paused status links its issue; a send-back of the same version links
+   * its answer's run instead, so the issue a paused reading of this version
+   * linked is kept, or the project's pause that names the change, while the
+   * app still keeps it. Written only when it changed.
+   */
+  private keepStatus(
+    record: TaskRecord,
+    repoId: string,
+    head: string,
+    items: readonly ForgeCheck[],
+    queue: ForgeCheck,
+    state: QueueKind,
+  ): void {
+    const kept = record.delivery?.queueStatus;
+    const number = record.delivery?.prNumber;
+    const rowPause = this.options.repos.get(repoId)?.queuePause;
+    const pause =
+      state.kind === "paused"
+        ? queue.link
+        : state.kind === "failed"
+          ? kept?.head === head && kept.pause
+            ? kept.pause
+            : number !== undefined && rowPause?.url && rowPause.changes.includes(number)
+              ? rowPause.url
+              : undefined
+          : undefined;
+    const own = items.filter((item) => item.name !== QUEUE_STATUS);
+    const overall = checkSnapshotSummary({
+      headSha: head,
+      items: own.map(({ name, state }) => ({ name, state })),
+      absenceDeclared: false,
+    }).overall;
+    const times = checksTimes(overall, own);
+    const fact: QueueStatusFact = {
+      head,
+      ...(queue.detail ? { words: queue.detail } : {}),
+      ...(queue.link ? { link: queue.link } : {}),
+      ...(pause ? { pause } : {}),
+      ...(times.ciStartedAt !== undefined ? { checksStartedAt: times.ciStartedAt } : {}),
+      ...(times.ciFinishedAt !== undefined ? { checksFinishedAt: times.ciFinishedAt } : {}),
+    };
+    if (JSON.stringify(kept) === JSON.stringify(fact)) return;
+    this.options.tasks.delivery.recordChangeEvidence(record.id, { queueStatus: fact });
   }
 
   /** The facts the Firstmate's words at a queue wait and the check watch's wake say, for a task waiting on its project's queue. */

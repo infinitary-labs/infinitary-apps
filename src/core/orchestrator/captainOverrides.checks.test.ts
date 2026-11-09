@@ -9,12 +9,13 @@
  * folder.
  */
 
-import { MERGE_ANYWAY_ACTION } from "@shared/cards";
+import { MERGE_ANYWAY_ACTION, SETTLE_FACT_VALUE_CLASS, splitSettleFacts } from "@shared/cards";
 import {
   CHECKS_ABSENT_WORDS,
   CHECKS_NOT_REPORTED_WORDS,
   currentCheckStatus,
 } from "@shared/checkSnapshot";
+import { factDotSvg } from "@shared/factDot";
 import {
   choiceWords,
   mergeClickRefusal,
@@ -22,7 +23,9 @@ import {
   softHoldWords,
   standingOverrideWords,
 } from "@shared/holds";
+import { QUEUE_STATUS } from "@shared/repos";
 import {
+  BATCH_CHECK_WORDS,
   CHECK_WORDS,
   MERGE_AFTER_FIXING_WORDS,
   MERGE_ANYWAY_WORDS,
@@ -49,8 +52,9 @@ import {
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { standingBaselineChecks } from "../tasks/dependencyWaits";
 import { seedTask } from "../tasks/seedTask";
-import { CHECK_FAILS_ON_MAIN_WORDS } from "./checkVerdicts";
+import { CHECK_FAILS_ON_MAIN_WORDS, CHECK_VERDICT_WORDS } from "./checkVerdicts";
 import { COMPLETION_REVISED_WHILE_RUNNING } from "./crewmateCards";
+import { FAILED_BATCH_NOTE } from "./mergeAuthorization";
 import { renderWake } from "./wakes";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
@@ -331,6 +335,95 @@ describe("CrewSupervisor", () => {
         await h.declare({});
         expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ headSha: "fixed0004", ci: "red" });
         expect(anywayOf(h)).toBeUndefined();
+      });
+
+      // INF-3208, the captain's INF-3183 plan, piece 2: after the project's
+      // queue sends a change back, its merge card says the queue's own words
+      // and the paused batch's issue in a Batch check cell, counts only the
+      // pull request's own checks, keeps the crewmate's diagnosis words off
+      // the queue status, and offers no Merge anyway, since no checks
+      // override passes the queue; the crewmate's answer at that version
+      // turns the merge back to the words whose click queues it again.
+      it("shows a send-back in the queue's own words beside the pull request's own checks, with no Merge anyway (INF-3208)", async () => {
+        const h = await approved({ queue: true });
+        const issue = "https://github.com/o/r/issues/97";
+        const run = "https://github.com/o/r/actions/runs/4254";
+        const words = "Sent back: adds the key but not to the pinned list";
+        const strip = () =>
+          splitSettleFacts(h.cards().find((card) => card.id === h.card.id)?.body ?? "")?.facts ??
+          "";
+        const cell = (fact: string) =>
+          new RegExp(
+            `data-fact="${fact}"[^>]*>.*?<span class="${SETTLE_FACT_VALUE_CLASS}">(.*?)</span></span>`,
+          ).exec(strip())?.[1];
+        // The batch paused on this version, linking its issue.
+        h.forge.queue = {
+          name: QUEUE_STATUS,
+          state: "pending",
+          detail: "Paused after batch run 12; meter.test.ts failed; touched by #7",
+          link: issue,
+        };
+        await h.declare({});
+        await vi.waitFor(() => expect(cell("batch")).toContain(BATCH_CHECK_WORDS.pause));
+        // A send-back by hand fails it, linking the answer's run instead.
+        h.forge.queue = {
+          name: QUEUE_STATUS,
+          state: "failure",
+          detail: words,
+          link: run,
+          startedAt: 1_000,
+          finishedAt: 9 * 60_000,
+        };
+        await h.declare({});
+        await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_AFTER_FIXING_WORDS));
+        await expect(h.emit("Sent back")).rejects.toThrow(
+          "The failed batch check is the project's queue's: no checks override passes it, so it gets no Merge anyway",
+        );
+        await h.declare({
+          diagnosis: {
+            headSha: APPROVED,
+            check: QUEUE_STATUS,
+            classification: "own-regression",
+            evidence: "The batch failed because the earlier version left the key off the list.",
+          },
+        });
+        await vi.waitFor(() => expect(cell("batch")).toContain(words));
+        expect(cell("batch")).toBe(
+          `${factDotSvg("failed")}<a href="${run}">${words}</a> · <a href="${issue}">${BATCH_CHECK_WORDS.pause}</a>`,
+        );
+        // The Checks cell counts the pull request's own check alone, and
+        // never times it by the queue status's own times.
+        expect(cell("checks")).toBe(`${factDotSvg("ok")}${CHECK_WORDS.green}`);
+        expect(strip()).not.toContain("data-check-verdict");
+        expect(strip()).not.toContain(CHECK_VERDICT_WORDS["own-regression"]);
+        expect(anywayOf(h)).toBeUndefined();
+        expect(h.supervisor.settling.approvals.queueWarning(h.taskId, "checks")).toBe(
+          FAILED_BATCH_NOTE,
+        );
+        // The crewmate answers the send-back: a click now puts the version
+        // back in the queue, and Merge anyway still has nothing to pass.
+        await h.declare({
+          declaration: {
+            headSha: APPROVED,
+            verdict: "answered",
+            check: QUEUE_STATUS,
+            evidence: "The send-back names the earlier version; this one holds the fix.",
+          },
+        });
+        await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_WORDS["merge-pr"]));
+        expect(anywayOf(h)).toBeUndefined();
+        // A failure of the pull request's own check takes the answer's words
+        // away, and Merge anyway stays off while the batch check failed.
+        h.forge.states = ["failure"];
+        await h.declare({});
+        await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_AFTER_FIXING_WORDS));
+        expect(anywayOf(h)).toBeUndefined();
+        // With no failed batch check, the pull request's own failed check
+        // brings Merge anyway back as before, and the Batch check cell goes.
+        h.forge.queue = undefined;
+        await h.declare({});
+        await vi.waitFor(() => expect(anywayOf(h)).toBeDefined());
+        expect(cell("batch")).toBeUndefined();
       });
 
       // Captain INF-1555 F12 replaces the separate red prerequisite; the offer carries the judgment.

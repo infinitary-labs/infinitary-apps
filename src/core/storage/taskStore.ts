@@ -478,6 +478,7 @@ export type TaskDelivery = {
    * so a later write by anything else reads as an answer.
    */
   queueMark?: QueueMark;
+  queueStatus?: import("@shared/repos").QueueStatusFact; // the Batch check cell's reading
   /** Non-PR run watches, saved until their named terminal wake or a crewmate outcome read. */
   runWatches?: RunWatch[];
   /** Contract 4.66's unversioned kept click; retired at boot, never run. */

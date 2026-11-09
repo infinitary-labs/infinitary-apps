@@ -206,6 +206,8 @@ export const FRAME_BASE_STYLE = `
   /* A pull request reads as every pull request link the app draws: underlined only while rested on. */
   .inf-fact-v a { text-decoration: none; }
   .inf-fact-v a:hover { text-decoration: underline; }
+  /* The queue's own words on a sent-back change wrap whole, so its pause issue link stays in view (INF-3208). */
+  .inf-fact[data-fact="batch"] .inf-fact-v { white-space: normal; overflow-wrap: anywhere; }
   .inf-facts > .inf-check-verdict { flex-basis: 100%; min-width: 0; margin: 0; padding: 0; border: 0; font-size: var(--text-sm); }
   .inf-check-verdict summary { overflow-wrap: anywhere; }
   .inf-check-verdict summary > span:last-child { color: var(--fg-2); }

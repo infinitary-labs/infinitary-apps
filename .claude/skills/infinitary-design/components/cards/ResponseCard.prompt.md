@@ -111,12 +111,16 @@ A card carrying a settle effect or a validated review shows the host-rendered `.
 A failed reading adds a quiet, full-width disclosure row per failed check beneath the checks: its name in mono, then the crewmate's recorded verdict in `--fg-2`, with evidence one click or Enter deeper in `--fg-3`.
 The row wraps rather than truncating the verdict, preserves the reader's open state during time refreshes, and resets when its version or evidence changes.
 Unknown or undiagnosed causes say so, and a suspected intermittent failure never reads as proven.
+A change that merges through the project's queue keeps the queue's status out of the Checks cell, which counts only the pull request's own checks (INF-3208).
+A Batch check cell after it says the status in the queue's own words, linked to its run, with "paused batch's issue" linked beside a paused or failed status; its dot is the status's state, and its words wrap whole so the issue link stays in view.
+The queue status gets no verdict row, and no Merge anyway stands beside a failed batch check, since no checks override passes the queue.
 Its cells are the shape the task's own fact strip takes on its record and its crew summary (`../now/NowPanel.prompt.md`, Shared task facts), with the same state dot and words, and its pull request link is every pull request link's: `--accent`, underlined only while the pointer rests on it (`TaskRecord.prompt.md`, "Pull request links").
 The strip is the first thing in the action row, pushed left of the buttons in a frame of its own, so it stays in view however long the body is; when the row cannot hold both it takes its own row above the buttons, and its hairline shows only where it follows a body, on a past card.
 The merge card's merge says what a click does and follows its actual check hold (captain INF-1555 F12).
 It reads "Merge the pull request" when its checks pass, "Merge when checks pass" while its checks are pending or unreadable, and "Merge after fixing errors" when its checks fail (captain INF-1555 F20).
 The merge offer itself expresses the crew's judgment that the work is ready; its separate captain click authorizes the merge and can keep that approval while checks hold it.
 While the captain's override passes the checks at the card's version, it reads "Merge the pull request" whatever the checks read, because a click then merges at once (INF-756).
+It reads the same when the only failure is a batch check the crewmate answered at that version, because a click puts the version back in the queue (INF-3208).
 A card whose click keeps nothing, such as a first mate's, keeps its words.
 The click takes the card away and nothing takes its place (INF-2913): Activity's one line says what the merge waits for, and a card comes back only when a stopped merge needs the captain's choice.
 

@@ -122,6 +122,24 @@ export const RUN_CHECK_WORDS: Words<RunChecks["state"]> = {
 export const CHECKS_NOT_READ_WORDS = "not read yet";
 
 /**
+ * The merge card's Batch check cell (INF-3208): the project's queue status
+ * apart from the pull request's own checks. The queue's own words fill it;
+ * these stand in only where the app kept none for the version, and the
+ * link names the paused batch's issue the queue linked from it.
+ */
+export const BATCH_CHECK_WORDS = {
+  label: "Batch check",
+  states: {
+    waiting: "waiting",
+    "in-batch": "in a batch run",
+    paused: "paused",
+    passed: "passed",
+    failed: "failed",
+  },
+  pause: "paused batch's issue",
+} as const;
+
+/**
  * The task record's Pull requests row (INF-2490): one line per pull request
  * on a task with more than one, its state and the one whose merge closes it.
  */

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "merge-card-batch-check",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A merge card after your queue sends a change back says why",
+      "body": "When your project's queue sends a change back, its merge card now has a Batch check row with the queue's own words and a link to the paused batch's issue. The Checks row counts only the pull request's own checks, so it no longer reads as failed when they all passed. The card no longer offers Merge anyway beside a failed batch check, since that could not get the change past the queue. Once the crewmate shows the version already holds the fix, the card offers Merge the pull request again.",
+      "picture": {
+        "dark": "merge-card-batch-check-dark.webp",
+        "light": "merge-card-batch-check-light.webp",
+        "alt": "A merge card whose Checks row reads 1 passed and 3 skipped, and whose Batch check row reads Sent back: adds the key but not to the pinned list, with a link to the paused batch's issue, beside the buttons Not now and Merge after fixing errors."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

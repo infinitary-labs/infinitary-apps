@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
+import { failedBatch } from "@shared/checkSnapshot";
 import { hasChangeRequests } from "@shared/forge";
-import { opensPullRequest } from "@shared/repos";
+import { deliveryForRecord, opensPullRequest } from "@shared/repos";
 import { forgeLocationOf } from "../forge";
 import { currentChange } from "../storage/changeProjection";
 import type { MergeAuthorization, MergeWait, TaskRecord } from "../storage/taskStore";
@@ -11,6 +12,7 @@ import {
   approvableOffer,
   candidateHead,
   endedAuthorization,
+  FAILED_BATCH_NOTE,
   outstandingGuidance,
   putInFront,
   retryAfter,
@@ -802,13 +804,24 @@ export class KeptApproval {
 
   /**
    * What the app's reads say of the project's queue, for the Firstmate's
-   * words beside a queue wait (docs/forge.md, "A project's queue"); undefined
-   * when nothing is amiss or the wait is not on the queue.
+   * words beside a queue wait (docs/forge.md, "A project's queue"), or
+   * beside a checks wait whose failure is the batch check at the version
+   * the pull request is at (INF-3208); undefined when nothing is amiss or
+   * the wait is on neither.
    */
   queueWarning(taskId: string, wait: MergeWait): string | undefined {
-    if (wait !== "queue") return undefined;
     const record = this.host.tasks.get(taskId);
     const repo = record?.repoId ? this.host.repos.get(record.repoId) : undefined;
+    if (wait === "checks") {
+      const head = record?.delivery?.headSha;
+      return record &&
+        head &&
+        deliveryForRecord(record, repo?.delivery) === "queue-pr" &&
+        failedBatch(record.delivery, head)
+        ? FAILED_BATCH_NOTE
+        : undefined;
+    }
+    if (wait !== "queue") return undefined;
     return repo
       ? queueWakeWords(queueNoteFacts(repo, record?.delivery?.queueMark, this.host.now()))
       : undefined;

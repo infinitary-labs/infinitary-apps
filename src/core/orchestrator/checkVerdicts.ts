@@ -5,6 +5,7 @@ import {
   type MainCheckEvidence,
 } from "@shared/checkSnapshot";
 import { checksFinishedAgo } from "@shared/checksSpan";
+import { QUEUE_STATUS } from "@shared/repos";
 import { escapeCardText } from "./cardText";
 
 /** The crewmate's judgment, never a host inference from logs or report prose. */
@@ -33,7 +34,12 @@ export function failsOnMainSentence(main: { sha: string; at: number }, now: numb
   return `Main's newest run of this check failed too, at ${main.sha.slice(0, 7)}, read ${checksFinishedAgo(main.at, now)}, so the failure is outside this change; the app watches main's run of it.`;
 }
 
-/** Only failures at the offered version belong on its merge card (nightly audit finding 3). */
+/**
+ * Only failures at the offered version belong on its merge card (nightly
+ * audit finding 3), and only the pull request's own checks: the crewmate's
+ * diagnosis applies to them, while the project's queue status says the
+ * queue's own words in the strip's Batch check cell (INF-3208).
+ */
 export function checkVerdicts(
   delivery: {
     ci?: string;
@@ -46,7 +52,9 @@ export function checkVerdicts(
 ): string {
   const { ci, headSha, ciRepair, mainChecks } = delivery;
   if (ci !== "red" || !headSha || !ciRepair) return "";
-  const failed = ciRepair.failures.find((reading) => reading.headSha === headSha)?.checks ?? [];
+  const failed = (
+    ciRepair.failures.find((reading) => reading.headSha === headSha)?.checks ?? []
+  ).filter((check) => check !== QUEUE_STATUS);
   const onMain = new Set(checksFailingOnMain(delivery));
   return failed
     .map((check) => {

@@ -518,10 +518,8 @@ export const riskAssessmentSchema = z.object({
 export type RiskAssessment = z.infer<typeof riskAssessmentSchema>;
 
 /**
- * The facts the host writes on a settle card's fact strip
- * (`SettleFacts.strip`), in the order it writes them; each cell
- * carries its fact in `data-fact`. A cell is present only when the host
- * holds that fact.
+ * The facts the host writes on a settle card's fact strip (`SettleFacts.strip`), in order;
+ * each cell carries its fact in `data-fact`, present only when the host holds that fact.
  */
 export const SETTLE_FACTS = [
   "project",
@@ -531,6 +529,7 @@ export const SETTLE_FACTS = [
   "change",
   "lines",
   "checks",
+  "batch",
   "review",
   "override",
 ] as const;

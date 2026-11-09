@@ -81,6 +81,24 @@ export const repoDeliverySchema = z.enum(["direct-pr", "queue-pr", "local-only"]
  * its how-to for the batched choice.
  */
 export const QUEUE_STATUS = "infinitary/queue"; // the shipped queue's rules own it (`QUEUE`, rules.mjs); github.test.ts holds the two equal
+
+/**
+ * The project's queue status on a version, as a task's last reading of it
+ * saw it (INF-3208): the queue's own words and link, the paused batch's
+ * issue a paused reading of this version linked, and when the pull
+ * request's own checks started and finished, without the queue status's
+ * times. The merge card's Batch check cell says it, and its Checks cell
+ * times the pull request's own checks by it (`ProjectQueue.observe`).
+ */
+export type QueueStatusFact = {
+  head: string;
+  words?: string;
+  link?: string;
+  pause?: string;
+  checksStartedAt?: number;
+  checksFinishedAt?: number;
+};
+
 export type RepoDelivery = z.infer<typeof repoDeliverySchema>;
 
 /** The postures that ship through a pull request: everything but a local land. */

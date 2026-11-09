@@ -731,10 +731,18 @@ export function keptFeedLine(wait: MergeWait, place: string, checks?: string): s
 }
 
 /**
+ * What the Firstmate is told beside a checks wait whose failure is the
+ * project's batch check (INF-3208): no checks override passes the queue, so
+ * Merge anyway could do nothing, and what clears it instead.
+ */
+export const FAILED_BATCH_NOTE = `The project's queue failed or sent back this version (${QUEUE_STATUS} failed). No checks override passes the queue, so never offer or ask for Merge anyway on it: the crewmate fixes the cause in a new version, or answers a send-back of a version that already holds the fix with check_change's answered verdict, and the host marks it waiting for the queue again.`;
+
+/**
  * What the Firstmate is told beside a wait on a kept approval: who moves
  * next, and that the captain is not asked for a second click. A queue wait
  * carries what the app's reads say of the project's queue (`queueWarning`,
- * INF-2913: no note shows it to the captain).
+ * INF-2913: no note shows it to the captain), and a checks wait on a failed
+ * batch check what clears it (INF-3208).
  */
 export function keptNote(
   wait: MergeWait,
@@ -755,7 +763,7 @@ export function keptNote(
       return `${kept} The crewmate declared its repair from ${head} unknown, so the host has an independent crewmate assess it once its turn ends: none keeps the approval and the host merges; any other answer ends it, and the host tells the crewmate to put up a new merge card. Nothing is needed from you.`;
     case "checks":
       return checks === "red"
-        ? `${kept} For ${head}, the checks failed and the merge waits for a fix. The crewmate reads failed logs and fixes the cause; a changed version is declared as a repair. ${declare}`
+        ? `${kept} For ${head}, the checks failed and the merge waits for a fix. The crewmate reads failed logs and fixes the cause; a changed version is declared as a repair.${queueWarning ? ` ${queueWarning}` : ""} ${declare}`
         : `${kept} For ${head}, ${MERGE_CHECKS_HOLD_REASON}. The crewmate reads missing results; the merge runs when its checks pass. ${declare}`;
     case "cap":
       return `${kept} A round cap holds the task: the captain's answer to the cap comes first, then the host merges.`;

@@ -9,7 +9,7 @@ import {
   takesTaskFacts,
   withMergeClosesLine,
 } from "@shared/cards";
-import { currentCheckSummary } from "@shared/checkSnapshot";
+import { currentCheckSummary, ownChecks } from "@shared/checkSnapshot";
 import {
   checksFinishedAgo,
   checksRestWords,
@@ -18,8 +18,9 @@ import {
 } from "@shared/checksSpan";
 import { factDotSvg } from "@shared/factDot";
 import { overrideCellWords, overrideWords, standingOverride } from "@shared/holds";
-import { opensPullRequest, type RepoDelivery } from "@shared/repos";
+import { opensPullRequest, QUEUE_STATUS, type RepoDelivery } from "@shared/repos";
 import {
+  BATCH_CHECK_WORDS,
   CARE_WORDS,
   CHECK_WORDS,
   CHECKS_NOT_READ_WORDS,
@@ -29,8 +30,9 @@ import {
   REVIEW_EARLIER_WORDS,
   REVIEW_WORDS,
 } from "@shared/vocabulary";
+import { queueKind } from "../queue/shipped/rules.mjs";
 import type { EmittedCardInput } from "../session/tools";
-import type { TaskRecord } from "../storage/taskStore";
+import type { TaskDelivery, TaskRecord } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
 import { escapeCardText } from "./cardText";
 import { checkVerdicts } from "./checkVerdicts";
@@ -284,14 +286,18 @@ export class SettleFacts {
     }
     this.readChangeLines(record);
     const ci = record.delivery?.ci;
-    const observed = record.delivery ? currentCheckSummary(record.delivery) : undefined;
+    // The Checks cell counts and times the pull request's own checks; the
+    // project's queue status, which says where the change stands in the
+    // batch, has its own Batch check cell (INF-3208).
+    const own = record.delivery ? ownDelivery(record.delivery) : undefined;
+    const observed = own ? currentCheckSummary(own) : undefined;
     const ciAt = record.delivery?.ciAt;
     if ((ci || observed) && ciAt !== undefined) {
       // How long the checks ran or took and how long ago they finished, in
       // the open; when they started and when the app last read them, on
       // rest (INF-587). The host rewrites the strip on every tick, so both
       // ages stay current while the card is up.
-      const span = record.delivery ? checksSpanOf(record.delivery) : null;
+      const span = own ? checksSpanOf(own) : null;
       const words = observed?.words ?? (ci ? CHECK_WORDS[ci] : CHECKS_NOT_READ_WORDS);
       const dot =
         observed?.dot ??
@@ -311,6 +317,8 @@ export class SettleFacts {
     } else if (opensPullRequest(delivery)) {
       cell("checks", "Checks", `${statusDot("idle")}${CHECKS_NOT_READ_WORDS}`);
     }
+    const batch = record.delivery ? batchCheck(record.delivery) : undefined;
+    if (batch) cell("batch", BATCH_CHECK_WORDS.label, batch.value, batch.title);
     if (record.delivery) cells.push(checkVerdicts(record.delivery, this.host.now()));
     // The independent review's word on a change (delivery rigor phase 2,
     // at any care since INF-1875): the verdict and the head it read, the
@@ -467,4 +475,57 @@ export class SettleFacts {
       .join("");
     return `<div class="inf-followups" data-followups><div class="inf-followups-k">Filed while working on this</div>${html}</div>`;
   }
+}
+
+/**
+ * The delivery facts the Checks cell reads (INF-3208): the reading without
+ * the project's queue status, timed by the pull request's own checks the
+ * queue's last reading kept. A reading that carries the queue status with no
+ * own times kept shows no duration rather than the status's.
+ */
+function ownDelivery(delivery: TaskDelivery): TaskDelivery {
+  const reading = delivery.checks;
+  if (!reading?.items.some((item) => item.name === QUEUE_STATUS)) return delivery;
+  const kept = delivery.queueStatus?.head === reading.headSha ? delivery.queueStatus : undefined;
+  return {
+    ...delivery,
+    checks: ownChecks(reading),
+    ciStartedAt: kept?.checksStartedAt,
+    ciFinishedAt: kept?.checksFinishedAt,
+  };
+}
+
+/**
+ * The Batch check cell (INF-3208): the project's queue status on the version
+ * on offer, in the queue's own words, linked to its run, with the paused
+ * batch's issue beside a paused or failed status. Undefined when the reading
+ * of the version on offer carries no queue status.
+ */
+function batchCheck(delivery: TaskDelivery): { value: string; title?: string } | undefined {
+  const reading = delivery.checks;
+  if (!reading || (delivery.headSha && reading.headSha !== delivery.headSha)) return undefined;
+  const item = reading.items.find((check) => check.name === QUEUE_STATUS);
+  if (!item) return undefined;
+  const kept = delivery.queueStatus?.head === reading.headSha ? delivery.queueStatus : undefined;
+  const state = queueKind(item.state, kept?.words ?? "");
+  const dot =
+    state.kind === "passed"
+      ? "ok"
+      : state.kind === "failed"
+        ? "failed"
+        : state.kind === "paused"
+          ? "warn"
+          : state.kind === "in-batch"
+            ? "running"
+            : "idle";
+  const words = escapeCardText(kept?.words ?? BATCH_CHECK_WORDS.states[state.kind]);
+  const https = (url: string | undefined) =>
+    url && /^https:\/\//.test(url) ? escapeCardText(url) : undefined;
+  const pause = state.kind === "paused" || state.kind === "failed" ? https(kept?.pause) : undefined;
+  // A paused status links the issue itself: its words are not linked twice.
+  const run = kept?.link !== kept?.pause ? https(kept?.link) : undefined;
+  return {
+    value: `${statusDot(dot)}${run ? `<a href="${run}">${words}</a>` : words}${pause ? ` · <a href="${pause}">${BATCH_CHECK_WORDS.pause}</a>` : ""}`,
+    ...(kept?.words ? { title: kept.words } : {}),
+  };
 }

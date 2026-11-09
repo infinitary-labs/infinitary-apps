@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { FactDotState } from "./factDot";
+import { QUEUE_STATUS } from "./repos";
 
 /** Reported check states, shared by the forge reader and every displayed fact. */
 export const checkStateSchema = z.enum([
@@ -135,6 +136,43 @@ export function checkSnapshotState(reading: CheckSnapshot): string {
   if (reading.items.some((check) => check.state === "pending")) return STATE_WORDS.pending;
   if (reading.complete === false) return CHECKS_INCOMPLETE_WORDS;
   return STATE_WORDS.neutral;
+}
+
+/**
+ * A reading of the pull request's own checks (INF-3208): every check but
+ * the project's queue status, which says where the change stands in the
+ * project's batch, not how its own checks ran. The merge card counts these
+ * in its Checks cell and shows the queue status in its Batch check cell.
+ */
+export function ownChecks(reading: CheckSnapshot): CheckSnapshot {
+  if (!reading.items.some((item) => item.name === QUEUE_STATUS)) return reading;
+  return { ...reading, items: reading.items.filter((item) => item.name !== QUEUE_STATUS) };
+}
+
+/**
+ * How the project's queue status stands in the reading of `head`, beside
+ * the pull request's own checks (INF-3208): `failed` when the queue failed
+ * the version, and `alone` when that is the reading's only failure, every
+ * own check passed, skipped or neutral. Undefined when the reading of that
+ * version carries no failed queue status.
+ */
+export function failedBatch(
+  delivery: { checks?: CheckSnapshot } | null | undefined,
+  head: string,
+): { alone: boolean } | undefined {
+  const reading = delivery?.checks;
+  if (reading?.headSha !== head) return undefined;
+  const queue = reading.items.find((item) => item.name === QUEUE_STATUS);
+  if (!queue || !isRedCheckState(queue.state)) return undefined;
+  const own = ownChecks(reading).items;
+  return {
+    alone:
+      reading.complete !== false &&
+      !reading.problem &&
+      own.every(
+        (item) => item.state === "success" || item.state === "skipped" || item.state === "neutral",
+      ),
+  };
 }
 
 /** A cached reading never describes a different version. */

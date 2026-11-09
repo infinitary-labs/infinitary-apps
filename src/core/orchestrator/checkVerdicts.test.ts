@@ -1,3 +1,4 @@
+import { QUEUE_STATUS } from "@shared/repos";
 import { describe, expect, it } from "vitest";
 import {
   CHECK_FAILS_ON_MAIN_WORDS,
@@ -73,5 +74,24 @@ describe("checkVerdicts", () => {
     expect(checkVerdicts(passing, now)).not.toContain("data-check-outside");
     const green = { ...reading(["unit-tests"], ["unit-tests"]), ci: "green" };
     expect(checkVerdicts(green, now)).toBe("");
+  });
+
+  // INF-3208: the crewmate's diagnosis words apply to the pull request's
+  // own checks; the queue status says the queue's own words in the strip's
+  // Batch check cell instead.
+  it("lists no row for the project's queue status, diagnosed or not, beside an own check's row", () => {
+    const delivery = reading(["unit-tests", QUEUE_STATUS], []);
+    delivery.ciRepair.diagnoses.push({
+      headSha,
+      check: QUEUE_STATUS,
+      classification: "own-regression",
+      evidence: "The batch failed on this change's test.",
+      at: 1,
+    } as (typeof delivery.ciRepair.diagnoses)[number]);
+    const html = checkVerdicts(delivery, now);
+    expect(html).toContain(`unit-tests</span> <span>· ${CHECK_VERDICT_MISSING}</span>`);
+    expect(html).not.toContain(QUEUE_STATUS);
+    expect(html).not.toContain(CHECK_VERDICT_WORDS["own-regression"]);
+    expect(checkVerdicts(reading([QUEUE_STATUS], []), now)).toBe("");
   });
 });

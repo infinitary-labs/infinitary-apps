@@ -2,6 +2,7 @@ import type { AttachmentRef } from "@shared/attachments";
 import { repairImpact, wireRepairImpact } from "@shared/checkRepair";
 import { describe, expect, it } from "vitest";
 import {
+  FAILED_BATCH_NOTE,
   isCaptainGuidance,
   keptFeedLine,
   keptNote,
@@ -129,6 +130,20 @@ describe("kept merge check words", () => {
     expect(keptNote("checks", "feedbeef", "GitHub", "red")).toContain(
       "the checks failed and the merge waits for a fix",
     );
+    expect(keptNote("checks", "feedbeef", "GitHub", "red")).not.toContain("Merge anyway");
+  });
+
+  // INF-3208: a failed batch check is what holds the kept approval, and no
+  // checks override passes the queue, so the first mate offers no Merge
+  // anyway and hears what clears it.
+  it("tells the first mate a failed batch check takes a fix or the crewmate's answer, never Merge anyway", () => {
+    const note = keptNote("checks", "feedbeef", "GitHub", "red", FAILED_BATCH_NOTE);
+    expect(note).toContain("the checks failed and the merge waits for a fix");
+    expect(note).toContain(
+      "No checks override passes the queue, so never offer or ask for Merge anyway on it",
+    );
+    expect(note).toContain("check_change's answered verdict");
+    expect(note.indexOf(FAILED_BATCH_NOTE)).toBeLessThan(note.indexOf("conflictRepair"));
   });
 
   it("keeps approval for passing checks, preserving the changed-work exception", () => {

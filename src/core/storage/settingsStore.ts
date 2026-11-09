@@ -88,6 +88,12 @@ const panelArrangementRowSchema = z.strictObject({
   morePick: z.string().min(1).max(64).optional(),
 });
 
+/** The `card-maximize` row: whether Keep cards maximized is on, and whether cards are maximized now. */
+const cardMaximizeRowSchema = z.strictObject({
+  keep: z.boolean(),
+  maximized: z.boolean(),
+});
+
 /** Small persisted app settings (KV rows in SQLite). */
 export class SettingsStore {
   private projection: Map<string, unknown> | undefined;
@@ -247,12 +253,34 @@ export class SettingsStore {
       }
       this.set("wash-default-zero-v1", true);
     }
-    return { ...DEFAULT_APPEARANCE, ...appearance };
+    const maximize = cardMaximizeRowSchema.safeParse(this.get("card-maximize"));
+    return {
+      ...DEFAULT_APPEARANCE,
+      ...appearance,
+      ...(maximize.success
+        ? { keepCardsMaximized: maximize.data.keep, cardsMaximized: maximize.data.maximized }
+        : {}),
+    };
   }
 
+  /**
+   * Saves the look. Keep cards maximized and whether cards are maximized go
+   * to their own row (`card-maximize`), so the `appearance` row stays one an
+   * older build parses (docs/saved-data-compatibility.md); a look without
+   * them keeps the saved ones.
+   */
   setAppearance(appearance: Appearance): void {
-    this.set("appearance", { ...this.getAppearance(), ...appearance });
+    const { keepCardsMaximized, cardsMaximized, ...look } = {
+      ...this.getAppearance(),
+      ...appearance,
+    };
+    this.set("appearance", look);
     this.set("wash-opacity-v2", true);
+    if (keepCardsMaximized !== undefined || cardsMaximized !== undefined)
+      this.set("card-maximize", {
+        keep: keepCardsMaximized ?? false,
+        maximized: cardsMaximized ?? false,
+      });
   }
 
   /**

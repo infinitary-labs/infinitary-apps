@@ -180,6 +180,8 @@ Settings → Appearance adds a Default card size row after Size, using GroupedPi
 Usual is the initial choice and keeps the content-based sizes above.
 Wide and Full set a minimum opening width of 800 and 1040 px respectively, without narrowing content-required cards; available room still bounds them, and the captain's edge drag overrides them.
 Maximized opens each card brought forward in the existing maximized view; Restore, Escape and Go to the main message still restore that visit, without changing the saved choice.
+A Keep cards maximized row follows it, a Switch, off by default: "After you maximize a card, every card stays maximized until you restore one."
+With it on, a maximize or restore (Restore or Escape) carries to every card brought forward, including those already in the stack, and lasts through a restart; Go to the main message still restores only that visit, and an edge drag stays on its own card.
 The setting belongs to this computer's persisted appearance, including on a computer controlling another computer's first mate.
 Each card keeps its own width while paging.
 A default-wide card gives way to docked panels, taking available room up to 800; panels fold only below 560 px of available room.
@@ -214,8 +216,8 @@ Restore, or an Escape nothing in the card used, gives it back its usual width, o
 A click outside the card does nothing.
 The keyboard's focus lands on the size control after each change; while maximized, Tab and ⇧Tab go round the card, its thread and its pager, and the window's parts are the card alone.
 Command search lists "Maximize or restore card", with no key of its own (`docs/keyboard.md`).
-A manual maximize or restore belongs to the shown card alone and is never saved: a revision keeps it, a lone card's reply keeps it and opens its thread as usual, and an arrival waits on the pager as ever.
-Paging, closing, a withdrawal, a reply that sends the card back, another card brought forward, Settings and a restart end that override, and the next shown card follows Default card size.
+With Keep cards maximized off, a manual maximize or restore belongs to the shown card alone and is never saved: a revision keeps it, a lone card's reply keeps it and opens its thread as usual, and an arrival waits on the pager as ever.
+Paging, closing, a withdrawal, a reply that sends the card back, another card brought forward, Settings and a restart end that override, and the next shown card follows Default card size, unless Keep cards maximized is on.
 Going to the main message restores the current card until another card comes forward.
 A change of size is a cut: no width tween, no scaled text, no blur.
 ```jsx

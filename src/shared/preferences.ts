@@ -48,6 +48,15 @@ export const appearanceSchema = z.strictObject({
   theme: themeSchema,
   /** Missing on older installs keeps content-based sizing. */
   defaultCardSize: defaultCardSizeSchema.optional(),
+  /**
+   * Keep cards maximized: after a maximize, every card shows maximized until
+   * one is restored. Missing means off. The core keeps it and
+   * `cardsMaximized` in a row of their own, so an older build, which reads
+   * the `appearance` row strictly, never meets them.
+   */
+  keepCardsMaximized: z.boolean().optional(),
+  /** Whether the captain's last size change maximized a card; read only while Keep cards maximized is on. */
+  cardsMaximized: z.boolean().optional(),
   size: uiSizeSchema.optional(),
   washStrength: washStrengthSchema.optional(),
   /** Missing on older installs means on, as on a fresh install. */

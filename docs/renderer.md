@@ -267,6 +267,7 @@ Which entry is maximized is the card layer's own state in `stage/CardLayer.tsx` 
 Each newly shown entry starts from `appearance.defaultCardSize`; Usual retains the host's width, Wide and Full widen it through `openingCardWidth`, and Maximized seeds that entry's maximized state before it paints.
 A manual maximize or restore lasts for that visit only, including revisions, and a request to focus the main message restores it.
 Paging, the layer remounting after Settings, and restarting start from the saved default again; the default is persisted, never the per-visit override.
+With Keep cards maximized on (`appearance.keepCardsMaximized`), `toggleSize` also saves the size it chose as `appearance.cardsMaximized`, and the layer seeds every newly shown entry maximized while that is true, so a maximize or restore (the button, Escape or the command) carries to every card until the next one.
 The prepared successor uses that same default so its document draws at its destination width.
 `entryView` places a maximized entry with `maximizedPlacement` (`cardGeometry.ts`): the window's width less 32px, and an open thread beside it at its own width rule.
 The layer then hangs 16px under the top bar instead of centring on `STAGE_TOP`, and sets `--card-max-height` (the window less the top bar, 32px of air and the pager's 40px lane) for everything inside it, so every card's cap (`CARD_MAX_HEIGHT`) and the task browser's page room read it; the shown entry also sets `--card-floor`, which its outer surface's floor (`cardFloor`) reads, so a short card fills the room.

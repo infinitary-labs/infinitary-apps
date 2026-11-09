@@ -36038,6 +36038,12 @@
               "maximized"
             ]
           },
+          "keepCardsMaximized": {
+            "type": "boolean"
+          },
+          "cardsMaximized": {
+            "type": "boolean"
+          },
           "size": {
             "anyOf": [
               {
@@ -36104,6 +36110,12 @@
                   "maximized"
                 ]
               },
+              "keepCardsMaximized": {
+                "type": "boolean"
+              },
+              "cardsMaximized": {
+                "type": "boolean"
+              },
               "size": {
                 "anyOf": [
                   {
@@ -36167,6 +36179,12 @@
               "full",
               "maximized"
             ]
+          },
+          "keepCardsMaximized": {
+            "type": "boolean"
+          },
+          "cardsMaximized": {
+            "type": "boolean"
           },
           "size": {
             "anyOf": [
@@ -36739,6 +36757,12 @@
                   "full",
                   "maximized"
                 ]
+              },
+              "keepCardsMaximized": {
+                "type": "boolean"
+              },
+              "cardsMaximized": {
+                "type": "boolean"
               },
               "size": {
                 "anyOf": [
@@ -62646,6 +62670,12 @@
                   "full",
                   "maximized"
                 ]
+              },
+              "keepCardsMaximized": {
+                "type": "boolean"
+              },
+              "cardsMaximized": {
+                "type": "boolean"
               },
               "size": {
                 "anyOf": [

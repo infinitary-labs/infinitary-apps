@@ -29,6 +29,8 @@ export function AppearanceTab() {
   const setSize = useShellStore((s) => s.setSize);
   const defaultCardSize = useShellStore((s) => s.defaultCardSize);
   const setDefaultCardSize = useShellStore((s) => s.setDefaultCardSize);
+  const keepCardsMaximized = useShellStore((s) => s.keepCardsMaximized);
+  const setKeepCardsMaximized = useShellStore((s) => s.setKeepCardsMaximized);
   const theme = useShellStore((s) => s.theme);
   const setTheme = useShellStore((s) => s.setTheme);
   const washStrength = useShellStore((s) => s.washStrength);
@@ -92,6 +94,19 @@ export function AppearanceTab() {
                 { value: "maximized", label: "Maximized" },
               ]}
               onChange={setDefaultCardSize}
+            />
+          }
+        />
+        <SettingRow
+          id="keep-cards-maximized"
+          error={errorFor("keepCardsMaximized")}
+          title="Keep cards maximized"
+          description="After you maximize a card, every card stays maximized until you restore one."
+          control={
+            <Switch
+              checked={keepCardsMaximized}
+              aria-label="Keep cards maximized"
+              onChange={setKeepCardsMaximized}
             />
           }
         />

@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "keep-cards-maximized",
+      "kind": "feature",
+      "title": "Keep cards maximized",
+      "body": "Settings → Appearance has a new Keep cards maximized switch. With it on, after you maximize a card, every card opens maximized, including cards already waiting, until you restore one. It is off until you turn it on.",
+      "area": "settings",
+      "picture": {
+        "dark": "keep-cards-maximized-dark.webp",
+        "light": "keep-cards-maximized-light.webp",
+        "alt": "The Keep cards maximized switch in Settings, after Default card size"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

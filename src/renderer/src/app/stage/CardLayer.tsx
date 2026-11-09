@@ -193,6 +193,12 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   const openThread = useShellStore((s) => s.openThread);
   const cardDrags = useShellStore((s) => s.cardDrags);
   const defaultCardSize = useShellStore((s) => s.defaultCardSize);
+  const keepCardsMaximized = useShellStore((s) => s.keepCardsMaximized);
+  const cardsMaximized = useShellStore((s) => s.cardsMaximized);
+  const setCardsMaximized = useShellStore((s) => s.setCardsMaximized);
+  // Maximized as the default, or the last size change maximized a card
+  // while Keep cards maximized is on: every entry comes forward maximized.
+  const opensMaximized = defaultCardSize === "maximized" || (keepCardsMaximized && cardsMaximized);
   const dragCard = useShellStore((s) => s.dragCard);
   // The picture viewer (card pictures, phase 3) belongs to the card that
   // opened it: renderer-only, and gone with that card from the stage.
@@ -219,7 +225,8 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   }, [replyable, cardId, loadThread]);
 
   // Each newly shown entry starts from the saved size. Manual restore and
-  // Go to the main message override it for this visit, never the next card.
+  // Go to the main message override it for this visit, never the next card,
+  // unless Keep cards maximized carries the maximize or restore to every card.
   const mainFocusRequest = useShellStore((s) => s.focusRequest);
   const cardFocusRequest = useShellStore((s) => s.cardFocusRequest);
   const cardFocusTarget = useShellStore((s) => s.cardFocusTarget);
@@ -227,15 +234,21 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   const openingSize = {
     cardId,
     defaultCardSize,
-    at: cardId && defaultCardSize === "maximized" ? { entryId: cardId, focusRequest } : null,
+    opensMaximized,
+    at: cardId && opensMaximized ? { entryId: cardId, focusRequest } : null,
   };
   const [sizeChoice, setSizeChoice] = useState<{
     cardId: string | undefined;
     defaultCardSize: DefaultCardSize;
+    opensMaximized: boolean;
     at: MaximizedAt | null;
   }>(openingSize);
   // Reset before the new entry paints, rather than flashing its usual size.
-  if (sizeChoice.cardId !== cardId || sizeChoice.defaultCardSize !== defaultCardSize) {
+  if (
+    sizeChoice.cardId !== cardId ||
+    sizeChoice.defaultCardSize !== defaultCardSize ||
+    sizeChoice.opensMaximized !== opensMaximized
+  ) {
     setSizeChoice(openingSize);
   }
   const maximized = isMaximized(sizeChoice.at, cardId, focusRequest);
@@ -287,7 +300,7 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   }, [candidateId, candidateReplies, loadThread]);
   const candidateView =
     candidate && (!candidateReplies || threadsLoaded[candidate.id])
-      ? entryView(candidate, undefined, facts, defaultCardSize === "maximized")
+      ? entryView(candidate, undefined, facts, opensMaximized)
       : undefined;
   const warm = candidateView && candidateView.home !== "in-place" ? candidate : undefined;
   // The following card waits until this selection's reveal and height easing
@@ -750,6 +763,8 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
               useShellStore.getState().focusRequest + useShellStore.getState().cardFocusRequest,
           },
     });
+    // Every card follows this one from now on, until the next maximize or restore.
+    if (keepCardsMaximized) setCardsMaximized(!maximized);
   };
   const sized = useRef(maximized);
   // The drawing a size changes in moves at once: the stage's lift does not ease it.

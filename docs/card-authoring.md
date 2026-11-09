@@ -506,6 +506,12 @@ The captain's edge drag wins over either minimum, and resetting the drag returns
 Maximized opens every newly shown entry in the existing maximized view, including task records, past cards and panel cards.
 Restore, Escape and Go to the main message restore the current visit without changing the setting; revisions preserve that override, while paging, reopening Settings and restarting use the saved choice again.
 This is a presentation choice of the computer showing the cards, persisted through the existing appearance writer and kept local by `ViewLook` when controlling another first mate.
+
+Settings → Appearance → Keep cards maximized, a switch after Default card size, is off on a fresh install (`appearance.keepCardsMaximized`).
+With it on, a maximize or restore of any entry carries to every entry, including cards already in the stack and the prepared next card: after a maximize each one comes forward maximized until one is restored (`appearance.cardsMaximized`).
+Restore and Escape count; Go to the main message restores only the current visit, and an edge drag stays on its own card.
+After a restore, entries open at Default card size, which still decides the restored width; with Default card size at Maximized, every entry opens maximized whatever the switch says.
+The state survives a restart, and turning the switch either way starts from restored.
 The host's stored width and the author's width hints do not change.
 
 Default-wide cards yield to docked panels, up to 800px, folding panels only when less than 560px remains.

@@ -1,4 +1,5 @@
 import { DEFAULT_DICTATION } from "@shared/dictation";
+import { appearanceSchema } from "@shared/preferences";
 import { describe, expect, it } from "vitest";
 import { openInMemoryDatabase } from "./db";
 import { SettingsStore } from "./settingsStore";
@@ -159,6 +160,46 @@ describe("SettingsStore preferences", () => {
       size: 150,
       theme: "light",
       washStrength: 35,
+    });
+  });
+
+  // The captain's ask (INF-3152): once a card is maximized, every card stays
+  // maximized until one is restored, and that lasts through a restart; an
+  // older build still reads theme, size and wash from the appearance row.
+  it("keeps Keep cards maximized and the maximized state apart from the row an older build reads", () => {
+    const db = openInMemoryDatabase();
+    const settings = new SettingsStore(db);
+    settings.setAppearance({ theme: "light", size: 125, washStrength: 35 });
+    expect(settings.getAppearance().keepCardsMaximized).toBeUndefined();
+    settings.setAppearance({ theme: "light", keepCardsMaximized: true, cardsMaximized: true });
+    // A later write without them, such as a theme change, keeps them.
+    settings.setAppearance({ theme: "dark" });
+    expect(new SettingsStore(db).getAppearance()).toEqual({
+      theme: "dark",
+      size: 125,
+      washStrength: 35,
+      showCrewModelNames: true,
+      keepCardsMaximized: true,
+      cardsMaximized: true,
+    });
+    const row = JSON.parse(
+      (
+        db.prepare("SELECT value FROM settings WHERE key = ?").get("appearance") as {
+          value: string;
+        }
+      ).value,
+    );
+    const olderBuild = appearanceSchema.omit({ keepCardsMaximized: true, cardsMaximized: true });
+    expect(olderBuild.parse(row)).toEqual({
+      theme: "dark",
+      size: 125,
+      washStrength: 35,
+      showCrewModelNames: true,
+    });
+    settings.setAppearance({ theme: "dark", cardsMaximized: false });
+    expect(new SettingsStore(db).getAppearance()).toMatchObject({
+      keepCardsMaximized: true,
+      cardsMaximized: false,
     });
   });
 

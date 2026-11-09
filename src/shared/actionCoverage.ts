@@ -127,6 +127,10 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
 export const ACTION_FIELD_EXCEPTIONS: Partial<Record<CoreInvokeChannel, Record<string, string>>> = {
   "inf:settings:appearance:set": {
     defaultCardSize: "A view choice for opening cards, set by the captain in Settings → Appearance",
+    keepCardsMaximized:
+      "A view choice for how cards keep their size, set by the captain in Settings → Appearance",
+    cardsMaximized:
+      "Whether the captain last maximized or restored a card, kept while Keep cards maximized is on; not a setting",
     usageUnit:
       "A view choice inside Settings → Usage, switched there or by Switch Usage units in command search",
   },

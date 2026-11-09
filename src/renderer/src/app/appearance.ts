@@ -21,6 +21,12 @@ export type AppearanceSlice = {
   theme: Theme;
   defaultCardSize: DefaultCardSize;
   setDefaultCardSize: (size: DefaultCardSize) => void;
+  /** Keep cards maximized: a maximize or restore carries to every card (docs/renderer.md). */
+  keepCardsMaximized: boolean;
+  setKeepCardsMaximized: (on: boolean) => void;
+  /** Whether the last maximize or restore, while Keep cards maximized is on, maximized a card. */
+  cardsMaximized: boolean;
+  setCardsMaximized: (maximized: boolean) => void;
   size: UiSize;
   setSize: (size: UiSize) => void;
   washStrength: number;
@@ -47,6 +53,8 @@ function lookOf(s: ShellState, appearance: Appearance): Partial<ShellState> {
   const look = {
     theme: appearance.theme,
     defaultCardSize: appearance.defaultCardSize ?? "usual",
+    keepCardsMaximized: appearance.keepCardsMaximized ?? false,
+    cardsMaximized: appearance.cardsMaximized ?? false,
     size: appearance.size ?? 100,
     washStrength: appearance.washStrength ?? DEFAULT_APPEARANCE.washStrength ?? 0,
     showCrewModelNames: appearance.showCrewModelNames ?? true,
@@ -101,6 +109,8 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
       const saved = appearanceSave.state.value ?? {
         theme: s.theme,
         defaultCardSize: s.defaultCardSize,
+        keepCardsMaximized: s.keepCardsMaximized,
+        cardsMaximized: s.cardsMaximized,
         size: s.size,
         washStrength: s.washStrength,
         showCrewModelNames: s.showCrewModelNames,
@@ -115,6 +125,8 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     // (./preferences); the default is only what an unread core would say.
     theme: DEFAULT_APPEARANCE.theme,
     defaultCardSize: "usual",
+    keepCardsMaximized: false,
+    cardsMaximized: false,
     size: 100,
     washStrength: DEFAULT_APPEARANCE.washStrength ?? 0,
     showCrewModelNames: DEFAULT_APPEARANCE.showCrewModelNames ?? true,
@@ -129,6 +141,15 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     setDefaultCardSize: (defaultCardSize) => {
       set({ defaultCardSize });
       saveAppearance("defaultCardSize", { defaultCardSize });
+    },
+    // Turning it either way starts from restored, so it never maximizes a card on its own.
+    setKeepCardsMaximized: (keepCardsMaximized) => {
+      set({ keepCardsMaximized, cardsMaximized: false });
+      saveAppearance("keepCardsMaximized", { keepCardsMaximized, cardsMaximized: false });
+    },
+    setCardsMaximized: (cardsMaximized) => {
+      set({ cardsMaximized });
+      saveAppearance("cardsMaximized", { cardsMaximized });
     },
     setTheme: (theme) => {
       set({ theme });

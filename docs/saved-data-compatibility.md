@@ -365,6 +365,12 @@ The home's `systems.json` records optional automatic-startup capability beside s
 An older strict reader treats that metadata file as unreadable and preserves it without rewriting; the device list and joins remain in their existing files.
 No database migration or saved-data format boundary changes.
 
+## Keep cards maximized
+
+Keep cards maximized and whether cards are maximized now live in a settings row of their own, `card-maximize`, beside the `appearance` row (`SettingsStore.getAppearance` and `setAppearance`).
+An older build reads `appearance` strictly, so neither goes in it, and it still reads theme, size and wash; it ignores the new row and opens cards at Default card size.
+A look written without them keeps the saved row.
+
 ## The rails' saved arrangement
 
 Since INF-2344 the rails keep one arrangement of every panel's slot and order, and the last More pick, in a settings row of their own, `panel-arrangement`, beside the `layout` row (`SettingsStore.getLayout` and `setLayout`, `docs/ui-plugins.md` "Preferences by talking").

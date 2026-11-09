@@ -36,6 +36,7 @@ import {
 import type { Rigor } from "@shared/rigor";
 import { z } from "zod";
 import { PERSONAL_WORKSPACE_NAME } from "../paths";
+import { CostLimitStore } from "../storage/costLimitStore";
 import type { AppDatabase } from "../storage/db";
 import { ensureRepoProject, ProjectStore } from "../storage/projectStore";
 import type { SettingsStore } from "../storage/settingsStore";
@@ -253,6 +254,7 @@ export class RepoRegistry {
 
   /** One project per managed repo (task-system D5), born and archived with the row. */
   private readonly projects: ProjectStore;
+  private readonly costLimits: CostLimitStore;
   /** Who hears a project's Runs on change (`onRunsOn`). */
   private readonly runsOnListeners = new Set<(repo: RepoView) => void>();
   /** Who hears a project's queue facts change (`onQueue`). */
@@ -266,6 +268,7 @@ export class RepoRegistry {
     private readonly options: RepoRegistryOptions = {},
   ) {
     this.projects = new ProjectStore(db);
+    this.costLimits = new CostLimitStore(db);
   }
 
   /** Where new projects go: the folder the person chose, else the fleet root. */
@@ -331,7 +334,7 @@ export class RepoRegistry {
     const rows = this.db
       .prepare(`SELECT ${ROW_COLUMNS} FROM repos ORDER BY added_at`)
       .all() as Row[];
-    return rows.map(fromRow);
+    return rows.map((row) => this.viewOf(row));
   }
 
   /**
@@ -365,9 +368,14 @@ export class RepoRegistry {
     const row = prepared(this.db, `SELECT ${ROW_COLUMNS} FROM repos WHERE id = ?`).get(id) as
       | Row
       | undefined;
-    const repo = row ? fromRow(row) : undefined;
+    const repo = row ? this.viewOf(row) : undefined;
     this.projection?.set(id, repo);
     return repo;
+  }
+
+  private viewOf(row: Row): RepoView {
+    const limit = row.kind === "personal" ? null : this.costLimits.limitOf("project", row.id);
+    return { ...fromRow(row), ...(row.kind === "personal" ? {} : { costLimit: limit }) };
   }
 
   /** True only while this exact path remains a registered project checkout. */
@@ -565,6 +573,8 @@ export class RepoRegistry {
         // Any choice of delivery answers a batched choice that waited.
         if (changes.delivery !== undefined && repo.queuePendingAt !== undefined)
           this.db.prepare("UPDATE repos SET queue_pending_at = NULL WHERE id = ?").run(id);
+        if (changes.costLimit !== undefined)
+          this.costLimits.setLimit("project", id, changes.costLimit, Date.now());
         this.projects.renameForRepo(id, name);
       })();
     } catch (error) {

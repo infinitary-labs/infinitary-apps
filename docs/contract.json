@@ -1601,6 +1601,41 @@
                 }
               ]
             },
+            "costLimit": {
+              "anyOf": [
+                {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "usd": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        }
+                      },
+                      "required": [
+                        "usd"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "none": {
+                          "type": "boolean",
+                          "const": true
+                        }
+                      },
+                      "required": [
+                        "none"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "runsOn": {
               "anyOf": [
                 {
@@ -1935,6 +1970,41 @@
                   }
                 ]
               },
+              "costLimit": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "usd": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          }
+                        },
+                        "required": [
+                          "usd"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "none": {
+                            "type": "boolean",
+                            "const": true
+                          }
+                        },
+                        "required": [
+                          "none"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "runsOn": {
                 "anyOf": [
                   {
@@ -2254,6 +2324,43 @@
                   }
                 ]
               },
+              "costLimit": {
+                "anyOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "usd": {
+                            "type": "number",
+                            "exclusiveMinimum": 0
+                          }
+                        },
+                        "required": [
+                          "usd"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "none": {
+                            "type": "boolean",
+                            "const": true
+                          }
+                        },
+                        "required": [
+                          "none"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "scope": {
                 "anyOf": [
                   {
@@ -2394,6 +2501,41 @@
                   "quick",
                   "standard",
                   "reviewed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "costLimit": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "usd": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "required": [
+                      "usd"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "none": {
+                        "type": "boolean",
+                        "const": true
+                      }
+                    },
+                    "required": [
+                      "none"
+                    ]
+                  }
                 ]
               },
               {
@@ -5338,6 +5480,41 @@
                   "quick",
                   "standard",
                   "reviewed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "costLimit": {
+            "anyOf": [
+              {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "usd": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "required": [
+                      "usd"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "none": {
+                        "type": "boolean",
+                        "const": true
+                      }
+                    },
+                    "required": [
+                      "none"
+                    ]
+                  }
                 ]
               },
               {
@@ -31048,6 +31225,62 @@
               {
                 "type": "null"
               }
+            ]
+          },
+          "cost": {
+            "type": "object",
+            "properties": {
+              "usd": {
+                "type": "number",
+                "minimum": 0
+              },
+              "unpriced": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "limit": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "usd": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "required": [
+                      "usd"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "none": {
+                        "type": "boolean",
+                        "const": true
+                      }
+                    },
+                    "required": [
+                      "none"
+                    ]
+                  }
+                ]
+              },
+              "source": {
+                "type": "string",
+                "enum": [
+                  "task",
+                  "project",
+                  "app"
+                ]
+              }
+            },
+            "required": [
+              "usd",
+              "unpriced",
+              "limit",
+              "source"
             ]
           },
           "liveValidation": {

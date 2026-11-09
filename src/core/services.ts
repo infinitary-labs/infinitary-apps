@@ -1,6 +1,11 @@
 import { readdir } from "node:fs/promises";
 import { join } from "node:path";
-import { type AppCostLimitView, limitUsd, RECENT_COST_DAYS } from "@shared/costLimit";
+import {
+  type AppCostLimitView,
+  effectiveCostLimit,
+  limitUsd,
+  RECENT_COST_DAYS,
+} from "@shared/costLimit";
 import { emptyTranscript } from "@shared/crewTranscript";
 import { isCustomApiProvider } from "@shared/customApi";
 import { deviceRunsWork } from "@shared/devices";
@@ -400,6 +405,7 @@ export async function createServices(
   let readWorkWaitFacts:
     | ((record: TaskRecord) => import("./tasks/taskWaits").TaskWaitFacts)
     | undefined;
+  let taskCostOf: ((record: TaskRecord) => import("@shared/costLimit").TaskCostView) | undefined;
   let readWorkPosture: ((record: TaskRecord) => WorkPosture) | undefined;
   // Every event broadcast passes one seam (eventSeam.ts).
   const eventSeam = createEventSeam({ tasks, activity, sharing, crewLive, emit });
@@ -439,6 +445,7 @@ export async function createServices(
       picture: (record, ref) => crewTranscripts?.picture(record, ref) ?? null,
     },
     // And where a task runs, which the crew supervisor below decides.
+    cost: (record) => taskCostOf?.(record),
     runsOn: (record) => runsOnOf(record),
     place: (record) => placeOf(record),
     computerMove: (record) => computerMoveOf(record),
@@ -687,6 +694,14 @@ export async function createServices(
   // Each task's cost limit below the app's own, and the holds a limit placed
   // (docs/usage.md, "The cost limit").
   const costLimitStore = new CostLimitStore(db);
+  taskCostOf = (record) => ({
+    ...costLimitStore.familySpend(record.id),
+    ...effectiveCostLimit({
+      task: costLimitStore.limitOf("task", record.id),
+      project: record.repoId ? repos.get(record.repoId)?.costLimit : null,
+      app: settings.getTaskCostLimit(),
+    }),
+  });
   const appCostLimitView = (): AppCostLimitView => {
     const limit = settings.getTaskCostLimit();
     const since = Date.now() - RECENT_COST_DAYS * 24 * 60 * 60 * 1000;

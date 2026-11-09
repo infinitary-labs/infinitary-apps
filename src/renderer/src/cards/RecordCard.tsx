@@ -32,6 +32,7 @@ import {
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 import { recordOpenSections, recordReadingPlaceId, useCardReadingPlace } from "./cardReadingPlace";
 import type { HtmlCardBody } from "./PrototypeBody";
+import { RecordCost } from "./RecordCost";
 import { RecordAttention, RecordDelivered, RecordGoal, RecordRelations } from "./RecordHead";
 import { RecordPaneChrome, RecordPaneFooter } from "./RecordPaneChrome";
 import { recordPillToneOf } from "./recordFooter";
@@ -394,6 +395,7 @@ export function RecordCard({
                       </RecordCell>
                     )}
                     <TaskResourceUse taskId={taskId} />
+                    {shown.cost && <RecordCost cost={shown.cost} />}
                   </>
                 }
               />

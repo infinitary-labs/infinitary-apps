@@ -12,6 +12,7 @@ import {
 import { AUTOMATION_UNREADABLE, type AutomationRule } from "@shared/automation";
 import { automationEventWords } from "@shared/automationWords";
 import type { PastCard } from "@shared/cards";
+import { projectCostChange } from "@shared/costLimit";
 import { CREATE_PANEL_SLOT_ID } from "@shared/createPanelSlot";
 import { isCustomApiProvider } from "@shared/customApi";
 import { HERE } from "@shared/deviceNames";
@@ -1416,10 +1417,12 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         const was = (before.get(name) as RepoView[]).find((entry) => entry.id === repo.id);
         const details = ["name", "path", "origin"] as const;
         const changed = details.filter((key) => was && was[key] !== repo[key]);
-        const descriptions = changed.map(
-          (key) =>
-            `${key === "origin" ? "where it lives" : key === "path" ? "folder" : "name"} to ${repo[key] ?? "kept on this computer"}`,
-        );
+        const descriptions = changed
+          .map(
+            (key) =>
+              `${key === "origin" ? "where it lives" : key === "path" ? "folder" : "name"} to ${repo[key] ?? "kept on this computer"}`,
+          )
+          .concat(projectCostChange(was?.costLimit, repo.costLimit));
         if (
           JSON.stringify(was?.placementRequirements) !== JSON.stringify(repo.placementRequirements)
         )

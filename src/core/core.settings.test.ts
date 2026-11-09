@@ -15,6 +15,7 @@ import { automationWords } from "./orchestrator/scheduler";
 import { actionValue, createAppTools } from "./pi/appTools";
 import { catalogRefreshesSettled } from "./pi/modelRuntime";
 import { NO_PLACED_TASK } from "./placed/placedWork";
+import { seedTask } from "./tasks/seedTask";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -116,6 +117,93 @@ describe("the core, driven with no Electron in the process", () => {
     ).rejects.toThrow("malformed request");
     await core.dispatch("inf:settings:dictation:set", [{ enabled: true, key: "AltRight" }]);
     detach();
+  });
+
+  // INF-3112's approved second piece: the captain can change the app and
+  // project limits by talking, and each task record reads the winning limit.
+  it("changes cost limits through the first mate action and reads them in task records", async () => {
+    const original = await core.dispatch("inf:settings:cost-limit:get", []);
+    const change = createAppTools({
+      dispatch: core.dispatch,
+      actor: () => ({ kind: "firstmate", wake: "captain" }),
+    }).find((tool) => tool.name === "app_change");
+    if (!change) throw new Error("Missing app_change");
+    const created = await core.services.repos.setup({ kind: "init", name: "cost-settings" });
+    const task = seedTask(core.services.tasks, {
+      id: "cost-record",
+      status: "queued",
+      title: "Review command search",
+      repoId: created.repo.id,
+      startPolicy: "on-request",
+    });
+    try {
+      const changed = await change.run({
+        action: "cost-limit",
+        value: { limit: { usd: 75 } },
+        evidence: "Ask me after a task spends $75",
+      });
+      expect(JSON.parse(changed.text).current).toEqual({ limit: { usd: 75 } });
+      expect((await core.dispatch("inf:tasks:detail", [task.id])).cost).toEqual({
+        usd: 0,
+        unpriced: 0,
+        limit: { usd: 75 },
+        source: "app",
+      });
+      await change.run({
+        action: "cost-limit",
+        value: { limit: { none: true } },
+        evidence: "Do not ask about cost by default",
+      });
+      expect((await core.dispatch("inf:tasks:detail", [task.id])).cost?.limit).toEqual({
+        none: true,
+      });
+      const setProject = (costLimit: unknown) =>
+        change.run({
+          action: "project-settings",
+          value: { repoId: created.repo.id, changes: { costLimit } },
+          evidence: "Set this project's cost limit",
+          on_words: true,
+        });
+      const projectChange = await setProject({ usd: 25 });
+      expect(
+        JSON.parse(projectChange.text).current.projects.find(
+          (project: { id: string }) => project.id === created.repo.id,
+        ).costLimit,
+      ).toEqual({ usd: 25 });
+      expect((await core.dispatch("inf:tasks:detail", [task.id])).cost).toMatchObject({
+        limit: { usd: 25 },
+        source: "project",
+      });
+      await setProject({ none: true });
+      expect((await core.dispatch("inf:tasks:detail", [task.id])).cost).toMatchObject({
+        limit: { none: true },
+        source: "project",
+      });
+      core.services.supervisor.costLimits.setTaskLimit(task.id, { usd: 100 });
+      expect((await core.dispatch("inf:tasks:detail", [task.id])).cost).toMatchObject({
+        limit: { usd: 100 },
+        source: "task",
+      });
+      core.services.supervisor.costLimits.setTaskLimit(task.id, null);
+      await setProject(null);
+      expect((await core.dispatch("inf:tasks:detail", [task.id])).cost).toMatchObject({
+        limit: { none: true },
+        source: "app",
+      });
+      const malformed = await change.run({
+        action: "cost-limit",
+        value: { limit: { usd: -1 } },
+        evidence: "Set a negative limit",
+      });
+      expect(Array.isArray(JSON.parse(malformed.text))).toBe(true);
+      expect((await core.dispatch("inf:settings:cost-limit:get", [])).limit).toEqual({
+        none: true,
+      });
+    } finally {
+      await core.dispatch("inf:settings:cost-limit:set", [original.limit]);
+      core.services.tasks.close(task.id, { status: "dropped", reason: "cancelled", actor: "host" });
+      core.services.repos.unregister(created.repo.id);
+    }
   });
 
   it("tells Firstmate every own-words action from the catalog", () => {

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { taskLifecycleOpSchema } from "./cards";
 import { checkSnapshotSchema } from "./checkSnapshot";
+import { taskCostViewSchema } from "./costLimit";
 import { recordDeliveryFactSchema } from "./deliveryFacts";
 import { computerReachSchema } from "./devices";
 import { liveValidationSummarySchema } from "./liveValidationSummary";
@@ -657,6 +658,7 @@ export type TaskCardRow = z.infer<typeof taskCardRowSchema>;
 
 /** One record in full: the view plus what the board leaves out. */
 export const taskDetailSchema = taskViewSchema.extend({
+  cost: taskCostViewSchema.optional(),
   liveValidation: liveValidationSummarySchema.optional(),
   /** Current policies, separate from dispatch and published delivery history. */
   policies: effectiveTaskPoliciesSchema.nullable().optional(),

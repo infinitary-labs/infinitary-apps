@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { costLimitSchema } from "./costLimit";
 import { HERE } from "./deviceNames";
 import type { ForgeKind } from "./forge";
 import { placementRequirementsSchema } from "./placement";
@@ -290,6 +291,7 @@ export const repoPolicyPatchSchema = z
     delivery: repoDeliverySchema.optional(),
     autonomy: z.boolean().optional(),
     rigor: rigorSchema.nullable().optional(),
+    costLimit: costLimitSchema.nullable().optional(),
     scope: z.string().nullable().optional(),
     name: z.string().trim().min(1).max(120).optional(),
     path: z.string().trim().min(1).max(4096).optional(),
@@ -297,7 +299,7 @@ export const repoPolicyPatchSchema = z
   })
   .strict()
   .refine((patch) => Object.values(patch).some((value) => value !== undefined), {
-    message: "pass delivery, autonomy, rigor, scope, name, path, origin, or several",
+    message: "pass delivery, autonomy, rigor, costLimit, scope, name, path, origin, or several",
   });
 export type RepoPolicyPatch = z.infer<typeof repoPolicyPatchSchema>;
 
@@ -397,6 +399,8 @@ export const repoViewSchema = z.object({
    * from the posture and the intelligence tier (`rigorFor` in `./rigor.ts`).
    */
   rigor: rigorSchema.nullable(),
+  /** Null follows Settings → Intelligence; absent on older homes. */
+  costLimit: costLimitSchema.nullable().optional(),
   /**
    * Where the project's next task starts (multi-machine piece 11,
    * docs/helper.md "Runs on"): the id of a paired computer that runs work,

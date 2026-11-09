@@ -2,11 +2,13 @@
 // "Folded under the goal, closed, with their count in the fold's name").
 // The filing, plan-skip and words cases moved here from the record's frame
 // tests with the parts they read.
+import { taskCostWords } from "@shared/costLimit";
 import { DELIVERY_BASIS_WORDS, DELIVERY_FACTS_LABEL } from "@shared/deliveryFacts";
 import type { TaskDetail } from "@shared/tasks";
 import { ElementType, parseDocument } from "htmlparser2";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { RecordCost } from "./RecordCost";
 import {
   RecordAttention,
   RecordDelivered,
@@ -237,6 +239,20 @@ describe("the head above the goal", () => {
         ),
       ),
     ).toMatch(/^Finished .*: The shoal is sounded\.$/);
+  });
+
+  // The approved cost-limit plan promises "$12 of $50" in the record.
+  // The queue regression requires a compact cell, with its full explanation
+  // still available to a person focusing the amount rather than a new row.
+  it("keeps the spend amount visible and the family/source explanation accessible in a focusable cell", () => {
+    const cost = { usd: 12, unpriced: 1, limit: { usd: 50 }, source: "project" as const };
+    const html = renderToStaticMarkup(<RecordCost cost={cost} />);
+    const amount = find(html, "data-record-cost");
+    const words = taskCostWords(cost);
+    expect(textOf(amount)).toBe(words.amount);
+    expect(amount?.attribs?.["aria-label"]).toBe(`${words.amount} · ${words.detail}`);
+    expect(amount?.attribs?.tabindex).toBe("0");
+    expect(amount?.attribs?.role).toBe("img");
   });
 
   it("names a parent, what it waits on and holds up, and its parts as rows", () => {

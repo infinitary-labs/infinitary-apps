@@ -90,3 +90,31 @@ export const appCostLimitViewSchema = z.object({
   }),
 });
 export type AppCostLimitView = z.infer<typeof appCostLimitViewSchema>;
+
+/** A task record's live family spend and the effective limit it follows. */
+export const taskCostViewSchema = z.object({
+  usd: z.number().nonnegative(),
+  unpriced: z.number().int().nonnegative(),
+  limit: costLimitSchema,
+  source: z.enum(["task", "project", "app"]),
+});
+export type TaskCostView = z.infer<typeof taskCostViewSchema>;
+
+/** The record states what its estimate counts, never presenting unpriced work as free. */
+export function taskCostWords(cost: TaskCostView): { amount: string; detail: string } {
+  return {
+    amount: `${formatUsd(cost.usd)}${"usd" in cost.limit ? ` of ${formatUsd(cost.limit.usd)}` : " · No limit"}`,
+    detail: `Estimated · Includes all parts · ${cost.source === "app" ? "App" : cost.source === "project" ? "Project" : "Task"} limit${cost.unpriced ? ` · ${cost.unpriced} unpriced ${cost.unpriced === 1 ? "response" : "responses"}` : ""}`,
+  };
+}
+
+/** The project-settings trail names the cost choice that actually changed. */
+export function projectCostChange(
+  before: CostLimit | null | undefined,
+  after: CostLimit | null | undefined,
+): string[] {
+  if (JSON.stringify(before ?? null) === JSON.stringify(after ?? null)) return [];
+  return [
+    `cost limit ${!after ? "follows the app" : "usd" in after ? formatUsd(after.usd) : "off"}`,
+  ];
+}

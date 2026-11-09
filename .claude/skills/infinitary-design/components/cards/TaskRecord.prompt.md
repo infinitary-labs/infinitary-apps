@@ -5,6 +5,16 @@ The whole pill tints for Waiting on you (`accent`) or Interrupted/failed Dropped
 The key gives way (ellipsis).
 The model is not in the top row: it is a cell of the Info tab's row of facts, read the way the crew summary reads it (FI3-565 piece 2).
 
+**Spend.**
+Info places a Spend cell in its existing fact strip, beside Use, never a separate row before the framed body.
+The mono value reads "$12 of $50", or "$12 · No limit".
+It is a Tab stop with the shared focus ring; pointer rest or keyboard focus shows "Estimated · Includes all parts · App limit" (Project limit or Task limit where set), followed by the count of unpriced responses when any.
+Its accessible name carries the amount and the same complete explanation.
+The compact cell leaves the record's intrinsic-height and prepared-body budgets unchanged.
+The value counts the task and everything under it, including parts and reviews, from the recorded usage ledger.
+It updates as responses arrive and the effective limit changes.
+An absent reading on an older home draws no Spend cell, never an inferred zero.
+
 **Tabs.**
 Once a task has more than its Info to show, a tab strip sits under the title in the captain's order (INF-2261, "Info, Cards, Activity, Crewmate, then Browser"): `Info` first, selected, then `Cards` with how many in mono `--fg-3` beside it once the task showed a card, `Activity` with no count once it has a line, `Crewmate` (`components/cards/TaskCrewmate`), then `Browser · <page title>` for each page (`components/cards/TaskBrowser`, "The tab strip").
 It is one tablist and one Tab stop; the arrows, Home and End move between tabs and Enter or Space shows the focused one.

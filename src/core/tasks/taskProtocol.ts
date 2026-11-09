@@ -1,5 +1,6 @@
 import { type Card, isReadyDecision, mergeEffectOf } from "@shared/cards";
 import { cardWords } from "@shared/cardWords";
+import type { TaskCostView } from "@shared/costLimit";
 import {
   type CrewPicture,
   type CrewResultText,
@@ -202,6 +203,8 @@ export type TaskProtocolOptions = {
   modelReason?: (record: TaskRecord) => ModelReason | undefined;
   /** How it got that model (`TaskDetail.modelChoice`); absent when the decision saved no comparison. */
   modelChoice?: (record: TaskRecord) => ModelChoice | undefined;
+  /** Live family spend through the cost-limit owner. */
+  cost?: (record: TaskRecord) => TaskCostView | undefined;
   /** Where a task runs (`TaskDetail.runsOn`); absent when no other computer could run it. */
   runsOn?: (record: TaskRecord) => TaskRunsOn | undefined;
   /**
@@ -529,6 +532,7 @@ export class TaskProtocol {
     const runsOn = this.options.runsOn?.(record);
     const reasoning = reasoningOf(record, timeline);
     const browser = this.options.browser?.(id);
+    const cost = this.options.cost?.(record);
     const hold = holdOf(record);
     const cards = this.options.cards.forTask?.(id, cardIdsOf(timeline)) ?? [];
     const cardTitle = (cardId: string) => cards.find((card) => card.id === cardId)?.title;
@@ -603,6 +607,7 @@ export class TaskProtocol {
             },
           }
         : {}),
+      ...(cost ? { cost } : {}),
       intent: record.intent,
       liveValidation: proof,
       // The rigor the host derived at dispatch (delivery rigor phase 2), off

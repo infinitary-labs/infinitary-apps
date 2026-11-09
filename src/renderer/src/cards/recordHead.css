@@ -196,3 +196,9 @@
   justify-self: start;
   border-radius: var(--radius-s);
 }
+
+/* Spend is one compact fact, with its complete explanation on keyboard focus. */
+[data-record-cost]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}

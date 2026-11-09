@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { AccountView } from "./accounts";
 import { type AutomationList, type AutomationRule, automationSpecSchema } from "./automation";
 import type { DeviceMake } from "./cards";
+import { type AppCostLimitView, costLimitSchema, formatUsd } from "./costLimit";
 import { crewSpeedSchema, SPEED_NAMES } from "./crewSpeed";
 import { type DecisionAnswerer, type DecisionsView, decisionAnswererSchema } from "./decisions";
 import { anotherUserHere, COMPUTER, HERE } from "./deviceNames";
@@ -344,7 +345,7 @@ const actionLines = {
       repoId: z.string().min(1),
       changes: repoPolicyPatchSchema,
     }),
-    line: "Change scope (what work belongs here; null clears it), delivery, autonomy, rigor, declared computer requirements (placementRequirements: systems, chips, tools, profile; null restores defaults), name, path (an already moved folder, with no planned or working tasks), or origin (the folder’s current git address, never a git configuration write). Exact captain words apply; otherwise the app asks on its exact-change card. Origin always asks. Personal workspace settings stay fixed; keys and history stay.",
+    line: "Change costLimit (estimated dollars as {usd}, {none:true} for no limit, null to follow the app), scope (what work belongs here; null clears it), delivery, autonomy, rigor, declared computer requirements (placementRequirements: systems, chips, tools, profile; null restores defaults), name, path (an already moved folder, with no planned or working tasks), or origin (the folder’s current git address, never a git configuration write). Exact captain words apply; otherwise the app asks on its exact-change card. Origin always asks. Personal workspace settings stay fixed; keys and history stay.",
     toRequest: (v) => [v.repoId, v.changes],
     readValue: (c) => ({
       projects: (c as RepoView[]).map(
@@ -359,6 +360,7 @@ const actionLines = {
           delivery,
           autonomy,
           rigor,
+          costLimit,
           placementRequirements,
         }) => ({
           id,
@@ -371,6 +373,7 @@ const actionLines = {
           delivery,
           autonomy,
           rigor,
+          costLimit,
           placementRequirements,
         }),
       ),
@@ -1394,6 +1397,20 @@ const actionLines = {
       (v.answer as QueueAnswer).action === "resume"
         ? "asked the queue to resume"
         : `asked the queue to send #${(v.answer as Extract<QueueAnswer, { action: "send-back" }>).number} back`,
+  },
+  "cost-limit": {
+    area: "intelligence",
+    tier: "asked",
+    change: "inf:settings:cost-limit:set",
+    current: "inf:settings:cost-limit:get",
+    value: z.strictObject({ limit: costLimitSchema }),
+    line: "Set the app's per-task cost limit when asked: {usd} in estimated US dollars, or {none:true} for no limit. It counts each task and everything under it, parts included. Project and task choices take precedence. The default lives in Settings → Intelligence.",
+    toRequest: (v) => [v.limit],
+    readValue: (current) => ({ limit: (current as AppCostLimitView).limit }),
+    done: (v) => {
+      const limit = v.limit as AppCostLimitView["limit"];
+      return "usd" in limit ? `task cost limit ${formatUsd(limit.usd)}` : "no task cost limit";
+    },
   },
   notifications: {
     area: "general",

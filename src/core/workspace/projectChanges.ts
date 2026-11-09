@@ -3,6 +3,7 @@ import { existsSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import { ACTIONS, type ActionActor, type ActionName, isProjectChange } from "@shared/actions";
 import { type Card, FIRSTMATE_CARD_META } from "@shared/cards";
+import { type CostLimit, formatUsd } from "@shared/costLimit";
 import type { DeviceView } from "@shared/devices";
 import { deviceRunsWork } from "@shared/devices";
 import { AUTOMATIC_COMPUTER, AUTOMATIC_WORD, type PlacementRequirements } from "@shared/placement";
@@ -237,10 +238,15 @@ function changeRows(offer: Offer, devices: readonly DeviceView[]): string {
     delivery: "Where changes go",
     autonomy: "Ask before merging",
     rigor: "Care",
+    costLimit: "Cost limit",
     runsOn: "Runs on",
     placementRequirements: "Computer requirements",
   };
   const words = (key: string, value: unknown): string => {
+    if (key === "costLimit") {
+      const limit = value as CostLimit | null | undefined;
+      return !limit ? "Follow the app" : "usd" in limit ? formatUsd(limit.usd) : "No limit";
+    }
     if (key === "scope") return value == null || value === "" ? "Not set" : String(value);
     if (key === "delivery") return PROJECT_DELIVERY_WORDS[value as RepoView["delivery"]];
     if (key === "autonomy") return value ? AUTONOMY_WORDS.putsInItself : AUTONOMY_WORDS.asksFirst;

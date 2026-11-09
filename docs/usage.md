@@ -113,6 +113,13 @@ A task, and everything under it, that passes its cost limit stops at a safe poin
 The limit is an amount in the same estimated dollars the ledger keeps, or no limit, and it is a ceiling, never a forecast.
 Three places set it, and the first that is set wins, read live: the task itself, its project, then the app (`effectiveCostLimit`, `src/shared/costLimit.ts`).
 The app's own limit starts at $50, the captain's choice drawn from their own ledger, and lives in Settings → Intelligence (`CostLimitRow.tsx`), whose row also says how many of the task families that spent anything in the last 30 days would have asked under it.
+Settings → Projects adds Cost limit beside Care: Follow app, Own amount or No limit, saved through `project-settings` as `costLimit` (`null`, `{ usd }`, or `{ none: true }`).
+The first mate changes the app's value through the asked `cost-limit` action and a project's value through the existing asked `project-settings` action, with the same authority and trail as the controls.
+Task Info shows Spend as "$12 of $50", or "$12 · No limit", in its compact fact strip.
+Resting the pointer on the amount or focusing it with Tab shows the limit's source and explains that the estimate includes all parts.
+It counts unpriced responses explicitly rather than calling them free, and reads through `TaskDetail.cost` from `CostLimitStore.familySpend` and `effectiveCostLimit`, never a second ledger.
+An older home without this reading shows no Spend row.
+An open record refreshes after model responses (including a part's), project configuration and app-setting actions.
 
 | Piece | Where |
 | --- | --- |
@@ -149,6 +156,8 @@ Tab reaches See more under the recent tasks, past their keys; Enter or Space add
 - `src/renderer/src/settings/usageWords.test.ts`: every printed word and number.
 - `src/renderer/src/settings/UsageTab.test.tsx`: the recent tasks while a read is out, after one fails, with nothing to list, and with more to show.
 - `src/core/storage/costLimitStore.test.ts` and `src/core/orchestrator/costLimits.test.ts`: the cost limit's spend, its 30-day count, the crossing, the card and each of its answers.
+- `src/core/core.settings.test.ts`: the first mate changes app and project limits through their catalog actions, task/project/app precedence, and invalid amounts leave the saved limit unchanged.
+- `tests/e2e/cost-limit.spec.ts`: the app default, project choices and persistence by keys, plus family spend and a live limit update in task Info.
 - `tests/e2e/usage.spec.ts`: a real first mate turn lands in the ledger, and the captain opens Usage, switches units, filters, opens and closes a model's details and finds the unit kept after a reload, all by keys; over a seeded ledger, Where it went lists the first mate, each project and other work, and See more adds ten tasks at a time by keys, kept across a unit switch and started over by a new period.
   `tests/e2e/usage.ts` holds its hooks and the seeded ledger.
 

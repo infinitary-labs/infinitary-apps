@@ -26,6 +26,8 @@ import { isView } from "../devices/viewWords";
 import { AddProject } from "./AddProject";
 import { FOLDER_THERE_WORDS } from "./addProjectWords";
 import { ForgeSection } from "./ForgeSection";
+import { ProjectCostLimit } from "./ProjectCostLimit";
+import { PROJECT_COST_WORDS } from "./projectCostWords";
 import {
   PROJECT_POLICY_WORDS,
   PROJECT_ROW_WORDS,
@@ -78,6 +80,7 @@ const chevron = (
 function applyPatch(repo: RepoView, patch: RepoPolicyPatch): RepoView {
   return {
     ...repo,
+    costLimit: patch.costLimit === undefined ? repo.costLimit : patch.costLimit,
     delivery: patch.delivery ?? repo.delivery,
     autonomy: patch.autonomy ?? repo.autonomy,
     rigor: patch.rigor === undefined ? repo.rigor : patch.rigor,
@@ -742,6 +745,19 @@ function ProjectRow({
               )
             }
           />
+          {!personal && repo.costLimit !== undefined && (
+            <PolicyRow
+              title={PROJECT_COST_WORDS.title}
+              description={PROJECT_COST_WORDS.description}
+              control={
+                <ProjectCostLimit
+                  id={repo.id}
+                  limit={repo.costLimit}
+                  onChange={(costLimit) => onPatch({ costLimit })}
+                />
+              }
+            />
+          )}
           {computers && (
             <PolicyRow
               title="Runs on"

@@ -1,4 +1,5 @@
 import { cardCornerOf } from "@shared/cardLeave";
+import { isDrawingSource, withDrawingFaces } from "@shared/cardPictures";
 import { cardTakesReplies } from "@shared/cards";
 import type { FramePicture } from "@shared/plugins/bridge";
 import type { DefaultCardSize } from "@shared/preferences";
@@ -48,6 +49,7 @@ import { crewStatusOf } from "../../character/crew/crewSignal";
 import { CardStack } from "../../design";
 import { type CardSize, CardSizeContext } from "../../design/cards/CardSize";
 import { CardPeeks } from "../../design/cards/CardStack";
+import { cardFace } from "../../design/cards/drawingFaces";
 import { PictureViewer, type ViewerDemo } from "../../design/cards/PictureViewer";
 import { CARD_MAX_HEIGHT } from "../../design/cards/ResponseCard";
 import { focusWithRing } from "../../design/focus";
@@ -830,7 +832,18 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
       : pastRead?.state === "ready"
         ? pastRead.card.title
         : card?.title;
-    if (card && cardId) setViewer({ cardId, title: title ?? "", ...set, opener });
+    if (!card || !cardId) return;
+    if (!set.pictures.some((picture) => isDrawingSource(picture.src))) {
+      setViewer({ cardId, title: title ?? "", ...set, opener });
+      return;
+    }
+    // A diagram takes the card's typefaces inside it before it opens (INF-3107).
+    void Promise.all(
+      set.pictures.map(async (picture) => ({
+        ...picture,
+        src: await withDrawingFaces(picture.src, cardFace),
+      })),
+    ).then((pictures) => setViewer({ cardId, title: title ?? "", ...set, pictures, opener }));
   };
   // Paging remembers which way the arrow went, for the slide (../../cards/stageMoves).
   const page = (dir: 1 | -1) => {

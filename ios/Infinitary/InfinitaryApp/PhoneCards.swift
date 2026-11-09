@@ -446,7 +446,12 @@ private struct PhoneCardPane: View {
             if back { readCount = messages.count; side.faceOffer = offer }
             turn(to: back)
         }
-        .sheet(isPresented: Binding(get: { host.presentation != nil }, set: { if !$0 { host.presentation = nil } })) {
+        // INF-3107: a picture or diagram opens full screen, where it can be read at its own size; a recording keeps its sheet.
+        .sheet(isPresented: Binding(get: { host.presentation?["type"].text == "demo" }, set: { if !$0 { host.presentation = nil } })) {
+            if let presentation = host.presentation { CardMediaView(presentation: presentation, session: session) }
+        }
+        .fullScreenCover(isPresented: Binding(get: { host.presentation.map { $0["type"].text != "demo" } ?? false },
+                                              set: { if !$0 { host.presentation = nil } })) {
             if let presentation = host.presentation { CardMediaView(presentation: presentation, session: session) }
         }
         .photosPicker(isPresented: $libraryOpen, selection: $photoSelection,

@@ -31,6 +31,28 @@ export const PICTURE_CARD_TITLES = {
   groups: "Two groups of pictures",
 } as const;
 const PICTURE_GROUP_CAPTION = "Before and after, at 640 px";
+
+/**
+ * A diagram a card draws inline, 750 units wide as docs/card-authoring.md
+ * asks, in the design system's tokens: the press that opens it (INF-3107).
+ */
+export const CARD_DIAGRAM = {
+  caption: "A picture travels from the card to the viewer on your own press",
+  width: 750,
+  height: 120,
+  label: "Viewer",
+} as const;
+const DIAGRAM_BOX = (x: number, words: string, lit = false) =>
+  `<rect x="${x}" y="30" width="200" height="60" rx="8" fill="var(${lit ? "--accent-dim" : "--bg-2"})" stroke="var(${lit ? "--accent" : "--line-2"})"/>` +
+  `<text x="${x + 100}" y="66" text-anchor="middle" fill="var(--fg-1)" font-size="14">${words}</text>`;
+const DIAGRAM =
+  `<figure><svg viewBox="0 0 ${CARD_DIAGRAM.width} ${CARD_DIAGRAM.height}" width="100%" role="img" aria-label="Card, card page and viewer">` +
+  DIAGRAM_BOX(25, "Card body") +
+  `<path d="M225 60h50" stroke="var(--line-2)" stroke-width="2"/>` +
+  DIAGRAM_BOX(275, "Card page") +
+  `<path d="M475 60h50" stroke="var(--line-2)" stroke-width="2"/>` +
+  DIAGRAM_BOX(525, CARD_DIAGRAM.label, true) +
+  `</svg><figcaption>${CARD_DIAGRAM.caption}</figcaption></figure>`;
 /** What the crewmate says when it ends its turn while a write still runs as a background job. */
 export const PICTURES_STILL_WRITING = "The pictures are still being written.";
 
@@ -65,7 +87,8 @@ function pictureCardToolCalls(): ScriptedCall[] {
           "<p>The settings screen, the meter row and the transcript, as they look now.</p>" +
           `<img src="${dataUrl(INLINE_PICTURE)}" alt="${INLINE_PICTURE.alt}">` +
           img(WIDE_PICTURE) +
-          img(TALL_PICTURE),
+          img(TALL_PICTURE) +
+          DIAGRAM,
       },
     },
     {

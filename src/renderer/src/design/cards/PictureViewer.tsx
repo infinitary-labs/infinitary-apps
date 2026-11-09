@@ -1,3 +1,4 @@
+import { isDrawingSource } from "@shared/cardPictures";
 import type React from "react";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -83,6 +84,12 @@ const GIF_LONGEST_MS = 10_000;
 /** How often a playing GIF's time moves on. */
 const GIF_TICK_MS = 250;
 
+/** What a diagram is drawn on, as a picture is in the card: its colors were chosen for it. */
+const DRAWING_GROUND: React.CSSProperties = {
+  background: "var(--bg-1)",
+  borderRadius: "var(--radius-s)",
+};
+
 const icon = {
   fill: "none",
   stroke: "currentColor",
@@ -163,8 +170,21 @@ export function PictureViewer({
   const box: Size | null = row
     ? { width: Math.max(0, row.width - 2 * SIDE_GUTTER), height: row.height }
     : null;
-  const fitsAtOne =
+  // A diagram (INF-3107) is a drawing, sharp at any size: fitted, it fills
+  // the room there is, larger than its own size where the window allows. A
+  // picture is never drawn larger than its own pixels.
+  const drawing = isDrawingSource(picture.src);
+  const scale =
+    size && box
+      ? Math.min(
+          drawing ? Number.POSITIVE_INFINITY : 1,
+          box.width / size.width,
+          box.height / size.height,
+        )
+      : 1;
+  const fitsBox =
     size !== null && box !== null && size.width <= box.width && size.height <= box.height;
+  const fitsAtOne = fitsBox && (!drawing || Math.abs(scale - 1) < 0.01);
   const zoomable = !demo && size !== null && box !== null && !fitsAtOne;
   const atOne = zoomed && zoomable;
   // Why Actual size does nothing, on rest, the pointer's or the keyboard's
@@ -399,7 +419,6 @@ export function PictureViewer({
     setOffset((previous) => clampOffset({ x: previous.x + dx, y: previous.y + dy }, size, box));
   };
 
-  const scale = size && box ? Math.min(1, box.width / size.width, box.height / size.height) : 1;
   const fitted = size ? { width: size.width * scale, height: size.height * scale } : null;
   const dims = size ? pictureSize(size) : "";
   const hint = !size ? "" : pictureHint(size, atOne ? "one" : fitsAtOne ? "own" : "fitted");
@@ -662,7 +681,15 @@ export function PictureViewer({
               overflow: "hidden",
               borderRadius: "var(--radius-s)",
               boxShadow: atOne ? "none" : "var(--shadow-2)",
-              cursor: atOne ? "grab" : zoomable ? "zoom-in" : "default",
+              cursor: atOne
+                ? fitsBox
+                  ? "zoom-in"
+                  : "grab"
+                : zoomable
+                  ? scale > 1
+                    ? "zoom-out"
+                    : "zoom-in"
+                  : "default",
               touchAction: "none",
               display: fitted || atOne ? "block" : "flex",
               alignItems: "center",
@@ -702,9 +729,15 @@ export function PictureViewer({
                       height: size.height,
                       maxWidth: "none",
                       transform: `translate(${offset.x}px, ${offset.y}px)`,
+                      ...(drawing ? DRAWING_GROUND : {}),
                     }
                   : fitted
-                    ? { display: "block", width: "100%", height: "100%" }
+                    ? {
+                        display: "block",
+                        width: "100%",
+                        height: "100%",
+                        ...(drawing ? DRAWING_GROUND : {}),
+                      }
                     : { display: "block", maxWidth: "100%", maxHeight: "100%" }
               }
             />

@@ -1,5 +1,6 @@
 import { SPELLINGS } from "./codeNames";
 import { APP_FRAME_SCHEME } from "./csp";
+import { DRAWING_SOURCE_PREFIX } from "./plugins/bridge";
 
 /**
  * Pictures by reference (card pictures, phase 2 of the locked plan): a
@@ -253,7 +254,8 @@ export function demoSources(body: string): Set<string> {
 
 /**
  * `data:` pictures the picture viewer shows: the raster formats a reply
- * picture may be. SVG is left to the body that drew it.
+ * picture may be. An SVG picture is shown only as a diagram the frame wrote
+ * itself (`isDrawingSource`).
  */
 const VIEWABLE_DATA_PICTURE = /^data:image\/(png|jpeg|gif|webp)[;,]/;
 
@@ -264,7 +266,7 @@ const VIEWABLE_DATA_PICTURE = /^data:image\/(png|jpeg|gif|webp)[;,]/;
  * of the frame scheme, a web URL the frame could never load - is not shown.
  */
 export function isViewablePictureSource(src: string): boolean {
-  if (VIEWABLE_DATA_PICTURE.test(src)) return true;
+  if (VIEWABLE_DATA_PICTURE.test(src) || isDrawingSource(src)) return true;
   const prefix = `${APP_FRAME_SCHEME}://${CARD_PICTURE_HOST}/`;
   return src.startsWith(prefix) && parseCardPictureFileName(src.slice(prefix.length)) !== undefined;
 }
@@ -278,11 +280,58 @@ export function isViewablePictureSource(src: string): boolean {
 export function viewablePictures<T extends { src: string }>(
   index: number,
   pictures: readonly T[],
+  drawings = true,
 ): { index: number; pictures: T[] } | undefined {
+  const viewable = (src: string) =>
+    isViewablePictureSource(src) && (drawings || !isDrawingSource(src));
   const clicked = pictures[index];
-  if (!clicked || !isViewablePictureSource(clicked.src)) return undefined;
-  const kept = pictures.filter((picture) => isViewablePictureSource(picture.src));
+  if (!clicked || !viewable(clicked.src)) return undefined;
+  const kept = pictures.filter((picture) => viewable(picture.src));
   return { index: kept.indexOf(clicked), pictures: kept };
+}
+
+/**
+ * Whether a picture is a diagram the frame wrote out of the card (INF-3107,
+ * `DRAWING_SOURCE_PREFIX`): an SVG picture, which runs nothing and loads
+ * nothing wherever it is shown. A playable preview's drawings open nothing,
+ * so its host asks `viewablePictures` without them.
+ */
+export function isDrawingSource(src: string): boolean {
+  return src.startsWith(DRAWING_SOURCE_PREFIX);
+}
+
+/** A typeface a diagram names, as the card's own stylesheet serves it. */
+const DRAWING_FACE = new RegExp(`${APP_FRAME_SCHEME}://fonts/([a-z0-9-]+\\.woff2)`, "g");
+
+/**
+ * A diagram with the card's own typefaces inside it. A picture loads
+ * nothing, so the faces the frame copied from the card's stylesheet each
+ * become the font file itself, which `read` gives as a `data:` URL; a face
+ * it cannot give is left as it was, and the words fall back to the
+ * computer's own type.
+ */
+export async function withDrawingFaces(
+  src: string,
+  read: (file: string) => Promise<string | undefined>,
+): Promise<string> {
+  if (!isDrawingSource(src)) return src;
+  let markup: string;
+  try {
+    markup = decodeURIComponent(src.slice(DRAWING_SOURCE_PREFIX.length));
+  } catch {
+    return src;
+  }
+  const files = new Set(Array.from(markup.matchAll(DRAWING_FACE), (match) => match[1] ?? ""));
+  const found = new Map<string, string>();
+  await Promise.all(
+    Array.from(files, async (file) => {
+      const data = await read(file).catch(() => undefined);
+      if (data?.startsWith("data:")) found.set(file, data);
+    }),
+  );
+  if (found.size === 0) return src;
+  const embedded = markup.replace(DRAWING_FACE, (whole, file: string) => found.get(file) ?? whole);
+  return DRAWING_SOURCE_PREFIX + encodeURIComponent(embedded);
 }
 
 /** One host's links in a body turned into the files they stand for, each file listed once. */

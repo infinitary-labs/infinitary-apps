@@ -6,14 +6,17 @@ import {
   cardPictureFiles,
   cardPictureUrl,
   demoSources,
+  isDrawingSource,
   isPlayableDemoSource,
   isViewablePictureSource,
   parseCardMediaFileName,
   parseCardPictureFileName,
   playableDemoKind,
   viewablePictures,
+  withDrawingFaces,
 } from "./cardPictures";
 import { cardDemoSchema } from "./cards";
+import { DRAWING_SOURCE_PREFIX } from "./plugins/bridge";
 
 const served = (n: number) => cardPictureUrl(`task-1-${n.toString(16).padStart(32, "0")}`, "png");
 const png = "data:image/png;base64,iVBORw0KGgo=";
@@ -52,6 +55,40 @@ describe("the pictures the viewer may show", () => {
     const group = [{ src: served(1) }, { src: "https://example.com/x.png" }];
     expect(viewablePictures(1, group)).toBeUndefined();
     expect(viewablePictures(5, group)).toBeUndefined();
+  });
+});
+
+// INF-3107: a diagram the frame wrote out of the card opens as a picture, except in a playable preview.
+describe("a diagram the viewer shows", () => {
+  const face = "app-frame://fonts/spacegrotesk-latin.woff2";
+  const markup = `<svg xmlns="http://www.w3.org/2000/svg" width="750" height="120"><style>@font-face { font-family: "Space Grotesk"; src: url("${face}") format("woff2"); }</style><text>Card body</text></svg>`;
+  const drawing = DRAWING_SOURCE_PREFIX + encodeURIComponent(markup);
+
+  it("opens a drawing the frame wrote, and no other SVG picture", () => {
+    expect(isDrawingSource(drawing)).toBe(true);
+    expect(viewablePictures(0, [{ src: drawing }])).toEqual({
+      index: 0,
+      pictures: [{ src: drawing }],
+    });
+    expect(isViewablePictureSource("data:image/svg+xml;base64,PHN2Zy8+")).toBe(false);
+  });
+
+  it("opens no drawing for a playable preview, whose drawings are its own", () => {
+    expect(viewablePictures(0, [{ src: drawing }], false)).toBeUndefined();
+    expect(viewablePictures(0, [{ src: png }], false)).toEqual({
+      index: 0,
+      pictures: [{ src: png }],
+    });
+  });
+
+  it("puts the card's own typefaces inside it, and leaves a face it cannot read as it was", async () => {
+    const woff2 = "data:font/woff2;base64,d09GMgABAAA=";
+    const read = async (file: string) => (file === "spacegrotesk-latin.woff2" ? woff2 : undefined);
+    const embedded = await withDrawingFaces(drawing, read);
+    const inside = decodeURIComponent(embedded.slice(DRAWING_SOURCE_PREFIX.length));
+    expect(inside).toBe(markup.replace(face, woff2));
+    expect(await withDrawingFaces(drawing, async () => undefined)).toBe(drawing);
+    expect(await withDrawingFaces(png, read)).toBe(png);
   });
 });
 

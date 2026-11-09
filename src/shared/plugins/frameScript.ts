@@ -3,9 +3,13 @@ import { OWN_SPELLING, SPELLINGS } from "../codeNames";
 import { KNOWLEDGE_ID_IN_TEXT } from "../knowledge";
 import { TASK_KEY_IN_TEXT } from "../taskKeys";
 import {
+  DRAWING_LOOK,
+  DRAWING_SOURCE_PREFIX,
+  DRAWING_WORDS_LOOK,
   FRAME_BRIDGE_VERSION,
   FRAME_DEMO_CAPTION_MAX,
   FRAME_DEMO_SOURCE,
+  FRAME_PICTURE_ALT_MAX,
   PICTURE_STRIP_SHOWN,
 } from "./bridge";
 import { READ_VALUE_DECODER } from "./readTransfer";
@@ -96,7 +100,11 @@ import { READ_VALUE_DECODER } from "./readTransfer";
  * `<img>` posts the clicked index and the pictures of its group - the
  * `figure.inf-pictures` it is a direct child of, else the picture alone -
  * each with its src, alt and natural size, so the host can open the picture
- * viewer with no code in the body. A click on a group's "+N" tile (the
+ * viewer with no code in the body. A click on a diagram - the outermost
+ * inline drawing in a figure, or one drawn the width of what holds it - or
+ * Enter or Space on one, posts the same message with one picture: the
+ * drawing as it stands, its look written on each element, as an SVG picture
+ * the host shows like any other (INF-3107). A click on a group's "+N" tile (the
  * figure's `::after`, laid out by the frame stylesheet beside the last
  * thumbnail or on the line under it) opens the group at the first picture
  * the strip does not show. A picture inside a control - a link, a button, a
@@ -820,6 +828,107 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
   }
   var PICTURE_CONTROL = "a, button, summary, label, [data-inf-action]";
   var UNSHOWN_PICTURE = ".inf-pictures > img:nth-of-type(n+7)";
+  // A diagram (INF-3107): an inline drawing a press opens in the picture
+  // viewer, as a picture does - the outermost drawing in a figure, or one
+  // drawn the width of what holds it. A small mark beside words, a drawing
+  // inside a control and one in a caption are not diagrams.
+  var DRAWING_CONTROL = PICTURE_CONTROL + ", input, select, textarea, figcaption";
+  function outermostDrawing(element) {
+    var drawing = element && element.closest ? element.closest("svg") : null;
+    while (drawing && drawing.parentElement && drawing.parentElement.closest("svg")) {
+      drawing = drawing.parentElement.closest("svg");
+    }
+    return drawing;
+  }
+  function isDiagram(drawing) {
+    if (!drawing || drawing.closest(DRAWING_CONTROL)) return false;
+    var figure = drawing.closest("figure");
+    if (figure && !figure.hasAttribute("data-inf-demo")) return true;
+    var holder = drawing.parentElement;
+    if (!holder) return false;
+    var space = getComputedStyle(holder);
+    if (/^(inline|contents|none)/.test(space.display)) return false;
+    var room = holder.clientWidth - (parseFloat(space.paddingLeft) || 0) - (parseFloat(space.paddingRight) || 0);
+    return room > 0 && drawing.getBoundingClientRect().width >= room - 1;
+  }
+  // The diagram as it stands, whole on its own: every element keeps the
+  // look the card gave it - the theme's colors, the author's classes, the
+  // stylesheet's type - written on the element, with the card's own faces
+  // for the families it uses, at its own size, one unit to a pixel. No
+  // script and no handler goes with it; the host shows it as a picture,
+  // which runs nothing and loads nothing.
+  var SVG_SPACE = "http://www.w3.org/2000/svg";
+  var DRAWING_LOOK = ${JSON.stringify(DRAWING_LOOK)};
+  var DRAWING_WORDS_LOOK = ${JSON.stringify(DRAWING_WORDS_LOOK)};
+  function lookOf(element, names, families) {
+    var computed = getComputedStyle(element);
+    var look = "";
+    for (var i = 0; i < names.length; i++) {
+      var value = computed.getPropertyValue(names[i]);
+      if (value) look += names[i] + ":" + value + ";";
+    }
+    computed.fontFamily.split(",").forEach(function (family) {
+      families[family.trim().replace(/^["']|["']$/g, "").toLowerCase()] = true;
+    });
+    return look;
+  }
+  function facesFor(families) {
+    var faces = "";
+    for (var i = 0; i < document.styleSheets.length; i++) {
+      var rules;
+      try { rules = document.styleSheets[i].cssRules; } catch (error) { continue; }
+      for (var j = 0; j < rules.length; j++) {
+        var rule = rules[j];
+        if (rule.type !== 5) continue;
+        var family = rule.style.getPropertyValue("font-family").trim().replace(/^["']|["']$/g, "").toLowerCase();
+        if (families[family]) faces += rule.cssText + "\\n";
+      }
+    }
+    return faces;
+  }
+  function drawingPicture(drawing) {
+    var copy = drawing.cloneNode(true);
+    var from = [drawing].concat(Array.prototype.slice.call(drawing.querySelectorAll("*")));
+    var to = [copy].concat(Array.prototype.slice.call(copy.querySelectorAll("*")));
+    var families = {};
+    var scripts = [];
+    for (var i = 0; i < from.length; i++) {
+      var element = to[i];
+      if (element.localName === "script") { scripts.push(element); continue; }
+      for (var a = element.attributes.length - 1; a >= 0; a--) {
+        if (/^on/i.test(element.attributes[a].name)) element.removeAttribute(element.attributes[a].name);
+      }
+      element.removeAttribute("tabindex");
+      element.removeAttribute("data-inf-picture");
+      element.setAttribute("style", lookOf(from[i], from[i].namespaceURI === SVG_SPACE ? DRAWING_LOOK : DRAWING_WORDS_LOOK, families));
+    }
+    scripts.forEach(function (script) { script.remove(); });
+    var box = drawing.viewBox && drawing.viewBox.baseVal;
+    var drawn = drawing.getBoundingClientRect();
+    var width = box && box.width > 0 ? box.width : drawn.width;
+    var height = box && box.height > 0 ? box.height : drawn.height;
+    if (!(box && box.width > 0 && box.height > 0)) copy.setAttribute("viewBox", "0 0 " + width + " " + height);
+    copy.setAttribute("width", String(width));
+    copy.setAttribute("height", String(height));
+    var faces = facesFor(families);
+    if (faces) {
+      var sheet = document.createElementNS(SVG_SPACE, "style");
+      sheet.textContent = faces;
+      copy.insertBefore(sheet, copy.firstChild);
+    }
+    var figure = drawing.closest("figure");
+    var caption = figure ? figure.querySelector("figcaption") : null;
+    var words = caption ? caption.textContent : (figure && figure.getAttribute("aria-label")) || drawing.getAttribute("aria-label") || "";
+    return {
+      src: ${JSON.stringify(DRAWING_SOURCE_PREFIX)} + encodeURIComponent(new XMLSerializer().serializeToString(copy)),
+      alt: (words || "").replace(/\\s+/g, " ").trim().slice(0, ${FRAME_PICTURE_ALT_MAX}),
+      width: Math.max(1, Math.round(width)),
+      height: Math.max(1, Math.round(height))
+    };
+  }
+  function openDrawing(drawing) {
+    post({ type: "image", index: 0, pictures: [drawingPicture(drawing)] });
+  }
   function tagPictures() {
     if (!caps.pictures || !document.body) return;
     var pictures = document.querySelectorAll("img:not([data-inf-picture]):not([tabindex])");
@@ -829,6 +938,14 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
       if (picture.closest(PICTURE_CONTROL) || picture.matches(UNSHOWN_PICTURE)) continue;
       picture.setAttribute("data-inf-picture", "");
       picture.setAttribute("tabindex", "0");
+      tagged = true;
+    }
+    var drawings = document.querySelectorAll("svg:not([data-inf-picture]):not([tabindex])");
+    for (var d = 0; d < drawings.length; d++) {
+      var drawing = drawings[d];
+      if (outermostDrawing(drawing) !== drawing || !isDiagram(drawing)) continue;
+      drawing.setAttribute("data-inf-picture", "");
+      drawing.setAttribute("tabindex", "0");
       tagged = true;
     }
     if (!tagged) return;
@@ -897,6 +1014,13 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
       if (picture.closest("button, summary, label")) return;
       openPicture(picture);
       return;
+    }
+    if (caps.pictures && !target.closest(DRAWING_CONTROL)) {
+      var drawing = outermostDrawing(target);
+      if (drawing && isDiagram(drawing)) {
+        openDrawing(drawing);
+        return;
+      }
     }
     if (target.classList.contains("inf-pictures")) {
       var more = moreTileIndex(target, event.clientX, event.clientY);
@@ -1630,7 +1754,10 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
     var target = event.target;
     if ((event.key === "Enter" || event.key === " ") && target && target.nodeType === 1 && target.hasAttribute("data-inf-picture")) {
       event.preventDefault();
-      if (!event.repeat) openPicture(target);
+      if (!event.repeat) {
+        if (target.localName === "svg") openDrawing(target);
+        else openPicture(target);
+      }
       return;
     }
     if (event.key !== "Escape" || !caps.escape || event.repeat || quieted === event) return;
@@ -1675,4 +1802,4 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-kyKGhteYf8iScLYERPNPWiHDGk1PY0lZ90Dcw46ddKg=";
+export const FRAME_BRIDGE_SHA256 = "sha256-9tiZIGMkf3qXNDO+dAprln04r0eS5c+SoPTrJfENuxM=";

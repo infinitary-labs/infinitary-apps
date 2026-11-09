@@ -155,6 +155,7 @@ Every remote byte comes through the already pinned connection, not WebKit networ
 Recordings arrive in bounded pieces with a stable size and a total cap.
 MP4 playback uses AVFoundation with an in-memory resource loader, all external asset references forbidden, and external playback and picture-in-picture disabled.
 The player receives no path or network URL; pictures and GIFs use a separate script-free, nonpersistent web view with no native message handler.
+A diagram the captain taps (INF-3107) reaches that same view as a picture: the bridge writes the drawing out with no script or event attribute, the parent admits only its own drawing form (`isDrawingSource`) and none from a playable preview, and native code replaces the bundled font addresses it names with the font files themselves before showing it in an `<img>`, which runs no script and loads nothing.
 Project fonts and pictures are parsed by WebKit and the system’s parsers in the web process; this is not a claim that WebKit has Chromium’s OpenType Sanitizer or Chromium’s per-site process model.
 A native watchdog tears down a nonresponsive web view while the SwiftUI close, pager and footer remain outside that process.
 Residuals are a browser/parser flaw, a yielding script that consumes resources while still answering, and authored pixels that lie about their own meaning, as on the desktop.

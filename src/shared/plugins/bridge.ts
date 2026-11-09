@@ -48,6 +48,92 @@ export const FRAME_DEMO_SOURCE = "app-frame://media/";
 export const FRAME_DEMO_SRC_MAX = 256;
 /** A demo's caption in a `demo` message. */
 export const FRAME_DEMO_CAPTION_MAX = 4_096;
+/**
+ * How a diagram travels in an `image` message (INF-3107): the frame writes
+ * the drawing as it stands into one SVG picture of its own, which the host
+ * shows as any picture - a picture runs no script and loads nothing.
+ */
+export const DRAWING_SOURCE_PREFIX = "data:image/svg+xml;charset=utf-8,";
+/**
+ * The look a diagram's drawn elements carry out of the card, each read off
+ * the card as it stands and written on the element: what paints a shape or
+ * a label, and what places and sets a label's type.
+ */
+export const DRAWING_LOOK = [
+  "fill",
+  "fill-opacity",
+  "fill-rule",
+  "stroke",
+  "stroke-width",
+  "stroke-opacity",
+  "stroke-dasharray",
+  "stroke-dashoffset",
+  "stroke-linecap",
+  "stroke-linejoin",
+  "stroke-miterlimit",
+  "paint-order",
+  "opacity",
+  "color",
+  "stop-color",
+  "stop-opacity",
+  "visibility",
+  "display",
+  "font-family",
+  "font-size",
+  "font-weight",
+  "font-style",
+  "letter-spacing",
+  "text-anchor",
+  "dominant-baseline",
+  "text-decoration",
+] as const;
+/** The same for words a diagram flows inside a `foreignObject`: their type, color and box. */
+export const DRAWING_WORDS_LOOK = [
+  "color",
+  "background-color",
+  "opacity",
+  "visibility",
+  "display",
+  "box-sizing",
+  "font-family",
+  "font-size",
+  "font-weight",
+  "font-style",
+  "line-height",
+  "letter-spacing",
+  "text-align",
+  "text-transform",
+  "text-decoration",
+  "white-space",
+  "overflow-wrap",
+  "margin-top",
+  "margin-right",
+  "margin-bottom",
+  "margin-left",
+  "padding-top",
+  "padding-right",
+  "padding-bottom",
+  "padding-left",
+  "border-top-width",
+  "border-right-width",
+  "border-bottom-width",
+  "border-left-width",
+  "border-top-style",
+  "border-right-style",
+  "border-bottom-style",
+  "border-left-style",
+  "border-top-color",
+  "border-right-color",
+  "border-bottom-color",
+  "border-left-color",
+  "border-radius",
+  "flex-direction",
+  "flex-wrap",
+  "align-items",
+  "justify-content",
+  "gap",
+  "list-style-type",
+] as const;
 /** The words a `draft` message may put in the message box: the start of one sentence. */
 export const FRAME_DRAFT_MAX = 500;
 

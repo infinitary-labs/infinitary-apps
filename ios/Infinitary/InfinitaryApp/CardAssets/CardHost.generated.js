@@ -6228,6 +6228,81 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   const FRAME_DEMO_SOURCE = "app-frame://media/";
   const FRAME_DEMO_SRC_MAX = 256;
   const FRAME_DEMO_CAPTION_MAX = 4096;
+  const DRAWING_SOURCE_PREFIX = "data:image/svg+xml;charset=utf-8,";
+  const DRAWING_LOOK = [
+    "fill",
+    "fill-opacity",
+    "fill-rule",
+    "stroke",
+    "stroke-width",
+    "stroke-opacity",
+    "stroke-dasharray",
+    "stroke-dashoffset",
+    "stroke-linecap",
+    "stroke-linejoin",
+    "stroke-miterlimit",
+    "paint-order",
+    "opacity",
+    "color",
+    "stop-color",
+    "stop-opacity",
+    "visibility",
+    "display",
+    "font-family",
+    "font-size",
+    "font-weight",
+    "font-style",
+    "letter-spacing",
+    "text-anchor",
+    "dominant-baseline",
+    "text-decoration"
+  ];
+  const DRAWING_WORDS_LOOK = [
+    "color",
+    "background-color",
+    "opacity",
+    "visibility",
+    "display",
+    "box-sizing",
+    "font-family",
+    "font-size",
+    "font-weight",
+    "font-style",
+    "line-height",
+    "letter-spacing",
+    "text-align",
+    "text-transform",
+    "text-decoration",
+    "white-space",
+    "overflow-wrap",
+    "margin-top",
+    "margin-right",
+    "margin-bottom",
+    "margin-left",
+    "padding-top",
+    "padding-right",
+    "padding-bottom",
+    "padding-left",
+    "border-top-width",
+    "border-right-width",
+    "border-bottom-width",
+    "border-left-width",
+    "border-top-style",
+    "border-right-style",
+    "border-bottom-style",
+    "border-left-style",
+    "border-top-color",
+    "border-right-color",
+    "border-bottom-color",
+    "border-left-color",
+    "border-radius",
+    "flex-direction",
+    "flex-wrap",
+    "align-items",
+    "justify-content",
+    "gap",
+    "list-style-type"
+  ];
   const FRAME_DRAFT_MAX = 500;
   const PICTURE_STRIP_SHOWN = 6;
   const correlationId = number().int().positive().max(Number.MAX_SAFE_INTEGER);
@@ -6992,6 +7067,107 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   var PICTURE_CONTROL = "a, button, summary, label, [data-inf-action]";
   var UNSHOWN_PICTURE = ".inf-pictures > img:nth-of-type(n+7)";
+  // A diagram (INF-3107): an inline drawing a press opens in the picture
+  // viewer, as a picture does - the outermost drawing in a figure, or one
+  // drawn the width of what holds it. A small mark beside words, a drawing
+  // inside a control and one in a caption are not diagrams.
+  var DRAWING_CONTROL = PICTURE_CONTROL + ", input, select, textarea, figcaption";
+  function outermostDrawing(element) {
+    var drawing = element && element.closest ? element.closest("svg") : null;
+    while (drawing && drawing.parentElement && drawing.parentElement.closest("svg")) {
+      drawing = drawing.parentElement.closest("svg");
+    }
+    return drawing;
+  }
+  function isDiagram(drawing) {
+    if (!drawing || drawing.closest(DRAWING_CONTROL)) return false;
+    var figure = drawing.closest("figure");
+    if (figure && !figure.hasAttribute("data-inf-demo")) return true;
+    var holder = drawing.parentElement;
+    if (!holder) return false;
+    var space = getComputedStyle(holder);
+    if (/^(inline|contents|none)/.test(space.display)) return false;
+    var room = holder.clientWidth - (parseFloat(space.paddingLeft) || 0) - (parseFloat(space.paddingRight) || 0);
+    return room > 0 && drawing.getBoundingClientRect().width >= room - 1;
+  }
+  // The diagram as it stands, whole on its own: every element keeps the
+  // look the card gave it - the theme's colors, the author's classes, the
+  // stylesheet's type - written on the element, with the card's own faces
+  // for the families it uses, at its own size, one unit to a pixel. No
+  // script and no handler goes with it; the host shows it as a picture,
+  // which runs nothing and loads nothing.
+  var SVG_SPACE = "http://www.w3.org/2000/svg";
+  var DRAWING_LOOK = ${JSON.stringify(DRAWING_LOOK)};
+  var DRAWING_WORDS_LOOK = ${JSON.stringify(DRAWING_WORDS_LOOK)};
+  function lookOf(element, names, families) {
+    var computed = getComputedStyle(element);
+    var look = "";
+    for (var i = 0; i < names.length; i++) {
+      var value = computed.getPropertyValue(names[i]);
+      if (value) look += names[i] + ":" + value + ";";
+    }
+    computed.fontFamily.split(",").forEach(function (family) {
+      families[family.trim().replace(/^["']|["']$/g, "").toLowerCase()] = true;
+    });
+    return look;
+  }
+  function facesFor(families) {
+    var faces = "";
+    for (var i = 0; i < document.styleSheets.length; i++) {
+      var rules;
+      try { rules = document.styleSheets[i].cssRules; } catch (error) { continue; }
+      for (var j = 0; j < rules.length; j++) {
+        var rule = rules[j];
+        if (rule.type !== 5) continue;
+        var family = rule.style.getPropertyValue("font-family").trim().replace(/^["']|["']$/g, "").toLowerCase();
+        if (families[family]) faces += rule.cssText + "\\n";
+      }
+    }
+    return faces;
+  }
+  function drawingPicture(drawing) {
+    var copy = drawing.cloneNode(true);
+    var from = [drawing].concat(Array.prototype.slice.call(drawing.querySelectorAll("*")));
+    var to = [copy].concat(Array.prototype.slice.call(copy.querySelectorAll("*")));
+    var families = {};
+    var scripts = [];
+    for (var i = 0; i < from.length; i++) {
+      var element = to[i];
+      if (element.localName === "script") { scripts.push(element); continue; }
+      for (var a = element.attributes.length - 1; a >= 0; a--) {
+        if (/^on/i.test(element.attributes[a].name)) element.removeAttribute(element.attributes[a].name);
+      }
+      element.removeAttribute("tabindex");
+      element.removeAttribute("data-inf-picture");
+      element.setAttribute("style", lookOf(from[i], from[i].namespaceURI === SVG_SPACE ? DRAWING_LOOK : DRAWING_WORDS_LOOK, families));
+    }
+    scripts.forEach(function (script) { script.remove(); });
+    var box = drawing.viewBox && drawing.viewBox.baseVal;
+    var drawn = drawing.getBoundingClientRect();
+    var width = box && box.width > 0 ? box.width : drawn.width;
+    var height = box && box.height > 0 ? box.height : drawn.height;
+    if (!(box && box.width > 0 && box.height > 0)) copy.setAttribute("viewBox", "0 0 " + width + " " + height);
+    copy.setAttribute("width", String(width));
+    copy.setAttribute("height", String(height));
+    var faces = facesFor(families);
+    if (faces) {
+      var sheet = document.createElementNS(SVG_SPACE, "style");
+      sheet.textContent = faces;
+      copy.insertBefore(sheet, copy.firstChild);
+    }
+    var figure = drawing.closest("figure");
+    var caption = figure ? figure.querySelector("figcaption") : null;
+    var words = caption ? caption.textContent : (figure && figure.getAttribute("aria-label")) || drawing.getAttribute("aria-label") || "";
+    return {
+      src: ${JSON.stringify(DRAWING_SOURCE_PREFIX)} + encodeURIComponent(new XMLSerializer().serializeToString(copy)),
+      alt: (words || "").replace(/\\s+/g, " ").trim().slice(0, ${FRAME_PICTURE_ALT_MAX}),
+      width: Math.max(1, Math.round(width)),
+      height: Math.max(1, Math.round(height))
+    };
+  }
+  function openDrawing(drawing) {
+    post({ type: "image", index: 0, pictures: [drawingPicture(drawing)] });
+  }
   function tagPictures() {
     if (!caps.pictures || !document.body) return;
     var pictures = document.querySelectorAll("img:not([data-inf-picture]):not([tabindex])");
@@ -7001,6 +7177,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       if (picture.closest(PICTURE_CONTROL) || picture.matches(UNSHOWN_PICTURE)) continue;
       picture.setAttribute("data-inf-picture", "");
       picture.setAttribute("tabindex", "0");
+      tagged = true;
+    }
+    var drawings = document.querySelectorAll("svg:not([data-inf-picture]):not([tabindex])");
+    for (var d = 0; d < drawings.length; d++) {
+      var drawing = drawings[d];
+      if (outermostDrawing(drawing) !== drawing || !isDiagram(drawing)) continue;
+      drawing.setAttribute("data-inf-picture", "");
+      drawing.setAttribute("tabindex", "0");
       tagged = true;
     }
     if (!tagged) return;
@@ -7069,6 +7253,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       if (picture.closest("button, summary, label")) return;
       openPicture(picture);
       return;
+    }
+    if (caps.pictures && !target.closest(DRAWING_CONTROL)) {
+      var drawing = outermostDrawing(target);
+      if (drawing && isDiagram(drawing)) {
+        openDrawing(drawing);
+        return;
+      }
     }
     if (target.classList.contains("inf-pictures")) {
       var more = moreTileIndex(target, event.clientX, event.clientY);
@@ -7802,7 +7993,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     var target = event.target;
     if ((event.key === "Enter" || event.key === " ") && target && target.nodeType === 1 && target.hasAttribute("data-inf-picture")) {
       event.preventDefault();
-      if (!event.repeat) openPicture(target);
+      if (!event.repeat) {
+        if (target.localName === "svg") openDrawing(target);
+        else openPicture(target);
+      }
       return;
     }
     if (event.key !== "Escape" || !caps.escape || event.repeat || quieted === event) return;
@@ -7841,7 +8035,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-kyKGhteYf8iScLYERPNPWiHDGk1PY0lZ90Dcw46ddKg=";
+  const FRAME_BRIDGE_SHA256 = "sha256-9tiZIGMkf3qXNDO+dAprln04r0eS5c+SoPTrJfENuxM=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";
@@ -7893,15 +8087,19 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }
   const VIEWABLE_DATA_PICTURE = /^data:image\/(png|jpeg|gif|webp)[;,]/;
   function isViewablePictureSource(src) {
-    if (VIEWABLE_DATA_PICTURE.test(src)) return true;
+    if (VIEWABLE_DATA_PICTURE.test(src) || isDrawingSource(src)) return true;
     const prefix = `${APP_FRAME_SCHEME}://${CARD_PICTURE_HOST}/`;
     return src.startsWith(prefix) && parseCardPictureFileName(src.slice(prefix.length)) !== void 0;
   }
-  function viewablePictures(index, pictures) {
+  function viewablePictures(index, pictures, drawings = true) {
+    const viewable = (src) => isViewablePictureSource(src) && (drawings || !isDrawingSource(src));
     const clicked = pictures[index];
-    if (!clicked || !isViewablePictureSource(clicked.src)) return void 0;
-    const kept = pictures.filter((picture) => isViewablePictureSource(picture.src));
+    if (!clicked || !viewable(clicked.src)) return void 0;
+    const kept = pictures.filter((picture) => viewable(picture.src));
     return { index: kept.indexOf(clicked), pictures: kept };
+  }
+  function isDrawingSource(src) {
+    return src.startsWith(DRAWING_SOURCE_PREFIX);
   }
   const FRAME_SANDBOX_TOKENS = ["allow-scripts"];
   const FRAME_SANDBOX = FRAME_SANDBOX_TOKENS.join(" ");
@@ -11975,6 +12173,8 @@ details[open]::details-content {
   svg :is(path, polyline, line):not([fill]):not([style*="fill"]) { fill: none; }
   body > svg, figure > svg, details > svg { display: block; }
   body > svg, details > svg { margin: 0 0 var(--space-2); }
+  /* A diagram the bridge tagged opens in the picture viewer on a click, as a picture does (INF-3107). */
+  svg[data-inf-picture] { cursor: zoom-in; }
   /* A picture never reaches past the body; one that would stand taller than
      360 px shrinks to fit 360 px, whole, letterboxed on --bg-1. A click opens
      it in the picture viewer (the bridge's image message), unless it sits in
@@ -12382,7 +12582,7 @@ ${REVISION_HIGHLIGHT_STYLE}`;
       }
       case "image": {
         if (!document.hasFocus() || !navigator.userActivation.isActive) return;
-        const set = viewablePictures(message.index, message.pictures);
+        const set = viewablePictures(message.index, message.pictures, !isPreviewBody(input.body));
         if (set) void native({ type: "image", ...set }).catch(() => {
         });
         break;

@@ -1,7 +1,7 @@
 import { cardNavigationParts } from "@shared/cardParts";
 import { demoSources, playableDemoKind, viewablePictures } from "@shared/cardPictures";
 import type { CardWidth } from "@shared/cards";
-import { REVISION_TARGETS_MAX } from "@shared/cards";
+import { isPreviewBody, REVISION_TARGETS_MAX } from "@shared/cards";
 import type { FrameAnswers, FramePicture } from "@shared/plugins/bridge";
 import { FRAME_ALLOW, FRAME_SANDBOX } from "@shared/plugins/containment";
 import type { FrameMount, FrameTheme } from "@shared/plugins/frameDocument";
@@ -414,7 +414,10 @@ function cardFrameSpec(
     // own press, as a link opens only then.
     onDraft: (text) => fromCaptain(() => props.onDraft?.(text)),
     onImage: (index, pictures) => {
-      const set = admitted() ? viewablePictures(index, pictures) : undefined;
+      // A playable preview's drawings are its own controls' (INF-3107): they open nothing.
+      const set = admitted()
+        ? viewablePictures(index, pictures, !isPreviewBody(props.body))
+        : undefined;
       if (set) fromCaptain(() => props.onPicture?.(set, frameRef.current));
     },
     // A demo opens in the same viewer, over its poster: only a recording this

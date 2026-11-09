@@ -90,6 +90,8 @@ export const FRAME_BASE_STYLE = `
   svg :is(path, polyline, line):not([fill]):not([style*="fill"]) { fill: none; }
   body > svg, figure > svg, details > svg { display: block; }
   body > svg, details > svg { margin: 0 0 var(--space-2); }
+  /* A diagram the bridge tagged opens in the picture viewer on a click, as a picture does (INF-3107). */
+  svg[data-inf-picture] { cursor: zoom-in; }
   /* A picture never reaches past the body; one that would stand taller than
      360 px shrinks to fit 360 px, whole, letterboxed on --bg-1. A click opens
      it in the picture viewer (the bridge's image message), unless it sits in

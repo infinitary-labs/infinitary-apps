@@ -17,6 +17,7 @@ import {
 } from "./pictureFixtures";
 import { promptInput } from "./prompt";
 import {
+  CARD_DIAGRAM,
   CARD_PICTURES_PROMPT_MARKER,
   cardPictures,
   PICTURE_CARD_TITLES,
@@ -303,6 +304,40 @@ test("a click, Z, Enter or Space toggles 1:1, and a drag or the wheel moves the 
   // Another picture always opens fitted.
   await clickPicture(page, PICTURE_CARD_TITLES.wide, 0);
   await expect(viewer(page).locator("[data-picture]")).toHaveAttribute("aria-pressed", "false");
+  await closeWithEscape(page);
+});
+
+// INF-3107 (the captain's Approve and build): a diagram drawn in a card opens in the same viewer, as a drawing that
+// fills the room there is, and Z goes to its own size.
+test("a click or Enter on a diagram opens it fitted and enlarged, and Z shows its own size", async () => {
+  const { page } = launched;
+  const title = PICTURE_CARD_TITLES.mixed;
+  await showCard(page, title);
+  const diagram = body(page, title).getByRole("img", { name: "Card, card page and viewer" });
+  await expect(diagram).toBeVisible();
+  await clickInBody(diagram);
+  const opened = await readViewer(page);
+  expect(opened.caption).toBe(CARD_DIAGRAM.caption);
+  expect(opened.count).toBe(pictureSize(CARD_DIAGRAM));
+  expect(opened.hint).toBe(pictureHint(CARD_DIAGRAM, "fitted"));
+  // Fitted: whole inside the row.
+  const fitted = await pictureGeometry(page);
+  expect(within(fitted.picture, fitted.row)).toEqual([]);
+  // Its words keep the card's look: the label is in the drawing the viewer shows.
+  expect(decodeURIComponent(opened.src ?? "")).toContain(`>${CARD_DIAGRAM.label}</text>`);
+
+  await page.keyboard.press("z");
+  await expect(viewer(page).locator("[data-picture]")).toHaveAttribute("aria-pressed", "true");
+  expect((await readViewer(page)).hint).toBe(pictureHint(CARD_DIAGRAM, "one"));
+  // Fitted, it was drawn larger than its own size, since a drawing stays sharp.
+  const own = await pictureGeometry(page);
+  expect(own.picture.width).toBeLessThan(fitted.picture.width);
+  await closeWithEscape(page);
+
+  // The keyboard reaches it too: Enter on the diagram opens it.
+  await focusOn(diagram);
+  await page.keyboard.press("Enter");
+  await expect(viewer(page).locator("[data-picture-caption]")).toHaveText(CARD_DIAGRAM.caption);
   await closeWithEscape(page);
 });
 

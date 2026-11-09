@@ -1068,6 +1068,7 @@ export async function startPhoneHome(
             title: "Read the harbour chart",
             holdsPlace: true,
             body: `<p>The survey is ready for your reply.</p><img src="app-frame://images/${picture}" alt="Blue harbour survey">
+            <figure><svg viewBox="0 0 750 120" width="100%" role="img" aria-label="Harbour approach in three legs"><rect x="20" y="30" width="200" height="60" rx="8" fill="var(--bg-2)" stroke="var(--line-2)"/><text x="120" y="66" text-anchor="middle" fill="var(--fg-1)">Outer buoy</text><rect x="275" y="30" width="200" height="60" rx="8" fill="var(--bg-2)" stroke="var(--line-2)"/><text x="375" y="66" text-anchor="middle" fill="var(--fg-1)">North entrance</text><rect x="530" y="30" width="200" height="60" rx="8" fill="var(--accent-dim)" stroke="var(--accent)"/><text x="630" y="66" text-anchor="middle" fill="var(--fg-1)">Inner quay</text></svg><figcaption>The approach in three legs</figcaption></figure>
             <figure data-inf-demo="app-frame://media/${recording}" data-inf-duration="5000"><img src="app-frame://images/${picture}" alt="The moving harbour marker"><figcaption>Move the harbour marker.</figcaption></figure>
             <button data-inf-action="body">Choose from the body</button>`,
             actions: [

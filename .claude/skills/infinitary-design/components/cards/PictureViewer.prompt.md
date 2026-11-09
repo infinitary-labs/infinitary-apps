@@ -8,8 +8,11 @@ A click on any picture in any card body.
 The viewer pages within that picture's group: the `figure.inf-pictures` it sits in (its direct `<img>` children, in body order), else the picture alone as a group of one.
 A click on a group's mono `+N` tile opens it at the first picture the strip does not show.
 A picture inside a link, a button, a `summary`, a `label` or a `data-inf-action` element belongs to that control and opens nothing, and a body's own script that handles the click first keeps it.
-In the body a picture that opens the viewer shows the `zoom-in` cursor, and so does the `+N` tile.
-The keyboard reaches the same pictures: each is a Tab stop with the body's `:focus-visible` ring, and `Enter` or `Space` opens it as a click does; a group's pictures past the fifth thumbnail are reached in the viewer.
+A click on a diagram opens it the same way, alone, as a set of one: the outermost inline drawing in a figure, or one drawn the width of what holds it.
+A small mark beside words, a drawing in a control or a `figcaption`, and a playable preview's drawings open nothing.
+The diagram opens as it stands at the press, in the card's colors and type, with no script; its caption is the figure's `figcaption`, else its label.
+In the body a picture or a diagram that opens the viewer shows the `zoom-in` cursor, and so does the `+N` tile.
+The keyboard reaches the same pictures and diagrams: each is a Tab stop with the body's `:focus-visible` ring, and `Enter` or `Space` opens it as a click does; a group's pictures past the fifth thumbnail are reached in the viewer.
 A picture opens only from the card the captain is in: the body's frame holds focus, which a click or a key gives it, never a card's own script.
 
 **The surface.**
@@ -26,6 +29,8 @@ The design system's modal-level surface, which command search shares (`component
   At 1:1 the picture fills the row, clipped to it, opening centred; dragging or the wheel moves it, and it stops where an edge meets the row's edge; an axis narrower than the row stays centred.
   A picture that already fits at 1:1 does not zoom and keeps the default cursor.
   Another picture always opens fitted.
+  A diagram is a drawing, sharp at any size, so fitted it fills the row, larger than its own size where there is room; a click, `Z`, `Enter` or `Space` toggles its own size, one unit to a pixel, wherever the two differ.
+  It is drawn on `--bg-1` with `--radius-s`, as a picture is in the card.
 - **Foot**: the picture's `alt` as its caption, `--text-sm` / `--fg-2`, centred, at most 70ch; under it one hint in mono `--text-xs` / `--fg-3` - `2800 × 520 · fitted · click or Z for 1:1`, `2800 × 520 · 1:1 · drag or scroll to move`, or `640 × 400 · shown at its own size`; under that, for a group, its thumbnails: 64 × 44 buttons, each picture cropped to its top on `--bg-1`, a `--line-1` border, `--radius-s`, at 70% opacity, each labelled "Picture N: <alt>".
   The current one is at full opacity with an `--accent` border - the viewer's only accent.
   When a group outgrows the row, the row scrolls sideways and keeps the current thumbnail in view.
@@ -68,5 +73,6 @@ A `--dur-med` (360 ms) `--ease-drift` fade in and out; none at all under reduced
 Dark and light through the tokens alone.
 
 In the app this is `src/renderer/src/design/cards/PictureViewer.tsx`, opened by the card layer (`src/renderer/src/app/stage/CardLayer.tsx`) from the frame bridge's `image` message (`src/shared/plugins/bridge.ts`).
-The viewer shows only what the host accepts (`viewablePictures` in `src/shared/cardPictures.ts`): the host's own `app-frame://images/` copies and `data:` PNG, JPEG, GIF or WebP pictures, nothing else.
+The viewer shows only what the host accepts (`viewablePictures` in `src/shared/cardPictures.ts`): the host's own `app-frame://images/` copies, `data:` PNG, JPEG, GIF or WebP pictures, and a diagram the bridge wrote out as an SVG picture (`isDrawingSource`), nothing else.
+A diagram's typefaces go inside it before it opens (`withDrawingFaces`), since a picture loads nothing.
 It plays only the host's own `app-frame://media/` copy of a recording the card's body names (`isPlayableDemoSource`), opened from the bridge's `demo` message; the copy's kind (`playableDemoKind`) picks the MP4 player or the GIF one.

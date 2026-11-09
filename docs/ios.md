@@ -251,6 +251,8 @@ A native collection timeout also releases a waiting footer or reply when the web
 `CardAssets` serves bundled fonts and minted picture, project-font and recording names through the pinned connection; it never opens an arbitrary URL or filesystem path.
 It asks through `ReadOnlySession.read`, which waits until the computer is in reach and asks again after a reconnect, so a card drawn from the first cards read, before the other first reads answer, still gets its pictures.
 A separate script-free, nonpersistent web view shows pictures and GIFs, with no native message handler.
+A tap on a picture or a diagram opens it full screen (INF-3107): fitted, with pinch from fitted to eight times fitted, a double-tap to its own size centred where tapped and back, a drag to pan, a refit when the device turns, and Done or a swipe down while fitted to close; a recording keeps its sheet.
+A diagram arrives as the SVG picture the bridge wrote out of the card, and native code puts the bundled faces it names inside it, since a picture loads nothing.
 Both web views disable system link previews as well as refusing navigation.
 A body's link leaves only on the captain's own press, when the parent's `isSafeCardHref` admits it, and native code checks its scheme again before the system opens it.
 MP4 recordings use the native player, whose resource loader serves only bounded bytes read through the pinned connection and writes nothing to disk.

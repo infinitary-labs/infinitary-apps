@@ -143,9 +143,14 @@ extension PhoneJourney {
         XCTAssertTrue(app.staticTexts["card-revised"].exists)
         XCTAssertTrue(app.buttons["put-aside-card"].exists)
         XCTAssertEqual(app.buttons["maximize-card"].exists, UIDevice.current.userInterfaceIdiom == .pad)
-        // The foot: the host's fact strip and what to do after merging stay with the choices.
+        // The foot: the host's fact strip stays with the choices.
         XCTAssertTrue(app.webViews["card-facts"].staticTexts.firstMatch.waitForPresence(timeout: 20), app.debugDescription)
-        XCTAssertTrue(app.staticTexts[try XCTUnwrap(fixture["requiredLead"] as? String)].exists)
+        // INF-3149: what happens after the merge leads the body, the captain's actions before the crew's steps.
+        let required = app.staticTexts[try XCTUnwrap(fixture["requiredLead"] as? String)]
+        let crew = app.staticTexts[try XCTUnwrap(fixture["crewLead"] as? String)]
+        XCTAssertTrue(required.exists, app.debugDescription)
+        XCTAssertTrue(crew.exists, app.debugDescription)
+        XCTAssertLessThan(required.frame.minY, crew.frame.minY, "The captain's actions come first")
         waitUntilEnabled(app.buttons["card-action-merge"])
         // Both appearances of the merge card supply the release note's hero pair.
         try await appearances("merge-card", showing: cardHeading(title))

@@ -307,20 +307,21 @@ Hide only hides; the saved card, its thread and its record keep everything.
   A task record's Cards row (`TaskRecord`), the Tasks filter's results and the first mate all open the same entry through the one shared show-card action.
   Nothing about a past card is a new stored card or a notification; its own opening is not a feed line either, except the first mate's pointing, which leaves one.
 
-A merge card with required captain actions draws a host notice outside the body scroller, immediately above its buttons.
-It reads “After merging, you need to…” and names every action, target and consequence in the normal body size.
-Several actions have a visible count and a focusable disclosure with every requirement; the list may scroll but never truncates requirements.
-The notice uses the existing neutral panel border, spacing and focus ring.
-In a short card it uses compact spacing and a focusable list scroller, leaving the merge buttons wholly visible below the card's field.
+A merge card's after-merge strip leads its body, inside the body's scroller, so it scrolls away as the captain reads on and never takes room from the body, the field or the buttons.
+The host writes it as the body document's own first part, an `inf-panel` above the author's words, never as chrome above the body's frame: a frame scrolled wholly out of sight never draws.
+Beside the risk chart it keeps its border clear of the chart, as any panel at the body's start does.
+The strip draws nothing when the card has neither required captain actions nor after-merge steps.
+The required captain actions come first, under the lead “After merging, you need to…” in `--warn`, the only tinted words in the strip: they are work only the captain can do.
+Each names its action, target and consequence in the normal body size, every one written out, with no count, disclosure or truncation.
 After successful merging, each independent obligation gets a decision card with inert instructions, a specific confirmation and Not now.
 Deferred obligations remain under Waiting on you in Tasks with Show the card; manual results read Confirmed by you and observed results Checked by your first mate.
 
-A merge card whose story lists after-merge steps draws a second host notice in the same place and the same panel, below the required actions when both appear.
-It reads “After merging, the crew starts” and lists each step as its task title, “Continue: ” and the step's title, with the step's goal beneath in `--fg-2`.
+A merge card whose story lists after-merge steps draws them in the same strip, below the required actions when both appear.
+Their lead reads “After merging, the crew starts” in `--fg-1`, and lists each step as its task title, “Continue: ” and the step's title, with the step's goal beneath in `--fg-2`.
 A step that names an existing task leads with its key in mono, then that task's own title and goal.
 A step that waits for other work adds a line beneath in the goal's style, “Starts once INF-2779 merges too”, naming each task it waits for.
-It names work the crew does, never the captain, so it carries no count, disclosure or confirmation; the list scrolls in a short card like the required actions' list and never truncates a step.
-A story with no steps draws no notice.
+It names work the crew does, never the captain, so it carries no count, disclosure or confirmation, and never truncates a step.
+A story with no steps draws no crew part.
 When the merge goes through, each step becomes its task, or starts the task it names, and starts on its own once nothing it waits for holds it; no card follows for it.
 
 ## Put aside

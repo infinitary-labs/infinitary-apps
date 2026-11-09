@@ -353,8 +353,7 @@ private struct PhoneCardPane: View {
     private var line: String? { problem ?? (phoneOnItsSide(verticalSize) ? session.takenBack[card.id] : nil) }
 
     private var hasFoot: Bool {
-        !card.actions.isEmpty || line != nil || takesReply || factsHost != nil || !card.value["requiredActions"].list.isEmpty
-            || !messages.isEmpty
+        !card.actions.isEmpty || line != nil || takesReply || factsHost != nil || !messages.isEmpty
     }
     /// The back shows: a card has a back only once its thread has a message.
     private var showsBack: Bool { turned && !messages.isEmpty }
@@ -732,6 +731,8 @@ private struct PhoneCardPane: View {
             if card.isPast {
                 Text(ending).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("past-ending")
             }
+            // INF-3149, the captain's direction C: what happens after the merge leads the body and scrolls away with it.
+            PhoneAfterMerge(actions: card.value["requiredActions"].list, steps: card.value["afterMerge"].list)
             if let failure = host.failure {
                 Text(failure).foregroundStyle(PhoneTheme.secondary)
                 if host.reading["of"].numeric != nil {
@@ -787,12 +788,10 @@ private struct PhoneCardPane: View {
 
     private var foot: some View {
         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-            // INF-1524 piece 3: a merge card's facts and what to do after merging stay with its choices.
+            // INF-1524 piece 3: a merge card's facts stay with its choices.
             if let factsHost, factsHost.failure == nil {
                 CardWebView(host: factsHost).frame(height: factsHost.height)
             }
-            let required = card.value["requiredActions"].list
-            if !required.isEmpty { PhoneRequiredActions(actions: required) }
             if let line { Text(line).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("card-error") }
             // INF-2565: a pane built again while its back shows starts turned, and its latest line gives way as the field does.
             if !messages.isEmpty { latestLine.modifier(PhoneFaceOnly(angle: turnAngle)) }

@@ -12280,12 +12280,23 @@ details[open]::details-content {
     clear: right;
   }
 `;
+  const AFTER_MERGE_STYLE = `
+  [data-inf-after-merge] { margin: 0 0 var(--space-3); padding: var(--space-2) var(--space-3); color: var(--fg-2); }
+  [data-inf-after-merge] p { margin: 0; }
+  [data-inf-after-merge] section + section { margin-top: var(--space-2); }
+  [data-inf-after-merge-lead] { color: var(--fg-1); }
+  [data-inf-after-merge-lead="captain"] { color: var(--warn); }
+  [data-inf-after-merge] ul { margin: var(--space-1) 0 0; padding-left: var(--space-4); }
+  [data-inf-after-merge] li + li { margin-top: var(--space-2); }
+  [data-inf-after-merge] li > span { color: var(--fg-1); }
+`;
   let cardStyle;
   function cardStylesheet() {
     cardStyle ??= `${frameStylesheet()}
 ${CARD_MEASURE_STYLE}
 ${CARD_CHANGES_STYLE}
 ${CARD_INSET_STYLE}
+${AFTER_MERGE_STYLE}
 ${REVISION_HIGHLIGHT_STYLE}`;
     return cardStyle;
   }

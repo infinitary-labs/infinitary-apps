@@ -920,7 +920,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   `src/core/pi/cardImages.test.ts` binds the copy and the rewrite, and `tests/browser/card-picture-fit.test.tsx` a picture shown whole in its card.
   Phase 3, the viewer: the bridge's `image` message (any `<img>` click, or a group's `+N` tile) carries the clicked index and its group's pictures; `viewablePictures` admits only the host's minted copies and `data:` rasters; `design/cards/PictureViewer.tsx` (design skill `PictureViewer.prompt.md`) is window-wide host chrome whose keys are a window capture listener, so they never reach the stack or the shell's Escape; `tests/e2e/card-pictures.spec.ts` is its binding test.
 
-When a crewmate must put its own change in before the rest can proceed, an intermediate card cannot do that: it lists the rest as after-merge steps on its change's story, and the merge card draws them under "After merging, the crew starts", outside the body ("After-merge steps", `docs/task-graph.md`).
+When a crewmate must put its own change in before the rest can proceed, an intermediate card cannot do that: it lists the rest as after-merge steps on its change's story, and the merge card draws them under "After merging, the crew starts", at the top of its body ("After-merge steps", `docs/task-graph.md`).
 The list is optional; a card with nothing to continue lists nothing.
 Only the ordinary merge card puts that change in, and its merge files each step as a task that starts on its own.
 If a later landing belongs to no task, the continuation may ask once for that outside change with an effect-free plain-reply button.
@@ -1041,7 +1041,7 @@ This is generic card behavior, not a lesson type or a new action effect.
 ## Required actions after merging
 
 New merge cards declare `required_actions`, including an empty list when none exist (`docs/required-actions.md`).
-The host draws their action, target and consequence outside the scrolling body beside Merge.
+The host draws their action, target and consequence at the top of the card's body, where they scroll away with it, before the crew's after-merge steps.
 A declaration grants no execution permission; a successful merge creates durable captain confirmation records, not crewmate continuations.
 
 ## Review finding attribution

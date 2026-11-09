@@ -137,6 +137,12 @@ type BodyProps = {
   /** Only a newly shown surface opts into its first body fade. */
   reveal?: boolean;
   /**
+   * The host's own markup that leads the body inside its document, so it
+   * scrolls away with it: a merge card's after-merge strip
+   * (`afterMergeStrip.ts`). Change bars and revision offsets move past it.
+   */
+  lead?: string;
+  /**
    * The chrome the card holds over the body's top right - a merge card's
    * risk chart (docs/card-authoring.md "The risk chart") - and the box to
    * keep clear until it is drawn (a body the stage prepares has no chrome
@@ -246,8 +252,9 @@ const frameStyle = (height: number): React.CSSProperties => ({
  * wedges it. A body drawing in a project's own font is mounted too, so the
  * font engine reads that file in a renderer process of its own.
  */
-export function HtmlCardBody({ inset: chrome, ...input }: BodyProps) {
+export function HtmlCardBody({ inset: chrome, lead, ...authored }: BodyProps) {
   const navigation = useRevisionNavigation();
+  const input = lead ? leadBody(authored, lead) : authored;
   const given: BodyProps = navigation?.offerId
     ? {
         ...input,
@@ -307,6 +314,21 @@ export function HtmlCardBody({ inset: chrome, ...input }: BodyProps) {
       )}
     </div>
   );
+}
+
+/**
+ * The body with the host's `lead` markup at its start, the author's
+ * document after it as markup (a plain text body would otherwise read as
+ * markup once led); its change bars and revision offsets move past the lead.
+ */
+function leadBody(input: Omit<BodyProps, "inset" | "lead">, lead: string): BodyProps {
+  const at = lead.length;
+  return {
+    ...input,
+    body: `${lead}${cardBodyHtml(input.body)}`,
+    ...(input.marks ? { marks: input.marks.map((mark) => mark + at) } : {}),
+    revisionStart: (start) => (input.revisionStart?.(start) ?? start) + at,
+  };
 }
 
 /**

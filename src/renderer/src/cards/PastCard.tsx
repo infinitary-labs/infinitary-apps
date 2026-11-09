@@ -8,12 +8,11 @@ import { ResponseCard } from "../design/cards/ResponseCard";
 import { RiskChart, riskBodyInset, riskChartBox } from "../design/cards/RiskChart";
 import { RISK_CHART_GAP } from "../design/cards/riskRadar";
 import { useCutWords } from "../design/core/overflowTitle";
-import { AfterMergeSteps } from "./AfterMergeSteps";
+import { afterMergeStrip } from "./afterMergeStrip";
 import { MessageList } from "./CardThread";
 import { pastReadingPlaceId, useCardReadingPlace } from "./cardReadingPlace";
 import { footerGroups } from "./footerGroups";
 import { HtmlCardBody } from "./PrototypeBody";
-import { RequiredActions } from "./RequiredActions";
 import { KeyedText } from "./TaskKey";
 
 /** A past card read once when its entry comes to the front; null while it loads. */
@@ -194,14 +193,6 @@ export function PastCardColumn({
           </div>
         </>
       }
-      attachment={
-        past.requiredActions?.length || past.afterMerge?.length ? (
-          <>
-            {past.requiredActions && <RequiredActions actions={past.requiredActions} />}
-            {past.afterMerge && <AfterMergeSteps steps={past.afterMerge} />}
-          </>
-        ) : undefined
-      }
       // What the card's field sent with the choice, as one quiet line under
       // the buttons (INF-924); nothing when it sent nothing.
       footer={
@@ -260,6 +251,7 @@ export function PastCardColumn({
       <div data-past-card={past.id}>
         <HtmlCardBody
           body={past.body}
+          lead={afterMergeStrip(past.requiredActions, past.afterMerge)}
           theme={theme}
           title={past.title}
           ownTaskId={past.taskId}

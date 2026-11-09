@@ -12,6 +12,7 @@ import { startCore } from "@core/index";
 import { appPathsFor } from "@core/paths";
 import { resolveFirstmateCardId } from "@core/pi/cardTool";
 import { seedTask } from "@core/tasks/seedTask";
+import { AFTER_MERGE_LEAD } from "@shared/afterMerge";
 import { CARD_LEAVE } from "@shared/cardLeave";
 import { ANYTHING_ELSE_ANSWER, PAST_CARD_WORDS_LEAD } from "@shared/cards";
 import { SCENE_OBSERVATIONS_SINCE } from "@shared/contractFeatures";
@@ -1147,6 +1148,13 @@ export async function startPhoneHome(
                 completion: { kind: "manual" as const, label: "Posted" },
               },
             ],
+            // INF-3149: the crew's own step shows on the phone too, after the captain's.
+            afterMerge: [
+              {
+                title: "Continue: Send the new chart to the pilot boats",
+                goal: "Every pilot boat carries the chart with the north entrance kept clear.",
+              },
+            ],
             risk: {
               declared: {
                 blast: { level: "low" as const, why: "One chart layer" },
@@ -1235,6 +1243,7 @@ export async function startPhoneHome(
             sentLead: PAST_CARD_WORDS_LEAD,
             anythingElse: ANYTHING_ELSE_ANSWER,
             requiredLead: REQUIRED_ACTIONS_LEAD,
+            crewLead: AFTER_MERGE_LEAD,
             threadCrew: THREAD_WHO_LABELS.crewmate,
             threadContributor: contributorWords({
               host: false,

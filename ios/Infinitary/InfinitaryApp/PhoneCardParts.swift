@@ -108,36 +108,59 @@ private struct PhoneRiskSheet: View {
     }
 }
 
-/// INF-1524 piece 3: what the captain must do after merging, pinned with the choices as the Mac's: the lead, then one
-/// action written out, or more folded under their count that opens into each one's title, target and consequence.
-struct PhoneRequiredActions: View {
+/// INF-3149, the captain's direction C, as the Mac's AfterMergeStrip: what happens after the merge, at the top of the
+/// card's body where it scrolls away. The captain's own actions come first under a lead in the warning color, then the
+/// steps the crew starts on its own, each with its goal, what it waits for and who does it. A card with neither draws
+/// nothing.
+struct PhoneAfterMerge: View {
     let actions: [PhoneJSON]
-    @State private var open = false
+    let steps: [PhoneJSON]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-            Text(PhoneCardWords.requiredActionsLead).font(PhoneFont.callout).foregroundStyle(PhoneTheme.text)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            if actions.count == 1 {
-                entries
-            } else {
-                DisclosureGroup(isExpanded: $open) { entries.padding(.top, PhoneTheme.space2) } label: {
-                    Text(PhoneCardWords.requiredActionsCount(actions.count)).font(PhoneFont.mono).foregroundStyle(PhoneTheme.warning)
-                }.tint(PhoneTheme.secondary)
-            }
-        }
-        .accessibilityElement(children: .contain).accessibilityIdentifier("card-required-actions")
-    }
-
-    private var entries: some View {
-        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-            ForEach(Array(actions.enumerated()), id: \.offset) { _, action in
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(action["title"].text ?? "") · \(action["target"].text ?? "")").font(PhoneFont.callout)
-                    Text(action["consequence"].text ?? "").font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+        if !actions.isEmpty || !steps.isEmpty {
+            VStack(alignment: .leading, spacing: PhoneTheme.space3) {
+                if !actions.isEmpty {
+                    group(PhoneCardWords.requiredActionsLead, color: PhoneTheme.warning, id: "card-required-actions") {
+                        ForEach(Array(actions.enumerated()), id: \.offset) { _, action in
+                            entry("\(action["title"].text ?? "") · \(action["target"].text ?? "")", [action["consequence"].text ?? ""])
+                        }
+                    }
+                }
+                if !steps.isEmpty {
+                    group(PhoneCardWords.afterMergeLead, color: PhoneTheme.text, id: "card-after-merge") {
+                        ForEach(Array(steps.enumerated()), id: \.offset) { _, step in
+                            let key = step["key"].text.map { "\($0) " } ?? ""
+                            let waits = step["waitsFor"].list.compactMap(\.text)
+                            entry(key + (step["title"].text ?? ""), [
+                                step["goal"].text, waits.isEmpty ? nil : PhoneCardWords.afterMergeWait(waits),
+                                PhoneCardWords.afterMergeDoer[step["doer"].text ?? "crewmate"],
+                            ].compactMap { $0 })
+                        }
+                    }
                 }
             }
-        }.frame(maxWidth: .infinity, alignment: .leading)
+            .padding(PhoneTheme.space3)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(RoundedRectangle(cornerRadius: PhoneTheme.controlRadius).stroke(PhoneTheme.line, lineWidth: 1))
+        }
+    }
+
+    private func group(_ lead: String, color: Color, id: String, @ViewBuilder rows: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+            Text(lead).font(PhoneFont.callout).foregroundStyle(color)
+            rows()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .contain).accessibilityIdentifier(id)
+    }
+
+    private func entry(_ title: String, _ lines: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).font(PhoneFont.callout).foregroundStyle(PhoneTheme.text)
+            ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
+                Text(line).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)
+            }
+        }
     }
 }
 

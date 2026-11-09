@@ -17,8 +17,8 @@ import type { FrameAnswers } from "@shared/plugins/bridge";
 import type { Theme } from "@shared/preferences";
 import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AfterMergeSteps } from "../../cards/AfterMergeSteps";
 import { AskedLine } from "../../cards/AskedLine";
+import { afterMergeStrip } from "../../cards/afterMergeStrip";
 import { answersLine } from "../../cards/answersLine";
 import { bridgeActionIds } from "../../cards/bridgeActions";
 import { CardAttachment } from "../../cards/CardAttachment";
@@ -27,7 +27,6 @@ import { useCardReadingPlace } from "../../cards/cardReadingPlace";
 import { useCardTask } from "../../cards/cardTask";
 import { choiceOrder, footerGroups, footerVariant } from "../../cards/footerGroups";
 import { CardFactsFrame, type CollectAnswers, HtmlCardBody } from "../../cards/PrototypeBody";
-import { RequiredActions } from "../../cards/RequiredActions";
 import { revisedLine } from "../../cards/revisedLine";
 import { useBodyEntrance } from "../../cards/SurfaceReveal";
 import { CardTaskKey, KeyedText } from "../../cards/TaskKey";
@@ -419,16 +418,10 @@ export function StackedCard({
             : undefined
         }
         attachment={
-          !bare &&
-          ((card.answerDone && !card.noteDone) ||
-            card.attachment ||
-            card.requiredActions?.length ||
-            card.afterMerge?.length) ? (
+          !bare && ((card.answerDone && !card.noteDone) || card.attachment) ? (
             <>
               {card.answerDone && !card.noteDone && <AnswerDone done={card.answerDone} />}
               {card.attachment && <CardAttachment cardId={card.id} attachment={card.attachment} />}
-              {card.requiredActions && <RequiredActions actions={card.requiredActions} />}
-              {card.afterMerge && <AfterMergeSteps steps={card.afterMerge} />}
             </>
           ) : undefined
         }
@@ -450,6 +443,8 @@ export function StackedCard({
           <LiveMessageList card={card} messages={messages} working={threadWorking} />
         ) : (
           <HtmlCardBody
+            // What happens after the merge leads the body and scrolls away with it (INF-3149).
+            lead={afterMergeStrip(card.requiredActions, card.afterMerge)}
             body={body}
             ownTaskId={ownTaskId}
             reveal={bodyEntrance.reveal}

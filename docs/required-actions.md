@@ -9,9 +9,10 @@ The declaration is display-only: it grants no execution permission.
 
 ## Before merging
 
-The host draws “After merging, you need to…” outside the body's scroller, above the buttons.
-Each action names its imperative, target and consequence of waiting.
-Several actions have a visible count and a keyboard-reachable disclosure; none is silently truncated.
+The host draws “After merging, you need to…” at the top of the merge card's body, inside its scroller, so it scrolls away as the captain reads on (design skill `components/cards/ResponseCard.prompt.md`); its lead takes the warning color.
+Each action names its imperative, target and consequence of waiting, every one written out; none is folded or truncated.
+The crew's after-merge steps follow in the same strip ("After-merge steps", `docs/task-graph.md`).
+The phone draws the same strip at the top of the card's body (`docs/ios.md`).
 The source task keeps the declaration and offered version before the merge.
 A captain click carries the declaration from the version the captain actually chose, including when a newer revision is not yet shown.
 

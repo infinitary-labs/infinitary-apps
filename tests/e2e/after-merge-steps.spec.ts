@@ -14,6 +14,7 @@ import {
 } from "../../src/shared/afterMerge";
 import { MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
+import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
@@ -160,7 +161,10 @@ for (const variant of ["steps", "none", "waits", "firstmate"] as const) {
       await input.press("Enter");
       const card = shownCard(page, AFTER_MERGE_STORY_TITLE);
       await expect(card).toBeVisible({ timeout: 45_000 });
-      const listed = card.getByRole("region", { name: AFTER_MERGE_LEAD });
+      // The steps lead the card's body (INF-3149), inside its document.
+      const listed = cardBody(page, AFTER_MERGE_STORY_TITLE).getByRole("region", {
+        name: AFTER_MERGE_LEAD,
+      });
       if (steps) {
         await expect(listed).toContainText(continueTitle);
         await expect(listed).toContainText(METER_AFTER_MERGE_STEP.goal);

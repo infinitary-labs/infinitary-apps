@@ -47,7 +47,7 @@ export function cardBodyHtml(body: string): string {
   return /<[a-z][\s\S]*>/i.test(body) ? body : plainTextBody(body);
 }
 
-function escapeHtml(text: string): string {
+export function escapeHtml(text: string): string {
   return text
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -205,11 +205,28 @@ export const CARD_INSET_STYLE = `
   }
 `;
 
+/**
+ * A merge card's after-merge strip (`afterMergeStrip.ts`; design skill
+ * ResponseCard, "After merging"): a panel leading the body, the captain's
+ * lead alone in the warning color, each step's title in the body's
+ * strongest color and its lines beneath in the body's own.
+ */
+export const AFTER_MERGE_STYLE = `
+  [data-inf-after-merge] { margin: 0 0 var(--space-3); padding: var(--space-2) var(--space-3); color: var(--fg-2); }
+  [data-inf-after-merge] p { margin: 0; }
+  [data-inf-after-merge] section + section { margin-top: var(--space-2); }
+  [data-inf-after-merge-lead] { color: var(--fg-1); }
+  [data-inf-after-merge-lead="captain"] { color: var(--warn); }
+  [data-inf-after-merge] ul { margin: var(--space-1) 0 0; padding-left: var(--space-4); }
+  [data-inf-after-merge] li + li { margin-top: var(--space-2); }
+  [data-inf-after-merge] li > span { color: var(--fg-1); }
+`;
+
 let cardStyle: string | undefined;
 
 /** The design system's stylesheet and the card's measure; a body's own `<style>` rides its markup. */
 export function cardStylesheet(): string {
-  cardStyle ??= `${frameStylesheet()}\n${CARD_MEASURE_STYLE}\n${CARD_CHANGES_STYLE}\n${CARD_INSET_STYLE}\n${REVISION_HIGHLIGHT_STYLE}`;
+  cardStyle ??= `${frameStylesheet()}\n${CARD_MEASURE_STYLE}\n${CARD_CHANGES_STYLE}\n${CARD_INSET_STYLE}\n${AFTER_MERGE_STYLE}\n${REVISION_HIGHLIGHT_STYLE}`;
   return cardStyle;
 }
 

@@ -599,18 +599,9 @@ private struct PhoneCardPane: View {
             .onTapGesture { if messageContext.keyboardUp { dismissPhoneKeyboard() } }
             .fixedSize(horizontal: false, vertical: true)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { backHeadHeight = $0 }
-            ScrollView {
-                PhoneCardThread(messages: messages, working: working)
-                    .padding(.horizontal, PhoneTheme.space4).padding(.vertical, PhoneTheme.space3)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { threadHeight = $0 }
-            }
-            .frame(maxHeight: threadHeight > 0 ? threadHeight : nil)
-            .defaultScrollAnchor(.bottom)
-            .scrollBounceBehavior(bounce)
-            .scrollDismissesKeyboard(.interactively)
-            .onScrollPhaseChange { _, phase in scrolled(phase) }
-            .accessibilityIdentifier("card-thread")
+            PhoneThreadScroller(messages: messages, working: working, bounce: bounce,
+                                onHeight: { threadHeight = $0 }, onPhase: scrolled)
+                .frame(maxHeight: threadHeight > 0 ? threadHeight : nil)
             Spacer(minLength: 0)
             backFoot.fixedSize(horizontal: false, vertical: true)
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { backFootHeight = $0 }

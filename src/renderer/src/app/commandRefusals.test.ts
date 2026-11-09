@@ -288,6 +288,19 @@ describe("why a window command cannot run now", () => {
     );
   });
 
+  // INF-3124: the thread's jump down is a command, there only while the captain reads above the foot.
+  it("goes to the thread's new messages only while the shown thread shows its jump down", () => {
+    const said: CardMessage = { id: 1, cardId: "a", who: "firstmate", text: "here", at: 1 };
+    const threaded = { ...HOME, threads: { a: [said] } };
+    expect(commandRefusal("cards.thread-new", threaded, { ...CLEAR, threadJump: true })).toBeNull();
+    expect(commandRefusal("cards.thread-new", threaded, CLEAR)).toBe(
+      "No card thread is read above its latest message",
+    );
+    expect(commandRefusal("cards.thread-new", { ...threaded, cards: [] }, CLEAR)).toBe(
+      "No card is shown",
+    );
+  });
+
   it("keeps the cards' commands to the home screen, where the cards are", () => {
     const settings = { ...HOME, view: "settings" as const };
     expect(commandRefusal("cards.minimize", settings, CLEAR)).toBe("Settings is open");

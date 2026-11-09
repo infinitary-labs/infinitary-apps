@@ -57,6 +57,8 @@ export type WindowFacts = {
   /** A modal dialog other than command search holds focus: the picture viewer, the custom API form. */
   dialogOpen: boolean;
   browserControl?: boolean;
+  /** The shown card's thread shows its jump down: the captain reads above its foot. */
+  threadJump?: boolean;
   /** The shown task record offers Move to a computer. */
   taskMove?: boolean;
   /** The shown record offers Close as done (INF-3169's plan, piece 3). */
@@ -276,6 +278,11 @@ const REFUSALS: Readonly<
     const entry = shownEntry(s);
     if (!entry || isHeldEntry(entry) || !cardTakesReplies(entry)) return "This card takes no reply";
     return (s.threads[entry.id]?.length ?? 0) > 0 ? null : "This card has no thread yet";
+  },
+  "cards.thread-new": (s, facts) => {
+    const refused = cardRefusal(s);
+    if (refused) return refused;
+    return facts.threadJump ? null : "No card thread is read above its latest message";
   },
   "settings.open": (s) => (s.view === "settings" ? "Settings is already open" : null),
   // From anywhere, Settings included: it goes to the Keyboard tab.

@@ -71,7 +71,10 @@ Where the panel is under 250px wide each key stacks over its value.
 The rows scroll past 240px, and a quiet `--fg-3` note closes the panel: "Sent to the author as context.
 A reply never approves building."
 Opening it near the foot of the list scrolls the panel into view only as far as keeps its own line visible.
-The list scrolls, newest at the bottom, and holds its scroll at the bottom as messages arrive.
+The list scrolls, newest at the bottom, and keeps the reader's place: it follows new messages, the working row and the waiting line only while the reader is within 24px of its bottom, and once they scroll up nothing but their own scroll moves it.
+At the bottom, new messages taller than the list open at their first line; the reader's own reply always takes the list to its bottom.
+While the reader is above the bottom, a jump down floats `--space-2` above the list's bottom edge, centred: a mono `--text-xs` uppercase pill, `--radius-pill`, opaque on `--bg-1`, reading a plain `↓` in `--fg-2` until messages arrive below, then `↓ 1 new` in `--accent` on `--accent-dim`, the pager's "1 new" badge with a down arrow.
+It never animates, is a Tab stop with the focus ring, and a press goes to the first new message, or the bottom, cut under reduced motion; it leaves at the bottom.
 
 Nothing in the thread resolves the card.
 The footer's buttons stay pinned and enabled while a thread is open and while a reply is in flight; a reply is not an answer to the decision.

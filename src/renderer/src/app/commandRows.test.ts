@@ -19,10 +19,15 @@ describe("command search's list", () => {
   });
 
   it("finds the thread's command by the words a person might use for it", () => {
-    for (const words of ["collapse", "chat", "thread"])
+    for (const words of ["collapse", "chat"])
       expect(commandRows(words, () => null, DEFAULT_BINDINGS).map((row) => row.id)).toEqual([
         "cards.thread",
       ]);
+    // "thread" also names the thread's jump down (INF-3124), after the thread itself.
+    expect(commandRows("thread", () => null, DEFAULT_BINDINGS).map((row) => row.id)).toEqual([
+      "cards.thread",
+      "cards.thread-new",
+    ]);
   });
 
   it("lists a command that acts in Devices only where this build offers Devices", () => {

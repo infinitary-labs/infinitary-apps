@@ -111,6 +111,9 @@ const moveComputerButton = (entryId: string) =>
 
 const closeDoneButton = (entryId: string) => shownPart(entryId, "[data-record-close-done]:enabled");
 
+/** The shown card's jump down in its thread, while the captain reads above its foot. */
+const threadJumpButton = (entryId: string) => shownPart(entryId, "[data-thread-jump]");
+
 const answerDoneButton = (entryId: string) =>
   shownPart(entryId, "button[data-answer-done-control]:not(:disabled)");
 
@@ -259,6 +262,7 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
       body.dispatchEvent(new Event("fm-next-revision", { bubbles: true })),
     ),
   "cards.thread": () => onShownCard((stage) => stage.thread?.()),
+  "cards.thread-new": () => toShownPart(threadJumpButton, (button) => button.click()),
   "cards.show-info": () => toTab("cards.show-info"),
   "cards.show-cards": () => toTab("cards.show-cards"),
   "cards.show-activity": () => toTab("cards.show-activity"),
@@ -379,6 +383,10 @@ function windowFacts(): WindowFacts {
     browserControl: (() => {
       const id = shownEntry(useShellStore.getState())?.id;
       return !!id && browserControlButton(id) !== null;
+    })(),
+    threadJump: (() => {
+      const id = shownEntry(useShellStore.getState())?.id;
+      return !!id && threadJumpButton(id) !== null;
     })(),
     taskMove: (() => {
       const id = shownEntry(useShellStore.getState())?.id;

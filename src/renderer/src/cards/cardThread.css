@@ -171,3 +171,44 @@
   background: var(--accent-dim);
   box-shadow: var(--focus-ring-inset);
 }
+
+/* The thread's jump down (INF-3124; the design skill's
+   components/cards/CardThread.prompt.md): floats over the foot of the
+   messages while the reader is above it, a plain arrow until messages
+   arrive below, then the pager's "1 new" badge with a down arrow. It is
+   opaque, so the lines under it never read through, and never animates. */
+[data-thread-jump] {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-2);
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  line-height: 1.4;
+  white-space: nowrap;
+  padding: 3px 10px;
+  margin: 0;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-pill);
+  color: var(--fg-2);
+  background: var(--bg-1);
+  cursor: pointer;
+}
+[data-thread-jump="unread"] {
+  color: var(--accent);
+  background: linear-gradient(var(--accent-dim), var(--accent-dim)), var(--bg-1);
+}
+[data-thread-jump]:hover {
+  color: var(--fg-1);
+}
+[data-thread-jump="unread"]:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+[data-thread-jump-key] {
+  margin-left: var(--space-2);
+  color: var(--fg-3);
+}

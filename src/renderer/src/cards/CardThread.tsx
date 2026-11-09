@@ -19,6 +19,7 @@ import {
   type CSSProperties,
   type MouseEvent,
   type ReactNode,
+  useCallback,
   useEffect,
   useId,
   useLayoutEffect,
@@ -31,7 +32,8 @@ import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
 import { replyDestination } from "../attachments/destinations";
 import { useFileIntake } from "../attachments/useFileIntake";
-import { Button, IconButton, type ImageAttachment, MicroLabel } from "../design";
+import { prefersReducedMotion } from "../character/reducedMotion";
+import { Button, focusWithRing, IconButton, type ImageAttachment, MicroLabel } from "../design";
 import { ComposerCount, ComposerCountAnnouncer, ComposerField } from "../design/core/ComposerField";
 import {
   AddFilesButton,
@@ -40,6 +42,7 @@ import {
   useFileDrop,
 } from "../design/core/FileControls";
 import { PastedTextChip } from "../design/voice/VoiceInput";
+import { FOLLOW_SLACK_PX } from "./CrewmateView";
 import type { CollectAnswers } from "./PrototypeBody";
 import { RevisionLinks } from "./RevisionNavigation";
 import { useMessageEntrance, useWorkingEntrance } from "./SurfaceReveal";
@@ -53,6 +56,8 @@ import {
   THREAD_WORKING,
   threadCountWords,
   threadCueLabel,
+  threadJumpLabel,
+  threadJumpWords,
 } from "./threadWords";
 import { useReplyDoing } from "./useReplyDoing";
 import { type ThreadWaitLine, useThreadWait } from "./useThreadWait";
@@ -742,9 +747,20 @@ function EndedLine({ card }: { card: Pick<Card, "id" | "ended" | "lifecycleId" |
   );
 }
 
+/** The list's own top padding, which a message brought to the top keeps above it. */
+const LIST_PAD_TOP = 4;
+
+/** The messages that came while the reader read above: the first one's id, and how many. */
+type Unread = { from: number; count: number };
+
 /**
- * The messages, oldest at the top. The list holds its scroll at the bottom
- * as they arrive, because the newest is always the one being answered.
+ * The messages, oldest at the top (docs/card-threads.md, "Keeping your
+ * place"). The list follows the thread only while the reader is at its
+ * foot: a new message, the working row and the waiting line keep the foot
+ * in view, except that new messages taller than the list open at their
+ * first line. Once the reader scrolls up, nothing but the reader moves it,
+ * and the jump down floats over its foot, counting what arrived below.
+ * The captain's own reply always takes the list to its foot.
  */
 export function MessageList({
   messages,
@@ -772,7 +788,7 @@ export function MessageList({
    */
   endedAt?: number | undefined;
 }) {
-  const endRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const count = messages.length;
   const workingEntrance = useWorkingEntrance();
   const waitingText = working ? undefined : waiting?.text;
@@ -782,44 +798,149 @@ export function MessageList({
   const split = ended && endedAt !== undefined ? messages.findIndex((m) => m.at > endedAt) : -1;
   const earlier = split < 0 ? messages : messages.slice(0, split);
   const later = split < 0 ? [] : messages.slice(split);
+  // Whether the reader is at the foot, as the list last measured it: a
+  // message or a tail that grows the list leaves it true until the list
+  // follows, so only the reader's own scroll ends following.
+  const atFoot = useRef(true);
+  const [above, setAbove] = useState(false);
+  const [unread, setUnread] = useState<Unread | null>(null);
+  // How many messages the list has placed; it opens at its foot.
+  const placed = useRef(count);
+  const measure = useCallback(() => {
+    const node = listRef.current;
+    if (!node) return;
+    const foot = node.scrollHeight - node.scrollTop - node.clientHeight <= FOLLOW_SLACK_PX;
+    atFoot.current = foot;
+    setAbove(!foot);
+    if (foot) setUnread(null);
+  }, []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a message or the tail is the trigger; `messages` is read as it stands then.
+  useLayoutEffect(() => {
+    const node = listRef.current;
+    const from = placed.current;
+    placed.current = count;
+    // Nothing to hold to while the thread is empty.
+    if (!node || (count === 0 && tail === undefined)) return;
+    const arrived = messages.slice(from);
+    if (arrived.some((message) => message.who === "captain")) {
+      // The captain's own reply: the foot, to watch the author take it up.
+      node.scrollTop = node.scrollHeight;
+    } else if (!atFoot.current) {
+      // Reading above: the list stays, and the jump down counts the arrivals.
+      const [first] = arrived;
+      if (first) {
+        setUnread((was) => ({
+          from: was?.from ?? first.id,
+          count: (was?.count ?? 0) + arrived.length,
+        }));
+      }
+      return;
+    } else {
+      // At the foot it follows, but new messages taller than the list open
+      // at their first line, so they read down from their start.
+      const start = arrived[0] ? topOf(node, arrived[0].id) : undefined;
+      node.scrollTop =
+        start !== undefined && node.scrollHeight - start > node.clientHeight
+          ? start
+          : node.scrollHeight;
+    }
+    measure();
+  }, [count, tail, measure]);
+  // The list changing size, as the card or the reply field grows, keeps a
+  // following foot in view and measures again, so a jump down leaves once
+  // the whole thread fits.
   useEffect(() => {
-    // Hold at the bottom as messages arrive, as the working row comes (the
-    // first mate's busy flag can land a render after the captain's reply,
-    // INF-1231), and as the waiting line comes or changes; the newest is
-    // always the one being answered. Nothing to hold to while the thread is
-    // empty.
-    if (count === 0 && tail === undefined) return;
-    endRef.current?.scrollIntoView({ block: "end" });
-  }, [count, tail]);
+    const node = listRef.current;
+    if (!node) return;
+    const observer = new ResizeObserver(() => {
+      if (atFoot.current) node.scrollTop = node.scrollHeight;
+      measure();
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [measure]);
+  // The jump down: to the first message that came while the reader read
+  // above, or to the foot.
+  const jump = (event: MouseEvent<HTMLButtonElement>) => {
+    const node = listRef.current;
+    if (!node) return;
+    const top = (unread && topOf(node, unread.from)) ?? node.scrollHeight;
+    setUnread(null);
+    node.scrollTo({ top, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    // A key that pressed it leaves the keyboard in the list it moved, where
+    // the reading keys scroll on, never on a control about to leave; a
+    // pointer press draws no ring.
+    if (byKey(event) && document.activeElement === event.currentTarget)
+      focusWithRing(node, { preventScroll: true });
+  };
+  const jumpKeys = useCommandKeys("cards.thread-new");
   return (
     <div
-      data-thread-messages=""
       style={{
+        position: "relative",
         flex: 1,
         minHeight: 0,
-        overflowY: "auto",
-        padding: "4px 16px 10px",
         display: "flex",
         flexDirection: "column",
-        gap: 10,
       }}
     >
-      {earlier.map((message) => (
-        <Message key={message.id} message={message} own={own} />
-      ))}
-      {ended}
-      {later.map((message) => (
-        <Message key={message.id} message={message} own={own} />
-      ))}
-      {working ? (
-        <WorkingRow entrance={workingEntrance} doing={doing} />
-      ) : (
-        !ended &&
-        waiting && <WaitingRow key={waiting.text} waiting={waiting} entrance={workingEntrance} />
+      <div
+        ref={listRef}
+        data-thread-messages=""
+        tabIndex={-1}
+        onScroll={measure}
+        style={{
+          // The messages' offsets are measured from the list (`topOf`).
+          position: "relative",
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          padding: `${LIST_PAD_TOP}px 16px 10px`,
+          display: "flex",
+          flexDirection: "column",
+          gap: 10,
+          outline: "none",
+        }}
+      >
+        {earlier.map((message) => (
+          <Message key={message.id} message={message} own={own} />
+        ))}
+        {ended}
+        {later.map((message) => (
+          <Message key={message.id} message={message} own={own} />
+        ))}
+        {working ? (
+          <WorkingRow entrance={workingEntrance} doing={doing} />
+        ) : (
+          !ended &&
+          waiting && <WaitingRow key={waiting.text} waiting={waiting} entrance={workingEntrance} />
+        )}
+      </div>
+      {above && (
+        <button
+          type="button"
+          data-thread-jump={unread ? "unread" : "foot"}
+          aria-label={threadJumpLabel(unread?.count ?? 0)}
+          aria-keyshortcuts={jumpKeys["aria-keyshortcuts"]}
+          onClick={jump}
+        >
+          {threadJumpWords(unread?.count ?? 0)}
+          {jumpKeys.keys && <span data-thread-jump-key="">{jumpKeys.keys}</span>}
+        </button>
       )}
-      <div ref={endRef} />
     </div>
   );
+}
+
+/**
+ * Where a message's top sits in the list's scroll, its padding kept above
+ * it; none for one not drawn. Its layout offset, never its drawn box, which
+ * the entrance animation still moves and scales as it arrives.
+ */
+function topOf(list: HTMLElement, id: number): number | undefined {
+  const line = list.querySelector<HTMLElement>(`[data-thread-message-id="${id}"]`);
+  if (!line) return undefined;
+  return Math.max(0, line.offsetTop - LIST_PAD_TOP);
 }
 
 /**
@@ -901,6 +1022,7 @@ function Message({ message, own }: { message: CardMessage; own: string | undefin
   return (
     <div
       data-thread-message={message.who}
+      data-thread-message-id={message.id}
       data-stage-reveal={reveal ? "entrance" : "static"}
       style={{
         display: "grid",

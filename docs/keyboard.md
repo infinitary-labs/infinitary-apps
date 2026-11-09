@@ -95,6 +95,7 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `cards.maximize`, Maximize or restore card | window, run by the shell page | none: chosen by name (full, screen, enlarge, expand and bigger find it too) |
 | `cards.next-revision`, Go to the next revised area | window, run by the shell page | none: chosen by name; selected revision, otherwise newest released list |
 | `cards.thread`, Show or hide the card's thread | window, run by the shell page | ⌘\ (collapse, expand, chat, replies and messages find it too) |
+| `cards.thread-new`, Go to the thread's new messages | window, run by the shell page | none: chosen by name; the shown card's jump down, while the captain reads above the thread's foot (`docs/card-threads.md`, "Keeping your place") |
 | `cards.show-info`, Show Info; `cards.show-cards`, Show Cards; `cards.show-activity`, Show Activity; `cards.show-crewmate`, Show Crewmate; `cards.show-browser`, Show Browser; `cards.next-tab`, Next tab; `cards.previous-tab`, Previous tab | window, run by the shell page | none: chosen by name (open and task record find Show Info too); on a card about a task, each Show command opens that task's tab in front of the card |
 | `browser.control`, Take or return browser control | window, run by the shell page | none: chosen by name; the shown browser uses the same control and shows an assigned key hint |
 | `task.move-computer`, Move the task to another computer | window, run by the shell page | none: chosen by name (computer, Mac, machine, device and record find it too); presses the shown record's Move to a computer, which opens its picker |
@@ -286,6 +287,7 @@ The main process's own commands, the size keys, are never refused by the page.
   The Crewmate tab's prompt keeps two keys of its own, as a message field keeps Enter: Enter sends its line to the crewmate, and ⌃C stops the crewmate's running turn, with Stop beside the hint for the pointer; Esc still hides the card (`docs/task-card-tabs.md`, "Typing").
 - `cards.thread`, Show or hide the card's thread, is the thread head's Collapse thread and the collapsed card's latest line in one key (`docs/card-threads.md`, "Collapsing the thread"), lent by the card layer like the arrows.
   It refuses on a card that takes no reply or has no thread yet, and while a recording runs; a focused reply field keeps the focus, and otherwise focus lands, ringed, on what undoes it.
+- `cards.thread-new`, Go to the thread's new messages, presses the shown card's jump down in its thread (`docs/card-threads.md`, "Keeping your place"); it is refused while the thread shows its foot.
 - `settings.open`, Open Settings, is the gear's own step; it refuses in Settings.
   The app menu's Settings… item shows its key and tells the page the same command when clicked.
 - `settings.keyboard`, Open Keyboard settings, opens Settings at its Keyboard tab, with the caret in the tab's search; it works from Settings too.

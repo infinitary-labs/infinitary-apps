@@ -31,6 +31,22 @@ export function newCountWords(count: number): string {
   return `${count} new`;
 }
 
+/**
+ * The thread's jump down while the captain reads above its foot (INF-3124):
+ * a plain arrow until messages arrive below, then how many came, on the Mac
+ * and the phone's card back.
+ */
+export function threadJumpWords(count: number): string {
+  return count > 0 ? `↓ ${newCountWords(count)}` : "↓";
+}
+
+/** What the jump down reads to assistive technology on the Mac. */
+export function threadJumpLabel(count: number): string {
+  return count > 0
+    ? `Go to the ${count} new ${count === 1 ? "message" : "messages"}`
+    : "Go to the latest message";
+}
+
 /** The thread with its count: the in-place rung's segment, and the head of the phone card's back. */
 export function threadCountWords(count: number): string {
   return `thread · ${count}`;

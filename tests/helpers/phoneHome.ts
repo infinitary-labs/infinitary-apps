@@ -14,7 +14,7 @@ import { resolveFirstmateCardId } from "@core/pi/cardTool";
 import { seedTask } from "@core/tasks/seedTask";
 import { AFTER_MERGE_LEAD } from "@shared/afterMerge";
 import { CARD_LEAVE } from "@shared/cardLeave";
-import { ANYTHING_ELSE_ANSWER, PAST_CARD_WORDS_LEAD } from "@shared/cards";
+import { ANYTHING_ELSE_ANSWER, type CardMessage, PAST_CARD_WORDS_LEAD } from "@shared/cards";
 import { SCENE_OBSERVATIONS_SINCE } from "@shared/contractFeatures";
 import { ENDED_CHIP_LABEL, ENDED_CLOSE_LABEL, endedLineWords } from "@shared/endedCard";
 import type { FmEvent } from "@shared/events";
@@ -187,6 +187,7 @@ export async function startPhoneHome(
     merge: "",
     news: "",
     flip: "",
+    place: "",
   };
   // The captain's question on the flip card, which the first mate's revision answers by its id.
   let flipQuestion: number | undefined;
@@ -1321,6 +1322,57 @@ export async function startPhoneHome(
             offerId: shown?.offerId ?? null,
             messages: core.services.supervisor.cards.thread(cardIDs.flip),
           };
+          break;
+        }
+        // INF-3124: a first mate card whose thread is longer than the card's back, read from its start.
+        case "POST place-card": {
+          for (const card of await core.dispatch("inf:cards:list", []))
+            await core.dispatch(
+              card.noteDone && !card.noteDone.closesTask
+                ? "inf:cards:note-done"
+                : "inf:cards:close",
+              [card.id],
+            );
+          const title = "The release window moves to Thursday";
+          cardIDs.place = core.services.supervisor.addFirstmateCard({
+            id: "phone-place",
+            title,
+            body: "<p>The release window moves to Thursday, after the long check finishes.</p>",
+            actions: [
+              { id: "wait", label: "Wait for Thursday", default: true },
+              { id: "now", label: "Release today" },
+            ],
+          });
+          const first =
+            "Here is the whole plan for the move, from the first check to the release itself.";
+          const said: [CardMessage["who"], string][] = [
+            ["firstmate", first],
+            ["captain", "walk me through it, step by step"],
+            ...Array.from({ length: 12 }, (_, step): [CardMessage["who"], string] => [
+              "firstmate",
+              `Step ${step + 1}: the long check runs again on the newest version, and the release waits for its result before anything moves on to the next part of the plan.`,
+            ]),
+          ];
+          for (const [who, text] of said)
+            core.services.supervisor.cards.addMessage(cardIDs.place, who, text);
+          core.services.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
+          core.services.supervisor.cards.flushBroadcast();
+          // A reply from the phone wakes the stand-in first mate, whose answer joins this thread.
+          result = { title, first, count: said.length, replyAnswer: MOCK_FM_CHAT_TEXT };
+          break;
+        }
+        // Two more lines from the first mate while the captain reads that thread from its start.
+        case "POST place-card-more": {
+          const newest = "One more thing: the notes for the release are ready for you to read.";
+          core.services.supervisor.cards.addMessage(
+            cardIDs.place,
+            "firstmate",
+            "The long check passed on the newest version.",
+          );
+          core.services.supervisor.cards.addMessage(cardIDs.place, "firstmate", newest);
+          core.services.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
+          core.services.supervisor.cards.flushBroadcast();
+          result = { added: "The long check passed on the newest version.", newest };
           break;
         }
         // INF-1524: a card that arrives while the merge card is read, which Home counts beside the pager.

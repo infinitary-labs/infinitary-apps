@@ -235,6 +235,9 @@ enum PhoneCardWords {
     }
     static func newCount(_ count: Int) -> String { ${fill(thread.newCountWords(7), { 7: "count" })} }
     static func threadCount(_ count: Int) -> String { ${fill(thread.threadCountWords(7), { 7: "count" })} }
+    static func threadJump(_ count: Int) -> String {
+        count == 0 ? ${text(thread.threadJumpWords(0))} : ${fill(thread.threadJumpWords(7), { 7: "count" })}
+    }
     /** Who really wrote a thread line, and whether it came after the card closed ("Shared cards"). */
     static func contributor(host: Bool, label: String?, clarification: Bool) -> String {
         switch (host, label, clarification) {

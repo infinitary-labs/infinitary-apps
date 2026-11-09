@@ -169,7 +169,8 @@ A running turn shows `working` in its place.
 On a crewmate's card the captain replied under, `working` is followed by what the crewmate did last since the captain's newest line: its task record's Now line (`nowOf`, `docs/task-record.md` "The Now line"), usually the description it gave the command it runs (`useReplyDoing`).
 The thread reads it off `tasks.detail` only while that turn runs, and that read re-reads on each of the crewmate's calls (`tool_start`, `tool_end`), so the line follows the work command by command; before its first doing since the reply, `working` stands alone.
 A collapsed thread's latest line shows the same words in place of the newest message.
-The message list holds its scroll at its foot as a message, the waiting line or `working` arrives, each on its own: on the first mate's card its busy flag lands a render after the captain's reply, so `working` scrolls the list again (INF-1231, `tests/browser/thread-working-reveal.test.tsx`).
+The message list keeps the captain's place ("Keeping your place" below).
+While the captain reads at its foot, a message, the waiting line or `working` keeps the foot in view, each on its own: on the first mate's card its busy flag lands a render after the captain's reply, so `working` follows the reply down (INF-1231, `tests/browser/thread-working-reveal.test.tsx`).
 When the hold ends, the checks finish or the author's turn starts, the posture moves and the line with it, with no thread message; the author's answer - a line naming the captain's message in `answers_message` - ends the wait and the line.
 Every input is persisted (the card's hold, the account's cut-off, the task's check watch), so a restart or a reload shows the same line.
 A first mate card has none: the paused seat writes its own saved line for every message it keeps (`docs/architecture.md` §16, "A paused seat").
@@ -330,6 +331,21 @@ The collapse's rules are `stackActions.test.ts`'s, its controls `CardThread.test
 One sharp edge paid for there: `--rail-docked-left|right` are REGISTERED (`@property`, `syntax: "<length>"`) because the ladder reads them.
 An unregistered custom property computes to its own token stream, so `--rail-docked-left: var(--rail-width)` reads back through `getComputedStyle` as the literal `max(300px, 20vw)` and parses as `NaN`; the ladder then placed the pair as if nothing were docked and it sat under the rail.
 `useShellLayout` also observes the STAGE's size, because a rail docking or undocking is not a render of the card layer.
+
+### Keeping your place
+
+The captain asked for a thread that stops pulling them down while they reread a longer reply (INF-3124, direction B).
+The list follows the thread only while the captain is at its foot: within 24 pixels of it, the slack the task's Crewmate tab follows its transcript with.
+Once they scroll up, nothing but their own scroll moves it: no message, turn start or end, crewmate command or waiting line.
+At the foot, new messages taller than the list open at their first line instead, so a long answer reads down from its start; the list then holds there.
+The captain's own reply always takes the list to its foot, so they see the author take it up.
+A thread opens at its foot, and where the captain is in a thread belongs to that window and is never saved.
+
+While the captain is above the foot, a small jump down floats over the foot of the messages: a plain `↓` until messages arrive below, then `↓ 1 new`, `↓ 2 new` (`threadJumpWords`), counting the author's, the first mate's and the app's lines, never the captain's own; a status change alone counts nothing.
+It is a Tab stop and a command, "Go to the thread's new messages" (`cards.thread-new`, no default key).
+A press goes to the first new message, or to the foot when none came, at once under reduced motion, and a press by key leaves focus in the list, where the reading keys scroll on.
+It leaves as soon as the captain reaches the foot, however they get there.
+The phone's card back keeps the same rule, with the same words.
 
 ## Ready decisions and choice admission
 

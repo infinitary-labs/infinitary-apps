@@ -63,8 +63,11 @@ const SURFACE: React.CSSProperties = {
   boxShadow: "var(--acrylic-shadow)",
 };
 
-/** How close to its end the transcript must be read for it to keep following new lines. */
-const FOLLOW_SLACK_PX = 24;
+/**
+ * How close to its end the transcript must be read for it to keep following
+ * new lines; a card's thread follows with the same slack.
+ */
+export const FOLLOW_SLACK_PX = 24;
 /** The prompt grows to this many lines, then scrolls inside. */
 const PROMPT_LINE_CAP = 6;
 

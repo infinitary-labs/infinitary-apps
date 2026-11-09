@@ -8394,6 +8394,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       keys: [{ key: "\\", meta: true }],
       searchWords: ["collapse", "expand", "chat", "replies", "messages"]
     },
+    // The shown card's jump down in its thread, while the captain reads above
+    // its foot (docs/card-threads.md, "Keeping your place"): chosen by name.
+    "cards.thread-new": {
+      label: "Go to the thread's new messages",
+      scope: "window",
+      runs: "shell",
+      repeat: false,
+      risk: "navigate",
+      keys: [],
+      searchWords: ["jump", "down", "latest", "bottom", "unread", "replies"]
+    },
     // The shown task card's tabs (docs/task-card-tabs.md): Info, Cards,
     // Activity (INF-2261), the crewmate's session and the browser's pages,
     // and on a card about a task its way to them (INF-358). No key of their

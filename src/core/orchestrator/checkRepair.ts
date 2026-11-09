@@ -1,4 +1,5 @@
 import { type CheckChangeInput, type CheckRepairLedger, failingRun } from "@shared/checkRepair";
+import { QUEUE_STATUS } from "@shared/repos";
 import { type ForgeCheck, isRedCheckState } from "../forge";
 import type { TaskDelivery, TaskRecord } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
@@ -83,13 +84,31 @@ export function declareCheckAction(
     };
   const declaration = input.declaration;
   if (declaration) {
-    if (declaration.verdict !== "flake" && declaration.verdict !== "settled")
+    if (
+      declaration.verdict !== "flake" &&
+      declaration.verdict !== "settled" &&
+      declaration.verdict !== "answered"
+    )
       return {
         read: false,
-        text: "Check declaration refused: readiness is expressed by the merge offer, not a separate ready or red verdict. Use declaration only for a flake or repair settlement.",
+        text: "Check declaration refused: readiness is expressed by the merge offer, not a separate ready or red verdict. Use declaration only for a flake, a repair settlement or an answer to the queue.",
       };
     if (!declaration.headSha.trim())
       return { read: false, text: "Check declaration refused: name the version." };
+    if (declaration.verdict === "answered") {
+      // An answer is to the queue's own failed status at that version, as
+      // the newest reading holds it: a closed fact, never the crew's words.
+      const snapshot = task.delivery?.checks;
+      const queue =
+        snapshot?.headSha === declaration.headSha
+          ? snapshot.items.find((item) => item.name === QUEUE_STATUS)
+          : undefined;
+      if (!queue || !isRedCheckState(queue.state))
+        return {
+          read: false,
+          text: `Answer refused: the newest reading shows no failed ${QUEUE_STATUS} at ${declaration.headSha}. Read the checks with check_change first; answer only the queue's failure or send-back of the version it is on.`,
+        };
+    }
     if (declaration.verdict === "settled" && (!declaration.repairId || !declaration.outcome))
       return { read: false, text: "Settlement refused: name the repair and its declared outcome." };
     if (declaration.verdict === "settled") {
@@ -143,7 +162,9 @@ export function declareCheckAction(
     read: true,
     text: input.diagnosis
       ? `Diagnosis recorded with evidence.${input.diagnosis.dependencyTask && tasks.resolve(input.diagnosis.dependencyTask) ? dependencyWords(tasks, tasks.resolve(input.diagnosis.dependencyTask)!) : ""}`
-      : "Crew check declaration recorded with evidence. No merge was authorized.",
+      : input.declaration?.verdict === "answered"
+        ? `Answer to the queue recorded with evidence. The captain's kept merge approval, where one covers ${input.declaration.headSha}, marks it waiting for the queue again once, when your turn ends; without one, nothing is marked until the captain's merge click. Put up no card for it.`
+        : "Crew check declaration recorded with evidence. No merge was authorized.",
   };
 }
 

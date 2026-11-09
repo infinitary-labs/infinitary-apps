@@ -31,6 +31,7 @@ On GitLab the queue runs nothing again before it pauses, so read the logs for a 
   Say in the issue which pull request is the fix.
 - **Send one change back.** When one change alone breaks the batch, start the queue's workflow by hand with `action` `send-back`, its number and a reason.
   That change fails with the reason, its own crew repairs it, and the rest resume.
+  When the failure lands on a version that already holds the fix, that change's crewmate answers it with check_change, and the change goes back to waiting with no new version and no new click.
 - **Resume after a flake.** When the failure does not come from any change in the batch, file the flaky test's owner first, then start the queue's workflow by hand with `action` `resume` and a reason that names that owner.
 
 Starting the workflow by hand is `POST /repos/{owner}/{repo}/actions/workflows/infinitary-queue.yml/dispatches` with `ref` the default branch and `inputs` `{ "action": ..., "number": ..., "reason": ... }`.

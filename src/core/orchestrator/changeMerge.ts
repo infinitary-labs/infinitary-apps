@@ -1,3 +1,4 @@
+import { queueAnswer } from "@shared/checkRepair";
 import { hasChangeRequests } from "@shared/forge";
 import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
 import { isMergeConflict } from "@shared/plainProblem";
@@ -10,6 +11,7 @@ import {
   ForgeError,
   type ForgePull,
   type ForgeReadiness,
+  isRedCheckState,
   isSignInForgeFailure,
   isTransientForgeFailure,
   messageWithoutPresentation,
@@ -282,12 +284,22 @@ export class ChangeMerge {
     // pull request's own checks passed: the merge waits on the queue, which
     // no checks override passes (docs/forge.md, "A project's queue").
     const queued = this.queued(taskId);
+    // The crewmate answered the queue's failure at this version (INF-3190):
+    // with the pull request's own checks passed, the version is marked
+    // waiting again once, as a version with no status is.
+    let answered = false;
     if (queued && checked) {
       const items = this.queueItems(taskId, checked.change);
       const queue = items?.find((item) => item.name === QUEUE_STATUS);
       const othersPassed =
         items?.every((item) => item.name === QUEUE_STATUS || PASSED_STATES.has(item.state)) ===
         true;
+      answered =
+        queue !== undefined &&
+        isRedCheckState(queue.state) &&
+        othersPassed &&
+        status.recorded &&
+        queueAnswer(this.options.tasks.get(taskId)?.delivery, checked.change.headSha) !== undefined;
       if (queue?.state === "pending" && othersPassed && status.recorded) {
         if (!guard?.unattended && !boundary?.unattended) this.restartQueue(taskId, checked.forge);
         return {
@@ -303,10 +315,11 @@ export class ChangeMerge {
     // still decide whether it merges.
     const unfinished = reading?.overall === "red" || reading?.overall === "pending";
     const checksPassed =
-      unfinished &&
-      status.recorded &&
-      checked !== undefined &&
-      overridePasses(this.options.tasks.get(taskId)?.delivery, "checks", checked.change.headSha);
+      answered ||
+      (unfinished &&
+        status.recorded &&
+        checked !== undefined &&
+        overridePasses(this.options.tasks.get(taskId)?.delivery, "checks", checked.change.headSha));
     if (!checked || (!checksPassed && (!status.recorded || reading?.overall !== "green"))) {
       const problem = this.options.tasks.get(taskId)?.delivery?.checks?.problem;
       const reason = problem
@@ -366,7 +379,9 @@ export class ChangeMerge {
       // a sign-in that could bypass the branch's rules (FI3-304 section 4).
       // Guidance is read after the carry, so a newer word during that wait
       // still stops the merge.
-      const queueWait = this.queueWait(taskId, this.queueItems(taskId, change));
+      const queueWait = answered
+        ? { state: undefined }
+        : this.queueWait(taskId, this.queueItems(taskId, change));
       if (hasChangeRequests(forge.kind) && (guard?.unattended || boundary?.unattended || settle)) {
         if (change.number === undefined)
           return { ok: false, text: "Cannot merge: the pull request identity is missing." };
@@ -397,6 +412,7 @@ export class ChangeMerge {
             guard?.beforeDispatch(change.headSha, true) ??
             boundary?.beforeDispatch(change.headSha, true),
           !guard?.unattended && !boundary?.unattended,
+          answered,
         );
       const withdrawn =
         guard?.beforeDispatch(change.headSha) ?? boundary?.beforeDispatch(change.headSha);
@@ -661,6 +677,7 @@ export class ChangeMerge {
     state: ForgeCheckState | undefined,
     look: () => string | undefined,
     attended: boolean,
+    answered = false,
   ): Promise<PrOutcome> {
     if (state !== undefined && state !== "pending") {
       return {
@@ -693,6 +710,14 @@ export class ChangeMerge {
         `Marked ${change.headSha} with ${QUEUE_STATUS}, waiting for the project's queue.`,
         { news: false, data: { queue: change.headSha } },
       );
+      if (answered) {
+        const title = this.options.tasks.get(taskId)?.title;
+        this.options.tasks.note(
+          taskId,
+          `${title ? `"${title}"` : "The change"} is back in the project's queue: its crewmate answered the queue's send-back of this version.`,
+          { news: true, feed: true, data: { queueAnswered: change.headSha } },
+        );
+      }
     }
     // A host whose mark starts nothing has the queue started here: on the
     // mark, and on the captain's own click on a version already waiting

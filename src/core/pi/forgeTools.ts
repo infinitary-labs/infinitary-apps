@@ -54,12 +54,23 @@ export const OPEN_CHANGE_AROUND_DESCRIPTION = [
 
 export const CHECK_CHANGE_TOOL_DESCRIPTION = [
   "Read typed facts on the newest pull request: each check's name, state, run, workflow and event where reported, mergeability, and whether the version moved. The host does not judge the work or settle repairs. facts.main is the default branch's newest run of a failed check: evidence on the cause, never a merge input.",
-  "Your merge card says the work is ready; record no separate ready or red verdict. Check facts still hold the merge, and only the captain's separate choice authorizes it. Use declaration only for flake or settled, with headSha and evidence. Settle at the recorded repair's headSha with repairId and outcome; check may name a renamed job and evidence explains the link. Facts list repair checks absent from this reading without guessing replacements.",
+  "Your merge card says the work is ready; record no separate ready or red verdict. Check facts still hold the merge, and only the captain's separate choice authorizes it. Use declaration only for flake, settled or answered, with headSha and evidence. Settle at the recorded repair's headSha with repairId and outcome; check may name a renamed job and evidence explains the link. Facts list repair checks absent from this reading without guessing replacements.",
   "Read failed logs and record diagnosis with evidence; repair records your fix. Judge readiness, flakes, settlement and when to stop from your delivery guidance, not a host count. Raw check readings never settle a repair. An unclear write is never replayed.",
   "An empty hosted reading stays pending. absentChecks, with pull or alone for your own pull request, records positive no-CI evidence from trusted default-branch policy and the local gate; time, history or missing workflow files prove nothing.",
   "While checks run the app watches them and wakes you on the first failure and when they finish. End your turn until that wake. With no watchable checks no wake comes.",
   "conflictRepair and captainGuidance grant no fresh merge consent.",
   "Put pull's review id in your merge card's merge effect, with after saying whether the task continues or closes. Only the captain's click sends it with autonomy off.",
+].join(" ");
+
+/**
+ * The declaration parameter's own words (INF-3190): the answer to the
+ * project's queue a Claude crewmate must see is here.
+ */
+export const QUEUE_ANSWER_DESCRIPTION = [
+  "verdict answered: the project's queue failed or sent back headSha, your pull request's current version, and you judged nothing is left to change there, such as a send-back that names an earlier version while this one holds the fix.",
+  "Name the queue status as check and say in evidence what the queue said and why it is answered.",
+  "Under the captain's kept merge approval the host marks that version waiting for the queue again once, with a feed line and no card: put up no merge card for it.",
+  "A version with something left to fix gets the fix, never an answer.",
 ].join(" ");
 
 /** The conflictRepair parameter's own words: the rule a Claude crewmate must see is here. */
@@ -201,14 +212,17 @@ export const CHECK_CHANGE_TOOL = crewmateTool({
       }),
     ),
     declaration: Type.Optional(
-      Type.Object({
-        headSha: Type.String(),
-        verdict: stringEnum(CHECK_DECLARATION_VERDICTS),
-        evidence: Type.String(),
-        check: Type.Optional(Type.String()),
-        repairId: Type.Optional(Type.String()),
-        outcome: Type.Optional(stringEnum(["passed", "failed", "superseded", "void"])),
-      }),
+      Type.Object(
+        {
+          headSha: Type.String(),
+          verdict: stringEnum(CHECK_DECLARATION_VERDICTS),
+          evidence: Type.String(),
+          check: Type.Optional(Type.String()),
+          repairId: Type.Optional(Type.String()),
+          outcome: Type.Optional(stringEnum(["passed", "failed", "superseded", "void"])),
+        },
+        { description: QUEUE_ANSWER_DESCRIPTION },
+      ),
     ),
     diagnosis: Type.Optional(
       Type.Object(

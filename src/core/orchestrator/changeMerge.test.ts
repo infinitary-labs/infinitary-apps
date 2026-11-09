@@ -768,6 +768,84 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     expect(putIns()).toEqual(["putIn fm/task-ab12cd34 repair01"]);
   });
 
+  it("puts a version the queue sent back into the queue again once, on its crewmate's declared answer, and never on the kept approval's own retry (INF-3190)", async () => {
+    // The captain's choice on INF-3183's plan: "The crewmate declares the
+    // send-back answered, and the host puts it back; feed lines, no card".
+    // The chain replayed: the queue's send-back lands on the version that
+    // already holds the fix, and the kept approval stopped on it.
+    let clock = 1_800_000_000_000;
+    const forge = new PinnedForge();
+    const harness = setup({ forge, now: () => clock });
+    await insertDirectPrTask(harness.tasks, harness.repos, {
+      shape: { kind: "fix", kind_source: "none", delivery_ask: "queue-pr" },
+    });
+    const marked: string[] = [];
+    forge.markQueued = async (sha: string) => {
+      marked.push(sha);
+      forge.atHead[sha] = [
+        { name: "linux-checks", state: "success" },
+        { name: QUEUE_STATUS, state: "pending" },
+      ];
+      return {};
+    };
+    const kept: MergeGuard = {
+      head: "feedbeef",
+      prNumber: 23,
+      unattended: true,
+      beforeDispatch: () => undefined,
+    };
+    const sentBack = () => {
+      forge.atHead.feedbeef = [
+        { name: "linux-checks", state: "success" },
+        { name: QUEUE_STATUS, state: "failure" },
+      ];
+    };
+    const answer = (evidence: string) =>
+      harness.service.checkTool.checkForCrew("ab12cd34", {
+        declaration: { headSha: "feedbeef", verdict: "answered", check: QUEUE_STATUS, evidence },
+      });
+    const feed = () =>
+      harness.tasks
+        .timeline("ab12cd34")
+        .filter((event) => event.feed && event.data?.queueAnswered === "feedbeef");
+
+    sentBack();
+    // An answer before the reading shows the failure is refused: it names a fact the host holds.
+    expect(await answer("the fix is in this version")).toContain("Answer refused");
+    // The kept approval's own retry stops on the failure and marks nothing.
+    expect(await harness.service.merges.merge("ab12cd34", kept)).toMatchObject({
+      ok: false,
+      stop: "checks",
+    });
+    expect(await harness.service.merges.merge("ab12cd34", kept)).toMatchObject({ stop: "checks" });
+    expect(marked).toEqual([]);
+
+    // The crewmate reads the send-back and answers it.
+    clock += 1_000;
+    expect(
+      await answer("the send-back named the earlier version; the fix is in this one"),
+    ).toContain("Answer to the queue recorded");
+    expect(await harness.service.merges.merge("ab12cd34", kept)).toMatchObject({
+      ok: false,
+      stop: "queue",
+    });
+    expect(marked).toEqual(["feedbeef"]);
+    expect(feed()).toHaveLength(1);
+    expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
+
+    // The queue fails it again: the answer was spent on the mark, so the
+    // retry stops on the checks until a new answer.
+    clock += 1_000;
+    sentBack();
+    expect(await harness.service.merges.merge("ab12cd34", kept)).toMatchObject({ stop: "checks" });
+    expect(marked).toEqual(["feedbeef"]);
+    clock += 1_000;
+    await answer("the batch failed on a flake in another change");
+    expect(await harness.service.merges.merge("ab12cd34", kept)).toMatchObject({ stop: "queue" });
+    expect(marked).toEqual(["feedbeef", "feedbeef"]);
+    expect(feed()).toHaveLength(2);
+  });
+
   // The reviews' findings (approval-never-restarts, restart-misses-card-route,
   // restart-on-unattended-reruns): on a host whose mark starts nothing, a
   // change the queue held joins only when a start reads it again, so the

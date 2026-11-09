@@ -49956,7 +49956,8 @@
                         "type": "string",
                         "enum": [
                           "flake",
-                          "settled"
+                          "settled",
+                          "answered"
                         ]
                       },
                       "evidence": {

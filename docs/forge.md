@@ -656,9 +656,12 @@ A queue may also keep a version `pending` with words of its own, such as the shi
 The status is read as one more check (`GitHubForge.checks`), so the check watch follows it, and the kept approval merges only once it reads `success` at that exact version, through the same version guard and with no new click (`ChangeMerge.mergeOnce`).
 A failed status wakes the crewmate through the failed-check wake like any failed check; the crewmate reads the batch's reason and link off the status with `github_read`, and its repair declarations decide whether the click carries to the fixed version.
 No checks override passes the queue.
+The crewmate may instead answer the queue's failure at the version it is on with check_change's `declaration`, verdict `answered`, when it judges nothing is left to change there, such as a send-back written on a version that already holds the fix (INF-3190).
+The host records the answer only while its newest reading shows `infinitary/queue` failed at that version, and the kept approval's next run then marks that version waiting again once, with the pull request's own checks passed, a feed line and no card (`queueAnswer`, `src/shared/checkRepair.ts`).
+The mark spends the answer, so a later failure there stops the kept approval on the checks until a new answer; the kept approval's own retry never marks a failed version by itself.
 While the queue runs, the kept approval waits on `queue` with no card for the captain, Activity's line reads "Waiting for the batch check", and the tick reads it again every ten minutes past the watch's bound.
 A first mate merge on project autonomy marks the version the same way and stops; it keeps no approval, so the first mate merges again once the queue passes.
-Evidence: `changeMerge.test.ts` ("merges a queue-pr change only once its queue passes ...") and `githubForge.test.ts` ("marks a version waiting for the project's queue ...").
+Evidence: `changeMerge.test.ts` ("merges a queue-pr change only once its queue passes ...", "puts a version the queue sent back into the queue again once ...") and `githubForge.test.ts` ("marks a version waiting for the project's queue ...").
 
 ### What the app reads about a project's queue
 

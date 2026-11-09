@@ -93,6 +93,9 @@ import type { WorkingCopies } from "./workingCopies";
 /** A crewmate here starts programs only through a home that answers them (`crewmate-programs.md`). */
 const CREWMATE_PROGRAMS = contractChange("crewmate-programs");
 
+/** A crewmate's answer to the project's queue goes only to a home that reads it (`check-queue-answer.md`). */
+const CHECK_QUEUE_ANSWER = contractChange("check-queue-answer");
+
 /** A saved-story card's copy of its story's facts goes only to a home that holds it against the story (`story-fact-copies.md`). */
 const STORY_FACT_COPIES = contractChange("story-fact-copies");
 
@@ -1521,6 +1524,14 @@ export class SessionHost {
         return ask("inf:work:open-change", { input }, signal);
       },
       onCheckChange: (input, signal) => {
+        // An older home has no answered verdict and would refuse the whole order.
+        if (
+          input?.declaration?.verdict === "answered" &&
+          !listsChange(this.options.homeChanges?.(), CHECK_QUEUE_ANSWER)
+        )
+          throw new Error(
+            `${HOME.the} runs an older Infinitary that cannot read an answer to the queue; nothing was sent. Say the answer in your report.`,
+          );
         const repair = input?.conflictRepair;
         const wire = repair
           ? { ...input, conflictRepair: { ...repair, impact: wireRepairImpact(repair.impact) } }

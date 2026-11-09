@@ -80,7 +80,7 @@ describe("CrewSupervisor", () => {
       other.tasks.placement.setGate(other.taskId, { kind: "captain", ref: "unrelated-decision" });
       expect(
         (await other.supervisor.settling.settle.settleTaskDetailed(other.taskId, "merge-pr")).text,
-      ).toContain("another decision");
+      ).toContain("the task is parked on the captain");
       expect(other.forge.merges).toEqual([]);
     });
 

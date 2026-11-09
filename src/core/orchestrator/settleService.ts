@@ -187,12 +187,26 @@ export class SettleService {
           record.gate?.kind === "captain" && record.gate.ref && passed.has(record.gate.ref);
         const wait = record.delivery?.captainWait;
         const waitIsPassed = wait?.cardId && passed.has(wait.cardId);
-        if (
-          decisions.some((card) => !passed.has(card.id)) ||
-          (record.gate && !gateIsPassed) ||
-          (wait && !waitIsPassed)
-        )
-          return `another decision or hold still needs attention. ${softHoldWords("decisions", "firstmate")}`;
+        // A report's check-back schedules another look, not a decision.
+        // Keep scheduled continuations and allowance gates as real holds.
+        const reminder =
+          record.gate?.kind === "at-time" &&
+          record.delivery?.checkBack !== undefined &&
+          record.gate.until === record.delivery.checkBack.until;
+        const question = decisions.find((card) => !passed.has(card.id));
+        const heldGate = record.gate && !gateIsPassed && !reminder ? record.gate : undefined;
+        const reason = question
+          ? `the open question "${question.title}" needs an answer`
+          : wait && !waitIsPassed
+            ? `the crewmate is waiting on the captain: ${wait.reason}`
+            : heldGate
+              ? heldGate.kind === "at-time"
+                ? "the task is waiting for its scheduled continuation"
+                : heldGate.kind === "quota-reset"
+                  ? "the task is waiting for your plan's allowance"
+                  : "the task is parked on the captain"
+              : undefined;
+        if (reason) return `${reason}. ${softHoldWords("decisions", "firstmate")}`;
       }
       this.locks.sentMerges.add(taskId);
       return undefined;

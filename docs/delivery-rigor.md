@@ -472,6 +472,9 @@ The captain's merge click on a merge card is an approval of that change, and a r
   A conflict, a moved head, checks, a review, GitHub's rules, GitHub not knowing yet, a draft, a sign-in, a hiccup, the captain's undeclared guidance or another refusal leaves the approval standing with `waiting` on that stop.
   A wait new for its head is a quiet timeline line, and one wake to the first mate where someone other than the crewmate the check watch wakes must move.
   Timed waits (`retryAt`, backing off to 30 minutes) are read again by the tick, never in a hot loop.
+  At the last look, an at-time gate whose end matches the task's reported check-back is only a reminder and does not hold an app-approved merge; a scheduled continuation, allowance gate, captain gate, open question or recorded captain wait still holds it.
+  The refusal names the actual hold, and a last-look refusal while the same approval and generation still stand records the existing refused wait, with one timeline line and first mate wake per head and a backed-off retry.
+  An ended or replaced approval leaves no new wait.
 - **A project's queue (INF-2430 piece 2).**
   On a project that merges through its queue, the attempt that passed every gate above and the last look below, which then records no attempt, writes `infinitary/queue` as waiting on its version instead of merging, and waits on `queue`; it merges only once that status reads `success` at that version ([the forge seam](forge.md), "A project's queue").
 - **No card after the click (INF-2913).**

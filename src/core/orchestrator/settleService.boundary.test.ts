@@ -7,7 +7,14 @@
  */
 import { MERGE_WORDS } from "@shared/vocabulary";
 import { describe, expect, it } from "vitest";
-import { HEAD, PR, settleWorld, TASK } from "../../../tests/helpers/settleHarness";
+import {
+  HEAD,
+  PR,
+  settleWorld,
+  standingApproval,
+  TASK,
+} from "../../../tests/helpers/settleHarness";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { seedTask } from "../tasks/seedTask";
 
 type World = ReturnType<typeof settleWorld>;
@@ -91,7 +98,7 @@ describe("the last look before a merge goes out", () => {
           status: "ready",
           createdAt: 1_000,
         }),
-      "another decision or hold still needs attention.",
+      'the open question "Which meter reads first?" needs an answer.',
     ],
     [
       "a part of it opened",
@@ -113,6 +120,178 @@ describe("the last look before a merge goes out", () => {
     expect(world.locks.mergeWasSent(TASK)).toBe(false);
     expect(world.tasks.get(TASK)?.closedReason ?? null).not.toBe("merged");
   });
+});
+
+// Intent: the approved reminder fix keeps all five real waits at the last
+// look, and records an unattended refusal once while backing off its retry.
+describe("an app-approved merge with a reported check-back", () => {
+  function reminderWorld() {
+    const world = settleWorld();
+    world.live.autonomy = true;
+    seedDelivery(world.tasks, TASK, {
+      mergeAuthorization: standingApproval({ issuer: "autonomy" }),
+    });
+    world.tasks.turns.recordReport(TASK, {
+      text: "The batch passed. I will check the merge again later.",
+      declared: { checkBack: { minutes: 10, waitingFor: "Confirm the merge completed" } },
+    });
+    return world;
+  }
+
+  function lastLook(world: World, change: () => void) {
+    const sent: string[] = [];
+    world.merge = async (guard, boundary) => {
+      change();
+      const refusal = guard?.beforeDispatch(HEAD) ?? boundary?.beforeDispatch(HEAD);
+      if (refusal) return { ok: false, stop: "withdrawn", text: `Cannot merge: ${refusal}` };
+      sent.push(HEAD);
+      return { ok: true, text: `Merged #${PR} on GitHub.`, receipt: { head: HEAD } };
+    };
+    return sent;
+  }
+
+  it("sends the merge despite the matching reminder", async () => {
+    const world = reminderWorld();
+    const sent = lastLook(world, () => {});
+    await world.kept.runMergeAuthorization(TASK);
+    expect(sent).toEqual([HEAD]);
+    expect(world.tasks.get(TASK)).toMatchObject({ status: "done", closedReason: "merged" });
+    expect(world.tasks.get(TASK)?.delivery?.mergeAuthorization?.status).toBe("consumed");
+  });
+
+  it("does not turn an ended approval into a waiting approval", async () => {
+    const world = reminderWorld();
+    const sent = lastLook(world, () =>
+      world.approvals.revokeMergeAuthorization(TASK, "the captain interrupted it"),
+    );
+    await world.kept.runMergeAuthorization(TASK);
+    expect(sent).toEqual([]);
+    expect(world.tasks.get(TASK)?.delivery?.mergeAuthorization).toMatchObject({
+      status: "revoked",
+    });
+    expect(world.tasks.get(TASK)?.delivery?.mergeAuthorization?.waiting).toBeUndefined();
+    expect(
+      world.tasks
+        .timeline(TASK)
+        .some((event) => event.text.startsWith("The kept merge did not run yet:")),
+    ).toBe(false);
+  });
+
+  it("does not attach an old refusal to a replacement generation", async () => {
+    const world = reminderWorld();
+    const before = world.tasks.get(TASK)?.delivery?.mergeAuthorization;
+    if (!before) throw new Error("The app approval fixture is missing");
+    const sent = lastLook(world, () =>
+      seedDelivery(world.tasks, TASK, {
+        mergeAuthorization: { ...before, generation: before.generation + 1 },
+      }),
+    );
+    await world.kept.runMergeAuthorization(TASK);
+    expect(sent).toEqual([]);
+    expect(world.tasks.get(TASK)?.delivery?.mergeAuthorization).toMatchObject({
+      status: "standing",
+      generation: before.generation + 1,
+    });
+    expect(world.tasks.get(TASK)?.delivery?.mergeAuthorization?.waiting).toBeUndefined();
+    expect(world.wakes).toEqual([]);
+  });
+
+  it.each<[string, (world: World) => void, string]>([
+    [
+      "scheduled continuation",
+      (world) =>
+        world.tasks.placement.setGate(TASK, {
+          kind: "at-time",
+          until: 1_200_000,
+        }),
+      "scheduled continuation",
+    ],
+    [
+      "allowance wait",
+      (world) =>
+        world.tasks.placement.setGate(TASK, {
+          kind: "quota-reset",
+          ref: "bucket:high",
+        }),
+      "waiting for your plan's allowance",
+    ],
+    [
+      "captain gate",
+      (world) =>
+        world.tasks.placement.setGate(TASK, {
+          kind: "captain",
+          ref: "card-plan",
+        }),
+      "parked on the captain",
+    ],
+    [
+      "reminder plus question",
+      (world) =>
+        world.cards.put({
+          id: "card-question",
+          taskId: TASK,
+          author: "crewmate",
+          priority: 1,
+          title: "Which meter reads first?",
+          meta: TASK,
+          body: "<p>Which meter reads first?</p>",
+          actions: [
+            { id: "left", label: "The left one", default: true },
+            { id: "right", label: "The right one" },
+          ],
+          status: "ready",
+          createdAt: 1_000,
+        }),
+      'open question "Which meter reads first?"',
+    ],
+    [
+      "reminder then captain wait",
+      (world) =>
+        world.tasks.turns.recordReport(TASK, {
+          text: "Choose the meter order before merging.",
+          declared: { wait: { reason: "Choose the meter order", cardId: "card-plan" } },
+        }),
+      "waiting on the captain: Choose the meter order",
+    ],
+  ])(
+    "keeps a %s stopped, recorded and backed off without repeated wakes",
+    async (_name, change, words) => {
+      const world = reminderWorld();
+      const sent = lastLook(world, () => change(world));
+      const notes = () =>
+        world.tasks
+          .timeline(TASK)
+          .filter((event) => event.text?.startsWith("The kept merge did not run yet:"));
+      await world.kept.runMergeAuthorization(TASK);
+      const first = world.tasks.get(TASK)?.delivery?.mergeAuthorization;
+      expect(sent).toEqual([]);
+      expect(first).toMatchObject({ status: "standing", waiting: { on: "refused", head: HEAD } });
+      expect(first?.attempt).toBeUndefined();
+      expect(first?.retryAt).toBeGreaterThan(1_000);
+      expect(notes()).toHaveLength(1);
+      expect(notes()[0]?.text).toContain(words);
+      expect(world.wakes).toHaveLength(1);
+      expect(world.wakes[0]).toMatchObject({ outcome: expect.stringContaining(words) });
+      await world.kept.runMergeAuthorization(TASK);
+      expect(sent).toEqual([]);
+      expect(notes()).toHaveLength(1);
+      expect(world.wakes).toHaveLength(1);
+      expect(world.tasks.get(TASK)?.delivery?.mergeAuthorization?.retryAt).toBeGreaterThan(
+        first?.retryAt ?? 0,
+      );
+      // Clearing the real wait keeps the same approval; it needs no new click.
+      world.cards.takeDown("card-question", "The meter order is settled.");
+      world.tasks.turns.recordReport(TASK, { text: "The wait is resolved." });
+      world.tasks.placement.setGate(TASK, null);
+      const resumed = lastLook(world, () => {});
+      await world.kept.runMergeAuthorization(TASK);
+      expect(resumed).toEqual([HEAD]);
+      expect(world.tasks.get(TASK)?.delivery?.mergeAuthorization).toMatchObject({
+        id: first?.id,
+        status: "consumed",
+      });
+    },
+  );
 });
 
 describe("a settle's refusals before anything goes out", () => {

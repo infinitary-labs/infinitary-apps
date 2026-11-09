@@ -622,8 +622,17 @@ export class KeptApproval {
   ): { wait: MergeWait; head: string; changed: boolean } | undefined {
     const record = this.host.tasks.get(taskId);
     const current = standingAuthorization(record?.delivery);
-    if (!record || !current || current.id !== authorization.id || result.ok) return undefined;
-    if (result.stop === "withdrawn") return undefined;
+    if (
+      !record ||
+      !current ||
+      current.id !== authorization.id ||
+      current.generation !== authorization.generation ||
+      result.ok
+    )
+      return undefined;
+    // A last-look refusal is not a withdrawn approval when this exact
+    // approval still stands. Keep its refusal visible and back off through
+    // the existing refused wait; an ended or replaced approval returned above.
     const now = this.host.now();
     if (result.contention) {
       // Due now for the tick and a restart; run again as soon as the

@@ -144,6 +144,11 @@ export type TaskRuntime = {
   explicitSummary?: string;
   /** What `explicitReport` declared about whose turn follows it (FI3-435). */
   explicitDeclared?: ReportDeclaration;
+  /**
+   * The record's event of the kept report (`TaskTurns.keptReport`) this
+   * runtime's turns already named: a later turn names it only once.
+   */
+  keptReportTold?: number;
   /** The typed review this turn's report recorded (INF-1875): a reviewer's verdict, read at the turn's end. */
   turnReview?: Extract<KeptValidationInput, { kind: "review" }>;
   /** Streaming while a prompt runs; idle between turns, still steerable. */

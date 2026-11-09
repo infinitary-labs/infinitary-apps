@@ -344,8 +344,17 @@ export class ReportIntake {
     if (declaration?.finished && this.host.askEnding.crewmateStep(task.id)) {
       throw new Error(CREWMATE_ANSWER_ASK);
     }
+    const heldSummary = summary?.replace(/\s+/g, " ").trim();
     const { recordedReleases, linked, responseReceipts } = this.options.tasks.atomic(
       () => ({
+        // Saved now, counted at the turn's end (INF-3165): a turn the
+        // provider fails after this call keeps the words on the record, and
+        // its retry names them (docs/inbox.md, "A report a failed turn
+        // kept"). A refused report rolls it back with the rest.
+        held: this.options.tasks.turns.holdReport(task.id, {
+          text: report,
+          ...(heldSummary ? { summary: heldSummary } : {}),
+        }),
         responseReceipts: (declaration?.responses ?? []).map((response) =>
           this.options.inbox.submitResponse(
             response,

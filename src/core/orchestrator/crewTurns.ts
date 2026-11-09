@@ -45,7 +45,7 @@ import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import { PENDING_RESPONSES_END, PENDING_RESPONSES_OPENING, wakeBuiltOn } from "./reportWakes";
 import { reviewCoversHead } from "./reviewCarry";
 import { installText } from "./taskMoves";
-import { laneTurnText, renderWake, type TypedWake } from "./wakes";
+import { keptReportNote, laneTurnText, renderWake, type TypedWake } from "./wakes";
 
 /**
  * The task timeline's line for a turn whose end never arrived, ended once
@@ -227,6 +227,19 @@ export class CrewTurns {
       : undefined;
   }
 
+  /**
+   * The note a turn opens with when the last turn called report and then
+   * stopped before it ended clean (INF-3165, docs/inbox.md "A report a
+   * failed turn kept"): once per kept report in this runtime, so a restart
+   * names it again.
+   */
+  private keptReportToTell(task: TaskRuntime): string | undefined {
+    const kept = this.core.options.tasks.turns.keptReport(task.id);
+    if (!kept || task.keptReportTold === kept.eventId) return undefined;
+    task.keptReportTold = kept.eventId;
+    return keptReportNote(kept.summary);
+  }
+
   /** One crewmate turn: prompt to completion, then idle (multi-turn). */
   async runTurn(
     task: TaskRuntime,
@@ -242,7 +255,13 @@ export class CrewTurns {
     // The rows it delivers name the turn, so a conversation on another
     // computer starts it once however often it is asked.
     const order = laneOrder(ids);
-    let served = leading.length > 0 ? `${laneTurnText(leading)}\n\n${text}` : text;
+    // A report the last turn made before it stopped short is named once,
+    // after a renewed conversation's reason, so the crewmate checks and
+    // reports again instead of redoing the work.
+    const kept = this.keptReportToTell(task);
+    let served = [leading.length > 0 ? laneTurnText(leading) : undefined, kept, text]
+      .filter((part) => part !== undefined)
+      .join("\n\n");
     // A captain question someone else answered while this steer waited is
     // told now, so its answerer does not answer it twice ("Shared cards").
     for (const answered of this.answeredWhileQueued(inboxIds)) served += `\n\n${answered}`;
@@ -593,6 +612,12 @@ export class CrewTurns {
     // The tool's own headline belongs to the tool's report, never to a
     // final text that stood in for it.
     const candidateSummary = task.explicitReport !== undefined ? task.explicitSummary : undefined;
+    // A report the provider-failed turn made before it failed is already on
+    // the record (`holdReport`): its wake names it (INF-3165).
+    const keptReport =
+      providerError && task.explicitReport !== undefined
+        ? reportSummary(candidateSummary || task.explicitReport)
+        : undefined;
     const declared = task.explicitReport !== undefined ? task.explicitDeclared : undefined;
     const turnReview = task.turnReview;
     task.turnReport = undefined;
@@ -801,13 +826,14 @@ export class CrewTurns {
           deviceId: this.core.options.tasks.get(task.id)?.deviceId ?? null,
         });
       const failedOp: TypedWake = retrying
-        ? outageFailedWake(task, error)
+        ? outageFailedWake(task, error, keptReport)
         : {
             facts: {
               kind: "turn-failed",
               task: { id: task.id, title: task.title },
               crewmate: task.crewmate,
               error,
+              ...(keptReport ? { keptReport } : {}),
             },
           };
       if (signInFailure) {

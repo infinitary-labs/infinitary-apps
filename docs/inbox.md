@@ -85,6 +85,23 @@ It stays due one grace after its cut attempt began, so the next launch's sweep d
 - **What it costs.**
   A turn that itself takes the app down is replayed at every launch, since a cut never spends a try; the three tries still bound every refusal.
 
+## A report a failed turn kept
+
+A crewmate's report counts as its turn's result only when the turn ends clean, but the record keeps its words from the moment the report tool is called (`TaskTurns.holdReport`, a `note` with `data.heldReport` and no feed line).
+So a turn the provider fails after the call, or a quit or a crash cuts, no longer loses the report.
+Nothing routes on the kept copy: it wakes nobody, closes nothing and is not the record's outcome.
+`TaskTurns.keptReport` reads it back until a later report counts.
+
+- **The first mate hears it.**
+  The failed turn's wake (`outage-failed`, or `turn-failed` when no guidance rode the turn) names the report's headline, says it did not count, and says the crewmate's next turn names it.
+- **The crewmate's next turn names it, once.**
+  That turn opens with `keptReportNote` (`src/core/orchestrator/wakes.ts`), after a renewed conversation's reason and before the message: the report is kept but did not count, the crewmate checks what already took effect before it repeats a step, and reports again if the report still stands.
+  The honest retry's own message follows word for word.
+  A runtime names each kept report once (`keptReportTold`), so a restart names it again.
+- **Nothing is replayed for it.**
+  The host never treats the kept report as the turn's result and never repeats an effect the failed turn may have had; the crewmate checks, then reports.
+  A task the Claude client's own exit closes as failed keeps the copy on its record and is closed as before.
+
 ## A lane of a started task in the backlog
 
 A started task that went back to the backlog (INF-2062; `docs/task-board.md`, "A started task in the backlog") keeps its lane until Start (`CrewFacts.inBacklog`).

@@ -19,6 +19,8 @@ export type OutageFacts =
       crewmate: string;
       /** The provider's error, already capped for a wake. */
       error: string;
+      /** The headline of the report the turn made before it failed, kept on the record (INF-3165). */
+      keptReport?: string;
     }
   | {
       /** The honest retry: the lane is still failing fifteen minutes into its outage. */
@@ -67,15 +69,31 @@ export type OutageFacts =
     };
 
 /** The honest retry's wake at the first provider failure of an outage. */
-export function outageFailedWake(task: WakeTask & { crewmate: string }, error: string): TypedWake {
+export function outageFailedWake(
+  task: WakeTask & { crewmate: string },
+  error: string,
+  keptReport?: string,
+): TypedWake {
   return {
     facts: {
       kind: "outage-failed",
       task: { id: task.id, title: task.title },
       crewmate: task.crewmate,
       error,
+      ...(keptReport ? { keptReport } : {}),
     },
   };
+}
+
+/**
+ * What a failed turn's wake says of the report it made before it failed
+ * (INF-3165): kept on the record, not counted, and named to the crewmate
+ * on its next turn. Empty when it made none.
+ */
+export function keptReportWords(keptReport: string | undefined): string {
+  return keptReport
+    ? ` Before it failed, the crewmate reported "${keptReport}": the host kept that report on the task's record, but it did not count as the turn's result. The crewmate's next turn names it and asks it to check what already took effect and report again, so do not ask it to redo the work.`
+    : "";
 }
 
 /** The name the still-down wake goes out once for: the outage, by when it began. */
@@ -216,7 +234,7 @@ function cutOffWayBack(facts: CutOffFacts): string {
 /** The honest retry's and the cut-off wakes, worded. */
 export const OUTAGE_WORDS: KindWords<OutageFacts> = {
   "outage-failed": (facts) =>
-    `[fm-op] ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}" failed at the provider: ${facts.error}. Nothing was set aside: the host keeps its guidance and retries it on its own, backing off to every 15 minutes, so do not resend it. You will hear when it answers again, and if it is still failing in 15 minutes. You can still steer or interrupt it.`,
+    `[fm-op] ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}" failed at the provider: ${facts.error}.${keptReportWords(facts.keptReport)} Nothing was set aside: the host keeps its guidance and retries it on its own, backing off to every 15 minutes, so do not resend it. You will hear when it answers again, and if it is still failing in 15 minutes. You can still steer or interrupt it.`,
   "outage-still-down": (facts) =>
     `[fm-op] ${facts.crewmate ?? `the crewmate on ${facts.key}`} on task ${facts.task.id} "${facts.task.title}" is still failing at the provider after ${Math.round(facts.downMs / 60_000)} minutes and ${facts.failures} tries. Its guidance is kept and retried every 15 minutes until the provider answers; nothing is lost. You can steer or interrupt it, or wait.`,
   "outage-recovered": (facts) =>

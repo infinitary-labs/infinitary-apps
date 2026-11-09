@@ -317,6 +317,17 @@ export const RESTART_REPLAY_NOTE =
   "Delivered again after a restart: the app closed - a quit or a crash - while your turn on the message below was running, so that turn may already have done part of it. Before you repeat a step, check what already took effect - your working copy and branch, a push, a pull request, a job or workflow you started, a card you showed - and carry on from there rather than doing it twice.";
 
 /**
+ * How a crewmate's turn opens when its last turn called report and then
+ * stopped before it ended clean - the provider failed it, or a quit or a
+ * crash cut it (docs/inbox.md, "A report a failed turn kept"): the report
+ * is kept on the record but did not count, so the crewmate checks what took
+ * effect and reports again instead of redoing the work.
+ */
+export function keptReportNote(summary: string): string {
+  return `Your last turn called report and then stopped before it finished, so that report is kept on your task's record but did not count as your turn's result, and the first mate has not acted on it. It said: "${summary}". Before you repeat any step, check what already took effect - your working copy and branch, a push, a pull request, a job or workflow you started, a card you showed. If that report still stands, report it again so it counts, rather than doing the work twice.`;
+}
+
+/**
  * A crewmate lane's rows as the words they carry, joined by a space: the
  * guidance a feed line or a wake quotes. The turn that serves them is
  * `laneTurnText`.

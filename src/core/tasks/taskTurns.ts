@@ -16,6 +16,16 @@ import type { TaskActivity, TaskRecord } from "../storage/taskStore";
 import type { TaskService } from "./taskService";
 import type { TaskWriter } from "./taskWriter";
 
+/** A report saved at its call that no counted report followed (`TaskTurns.keptReport`). */
+export type KeptReport = {
+  /** The record's event that holds it. */
+  eventId: number;
+  at: number;
+  text: string;
+  /** Its one-line headline: the crewmate's own summary, else its first sentence. */
+  summary: string;
+};
+
 /**
  * What a crewmate's report declared about whose turn follows it (FI3-435):
  * a wait on the captain, with its reason and the card he is to read, or its
@@ -385,6 +395,55 @@ export class TaskTurns {
       });
     });
     run();
+  }
+
+  /**
+   * A crewmate's report, saved on the record the moment it calls the report
+   * tool (INF-3165, docs/inbox.md "A report a failed turn kept"): it counts
+   * as the turn's result only when the turn ends clean (`recordReport`), but
+   * a turn the provider fails, or a quit or crash cuts, after the call no
+   * longer loses its words. A `note` with no feed line, so nothing routes
+   * on it; `keptReport` reads it back.
+   */
+  holdReport(id: string, input: { text: string; summary?: string }): number {
+    const at = this.writer.now();
+    const summary = reportSummary(input.summary?.trim() || input.text);
+    const run = this.writer.write(() => {
+      this.writer.patch(id, { updatedAt: at });
+      return this.writer.addEvent({
+        taskId: id,
+        at,
+        actor: "crewmate",
+        kind: "note",
+        text: `report saved as it was made, counted when the turn ends: ${summary}`,
+        data: {
+          heldReport: { text: input.text, ...(summary ? { summary } : {}) },
+          news: false,
+        },
+        feed: false,
+      });
+    });
+    return run();
+  }
+
+  /**
+   * The newest report saved at its call (`holdReport`) that no report the
+   * record counted came after: the words a provider-failed, quit or crashed
+   * turn reported before it stopped. Undefined once a later turn reported.
+   */
+  keptReport(id: string): KeptReport | undefined {
+    const held = this.writer.events.latestWithObject(id, "note", "heldReport");
+    if (!held) return undefined;
+    const counted = this.writer.events.lastReports(id).at(-1);
+    if (counted && counted.id > held.id) return undefined;
+    const kept = held.data?.heldReport as { text?: unknown; summary?: unknown } | undefined;
+    if (typeof kept?.text !== "string") return undefined;
+    return {
+      eventId: held.id,
+      at: held.at,
+      text: kept.text,
+      summary: typeof kept.summary === "string" ? kept.summary : reportSummary(kept.text),
+    };
   }
 
   /**

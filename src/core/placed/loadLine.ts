@@ -46,7 +46,7 @@ const CALLER_GONE = "The run's caller has ended, so the run left the line; nothi
 /** One journal line: what the line did, to which run, and what it compared against. */
 export type LoadJournalEntry = {
   at: string;
-  event: "wait" | "admit" | "blocked" | "exited" | "release" | "refuse";
+  event: "wait" | "admit" | "blocked" | "exited" | "release" | "refuse" | "unread";
   taskId: string;
   hold?: string;
   demand?: LoadDemand;
@@ -63,9 +63,17 @@ export type LoadJournalEntry = {
 
 export type LoadClaim = { pid: number; demand: LoadDemand; parent?: string };
 export type LoadReceipt = { hold: string; pid: number; payload: number; started: string };
+/**
+ * A claim's answer: its run, or, when the process table could not be read
+ * and the caller holds no verified place, a wait with no hold that the
+ * wrapper answers by asking again (INF-3192). It grants nothing.
+ */
+export type LoadClaimAnswer =
+  | LoadRun
+  | { id?: undefined; state: "waiting"; ahead: number; reason: "unavailable" };
 export type TaskLoad = {
   receipt: (input: LoadReceipt, permitted?: () => boolean) => Promise<void>;
-  claim: (input: LoadClaim) => Promise<LoadRun>;
+  claim: (input: LoadClaim) => Promise<LoadClaimAnswer>;
   read: () => LoadSnapshot;
 };
 
@@ -312,7 +320,7 @@ export class LoadLine {
     this.roots.clear();
   }
 
-  private async claim(taskId: string, input: LoadClaim): Promise<LoadRun> {
+  private async claim(taskId: string, input: LoadClaim): Promise<LoadClaimAnswer> {
     try {
       return await this.claimOnce(taskId, input);
     } catch (error) {
@@ -326,7 +334,7 @@ export class LoadLine {
     }
   }
 
-  private async claimOnce(taskId: string, input: LoadClaim): Promise<LoadRun> {
+  private async claimOnce(taskId: string, input: LoadClaim): Promise<LoadClaimAnswer> {
     this.check();
     const demand = loadDemandSchema.parse(input.demand);
     if (!Number.isSafeInteger(input.pid) || input.pid <= 0)
@@ -349,7 +357,14 @@ export class LoadLine {
             )
           : undefined;
       if (held) return { ...this.runOf(held.id), state: "waiting", reason: "unavailable" };
-      throw new Error("The run's process could not be read; nothing started.");
+      // An unreadable table proves nothing about a new caller either: it asks
+      // again on the next reading, and nothing is held or started until a
+      // readable table checks its identity (INF-3192).
+      if (rows === null) {
+        this.journal({ event: "unread", taskId, demand });
+        return { state: "waiting", ahead: 0, reason: "unavailable" };
+      }
+      throw new Error("The run's process is not running; nothing started.");
     }
     if (input.parent) {
       const parent = this.held.find((held) => held.id === input.parent && held.taskId === taskId);

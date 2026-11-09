@@ -1,10 +1,17 @@
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import type { LoadRun } from "@shared/load";
 import { RESOURCE_MAX_AGE_MS, type ResourceObservation } from "@shared/resources";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { deferred } from "../../../tests/helpers/deferred";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { JOURNAL_FILE, JOURNAL_MAX_BYTES, type LoadJournalEntry, LoadLine } from "./loadLine";
+import {
+  JOURNAL_FILE,
+  JOURNAL_MAX_BYTES,
+  type LoadClaimAnswer,
+  type LoadJournalEntry,
+  LoadLine,
+} from "./loadLine";
 import { type ProcessReading, processesFromPs } from "./processResources";
 
 // INF-1685 accepted direction A: the plan's worked 14-core case and its busy
@@ -37,6 +44,12 @@ function rowAt(rows: ProcessReading[], index: number): ProcessReading {
   if (!row) throw new Error("The recorded process identity is missing");
   return row;
 }
+/** A claim these tests expect a hold for: a readable table checked the caller. */
+async function held(answer: Promise<LoadClaimAnswer>): Promise<LoadRun> {
+  const run = await answer;
+  if (!run.id) throw new Error("The claim was answered without a hold");
+  return run;
+}
 function addWork(rows: ProcessReading[], cores: number, elapsedMs: number) {
   const row = rowAt(rows, 0);
   if (row.cpuMs === undefined) throw new Error("The recorded CPU counter is missing");
@@ -53,7 +66,11 @@ function setup() {
   });
   lines.push(line);
   const claim = (index: number, cpu = 4, memoryBytes = 1024 ** 3) =>
-    line.forTask("same-task").claim({ pid: rowAt(rows, index).pid, demand: { cpu, memoryBytes } });
+    held(
+      line
+        .forTask("same-task")
+        .claim({ pid: rowAt(rows, index).pid, demand: { cpu, memoryBytes } }),
+    );
   const receipt = async (hold: string, index = 0) => {
     const leader = rowAt(rows, index);
     // Recorded child metadata, placed under the admitted leader for this fixture.
@@ -129,7 +146,12 @@ describe("queued identity checks", () => {
     expect(await task.claim(input)).toEqual({ ...first, state: "running", reason: undefined });
   });
 
-  it("still refuses missing identities, unknown new callers and mismatched declarations", async () => {
+  // Re-typed for INF-3192 (INF-3188's reproduction): while simulators booted, the
+  // process table read ran out its time limit and first claims were refused, so
+  // their runs ended. An unreadable table proves nothing about a caller, so a
+  // claim it cannot check waits and asks again, granting nothing; only a readable
+  // table that lacks the caller is still refused.
+  it("answers a claim it cannot check on an unreadable table with a wait that grants nothing", async () => {
     let rows: ProcessReading[] | null = identities;
     const line = new LoadLine({
       stateFile: join(scratchDir("identity-refusal-"), "holds.json"),
@@ -139,21 +161,36 @@ describe("queued identity checks", () => {
     lines.push(line);
     const input = { pid: rowAt(identities, 0).pid, demand: { cpu: 4, memoryBytes: 1024 ** 3 } };
     const task = line.forTask("queued");
-    const held = await task.claim(input);
+    const kept = await task.claim(input);
     rows = null;
-    const refused = "The run's process could not be read; nothing started.";
-    await expect(line.forTask("other").claim(input)).rejects.toThrow(refused);
-    await expect(task.claim({ ...input, pid: rowAt(identities, 1).pid })).rejects.toThrow(refused);
-    await expect(task.claim({ ...input, demand: { ...input.demand, cpu: 5 } })).rejects.toThrow(
-      refused,
+    const unread = { state: "waiting", reason: "unavailable" };
+    // The verified caller keeps its place.
+    expect(await task.claim(input)).toMatchObject({ ...unread, id: kept.id });
+    for (const claim of [
+      () => line.forTask("other").claim(input),
+      () => task.claim({ ...input, pid: rowAt(identities, 1).pid }),
+      () => task.claim({ ...input, demand: { ...input.demand, cpu: 5 } }),
+      () => task.claim({ ...input, demand: { ...input.demand, memoryBytes: 2 * 1024 ** 3 } }),
+      () => task.claim({ ...input, parent: kept.id }),
+    ]) {
+      const answer = await claim();
+      expect(answer).toMatchObject(unread);
+      expect(answer.id).toBeUndefined();
+    }
+    expect(line.snapshot().runs).toEqual([kept]);
+    await expect(task.claim({ ...input, pid: 0 })).rejects.toThrow(
+      "The run has no process identity.",
     );
-    await expect(
-      task.claim({ ...input, demand: { ...input.demand, memoryBytes: 2 * 1024 ** 3 } }),
-    ).rejects.toThrow(refused);
-    await expect(task.claim({ ...input, parent: held.id })).rejects.toThrow(refused);
     rows = identities.slice(1); // A readable table proves the original caller is missing.
-    await expect(task.claim(input)).rejects.toThrow(refused);
-    expect(line.snapshot().runs).toEqual([held]);
+    await expect(task.claim(input)).rejects.toThrow(
+      "The run's process is not running; nothing started.",
+    );
+    // Once readable, a mismatched declaration is refused as before.
+    rows = identities;
+    await expect(task.claim({ ...input, demand: { ...input.demand, cpu: 5 } })).rejects.toThrow(
+      "This process group already declared a different hold.",
+    );
+    expect(line.snapshot().runs).toEqual([kept]);
   });
 });
 
@@ -413,7 +450,7 @@ describe("verified processor startup coverage", () => {
     lines.push(line);
     line.observe(reading, rows);
     const input = { pid: rowAt(rows, 0).pid, demand: { cpu: 8, memoryBytes: 1024 ** 3 } };
-    const first = await line.forTask("restart").claim(input);
+    const first = await held(line.forTask("restart").claim(input));
     const child = { ...rowAt(rows, 1), parent: input.pid, group: input.pid };
     rows[1] = child;
     await line
@@ -481,7 +518,9 @@ describe("verified processor startup coverage", () => {
     const leader = rowAt(rows, 0);
     const child = rowAt(rows, 1);
     const task = line.forTask("revoked");
-    const first = await task.claim({ pid: leader.pid, demand: { cpu: 8, memoryBytes: 1024 ** 3 } });
+    const first = await held(
+      task.claim({ pid: leader.pid, demand: { cpu: 8, memoryBytes: 1024 ** 3 } }),
+    );
     rows[1] = { ...child, group: leader.pid };
     blocked = true;
     const receipt = task.receipt(
@@ -504,9 +543,9 @@ describe("verified processor startup coverage", () => {
     lines.push(line);
     line.observe(reading, rows);
     const leader = rowAt(rows, 0);
-    const first = await line
-      .forTask("store")
-      .claim({ pid: leader.pid, demand: { cpu: 8, memoryBytes: 1024 ** 3 } });
+    const first = await held(
+      line.forTask("store").claim({ pid: leader.pid, demand: { cpu: 8, memoryBytes: 1024 ** 3 } }),
+    );
     const child = rowAt(rows, 1);
     rows[1] = { ...child, group: leader.pid };
     renameSync(parent, join(dir, "saved"));

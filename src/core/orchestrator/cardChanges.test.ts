@@ -120,6 +120,35 @@ describe("cardChanges", () => {
     expect(cardChanges(at("a".repeat(32)), other, 1)).toMatchObject({ added: 1, removed: 1 });
   });
 
+  // INF-3188: a revision swapped a figure's picture for a different file while
+  // keeping its alt text and caption, and the captain saw no change; a caption
+  // edit beside an unchanged picture marked the figure as if its picture were new.
+  it("compares each picture by its verified bytes, never by its copy's name alone", () => {
+    const figure = (hex: string, caption: string) =>
+      `<figure class="inf-pictures"><img src="app-frame://images/fae94df9-${hex}.png" alt="The keyboard-down button beside the send arrow" width="1206" height="2622"><figcaption>${caption}</figcaption></figure>`;
+    const version = (hex: string, sha: string, caption = "B. The keyboard-down mark") => ({
+      ...card(`<p>The circle is redrawn.</p>${figure(hex, caption)}`),
+      pictures: [
+        {
+          id: `fae94df9-${hex}`,
+          sha256: sha.repeat(64),
+          alt: "The keyboard-down button beside the send arrow",
+          width: 1206,
+          height: 2622,
+          group: 0,
+        },
+      ],
+    });
+    const twoLine = version("c".repeat(32), "8");
+    // The same file copied again under a new name is not a change.
+    expect(cardChanges(twoLine, version("b".repeat(32), "8"), 1)).toBeUndefined();
+    // Another file under the same alt text and caption is.
+    expect(cardChanges(twoLine, version("4".repeat(32), "a"), 1)).toMatchObject({
+      added: 1,
+      removed: 1,
+    });
+  });
+
   it("ignores the names the host gave a demo recording's copy and its poster's", () => {
     const at = (hex: string, caption = "Drag the row") =>
       card(

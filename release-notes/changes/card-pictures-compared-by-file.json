@@ -1,0 +1,22 @@
+{
+  "entries": [
+    {
+      "id": "card-pictures-compared-by-file",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A revised card marks a picture only when the picture itself changed",
+      "body": "When a crewmate revised a card, the change bar could not tell one picture from another: a new picture under the same words showed no change, and an old picture beside a reworded caption looked new. The bar now follows the picture file itself. A crewmate that says a picture is replaced now replaces it on the same revision, rather than keeping the old one with a note beside it.",
+      "noPicture": "The change bar looks the same as before; the fix changes only which revisions it appears beside.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "heavy-run-waits-on-busy-computer",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate's heavy run waits when the computer is too busy to check it",
+      "body": "When the computer was busy, such as while an iPhone simulator started, a crewmate's heavy run could stop at once with \"The run's process could not be read; nothing started.\" The run now waits in line and asks again until the computer can check it.",
+      "noPicture": "This changes when a crewmate's command waits instead of stopping; no view or control changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

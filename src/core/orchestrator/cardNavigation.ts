@@ -4,7 +4,6 @@ import {
   normalizedCardMarkup,
   unmatchedParts,
 } from "@shared/cardParts";
-import { cardMediaUrl, cardPictureUrl } from "@shared/cardPictures";
 import {
   type Card,
   type CardRevisionLinks,
@@ -12,22 +11,10 @@ import {
   REVISION_TARGETS_MAX,
   type RevisionTarget,
 } from "@shared/cards";
-import { actionsKey } from "./cardChanges";
+import { actionsKey, mediaOf } from "./cardChanges";
 
 type Version = Pick<Card, "title" | "body" | "actions" | "pictures">;
 
-function mediaOf(version: Version, identities: boolean): Map<string, string> {
-  const media = new Map<string, string>();
-  // Identity comes from verified bytes, never a freshly minted copy name.
-  for (const picture of version.pictures ?? []) {
-    if (identities && picture.sha256)
-      for (const ext of ["png", "jpg", "webp"] as const)
-        media.set(cardPictureUrl(picture.id, ext), picture.sha256);
-    if (picture.demo)
-      media.set(cardMediaUrl(picture.demo.id, picture.demo.kind), picture.demo.sha256);
-  }
-  return media;
-}
 function parts(version: Version, identities = true): NavigationPart[] {
   return cardNavigationParts(version.body, mediaOf(version, identities));
 }

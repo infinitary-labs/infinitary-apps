@@ -573,7 +573,7 @@ export class AxiChannel {
       return {
         data: {
           state: run.state,
-          hold: run.id,
+          ...(run.id ? { hold: run.id } : {}),
           ahead: run.ahead,
           ...(run.reason ? { reason: run.reason, note: loadWaitWords() } : {}),
         },

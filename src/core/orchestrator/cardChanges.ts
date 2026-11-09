@@ -1,4 +1,5 @@
 import { cardParts, unmatchedParts } from "@shared/cardParts";
+import { cardMediaUrl, cardPictureUrl } from "@shared/cardPictures";
 import {
   CARD_CHANGE_MARKS_MAX,
   type Card,
@@ -22,9 +23,13 @@ export { cardParts } from "@shared/cardParts";
  *
  * Two parts are the same when their markup is: tag names, attributes in any
  * order, and text with its whitespace collapsed. Two things the host itself
- * rewrites on every call are not the author's change and are ignored: the
- * name of a picture's or a demo recording's copy (a fresh random name each
- * emit) and the host's fact strip and follow-up rows on a settle card. A
+ * rewrites on every call are not the author's change: the name of a
+ * picture's or a demo recording's copy (a fresh random name each emit),
+ * which is read as the copy's verified bytes (`mediaOf`), so the same file
+ * is the same part and another file under the same words is a change
+ * (INF-3188), and the host's fact strip and follow-up rows on a settle card,
+ * which are ignored. Older pictures saved with no bytes recorded still read
+ * every picture as the same. A
  * project font's copy needs no such rule: the host names it by its own
  * bytes (`verifyCardImages`), so an unchanged font keeps its name in a
  * preview's style sheet and a changed one is the author's change.
@@ -35,7 +40,25 @@ export { cardParts } from "@shared/cardParts";
  */
 
 /** What a version of a card shows the captain, for comparing two of them. */
-export type CardVersion = Pick<Card, "title" | "body" | "actions">;
+export type CardVersion = Pick<Card, "title" | "body" | "actions" | "pictures">;
+
+/**
+ * Each picture and demo copy's address read as its verified bytes. A version
+ * with a picture saved before bytes were recorded reads none of its pictures
+ * by bytes (`identities` false), so its pictures all read as "picture".
+ */
+export function mediaOf(version: Pick<Card, "pictures">, identities: boolean): Map<string, string> {
+  const media = new Map<string, string>();
+  // Identity comes from verified bytes, never a freshly minted copy name.
+  for (const picture of version.pictures ?? []) {
+    if (identities && picture.sha256)
+      for (const ext of ["png", "jpg", "webp"] as const)
+        media.set(cardPictureUrl(picture.id, ext), picture.sha256);
+    if (picture.demo)
+      media.set(cardMediaUrl(picture.demo.id, picture.demo.kind), picture.demo.sha256);
+  }
+  return media;
+}
 
 export function actionsKey(actions: readonly CardAction[]): string {
   return JSON.stringify(
@@ -54,8 +77,9 @@ export function cardChanges(
   shown: CardVersion,
   at: number,
 ): CardChanges | undefined {
-  const parts = cardParts(shown.body);
-  const { added, removed } = unmatchedParts(cardParts(seen.body), parts);
+  const identities = [...(seen.pictures ?? []), ...(shown.pictures ?? [])].every((p) => p.sha256);
+  const parts = cardParts(shown.body, mediaOf(shown, identities));
+  const { added, removed } = unmatchedParts(cardParts(seen.body, mediaOf(seen, identities)), parts);
   if (
     added.length === 0 &&
     removed === 0 &&

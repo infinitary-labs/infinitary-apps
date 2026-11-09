@@ -32,7 +32,9 @@ A lost claim reply may finish on the host later, but neither that reply nor a re
 Admission recovery applies only before payload creation, never to a payload launch or another command's effects; invalid requests, revoked keys, lost channels and owner refusals still end the waiting wrapper.
 If a later process-table reading is unavailable, a previously verified caller with the same task, group and declaration keeps waiting in its existing place instead of treating the missing reading as proof it ended.
 The reply grants no execution until a fresh reading verifies the caller, even if capacity has already admitted its saved hold; that reservation remains counted in the meantime.
-An unreadable first claim, a caller absent from a readable table, a changed declaration and an unverified nested claim still refuse.
+Any other claim on an unavailable reading, a first claim, a changed declaration or a nested claim, answers a wait with no hold and the reading cadence: the reading proves nothing about the caller, so the wrapper asks again and nothing is held or started until a readable table checks it.
+A process-table read can run out its time limit while the computer is busy, such as while simulators boot.
+A caller absent from a readable table, and a changed declaration or an unverified nested claim on a readable one, still refuse.
 
 A nested wrapper carries `INFINITARY_LOAD_HOLD` and reuses the outer declaration only when the app verifies the same task and process group.
 A nested demand larger than the outer declaration refuses before starting its program.

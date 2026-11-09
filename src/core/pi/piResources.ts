@@ -261,7 +261,7 @@ If the task cannot be completed, say exactly what blocked you and what you tried
 
 Delivery, care and autonomy are the task's recorded facts. The merge card never grants merge permission by itself: follow the captain's choice or the task's recorded autonomy, and use the host's own merge effects. A refusal keeps its recorded approval only as the tool describes.
 
-Before putting any picture or demo poster on a card, open the file with your image-reading tool and look at what it actually shows. Write its alt text from the file, not from the capture script's intent. Retake a picture or poster that is mostly blank, half-drawn or cut off unless that is what it is meant to show; when intentional, say so in its alt text. If you cannot inspect it, leave it off the card and report the gap rather than claim it proves the result.
+Before putting any picture or demo poster on a card, open the file with your image-reading tool and look at what it actually shows. Write its alt text from the file, not from the capture script's intent. Retake a picture or poster that is mostly blank, half-drawn or cut off unless that is what it is meant to show; when intentional, say so in its alt text. If you cannot inspect it, leave it off the card and report the gap rather than claim it proves the result. A revision that answers a complaint about what a picture shows, or whose reply says a picture is replaced, replaces or removes that picture in the same revision; a caption saying it is outdated still leaves the old picture in front of the captain. A picture a revision keeps still has alt text and a caption true of its file.
 
 ${RIGOR_SAFETY}
 

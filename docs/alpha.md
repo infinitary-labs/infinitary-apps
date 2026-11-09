@@ -232,8 +232,8 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The signing job holds the real Mac while the release's Mac lanes run, so those lanes take a virtual place or wait for the real Mac (`docs/testing.md`, "The real Mac's place").
 - **Signing on the real Mac, uploads on a hosted machine, checks in a virtual Mac (INF-1716, INF-2498).**
   The signing job runs on the real Mac through the checked disk image, then hands off and frees it.
-  Its handoff is one uncompressed Actions artifact per attempt: the zip to record and, when one was built, the checked disk image, with a manifest of the run, attempt, workflow revision, source, channel, version, download mode, and each file's size and checksum.
-  It never carries the app, the workspace, a credential or the environment, nor the Linux files, which come from the linux job; the artifact's id and the manifest's checksum are the signing job's outputs.
+  Its handoff is two uncompressed Actions artifacts per attempt: one holds the zip to record, the other the checked disk image, when one was built, and a manifest of the run, attempt, workflow revision, source, channel, version, download mode, and each file's size and checksum.
+  It never carries the app, the workspace, a credential or the environment, nor the Linux files, which come from the linux job; both artifacts' ids, the zip's on its own and the manifest's checksum are the signing job's outputs, and every reader fetches the artifacts by id into one folder.
   The `upload` job starts only after the signing job, the update check and every check succeeded, on GitHub's hosted `ubuntu-24.04`, one run of a version at a time.
   Before any effect it validates the handoff: the manifest is the one the signing job wrote, names this run, an attempt no later than this one, this workflow revision and this release, and the files are exactly those it lists, byte for byte.
   Then it lays out the Linux files and records the zip in the source record first, alone, so no place can hold a zip the record lacks.
@@ -246,6 +246,10 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The Apple signing material stays on the real Mac; the upload job holds the upload keys - the workflow token that writes, the storage keys and both tap tokens - and the virtual Mac holds only the tap tokens and storage keys its switch steps write with (`tests/release-workflows-resolve.test.ts`, "pins which machine holds which key").
   Rerunning only the upload or publication job reuses the signing job's handoff from whichever attempt produced it; rerunning the signing job hands off anew, and the record's immutable adoption still decides which bytes publish.
   The handoff and upload code lives in the workflow itself, so an older alpha promoted to stable needs none of it in its source.
+- **Signing steps that overlap (INF-3193).**
+  Most of the disk image's time is Apple's notarization wait, so the signing job starts the disk image in the background once the zip is built and the record read.
+  Meanwhile it runs the zip's Gatekeeper and launch gates and uploads the zip's artifact; then it waits for the disk image, prints its log, fails on its exit status, and uploads the manifest and the disk image.
+  The update check fetches only the zip's artifact.
 - **Release notes are checked first (`docs/release-notes.md`).**
   The `notes` job runs before `verify` or any signing, on the resolved source with full history.
   Every source change since the previous release needs a note or a reviewed exclusion, reviewed with its change before merge.

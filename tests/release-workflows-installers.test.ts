@@ -274,8 +274,9 @@ it("runs the update check on Apple silicon only, updating from the signing job's
   expect(callers.map(([id]) => id)).toEqual(["update"]);
   const [[, update]] = callers as [[string, (typeof release.jobs)[string]]];
   expect(update.secrets).toBeUndefined();
+  // It fetches only the zip's artifact of the signing job's handoff (INF-3193).
   // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
-  expect(update.with?.handoff_id).toBe("${{ needs.release.outputs.handoff_id }}");
+  expect(update.with?.handoff_id).toBe("${{ needs.release.outputs.handoff_zip_id }}");
   // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
   expect(update.with?.zip_sha256).toBe("${{ needs.release.outputs.sha256 }}");
   expect(update.with?.trigger).toBe(release.jobs.verify?.with?.trigger);

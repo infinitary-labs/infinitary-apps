@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "release-signing-overlap",
+      "reason": "The release workflow's signing job builds and notarizes the disk image in the background while it checks and uploads the zip, so a release finishes signing sooner; the app and what it publishes stay the same."
+    }
+  ]
+}

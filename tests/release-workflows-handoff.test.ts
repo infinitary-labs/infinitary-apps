@@ -158,17 +158,19 @@ describe("the signed channel workflow", () => {
     expect(
       (upload as { concurrency?: Record<string, unknown> }).concurrency?.["cancel-in-progress"],
     ).toBe(false);
-    // The handoff is stored as is, one artifact per producer attempt, and
-    // fetched by the immutable id the signing job recorded.
-    expect(step("handoff-upload")).toMatchObject({
-      uses: "actions/upload-artifact@v4",
-      with: {
-        // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
-        name: "${{ steps.handoff.outputs.name }}",
-        "compression-level": 0,
-        "if-no-files-found": "error",
-      },
-    });
+    // The handoff is stored as is, two artifacts per producer attempt - the
+    // zip's, then the manifest's and disk image's (INF-3193) - and fetched by
+    // the immutable ids the signing job recorded.
+    for (const [id, name] of <const>[
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+      ["handoff-zip-upload", "${{ steps.handoff-zip.outputs.name }}"],
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+      ["handoff-upload", "${{ steps.handoff.outputs.name }}"],
+    ])
+      expect(step(id)).toMatchObject({
+        uses: "actions/upload-artifact@v4",
+        with: { name, "compression-level": 0, "if-no-files-found": "error" },
+      });
     const fetch = uploadSteps.find((candidate) => candidate.name === "Fetch the checked files");
     expect(fetch).toMatchObject({
       uses: "actions/download-artifact@v4",
@@ -188,8 +190,11 @@ describe("the signed channel workflow", () => {
       ).toBe(false);
     const outputs = jobOf(release, "release").outputs ?? {};
     expect(outputs).toEqual({
+      handoff_id:
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
+        "${{ format('{0},{1}', steps.handoff-zip-upload.outputs.artifact-id, steps.handoff-upload.outputs.artifact-id) }}",
       // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
-      handoff_id: "${{ steps.handoff-upload.outputs.artifact-id }}",
+      handoff_zip_id: "${{ steps.handoff-zip-upload.outputs.artifact-id }}",
       // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
       handoff_name: "${{ steps.handoff.outputs.name }}",
       // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
@@ -279,7 +284,7 @@ describe("the signed channel workflow", () => {
     const sha = (file: string) => createHash("sha256").update(readFileSync(file)).digest("hex");
 
     /**
-     * The signing job's record read, then its handoff step, on a run's files;
+     * The signing job's record read, then its two handoff steps, on a run's files;
      * their outputs and the job's. With a stand-in record the job's own read
      * runs against it; otherwise `adopted` stands for a retry whose record
      * keeps the bytes published first.
@@ -332,32 +337,39 @@ describe("the signed channel workflow", () => {
         dmg: { outputs: builtDmg ? { path: dmg } : {} },
         visibility: { outputs: dryRun ? {} : { direct: String(direct) } },
       };
-      const output = join(temp, "output");
-      const result = run(step("handoff").run ?? "", {
-        ...env,
-        ...stepEnv(step("handoff"), {
-          steps,
-          needs: { resolve: { outputs: resolve } },
-          github: { run_id: runId, run_attempt: attempt, sha: workflowSha },
-        }),
-        RUNNER_TEMP: temp,
-        GITHUB_OUTPUT: output,
-        dist_zip: distZip,
-      });
-      expect(result.status, result.stderr).toBe(0);
-      const handoff = outputsOf(output);
+      const contexts = {
+        needs: { resolve: { outputs: resolve } },
+        github: { run_id: runId, run_attempt: attempt, sha: workflowSha },
+      };
+      // The zip's artifact goes up first, then the manifest's (INF-3193).
+      const ran = (id: string, stepOutputs: Record<string, unknown>) => {
+        const output = join(temp, `${id}-output`);
+        const result = run(step(id).run ?? "", {
+          ...env,
+          ...stepEnv(step(id), { ...contexts, steps: stepOutputs }),
+          RUNNER_TEMP: temp,
+          GITHUB_OUTPUT: output,
+          dist_zip: distZip,
+        });
+        expect(result.status, result.stderr).toBe(0);
+        return outputsOf(output);
+      };
+      const handoffZip = ran("handoff-zip", steps);
+      const handoff = ran("handoff", { ...steps, "handoff-zip": { outputs: handoffZip } });
       const job = Object.fromEntries(
         Object.entries(jobOf(release, "release").outputs ?? {}).map(([name, value]) => [
           name,
           workflowString(value, {
             steps: {
+              "handoff-zip": { outputs: handoffZip },
+              "handoff-zip-upload": { outputs: { "artifact-id": "4710" } },
               handoff: { outputs: handoff },
               "handoff-upload": { outputs: { "artifact-id": "4711" } },
             },
           }),
         ]),
       );
-      return { temp, handoff, job, resolve, recorded, distZip, dmg };
+      return { temp, handoffZip, handoff, job, resolve, recorded, distZip, dmg };
     };
 
     /** The artifact as the publication job fetches it, then its validation step. */
@@ -372,6 +384,8 @@ describe("the signed channel workflow", () => {
     ) => {
       const temp = scratchDir("infinitary-handoff-publication-");
       const download = join(temp, "handoff-download");
+      // Both artifacts by id into one folder, as merge-multiple lays them out.
+      cpSync(produced.handoffZip.path ?? "", download, { recursive: true });
       cpSync(produced.handoff.path ?? "", download, { recursive: true });
       options.alter?.(download);
       const resolve = options.resolve ?? produced.resolve;
@@ -406,7 +420,8 @@ describe("the signed channel workflow", () => {
 
     it("hands publication the record's zip and the checked image, byte for byte, and no Linux files", () => {
       const produced = produce({ adopted: true });
-      expect(produced.job.handoff_id).toBe("4711");
+      expect(produced.job.handoff_id).toBe("4710,4711");
+      expect(produced.job.handoff_zip_id).toBe("4710");
       expect(produced.job.handoff_name).toBe("release-handoff-1");
       expect(produced.job.direct).toBe("true");
       const outputs = accepted(consume(produced));
@@ -418,11 +433,8 @@ describe("the signed channel workflow", () => {
       // Only the allowlist travels: no app, workspace or environment. The
       // Linux files reach publication from the linux job, which may still
       // run while the signing job hands off (INF-2074).
-      expect(readdirSync(produced.handoff.path ?? "").sort()).toEqual([
-        "dmg",
-        "manifest.json",
-        "zip",
-      ]);
+      expect(readdirSync(produced.handoffZip.path ?? "")).toEqual(["zip"]);
+      expect(readdirSync(produced.handoff.path ?? "").sort()).toEqual(["dmg", "manifest.json"]);
       expect(readFileSync(join(produced.handoff.path ?? "", "manifest.json"), "utf8")).not.toMatch(
         /secret|TOKEN|KEY/,
       );
@@ -434,6 +446,75 @@ describe("the signed channel workflow", () => {
       const rehearsal = produce({ dryRun: true });
       expect(rehearsal.job.direct).toBe("false");
       expect(accepted(consume(rehearsal)).dmg).toMatch(/mac-universal\.dmg$/);
+    });
+
+    /**
+     * INF-3193 (the captain: "find signing steps that can overlap"): the disk
+     * image starts in the background, so the zip's gate and upload run while
+     * Apple notarizes it, and the step that waits for it passes or fails on
+     * its outcome. The disk image's own scripts and Apple's tools are
+     * stand-ins; the notarization stand-in holds until the test lets it go.
+     */
+    it("builds the disk image beside the zip's steps, and its waiting step reports how it ended", () => {
+      const resolve = resolveOutputs();
+      const env = jobEnv("release", resolve);
+      const background = (verifyStatus: number) => {
+        const temp = scratchDir("infinitary-handoff-dmg-");
+        const work = join(temp, "source");
+        const bin = join(temp, "bin");
+        mkdirSync(join(work, "scripts"), { recursive: true });
+        mkdirSync(bin);
+        const gate = join(temp, "notarization-done");
+        const tools: Record<string, string> = {
+          [join(bin, "ditto")]: 'for last; do :; done; mkdir -p "$last"',
+          [join(bin, "codesign")]: "exit 0",
+          [join(bin, "xcrun")]:
+            `if [[ "$1" == notarytool ]]; then while [[ ! -e "${gate}" ]]; do sleep 0.1; done; fi`,
+          [join(work, "scripts", "build-mac-dmg.sh")]:
+            'mkdir -p "$3" && echo image > "$3/$DMG_NAME"',
+          [join(work, "scripts", "verify-mac-dmg.sh")]: `echo "checked $1"; exit ${verifyStatus}`,
+        };
+        for (const [path, body] of Object.entries(tools))
+          writeFileSync(path, `#!/bin/bash\n${body}\n`, { mode: 0o755 });
+        const stepRun = (id: string, contexts: Record<string, unknown>) => {
+          const output = join(temp, `${id}-output`);
+          writeFileSync(output, "");
+          const result = spawnSync(
+            "bash",
+            ["--noprofile", "--norc", "-e", "-c", step(id).run ?? ""],
+            {
+              cwd: work,
+              encoding: "utf8",
+              env: {
+                PATH: `${bin}:${process.env.PATH}`,
+                ...release.env,
+                ...env,
+                ...stepEnv(step(id), contexts),
+                RUNNER_TEMP: temp,
+                GITHUB_OUTPUT: output,
+                dist_zip: join(temp, env.ZIP_NAME ?? ""),
+              },
+            },
+          );
+          return { result, outputs: outputsOf(output) };
+        };
+        const started = stepRun("dmg", { steps: {}, secrets: {} });
+        expect(started.result.status, started.result.stderr).toBe(0);
+        // The start returned while notarization still holds: nothing is built yet.
+        expect(existsSync(join(temp, "dmg-job", "status"))).toBe(false);
+        writeFileSync(gate, "");
+        const done = stepRun("dmg-done", { steps: { dmg: { outputs: started.outputs } } });
+        return { started, done, temp };
+      };
+      const passed = background(0);
+      expect(passed.done.result.status, passed.done.result.stderr).toBe(0);
+      expect(passed.done.result.stdout).toContain(`checked ${passed.started.outputs.path}`);
+      expect(readFileSync(passed.started.outputs.path ?? "", "utf8")).toBe("image\n");
+      expect(existsSync(`${passed.started.outputs.path}.sha256`)).toBe(true);
+      const failed = background(3);
+      expect(failed.done.result.status).not.toBe(0);
+      expect(failed.done.result.stdout).toContain("checked");
+      expect(failed.done.result.stderr).toMatch(/ended with status 3/);
     });
 
     it("lets a publication-only rerun reuse an earlier attempt's handoff, and refuses one from a later attempt", () => {

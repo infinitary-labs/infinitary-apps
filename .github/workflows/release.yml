@@ -610,7 +610,10 @@ jobs:
     # What the upload job reads: the checked files' artifact, its
     # manifest's checksum, the zip's checksum and whether downloads are direct.
     outputs:
-      handoff_id: ${{ steps.handoff-upload.outputs.artifact-id }}
+      # Both artifacts, the zip's first, as download-artifact's artifact-ids
+      # reads them; the update check reads only the zip's.
+      handoff_id: ${{ format('{0},{1}', steps.handoff-zip-upload.outputs.artifact-id, steps.handoff-upload.outputs.artifact-id) }}
+      handoff_zip_id: ${{ steps.handoff-zip-upload.outputs.artifact-id }}
       handoff_name: ${{ steps.handoff.outputs.name }}
       handoff_manifest: ${{ steps.handoff.outputs.manifest }}
       sha256: ${{ steps.handoff.outputs.sha256 }}
@@ -881,18 +884,12 @@ jobs:
             --wait
           xcrun stapler staple "dist/mac-universal/$APP_NAME"
 
-      - name: Build and verify the distribution zip
-        id: zip
+      - name: Build the distribution zip
+        id: zip-build
         run: |
           set -euo pipefail
           rm -rf "$RUNNER_TEMP/dist" && mkdir -p "$RUNNER_TEMP/dist"
           ditto -c -k --sequesterRsrc --keepParent "dist/mac-universal/$APP_NAME" "$RUNNER_TEMP/dist/$ZIP_NAME"
-          # Final verification runs against the exact zip that will publish.
-          EXTRACT_DIR="$RUNNER_TEMP/final-verify"
-          rm -rf "$EXTRACT_DIR" && mkdir -p "$EXTRACT_DIR"
-          ditto -x -k "$RUNNER_TEMP/dist/$ZIP_NAME" "$EXTRACT_DIR"
-          scripts/verify-app.sh "$EXTRACT_DIR/$APP_NAME" --signed --gatekeeper
-          scripts/check-app-launch.sh "$EXTRACT_DIR/$APP_NAME" "$VERSION"
           echo "dist_zip=$RUNNER_TEMP/dist/$ZIP_NAME" >> "$GITHUB_ENV"
 
       - name: Compute artifact checksum
@@ -939,7 +936,12 @@ jobs:
             echo "sha256=$SHA256"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Build, sign, notarize and check the disk image
+      # The disk image overlaps the zip's own gate and upload (INF-3193): most
+      # of its time is Apple's notarization wait, so it runs in the
+      # background from here, and the next steps check the zip and keep it
+      # for publication meanwhile. Every output goes to its log, which the
+      # step that waits for it prints; its exit status decides that step.
+      - name: Start the disk image beside the zip's check and upload
         id: dmg
         if: ${{ needs.resolve.outputs.dry_run == 'true' || steps.visibility.outputs.direct == 'true' }}
         env:
@@ -949,6 +951,10 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
         run: |
+          set -euo pipefail
+          WORK="$RUNNER_TEMP/dmg-job"
+          rm -rf "$WORK" "$RUNNER_TEMP/dmg-source" "$RUNNER_TEMP/dmg" && mkdir -p "$WORK"
+          cat > "$WORK/build.sh" <<'SH'
           set -euo pipefail
           FINAL_ZIP="${RECORDED_ZIP:-$dist_zip}"
           FINAL="$RUNNER_TEMP/dmg-source"
@@ -961,7 +967,29 @@ jobs:
           xcrun stapler staple "$DIST_DMG"
           scripts/verify-mac-dmg.sh "$DIST_DMG" "$FINAL_ZIP" "$VERSION"
           (cd "$(dirname "$DIST_DMG")" && shasum -a 256 "$DMG_NAME" > "$DMG_NAME.sha256")
-          echo "path=$DIST_DMG" >> "$GITHUB_OUTPUT"
+          SH
+          (
+            STATUS=0
+            bash --noprofile --norc "$WORK/build.sh" </dev/null >"$WORK/log" 2>&1 || STATUS=$?
+            echo "$STATUS" > "$WORK/status"
+          ) </dev/null >/dev/null 2>&1 &
+          {
+            echo "pid=$!"
+            echo "work=$WORK"
+            echo "path=$RUNNER_TEMP/dmg/$DMG_NAME"
+          } >> "$GITHUB_OUTPUT"
+
+      # Final verification runs against the exact zip that will publish,
+      # while the disk image builds and notarizes.
+      - name: Verify the distribution zip
+        id: zip
+        run: |
+          set -euo pipefail
+          EXTRACT_DIR="$RUNNER_TEMP/final-verify"
+          rm -rf "$EXTRACT_DIR" && mkdir -p "$EXTRACT_DIR"
+          ditto -x -k "$dist_zip" "$EXTRACT_DIR"
+          scripts/verify-app.sh "$EXTRACT_DIR/$APP_NAME" --signed --gatekeeper
+          scripts/check-app-launch.sh "$EXTRACT_DIR/$APP_NAME" "$VERSION"
 
       # The handoff (INF-1716): the signing job ends at the checked disk image,
       # and the upload job takes it to every place. It hands over only what
@@ -969,13 +997,72 @@ jobs:
       # checked disk image - with a manifest binding them to this run,
       # attempt, workflow revision and release. The Linux files come to the
       # upload from the linux job, which may still run here. Never the
-      # unpacked app, the workspace, a credential or the environment.
+      # unpacked app, the workspace, a credential or the environment. It is
+      # two artifacts (INF-3193): the zip goes up first, while the disk image
+      # is still notarized, and the manifest and the disk image after it.
+      # Every reader fetches both by id into one folder.
+      - name: Prepare the checked zip for publication
+        id: handoff-zip
+        env:
+          RECORDED_ZIP: ${{ steps.recorded.outputs.zip }}
+          RECORDED_SHA256: ${{ steps.recorded.outputs.sha256 }}
+          CHECKED_SHA256: ${{ steps.checksum.outputs.sha256 }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          node --input-type=module <<'JS'
+          import { createHash } from 'node:crypto';
+          import { appendFileSync, copyFileSync, lstatSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
+          import { basename, join } from 'node:path';
+          const env = process.env;
+          const out = join(env.RUNNER_TEMP, 'handoff-zip');
+          rmSync(out, { recursive: true, force: true });
+          // The zip an earlier attempt recorded, or else this attempt's, which
+          // the zip gate checked; a rehearsal reads no record.
+          const zip = env.RECORDED_ZIP || env.dist_zip;
+          const sha256 = env.RECORDED_ZIP ? env.RECORDED_SHA256 : env.CHECKED_SHA256;
+          if (!zip || basename(zip) !== env.ZIP_NAME) throw new Error(`No checked ${env.ZIP_NAME} to hand off`);
+          if (!lstatSync(zip).isFile()) throw new Error(`Not a regular file: ${zip}`);
+          mkdirSync(join(out, 'zip'), { recursive: true });
+          copyFileSync(zip, join(out, 'zip', basename(zip)));
+          if (createHash('sha256').update(readFileSync(join(out, 'zip', basename(zip)))).digest('hex') !== sha256) throw new Error('The zip to hand off is not the checked or recorded zip');
+          appendFileSync(env.GITHUB_OUTPUT, `path=${out}\nname=release-handoff-${env.RUN_ATTEMPT}-zip\n`);
+          JS
+
+      # Stored as is: the files are already compressed, and each producer
+      # attempt keeps its own artifacts rather than replacing one.
+      - name: Keep the checked zip for publication
+        id: handoff-zip-upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.handoff-zip.outputs.name }}
+          path: ${{ steps.handoff-zip.outputs.path }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
+      - name: Finish and check the disk image
+        id: dmg-done
+        if: ${{ steps.dmg.outcome == 'success' }}
+        env:
+          DMG_PID: ${{ steps.dmg.outputs.pid }}
+          WORK: ${{ steps.dmg.outputs.work }}
+        run: |
+          set -euo pipefail
+          while [[ ! -s "$WORK/status" ]] && kill -0 "$DMG_PID" 2>/dev/null; do sleep 2; done
+          cat "$WORK/log"
+          STATUS="$(cat "$WORK/status" 2>/dev/null || true)"
+          if [[ "$STATUS" != 0 ]]; then
+            echo "::error title=The disk image failed::Building, signing, notarizing or checking the disk image ended with status ${STATUS:-unknown}; its log is above." >&2
+            exit 1
+          fi
+
       - name: Prepare the checked files for publication
         id: handoff
         env:
           RECORDED_ZIP: ${{ steps.recorded.outputs.zip }}
           RECORDED_SHA256: ${{ steps.recorded.outputs.sha256 }}
           CHECKED_SHA256: ${{ steps.checksum.outputs.sha256 }}
+          CHECKED_ZIP: ${{ steps.handoff-zip.outputs.path }}
           CHECKED_DMG: ${{ steps.dmg.outputs.path }}
           DIRECT: ${{ steps.visibility.outputs.direct }}
           OLD_CASK: ${{ needs.resolve.outputs.old_cask }}
@@ -990,26 +1077,28 @@ jobs:
           const env = process.env;
           const out = join(env.RUNNER_TEMP, 'handoff');
           rmSync(out, { recursive: true, force: true });
+          mkdirSync(out, { recursive: true });
           const dryRun = env.DRY_RUN === 'true';
           const direct = env.DIRECT === 'true';
-          // The zip an earlier attempt recorded, or else this attempt's, which
-          // the zip gate checked; a rehearsal reads no record.
-          const zip = env.RECORDED_ZIP || env.dist_zip;
           const sha256 = env.RECORDED_ZIP ? env.RECORDED_SHA256 : env.CHECKED_SHA256;
           const files = [];
-          const place = (folder, from) => {
+          // Each file is listed as the bytes its artifact carries; only the
+          // disk image is placed here, since the zip went up on its own.
+          const list = (folder, from, placed) => {
             if (!lstatSync(from).isFile()) throw new Error(`Not a regular file: ${from}`);
-            mkdirSync(join(out, folder), { recursive: true });
             const bytes = readFileSync(from);
-            copyFileSync(from, join(out, folder, basename(from)));
+            if (placed) {
+              mkdirSync(join(out, folder), { recursive: true });
+              copyFileSync(from, join(out, folder, basename(from)));
+            }
             files.push({ path: `${folder}/${basename(from)}`, size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') });
           };
-          if (!zip || basename(zip) !== env.ZIP_NAME) throw new Error(`No checked ${env.ZIP_NAME} to hand off`);
-          place('zip', zip);
+          if (!env.CHECKED_ZIP) throw new Error(`No checked ${env.ZIP_NAME} to hand off`);
+          list('zip', join(env.CHECKED_ZIP, 'zip', env.ZIP_NAME), false);
           if (files[0].sha256 !== sha256) throw new Error('The zip to hand off is not the checked or recorded zip');
           if (dryRun || direct) {
             if (!env.CHECKED_DMG || basename(env.CHECKED_DMG) !== env.DMG_NAME) throw new Error(`No checked ${env.DMG_NAME} to hand off`);
-            place('dmg', env.CHECKED_DMG);
+            list('dmg', env.CHECKED_DMG, true);
           } else if (env.CHECKED_DMG) {
             throw new Error('A disk image was built for a release without direct downloads');
           }
@@ -1025,8 +1114,6 @@ jobs:
           console.log(`Handing off ${files.length} files, manifest sha256 ${digest}`);
           JS
 
-      # Stored as is: the files are already compressed, and each producer
-      # attempt keeps its own artifact rather than replacing one.
       - name: Keep the checked files for publication
         id: handoff-upload
         uses: actions/upload-artifact@v4
@@ -1043,7 +1130,7 @@ jobs:
         continue-on-error: true
         env:
           SHA256: ${{ steps.recorded.outputs.sha256 || steps.checksum.outputs.sha256 }}
-          HANDOFF: artifact ${{ steps.handoff-upload.outputs.artifact-id || 'none' }}, manifest sha256 ${{ steps.handoff.outputs.manifest || 'none' }}
+          HANDOFF: artifacts ${{ steps.handoff-zip-upload.outputs.artifact-id || 'none' }} (zip) and ${{ steps.handoff-upload.outputs.artifact-id || 'none' }}, manifest sha256 ${{ steps.handoff.outputs.manifest || 'none' }}
           GATES: >-
             visibility=${{ steps.visibility.outcome }} capability=${{ steps.capability.outcome }}
             build=${{ steps.build.outcome }} package=${{ steps.package.outcome }}
@@ -1051,7 +1138,9 @@ jobs:
             launch=${{ steps.launch.outcome }} data-folder=${{ steps.data-folder.outcome }}
             work-mode=${{ steps.work-mode.outcome }} notarize=${{ steps.notarize.outcome }}
             zip=${{ steps.zip.outcome }} checksum=${{ steps.checksum.outcome }}
-            read-record=${{ steps.recorded.outcome }} dmg=${{ steps.dmg.outcome }}
+            zip-build=${{ steps.zip-build.outcome }} read-record=${{ steps.recorded.outcome }}
+            dmg=${{ steps.dmg.outcome }} dmg-done=${{ steps.dmg-done.outcome }}
+            handoff-zip=${{ steps.handoff-zip.outcome }} handoff-zip-upload=${{ steps.handoff-zip-upload.outcome }}
             handoff=${{ steps.handoff.outcome }} handoff-upload=${{ steps.handoff-upload.outcome }}
         run: |
           APP="dist/mac-universal/$APP_NAME"
@@ -1091,7 +1180,7 @@ jobs:
       trigger: ${{ needs.resolve.outputs.trigger }}
       ref: ${{ needs.resolve.outputs.source_commit }}
       version: ${{ needs.resolve.outputs.version }}
-      handoff_id: ${{ needs.release.outputs.handoff_id }}
+      handoff_id: ${{ needs.release.outputs.handoff_zip_id }}
       zip_name: ${{ needs.resolve.outputs.zip_name }}
       zip_sha256: ${{ needs.release.outputs.sha256 }}
       runner: ${{ needs.resolve.outputs.dry_run == 'false' && fromJSON(vars.MAC_QUEUES || '{}').release_light || '' }}
@@ -1558,7 +1647,7 @@ jobs:
         if: always()
         continue-on-error: true
         env:
-          HANDOFF: artifact ${{ needs.release.outputs.handoff_id || 'none' }}, manifest sha256 ${{ needs.release.outputs.handoff_manifest || 'none' }}, from attempt ${{ steps.handoff-check.outputs.attempt || 'unread' }}
+          HANDOFF: artifacts ${{ needs.release.outputs.handoff_id || 'none' }}, manifest sha256 ${{ needs.release.outputs.handoff_manifest || 'none' }}, from attempt ${{ steps.handoff-check.outputs.attempt || 'unread' }}
           PLACES: ${{ steps.upload.outputs.places }}
           UPLOAD_SECONDS: ${{ steps.upload.outputs.seconds }}
           GATES: >-
@@ -1979,7 +2068,7 @@ jobs:
           LANES: ${{ (needs.resolve.outputs.verify_required != 'true' || needs.resolve.outputs.main_journeys == 'true') && 'none' || needs.resolve.outputs.main_run != '' && 'linux-e2e, parallel and desktop (every journey)' || 'linux-checks, linux-e2e, mac, parallel and desktop' }}
           OMITTED: ${{ needs.resolve.outputs.main_journeys == 'true' && format('linux-checks, linux-e2e, mac, parallel and desktop; inherited from {0}, not repeated here', needs.resolve.outputs.main_run) || needs.resolve.outputs.main_run != '' && format('linux-checks and mac; inherited from rolling main {0}, not repeated here', needs.resolve.outputs.main_run) || needs.resolve.outputs.verify_required == 'true' && 'none' || 'linux-checks, linux-e2e, mac, parallel and desktop; inherited from the published alpha, not passed in this run' }}
           SHA256: ${{ needs.release.outputs.sha256 }}
-          HANDOFF: artifact ${{ needs.release.outputs.handoff_id || 'none' }}, manifest sha256 ${{ needs.release.outputs.handoff_manifest || 'none' }}, from attempt ${{ needs.upload.outputs.attempt || 'unread' }}
+          HANDOFF: artifacts ${{ needs.release.outputs.handoff_id || 'none' }}, manifest sha256 ${{ needs.release.outputs.handoff_manifest || 'none' }}, from attempt ${{ needs.upload.outputs.attempt || 'unread' }}
           GATES: >-
             uploads=${{ needs.upload.result }}
             expected=${{ steps.expected.outcome }}

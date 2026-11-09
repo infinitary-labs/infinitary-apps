@@ -21,6 +21,7 @@ import {
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
+import { deferred } from "../../../tests/helpers/deferred";
 import { crewmateTempDir } from "../paths";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { TaskProtocol } from "../tasks/taskProtocol";
@@ -221,6 +222,63 @@ describe("CrewSupervisor", () => {
     await tick();
     expect(legacyStateOf(tasks.get(taskId))).toBe("cancelled");
     expect(finished()).toHaveLength(1);
+  });
+
+  // A merge batch failed crew-model-labels.spec.ts: the first mate's cancel
+  // reached a crewmate whose working copy was still being made, so the
+  // cancel only marked it, and the start then failed on that mark. The task
+  // went back to waiting with no close and no closing note (INF-547). A
+  // cancel that comes while a crewmate starts ends the task as that cancel,
+  // with the first mate's sentence, whichever way the task was started.
+  it.each([
+    ["spawned", false],
+    ["queued", true],
+  ])("ends a %s task as the cancel that reached it while it started", async (_name, queued) => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, events, tasks, workspace, paths } = setup(crewmate);
+    const reached = deferred<string>();
+    const made = deferred<void>();
+    vi.mocked(workspace.createTaskWorktree).mockImplementationOnce(async (id: string) => {
+      reached.resolve(id);
+      await made.promise;
+      return {
+        taskId: id,
+        cwd: join(paths.worktreesDir, id),
+        branch: `fm/task-${id}`,
+        repoDir: paths.defaultWorkspaceDir,
+      };
+    });
+    const at = Date.now() + 60 * 60 * 1000;
+    const commissioned = supervisor.intake.commission({
+      title: "Second orbit example",
+      intent: intentOf("draw the second orbit"),
+      ...(queued ? { startAfter: { at } } : {}),
+    });
+    if (queued) {
+      await commissioned;
+      void supervisor.watch.sweepGates(at + 1000);
+    }
+    const taskId = await reached.promise;
+    const sentence = "Dropped the second orbit example, as you asked.";
+    await supervisor.sessions.interruptCrewmate(
+      taskId,
+      "cancel",
+      { actor: "firstmate", via: "tool", decision: null },
+      sentence,
+    );
+    made.resolve();
+    await commissioned;
+    await vi.waitFor(() =>
+      expect(tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "cancelled" }),
+    );
+    expect(
+      tasks.timeline(taskId).find((event) => event.data?.reason === "cancelled")?.data,
+    ).toMatchObject({ closingSentence: sentence });
+    expect(events.filter((event) => event.type === "task_finished")).toEqual([
+      expect.objectContaining({ taskId, status: "cancelled" }),
+    ]);
+    expect(crewmate.promptCalls).toEqual([]);
+    await vi.waitFor(() => expect(workspace.removeTaskWorktree).toHaveBeenCalled());
   });
 
   it("cancels an idle reported task that stayed active until settled", async () => {

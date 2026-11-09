@@ -305,7 +305,11 @@ export class CrewToolHooks {
       this.core.facts.machineOf(task.id) === LOCAL_MACHINE_ID,
       join(this.core.options.paths.crewmatesDir, task.id, "completions.sqlite"),
     );
-    if (this.core.tasks.get(task.id) !== task || task.cancelled) {
+    // Only a crewmate let go meanwhile stops its start here. One a cancel
+    // reached while it started is still the task's: the cancel ends it as a
+    // cancel once the start has run (`CrewTurns.prepareFirstTurn`), never as
+    // a start that failed, which would put the task back to wait.
+    if (this.core.tasks.get(task.id) !== task) {
       await unsubscribe();
       throw new Error("The task closed while its transcript was being located.");
     }

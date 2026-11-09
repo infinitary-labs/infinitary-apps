@@ -15,7 +15,6 @@ import {
   type FreezeIncident,
   type FreezeLine,
   FreezeRecorder,
-  HEARTBEAT_MS,
   RECORD_MAX_LINES,
 } from "./freezeRecorder";
 import { FreezeTally, type VersionSummary } from "./freezeTally";
@@ -48,15 +47,20 @@ afterEach(() => {
  * only after the watchdog thread has started; on a busy computer that came
  * after the stall had begun, which was then recorded with no names (INF-2515).
  * `arm: false` leaves the arming to the test, for one that arms before it
- * loads code. `stall` holds the main thread and answers the line recorded for
- * it: the first one that began no earlier than the heartbeat before the
- * stall, so a stall the test runner itself caused while starting is not taken
- * for it.
+ * loads code. `hold` then holds the main thread at once, and the answer is the
+ * line recorded for it: the first completed one. The recorder beats as it
+ * starts and the watchdog records nothing before that beat, so with no turn
+ * of the event loop between the beat and the hold, the first stall it records
+ * is the one the hold makes, however late a busy runner runs the test. Given
+ * a turn there, a busy runner could leave the last beat well before the hold,
+ * or stall the main thread itself, and a case could wait for the line of a
+ * stall that never came.
  */
-function startRecorder(
+async function recordStall(
   recordPath: string,
+  hold: () => void,
   { arm = true }: { arm?: boolean } = {},
-): { stall: (hold: () => void) => Promise<FreezeLine> } {
+): Promise<FreezeLine> {
   const lines: FreezeLine[] = [];
   const waiters: (() => void)[] = [];
   if (arm) armWatchdog();
@@ -74,17 +78,12 @@ function startRecorder(
     },
   });
   recorder.start();
-  return {
-    stall: async (hold) => {
-      const since = Date.now() - HEARTBEAT_MS * 2;
-      hold();
-      for (;;) {
-        const line = lines.find((each) => Date.parse(each.at) >= since);
-        if (line) return line;
-        await new Promise<void>((done) => waiters.push(done));
-      }
-    },
-  };
+  hold();
+  for (;;) {
+    const [line] = lines;
+    if (line) return line;
+    await new Promise<void>((done) => waiters.push(done));
+  }
 }
 
 /** Busy work on the main thread, the way a long synchronous database walk is. */
@@ -123,8 +122,7 @@ function loadAppSizedCode(): void {
 describe("the freeze recorder", () => {
   it("records a main thread stall with the function that held it, innermost first", async () => {
     const recordPath = join(scratchDir("infinitary-freeze-busy-"), "freezes.jsonl");
-    const { stall } = startRecorder(recordPath);
-    const seen = await stall(() => renderOpenMessages(FREEZE_THRESHOLD_MS * 8));
+    const seen = await recordStall(recordPath, () => renderOpenMessages(FREEZE_THRESHOLD_MS * 8));
 
     const names = seen.frames.map((frame) => frame.name);
     expect(names).toContain("walkEveryRow");
@@ -156,8 +154,9 @@ describe("the freeze recorder", () => {
     armWatchdog();
     loadAppSizedCode();
     const recordPath = join(scratchDir("infinitary-freeze-armed-"), "freezes.jsonl");
-    const { stall } = startRecorder(recordPath, { arm: false });
-    const seen = await stall(() => renderOpenMessages(FREEZE_THRESHOLD_MS * 8));
+    const seen = await recordStall(recordPath, () => renderOpenMessages(FREEZE_THRESHOLD_MS * 8), {
+      arm: false,
+    });
 
     const names = seen.frames.map((frame) => frame.name);
     expect(names).toContain("walkEveryRow");
@@ -169,9 +168,8 @@ describe("the freeze recorder", () => {
   // The observed location is retained without claiming where V8 must pause.
   it("retains capture timing through high-CPU native work followed by short JavaScript", async () => {
     const recordPath = join(scratchDir("infinitary-freeze-native-"), "freezes.jsonl");
-    const { stall } = startRecorder(recordPath);
     let result = 0;
-    const seen = await stall(() => {
+    const seen = await recordStall(recordPath, () => {
       const derived = pbkdf2Sync("disposable input", "disposable salt", 2_000_000, 32, "sha256");
       result = derived.readUInt8(0);
     });
@@ -193,9 +191,8 @@ describe("the freeze recorder", () => {
 
   it("marks a wait's names as uncertain by its low processor time", async () => {
     const recordPath = join(scratchDir("infinitary-freeze-wait-"), "freezes.jsonl");
-    const { stall } = startRecorder(recordPath);
     // A synchronous wait outside JavaScript, as on another program.
-    const seen = await stall(() => {
+    const seen = await recordStall(recordPath, () => {
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, FREEZE_THRESHOLD_MS * 8);
     });
 
@@ -207,7 +204,6 @@ describe("the freeze recorder", () => {
   it("completes the same incident whose start was visible before recovery (INF-2205)", async () => {
     const dir = scratchDir("infinitary-freeze-start-");
     const recordPath = join(dir, "freezes.jsonl");
-    const { stall } = startRecorder(recordPath);
     const release = new Int32Array(new SharedArrayBuffer(4));
     const observer = new Worker(
       `
@@ -228,9 +224,11 @@ describe("the freeze recorder", () => {
       { eval: true, workerData: { dir, path: recordPath, release } },
     );
     try {
+      // The observer watches before the recorder starts, so the hold follows
+      // the recorder's first heartbeat with nothing between them.
       await once(observer, "message");
       const observed = once(observer, "message");
-      const completed = await stall(() => Atomics.wait(release, 0, 0, 3000));
+      const completed = await recordStall(recordPath, () => Atomics.wait(release, 0, 0, 3000));
       const [start] = await observed;
       expect(start).toEqual({
         incidentId: completed.incidentId,
@@ -359,8 +357,7 @@ describe("the freeze recorder", () => {
       frames: [{ name: "taskIdsWithRef", file: "index.js", line: 4021, column: 17 }],
     }));
     writeFileSync(recordPath, `${old.map((each) => JSON.stringify(each)).join("\n")}\n`);
-    const { stall } = startRecorder(recordPath);
-    const seen = await stall(() => renderOpenMessages(FREEZE_THRESHOLD_MS * 8));
+    const seen = await recordStall(recordPath, () => renderOpenMessages(FREEZE_THRESHOLD_MS * 8));
 
     const record = readFreezes(recordPath);
     expect(record).toHaveLength(RECORD_MAX_LINES);

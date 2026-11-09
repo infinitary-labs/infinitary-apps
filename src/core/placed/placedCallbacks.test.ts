@@ -955,6 +955,7 @@ describe("a task that runs on a computer that runs work", () => {
         heardFact: (deviceId, task, fact) => heard.push(["fact", deviceId, task, fact]),
         heardFrame: (task, frame) => heard.push(["frame", task, frame]),
         heardEvent: (deviceId, task, event) => heard.push(["event", deviceId, task, event]),
+        privateSiteList: () => ["wiki.corp.example"],
       }),
     });
     model([{ text: "Looking." }]);
@@ -982,6 +983,10 @@ describe("a task that runs on a computer that runs work", () => {
         site: "club.example",
       }),
     ).resolves.toEqual({ signIn: saved });
+    // The captain's private sites list is lent whole, read live (INF-3116, answer A).
+    await expect(
+      home.placed.answer(at.deviceId, "inf:work:private-sites", { task: "t-browse" }),
+    ).resolves.toEqual({ sites: ["wiki.corp.example"] });
     const note = { kind: "note" as const, text: "Signed in to the club." };
     for (let repeat = 0; repeat < 2; repeat++)
       await expect(

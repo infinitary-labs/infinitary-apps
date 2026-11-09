@@ -38,6 +38,7 @@ import {
   uiSizeSchema,
   washStrengthSchema,
 } from "./preferences";
+import { normalizePrivateSite, type PrivateSitesView } from "./privateSites";
 import { projectSetupProposalSchema } from "./projectSetup";
 import { catalogEntry } from "./providers";
 import type { RoutingSettings } from "./quota";
@@ -148,6 +149,7 @@ export type HandoverOffer = {
     | { remove: string }
     | { add: string }
     | { update: string }
+    | { privateSite: string }
     | { signIn: string }
     | { signInOn: { deviceId: string; providerId: string } };
 };
@@ -484,6 +486,44 @@ const actionLines = {
         label: "Make a link",
         decline: "Not now",
         arrival: { make: "link" },
+      };
+    },
+  },
+  // The captain's private sites list for task browsers (docs/task-browser.md,
+  // "Private sites"): the first mate only offers the app's Allow card, and
+  // only the captain's click on it, or their own entry in Settings, adds one.
+  "private-site-allow": {
+    area: "general",
+    tier: "hands",
+    handover: "settings",
+    change: "inf:browser:private-sites:add",
+    current: "inf:browser:private-sites",
+    value: z.strictObject({ site: z.string().min(1).max(2_048) }),
+    line: "Offer to let task browsers on every computer reach a private site - one on an office, home or VPN network - when a crewmate's report or the captain names one: app_change puts up the app's own card, and only the captain's Allow click adds it to Settings → General → Private sites. Pass site: the name the crewmate gave (wiki.corp.example), or a suffix of two or more parts (.corp.example.com) for every name under it, never an address. A listed site opens over https or http from any page; it never reaches loopback, link-local or cloud metadata addresses, so a program that listens only inside this computer stays out of reach.",
+    toRequest: (v) => [v.site],
+    readValue: (c) => ({ privateSites: (c as PrivateSitesView).sites }),
+    done: (v) => `allowed ${String(v.site)} for task browsers`,
+    offer: (v, c) => {
+      const checked = normalizePrivateSite(String(v.site));
+      if (!checked.ok) throw new Error(checked.text);
+      const site = checked.site;
+      if ((c as PrivateSitesView | null)?.sites.includes(site))
+        throw new Error(`${site} is already on the private sites list.`);
+      const suffix = site.startsWith(".");
+      return {
+        cardId: `app-private-site-${cardSlug(site)}`,
+        title: suffix
+          ? `Let task browsers reach sites under ${site}?`
+          : `Let task browsers reach ${site}?`,
+        paragraphs: [
+          suffix
+            ? `Task browsers on all your computers could then open every site whose name ends in ${site}, on an office, home or VPN network, over https or http.`
+            : `Task browsers on all your computers could then open ${site} on an office, home or VPN network, over https or http.`,
+          "Any page a crewmate opens could reach it too, as in an ordinary browser. It never reaches a program that listens only inside this computer, or cloud metadata addresses. You can remove it in Settings → General → Private sites.",
+        ],
+        label: "Allow",
+        decline: "Not now",
+        arrival: { privateSite: site },
       };
     },
   },

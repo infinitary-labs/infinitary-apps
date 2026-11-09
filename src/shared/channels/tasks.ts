@@ -8,6 +8,11 @@ import {
 import { crewCountsSchema } from "../events";
 import { feedLineSchema } from "../feed";
 import {
+  privateSiteChangeSchema,
+  privateSiteSchema,
+  privateSitesViewSchema,
+} from "../privateSites";
+import {
   savedSignInsViewSchema,
   taskBrowserCommandResultSchema,
   taskBrowserHandleSchema,
@@ -162,5 +167,29 @@ export const taskChannels = {
     reach: "home",
     request: z.tuple([z.string().min(1).max(260)]),
     response: taskBrowserCommandResultSchema,
+  },
+  // The captain's private sites list for task browsers on every computer
+  // (docs/task-browser.md, "Private sites"): kept at the home, so a
+  // computer that only runs work never holds it.
+  "inf:browser:private-sites": {
+    effect: "read",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([]),
+    response: privateSitesViewSchema,
+  },
+  "inf:browser:private-sites:add": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([z.string().min(1).max(2_048)]),
+    response: privateSiteChangeSchema,
+  },
+  "inf:browser:private-sites:remove": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([privateSiteSchema]),
+    response: privateSiteChangeSchema,
   },
 } as const satisfies Record<string, ChannelDeclaration>;

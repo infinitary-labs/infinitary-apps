@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { HERE } from "@shared/deviceNames";
+import { listsPrivateSite } from "@shared/privateSites";
 import {
   FRESH_LOOK_WORDS,
   type OfferedSignIn,
@@ -192,6 +193,13 @@ export type TaskBrowsersOptions = {
   lookup?: GuardLookup;
   /** The website sign-ins saved on this Mac; with none, nothing is saved or offered. */
   signIns?: SignInStore;
+  /**
+   * The captain's private sites list (docs/task-browser.md, "Private
+   * sites"): the home's own, or the one it lends a computer that runs work,
+   * read as a task's browser opens and at each of its crewmate's opens.
+   * With none, no private site is reached.
+   */
+  privateSites?: (taskId: string) => readonly string[] | Promise<readonly string[]>;
   /** The home may lend an opted-in site to a browser on another computer, without storing it there. */
   automaticSignIn?: (taskId: string, site: string) => Promise<SavedSignInRecord | undefined>;
   /** The time, injected so a test drives which cookies are still alive. */
@@ -281,6 +289,8 @@ export class TaskBrowsers {
   private readonly commands: CrewmateCommands;
   private readonly actions: PageActions;
   private readonly grants: SavedSignInGrants;
+  /** The private sites list as last read: what the guard and the policy check a name against. */
+  private sites: readonly string[] = [];
 
   constructor(private readonly options: TaskBrowsersOptions) {
     this.max = options.max ?? TASK_BROWSERS_MAX;
@@ -306,6 +316,8 @@ export class TaskBrowsers {
       handBackBooks: (taskId, browser) => this.handBackBooks(taskId, browser),
       handBack: (taskId, browser, back) => this.handBack(taskId, browser, back),
       serial: (taskId, run) => this.queues.run(taskId, run),
+      listed: (hostname) => listsPrivateSite(this.sites, hostname),
+      readSites: (taskId) => this.readSites(taskId),
       steadily: (browser, run) => this.steady.run(browser, run),
       get commands() {
         return commands;
@@ -319,6 +331,29 @@ export class TaskBrowsers {
     this.commands = commands;
     this.actions = new PageActions(core);
     this.grants = grants;
+  }
+
+  /**
+   * Read the private sites list again; an unreadable one keeps the last read,
+   * which a computer that runs work starts empty, so it refuses as before.
+   */
+  private async readSites(taskId: string): Promise<void> {
+    if (!this.options.privateSites) return;
+    try {
+      this.sites = [...(await this.options.privateSites(taskId))];
+    } catch {
+      // The home out of reach, or one without the list: the last read stands.
+    }
+  }
+
+  /**
+   * The captain changed the private sites list: the guard and the policy
+   * check every name against it from now on, and a connection a removed
+   * site's listing let through ends at once.
+   */
+  privateSitesChanged(sites: readonly string[]): void {
+    this.sites = [...sites];
+    for (const browser of this.browsers.values()) browser.guard?.recheck?.();
   }
 
   /** How many task browsers run now. */
@@ -883,6 +918,7 @@ export class TaskBrowsers {
           notices.block(refusal.host, refusal.kind);
         },
         ...(this.options.lookup ? { lookup: this.options.lookup } : {}),
+        listed: (host) => listsPrivateSite(this.sites, host),
       });
     } catch {
       return undefined;
@@ -898,7 +934,9 @@ export class TaskBrowsers {
           password: browser.guard.password,
         },
         allow: ({ url }) => {
-          const decision = decideRequest(url, browser.origins);
+          const decision = decideRequest(url, browser.origins, (host) =>
+            listsPrivateSite(this.sites, host),
+          );
           if (decision.allowed) return true;
           if (!captains()) notices.block(decision.host, decision.kind);
           return false;
@@ -1042,7 +1080,9 @@ export class TaskBrowsers {
       return undefined;
     }
     if (url && url !== "about:blank") {
-      const decision = decideRequest(url, browser.origins);
+      const decision = decideRequest(url, browser.origins, (host) =>
+        listsPrivateSite(this.sites, host),
+      );
       if (!decision.allowed) {
         if (browser.control !== "captain") browser.notices.block(decision.host, decision.kind);
         return undefined;
@@ -1213,7 +1253,8 @@ export class TaskBrowsers {
     }
     const address =
       served && server ? `${server.origin}${ended.url.slice(served.origin.length)}` : ended.url;
-    const check = checkOpenable(address);
+    await this.readSites(taskId);
+    const check = checkOpenable(address, (host) => listsPrivateSite(this.sites, host));
     if (!check.ok) {
       server?.close();
       return { ok: false, text: check.reason };

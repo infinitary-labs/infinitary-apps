@@ -666,6 +666,7 @@ export class CardActions {
             ...(effect.remove ? { remove: effect.remove } : {}),
             ...(effect.add ? { add: effect.add } : {}),
             ...(effect.update ? { update: effect.update } : {}),
+            ...(effect.privateSite ? { privateSite: effect.privateSite } : {}),
             ...(effect.signInOn ? { signInOn: effect.signInOn } : {}),
             ...(effect.forgeSignInOn ? { forgeSignInOn: effect.forgeSignInOn } : {}),
           },

@@ -261,6 +261,9 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
               : {}),
             ...(effect.signIn ? { pendingForgeSignIn: effect.signIn } : {}),
             ...(effect.target === "devices" ? deviceArrival(effect) : {}),
+            ...(effect.target === "settings" && effect.privateSite
+              ? { settingsSection: "general", pendingPrivateSite: effect.privateSite }
+              : {}),
             ...(effect.target === "subscriptions" && effect.signInOn
               ? { pendingDeviceSignIn: effect.signInOn }
               : {}),

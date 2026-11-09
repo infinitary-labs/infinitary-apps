@@ -41,8 +41,8 @@ Do not add a second store of website sign-ins: saved sign-ins have one owner, re
 
 ## Authority
 
-- Connection guard: every request a page makes is checked before it leaves, and every connection off loopback goes through the browser's own guard, which resolves the name itself, refuses it unless every address is public, and connects to the address it checked.
-- The guard answers only its own browser; a private network, plain http, another server on the computer, a file or an app scheme is refused and named in the next answer.
+- Connection guard: every request a page makes is checked before it leaves, and every connection off loopback goes through the browser's own guard, which resolves the name itself, refuses it unless every address is public or the name is on the captain's private sites list, and connects to the address it checked.
+- The guard answers only its own browser; a private network or plain http the captain did not list, another server on the computer, a file or an app scheme is refused and named in the next answer.
 - Captain handoff: only the captain's Take control and Return control move control (`TaskBrowsers.takeControl`, `TaskBrowsers.returnControl`); nothing else does - not a click on the page, a sign-in, a redirect, Hide, a card closing or a timer.
 - While the captain holds a browser the crewmate's commands refuse, and nothing the captain does or the page says is recorded or reaches the crewmate.
 - A crewmate that needs a person - a sign-in, a code, a payment - asks on an ordinary decision card with `browser_handoff` and one action whose effect is `{ kind: "open", target: "browser" }`; the browser pauses before the card goes up (`TaskBrowsers.requestHelp`).

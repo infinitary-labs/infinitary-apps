@@ -1,5 +1,6 @@
 import { BlockList, isIP } from "node:net";
 import { CUSTOM_API_MAX_HEADERS, type CustomApiFailureCategory } from "@shared/customApi";
+import { neverReachable } from "../browser/addresses";
 
 export type CustomNetworkMode = "public" | "private" | "local";
 export type CustomApiFailure = CustomApiFailureCategory;
@@ -176,26 +177,6 @@ const forbidden = ranges([
 ]);
 const globalV6 = ranges([["2000::", 3]]);
 const mappedV4 = ranges([["::ffff:0:0", 96]]);
-/**
- * Answers no exception reaches: this computer's own services, the unspecified
- * address (which reaches this computer too), link-local, multicast and the
- * known metadata services. An IPv4-mapped answer is matched as its IPv4.
- */
-const neverExcepted = ranges([
-  ["0.0.0.0", 8],
-  ["127.0.0.0", 8],
-  ["169.254.0.0", 16],
-  ["224.0.0.0", 3],
-  ["100.100.100.200", 32],
-  ["168.63.129.16", 32],
-  ["::", 128],
-  ["::1", 128],
-  ["fe80::", 10],
-  ["ff00::", 8],
-  ["fd00:ec2::254", 128],
-  ["fd20:ce::254", 128],
-]);
-const nat64 = ranges([["64:ff9b::", 96]]);
 
 function has(list: BlockList, address: string): boolean {
   return list.check(address, isIP(address) === 6 ? "ipv6" : "ipv4");
@@ -222,20 +203,6 @@ export function assertCustomApiAddresses(
   }
 }
 
-/** The IPv4 address a NAT64 answer (64:ff9b::/96) stands for, which the gateway reaches. */
-function nat64Target(address: string): string | undefined {
-  if (isIP(address) !== 6 || !has(nat64, address)) return undefined;
-  const halves = address.split("::");
-  const head = halves[0] ? halves[0].split(":") : [];
-  const tail = halves[1] ? halves[1].split(":") : [];
-  const last = tail.at(-1) ?? head.at(-1) ?? "";
-  if (isIP(last) === 4) return last;
-  const groups = [...head, ...Array(8 - head.length - tail.length).fill("0"), ...tail];
-  const low = groups.slice(6).map((group) => Number.parseInt(group || "0", 16));
-  const [high = 0, rest = 0] = low;
-  return [high >> 8, high & 255, rest >> 8, rest & 255].join(".");
-}
-
 /** The kind of network one DNS answer points to, as the form tells it. */
 export function customApiAnswerKind(address: string): "local" | "private" | "public" | "reserved" {
   if (!isIP(address)) return "reserved";
@@ -248,18 +215,11 @@ export function customApiAnswerKind(address: string): "local" | "private" | "pub
 
 /**
  * Whether the person may make an exception for these answers: every one is an
- * address, and none points to this computer, link-local, multicast or a
- * metadata service, directly or through NAT64.
+ * address, and none is one no allowance reaches (`neverReachable`, shared
+ * with the task browsers' private sites), directly or through NAT64.
  */
 export function customApiExceptionAllows(addresses: readonly string[]): boolean {
-  return (
-    addresses.length > 0 &&
-    addresses.every((address) => {
-      if (!isIP(address) || has(neverExcepted, address)) return false;
-      const target = nat64Target(address);
-      return !target || !has(neverExcepted, target);
-    })
-  );
+  return addresses.length > 0 && addresses.every((address) => !neverReachable(address));
 }
 
 /** An excepted address's answers, checked on every request as a class is. */

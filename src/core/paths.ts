@@ -39,6 +39,12 @@ export type AppPaths = {
    */
   webSignInsDir: string;
   /**
+   * The captain's private sites list for task browsers on every computer
+   * (docs/task-browser.md, "Private sites"): one 0600 file, written only by
+   * `PrivateSites`.
+   */
+  privateSitesFile: string;
+  /**
    * The freeze recorder's bounded record (docs/freeze-recorder.md): one
    * JSON line per main thread stall, written only by its watchdog thread.
    */
@@ -156,6 +162,7 @@ export function appPathsFor(userData: string): AppPaths {
     integrationsDir: join(userData, "integrations"),
     devicesDir: join(userData, "devices"),
     webSignInsDir: join(userData, "web-sign-ins"),
+    privateSitesFile: join(userData, "private-sites.json"),
     freezeRecordPath: join(userData, "freezes.jsonl"),
     freezeTallyPath: join(userData, "freeze-tally.json"),
     memoryRecordPath: join(userData, "memory.jsonl"),

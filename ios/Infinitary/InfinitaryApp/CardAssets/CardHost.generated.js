@@ -4967,6 +4967,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     // `inf:devices:add` reads it again before anything is reached.
     add: string().min(1).max(255).optional(),
     update: string().min(1).max(64).optional(),
+    privateSite: string().min(1).max(253).optional(),
     signInOn: signInOnSchema.optional(),
     forgeSignInOn: forgeSignInOnSchema.optional()
   });
@@ -5615,6 +5616,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     add: string().optional(),
     /** Settings -> Devices updates Firstmate on this computer, added by its address, on arrival. */
     update: string().optional(),
+    /** Settings -> General adds this private site for task browsers on arrival; the add checks it again. */
+    privateSite: string().optional(),
     /** Settings -> Intelligence starts this sign-in on that computer on arrival. */
     signInOn: signInOnSchema.optional(),
     /** Settings -> Projects starts that computer's own sign-in where projects live on arrival. */

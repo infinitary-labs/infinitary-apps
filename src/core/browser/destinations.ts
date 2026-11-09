@@ -19,6 +19,11 @@ import { isPublicAddress, literalAddress } from "./addresses";
  * the connection guard (`connectionGuard.ts`), which resolves the name
  * itself and connects only to the public address it checked.
  *
+ * A name on the captain's private sites list (`listed`, docs/task-browser.md,
+ * "Private sites") is opened over https or http, by the crewmate and by any
+ * page, as an ordinary browser allows; the guard still checks where it
+ * leads. An address written out stays refused, listed or not.
+ *
  * Pure: every caller hands in the task's registered origins.
  */
 
@@ -66,6 +71,9 @@ function parse(value: string): URL | undefined {
   }
 }
 
+/** Whether a name is on the captain's private sites list; none is when absent. */
+export type ListedSite = (hostname: string) => boolean;
+
 /** Why a crewmate's own address was not opened, in words its answer carries. */
 export type OpenRefusal = { ok: false; reason: string };
 
@@ -77,6 +85,7 @@ export type OpenRefusal = { ok: false; reason: string };
  */
 export function checkOpenable(
   value: string,
+  listed: ListedSite = () => false,
 ): { ok: true; url: URL; origin?: string } | OpenRefusal {
   const url = parse(value.trim());
   if (!url) {
@@ -102,15 +111,16 @@ export function checkOpenable(
   if (literal !== undefined && !isPublicAddress(literal)) {
     return {
       ok: false,
-      reason: `${url.hostname} is an address on a private network or kept for special use. This browser opens public websites and the pages a project serves on ${HERE.this} (localhost, 127.0.0.1 or a name ending in .localhost), never another device on a network.`,
+      reason: `${url.hostname} is an address on a private network or kept for special use. This browser opens public websites and the pages a project serves on ${HERE.this} (localhost, 127.0.0.1 or a name ending in .localhost), and a private site the captain allowed by its name, never an address on a network.`,
     };
   }
+  if (literal === undefined && listed(url.hostname)) return { ok: true, url };
   if (url.protocol === "http:") {
     const secure = new URL(url.href);
     secure.protocol = "https:";
     return {
       ok: false,
-      reason: `This browser opens public websites only over https. Open ${secure.href} instead.`,
+      reason: `This browser opens a site over plain http only when it is a private site the captain allowed. Open ${secure.href} instead; if the task needs ${url.hostname} over http on an office, home or VPN network, ask the first mate in your report (needs_firstmate), naming ${url.hostname}.`,
     };
   }
   return { ok: true, url };
@@ -138,10 +148,15 @@ export type RequestDecision =
 /**
  * Decide one request a task page made, top level or not: content the page
  * makes itself goes through, a request to an origin the crewmate opened
- * goes through, a public website over https or wss goes on to the
- * connection guard, and everything else is refused.
+ * goes through, a public website over https or wss, or a listed private
+ * site over any of the four, goes on to the connection guard, and
+ * everything else is refused.
  */
-export function decideRequest(value: string, origins: ReadonlySet<string>): RequestDecision {
+export function decideRequest(
+  value: string,
+  origins: ReadonlySet<string>,
+  listed: ListedSite = () => false,
+): RequestDecision {
   const url = parse(value);
   if (!url) return { allowed: false, host: "an unreadable address", kind: "scheme" };
   if (PAGE_LOCAL_SCHEMES.has(url.protocol)) return { allowed: true };
@@ -157,6 +172,7 @@ export function decideRequest(value: string, origins: ReadonlySet<string>): Requ
   if (literal !== undefined && !isPublicAddress(literal)) {
     return { allowed: false, host: url.hostname, kind: "private" };
   }
+  if (literal === undefined && listed(url.hostname)) return { allowed: true };
   if (url.protocol === "http:" || url.protocol === "ws:") {
     return { allowed: false, host: url.hostname, kind: "insecure" };
   }

@@ -1,4 +1,6 @@
+import { createServer as createHttpServer } from "node:http";
 import { createServer, connect as netConnect, type Server, type Socket } from "node:net";
+import { listsPrivateSite } from "@shared/privateSites";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   type ConnectionGuardHandle,
@@ -42,13 +44,33 @@ type Started = {
   connects: string[];
 };
 
-async function guarded(hosts: Record<string, string[]>, sitePort?: number): Promise<Started> {
+/** A plain http server standing in for a private site: it answers with what it was asked. */
+async function webSite(): Promise<{ port: number }> {
+  const server = createHttpServer((request, response) => {
+    response.writeHead(200, { "content-type": "text/plain" });
+    response.end(
+      `${request.method} ${request.url} host=${request.headers.host} proxy=${request.headers["proxy-authorization"] ?? "none"}`,
+    );
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  open.push({ close: () => server.close() });
+  const address = server.address();
+  return { port: typeof address === "object" && address ? address.port : 0 };
+}
+
+async function guarded(
+  hosts: Record<string, string[]>,
+  sitePort?: number,
+  /** The captain's private sites list (INF-3116, answer A). */
+  sites: readonly string[] = [],
+): Promise<Started> {
   const refused: GuardRefusal[] = [];
   const lookups: string[] = [];
   const connects: string[] = [];
   const lookup = hostsLookup(hosts);
   const guard = await startConnectionGuard({
     onRefused: (refusal) => refused.push(refusal),
+    listed: (host) => listsPrivateSite(sites, host),
     lookup: (host) => {
       lookups.push(host);
       return lookup(host);
@@ -225,6 +247,161 @@ describe("the task browser's connection guard", () => {
         ],
       },
     ]);
+  });
+
+  // INF-3116, answer A: a listed name reaches its answers on a private network.
+  it("tunnels a listed name and a name under a listed suffix to their private answers", async () => {
+    const { port } = await site();
+    const { guard, connects, refused } = await guarded(
+      {
+        "wiki.corp.example": ["10.20.30.40"],
+        "build.eng.corp.example.com": ["fd00::7", "100.101.102.103"],
+        "corp.example.com": ["10.0.0.9"],
+      },
+      port,
+      ["wiki.corp.example", ".corp.example.com"],
+    );
+    for (const host of ["wiki.corp.example", "build.eng.corp.example.com"]) {
+      const text = await exchange(guard, connectTo(`${host}:443`, guard), {
+        until: /pong/,
+        afterHead: (socket) => socket.write("ping"),
+      });
+      expect(text, host).toMatch(/^HTTP\/1\.1 200 Connection Established\r\n\r\n/);
+    }
+    // A suffix covers the names under it, never the bare name itself (answer 3).
+    expect(await exchange(guard, connectTo("corp.example.com:443", guard))).toMatch(
+      /^HTTP\/1\.1 403 /,
+    );
+    expect(connects).toEqual(["10.20.30.40:443", "fd00::7:443"]);
+    expect(refused).toEqual([
+      {
+        host: "corp.example.com",
+        kind: "private",
+        answers: [{ address: "10.0.0.9", kind: "private" }],
+      },
+    ]);
+  });
+
+  // INF-3129 review, the captain's ruling: a Remove stops every open task browser at once.
+  it("ends a listed name's open tunnel once the name is removed, and keeps a public one", async () => {
+    const { port } = await site();
+    const sites = ["wiki.corp.example"];
+    const { guard } = await guarded(
+      { "wiki.corp.example": ["10.20.30.40"], "skyfare.example": ["93.184.215.14"] },
+      port,
+      sites,
+    );
+    const tunnel = (host: string) =>
+      new Promise<{ closed: Promise<void> }>((resolve, reject) => {
+        const socket = netConnect({ host: guard.host, port: guard.port });
+        open.push({ close: () => socket.destroy() });
+        const closed = new Promise<void>((done) => socket.once("close", () => done()));
+        let text = "";
+        socket.on("connect", () => socket.write(connectTo(`${host}:443`, guard)));
+        socket.on("data", (data) => {
+          text += data.toString();
+          if (text.endsWith("\r\n\r\n")) socket.write("ping");
+          if (text.endsWith("pong")) resolve({ closed });
+        });
+        socket.on("error", reject);
+      });
+    const listed = await tunnel("wiki.corp.example");
+    const publicSite = await tunnel("skyfare.example");
+    let publicClosed = false;
+    void publicSite.closed.then(() => {
+      publicClosed = true;
+    });
+    // The list the guard reads changes, as the captain's Remove changes it.
+    sites.length = 0;
+    guard.recheck?.();
+    await listed.closed;
+    expect(await exchange(guard, connectTo("wiki.corp.example:443", guard))).toMatch(
+      /^HTTP\/1\.1 403 /,
+    );
+    // A whole exchange later, the public tunnel is still open.
+    expect(publicClosed).toBe(false);
+  });
+
+  it("refuses a listed name whose Remove lands while it is being dialed", async () => {
+    const { port } = await site();
+    const sites = ["wiki.corp.example"];
+    const refused: GuardRefusal[] = [];
+    const guard = await startConnectionGuard({
+      onRefused: (refusal) => refused.push(refusal),
+      listed: (host) => listsPrivateSite(sites, host),
+      lookup: hostsLookup({ "wiki.corp.example": ["10.20.30.40"] }),
+      // The captain's Remove lands as the guard dials the checked address.
+      connect: () => {
+        sites.length = 0;
+        return netConnect({ host: "127.0.0.1", port });
+      },
+    });
+    open.push(guard);
+    expect(await exchange(guard, connectTo("wiki.corp.example:443", guard))).toMatch(
+      /^HTTP\/1\.1 403 /,
+    );
+    expect(refused).toMatchObject([{ host: "wiki.corp.example", kind: "private", listed: true }]);
+  });
+
+  it("never dials this computer, link-local or metadata answers of a listed name", async () => {
+    const { port } = await site();
+    const { guard, connects, refused } = await guarded(
+      {
+        "rebind.corp.example": ["127.0.0.1", "::ffff:169.254.169.254"],
+        "meta.corp.example": ["100.100.100.200", "fd00:ec2::254", "64:ff9b::a9fe:a9fe"],
+        "portal.corp.example": ["169.254.169.254", "10.0.0.5"],
+      },
+      port,
+      [".corp.example"],
+    );
+    for (const host of ["rebind.corp.example", "meta.corp.example"]) {
+      expect(await exchange(guard, connectTo(`${host}:443`, guard)), host).toMatch(
+        /^HTTP\/1\.1 403 /,
+      );
+    }
+    // Among them a private answer it may reach is still dialed, alone.
+    const text = await exchange(guard, connectTo("portal.corp.example:443", guard), {
+      until: /pong/,
+      afterHead: (socket) => socket.write("ping"),
+    });
+    expect(text).toMatch(/^HTTP\/1\.1 200 /);
+    expect(connects).toEqual(["10.0.0.5:443"]);
+    expect(refused.map(({ host, kind, listed }) => ({ host, kind, listed }))).toEqual([
+      { host: "rebind.corp.example", kind: "private", listed: true },
+      { host: "meta.corp.example", kind: "private", listed: true },
+    ]);
+  });
+
+  // INF-3116, answer 4: a listed site opens over plain http too.
+  it("carries a plain http request for a listed name to the address it checked", async () => {
+    const { port } = await webSite();
+    const { guard, connects, lookups } = await guarded(
+      { "wiki.corp.example": ["10.20.30.40"] },
+      port,
+      ["wiki.corp.example"],
+    );
+    const text = await exchange(
+      guard,
+      `GET http://wiki.corp.example/pages?id=7 HTTP/1.1\r\nHost: wiki.corp.example\r\n${signIn(guard)}Proxy-Connection: keep-alive\r\n\r\n`,
+      { until: /proxy=none/ },
+    );
+    expect(text).toMatch(/^HTTP\/1\.1 200 /);
+    // The site reads the request as a browser sent it, with no word of the guard's sign-in.
+    expect(text).toContain("GET /pages?id=7 host=wiki.corp.example proxy=none");
+    expect(lookups).toEqual(["wiki.corp.example"]);
+    expect(connects).toEqual(["10.20.30.40:80"]);
+  });
+
+  it("asks a plain http request without its sign-in to sign in, resolving nothing", async () => {
+    const { guard, lookups } = await guarded({ "wiki.corp.example": ["10.20.30.40"] }, undefined, [
+      "wiki.corp.example",
+    ]);
+    const text = await exchange(
+      guard,
+      "GET http://wiki.corp.example/ HTTP/1.1\r\nHost: wiki.corp.example\r\n\r\n",
+    );
+    expect(text).toMatch(/^HTTP\/1\.1 407 /);
+    expect(lookups).toEqual([]);
   });
 
   it("refuses a private address written out, without resolving anything", async () => {

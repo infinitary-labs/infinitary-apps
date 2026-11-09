@@ -18,6 +18,7 @@ import { thisDesktop } from "../design/core/desktop";
 import { isView } from "../devices/viewWords";
 import { purgedTasksText, YOUR_PANELS_WORDS } from "./generalWords";
 import { LocalSeatSection } from "./LocalSeatSection";
+import { PrivateSitesSection } from "./PrivateSitesSection";
 import { SharingSection } from "./SharingSection";
 import { ROW_GAP, SECTION_GAP, SectionLabel, SettingRow } from "./settingRows";
 import { UpdateChannelRow } from "./UpdateChannelRow";
@@ -604,6 +605,7 @@ export function GeneralTab() {
       </div>
       <SharingSection />
       <WebsiteSignInsSection />
+      <PrivateSitesSection />
       <LocalSeatSection />
       <div style={{ marginTop: SECTION_GAP, display: "grid", gap: ROW_GAP }}>
         <VersionRow />

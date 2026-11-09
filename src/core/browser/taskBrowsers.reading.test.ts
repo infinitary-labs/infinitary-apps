@@ -134,10 +134,55 @@ describe("a task's own browser", () => {
     expect(browsers.isOpen("t1")).toBe(true);
   });
 
+  // INF-3116, answers A, 4 and 5: the captain's private sites list, read
+  // again at each open, lets the crewmate and any page reach a listed site
+  // over https or http; a list that cannot be read keeps the last one.
+  it("opens a private site once the captain lists it, over http too, and lets its pages reach it", async () => {
+    let sites: string[] = [];
+    let reachable = true;
+    const asked: string[] = [];
+    const { browsers, pages, guards } = harness({
+      privateSites: async (taskId) => {
+        asked.push(taskId);
+        if (!reachable) throw new Error("the home is out of reach");
+        return sites;
+      },
+    });
+    const browser = browsers.forTask("t1");
+    const before = await browser.navigate({ url: "http://wiki.corp.example/" });
+    expect(before.text).toContain("naming wiki.corp.example.");
+    expect(pages).toHaveLength(0);
+    sites = [".corp.example"];
+    const opened = await browser.navigate({ url: "http://wiki.corp.example/" });
+    expect(opened.text).toContain("Opened http://wiki.corp.example/.");
+    expect(asked).toEqual(["t1", "t1"]);
+    const page = pages[0] as FakePage;
+    expect(page.opened.allow({ url: "http://chat.corp.example/live", topLevel: false })).toBe(true);
+    expect(page.opened.allow({ url: "http://tracker.example/", topLevel: false })).toBe(false);
+    expect(guards[0]?.listed?.("wiki.corp.example")).toBe(true);
+    expect(guards[0]?.listed?.("corp.example.org")).toBe(false);
+    // The home out of reach: the list last read still stands.
+    reachable = false;
+    expect((await browser.navigate({ url: "http://docs.corp.example/" })).text).toContain(
+      "Opened http://docs.corp.example/.",
+    );
+    // INF-3129 review, the captain's ruling: a Remove takes effect in the open
+    // browser at once - its pages and its guard refuse the site, and the
+    // guard ends the connections the listing let through.
+    browsers.privateSitesChanged([]);
+    expect(page.opened.allow({ url: "http://chat.corp.example/live", topLevel: false })).toBe(
+      false,
+    );
+    expect(guards[0]?.listed?.("wiki.corp.example")).toBe(false);
+    expect(guards[0]?.rechecks).toBe(1);
+  });
+
   it("refuses a website over plain http and a private address without opening a browser", async () => {
     const { browsers, pages, guards } = harness();
     const plain = await browsers.forTask("t1").navigate({ url: "http://skyfare.example/" });
-    expect(plain.text).toContain("only over https");
+    expect(plain.text).toContain(
+      "over plain http only when it is a private site the captain allowed",
+    );
     expect(plain.text).toContain("https://skyfare.example/");
     const router = await browsers.forTask("t1").navigate({ url: "https://192.168.1.1/" });
     expect(router.text).toContain("private network");
@@ -176,11 +221,11 @@ describe("a task's own browser", () => {
     expect(look).toContain("Could not find what the page asked for: ads.nowhere.example.");
     // Its own load refused at the connection says why, by the guard's word.
     page.loadOutcome = { ok: false, code: "ERR_TUNNEL_CONNECTION_FAILED" };
-    // INF-3116: it names the address and its kind, and that no setting allows it yet.
+    // INF-3116: it names the address and its kind, and that the captain can allow it (answer A).
     guards[0]?.onRefused(guardSaw("wiki.corp.example", "private", "10.20.30.40"));
-    const refused = await browser.navigate({ url: "https://wiki.corp.example/" });
+    const refused = await browser.navigate({ url: "https://wiki.corp.example:8443/" });
     expect(refused.text).toContain(
-      "wiki.corp.example leads to 10.20.30.40, an address on a private network such as an office or VPN network, so the browser refused it at the connection. Task browsers reach public websites and the pages on this computer you open; no setting lets them reach a private site yet.",
+      "wiki.corp.example:8443 leads to 10.20.30.40, an address on a private network such as an office or VPN network, so the browser refused it at the connection. Task browsers reach public websites, the pages on this computer you open and the private sites the captain allowed. The captain can allow it for task browsers: if the task needs wiki.corp.example, ask the first mate in your report (needs_firstmate), naming wiki.corp.example.",
     );
     // Its lead says it once; the summary does not say it again.
     expect(refused.text).not.toContain("Blocked what the page asked for");

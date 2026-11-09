@@ -8344,6 +8344,11 @@
                             "minLength": 1,
                             "maxLength": 64
                           },
+                          "privateSite": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 253
+                          },
                           "signInOn": {
                             "type": "object",
                             "properties": {
@@ -9081,6 +9086,9 @@
               "update": {
                 "type": "string"
               },
+              "privateSite": {
+                "type": "string"
+              },
               "signInOn": {
                 "type": "object",
                 "properties": {
@@ -9595,6 +9603,11 @@
                               "type": "string",
                               "minLength": 1,
                               "maxLength": 64
+                            },
+                            "privateSite": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 253
                             },
                             "signInOn": {
                               "type": "object",
@@ -36050,6 +36063,148 @@
         ]
       }
     },
+    "inf:browser:private-sites": {
+      "effect": "read",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "sites": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          }
+        },
+        "required": [
+          "available",
+          "sites"
+        ]
+      }
+    },
+    "inf:browser:private-sites:add": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2048
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": true
+              },
+              "sites": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              }
+            },
+            "required": [
+              "ok",
+              "sites"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": false
+              },
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ok",
+              "text"
+            ]
+          }
+        ]
+      }
+    },
+    "inf:browser:private-sites:remove": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 253
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": true
+              },
+              "sites": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 253
+                }
+              }
+            },
+            "required": [
+              "ok",
+              "sites"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": false
+              },
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ok",
+              "text"
+            ]
+          }
+        ]
+      }
+    },
     "inf:projects:list": {
       "effect": "read",
       "reach": "views",
@@ -46201,6 +46356,11 @@
                                   "minLength": 1,
                                   "maxLength": 64
                                 },
+                                "privateSite": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 253
+                                },
                                 "signInOn": {
                                   "type": "object",
                                   "properties": {
@@ -53820,6 +53980,46 @@
         }
       }
     },
+    "inf:work:private-sites": {
+      "effect": "read",
+      "reach": "work",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              }
+            },
+            "required": [
+              "task"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "sites": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253
+            }
+          }
+        },
+        "required": [
+          "sites"
+        ]
+      }
+    },
     "inf:work:browser-frame": {
       "effect": "change",
       "reach": "work",
@@ -57017,6 +57217,11 @@
                             "type": "string",
                             "minLength": 1,
                             "maxLength": 64
+                          },
+                          "privateSite": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 253
                           },
                           "signInOn": {
                             "type": "object",
@@ -72772,6 +72977,44 @@
               },
               "required": [
                 "site"
+              ]
+            }
+          ],
+          "minItems": 1,
+          "items": false
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "ok": {
+              "type": "boolean",
+              "const": true
+            }
+          },
+          "required": [
+            "ok"
+          ]
+        }
+      },
+      "inf:task-browser:private-sites": {
+        "effect": "change",
+        "request": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "sites": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 253
+                  }
+                }
+              },
+              "required": [
+                "sites"
               ]
             }
           ],

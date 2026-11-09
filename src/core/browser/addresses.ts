@@ -3,7 +3,8 @@ import { isIP } from "node:net";
 /**
  * Which addresses a task browser may connect to on the internet
  * (docs/task-browser.md, "Where a page may go"): a public one, and nothing
- * on this Mac, a private network, a shared carrier network, a link, a
+ * on this Mac, a private network (unless the captain listed its name, and
+ * then never what `neverReachable` names), a shared carrier network, a link, a
  * multicast group, or a range kept for documentation, benchmarks or later
  * use. The connection guard (`connectionGuard.ts`) asks this of every
  * address a name resolves to, and the destination policy of every address
@@ -140,6 +141,46 @@ export function addressKind(address: string): AddressKind {
   }
   if (value === 1n) return "this-computer";
   return inIpv6(value, ["fc00::", 7]) ? "private" : "reserved";
+}
+
+/**
+ * Answers nothing ever reaches, whatever the person allowed - a private site
+ * on the task browsers' list (docs/task-browser.md, "Private sites") or a
+ * custom API connection's exception (docs/custom-api.md): this computer's
+ * own services, the unspecified address (which reaches this computer too),
+ * link-local, multicast and the known cloud metadata services. An IPv4
+ * address mapped into IPv6 or translated by NAT64 is read by its IPv4 one.
+ */
+const IPV4_NEVER: readonly [string, number][] = [
+  ["0.0.0.0", 8],
+  ["127.0.0.0", 8],
+  ["169.254.0.0", 16],
+  ["224.0.0.0", 3],
+  ["100.100.100.200", 32],
+  ["168.63.129.16", 32],
+];
+const IPV6_NEVER: readonly [string, number][] = [
+  ["::", 128],
+  ["::1", 128],
+  ["fe80::", 10],
+  ["ff00::", 8],
+  ["fd00:ec2::254", 128],
+  ["fd20:ce::254", 128],
+];
+
+/** Whether no allowance may ever reach an address; anything that is not an address never is reached. */
+export function neverReachable(address: string): boolean {
+  const family = isIP(address);
+  if (family === 4) {
+    const value = ipv4Value(address);
+    return IPV4_NEVER.some((range) => inIpv4(value, range));
+  }
+  if (family !== 6) return true;
+  const value = ipv6Value(address);
+  if (inIpv6(value, ["::ffff:0:0", 96]) || inIpv6(value, ["64:ff9b::", 96])) {
+    return neverReachable(ipv4OfValue(value));
+  }
+  return IPV6_NEVER.some((range) => inIpv6(value, range));
 }
 
 /**

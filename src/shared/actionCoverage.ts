@@ -73,6 +73,8 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
     "The captain's installed-app subscription on the controlling computer, chosen in Settings; never an agent change to the home computer",
   "inf:browser:sign-ins:automatic":
     "The captain's separate grant or revocation of saved website account access; the first mate never changes it",
+  "inf:browser:private-sites:remove":
+    "The captain's own Remove of a private site in Settings; the first mate never removes one",
   "inf:browser:sign-ins:remove":
     "The captain's own Remove of a saved website sign-in; the first mate never removes one",
   "inf:cards:seen": "View stamp",

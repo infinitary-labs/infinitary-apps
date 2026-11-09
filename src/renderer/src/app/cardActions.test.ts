@@ -160,6 +160,20 @@ describe("card action receipts", () => {
     }
   });
 
+  // INF-3116, answer A: the Allow card lands on Settings -> General, which adds its site.
+  it("routes a private site's Allow card into General with the site to add on arrival", async () => {
+    const ipc = request();
+    const sent = useShellStore.getState().actOnCard("choice", "open");
+    ipc.resolve({ effect: { kind: "open", target: "settings", privateSite: "wiki.corp.example" } });
+    await sent;
+    expect(useShellStore.getState()).toMatchObject({
+      view: "settings",
+      settingsSection: "general",
+      pendingPrivateSite: "wiki.corp.example",
+    });
+    useShellStore.setState({ pendingPrivateSite: null, settingsSection: null, view: "home" });
+  });
+
   it("on a Mac controlling another, sends no click that opens Settings there and says where to do it (docs/view.md)", async () => {
     const ipc = request();
     // The pause card, as the host builds it: move Firstmate, or sign in again.

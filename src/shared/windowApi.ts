@@ -86,6 +86,7 @@ import type {
   PersonalPanels,
   ShellPreferences,
 } from "./preferences";
+import type { PrivateSiteChange, PrivateSitesView } from "./privateSites";
 import type { AuthNotice, AuthPromptView, ProviderView } from "./providers";
 import type {
   ModelsCatalogView,
@@ -500,6 +501,12 @@ export type FirstmateApi = {
     ) => Promise<TaskBrowserCommandResult>;
     /** Remove a site's saved sign-in, signing out every browser using it. */
     removeSignIn: (site: string) => Promise<TaskBrowserCommandResult>;
+    /** The captain's private sites list, for Settings; `available` false where there are no task browsers. */
+    privateSites: () => Promise<PrivateSitesView>;
+    /** Add a name or suffix the captain typed or allowed on the app's card. */
+    addPrivateSite: (site: string) => Promise<PrivateSiteChange>;
+    /** Remove an entry from the list. */
+    removePrivateSite: (site: string) => Promise<PrivateSiteChange>;
     /** The captain's own pointer, keys and pasted text, while he has control; recorded nowhere. */
     input: (taskId: string, input: TaskBrowserInput) => Promise<TaskBrowserCommandResult>;
     /** The room the maximized view gives the watched page, or null to give it back its own size. */

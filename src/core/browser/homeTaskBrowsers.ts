@@ -9,6 +9,7 @@ import { type AppPaths, crewmateEvidenceDir } from "../paths";
 import { HomeBrowsers, PlacedBrowsers, type PlacedBrowsersOptions } from "../placed/placedBrowsers";
 import type { TaskService } from "../tasks/taskService";
 import { browserLookup } from "./connectionGuard";
+import { PrivateSites } from "./privateSites";
 import { TaskBrowsers } from "./taskBrowsers";
 import { WebSignIns } from "./webSignIns";
 
@@ -33,6 +34,9 @@ export function startTaskBrowsers(options: {
   const { host, paths, tasks, broadcastEvent, cardStack } = options;
   if (!host.browser) return undefined;
   const webSignIns = new WebSignIns(paths.webSignInsDir);
+  // The captain's private sites list (docs/task-browser.md, "Private sites"):
+  // read here as a browser opens a page, and lent to every computer that runs work.
+  const privateSites = new PrivateSites(paths.privateSitesFile);
   const localBrowsers = new TaskBrowsers({
     host: host.browser,
     ...browserLookup(host.app.packaged),
@@ -48,20 +52,25 @@ export function startTaskBrowsers(options: {
     onReturned: (taskId, returned) => cardStack()?.cardActions.browserReturned(taskId, returned),
     // Website sign-ins the captain saves on this Mac (docs/task-browser.md, "Saved sign-ins").
     signIns: webSignIns,
+    privateSites: () => privateSites.list(),
   });
-  return new HomeBrowsers(
-    localBrowsers,
-    new PlacedBrowsers({
-      devices: options.workDevices,
-      deviceOf: (taskId) => tasks.get(taskId)?.deviceId,
-      nameOf: (deviceId) =>
-        options.devices.list().find((device) => device.id === deviceId)?.name ?? "That computer",
-      signIns: webSignIns,
-      note: (taskId, text) => tasks.note(taskId, text, { news: true }),
-      onChange: (taskId) => broadcastEvent({ type: "task_browser", taskId }),
-      onReturned: (taskId, returned) => cardStack()?.cardActions.browserReturned(taskId, returned),
-    }),
-  );
+  const placedBrowsers = new PlacedBrowsers({
+    devices: options.workDevices,
+    deviceOf: (taskId) => tasks.get(taskId)?.deviceId,
+    nameOf: (deviceId) =>
+      options.devices.list().find((device) => device.id === deviceId)?.name ?? "That computer",
+    signIns: webSignIns,
+    privateSites,
+    note: (taskId, text) => tasks.note(taskId, text, { news: true }),
+    onChange: (taskId) => broadcastEvent({ type: "task_browser", taskId }),
+    onReturned: (taskId, returned) => cardStack()?.cardActions.browserReturned(taskId, returned),
+  });
+  // A change takes effect at once in every open browser, here and on each computer that runs work.
+  privateSites.onChange((sites) => {
+    localBrowsers.privateSitesChanged(sites);
+    placedBrowsers.privateSitesChanged(sites);
+  });
+  return new HomeBrowsers(localBrowsers, placedBrowsers, privateSites);
 }
 
 /**

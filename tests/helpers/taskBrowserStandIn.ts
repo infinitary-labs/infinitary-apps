@@ -330,6 +330,7 @@ export function harness(
     workingCopy?: string;
     chooseFiles?: HostTaskBrowser["chooseFiles"];
     serve?: TaskBrowsersOptions["serve"];
+    privateSites?: TaskBrowsersOptions["privateSites"];
     /** Set when the host should open no page, as one that cannot start a browser. */
     refuseOpen?: () => boolean;
   } = {},
@@ -341,7 +342,7 @@ export function harness(
   const pending: { ms: number; fn: () => void; cancelled: boolean }[] = [];
   const evidence = scratchDir("infinitary-browser-");
   /** Each browser's connection guard, as the stand-in for the real one on loopback. */
-  const guards: (ConnectionGuardOptions & { closed: boolean })[] = [];
+  const guards: (ConnectionGuardOptions & { closed: boolean; rechecks: number })[] = [];
   const host: HostTaskBrowser = {
     open: async (input) => {
       if (options.refuseOpen?.()) throw new Error("no browser could start");
@@ -363,8 +364,9 @@ export function harness(
     ...(options.now ? { now: options.now } : {}),
     ...(options.automaticSignIn ? { automaticSignIn: options.automaticSignIn } : {}),
     ...(options.serve ? { serve: options.serve } : {}),
+    ...(options.privateSites ? { privateSites: options.privateSites } : {}),
     guard: async (guardOptions) => {
-      const guard = { ...guardOptions, closed: false };
+      const guard = { ...guardOptions, closed: false, rechecks: 0 };
       guards.push(guard);
       return {
         host: "127.0.0.1",
@@ -373,6 +375,9 @@ export function harness(
         password: `secret-${guards.length}`,
         close: () => {
           guard.closed = true;
+        },
+        recheck: () => {
+          guard.rechecks += 1;
         },
       };
     },

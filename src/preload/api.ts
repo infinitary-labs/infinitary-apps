@@ -395,6 +395,9 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       allowAutomaticSignIn: (site, id, automatic) =>
         invoke("inf:browser:sign-ins:automatic", site, id, automatic),
       removeSignIn: (site) => invoke("inf:browser:sign-ins:remove", site),
+      privateSites: () => invoke("inf:browser:private-sites"),
+      addPrivateSite: (site) => invoke("inf:browser:private-sites:add", site),
+      removePrivateSite: (site) => invoke("inf:browser:private-sites:remove", site),
       input: (taskId, input) => invoke("inf:browser:input", taskId, input),
       size: (taskId, size) => invoke("inf:browser:size", taskId, size),
     },

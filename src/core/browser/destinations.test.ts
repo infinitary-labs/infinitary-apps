@@ -1,3 +1,4 @@
+import { listsPrivateSite } from "@shared/privateSites";
 import { describe, expect, it } from "vitest";
 import { checkOpenable, decideRequest, isLoopbackHost, originKey } from "./destinations";
 
@@ -53,7 +54,9 @@ describe("the task browser's destinations", () => {
 
   it("refuses anything else in words that say why and what to do", () => {
     const plain = checkOpenable("http://skyfare.example/flights");
-    expect(!plain.ok && plain.reason).toContain("only over https");
+    expect(!plain.ok && plain.reason).toContain(
+      "over plain http only when it is a private site the captain allowed",
+    );
     expect(!plain.ok && plain.reason).toContain("https://skyfare.example/flights");
     for (const address of [
       "http://192.168.1.5/router",
@@ -135,6 +138,33 @@ describe("the task browser's destinations", () => {
     expect(decideRequest("msauth://sign-in", origins)).toMatchObject({
       allowed: false,
       kind: "scheme",
+    });
+  });
+  // INF-3116, answers 4 and 5: a private site the captain listed opens over
+  // https or http, from the crewmate's own open and from any page.
+  it("opens a listed private site over https or http, from any page, never by its address", () => {
+    const listed = (host: string): boolean => listsPrivateSite([".corp.example"], host);
+    expect(checkOpenable("http://wiki.corp.example/start", listed)).toMatchObject({ ok: true });
+    expect(checkOpenable("https://wiki.corp.example/", listed)).toMatchObject({ ok: true });
+    expect(checkOpenable("http://wiki.example.org/", listed)).toMatchObject({ ok: false });
+    expect(checkOpenable("http://10.20.30.40/", listed)).toMatchObject({ ok: false });
+    // Any page's request to it goes on to the guard, over each web scheme.
+    const none = new Set<string>();
+    for (const url of [
+      "http://wiki.corp.example/api",
+      "https://wiki.corp.example/api",
+      "ws://chat.corp.example/live",
+      "wss://chat.corp.example/live",
+    ]) {
+      expect(decideRequest(url, none, listed), url).toEqual({ allowed: true });
+    }
+    expect(decideRequest("http://tracker.example/", none, listed)).toMatchObject({
+      allowed: false,
+      kind: "insecure",
+    });
+    expect(decideRequest("http://10.20.30.40/", none, listed)).toMatchObject({
+      allowed: false,
+      kind: "private",
     });
   });
 });

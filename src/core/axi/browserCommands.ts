@@ -30,7 +30,7 @@ export type BrowserConnection = {
   ) => Promise<BrowserReply>;
 };
 
-const DESCRIPTION = `This task's own browser: open public websites over https and pages ${HERE.this} serves, read them as outlines with refs, use them with real input, and photograph them into your evidence folder.`;
+const DESCRIPTION = `This task's own browser: open public websites over https, private sites the captain allowed and pages ${HERE.this} serves, read them as outlines with refs, use them with real input, and photograph them into your evidence folder.`;
 
 /** A ref as a crewmate may write it: `@g1:e5`, `g1:e5` or `[g1:e5]`. */
 const REF_ARG = new RegExp(`^@?\\[?(${REF_PATTERN})\\]?$`, "i");
@@ -258,7 +258,7 @@ async function ask<Op extends BrowserOp>(
 export const BROWSER_COMMANDS: Record<string, AxiCommand<BrowserConnection>> = {
   open: command(
     "open <url>",
-    `Open a public website over https, or a page a project serves on ${HERE.this} (localhost, 127.0.0.1, a name ending in .localhost), and show its outline. A fresh browser has nothing signed in. A private-network address, plain http, a certificate error and a site's sign-in box are refused.`,
+    `Open a public website over https, a private site the captain allowed (over https or http, by its name), or a page a project serves on ${HERE.this} (localhost, 127.0.0.1, a name ending in .localhost), and show its outline. A fresh browser has nothing signed in. A private-network address, an unlisted private site, other plain http, a certificate error and a site's sign-in box are refused.`,
     async (args, browser) => {
       const url = args.positional[0];
       if (!url || args.positional.length > 1)

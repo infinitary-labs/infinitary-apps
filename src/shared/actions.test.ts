@@ -12,6 +12,30 @@ import { CORE_INVOKE_CHANNELS, type CoreInvokeChannel, invokeContract } from "./
 import { remoteLoginWords } from "./remoteLogin";
 
 describe("action permissions and channel parity", () => {
+  // INF-3116, answer A: the first mate only offers the app's Allow card for
+  // a private site; the captain's click on it adds the checked name.
+  it("offers a private site on the app's Allow card, checked, and never one already listed", () => {
+    const allow = ACTIONS["private-site-allow"];
+    expect(allow.tier).toBe("hands");
+    const view = { available: true, sites: ["wiki.corp.example"] };
+    expect(
+      allow.offer?.({ site: "*.Corp.Example.com" }, view, { platform: "darwin" }),
+    ).toMatchObject({
+      title: "Let task browsers reach sites under .corp.example.com?",
+      label: "Allow",
+      arrival: { privateSite: ".corp.example.com" },
+    });
+    expect(() => allow.offer?.({ site: ".com" }, view, { platform: "darwin" })).toThrow(
+      "two or more parts",
+    );
+    expect(() => allow.offer?.({ site: "10.20.30.40" }, view, { platform: "darwin" })).toThrow(
+      "never by its address",
+    );
+    expect(() =>
+      allow.offer?.({ site: "wiki.corp.example" }, view, { platform: "darwin" }),
+    ).toThrow("already on the private sites list");
+  });
+
   it("INF-1007: integration-add carries each named server kind into its sign-in form", () => {
     const add = ACTIONS["integration-add"];
     const view = {

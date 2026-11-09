@@ -20,6 +20,7 @@ import {
 } from "@shared/work";
 import { siteNamed } from "../browser/browserRecord";
 import type { BrowserAnswer } from "../browser/crewmateCommands";
+import type { PrivateSites } from "../browser/privateSites";
 import { failedSignInNote, offeredOf, offeredSignIn } from "../browser/savedSignInGrants";
 import type {
   BrowserFrameSink,
@@ -74,6 +75,8 @@ export type PlacedBrowsersOptions = {
   nameOf: (deviceId: string) => string;
   /** The website sign-ins saved on this Mac; with none, nothing is lent or saved. */
   signIns?: WebSignIns;
+  /** The captain's private sites list, lent whole to a browser there as it opens a page. */
+  privateSites?: Pick<PrivateSites, "list">;
   /** One line on the task's own timeline. */
   note: (taskId: string, text: string) => void;
   /** A task's browser changed for the captain: its record and view read it again. */
@@ -121,6 +124,10 @@ export class PlacedBrowsers implements PlacedBrowserSink {
     this.lend(task, record.site, record.id);
     const { failedAt: _failedAt, ...lent } = record;
     return { ...lent, automatic: true, cookies: liveCookies(record.cookies, this.now()) };
+  }
+
+  privateSiteList(): string[] {
+    return this.options.privateSites?.list() ?? [];
   }
 
   heardFact(deviceId: string, task: string, fact: TaskBrowserFact | null): void {
@@ -365,6 +372,29 @@ export class PlacedBrowsers implements PlacedBrowserSink {
   }
 
   /**
+   * The captain changed the private sites list: each computer with an open
+   * browser takes it at once (`inf:task-browser:private-sites`), and one
+   * out of reach takes it when it is heard from again (`reached`); one that
+   * opens later reads it then.
+   */
+  privateSitesChanged(sites: readonly string[]): void {
+    const devices = new Set<string>();
+    for (const { deviceId, fact } of this.facts.values())
+      if (fact.state === "open") devices.add(deviceId);
+    for (const deviceId of devices) this.lendSites(deviceId, sites);
+  }
+
+  private lendSites(deviceId: string, sites: readonly string[]): void {
+    void this.options.devices
+      .ask(deviceId, "inf:task-browser:private-sites", [{ sites: [...sites] }])
+      .catch((caught: unknown) =>
+        this.log(
+          `could not give ${deviceId}'s browsers the private sites list: ${messageOf(caught)}`,
+        ),
+      );
+  }
+
+  /**
    * The task closed: its browser there goes, at once or once that computer
    * closes its conversation, and the captain reads it stopped now.
    */
@@ -442,6 +472,9 @@ export class PlacedBrowsers implements PlacedBrowserSink {
     for (const [task, heard] of [...this.facts])
       if (heard.deviceId === deviceId && !said.has(task)) this.heard(deviceId, task, null);
     for (const [task, fact] of said) this.heard(deviceId, task, fact);
+    // A change made while it was out of reach reaches its open browsers now.
+    if (this.options.privateSites && answer.facts.some((entry) => entry.fact?.state === "open"))
+      this.lendSites(deviceId, this.options.privateSites.list());
     for (const task of this.watchers.keys()) {
       if (this.options.deviceOf(task) !== deviceId) continue;
       this.tell(task, "inf:task-browser:watch", { watching: true });
@@ -522,6 +555,8 @@ export class HomeBrowsers {
     private readonly local: TaskBrowsers,
     /** The browsers of tasks on other computers, which hear what those computers say. */
     readonly there: PlacedBrowsers,
+    /** The captain's private sites list, which every computer's task browsers read. */
+    readonly privateSites: PrivateSites,
   ) {}
 
   isOpen(taskId: string): boolean {

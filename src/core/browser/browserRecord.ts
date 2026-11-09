@@ -143,6 +143,10 @@ export type BrowsersCore = {
   handBack(taskId: string, browser: Browser, back: HandBack): void;
   /** One command at a time per task, in the order they came. */
   serial<T>(taskId: string, run: () => Promise<T>): Promise<T>;
+  /** Whether a name is on the captain's private sites list, as last read. */
+  listed(hostname: string): boolean;
+  /** Read the private sites list again, before a crewmate's open is checked. */
+  readSites(taskId: string): Promise<void>;
   /** One click or resize at a time per browser, in the order they came. */
   steadily<T>(browser: Browser, run: () => Promise<T>): Promise<T>;
   readonly commands: CrewmateCommands;

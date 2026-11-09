@@ -212,6 +212,12 @@ export class ComputerBrowsers {
           once: returned.once,
         }),
       signIns: this.lent,
+      // The home's private sites list, lent as each page opens; a home
+      // without it, or out of reach, leaves the last read (none at first).
+      privateSites: async (task) =>
+        workRequests["inf:work:private-sites"].response.parse(
+          await options.tell("inf:work:private-sites", [{ task }]),
+        ).sites,
       automaticSignIn: async (task, site) => {
         const result = workRequests["inf:work:browser-sign-in"].response.parse(
           await options.tell("inf:work:browser-sign-in", [{ task, site }]),
@@ -372,6 +378,11 @@ export class ComputerBrowsers {
       case "inf:task-browser:sign-out": {
         const [{ site }] = request as BrowserOrderRequest<"inf:task-browser:sign-out">;
         await browsers.removeSavedSignIn(site);
+        return { ok: true };
+      }
+      case "inf:task-browser:private-sites": {
+        const [{ sites }] = request as BrowserOrderRequest<"inf:task-browser:private-sites">;
+        browsers.privateSitesChanged(sites);
         return { ok: true };
       }
       case "inf:task-browser:close": {

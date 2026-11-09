@@ -276,6 +276,8 @@ export type CrewMachines = {
 
 /** What a task's browser on a computer tells this Mac, by the computer that asked. */
 export type PlacedBrowserSink = {
+  /** The captain's private sites list, lent to a task's browser there as it opens a page. */
+  privateSiteList?: () => string[];
   automaticSignIn?: (
     task: string,
     site: string,

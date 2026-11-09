@@ -549,6 +549,11 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         signIn: this.options.browsers?.()?.automaticSignIn?.(asked.task, site),
       } as InvokeResponse<C>;
     }
+    if (channel === "inf:work:private-sites") {
+      return {
+        sites: this.options.browsers?.()?.privateSiteList?.() ?? [],
+      } as InvokeResponse<C>;
+    }
     const placed = this.load(asked.task, deviceId);
     if (channel === "inf:work:events") {
       const { events } = request as InvokeRequest<"inf:work:events">[0];

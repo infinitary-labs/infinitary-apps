@@ -40,23 +40,24 @@ Callers drive every browser through `TaskBrowsers`, and import the shapes and wo
 ## Where a page may go
 
 A crewmate opens a public website over https, or an http or https address on this Mac's loopback: `localhost`, a name ending in `.localhost`, `127.0.0.0/8` or `[::1]`.
+It also opens a private site the captain allowed ("Private sites" below), by its name, over https or http.
 Which websites a task needs is the crewmate's judgment, from its instructions; the host checks only the typed rules below, never what a site is for.
 Opening a loopback address registers its origin (host and port, with a live-reload socket on the same port counted as the same origin) for that task alone.
 The host registers one more the same way: the address it serves a project folder at for a page from the project ("A page from the project" below).
-A website over plain http, and an address written out that is on a private network or kept for special use, is refused before anything opens, in words that say what to open instead.
+A website over plain http that is not on the list, and an address written out that is on a private network or kept for special use, is refused before anything opens, in words that say what to open instead.
 
 Every request a page makes asks `decideRequest` (`src/core/browser/destinations.ts`) before it leaves, top level or not: a redirect, a frame, a picture, a script, a worker, a websocket, a popup.
-Content the page makes itself (`data:`, `blob:`, `about:`) and the origins the crewmate opened go through, and so does a public website over https or wss.
-Everything else is refused: another server on this Mac, an address on a private network, a website over plain http or ws, a file, an app scheme.
+Content the page makes itself (`data:`, `blob:`, `about:`) and the origins the crewmate opened go through, and so does a public website over https or wss, and a listed private site over any web scheme, from any page.
+Everything else is refused: another server on this Mac, an address on a private network, a website over plain http or ws that is not listed, a file, an app scheme.
 
 An address is only what it names, and a public name can resolve to a private address, or change to one between a check and a connection.
 So every connection off this Mac's loopback goes through the browser's own connection guard (`startConnectionGuard`, `src/core/browser/connectionGuard.ts`), its session's one proxy.
 The guard resolves the name itself, reads each answer's kind (`addressKind`, `src/core/browser/addresses.ts`): public, this computer, a private network such as an office or VPN network, or reserved.
-It dials only the answers it checked are public, in the order the name server gave them, and never resolves the name again.
-A name with public and private answers connects through its public ones alone; its private answers are skipped and never dialed.
-A name with no public answer is refused at the connection, before anything reaches it, and named in the next answer.
-No setting lets a task browser reach a private site yet.
-The guard carries only `CONNECT` tunnels, and the page's own TLS runs end to end through them; it neither reads nor ends it.
+It dials only the answers it checked, in the order the name server gave them, and never resolves the name again: a public answer, or for a listed name a private one too.
+A name that is not listed with public and private answers connects through its public ones alone; its private answers are skipped and never dialed.
+A name with no answer it may dial is refused at the connection, before anything reaches it, and named in the next answer.
+The guard carries `CONNECT` tunnels, and the page's own TLS runs end to end through them; it neither reads nor ends it.
+It also forwards a plain http request for a listed name, its own sign-in and hop headers taken off, to the address it checked; any other plain request is refused.
 Loopback never goes through the guard: the browser resolves those names to this Mac itself, never through a name server, and the policy above has already checked their origins.
 WebRTC reaches its peers only through the guard (`disable_non_proxied_udp`), so it never goes around it.
 
@@ -67,7 +68,7 @@ An unpackaged run may stand in its own resolver with `INFINITARY_TASK_BROWSER_HO
 The next answer names what was refused, by host and by why: a private network, plain http, another server on this Mac (open it with `infinitary-browser-axi open` to let the page reach it), or not a web address.
 A name the guard could not find, or whose server did not answer, is named too.
 A load of the crewmate's own that the guard refused says why in its lead (`guardRefusalLead`, `src/core/browser/pageNotices.ts`): the name was not found, did not answer, or leads to the addresses it names, each with its kind.
-A private network's answer says no setting lets task browsers reach a private site yet; this computer's says to open the page by localhost; a reserved one says a proxy app or DNS filter usually gives it.
+A private network's answer says the captain can allow the site for task browsers, and tells the crewmate to ask the first mate in its report (`needs_firstmate`), naming the site; a listed name that leads only to an address no task browser reaches says so; this computer's says to open the page by localhost; a reserved one says a proxy app or DNS filter usually gives it.
 A mixed name whose public answers did not respond names them, and the private answers it skipped.
 
 The browser also refuses, and tells the crewmate once:
@@ -79,7 +80,27 @@ The browser also refuses, and tells the crewmate once:
 Nothing a page asks for ever opens in the person's own browser or another app: an app scheme is refused like any other, and every permission, the one that opens an outside app among them, is refused.
 A page that takes the crewmate to a sign-in it did not expect, or on another site, is not signed in to by the crewmate: the help of the answer that opened it tells it to ask the captain with `browser_handoff` ("Asking for help").
 
-The fence is the page's, not the crewmate's: a hostile page cannot reach the rest of this Mac or its network through the task's browser, while the crewmate's own shell stays socially isolated (`docs/architecture.md` §4).
+## Private sites
+
+A site on an office, home or VPN network has a private address, so a task browser reaches it only once the captain lists it.
+Settings › General › Private sites holds the list (`PrivateSitesSection`): one row per entry with Remove, and a field that adds one with Enter or Add.
+An entry is a name (`wiki.corp.example`) or a suffix of two or more parts (`.corp.example.com`, typed with or without `*`) that covers every name under it but not its own bare name (`normalizePrivateSite`, `listsPrivateSite`, `src/shared/privateSites.ts`).
+An entry is never an address, `localhost` or a top-level domain alone, and a pasted address adds its host.
+The first mate never adds one: when a crewmate's report names a private site the task needs, it puts up the app's own Allow card (`private-site-allow` in `src/shared/actions.ts`), and only the captain's click on Allow adds the site, landing on Settings › General with it listed.
+
+The home keeps the list in one file (`PrivateSites`, `src/core/browser/privateSites.ts`, `private-sites.json`) and is its one writer.
+The list is one for every computer: a computer that runs work asks the home for it (`inf:work:private-sites`) before each of its crewmate's opens and keeps no copy, and while the home does not answer, the last list it read stands, empty at first.
+A browser here reads the same file before each open.
+Each add or Remove reaches open browsers at once (`PrivateSites.onChange`): the home gives its own browsers the new list and sends it to each computer with an open task browser (`inf:task-browser:private-sites`), and every browser's guard ends the connections it holds to a name no longer listed (`ConnectionGuardHandle.recheck`), so a removed site stops loading at once, on every page.
+A computer out of reach at the change takes the list when the home hears from it again (`PlacedBrowsers.reached`), and the guard checks the list again once a dial ends, so a Remove that lands mid-dial ends that connection too.
+A computer that runs work on an older version refuses that order, and the home only logs it, so a Remove reaches that computer's browsers at their next open.
+
+A listed name is still resolved and checked by the guard.
+Its public answers and its private-network answers are dialed; this computer's loopback, an unspecified address, link-local, multicast and cloud metadata addresses never are, however they are written, IPv4-mapped and NAT64 forms included (`neverReachable`, `src/core/browser/addresses.ts`, the same list the custom API's exception reads, `docs/custom-api.md`).
+Any page of a task's browser reaches a listed site, as an ordinary browser does, over https or http.
+An address written out stays refused even when its name is listed, so a site is reached by its name alone.
+
+The fence is the page's, not the crewmate's: a hostile page cannot reach the rest of this Mac or its network through the task's browser, beyond the private sites the captain listed, while the crewmate's own shell stays socially isolated (`docs/architecture.md` §4).
 
 ## What a crewmate reads
 
@@ -525,8 +546,8 @@ That computer keeps task browsers when it has a browser engine and a command pro
 The home names the browser in the crewmate's instructions and tells that computer the task has one (`PlacedSpec.browser`); that computer grants the command to the crewmate's shell when it opens the conversation, and the browser goes when the conversation there closes for good.
 
 Its pages are that computer's.
-A page a project serves on that computer's own loopback is the one the crewmate opens, its connection guard resolves and checks every address from there, so a name that leads to that computer or its private network is refused at the connection, and its pictures land in the task's evidence folder there, where the crewmate reads them.
-That computer's own `TaskBrowsers` owns it, with every rule on this page, and its crewmate reaches it through that computer's own task channel (`ComputerBrowsers`, `src/core/helper/browsers.ts`; `docs/axi-commands.md`).
+A page a project serves on that computer's own loopback is the one the crewmate opens, its connection guard resolves and checks every address from there, so a name that leads to that computer or its private network is refused at the connection unless the captain listed it, and its pictures land in the task's evidence folder there, where the crewmate reads them.
+That computer's own `TaskBrowsers` owns it, with every rule on this page and the home's private sites list, and its crewmate reaches it through that computer's own task channel (`ComputerBrowsers`, `src/core/helper/browsers.ts`; `docs/axi-commands.md`).
 
 The captain reads and drives it from the home as the captain does one here (`PlacedBrowsers` and `HomeBrowsers`, `src/core/placed/placedBrowsers.ts`):
 
@@ -604,7 +625,10 @@ It also holds a cut passage naming a ref, a wait reading past that cut, a time e
 `reading.test.ts` holds the snapshot's marks, which elements the window shows, the whole-page picture's width and the navigation-payload error left out of an answer.
 `taskBrowsers.reading.test.ts` holds a click on a link, and a button click, whose address changes after the click, answering with the new page, a full read of a cut line, a long page read from its top, from a line, around words and on screen after a scroll, and a wait answered with the part that holds its words.
 It also holds a ref from before a move refused for every action and a full read, with nothing sent to the page, while the element that took its place keeps its own ref, and a ref from a browser the task had before refused.
-`addresses.test.ts` holds which addresses are public, however they are written, and each address's kind, and `connectionGuard.test.ts` the guard against a stand-in site on loopback: only its own browser's sign-in is answered, a public name tunnels to the one address it checked and is resolved once, a name that leads only to this Mac or a private network is refused before any connection with each answer's kind, a name with public and private answers tunnels to its public one alone, and one whose public answer does not respond reports what it skipped, a private address written out is refused unresolved, a name not found and a server that does not answer are told apart, no plain request is carried, and closing ends its tunnels.
+`addresses.test.ts` holds which addresses are public, however they are written, and each address's kind, and `connectionGuard.test.ts` the guard against a stand-in site on loopback: only its own browser's sign-in is answered, a public name tunnels to the one address it checked and is resolved once, a name that leads only to this Mac or a private network is refused before any connection with each answer's kind, a name with public and private answers tunnels to its public one alone, and one whose public answer does not respond reports what it skipped, a private address written out is refused unresolved, a name not found and a server that does not answer are told apart, and closing ends its tunnels.
+It also holds a listed name and a name under a listed suffix tunnelling to their private answers while the suffix's bare name is refused, a listed name whose answers no task browser reaches refused, a plain http request for a listed name forwarded to its checked address without the guard's sign-in, a plain request without the sign-in refused before any lookup, a listed name's open tunnel ended once the name is removed while a public one stays, and a Remove that lands mid-dial refused.
+`privateSites.test.ts` holds the list's file, what an entry may be and each change being heard, `destinations.test.ts` a listed site opening over http and https from any page and never by its address, and `taskBrowsers.reading.test.ts` a crewmate opening a listed site, its pages reaching it, an unreadable list keeping the last read, and a Remove refusing its pages at once and asking the guard to end its connections; `placedCallbacks.test.ts` holds the home's answer to a computer that runs work, `placedBrowsers.test.ts` the home sending each change to a computer with an open browser, and again when one is back in reach, and only logging an older one's refusal, `actions.test.ts` the Allow card, and `cardActions.test.ts` its click landing on General.
+`tests/e2e/private-sites.spec.ts` has the first mate offer the Allow card, the captain's key on Allow add the site and land on General, and the captain add a suffix with Enter, be refused an address with its reason, and remove the first site by key, each change saved.
 `taskBrowsers.reading.test.ts` also holds public websites through the guard and its refusals' words, each kind of answer's lead among them, and the certificate, sign-in box and client certificate refusals.
 `taskBrowsers.view.test.ts` holds a second page opening, taking the crewmate's commands, each page's refs refused on the other, switching back and closing itself, the two-page cap and a refused popup, the captain's pick of a page and the view following the current page.
 `taskBrowsers.signIns.test.ts` holds a browser handed back keeping only what the task needs: no query, no error words, no typed text the crewmate did not type and no picture of it, while what the crewmate types itself reads back until the captain holds the page again.

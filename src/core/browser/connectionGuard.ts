@@ -1,10 +1,15 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { lookup as dnsLookup } from "node:dns/promises";
-import { createServer, type IncomingMessage } from "node:http";
+import {
+  createServer,
+  request as httpRequest,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 import { type AddressInfo, isIP, connect as netConnect, type Socket } from "node:net";
-import type { Duplex } from "node:stream";
+import { type Duplex, pipeline } from "node:stream";
 import { settingFrom } from "@shared/envSettings";
-import { type AddressKind, addressKind } from "./addresses";
+import { type AddressKind, addressKind, neverReachable } from "./addresses";
 
 /**
  * A task browser's connection guard (docs/task-browser.md, "Where a page
@@ -20,10 +25,15 @@ import { type AddressKind, addressKind } from "./addresses";
  * between a check and a connection, never reaches this Mac's network. A tunnel then carries the
  * page's own TLS, end to end, which the guard neither reads nor ends.
  *
+ * A name on the captain's private sites list (`listed`, docs/task-browser.md,
+ * "Private sites") may also reach its answers on a private network, never
+ * one no allowance reaches (`neverReachable`), and only such a name may ask
+ * for a plain http page, which the guard carries to the address it checked.
+ *
  * It listens on loopback alone, only while its browser is open, and answers
  * only that browser: the session signs in with a secret made for this one
  * guard, and any other caller is refused before anything is resolved. It
- * carries nothing but `CONNECT`. The session signs in once before its page
+ * carries `CONNECT`, and a plain http request only for a listed name. The session signs in once before its page
  * loads, by asking for `GUARD_SIGN_IN_HOST`, because a browser never
  * answers a sign-in challenge for a page's cross-origin picture, which may
  * be its first connection off this Mac.
@@ -42,6 +52,8 @@ export type GuardRefusal = {
   host: string;
   kind: GuardRefusalKind;
   answers: readonly GuardAnswer[];
+  /** The name is on the captain's private sites list, so its private answers were admitted too. */
+  listed?: true;
 };
 
 /** Every address a name resolves to. */
@@ -52,6 +64,8 @@ export type ConnectionGuardOptions = {
   onRefused: (refusal: GuardRefusal) => void;
   /** The system's resolver when absent. */
   lookup?: GuardLookup;
+  /** Whether a name is on the captain's private sites list, read at each connection; none is when absent. */
+  listed?: (host: string) => boolean;
   /** Opens the socket to a checked address; a test stands in its own. */
   connect?: (address: string, port: number) => Duplex;
   /** How long one address may take to answer before the next is tried. */
@@ -66,7 +80,14 @@ export type GuardEndpoint = {
   password: string;
 };
 
-export type ConnectionGuardHandle = GuardEndpoint & { close: () => void };
+export type ConnectionGuardHandle = GuardEndpoint & {
+  close: () => void;
+  /**
+   * The private sites list changed: every connection a name's listing let
+   * through ends once that name is no longer listed. A stand-in may omit it.
+   */
+  recheck?: () => void;
+};
 
 /**
  * The name a browser's session asks its guard for once, signed in, before
@@ -76,6 +97,18 @@ export type ConnectionGuardHandle = GuardEndpoint & { close: () => void };
 export const GUARD_SIGN_IN_HOST = "sign-in.task-browser.invalid";
 
 const CONNECT_MS = 10_000;
+/** Headers that speak of one hop alone, which a carried http request leaves behind. */
+const HOP_HEADERS = new Set([
+  "connection",
+  "keep-alive",
+  "proxy-authorization",
+  "proxy-authenticate",
+  "proxy-connection",
+  "te",
+  "trailer",
+  "transfer-encoding",
+  "upgrade",
+]);
 const REALM = "task browser";
 
 const systemLookup: GuardLookup = async (host) =>
@@ -129,6 +162,8 @@ export async function startConnectionGuard(
     `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`,
   );
   const sockets = new Set<Duplex>();
+  /** Each connection to a listed name, by that name, so a Remove ends it. */
+  const byListing = new Map<Duplex, string>();
   let closed = false;
   const track = (socket: Duplex): void => {
     sockets.add(socket);
@@ -165,11 +200,140 @@ export async function startConnectionGuard(
     return undefined;
   };
 
-  const server = createServer((_request, response) => {
-    // Only tunnels: the page's own TLS rides them. A plain request is refused.
-    response.writeHead(403, { connection: "close" });
-    response.end();
-  });
+  /**
+   * Resolve a name once and dial only the answers it may reach: public
+   * ones, and for a listed name a private network's too, never one no
+   * allowance reaches. Nothing when the guard closed meanwhile.
+   */
+  const admit = async (
+    host: string,
+    port: number,
+  ): Promise<{ ok: true; upstream: Duplex } | { ok: false; refusal?: GuardRefusal }> => {
+    const listed = !isIP(host) && options.listed?.(host) === true;
+    const refused = (
+      kind: GuardRefusalKind,
+      answers: readonly GuardAnswer[] = [],
+    ): { ok: false; refusal: GuardRefusal } => ({
+      ok: false,
+      refusal: { host, kind, answers, ...(listed ? { listed: true as const } : {}) },
+    });
+    let addresses: string[];
+    if (isIP(host)) addresses = [host];
+    else {
+      try {
+        addresses = await lookup(host);
+      } catch {
+        return closed ? { ok: false } : refused("unresolved");
+      }
+    }
+    if (closed) return { ok: false };
+    if (addresses.length === 0) return refused("unresolved");
+    // Only a checked answer is ever dialed: one it may not reach is
+    // skipped, and a name with none it may reach is refused whole.
+    const answers = addresses.map((address) => ({ address, kind: addressKind(address) }));
+    const reachable = answers.filter(
+      (answer) =>
+        answer.kind === "public" ||
+        (listed && answer.kind === "private" && !neverReachable(answer.address)),
+    );
+    if (reachable.length === 0) return refused("private", answers);
+    const upstream = await reach(
+      reachable.map((answer) => answer.address),
+      port,
+    );
+    if (!upstream) return closed ? { ok: false } : refused("unreachable", answers);
+    if (listed) {
+      // A Remove that landed while this name was being dialed ends it here.
+      if (options.listed?.(host) !== true) {
+        upstream.destroy();
+        return refused("private", answers);
+      }
+      byListing.set(upstream, host);
+      upstream.once("close", () => byListing.delete(upstream));
+    }
+    return { ok: true, upstream };
+  };
+
+  /**
+   * A plain http request, which a page's session sends its proxy whole: only
+   * for a name on the private sites list, carried to the address the guard
+   * checked. Every other one is refused, since a public website is reached
+   * over https alone.
+   */
+  const forward = (request: IncomingMessage, response: ServerResponse): void => {
+    if (!signedIn(request)) {
+      response.writeHead(407, {
+        "proxy-authenticate": `Basic realm="${REALM}"`,
+        connection: "close",
+      });
+      response.end();
+      return;
+    }
+    let url: URL | undefined;
+    try {
+      url = new URL(request.url ?? "");
+    } catch {
+      url = undefined;
+    }
+    const host = url?.hostname.toLowerCase() ?? "";
+    if (url?.protocol !== "http:" || isIP(host) || options.listed?.(host) !== true) {
+      response.writeHead(403, { connection: "close" });
+      response.end();
+      return;
+    }
+    const port = Number(url.port || 80);
+    const path = `${url.pathname}${url.search}`;
+    void (async () => {
+      const reached = await admit(host, port);
+      if (!reached.ok) {
+        if (reached.refusal) {
+          options.onRefused(reached.refusal);
+          response.writeHead(reached.refusal.kind === "private" ? 403 : 502, {
+            connection: "close",
+          });
+          response.end();
+        } else response.destroy();
+        return;
+      }
+      const headers: Record<string, string | string[]> = {};
+      for (const [name, value] of Object.entries(request.headers)) {
+        if (value === undefined || HOP_HEADERS.has(name)) continue;
+        headers[name] = value;
+      }
+      headers.connection = "close";
+      const upstream = reached.upstream;
+      const outgoing = httpRequest({
+        method: request.method ?? "GET",
+        path,
+        headers,
+        setHost: false,
+        createConnection: () => upstream as Socket,
+      });
+      outgoing.on("response", (incoming) => {
+        const back: string[] = [];
+        for (let index = 0; index < incoming.rawHeaders.length; index += 2) {
+          const name = incoming.rawHeaders[index] ?? "";
+          if (HOP_HEADERS.has(name.toLowerCase())) continue;
+          back.push(name, incoming.rawHeaders[index + 1] ?? "");
+        }
+        response.writeHead(incoming.statusCode ?? 502, back);
+        // Either side ending ends the other, so neither waits on a gone peer.
+        pipeline(incoming, response, () => upstream.destroy());
+      });
+      outgoing.on("error", () => {
+        if (!response.headersSent) {
+          response.writeHead(502, { connection: "close" });
+          response.end();
+        } else response.destroy();
+      });
+      response.on("close", () => upstream.destroy());
+      pipeline(request, outgoing, (error) => {
+        if (error) upstream.destroy();
+      });
+    })();
+  };
+
+  const server = createServer(forward);
   server.on("connection", track);
   server.on("clientError", (_error, socket) => socket.destroy());
   server.on("connect", (request: IncomingMessage, socket: Duplex, head: Buffer) => {
@@ -190,45 +354,15 @@ export async function startConnectionGuard(
         answer(socket, "204 No Content");
         return;
       }
-      const refuse = (kind: GuardRefusalKind, answers: readonly GuardAnswer[] = []): void => {
-        options.onRefused({ host: target.host, kind, answers });
-        answer(socket, kind === "private" ? "403 Forbidden" : "502 Bad Gateway");
-      };
-      let addresses: string[];
-      if (isIP(target.host)) addresses = [target.host];
-      else {
-        try {
-          addresses = await lookup(target.host);
-        } catch {
-          refuse("unresolved");
-          return;
-        }
-      }
-      if (closed) {
-        socket.destroy();
+      const reached = await admit(target.host, target.port);
+      if (!reached.ok) {
+        if (reached.refusal) {
+          options.onRefused(reached.refusal);
+          answer(socket, reached.refusal.kind === "private" ? "403 Forbidden" : "502 Bad Gateway");
+        } else socket.destroy();
         return;
       }
-      if (addresses.length === 0) {
-        refuse("unresolved");
-        return;
-      }
-      // Only a checked public answer is ever dialed: a private one among
-      // them is skipped, and a name with none is refused whole.
-      const answers = addresses.map((address) => ({ address, kind: addressKind(address) }));
-      const reachable = answers.filter((answer) => answer.kind === "public");
-      if (reachable.length === 0) {
-        refuse("private", answers);
-        return;
-      }
-      const upstream = await reach(
-        reachable.map((answer) => answer.address),
-        target.port,
-      );
-      if (!upstream) {
-        if (!closed) refuse("unreachable", answers);
-        else socket.destroy();
-        return;
-      }
+      const upstream = reached.upstream;
       upstream.on("error", () => socket.destroy());
       upstream.on("close", () => socket.destroy());
       socket.on("close", () => upstream.destroy());
@@ -258,6 +392,10 @@ export async function startConnectionGuard(
       server.close();
       for (const socket of sockets) socket.destroy();
       sockets.clear();
+    },
+    recheck: () => {
+      for (const [upstream, host] of byListing)
+        if (options.listed?.(host) !== true) upstream.destroy();
     },
   };
 }

@@ -1,7 +1,7 @@
 import { HERE } from "@shared/deviceNames";
 import { TASK_BROWSER_PAGES_MAX } from "@shared/taskBrowser";
 import type { HostBrowserRefusal } from "../host";
-import type { AddressKind } from "./addresses";
+import { type AddressKind, neverReachable } from "./addresses";
 import { quoted, siteOf } from "./browserRecord";
 import { browserCommand } from "./commandWords";
 import type { GuardAnswer, GuardRefusal, GuardRefusalKind } from "./connectionGuard";
@@ -12,6 +12,10 @@ const NOTICES_SHOWN = 8;
 const NOTICE_MAX = 300;
 /** Notices kept between answers; older ones only count. */
 const NOTICES_KEPT = 50;
+
+/** How a crewmate asks for a private site, which only the captain's click allows. */
+const ALLOW_WORDS =
+  "The captain can allow a private site for task browsers by its name: if the task needs one, ask the first mate in your report (needs_firstmate), naming the site.";
 
 /** A host the page asked for and did not get: refused by policy, or by its connection guard. */
 type Blocked = { count: number; kind: BlockKind | Exclude<GuardRefusalKind, "private"> };
@@ -25,14 +29,14 @@ const BLOCKED_WORDS: readonly [Blocked["kind"], readonly [string, string]][] = [
     "private",
     [
       `Blocked what the page asked for on ${HERE.this}'s network or another private one: `,
-      `This browser reaches public websites and the pages on ${HERE.this} you open, never another device; a public name that leads to a private address is refused at the connection.`,
+      `This browser reaches public websites, the pages on ${HERE.this} you open and the private sites the captain allowed, never another device; a public name that leads to a private address is refused at the connection. ${ALLOW_WORDS}`,
     ],
   ],
   [
     "insecure",
     [
       "Blocked what the page asked for from websites over plain http: ",
-      "This browser reaches websites only over https.",
+      "This browser reaches public websites only over https; a private site the captain allowed opens over http too.",
     ],
   ],
   [
@@ -74,7 +78,7 @@ const ANSWER_WORDS: Record<Exclude<AddressKind, "public">, readonly [string, str
   private: [
     "an address on a private network such as an office or VPN network",
     "addresses on a private network such as an office or VPN network",
-    `Task browsers reach public websites and the pages on ${HERE.this} you open; no setting lets them reach a private site yet.`,
+    `Task browsers reach public websites, the pages on ${HERE.this} you open and the private sites the captain allowed.`,
   ],
   "this-computer": [
     `an address on ${HERE.this}`,
@@ -123,22 +127,37 @@ function nonPublic(answers: readonly GuardAnswer[]): { named: string[]; after: s
  * page may go"); nothing for a refusal these words do not cover.
  */
 export function guardRefusalLead(site: string, refusal: GuardRefusal): string | undefined {
+  // A listed name's private answers are dialed too, unless no allowance reaches them.
+  const admitted = (answer: GuardAnswer): boolean =>
+    answer.kind === "public" ||
+    (refusal.listed === true && answer.kind === "private" && !neverReachable(answer.address));
+  const skipped = refusal.answers.filter((answer) => !admitted(answer));
+  const { named, after } = nonPublic(skipped);
+  // An unlisted name with a private answer may be allowed by the captain.
+  const allow =
+    !refusal.listed && skipped.some((answer) => answer.kind === "private")
+      ? ` The captain can allow it for task browsers: if the task needs ${refusal.host}, ask the first mate in your report (needs_firstmate), naming ${refusal.host}.`
+      : "";
   switch (refusal.kind) {
     case "private": {
-      const { named, after } = nonPublic(refusal.answers);
       if (named.length === 0) {
         return `${site} leads to an address that is not on the internet, so the browser refused it at the connection. ${ANSWER_WORDS.private[2]}`;
       }
-      return `${site} leads to ${named.join("; and to ")}, so the browser refused it at the connection. ${after.join(" ")}`;
+      if (refusal.listed) {
+        return `${site} is on the captain's private sites list, but leads only to ${named.join("; and to ")}, which no task browser reaches, so the browser refused it at the connection.`;
+      }
+      return `${site} leads to ${named.join("; and to ")}, so the browser refused it at the connection. ${after.join(" ")}${allow}`;
     }
     case "unresolved":
       return `${site} was not found. Check the address.`;
     case "unreachable": {
-      const tried = refusal.answers.filter((answer) => answer.kind === "public");
-      const { named, after } = nonPublic(refusal.answers);
+      const tried = refusal.answers.filter(admitted);
       if (named.length === 0)
         return `${site} did not answer. Try again later, or carry on without it.`;
-      return `${site} did not answer at its public ${tried.length === 1 ? "address" : "addresses"}, ${listed(tried.map((a) => a.address))}. The browser skipped ${named.join("; and ")}, which it never dials. ${after.join(" ")}`;
+      const where = refusal.listed
+        ? listed(tried.map((a) => a.address))
+        : `its public ${tried.length === 1 ? "address" : "addresses"}, ${listed(tried.map((a) => a.address))}`;
+      return `${site} did not answer at ${where}. The browser skipped ${named.join("; and ")}, which it never dials. ${after.join(" ")}${allow}`;
     }
   }
 }

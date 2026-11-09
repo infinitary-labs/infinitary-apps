@@ -61,6 +61,7 @@ import { devicePlace } from "@shared/signIns";
 import type { AppPanelGates } from "@shared/surfaces";
 import { resolveWorkComputer } from "@shared/workComputer";
 import type { RunbookView } from "../shared/runbooks";
+import { addedPrivateSite, privateSiteChannels } from "./browser/privateSites";
 import { CONTRACT_CHANGES } from "./connection/contractChanges";
 import type { CoreServices } from "./coreServices";
 import { RemoteLoginRefusedError } from "./devices/remoteLogin";
@@ -834,6 +835,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       services.browsers
         ? services.browsers.removeSavedSignIn(site)
         : { ok: false, text: NO_TASK_BROWSERS },
+    ...privateSiteChannels(() => services.browsers?.privateSites, NO_TASK_BROWSERS),
 
     "inf:projects:list": () => services.taskProtocol.projects(),
 
@@ -1781,6 +1783,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         trail(name, integrationSignInValue(channel, args), actor);
       } else if (name === "forge-sign-out") {
         trail(name, { host: args[0] }, actor);
+      } else if (name === "private-site-allow") {
+        trail(name, { site: addedPrivateSite(before.get(name), after) }, actor);
       } else if (name === "direction") {
         const { op, direction } = result as InvokeResponse<"inf:knowledge:direction:set">;
         trail(name, { op, text: direction.text }, actor);

@@ -438,7 +438,9 @@ export class CrewmateCommands {
         return answer(browser, () => loadLead(browser, outcome, done, entry.page.url()));
       });
     }
-    const check = checkOpenable(input.url as string);
+    // The list as it stands now: one the captain just allowed opens at once.
+    await this.core.readSites(taskId);
+    const check = checkOpenable(input.url as string, (host) => this.core.listed(host));
     if (!check.ok) return refused(check.reason);
     let browser = this.core.browsers.get(taskId);
     // The site the captain already reads, when this page is on another one.

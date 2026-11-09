@@ -384,8 +384,8 @@ describe("ipc contract", () => {
    * shared-card pair that reads one card and corrects a required action's
    * words (INF-2214, docs/card-threads.md "Shared cards"), the start of a
    * program its crewmate needs (INF-3022, docs/programs.md) - a card picture, a
-   * job's end, the numbered events and what a task's browser there tells the
-   * home, and nothing a view or the window asks.
+   * job's end, the numbered events, what a task's browser there tells the
+   * home and the private sites list it reads, and nothing a view or the window asks.
    */
   it("lets a computer that runs work ask only the work requests", () => {
     expect([...WORK_INVOKE_CHANNELS].sort()).toEqual([
@@ -412,6 +412,7 @@ describe("ipc contract", () => {
       "inf:work:open-change",
       "inf:work:picture",
       "inf:work:prepare-change",
+      "inf:work:private-sites",
       "inf:work:progress",
       "inf:work:read-card",
       "inf:work:read-workflow",

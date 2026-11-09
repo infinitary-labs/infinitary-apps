@@ -113,6 +113,11 @@ type ShellCore = {
    */
   pendingDeviceArrival: DeviceArrival | null;
   /**
+   * A private site Settings -> General adds on arrival from the app's Allow
+   * card (docs/task-browser.md, "Private sites"), then forgets.
+   */
+  pendingPrivateSite: string | null;
+  /**
    * A sign-in on a computer that runs work to start on arrival in Settings
    * -> Intelligence (docs/helper.md, "Its own sign-ins").
    */
@@ -228,6 +233,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   pendingRestoreAccountId: null,
   pendingForgeSignIn: null,
   pendingDeviceArrival: null,
+  pendingPrivateSite: null,
   pendingDeviceSignIn: null,
   pendingDeviceForgeSignIn: null,
   thisMac: null,

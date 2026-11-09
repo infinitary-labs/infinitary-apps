@@ -22,6 +22,7 @@ import {
   placementFactsAnswerSchema,
   placementFactsRequestSchema,
 } from "./placement";
+import { privateSiteSchema } from "./privateSites";
 import { reasoningSchema } from "./reasoning";
 import { keptRecoveryWaySchema, workWaitSchema } from "./recovery";
 import { requiredActionRevisionInputSchema, requiredActionsSchema } from "./requiredActions";
@@ -1007,6 +1008,16 @@ export const workRequests = {
         .optional(),
     }),
   },
+  /**
+   * The captain's private sites list, read live as a task's browser there
+   * opens a page (docs/task-browser.md, "Private sites"; `task-browser-private-sites.md`):
+   * the home lends it and that computer keeps no copy.
+   */
+  "inf:work:private-sites": {
+    effect: "read",
+    request: z.tuple([z.strictObject({ task: placedTaskIdSchema })]),
+    response: z.object({ sites: z.array(privateSiteSchema) }),
+  },
   /** One picture of a task's page while the captain watches it there; asked once, like the fact. */
   "inf:work:browser-frame": {
     effect: "change",
@@ -1795,6 +1806,12 @@ export const browserOrders = {
   "inf:task-browser:sign-out": {
     effect: "change",
     request: z.tuple([z.object({ site: z.string().min(1) })]),
+    response: doneSchema,
+  },
+  /** The captain changed the private sites list: every browser there checks names against it at once. */
+  "inf:task-browser:private-sites": {
+    effect: "change",
+    request: z.tuple([z.strictObject({ sites: z.array(privateSiteSchema) })]),
     response: doneSchema,
   },
   /** The task closed: its browser there goes, and its command answers nothing more. */

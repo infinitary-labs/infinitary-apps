@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { WebSignIns } from "../browser/webSignIns";
 import { PlacedBrowsers } from "./placedBrowsers";
@@ -14,6 +14,7 @@ const handle = { session: "work-browser", generation: 1 };
 function setup(answer: (channel: string, args: unknown) => Promise<unknown>) {
   const store = new WebSignIns(scratchDir("infinitary-home-sign-ins-"));
   const notes: string[] = [];
+  const logs: string[] = [];
   const browsers = new PlacedBrowsers({
     devices: {
       ask: async (_device, channel, args) => answer(channel, args),
@@ -25,6 +26,7 @@ function setup(answer: (channel: string, args: unknown) => Promise<unknown>) {
     note: (task, text) => notes.push(`${task}: ${text}`),
     onChange: () => {},
     onReturned: () => {},
+    log: (line) => logs.push(line),
   });
   browsers.heardFact("work-computer", "task", {
     state: "open",
@@ -34,7 +36,7 @@ function setup(answer: (channel: string, args: unknown) => Promise<unknown>) {
     control: "captain",
     ...handle,
   });
-  return { store, browsers, notes };
+  return { store, browsers, notes, logs };
 }
 
 describe("home-owned saved-site handback across computers", () => {
@@ -168,5 +170,72 @@ describe("home-owned saved-site handback across computers", () => {
     store.save(site, held);
     expect(browsers.markSavedSignInFailed("task", site)).toBe(false);
     expect(store.get(site)?.failedAt).toBeUndefined();
+  });
+
+  // INF-3129 review, the captain's ruling: a Remove stops every open task browser at once.
+  it("gives the private sites list to each computer with an open browser, and only logs an older computer's refusal", async () => {
+    const asked: unknown[] = [];
+    const { browsers, logs } = setup(async (channel, args) => {
+      asked.push([channel, args]);
+      throw new Error("No such order");
+    });
+    browsers.privateSitesChanged([".corp.example"]);
+    await new Promise((settle) => setImmediate(settle));
+    expect(asked).toEqual([["inf:task-browser:private-sites", [{ sites: [".corp.example"] }]]]);
+    expect(logs).toEqual([
+      "could not give work-computer's browsers the private sites list: No such order",
+    ]);
+    browsers.heardFact("work-computer", "task", null);
+    browsers.privateSitesChanged([]);
+    await new Promise((settle) => setImmediate(settle));
+    expect(asked).toHaveLength(1);
+  });
+
+  // INF-3211 review note: a Remove made while that computer was out of reach reaches it once heard from.
+  it("gives a computer the private sites list again when it is back in reach with an open browser", async () => {
+    const asked: unknown[] = [];
+    let reach: ((contact: { deviceId: string; contact: string }) => void) | undefined;
+    const browsers = new PlacedBrowsers({
+      devices: {
+        ask: async (_device, channel, args) => {
+          asked.push([channel, args]);
+          return channel === "inf:task-browser:facts"
+            ? {
+                facts: [
+                  {
+                    task: "task",
+                    fact: {
+                      state: "open",
+                      site,
+                      url: `https://${site}/`,
+                      title: "Club",
+                      ...handle,
+                    },
+                  },
+                ],
+              }
+            : { ok: true };
+        },
+        onWorkDevice: (listener) => {
+          reach = listener as typeof reach;
+          return () => {};
+        },
+      } as Pick<WorkDevices, "ask" | "onWorkDevice">,
+      deviceOf: () => "work-computer",
+      nameOf: () => "Work computer",
+      privateSites: { list: () => [".corp.example"] },
+      note: () => {},
+      onChange: () => {},
+      onReturned: () => {},
+      log: () => {},
+    });
+    reach?.({ deviceId: "work-computer", contact: "in-reach" });
+    await vi.waitFor(() =>
+      expect(asked).toContainEqual([
+        "inf:task-browser:private-sites",
+        [{ sites: [".corp.example"] }],
+      ]),
+    );
+    expect(browsers.holds("task")).toBe(true);
   });
 });

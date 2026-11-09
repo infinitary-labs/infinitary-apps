@@ -169,6 +169,7 @@ export const openEffectSchema = z.object({
   // `inf:devices:add` reads it again before anything is reached.
   add: z.string().min(1).max(255).optional(),
   update: z.string().min(1).max(64).optional(),
+  privateSite: z.string().min(1).max(253).optional(),
   signInOn: signInOnSchema.optional(),
   forgeSignInOn: forgeSignInOnSchema.optional(),
 });
@@ -1643,6 +1644,8 @@ export const shellEffectSchema = z.object({
   add: z.string().optional(),
   /** Settings -> Devices updates Firstmate on this computer, added by its address, on arrival. */
   update: z.string().optional(),
+  /** Settings -> General adds this private site for task browsers on arrival; the add checks it again. */
+  privateSite: z.string().optional(),
   /** Settings -> Intelligence starts this sign-in on that computer on arrival. */
   signInOn: signInOnSchema.optional(),
   /** Settings -> Projects starts that computer's own sign-in where projects live on arrival. */

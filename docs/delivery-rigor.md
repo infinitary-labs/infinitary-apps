@@ -171,7 +171,7 @@ Its brief says the effect is the deliverable: make it, check it took, commit and
 The captain’s words authorize only the goal’s named effects; keychain, signing, outside writes, payments and browser handoffs retain their existing consent requirements.
 Its own project’s forge writes go at once, while outside-project writes still ask, and it has no prepare/open/check change tools.
 An operation has no delivery, autonomy or care policy, and no merge card; its factual outcome note stays until the captain closes it.
-Once its crewmate is idle and has reported, the first mate declares verification with `settle_task finished` and `completion_evidence`.
+Once its crewmate is idle and has reported, the first mate declares verification with `settle_task` done, why `finished`, and `evidence`.
 The existing settle owner records `done/finished` and the evidence, checks outstanding work and decisions, and retires any scratch working copy through its existing owner; the project folder stays untouched.
 Merge and land are refused; dismissal of a note is never proof of the effect.
 
@@ -189,7 +189,7 @@ The captain's choice on that card is the CLOSE (captain F2 A): it closes the row
 A card its crewmate declared `continues`, such as a consent before it uses something sensitive, is not that card, and its choice goes back to the crewmate (INF-1226); nor is a card handing the captain the task's browser, whose click hands it over while the task goes on (INF-1322).
 The captain's close control never ends work or selects a choice: putting a card aside or reading a marked saved answer sends no author wake.
 An ordinary note read acknowledges its message and reaches its crewmate through `card-closed`; a duplicate closure also reaches the author without being an ordinary-read acknowledgement.
-After an ordinary read, the crewmate reports `finished` if nothing remains, and the first mate can close the answer row with `settle_task answered`.
+After an ordinary read, the crewmate reports `finished` if nothing remains, and the first mate can close the answer row with `settle_task` done, why `answered`.
 A marked saved answer instead waits for explicit Done, which receipts it and closes an answer deliverable `done/answered` without a `card-closed` wake.
 The findings travel to a builder through `basis`: when `spawn_crewmate` names a verified basis, `renderBasisSection` carries that task's captain words and its report into the builder's brief, and names the file its card body is saved to whole (`docs/sequences.md`); any agent can read them back with the `tasks` query by key.
 
@@ -522,10 +522,11 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 | Kind | Level | Rests on | What it holds | What passes it |
 |---|---|---|---|---|
 | `asks-first` | soft | consent | a first mate merge while autonomy is off | the captain's click on the merge card, or the override |
-| `decisions` | soft | record | a first mate merge while another decision on the task is open | the override |
-| `waits` | soft | record | a close or merge card while a wait on other work stands | the override |
-| `parts` | soft | record | a close while the task's planned parts are open | `proceed_with_open`, or the override |
+| `decisions` | soft | record | a first mate merge, or its own close as done, while another decision on the task is open | the override, or the captain's words on the close |
+| `waits` | soft | record | a close or merge card while a wait on other work stands | the override, or the captain's words on the close |
+| `parts` | soft | record | a close while the task's planned parts are open | `proceed_with_open`, the override, or the captain's words on the close |
 | `checks` | soft | record | a merge card or merge while the checks failed or are running | Merge anyway on the merge card, or the override |
+| `proof` | soft | record | the first mate's own close as done while its crewmate has not reported, its own pull request is open, or its unmerged work goes nowhere the close names | the override, or the captain's words on the close |
 | `story` | soft | consent | a GitHub or GitLab pull request opened, or merged, without its current published story | the override |
 | `escalation` | soft | made-up number | a stronger model past the ladder's top | the captain names the model |
 | `program-bound` | soft | consent | a program's task() call past its bound | on the captain's words the crewmate that started it raises the bound with `start_program`, or the first mate with `update_task program_bound` |

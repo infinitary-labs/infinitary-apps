@@ -45,6 +45,7 @@ import {
 import type { AnswerDeliveryCheck } from "./answerDeliveryCheck";
 import { withAskAttribution } from "./askAttribution";
 import type { AskCapture } from "./askCapture";
+import { captainWordsIn, OVERRIDE_REFUSED } from "./captainOverrides";
 import { FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import { escapeCardText } from "./cardText";
 import type { DecisionCapture } from "./decisionCapture";
@@ -92,6 +93,28 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
         if (input.action === "publish" || input.action === "revise") host.replyEmote("tuck");
       },
     ),
+  };
+  // A close the first mate asked for (INF-547): it carries the first mate's
+  // sentence, keyed by the record whichever reference named it, and a
+  // close that took effect is the turn's action.
+  const settled = async (
+    taskId: string,
+    closingSentence: string | undefined,
+    close: () => Promise<{ text: string; refusal?: SettleRefusal }>,
+  ): Promise<{ text: string; refusal?: SettleRefusal }> => {
+    const result = closingSentence
+      ? await supervisor.settling.closing.withClosingSentence(
+          host.options.tasks.resolve(taskId)?.id ?? taskId,
+          closingSentence,
+          close,
+        )
+      : await close();
+    const status = host.options.tasks.get(taskId)?.status;
+    if (!result.refusal && (status === "done" || status === "dropped")) {
+      host.turn.delivered = true;
+      host.noteDelivery({ outcome: "action", kind: "work", tool: "settle_task", ref: taskId });
+    }
+    return result;
   };
   const delegate: CrewDelegate = {
     escalationEligible: (taskId) => supervisor.escalationEligible(taskId),
@@ -181,52 +204,41 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
     // label read, so `escalate_from` is reachable only from a turn that
     // carries the captain's own words.
     isCaptainTurn: () => host.turn.origin === "captain-turn",
-    carryOnTask: async (taskId, carriedBy, closingSentence) => {
+    settleTask: async (taskId, mode, confirm, proceedWithOpen, closingSentence) => {
       host.asks.attach(taskId, "settle_task");
-      const close = () => supervisor.intake.carryOnTask(taskId, carriedBy);
-      const text = closingSentence
-        ? await supervisor.settling.closing.withClosingSentence(
-            host.options.tasks.resolve(taskId)?.id ?? taskId,
-            closingSentence,
-            close,
-          )
-        : await close();
-      if (host.options.tasks.get(taskId)?.status === "done") {
-        host.turn.delivered = true;
-        host.noteDelivery({ outcome: "action", kind: "work", tool: "settle_task", ref: taskId });
-      }
-      return text;
+      const settle = (): Promise<{ text: string; refusal?: SettleRefusal }> =>
+        supervisor.settling.settle.settleTaskDetailed(taskId, mode, confirm, proceedWithOpen);
+      return settled(taskId, closingSentence, settle);
     },
-    settleTask: async (taskId, mode, confirm, proceedWithOpen, evidence, closingSentence) => {
+    closeDone: async (taskId, input) => {
       host.asks.attach(taskId, "settle_task");
-      const settle = async (): Promise<{ text: string; refusal?: SettleRefusal }> =>
-        mode === "answered"
-          ? { text: (await supervisor.settling.declared.closeAnswerUsedAsBasis(taskId)).text }
-          : mode === "released"
-            ? await supervisor.settling.declared.closeExternallyReleased(taskId, evidence ?? "")
-            : mode === "finished"
-              ? await supervisor.settling.declared.closeFinishedFolderWork(taskId, evidence ?? "")
-              : await supervisor.settling.settle.settleTaskDetailed(
-                  taskId,
-                  mode,
-                  confirm,
-                  proceedWithOpen,
-                );
-      // The close carries the first mate's sentence (INF-547), keyed by
-      // the record whichever reference named it.
-      const result = closingSentence
-        ? await supervisor.settling.closing.withClosingSentence(
-            host.options.tasks.resolve(taskId)?.id ?? taskId,
-            closingSentence,
-            settle,
-          )
-        : await settle();
-      const status = host.options.tasks.get(taskId)?.status;
-      if (!result.refusal && (status === "done" || status === "dropped")) {
-        host.turn.delivered = true;
-        host.noteDelivery({ outcome: "action", kind: "work", tool: "settle_task", ref: taskId });
+      const record = host.options.tasks.resolve(taskId);
+      if (!record) return { text: `Not closed: there is no task "${taskId}".` };
+      // The captain's own words, checked as an override's are: this turn's,
+      // or the words on this task the first mate cites (INF-1216). His
+      // click on a merge approves that merge, never a close.
+      let captainWords: string | undefined;
+      const from = input.captainWordsFrom?.trim();
+      if (from) {
+        const said = captainWordsIn(host.turn, from, (cited) =>
+          supervisor.overrides.citedCaptainWords(record.id, cited),
+        );
+        if (!said.ok) return { text: said.text.replace(OVERRIDE_REFUSED, "Not closed:") };
+        if (said.mergeClick)
+          return {
+            text: "Not closed: the words cited are the captain's click on a merge, which approves that merge and asks no close. Cite their words that ask the close, or close without captain_words.",
+          };
+        captainWords = said.words;
       }
-      return result;
+      const close = () =>
+        supervisor.settling.done.close(record.id, {
+          ...(input.why ? { why: input.why } : {}),
+          ...(input.carriedBy ? { carriedBy: input.carriedBy } : {}),
+          ...(input.deliveredIn ? { deliveredIn: input.deliveredIn } : {}),
+          ...(input.evidence ? { evidence: input.evidence } : {}),
+          ...(captainWords ? { captainWords } : {}),
+        });
+      return settled(record.id, input.closingSentence, close);
     },
   };
   const scheduler = host.options.scheduler;

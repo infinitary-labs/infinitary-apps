@@ -624,6 +624,23 @@ describe("taskWorkStatus (P1: what a discard would destroy)", () => {
     expect(await workspace.taskWorkStatus(task)).toEqual({ dirty: false, unlandedCommits: 0 });
   });
 
+  // INF-3169 piece 2: a done close naming a commit reads whether it is on the main branch.
+  it("reads a commit as on the main branch once it merged there, remotely too, and null for one it cannot find", async () => {
+    const { paths, workspace } = await serviceWithRemote();
+    const task = await workspace.createTaskWorktree("onmain1");
+    writeFileSync(join(task.cwd, "meter.txt"), "fixed meter\n");
+    await git(task.cwd, ["add", "-A"]);
+    await git(task.cwd, ["commit", "-m", "fix: the meter"]);
+    const commit = await git(task.cwd, ["rev-parse", "HEAD"]);
+    const repo = paths.defaultWorkspaceDir;
+    expect(await workspace.commitOnMain(repo, commit)).toBe(false);
+    await git(task.cwd, ["push", "origin", `${task.branch}:main`]);
+    await git(repo, ["fetch", "origin", "main"]);
+    expect(await workspace.commitOnMain(repo, commit)).toBe(true);
+    expect(await workspace.commitOnMain(repo, commit.slice(0, 12))).toBe(true);
+    expect(await workspace.commitOnMain(repo, "0".repeat(40))).toBeNull();
+  });
+
   it("keeps commits protected when they exist only on the task's remote branch", async () => {
     const { workspace } = await serviceWithRemote();
     const task = await workspace.createTaskWorktree("statremote2");

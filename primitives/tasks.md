@@ -59,11 +59,11 @@ Every relation below is one kind of the checked relationship contract, with its 
 - Typed result: `result_schema` on the shape makes the report's `result` a checked JSON object, delivered to the first mate and to any task whose basis names it.
 
 Close rules: a parent closes only when every child is closed, except host delivery children (`isDeliveryChild`); a task does not close while a marked blocker is still live work (a soft hold the captain may override); a container no crewmate holds completes with its children.
-An answer task closes `done/answered` on the captain's choice on its crewmate's card, unless the crewmate declared that card `continues`, or through `settle_task answered` when it was declared an internal step and a live task builds on it or waits on it.
+An answer task closes `done/answered` on the captain's choice on its crewmate's card, unless the crewmate declared that card `continues`, or through `settle_task` done, why `answered`, when it was declared an internal step and a live task builds on it or waits on it.
 A reported, idle task whose result was handed on through verified file delivery or a captain result choice can also close `done/answered` without `internal_step`; the handoff receipt never bypasses unmerged-work, outstanding-work or relationship checks (`docs/task-graph.md`).
 An operation delivers a named effect, not code or an answer card, and is declared with the operation constraint; `in_folder` work is an operation too.
 Read-only beside either declaration is refused; operations skip kind classification and request medium through R12 after captain overrides and a program’s choice.
-Reported operations and legacy work declared `in_folder` can close `done/finished` through `settle_task finished` with the first mate's explicit completion evidence, through the same settle and task owners, without touching the project folder (`docs/task-record.md`).
+Reported operations and legacy work declared `in_folder` can close `done/finished` through `settle_task` done, why `finished`, with the first mate's explicit evidence, through the same settle and task owners, without touching the project folder (`docs/task-record.md`).
 Host closes (a failed turn, a cancel) are unguarded so a record can always record what happened.
 Retiring the working copy and branch on close belongs to [projects-and-working-copies.md](projects-and-working-copies.md).
 

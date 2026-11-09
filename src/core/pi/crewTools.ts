@@ -1,3 +1,4 @@
+import { DONE_WHYS, type DoneWhy } from "@shared/deliveryFacts";
 import { type ReasoningChoice, reasoningChoiceSchema } from "@shared/modelSlots";
 import type { PlacementRequirements } from "@shared/placement";
 import type { RepoDelivery } from "@shared/repos";
@@ -246,14 +247,27 @@ export type CrewDelegate = {
    */
   settleTask(
     taskId: string,
-    mode: "merge-pr" | "land" | "discard" | "answered" | "released" | "finished",
+    mode: "merge-pr" | "land" | "discard",
     confirm?: boolean,
     proceedWithOpen?: boolean,
-    evidence?: string,
     closingSentence?: string,
   ): Promise<{ text: string; refusal?: SettleRefusal }>;
-  /** settle_task carried_on (INF-1825): close a task done through the task carrying its work. */
-  carryOnTask(taskId: string, carriedBy: string, closingSentence?: string): Promise<string>;
+  /**
+   * settle_task done (INF-3169's plan, piece 2): the one close as done,
+   * naming why, with the captain's words, when they ask it, passing every
+   * soft hold (`captainWordsFrom`: `turn`, or where his words came in).
+   */
+  closeDone(
+    taskId: string,
+    input: {
+      why?: DoneWhy;
+      carriedBy?: string;
+      deliveredIn?: string;
+      evidence?: string;
+      captainWordsFrom?: string;
+      closingSentence?: string;
+    },
+  ): Promise<{ text: string; refusal?: SettleRefusal }>;
 };
 
 /**
@@ -262,7 +276,7 @@ export type CrewDelegate = {
  * settle_task's says it once; interrupt_crewmate's points there.
  */
 export const CLOSING_SENTENCE_DESCRIPTION =
-  "Required except answered and carried_on: one plain sentence for the captain on what became of the work and why.";
+  "Required except done answered or carried_on: one plain sentence for the captain on what became of the work and why.";
 
 /** A close of started work refused for want of its sentence: what is missing and how to answer. */
 export function closingSentenceMissing(mode: string): string {
@@ -271,7 +285,7 @@ export function closingSentenceMissing(mode: string): string {
 
 /** What `internal_step` means, shared by spawn_crewmate and create_task. */
 export const INTERNAL_STEP_DESCRIPTION =
-  "True when the captain did not ask for this work: a step of a sequence you run, a helper another task needs, a crewmate's request, or work you start unasked. Its drop or finish puts no note up; a merge or release still does. A step's answer goes to the next step, and once that step has started you close it with settle_task answered. Omit it when the captain asked for this result - by message, card choice or schedule (\"show me the repro first\"): that stays theirs to close.";
+  "True when the captain did not ask for this work: a step of a sequence you run, a helper another task needs, a crewmate's request, or work you start unasked. Its drop or finish puts no note up; a merge or release still does. A step's answer goes to the next step, and once that step has started you close it with settle_task done, why answered. Omit it when the captain asked for this result - by message, card choice or schedule (\"show me the repro first\"): that stays theirs to close.";
 
 /**
  * What `basis` means, shared by spawn_crewmate and create_task: a planned
@@ -737,39 +751,33 @@ export function createCrewTools(delegate: CrewDelegate) {
     name: "settle_task",
     label: "Settle task",
     description:
-      "merge-pr rechecks and merges the task's current pull request (fast-forwards on " +
-      "plain Git), or closes as merged one already merged once no question or other pull request on it is open; " +
-      "a merge with either open keeps the task open. " +
-      "land merges locally, never for direct-PR. Both close and remove the worktree. " +
-      "Every close keeps unmerged commits, records, sessions; squash merges never block closing. " +
-      "discard removes unwanted work unmerged. answered closes reported idle work handed on by " +
-      "files_from or a card choice, with no unmerged work; also internal answers with a report or successor, or finished answers. Never discard results. " +
-      "released closes a reported, idle work task only after you independently verify its " +
-      "delivery through an external release process, with release_evidence. finished closes verified, reported, idle " +
-      "operations, in_folder or personal_ui work, or work whose copy holds no change, with completion_evidence; folder files and git stay. " +
-      "Missing changes or dismissed cards prove nothing. Never discard successful folder work or use finished to bypass merging. " +
-      "carried_on closes work another task carries on or merged in its PR, named by carried_by, as done, never dropped: " +
-      "its waits move there and its own PR closes; no note goes up. " +
-      "Use crew_status to pick the task id; never guess among several matches.",
+      "merge-pr rechecks and merges the task's current pull request (fast-forwards on plain Git), or closes as merged " +
+      "one already merged once no question or other pull request on it is open. land merges locally, never for direct-PR. " +
+      "discard removes unwanted work unmerged; never discard results. done closes it as done and names why: answered " +
+      "(an answer reported or handed on), finished (verified work with nothing to merge), released (you independently " +
+      "verified its delivery through an external release; evidence names it), carried_on (carried_by) or merged (delivered_in: any pull request in its project, or a commit on main). " +
+      "Every close stops its crewmate and keeps unmerged commits, edits, records and sessions. done leaves the task's " +
+      "own pull request open and records it, but carried_on closes it. Closing on your own, done holds for open " +
+      "decisions, parts, waits and the delivery proof: a report, its own pull request closed or merged, and its work " +
+      "merged or named elsewhere. captain_words passes them all. Use crew_status to pick the task id; never guess among several matches.",
     parameters: Type.Object({
       task_id: Type.String({ description: "The task id from crew_status or spawn" }),
-      mode: stringEnum([
-        "merge-pr",
-        "land",
-        "discard",
-        "answered",
-        "released",
-        "finished",
-        "carried_on",
-      ]),
+      mode: stringEnum(["merge-pr", "land", "discard", "done"]),
+      why: Type.Optional(stringEnum([...DONE_WHYS])),
       carried_by: Type.Optional(
         Type.String({ description: "For carried_on: the task (key or id) carrying its work" }),
       ),
-      completion_evidence: Type.Optional(
-        Type.String({ description: "For finished: the completed result and what proves it" }),
+      delivered_in: Type.Optional(
+        Type.String({ description: "For merged: a pull request number or a commit id" }),
       ),
-      release_evidence: Type.Optional(
-        Type.String({ description: "For released: the release and what proves delivery" }),
+      evidence: Type.Optional(
+        Type.String({ description: "For done: the release or result; required for released" }),
+      ),
+      captain_words: Type.Optional(
+        Type.String({
+          description:
+            "For done on the captain's own words asking it: turn, or the card id or crewmate-tab they came in",
+        }),
       ),
       confirm: Type.Optional(
         Type.Boolean({
@@ -785,23 +793,26 @@ export function createCrewTools(delegate: CrewDelegate) {
     }),
     run: async (params) => {
       const sentence = params.closing_sentence?.trim();
-      if (params.mode === "carried_on") {
-        const carriedBy = params.carried_by?.trim();
-        if (!carriedBy)
-          return {
-            text: "Not closed: carried_on needs carried_by, the task carrying this task's work. Call it again with one.",
-          };
-        return { text: await delegate.carryOnTask(params.task_id, carriedBy, sentence) };
+      if (params.mode === "done") {
+        if (params.why !== "answered" && params.why !== "carried_on" && !sentence)
+          return { text: closingSentenceMissing("done") };
+        const { text, refusal } = await delegate.closeDone(params.task_id, {
+          ...(params.why ? { why: params.why } : {}),
+          ...(params.carried_by?.trim() ? { carriedBy: params.carried_by.trim() } : {}),
+          ...(params.delivered_in?.trim() ? { deliveredIn: params.delivered_in.trim() } : {}),
+          ...(params.evidence ? { evidence: params.evidence } : {}),
+          ...(params.captain_words ? { captainWordsFrom: params.captain_words } : {}),
+          ...(sentence ? { closingSentence: sentence } : {}),
+        });
+        return { text, ...(refusal ? { details: { refusal } } : {}) };
       }
-      if (params.mode !== "answered" && !sentence)
-        return { text: closingSentenceMissing(params.mode) };
+      if (!sentence) return { text: closingSentenceMissing(params.mode) };
       const { text, refusal } = await delegate.settleTask(
         params.task_id,
         params.mode,
         params.confirm,
         params.proceed_with_open,
-        params.mode === "finished" ? params.completion_evidence : params.release_evidence,
-        ...(params.mode !== "answered" && sentence ? [sentence] : []),
+        sentence,
       );
       return { text, ...(refusal ? { details: { refusal } } : {}) };
     },

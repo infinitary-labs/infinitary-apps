@@ -1326,10 +1326,10 @@ describe("CrewSupervisor: the card thread", () => {
     await tick();
     expect(harness.cards().map((entry) => entry.id)).toContain(note.id);
 
-    const closed = await harness.supervisor.settling.declared.closeExternallyReleased(
-      taskId,
-      "v1.2.3 published",
-    );
+    const closed = await harness.supervisor.settling.done.close(taskId, {
+      why: "released",
+      evidence: "v1.2.3 published",
+    });
     await tick();
     expect(closed.text).toContain("v1.2.3 published");
     expect(harness.tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "released" });

@@ -3,8 +3,8 @@
  * (INF-2625's plan, the settle piece): how a task closes. The order a close
  * takes - the crewmate stops, the record and its approval close in one
  * transaction, then the working copy - and
- * the rechecks the first mate's declared closes make after reading the
- * working copy.
+ * the rechecks the first mate's close as done makes after reading the
+ * delivery.
  */
 import { describe, expect, it } from "vitest";
 import {
@@ -66,9 +66,13 @@ describe("the order a close takes", () => {
   it("records the close before the crewmate stops when the first mate closes finished work", async () => {
     const world = settleWorld();
     seedDelivery(world.tasks, TASK, { prNumber: undefined, headSha: undefined });
+    world.live.pull = undefined;
     world.live.deliverable = "operation";
-    const answer = await world.declared.closeFinishedFolderWork(TASK, "The meter reads on time.");
-    expect(answer.text).toContain("as finished: The meter reads on time.");
+    const answer = await world.done.close(TASK, {
+      why: "finished",
+      evidence: "The meter reads on time.",
+    });
+    expect(answer.text).toContain("as finished.");
     expect(world.log.slice(0, 2)).toEqual([
       "stop runtime: active/none",
       "runtime stopped: done/none",
@@ -133,7 +137,7 @@ describe("the order a close takes", () => {
   });
 });
 
-describe("a release close rechecks after reading the working copy", () => {
+describe("a release close rechecks after reading its delivery", () => {
   function released(): SettleWorld {
     const world = settleWorld();
     world.live.pull = {
@@ -145,8 +149,8 @@ describe("a release close rechecks after reading the working copy", () => {
 
   it("closes released work once nothing changed during the read", async () => {
     const world = released();
-    const answer = await world.declared.closeExternallyReleased(TASK, "Shipped in 1.4.");
-    expect(answer.text).toContain("as released outside this task: Shipped in 1.4.");
+    const answer = await world.done.close(TASK, { why: "released", evidence: "Shipped in 1.4." });
+    expect(answer.text).toContain("as released.");
     expect(world.tasks.get(TASK)).toMatchObject({ status: "done", closedReason: "released" });
   });
 
@@ -156,10 +160,8 @@ describe("a release close rechecks after reading the working copy", () => {
       world.tasks.turns.setActivity(TASK, "running");
       return { dirty: false, unlandedCommits: 0 };
     };
-    const answer = await world.declared.closeExternallyReleased(TASK, "Shipped in 1.4.");
-    expect(answer.text).toContain(
-      "its state changed while the working copy was checked; try again.",
-    );
+    const answer = await world.done.close(TASK, { why: "released", evidence: "Shipped in 1.4." });
+    expect(answer.text).toContain("its state changed while its delivery was read; try again.");
     expect(world.tasks.get(TASK)?.status).toBe("active");
   });
 
@@ -170,31 +172,29 @@ describe("a release close rechecks after reading the working copy", () => {
       world.tasks.graph.link("gauge", TASK, "blocks", "crewmate", true);
       return { dirty: false, unlandedCommits: 0 };
     };
-    const answer = await world.declared.closeExternallyReleased(TASK, "Shipped in 1.4.");
+    const answer = await world.done.close(TASK, { why: "released", evidence: "Shipped in 1.4." });
     expect(answer.refusal).toMatchObject({ tasks: [expect.objectContaining({ id: "gauge" })] });
     expect(world.tasks.get(TASK)?.status).toBe("active");
   });
 
-  it("refuses while its pull request may still be open", async () => {
+  it("holds while its own pull request reads open, and records one it cannot read", async () => {
     const world = settleWorld();
-    const answer = await world.declared.closeExternallyReleased(TASK, "Shipped in 1.4.");
-    expect(answer.text).toContain(`#${PR} is still open; close or merge it first.`);
+    const answer = await world.done.close(TASK, { why: "released", evidence: "Shipped in 1.4." });
+    expect(answer.text).toContain(`its own pull request #${PR} is still open`);
+    expect(answer.text).toContain("Soft hold proof");
+    // A pull request the app cannot read no longer stops the close (INF-3169's plan).
     world.live.pull = undefined;
-    const unread = await world.declared.closeExternallyReleased(TASK, "Shipped in 1.4.");
-    expect(unread.text).toContain(`#${PR} could not be read, so it may still be open`);
+    const unread = await world.done.close(TASK, { why: "released", evidence: "Shipped in 1.4." });
+    expect(unread.text).toContain(`Its own pull request #${PR} could not be read.`);
+    expect(world.tasks.get(TASK)).toMatchObject({ status: "done", closedReason: "released" });
   });
 
-  it("refuses uncommitted edits and a working copy it cannot read", async () => {
+  it("closes over uncommitted edits it saves, naming the release as where the work went", async () => {
     const world = released();
     world.live.work = { dirty: true, unlandedCommits: 0 };
-    expect((await world.declared.closeExternallyReleased(TASK, "Shipped in 1.4.")).text).toContain(
-      "its working copy has uncommitted edits",
-    );
-    world.live.work = null;
-    expect((await world.declared.closeExternallyReleased(TASK, "Shipped in 1.4.")).text).toContain(
-      "the working copy could not be checked: the working copy is gone",
-    );
-    expect(world.tasks.get(TASK)?.status).toBe("active");
+    const answer = await world.done.close(TASK, { why: "released", evidence: "Shipped in 1.4." });
+    expect(answer.text).toContain("uncommitted edits, saved.");
+    expect(world.log).toContain("retire worktree: done/none");
   });
 });
 
@@ -203,13 +203,14 @@ describe("a handed-on answer's close rechecks after reading the working copy", (
   function handedOn(): SettleWorld {
     const world = settleWorld();
     seedDelivery(world.tasks, TASK, { prNumber: undefined, headSha: undefined });
+    world.live.pull = undefined;
     world.tasks.capture.recordResultHandoff(TASK, { cardId: "card-done", action: "keep" });
     return world;
   }
 
   it("closes it as answered when its working copy holds nothing unmerged", async () => {
     const world = handedOn();
-    const answer = await world.declared.closeAnswerUsedAsBasis(TASK);
+    const answer = await world.done.close(TASK, { why: "answered" });
     expect(answer).toMatchObject({ ok: true });
     expect(world.tasks.get(TASK)).toMatchObject({ status: "done", closedReason: "answered" });
   });
@@ -220,23 +221,17 @@ describe("a handed-on answer's close rechecks after reading the working copy", (
       world.tasks.turns.setActivity(TASK, "running");
       return { dirty: false, unlandedCommits: 0 };
     };
-    const answer = await world.declared.closeAnswerUsedAsBasis(TASK);
-    expect(answer.text).toContain(
-      "its work changed during the check; read its latest report before closing it.",
-    );
+    const answer = await world.done.close(TASK, { why: "answered" });
+    expect(answer.text).toContain("its state changed while its delivery was read; try again.");
     expect(world.tasks.get(TASK)?.status).toBe("active");
   });
 
-  it("refuses unmerged work and a working copy it cannot read", async () => {
+  it("holds unmerged work the close names nowhere else", async () => {
     const world = handedOn();
     world.live.work = { dirty: false, unlandedCommits: 1 };
-    expect((await world.declared.closeAnswerUsedAsBasis(TASK)).text).toContain(
-      "its working copy has uncommitted edits or unmerged commits",
-    );
-    world.live.work = null;
-    expect((await world.declared.closeAnswerUsedAsBasis(TASK)).text).toContain(
-      "its working copy could not be checked; keep the task open.",
-    );
+    const answer = await world.done.close(TASK, { why: "answered" });
+    expect(answer.text).toContain("holds work that is not merged");
+    expect(answer.text).toContain("Soft hold proof");
     expect(world.tasks.get(TASK)?.status).toBe("active");
   });
 });
@@ -265,7 +260,7 @@ describe("a carried-on close's refusals", () => {
     const world = settleWorld();
     seedTask(world.tasks, { id: "carrier", title: "Carry the meter on", status: "idle" });
     await change(world);
-    const answer = await world.declared.closeCarriedOn(TASK, "carrier");
+    const answer = await world.done.close(TASK, { why: "carried_on", carriedBy: "carrier" });
     expect(answer.ok).toBe(false);
     expect(answer.text).toContain(words);
   });
@@ -276,10 +271,10 @@ describe("a carried-on close's refusals", () => {
     world.live.autonomy = true;
     let answer: { ok: boolean; text: string } | undefined;
     world.merge = async () => {
-      answer = await world.declared.closeCarriedOn(TASK, "carrier");
+      answer = await world.done.close(TASK, { why: "carried_on", carriedBy: "carrier" });
       return { ok: false, text: "Checks are running.", stop: "checks" };
     };
     await world.settle.settleTaskDetailed(TASK, "merge-pr");
-    expect(answer?.text).toContain("merge-pr is already in progress. Wait for its outcome.");
+    expect(answer?.text).toContain("another settle of it is already in progress.");
   });
 });

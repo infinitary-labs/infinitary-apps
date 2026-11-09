@@ -381,7 +381,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "work the captain did not ask for is declared internal, the captain's own ask never is",
     home: { tool: "spawn_crewmate", parameter: "shape" },
-    says: "internal_step: True when the captain did not ask for this work: a step of a sequence you run, a helper another task needs, a crewmate's request, or work you start unasked. Its drop or finish puts no note up; a merge or release still does. A step's answer goes to the next step, and once that step has started you close it with settle_task answered. Omit it when the captain asked for this result - by message, card choice or schedule",
+    says: "internal_step: True when the captain did not ask for this work: a step of a sequence you run, a helper another task needs, a crewmate's request, or work you start unasked. Its drop or finish puts no note up; a merge or release still does. A step's answer goes to the next step, and once that step has started you close it with settle_task done, why answered. Omit it when the captain asked for this result - by message, card choice or schedule",
   },
   {
     rule: "the same internal-step rule on a planned step",
@@ -591,7 +591,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "released needs independently verified delivery",
     home: { tool: "settle_task" },
-    says: "released closes a reported, idle work task only after you independently verify its delivery through an external release process",
+    says: "released (you independently verified its delivery through an external release; evidence names it)",
   },
   {
     rule: "the captain's Start applies his directions, then starts",

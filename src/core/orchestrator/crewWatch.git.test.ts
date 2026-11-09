@@ -219,19 +219,19 @@ describe("closed task worktrees always go, work saved first (real git)", {
     await git(repoDir, ["commit", "-m", "fix the meter (#65)"]);
 
     // While its own pull request is open, the close refuses and keeps everything.
-    const held = await supervisor.settling.declared.closeExternallyReleased(
-      taskId,
-      "PR #65 merged with this work",
-    );
+    const held = await supervisor.settling.done.close(taskId, {
+      why: "released",
+      evidence: "PR #65 merged with this work",
+    });
     expect(held.text).toContain("#66 is still open");
     expect(tasks.get(taskId)?.status).toBe("active");
     expect(existsSync(cwd)).toBe(true);
 
     ownPull = { ...ownPull, state: "closed" };
-    const closed = await supervisor.settling.declared.closeExternallyReleased(
-      taskId,
-      "PR #65 merged with this work",
-    );
+    const closed = await supervisor.settling.done.close(taskId, {
+      why: "released",
+      evidence: "PR #65 merged with this work",
+    });
     expect(closed.text).toContain("Closed");
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "released" });
     expect(tasks.timeline(taskId).find((entry) => entry.data?.releaseEvidence)?.data).toMatchObject(

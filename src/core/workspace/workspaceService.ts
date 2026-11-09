@@ -823,6 +823,23 @@ export class WorkspaceService {
   }
 
   /**
+   * Whether `commit` is on the project's main line in `repoDir` (INF-3169's
+   * plan, piece 2): reachable from its checked-out HEAD or a tracked
+   * integration ref, the same refs `taskWorkStatus` counts as merged. Null
+   * when the commit cannot be found there, so nobody can say. A squash
+   * merge's original commits read false; its pull request's merged flag is
+   * the fact for those.
+   */
+  async commitOnMain(repoDir: string, commit: string): Promise<boolean | null> {
+    if (!repoDir) return null;
+    const sha = await resolveCommit(repoDir, commit);
+    if (!sha) return null;
+    const refs = await trackedIntegrationRefs({ taskId: "", cwd: "", branch: "", repoDir });
+    for (const ref of ["HEAD", ...refs]) if (await isAncestor(repoDir, sha, ref)) return true;
+    return false;
+  }
+
+  /**
    * What a discard would destroy: uncommitted edits in the worktree plus
    * branch commits not reachable from the repo's checked-out HEAD or its
    * tracked remote integration refs. A missing worktree or branch counts as

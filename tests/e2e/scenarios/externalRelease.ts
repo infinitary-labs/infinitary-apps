@@ -19,9 +19,9 @@ export const externalRelease: Scenario =
             name: "settle_task",
             args: {
               task_id: taskId,
-              mode: "released",
-              release_evidence:
-                "Release v1.2.3 verified in the release manifest and published artifact",
+              mode: "done",
+              why: "released",
+              evidence: "Release v1.2.3 verified in the release manifest and published artifact",
               closing_sentence: MOCK_CLOSING_SENTENCES.released,
             },
           },

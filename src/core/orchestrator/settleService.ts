@@ -618,11 +618,16 @@ export class SettleService {
     });
   }
 
-  /** A merged task's close: the record, the managed checkout, and the gates it releases. */
+  /**
+   * A merged task's close: the record, the managed checkout, and the gates
+   * it releases. `data` is more for the close to record, such as a done
+   * close's delivery facts.
+   */
   async closeMerged(
     record: TaskRecord,
     actor: TaskClose["actor"],
     result: PrOutcome,
+    data?: Record<string, unknown>,
   ): Promise<SettleOutcome> {
     const taskId = record.id;
     await this.closing.closeTask(
@@ -634,7 +639,9 @@ export class SettleService {
         text: result.text,
         // Activity's line for the merge: the change and where it went in,
         // never its address (INF-1845).
-        ...(result.line ? { data: { line: result.line } } : {}),
+        ...(result.line || data
+          ? { data: { ...data, ...(result.line ? { line: result.line } : {}) } }
+          : {}),
         delivery: {
           landedMode: "pr",
           ...(result.receipt?.sha ? { mergedSha: result.receipt.sha } : {}),
@@ -899,7 +906,7 @@ export class SettleService {
       if (!record) throw new Error(`Unknown task "${taskId}".`);
       return {
         ok: false,
-        text: `Task ${taskId} "${record.title}" builds in place on the personal workspace: its changes are already there and committed, so there is nothing to merge, land, or discard. Close it with settle_task finished and completion_evidence once its report is verified${
+        text: `Task ${taskId} "${record.title}" builds in place on the personal workspace: its changes are already there and committed, so there is nothing to merge, land, or discard. Close it with settle_task done, why finished and evidence once its report is verified${
           this.host.runtimeState(taskId) ? ", or interrupt it with mode cancel to stop it" : ""
         }. ${fixedHoldWords("nothing-to-merge")}`,
       };
@@ -915,12 +922,12 @@ export class SettleService {
       if (this.host.deliverableOf(record) === "operation")
         return {
           ok: false,
-          text: `Nothing to merge: this task delivers an operation, not code. Verify the effect and close it finished with completion_evidence. ${fixedHoldWords("nothing-to-merge")}`,
+          text: `Nothing to merge: this task delivers an operation, not code. Verify the effect and close it done, why finished with evidence. ${fixedHoldWords("nothing-to-merge")}`,
         };
       if (this.host.deliverableOf(record) === "answer") {
         return {
           ok: false,
-          text: `Nothing to ${mode === "merge-pr" ? "merge" : "land"}: task ${taskId} "${record.title}" delivers an answer, not a change - it commits nothing and opens no pull request, and its card is the deliverable. It closes when the captain resolves that card, or with settle_task answered once its answer is handed on. ${fixedHoldWords("nothing-to-merge")}`,
+          text: `Nothing to ${mode === "merge-pr" ? "merge" : "land"}: task ${taskId} "${record.title}" delivers an answer, not a change - it commits nothing and opens no pull request, and its card is the deliverable. It closes when the captain resolves that card, or with settle_task done, why answered once its answer is handed on. ${fixedHoldWords("nothing-to-merge")}`,
         };
       }
     }

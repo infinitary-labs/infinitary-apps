@@ -545,7 +545,7 @@ export async function approvalHost(
         const linked = tasks.graph.blockers(to.id).some((task) => task.id === from.id);
         return linked !== (args.remove === true) ? "success" : "refused";
       }
-      if (name === "settle_task" && args.mode === "answered") {
+      if (name === "settle_task" && args.mode === "done" && args.why === "answered") {
         const task = tasks.resolve(String(args.task_id));
         return task?.status === "done" && task.closedReason === "answered" ? "success" : "refused";
       }

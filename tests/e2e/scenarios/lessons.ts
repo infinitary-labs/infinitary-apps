@@ -74,8 +74,9 @@ export const lessons: Scenario =
               name: "settle_task",
               args: {
                 task_id: reported,
-                mode: "finished",
-                completion_evidence: "the lessons stopped and their records are saved",
+                mode: "done",
+                why: "finished",
+                evidence: "the lessons stopped and their records are saved",
                 closing_sentence: "The lessons are stopped; their records are kept.",
               },
             },

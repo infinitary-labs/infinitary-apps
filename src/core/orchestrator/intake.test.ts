@@ -208,13 +208,17 @@ describe("new work", () => {
       intent: intentOf("label every gauge"),
       repoId: h.repo.id,
     });
-    expect(await h.supervisor.intake.carryOnTask(planned.key, carrier.key)).toBe(
-      `Closed ${planned.key} "Label the meter" as done: ${carrier.key} carries on its work.`,
-    );
-    expect(h.tasks.get(planned.id)).toMatchObject({ status: "done" });
-    expect(notes(h.events).at(-1)).toBe(
-      `"Label the meter" (${planned.key}) is carried on by ${carrier.key}.`,
-    );
+    expect(
+      (
+        await h.supervisor.settling.done.close(planned.key, {
+          why: "carried_on",
+          carriedBy: carrier.key,
+        })
+      ).text,
+    ).toBe(`Closed ${planned.key} "Label the meter" as done: ${carrier.key} carries on its work.`);
+    // INF-3169 piece 2: one close as done, its record reading the carrier, as a started task's does.
+    expect(h.tasks.get(planned.id)).toMatchObject({ status: "done", closedReason: "superseded" });
+    expect(h.tasks.graph.replacementOf(planned.id)).toBe(carrier.key);
   });
 
   it("leaves a parent whose children have all closed open while it has a card of its own, and closes it once the card goes", async () => {

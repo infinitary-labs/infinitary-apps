@@ -556,7 +556,7 @@ export async function runEvaluation(
                     text = "Invalid tool parameters";
                   } else if (
                     tool.name === "settle_task" &&
-                    (args as { mode?: string }).mode !== "answered"
+                    !isFictionalAnswerClose(args)
                   ) {
                     result = "refused";
                     text = "Evaluation never merges, discards or releases tasks";
@@ -831,4 +831,10 @@ async function productionFactory(role: AccountModel, userData: string, dir: stri
       runtime: await vault.runtimeFor(role.accountId),
     } as SessionBinding,
   };
+}
+
+/** The one close an evaluation runs: a done close of a fictional answer, on no words of the captain's. */
+function isFictionalAnswerClose(args: unknown): boolean {
+  const { mode, why, captain_words } = args as { mode?: string; why?: string; captain_words?: string };
+  return mode === "done" && why === "answered" && captain_words === undefined;
 }

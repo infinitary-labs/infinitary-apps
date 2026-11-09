@@ -1294,7 +1294,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     tasks.capture.attachAsk(message.id, taskId, "tool:spawn_crewmate");
     tasks.turns.recordReport(taskId, { text: "Version 1.2.3 shipped the change." });
     await supervisor.settling.closing.withClosingSentence(taskId, SENTENCE, () =>
-      supervisor.settling.declared.closeExternallyReleased(taskId, "v1.2.3 published"),
+      supervisor.settling.done.close(taskId, { why: "released", evidence: "v1.2.3 published" }),
     );
     await tick();
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "released" });

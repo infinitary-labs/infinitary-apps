@@ -67,6 +67,8 @@ export type SettleWorld = SettleOwners & {
     deliverable: "change" | "answer" | "operation";
     pull: ForgePull | undefined;
     work: { dirty: boolean; unlandedCommits: number } | null;
+    /** Whether a commit the close names is on the main branch; null when it cannot be found. */
+    onMain: boolean | null;
   };
   /** What the merge request answers; a test replaces it. */
   merge: (
@@ -135,6 +137,7 @@ export function settleWorld(options: { reviews?: boolean } = {}): SettleWorld {
         readiness: "clean",
       },
       work: { dirty: false, unlandedCommits: 0 },
+      onMain: null,
     },
     merge: async () => ({ ok: true, text: `Merged #${PR} on GitHub.`, receipt: { head: HEAD } }),
     readWork: async () => world.live.work,
@@ -147,6 +150,7 @@ export function settleWorld(options: { reviews?: boolean } = {}): SettleWorld {
       if (!work) throw new Error("the working copy is gone");
       return work;
     },
+    commitOnMain: async () => world.live.onMain,
     retireTaskWorktree: async () => {
       log.push(`retire worktree: ${state()}`);
       return { outcome: "removed" as const, kept: null };

@@ -35,8 +35,9 @@ export const operationTask: Scenario =
               name: "settle_task",
               args: {
                 task_id: match?.[1] ?? "missing",
-                mode: "finished",
-                completion_evidence: OPERATION_EVIDENCE,
+                mode: "done",
+                why: "finished",
+                evidence: OPERATION_EVIDENCE,
                 closing_sentence: "The chosen service is ready.",
               },
             },

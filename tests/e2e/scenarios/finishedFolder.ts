@@ -26,10 +26,9 @@ export const finishedFolder: Scenario =
           name: "settle_task",
           args: {
             task_id: taskId,
-            mode: "finished",
-            ...(marker === FINISH_FOLDER_PROMPT
-              ? { completion_evidence: FOLDER_CHECK_EVIDENCE }
-              : {}),
+            mode: "done",
+            why: "finished",
+            ...(marker === FINISH_FOLDER_PROMPT ? { evidence: FOLDER_CHECK_EVIDENCE } : {}),
             closing_sentence: FOLDER_CHECK_SENTENCE,
           },
         },

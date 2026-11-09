@@ -198,7 +198,8 @@ export function scoreOwnershipRun(
         (call) =>
           call.name === "settle_task" &&
           call.args.task_id === "OWNER" &&
-          call.args.mode === "answered",
+          call.args.mode === "done" &&
+          call.args.why === "answered",
       )
     )
       failures.push("Close the used internal answer as answered");

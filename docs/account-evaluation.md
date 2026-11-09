@@ -107,7 +107,7 @@ Every case gets fresh disposable state and ids; fixture tasks enter through `see
 Crew dispatch opens inert sessions only; it never opens another model session, creates a git repository or merges.
 Tools come from the production seat/crewmate presets, restricted to the fictional graph, crew and cards (builder reviews only get read/report/card tools).
 Coding built-ins, project discovery/setup, schedules, sign-in operations and real-account writes are disconnected.
-Only `settle_task answered` may close a fictional internal answer; merges, discards and releases are refused before execution.
+Only `settle_task` done, why `answered`, may close a fictional internal answer; merges, discards and releases are refused before execution.
 
 The runner records request events, response content/usage/model fields, executed calls and exact returned text, final graph/card state, starts, endings and checksums from an artifact allowlist.
 Credential-shaped text is redacted before writing, string by string before serialization so an escape such as `\n` never hides where a word starts: `Bearer` and its token, `access_token`/`refresh_token` and their values, and `sk-`/`eyJ` keys and tokens only where a word starts and in their real case, so ordinary words such as task-card and task-first stay readable A key that needed redaction takes its value with it.

@@ -30,8 +30,9 @@ export const personalize: Scenario =
             name: "settle_task",
             args: {
               task_id: reported[1],
-              mode: "finished",
-              completion_evidence: "its crewmate reported and the workspace saved its turn",
+              mode: "done",
+              why: "finished",
+              evidence: "its crewmate reported and the workspace saved its turn",
               closing_sentence: "The fixture is tidied.",
             },
           },

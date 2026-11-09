@@ -6,6 +6,7 @@ import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { keptRefFor } from "../../src/core/workspace/workspaceService";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
@@ -17,7 +18,7 @@ import { noteDone, shownCard } from "./stack";
 /** The crewmate's note the spec seeds on the stage, and finds there. */
 const RELEASE_NOTE_TITLE = "The release was published";
 
-test("a verified external release closes reported work, not a dismissed note or unlanded work", async () => {
+test("a verified external release closes reported work, not a dismissed note, and saves its unlanded edit", async () => {
   const userDataDir = scratchDir("infinitary-release-settle-");
   const repoDir = join(userDataDir, "repo");
   const worktreeDir = join(userDataDir, "worktree");
@@ -84,30 +85,24 @@ test("a verified external release closes reported work, not a dismissed note or 
 
     // e2e-fixture: input -- Author the real project files this journey commits, preserves or merges.
     writeFileSync(join(worktreeDir, "pending.txt"), "not released\n");
+    // The release names where the work went, so an uncommitted edit no longer
+    // holds the close: the close saves it and says so (one close as done).
     const input = promptInput(page);
-    await input.fill(`${RELEASE_PROMPT_MARKER}Publish the build`);
-    await input.press("Enter");
-    await expect
-      .poll(
-        () => mockProvider?.requestBodies().some((body) => body.includes("uncommitted edits")),
-        {
-          timeout: 30_000,
-        },
-      )
-      .toBe(true);
-    await expect
-      .poll(() => page.evaluate(() => window.infinitary.tasks.detail("released")))
-      .toMatchObject({ status: "active" });
-    expect(existsSync(worktreeDir)).toBe(true);
-
-    // Resolve the unlanded edit, then the same explicit declaration can close.
-    git("-C", worktreeDir, "clean", "-f", "pending.txt");
     await input.fill(`${RELEASE_PROMPT_MARKER}Publish the build`);
     await input.press("Enter");
     await expect
       .poll(() => page.evaluate(() => window.infinitary.tasks.detail("released")))
       .toMatchObject({ status: "done", closedReason: "released" });
+    await expect
+      .poll(() =>
+        mockProvider?.requestBodies().some((body) => body.includes("uncommitted edits, saved")),
+      )
+      .toBe(true);
     await expect.poll(() => existsSync(worktreeDir)).toBe(false);
+    // The saved edit is on the task's kept ref.
+    expect(git("-C", repoDir, "show", `${keptRefFor("released")}:pending.txt`)).toBe(
+      "not released\n",
+    );
     await page.getByRole("button", { name: "Expand Tasks" }).click();
     const done = nowFrame(page).locator('[data-now-group-header="landed"]');
     await expect(done).toBeVisible();

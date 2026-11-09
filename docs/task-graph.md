@@ -102,22 +102,22 @@ The captain's close control is not a choice and never ends work: it puts a decis
 An ordinary note read acknowledges its message and reaches its crewmate through `card-closed`; a duplicate closure also reaches the author, but is not an ordinary-read acknowledgement.
 Putting a card aside or reading a marked saved answer sends no author wake and does not acknowledge that saved answer.
 Only explicit Done receipts the marked saved answer (`CardService.finishAnswer`, `answer-done`); for an answer deliverable, it closes the row `done/answered` without a `card-closed` wake.
-After an ordinary read, the crewmate reports `finished` if nothing remains, and the first mate can close the answer row with `settle_task answered`; the read itself never closes it.
+After an ordinary read, the crewmate reports `finished` if nothing remains, and the first mate can close the answer row with `settle_task` done, why `answered`; the read itself never closes it.
 The row lists under the now panel's `landed` group like any other closed work and reads `answered`.
 
 Whether an answer task is an internal step (captain's call C, 2026-09-24: "intelligent judgments ... handled mostly through instructions") of a sequence the first mate runs, or something the captain asked for personally, is the first mate's judgment: it declares a step when it creates it (`internal_step` on `spawn_crewmate` or `create_task`, stored on the shape), and the host infers nothing - no rule reads the parent, the kind or the words.
 Absent is the captain's own ask, which is also every row from before the field.
-`settle_task` mode `answered` lets the first mate close an IDLE answer task it declared a step `done/answered` once a planned or started task names it as its `basis` - its answer carries on in that task's brief (`DeclaredCloses.closeAnswerUsedAsBasis`).
+`settle_task` done, why `answered`, lets the first mate close an IDLE answer task it declared a step `done/answered` once a planned or started task names it as its `basis` - its answer carries on in that task's brief (`DoneClose`, the one close as done; `docs/task-record.md`, "One close as done").
 It closes a step the same way when a live task waits on it through a `blocks` link (FI3-422): the step was run for that task, and its close as done is what clears the wait, so a finished check never holds that task's merge or has to be discarded; a task naming it as its basis comes first.
 The feed says where it went ("KEY answered: its answer carries on in KEY \"title\""), never "discarded".
 A step whose crewmate reported its answer closes the same way when nothing builds on it or waits on it (INF-1137): the first mate passed the answer on itself, as by a steer to a task already under way, and the feed reads "Answered: its crewmate reported the answer", so a finished investigation is never announced as dropped.
-The same mode closes an answer the captain asked for once its crewmate's report declared it finished (`delivery.finishedAt`, FI3-435), with nothing built on it required.
+The same close takes an answer the captain asked for once its crewmate's report declared it finished (`delivery.finishedAt`, FI3-435), with nothing built on it required.
 A verified file delivery through `steer_crewmate files_from`, or a plain result choice on the crewmate's card, records a durable result-handoff receipt (INF-1426).
-`settle_task answered` also closes a reported, idle task with that receipt, without requiring `internal_step` or an answer deliverable.
+`settle_task` done, why `answered`, also closes a reported, idle task with that receipt, without requiring `internal_step` or an answer deliverable.
 The first mate judges whether the result completes the task; the receipt proves only that it was handed on.
 Consent, browser handoffs, continuing cards, invalid actions and dismissals record no result receipt.
-A task with a proposed change, uncommitted edits, unmerged commits, an unreadable working copy, outstanding work or guidance, or open children or dependencies cannot use this path to bypass delivery.
-It is refused, as text, on anything neither declared a step nor declared finished nor holding a result receipt, on a change without that receipt, one still working or never run, a step that reported nothing and no live task builds on or waits on, one whose own answer card is still up, and one whose first mate card still asks the captain something, because the close would take that question down.
+Closing on its own, the first mate's close is held on a task still working or with guidance queued, one whose crewmate has not reported, one whose own pull request reads open, one whose commits are not merged when the close names nowhere else the work went, an answer the captain asked for and has not read, one whose own answer card is still up, one whose card still asks the captain something, and open children or dependencies.
+Each is a soft hold the captain's own words pass (`captain_words`).
 A first mate note on the task stays on the stack through the close, the same as a crewmate's note, until the captain closes it.
 Discard, cancel and `update_task drop` keep their own closes.
 
@@ -127,15 +127,14 @@ Once every child is closed, the ready sweep (`TaskIntake.completeContainers`, wh
 A parent that carries a crewmate, ever started, or still has an open child is never touched, and `closeRefusal` is unchanged.
 
 `settle_task` in every mode and every settle through `SettleService.settleTask` check these first.
-An externally delivered work task may close `done/released` only through an explicit `settle_task released` with a specific verified release named in `release_evidence`; it needs an idle reported change task, none of its own pull requests reading open or unreadable, and a successfully inspected working copy with no uncommitted edits.
+An externally delivered work task closes `done/released` through `settle_task` done, why `released`, with a specific verified release named in `evidence`; closing on its own, the first mate needs an idle reported task and none of its own pull requests reading open, and the close records each of its pull requests and its working copy as it read them, unread included (`docs/task-record.md`, "One close as done").
 A pull request of its own closed without merging, or commits only history calls unmerged, such as a squash merge's originals, do not refuse it: the close keeps those commits on the task's kept ref (INF-2628).
 The release evidence is recorded in its close event.
-Ordinary work declared `in_folder` closes `done/finished` through `settle_task finished` after the first mate verifies its reported result and supplies `completion_evidence` (INF-1279).
-`DeclaredCloses.closeFinishedFolderWork` records the declaration through the existing close owner without inspecting or changing the project folder, preserving edits, staged work, stashes and unpushed commits.
-Only an idle, reported change task with no proposed change qualifies; outstanding jobs, guidance, check-backs, captain waits, questions, pending settles and the child or dependency holds refuse the close.
-A change task with a working copy or branch of its own that delivered no change, such as a triage whose fix went to another task's branch, closes `done/finished` the same way (INF-2971): the host reads that copy where it ran, as a discard does, and closes only when it holds no commit or uncommitted edit, recording `noChange` beside the evidence.
-A copy that holds work refuses and names `merge-pr` or `land` by the task's delivery; one that cannot be read refuses until it reads.
-Every settle refusal names the one mode that would close the task, never "its delivery path" or a list of modes, so finished work is never discarded for want of a working mode.
+Ordinary work declared `in_folder` closes `done/finished` through `settle_task` done, why `finished`, after the first mate verifies its reported result and supplies `evidence` (INF-1279).
+The close records the declaration through the existing close owner without changing the project folder, preserving edits, staged work, stashes and unpushed commits.
+A change task with a working copy or branch of its own that delivered no change, such as a triage whose fix went to another task's branch, closes `done/finished` the same way (INF-2971): the host reads that copy where it ran, as a discard does, and records `noChange` beside the evidence when it holds no commit or uncommitted edit.
+A copy that holds work is held by the delivery proof unless the close names where the work went; one that cannot be read is recorded as unread and never holds the close.
+Every settle refusal names what would close the task, so finished work is never discarded for want of a working close.
 The host checks these typed facts, never the meaning of the evidence; verification remains the first mate's judgment, not a publication-specific state or a substitute for merging.
 A missing proposed change, a note dismissal or an unverified assertion never closes work; the host does not infer delivery from either.
 Each close refusal is a structured `SettleRefusal` (`{ refused, task, tasks, ways, text }`, cards/tasks/agents P2 WI-12): the tool returns its `.text`, and the ways out ride the settle wake as a fenced JSON block the first mate carries as effect buttons - a merge that keeps a task's open children planned is `settle_task` with `proceed_with_open`.

@@ -50,6 +50,7 @@ function fixture(deliverable: "answer" | "change" = "answer", reported = true) {
       // Every close takes down a merge note an earlier version put up (INF-2913).
       withdrawHostCard: () => {},
       scheduleBroadcast: () => {},
+      releaseMerged: () => {},
     },
     inbox: new InboxStore(db),
     endLiveTask: () => {},
@@ -58,8 +59,16 @@ function fixture(deliverable: "answer" | "change" = "answer", reported = true) {
     broadcastCrewCounts: () => {},
     workspace: { taskWorkStatus: workStatus },
   } as unknown as SettleServiceHost;
-  const service = createSettleOwners(host).declared;
-  return { tasks, service, cards, cardCloses, workStatus };
+  const owners = createSettleOwners(host);
+  return {
+    tasks,
+    host,
+    service: owners.declared,
+    done: owners.done,
+    cards,
+    cardCloses,
+    workStatus,
+  };
 }
 
 // A handed-on result closes done as answered: its notes stay, and a note
@@ -72,7 +81,7 @@ const ANSWERED_CLOSE = [
 
 describe("handed-on result completion", () => {
   it("delivers a real screenshot before closing the source as done, and keeps the successor's copy", async () => {
-    const { tasks, service, cardCloses } = fixture("change");
+    const { tasks, done, cardCloses } = fixture("change");
     const paths = { crewmatesDir: scratchDir("infinitary-handed-result-") } as AppPaths;
     const original = fileURLToPath(
       new URL("../../../release-notes/pictures/action-reply-line-dark.webp", import.meta.url),
@@ -84,7 +93,7 @@ describe("handed-on result completion", () => {
     const delivered = join(crewmateTempDir(paths, "builder"), "handover", kept.file);
     expect(guidance).toContain(delivered);
     expect(await readFile(delivered)).toEqual(await readFile(original));
-    expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: true });
+    expect(await done.close("finder", { why: "answered" })).toMatchObject({ ok: true });
     expect(tasks.get("finder")).toMatchObject({ status: "done", closedReason: "answered" });
     expect(cardCloses).toEqual(ANSWERED_CLOSE);
     expect(await readFile(delivered)).toEqual(await readFile(original));
@@ -101,9 +110,9 @@ describe("handed-on result completion", () => {
   it.each(["answer", "change"] as const)(
     "closes a reported %s handed to another task without an internal-step declaration",
     async (kind) => {
-      const { tasks, service, cardCloses } = fixture(kind);
+      const { tasks, done, cardCloses } = fixture(kind);
       tasks.capture.recordResultHandoff("finder", { taskId: "builder" });
-      expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: true });
+      expect(await done.close("finder", { why: "answered" })).toMatchObject({ ok: true });
       expect(tasks.get("finder")).toMatchObject({ status: "done", closedReason: "answered" });
       expect(cardCloses).toEqual(ANSWERED_CLOSE);
       expect(tasks.timeline("finder")).toContainEqual(
@@ -115,7 +124,7 @@ describe("handed-on result completion", () => {
   );
 
   it("records a captain result choice on a change without closing it mid-turn, then finishes it as answered", async () => {
-    const { tasks, service, cardCloses } = fixture("change");
+    const { tasks, done, service, cardCloses } = fixture("change");
     const card = {
       id: "card-finder-result",
       taskId: "finder",
@@ -125,7 +134,7 @@ describe("handed-on result completion", () => {
     expect(service.closeAnsweredTask(card, "use", "captain")).toBe(false);
     expect(tasks.capture.resultHandoffOf("finder")).toBe(true);
     expect(cardCloses).toEqual([]);
-    expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: true });
+    expect(await done.close("finder", { why: "answered" })).toMatchObject({ ok: true });
     expect(tasks.get("finder")?.status).toBe("done");
     expect(cardCloses).toEqual(ANSWERED_CLOSE);
   });
@@ -156,21 +165,34 @@ describe("handed-on result completion", () => {
   });
 
   it("requires the source's report even when files were delivered", async () => {
-    const { tasks, service } = fixture("change", false);
+    const { tasks, done } = fixture("change", false);
     tasks.capture.recordResultHandoff("finder", { taskId: "builder" });
-    expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: false });
+    expect(await done.close("finder", { why: "answered" })).toMatchObject({ ok: false });
   });
 
-  it("keeps a task-owned pull request on its normal delivery path", async () => {
-    const { tasks, service } = fixture("change");
-    tasks.capture.recordResultHandoff("finder", { taskId: "builder" });
-    seedDelivery(tasks, "finder", { prNumber: 497 });
-    expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: false });
-    expect(tasks.get("finder")?.status).toBe("active");
+  // INF-3169 piece 2, captain: "Leave it open where the project lives, and say so on the record".
+  it("holds while its own pull request reads open, and closes over one it cannot read", async () => {
+    const open = fixture("change");
+    open.tasks.capture.recordResultHandoff("finder", { taskId: "builder" });
+    seedDelivery(open.tasks, "finder", { prNumber: 497 });
+    open.host.readPull = async () => ({ number: 497, state: "open" }) as never;
+    expect(await open.done.close("finder", { why: "answered" })).toMatchObject({
+      ok: false,
+      text: expect.stringContaining("its own pull request #497 is still open"),
+    });
+    expect(open.tasks.get("finder")?.status).toBe("active");
+    const unread = fixture("change");
+    unread.tasks.capture.recordResultHandoff("finder", { taskId: "builder" });
+    seedDelivery(unread.tasks, "finder", { prNumber: 497 });
+    expect(await unread.done.close("finder", { why: "answered" })).toMatchObject({
+      ok: true,
+      text: expect.stringContaining("could not be read"),
+    });
+    expect(unread.tasks.get("finder")?.status).toBe("done");
   });
 
   it("preserves the open-child close rule after a result handoff", async () => {
-    const { tasks, service } = fixture("change");
+    const { tasks, done } = fixture("change");
     tasks.capture.recordResultHandoff("finder", { taskId: "builder" });
     seedTask(tasks, {
       id: "child",
@@ -178,25 +200,20 @@ describe("handed-on result completion", () => {
       parentId: "finder",
       status: "idle",
     });
-    expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: false });
+    expect(await done.close("finder", { why: "answered" })).toMatchObject({ ok: false });
   });
 
   it("does not turn a report alone into permission to finish a captain-requested answer", async () => {
-    const { tasks, service } = fixture();
-    expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: false });
+    const { tasks, done } = fixture();
+    expect(await done.close("finder", { why: "answered" })).toMatchObject({ ok: false });
     expect(tasks.get("finder")?.status).toBe("active");
-  });
-
-  it("does not let a change without a handoff bypass delivery", async () => {
-    const { service } = fixture("change");
-    expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: false });
   });
 
   it.each([
     { dirty: true, unlandedCommits: 0 },
     { dirty: false, unlandedCommits: 1 },
   ])("keeps unmerged work after handoff: %j", async (work) => {
-    const { tasks, service, workStatus } = fixture("change");
+    const { tasks, done, workStatus } = fixture("change");
     tasks.capture.recordResultHandoff("finder", { taskId: "builder" });
     tasks.starts.dispatch("finder", {
       workspace: { repoDir: "/project", worktreeDir: "/working-copy", branch: "finder" },
@@ -205,16 +222,16 @@ describe("handed-on result completion", () => {
     });
     tasks.turns.setActivity("finder", "idle");
     workStatus.mockResolvedValue(work);
-    // The refusal names the one mode that would close it (INF-2971).
-    expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({
+    // The proof hold names what the close could name instead (INF-3169 piece 2).
+    expect(await done.close("finder", { why: "answered" })).toMatchObject({
       ok: false,
-      text: expect.stringContaining("then close it with settle_task land"),
+      text: expect.stringContaining("the close names nowhere else it went"),
     });
     expect(tasks.get("finder")?.status).toBe("active");
   });
 
   it("keeps a question and its result open after handoff", async () => {
-    const { tasks, service, cards } = fixture();
+    const { tasks, done, cards } = fixture();
     tasks.capture.recordResultHandoff("finder", { taskId: "builder" });
     cards.push({
       id: "card-finder-result",
@@ -222,6 +239,6 @@ describe("handed-on result completion", () => {
       title: "Which screenshot?",
       actions: [{ id: "pick" }],
     });
-    expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: false });
+    expect(await done.close("finder", { why: "answered" })).toMatchObject({ ok: false });
   });
 });

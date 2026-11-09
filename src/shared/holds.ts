@@ -42,6 +42,11 @@ export const HOLDS = {
     restsOn: "record",
     name: "the checks",
   },
+  proof: {
+    level: "soft",
+    restsOn: "record",
+    name: "the delivery proof",
+  },
   story: {
     level: "soft",
     restsOn: "consent",

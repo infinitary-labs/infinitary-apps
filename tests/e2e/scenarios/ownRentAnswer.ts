@@ -41,7 +41,9 @@ export const ownRentAnswer: Scenario =
       }
       if (calledTool(latestUserTail, "emit_card") && !calledTool(latestUserTail, "settle_task")) {
         return {
-          calls: [{ name: "settle_task", args: { task_id: taskId, mode: "answered" } }],
+          calls: [
+            { name: "settle_task", args: { task_id: taskId, mode: "done", why: "answered" } },
+          ],
           afterMs: OWN_RENT_SETTLE_DELAY_MS,
         };
       }

@@ -22,7 +22,7 @@ The runbook tells the first mate to relay the lesson skill and learner records i
 The workspace's generic instructions ask the crewmate to open the skill its brief names, and panel checks apply only when it changes a panel.
 For ongoing personal work every finished turn is committed, with the report as the message or `ongoing work turn` when there is none, without closing the task or waking the first mate for routine progress.
 A commit that fails is the one exception: it wakes the first mate with git's words, as on any personal task (`docs/personal-panels.md`, "Report, commit, close").
-A report that asks the first mate for something, or declares the work finished, routes as any other report once its commit lands; the first mate closes a finished subject with `settle_task` `finished`, which keeps the files (INF-1677).
+A report that asks the first mate for something, or declares the work finished, routes as any other report once its commit lands; the first mate closes a finished subject with `settle_task` done, why `finished`, which keeps the files (INF-1677).
 `lessons/` is a record folder: it holds no `panel.tsx` or `server.ts`, so a panel build never loads, stamps, lints, places or copies it (`isPanel`, `src/core/personal/liveWorkspace.ts`).
 An active task that builds in place and has a recorded conversation survives a restart; boot recovery returns to the queue only an active task with neither a working copy nor a conversation (`TaskService.releaseUnstartedDispatches`).
 

@@ -690,8 +690,8 @@ A task runs in a working copy of its own on the computer that runs it, made from
   The crewmate pushes from it in its own shell, with the app's own git there, which answers GitHub with this computer's own sign-in (`configureComputerGit`); nothing of the home's sign-in is here.
 - **What it holds.**
   `inf:working-copy:status` says whether it holds edits or commits that never merged, as the home reads its own, and where the project it was cloned from lives (`origin`, null for one of this computer's own local workspace).
-  Both discard and `settle_task released` ask this computer to inspect its working copy; a missing copy or an unreachable computer is an unknown result, never a clean copy.
-  Released closure requires a present, clean copy with no unlanded commits and the first mate's explicit release evidence; it does not merge a branch or a pull request.
+  Both discard and a `settle_task` done close ask this computer to inspect its working copy; a missing copy or an unreachable computer is an unknown result, never a clean copy.
+  A done close records what the copy holds, saves its edits and commits as every close does, and records a copy it cannot read as unread rather than refusing; it does not merge a branch or a pull request.
 - **Seeding.**
   `inf:working-copy:seed` keeps the home's default workspace, which only a task with no project works in, in this computer's own: the commit is asked for first, answered `have` when this computer holds it, else `need` with the commits it holds that the bundle may leave out, and the bundle then arrives in pieces the way an artifact does.
   Once whole and matching its digest it is fetched into `refs/infinitary/home-main` (`SEEDED_REF`), never this computer's checked-out branch, so a default workspace made here before shares no history with it and is left alone.

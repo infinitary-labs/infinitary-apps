@@ -32,7 +32,7 @@ function toolset(overrides: Partial<CrewDelegate> = {}) {
     crewStatus: vi.fn(() => []),
     isCaptainTurn: vi.fn(() => true),
     settleTask: vi.fn(async () => ({ text: "settled" })),
-    carryOnTask: vi.fn(async () => "carried"),
+    closeDone: vi.fn(async () => ({ text: "closed" })),
     ...overrides,
   };
   const tools = piToolsOf(createCrewTools(delegate)) as unknown as AnyTool[];
@@ -549,19 +549,18 @@ describe("crew tools", () => {
       ?.execute("t1", { task_id: "ab12", mode: "cancel", closing_sentence: "  " });
     expect(cancel?.content[0]?.text).toBe(closingSentenceMissing("cancel"));
     expect(delegate.interruptCrewmate).not.toHaveBeenCalled();
-    for (const mode of ["merge-pr", "land", "discard", "released", "finished"] as const) {
+    for (const mode of ["merge-pr", "land", "discard"] as const) {
       const settled = await byName.get("settle_task")?.execute("t1", { task_id: "ab12", mode });
       expect(settled?.content[0]?.text).toBe(closingSentenceMissing(mode));
     }
+    for (const why of ["released", "finished", "merged"] as const) {
+      const settled = await byName
+        .get("settle_task")
+        ?.execute("t1", { task_id: "ab12", mode: "done", why });
+      expect(settled?.content[0]?.text).toBe(closingSentenceMissing("done"));
+    }
     expect(delegate.settleTask).not.toHaveBeenCalled();
-    await byName.get("settle_task")?.execute("t1", { task_id: "ab12", mode: "answered" });
-    expect(delegate.settleTask).toHaveBeenCalledWith(
-      "ab12",
-      "answered",
-      undefined,
-      undefined,
-      undefined,
-    );
+    expect(delegate.closeDone).not.toHaveBeenCalled();
   });
 
   it("settle_task routes PR merge, local land, and discard", async () => {
@@ -575,7 +574,6 @@ describe("crew tools", () => {
       "merge-pr",
       undefined,
       undefined,
-      undefined,
       sentence,
     );
 
@@ -585,7 +583,6 @@ describe("crew tools", () => {
     expect(delegate.settleTask).toHaveBeenCalledWith(
       "ab12",
       "land",
-      undefined,
       undefined,
       undefined,
       sentence,
@@ -598,14 +595,7 @@ describe("crew tools", () => {
       confirm: true,
       closing_sentence: sentence,
     });
-    expect(delegate.settleTask).toHaveBeenCalledWith(
-      "ab12",
-      "discard",
-      true,
-      undefined,
-      undefined,
-      sentence,
-    );
+    expect(delegate.settleTask).toHaveBeenCalledWith("ab12", "discard", true, undefined, sentence);
 
     await byName.get("settle_task")?.execute("t1", {
       task_id: "ab12",
@@ -613,68 +603,64 @@ describe("crew tools", () => {
       proceed_with_open: true,
       closing_sentence: sentence,
     });
-    expect(delegate.settleTask).toHaveBeenCalledWith(
-      "ab12",
-      "merge-pr",
-      undefined,
-      true,
-      undefined,
-      sentence,
-    );
+    expect(delegate.settleTask).toHaveBeenCalledWith("ab12", "merge-pr", undefined, true, sentence);
 
-    await byName.get("settle_task")?.execute("t2", {
-      task_id: "ab12",
-      mode: "released",
-      release_evidence: "v1.2.3 published and verified",
-      closing_sentence: sentence,
-    });
-    expect(delegate.settleTask).toHaveBeenCalledWith(
-      "ab12",
-      "released",
-      undefined,
-      undefined,
-      "v1.2.3 published and verified",
-      sentence,
-    );
+    expect(delegate.closeDone).not.toHaveBeenCalled();
   });
 
-  // INF-1825: work another task carries on closes through carried_by, with no closing sentence required.
-  it("settle_task carried_on names the task carrying the work, and asks for one when it is missing", async () => {
+  // INF-3169 piece 2: answered, finished, released, carried_on and merged are one done close, naming why.
+  it("settle_task done carries why, its facts and the captain's words to the one close", async () => {
     const { delegate, byName } = toolset();
-    const missing = await byName
-      .get("settle_task")
-      ?.execute("t1", { task_id: "ab12", mode: "carried_on" });
-    expect(missing?.content[0]?.text).toContain("carried_on needs carried_by");
-    expect(delegate.carryOnTask).not.toHaveBeenCalled();
+    const sentence = "Version 1.2.3 shipped the meter fix.";
+    const released = await byName.get("settle_task")?.execute("t2", {
+      task_id: "ab12",
+      mode: "done",
+      why: "released",
+      evidence: "v1.2.3 published and verified",
+      captain_words: "turn",
+      closing_sentence: sentence,
+    });
+    expect(delegate.closeDone).toHaveBeenCalledWith("ab12", {
+      why: "released",
+      evidence: "v1.2.3 published and verified",
+      captainWordsFrom: "turn",
+      closingSentence: sentence,
+    });
+    expect(released?.content[0]?.text).toBe("closed");
 
-    const carried = await byName
-      .get("settle_task")
-      ?.execute("t1", { task_id: "ab12", mode: "carried_on", carried_by: " INF-1737 " });
-    expect(delegate.carryOnTask).toHaveBeenCalledWith("ab12", "INF-1737", undefined);
-    expect(carried?.content[0]?.text).toBe("carried");
+    await byName.get("settle_task")?.execute("t3", {
+      task_id: "ab12",
+      mode: "done",
+      why: "merged",
+      delivered_in: " #65 ",
+      closing_sentence: sentence,
+    });
+    expect(delegate.closeDone).toHaveBeenLastCalledWith("ab12", {
+      why: "merged",
+      deliveredIn: "#65",
+      closingSentence: sentence,
+    });
     expect(delegate.settleTask).not.toHaveBeenCalled();
   });
 
-  // INF-1279: success in a project folder reaches the task owner with its own evidence.
-  it("routes finished folder work with completion evidence, never release evidence", async () => {
+  // INF-1825: work another task carries on closes through carried_by, and an answer, with no closing sentence required.
+  it("settle_task done closes an answer or carried-on work without a closing sentence", async () => {
     const { delegate, byName } = toolset();
-    const evidence = "Checked the folder and verified that the captain's draft is intact.";
-    const sentence = "The project folder was checked.";
     await byName.get("settle_task")?.execute("t1", {
       task_id: "ab12",
-      mode: "finished",
-      completion_evidence: evidence,
-      release_evidence: "not the evidence for this mode",
-      closing_sentence: sentence,
+      mode: "done",
+      why: "carried_on",
+      carried_by: " INF-1737 ",
     });
-    expect(delegate.settleTask).toHaveBeenCalledWith(
-      "ab12",
-      "finished",
-      undefined,
-      undefined,
-      evidence,
-      sentence,
-    );
+    expect(delegate.closeDone).toHaveBeenLastCalledWith("ab12", {
+      why: "carried_on",
+      carriedBy: "INF-1737",
+    });
+    await byName
+      .get("settle_task")
+      ?.execute("t1", { task_id: "ab12", mode: "done", why: "answered" });
+    expect(delegate.closeDone).toHaveBeenLastCalledWith("ab12", { why: "answered" });
+    expect(delegate.settleTask).not.toHaveBeenCalled();
   });
 
   it("settle_task carries a structured refusal in its details", async () => {

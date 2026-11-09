@@ -1,4 +1,5 @@
 import { DeclaredCloses } from "./declaredCloses";
+import { DoneClose } from "./doneClose";
 import { KeptApproval } from "./keptApproval";
 import { KeptMerge } from "./keptMerge";
 import type { SettleServiceHost } from "./settleHost";
@@ -21,6 +22,8 @@ import { TaskClosing } from "./taskClose";
  *   (`./settleService.ts`).
  * - `kept`: merges run under a kept approval (`./keptMerge.ts`).
  * - `declared`: closes declared on a typed fact (`./declaredCloses.ts`).
+ * - `done`: the one close as done, with its holds and delivery facts
+ *   (`./doneClose.ts`).
  */
 export type SettleOwners = {
   locks: SettleLocks;
@@ -29,6 +32,7 @@ export type SettleOwners = {
   settle: SettleService;
   kept: KeptMerge;
   declared: DeclaredCloses;
+  done: DoneClose;
 };
 
 /** Compose the settle owners over one host. */
@@ -38,11 +42,12 @@ export function createSettleOwners(host: SettleServiceHost): SettleOwners {
   const closing = new TaskClosing(host, locks);
   const settle = new SettleService(host, locks, approvals, closing);
   const kept = new KeptMerge(host, locks, approvals, closing, settle);
-  const declared = new DeclaredCloses(host, locks, closing, settle);
+  const declared = new DeclaredCloses(host, closing);
+  const done = new DoneClose(host, locks, closing, settle, declared);
   locks.runKept = (taskId) => {
     void kept.runMergeAuthorization(taskId).catch((caught: unknown) => {
       console.warn("[settle] a kept merge approval could not run:", caught);
     });
   };
-  return { locks, approvals, closing, settle, kept, declared };
+  return { locks, approvals, closing, settle, kept, declared, done };
 }

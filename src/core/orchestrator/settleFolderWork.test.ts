@@ -106,9 +106,9 @@ describe("verified folder-work completion", () => {
       body: "<p>The draft is intact.</p>",
       actions: [],
     });
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, ` ${evidence} `)).text).toContain(
-      "as finished",
-    );
+    expect(
+      (await h.done.close(h.task.id, { why: "finished", evidence: ` ${evidence} ` })).text,
+    ).toContain("as finished");
     expect(h.tasks.get(h.task.id)).toMatchObject({
       status: "done",
       closedReason: "finished",
@@ -125,7 +125,7 @@ describe("verified folder-work completion", () => {
     expect(h.host.mergePullRequest).not.toHaveBeenCalled();
     expect(h.host.closePullRequest).not.toHaveBeenCalled();
     const events = h.tasks.timeline(h.task.id);
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain(
       "Cannot close",
     );
     expect(h.tasks.timeline(h.task.id)).toEqual(events);
@@ -140,7 +140,7 @@ describe("verified folder-work completion", () => {
     await h.closing.withClosingSentence(
       h.task.id,
       "The folder was checked and your edits remain intact.",
-      () => h.declared.closeFinishedFolderWork(h.task.id, evidence),
+      () => h.done.close(h.task.id, { why: "finished", evidence }),
     );
     expect(h.cards.snapshot()).toMatchObject([
       { title: `${h.task.key} finished`, actions: [], answering: true },
@@ -153,10 +153,6 @@ describe("verified folder-work completion", () => {
     { status: "interrupted" },
     { status: "cancelled" },
     { outcome: "" },
-    { worktreeDir: "/task-copy" },
-    { branch: "fm/task-branch" },
-    { deviceId: "other-mac" },
-    { shape: { kind: "chore", kind_source: "test", deliverable: "change" } },
     {
       shape: {
         kind: "research",
@@ -170,7 +166,7 @@ describe("verified folder-work completion", () => {
     async (seed) => {
       const h = setup(seed);
       const before = h.tasks.get(h.task.id);
-      expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+      expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain(
         "Cannot close",
       );
       expect(h.tasks.get(h.task.id)).toEqual(before);
@@ -180,7 +176,9 @@ describe("verified folder-work completion", () => {
 
   it("requires evidence rather than inferring success from an idle report", async () => {
     const h = setup();
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, "  ")).text).toContain("evidence");
+    expect((await h.done.close(h.task.id, { why: "finished", evidence: "  " })).text).toContain(
+      "evidence",
+    );
     expect(h.tasks.get(h.task.id)?.status).toBe("active");
   });
 
@@ -192,13 +190,13 @@ describe("verified folder-work completion", () => {
       status: "queued",
       parentId: h.task.id,
     });
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).refusal?.refused).toBe(
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).refusal?.refused).toBe(
       "children-open",
     );
     h.tasks.close("child", { status: "done", reason: "finished", actor: "host" });
     seedTask(h.tasks, { id: "blocker", title: "Required check", status: "idle" });
     h.tasks.graph.link("blocker", h.task.id, "blocks", "firstmate", true);
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).refusal).toBeDefined();
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).refusal).toBeDefined();
     expect(h.tasks.get(h.task.id)?.status).toBe("active");
   });
 
@@ -213,27 +211,27 @@ describe("verified folder-work completion", () => {
         { id: "no", label: "Stop" },
       ],
     });
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain(
       "Cannot close",
     );
     h.cards.close(question, { kind: "firstmate" });
     seedDelivery(h.tasks, h.task.id, { captainWait: { reason: "Read the result", at: 1000 } });
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain(
       "Cannot close",
     );
     seedDelivery(h.tasks, h.task.id, { captainWait: undefined });
     h.host.hasRunningJobs.mockReturnValue(true);
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain(
       "Cannot close",
     );
     h.host.hasRunningJobs.mockReturnValue(false);
     h.inbox.enqueue(h.task.id, "Please check another file");
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain(
       "Cannot close",
     );
     expect(h.inbox.allFor(h.task.id)).toHaveLength(1);
     h.inbox.markDelivered(h.inbox.allFor(h.task.id).map((row) => row.id));
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain(
       "Cannot close",
     );
     expect(h.inbox.inFlight(h.task.id)).toHaveLength(1);
@@ -243,29 +241,33 @@ describe("verified folder-work completion", () => {
   it("leaves a continuing turn, a check-back and a gate open", async () => {
     const h = setup();
     h.host.runtimeState.mockReturnValue("streaming");
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain(
       "Cannot close",
     );
     h.host.runtimeState.mockReturnValue("idle");
     seedDelivery(h.tasks, h.task.id, {
       checkBack: { at: 1000, until: 2000, waitingFor: "The check to finish" },
     });
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain(
       "Cannot close",
     );
     seedDelivery(h.tasks, h.task.id, { checkBack: undefined });
     h.tasks.placement.setGate(h.task.id, { kind: "captain", reason: "A decision is pending" });
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain(
       "Cannot close",
     );
     expect(h.host.stopRuntime).not.toHaveBeenCalled();
   });
 
-  it("refuses task-owned changes and another pending settle", async () => {
+  it("refuses its own pull request still open and another pending settle", async () => {
     const h = setup();
     seedDelivery(h.tasks, h.task.id, { prNumber: 7 });
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
-      "pull request",
+    const pulls = {
+      readPull: async () => ({ number: 7, state: "open", merged: false, headSha: "a" }),
+    };
+    Object.assign(h.host, pulls);
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain(
+      "its own pull request #7 is still open",
     );
     seedDelivery(h.tasks, h.task.id, { prNumber: undefined });
     h.tasks.delivery.setPendingSettle(h.task.id, {
@@ -274,9 +276,7 @@ describe("verified folder-work completion", () => {
       requestedAt: 1000,
       proceedWithOpen: false,
     });
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
-      "settle",
-    );
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain("settle");
     expect(h.host.stopRuntime).not.toHaveBeenCalled();
   });
 
@@ -288,11 +288,9 @@ describe("verified folder-work completion", () => {
         stop = resolve;
       }),
     );
-    const closing = h.declared.closeFinishedFolderWork(h.task.id, evidence);
-    expect(h.tasks.get(h.task.id)?.status).toBe("done");
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
-      "settle",
-    );
+    const closing = h.done.close(h.task.id, { why: "finished", evidence });
+    await vi.waitFor(() => expect(h.tasks.get(h.task.id)?.status).toBe("done"));
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain("settle");
     stop();
     await closing;
     expect(h.host.stopRuntime).toHaveBeenCalledTimes(1);
@@ -303,7 +301,7 @@ describe("verified folder-work completion", () => {
 describe("verified operation completion", () => {
   it("closes an operation done/finished from reported evidence without a merge", async () => {
     const h = setup({ shape: { kind: "unclear", deliverable: "operation" } });
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain(
       "as finished",
     );
     expect(h.tasks.get(h.task.id)).toMatchObject({ status: "done", closedReason: "finished" });
@@ -320,13 +318,13 @@ describe("verified operation completion", () => {
   });
   it("requires both a report and an explicit verification statement", async () => {
     const h = setup({ outcome: "", shape: { kind: "unclear", deliverable: "operation" } });
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain(
       "has not reported",
     );
     const reported = setup({ shape: { kind: "unclear", deliverable: "operation" } });
-    expect((await reported.declared.closeFinishedFolderWork(reported.task.id, "")).text).toContain(
-      "evidence",
-    );
+    expect(
+      (await reported.done.close(reported.task.id, { why: "finished", evidence: "" })).text,
+    ).toContain("evidence");
   });
 });
 
@@ -339,7 +337,7 @@ it("retires an operation’s scratch working copy without merging it", async () 
   });
   const retire = vi.fn(async () => ({ outcome: "removed", kept: null }));
   h.host.workspace = { retireTaskWorktree: retire };
-  expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+  expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain(
     "as finished",
   );
   expect(retire).toHaveBeenCalledWith(expect.objectContaining({ cwd: "/scratch-operation" }), {});
@@ -374,7 +372,7 @@ describe("a change task that delivered no change", () => {
 
   it("closes done/finished after reading a clean copy, retiring it unmerged", async () => {
     const h = withCopy({ dirty: false, unlandedCommits: 0 });
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain(
       "as finished",
     );
     expect(h.read).toHaveBeenCalledWith(expect.objectContaining({ cwd: "/task-copy" }), {
@@ -393,24 +391,15 @@ describe("a change task that delivered no change", () => {
   });
 
   it.each([
-    [{ dirty: true, unlandedCommits: 0 }, "uncommitted edits"],
-    [{ dirty: false, unlandedCommits: 2 }, "2 unmerged commits"],
-  ] as const)("refuses a copy holding work %j and names land", async (work, held) => {
+    { dirty: true, unlandedCommits: 0 },
+    { dirty: false, unlandedCommits: 2 },
+  ])("holds a copy holding work %j for its delivery proof", async (work) => {
     const h = withCopy(work);
     const before = h.tasks.get(h.task.id);
-    const { text } = await h.declared.closeFinishedFolderWork(h.task.id, evidence);
-    expect(text).toContain(held);
-    expect(text).toContain("settle_task land");
+    const { text } = await h.done.close(h.task.id, { why: "finished", evidence });
+    expect(text).toContain("holds work that is not merged");
+    expect(text).toContain("Soft hold proof");
     expect(h.tasks.get(h.task.id)).toEqual(before);
-    expect(h.retire).not.toHaveBeenCalled();
-  });
-
-  it("refuses a copy it cannot read, and leaves the task open", async () => {
-    const h = withCopy(new Error("git status failed"));
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
-      "try finished again",
-    );
-    expect(h.tasks.get(h.task.id)?.status).toBe("active");
     expect(h.retire).not.toHaveBeenCalled();
   });
 
@@ -420,16 +409,9 @@ describe("a change task that delivered no change", () => {
       h.host.runtimeState.mockReturnValue("streaming");
       return { dirty: false, unlandedCommits: 0 };
     });
-    expect((await h.declared.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+    expect((await h.done.close(h.task.id, { why: "finished", evidence })).text).toContain(
       "state changed",
     );
     expect(h.tasks.get(h.task.id)?.status).toBe("active");
-  });
-
-  it("answered names finished instead of a discard", async () => {
-    const h = withCopy({ dirty: false, unlandedCommits: 0 });
-    const { text } = await h.declared.closeAnswerUsedAsBasis(h.task.id);
-    expect(text).toContain("settle_task finished");
-    expect(text).not.toContain("discard");
   });
 });

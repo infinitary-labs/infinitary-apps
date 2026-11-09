@@ -32,8 +32,9 @@ export const personalPanels: Scenario =
             name: "settle_task",
             args: {
               task_id: reported,
-              mode: "finished",
-              completion_evidence: "the panel is on the rail and its report saved it",
+              mode: "done",
+              why: "finished",
+              evidence: "the panel is on the rail and its report saved it",
               closing_sentence: "Your panel is built.",
             },
           },

@@ -1041,7 +1041,9 @@ export async function startMockProvider(
           }
           if (!hasToolResults && latestUserTail.includes(FINISHED_REPORT_WORDS)) {
             const taskId = latestUserTail.match(/reported on task ([\w-]+)/)?.[1] ?? "missing";
-            streamToolCalls([{ name: "settle_task", args: { task_id: taskId, mode: "answered" } }]);
+            streamToolCalls([
+              { name: "settle_task", args: { task_id: taskId, mode: "done", why: "answered" } },
+            ]);
             return;
           }
           if (!hasToolResults && latestUserTail.includes(SPAWN_PROMPT_MARKER)) {

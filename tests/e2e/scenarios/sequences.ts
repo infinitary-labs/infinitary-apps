@@ -534,7 +534,7 @@ function sequencesFirstmateMove(
     if (started) return started;
     if (results.length === 2) {
       return {
-        calls: [{ name: "settle_task", args: { task_id: yes, mode: "answered" } }],
+        calls: [{ name: "settle_task", args: { task_id: yes, mode: "done", why: "answered" } }],
       };
     }
     return { text: "Fix under way." };
@@ -546,7 +546,9 @@ function sequencesFirstmateMove(
   )?.[1];
   if (passed) {
     if (results.length > 0) return { text: "The checks passed; the build carries on." };
-    return { calls: [{ name: "settle_task", args: { task_id: passed, mode: "answered" } }] };
+    return {
+      calls: [{ name: "settle_task", args: { task_id: passed, mode: "done", why: "answered" } }],
+    };
   }
   return undefined;
 }

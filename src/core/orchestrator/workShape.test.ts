@@ -566,7 +566,7 @@ describe("the deliverable axis (Task B)", () => {
       body: "<p>Buying Macs costs far less for steady use.</p>",
       actions: [],
     });
-    const settled = await supervisor.settling.declared.closeAnswerUsedAsBasis(taskId);
+    const settled = await supervisor.settling.done.close(taskId, { why: "answered" });
     await tick();
     expect(settled).toMatchObject({ ok: true });
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
@@ -585,7 +585,7 @@ describe("the deliverable axis (Task B)", () => {
     supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
     await tick();
     expect(cards().map((entry) => entry.id)).toContain(fmCardId);
-    expect(await supervisor.settling.declared.closeAnswerUsedAsBasis(taskId)).toMatchObject({
+    expect(await supervisor.settling.done.close(taskId, { why: "answered" })).toMatchObject({
       ok: true,
     });
     await tick();
@@ -604,7 +604,7 @@ describe("the deliverable axis (Task B)", () => {
         { id: "more", label: "Dig further" },
       ],
     });
-    const settled = await supervisor.settling.declared.closeAnswerUsedAsBasis(taskId);
+    const settled = await supervisor.settling.done.close(taskId, { why: "answered" });
     expect(settled.ok).toBe(false);
     expect(settled.text).toContain('its card "Own vs rent for Mac CI" still asks the captain');
     expect(tasks.get(taskId)?.status).toBe("active");

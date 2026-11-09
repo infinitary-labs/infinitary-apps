@@ -212,7 +212,7 @@ export const workShapeSchema = z.object({
    * an internal step of a sequence it is running for an ask, whose answer is
    * handed to the next step (docs/sequences.md). Its judgment, taught by its
    * instructions - never inferred by the host, which only stores it and
-   * honours it: `settle_task answered` closes an answer task only when it
+   * honours it: `settle_task` done, why answered, closes an answer task only when it
    * was declared this way, and the brief tells such a step that its report
    * is the answer handed on. Absent - the default, and every row from
    * before it - is the captain's own ask, his to close.

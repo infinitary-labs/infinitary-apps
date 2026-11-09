@@ -99,7 +99,7 @@ The first mate’s crew context row carries the saved answer’s creation time a
 What remains after the acknowledgement is the crewmate's call, never the first mate's.
 
 **Finished wakes the first mate once, after an explicit acknowledgement** (INF-731, with the INF-1879 corner rule).
-`finished` is the crewmate’s declaration that nothing remains after the captain’s acknowledgement, and on an answer task the first mate's `settle_task answered` is refused while a card of the crewmate's is up (`closeAnswerUsedAsBasis`), so each such wake asked for a close it could not make.
+`finished` is the crewmate’s declaration that nothing remains after the captain’s acknowledgement, and on an answer task the first mate's `settle_task` done close is held while a card of the crewmate's is up (`DoneClose`), so each such wake asked for a close it could not make.
 So a report that declares it while a card of its own is still on the captain's screen, a note included, is row 1: the captain's turn, no wake (`finishedCardUp`, kept apart from `decisionCardOpen` so a note alone never holds a report's turn).
 The captain's replies under that card each bring the crewmate a turn and a report, and none of them wakes the first mate; the receipt tells the crewmate so.
 An explicit message can reach the crewmate as its next turn, whose report declares `finished` with the card no longer holding a decision; a corner press never starts that turn.

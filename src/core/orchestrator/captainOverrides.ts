@@ -17,6 +17,38 @@ import type { TaskRuntime } from "./crewRuntime";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import type { SettleOwners } from "./settleOwners";
 
+/** How an override refused on its words begins, so a caller that cites words for its own record can say it in its own. */
+export const OVERRIDE_REFUSED = "Override refused: nothing was recorded.";
+
+/**
+ * The captain's own words a first mate tool cites (INF-1216): this turn's
+ * (`from` omitted or `turn`), every message of his it carries, however it
+ * began; or the words on the task `cite` reads from a card, the Crewmate
+ * tab or the standing override. A scheduled check carries none of his
+ * words, so it cites none. The host checks only that the words are his.
+ */
+export function captainWordsIn(
+  turn: { canCreate: boolean; asked: readonly string[] },
+  from: string | undefined,
+  cite: (from: string) => ReturnType<CaptainOverrides["citedCaptainWords"]>,
+): ReturnType<CaptainOverrides["citedCaptainWords"]> {
+  if (from && from !== "turn") {
+    if (!turn.canCreate && turn.asked.length === 0)
+      return {
+        ok: false,
+        text: `${OVERRIDE_REFUSED} A scheduled check records no override, since no words of the captain's arrived with it; the one standing still applies.`,
+      };
+    return cite(from);
+  }
+  const words = turn.asked.join("\n").trim();
+  return words
+    ? { ok: true, words }
+    : {
+        ok: false,
+        text: `${OVERRIDE_REFUSED} Only the captain's own words declare one: this turn's, or their reply or click on a card of the task or line in its Crewmate tab, cited with from.`,
+      };
+}
+
 /** What the captain's overrides reach of the supervisor beyond its options. */
 export type CaptainOverridesHost = {
   now(): number;

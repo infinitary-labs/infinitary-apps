@@ -998,7 +998,7 @@ describe("the first mate's shared commands", () => {
     ]).text;
     const answer = await ask("chat", { system: FIRSTMATE_PERSONA, messages: [user("chat", wake)] });
     expect(answer.calls).toEqual([
-      { name: "settle_task", args: { task_id: "task-gauge", mode: "answered" } },
+      { name: "settle_task", args: { task_id: "task-gauge", mode: "done", why: "answered" } },
     ]);
   });
 

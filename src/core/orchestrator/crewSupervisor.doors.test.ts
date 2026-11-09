@@ -58,7 +58,7 @@ async function said(tool: BoundTool, params: Record<string, unknown>): Promise<s
 }
 
 describe("the first mate's settle_task reaches the close each mode names", () => {
-  it("closes an internal step's answer as answered", async () => {
+  it("closes an internal step's answer as done, why answered", async () => {
     const { tools, tasks } = await firstmateSeat();
     seedTask(tasks, {
       id: "meter-answer",
@@ -73,39 +73,64 @@ describe("the first mate's settle_task reaches the close each mode names", () =>
       },
     });
     expect(
-      await said(toolOf(tools, "settle_task"), { task_id: "meter-answer", mode: "answered" }),
-    ).toBe('Closed SCR-1 "Explain the meter" as answered: its crewmate reported the answer.');
+      await said(toolOf(tools, "settle_task"), {
+        task_id: "meter-answer",
+        mode: "done",
+        why: "answered",
+      }),
+    ).toContain('Closed SCR-1 "Explain the meter" as answered.');
     expect(tasks.get("meter-answer")).toMatchObject({ status: "done", closedReason: "answered" });
   });
 
-  it("answers a change each mode's own refusal, and leaves it open", async () => {
-    const refusals: Record<string, string> = {
-      released:
-        'Cannot close SCR-1 "Fix the meter" as released: its working copy is unavailable; check the work before closing it.',
-      finished:
-        'Cannot close SCR-1 "Fix the meter" as finished: it has no working copy to read, so nothing shows it delivered no change; close it carried_on if another task holds its work.',
-      "merge-pr":
-        "Cannot merge: task meter-fix does not deliver as a pull request; close it with settle_task land.",
-      answered:
-        'Cannot close SCR-1 "Fix the meter" as answered: it delivers a change, not an answer, and has no working copy; close it carried_on if another task holds its work.',
-    };
-    for (const [mode, refusal] of Object.entries(refusals)) {
-      const { tools, tasks } = await firstmateSeat();
-      seedTask(tasks, {
-        id: "meter-fix",
-        title: "Fix the meter",
-        status: "completed",
-        outcome: "Fixed.",
+  // INF-3169 piece 2: a change with no working copy is no longer refused every
+  // way; the one close records what it read, and merge-pr keeps its own refusal.
+  it("closes a reported change done as finished, and answers merge-pr its own refusal", async () => {
+    const { tools, tasks } = await firstmateSeat();
+    seedTask(tasks, {
+      id: "meter-fix",
+      title: "Fix the meter",
+      status: "completed",
+      outcome: "Fixed.",
+    });
+    expect(
+      await said(toolOf(tools, "settle_task"), {
+        task_id: "meter-fix",
+        mode: "merge-pr",
+        closing_sentence: "The meter is fixed.",
+      }),
+    ).toBe(
+      "Cannot merge: task meter-fix does not deliver as a pull request; close it with settle_task land.",
+    );
+    expect(tasks.get("meter-fix")?.status).toBe("active");
+    expect(
+      await said(toolOf(tools, "settle_task"), {
+        task_id: "meter-fix",
+        mode: "done",
+        why: "finished",
+        evidence: "The meter test passes.",
+        closing_sentence: "The meter is fixed.",
+      }),
+    ).toContain(
+      'Closed SCR-1 "Fix the meter" as finished. Result named by the first mate: The meter test passes.',
+    );
+    expect(tasks.get("meter-fix")).toMatchObject({ status: "done", closedReason: "finished" });
+  });
+
+  // The captain's words pass the holds only as an override's do: a check with
+  // no words of theirs carries none, and a merge click is never a close.
+  it("refuses captain_words a turn without the captain's words cannot carry", async () => {
+    const { tools, tasks } = await firstmateSeat();
+    seedTask(tasks, { id: "meter-fix", title: "Fix the meter", status: "idle" });
+    for (const from of ["turn", "card-meter"]) {
+      const text = await said(toolOf(tools, "settle_task"), {
+        task_id: "meter-fix",
+        mode: "done",
+        why: "finished",
+        evidence: "The meter test passes.",
+        captain_words: from,
+        closing_sentence: "The meter is fixed.",
       });
-      expect(
-        await said(toolOf(tools, "settle_task"), {
-          task_id: "meter-fix",
-          mode,
-          closing_sentence: "The meter is fixed.",
-          completion_evidence: "The meter test passes.",
-          release_evidence: "Version 1.2 is published.",
-        }),
-      ).toBe(refusal);
+      expect(text).toMatch(/^Not closed:/);
       expect(tasks.get("meter-fix")?.status).toBe("active");
     }
   });

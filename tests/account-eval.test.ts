@@ -1041,7 +1041,7 @@ describe("answer ownership evaluation", () => {
     const test = ownershipCases.find((test) => test.ownership === "advance")!;
     const api = await scriptedEndpoint({
       name: "settle_task",
-      args: { task_id: "OWNER", mode: "answered" },
+      args: { task_id: "OWNER", mode: "done", why: "answered" },
     });
     closeProvider = api.close;
     const opts = options(root);
@@ -1123,7 +1123,7 @@ describe("answer ownership evaluation", () => {
           });
         } else {
           await call("update_task", { task: "NEXT", start_now: true });
-          await call("settle_task", { task_id: "OWNER", mode: "answered" });
+          await call("settle_task", { task_id: "OWNER", mode: "done", why: "answered" });
         }
         const run = {
           endedNormally: true,

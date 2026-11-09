@@ -393,7 +393,12 @@ describe("CrewSupervisor", () => {
       expect(merge.text).toContain("closed without merging");
       expect(h.tasks.get(h.taskId)?.status).toBe("active");
 
-      const text = await h.supervisor.intake.carryOnTask(h.taskId, carrier.key);
+      const text = (
+        await h.supervisor.settling.done.close(h.taskId, {
+          why: "carried_on",
+          carriedBy: carrier.key,
+        })
+      ).text;
       await tick();
       expect(text).toContain(`${carrier.key} carries on its work.`);
       expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "superseded" });

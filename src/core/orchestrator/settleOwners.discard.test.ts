@@ -9,6 +9,7 @@
  */
 
 import type { Card } from "@shared/cards";
+import { deliveryFactsOf } from "@shared/deliveryFacts";
 import { describe, expect, it, vi } from "vitest";
 import {
   type FakeCrewmate,
@@ -394,6 +395,10 @@ describe("CrewSupervisor", () => {
       crewmate.finishPrompt();
       await tick();
       expect(legacyStateOf(harness.tasks.get(taskId))).toBe("idle");
+      // Closing on its own, the first mate closes reported work (INF-3169 piece 2's proof hold).
+      harness.tasks.turns.recordReport(taskId, {
+        text: "The notice fix moves to its own pull request.",
+      });
       const carrier = seedTask(harness.tasks, {
         id: "carrier",
         title: "Fix the notice in its own pull request",
@@ -411,7 +416,9 @@ describe("CrewSupervisor", () => {
       h.tasks.graph.link(h.taskId, waiter.id, "blocks", "firstmate");
 
       const text = await h.supervisor.settling.closing.withClosingSentence(h.taskId, SENTENCE, () =>
-        h.supervisor.intake.carryOnTask(h.taskId, h.carrier.key),
+        h.supervisor.settling.done
+          .close(h.taskId, { why: "carried_on", carriedBy: h.carrier.key })
+          .then((result) => result.text),
       );
       await tick();
 
@@ -441,32 +448,38 @@ describe("CrewSupervisor", () => {
       seedDelivery(h.tasks, h.taskId, { prNumber: 9, prUrl });
       seedDelivery(h.tasks, h.carrier.id, { prNumber: 9, prUrl });
 
-      await h.supervisor.intake.carryOnTask(h.taskId, h.carrier.key);
+      (
+        await h.supervisor.settling.done.close(h.taskId, {
+          why: "carried_on",
+          carriedBy: h.carrier.key,
+        })
+      ).text;
       await tick();
 
       expect(h.tasks.get(h.taskId)?.status).toBe("done");
       expect(closePullRequest).not.toHaveBeenCalled();
     });
 
-    it("refuses the task itself, a task under it, a dropped task and a task whose card waits on the captain, writing nothing", async () => {
+    it("refuses the task itself, a dropped task and a task whose card waits on the captain, writing nothing", async () => {
       const h = await carriedWork();
-      h.tasks.create({
-        id: "part",
-        title: "A part of it",
-        prompt: "p",
-        repoId: null,
-        parentId: h.taskId,
-      });
-      h.tasks.close("part", { status: "dropped", reason: "cancelled", actor: "firstmate" });
       const gone = seedTask(h.tasks, { id: "gone", title: "Gone", status: "cancelled" });
       const key = h.tasks.get(h.taskId)?.key ?? "";
-      expect(await h.supervisor.intake.carryOnTask(h.taskId, h.taskId)).toBe(
-        `Refused: ${key} cannot be replaced by itself.`,
-      );
-      expect(await h.supervisor.intake.carryOnTask(h.taskId, "part")).toContain("is under");
-      expect(await h.supervisor.intake.carryOnTask(h.taskId, gone.key)).toBe(
-        `Refused: ${gone.key} is dropped itself, so it does not do ${key}'s work.`,
-      );
+      expect(
+        (
+          await h.supervisor.settling.done.close(h.taskId, {
+            why: "carried_on",
+            carriedBy: h.taskId,
+          })
+        ).text,
+      ).toBe(`Refused: ${key} cannot be replaced by itself.`);
+      expect(
+        (
+          await h.supervisor.settling.done.close(h.taskId, {
+            why: "carried_on",
+            carriedBy: gone.key,
+          })
+        ).text,
+      ).toBe(`Refused: ${gone.key} is dropped itself, so it does not do ${key}'s work.`);
       h.specs[0]?.onCard?.({
         title: "Which notice wording?",
         body: "<p>Pick one.</p>",
@@ -476,9 +489,14 @@ describe("CrewSupervisor", () => {
         ],
       });
       await tick();
-      expect(await h.supervisor.intake.carryOnTask(h.taskId, h.carrier.key)).toContain(
-        'its card "Which notice wording?" still waits on the captain',
-      );
+      expect(
+        (
+          await h.supervisor.settling.done.close(h.taskId, {
+            why: "carried_on",
+            carriedBy: h.carrier.key,
+          })
+        ).text,
+      ).toContain('its card "Which notice wording?" still asks the captain');
       expect(h.tasks.get(h.taskId)?.status).toBe("active");
       expect(h.tasks.graph.allLinks().filter((link) => link.type === "replaced-by")).toEqual([]);
     });
@@ -498,7 +516,12 @@ describe("CrewSupervisor", () => {
       await tick();
       expect(left(h.cards(), h.carrier.id)).toEqual([]);
 
-      await h.supervisor.intake.carryOnTask(h.taskId, h.carrier.key);
+      (
+        await h.supervisor.settling.done.close(h.taskId, {
+          why: "carried_on",
+          carriedBy: h.carrier.key,
+        })
+      ).text;
       await tick();
 
       expect(left(h.cards(), h.taskId)).toEqual([]);
@@ -723,24 +746,18 @@ describe("CrewSupervisor", () => {
       worktreeDir: "/work",
     });
     expect(
-      (await supervisor.settling.declared.closeExternallyReleased("release", "")).text,
-    ).toContain("name the release");
+      (await supervisor.settling.done.close("release", { why: "released", evidence: "" })).text,
+    ).toContain("released needs evidence");
     expect(tasks.get("release")?.status).toBe("active");
-    vi.mocked(workspace.taskWorkStatus).mockResolvedValueOnce({ dirty: true, unlandedCommits: 0 });
-    expect(
-      (await supervisor.settling.declared.closeExternallyReleased("release", "v1.2.3 published"))
-        .text,
-    ).toContain("uncommitted edits");
-    expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
-    // INF-2628, the captain's "Release close accepts closed pull requests and
-    // squash merges": commits only history calls unmerged no longer refuse,
-    // since the close saves them before the working copy goes.
-    vi.mocked(workspace.taskWorkStatus).mockResolvedValueOnce({ dirty: false, unlandedCommits: 2 });
-    const settled = await supervisor.settling.declared.closeExternallyReleased(
-      "release",
-      "v1.2.3 published",
-    );
+    // INF-3169 piece 2: the release names where the work went, so edits the
+    // close saves before the working copy goes no longer hold it; the record says so.
+    vi.mocked(workspace.taskWorkStatus).mockResolvedValueOnce({ dirty: true, unlandedCommits: 2 });
+    const settled = await supervisor.settling.done.close("release", {
+      why: "released",
+      evidence: "v1.2.3 published",
+    });
     expect(settled.text).toContain("v1.2.3 published");
+    expect(settled.text).toContain("2 commits not on the main branch and uncommitted edits, saved");
     expect(tasks.get("release")).toMatchObject({ status: "done", closedReason: "released" });
     expect(
       tasks.timeline("release").find((entry) => entry.text.includes("v1.2.3 published"))?.data,
@@ -748,14 +765,18 @@ describe("CrewSupervisor", () => {
     expect(workspace.landTaskWork).not.toHaveBeenCalled();
     expect(workspace.removeTaskWorktree).toHaveBeenCalledOnce();
     expect(
-      (await supervisor.settling.declared.closeExternallyReleased("release", "v1.2.3 published"))
-        .text,
-    ).toContain("wait for its crewmate");
+      (
+        await supervisor.settling.done.close("release", {
+          why: "released",
+          evidence: "v1.2.3 published",
+        })
+      ).text,
+    ).toContain("already released");
   });
 
-  it("refuses an external release for unreported work, a pull request that may still be open and failed inspection", async () => {
-    // INF-2628: the task's own pull request refuses the release close only
-    // while it reads open or cannot be read.
+  it("holds an external release for unreported work and its own open pull request, and records what it could not read", async () => {
+    // INF-3169 piece 2: its own pull request holds the close only while it
+    // reads open; one the app cannot read is recorded as unread.
     const pulls = new Map<number, ForgePull | Error>();
     const { supervisor, tasks, workspace } = setup(fakeCrewmate(), {
       readPull: async (_id, number) => {
@@ -771,8 +792,12 @@ describe("CrewSupervisor", () => {
       worktreeDir: "/work",
     });
     expect(
-      (await supervisor.settling.declared.closeExternallyReleased("release", "v1.2.3 published"))
-        .text,
+      (
+        await supervisor.settling.done.close("release", {
+          why: "released",
+          evidence: "v1.2.3 published",
+        })
+      ).text,
     ).toContain("has not reported");
     tasks.turns.recordReport("release", { text: "Published externally" });
     seedDelivery(tasks, "release", { prUrl: "https://github.com/o/r/pull/1", prNumber: 1 });
@@ -786,28 +811,30 @@ describe("CrewSupervisor", () => {
     };
     pulls.set(1, pull);
     expect(
-      (await supervisor.settling.declared.closeExternallyReleased("release", "v1.2.3 published"))
-        .text,
+      (
+        await supervisor.settling.done.close("release", {
+          why: "released",
+          evidence: "v1.2.3 published",
+        })
+      ).text,
     ).toContain("is still open");
-    pulls.set(1, new ForgeError("transient", "GitHub answered 502 to GET /repos/o/r/pulls/1"));
-    expect(
-      (await supervisor.settling.declared.closeExternallyReleased("release", "v1.2.3 published"))
-        .text,
-    ).toContain("could not be read, so it may still be open");
     expect(tasks.get("release")?.status).toBe("active");
-    seedTask(tasks, {
-      id: "other",
-      title: "Second release",
-      status: "idle",
-      outcome: "Published",
-      worktreeDir: "/other",
-    });
+    pulls.set(1, new ForgeError("transient", "GitHub answered 502 to GET /repos/o/r/pulls/1"));
     vi.mocked(workspace.taskWorkStatus).mockRejectedValueOnce(new Error("cannot inspect"));
+    const unread = await supervisor.settling.done.close("release", {
+      why: "released",
+      evidence: "v1.2.3 published",
+    });
+    expect(unread.text).toContain("#1 could not be read");
+    expect(unread.text).toContain("working copy could not be read");
+    expect(tasks.get("release")).toMatchObject({ status: "done", closedReason: "released" });
     expect(
-      (await supervisor.settling.declared.closeExternallyReleased("other", "v1.2.3 published"))
-        .text,
-    ).toContain("cannot inspect");
-    expect(tasks.get("other")?.status).toBe("active");
+      deliveryFactsOf(
+        tasks.timeline("release").find((entry) => entry.data?.deliveryFacts)?.data ?? undefined,
+      )
+        .filter((fact) => fact.basis === "unread")
+        .map((fact) => fact.kind),
+    ).toEqual(["pull-request", "work"]);
   });
 
   it("lands an idle task through the workspace and cleans up (Q5)", async () => {
@@ -974,7 +1001,7 @@ describe("closing an answer task another task builds on", () => {
         deliverable: "answer",
         internal_step: true,
       });
-      const result = await supervisor.settling.declared.closeAnswerUsedAsBasis(step.key);
+      const result = await supervisor.settling.done.close(step.key, { why: "answered" });
       expect(result.ok).toBe(true);
       expect(tasks.get(step.taskId)).toMatchObject({ status: "done", closedReason: "answered" });
       const closed = tasks.get(step.taskId) as TaskRecord;
@@ -987,7 +1014,7 @@ describe("closing an answer task another task builds on", () => {
         `Answered: its answer carries on in ${step.next.key} "${step.next.title}"`,
       );
       expect(line?.text).not.toContain("discard");
-      expect((await supervisor.settling.declared.closeAnswerUsedAsBasis(step.key)).text).toContain(
+      expect((await supervisor.settling.done.close(step.key, { why: "answered" })).text).toContain(
         "already",
       );
     }
@@ -1022,9 +1049,9 @@ describe("closing an answer task another task builds on", () => {
     expect(tasks.graph.blocking(check.taskId).map((row) => row.id)).toEqual([build.taskId]);
     expect(tasks.graph.blockerRefusal(build.taskId)).toBeUndefined();
 
-    const result = await supervisor.settling.declared.closeAnswerUsedAsBasis(checkKey);
+    const result = await supervisor.settling.done.close(checkKey, { why: "answered" });
     expect(result).toMatchObject({ ok: true });
-    expect(result.text).toContain(`its answer carries on in ${buildKey} "Implement the meter"`);
+    expect(result.text).toContain(`Its answer carries on in ${buildKey} "Implement the meter"`);
     const closed = tasks.get(check.taskId) as TaskRecord;
     expect(closed).toMatchObject({ status: "done", closedReason: "answered" });
     const close = tasks
@@ -1054,9 +1081,9 @@ describe("closing an answer task another task builds on", () => {
     tasks.graph.link(late.taskId, gone.id, "blocks", "firstmate");
     tasks.close(gone.id, { status: "dropped", reason: "cancelled", actor: "host" });
     await reportAndIdle(lateChecker, late.taskId, "checks: pass - eight of eight.");
-    const closedLate = await supervisor.settling.declared.closeAnswerUsedAsBasis(late.taskId);
+    const closedLate = await supervisor.settling.done.close(late.taskId, { why: "answered" });
     expect(closedLate).toMatchObject({ ok: true });
-    expect(closedLate.text).toContain("its crewmate reported the answer");
+    expect(closedLate.text).toContain("Its crewmate reported the answer");
     expect(closedLate.text).not.toContain("Fix the dock");
   });
 
@@ -1081,7 +1108,7 @@ describe("closing an answer task another task builds on", () => {
     );
     const key = tasks.get(check.taskId)?.key ?? check.taskId;
 
-    const result = await supervisor.settling.declared.closeAnswerUsedAsBasis(key);
+    const result = await supervisor.settling.done.close(key, { why: "answered" });
     expect(result).toMatchObject({ ok: true });
     const closed = tasks.get(check.taskId) as TaskRecord;
     expect(closed).toMatchObject({ status: "done", closedReason: "answered" });
@@ -1103,9 +1130,9 @@ describe("closing an answer task another task builds on", () => {
     const plan = await answered(harness, planner, "Plan the dock", false);
     for (const asked of [reproduce, plan]) {
       expect(tasks.get(asked.taskId)?.shape?.internal_step).toBeUndefined();
-      const refused = await supervisor.settling.declared.closeAnswerUsedAsBasis(asked.key);
+      const refused = await supervisor.settling.done.close(asked.key, { why: "answered" });
       expect(refused).toMatchObject({ ok: false });
-      expect(refused.text).toContain("it was not opened as an internal step of yours");
+      expect(refused.text).toContain("the captain asked for its answer");
       expect(tasks.get(asked.taskId)?.status).toBe("active");
     }
     // His own close is unchanged: his choice on its card closes it answered.
@@ -1125,7 +1152,7 @@ describe("closing an answer task another task builds on", () => {
     expect(tasks.get(reproduce.taskId)).toMatchObject({ status: "done", closedReason: "answered" });
   });
 
-  it("refuses a step still working, one with no report, a change, and one whose card is up", async () => {
+  it("refuses a step still working, one with no report, and one whose card is up, and closes a reported change", async () => {
     const working = fakeCrewmate();
     const unused = fakeCrewmate();
     const builder = fakeCrewmate();
@@ -1146,7 +1173,7 @@ describe("closing an answer task another task builds on", () => {
       intent: intentOf("fix"),
       shape: { basis: busyKey },
     });
-    const stillWorking = await supervisor.settling.declared.closeAnswerUsedAsBasis(busyKey);
+    const stillWorking = await supervisor.settling.done.close(busyKey, { why: "answered" });
     expect(stillWorking).toMatchObject({ ok: false });
     expect(stillWorking.text).toContain("its crewmate is still working");
 
@@ -1161,16 +1188,19 @@ describe("closing an answer task another task builds on", () => {
     unused.finishPrompt();
     await tick();
     expect(tasks.get(lone.taskId)?.outcome).toBeNull();
-    const nobody = await supervisor.settling.declared.closeAnswerUsedAsBasis(
+    const nobody = await supervisor.settling.done.close(
       tasks.get(lone.taskId)?.key ?? lone.taskId,
+      { why: "answered" },
     );
     expect(nobody).toMatchObject({ ok: false });
-    expect(nobody.text).toContain("its crewmate has reported no answer yet");
+    expect(nobody.text).toContain("its crewmate has not reported yet");
 
+    // INF-3169 piece 2: a reported change with nothing unmerged and no pull
+    // request of its own closes as answered; no separate close refuses it.
     const change = await answered(harness, builder, "Implement the rename", true);
-    const notAnswer = await supervisor.settling.declared.closeAnswerUsedAsBasis(change.key);
-    expect(notAnswer).toMatchObject({ ok: false });
-    expect(notAnswer.text).toContain("delivers a change, not an answer");
+    expect(await supervisor.settling.done.close(change.key, { why: "answered" })).toMatchObject({
+      ok: true,
+    });
 
     const shown = await supervisor.intake.commission({
       title: "Reproduce the flash",
@@ -1193,14 +1223,12 @@ describe("closing an answer task another task builds on", () => {
       intent: intentOf("fix"),
       shape: { basis: shownKey },
     });
-    const waiting = await supervisor.settling.declared.closeAnswerUsedAsBasis(shownKey);
+    const waiting = await supervisor.settling.done.close(shownKey, { why: "answered" });
     expect(waiting).toMatchObject({ ok: false });
-    expect(waiting.text).toContain(
-      'its answer card "The flash reproduces" is waiting on the captain',
-    );
+    expect(waiting.text).toContain('its card "The flash reproduces" still asks the captain');
 
     // Every refusal left its task exactly as it was.
-    for (const id of [busy.taskId, lone.taskId, change.taskId, shown.taskId]) {
+    for (const id of [busy.taskId, lone.taskId, shown.taskId]) {
       expect(tasks.get(id)?.status).toBe("active");
     }
   });

@@ -115,7 +115,7 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
       ) {
         // An answer the next task took as its basis, a step a live task
         // waited on, or a step whose reported answer the first mate passed
-        // on itself (settle_task answered): it was used, not thrown away.
+        // on itself (settle_task done, why answered): it was used, not thrown away.
         line = `Answered: ${event.text.replace(/^answered - /, "")}`;
       } else if (reason === "answered") {
         line = ANSWERED_LINE;

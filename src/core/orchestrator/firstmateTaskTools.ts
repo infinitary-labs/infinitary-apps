@@ -5,6 +5,7 @@ import { TaskGraphRefusal } from "../tasks/taskGraph";
 import { queryTasks } from "../tasks/taskQuery";
 import type { DeliveryNote } from "./answerDelivery";
 import type { AskCapture } from "./askCapture";
+import { captainWordsIn } from "./captainOverrides";
 import { cardMutationText } from "./cardMutationText";
 import type { FirstmateAgentOptions, FirstmateTurn } from "./firstmateAgent";
 import { startedReply } from "./replyLine";
@@ -317,18 +318,14 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         // report (INF-1582 finding 2). A scheduled check carries none.
         // A click on a merge is his approval of it, never words that pass
         // the checks (INF-1966): the host says which, from the card's action.
-        let said: { words: string; mergeClick?: true };
-        if (input.from) {
-          if (!host.turn.canCreate && host.turn.asked.length === 0)
-            return "Override refused: nothing was recorded. A scheduled check records no override, since no words of the captain's arrived with it; the one standing still applies.";
-          const cited = supervisor.overrides.citedCaptainWords(record.id, input.from);
-          if (!cited.ok) return cited.text;
-          said = { words: cited.words, ...(cited.mergeClick ? { mergeClick: true } : {}) };
-        } else {
-          said = { words: host.turn.asked.join("\n").trim() };
-          if (!said.words)
-            return "Override refused: only the captain's own words declare one: this turn's, or their reply or click on a card of the task or line in its Crewmate tab, cited with from.";
-        }
+        const cited = captainWordsIn(host.turn, input.from, (from) =>
+          supervisor.overrides.citedCaptainWords(record.id, from),
+        );
+        if (!cited.ok) return cited.text;
+        const said = {
+          words: cited.words,
+          ...(cited.mergeClick ? { mergeClick: true as const } : {}),
+        };
         host.asks.attach(record.id, "update_task");
         const declared = supervisor.overrides.declareOverride(record.id, {
           ...said,

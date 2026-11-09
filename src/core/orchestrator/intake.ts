@@ -1167,7 +1167,7 @@ export class TaskIntake {
     const handle = `${record.key || record.id} "${record.title}"`;
     if (record.status !== "open") {
       return record.status === "active"
-        ? `Cannot drop ${handle} here: a crewmate holds it. Use settle_task (discard) for work that has started, or carried_on when another task carries its work.`
+        ? `Cannot drop ${handle} here: a crewmate holds it. Use settle_task (discard) for work that has started, or done with why carried_on when another task carries its work.`
         : `${handle} is already ${describeStatus(record)}.`;
     }
     const started = this.options.tasks.graph
@@ -1235,21 +1235,5 @@ export class TaskIntake {
     return dropped.length > 0
       ? `Dropped ${handle} and ${named} as superseded.`
       : `Dropped ${handle}.`;
-  }
-
-  /**
-   * settle_task carried_on (INF-1825): work another task carries on closes
-   * done through it. Unstarted work closes as update_task drop with
-   * replaced_by closes it; started work through the settle path, which
-   * keeps its commits and closes its own pull request.
-   */
-  async carryOnTask(taskRef: string, carrierRef: string): Promise<string> {
-    const record = this.resolveTaskRef(taskRef, "task_id");
-    if (record.status === "open")
-      return this.dropTask(record.id, {
-        reason: `carried on by ${carrierRef}`,
-        replacedBy: carrierRef,
-      });
-    return (await this.host.settling.declared.closeCarriedOn(record.id, carrierRef)).text;
   }
 }

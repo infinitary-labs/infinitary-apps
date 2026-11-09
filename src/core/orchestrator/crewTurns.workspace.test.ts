@@ -277,10 +277,10 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     expect(crewmate.dispose).not.toHaveBeenCalled();
     expect(
       (
-        await h.supervisor.settling.declared.closeFinishedFolderWork(
-          taskId,
-          "the clock is on the right rail",
-        )
+        await h.supervisor.settling.done.close(taskId, {
+          why: "finished",
+          evidence: "the clock is on the right rail",
+        })
       ).text,
     ).toContain("as finished");
     expect(h.tasks.get(taskId)).toMatchObject({
@@ -370,10 +370,10 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     expect(h.commits).toEqual([{ taskId, message: "Tokyo clock panel added." }]);
     expect(
       (
-        await h.supervisor.settling.declared.closeFinishedFolderWork(
-          taskId,
-          "the clock is on the right rail",
-        )
+        await h.supervisor.settling.done.close(taskId, {
+          why: "finished",
+          evidence: "the clock is on the right rail",
+        })
       ).text,
     ).toContain("as finished");
     expect(h.tasks.get(taskId)?.closedReason).toBe("finished");

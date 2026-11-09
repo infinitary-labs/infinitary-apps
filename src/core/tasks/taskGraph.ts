@@ -408,16 +408,25 @@ export class TaskGraph {
 
   /**
    * Why `carrierId` cannot carry on `id`'s work (INF-1825), or undefined:
-   * not the task itself, not a task under it (its close would take it
-   * along), and not a dropped task, which does no work.
+   * not the task itself, not a dropped task, which does no work, and not a
+   * task under it when its close drops its parts (an unstarted task's drop
+   * does). A done close keeps open parts planned, so one of its own parts
+   * can carry it on (INF-3169's plan, piece 2: `partsStayOpen`).
    */
-  carrierRefusal(id: string, carrierId: string): string | undefined {
+  carrierRefusal(
+    id: string,
+    carrierId: string,
+    options: { partsStayOpen?: boolean } = {},
+  ): string | undefined {
     const record = this.writer.mustGet(id);
     const carrier = this.writer.mustGet(carrierId);
     const key = keyOrId(record);
     const other = keyOrId(carrier);
     if (carrier.id === record.id) return `Refused: ${key} cannot be replaced by itself.`;
-    if (this.ancestors(carrier.id).some((ancestor) => ancestor.id === record.id))
+    if (
+      !options.partsStayOpen &&
+      this.ancestors(carrier.id).some((ancestor) => ancestor.id === record.id)
+    )
       return `Refused: ${other} is under ${key}, so closing ${key} would close it too; name a task outside it.`;
     if (carrier.status === "dropped")
       return `Refused: ${other} is dropped itself, so it does not do ${key}'s work.`;
@@ -536,12 +545,19 @@ export class TaskGraph {
    * open children and the ways out, or undefined when the row may close. The
    * settle path adds the mode-specific `proceed_with_open` way; the ways here
    * are the ones that hold whoever closes - drop or start each child.
+   * `carrierId` names a part carrying the task on: the child it sits under,
+   * or itself, is where the work goes on and holds nothing; its siblings do.
    */
-  closeRefusal(id: string): SettleRefusal | undefined {
+  closeRefusal(id: string, options: { carrierId?: string } = {}): SettleRefusal | undefined {
+    const carrying = options.carrierId
+      ? new Set([options.carrierId, ...this.ancestors(options.carrierId).map((task) => task.id)])
+      : undefined;
     // Delivery machinery (a host-commissioned child, e.g. the review) never
     // holds its parent's close: the supervisor retires such children with
     // the parent's close.
-    const open = this.openChildren(id).filter((child) => !TaskService.isDeliveryChild(child));
+    const open = this.openChildren(id).filter(
+      (child) => !TaskService.isDeliveryChild(child) && !carrying?.has(child.id),
+    );
     if (open.length === 0) return undefined;
     const task = settleRef(this.writer.store.get(id), id);
     const children = open.map((child) => settleRef(child, child.id));

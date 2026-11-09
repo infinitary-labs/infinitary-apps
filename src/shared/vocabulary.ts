@@ -148,6 +148,12 @@ export const REVIEW_WORDS: Words<"pass" | "findings" | "blocked"> = {
   blocked: "blocked",
 };
 
+/**
+ * A passed review that does not cover the version on offer (INF-3141): it
+ * read an earlier version, so a screen never shows it as a plain pass.
+ */
+export const REVIEW_EARLIER_WORDS = "passed at an earlier version";
+
 /** The model tier's word in a feed line, when a line must name one. */
 export const TIER_WORDS: Record<string, string> = {
   premium: "premium",

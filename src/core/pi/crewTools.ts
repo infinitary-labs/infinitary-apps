@@ -158,6 +158,24 @@ export type CrewStatusEntry = {
   };
 };
 
+/**
+ * The version a review ask assigned, and whether its builder held edits
+ * not yet committed then: true, false, or null when that could not be read.
+ */
+export type ReviewAssigned = { head: string; uncommitted: boolean | null };
+
+/** What a review ask's answer says about the version it assigned (INF-3141). */
+export function reviewAssignedWords(review: ReviewAssigned): string {
+  const head = review.head.slice(0, 7);
+  return ` The review is assigned the builder's committed version ${head}.${
+    review.uncommitted === true
+      ? " The builder also has edits not yet committed; the review does not see them, and once they are committed a later review turn takes the newer version."
+      : review.uncommitted === null
+        ? " Whether the builder has edits not yet committed could not be read."
+        : ""
+  }`;
+}
+
 export type CrewDelegate = {
   commission(input: {
     title: string;
@@ -182,6 +200,8 @@ export type CrewDelegate = {
     crewmate: string;
     /** The model the user named beside the one that took the task (FI3-444). */
     model?: NamedModel;
+    /** A review ask's assigned version (INF-3141). */
+    review?: ReviewAssigned;
   }>;
   steerCrewmate(
     taskId: string,
@@ -580,7 +600,7 @@ export function createCrewTools(delegate: CrewDelegate) {
         ...(params.delivery_note !== undefined ? { delivery_note: params.delivery_note } : {}),
         ...(params.personal_ui ? { kind: "personal-ui" } : {}),
       });
-      const { taskId, crewmate, model } = await delegate.commission({
+      const { taskId, crewmate, model, review } = await delegate.commission({
         title: params.title,
         intent,
         ...(params.repo_id ? { repoId: params.repo_id } : {}),
@@ -600,7 +620,7 @@ export function createCrewTools(delegate: CrewDelegate) {
         };
       }
       return {
-        text: `Commissioned ${crewmate} on task ${taskId}${model ? `; it runs ${namedModelWords(model)}` : ""}.`,
+        text: `Commissioned ${crewmate} on task ${taskId}${model ? `; it runs ${namedModelWords(model)}` : ""}.${review ? reviewAssignedWords(review) : ""}`,
       };
     },
   });

@@ -746,7 +746,7 @@ export class CardActions {
     if (!builder || TaskService.isClosed(builder)) return;
     try {
       if (!builder.intent) throw new Error("the task has no recorded words to review against.");
-      const { taskId: reviewId } = await this.core.intake.commissionReview(
+      const { taskId: reviewId, review: assigned } = await this.core.intake.commissionReview(
         {
           title: `Review: ${builder.title}`,
           intent: builder.intent,
@@ -755,10 +755,19 @@ export class CardActions {
         builder.id,
       );
       const review = this.core.options.tasks.get(reviewId);
+      // The review reads the builder's newest commit, which can be newer
+      // than the version the merge card offered: the note names both
+      // when they differ (INF-3141).
+      const offered = builder.delivery?.headSha;
+      const at = assigned.head.slice(0, 7);
       if (this.core.options.tasks.get(taskId))
         this.core.options.tasks.note(
           taskId,
-          `the app started review ${review?.key || reviewId} of the version on the merge card`,
+          `the app started review ${review?.key || reviewId} of version ${at}${
+            offered && offered !== assigned.head
+              ? `, newer than ${offered.slice(0, 7)} on the merge card`
+              : ""
+          }${assigned.uncommitted ? "; edits not yet committed are not in it" : ""}`,
           { news: true, data: { reviewTaskId: reviewId } },
         );
     } catch (caught) {

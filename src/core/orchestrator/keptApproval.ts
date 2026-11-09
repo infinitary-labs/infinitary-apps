@@ -661,10 +661,9 @@ export class KeptApproval {
   /**
    * The checks a host-run merge makes before it asks anything of GitHub
    * (FI3-304 section 4): the task and pull request are still the approved
-   * ones, no new merge card replaced the approval, no round cap holds
-   * the task, a declared repair is not still undecided, and a reviewed
-   * task's review passed for this change. A failed identity
-   * check ends the approval; the others are waits.
+   * ones, no new merge card replaced the approval, and a declared repair
+   * is not still undecided; no review is read (INF-1876). A failed
+   * identity check ends the approval; the others are waits.
    */
   private authorizationIdentity(
     record: TaskRecord,

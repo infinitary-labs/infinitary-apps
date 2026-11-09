@@ -128,8 +128,7 @@ export class KeptMerge {
    * last look before the request; what stops it is a wait on the approval
    * (a quiet timeline line, and one wake where someone else must move) or
    * an end that the feed and the Firstmate hear.
-   * A reviewed task's coverage is the reading stored with the candidate
-   * version. This run does not read the branch to carry a passed review.
+   * It reads no review (INF-1876).
    */
   async runMergeAuthorization(taskId: string): Promise<void> {
     // Each approved pull request on the task goes ahead on its own

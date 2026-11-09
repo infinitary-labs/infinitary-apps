@@ -268,6 +268,27 @@ export class ReportIntake {
         crewmateCardPicturesDir(this.options.paths, owner.id),
         owner.id,
       );
+    // A verdict for another version than this turn's is refused below; the
+    // refusal names the assigned version and the builder's newest commit,
+    // so the reviewer and the first mate see which one it judged (INF-3141).
+    const assigned = record.delivery?.validationAssignment;
+    if (
+      input.kind === "review" &&
+      builder &&
+      assigned &&
+      (input.head !== assigned.head || input.revision !== assigned.revision)
+    ) {
+      const newest = await this.validationHead(builder).catch(() => undefined);
+      throw new Error(
+        `Live validation refused: Judge only the version and evidence assigned to this review turn: version ${assigned.head.slice(0, 7)} at evidence revision ${assigned.revision}; this record names ${input.head.slice(0, 7)} at evidence revision ${input.revision}. ${
+          newest === undefined
+            ? "The builder's newest commit cannot be read now."
+            : newest === assigned.head
+              ? "That is also the builder's newest commit."
+              : `The builder's newest commit is ${newest.slice(0, 7)}; a later review turn is assigned it.`
+        }`,
+      );
+    }
     this.options.tasks.delivery.recordLiveValidation(owner.id, input, {
       head,
       ...(builder ? { reviewer: task.id, assignment: record.delivery?.validationAssignment } : {}),

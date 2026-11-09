@@ -10,7 +10,7 @@ import {
   type WorkShapeAsk,
 } from "@shared/routingPolicy";
 import type { MessageFile } from "../overflow";
-import { NOTHING_SPAWNED } from "../pi/crewTools";
+import { NOTHING_SPAWNED, type ReviewAssigned } from "../pi/crewTools";
 import { programShape } from "../program/programRunner";
 import { tierFor } from "../routing/policy";
 import { type RouteResult, requiresReasoningWait } from "../routing/router";
@@ -34,6 +34,7 @@ import type { NamedModel } from "./namedModel";
 import type { Reviews } from "./reviews";
 import type { SettleOwners } from "./settleOwners";
 import { describeStatus } from "./settleService";
+import { workspaceOf } from "./taskClose";
 import type { PlacedWaitFor, TaskPlacement } from "./taskPlacement";
 import {
   classifyShape,
@@ -205,7 +206,12 @@ export class TaskIntake {
      */
     messageFiles?: readonly MessageFile[];
     attachments?: readonly AttachmentRef[];
-  }): Promise<{ taskId: string; crewmate: string; model?: NamedModel }> {
+  }): Promise<{
+    taskId: string;
+    crewmate: string;
+    model?: NamedModel;
+    review?: ReviewAssigned;
+  }> {
     assertDeliverableConstraints(input.intent, input.shape?.in_folder === true);
     // An independent review (delivery rigor phase 2) is its own commission:
     // the host briefs it from the record and holds nothing on the builder
@@ -489,10 +495,10 @@ export class TaskIntake {
    * commission's answer carries the model that took the task beside it
    * (FI3-444). Read from the ask, since a review never routes on one.
    */
-  private withNamedModel(
-    handle: { taskId: string; crewmate: string },
+  private withNamedModel<T extends { taskId: string; crewmate: string }>(
+    handle: T,
     ask: WorkShapeAsk | undefined,
-  ): { taskId: string; crewmate: string; model?: NamedModel } {
+  ): T & { model?: NamedModel } {
     const named = ask?.override_model_id?.trim();
     if (!named || handle.crewmate === "queued") return handle;
     return {
@@ -536,7 +542,7 @@ export class TaskIntake {
       priority?: number;
     },
     reviewOf: string,
-  ): Promise<{ taskId: string; crewmate: string }> {
+  ): Promise<{ taskId: string; crewmate: string; review: ReviewAssigned }> {
     const builder = this.resolveTaskRef(reviewOf, "review_of");
     const handle = builder.key || builder.id;
     if (builder.kind !== "work") {
@@ -654,7 +660,7 @@ export class TaskIntake {
         data: { reviewTaskId: taskId },
       },
     );
-    return this.host.startTask({
+    const started = await this.host.startTask({
       taskId,
       title,
       brief,
@@ -662,6 +668,20 @@ export class TaskIntake {
       routed,
       fresh: true,
     });
+    // The answer names the version assigned, and whether the builder holds
+    // edits not yet committed, which the review cannot see (INF-3141).
+    return { ...started, review: { head: headSha, uncommitted: await this.uncommitted(builder) } };
+  }
+
+  /** Whether a builder's working copy holds edits not yet committed; null when unreadable. */
+  private async uncommitted(builder: TaskRecord): Promise<boolean | null> {
+    const status = await (builder.deviceId
+      ? (this.options.machines?.workStatus(builder.id) ?? Promise.resolve(null))
+      : builder.worktreeDir && builder.branch
+        ? this.options.workspace.taskWorkStatus(workspaceOf(builder), { strict: true })
+        : Promise.resolve(null)
+    ).catch(() => null);
+    return status ? status.dirty : null;
   }
 
   /** The personal workspace as a repo (Step 4), or a loud refusal when this build has none. */

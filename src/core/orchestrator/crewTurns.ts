@@ -43,6 +43,7 @@ import { outageFailedWake } from "./outageWakes";
 import { implausibleReport } from "./reportPlausibility";
 import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import { PENDING_RESPONSES_END, PENDING_RESPONSES_OPENING, wakeBuiltOn } from "./reportWakes";
+import { reviewCoversHead } from "./reviewCarry";
 import { installText } from "./taskMoves";
 import { laneTurnText, renderWake, type TypedWake } from "./wakes";
 
@@ -994,6 +995,14 @@ export class CrewTurns {
       title: held.title,
     }));
     const review = record ? this.core.reviewToReread(record) : undefined;
+    // A pass that does not cover the version now on offer is named, so an
+    // earlier review never reads as covering later work (INF-3141).
+    const read = record?.delivery?.reviewVerdict === "pass" ? record.delivery.reviewSha : undefined;
+    const offered = record?.delivery?.headSha;
+    const earlierPass =
+      read && offered && !reviewCoversHead(record?.delivery, offered)
+        ? { read, offered }
+        : undefined;
     const builtOn = wakeBuiltOn(builtOnRows(this.core.options.tasks, task.id));
     const programBranches = startedProgramBranches(this.core.options.tasks, task.id);
     const witnesses = this.core.ladder.witnesses(task.id, this.core.now());
@@ -1028,6 +1037,7 @@ export class CrewTurns {
         ...(declared?.result ? { result: declared.result } : {}),
         ...(ci ? { ci } : {}),
         ...(review ? { review } : {}),
+        ...(earlierPass ? { earlierPass } : {}),
       },
     };
     // A program's part answering its call is the program's to read (INF-799);

@@ -43,11 +43,12 @@ import {
 } from "@shared/tasks";
 import type { WorkPosture } from "@shared/workPosture";
 import type { CoreEventSink } from "../events";
+import { reviewCoversHead } from "../orchestrator/reviewCarry";
 import { currentChange, taskPullRequestsOf } from "../storage/changeProjection";
 import type { ProjectRecord } from "../storage/projectStore";
 import type { TaskEvent } from "../storage/taskEventStore";
 import type { TaskLink } from "../storage/taskLinkStore";
-import { oldestFirst, type TaskRecord } from "../storage/taskStore";
+import { oldestFirst, type TaskDelivery, type TaskRecord } from "../storage/taskStore";
 import { standingDependencyWaits } from "./dependencyWaits";
 import { holdingWaits, waitsSince } from "./holdingWaits";
 import { queueWaitOf } from "./queueWait";
@@ -1351,8 +1352,14 @@ export class TaskProtocol {
         deadBlocker);
     // The private closure snapshot is served through Details' policies,
     // not added to the board's published delivery contract.
-    const delivery = record.delivery ? { ...record.delivery } : null;
+    const delivery: (TaskDelivery & { reviewCovers?: boolean }) | null = record.delivery
+      ? { ...record.delivery }
+      : null;
     if (delivery) delete delivery.closedPolicies;
+    // Whether a pass covers the version on offer, so a screen that shows
+    // "passed" can say when it covers only an earlier one (INF-3141).
+    if (delivery?.reviewVerdict === "pass" && delivery.reviewSha && delivery.headSha)
+      delivery.reviewCovers = reviewCoversHead(delivery, delivery.headSha);
     return withMoves({
       id: record.id,
       key: record.key,

@@ -909,9 +909,16 @@ export class CrewSupervisor {
         "This review started on another computer. Close it and commission a new review on the builder's computer.",
       );
     // The first assignment is already prepared and briefed at commission.
-    // Keep it through retries; only a later review turn takes a new head.
-    if (review.delivery?.headSha && !review.outcome) return undefined;
-    const facts = await this.reviews.reviewFacts(builder);
+    // Keep it through retries while the builder's head is still that one;
+    // a turn after a first turn that ended with no report, such as a
+    // provider failure, takes the builder's newer commit like any later
+    // turn (INF-3141). A head that cannot be read then keeps the prepared one.
+    const firstAssignment = Boolean(review.delivery?.headSha && !review.outcome);
+    const facts = await this.reviews.reviewFacts(builder).catch((caught: unknown) => {
+      if (firstAssignment) return undefined;
+      throw caught;
+    });
+    if (!facts || (firstAssignment && facts.headSha === review.delivery?.headSha)) return undefined;
     this.options.tasks.delivery.recordChangeEvidence(review.id, {
       validationAssignment: validationAssignment(builder.delivery?.liveValidation, facts.headSha),
     });

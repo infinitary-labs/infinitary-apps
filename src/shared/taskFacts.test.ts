@@ -4,6 +4,7 @@ import { modelNames } from "./modelDisplayName";
 import { browserDriverOf, canOpenAgain, type TaskBrowserStop } from "./taskBrowser";
 import { TASK_FACTS, taskFactsOf } from "./taskFacts";
 import type { TaskActivityRow, TaskDetail } from "./tasks";
+import { REVIEW_EARLIER_WORDS, REVIEW_WORDS } from "./vocabulary";
 
 const now = new Date("2026-10-02T18:00:00Z").getTime();
 function row(kind: TaskActivityRow["kind"], text: string, at: number): TaskActivityRow {
@@ -517,6 +518,28 @@ describe("the shared task facts", () => {
       checks: null,
       review: { dot: "warn", words: "findings · risk high" },
     });
+  });
+
+  // INF-3141 (the captain's direction 1): a screen that shows a review as
+  // passed shows the version it read, and flags a pass that the home says
+  // does not cover the version on offer.
+  it("names the version a pass read, and reads one that does not cover the version on offer as earlier", () => {
+    const delivery = {
+      mode: "direct-pr" as const,
+      prNumber: 84,
+      headSha: "fedcba9876543210fedcba9876543210fedcba98",
+      reviewVerdict: "pass" as const,
+      reviewSha: "0123456789abcdef0123456789abcdef01234567",
+      reviewRisk: "low" as const,
+    };
+    expect(
+      taskFactsOf(detail({ delivery: { ...delivery, reviewCovers: true } }), names).delivery
+        ?.review,
+    ).toEqual({ dot: "ok", words: `${REVIEW_WORDS.pass} 0123456 · risk low` });
+    expect(
+      taskFactsOf(detail({ delivery: { ...delivery, reviewCovers: false } }), names).delivery
+        ?.review,
+    ).toEqual({ dot: "warn", words: `${REVIEW_EARLIER_WORDS} 0123456 · risk low` });
   });
 
   it("reads the task's own browser: the crewmate drives while its turn runs, then nobody does", () => {

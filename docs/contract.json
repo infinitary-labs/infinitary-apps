@@ -28458,6 +28458,9 @@
                         "reviewCarrySha": {
                           "type": "string"
                         },
+                        "reviewCovers": {
+                          "type": "boolean"
+                        },
                         "reviewRisk": {
                           "type": "string",
                           "enum": [
@@ -30137,6 +30140,9 @@
                   },
                   "reviewCarrySha": {
                     "type": "string"
+                  },
+                  "reviewCovers": {
+                    "type": "boolean"
                   },
                   "reviewRisk": {
                     "type": "string",
@@ -34726,6 +34732,9 @@
                     },
                     "reviewCarrySha": {
                       "type": "string"
+                    },
+                    "reviewCovers": {
+                      "type": "boolean"
                     },
                     "reviewRisk": {
                       "type": "string",
@@ -58936,6 +58945,9 @@
                         "reviewCarrySha": {
                           "type": "string"
                         },
+                        "reviewCovers": {
+                          "type": "boolean"
+                        },
                         "reviewRisk": {
                           "type": "string",
                           "enum": [
@@ -60615,6 +60627,9 @@
                         },
                         "reviewCarrySha": {
                           "type": "string"
+                        },
+                        "reviewCovers": {
+                          "type": "boolean"
                         },
                         "reviewRisk": {
                           "type": "string",

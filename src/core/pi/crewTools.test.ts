@@ -4,6 +4,7 @@ import {
   closingSentenceMissing,
   createCrewTools,
   groupSpawnArgs,
+  reviewAssignedWords,
 } from "./crewTools";
 import { piToolsOf } from "./toolSpec";
 
@@ -157,6 +158,26 @@ describe("crew tools", () => {
     expect(delegate.commission).toHaveBeenCalledWith(
       expect.objectContaining({ shape: { premium_ask: true, basis: "FM3K-12" } }),
     );
+  });
+
+  // INF-3141 (the captain's direction 1): a review ask's answer names the
+  // version it assigned and says when edits not yet committed are unseen.
+  it("answers a review ask with the version it assigned", async () => {
+    const review = { head: "0123456789abcdef0123456789abcdef01234567", uncommitted: true };
+    const { byName } = toolset({
+      commission: vi.fn(async () => ({ taskId: "ab12cd34", crewmate: "crewmate 2", review })),
+    });
+    const result = await byName.get("spawn_crewmate")?.execute("t1", {
+      title: "Review",
+      goal: "Review the meter fix",
+      user_words: "fix the meter",
+      shape: { review_of: "INF-7" },
+    });
+    expect(result?.content[0]?.text).toBe(
+      `Commissioned crewmate 2 on task ab12cd34.${reviewAssignedWords(review)}`,
+    );
+    expect(reviewAssignedWords(review)).toContain("0123456");
+    expect(reviewAssignedWords(review)).toContain("edits not yet committed");
   });
 
   it("carries the first mate's declaration that the work is on the project's folder (INF-567)", async () => {

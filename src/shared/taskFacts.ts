@@ -28,6 +28,7 @@ import {
   CHECK_WORDS,
   CHECKS_NOT_READ_WORDS,
   PULL_REQUEST_WORDS,
+  REVIEW_EARLIER_WORDS,
   REVIEW_WORDS,
   RUN_CHECK_WORDS,
 } from "./vocabulary";
@@ -385,10 +386,13 @@ function deliveryOf(task: Pick<TaskView, "status" | "delivery">): TaskDelivery |
             span: runChecksSpanOf(facts.runChecks),
           }
         : null;
+  // The version the review read rides its words; a pass the home says
+  // does not cover the version on offer reads as an earlier one (INF-3141).
+  const earlier = facts.reviewVerdict === "pass" && facts.reviewCovers === false;
   const review = facts.reviewVerdict
     ? {
-        dot: REVIEW_DOT[facts.reviewVerdict],
-        words: `${REVIEW_WORDS[facts.reviewVerdict]}${facts.reviewRisk ? ` · risk ${facts.reviewRisk}` : ""}`,
+        dot: earlier ? ("warn" as const) : REVIEW_DOT[facts.reviewVerdict],
+        words: `${earlier ? REVIEW_EARLIER_WORDS : REVIEW_WORDS[facts.reviewVerdict]}${facts.reviewSha ? ` ${facts.reviewSha.slice(0, 7)}` : ""}${facts.reviewRisk ? ` · risk ${facts.reviewRisk}` : ""}`,
       }
     : null;
   return change || checks || review ? { change, checks, review } : null;

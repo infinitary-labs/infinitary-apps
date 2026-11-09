@@ -191,6 +191,13 @@ export const taskDeliveryViewSchema = z.object({
    * No longer written. An older record's value still covers its head.
    */
   reviewCarrySha: z.string().optional(),
+  /**
+   * Whether a passed review covers `headSha`, the version on offer, by the
+   * home's coverage rule (exact version or the same change reading). Set
+   * only when the review passed and both versions are known; absent from
+   * an older home (INF-3141).
+   */
+  reviewCovers: z.boolean().optional(),
   reviewRisk: reviewRiskSchema.optional(),
   reviewRiskNote: z.string().optional(),
   reviewedAt: z.number().optional(),

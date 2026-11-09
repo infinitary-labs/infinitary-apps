@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { acceptedValidation } from "@shared/liveValidation";
+import { REVIEW_EARLIER_WORDS } from "@shared/vocabulary";
 import { describe, expect, it, vi } from "vitest";
 import {
   completionBody,
@@ -30,6 +31,7 @@ import { readChangeReading } from "../workspace/workspaceService";
 import type { CrewmateSpec } from "./crewSession";
 import { REVIEW_FIX_RULES, renderRigorSection } from "./intentBrief";
 import {
+  earlierPassText,
   REVIEW_NEW_HEAD_NEXT,
   REVIEW_PASSED_NEXT,
   REVIEW_PROOF_NEXT,
@@ -656,7 +658,8 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       );
       expect(passWake).toContain(`review task ${tasks.get(reviewId)?.key} is closed`);
       expect(passWake?.endsWith(` ${REVIEW_PASSED_NEXT}`)).toBe(true);
-      expect(supervisor.facts.crewStatus(builderId)[0]?.review).toBe("review passed");
+      // The crew list names the version the pass read (INF-3141).
+      expect(supervisor.facts.crewStatus(builderId)[0]?.review).toBe("review passed at 0123456");
       expect(tasks.graph.blockersHoldingClose(builderId)).toEqual([]);
 
       // After the pass the builder pushes and opens the PR (the new
@@ -1383,6 +1386,142 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(reviewFindingsNext()).toContain(`prefixed with - ${REVIEW_FIX_RULES}.`);
     } finally {
       repo.dispose();
+    }
+  });
+});
+
+// INF-3141 (the captain's direction 1, "Show the version everywhere and fix
+// the stuck reviewer"): a review's verdict, its refusal, its ask and every
+// screen that shows a pass are bound to the version the review read.
+describe("a review bound to the version it read (INF-3141)", () => {
+  const OLD = "0123456789abcdef0123456789abcdef01234567";
+  const NEW = "fedcba9876543210fedcba9876543210fedcba98";
+
+  async function commissioned() {
+    const builder = fakeCrewmate();
+    const reviewer = fakeCrewmate();
+    const env = setup(builder, { crewmates: [reviewer] });
+    const repo = gitRepo();
+    const { repo: view } = await env.repos.setup({
+      kind: "adopt",
+      path: repo.dir,
+      name: repo.name,
+    });
+    env.repos.configure(view.id, { delivery: "direct-pr" });
+    const { taskId: builderId } = await env.supervisor.intake.commission({
+      title: "Fix the meter test",
+      intent: intentOf("fix it"),
+      repoId: view.id,
+    });
+    await tick();
+    await reportTurn(builder, builderId, "Intent: fix. Committed.");
+    vi.mocked(env.workspace.branchHead).mockResolvedValue(OLD);
+    // The builder still holds edits not yet committed when the review is asked for.
+    vi.mocked(env.workspace.taskWorkStatus).mockResolvedValueOnce({
+      dirty: true,
+      unlandedCommits: 0,
+    });
+    const asked = await env.supervisor.intake.commission({
+      title: "Review",
+      intent: intentOf("fix it"),
+      shape: { review_of: builderId },
+    });
+    await tick();
+    return { ...env, repo, builder, reviewer, builderId, reviewId: asked.taskId, asked };
+  }
+
+  it("names the assigned version on the ask, and moves a reviewer whose first turn failed to the builder's newer commit", async () => {
+    const h = await commissioned();
+    try {
+      // The ask's answer names the version it assigned and the edits it cannot see.
+      expect(h.asked.review).toEqual({ head: OLD, uncommitted: true });
+      expect(h.tasks.get(h.reviewId)?.delivery?.headSha).toBe(OLD);
+
+      // The reviewer's first turn fails at the provider: no report.
+      h.reviewer.emit({ type: "turn_failed", taskId: h.reviewId, error: "Internal error" });
+      h.reviewer.emit({ type: "turn_end", taskId: h.reviewId });
+      h.reviewer.finishPrompt();
+      await tick();
+      expect(h.tasks.get(h.reviewId)?.outcome ?? null).toBeNull();
+
+      // The builder commits its repair; the steer's turn is assigned it.
+      vi.mocked(h.workspace.branchHead).mockResolvedValue(NEW);
+      await h.supervisor.steer.steerCrewmate(h.reviewId, "Review the repaired version.");
+      await tick();
+      expect(h.tasks.get(h.reviewId)?.delivery?.headSha).toBe(NEW);
+      expect(h.reviewer.promptCalls.at(-1)).toContain("Current review assignment");
+
+      // A verdict for the earlier version is refused, naming both versions.
+      const stale = { ...typedReview(h.tasks, h.reviewId, { code: "clear" }), head: OLD };
+      await expect(
+        h.specs[1]!.onReport!("Reviewed.", undefined, { validation: stale }),
+      ).rejects.toThrow(
+        `version ${NEW.slice(0, 7)} at evidence revision ${stale.revision}; this record names ${OLD.slice(0, 7)}`,
+      );
+      // The verdict at the assigned version records the pass.
+      await reviewTurn(h, h.reviewer, 1, h.reviewId, "No findings.", { code: "clear" });
+      expect(h.tasks.get(h.builderId)?.delivery).toMatchObject({
+        reviewVerdict: "pass",
+        reviewSha: NEW,
+      });
+    } finally {
+      h.repo.dispose();
+    }
+  });
+
+  it("says a pass covers only an earlier version on the crew list, the builder's report and the merge card", async () => {
+    const h = await commissioned();
+    try {
+      await reviewTurn(h, h.reviewer, 1, h.reviewId, "No findings.", {
+        code: "clear",
+        risk: { level: "low", why: "one test file changed." },
+      });
+      expect(h.supervisor.facts.crewStatus(h.builderId)[0]?.review).toBe(
+        `review passed at ${OLD.slice(0, 7)}`,
+      );
+      // The builder commits more work after the pass and pushes it.
+      vi.mocked(h.workspace.branchHead).mockResolvedValue(NEW);
+      seedDelivery(h.tasks, h.builderId, {
+        prUrl: "https://github.com/o/r/pull/55",
+        prNumber: 55,
+        headSha: NEW,
+        ci: "green",
+        ciAt: Date.now(),
+      });
+      expect(h.supervisor.facts.crewStatus(h.builderId)[0]?.review).toBe(
+        `review passed at ${OLD.slice(0, 7)} only, an earlier version than ${NEW.slice(0, 7)} on offer`,
+      );
+      await h.supervisor.steer.steerCrewmate(h.builderId, "Push and drive CI green.");
+      await tick();
+      await reportTurn(h.builder, h.builderId, "Repaired the flush after the pass.");
+      const wake = h.ops.filter((line) => line.includes(`reported on task ${h.builderId}`)).at(-1);
+      expect(wake).toContain(earlierPassText({ read: OLD, offered: NEW }));
+
+      const cardId = await (h.specs[0] as CrewmateSpec).onCard?.({
+        requiredActions: [],
+        title: "The meter test is steady",
+        body: completionBody(
+          [
+            "<h3>Intent</h3><p>The meter test passes ten runs in a row.</p>",
+            "<h3>What changed</h3><p>The test awaits the queue flush.</p>",
+            "<h3>Verified</h3><p>Reran the suite ten times.</p>",
+            "<h3>Risk</h3><p>Low.</p>",
+            "<h3>Not done</h3><p>Nothing.</p>",
+          ].join(""),
+        ),
+        actions: [
+          { id: "merge", label: "Merge PR", default: true, effect: SETTLE_MERGE },
+          { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+        ],
+      });
+      await tick();
+      const body = h.cards().find((entry) => entry.id === cardId)?.body ?? "";
+      expect(body).toContain(
+        `${REVIEW_EARLIER_WORDS} <span class="inf-mono">${OLD.slice(0, 7)}</span> · risk low`,
+      );
+      expect(body).toContain(`It does not cover ${NEW.slice(0, 7)}, the version on offer.`);
+    } finally {
+      h.repo.dispose();
     }
   });
 });

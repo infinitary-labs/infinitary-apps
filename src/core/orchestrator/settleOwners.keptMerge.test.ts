@@ -708,7 +708,7 @@ describe("CrewSupervisor", () => {
             (event) =>
               event.kind === "note" &&
               event.text ===
-                `the app started review ${review?.key} of the version on the merge card`,
+                `the app started review ${review?.key} of version ${APPROVED.slice(0, 7)}`,
           ),
       ).toBe(true);
       // The first mate's own spawn for the same review finds it open.
@@ -849,7 +849,10 @@ describe("CrewSupervisor", () => {
         reviewRounds: 2,
         prNumber: 7,
       });
-      expect(h.supervisor.facts.crewStatus(h.taskId)[0]?.review).toBe("review passed");
+      // A pass at an earlier version says so beside the version on offer (INF-3141).
+      expect(h.supervisor.facts.crewStatus(h.taskId)[0]?.review).toBe(
+        `review passed at older only, an earlier version than ${APPROVED.slice(0, 7)} on offer`,
+      );
       await h.supervisor.settling.settle.settleTaskDetailed(h.taskId, "merge-pr");
       expect(h.forge.merges).toEqual([APPROVED]);
     });

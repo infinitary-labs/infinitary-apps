@@ -26,6 +26,7 @@ import {
   changeLinesWords,
   DEFAULT_WORKSPACE_WORD,
   MERGE_ANYWAY_WORDS,
+  REVIEW_EARLIER_WORDS,
   REVIEW_WORDS,
 } from "@shared/vocabulary";
 import type { EmittedCardInput } from "../session/tools";
@@ -34,6 +35,7 @@ import { TaskService } from "../tasks/taskService";
 import { escapeCardText } from "./cardText";
 import { checkVerdicts } from "./checkVerdicts";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
+import { reviewCoversHead } from "./reviewCarry";
 
 /**
  * What a settle card carries from the record rather than its author's words
@@ -321,11 +323,19 @@ export class SettleFacts {
           ? ` <span class="inf-mono">${escapeCardText(review.reviewSha.slice(0, 7))}</span>`
           : "";
         const risk = review.reviewRisk ? ` · risk ${review.reviewRisk}` : "";
+        // A pass that does not cover the version on offer reads as one at
+        // an earlier version, never a plain green pass (INF-3141).
+        const earlier =
+          review.reviewVerdict === "pass" &&
+          offered !== undefined &&
+          !reviewCoversHead(review, offered);
         cell(
           "review",
           "Review",
-          `${statusDot(review.reviewVerdict === "pass" ? "ok" : review.reviewVerdict === "blocked" ? "failed" : "warn")}${REVIEW_WORDS[review.reviewVerdict]}${at}${risk}`,
-          review.reviewRiskNote,
+          `${statusDot(review.reviewVerdict === "pass" && !earlier ? "ok" : review.reviewVerdict === "blocked" ? "failed" : "warn")}${earlier ? REVIEW_EARLIER_WORDS : REVIEW_WORDS[review.reviewVerdict]}${at}${risk}`,
+          earlier
+            ? `It does not cover ${offered.slice(0, 7)}, the version on offer.${review.reviewRiskNote ? ` ${review.reviewRiskNote}` : ""}`
+            : review.reviewRiskNote,
         );
       } else if (this.host.reviewOpen(record.id)) {
         cell("review", "Review", `${statusDot("running")}open`);

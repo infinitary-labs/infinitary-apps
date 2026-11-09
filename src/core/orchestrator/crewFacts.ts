@@ -27,6 +27,7 @@ import { premiumRetryPossible } from "./holds";
 import type { AccountServeability } from "./idleLadder";
 import { blockedText, gateText } from "./intake";
 import type { PersonalBriefFacts } from "./intentBrief";
+import { reviewCoversHead } from "./reviewCarry";
 import { rowAttachments } from "./wakes";
 import { deliverableOf } from "./workShape";
 
@@ -192,7 +193,16 @@ export class CrewFacts {
     }
     // A review happens at any care (INF-1875).
     const verdict = record.delivery?.reviewVerdict;
-    if (verdict === "pass") return "review passed";
+    // A pass names the version it read, and says when it does not cover
+    // the version on offer (INF-3141).
+    if (verdict === "pass") {
+      const read = record.delivery?.reviewSha;
+      const offered = record.delivery?.headSha;
+      if (!read) return "review passed";
+      return offered && !reviewCoversHead(record.delivery, offered)
+        ? `review passed at ${read.slice(0, 7)} only, an earlier version than ${offered.slice(0, 7)} on offer`
+        : `review passed at ${read.slice(0, 7)}`;
+    }
     const open = this.core.openReviewOf(record.id);
     if (open) return `review open (${open.key || open.id})`;
     return verdict ? `review: ${verdict}` : undefined;

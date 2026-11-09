@@ -1,6 +1,4 @@
 import { randomUUID } from "node:crypto";
-import { type FileHandle, open, readFile } from "node:fs/promises";
-import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import type { AccountView } from "@shared/accounts";
 import {
@@ -13,11 +11,6 @@ import {
 } from "@shared/actions";
 import { AUTOMATION_UNREADABLE, type AutomationRule } from "@shared/automation";
 import { automationEventWords } from "@shared/automationWords";
-import {
-  parseCardMediaFileName,
-  parseCardPictureFileName,
-  parseCardTypefaceFileName,
-} from "@shared/cardPictures";
 import type { PastCard } from "@shared/cards";
 import { CREATE_PANEL_SLOT_ID } from "@shared/createPanelSlot";
 import { isCustomApiProvider } from "@shared/customApi";
@@ -51,12 +44,7 @@ import { type AuthPromptView, providerServesRole } from "@shared/providers";
 import { releaseNoteToShow } from "@shared/releaseTracking";
 import type { RemoteLoginRefusedAnswer } from "@shared/remoteLogin";
 import type { RepoPolicyPatch, RepoSetupResult } from "@shared/repos";
-import {
-  opensPullRequest,
-  type RepoView,
-  repoConfiguredEvent,
-  repoRemovalRefusal,
-} from "@shared/repos";
+import { opensPullRequest, type RepoView, repoRemovalRefusal } from "@shared/repos";
 import { devicePlace } from "@shared/signIns";
 import type { AppPanelGates } from "@shared/surfaces";
 import { resolveWorkComputer } from "@shared/workComputer";
@@ -65,13 +53,14 @@ import { addedPrivateSite, privateSiteChannels } from "./browser/privateSites";
 import { CONTRACT_CHANGES } from "./connection/contractChanges";
 import type { CoreServices } from "./coreServices";
 import { RemoteLoginRefusedError } from "./devices/remoteLogin";
+import { createActionTrail } from "./dispatcher/actionTrail";
+import { cardMediaHandlers } from "./dispatcher/cardMedia";
 import type { CoreEventSink } from "./events";
 import { SignInRequiredError, signInRefusal } from "./forge";
 import type { HostCapabilities } from "./host";
 import { isAllowedOpenExternalUrl } from "./openExternal";
 import { CardChoiceUnavailableError } from "./orchestrator/cardActions";
 import { type MessageFile, withPastedFiles } from "./overflow";
-import { crewmateCardPicturesDir } from "./paths";
 import { actionValue } from "./pi/appTools";
 import { customCapabilityProfiles } from "./pi/customApiModels";
 import { listSurfaces, type SurfaceView } from "./pi/personalizeTool";
@@ -98,20 +87,6 @@ const PHONE_DIAGNOSTIC_ONLY = "A phone's usage event is handed only by a paired 
 
 /** What a task browser command answers on a core that keeps none (an installed build). */
 const NO_TASK_BROWSERS = `${HERE.This} keeps no task browsers.`;
-
-/**
- * How long a captain's settled run waits for its next step
- * (docs/orchestrator-contract.md, "Settled runs"; the captain's answer on
- * FI3-1330).
- */
-export const SETTLE_MS = 10_000;
-
-/**
- * One step on a setting a run can settle: its target within the action
- * (a panel, an account, a crew slot; empty for a setting of its own), and
- * the target's state before and after the step.
- */
-type SettingStep = { target: string; from: unknown; to: unknown };
 
 /** Remote Login refusals always carry their typed kind and lines; other failures reject. */
 async function refusalAsAnswer<T>(run: () => Promise<T>): Promise<T | RemoteLoginRefusedAnswer> {
@@ -543,65 +518,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
 
     "inf:cards:thread": (cardId) => services.supervisor.cards.thread(cardId),
 
-    // The home's own copy of a picture a card names, for a view's frames
-    // (docs/view.md). Located from the minted name alone, as the frame
-    // scheme locates it; a refusal names no path.
-    "inf:cards:picture": async (name) => {
-      const picture = parseCardPictureFileName(name);
-      if (!picture) throw new Error("That is not the name of a card picture.");
-      let bytes: Buffer;
-      try {
-        bytes = await readFile(
-          join(crewmateCardPicturesDir(services.paths, picture.taskId), picture.fileName),
-        );
-      } catch {
-        throw new Error("No card picture has that name.");
-      }
-      return { contentType: picture.contentType, data: bytes.toString("base64") };
-    },
-
-    // The home's own copy of a project font a preview names, for a view's
-    // frames (docs/view.md), located from the minted name alone as a
-    // picture is; a refusal names no path.
-    "inf:cards:typeface": async (name) => {
-      const typeface = parseCardTypefaceFileName(name);
-      if (!typeface) throw new Error("That is not the name of a card's font.");
-      let bytes: Buffer;
-      try {
-        bytes = await readFile(
-          join(crewmateCardPicturesDir(services.paths, typeface.taskId), typeface.fileName),
-        );
-      } catch {
-        throw new Error("No card font has that name.");
-      }
-      return { contentType: typeface.contentType, data: bytes.toString("base64") };
-    },
-
-    // A piece of the home's own copy of a card's demo recording, for a
-    // view's picture viewer (docs/view.md): located from the minted name
-    // alone, read from the offset asked and no further than the file.
-    "inf:cards:media": async (name, offset, length) => {
-      const recording = parseCardMediaFileName(name);
-      if (!recording) throw new Error("That is not the name of a card's recording.");
-      const path = join(
-        crewmateCardPicturesDir(services.paths, recording.taskId),
-        recording.fileName,
-      );
-      let handle: FileHandle;
-      try {
-        handle = await open(path, "r");
-      } catch {
-        throw new Error("No card recording has that name.");
-      }
-      try {
-        const { size } = await handle.stat();
-        const piece = Buffer.alloc(Math.max(0, Math.min(length, size - offset)));
-        if (piece.length > 0) await handle.read(piece, 0, piece.length, offset);
-        return { contentType: recording.contentType, size, data: piece.toString("base64") };
-      } finally {
-        await handle.close();
-      }
-    },
+    ...cardMediaHandlers(services),
 
     // The captain's click on a card's page from its task's project
     // (docs/task-browser.md, "A page from the project"): only the path the
@@ -1352,160 +1269,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       services.personal.askAgain(extensionId, integration, action),
   };
 
-  /**
-   * The captain's open settled run (docs/orchestrator-contract.md, "Settled
-   * runs"): one setting - a catalog action and its target - changed by the
-   * captain, `from` its state before the run's first step, `at` the newest
-   * step, written as one Activity line and one operation.
-   */
-  let openRun: {
-    id: string;
-    name: ActionName;
-    target: string;
-    from: unknown;
-    at: number;
-    operationId: string;
-  } | null = null;
-
-  /**
-   * The open run a step on this setting continues: the captain's own, on the
-   * same setting, within SETTLE_MS of its last step, while its line is still
-   * Activity's newest and its operation is still on the record.
-   */
-  function runOf(name: ActionName, target: string, actor: ActionActor) {
-    const run = openRun;
-    if (actor.kind !== "captain" || !run || run.name !== name || run.target !== target) return null;
-    if (services.ticker.now() - run.at > SETTLE_MS) return null;
-    if (services.activityRun() !== run.id || !services.tasks.get(run.operationId)) return null;
-    return run;
-  }
-
-  /**
-   * The captain's step on a setting (docs/orchestrator-contract.md, "Settled
-   * runs"): the run's first step writes its line and operation, a later one
-   * rewrites both in place, and a run back where it started withdraws both.
-   */
-  function settle(name: ActionName, value: Record<string, unknown>, step: SettingStep): void {
-    const run = runOf(name, step.target, { kind: "captain" });
-    const from = (run ? run.from : step.from) as Record<string, unknown>;
-    const text = ACTIONS[name].settled?.(from, value) ?? ACTIONS[name].done(value);
-    const at = services.ticker.now();
-    if (run && isDeepStrictEqual(run.from, step.to)) {
-      openRun = null;
-      services.tasks.archive.withdrawOperation(run.operationId);
-      services.broadcastEvent({
-        type: "personalized",
-        text,
-        actor: "captain",
-        run: { id: run.id, withdrawn: true },
-      });
-      return;
-    }
-    if (run) {
-      run.at = at;
-      services.tasks.capture.reviseOperation(run.operationId, { title: text, outcome: text });
-      services.broadcastEvent({
-        type: "personalized",
-        text,
-        actor: "captain",
-        run: { id: run.id },
-      });
-      return;
-    }
-    const row = services.tasks.capture.fileOperation({
-      id: randomUUID().slice(0, 8),
-      title: text,
-      outcome: text,
-      tool: "app_change",
-      actor: "captain",
-    });
-    openRun = {
-      id: randomUUID(),
-      name,
-      target: step.target,
-      from: step.from,
-      at,
-      operationId: row.id,
-    };
-    services.broadcastEvent({
-      type: "personalized",
-      text,
-      actor: "captain",
-      run: { id: openRun.id },
-    });
-  }
-
-  function trail(
-    name: ActionName,
-    value: Record<string, unknown>,
-    actor: ActionActor,
-    step?: SettingStep,
-  ): void {
-    if (step && actor.kind === "captain") {
-      settle(name, value, step);
-      return;
-    }
-    const text = ACTIONS[name].done(value);
-    const row = services.tasks.capture.fileOperation({
-      id: randomUUID().slice(0, 8),
-      title:
-        name === "project-settings" ||
-        name === "project-runs-on" ||
-        name === "project-setup" ||
-        name === "project-remove"
-          ? name === "project-setup"
-            ? `Set up project ${(value.repo as RepoView).name}`
-            : name === "project-remove"
-              ? `Removed project ${(value.repo as RepoView).name}`
-              : `Changed settings for project ${(value.repo as RepoView).name}`
-          : text,
-      outcome: text,
-      tool: "app_change",
-      actor: actor.kind,
-      ...(name === "project-settings" ||
-      name === "project-runs-on" ||
-      name === "project-setup" ||
-      name === "project-remove"
-        ? { repoId: (value.repo as RepoView).id }
-        : {}),
-    });
-    if (actor.kind === "firstmate") options.onActionRecorded?.(row.id, name, value);
-    if (name === "project-remove") {
-      const repo = value.repo as RepoView;
-      services.broadcastEvent({
-        type: "repo_unregistered",
-        repoId: repo.id,
-        name: repo.name,
-        actor: actor.kind,
-      });
-    } else if (name === "project-setup") {
-      const repo = value.repo as RepoView;
-      services.broadcastEvent({
-        type: "repo_setup",
-        repoId: repo.id,
-        name: repo.name,
-        path: repo.path,
-        kind: repo.setupKind,
-        actor: actor.kind,
-      });
-    } else if (name === "project-settings")
-      services.broadcastEvent({
-        ...repoConfiguredEvent(value.repo as RepoView),
-        ...(value.description ? { description: value.description as string } : {}),
-        actor: actor.kind,
-      });
-    else if (name === "project-runs-on") {
-      const repo = value.repo as RepoView;
-      services.broadcastEvent({
-        type: "repo_runs_on",
-        repoId: repo.id,
-        name: repo.name,
-        runsOn: repo.runsOn,
-        text,
-        actor: actor.kind,
-      });
-    } else services.broadcastEvent({ type: "personalized", text, actor: actor.kind });
-  }
+  const { runOf, trail } = createActionTrail(services, options);
 
   const dispatch = async <C extends Exclude<CoreInvokeChannel, WorkInvokeChannel>>(
     channel: C,

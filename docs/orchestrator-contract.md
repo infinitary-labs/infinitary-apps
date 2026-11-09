@@ -121,7 +121,7 @@ The Size picker, the size keys, the View menu and command search make the same c
 
 ### Settled runs
 
-A run of the captain's own steps on one setting is one feed line and one operation, written where the trail writes them (`settle` in `src/core/dispatcher.ts`; the captain's answers on FI3-1330).
+A run of the captain's own steps on one setting is one feed line and one operation, written where the trail writes them (`settle` in `src/core/dispatcher/actionTrail.ts`; the captain's answers on FI3-1330).
 One drag of the window wash slider, a held size key or a panel folded and opened again would otherwise write a line and file a task number for every step.
 A setting is one catalog action and its target: a panel by surface, an account by id, a provider's preferred account, a crew slot by offering and slot, or the action alone.
 The run's first step writes its line and files its operation, and each later step rewrites both in place: the same row and the same task key, with the step's words and time.

@@ -326,6 +326,8 @@
         "!src/core/core.boot.test.ts",
         "!src/core/core.capture.test.ts",
         "!src/core/core.connection.test.ts",
+        "!src/core/dispatcher.media.test.ts",
+        "!src/core/dispatcher.placement.test.ts",
         "!src/core/core.contract.test.ts",
         "!src/core/core.projects.test.ts",
         "!src/core/core.settings.test.ts",

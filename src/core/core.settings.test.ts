@@ -8,7 +8,7 @@ import { afterAll, beforeAll, describe, expect, it, onTestFinished, vi } from "v
 import { fakeHost, quotaFixture } from "../../tests/helpers/bootedCore";
 import { SAMPLE_NOTES } from "../../tests/helpers/mcpStandIn";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
-import { SETTLE_MS } from "./dispatcher";
+import { SETTLE_MS } from "./dispatcher/actionTrail";
 import { ForgeSignInStore } from "./forge/signIns";
 import { type Core, startCore } from "./index";
 import { automationWords } from "./orchestrator/scheduler";

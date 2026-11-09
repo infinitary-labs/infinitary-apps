@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "split-core-dispatcher",
+      "reason": "Internal refactor of the core dispatcher with behavioral guardrails; no intended user-visible change."
+    }
+  ]
+}

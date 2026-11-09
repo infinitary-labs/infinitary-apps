@@ -161,20 +161,19 @@ export type HoldOverride = {
    * The words are the captain's click on a merge (INF-1966): the completion
    * card's merge, Merge when checks pass among its words, or an ordinary
    * request_merge card's. That click is his approval of the merge, kept
-   * until the checks pass, so these words never pass the checks - neither
-   * when first cited nor when named again with `standing`.
+   * until the checks pass, not a general override. Older saved overrides
+   * carrying this marker remain in history but never stand or pass a hold.
    */
   mergeClick?: true;
   at: number;
 };
 
 /**
- * The refusal of an override that names the checks on the captain's click
- * on a merge (INF-1966): the click is his approval, which waits for the
- * checks; only his own words, or his Merge anyway click, pass them.
+ * An ordinary merge click approves only its scoped merge, never an
+ * override (INF-3284). Explicit words and exception clicks remain separate.
  */
 export function mergeClickRefusal(words: string): string {
-  return `Override refused: nothing was recorded. The words cited, "${words}", are the captain's click on a merge: their approval of it, which the app keeps and runs once the checks pass, so the click never passes the checks. Leave the checks out: the merge waits while the crewmate reads them or declares that the pull request has none. Only the captain's own words that the checks need not pass, or their Merge anyway click, pass them.`;
+  return `Override refused: nothing was recorded. The words cited, "${words}", are the captain's click on a merge: approval of that change at that version, not a general override. The app keeps that scoped approval and its accepted repairs until the checks pass; the click never passes the checks or any other hold. Only separately given words or an explicit exception choice can declare an override.`;
 }
 
 /** The override standing on a task at this version: one for the task's life, or one for this very version. */
@@ -183,7 +182,7 @@ export function standingOverride(
   head?: string,
 ): HoldOverride | undefined {
   const override = delivery?.override;
-  if (!override) return undefined;
+  if (!override || override.mergeClick) return undefined;
   return override.until === "task" || (head !== undefined && head === override.head)
     ? override
     : undefined;

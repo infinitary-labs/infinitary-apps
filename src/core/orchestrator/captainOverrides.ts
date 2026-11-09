@@ -87,8 +87,8 @@ export class CaptainOverrides {
    * override stands at a time: a new one replaces it. Naming a counted limit
    * reopens it now. Words that are his click on a merge (`mergeClick`, from
    * `citedCaptainWords`) are his approval of it, kept until the checks pass,
-   * so they never pass the checks (INF-1966), and the record keeps that
-   * fact for `standing` to carry.
+   * so they never create a general override. The scoped merge approval
+   * and its repair carry remain the only permission that click gives.
    */
   declareOverride(
     taskId: string,
@@ -107,8 +107,7 @@ export class CaptainOverrides {
     const holds = [...new Set(input.holds)];
     if (holds.length === 0)
       return { ok: false, text: "Name at least one soft hold the captain's words pass." };
-    if (input.mergeClick && holds.includes("checks"))
-      return { ok: false, text: mergeClickRefusal(input.words) };
+    if (input.mergeClick) return { ok: false, text: mergeClickRefusal(input.words) };
     const head = record.delivery?.headSha;
     if (input.until === "version" && !head)
       return {
@@ -125,7 +124,6 @@ export class CaptainOverrides {
       ...(input.until === "version" && head
         ? { head, ...(prNumber !== undefined ? { prNumber } : {}) }
         : {}),
-      ...(input.mergeClick ? { mergeClick: true as const } : {}),
       at: this.host.now(),
     };
     this.options.tasks.delivery.recordPermissionRecords(

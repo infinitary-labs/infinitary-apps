@@ -470,7 +470,7 @@ describe("the captain's override, from a click, a thread or words typed mid-turn
   // INF-1966: on DOP-140 the first mate cited the captain's click on Merge
   // when checks pass as words passing the checks, and the pull request merged
   // with no word of theirs that the checks need not pass.
-  it("refuses to pass the checks on the captain's click on a merge, also when named again with the standing words (INF-1966)", async () => {
+  it("refuses to turn an ordinary merge click into any override or standing words (INF-1966, INF-3284)", async () => {
     const ready = "The meter retry is ready to merge";
     const f = harness([
       {
@@ -494,20 +494,20 @@ describe("the captain's override, from a click, a thread or words typed mid-turn
       JSON.stringify(mergeClickRefusal(clicked)).slice(1, -1),
     );
     expect(f.recorded()).toBeUndefined();
-    // The same click may still pass a hold that is not the checks, and the
-    // record keeps what the words are.
+    // INF-3284's accepted retirement: even a non-check hold cannot turn
+    // this scoped approval into general permission through the tool boundary.
     expect(await f.declare({ holds: ["waits"], until: "task", from: "card-ab12" })).toContain(
-      "Recorded the captain's override",
+      JSON.stringify(mergeClickRefusal(clicked)).slice(1, -1),
     );
-    expect(f.recorded()).toMatchObject({ words: clicked, holds: ["waits"], mergeClick: true });
+    expect(f.recorded()).toBeUndefined();
     await f.finish();
-    // Naming the checks later with the words standing is the same click.
+    // The rejected click created no standing words to cite later.
     f.report("the checks still hold the merge.");
     await drained(f.session, 2);
     expect(
       await f.declare({ holds: ["waits", "checks"], until: "task", from: "standing" }),
     ).toContain("Override refused");
-    expect(f.recorded()).toMatchObject({ words: clicked, holds: ["waits"], mergeClick: true });
+    expect(f.recorded()).toBeUndefined();
     await f.finish();
     f.agent.dispose();
     f.db.close();

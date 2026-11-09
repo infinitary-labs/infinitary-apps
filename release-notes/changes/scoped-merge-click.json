@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "scoped-merge-click",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Merge approval stays with the change you chose",
+      "body": "An ordinary merge click no longer doubles as permission for the whole task. Your approval stays tied to its change and version, including accepted unchanged repairs. Separately given permission still applies as before.",
+      "noPicture": "This corrects permission handling behind the existing merge button without changing its appearance.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -4794,7 +4794,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   const AFTER_MERGE_TITLE_ROOM = 64 - AFTER_MERGE_TITLE_PREFIX.length;
   const taskRef = string().trim().min(1).max(64);
   const AFTER_MERGE_DOERS = ["crewmate", "firstmate"];
-  const afterMergeStepSchema = object({
+  object({
     /** Who does it: a crewmate (the default) or the first mate, for a change in the app itself. */
     doer: _enum(AFTER_MERGE_DOERS).optional(),
     /** An existing open task the merge starts, in place of a new one (title, goal, why). */
@@ -4805,17 +4805,16 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     /** The project a new step is filed in, by key; the origin's when absent. */
     project: taskRef.optional(),
     /** Tasks whose merge the step waits for, by key: each a `blocks` link into it. */
-    blockedBy: array(taskRef).max(10).optional()
+    blockedBy: array(taskRef).optional()
   });
-  array(afterMergeStepSchema).max(10);
   const afterMergeShownSchema = object({
     doer: _enum(AFTER_MERGE_DOERS).optional(),
     title: string().min(1).max(500),
     goal: string().max(4e3).optional(),
     key: string().max(64).optional(),
-    waitsFor: array(string().max(64)).max(10).optional()
+    waitsFor: array(string().max(64)).optional()
   });
-  const afterMergeShownListSchema = array(afterMergeShownSchema).max(10);
+  const afterMergeShownListSchema = array(afterMergeShownSchema);
   const cardCornerSchema = object({
     icon: literal("minus"),
     label: string(),

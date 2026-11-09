@@ -37,9 +37,9 @@ export const afterMergeStepSchema = z.object({
   /** The project a new step is filed in, by key; the origin's when absent. */
   project: taskRef.optional(),
   /** Tasks whose merge the step waits for, by key: each a `blocks` link into it. */
-  blockedBy: z.array(taskRef).max(10).optional(),
+  blockedBy: z.array(taskRef).optional(),
 });
-export const afterMergeStepsSchema = z.array(afterMergeStepSchema).max(10);
+export const afterMergeStepsSchema = z.array(afterMergeStepSchema);
 export type AfterMergeStep = z.infer<typeof afterMergeStepSchema>;
 
 /**
@@ -78,9 +78,9 @@ export const afterMergeShownSchema = z.object({
   title: z.string().min(1).max(500),
   goal: z.string().max(4000).optional(),
   key: z.string().max(64).optional(),
-  waitsFor: z.array(z.string().max(64)).max(10).optional(),
+  waitsFor: z.array(z.string().max(64)).optional(),
 });
-export const afterMergeShownListSchema = z.array(afterMergeShownSchema).max(10);
+export const afterMergeShownListSchema = z.array(afterMergeShownSchema);
 
 /**
  * One step the host filed or started at a merge, as the settled wake names

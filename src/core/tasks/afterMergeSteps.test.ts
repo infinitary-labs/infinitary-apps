@@ -1,4 +1,4 @@
-import type { AfterMergeStep } from "@shared/afterMerge";
+import { type AfterMergeStep, afterMergeShownListSchema } from "@shared/afterMerge";
 import { RISK_DIMENSIONS } from "@shared/cards";
 import { type ChangePresentation, changePresentationSchema } from "@shared/changePresentation";
 import { describe, expect, it } from "vitest";
@@ -105,6 +105,68 @@ const continueTasks = (tasks: TaskService) =>
   tasks.list().filter((record) => record.title.startsWith("Continue: "));
 
 describe("after-merge steps at the merge", () => {
+  // INF-3282, approved from the weekly reach audit: eleven authorized steps
+  // and eleven dependencies must survive admission, display and activation.
+  // Extend DOP-299's split-runner rollout to a fleet of work computers.
+  it("keeps every step and dependency beyond ten through a merged close", () => {
+    const { tasks, origin } = setup();
+    const blockers = Array.from({ length: 11 }, (_, index) =>
+      seedTask(tasks, {
+        id: `runner-${index + 1}`,
+        title: `Prepare split runner on work computer ${index + 1}`,
+        repoId: "dotfiles",
+        status: "idle",
+      }),
+    );
+    const steps = blockers.map((_, index) => ({
+      ...DOP299_STEP[0],
+      title: `Set split queues on work computer ${index + 1}`,
+      blockedBy: blockers.map((blocker) => blocker.key),
+    }));
+    expect(tasks.delivery.afterMergeRefusal(origin.id, steps)).toBeUndefined();
+    declare(tasks, origin, steps);
+    const shown = afterMergeShownListSchema.parse(tasks.delivery.afterMergeShown(steps));
+    expect(shown.map((step) => step.title)).toEqual(steps.map((step) => `Continue: ${step.title}`));
+    for (const step of shown) expect(step.waitsFor).toEqual(blockers.map((task) => task.key));
+
+    tasks.close(origin.id, { status: "done", reason: "merged", actor: "host" });
+    tasks.delivery.activateAfterMergeSteps(origin.id);
+    const filed = continueTasks(tasks);
+    expect(filed.map((task) => task.title).sort()).toEqual(shown.map((step) => step.title).sort());
+    for (const task of filed) {
+      expect(task.startPolicy).toBe("when-ready");
+      expect(
+        tasks.graph
+          .blockers(task.id)
+          .map((blocker) => blocker.id)
+          .sort(),
+      ).toEqual(blockers.map((blocker) => blocker.id).sort());
+      expect(tasks.graph.listReady().map((ready) => ready.id)).not.toContain(task.id);
+    }
+  });
+
+  // INF-3282 also retains actual payload protection with an explained way on.
+  it("refuses oversized story JSON without dropping work and accepts task references instead", () => {
+    const { origin } = setup();
+    const longSteps = Array.from({ length: 16 }, () => ({
+      ...DOP299_STEP[0],
+      why: "The split runner setup must be installed before the queue labels change. ".repeat(55),
+    }));
+    const result = changePresentationSchema.safeParse({
+      ...dop299Story(origin.id),
+      afterMerge: longSteps,
+    });
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.error.issues.map((issue) => issue.message).join(" ")).toContain(
+      "60,000 UTF-16 code units of JSON",
+    );
+    expect(result.error.issues.map((issue) => issue.message).join(" ")).toContain(
+      "list their keys instead; keep every authorized task and dependency",
+    );
+    const references = longSteps.map((_, index) => ({ task: `DOP-${300 + index}` }));
+    expect(dop299Story(origin.id, references).afterMerge).toEqual(references);
+  });
   it("files each declared step as a Continue task that starts on its own once merged", () => {
     const { tasks, origin } = setup(DOP299_STEP);
     expect(continueTasks(tasks)).toEqual([]);

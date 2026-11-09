@@ -302,7 +302,12 @@ function evidenceRelations(
         issue(`After evidence for ${view.id} needs fresh capture or an applicability declaration.`);
     }
   }
-  if (JSON.stringify(draft).length > 60000) issue("The story is too large; shorten its text.");
+  // Keep the existing whole-story storage/publication guard, not a work-item count.
+  // String.length measures serialized UTF-16 code units, including JSON punctuation.
+  if (JSON.stringify(draft).length > 60000)
+    issue(
+      "The story exceeds 60,000 UTF-16 code units of JSON, including its after-merge work. Shorten descriptions or file the work as tasks first and list their keys instead; keep every authorized task and dependency.",
+    );
 }
 
 /** Keep old saved stories readable without rewriting their authored content. */

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "after-merge-work-counts",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Keep all authorized work after a merge",
+      "body": "A change can list more than ten follow-up tasks and more than ten dependencies without losing any from its merge card. If the whole story is too large, the refusal explains the bound and how to keep the work using task references.",
+      "noPicture": "This removes a validation restriction without changing the merge card's layout or controls.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

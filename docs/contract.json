@@ -8174,7 +8174,6 @@
               }
             },
             "afterMerge": {
-              "maxItems": 10,
               "type": "array",
               "items": {
                 "type": "object",
@@ -8200,7 +8199,6 @@
                     "maxLength": 64
                   },
                   "waitsFor": {
-                    "maxItems": 10,
                     "type": "array",
                     "items": {
                       "type": "string",
@@ -9441,7 +9439,6 @@
                 }
               },
               "afterMerge": {
-                "maxItems": 10,
                 "type": "array",
                 "items": {
                   "type": "object",
@@ -9467,7 +9464,6 @@
                       "maxLength": 64
                     },
                     "waitsFor": {
-                      "maxItems": 10,
                       "type": "array",
                       "items": {
                         "type": "string",
@@ -10504,7 +10500,6 @@
                 }
               },
               "afterMerge": {
-                "maxItems": 10,
                 "type": "array",
                 "items": {
                   "type": "object",
@@ -10530,7 +10525,6 @@
                       "maxLength": 64
                     },
                     "waitsFor": {
-                      "maxItems": 10,
                       "type": "array",
                       "items": {
                         "type": "string",
@@ -11802,7 +11796,6 @@
                 }
               },
               "afterMerge": {
-                "maxItems": 10,
                 "type": "array",
                 "items": {
                   "type": "object",
@@ -11828,7 +11821,6 @@
                       "maxLength": 64
                     },
                     "waitsFor": {
-                      "maxItems": 10,
                       "type": "array",
                       "items": {
                         "type": "string",
@@ -12589,7 +12581,6 @@
             }
           },
           "afterMerge": {
-            "maxItems": 10,
             "type": "array",
             "items": {
               "type": "object",
@@ -12615,7 +12606,6 @@
                   "maxLength": 64
                 },
                 "waitsFor": {
-                  "maxItems": 10,
                   "type": "array",
                   "items": {
                     "type": "string",
@@ -49994,7 +49984,6 @@
                     }
                   },
                   "afterMerge": {
-                    "maxItems": 10,
                     "type": "array",
                     "items": {
                       "type": "object",
@@ -50032,7 +50021,6 @@
                           "maxLength": 64
                         },
                         "blockedBy": {
-                          "maxItems": 10,
                           "type": "array",
                           "items": {
                             "type": "string",
@@ -57293,7 +57281,6 @@
               }
             },
             "afterMerge": {
-              "maxItems": 10,
               "type": "array",
               "items": {
                 "type": "object",
@@ -57319,7 +57306,6 @@
                     "maxLength": 64
                   },
                   "waitsFor": {
-                    "maxItems": 10,
                     "type": "array",
                     "items": {
                       "type": "string",

@@ -257,6 +257,9 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 The rest of the origin's work after its own change merges is declared, never filed during the work: the change's saved story may list `afterMerge` steps (`src/shared/afterMerge.ts`), each a new task's title, goal and why, or the key of an existing open task that has not started (`task`).
 A new step may name the project it is filed in by key (`project`), the origin's when absent, and any step may name the tasks whose merge it also waits for (`blockedBy`).
+Neither the steps nor their dependency lists have an item-count limit, including the merge card's display data.
+The existing whole-story guard accepts at most 60,000 UTF-16 code units of serialized JSON, including punctuation and after-merge work, to bound the stored and published story rather than the amount of work.
+An oversized story is refused without truncation: shorten descriptions or file the work as tasks first and list their keys, keeping every authorized task and dependency.
 Each step names who does it (`doer`): a crewmate in a project's working copy, the default, or the first mate, for a change in the app itself such as an Automation rule, a setting or a direction, which no crewmate can reach.
 A first-mate step is a title, goal and why alone, with no `task`, `project` or `blockedBy`, and the merge files no task for it: the merge's settled wake, or the first mate's own `settle_task` result, hands it to the first mate to do with its own tools (`TaskDeliveries.firstmateAfterMergeSteps`).
 Preparing the story refuses a step whose shape is incomplete, a named task that is running, closed, unknown or the origin itself, a named task already set to start on its own unless it waits on the origin, an unknown or archived project, and a wait on an unknown task, on the origin, or one that would close a cycle (`TaskDeliveries.afterMergeRefusal`).

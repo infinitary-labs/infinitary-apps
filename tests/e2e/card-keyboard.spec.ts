@@ -332,10 +332,12 @@ test("⌘1 presses the recommended choice, and the other keys count leftward fro
     await typeDraft(page);
 
     await test.step("the default shows ⌘1, and the keys grow from the right edge leftward", async () => {
-      // Drawn left to right: Abandon, Save and defer, Approve and build.
+      // Drawn left to right: the app's Decline (INF-3108), Abandon, Save and
+      // defer, Approve and build.
       await expect(
         shownEntry(page).locator("[data-card-actions] [data-card-choice] [data-button-key]"),
       ).toHaveText([
+        hintOf(CARD_CHOICE_COMMANDS[3]),
         hintOf(CARD_CHOICE_COMMANDS[2]),
         hintOf(CARD_CHOICE_COMMANDS[1]),
         hintOf(CARD_CHOICE_COMMANDS[0]),

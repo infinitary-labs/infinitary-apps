@@ -146,6 +146,7 @@ export function emittedAction(action: {
   default?: boolean;
   effect?: EffectParam;
   danger?: boolean;
+  declines?: boolean;
 }): DeclaredAction {
   return {
     id: action.id,
@@ -153,6 +154,7 @@ export function emittedAction(action: {
     ...(action.default ? { default: true } : {}),
     ...(action.effect ? { effect: agentEffect(action.effect) } : {}),
     ...(action.danger ? { danger: true } : {}),
+    ...(action.declines ? { declines: true } : {}),
   };
 }
 
@@ -328,6 +330,7 @@ function actionParam<Effect extends TSchema>(effect: Effect) {
       default: Type.Optional(Type.Boolean()),
       effect: Type.Optional(effect),
       danger: Type.Optional(Type.Boolean()),
+      declines: Type.Optional(Type.Boolean()),
     },
     { additionalProperties: true },
   );

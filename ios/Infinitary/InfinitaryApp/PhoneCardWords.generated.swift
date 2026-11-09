@@ -14,6 +14,7 @@ enum PhoneCardWords {
     static func doneRest(_ taskKey: String) -> String {
         "Done · closes \(taskKey) as answered; the answer stays on its record"
     }
+    static let decline = "Decline"
     static let putAside = "Put aside"
     static let putAsideRest = "Put aside · waits in Tasks, back when it changes"
     static let maximize = "Maximize card"

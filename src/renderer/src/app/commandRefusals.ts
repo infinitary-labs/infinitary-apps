@@ -64,6 +64,8 @@ export type WindowFacts = {
   /** The shown record offers Close as done (INF-3169's plan, piece 3). */
   taskCloseDone?: boolean;
   answerDoneReady?: boolean;
+  /** The shown decision offers a way to say no (INF-3108). */
+  declineReady?: boolean;
   computers?: { page: number; pages: number };
   /** The top bar's project pill: whether it shows, and the focus that holds (docs/project-focus.md). */
   projectFocus?: { shown: boolean; focus: string | null };
@@ -244,6 +246,8 @@ const REFUSALS: Readonly<
   "cards.minimize": cardRefusal,
   "cards.done": (s, facts) =>
     cardRefusal(s) ?? (facts.answerDoneReady ? null : "This card has no Done or Got it"),
+  "cards.decline": (s, facts) =>
+    cardRefusal(s) ?? (facts.declineReady ? null : "This card has no way to say no"),
   "cards.maximize": cardRefusal,
   // A thread exists once its first message is sent; a recording keeps focus
   // where its words will go.

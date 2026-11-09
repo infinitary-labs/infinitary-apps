@@ -101,6 +101,12 @@ describe("command search's list", () => {
         keys: undefined,
         refusal: null,
       },
+      {
+        id: "cards.decline",
+        label: "Decline every choice on the card",
+        keys: undefined,
+        refusal: null,
+      },
       { id: "cards.maximize", label: "Maximize or restore card", keys: undefined, refusal: null },
       {
         id: "cards.thread",
@@ -130,6 +136,7 @@ describe("command search's list", () => {
       ["cards.next", "⌘J"],
       ["cards.minimize", "⇧⌘M"],
       ["cards.done", undefined],
+      ["cards.decline", undefined],
       ["cards.maximize", undefined],
       ["cards.thread", "⌘\\"],
       ["cards.show-cards", undefined],

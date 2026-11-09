@@ -5,6 +5,7 @@
  * never a table of reserved ids.
  */
 
+import { LEGACY_CLOSE_CONTROL_IDS } from "../../src/shared/cardLeave.ts";
 import { migrateLegacyActions } from "../../src/shared/cards.ts";
 import type { CardRow } from "./fleetTables.ts";
 
@@ -56,12 +57,12 @@ const CAPTAIN_DISMISS = "close";
 /**
  * Whether an id that names no declared action was one of the pre-P1 CLOSE
  * CONTROLS (`dismiss`, `later`, `keep`). The answer comes from the one
- * shared legacy table - `migrateLegacyActions` drops exactly those ids, the
- * same mapping migration 29 ran - so this file keeps no reserved-id list of
- * its own, and a historical dismissal still reads as the dismissal it was.
+ * shared list (`LEGACY_CLOSE_CONTROL_IDS`), so this file keeps no
+ * reserved-id list of its own, and a historical dismissal still reads as
+ * the dismissal it was.
  */
 function wasCloseControl(id: string): boolean {
-  return migrateLegacyActions([{ id, label: id }]).length === 0;
+  return LEGACY_CLOSE_CONTROL_IDS.has(id);
 }
 
 /**

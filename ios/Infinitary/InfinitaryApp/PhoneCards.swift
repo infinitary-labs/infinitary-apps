@@ -777,9 +777,12 @@ private struct PhoneCardPane: View {
     }
 
     /// INF-944 item 5 with the captain's INF-945 pick: the Mac's row, pinned under a hairline while the body runs on beneath.
-    /// The Mac's footer order (footerGroups.ts): the default is drawn last, at the trailing edge.
+    /// The Mac's footer order (footerGroups.ts): quiet actions such as the app's Decline first, then the other choices,
+    /// and the default last, at the trailing edge.
     private var footerOrder: [PhoneJSON] {
-        card.actions.filter { !$0["default"].flag } + card.actions.filter { $0["default"].flag }
+        let quiet = card.actions.filter { $0["variant"].text == "ghost" }
+        let choices = card.actions.filter { $0["variant"].text != "ghost" }
+        return quiet + choices.filter { !$0["default"].flag } + choices.filter { $0["default"].flag }
     }
 
     /// The Mac's footerVariant: the action's own variant, else primary for the default. The default waits muted while a

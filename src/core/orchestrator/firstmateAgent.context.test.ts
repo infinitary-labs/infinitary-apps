@@ -1,5 +1,6 @@
 import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { DECLINE_ACTION_ID, DECLINE_LABEL } from "@shared/cardLeave";
 import { replyWithSettings } from "@shared/cards";
 import type { ModelsCatalogView, Slot } from "@shared/quota";
 import { describe, expect, it, vi } from "vitest";
@@ -593,6 +594,7 @@ describe("INF-1712: a context carries what changed, and a fold reads open work b
       actions: [
         { id: "fast", label: "Retry fast", default: true },
         { id: "slow", label: "Retry slow" },
+        { id: DECLINE_ACTION_ID, label: DECLINE_LABEL },
       ],
       waits_on: "its author's answer",
       unanswered: replied,

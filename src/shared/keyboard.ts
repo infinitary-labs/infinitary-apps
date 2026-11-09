@@ -295,6 +295,17 @@ export const KEYBOARD_COMMANDS = {
     risk: "close",
     keys: [],
   },
+  // INF-3108: the shown decision's way to say no, the app's Decline or the
+  // author's own, chosen by name; ⌘1-⌘4 also reach it by its place.
+  "cards.decline": {
+    label: "Decline every choice on the card",
+    searchWords: ["card", "decline", "no", "not now", "none", "reject"],
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "close",
+    keys: [],
+  },
   "cards.maximize": {
     label: "Maximize or restore card",
     scope: "window",

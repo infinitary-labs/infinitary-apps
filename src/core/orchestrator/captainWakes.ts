@@ -8,7 +8,7 @@
  * kind's words, are in `wakes.ts`.
  */
 
-import { NOTE_GOT_IT_LABEL } from "@shared/cardLeave";
+import { DECLINE_ACTION_ID, NOTE_GOT_IT_LABEL } from "@shared/cardLeave";
 import {
   type CardAnswer,
   type CardEffect,
@@ -146,6 +146,10 @@ export type CaptainFacts =
       /** The work a crewmate ran for the message, all ended with no card answering it. */
       workEnded?: { id: string; title: string }[];
     };
+
+/** What the app's Decline means to the card's author (INF-3108). */
+export const DECLINE_WORDS =
+  "The captain declined every choice on the card: go on without them, and ask again only with something new.";
 
 /** How the steer telling a crewmate the captain closed its card begins (FI3-435). */
 export const CARD_CLOSED_STEER_PREFIX = "The captain closed your card ";
@@ -355,14 +359,16 @@ export const CAPTAIN_WORDS: KindWords<CaptainFacts> = {
       next: `This receipt is not the plan. For any choice that files, starts or saves work, use read to recover the full report, closing offer and submitted answers before acting. Judge the choice by meaning, not its label: ${APPROVE_AND_BUILD}, ${START_THE_NEXT_STEP} and ${SAVE_AND_DEFER} are examples, not an allowlist. Routine acknowledgements and choices that abandon work (for example, ${ABANDON}) need no read. Follow HANDOFF: reuse an existing successor for authorized work, save deferred work unstarted, and keep design-only and later gates.`,
     })}`,
   "card-choice": (facts) => {
+    // The app's Decline (INF-3108) is the captain's no to every choice.
+    const declined = facts.choice.id === DECLINE_ACTION_ID ? ` ${DECLINE_WORDS}` : "";
     if (facts.to === "firstmate") {
       const about = `card "${facts.card.title}"${facts.card.id ? ` (${facts.card.id})` : ""}${facts.card.taskId ? ` on task ${facts.card.taskId}` : ""}`;
       return facts.source === "frame"
         ? `[fm-op] a script chose "${facts.choice.label}" (${facts.choice.id}) on ${about}.${valueText(facts.choice)}${answersText(facts.choice, facts.source)}`
-        : `[user]\n${facts.choice.label}\nChoice on ${about}.${valueText(facts.choice)}${answersText(facts.choice)}`;
+        : `[user]\n${facts.choice.label}\nChoice on ${about}.${declined}${valueText(facts.choice)}${answersText(facts.choice)}`;
     }
     if (facts.browserGone) return renderBrowserGone(facts);
-    return `Card "${facts.card.title}": ${facts.source === "frame" ? "a script" : "the user"} chose "${facts.choice.label}" (${facts.choice.id}).${valueText(facts.choice)}${answersText(facts.choice, facts.source)}`;
+    return `Card "${facts.card.title}": ${facts.source === "frame" ? "a script" : "the user"} chose "${facts.choice.label}" (${facts.choice.id}).${declined}${valueText(facts.choice)}${answersText(facts.choice, facts.source)}`;
   },
   "card-closed": (facts) =>
     facts.duplicateOf

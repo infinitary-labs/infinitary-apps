@@ -13,7 +13,7 @@ import {
   REVERSE_MIGRATION_71,
   tmpUserData,
 } from "../../../tests/helpers/migrations";
-import { migrateOneMergeEffect } from "./cardMigrations";
+import { migrateOneMergeEffect, restoreCloseControls } from "./cardMigrations";
 import { CardStore } from "./cardStore";
 import { openDatabase } from "./db";
 import { MIGRATIONS } from "./migrations";
@@ -232,12 +232,14 @@ describe("migration 29 (one card shape with effects, cards/tasks/agents P1)", ()
       { id: "card-fm-note", author: "firstmate", kind: "note" },
     ]);
     // The real consumer reads every open card back as the one shape, with
-    // the effects the old ids meant: keep and Later are gone (closing is
-    // keep), a discard is danger, and the account rides the host effect.
+    // the effects the old ids meant: a discard is danger, and the account
+    // rides the host effect. Keep and Later stay the replies they were,
+    // since no corner closes a card any more (INF-3108's approved plan).
     const open = new CardStore(upgraded).listOpen();
     const byId = (id: string) => open.find((card) => card.id === id);
     expect(byId("card-t1-1")).toMatchObject({ author: "crewmate", taskId: "t1" });
     expect(byId("card-t1-1")?.actions).toEqual([
+      { id: "keep", label: "Keep" },
       {
         id: "merge-pr",
         label: "Merge PR",
@@ -263,6 +265,7 @@ describe("migration 29 (one card shape with effects, cards/tasks/agents P1)", ()
     ]);
     expect(byId("card-fm-plan")?.actions).toEqual([
       { id: "approve", label: "Go ahead", default: true },
+      { id: "later", label: "Later" },
     ]);
     expect(byId("card-fm-no-headroom")?.actions).toEqual([
       {
@@ -296,7 +299,6 @@ describe("migration 29 (one card shape with effects, cards/tasks/agents P1)", ()
     expect(backfill.map((row) => row.card_id)).toEqual([
       "card-auth-account-acct_1",
       "card-fm-no-headroom",
-      "card-fm-plan",
       "card-t1-1",
     ]);
     const restore = upgraded.prepare("UPDATE cards SET actions_json = ? WHERE id = ?");
@@ -421,6 +423,120 @@ describe("the one merge effect (INF-2744)", () => {
       { card_id: "card-own", actions_json: own },
       { card_id: "card-release", actions_json: requested },
     ]);
+    upgraded.close();
+  });
+});
+
+// INF-3108's approved plan, piece 1: a home the 0.6.4 upgrade rewrote gets
+// back the Not now, Keep and Dismiss buttons that upgrade dropped, on open
+// cards still exactly as it left them. The cards are the ones INF-3102
+// reproduced: a first mate question whose Not now was the old close id.
+describe("the close controls the 0.6.4 upgrade dropped (INF-3108)", () => {
+  it("gives them back to open cards unchanged since, leaves revised and closed cards, keeps them on a later upgrade, and reverses", () => {
+    const dir = tmpUserData();
+    // The database as 0.6.4 left it, read from the migration list so a later
+    // migration does not move it: its rewrite already ran and kept each
+    // card's actions from before in `card_effect_backfill`.
+    const before = openDatabase(dir, MIGRATIONS.indexOf(restoreCloseControls));
+    const question = [
+      { id: "review", label: "Review now", default: true },
+      { id: "later", label: "Not now" },
+    ];
+    const asUpgraded = [{ id: "review", label: "Review now", default: true }];
+    const insert = before.prepare(
+      `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, body, actions_json, status, created_at, resolved_at, chosen_action)
+       VALUES (?, NULL, 'decision', 'firstmate', 30, ?, 'firstmate', '<p>The launch review can happen now or after the checklist is done.</p>', ?, 'ready', ?, ?, ?)`,
+    );
+    const backup = before.prepare(
+      "INSERT INTO card_effect_backfill (card_id, actions_json, migrated_at) VALUES (?, ?, 1)",
+    );
+    // Open and as the upgrade left it: the one to restore.
+    insert.run(
+      "card-fm-review",
+      "Choose when to review the launch",
+      JSON.stringify(asUpgraded),
+      1,
+      null,
+      null,
+    );
+    backup.run("card-fm-review", JSON.stringify(question));
+    // A merge card whose Keep the upgrade dropped beside its new merge effect.
+    const kept = [
+      { id: "keep", label: "Keep" },
+      { id: "merge", label: "Merge", default: true, effect: { kind: "settle", mode: "merge" } },
+    ];
+    const keptUpgraded = [
+      { id: "merge", label: "Merge", default: true, effect: { kind: "merge", after: "close" } },
+    ];
+    insert.run(
+      "card-merge-keep",
+      "The export fix is ready",
+      JSON.stringify(keptUpgraded),
+      2,
+      null,
+      null,
+    );
+    backup.run("card-merge-keep", JSON.stringify(kept));
+    // Revised by its author since the upgrade: its newer buttons stay.
+    const revised = [
+      { id: "review", label: "Review now", default: true },
+      { id: "after", label: "After the checklist" },
+    ];
+    insert.run(
+      "card-fm-revised",
+      "Choose when to review the docs",
+      JSON.stringify(revised),
+      3,
+      null,
+      null,
+    );
+    backup.run("card-fm-revised", JSON.stringify(question));
+    // Closed since the upgrade: history, untouched.
+    insert.run(
+      "card-fm-closed",
+      "Choose when to review the site",
+      JSON.stringify(asUpgraded),
+      4,
+      5,
+      "review",
+    );
+    backup.run("card-fm-closed", JSON.stringify(question));
+    before.close();
+
+    const upgraded = openDatabase(dir);
+    expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
+    const store = new CardStore(upgraded);
+    expect(store.get("card-fm-review")?.actions).toEqual(question);
+    expect(store.get("card-merge-keep")?.actions).toEqual([
+      { id: "keep", label: "Keep" },
+      keptUpgraded[0],
+    ]);
+    expect(store.get("card-fm-revised")?.actions).toEqual(revised);
+    const saved = (id: string) =>
+      (
+        upgraded.prepare("SELECT actions_json FROM cards WHERE id = ?").get(id) as {
+          actions_json: string;
+        }
+      ).actions_json;
+    expect(saved("card-fm-closed")).toBe(JSON.stringify(asUpgraded));
+
+    // A later upgrade that re-runs the mapping keeps them.
+    migrateOneMergeEffect(upgraded);
+    expect(store.get("card-fm-review")?.actions).toEqual(question);
+    expect(store.get("card-merge-keep")?.actions[0]).toEqual({ id: "keep", label: "Keep" });
+
+    // Reversible: each restored card's actions before the restore are kept.
+    const restored = upgraded
+      .prepare("SELECT card_id, actions_json FROM card_close_control_restore ORDER BY card_id")
+      .all() as { card_id: string; actions_json: string }[];
+    expect(restored).toEqual([
+      { card_id: "card-fm-review", actions_json: JSON.stringify(asUpgraded) },
+      { card_id: "card-merge-keep", actions_json: JSON.stringify(keptUpgraded) },
+    ]);
+    const put = upgraded.prepare("UPDATE cards SET actions_json = ? WHERE id = ?");
+    for (const row of restored) put.run(row.actions_json, row.card_id);
+    upgraded.exec("DROP TABLE card_close_control_restore");
+    expect(saved("card-fm-review")).toBe(JSON.stringify(asUpgraded));
     upgraded.close();
   });
 });

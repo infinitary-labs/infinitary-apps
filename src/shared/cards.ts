@@ -316,6 +316,8 @@ export const cardActionSchema = z.object({
    * press it.
    */
   passes: z.literal("checks").optional(),
+  /** The choice says no to every other one (INF-3108); a decision with none gets `withAppDecline`'s. */
+  declines: z.literal(true).optional(),
 });
 export type CardAction = z.infer<typeof cardActionSchema>;
 
@@ -1610,12 +1612,10 @@ export type ShellEffect = z.infer<typeof shellEffectSchema>;
  * meant. Migration 29 runs this once over the open cards of an upgraded
  * database, and the replay harness over the cards its recorded sessions
  * emit, so a card minted under the old contract still does what its
- * button says. `null` is an id that carried no meaning worth keeping:
- * `later` parked (gone since P0), `keep` and `dismiss` were the close
- * control, which every card has in its chrome. `undefined` is an ordinary
- * reply, untouched.
+ * button says. `undefined` is an ordinary reply, untouched, the old close
+ * controls included (`LEGACY_CLOSE_CONTROL_IDS`, INF-3108).
  */
-export function legacyActionEffect(id: string): CardEffect | null | undefined {
+export function legacyActionEffect(id: string): CardEffect | undefined {
   switch (id) {
     case "merge-pr":
     case "land":
@@ -1628,10 +1628,6 @@ export function legacyActionEffect(id: string): CardEffect | null | undefined {
       return { kind: "open", target: "settings" };
     case "retry-firstmate":
       return { kind: "host", op: "retry-firstmate" };
-    case "later":
-    case "keep":
-    case "dismiss":
-      return null;
     default:
       break;
   }
@@ -1645,8 +1641,8 @@ export function legacyActionEffect(id: string): CardEffect | null | undefined {
 
 /**
  * A card's actions from before P1 in P1's vocabulary: the reserved ids
- * become effects (a discard is danger), the ids that were the close control
- * go, and every other action is the reply it always was. A settle merge or
+ * become effects (a discard is danger), and every other action is the
+ * reply it always was, the old close controls included. A settle merge or
  * a `request_merge` from before the one merge effect becomes that effect
  * (INF-2744, `mergeEffectOf`). Any other action that already carries an
  * effect is left alone, so the mapping is idempotent.
@@ -1655,7 +1651,6 @@ export function migrateLegacyActions(actions: CardAction[]): CardAction[] {
   return oneMergeEffect(actions).flatMap((action) => {
     if (action.effect) return [action];
     const effect = legacyActionEffect(action.id);
-    if (effect === null) return [];
     if (effect === undefined) return [action];
     const danger = effect.kind === "settle" && effect.mode === "discard";
     return [{ ...action, effect, ...(danger ? { danger: true, variant: "danger" as const } : {}) }];

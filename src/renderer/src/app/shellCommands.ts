@@ -117,6 +117,10 @@ const threadJumpButton = (entryId: string) => shownPart(entryId, "[data-thread-j
 const answerDoneButton = (entryId: string) =>
   shownPart(entryId, "button[data-answer-done-control]:not(:disabled)");
 
+/** The shown decision's way to say no (INF-3108): the app's Decline or the author's own. */
+const declineButton = (entryId: string) =>
+  shownPart(entryId, "[data-card-actions] button[data-card-declines]:not(:disabled)");
+
 /** The shown card's reply field. */
 const replyField = (cardId: string) =>
   shownPart(cardId, `[data-card-reply="${CSS.escape(cardId)}"] textarea`);
@@ -256,6 +260,7 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   "cards.next": () => onShownCard((stage) => stage.page(1)),
   "cards.minimize": () => onShownCard((stage) => stage.minimize?.()),
   "cards.done": () => toShownPart(answerDoneButton, (button) => button.click()),
+  "cards.decline": () => toShownPart(declineButton, (button) => button.click()),
   "cards.maximize": () => onShownCard((stage) => stage.toggleSize()),
   "cards.next-revision": () =>
     toShownPart(cardBody, (body) =>
@@ -379,6 +384,10 @@ function windowFacts(): WindowFacts {
     answerDoneReady: (() => {
       const id = shownEntry(useShellStore.getState())?.id;
       return !!id && answerDoneButton(id) !== null;
+    })(),
+    declineReady: (() => {
+      const id = shownEntry(useShellStore.getState())?.id;
+      return !!id && declineButton(id) !== null;
     })(),
     browserControl: (() => {
       const id = shownEntry(useShellStore.getState())?.id;

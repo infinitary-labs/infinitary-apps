@@ -30,6 +30,7 @@ import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import { queueWaitOf } from "../tasks/queueWait";
 import { seedTask } from "../tasks/seedTask";
 import type { RepoRegistry } from "../workspace/repoRegistry";
+import { DECLINE_WORDS } from "./captainWakes";
 import type { FirstmateAgent } from "./firstmateAgent";
 import * as settleWords from "./settleService";
 
@@ -1146,7 +1147,7 @@ describe("FirstmateAgent", () => {
     });
     const card = supervisor.cards.snapshot()[0];
     expect(card).toBeDefined();
-    // INF-1879: only the question's explicit Dismiss creates dismissed history.
+    // INF-1879: only the question's explicit way out ends it; INF-3108 made that way out Decline.
     const question = seedTask(tasks, {
       id: "old-plan-question",
       title: "Old plan",
@@ -1156,10 +1157,15 @@ describe("FirstmateAgent", () => {
     });
     expect(supervisor.hostOps.runTaskOp(question.id, "dismiss-question")).toBeUndefined();
     expect(supervisor.cards.snapshot()).toHaveLength(0);
+    // INF-3108: the record's Decline is the captain's answer, which wakes the first mate once.
+    await drained(session, 1);
+    expect(session.prompts[0]).toContain(DECLINE_WORDS);
+    session.emitTurnEnd("Understood.");
+    session.resolveNextPrompt();
     await agent.converse({ text: "build this plan again", pastCardId: card?.id });
-    const turn = session.prompts[0] as string;
+    const turn = session.prompts.at(-1) as string;
     expect(decodeContext(turn).about).toBe(
-      `past card ${card?.id} "Old plan" (Closed without choosing) - the captain is reading it as history; it is closed and nothing on it can be clicked, so any change comes through your tools`,
+      `past card ${card?.id} "Old plan" (You chose Decline) - the captain is reading it as history; it is closed and nothing on it can be clicked, so any change comes through your tools`,
     );
     expect(turn.split("[user]\n")[1]).toBe("build this plan again");
   });

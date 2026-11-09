@@ -7,6 +7,7 @@
  * (tests/helpers/crewHarness.ts) and reads what it answers, the cards and the record.
  */
 
+import { DECLINE_ACTION_ID } from "@shared/cardLeave";
 import { type Card, cardPresentation, onStage } from "@shared/cards";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -93,13 +94,19 @@ describe("CrewSupervisor", () => {
 
     const snapshot = cards();
     expect(snapshot.map(cardPresentation)).toEqual(["decision", "decision", "note"]);
-    // A card carries exactly the actions its author declared (P0, WI-1).
+    // A card carries exactly the actions its author declared (P0, WI-1), and
+    // a decision with no way to say no of its own the app's Decline (INF-3108).
     const preview = snapshot.find((card) => card.title === "Preview") as Card;
-    expect(preview.actions.map((action) => action.id)).toEqual(["turn", "hold"]);
+    expect(preview.actions.map((action) => action.id)).toEqual(["turn", "hold", DECLINE_ACTION_ID]);
     const decision = snapshot.find((card) => card.title === "Pick a course") as Card;
-    expect(decision.actions.map((action) => action.id)).toEqual(["hold", "change"]);
+    expect(decision.actions.map((action) => action.id)).toEqual([
+      "hold",
+      "change",
+      DECLINE_ACTION_ID,
+    ]);
     expect(decision.actions[0]).toMatchObject({ id: "hold", variant: "secondary" });
-    expect(decision.actions.at(-1)).toMatchObject({ id: "change", variant: "primary" });
+    expect(decision.actions[1]).toMatchObject({ id: "change", variant: "primary" });
+    expect(decision.actions[2]).toMatchObject({ id: DECLINE_ACTION_ID, variant: "ghost" });
     const note = snapshot[2] as Card;
     expect(note.actions).toEqual([]);
     // The chrome meta line names the task, and the catalog model rides
@@ -409,7 +416,7 @@ describe("emit_card stable id revision", () => {
       body: "<p>v2</p>",
       createdAt,
     });
-    expect(revised[0]?.actions.map((action) => action.id)).toEqual(["go"]);
+    expect(revised[0]?.actions.map((action) => action.id)).toEqual(["go", DECLINE_ACTION_ID]);
 
     supervisor.addFirstmateCard({
       id: "fm-other-topic",

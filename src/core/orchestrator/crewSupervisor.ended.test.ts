@@ -10,6 +10,7 @@
  * still ends the card at once; only the stack the views draw keeps it.
  */
 
+import { DECLINE_ACTION_ID } from "@shared/cardLeave";
 import { type Card, MERGE_CLOSES_WORDS, withMergeClosesLine } from "@shared/cards";
 import { ENDED_CLOSE_LABEL, endedLineWords } from "@shared/endedCard";
 import { describe, expect, it, vi } from "vitest";
@@ -128,7 +129,10 @@ describe("a card its author ends after the captain saw it (INF-3071)", () => {
     expect(h.supervisor.cards.shown(h.card.id)?.minimized).toBe(true);
     const back = pushed(h).find((entry) => entry.id === h.card.id);
     expect(back?.ended).toBeUndefined();
-    expect(back?.actions.map((action) => action.id).sort()).toEqual(["approve", "defer"]);
+    // Open again, it takes the app's Decline like any open decision (INF-3108).
+    expect(back?.actions.map((action) => action.id).sort()).toEqual(
+      [DECLINE_ACTION_ID, "approve", "defer"].sort(),
+    );
   });
 
   it("comes back ended after a restart, and the minus closes it", async () => {

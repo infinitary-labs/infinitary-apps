@@ -1,3 +1,4 @@
+import { DECLINE_ACTION_ID } from "@shared/cardLeave";
 import type { Card } from "@shared/cards";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import { parseServedInput } from "@shared/servedFrame";
@@ -771,7 +772,8 @@ describe("FirstmateAgent", () => {
     expect(card).toMatch(
       /^open card card-t58-1 \(decision, from its crewmate\) "PR 58 is merged": Merged Merged into main/,
     );
-    expect(card).toContain("… [actions: close-task]");
+    // The first mate reads the card the captain sees, the app's Decline included (INF-3108).
+    expect(card).toContain(`… [actions: close-task, ${DECLINE_ACTION_ID}]`);
     expect(card).not.toContain("draw()");
     expect(card.length).toBeLessThan(400);
   });

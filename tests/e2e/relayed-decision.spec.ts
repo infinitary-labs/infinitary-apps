@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
+import { DECLINE_LABEL } from "../../src/shared/cardLeave";
 import { launchClaudeCrew } from "./claudeCrew";
 import { CLAUDE_CREW_PROMPT_MARKER } from "./crewScripts";
 import type { LaunchedApp } from "./launch";
@@ -41,6 +42,9 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   await launched.close();
 });
+
+/** The plan card's buttons: its crewmate's choices and the app's Decline (INF-3108). */
+const PLAN_BUTTONS = [...MOCK_CLAUDE_PLAN_ACTIONS, DECLINE_LABEL].sort();
 
 /** A card's actions by label, whatever order the stack draws them in. */
 function actionLabels(card: { actions: { label: string }[] } | undefined): string[] {
@@ -91,7 +95,7 @@ test("an approval given by reply under a crewmate's plan card wakes the Firstmat
       },
       { timeout: 45_000 },
     )
-    .toEqual([...MOCK_CLAUDE_PLAN_ACTIONS]);
+    .toEqual(PLAN_BUTTONS);
   await showCard(page, MOCK_CLAUDE_PLAN_CARD_TITLE);
 
   // The captain approves it by reply, not by its button.
@@ -121,7 +125,7 @@ test("an approval given by reply under a crewmate's plan card wakes the Firstmat
   writeFileSync(test.info().outputPath("firstmate-wake.txt"), `${served.at(-1) ?? ""}\n`);
 
   // His reply chose nothing: the plan card is still up with both buttons.
-  expect(actionLabels(await planCard())).toEqual([...MOCK_CLAUDE_PLAN_ACTIONS]);
+  expect(actionLabels(await planCard())).toEqual(PLAN_BUTTONS);
   await page.locator("[data-card-layer]").screenshot({
     path: test.info().outputPath("relayed-decision-thread.png"),
   });

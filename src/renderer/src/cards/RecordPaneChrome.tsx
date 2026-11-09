@@ -1,4 +1,4 @@
-import { answerDoneRest } from "@shared/cardLeave";
+import { answerDoneRest, DECLINE_LABEL } from "@shared/cardLeave";
 import type { DropTaskReview, TaskLifecycleOp } from "@shared/cards";
 import {
   computerMoveLine,
@@ -450,7 +450,7 @@ export function RecordPaneFooter({
   } else if (end === "dismiss-question") {
     endButton = (
       <Button variant="secondary" pending={pending === end} onClick={() => run(end)}>
-        Dismiss
+        {DECLINE_LABEL}
       </Button>
     );
     nextButton = (

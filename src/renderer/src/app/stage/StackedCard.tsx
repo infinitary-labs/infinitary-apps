@@ -290,6 +290,8 @@ export function StackedCard({
                     key={action.id}
                     // Where Go to the card's buttons lands (docs/keyboard.md).
                     data-card-action-default={action.default ? "" : undefined}
+                    // `cards.decline` presses the decision's way to say no (INF-3108).
+                    data-card-declines={action.declines ? "" : undefined}
                     data-card-choice={at !== undefined && at < choiceKeys.length ? at : undefined}
                     aria-keyshortcuts={choiceKey?.keys ? choiceKey["aria-keyshortcuts"] : undefined}
                     // The key sits inside the button at the size its label gives it.

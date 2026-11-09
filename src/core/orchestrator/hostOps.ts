@@ -28,6 +28,7 @@ import { isUnstartedWork } from "@shared/tasks";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import type { TaskRecord } from "../storage/taskStore";
 import { TaskService } from "../tasks/taskService";
+import { CardChoiceUnavailableError } from "./cardActions";
 import type { CrewCore } from "./crewCore";
 import type { InterruptSource } from "./crewRuntime";
 import type { PluginConsentHandler, ProjectSetupHandler } from "./crewSupervisorOptions";
@@ -256,8 +257,20 @@ export class HostOps {
           return "This task has no answer ready to mark Done.";
         return undefined;
       }
-      case "dismiss-question":
-        return this.core.cards.dismissQuestion(taskId);
+      case "dismiss-question": {
+        // The record's Decline (INF-3108): the question's own way to say no,
+        // or the app's Decline, pressed as the captain's choice.
+        const card = this.core.cards.questionCard(taskId);
+        const decline = card?.actions.find((action) => action.declines);
+        if (!card || !decline) return "This question is no longer waiting.";
+        try {
+          this.core.cardActions.act(card.id, decline.id, "chrome");
+        } catch (error) {
+          if (error instanceof CardChoiceUnavailableError) return error.message;
+          throw error;
+        }
+        return undefined;
+      }
       case "show-card": {
         const action = this.core.options.tasks.get(taskId)?.delivery?.captainAction;
         if (action && !this.core.cards.presentRequiredAction(taskId))

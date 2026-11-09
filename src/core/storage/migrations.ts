@@ -7,6 +7,7 @@ import {
   clearInterimAnswers,
   migrateCardEffects,
   migrateOneMergeEffect,
+  restoreCloseControls,
 } from "./cardMigrations";
 import type { AppDatabase } from "./db";
 import {
@@ -1301,6 +1302,12 @@ export const MIGRATIONS: readonly Migration[] = [
     at INTEGER NOT NULL
   );
   `,
+  // INF-3108 piece 1: the Not now, Keep and Dismiss buttons the 0.6.4
+  // upgrade dropped come back on every open card still exactly as that
+  // upgrade left it (`restoreCloseControls`). A card revised or closed
+  // since is untouched. Reversible: each restored card's actions before it
+  // are kept in `card_close_control_restore`.
+  restoreCloseControls,
 ];
 
 export function addPluginKind(db: AppDatabase): void {

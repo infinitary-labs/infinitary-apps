@@ -31,13 +31,20 @@ What a card *is* follows from what it carries, and the host derives the chrome f
 | actions, authored by the app itself | **attention** (the agent-down set: sign in, out of quota, a refusal, a paused or moved seat, a failed turn; and a crewmate stuck past the idle ladder) | the host's own copy |
 
 One general rule decides between the first two (contract v4.1): a card whose answer implies any potential next step for the captain, even an optional one, is a decision with the step the emitter would take marked `default`; only a pure fact with no next step is a note.
-A decision offers 2-3 declared options and marks exactly one `default`; the card carries exactly what its author declared (no automatic `Later`), and the shape lint refuses any other count.
+A decision offers 2-3 declared options and marks exactly one `default`, and the shape lint refuses any other count.
+The app adds one more action, Decline, to every decision by the first mate or a crewmate whose author declared no way to say no (INF-3108, `appDeclineOf` in `src/shared/cardDecline.ts`).
+An author marks its own way to say no, such as Not now or Abandon, with `declines: true`, and then the card carries exactly what its author declared.
+A merge card and the app's own cards never take Decline.
+The core adds Decline to the card it shows and the saved card never holds it, so the window, the phone and the change marks all read one card.
+Decline is drawn quiet, first in the footer to the left of the choices, is reached with Tab, and `cards.decline` presses it from command search.
+Pressing it records the captain's answer "no to every choice" through the choice path under the reserved id `app-decline` (`DECLINE_ACTION_ID` in `src/shared/cardLeave.ts`), and its author gets the one card-choice message that says so.
+On an answer task Decline closes the task as answered, as any choice does, unless the card is marked `continues`.
 An available crewmate shows its own findings and decisions on its own card, rather than reporting only for the first mate to relay them.
 A note is never a progress update; routine progress belongs in the quiet feed, and emitting zero cards is correct when nothing needs them.
 
 Every card has one minimize corner that only puts it away and never ends a task (INF-1879); named buttons make decisions and Done receipts an answer.
 Putting a decision or pending note away sends no choice, refusal or close steer to its author (`docs/card-threads.md`).
-So a card never offers a "Keep" or "Dismiss" button of its own.
+So a card never offers a "Keep" or "Dismiss" button of its own; a decision's way to say no is a choice, its author's own marked one or the app's Decline.
 
 ### The preview is the decision
 
@@ -106,6 +113,9 @@ Do not put settle effects on intermediate questions, and if a merge card is alre
 
 Cards minted before P1 carried these semantics as reserved action ids (`keep`, `merge-pr`, `land`, `discard`, `open-settings`, ...).
 Migration 29 rewrote every open card's actions into effects (`legacyActionEffect`, logged in `card_effect_backfill`; closed cards are history and untouched), and the replay harness applies the same translation to the cards its recorded sessions emit.
+The old close controls (`later`, `keep` and `dismiss`, `LEGACY_CLOSE_CONTROL_IDS`) map to no effect and stay ordinary replies: the 0.6.4 upgrade dropped them, which left some open cards with no way out (INF-3108).
+A later migration (`restoreCloseControls`) gives them back on open cards still unchanged since that upgrade, and logs each card's actions before the restore in `card_close_control_restore`, so the restore can be undone.
+The replay keeps its recorded reading and still drops them.
 
 ## The host's settle facts
 
@@ -1071,7 +1081,7 @@ The footer button is the note's first choice, so ⌘1 presses it, and `cards.don
 The phone sends `inf:cards:note-done`; an older phone still reads `answerDone` and its corner request now only puts the note aside.
 A note whose author still owes an answer stays open and put away until that answer arrives.
 The task record and the window's own panels only hide.
-The task-less first mate question's record offers Dismiss as an explicit ending, never in the corner.
+The task-less first mate question's record offers Decline as an explicit ending, never in the corner; it presses the question's Decline, so the question closes as answered.
 Shift-Command-M puts away every shown card, including the window's own panels; the Close command and its installed bindings retire.
 A put-away decision preserves its draft without a warning popover.
 No timer completes an answer left put away.

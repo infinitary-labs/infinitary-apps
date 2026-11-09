@@ -64,6 +64,7 @@ A close is a receipt for the choice, not proof of success.
 See `../core/Button.prompt.md` for pending and inline request-error treatment.
 A decision's footer reads left to right: the other choices (secondary; a destructive one such as Discard in `danger`), and the emitter's one default (primary) - the only primary on the card, unless the default is itself destructive, in which case danger wins.
 The footer draws the default at the right edge whatever order a card lists its actions in, so a card the app writes itself, such as the stall card's Back to backlog, Discard and Nudge, reads the same as an agent's.
+A decision whose author declared no way to say no carries the app's Decline, a quiet (ghost) button first in the footer, to the left of the choices; it answers no to every choice and closes the card like any other choice (INF-3108; merge cards and the app's own cards never carry it).
 Every action closes the card: the captain asks for a revision by replying, so there is no Revise or Explain more button, no automatic Later and no Keep button - closing the card is keep.
 Keep `--space-3` above the action row so the body and buttons stay distinct.
 The choices are one non-wrapping group in a right-aligned wrapping row: when the card is too narrow for one row they move down together, and the default never sits alone on a row.

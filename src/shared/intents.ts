@@ -51,7 +51,7 @@ export const INTENT_TABLE = {
     settles: "A board or record snapshot showing the start.",
   },
   finish: {
-    shows: "The record and its row show the explicit Done or Dismiss ending.",
+    shows: "The record and its row show the explicit Done or Decline ending.",
     settles: "A board or record snapshot with that ending, never merely a hidden card.",
   },
   interrupt: {

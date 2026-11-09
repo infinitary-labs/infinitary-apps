@@ -16,6 +16,7 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { DECLINE_ACTION_ID } from "@shared/cardLeave";
 import { LIVE_ATTACHMENT_LABEL_MAX, MERGE_NOT_NOW_ID } from "@shared/cards";
 import { PROJECT_PAGE_RULE } from "@shared/projectPage";
 import { MERGE_NOT_NOW_WORDS, sendWriteWords } from "@shared/vocabulary";
@@ -274,6 +275,8 @@ describe("a crewmate's card that asks to send a kept write", () => {
         default: true,
         effect: { kind: "request_write", ask: ask.id },
       }),
+      // Its Not now is not marked as its way to say no, so the app's Decline joins (INF-3108).
+      expect.objectContaining({ id: DECLINE_ACTION_ID }),
     ]);
     expect(card?.body.endsWith(writeAskStrip(ask))).toBe(true);
     expect(card?.body).toContain("The notes project tracks each release");

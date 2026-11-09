@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { withAppDecline } from "@shared/cardDecline";
 import {
   CARD_OBSERVATION_NOTE_MAX,
   CARD_QUESTIONS_MAX_BYTES,
@@ -163,7 +164,9 @@ export class CardEvidence {
         ...(card.model ? { model: card.model } : {}),
         ...(card.place ? { place: card.place } : {}),
         body: card.body,
-        actions: card.actions,
+        // What the captain is offered, the app's Decline included (INF-3108),
+        // so a past card shows the button its ending names.
+        actions: withAppDecline(card).actions,
         ...(card.pictures?.length ? { pictures: card.pictures } : {}),
         ...(card.width ? { width: card.width } : {}),
         ...(card.attachment ? { attachment: card.attachment } : {}),

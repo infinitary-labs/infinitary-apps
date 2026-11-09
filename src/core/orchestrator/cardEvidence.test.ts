@@ -1,4 +1,9 @@
-import { NOTE_DONE_ACTION_ID, NOTE_GOT_IT_LABEL } from "@shared/cardLeave";
+import {
+  DECLINE_ACTION_ID,
+  DECLINE_LABEL,
+  NOTE_DONE_ACTION_ID,
+  NOTE_GOT_IT_LABEL,
+} from "@shared/cardLeave";
 import { type Card, type CardObservation, withMergeClosesLine } from "@shared/cards";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setup } from "../../../tests/helpers/cardServiceHarness";
@@ -25,8 +30,9 @@ const decision = {
  * observation beside it, read back through the store's typed reader.
  */
 describe("CardService evidence", () => {
-  // INF-1879: only the question's explicit Dismiss ends it; retain that captain action in its history.
-  it("records the explicit question Dismiss, not its presentation-only corner, as an exit", () => {
+  // INF-1879: only the question's explicit way out ends it, never its presentation-only corner.
+  // INF-3108: that way out is the app's Decline, kept as the captain's answer through the choice path.
+  it("records the question's Decline, not its presentation-only corner, as the captain's answer", () => {
     const { tasks, cardStore, make } = setup();
     const cards = make();
     const id = cards.addFirstmateCard({ ...decision, id: "card-fm-launch-review" });
@@ -38,17 +44,20 @@ describe("CardService evidence", () => {
     try {
       cards.dismiss(cards.shown(id) as Card);
       expect(tasks.get(question.id)?.status).toBe("open");
-      expect(cardStore.observations(id).filter((entry) => entry.kind === "exit")).toEqual([]);
-      expect(cards.dismissQuestion(question.id)).toBeUndefined();
-      expect(tasks.get(question.id)).toMatchObject({
-        status: "dropped",
-        closedReason: "cancelled",
-      });
-      expect(cardStore.observations(id).filter((entry) => entry.kind === "exit")).toEqual([
+      expect(only(cardStore, id, "action")).toEqual([]);
+      const shown = cards.questionCard(question.id) as Card;
+      const decline = shown.actions.find((action) => action.declines);
+      expect(decline).toMatchObject({ id: DECLINE_ACTION_ID, label: DECLINE_LABEL });
+      cards.resolve(shown, DECLINE_ACTION_ID, DECLINE_ACTION_ID);
+      expect(tasks.get(question.id)).toMatchObject({ status: "done", closedReason: "answered" });
+      expect(only(cardStore, id, "action")).toEqual([
         expect.objectContaining({
           actor: "captain",
-          source: "host",
-          payload: { reason: "dismissed" },
+          payload: expect.objectContaining({
+            actionId: DECLINE_ACTION_ID,
+            recognized: true,
+            closes: true,
+          }),
         }),
       ]);
       expect(cards.shown(id)).toBeUndefined();

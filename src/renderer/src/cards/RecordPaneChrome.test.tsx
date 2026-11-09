@@ -1,3 +1,4 @@
+import { DECLINE_LABEL } from "@shared/cardLeave";
 import type { RecordBar } from "@shared/recordBar";
 import { CLOSE_DONE_LABEL, recordOffersCloseDone } from "@shared/recordCloseDone";
 import { DROP_TASK_LABEL, HIDE_RECORD_LABEL } from "@shared/recordDrop";
@@ -193,9 +194,9 @@ const open = (patch: Partial<RecordBar>): RecordBar => ({
 });
 
 describe("task record action bar", () => {
-  it("INF-1879: keeps explicit Dismiss beside Show the card, and Done beside Drop task", () => {
+  it("INF-1879: keeps the explicit way out, Decline since INF-3108, beside Show the card, and Done beside Drop task", () => {
     expect(slots(bar({ end: "dismiss-question", next: "show-card", blocked: false }))).toEqual({
-      end: "Dismiss",
+      end: DECLINE_LABEL,
       next: "Show the card",
     });
     expect(slots(bar({ end: "stop-task", next: "answer-done", blocked: false }))).toEqual({

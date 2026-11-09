@@ -209,6 +209,7 @@ enum PhoneCardWords {
     static func doneRest(_ taskKey: String) -> String {
         ${text(leave.answerDoneRest("__TASK_KEY__")).replace("__TASK_KEY__", "\\(taskKey)")}
     }
+    static let decline = ${text(leave.DECLINE_LABEL)}
     static let putAside = ${text(leave.CARD_LEAVE.decision.label)}
     static let putAsideRest = ${text(leave.CARD_LEAVE.decision.restWords)}
     static let maximize = ${text(size.MAXIMIZE_LABEL)}

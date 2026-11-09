@@ -3,6 +3,7 @@ import {
   ALL_VERSIONS,
   appliedVersions,
   columnNames,
+  REVERSE_CLOSE_CONTROL_RESTORE,
   REVERSE_MIGRATION_50,
   REVERSE_MIGRATION_57,
   REVERSE_MIGRATION_59,
@@ -272,7 +273,8 @@ describe("migration 50 (one decision ledger, the primitives review P6)", () => {
     // Reversible: the three tables back from their kinds, every row as it was.
     dropViews(upgraded);
     upgraded.exec(
-      REVERSE_RUNNING_WORK +
+      REVERSE_CLOSE_CONTROL_RESTORE +
+        REVERSE_RUNNING_WORK +
         REVERSE_TASK_REFERENCES +
         REVERSE_TASK_SESSIONS +
         REVERSE_MIGRATION_80 +
@@ -340,7 +342,8 @@ describe("migrations 34-35 (the work shape, its rule, and the served tier)", () 
     // table into the ledger: undoing the head undoes both first.
     dropViews(upgraded);
     upgraded.exec(
-      REVERSE_RUNNING_WORK +
+      REVERSE_CLOSE_CONTROL_RESTORE +
+        REVERSE_RUNNING_WORK +
         REVERSE_MIGRATION_76 +
         REVERSE_MIGRATION_71 +
         REVERSE_MIGRATION_70 +

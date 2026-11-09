@@ -2,6 +2,13 @@ import { z } from "zod";
 import type { CardPresentation } from "./cards";
 import { formatDurationShort } from "./quotaSignals.ts";
 
+/**
+ * The ids that were the close control while every card had a ×. The 0.6.4
+ * upgrade dropped them; `restoreCloseControls` puts them back as replies
+ * (INF-3108), and the recorded corpora read an old click on one as a close.
+ */
+export const LEGACY_CLOSE_CONTROL_IDS: ReadonlySet<string> = new Set(["later", "keep", "dismiss"]);
+
 /** INF-1879: the corner is presentation only; ending work always has a named button. */
 export type CardLeaveKind = CardPresentation | "record" | "window-panel";
 export const cardCornerSchema = z.object({
@@ -78,6 +85,15 @@ export function noteDoneOf(key: string | undefined, closesTask: boolean): NoteDo
     closesTask: false,
   };
 }
+
+/**
+ * The app's own way to say no on a decision (INF-3108): the captain's
+ * answer "no to every choice", pressed like any choice and recorded under
+ * this id, so its author goes on without those choices. The core adds it
+ * (`withAppDecline`); no author declares it.
+ */
+export const DECLINE_ACTION_ID = "app-decline";
+export const DECLINE_LABEL = "Decline";
 
 /** A recorded wait age is information, never a deadline. */
 export function answerWaitWords(since: number, now: number): string {

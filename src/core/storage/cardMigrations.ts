@@ -1,3 +1,4 @@
+import { LEGACY_CLOSE_CONTROL_IDS } from "@shared/cardLeave";
 import { type CardAction, migrateLegacyActions } from "@shared/cards";
 import { addColumn } from "./addColumn";
 import type { AppDatabase } from "./db";
@@ -88,6 +89,60 @@ export function migrateOneMergeEffect(db: AppDatabase): void {
     if (migrated === row.actions_json) continue;
     log.run(row.id, row.actions_json, now);
     rewrite.run(migrated, row.id);
+  }
+}
+
+/**
+ * INF-3108 piece 1: the 0.6.4 upgrade (`migrateOneMergeEffect`) re-ran the
+ * old mapping over every open card, which then still dropped the close
+ * controls (`LEGACY_CLOSE_CONTROL_IDS`: Not now, Keep, Dismiss) as
+ * duplicates of a × the corner no longer was, so those cards lost their
+ * only way out. Each open card whose saved actions are still exactly what
+ * that upgrade wrote from its backup in `card_effect_backfill` gets the
+ * dropped buttons back, as the replies they were. A card its author has
+ * revised since, or one closed since, is left alone. Reversible: each
+ * restored card's actions before the restore are kept in
+ * `card_close_control_restore`; a run over a reversed database keeps the
+ * first record of each card.
+ */
+export function restoreCloseControls(db: AppDatabase): void {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS card_close_control_restore (
+      card_id TEXT PRIMARY KEY,
+      actions_json TEXT NOT NULL,
+      restored_at INTEGER NOT NULL
+    );
+  `);
+  const rows = db
+    .prepare(
+      `SELECT c.id, c.actions_json, b.actions_json AS backup
+         FROM card_effect_backfill b JOIN cards c ON c.id = b.card_id
+         WHERE c.resolved_at IS NULL ORDER BY c.created_at, c.id`,
+    )
+    .all() as { id: string; actions_json: string; backup: string }[];
+  const log = db.prepare(
+    "INSERT OR IGNORE INTO card_close_control_restore (card_id, actions_json, restored_at) VALUES (?, ?, ?)",
+  );
+  const rewrite = db.prepare("UPDATE cards SET actions_json = ? WHERE id = ?");
+  const now = Date.now();
+  for (const row of rows) {
+    let backup: CardAction[];
+    try {
+      const parsed = JSON.parse(row.backup) as unknown;
+      if (!Array.isArray(parsed)) continue;
+      backup = parsed as CardAction[];
+    } catch {
+      continue;
+    }
+    const restored = migrateLegacyActions(backup);
+    // What the older mapping wrote: the same, without the close controls.
+    const upgraded = restored.filter(
+      (action) => action.effect || !LEGACY_CLOSE_CONTROL_IDS.has(action.id),
+    );
+    if (upgraded.length === restored.length) continue;
+    if (JSON.stringify(upgraded) !== row.actions_json) continue;
+    log.run(row.id, row.actions_json, now);
+    rewrite.run(JSON.stringify(restored), row.id);
   }
 }
 

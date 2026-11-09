@@ -5078,7 +5078,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      * the merge it words; no agent declares it, and a body's script cannot
      * press it.
      */
-    passes: literal("checks").optional()
+    passes: literal("checks").optional(),
+    /** The choice says no to every other one (INF-3108); a decision with none gets `withAppDecline`'s. */
+    declines: literal(true).optional()
   });
   const cardDemoSchema = strictObject({
     /** The copy's minted id, `<taskId>-<32 hex>`; its file is `<id>.<kind>`. */
@@ -8359,6 +8361,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cards.done": {
       label: "Press the note's Done or Got it",
       searchWords: ["card", "note", "answer", "done", "got it"],
+      scope: "window",
+      runs: "shell",
+      repeat: false,
+      risk: "close",
+      keys: []
+    },
+    // INF-3108: the shown decision's way to say no, the app's Decline or the
+    // author's own, chosen by name; ⌘1-⌘4 also reach it by its place.
+    "cards.decline": {
+      label: "Decline every choice on the card",
+      searchWords: ["card", "decline", "no", "not now", "none", "reject"],
       scope: "window",
       runs: "shell",
       repeat: false,

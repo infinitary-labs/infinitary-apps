@@ -198,7 +198,7 @@ Unavailable remote run facts say Run status unavailable on that computer, rather
 
 The shared minimize corner only hides the record, never ends its task (`src/shared/cardLeave.ts`).
 A saved marked answer offers Done in the next slot, with its waiting age, even after its note was put away.
-A task-less first mate question offers explicit Dismiss beside Show the card.
+A task-less first mate question offers explicit Decline beside Show the card; it answers the question with no to every choice.
 
 ## Recorded wait details
 

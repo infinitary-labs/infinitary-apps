@@ -409,7 +409,7 @@ Only a Queued row shows the home’s dated `queueWait` line below its title, wit
 The row words come from `src/panels/now/words.ts` through the generated `PhoneTaskRowWords`, and `PhoneTaskListTests` replays the desktop panel's own reading of one board, recorded by `scripts/generate-phone-scene.ts`.
 A card put aside on the Mac lists its task under Waiting on you by the Mac's `presentTask` rule, which `PhoneBoard.presenting` follows; a card with no task gets its own row titled by the card.
 A tap makes the Mac's four checks in order (`openTask`): a row whose task has cards put aside brings them back on every Mac and shows them on Home; a task whose card is ready on the stack shows that card on Home; a required step put off shows its card again through the Mac's `show-card` move; any other row opens the task's record.
-A first mate question is the one exception: its card shows no task key and the phone's cards have no Info tab, so its row opens its record, where Dismiss is.
+A first mate question is the one exception: its card shows no task key and the phone's cards have no Info tab, so its row opens its record, where Decline is.
 A search keeps the groups, opens every one, matches the title or the key as the Mac's does, and adds Earlier with the Mac's older closed matches, newest closed first.
 The search waits above the list until the list is pulled down from its top, as the Mac's waits behind its icon.
 Find a task (Shift-Command-F, the Mac's key) opens it with the caret in the field; Close search, or Escape on an empty field, puts it away.
@@ -434,7 +434,7 @@ Info follows the Mac's order: what needs attention, a charted filing's Why, how 
 The goal follows with the captain's words folded under it, then Project, Now and Progress, the row of facts (Model, Reasoning, the pull request with its checks, Review, Delivery and Runs on) and a closed More with the crewmate, the branch and the task's policies.
 Cards lists every card the task showed, newest first: an open card shows on Home, one put aside comes back first, and a closed one shows as a past card.
 Activity takes the old timeline's place: the task's activity oldest first, the last eight with Show earlier for the rest, each row with its age, its words, the task it came from and the events folded under it.
-Info, Cards and Activity end with the Mac's record bar (`recordBarOf`): Drop task, or Dismiss for a first mate question, at the leading edge, and Start, Try again, Starting, Start again, Continue, Show the card or Done at the trailing edge.
+Info, Cards and Activity end with the Mac's record bar (`recordBarOf`): Drop task, or Decline for a first mate question, at the leading edge, and Start, Try again, Starting, Start again, Continue, Show the card or Done at the trailing edge.
 Drop task asks once in the Mac's words before it drops, naming the tasks still waiting on the work and the ones already working, and says why instead when the record changed or a part is still open.
 Show the card asks the Mac to show it again, then takes the captain to Home with that card.
 The Crewmate tab reads the redacted session and live words from their Mac owners and ends with the Mac's status line: Working with how long the turn has run and Stop, Paused while the captain holds its browser, Waiting on you or Idle.
@@ -462,7 +462,7 @@ A close or a choice takes the card off Home and the next card is up; putting a c
 A reply joins the card's thread marked Sending… where its time will be, and the draft and photos clear.
 A message clears the box and stands as the last turn, marked Sending… until the computer has it.
 Start and Continue read Starting on the record and its row, Stop reads Stopping, and a steer shows in the transcript marked Sending… as its draft clears.
-An explicit Done or Dismiss shows its selected ending on the record and row at the tap, and settles only when the home's task reading carries the matching status and reason.
+An explicit Done or Decline shows its selected ending on the record and row at the tap, and settles only when the home's task reading carries the matching status and reason.
 Putting any card aside predicts its minimized state, and a note's own Got it, in its pinned row under the hairline, predicts its acknowledgement (INF-2794); neither predicts a task ending.
 With an older computer whose note corner still reads, the minus predicts that acknowledgement as before.
 A snapshot that holds the change retires its intent with nothing moving.

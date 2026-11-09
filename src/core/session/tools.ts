@@ -62,6 +62,8 @@ export type EmittedAction = {
   default?: boolean;
   effect?: CardEffect;
   danger?: boolean;
+  /** The author's own way to say no to every choice (INF-3108); the app adds no Decline beside it. */
+  declines?: true;
   /** The care the captain's click sets on the task; the host's own, never declared. */
   care?: Rigor;
 };

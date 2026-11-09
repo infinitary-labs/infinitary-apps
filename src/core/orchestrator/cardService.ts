@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { withAppDecline } from "@shared/cardDecline";
 import {
   ANSWER_DONE_LABEL,
   cardCornerOf,
@@ -603,24 +604,13 @@ export class CardService {
     return this.recordResolution(card, "answer-done", "captain");
   }
 
-  /** The task-less question's explicit Dismiss, never a corner operation. */
-  dismissQuestion(taskId: string): string | undefined {
-    const record = this.host.tasks.get(taskId);
-    const card = this.snapshot().find(
+  /** The shown task-less question a decision row waits on, for the record's Decline (INF-3108). */
+  questionCard(taskId: string): Card | undefined {
+    if (this.host.tasks.get(taskId)?.kind !== "decision") return undefined;
+    const card = [...this.cards.values()].find(
       (entry) => this.host.tasks.capture.openCardTaskFor(entry.id)?.id === taskId,
     );
-    if (record?.kind !== "decision" || !card || card.taskId)
-      return "This question is no longer waiting.";
-    let observation: string | undefined;
-    this.host.cardStore.transaction(() => {
-      this.host.cardStore.resolve(card.id, "close");
-      observation = this.evidence.noteExit(card, "captain", "host", { reason: "dismissed" });
-    });
-    this.cards.delete(card.id);
-    this.staged.delete(card.id);
-    this.recordResolution(card, "dismissed", "captain", undefined, observation);
-    this.scheduleBroadcast();
-    return undefined;
+    return card && !card.taskId ? this.shown(card.id) : undefined;
   }
 
   /** A task that never started leaves no card rows behind. */
@@ -704,22 +694,32 @@ export class CardService {
    * the captain replied under keeps its place (`compareStack`).
    */
   taskSnapshot(): Card[] {
+    this.pruneStage(); // Task flags need only the shown version and order.
+    return this.stagedVersions().map((card) => withAppDecline(card));
+  }
+
+  /** Drops change marks and asides that no longer name a shown card. */
+  private pruneStage(): void {
     this.evidence.pruneChanges();
     for (const [id, lifecycleId] of this.asideUntilTurnEnd) {
       if (this.cards.get(id)?.lifecycleId !== lifecycleId) this.asideUntilTurnEnd.delete(id);
     }
-    // Task flags and minimized-card rows need the shown version and order,
-    // not each card's message graph, task title or seen observation.
+  }
+
+  /** Each card's shown version in stack order, as its author wrote it. */
+  private stagedVersions(): Card[] {
     return [...this.cards.values()].map((card) => this.stageVersion(card)).sort(compareStack);
   }
 
   /** The stage's full presentation, including task, message and seen facts. */
   snapshot(): Card[] {
     const asked = new Map<string, CardAsked | undefined>();
-    return this.taskSnapshot().map((staged) => {
+    this.pruneStage();
+    return this.stagedVersions().map((staged) => {
       const shown = {
-        // Corner words and Done belong to the public view, not graph-free task flags.
-        ...this.evidence.withChanges(this.onTheStage(staged)),
+        // Corner words and Done belong to the public view, not graph-free task flags;
+        // Decline joins after the change marks, which compare the author's versions.
+        ...withAppDecline(this.evidence.withChanges(this.onTheStage(staged))),
         ...this.evidence.updateState(staged),
         seen: staged.lifecycleId
           ? this.host.cardStore.lastSeenOffer(staged.id, staged.lifecycleId) !== undefined
@@ -871,7 +871,7 @@ export class CardService {
    */
   shown(id: string): Card | undefined {
     const card = this.cards.get(id);
-    return card && this.onTheStage(card);
+    return card && withAppDecline(this.onTheStage(card));
   }
 
   /**

@@ -107,8 +107,9 @@ function fakeSettleRefusal(actions: EmittedCard["actions"]): string | undefined 
 
 /**
  * A product fact (D-9): how many actions a decision gives (CARD_MECHANICS:
- * "A decision gives 2 or 3 actions"). One is no choice - the close already
- * keeps - and four are a menu. FI3-409's live check showed one with a radio question and a lone
+ * "A decision gives 2 or 3 actions"). One is no choice - the app's Decline
+ * (`withAppDecline`) is a way to say no, not an alternative, and it is
+ * added after this count - and four are a menu. FI3-409's live check showed one with a radio question and a lone
  * "Save this answer" going up because nothing counted. The lint reads the
  * card the captain gets: a crewmate's completion decision is counted after
  * the host writes its merge and discard pair.

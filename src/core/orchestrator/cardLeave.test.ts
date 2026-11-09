@@ -1,3 +1,4 @@
+import { withAppDecline } from "@shared/cardDecline";
 import { cardCornerOf, NOTE_GOT_IT_LABEL, noteDoneOf } from "@shared/cardLeave";
 import { CARD_PRESENTATIONS, type Card, cardPresentation } from "@shared/cards";
 import { expect, it, vi } from "vitest";
@@ -62,7 +63,11 @@ for (const kind of CARD_PRESENTATIONS) {
         expect(closed).not.toHaveBeenCalled();
         // Putting a card aside reads nothing and reaches nobody.
         expect(responded).not.toHaveBeenCalled();
-        expect(service.shown(card.id)).toMatchObject({ minimized: true, actions: card.actions });
+        // Its choices stay as shown, the app's Decline on a decision included (INF-3108).
+        expect(service.shown(card.id)).toMatchObject({
+          minimized: true,
+          actions: withAppDecline(card).actions,
+        });
         expect(store.listOpen().map((card) => card.id)).toContain(card.id);
       } finally {
         service.dispose();

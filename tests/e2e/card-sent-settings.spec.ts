@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
+import { DECLINE_ACTION_ID } from "../../src/shared/cardLeave";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
@@ -111,7 +112,8 @@ for (const status of ["ready", "streaming"] as const) {
       const cards = await page.evaluate(() => window.infinitary.cards.list());
       expect(cards.find((card) => card.id === "legacy")).toMatchObject({
         status: "ready",
-        actions: [{ id: "leave" }, { id: "build" }],
+        // The author's choices, and the app's Decline beside them (INF-3108).
+        actions: [{ id: "leave" }, { id: "build" }, { id: DECLINE_ACTION_ID }],
       });
       await expect(
         shownEntry(page).getByRole("button", { name: "Approve and build", exact: true }),

@@ -495,6 +495,7 @@ const EMIT_CARD_NESTED_CARRIERS: Record<string, string> = {
   "actions[].effect":
     "An action's effect is what the host does on the click; with no effect the click returns to you as a message.",
   "actions[].danger": "danger true renders a destructive choice",
+  "actions[].declines": "declines true marks your own way to say no to every choice",
   "actions[].effect<merge>.after":
     "kind merge with after close (ends the task once nothing else is open) or continue",
   "actions[].effect<merge>.review": "review (check_change pull's id; omit for your current change)",

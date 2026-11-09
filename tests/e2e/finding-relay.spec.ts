@@ -83,8 +83,9 @@ test("a task held on another's finding carries on when that task reports it with
     const readerCards = (await page.evaluate(() => window.infinitary.cards.list())).filter(
       (card) => card.taskId === reader,
     );
+    // Its crewmate's two choices, and the app's Decline beside them (INF-3108).
     expect(readerCards.map((card) => [card.title, card.actions.length])).toEqual([
-      [READER_CARD_TITLE, 2],
+      [READER_CARD_TITLE, 3],
     ]);
     // The report woke the first mate, naming the rerun held on it.
     const sorts = () => new DecisionStore(db).recent(200);

@@ -1,3 +1,4 @@
+import { DECLINE_ACTION_ID } from "@shared/cardLeave";
 import { describe, expect, it, vi } from "vitest";
 import {
   crewCard,
@@ -452,7 +453,11 @@ describe("FirstmateAgent capture", () => {
     // The card carries exactly the two declared actions: nothing parks it
     // and nothing brings it back (cards/tasks/agents P0, WI-1).
     const shownCard = supervisor.cards.snapshot().find((card) => card.id === cardId);
-    expect(shownCard?.actions.map((action) => action.id)).toEqual(["wait", "ship-now"]);
+    expect(shownCard?.actions.map((action) => action.id)).toEqual([
+      "wait",
+      "ship-now",
+      DECLINE_ACTION_ID,
+    ]);
     expect(tasks.list().filter((record) => record.id.startsWith("park-"))).toHaveLength(0);
 
     supervisor.cardActions.act(cardId, "ship-now");
@@ -467,7 +472,7 @@ describe("FirstmateAgent capture", () => {
     expect(events.some((event) => event.type === "firstmate_state")).toBe(true);
   });
 
-  it("INF-1879: explicit Dismiss drops a decision task; putting it away does not, and withdrawal supersedes", async () => {
+  it("INF-1879: the record's Decline answers a decision task (INF-3108); putting it away does not, and withdrawal supersedes", async () => {
     const { agent, session, specs, tasks, supervisor } = setup();
     await agent.converse("two questions");
     const emit = toolsOf(specs).get("emit_card");
@@ -502,7 +507,7 @@ describe("FirstmateAgent capture", () => {
     await close?.execute("c3", { card_id: secondId, reason: "moot" });
     const rows = tasks.list().filter((record) => record.kind === "decision");
     expect(rows.map((row) => [row.status, row.closedReason])).toEqual([
-      ["dropped", "cancelled"],
+      ["done", "answered"],
       ["dropped", "superseded"],
     ]);
     session.emitTurnEnd("Done.");

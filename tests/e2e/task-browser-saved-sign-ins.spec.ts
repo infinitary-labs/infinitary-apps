@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { expect, type Locator, test } from "@playwright/test";
 import type { TaskDetail } from "@shared/tasks";
+import { DECLINE_LABEL } from "../../src/shared/cardLeave";
 import { HERE } from "../../src/shared/deviceNames";
 import {
   RETURN_CONTROL_LABEL,
@@ -236,6 +237,7 @@ test("without future-task permission a saved sign-in reaches a later task only o
         expect((await savedCardOf(task.id))?.actions.map((action) => action.label)).toEqual([
           MOCK_LEAVE_WAITING,
           MOCK_SAVED_ACTION,
+          DECLINE_LABEL, // The app's Decline beside the crewmate's choices (INF-3108).
         ]);
         expect(await page.evaluate(() => window.infinitary.browser.signIns())).toEqual({
           available: true,
@@ -336,6 +338,7 @@ test("without future-task permission a saved sign-in reaches a later task only o
           { label: MOCK_LEAVE_WAITING, default: false, savedSignIn: false },
           { label: SIGN_IN_MYSELF_LABEL, default: false, savedSignIn: false },
           { label: savedSignInLabel(site), default: true, savedSignIn: true },
+          { label: DECLINE_LABEL, default: false, savedSignIn: false }, // The app's Decline (INF-3108).
         ]);
         // Its browser started empty: the card is up on a page that is not signed in.
         expect(await pageSays(launched.app, clubUrl, "state")).toBe("Not signed in");
@@ -548,6 +551,7 @@ test("a site that keeps its sign-in in its own page storage is saved, used and r
           { label: MOCK_LEAVE_WAITING, default: false },
           { label: SIGN_IN_MYSELF_LABEL, default: false },
           { label: savedSignInLabel(site), default: true },
+          { label: DECLINE_LABEL, default: false }, // The app's Decline (INF-3108).
         ]);
         // Its browser started empty: nothing of the club's storage is in it yet.
         expect(await pageSays(app, clubUrl, "state")).toBe("Not signed in");
@@ -739,6 +743,7 @@ test("a site that keeps its sign-in in its page's session storage is saved at th
           { label: MOCK_LEAVE_WAITING, default: false },
           { label: SIGN_IN_MYSELF_LABEL, default: false },
           { label: savedSignInLabel(site), default: true },
+          { label: DECLINE_LABEL, default: false }, // The app's Decline (INF-3108).
         ]);
         // Its browser started empty: nothing of the club's session storage is in it yet.
         expect(await pageSays(app, clubUrl, "state")).toBe("Not signed in");
@@ -879,6 +884,7 @@ test("a saved sign-in the site turned away is marked by the crewmate, and the ne
           { label: MOCK_LEAVE_WAITING, default: false },
           { label: SIGN_IN_MYSELF_LABEL, default: false },
           { label: savedSignInLabel(site), default: true },
+          { label: DECLINE_LABEL, default: false }, // The app's Decline (INF-3108).
         ]);
         await showCard(page, MOCK_SAVED_CARD_TITLE);
         // The same crop as the request after the mark, into the evidence folder alone.
@@ -907,6 +913,7 @@ test("a saved sign-in the site turned away is marked by the crewmate, and the ne
         expect(await buttons(MOCK_SAVED_FAILED_CARD_TITLE, task.id)).toEqual([
           { label: MOCK_LEAVE_WAITING, default: false },
           { label: MOCK_SAVED_ACTION, default: true },
+          { label: DECLINE_LABEL, default: false }, // The app's Decline (INF-3108).
         ]);
         return task;
       });
@@ -917,6 +924,7 @@ test("a saved sign-in the site turned away is marked by the crewmate, and the ne
         { label: MOCK_LEAVE_WAITING, default: false },
         { label: SAVED_SIGN_IN_FAILED_LABEL, default: false },
         { label: SIGN_IN_MYSELF_LABEL, default: true },
+        { label: DECLINE_LABEL, default: false }, // The app's Decline (INF-3108).
       ]);
       await showCard(page, MOCK_SAVED_CARD_TITLE);
       const card = savedCardRegion();

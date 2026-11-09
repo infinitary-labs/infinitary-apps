@@ -6,7 +6,12 @@ import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
-import { CARD_LEAVE, type CardLeaveKind, NOTE_GOT_IT_LABEL } from "../../src/shared/cardLeave";
+import {
+  CARD_LEAVE,
+  type CardLeaveKind,
+  DECLINE_LABEL,
+  NOTE_GOT_IT_LABEL,
+} from "../../src/shared/cardLeave";
 import { pastEndingWords } from "../../src/shared/pastCard";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
@@ -177,12 +182,14 @@ test("each registered corner puts away without ending work; only Done receipts t
         await expect(
           shownEntry(page).getByRole("button", { name: "Show the card", exact: true }),
         ).toBeVisible();
+        // INF-3108: the record's way out is the app's Decline, the captain's
+        // answer "no to every choice", so the question closes as answered.
         await pressKey(
-          shownEntry(page).getByRole("button", { name: "Dismiss", exact: true }),
+          shownEntry(page).getByRole("button", { name: DECLINE_LABEL, exact: true }),
           "Enter",
         );
-        await expect.poll(() => status("firstmate-question")).toBe("dropped");
-        // The saved receipt precedes the record's update. Wait for its dismissed
+        await expect.poll(() => status("firstmate-question")).toBe("done");
+        // The saved receipt precedes the record's update. Wait for its declined
         // question bar to leave before focusing the next control (INF-1879).
         await expect(shownEntry(page).locator('[data-record-end="dismiss-question"]')).toHaveCount(
           0,
@@ -264,6 +271,25 @@ test("each registered corner puts away without ending work; only Done receipts t
         recordFrame(page).locator('[data-record-card="card-plain-launch"]'),
       ).toContainText(pastEndingWords({ how: "chose", label: NOTE_GOT_IT_LABEL, at: 0 }));
       await pressKey(leave(), "Enter");
+    });
+    /** INF-3108 approved plan: a crewmate's decision with no way to say no of its own takes the
+     * app's Decline at the footer's left; command search presses it, and on an answer task it
+     * closes the task as answered.
+     */
+    await test.step("Decline answers no to every choice and closes an answer task", async () => {
+      await expandDock(page, "now");
+      await pressRow(page, keys.decision!);
+      await showCard(page, "Launch decision");
+      const footer = shownEntry(page).locator("[data-card-actions] button");
+      // The button's text also holds its pending words and key hint, so its label is read by prefix.
+      await expect(footer.first()).toHaveText(new RegExp(`^${DECLINE_LABEL}`));
+      await expect(footer.first()).toHaveAttribute("data-card-declines", "");
+      await runFromSearch(app.app, page, "cards.decline");
+      await expectNoCard(page, "Launch decision");
+      await expect.poll(() => status("decision")).toBe("done");
+      expect(readSavedData(home, (db) => new TaskStore(db).get("decision")?.closedReason)).toBe(
+        "answered",
+      );
     });
     await test.step("Done is an explicit host receipt, even after the answer was put away", async () => {
       await expandDock(page, "now");

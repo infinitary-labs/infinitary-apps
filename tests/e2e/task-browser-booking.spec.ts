@@ -11,6 +11,7 @@ import {
 } from "../../src/core/orchestrator/captainWakes";
 import { CREWMATE_BROWSER_LINE } from "../../src/core/pi/piResources";
 import { CardRefusedError, labeledActions } from "../../src/core/session/tools";
+import { DECLINE_LABEL } from "../../src/shared/cardLeave";
 import {
   DRIVER_WORDS,
   RETURN_CONTROL_LABEL,
@@ -493,6 +494,7 @@ for (const runtime of RUNTIMES) {
             expect(card?.actions.map((action) => action.label)).toEqual([
               MOCK_REVIEW_STOP_ACTION,
               MOCK_REVIEW_PAY_ACTION,
+              DECLINE_LABEL, // The app's Decline beside the crewmate's choices (INF-3108).
             ]);
             expect(card?.attachment).toMatchObject({ kind: "browser", handoff: true });
             await showCard(page, reviewTitle);
@@ -761,6 +763,7 @@ for (const runtime of RUNTIMES) {
           expect(card?.actions.map((action) => action.label)).toEqual([
             MOCK_LOST_NOT_BOOKED_ACTION,
             MOCK_LOST_CHECK_ACTION,
+            DECLINE_LABEL, // The app's Decline beside the crewmate's choices (INF-3108).
           ]);
           await showCard(app.page, unknownCardTitle(airline.site));
           await shoot(app.page.locator(SHOWN_ENTRY), "card-unknown-dark.png");

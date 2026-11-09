@@ -92,6 +92,7 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `cards.next`, Show the next card | window, run by the shell page | ⇧⌘] (`]` or `}` with Shift) |
 | `cards.minimize`, Put card aside | window, run by the shell page | ⇧⌘M |
 | `cards.done`, Press the note's Done or Got it | window, run by the shell page | none: chosen by name |
+| `cards.decline`, Decline every choice on the card | window, run by the shell page | none: chosen by name (no, not now, none and reject find it too) |
 | `cards.maximize`, Maximize or restore card | window, run by the shell page | none: chosen by name (full, screen, enlarge, expand and bigger find it too) |
 | `cards.next-revision`, Go to the next revised area | window, run by the shell page | none: chosen by name; selected revision, otherwise newest released list |
 | `cards.thread`, Show or hide the card's thread | window, run by the shell page | ⌘\ (collapse, expand, chat, replies and messages find it too) |
@@ -276,6 +277,7 @@ The main process's own commands, the size keys, are never refused by the page.
 - `cards.previous` and `cards.next` are the pager's own arrows, with the same slide; `cards.minimize` puts any shown card away without ending work or asking about retained drafts.
 - `cards.minimize`, Put card aside (⇧⌘M), puts a decision aside, reads a note or hides a window panel through its shared corner; it never ends work.
 - `cards.done`, Press the note's Done or Got it, presses the shown note's footer button, or the host’s Done in an answer's record, and refuses when the card has neither.
+- `cards.decline`, Decline every choice on the card, presses the shown decision's way to say no: its author's own marked choice or the app's Decline (INF-3108, `docs/card-authoring.md`); it refuses when the card has neither.
 - `cards.maximize`, Maximize or restore card, is the card's size control (the design skill's `components/cards/ResponseCard.prompt.md`, "Maximize"), with focus on that control after it.
   The card layer lends these to the commands (`cardStage.ts`) and says which entry it shows; a command acts only while the store still shows that entry.
   They work on the home screen only, and an arrow refuses at the stack's end.

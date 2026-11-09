@@ -740,7 +740,7 @@ Click or Enter restores the task’s minimized cards; a task’s existing ready 
 The record’s Cards tab labels an open minimized card Put aside, and its link brings the live card back.
 A put-aside note keeps its task's row there until the captain presses the note's Done or Got it, which reads it (INF-2794); the minus never reads a note.
 The record’s Show the card also brings back a minimized decision.
-A task-less first mate question keeps that button beside explicit Dismiss, which alone drops the question without a choice.
+A task-less first mate question keeps that button beside explicit Decline, which presses the question's Decline (INF-3108): the first mate hears no to every choice and the question closes as answered.
 
 ## Live validation
 

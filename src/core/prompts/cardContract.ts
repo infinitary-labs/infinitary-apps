@@ -331,7 +331,7 @@ const RISK_PARAM = [
  */
 /** The effects every role's actions may declare, up to the open effect. */
 const ACTIONS_EFFECTS =
-  "Action buttons: id (stable, kebab-case), label (sentence case), default true on exactly one, optional effect and danger. effect is kind merge with after close (ends the task once nothing else is open) or continue, review (check_change pull's id; omit for your current change) and asks_first (why a standing direction leaves this merge to the captain); or kind settle with mode discard and confirm; proceed_with_open true settles a task with open children, keeping them planned, when a refusal names it;";
+  "Action buttons: id (stable, kebab-case), label (sentence case), default true on exactly one, optional effect, danger and declines. declines true marks your own way to say no to every choice, such as Not now or Abandon; without one the app adds Decline, which reaches you as no to every choice. effect is kind merge with after close (ends the task once nothing else is open) or continue, review (check_change pull's id; omit for your current change) and asks_first (why a standing direction leaves this merge to the captain); or kind settle with mode discard and confirm; proceed_with_open true settles a task with open children, keeping them planned, when a refusal names it;";
 const ACTIONS_OPEN =
   " or kind open with target settings|subscriptions|projects and sign_in naming the host whose sign-in the projects section starts, exactly as a not-signed-in refusal's way names it.";
 

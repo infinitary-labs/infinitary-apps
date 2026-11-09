@@ -75,6 +75,8 @@ describe("EMIT_CARD_TOOL_DESCRIPTION", () => {
       "default",
       "effect",
       "danger",
+      // INF-3108: the author's own way to say no, which keeps the app's Decline off.
+      "declines",
     ]);
   });
 });

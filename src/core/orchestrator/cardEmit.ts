@@ -589,6 +589,7 @@ export function buildEmittedCard(
         ...(action.default ? { default: true } : {}),
         ...(action.effect ? { effect: action.effect } : {}),
         ...(danger ? { danger: true } : {}),
+        ...(action.declines ? { declines: true as const } : {}),
         ...(action.care ? { care: action.care } : {}),
       };
     });

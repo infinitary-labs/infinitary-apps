@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { LEGACY_CLOSE_CONTROL_IDS } from "./cardLeave";
 import {
   agentEffectSchema,
   type Card,
@@ -161,10 +162,16 @@ describe("legacyActionEffect", () => {
       arg: "kimi-coding",
     });
     expect(legacyActionEffect("retry-firstmate")).toEqual({ kind: "host", op: "retry-firstmate" });
-    // The close control's old names carried nothing worth keeping.
-    for (const id of ["keep", "later", "dismiss"]) expect(legacyActionEffect(id)).toBeNull();
-    // A reply, and a lookalike that never dispatched, stay replies.
-    for (const id of ["approve", "explain-more", "merge-pr55", "land-it"]) {
+    // A reply, a lookalike that never dispatched, and (INF-3108's approved
+    // plan) the old close controls, which no corner duplicates since
+    // INF-1879, stay replies.
+    for (const id of [
+      "approve",
+      "explain-more",
+      "merge-pr55",
+      "land-it",
+      ...LEGACY_CLOSE_CONTROL_IDS,
+    ]) {
       expect(legacyActionEffect(id)).toBeUndefined();
     }
   });
@@ -178,6 +185,7 @@ describe("legacyActionEffect", () => {
     ];
     const migrated = migrateLegacyActions(legacy);
     expect(migrated).toEqual([
+      { id: "keep", label: "Keep", variant: "secondary" },
       {
         id: "merge-pr",
         label: "Merge PR",

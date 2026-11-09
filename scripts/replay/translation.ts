@@ -8,7 +8,12 @@ import { preansweredQuestions, writeInGaps } from "../../src/core/pi/cardLint.ts
 import { groupSpawnArgs } from "../../src/core/pi/crewTools.ts";
 import { legacyShapeFromDifficulty } from "../../src/core/routing/policy.ts";
 import type { LegacyTaskStatus } from "../../src/core/tasks/seedTask.ts";
-import { type CardAction, isPreviewBody, migrateLegacyActions } from "../../src/shared/cards.ts";
+import { LEGACY_CLOSE_CONTROL_IDS } from "../../src/shared/cardLeave.ts";
+import {
+  type CardAction,
+  isPreviewBody,
+  migrateLegacyActions,
+} from "../../src/shared/cards.ts";
 import type { IntelligenceBucket } from "../../src/shared/modelSlots.ts";
 import { type WorkShape, workShapeSchema } from "../../src/shared/routingPolicy.ts";
 import { stringColumn, type TableRow } from "../recorded-tables.ts";
@@ -168,7 +173,12 @@ export function recordedActions(raw: unknown): CardAction[] {
         !!action && typeof action === "object" && typeof (action as JsonRecord).id === "string",
     )
     .map(({ keeps_open: _retired, ...action }) => action as unknown as CardAction);
-  return migrateLegacyActions(actions);
+  // A recorded close control (`later`, `keep`, `dismiss`) duplicated the ×
+  // every card had when it was recorded, so the replay keeps reading it as
+  // that close, not as a choice (INF-3108 keeps them on live cards).
+  return migrateLegacyActions(actions).filter(
+    (action) => action.effect || !LEGACY_CLOSE_CONTROL_IDS.has(action.id),
+  );
 }
 
 /**

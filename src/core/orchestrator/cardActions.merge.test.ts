@@ -7,6 +7,7 @@
  * Each case drives a real CrewSupervisor through the crew harness
  * (tests/helpers/crewHarness.ts) and reads what it answers, the cards and the record.
  */
+import { DECLINE_ACTION_ID, DECLINE_LABEL } from "@shared/cardLeave";
 import {
   CARD_ANSWERS_BOUND_REFUSAL,
   type Card,
@@ -597,7 +598,11 @@ describe("CrewSupervisor", () => {
     });
     await tick();
     const decision = cards().find((entry) => entry.actions.length > 0) as Card;
-    expect(decision.actions.map((action) => action.id)).toEqual(["hold", "change"]);
+    expect(decision.actions.map((action) => action.id)).toEqual([
+      "hold",
+      "change",
+      DECLINE_ACTION_ID,
+    ]);
 
     const opsBefore = ops.length;
     supervisor.close(decision.id);
@@ -629,7 +634,8 @@ describe("the task graph (R1)", () => {
     });
     await tick();
     const card = cards().find((entry) => entry.meta === "firstmate") as Card;
-    expect(card.actions.map((action) => action.id)).toEqual(["a", "b"]);
+    // Its declared actions, then the app's Decline (INF-3108).
+    expect(card.actions.map((action) => action.id)).toEqual(["a", "b", DECLINE_ACTION_ID]);
 
     // Every click returns to its author: the card leaves the stack, no row
     // parks, no wake says "deferred", and the strip counts no one waiting.
@@ -667,6 +673,7 @@ describe("the task graph (R1)", () => {
     expect(cards().find((card) => card.id === id)?.actions).toMatchObject([
       { label: "Try a premium model" },
       { label: "Try again", default: true },
+      { id: DECLINE_ACTION_ID },
     ]);
     expect(
       cards()
@@ -841,13 +848,14 @@ describe("decision actions", () => {
     return { ...harness, taskId, cardId: cardId ?? "", onCard };
   }
 
-  it("marks the default primary and orders the footer: the choices, then the default", async () => {
+  it("marks the default primary and orders the footer: the choices, then the default, then the app's quiet Decline", async () => {
     const crewmate = fakeCrewmate();
     const { cards, cardId } = await decisionOnScreen(crewmate);
     const card = cards().find((entry) => entry.id === cardId) as Card;
     expect(card.actions).toEqual([
       { id: "mock-clock", label: "Mock the clock", variant: "secondary" },
       { id: "await-queue", label: "Await the queue", variant: "primary", default: true },
+      { id: DECLINE_ACTION_ID, label: DECLINE_LABEL, variant: "ghost", declines: true },
     ]);
   });
 

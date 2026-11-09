@@ -2,6 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { closingNoteTitle } from "../../src/core/orchestrator/settleWords";
+import { DECLINE_ACTION_ID } from "../../src/shared/cardLeave";
 import type { Card } from "../../src/shared/cards";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchClaudeCrew } from "./claudeCrew";
@@ -124,7 +125,12 @@ for (const reason of ["cancelled", "failed"] as const) {
       await expect.poll(() => app.mockProvider?.heldRequests()).toBe(1);
       const [card] = await app.page.evaluate(() => window.infinitary.cards.list());
       const taskId = card?.taskId as string;
-      expect(card?.actions).toHaveLength(2);
+      // The crewmate's two choices, and the app's Decline beside them (INF-3108).
+      expect(card?.actions.map((action) => action.id)).toEqual([
+        "starboard",
+        "port",
+        DECLINE_ACTION_ID,
+      ]);
       expect(card?.awaiting).toBeUndefined();
       await expect
         .poll(() => app.page.evaluate((id) => window.infinitary.tasks.detail(id), taskId))

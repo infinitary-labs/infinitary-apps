@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-request-one-device",
+      "reason": "CI only: a manual phone check request can name one device, so a replacement proof runs that device's job alone at a branch's current version."
+    }
+  ]
+}

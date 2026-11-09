@@ -15,6 +15,8 @@ name: phone
 # INF-2970's fix 1: a request runs its iPad and iPhone parts as two jobs, one per device, so
 # each takes its own phone Mac at once instead of one after the other on one; the edited-part
 # passes stay in the iPhone's job, on its build and simulator, as INF-2582 chose.
+# INF-3205: a request may name one device, as a call does, so a replacement proof runs that
+# device's job alone at the branch's current version with the same part selection.
 on:
   workflow_call:
     inputs:
@@ -43,6 +45,10 @@ on:
       parts:
         description: Parts to run, separated by spaces (empty runs all)
         type: string
+      device:
+        description: The one device this request checks, ipad or iphone; empty checks both
+        type: string
+        default: ''
       starve:
         description: Reproduce scheduling starvation on each part's owned descendants
         type: boolean
@@ -87,6 +93,7 @@ jobs:
   # request on a branch that would run every part names its task and reason, as a full Linux
   # sweep does, and is refused on a light Linux machine before it waits for a phone guest
   # (docs/testing.md, "What a task branch requests"). A call and every narrower request pass.
+  # INF-3205: every route refuses a device other than the two here, before a phone Mac is taken.
   request:
     name: ${{ format('{0} · Check phone check request', inputs.trigger || 'Manual request') }}
     # The phone release's call, which passes its resolved source, runs it on GitHub's hosted Ubuntu.
@@ -99,22 +106,28 @@ jobs:
           EVERY_PART: ${{ !inputs.affected && inputs.parts == '' && !inputs.waits }}
           AFFECTED: ${{ inputs.affected }}
           PARTS: ${{ inputs.parts }}
+          DEVICE: ${{ inputs.device }}
           TASK: ${{ inputs.task }}
           REASON: ${{ inputs.reason }}
         run: |
+          case "$DEVICE" in
+            ''|ipad|iphone) ;;
+            *) echo "Unknown phone device: $DEVICE; send ipad, iphone or nothing for both"; exit 1 ;;
+          esac
           if [ "$MANUAL" != true ]; then exit 0; fi
           if [ "$BRANCH" = true ] && [ "$EVERY_PART" = true ]; then
             [ -n "$TASK" ] && [ -n "$REASON" ] || {
               echo 'A branch request for every phone part requires a task and reason; send affected "true" or name parts instead'; exit 1;
             }
           fi
-          printf 'Phone request: every_part=%s affected=%s parts=%s task=%s reason=%s\n' "$EVERY_PART" "$AFFECTED" "$PARTS" "$TASK" "$REASON" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Phone request: every_part=%s affected=%s parts=%s device=%s task=%s reason=%s\n' "$EVERY_PART" "$AFFECTED" "$PARTS" "${DEVICE:-both}" "$TASK" "$REASON" >> "$GITHUB_STEP_SUMMARY"
   # Each job's name leads with the caller's trigger (scripts/ci-job-names.mjs).
   native-phone:
     needs: request
     name: ${{ inputs.evidence_run != '' && 'Manual request · Phone checks not requested' || format(inputs.waits && '{0} · Wait-clock tests ({1})' || '{0} · Phone checks ({1})', inputs.trigger || 'Manual request', matrix.device == 'ipad' && 'iPad' || 'iPhone') }}
     if: inputs.evidence_run == ''
-    # INF-2970's fix 1: one job per device, each on its own phone Mac; a call names its one device.
+    # INF-2970's fix 1: one job per device, each on its own phone Mac; a call or a request may
+    # name its one device (INF-3205).
     # One device failing never cancels the other, so each reports its own parts, as the release does.
     strategy:
       fail-fast: false
@@ -168,9 +181,10 @@ jobs:
           BASE_REF: ${{ inputs.base || 'origin/main' }}
           AFFECTED: ${{ inputs.affected }}
           REQUESTED_PARTS: ${{ inputs.parts }}
-      # Both device jobs choose the same parts; the iPhone's, which runs every kept part, keeps them.
+      # Both device jobs choose the same parts; the iPhone's, which runs every kept part, keeps them,
+      # and a request that names one device keeps them in that device's job (INF-3205).
       - name: Keep the chosen and left parts
-        if: github.event_name == 'workflow_dispatch' && matrix.device == 'iphone'
+        if: github.event_name == 'workflow_dispatch' && matrix.device == (inputs.device || 'iphone')
         uses: actions/upload-artifact@v4
         with:
           name: phone-placement

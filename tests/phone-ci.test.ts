@@ -368,6 +368,8 @@ describe("the native gate on an affected request", () => {
     expect(Object.keys(workflow.on)).toEqual(["workflow_call", "workflow_dispatch"]);
     expect(workflow.on.workflow_dispatch.inputs).toMatchObject({
       parts: { type: "string" },
+      // INF-3205: a request names its one device as a call does; empty, the default, checks both.
+      device: { type: "string", default: "" },
       starve: { type: "boolean", default: false },
       perf: { type: "boolean", default: false },
       waits: { type: "boolean", default: false },
@@ -638,6 +640,97 @@ describe("the phone check on request", () => {
       ),
     ).toEqual([["ipad", "iphone"], ["ipad"], ["iphone"]]);
     expect(workflow.jobs[NATIVE_JOB].strategy["fail-fast"]).toBe(false);
+  });
+});
+
+// INF-3205: a replacement proof of one device runs that device's job alone at the branch's current
+// version, with the part selection it would have beside the other device's, and nothing else.
+describe("a request that names one device", () => {
+  const PLACEMENT = "Keep the chosen and left parts";
+  const native = workflow.jobs[NATIVE_JOB];
+  const chosen = {
+    "request-select": {
+      parts: "join-read talk-tasks rest",
+      ipad_parts: "talk-tasks rest",
+      iphone_parts: "join-read",
+      repeat_parts: "talk-tasks",
+      full: "true",
+    },
+  };
+  // Each device job a request starts, by the native job's own matrix.
+  const devices = (inputs: Plain) =>
+    workflowValue(native.strategy.matrix.device, { inputs }) as string[];
+  // The gate's limit and environment in a device's job, with the chooser's parts above.
+  function gate(inputs: Plain, device: string) {
+    const ran = stepsThatRun(OFF, false, inputs, BRANCH_REQUEST, chosen, device);
+    const step = ran.find(isGate)!;
+    const choosing = ran.some((each) => each.id === "request-select");
+    const contexts = {
+      github: BRANCH_REQUEST,
+      inputs,
+      matrix: { device },
+      runner: { temp: "/runner/temp" },
+      steps: { "request-select": { outputs: choosing ? chosen["request-select"] : {} } },
+    };
+    return {
+      steps: names(ran).filter((name) => name !== PLACEMENT),
+      timeout: workflowValue(String(step["timeout-minutes"]), contexts),
+      env: Object.fromEntries(
+        Object.entries(step.env!).map(([key, value]) => [key, workflowString(value, contexts)]),
+      ),
+    };
+  }
+  it("starts only the named device's job, and both when it names none", () => {
+    expect(devices({ affected: true })).toEqual(["ipad", "iphone"]);
+    expect(devices({ affected: true, device: "" })).toEqual(["ipad", "iphone"]);
+    expect(devices({ affected: true, device: "ipad" })).toEqual(["ipad"]);
+    expect(devices({ affected: true, device: "iphone" })).toEqual(["iphone"]);
+  });
+  it.each([
+    { affected: true },
+    { affected: false, parts: "cards-form" },
+    { affected: false, waits: true },
+    { affected: false, task: "INF-3205", reason: "Replacement proof" },
+  ] as Plain[])(
+    "runs the iPad's gate as a both-device request's iPad job does for %j",
+    (inputs) => {
+      const alone = gate({ ...inputs, device: "ipad" }, "ipad");
+      expect(alone).toEqual(gate(inputs, "ipad"));
+      // The iPad still runs each part once and never the iPhone's further passes.
+      expect(alone.timeout).toBe(90);
+      expect(alone.env.PHONE_DEVICE).toBe("ipad");
+    },
+  );
+  it("chooses the parts in the named device's job as in a both-device request", () => {
+    const request = (native.steps as Step[]).find((step) => step.id === "request-select")!;
+    for (const device of ["", "ipad", "iphone"])
+      expect(
+        holds(condition(request), {
+          github: BRANCH_REQUEST,
+          inputs: { affected: true, parts: "", device },
+          matrix: { device: device || "ipad" },
+        }),
+      ).toBe(true);
+    // An iPad request whose kept parts all run on the iPhone alone ends before its gate, as the
+    // iPad's job beside the iPhone's does; named parts still run.
+    for (const parts of ["", "rest"])
+      expect(
+        holds(gateCondition(), {
+          github: BRANCH_REQUEST,
+          inputs: { affected: true, parts, device: "ipad" },
+          matrix: { device: "ipad" },
+          steps: { "request-select": { outputs: { parts: "rest", ipad_parts: "" } } },
+        }),
+      ).toBe(parts !== "");
+  });
+  it("keeps the part selection once a request, in the named device's job or the iPhone's", () => {
+    const keeps = (inputs: Plain) =>
+      devices(inputs).filter((device) =>
+        names(stepsThatRun(OFF, false, inputs, BRANCH_REQUEST, chosen, device)).includes(PLACEMENT),
+      );
+    expect(keeps({ affected: true })).toEqual(["iphone"]);
+    expect(keeps({ affected: true, device: "ipad" })).toEqual(["ipad"]);
+    expect(keeps({ affected: true, device: "iphone" })).toEqual(["iphone"]);
   });
 });
 

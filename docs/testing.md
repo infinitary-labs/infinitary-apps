@@ -683,6 +683,10 @@ This selection reuses `PART_OWNERS` and the Swift declaration reach reader, with
 Shared phone inputs and unreadable comparisons or test changes run every part instead.
 An affected request with no reached parts skips both devices' gates, and one whose every kept part runs on the iPhone alone skips the iPad's (the chooser's `ipad_parts`); the summary and the iPhone job's `phone-placement` artifact record the selection.
 Explicit `parts` still overrides automatic selection for diagnostic runs.
+The optional `device` input, `ipad` or `iphone`, starts that device's job alone, as the phone release's call does; empty, its default, starts both (INF-3205).
+That job runs with every other input as it would beside the other device's, so a replacement proof of one device sends the original request's inputs with `device`, at the branch's current version, which a rerun of the original run cannot reach since it keeps the original version.
+A request that names one device keeps `phone-placement` in that device's job, and an iPad request whose every kept part runs on the iPhone alone checks nothing, as the iPad's job of a both-device request would.
+The `request` job refuses any other device, on every route, before a phone Mac is taken, and names the device in the request summary.
 The chooser compares ordinary coverage with the complete live part table, independent of order, and keeps `coverage`, `iphoneOnly` and `repeats` in `phone-placement`.
 INF-2582 direction A (the captain's choices "A: wait once and trim the soak" and "iPhone only; iPad waits for the release check") shapes the gate of an affected request in three ways.
 A part the change only reaches runs on the iPhone alone (the chooser's `iphone_parts`), and the iPad runs it in the next phone release; a part whose test code changed, or every part of a change the chooser could not read, runs on both devices.

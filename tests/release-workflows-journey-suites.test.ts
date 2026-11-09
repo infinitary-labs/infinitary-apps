@@ -648,6 +648,7 @@ describe("the phone check request guard (INF-2576)", () => {
     expect(phone.jobs["native-phone"]?.needs).toBe("request");
     expect(phone.on.workflow_dispatch.inputs).toHaveProperty("task");
     expect(phone.on.workflow_dispatch.inputs).toHaveProperty("reason");
+    expect(phone.on.workflow_dispatch.inputs).toHaveProperty("device");
     // Refused on a light Linux machine, never in the phone guests' line; the phone release's
     // call, which passes its resolved source, stays on GitHub's hosted Ubuntu.
     const runner = (inputs: Record<string, string>) =>
@@ -693,7 +694,39 @@ describe("the phone check request guard (INF-2576)", () => {
     // GitHub fills an unsent boolean input with its default, false.
     const explained = { affected: false, task: "INF-2576", reason: "Shared phone setup changed" };
     expect(runGuard(branch, explained).summary).toBe(
-      "Phone request: every_part=true affected=false parts= task=INF-2576 reason=Shared phone setup changed\n",
+      "Phone request: every_part=true affected=false parts= device=both task=INF-2576 reason=Shared phone setup changed\n",
     );
+  });
+
+  // INF-3205: a request may name one device, as the phone release's call does, and every route
+  // refuses any other before a phone Mac is taken.
+  it("passes a request for one device and records it", () => {
+    for (const device of ["ipad", "iphone"]) {
+      const result = runGuard(branch, { affected: true, device });
+      expect(result.status, result.stdout).toBe(0);
+      expect(result.summary).toBe(
+        `Phone request: every_part=false affected=true parts= device=${device} task= reason=\n`,
+      );
+    }
+    const call = { event_name: "workflow_call", ref: "refs/heads/main" };
+    for (const device of ["ipad", "iphone"])
+      expect(runGuard(call, { source_commit: "a".repeat(40), device }).status).toBe(0);
+  });
+
+  it("refuses an unknown device on every route before a phone Mac is taken", () => {
+    for (const [github, inputs] of [
+      [branch, { affected: true, device: "watch" }],
+      [branch, { affected: true, device: "ipad,iphone" }],
+      [{ event_name: "workflow_dispatch", ref: "refs/heads/main" }, { device: "iPad" }],
+      [
+        { event_name: "workflow_call", ref: "refs/heads/main" },
+        { source_commit: "a".repeat(40), device: "both" },
+      ],
+    ] as const) {
+      const result = runGuard(github, inputs);
+      expect(result.status, JSON.stringify(inputs)).not.toBe(0);
+      expect(result.stdout).toContain(`Unknown phone device: ${inputs.device}`);
+      expect(result.summary).toBe("");
+    }
   });
 });

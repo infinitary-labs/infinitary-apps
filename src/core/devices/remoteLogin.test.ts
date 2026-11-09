@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { Writable } from "node:stream";
 import { PAIRING_LINK_PREFIX } from "@shared/devices";
 import { remoteLoginWords } from "@shared/remoteLogin";
@@ -26,6 +26,7 @@ import {
   standInRecord,
 } from "../../../tests/helpers/standInFirstmate";
 import * as appArchive from "./appArchive";
+import { checkLine } from "./hostTrust";
 import { placeLocalityChallenge } from "./locality";
 import { RemoteLoginRefusedError, sendCopy } from "./remoteLogin";
 import { runSsh } from "./ssh";
@@ -322,6 +323,55 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
     expect(refused).toMatchObject({ refusal: "host-changed" });
     expect(existsSync(changedRecord)).toBe(false);
     expect(changed.lines().some((line) => line.includes("Terminal"))).toBe(false);
+  }, 30_000);
+
+  // A user report: an alias the person's SSH settings reach through a proxy
+  // has no name of its own to dial, and the add stopped at "Could not
+  // reach" while `ssh <alias>` signed in. The key is read through that
+  // same proxy, shown on the same check line, and the add goes on.
+  it("reads the check line through the proxy the person's SSH settings name for an alias, and adds it", async () => {
+    const sshd = await server();
+    sshd.knownHosts("unknown");
+    const bastion = await server();
+    const target = sshd.ssh();
+    const settings = target.args[1] ?? "";
+    const serverDir = dirname(settings);
+    const bastionDir = dirname(bastion.ssh().args[1] ?? "");
+    const [type, publicKey] = readFileSync(join(serverDir, "host.pub"), "utf8").split(" ");
+    // The person's settings, as `-F` gives them: two aliases with no name
+    // anything outside SSH can look up, and one behind a jump host.
+    writeFileSync(
+      settings,
+      [
+        "Host build-box",
+        `  ProxyCommand /usr/bin/ssh -F ${settings} -W 127.0.0.1:%p bastion`,
+        "Host build-hop",
+        "  HostName 127.0.0.1",
+        "  ProxyJump bastion",
+        "Host bastion",
+        "  HostName 127.0.0.1",
+        `  Port ${bastion.port}`,
+        `  IdentityFile ${join(bastionDir, "good")}`,
+        `  UserKnownHostsFile ${bastion.knownHostsFile}`,
+        readFileSync(settings, "utf8"),
+      ].join("\n"),
+    );
+    const user = sshd.address.split("@")[0];
+    for (const alias of ["build-box", `${user}@build-box`, "build-hop"]) {
+      const record = join(scratchDir("infinitary-remote-record-"), "started");
+      const at = await home({ ssh: target, bundle: standInBundle(record) });
+      const asked = await at.remote.addOrAsk(alias);
+      expect(asked, alias).toEqual({
+        asks: "confirm",
+        address: alias,
+        line: checkLine(type ?? "", publicKey ?? ""),
+      });
+      expect(existsSync(record), alias).toBe(false);
+      expect(readFileSync(sshd.knownHostsFile, "utf8"), alias).toBe("");
+      const device = await at.remote.add(alias, { confirm: "line" in asked ? asked.line : "" });
+      expect(device.remoteLogin, alias).toBe(alias);
+      expect(existsSync(record), alias).toBe(true);
+    }
   }, 30_000);
 
   it("refuses a computer of a system Firstmate does not run on, or whose user already runs work, before sending anything", async () => {

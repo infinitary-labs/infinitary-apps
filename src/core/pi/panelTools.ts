@@ -37,7 +37,7 @@ export const PLACE_PANEL_TOOL_DESCRIPTION = [
   "The placed version shows with the running dot until your report commits it; a save after placing runs out of sight again until you place again.",
   "Pass id (the extension's directory name) to place one; omit it to place every extension you changed. An id you did not change is only looked at.",
   "Run it before every report, then capture_panel to photograph the panel docked.",
-  "When the window did not draw it and the panel's files cannot change that, such as a hidden panel or panels switched off, say so in your report and wait on the captain; do not call it done; never move or hide their other panels yourself.",
+  "When the window did not draw it and the panel's files cannot change that, such as a hidden panel or panels switched off, say so in your report and wait on the captain; do not call it done.",
   "Folded or in the More row, the panel is built and on their rail, which is only too short: say where it sits in your report, and never collapse, move or hide their other panels.",
 ].join(" ");
 

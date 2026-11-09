@@ -122,7 +122,7 @@ export const FILE_FOLLOWUP_TOOL_DESCRIPTION = [
   "Search first with tasks (text, project): if a matching task already exists, file nothing and name its key in your report.",
   "It becomes a separate planned task, discovered from yours, and waits until the first mate decides; nothing starts on its own and you keep working.",
   "The first mate hears about it with your report, not as a message of its own, and triages it there.",
-  "Filing it does NOT hold your own task up: your work still stands on its own merits.",
+  "Filing it does not hold your own task up.",
   FOLLOWUP_AFTER_MERGE_RULE,
   "For a host-record takeover, file Take over: my branch in a fresh task, then needs_firstmate to start it now; no merge prerequisite, never to bypass consent or repeat an unknown effect.",
   "The one exception is blocks_me, a real dependency: pass it true only when your task cannot merge until that work does; it then stops your task from closing.",
@@ -134,10 +134,10 @@ export const FILE_FOLLOWUP_TOOL_DESCRIPTION = [
 export const NOTE_PROGRESS_TOOL_DESCRIPTION = [
   "Put one line on your task's own timeline - a milestone reached, a decision you made, what you are doing next.",
   "It is never shown as a card or a feed line; the captain can read it on the task's record.",
-  "Call it as soon as a plan item finishes or the work moves to the next item, in the middle of your turn: the captain watches the plan move while you work, and a note held for the end of your turn leaves it standing still.",
+  "Call it as soon as a plan item finishes or the work moves on, mid-turn: the captain watches the plan move while you work, and a note held to the end leaves it standing still.",
   "Otherwise use it at real milestones, not every command, and never instead of your final report.",
   "Pass plan to show where the work stands: the whole list of what the task takes, each item with a label, a word or two for its dot, and its state - done, current, next or skipped.",
-  "The captain sees it as dots beside the task and a list on its record, so keep it short: under eight items, one current at a time.",
+  "The captain sees dots beside the task and a list on its record: under eight items, one current at a time.",
   "Send the first list with your brief, send the whole list with every later note, unchanged if nothing moved, and fold finished items into one item to make room; the final report leaves every item done or skipped.",
 ].join(" ");
 

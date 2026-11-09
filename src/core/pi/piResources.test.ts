@@ -81,7 +81,8 @@ describe("where a crewmate keeps its evidence", () => {
     const prompt = buildCrewmateSystemPrompt("claude", evidenceDir);
     expect(prompt).toContain(`Your evidence folder is ${evidenceDir}`);
     expect(prompt).toContain("never inside your working copy");
-    expect(prompt).toContain("no local path, private thread or personal detail enters it");
+    // The stranger rule keeps local paths and private details out of what the project shows (PUBLIC_WRITING).
+    expect(prompt).toContain("Leave out addresses, folder paths, clock times");
     expect(buildCrewmateSystemPrompt("pi")).not.toContain("Your evidence folder is");
   });
 
@@ -225,7 +226,7 @@ describe("selective filing reaches every agent that acts on it", () => {
     expect(core).toContain(
       "Optional ideas a report names stay there, unfiled, unless the captain picks them",
     );
-    expect(core).toContain("offer them in one decision card after that report");
+    expect(core).toContain("offer them in one decision card.");
     // A captain's merge wakes the first mate only when it fails or frees work
     // only a start begins (INF-834's friction 7), so a covered task is linked
     // to wait on the merge that covers it.
@@ -297,7 +298,7 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
       "At a captain-only action, its crewmate asks on a card",
       "design-only limits even a filed build",
       "Never steer an unstarted builder or closed planner",
-      "Every planned or recovered builder retains the full accepted specification",
+      "Every planned or recovered builder keeps the full accepted specification",
       "Implementation approval, plan closure, saved answers and passing validation never grant merge permission",
     ];
     for (const [name, served] of agents) {
@@ -359,7 +360,7 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
       "A saved build first checks the plan against the current code",
       "After an answer authorizes a build, report without a new captain wait",
       "A preview ships nothing: scratch stays private in the working copy",
-      "the footer choices submit the current settings, and so do author-directed replies",
+      "the footer choices and author-directed replies submit the current settings",
       // INF-2715: the Firstmate's own cards are static, so a card script is the crew's alone.
       "An inline <script> (no src) may add behavior",
     ];
@@ -471,10 +472,10 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1)", () => {
       "It is not a card action; a turn ends with this sentence, never close_card.",
     );
     expect(core).toContain(
-      "A card emitted as this turn's answer is current, not obsolete, and must not be withdrawn this turn.",
+      "A card emitted as this turn's answer is current and must not be withdrawn this turn.",
     );
     expect(core).toContain(
-      "Zero cards plus this sentence is correct whenever nothing needs the captain",
+      "Zero cards plus this sentence is correct when nothing needs the captain",
     );
     expect(core).toContain("call emote before it for one reaction, motion only");
     expect(core).toContain("never instead of a required card or action");
@@ -488,7 +489,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1)", () => {
     expect(core).toContain(
       "A card is allowed only when work cannot move forward without a captain decision, or the captain cannot move forward without seeing that fact.",
     );
-    expect(core).toContain("Progress, CI waits, and watching-status are never cards");
+    expect(core).toContain("Progress, CI waits and watching-status are never cards");
   });
 
   it("delegates evidence gathering to crewmates without exposing synchronous reading", () => {
@@ -665,7 +666,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.1, interaction P1 WI-9 and WI-12)",
       "Emit the answer by CARD_AUTHORING's decision/note rule and emit_card's default-action rule",
     );
     expect(FIRSTMATE_CARD_AUTHORING).toContain(
-      "An answer that implies any potential next step for the captain, even an optional one, is a decision; only a pure fact with no next step is a note.",
+      "An answer that implies any next step for the captain, even an optional one, is a decision; only a pure fact is a note.",
     );
     expect(FIRSTMATE_EMIT_CARD_DESCRIPTION).toContain(
       "marks exactly one default, the step you would take",
@@ -776,13 +777,11 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.4 and v1.7, host-run settle outcome
     expect(served).toContain(
       'If premium is unavailable (quota/models line), say so on the card and use the hold\'s "Try a stronger model" way instead',
     );
-    expect(served).toContain("When ineligible, omit the premium action and keep the other ways");
+    expect(served).toContain("When ineligible, omit the premium action");
     expect(served).toContain("Never offer both model actions");
+    expect(served).toContain('on "Try a stronger model", omit premium_ask');
     expect(served).toContain(
-      'on a "Try a stronger model" click, spawn with escalate_from but omit premium_ask',
-    );
-    expect(served).toContain(
-      "Only on the captain's premium click does the escalate_from spawn also set shape.premium_ask true",
+      "The escalate_from spawn sets shape.premium_ask true only on the captain's premium click",
     );
     // What that spawn carries is said once, where the trigger is.
     expect(served).toContain(
@@ -946,7 +945,7 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
 
   it("gives every persona the authoring text exactly once", () => {
     const decisionFirst =
-      "An answer that implies any potential next step for the captain, even an optional one, is a decision; only a pure fact with no next step is a note.";
+      "An answer that implies any next step for the captain, even an optional one, is a decision; only a pure fact is a note.";
     expect(CARD_AUTHORING.split(decisionFirst).length - 1).toBe(1);
     for (const [name, prompt] of personas) {
       const text = name === "firstmate" ? FIRSTMATE_CARD_AUTHORING : CARD_AUTHORING;
@@ -1125,9 +1124,7 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
     }
     // The two opt-outs, restated the same way: the crewmate's picture of a
     // visible change, and the Firstmate's own figures.
-    expect(buildCrewmateSystemPrompt("pi")).toContain(
-      "when the change has a visible surface, that includes pictures of it",
-    );
+    expect(buildCrewmateSystemPrompt("pi")).toContain("pictures included for a visible surface");
     expect(buildCrewmateSystemPrompt("pi")).not.toContain(
       "or Verified says in one sentence why not",
     );
@@ -1402,7 +1399,7 @@ describe("the default rule on tests (FI3-1756, the captain's approved plan)", ()
       // helper or stand-in a change edits, a repaired one included, meets
       // the six words in that pull request, and deleting still asks.
       "Bring each test file, helper or stand-in you edit to the six words in the same pull request, moving stand-ins to their owner; deleting a test still asks for the captain's approval.",
-      "Name patterns elsewhere in your report, never fixing or copying them.",
+      "Name patterns in your report, never fixing or copying them.",
       // INF-840, the captain's direction 2: a change's own test is never a
       // suspected flake, and its crewmate repeats it locally before the card.
       "A test whose own code your change adds or edits is never a suspected flake",
@@ -1561,7 +1558,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     );
     expect(prompt).not.toContain("check or select the option you propose");
     expect(prompt).toContain(
-      "Controls update the preview and the renderer's draft only, never an author turn",
+      "Controls update only the preview and the renderer's draft, never an author turn",
     );
     expect(prompt).not.toContain('inf.action("use-settings"');
     expect(prompt).not.toMatch(/explain.more/i);
@@ -1576,7 +1573,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
       );
       expect(prompt).toContain("opens with four headed sections in order");
       expect(prompt).toContain(
-        "Why (the ask or defect; prefer the captain's original intent, wording or framing when available, paraphrase faithfully and quote only exact words; otherwise use factual motivation)",
+        "Why (the ask or defect; prefer the captain's original intent or wording, paraphrased faithfully, quoting only exact words; otherwise factual motivation)",
       );
       let last = prompt.indexOf("For finished code work,");
       for (const heading of COMPLETION_CARD_HEADINGS) {
@@ -1680,7 +1677,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
       // Confirmed by calls that change nothing, not assumed.
       expect(prompt).toContain("confirm each with the cheapest call that changes nothing");
       expect(prompt).toContain("git push --dry-run");
-      expect(prompt).toContain("plan only evidence you can actually gather");
+      expect(prompt).toContain("plan only evidence you can gather");
       // A gap someone else closes surfaces before the build, through the
       // existing filing and blocker paths, in a report that ends the turn.
       expect(prompt).toContain(
@@ -1725,11 +1722,11 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     // that cannot run is named, never dropped. No spec or command is named -
     // the repository's own instructions own those.
     expect(prompt).toContain(
-      "Demonstrate the intent end-to-end: list the concrete actions an end user would take and their expected results; gather evidence for each: product-level artifacts that directly show the behavior working, such as screenshots, recordings, rendered UI, CLI transcripts, API responses, persisted state, or logs. Use as many artifacts as it takes; when the change has a visible surface, that includes pictures of it. Unit tests passing, generic pass/fail output, and reading the code are not evidence on their own. Keep every artifact you gather - pictures, recordings, transcripts, logs - in your task's evidence folder, never in the working copy or a commit; the description is written for a stranger, so no local path, private thread or personal detail enters it. Verified states what each artifact showed, or what stopped you gathering it. A picture the repository's own instructions keep with the change, such as a release note's hero picture, is part of the change, not evidence: commit it where they say. Show image artifacts on the merge card by their path in the evidence folder.",
+      "Demonstrate the intent end-to-end: list the concrete actions an end user would take and their expected results; gather evidence for each: product-level artifacts that directly show the behavior working, such as screenshots, recordings, rendered UI, CLI transcripts, API responses, persisted state, or logs. Use as many artifacts as it takes, pictures included for a visible surface. Unit tests passing, generic pass/fail output, and reading the code are not evidence on their own. Keep every artifact in your task's evidence folder, never in the working copy or a commit. Verified states what each artifact showed, or what stopped you gathering it. A picture the repository's own instructions keep with the change, such as a release note's hero picture, is part of the change, not evidence: commit it where they say. Show image artifacts on the merge card by their path in the evidence folder.",
     );
     expect(prompt.match(/unit tests passing/gi)).toHaveLength(1);
     expect(prompt).toContain(
-      `Run the smallest set of existing tests that would catch a break in what an end user experiences, including end-to-end tests that cover the surfaces you changed, and re-run them after any rebase that brings in overlapping changes. Where the project's end-to-end tests read a surface through shared helpers, the tests that cover it are those helpers' callers, and a change that moves what a helper reads is fixed once in the helper, never in copies across the tests.`,
+      `Run the smallest set of existing tests that would catch a break in what an end user experiences, end-to-end tests covering the changed surfaces included, and re-run them after any rebase that brings in overlapping changes. Where end-to-end tests read a surface through shared helpers, the tests covering it are those helpers' callers, and a change to what a helper reads is fixed once in the helper, never in copies across the tests.`,
     );
     // The validation resource rule is the core's own paragraph, said once.
     expect(prompt.split(RIGOR_SAFETY)).toHaveLength(2);
@@ -1741,7 +1738,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     );
     expect(prompt).not.toMatch(/pnpm|playwright|test:e2e|package:mac/i);
     expect(prompt).toContain(
-      "If no existing test produces the evidence, write or improve a test so one does; if automated testing cannot, execute manual verification steps and record what you performed.",
+      "If no existing test produces the evidence, write or improve a test so one does; if automated testing cannot, perform manual verification steps and record them.",
     );
     expect(prompt).toContain(
       "read the whole diff once against the user's words and your self-brief, and revert or name every change the words did not ask for",
@@ -1845,13 +1842,14 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // INF-2744's approved plan names the one merge card: the fact strip rides a merge or settle effect.
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "ee546c18a4ff81f5f5bcda3dc464d290f6940d2382a840d638a403c631bccb62",
+    "fd2515e14e6ee6fdce708937dc4c9dc5c0f9753240dfe43d5cf06e4da72bcaab",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.
   // INF-2744 names the captain's separate click by the merge card's name.
   // INF-3170's approved plan keeps a builder's repair of its own work inside the approval.
-  expect(hash(HANDOFF)).toBe("24a07d2abefbb53d1c1c8a04010ef665d2f71ba115c0471c60793aa0e6032708");
+  // The prompt-budget trim (INF-3227) says the same rules in fewer words, in both sources.
+  expect(hash(HANDOFF)).toBe("9a04954bb1cdeebe884cf216f138993e5227fe805d91732be621c9ed388c1f88");
 });
 
 // INF-880: the submitted words-only rule must survive procedure filtering on every tier.
@@ -1871,9 +1869,7 @@ describe("validation resource consent on every tier", () => {
           expect(prompt.split(RIGOR_SAFETY)).toHaveLength(2);
           expect(prompt).toContain("keychain or signing access, credential access");
           // INF-1540 direction 3: every consent ask stands for the rest of the task.
-          expect(prompt).toContain(
-            "Ask each consent for the rest of this task and say so in the ask",
-          );
+          expect(prompt).toContain("Ask each consent for the rest of this task, saying so");
           expect(prompt).toContain("for every later check, run or version of this task");
           expect(prompt).toContain("report needs_firstmate asking the first mate to coordinate");
         }

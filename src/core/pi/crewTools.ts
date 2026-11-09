@@ -306,7 +306,7 @@ export function closingSentenceMissing(mode: string): string {
 
 /** What `internal_step` means, shared by spawn_crewmate and create_task. */
 export const INTERNAL_STEP_DESCRIPTION =
-  "True when the captain did not ask for this work: a step of a sequence you run, a helper another task needs, a crewmate's request, or work you start unasked. Its drop or finish puts no note up; a merge or release still does. A step's answer goes to the next step, and once that step has started you close it with settle_task done, why answered. Omit it when the captain asked for this result - by message, card choice or schedule (\"show me the repro first\"): that stays theirs to close.";
+  "True when the captain did not ask for this work: a sequence step, a helper another task needs, a crewmate's request, or work you start unasked. Its drop or finish puts no note up; a merge or release still does. A step's answer goes to the next step, and once that step has started you close it with settle_task done, why answered. Omit it when the captain asked for this result - by message, card choice or schedule: that stays theirs to close.";
 
 /**
  * What `basis` means, shared by spawn_crewmate and create_task: a planned
@@ -314,7 +314,7 @@ export const INTERNAL_STEP_DESCRIPTION =
  * when the step dispatches.
  */
 export const BASIS_DESCRIPTION =
-  "The task (id or key) whose report is this work's spec, or whose reproduction it fixes. Name it only when that task really carries it - the host checks, and ignores an unverified basis.";
+  "The task (id or key) whose report is this work's spec, or whose reproduction it fixes. Name it only when that task really carries it; the host ignores an unverified basis.";
 
 /** A group's description: what it holds, then each field's rule on its own line under the field's name. */
 function groupDescription(lead: string, rules: Record<string, string>): string {
@@ -377,7 +377,7 @@ const SHAPE_FIELD_RULES = {
   override_speed: "As update_task.crew_speed.",
   override_reasoning: "As update_task.reasoning.",
   override_model_id:
-    "The model the user named: an exact model id (e.g. gpt-6-astra), or a provider-qualified key (e.g. anthropic-claude/claude-fable-5-1) when the provider matters. Only when the user named one; it wins when available, else normal routing.",
+    "The model the user named: an exact model id, or a provider-qualified key when the provider matters. Only when the user named one; it wins when available, else normal routing.",
   escalate_from:
     "The task (id or key) whose result the user rejected: only under the escalation rule. The host stops that attempt, keeps its branch and report, and runs this one a tier up.",
   rigor_ask: "Only when the user said in words how careful to be.",

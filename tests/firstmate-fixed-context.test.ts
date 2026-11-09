@@ -381,7 +381,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "work the captain did not ask for is declared internal, the captain's own ask never is",
     home: { tool: "spawn_crewmate", parameter: "shape" },
-    says: "internal_step: True when the captain did not ask for this work: a step of a sequence you run, a helper another task needs, a crewmate's request, or work you start unasked. Its drop or finish puts no note up; a merge or release still does. A step's answer goes to the next step, and once that step has started you close it with settle_task done, why answered. Omit it when the captain asked for this result - by message, card choice or schedule",
+    says: "internal_step: True when the captain did not ask for this work: a sequence step, a helper another task needs, a crewmate's request, or work you start unasked. Its drop or finish puts no note up; a merge or release still does. A step's answer goes to the next step, and once that step has started you close it with settle_task done, why answered. Omit it when the captain asked for this result - by message, card choice or schedule",
   },
   {
     rule: "the same internal-step rule on a planned step",
@@ -517,7 +517,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "the host sizes a card from its body, and a hint only widens",
     home: { tool: "emit_card", parameter: "width" },
-    says: "pass it only to require more room; it can only widen, never narrow",
+    says: "pass it only to require more room; it only widens",
   },
   // Taken out of a tool's text at 19,710 (FI3-1268), where the core or the
   // tool's own parameter already says it.
@@ -634,7 +634,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "autonomy is read to report who merges",
     home: "handoff",
-    says: "Read the task’s current autonomy fact",
+    says: "read the task’s current fact",
   },
   {
     rule: "a piece's basis is the approved answer whatever its kind",

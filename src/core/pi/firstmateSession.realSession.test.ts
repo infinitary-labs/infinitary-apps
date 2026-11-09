@@ -264,7 +264,7 @@ describe("the Pi seat's production contract", () => {
     // self-source path rides the context block instead.
     expect(loader.getSystemPrompt()).not.toContain("/tmp/fm-self-source");
     expect(loader.getSystemPrompt()).toContain("self-map.json");
-    expect(loader.getSystemPrompt()).toContain("It must not modify that packaged copy");
+    expect(loader.getSystemPrompt()).toContain("it must not modify that packaged copy");
     expect(loader.getExtensions().extensions).toEqual([]);
     expect(loader.getSkills().skills).toEqual([]);
     expect(loader.getAgentsFiles().agentsFiles).toEqual([]);

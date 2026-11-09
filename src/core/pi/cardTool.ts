@@ -528,7 +528,7 @@ const crewmateCardParams = Type.Object({
  * description, which a Claude model reads.
  */
 const BROWSER_BUTTON_DESCRIPTION = [
-  `Optional: a short label (at most ${LIVE_ATTACHMENT_LABEL_MAX} characters), such as Try it, View search or View booking, for a button the app adds under this card's body that opens this task's browser for the captain to watch.`,
+  `Optional: a short label (at most ${LIVE_ATTACHMENT_LABEL_MAX} characters), such as Try it or View booking, for a button the app adds under this card's body that opens this task's browser for the captain to watch.`,
   "It only opens the view: it never answers or closes the card, and it changes no merge.",
   `It needs this task's browser, opened with ${browserCommand("open <url>")}; leave it open while the card is up, since a stopped browser opens stopped and a fresh one starts with nothing it had.`,
 ].join(" ");
@@ -542,7 +542,7 @@ const BROWSER_PAGE_DESCRIPTION = [
   "Optional, only beside browser_button: an HTML file from your task's project, such as index.html, that the button opens in this task's browser.",
   "Give its path relative to your working copy, the same in the project folder: an .html or .htm file, with no .. and no link on the way.",
   "The app checks it when the card goes up and serves only files inside the project folder, so before your work merges the click opens the current file or says it is not there yet.",
-  "It needs no browser open now, works after your task closes, never answers or closes the card, changes no merge; never beside browser_handoff.",
+  "It needs no browser open now and works after your task closes; never beside browser_handoff.",
 ].join(" ");
 
 /** The label the request's description gives as its example of the captain's step to sign in. */

@@ -224,7 +224,7 @@ describe("the crewmate tool spec", () => {
     );
     // INF-1464: the captain watched the plan stand still while a crewmate worked.
     expect(tool?.description).toContain(
-      "as soon as a plan item finishes or the work moves to the next item, in the middle of your turn",
+      "as soon as a plan item finishes or the work moves on, mid-turn",
     );
   });
 

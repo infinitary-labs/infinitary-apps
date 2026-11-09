@@ -17,6 +17,32 @@ extension PhoneJourney {
         try await verifyCardReadiness()
         try await verifySharedSeen()
         try await verifyEndedCard()
+        try await verifyNextAfterClose()
+    }
+
+    /// INF-3155, the captain: "when all the cards are already read, dismissing the current card should reveal the next
+    /// one, not going back to the first. this should behave consistently on both desktop and ios". With every card read,
+    /// a closed card gives way to the card after it, and the last card to the one before it, as on the Mac.
+    private func verifyNextAfterClose() async throws {
+        let fixture = try await home("next-card-fixture")
+        let titles = try XCTUnwrap(fixture["titles"] as? [String])
+        XCTAssertEqual(titles.count, 4)
+        for title in titles {
+            showCard(title)
+            _ = try await home("seen-wait", body: title)
+        }
+        showCard(titles[1])
+        _ = try await home("close-titled", body: titles[1])
+        XCTAssertTrue(cardHeading(titles[1]).waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(cardHeading(titles[2]).waitForPresence(timeout: 10), "A middle close brings up the card after it")
+        XCTAssertEqual(app.buttons["card-pager"].label, "2 of 3")
+        picture("next-after-middle-close")
+        showCard(titles[3])
+        _ = try await home("close-titled", body: titles[3])
+        XCTAssertTrue(cardHeading(titles[3]).waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(cardHeading(titles[2]).waitForPresence(timeout: 10), "Closing the last card brings up the one before it")
+        XCTAssertEqual(app.buttons["card-pager"].label, "2 of 2")
+        picture("next-after-last-close")
     }
 
     /// INF-1610: a card about the captain's message names it under its title, as on the Mac.

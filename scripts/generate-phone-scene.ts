@@ -81,6 +81,11 @@ try {
     recordAsksOf: (task: TaskDetail) => Array<{ id: string }>;
     recordWordsFoldName: (task: TaskDetail) => string | null;
   }>(join(REPO_ROOT, "src/renderer/src/cards/RecordHead.tsx"));
+  // The stack is a renderer module the scripts' project does not compile, so this names only the shapes it reads.
+  const { departureIndex, neighboursOf } = await runner.import<{
+    departureIndex: (shown: Array<{ id: string }>, unread: readonly string[], action: "depart", neighbours: readonly string[]) => number;
+    neighboursOf: (ids: readonly string[], left: string) => string[];
+  }>(join(REPO_ROOT, "src/renderer/src/app/stack.ts"));
   const { SCENE_REACH_PX, satellitePhase } = await runner.import<typeof import("../src/renderer/src/character/crew/satellites.ts")>(join(character, "crew/satellites.ts"));
   const outputs = {
     "ios/Infinitary/InfinitaryApp/PhoneSceneData.generated.json": {
@@ -102,7 +107,27 @@ try {
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskList.generated.json": taskListReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskRecord.generated.json": taskRecordReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneRowMoves.generated.json": taskMoveReadings(),
+    "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneCardDeparture.generated.json": departureReadings(),
   };
+  /** INF-3155: the card the Mac's stack brings up when the shown card leaves, for the phone's to replay. */
+  function departureReadings() {
+    const stacks: Array<[string, string[], string, string[], string[]]> = [
+      ["all read, a middle card closes", ["a", "b", "c", "d"], "b", ["a", "c", "d"], []],
+      ["all read, the first card closes", ["a", "b", "c"], "a", ["b", "c"], []],
+      ["all read, the last card closes", ["a", "b", "c"], "c", ["a", "b"], []],
+      ["all read, the next card left too", ["a", "b", "c", "d"], "b", ["a", "d"], []],
+      ["all read, the last two left together", ["a", "b", "c"], "c", ["a"], []],
+      ["all read, the stack reordered as it closed", ["a", "b", "c"], "a", ["c", "b"], []],
+      ["an unread card waits before it", ["a", "b", "c", "d"], "c", ["a", "b", "d"], ["a"]],
+      ["an unread card arrived as it closed", ["a", "b"], "b", ["a", "c"], ["c"]],
+      ["only new cards are left", ["a"], "a", ["x", "y"], []],
+      ["the only card closes", ["a"], "a", [], []],
+    ];
+    return stacks.map(([name, previous, left, ids, unread]) => {
+      const at = departureIndex(ids.map((id) => ({ id })), unread, "depart", neighboursOf(previous, left));
+      return { name, previous, left, ids, unread, comesUp: ids[at] ?? null };
+    });
+  }
   /** INF-3011: the desktop cinch's frames and motes through a shortening that runs and one only heard ending, for the phone's to replay. */
   function cinchTraces() {
     const fixed = (n: number) => Math.round(n * 1e9) / 1e9;

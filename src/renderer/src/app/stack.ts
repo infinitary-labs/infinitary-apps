@@ -303,8 +303,21 @@ function firstCardIndex(shown: StackEntry[]): number {
 }
 
 /**
+ * The ids to try, in order, when `left` leaves a stack shown in `ids` order:
+ * the cards after it, nearest first, then those before it, nearest first -
+ * the next arrow's card, and at the last card the one before it (INF-3155).
+ */
+export function neighboursOf(ids: readonly string[], left: string | undefined): string[] {
+  const at = left === undefined ? -1 : ids.indexOf(left);
+  if (at < 0) return [];
+  return [...ids.slice(at + 1), ...ids.slice(0, at).reverse()];
+}
+
+/**
  * Where the stack goes when the shown card leaves it (the captain's FI3-711
- * answers: first unread anywhere). The first unread card in stack order,
+ * answer, first unread anywhere, and INF-3155, stay in place): the first
+ * unread card in stack order, else the card nearest after where the shown
+ * card was (`neighbours`, from `neighboursOf`), else the nearest before it,
  * else the first card; a task record or past card only when no card is
  * left. A reply never moves a card (INF-770). The one rule for the stack
  * and for the successor the stage prepares (`dismissalSuccessor`). Hide
@@ -315,11 +328,16 @@ export function departureIndex(
   shown: StackEntry[],
   unread: readonly string[],
   action: "depart" | "hide" = "depart",
+  neighbours: readonly string[] = [],
 ): number {
   if (action === "hide") return firstCardIndex(shown);
   const card = (entry: StackEntry) => !isHeldEntry(entry);
   const firstUnread = shown.findIndex((entry) => card(entry) && unread.includes(entry.id));
   if (firstUnread >= 0) return firstUnread;
+  for (const id of neighbours) {
+    const at = shown.findIndex((entry) => card(entry) && entry.id === id);
+    if (at >= 0) return at;
+  }
   const first = shown.findIndex(card);
   return first >= 0 ? first : firstCardIndex(shown);
 }
@@ -336,7 +354,9 @@ export function dismissalSuccessor(
 ): StackEntry | undefined {
   const leaving = shown[index];
   const rest = shown.filter((entry) => entry !== leaving);
-  return rest[departureIndex(rest, unread, leaving && isHeldEntry(leaving) ? "hide" : "depart")];
+  if (leaving && isHeldEntry(leaving)) return rest[departureIndex(rest, unread, "hide")];
+  const order = shown.map((entry) => entry.id);
+  return rest[departureIndex(rest, unread, "depart", neighboursOf(order, leaving?.id))];
 }
 
 /** Keep the reader on their entry; else the first card (hiding a record keeps this rule). */
@@ -424,11 +444,16 @@ export function reconcileStack(
         .map((card) => card.id),
     ]),
   ];
-  // The shown card left: the first unread card comes up, else the first
-  // card (`departureIndex`). Records remain available through paging.
+  // The shown card left: the first unread card comes up, else the card
+  // after it, else the one before it (`departureIndex`). Records remain
+  // available through paging.
   const stays = shown.findIndex((card) => card.id === active?.id);
   let cardIndex =
-    stays >= 0 ? stays : prev.cardsSeeded ? departureIndex(shown, unseen) : firstCardIndex(shown);
+    stays >= 0
+      ? stays
+      : prev.cardsSeeded
+        ? departureIndex(shown, unseen, "depart", neighboursOf(prevShownIds, active?.id))
+        : firstCardIndex(shown);
   // A declared continuity card may take the stage only when it arrives,
   // never on an unrelated push or a revision while the reader paged away.
   const forward = shown.findIndex(

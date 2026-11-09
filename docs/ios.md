@@ -179,7 +179,7 @@ Older native readers ignore the optional fields; older desktop readers receive a
 Full shared marks require updated owner and views; offline views keep last-known state until delivery resumes.
 Project filters stay local to each desktop window, with no new phone filter.
 Swiping the native head pages cards without capturing the body's horizontal form and canvas gestures.
-Ordinary arrivals keep the shown card in place; a new `holdsPlace` card comes forward, and a departure chooses an unread card before the first card.
+Ordinary arrivals keep the shown card in place; a new `holdsPlace` card comes forward, and a departure chooses an unread card first, else the card after the one that left, else the one before it, by the Mac's rule (`PhoneCardDeparture`, which `PhoneCardDepartureTests` holds to the Mac's recorded choices).
 On Home, unread cards besides the shown one are counted beside the pager ("1 new"), and a press shows the first of them; the new-card pill shows only on the other tabs, while a reply's pill shows on every tab.
 Form and reply drafts live only in memory and survive paging.
 Native controls own the head, footer choices and reply field; a body cannot draw over or press them.
@@ -343,6 +343,7 @@ Crew sit on the desktop's growing two-orbit ring (`docs/crew-orbits.md`): the fi
 Returning crew open a seat among visible survivors on the same logical orbit; a fallback crew member takes part in main-orbit spacing.
 A re-spaced or resized orbit glides its crew around it, and neither orbits nor another computer's center are outlined.
 `PhoneOrbitSeatsTests` replays the desktop's own seat choices, recorded by `scripts/generate-phone-scene.ts`.
+`PhoneCardDepartureTests` replays the desktop stack's own choice of the card that comes up after a close, recorded the same way.
 Its native Browse crew command, Shift-Command-C, enters app-owned browsing with an accent viewport outline; arrow keys pan it, Tab selects a real crewmate and Space opens that crewmate's preview.
 While browsing, a scene-owned responder holds first-responder status and offers those unmodified keys as priority key commands, because SwiftUI shortcuts for them lose to the system's focus and text handling.
 Each crewmate and program answers touch across its 44-point square, not only the drawn circle.

@@ -477,7 +477,8 @@ describe("stack visibility (WI-18)", () => {
     expect(takeCharacterNotice()).toBe(false);
   });
 
-  it("reveals the first card after a middle close or reply, skipping open records", () => {
+  // INF-3155 direction A: with nothing unread, the card after the closed one comes up.
+  it("reveals the next card after a middle close or reply, skipping open records", () => {
     const a = ready("a", { actions: DECIDE });
     const b = ready("b", { actions: DECIDE });
     const c = ready("c", { actions: DECIDE });
@@ -487,15 +488,15 @@ describe("stack visibility (WI-18)", () => {
     state().openRecord("t2");
     state().focusCard("c");
     state().applyCards([a, b, d]);
-    expect(shownId()).toBe("a");
-    expect(state().cardIndex).toBe(2);
+    expect(shownId()).toBe("d");
+    expect(state().cardIndex).toBe(4);
     state().applyCards([a, b, c, d]);
     // "c" came back: it is news, and the first unread card wins.
     state().focusCard("c");
     state().focusCard("b");
     state().applyCards([a, c, d, { ...b, awaiting: "answer" }]);
-    expect(shownId()).toBe("a");
-    expect(state().cardIndex).toBe(2);
+    expect(shownId()).toBe("c");
+    expect(state().cardIndex).toBe(3);
     // Unseen departures leave the reader in place.
     state().focusCard("d");
     state().applyCards([a, d, { ...b, awaiting: "answer" }]);
@@ -507,7 +508,8 @@ describe("stack visibility (WI-18)", () => {
     expect(state().records).toEqual([{ taskId: "t1" }]);
   });
 
-  it("wraps to the first card when the shown card was the last one", () => {
+  // INF-3155 direction A: at the last card the one before it comes up, never the first.
+  it("brings up the card before it when the shown card was the last one", () => {
     const a = ready("a", { actions: DECIDE });
     const b = ready("b", { actions: DECIDE });
     const c = ready("c", { actions: DECIDE });
@@ -516,15 +518,31 @@ describe("stack visibility (WI-18)", () => {
     state().nextCard();
     expect(shownId()).toBe("c");
     state().applyCards([a, b, { ...c, awaiting: "answer" }]);
-    expect(shownId()).toBe("a");
-    expect(state().cardIndex).toBe(0);
+    expect(shownId()).toBe("b");
+    expect(state().cardIndex).toBe(1);
     // Repeated waiting snapshots do not move the reader.
     state().applyCards([{ ...c, awaiting: "answer" }, a, b]);
     state().applyCards([a, b, { ...c, awaiting: "answer" }]);
+    expect(shownId()).toBe("b");
+  });
+
+  // INF-3155: "next" is the card the next arrow would have shown; one that left too is passed over.
+  it("brings up the card after the next one when both leave at once, and the stage prepared it", () => {
+    const a = ready("a", { actions: DECIDE });
+    const b = ready("b", { actions: DECIDE });
+    const c = ready("c", { actions: DECIDE });
+    const d = ready("d", { actions: DECIDE });
+    state().applyCards([a, b, c, d]);
+    state().focusCard("b");
+    const prepared = dismissalSuccessor(stackOf(state()), state().cardIndex, state().unreadCardIds);
+    expect(prepared?.id).toBe("c");
+    state().applyCards([a, c, d]);
+    expect(shownId()).toBe(prepared?.id);
+    state().applyCards([a]);
     expect(shownId()).toBe("a");
   });
 
-  it("brings up the first unread card after a close or a reply, before the first card", () => {
+  it("brings up the first unread card after a close or a reply, before the next card", () => {
     const a = ready("a", { actions: DECIDE });
     const b = ready("b", { actions: DECIDE });
     const c = ready("c", { actions: DECIDE });
@@ -542,9 +560,9 @@ describe("stack visibility (WI-18)", () => {
     state().applyCards([a, c, e, { ...d, awaiting: "answer" }]);
     expect(shownId()).toBe("e");
     expect(state().unreadCardIds).toEqual([]);
-    // Nothing unread: the first card, as before.
+    // Nothing unread: "e" was last, so the card before it (INF-3155).
     state().applyCards([a, c, { ...d, awaiting: "answer" }]);
-    expect(shownId()).toBe("a");
+    expect(shownId()).toBe("c");
   });
 
   it("prepares the card a close would bring up, by the same rule", () => {
@@ -554,8 +572,9 @@ describe("stack visibility (WI-18)", () => {
     const stack = [a, b, c];
     // Shown "a": nothing unread, so "b", never the shown card itself.
     expect(dismissalSuccessor(stack, 0, [])?.id).toBe("b");
-    // Shown "b": the first card, not the next arrow.
-    expect(dismissalSuccessor(stack, 1, [])?.id).toBe("a");
+    // Shown "b": the next arrow's card, and at the last card the one before it (INF-3155).
+    expect(dismissalSuccessor(stack, 1, [])?.id).toBe("c");
+    expect(dismissalSuccessor(stack, 2, [])?.id).toBe("b");
     // An unread card wins wherever it is.
     expect(dismissalSuccessor(stack, 0, ["c"])?.id).toBe("c");
     expect(dismissalSuccessor([a], 0, [])).toBeUndefined();
@@ -923,7 +942,7 @@ describe("the project focus holds other projects' cards back (docs/project-focus
     focusOn("repo-inf");
     expect(stackIds()).toEqual(["inf", "mate"]);
     expect(state().heldBackCardIds).toEqual(["web"]);
-    // The first card comes up, with no notice and no focus taken back.
+    // The card after it comes up, with no notice and no focus taken back.
     expect(shownId()).toBe("inf");
     expect(takeCharacterNotice()).toBe(false);
     expect(state().focusRequest).toBe(presses);

@@ -114,7 +114,7 @@ The stage keeps its ordinary pair of documents mounted (`stageSlots.ts`, a pure 
 
 - **Shown**: the selected entry, in flow; the shell measures only it.
 - **Prepared successor** (`warm`): the entry a close would bring up - `dismissalSuccessor`, the same action-specific `departureIndex` rule the stack uses, never the next arrow - drawn invisibly at its own final width once its thread history is read, with only its body (no chrome), inert and hidden from assistive technology.
-  Hide on a task record or past card prepares the first live card, even if already read; ordinary departure prepares the first unread card, falling back to the first live card, then a held entry.
+  Hide on a task record or past card prepares the first live card, even if already read; ordinary departure prepares the first unread card, falling back to the live card after the shown one, then the one before it, then a held entry.
   Any ordinary ready card is prepared, with a script or without: its page is born held (below), so nothing of its own runs before it is shown.
   Task records and past cards are read when shown, since opening a record marks its filing opened, and a card still being written waits until it is ready.
   Nothing is prepared behind a hidden window, and preparing marks nothing read, folds no rail and moves nothing on screen.

@@ -58,7 +58,9 @@ struct PhoneCards: View {
             if let marked = session.stack.first(where: { !previousIDs.contains($0.id) && $0.value["holdsPlace"].flag }) {
                 selected = marked.id; past = nil
             } else if selected == nil || !ids.contains(selected!) {
-                selected = session.stack.first(where: { !session.hasSeen($0) })?.id ?? ids.first
+                // FI3-711 and INF-3155: an unread card first, else the card after the one that left, as on the Mac.
+                let unread = Set(session.stack.filter { !session.hasSeen($0) }.map(\.id))
+                selected = PhoneCardDeparture.comesUp(after: selected, previous: previousIDs, ids: ids, unread: unread.contains)
             }
             showRestored(ids)
             previousIDs = ids

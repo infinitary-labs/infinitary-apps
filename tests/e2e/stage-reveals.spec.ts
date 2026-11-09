@@ -141,7 +141,9 @@ test("under reduced motion a new reply arrives without moving, and stays after a
 });
 
 // This case owns its entire stack; no earlier journey supplies a card or record.
-test("closing a middle card or hiding a record reveals the oldest card, not the next entry", async () => {
+// INF-3155, the captain: "when all the cards are already read, dismissing the
+// current card should reveal the next one, not going back to the first".
+test("with every card read, a close reveals the next card or at the last the one before it, and hiding a record the oldest card", async () => {
   const userDataDir = scratchDir("infinitary-reveal-first-");
   const db = openDatabase(userDataDir);
   const tasks = new TaskService({ db, strict: true });
@@ -192,22 +194,28 @@ test("closing a middle card or hiding a record reveals the oldest card, not the 
     await expect(surface(page)).toHaveCSS("opacity", "1");
     await page.screenshot({ path: test.info().outputPath("before-middle-dismiss.png") });
     await cardLeave(page).click();
-    await expect(shownCard(page, HARBOUR_NOTES[0])).toBeVisible();
-    await expect(pagerAt(page, 3, 5)).toBeVisible();
+    await expect(shownCard(page, HARBOUR_NOTES[3])).toBeVisible();
+    await expect(pagerAt(page, 5, 5)).toBeVisible();
     await expect(surface(page)).toHaveCSS("opacity", "1");
     await expect(
-      cardBody(page, HARBOUR_NOTES[0]).getByText(
+      cardBody(page, HARBOUR_NOTES[3]).getByText(
         "The oldest harbour note should show after a dismissal.",
       ),
     ).toBeVisible();
     await page.screenshot({ path: test.info().outputPath("after-middle-dismiss.png") });
-    await page.getByRole("button", { name: "Previous card" }).click();
+    for (const _ of [0, 1, 2]) await page.getByRole("button", { name: "Previous card" }).click();
     await expect(recordCard(page)).toHaveAttribute("data-task-record", "harbour");
     await hideRecord(page).evaluate((el) => (el as HTMLElement).click());
     await expect(shownCard(page, HARBOUR_NOTES[0])).toBeVisible();
     await expect(pagerAt(page, 2, 4)).toBeVisible();
     await expect(surface(page)).toHaveCSS("opacity", "1");
     await page.screenshot({ path: test.info().outputPath("after-hide-record.png") });
+    // The last card closes: the one before it comes up, not the first.
+    await showCard(page, HARBOUR_NOTES[3]);
+    await cardLeave(page).click();
+    await expect(shownCard(page, HARBOUR_NOTES[1])).toBeVisible();
+    await expect(pagerAt(page, 3, 3)).toBeVisible();
+    await page.screenshot({ path: test.info().outputPath("after-last-dismiss.png") });
     await test.info().attach("remaining ordered cards", {
       body: JSON.stringify(await page.evaluate(() => window.infinitary.cards.list())),
       contentType: "application/json",
@@ -218,7 +226,8 @@ test("closing a middle card or hiding a record reveals the oldest card, not the 
 });
 
 // The captain's FI3-711 answers: the first unread card comes up next after a
-// close; with none unread, the first card does. INF-770 direction A: a reply
+// close; with none unread, INF-3155's next card does, or at the last card the
+// one before it. INF-770 direction A: a reply
 // never moves a card, so the unread one waits until the captain moves on.
 test("closing a card brings up the first unread card, not the first card, and a reply keeps its card shown", async () => {
   const app = await launchWithCards([
@@ -241,6 +250,7 @@ test("closing a card brings up the first unread card, not the first card, and a 
     await showCard(page, CLOSING_NOTE);
     await expectUpdateSeen(page, "closing");
     await receiveUnreadCard(page);
+    const [first = ""] = await answers();
     await test.step("a close skips the first card for the unread one", async () => {
       await cardLeave(page, shownEntry(page)).click();
       await expect(shownCard(page, MOCK_ANSWER_TITLE)).toBeVisible();
@@ -278,9 +288,9 @@ test("closing a card brings up the first unread card, not the first card, and a 
       await expect(cardReply(page).row).toHaveAttribute("data-card-reply", arrived);
       await expect(unreadBadge).toHaveCount(0);
     });
-    await test.step("with nothing unread, a close brings up the first card", async () => {
+    await test.step("with nothing unread, closing the last card brings up the one before it", async () => {
       await cardLeave(page, shownEntry(page)).click();
-      await expect(shownCard(page, READ_NOTE)).toBeVisible();
+      await expect(cardReply(page).row).toHaveAttribute("data-card-reply", first);
     });
   } finally {
     await app.close();

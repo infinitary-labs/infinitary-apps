@@ -1622,6 +1622,44 @@ export async function startPhoneHome(
           result = { card: read(), calls: structuredClone(cardRequests) };
           break;
         }
+        // INF-3155: four notes, every one read before one closes, so the card after it comes up.
+        case "POST next-card-fixture": {
+          for (const card of core.services.supervisor.cards.snapshot())
+            await core.dispatch(
+              card.noteDone && !card.noteDone.closesTask
+                ? "inf:cards:note-done"
+                : "inf:cards:close",
+              [card.id],
+            );
+          const titles = ["Morning tide", "Harbour pilot", "Evening tide", "Night watch"];
+          for (const [index, title] of titles.entries())
+            core.services.supervisor.addFirstmateCard({
+              id: `next-card-${index}`,
+              title,
+              body: `<p>${title} notes for the harbour.</p>`,
+              actions: [],
+            });
+          result = { titles };
+          break;
+        }
+        // INF-3155: the card titled in the body leaves, as when it is answered on another device.
+        case "POST close-titled": {
+          let title = "";
+          for await (const chunk of request) {
+            title += chunk.toString();
+            if (title.length > 1024) throw new Error("A card title is too long");
+          }
+          const card = core.services.supervisor.cards
+            .snapshot()
+            .find((card) => card.title === title);
+          if (!card) throw new Error(`No card is titled ${title}`);
+          await core.dispatch(
+            card.noteDone && !card.noteDone.closesTask ? "inf:cards:note-done" : "inf:cards:close",
+            [card.id],
+          );
+          result = { ok: true };
+          break;
+        }
         // INF-2202 run 41590230179: the journey reads a card, then leaves; the home's own mark of that exact update,
         // not the title on screen, proves the phone read it, so every later fresh stack opens on its first card.
         case "POST seen-wait": {

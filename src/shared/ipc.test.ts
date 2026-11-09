@@ -358,6 +358,7 @@ describe("ipc contract", () => {
       // INF-2631: a paired phone hands its own usage events to its computer's Diagnostics.
       "inf:settings:sharing:phone",
       "inf:shell:preferences",
+      "inf:task:close-done",
       "inf:task:interrupt",
       "inf:task:move",
       "inf:task:move-options",

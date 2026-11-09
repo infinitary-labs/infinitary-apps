@@ -79,6 +79,37 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+/* How a close as done delivered the work: the Delivered row, one fact a
+   line, how it is known at the line's right edge in mono, where Now keeps
+   its age (the design skill's TaskRecord). */
+.fm-task-facts .delivered {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+.fm-task-facts .delivered li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+.fm-task-facts .delivered li + li {
+  margin-top: 2px;
+}
+.fm-task-facts .delivered .fact {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.fm-task-facts .delivered .basis {
+  flex: none;
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+.fm-task-facts .delivered [data-record-delivery-fact="unread"] .basis {
+  color: var(--warn);
+}
 .fm-task-facts .keys {
   min-width: 0;
   overflow-wrap: anywhere;

@@ -109,6 +109,8 @@ const browserControlButton = (entryId: string) =>
 const moveComputerButton = (entryId: string) =>
   shownPart(entryId, "[data-record-move-open]:enabled");
 
+const closeDoneButton = (entryId: string) => shownPart(entryId, "[data-record-close-done]:enabled");
+
 const answerDoneButton = (entryId: string) =>
   shownPart(entryId, "button[data-answer-done-control]:not(:disabled)");
 
@@ -264,6 +266,8 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   "browser.control": () => toShownPart(browserControlButton, (button) => button.click()),
   // The click itself: the picker opens with focus on its first computer.
   "task.move-computer": () => toShownPart(moveComputerButton, (button) => button.click()),
+  // The click itself: the one confirm opens with focus on Cancel.
+  "task.close-done": () => toShownPart(closeDoneButton, (button) => button.click()),
   "cards.show-browser": () => toTab("cards.show-browser"),
   "cards.next-tab": () => toTab("cards.next-tab"),
   "cards.previous-tab": () => toTab("cards.previous-tab"),
@@ -379,6 +383,10 @@ function windowFacts(): WindowFacts {
     taskMove: (() => {
       const id = shownEntry(useShellStore.getState())?.id;
       return !!id && moveComputerButton(id) !== null;
+    })(),
+    taskCloseDone: (() => {
+      const id = shownEntry(useShellStore.getState())?.id;
+      return !!id && closeDoneButton(id) !== null;
     })(),
     updateAvailable: useUpdateState.getState().status?.updateAvailable ?? false,
     checksUpdates: checksUpdates(useUpdateState.getState().status),

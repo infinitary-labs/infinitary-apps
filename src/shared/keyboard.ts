@@ -384,6 +384,17 @@ export const KEYBOARD_COMMANDS = {
     keys: [],
     searchWords: ["computer", "mac", "machine", "move", "device", "record"],
   },
+  // The shown task record's Close as done (INF-3169's plan, piece 3): opens
+  // its one confirm, which closes nothing until its own Close as done.
+  "task.close-done": {
+    label: "Close the task as done",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["done", "finish", "finished", "complete", "close", "record", "task"],
+  },
   "cards.show-browser": {
     label: "Show Browser",
     scope: "window",

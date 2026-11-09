@@ -1,7 +1,8 @@
 import type { RecordBar } from "@shared/recordBar";
+import { CLOSE_DONE_LABEL, recordOffersCloseDone } from "@shared/recordCloseDone";
 import { DROP_TASK_LABEL, HIDE_RECORD_LABEL } from "@shared/recordDrop";
 import type { TaskStatusReading } from "@shared/taskPresentation";
-import type { DropEffects } from "@shared/tasks";
+import type { DropEffects, TaskView } from "@shared/tasks";
 import { ElementType, parseDocument } from "htmlparser2";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -113,7 +114,10 @@ describe("task record chrome", () => {
 
 const emptyEffects: DropEffects = { parts: [], waiting: [], underway: [] };
 
-function bar(state: RecordBar | null, extra: { effects?: DropEffects | null } = {}): Node {
+function bar(
+  state: RecordBar | null,
+  extra: { effects?: DropEffects | null; closeDone?: boolean } = {},
+): Node {
   const html = renderToStaticMarkup(
     <RecordPaneFooter
       bar={state}
@@ -123,6 +127,14 @@ function bar(state: RecordBar | null, extra: { effects?: DropEffects | null } = 
       revision={0}
       onRun={() => Promise.resolve()}
       onShowCard={() => {}}
+      {...(extra.closeDone !== undefined
+        ? {
+            closeDone: {
+              offered: extra.closeDone,
+              close: () => Promise.resolve({ ok: true, text: "Closed." }),
+            },
+          }
+        : {})}
     />,
   );
   return parseDocument(html) as unknown as Node;
@@ -248,6 +260,54 @@ describe("task record action bar", () => {
     const row = marked(bar(open({})), "data-record-footer")?.children?.[0];
     const order = (row?.children ?? []).map((child) => child.attribs?.["data-record-slot"] ?? "");
     expect(order).toEqual(["end", "", "next"]);
+  });
+
+  // INF-3169's plan, piece 3: "a Close as done button on a started task's
+  // record" - in its own slot just left of the next step, so Tab reaches
+  // Drop task, then Close as done, then the next step.
+  it("puts Close as done in its own slot just left of the next step, only when it is offered", () => {
+    const started = open({ end: "stop-task", next: "continue" });
+    expect(buttons(bar(started, { closeDone: true }))).toEqual([
+      DROP_TASK_LABEL,
+      CLOSE_DONE_LABEL,
+      "Continue",
+    ]);
+    const row = marked(bar(started, { closeDone: true }), "data-record-footer")?.children?.[0];
+    const order = (row?.children ?? []).map((child) => child.attribs?.["data-record-slot"] ?? "");
+    expect(order).toEqual(["end", "", "done", "next"]);
+    expect(buttons(bar(started, { closeDone: false }))).toEqual([DROP_TASK_LABEL, "Continue"]);
+    // An idle started task with nothing for the captain still offers it.
+    expect(buttons(bar(open({ end: "stop-task", next: null }), { closeDone: true }))).toEqual([
+      DROP_TASK_LABEL,
+      CLOSE_DONE_LABEL,
+    ]);
+  });
+
+  it("offers Close as done on started work only, never while it starts or on a saved answer", () => {
+    const view = (patch: Partial<TaskView>) =>
+      ({
+        kind: "work",
+        status: "active",
+        activity: "idle",
+        startPolicy: "when-ready",
+        flags: { blocked: false, held: false, needsYou: false, ready: false },
+        waitingCardId: null,
+        children: { total: 0, closed: 0 },
+        blockedBy: [],
+        startedAt: 1,
+        ...patch,
+      }) as TaskView;
+    expect(recordOffersCloseDone(view({}))).toBe(true);
+    expect(recordOffersCloseDone(view({ activity: "running" }))).toBe(true);
+    expect(recordOffersCloseDone(view({ activity: "interrupted" }))).toBe(true);
+    expect(recordOffersCloseDone(view({ waitingCardId: "card-1" }))).toBe(true);
+    expect(recordOffersCloseDone(view({ status: "open", activity: null, startedAt: null }))).toBe(
+      false,
+    );
+    expect(recordOffersCloseDone(view({ activity: "starting" }))).toBe(false);
+    expect(recordOffersCloseDone(view({ answerNoteId: "card-answer" }))).toBe(false);
+    expect(recordOffersCloseDone(view({ kind: "decision" }))).toBe(false);
+    expect(recordOffersCloseDone(view({ status: "done", activity: null }))).toBe(false);
   });
 
   it("draws no bar on an open row with no button", () => {

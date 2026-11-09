@@ -200,6 +200,8 @@ export type FirstmateApi = {
       /** The panel whose page the captain moved it from, by its title. */
       from?: TaskMoveFrom,
     ) => Promise<{ ok: true } | { ok: false; text: string }>;
+    /** The record's Close as done: close started work as done on the captain's word. */
+    closeDone: (taskId: string) => Promise<{ ok: boolean; text: string }>;
     /** Where a started task could move: Move to a computer's choices. */
     moveOptions: (taskId: string) => Promise<MoveOptions>;
     /** Move a started task to a computer, or cancel its waiting move with null. */

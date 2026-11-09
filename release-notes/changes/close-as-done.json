@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "close-as-done",
+      "kind": "feature",
+      "area": "tasks",
+      "title": "Close a started task as done from its record, and see how it was delivered",
+      "body": "A started task's record now has a Close as done button, also in command search. It asks once, then closes the task on your word: a working crewmate stops, unmerged work is saved, and an open pull request stays open. A task closed as done now has a Delivered row on its record that says how the work was delivered, such as a pull request merged or still open, or edits saved, each marked Checked or As stated.",
+      "picture": {
+        "dark": "close-as-done-dark.webp",
+        "light": "close-as-done-light.webp",
+        "alt": "A done task's record reads Finished on your word, then a Delivered row: its pull request still open and its edits saved, each marked Checked"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

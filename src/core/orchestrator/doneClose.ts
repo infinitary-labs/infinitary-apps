@@ -1,5 +1,6 @@
 import type { DeliveryFact, DoneWhy } from "@shared/deliveryFacts";
 import { type OverridableHold, overridePasses, softHoldWords } from "@shared/holds";
+import { TASK_CARD_VIA } from "@shared/provenance";
 import type { ForgePull } from "../forge/forge";
 import type { TaskRecord } from "../storage/taskStore";
 import { type SettleRefusal, TaskGraphRefusal } from "../tasks/taskGraph";
@@ -26,7 +27,16 @@ export type DoneCloseInput = {
    * are his: they pass every soft hold, and the close keeps them.
    */
   captainWords?: string;
+  /**
+   * The captain pressed Close as done on the task's record (INF-3169's
+   * plan, piece 3): the close is the captain's, from the task card, and the press is
+   * its words.
+   */
+  fromRecord?: true;
 };
+
+/** The words a press of Close as done on the record carries as the captain's. */
+export const CLOSE_AS_DONE_PRESS = "Close as done, pressed on the task's record.";
 
 export type DoneCloseResult = { ok: boolean; text: string; refusal?: SettleRefusal };
 
@@ -111,7 +121,8 @@ export class DoneClose {
       return refuse("another settle of it is already in progress. Wait for its outcome.");
     if (TaskService.isClosed(record)) return refuse(`it is already ${describeStatus(record)}.`);
 
-    const words = input.captainWords?.trim() || undefined;
+    const words =
+      input.captainWords?.trim() || (input.fromRecord ? CLOSE_AS_DONE_PRESS : undefined);
     const why = input.why;
     if (!why && !words)
       return refuse(
@@ -166,7 +177,12 @@ export class DoneClose {
           : this.proofHeld(current, why, carrier, read);
         if (proof) return refuse(`${proof} ${softHoldWords("proof", "firstmate")}`);
       }
-      return await this.closeWith(record, handle, why, carrier, words, evidence, read);
+      return await this.closeWith(
+        record,
+        handle,
+        { why, carrier, words, evidence, fromRecord: input.fromRecord === true },
+        read,
+      );
     } catch (caught) {
       if (caught instanceof TaskGraphRefusal) return refuse(caught.message);
       throw caught;
@@ -481,15 +497,26 @@ export class DoneClose {
   private async closeWith(
     record: TaskRecord,
     handle: string,
-    why: DoneWhy | undefined,
-    carrier: TaskRecord | undefined,
-    words: string | undefined,
-    evidence: string | undefined,
+    asked: {
+      why: DoneWhy | undefined;
+      carrier: TaskRecord | undefined;
+      words: string | undefined;
+      evidence: string | undefined;
+      fromRecord: boolean;
+    },
     read: ReadFacts,
   ): Promise<DoneCloseResult> {
+    const { why, carrier, words, evidence, fromRecord } = asked;
     const { facts } = read;
+    // A press on the record is the captain's own close, from the task card.
+    const actor = fromRecord ? ("captain" as const) : ("firstmate" as const);
     const said = words ? { captainWords: words, onWord: true } : {};
-    const recorded = { why: why ?? "word", deliveryFacts: facts, ...said };
+    const recorded = {
+      why: why ?? "word",
+      deliveryFacts: facts,
+      ...said,
+      ...(fromRecord ? { via: TASK_CARD_VIA } : {}),
+    };
     // The record keeps every fact; the answer leaves out the one its own words already say.
     const lineOf = (shown: DeliveryFact[]) =>
       shown.map((fact) => ` ${fact.text.replace(/\.$/, "")}.`).join("");
@@ -501,7 +528,7 @@ export class DoneClose {
       const end = this.host.tasks.graph.carrierOf(record.id);
       const shared = [carrier, end].some((next) => next && sameChange(record, next));
       const pullRequest = shared ? "" : (await this.closing.closeOpenPullRequest(record.id)).text;
-      const close = carriedOnClose(carrier, "firstmate");
+      const close = carriedOnClose(carrier, actor);
       await this.closing.closeTask(record.id, { ...close, data: { ...close.data, ...recorded } });
       this.declared.placeHeldOutcome(record.id);
       return {
@@ -517,7 +544,7 @@ export class DoneClose {
         : `commit ${sha?.slice(0, 12)}`;
       const merged = await this.settle.closeMerged(
         record,
-        "firstmate",
+        actor,
         {
           ok: true,
           text: `Merged in ${name}.`,
@@ -528,7 +555,7 @@ export class DoneClose {
       );
       return { ok: merged.ok, text: `Closed ${handle} as done. ${merged.text}${factLine}` };
     }
-    const close = this.reasonOf(record, why, evidence, read);
+    const close = { ...this.reasonOf(record, why, evidence, read), actor };
     await this.closing.closeTask(
       record.id,
       { ...close, data: { ...close.data, ...recorded } },

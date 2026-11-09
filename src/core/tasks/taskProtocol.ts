@@ -6,6 +6,7 @@ import {
   type CrewTranscript,
   emptyTranscript,
 } from "@shared/crewTranscript";
+import { deliveryFactsOf } from "@shared/deliveryFacts";
 import type { FmEvent } from "@shared/events";
 import { overridePasses } from "@shared/holds";
 import type { ValidationEvidence } from "@shared/liveValidation";
@@ -1680,10 +1681,24 @@ function closingOf(
   );
   const at = close?.at ?? record.closedAt;
   if (at == null) return null;
-  if (carried) return { at, note: carriedOnWords(carried) };
-  const words = close?.text.replace(/^(?:dropped|superseded) - /, "").trim() ?? "";
+  // A close as done's facts, and whether the captain's word asked it
+  // (INF-3169's plan, piece 3): the record lists them in its Delivered row.
+  const facts = deliveryFactsOf(close?.data ?? undefined).map(({ basis, text }) => ({
+    basis,
+    text,
+  }));
+  const onWord = close?.data?.onWord === true;
+  const done = {
+    ...(facts.length > 0 ? { facts } : {}),
+    ...(onWord ? { onWord: true as const } : {}),
+  };
+  if (carried) return { at, note: carriedOnWords(carried), ...done };
+  // The line already says the reason's word: the note keeps only what it adds.
+  let words = (close?.text ?? "").replace(/^(?:dropped|superseded) - /, "").trim();
+  for (const lead of [`${record.closedReason}: `, `${record.closedReason} - `])
+    if (words.startsWith(lead)) words = words.slice(lead.length);
   const note = words && words !== record.closedReason ? words : null;
-  return { at, note };
+  return { at, note, ...done };
 }
 
 /** Where the work of a task closed as carried on stands, in the record's words (INF-1825). */

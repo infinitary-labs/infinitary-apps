@@ -2,11 +2,18 @@
 // "Folded under the goal, closed, with their count in the fold's name").
 // The filing, plan-skip and words cases moved here from the record's frame
 // tests with the parts they read.
+import { DELIVERY_BASIS_WORDS, DELIVERY_FACTS_LABEL } from "@shared/deliveryFacts";
 import type { TaskDetail } from "@shared/tasks";
 import { ElementType, parseDocument } from "htmlparser2";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { RecordAttention, RecordGoal, RecordRelations, recordWordsFoldName } from "./RecordHead";
+import {
+  RecordAttention,
+  RecordDelivered,
+  RecordGoal,
+  RecordRelations,
+  recordWordsFoldName,
+} from "./RecordHead";
 
 type Node = { type: string; data?: string; attribs?: Record<string, string>; children?: Node[] };
 
@@ -179,6 +186,57 @@ describe("the head above the goal", () => {
     expect(renderToStaticMarkup(<RecordAttention detail={task()} onOpenChange={() => {}} />)).toBe(
       "",
     );
+  });
+
+  // INF-3169's plan, piece 3: "the facts on the record" - each delivery fact
+  // the close as done recorded with how it is known, in the record's own
+  // labelled rows (the captain: the first drawing was "too inconsistent with
+  // surrounding UI"), under the closed line that says whose word closed it.
+  it("lists a close as done's delivery facts as the record's Delivered row, each with how it is known", () => {
+    const facts = [
+      { basis: "checked" as const, text: "Its own pull request #55 is still open" },
+      {
+        basis: "stated" as const,
+        text: "Result named by the first mate: The meter reads on time.",
+      },
+      { basis: "unread" as const, text: "Its working copy could not be read" },
+    ];
+    const closed = task({
+      status: "done",
+      activity: null,
+      closedReason: "finished",
+      closedAt: now,
+      closing: { at: now, note: null, onWord: true, facts },
+    });
+    const head = renderToStaticMarkup(<RecordAttention detail={closed} onOpenChange={() => {}} />);
+    expect(textOf(find(head, "data-record-context"))).toMatch(/^Finished on your word .*\.$/);
+    expect(find(head, "data-record-delivery-facts")).toBeUndefined();
+
+    const html = renderToStaticMarkup(<RecordDelivered detail={closed} />);
+    expect(textOf(find(html, "data-task-fact-label"))).toBe(DELIVERY_FACTS_LABEL);
+    const list = find(html, "data-record-delivery-facts");
+    const rows = (list?.children ?? []).filter((node) => node.type === ElementType.Tag);
+    expect(rows.map((row) => [row.attribs?.["data-record-delivery-fact"], textOf(row)])).toEqual(
+      facts.map((fact) => [fact.basis, `${fact.text}${DELIVERY_BASIS_WORDS[fact.basis]}`]),
+    );
+
+    // A closed task with no facts draws no row, and only its line.
+    const plain = task({
+      status: "done",
+      activity: null,
+      closedReason: "finished",
+      closedAt: now,
+      closing: { at: now, note: "The shoal is sounded." },
+    });
+    expect(renderToStaticMarkup(<RecordDelivered detail={plain} />)).toBe("");
+    expect(
+      textOf(
+        find(
+          renderToStaticMarkup(<RecordAttention detail={plain} onOpenChange={() => {}} />),
+          "data-record-context",
+        ),
+      ),
+    ).toMatch(/^Finished .*: The shoal is sounded\.$/);
   });
 
   it("names a parent, what it waits on and holds up, and its parts as rows", () => {

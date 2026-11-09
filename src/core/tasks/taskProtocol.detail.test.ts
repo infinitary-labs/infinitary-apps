@@ -333,6 +333,75 @@ describe("the task protocol (task-system P3)", () => {
     expect(taskDetailSchema.parse(detail)).toEqual(detail);
   });
 
+  // INF-3169's plan, piece 3: "the facts on the record" - each delivery fact
+  // a close as done recorded, marked checked, as stated or unread, and the
+  // captain's word when it asked the close. The facts are the ones the one
+  // close as done records for a task with an open pull request and work it saved.
+  it("carries a close as done's delivery facts and the captain's word on its closing, and drops a note's repeat of the reason", () => {
+    const { tasks, protocol } = taskProtocolFixture();
+    tasks.create({ id: "a", title: "Correct the meter", prompt: "p", repoId: "r1" });
+    tasks.close("a", {
+      status: "done",
+      reason: "finished",
+      actor: "captain",
+      text: "finished on the captain's word",
+      data: {
+        why: "word",
+        captainWords: "Close as done, pressed on the task's record.",
+        onWord: true,
+        deliveryFacts: [
+          {
+            kind: "pull-request",
+            basis: "checked",
+            text: "Its own pull request #55 is still open",
+          },
+          {
+            kind: "work",
+            basis: "checked",
+            text: "1 commit not on the main branch and uncommitted edits, saved",
+          },
+          {
+            kind: "evidence",
+            basis: "stated",
+            text: "Result named by the first mate: The meter reads on time.",
+          },
+          {
+            kind: "pull-request",
+            basis: "unread",
+            text: "Its own pull request #54 could not be read",
+          },
+        ],
+      },
+    });
+    const detail = taskDetailSchema.parse(protocol.detail("a"));
+    expect(detail.closing).toEqual({
+      at: expect.any(Number),
+      // The host's words stay whole for a reader that does not read onWord.
+      note: "finished on the captain's word",
+      onWord: true,
+      facts: [
+        { basis: "checked", text: "Its own pull request #55 is still open" },
+        { basis: "checked", text: "1 commit not on the main branch and uncommitted edits, saved" },
+        { basis: "stated", text: "Result named by the first mate: The meter reads on time." },
+        { basis: "unread", text: "Its own pull request #54 could not be read" },
+      ],
+    });
+
+    // A finished close with evidence keeps the evidence, not the reason's word again.
+    tasks.create({ id: "b", title: "Sound the shoal", prompt: "p", repoId: "r1" });
+    tasks.close("b", {
+      status: "done",
+      reason: "finished",
+      actor: "firstmate",
+      text: "finished: The shoal is sounded.",
+      data: { why: "finished", deliveryFacts: [] },
+    });
+    expect(protocol.detail("b").closing).toEqual({
+      at: expect.any(Number),
+      note: "The shoal is sounded.",
+    });
+  });
+
   it("reads the record the way the popup shows it: headline, model name, condensed activity, closing and problem", () => {
     const { db, tasks, protocol, tick } = taskProtocolFixture({
       modelLabel: (model) => (model === "openai/gpt-6-sol" ? "GPT-6 Sol" : undefined),

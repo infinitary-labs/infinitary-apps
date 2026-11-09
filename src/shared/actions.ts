@@ -870,6 +870,7 @@ const actionLines = {
     "general",
     "asked",
     "Use settle_task for merge or discard; an ask-first merge still needs the captain's click.",
+    ["inf:task:close-done"],
   ),
   "card-close": guidance(
     "general",

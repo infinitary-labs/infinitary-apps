@@ -264,6 +264,28 @@ describe("a closed task's line", () => {
     });
   });
 
+  // INF-3169's plan, piece 3: a close as done on the captain's word says so
+  // once, in its lead; the saved note keeps the host's own words for readers
+  // that do not read onWord (the phone's closed line).
+  it("says a close on the captain's word in its lead, once", () => {
+    const closed = (note: string) =>
+      recordClosedLineOf(
+        task({
+          status: "done",
+          closedReason: "finished",
+          closedAt: now,
+          closing: { at: now, note, onWord: true },
+        }),
+      );
+    expect(closed("finished on the captain's word")).toEqual({
+      lead: "Finished on your word ",
+      at: now,
+      change: null,
+      tail: ".",
+    });
+    expect(closed("The meter reads on time.")?.tail).toBe(": The meter reads on time.");
+  });
+
   it("reads a dropped task by its recorded note, not as a missing report", () => {
     expect(
       recordClosedLineOf(

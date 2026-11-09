@@ -59,6 +59,8 @@ export type WindowFacts = {
   browserControl?: boolean;
   /** The shown task record offers Move to a computer. */
   taskMove?: boolean;
+  /** The shown record offers Close as done (INF-3169's plan, piece 3). */
+  taskCloseDone?: boolean;
   answerDoneReady?: boolean;
   computers?: { page: number; pages: number };
   /** The top bar's project pill: whether it shows, and the focus that holds (docs/project-focus.md). */
@@ -262,6 +264,8 @@ const REFUSALS: Readonly<
     facts.browserControl ? null : "Show a browser with control available first",
   "task.move-computer": (_s, facts) =>
     facts.taskMove ? null : "Show a started task that can move to another computer first",
+  "task.close-done": (_s, facts) =>
+    facts.taskCloseDone ? null : "Show a started task's record first",
   "cards.show-browser": (s) => tabRefusal(s, "cards.show-browser"),
   "cards.next-tab": (s) => tabRefusal(s, "cards.next-tab"),
   "cards.previous-tab": (s) => tabRefusal(s, "cards.previous-tab"),

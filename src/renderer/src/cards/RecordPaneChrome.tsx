@@ -6,6 +6,7 @@ import {
   RECORD_NEXT_LABELS,
   type RecordBar,
 } from "@shared/recordBar";
+import { CLOSE_DONE_LABEL, closeDoneConfirm } from "@shared/recordCloseDone";
 import {
   DROP_CANCEL_LABEL,
   DROP_REVIEW_STALE,
@@ -171,6 +172,16 @@ export function RecordPaneChrome({
 }
 
 /**
+ * The record's Close as done (INF-3169's plan, piece 3): whether it is
+ * offered, and the close itself, whose answer is the close's own words or
+ * a refusal.
+ */
+export type RecordCloseDone = {
+  offered: boolean;
+  close: () => Promise<{ ok: boolean; text: string }>;
+};
+
+/**
  * A started task's Move to a computer on its record (docs/helper.md,
  * "Moving a started task"): whether it may move now, the move that stands,
  * where it could go and the ask itself, which `null` cancels.
@@ -199,6 +210,12 @@ export type RecordMove = {
  * writes nothing. Enter does not approve a drop: Cancel takes focus, and
  * both buttons are type="button". Show the card only points at the waiting
  * decision. Tab reaches the buttons in the order shown.
+ *
+ * Close as done (INF-3169's plan, piece 3) sits in its own slot just left
+ * of the next slot on started work, and asks once the same way: Cancel
+ * takes the end slot and focus, the confirm sentence says what the close
+ * does to the work, and a primary Close as done takes the next slot. The
+ * record stays, and reads Done once the close is accepted.
  */
 export function RecordPaneFooter({
   bar,
@@ -209,6 +226,7 @@ export function RecordPaneFooter({
   onRun,
   onShowCard,
   move,
+  closeDone,
 }: {
   bar: RecordBar | null;
   effects: DropEffects | null;
@@ -220,8 +238,12 @@ export function RecordPaneFooter({
   onRun: (op: TaskLifecycleOp, review?: DropTaskReview) => Promise<unknown>;
   onShowCard: () => void;
   move?: RecordMove;
+  closeDone?: RecordCloseDone;
 }) {
-  const [confirming, setConfirming] = useState(false);
+  /** The one confirm that asks, Drop task's or Close as done's, if any. */
+  const [confirming, setConfirming] = useState<"drop" | "close-done" | null>(null);
+  /** Close as done's close while it runs. */
+  const [closingDone, setClosingDone] = useState(false);
   const [pending, setPending] = useState<TaskLifecycleOp | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** Move to a computer's picker, while it is open: every other computer, and the one chosen. */
@@ -230,18 +252,24 @@ export function RecordPaneFooter({
   const [moving, setMoving] = useState<"open" | "move" | "cancel" | null>(null);
   const moveKeys = useCommandKeys("task.move-computer");
   const doneKeys = useCommandKeys("cards.done");
+  const closeDoneKeys = useCommandKeys("task.close-done");
   const reviewKey = effects ? JSON.stringify(effects) : "";
 
   // A new reading of the record settles whatever was in flight.
   // biome-ignore lint/correctness/useExhaustiveDependencies: `revision` is the trigger.
   useEffect(() => {
     setPending(null);
+    setClosingDone(false);
   }, [revision]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: the slots, task and reviewed effects are the triggers.
   useEffect(() => {
-    setConfirming(false);
+    setConfirming((asked) => (asked === "drop" ? null : asked));
     setError(null);
   }, [bar?.end, bar?.next, taskKey, reviewKey]);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the offer and the task are the triggers.
+  useEffect(() => {
+    setConfirming((asked) => (asked === "close-done" ? null : asked));
+  }, [closeDone?.offered, taskKey]);
   // A move that started, or a task that may no longer move, closes the picker.
   // biome-ignore lint/correctness/useExhaustiveDependencies: the move's state and the task are the triggers.
   useEffect(() => {
@@ -250,7 +278,8 @@ export function RecordPaneFooter({
     setMoving(null);
   }, [move?.movable, move?.computerMove?.state, taskKey]);
 
-  if (!bar || (!bar.end && !bar.next)) return null;
+  const offersDone = closeDone?.offered === true;
+  if (!bar || (!bar.end && !bar.next && !offersDone)) return null;
   const end = bar.end;
 
   const run = (op: TaskLifecycleOp, review?: DropTaskReview) => {
@@ -258,11 +287,11 @@ export function RecordPaneFooter({
     setError(null);
     onRun(op, review).catch((caught: unknown) => {
       setPending(null);
-      setConfirming(false);
+      setConfirming(null);
       setError(caught instanceof Error ? caught.message : String(caught));
     });
   };
-  const busy = pending !== null;
+  const busy = pending !== null || closingDone;
   const beginDrop = () => {
     if (end === "drop-task") {
       if (!effects) {
@@ -275,7 +304,7 @@ export function RecordPaneFooter({
       }
     }
     setError(null);
-    setConfirming(true);
+    setConfirming("drop");
   };
   const confirm = () => {
     if (end === "stop-task") run("stop-task");
@@ -284,6 +313,26 @@ export function RecordPaneFooter({
         parts: effects.parts.map((part) => part.key),
         waiting: effects.waiting.map((task) => task.key),
         underway: effects.underway.map((task) => task.key),
+      });
+  };
+
+  const confirmDone = () => {
+    if (!closeDone) return;
+    setClosingDone(true);
+    setError(null);
+    closeDone
+      .close()
+      .then((done) => {
+        setConfirming(null);
+        if (!done.ok) {
+          setClosingDone(false);
+          setError(done.text);
+        }
+      })
+      .catch((caught: unknown) => {
+        setClosingDone(false);
+        setConfirming(null);
+        setError(caught instanceof Error ? caught.message : String(caught));
       });
   };
 
@@ -326,10 +375,12 @@ export function RecordPaneFooter({
       });
   };
 
-  const asking = confirming && end !== null;
-  const choosing = !asking && picking !== null;
+  const askingDone = confirming === "close-done" && offersDone;
+  const asking = confirming === "drop" && end !== null;
+  const choosing = !asking && !askingDone && picking !== null;
   let confirmLine = "";
-  if (asking) {
+  if (askingDone) confirmLine = closeDoneConfirm(taskKey);
+  else if (asking) {
     const unstarted = end === "drop-task" && effects;
     const waiting = unstarted ? dropWaitingLine(effects.waiting) : null;
     const underway = unstarted ? dropUnderwayLine(effects.underway) : null;
@@ -340,8 +391,33 @@ export function RecordPaneFooter({
 
   let endButton: React.ReactNode = null;
   let nextButton: React.ReactNode = null;
+  let doneButton: React.ReactNode = null;
   let between: React.ReactNode = confirmLine;
-  if (choosing) {
+  if (askingDone) {
+    // Its own key: the end slot's Drop task must not be reused, or autoFocus never runs.
+    endButton = (
+      <Button
+        key="close-done-cancel"
+        variant="secondary"
+        autoFocus
+        disabled={closingDone}
+        onClick={() => setConfirming(null)}
+      >
+        {DROP_CANCEL_LABEL}
+      </Button>
+    );
+    nextButton = (
+      <Button
+        variant="primary"
+        data-record-close-done-confirm=""
+        pending={closingDone}
+        disabled={closingDone}
+        onClick={confirmDone}
+      >
+        {CLOSE_DONE_LABEL}
+      </Button>
+    );
+  } else if (choosing) {
     endButton = (
       <Button
         variant="secondary"
@@ -387,7 +463,7 @@ export function RecordPaneFooter({
     );
   } else if (asking) {
     endButton = (
-      <Button variant="secondary" autoFocus disabled={busy} onClick={() => setConfirming(false)}>
+      <Button variant="secondary" autoFocus disabled={busy} onClick={() => setConfirming(null)}>
         {DROP_CANCEL_LABEL}
       </Button>
     );
@@ -433,6 +509,21 @@ export function RecordPaneFooter({
       );
     }
     if (move?.computerMove) between = computerMoveLine(move.computerMove);
+    if (offersDone)
+      doneButton = (
+        <Button
+          variant="secondary"
+          data-record-close-done=""
+          {...closeDoneKeys}
+          disabled={busy}
+          onClick={() => {
+            setError(null);
+            setConfirming("close-done");
+          }}
+        >
+          {CLOSE_DONE_LABEL}
+        </Button>
+      );
     if (bar.next === "show-card") {
       nextButton = (
         <Button variant="primary" onClick={onShowCard}>
@@ -480,7 +571,7 @@ export function RecordPaneFooter({
 
   return (
     <div
-      data-record-footer={asking ? "confirm" : choosing ? "move" : "bar"}
+      data-record-footer={asking || askingDone ? "confirm" : choosing ? "move" : "bar"}
       data-record-end={end ?? "none"}
       data-record-next={bar.next ?? "none"}
       style={{
@@ -505,7 +596,8 @@ export function RecordPaneFooter({
             a move stands while one does. */}
         <div
           {...(asking ? { "data-record-confirm": end } : {})}
-          {...(!asking && !choosing && move?.computerMove
+          {...(askingDone ? { "data-record-confirm": "close-done" } : {})}
+          {...(!asking && !askingDone && !choosing && move?.computerMove
             ? { "data-record-move": move.computerMove.state }
             : {})}
           style={{
@@ -518,6 +610,11 @@ export function RecordPaneFooter({
         >
           {between}
         </div>
+        {doneButton && (
+          <div data-record-slot="done" style={{ display: "flex", flexShrink: 0 }}>
+            {doneButton}
+          </div>
+        )}
         <div data-record-slot="next" style={{ display: "flex", flexShrink: 0 }}>
           {nextButton}
         </div>

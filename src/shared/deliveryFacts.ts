@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 /**
  * The delivery facts a done close records (INF-3169's plan, piece 2;
  * docs/task-record.md, "One close as done"): each fact the close could
@@ -46,3 +48,23 @@ export function deliveryFactsOf(data: Record<string, unknown> | undefined): Deli
       ["checked", "stated", "unread"].includes((fact as DeliveryFact).basis),
   );
 }
+
+/**
+ * A delivery fact as the task record shows it (INF-3169's plan, piece 3):
+ * its words and how the app knows it. The kind stays on the close event.
+ */
+export const recordDeliveryFactSchema = z.object({
+  basis: z.enum(["checked", "stated", "unread"]),
+  text: z.string().min(1),
+});
+export type RecordDeliveryFact = z.infer<typeof recordDeliveryFactSchema>;
+
+/** The micro label over the facts on the record. */
+export const DELIVERY_FACTS_LABEL = "Delivered";
+
+/** How the record says each fact is known. */
+export const DELIVERY_BASIS_WORDS: Record<DeliveryFactBasis, string> = {
+  checked: "Checked",
+  stated: "As stated",
+  unread: "Not read",
+};

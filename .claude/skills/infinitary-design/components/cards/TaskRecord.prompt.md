@@ -33,18 +33,19 @@ A Dropped work record has only Start again in its next slot unless a replacement
 | Status | End | Next | Said in the body's attention box |
 |---|---|---|---|
 | Backlog | Drop task | `Start` | - |
+| Backlog, started before | Drop task | `Close as done`, `Start` | - |
 | Starting | empty | `Starting`, unavailable | Still starting. You can keep working. after 15 seconds, or Checking whether it started if contact is lost. |
 | Backlog, could not start | Drop task | `Try again` | The concrete reason. |
 | Backlog or Queued, blocked | Drop task | `Start`, disabled | Waiting on FI3-6 (a dropped dependency: A task it waits on was dropped, Ask your first mate about its dependencies before starting.) |
 | Backlog or Queued, with parts | Drop task | empty | Its 5 parts do the work, 3 closed, 2 still open. |
 | Queued, held or not | Drop task | empty - no Start now | - (held: what it waits for and what ends the wait, Waiting for a premium model, You asked for premium, and no premium model has allowance now. It starts by itself once one does. Ask your first mate to start it sooner on another model.) |
 | Dropped, with no replacement or parts | empty | `Start again` | - |
-| Working | Drop task | empty | - |
-| Idle | Drop task | empty | - |
-| Interrupted | Drop task | `Continue` | Work was interrupted |
-| Waiting on you | Drop task | `Show the card` | - (no card to show: This task needs you, Ask your first mate what is needed to continue.) |
+| Working | Drop task | `Close as done` | - |
+| Idle | Drop task | `Close as done` | - |
+| Interrupted | Drop task | `Close as done`, `Continue` | Work was interrupted |
+| Waiting on you | Drop task | `Close as done`, `Show the card` | - (no card to show: This task needs you, Ask your first mate what is needed to continue.) |
 
-`Drop task` (secondary) is the one verb that ends a task from its record, whatever its state.
+`Drop task` (secondary) is the one verb that drops a task from its record, whatever its state.
 Before the work starts it drops the record and the task never starts; once started it ends the task as the captain's cancel, keeping a copy of its unfinished work.
 The record whose Drop task was confirmed closes once the host accepts the drop, as it does on Start; the task stays dropped on its record, which the Tasks panel opens again with `Start again`.
 A row no host operation can end - the first mate's own decision and operation rows, or work returned to the queue after it started - leaves the end slot empty.
@@ -79,9 +80,17 @@ Reply hides and refusal restorations update the open record with the rail.
 No ready choice means existing attention/hold guidance and the bar's other slots, not a decision claim.
 Show the card refreshes the choice before focusing it, never forcing a hidden card onto the stage.
 
+`Close as done` (secondary) closes started work as done on the captain's word (INF-3169's plan, piece 3; `docs/task-record.md`, "One close as done").
+It sits just left of the next slot, in its own slot, on every started work record whose start is accepted and that has no saved answer waiting for Done.
+It asks once, inline, the way Drop task does: Cancel (secondary, takes focus) takes the end slot, the sentence sits between, and a primary `Close as done` takes the next slot, so Enter does not approve.
+The sentence says what the close does to the work: "Close FI3-x as done?
+A working crewmate stops, unmerged work is saved, and an open pull request stays open."
+The record stays shown once the close is accepted, and reads Done with its Delivered row; a refusal is the inline line under the row.
+
 **The Info tab** (INF-2261: the record's overview shaped like the crew summary's hover preview, which stays as it is).
 A failure, an interruption, a hold or a wait keeps its sentence at the top of the body, above the goal: an attention box (danger-tinted, in plain words, for an interrupted or failed task; warn-tinted for a blocker, a dropped dependency, a parent whose parts do the work, a hold or another need).
-A crew filing's reason leads beside it only while the filing is open (queued or in the backlog), and a closed task has one sentence of how it closed (`Merged 46 min ago as pull request #417. The checks passed.`, `Dropped 1 hr ago: <the words it was dropped with>`).
+A crew filing's reason leads beside it only while the filing is open (queued or in the backlog), and a closed task has one sentence of how it closed (`Merged 46 min ago as pull request #417. The checks passed.`, `Dropped 1 hr ago: <the words it was dropped with>`, `Finished on your word 2 min ago.`).
+A task closed as done with delivery facts lists them as the first of the record's rows, labelled DELIVERED in the side column like GOAL and NOW: one fact per line in `--fg-2`, each with how it is known at the line's right edge where NOW keeps its age, in 11px mono `--fg-3` (`Checked`, `As stated`, `Not read`), `Not read` in `--warn`.
 Then the shared task facts (`components/now/NowPanel`, Shared task facts), their labels in the summary's 66px side column: PART OF, WAITS ON, HOLDS UP and PARTS as rows of keys, each absent when empty; GOAL, the goal whole in `--fg-1`, with the captain's words folded under it, closed, the fold's name counting them (the captain's pick: "Folded under the goal, closed, with their count in the fold's name", `Your 2 messages`); PROJECT; NOW, the crewmate's own newest doing with its short age (the line may take up to three lines here); then PROGRESS, the count and the current item of the plan the crewmate reported, its newest list note’s short age at the right edge as on Now, with the whole list under it, always open, finished items past eight behind `Show earlier · N` (FI3-734); then BROWSER, while this computer keeps the task's own browser open or knows why it stopped (`TaskBrowser.prompt.md`): the site in mono, then who is driving (`the crewmate is driving`, `nobody is driving`) or what stopped it (`you stopped it`, `the crewmate closed it`, `stopped after 30 minutes unused`, `its page stopped working`, `stopped when the task closed`), then `Open` as a link that brings the task's browser view to the front, parted by `·`.
 The title stays the task's one line in the chrome; the goal is never put in its place (the captain: "The title stays its one line about the task").
 The words fold is a quiet caret line in `--fg-3`; open, it holds a filing's "Why it was filed" once the filing is no longer open, why the first mate built without a plan, the captain's words verbatim in a hairline blockquote, and later asks with their short ages.

@@ -295,6 +295,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       const refusal = services.supervisor.hostOps.runTaskOp(taskId, op, review ?? undefined, from);
       return refusal ? { ok: false as const, text: refusal } : { ok: true as const };
     },
+    "inf:task:close-done": (taskId) => services.supervisor.hostOps.closeDoneFromRecord(taskId),
 
     "inf:task:delete": async (taskId) => {
       // Behaves like discard (task-system P0): the worktree goes, the
@@ -1608,8 +1609,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         if (changed.size > 1) throw new Error("Change one panel at a time.");
       }
       const surfaces = listSurfaces(oldLayout, services.personal.snapshot(), gatesOf(services));
-      // An app panel waiting on its gate has its place too, and Settings →
-      // Panels moves it.
+      // An app panel waiting on its gate has its place too, and Settings → Panels moves it.
       const known = new Set([
         ...surfaces.map((surface) => surface.id),
         ...knownPanels(services.personal.snapshot()).map((panel) => panel.id),

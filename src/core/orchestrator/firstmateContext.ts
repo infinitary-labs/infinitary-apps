@@ -312,7 +312,9 @@ export class FirstmateContext {
                 ? `the captain queued it to start by itself when nothing holds it, ${age}`
                 : op === "unqueue-task"
                   ? `the captain moved it back to the backlog; it starts only on request, ${age}`
-                  : `the captain stopped it and dropped it; its unfinished work is kept, ${age}`;
+                  : op === "close-done"
+                    ? `the captain closed it as done from its record (Close as done), ${age}; its unmerged work is kept and an open pull request stays open`
+                    : `the captain stopped it and dropped it; its unfinished work is kept, ${age}`;
     return `- task ${task?.key || taskId} (task_id: ${taskId}) "${task?.title ?? ""}": ${what}`;
   }
 

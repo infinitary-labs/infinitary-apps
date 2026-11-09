@@ -153,6 +153,13 @@ export function recordClosedLineOf(task: ClosedDetail): RecordClosedLine | null 
     : task.status === "done"
       ? "Done"
       : "Dropped";
-  const note = task.closing?.note;
-  return { lead: `${word} `, at, change: null, tail: note ? `: ${note}` : "." };
+  // A close the captain's own word asked says so in its lead (INF-3169's
+  // plan, piece 3), so its note drops the words that only repeat it.
+  const onWord = task.closing?.onWord === true;
+  const said = onWord ? `${word} on your word` : word;
+  const words = onWord
+    ? task.closing?.note?.replace(/ on the captain's word$/, "")
+    : task.closing?.note;
+  const note = words && words !== reason ? words : null;
+  return { lead: `${said} `, at, change: null, tail: note ? `: ${note}` : "." };
 }

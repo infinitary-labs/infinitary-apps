@@ -494,6 +494,15 @@ The captain's own words pass every soft hold: `captain_words` names where they c
 A merge click is never such words; merging stays on the merge card.
 The close only refuses outright what no words change: a task that is not crew work, one already closed, one another settle holds, and missing evidence or a missing carrier.
 
+The record shows the facts as its first row, labelled Delivered beside Goal and Now, each with how it is known at the line's right edge: Checked, As stated, or Not read (`closing.facts` on the task's detail, `RecordDelivered` in `src/renderer/src/cards/RecordHead.tsx`).
+A close the captain's word asked reads `Finished on your word` (`closing.onWord`), and the line keeps only the words the close adds beyond its reason.
+
+A started task's record offers Close as done (`recordOffersCloseDone`, `src/shared/recordCloseDone.ts`): the captain's own word, from the record, that the work is done.
+It sits just left of the bar's next slot on started work whose start was accepted and that has no saved answer waiting for Done, and command search lists it as Close the task as done (`task.close-done`).
+It asks once, inline, as Drop task does: Cancel takes focus, the sentence says a working crewmate stops, unmerged work is saved and an open pull request stays open, and a second Close as done closes it.
+The press closes the task through the one close as done (`HostOps.closeDoneFromRecord`, `inf:task:close-done`) as the captain's, from the task card, with the press as their words, so it passes every soft hold and meets only the real limits; with no why named it closes `finished`.
+The record stays shown and reads Done with its facts; a refusal is the bar's inline line and writes nothing.
+
 ## Work carried on by another task
 
 Work another task carries on closes done, never dropped (INF-1825): "dropped" is kept for work that was really abandoned.
@@ -562,12 +571,13 @@ The record's Info tab is shaped like the crew summary a task's circle shows on h
 The window draws its overview from the shared task facts (`TaskFactRows`, `TaskFactStrip`, `src/renderer/src/design/core/TaskFacts.tsx`), in this order:
 
 1. The attention sentence, when something is wrong or the task waits: a failure, an interruption, a hold or a wait (`recordAttentionOf`, `src/shared/recordAttention.ts`), with a charted filing's Why and a closed task's one line (`recordClosedLineOf`) beside it (`RecordAttention`, `src/renderer/src/cards/RecordHead.tsx`).
-2. The task's place among other tasks as rows of keys: Part of, Waits on, Holds up and Parts (`RecordRelations`).
-3. The goal, whole, with the captain's words folded under it, closed, the fold's name counting them ("Your 2 messages"); the fold also holds why a crew filing was filed and why the first mate built without a plan (`RecordGoal`, `recordWordsFoldName`).
+2. On a task closed as done, the Delivered row: each delivery fact the close read, with how it is known (`RecordDelivered`).
+3. The task's place among other tasks as rows of keys: Part of, Waits on, Holds up and Parts (`RecordRelations`).
+4. The goal, whole, with the captain's words folded under it, closed, the fold's name counting them ("Your 2 messages"); the fold also holds why a crew filing was filed and why the first mate built without a plan (`RecordGoal`, `recordWordsFoldName`).
    The title stays the task's one line in the chrome.
-4. Project, Now, Progress and the Browser line, as the summary draws them.
-5. One row of facts under a hairline, as the summary's footer row: the model with its intelligence badge, the reasoning, the change with its checks as one cell, the review, Delivery, Runs on, a dim mono Use cell and a Run cell beside it ("Live resource use"), then Why this model.
-6. One closed More row at the end, scrolling with the body: the facts the summary leaves out, with their policy sources, Knowledge used and Live validation; a short dim preview beside its name says what it holds.
+5. Project, Now, Progress and the Browser line, as the summary draws them.
+6. One row of facts under a hairline, as the summary's footer row: the model with its intelligence badge, the reasoning, the change with its checks as one cell, the review, Delivery, Runs on, a dim mono Use cell and a Run cell beside it ("Live resource use"), then Why this model.
+7. One closed More row at the end, scrolling with the body: the facts the summary leaves out, with their policy sources, Knowledge used and Live validation; a short dim preview beside its name says what it holds.
 
 The words fold and More are remembered per task while its record stays in the stack, as every record section is (`recordOpenSections`): paging away and back keeps them, and closing the record ends its visit, so reopening starts with both closed.
 Cards and Activity are the record's own tabs (`docs/task-card-tabs.md`): the record's sandboxed body draws them and More, and the window tells it which view to show (`view` in its state, `[data-record-view]` on each part).

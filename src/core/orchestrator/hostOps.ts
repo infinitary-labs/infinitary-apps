@@ -9,6 +9,11 @@ import type {
 import { softHoldWords } from "@shared/holds";
 import { TASK_CARD_VIA } from "@shared/provenance";
 import {
+  closeDoneClosedRefusal,
+  closeDoneMissingRefusal,
+  closeDoneNotStartedRefusal,
+} from "@shared/recordCloseDone";
+import {
   DROP_REVIEW_STALE,
   dropMissingRefusal,
   dropStartedRefusal,
@@ -304,6 +309,24 @@ export class HostOps {
         this.core.sessions.stopTask(taskId, TASK_CARD_VIA, panel);
         return undefined;
     }
+  }
+
+  /**
+   * The record's Close as done (INF-3169's plan, piece 3): the captain's
+   * own word that started work is done, through the one close as done. The
+   * press passes every soft hold, so only the real limits refuse it; a
+   * refusal is text for the record's inline line.
+   */
+  async closeDoneFromRecord(taskId: string): Promise<{ ok: boolean; text: string }> {
+    const record = this.core.options.tasks.get(taskId);
+    const key = record?.key || taskId;
+    if (!record) return { ok: false, text: closeDoneMissingRefusal(key) };
+    if (record.status === "done" || record.status === "dropped")
+      return { ok: false, text: closeDoneClosedRefusal(key) };
+    if (record.kind !== "work" || record.status !== "active")
+      return { ok: false, text: closeDoneNotStartedRefusal(key) };
+    const done = await this.core.settling.done.close(taskId, { fromRecord: true });
+    return { ok: done.ok, text: done.text };
   }
 
   /**

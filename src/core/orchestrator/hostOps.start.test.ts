@@ -6,6 +6,7 @@
  * Each case drives a real CrewSupervisor through the crew harness
  * (tests/helpers/crewHarness.ts) and reads what it answers, the cards and the record.
  */
+import { closeDoneClosedRefusal, closeDoneNotStartedRefusal } from "@shared/recordCloseDone";
 import { queueStartedBacklogRefusal } from "@shared/taskQueue";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -16,6 +17,7 @@ import {
   tick,
 } from "../../../tests/helpers/crewHarness";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
+import { CLOSE_AS_DONE_PRESS } from "./doneClose";
 import { IDLE_NUDGE_TEXT } from "./idleWakes";
 
 fakeCrewTimersEachTest();
@@ -209,6 +211,47 @@ describe("the task graph (R1)", () => {
     crewmate.failPrompt("aborted");
     await tick();
     expect(tasks.get(planned.id)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
+  });
+
+  // INF-3169's plan, piece 3: "a Close as done button on a started task's
+  // record with one confirm" - the captain's own word that the work is done,
+  // which meets only the real limits.
+  it("closes started work as done on the captain's press from its record, and refuses work that has not started", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, ops } = setup(crewmate);
+    const unstarted = supervisor.intake.plan({ title: "Never mind", intent: intentOf("nope") });
+    const key = tasks.get(unstarted.id)?.key || unstarted.id;
+    await expect(supervisor.hostOps.closeDoneFromRecord(unstarted.id)).resolves.toEqual({
+      ok: false,
+      text: closeDoneNotStartedRefusal(key),
+    });
+    expect(tasks.get(unstarted.id)?.status).toBe("open");
+
+    const planned = supervisor.intake.plan({
+      title: "Write the ADR",
+      intent: intentOf("write it"),
+    });
+    supervisor.hostOps.runTaskOp(planned.id, "start-task");
+    await tick();
+    expect(tasks.get(planned.id)?.status).toBe("active");
+    const key2 = tasks.get(planned.id)?.key || planned.id;
+    // Pressed mid-turn, before its crewmate reported: the captain's word passes that hold.
+    const closed = await supervisor.hostOps.closeDoneFromRecord(planned.id);
+    expect(closed).toMatchObject({ ok: true });
+    expect(tasks.get(planned.id)).toMatchObject({ status: "done", closedReason: "finished" });
+    const close = tasks
+      .timeline(planned.id)
+      .find((event) => event.data?.status === "done" && event.data?.reason === "finished");
+    expect(close).toMatchObject({
+      actor: "captain",
+      data: { via: "task-card", onWord: true, captainWords: CLOSE_AS_DONE_PRESS, why: "word" },
+    });
+    // Closed already: the real limit refuses a second press.
+    const again = await supervisor.hostOps.closeDoneFromRecord(planned.id);
+    expect(again).toEqual({ ok: false, text: closeDoneClosedRefusal(key2) });
+    // The press reads as itself, never as one of the record's other buttons, and woke nobody.
+    expect(tasks.taskCardClicksSince(0).map(({ op }) => op)).toEqual(["close-done", "start-task"]);
+    expect(ops).toEqual([]);
   });
 
   it("writes every task card click on the history as the captain's, once each, and wakes nobody (FI3-695)", async () => {

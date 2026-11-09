@@ -1,3 +1,4 @@
+import { DELIVERY_BASIS_WORDS, DELIVERY_FACTS_LABEL } from "@shared/deliveryFacts";
 import { recordAttentionOf, recordClosedLineOf } from "@shared/recordAttention";
 import type { TaskDetail } from "@shared/tasks";
 import type { ReactNode } from "react";
@@ -86,14 +87,38 @@ export function RecordAttention({
 }
 
 /** One row of the record's head, its micro label in the side column (the shared facts' row). */
-function Row({ label, children }: { label: string; children: ReactNode }) {
+function Row({ label, hook, children }: { label: string; hook?: string; children: ReactNode }) {
   return (
-    <div className="row">
+    <div className="row" data-record-row={hook}>
       <div className="label" data-task-fact-label="">
         {label}
       </div>
       {children}
     </div>
+  );
+}
+
+/**
+ * How a close as done delivered the work (INF-3169's plan, piece 3): the
+ * first of the record's rows on a closed task, one fact a line, each with
+ * how it is known at the line's right edge, where Now keeps its age.
+ */
+export function RecordDelivered({ detail }: { detail: TaskDetail }) {
+  const facts = detail.closing?.facts ?? [];
+  if (facts.length === 0) return null;
+  return (
+    <Row label={DELIVERY_FACTS_LABEL} hook="delivered">
+      <ul className="delivered" data-record-delivery-facts="">
+        {facts.map((fact) => (
+          <li key={`${fact.basis}:${fact.text}`} data-record-delivery-fact={fact.basis}>
+            <span className="fact">
+              <KeyedText text={fact.text} own={detail.id} />
+            </span>
+            <span className="basis">{DELIVERY_BASIS_WORDS[fact.basis]}</span>
+          </li>
+        ))}
+      </ul>
+    </Row>
   );
 }
 

@@ -173,15 +173,22 @@ export type UpdateTaskPatch = {
  * One click of the captain's on a task card's own buttons (`taskCardClicksSince`),
  * or on a panel that moved the task, named by its title.
  */
-export type TaskCardClick = { taskId: string; at: number; op: TaskLifecycleOp; panel?: string };
+export type TaskCardClick = {
+  taskId: string;
+  at: number;
+  /** A lifecycle button, or the record's Close as done (INF-3169's plan, piece 3). */
+  op: TaskLifecycleOp | "close-done";
+  panel?: string;
+};
 
 /**
  * Which button a task card history entry records, read from its typed kind:
  * the steer is Continue, the cancel request is Drop task on started work,
  * the drop before start is the footer's own drop, the start is Start, and
- * a start policy the captain set is the task board's queue or unqueue.
+ * a start policy the captain set is the task board's queue or unqueue, and
+ * a close as done is the record's Close as done.
  */
-function taskCardOp(event: TaskEvent): TaskLifecycleOp | undefined {
+function taskCardOp(event: TaskEvent): TaskCardClick["op"] | undefined {
   const data = event.data ?? {};
   switch (event.kind) {
     case "note":
@@ -201,6 +208,7 @@ function taskCardOp(event: TaskEvent): TaskLifecycleOp | undefined {
         ? undefined
         : "stop-task";
     case "status":
+      if (data.status === "done") return "close-done";
       return data[DROP_BEFORE_START] === true ? "drop-task" : "start-task";
     default:
       return undefined;

@@ -144,6 +144,17 @@ export const talkChannels = {
       z.object({ ok: z.literal(false), text: z.string().min(1) }),
     ]),
   },
+  // The task record's Close as done (INF-3169's plan, piece 3;
+  // docs/task-record.md, "One close as done"): the captain's own word that
+  // started work is done. The answer is the close's own words, or a refusal
+  // at a real limit as text, which writes nothing.
+  "inf:task:close-done": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(64)]),
+    response: z.object({ ok: z.boolean(), text: z.string().min(1) }),
+  },
   // The task record's Move to a computer (docs/helper.md, "Moving a started
   // task"): where the task could move, and the move itself - to a computer
   // that runs work by its device id or `this-mac`, or null to cancel a move

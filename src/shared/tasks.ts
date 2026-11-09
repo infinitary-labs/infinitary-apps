@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { taskLifecycleOpSchema } from "./cards";
 import { checkSnapshotSchema } from "./checkSnapshot";
+import { recordDeliveryFactSchema } from "./deliveryFacts";
 import { computerReachSchema } from "./devices";
 import { liveValidationSummarySchema } from "./liveValidationSummary";
 import { modelChoiceSchema } from "./modelChoice";
@@ -728,8 +729,18 @@ export const taskDetailSchema = taskViewSchema.extend({
   /**
    * How a closed row closed: when, and the words recorded with the close
    * (a drop's reason) when there were any beyond the reason's own word.
+   * A close as done adds the delivery facts it recorded (`facts`), and
+   * `onWord` when the captain's own word asked it (INF-3169's plan, piece
+   * 3); both are absent on any other close, and from an older home.
    */
-  closing: z.object({ at: z.number(), note: z.string().nullable() }).nullable(),
+  closing: z
+    .object({
+      at: z.number(),
+      note: z.string().nullable(),
+      facts: z.array(recordDeliveryFactSchema).optional(),
+      onWord: z.literal(true).optional(),
+    })
+    .nullable(),
   /**
    * The newest failure or interruption in plain words (`plainProblem`, whose
    * sign-in reading is the one classifier's); null when there was none. The

@@ -1312,6 +1312,38 @@
         ]
       }
     },
+    "inf:task:close-done": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "ok",
+          "text"
+        ]
+      }
+    },
     "inf:task:move-options": {
       "effect": "read",
       "reach": "views",
@@ -33002,6 +33034,34 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "facts": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "basis": {
+                          "type": "string",
+                          "enum": [
+                            "checked",
+                            "stated",
+                            "unread"
+                          ]
+                        },
+                        "text": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": [
+                        "basis",
+                        "text"
+                      ]
+                    }
+                  },
+                  "onWord": {
+                    "type": "boolean",
+                    "const": true
                   }
                 },
                 "required": [

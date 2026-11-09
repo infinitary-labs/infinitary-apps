@@ -2,6 +2,7 @@ import type { DropTaskReview, TaskLifecycleOp } from "@shared/cards";
 import { isSafeCardHref } from "@shared/linkify";
 import type { FrameTheme } from "@shared/plugins/frameDocument";
 import { recordBarOf } from "@shared/recordBar";
+import { recordOffersCloseDone } from "@shared/recordCloseDone";
 import { recordProofDemo, recordProofPictures } from "@shared/recordProof";
 import { browserDriverOf } from "@shared/taskBrowser";
 import { taskFactsOf } from "@shared/taskFacts";
@@ -31,7 +32,7 @@ import {
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 import { recordOpenSections, recordReadingPlaceId, useCardReadingPlace } from "./cardReadingPlace";
 import type { HtmlCardBody } from "./PrototypeBody";
-import { RecordAttention, RecordGoal, RecordRelations } from "./RecordHead";
+import { RecordAttention, RecordDelivered, RecordGoal, RecordRelations } from "./RecordHead";
 import { RecordPaneChrome, RecordPaneFooter } from "./RecordPaneChrome";
 import { recordPillToneOf } from "./recordFooter";
 import { useStageRole } from "./SurfaceReveal";
@@ -339,6 +340,10 @@ export function RecordCard({
               options: () => window.infinitary.task.moveOptions(taskId),
               move: (to) => window.infinitary.task.move(taskId, to),
             }}
+            closeDone={{
+              offered: recordOffersCloseDone(shown),
+              close: () => window.infinitary.task.closeDone(taskId),
+            }}
           />
         )
       }
@@ -356,6 +361,7 @@ export function RecordCard({
               facts={facts}
               lead={
                 <>
+                  <RecordDelivered detail={shown} />
                   <RecordRelations detail={shown} parentKey={parentKey} />
                   <RecordGoal detail={shown} open={wordsOpen} onToggle={toggleWords} />
                 </>

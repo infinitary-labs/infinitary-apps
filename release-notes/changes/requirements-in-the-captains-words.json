@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "requirements-in-the-captains-words",
+      "reason": "One standing rule in the first mate's instructions: it prefers the person's own quoted words for a number, limit or scope it passes to a crewmate. No screen, setting or stored data changes."
+    }
+  ]
+}

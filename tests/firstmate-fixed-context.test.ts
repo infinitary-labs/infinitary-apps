@@ -414,6 +414,15 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     says: "autonomy_ask: Only when the user said in words whether this task merges its green work itself (true) or asks first (false).",
   },
   {
+    // INF-3171: the captain's question under its plan card - "do we have first
+    // mate instruction asking first mate to prefer passing original user words
+    // for such requirements?" - answered with one standing rule; INF-3173's
+    // follow-up makes the words preferred, refined only when they are unclear.
+    rule: "a captain requirement prefers their own quoted words, reworded only when unclear",
+    home: "core",
+    says: "When a goal, constraint, message to a crewmate or standing direction carries a requirement of the captain's - a number, a limit or what it applies to - prefer their own words for it, in quotes; reword it only where their words would leave the requirement unclear, never as a habit.",
+  },
+  {
     rule: "what an escalation spawn carries over",
     home: "core",
     says: "spawn_crewmate again with escalate_from naming that task, their words verbatim as user_words, and the original goal",

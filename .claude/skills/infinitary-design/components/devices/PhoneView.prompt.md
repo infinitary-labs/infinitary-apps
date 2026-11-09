@@ -67,14 +67,16 @@ Activity is newest first on both devices, following the captain's submitted answ
 A row has a semantic kind dot, the computer-authored words, an optional task key in micro mono inline before them, and a relative mono age.
 The exact local date and time remains available to VoiceOver; an empty Activity says “No activity yet”.
 
-Home shows one card at a time, with a peek of the next card at its right edge and a quiet pager below it: two chevrons around the count; an ordinary arrival never replaces the card being read.
+Home shows one card at a time in a row of cards, with the previous and next cards' own edges 8 points wide at its sides, 8 points away, and a quiet pager below it: two chevrons around the count; an ordinary arrival never replaces the card being read.
 The count opens a menu of the current titles; the next chevron carries a dot while an unread card lies ahead.
 With no card to page the pager hides; a card put aside waits in Tasks, and its row there brings it back.
 Home carries a dot in the strip while a card is not yet read, and VoiceOver hears the count.
 The peek stays within the shorter of the foreground card and its scrolling viewport, never filling the empty space beneath a short card or reaching the pager.
-Swiping the native card head changes cards without intercepting the body's own sliders, canvases or pinch gestures.
+A sideways swipe anywhere on the card moves the row with the finger, every card leaning up to 3 degrees about its own foot; past 35% of the width or a quick flick it slides to the next card (swiping left brings the one after), and anything less glides back on the glide ease with no overshoot.
+A swipe that starts on the body's own slider, canvas, dragged drawing or sideways scroller stays the body's, a mostly vertical drag scrolls, two fingers never swipe, and while the keyboard is up only the chevrons change cards.
+The chevrons slide the row one card as a swipe does; under reduced motion the row stays still, the card dims toward a chevron at the side it heads to, and the next card fades in over `--dur-fade`.
 The card stage fits the shell's available column, up to 560 logical points, and owns neither navigation nor the computer-details sheet; on an iPad the card's head can maximize it to the stage's whole width.
-A card is the Mac's raised surface: a solid fill, a thin edge, a light line inside its top and a soft drop shadow, and the next card's sliver is raised the same way.
+A card is the Mac's raised surface: a solid fill, a thin edge, a light line inside its top and a soft drop shadow, and the cards beside it in the row are raised the same way.
 The head, footer buttons and reply field are native controls outside the body’s web view.
 The head reads as the Mac's: the kind chip (Attention in red), the task's key in mono, which opens its record, where the task runs, the model chip and the risk, then the title and the revised line; it names no sender.
 The shared minus is the card's only leave control: it puts decisions, attention and pending notes aside, or reads an ordinary note using the host's declared meaning.

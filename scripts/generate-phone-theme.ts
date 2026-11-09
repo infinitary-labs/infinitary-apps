@@ -30,7 +30,16 @@ const metrics = Object.entries(lengths).map(([name, token]) => {
 const surfaceMs = /--dur-med:([\d.]+)ms;/.exec(geometry)?.[1];
 const glide = /--ease-out:cubic-bezier\(([^)]+)\);/.exec(geometry)?.[1]?.split(",").map(Number);
 if (!surfaceMs || glide?.length !== 4) throw new Error("Missing --dur-med or --ease-out");
-const motion = `    static let surfaceMove = Animation.timingCurve(${glide.join(", ")}, duration: ${Number(surfaceMs) / 1000})`;
+/** INF-3110: a card paging in (--dur-page) and the one fade reduced motion keeps (--dur-fade), as seconds. */
+const pageMs = /--dur-page:([\d.]+)ms;/.exec(geometry)?.[1];
+const fadeMs = /--dur-fade:([\d.]+)ms;/.exec(geometry)?.[1];
+if (!pageMs || !fadeMs) throw new Error("Missing --dur-page or --dur-fade");
+const motion = [
+  `    static let surfaceMove = Animation.timingCurve(${glide.join(", ")}, duration: ${Number(surfaceMs) / 1000})`,
+  `    static let glide: (Double, Double, Double, Double) = (${glide.join(", ")})`,
+  `    static let pageSeconds: Double = ${Number(pageMs) / 1000}`,
+  `    static let fadeSeconds: Double = ${Number(fadeMs) / 1000}`,
+].join("\n");
 /** The character's wire and halo multipliers, which the light theme raises where thin lines wash out. */
 function scalar(scope: string, token: string): number {
   const value = new RegExp(`--${token}:([\\d.]+);`).exec(scope)?.[1];

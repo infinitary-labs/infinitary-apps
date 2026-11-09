@@ -1027,10 +1027,15 @@ export async function startPhoneHome(
               <label><input type="radio" required name="harbour" value="south"> South Basin</label></fieldset>
               <label for="note">A note</label><input id="note" name="note" value="Morning tide">
               <button id="preview" type="button">Move the marker</button><p id="marker">Marker at the entrance</p>
+              <input id="depth" type="range" min="0" max="10" value="8" aria-label="Chart depth" style="width:100%"><p id="depth-shown">Chart depth 8</p>
               <p id="sandbox">Checking the card boundary</p><p id="appearance"></p>
               <script>
                 const appearance = theme => document.getElementById("appearance").textContent = theme === "dark" ? "Night chart" : "Day chart";
                 appearance(inf.theme); inf.onTheme(appearance);
+                // INF-3110: a body's own slider keeps its sideways drag; the card's swipe leaves it alone.
+                document.getElementById("depth").addEventListener("input", (event) => {
+                  document.getElementById("depth-shown").textContent = "Chart depth " + event.target.value;
+                });
                 inf.stage("chart", {zoom: 1});
                 document.getElementById("preview").addEventListener("click", () => {
                   inf.stage("chart", {zoom: 2}); document.getElementById("marker").textContent = "Marker inside the harbour";

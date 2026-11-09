@@ -29,7 +29,8 @@ import XCTest
             : name == "Tasks" ? phoneTasksColumn(app) : app.scrollViews["card-scroll"]
         XCTAssertTrue(surface.waitForPresence(timeout: 10), "The requested tab actually opens")
         XCTAssertTrue(waitForPhonePress(surface))
-        if name != "Activity" { verifyPhoneReadingColumn(surface, column: column) }
+        if name == "Tasks" { verifyPhoneReadingColumn(surface, column: column) }
+        if name == "Home" { verifyPhoneCardWidth(surface, app: app) }
         if name == "Home" {
             XCTAssertEqual(input.value as? String, words, "Changing tabs keeps the unsent words")
             XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 1, "Changing tabs keeps the picked photo")
@@ -51,7 +52,7 @@ import XCTest
         XCTAssertFalse(app.buttons["tab-home"].exists, "Landscape columns have no strip above them")
         XCTAssertLessThanOrEqual(sidebar.frame.maxX, input.frame.minX,
             "The landscape composer belongs to the stage beside the sidebar")
-        verifyPhoneReadingColumn(app.scrollViews["card-scroll"], app: app)
+        verifyPhoneCardWidth(app.scrollViews["card-scroll"], app: app, after: sidebar)
         tapOnPhone(phoneSidebarRail("Tasks", in: sidebar))
         // The search waits above the list until it is pulled down (INF-589 item 9), so the list's column stands for Tasks.
         let tasks = phoneTasksColumn(sidebar)
@@ -353,11 +354,18 @@ struct PhonePhotoObservation {
     return left...right
 }
 
-/// INF-589 item 15: the card, the Tasks list and the message box share one centred reading column on any width.
-@MainActor func verifyPhoneReadingColumn(_ surface: XCUIElement, app: XCUIApplication) {
-    verifyPhoneReadingColumn(surface, column: phoneReadingColumn(app: app))
+/// INF-3110, the captain's "widen the card only": the card takes its stage's whole width less the stage's 16-point
+/// gutters (`PhoneTheme.space4`), so on an iPad it is wider than the message box and the next card shows only its edge.
+/// The stage starts after the landscape iPad's sidebar and the 1-point line beside it.
+@MainActor func verifyPhoneCardWidth(_ card: XCUIElement, app: XCUIApplication, after sidebar: XCUIElement? = nil) {
+    let gutter: CGFloat = 16
+    let frame = phoneAccessibilityBounds(card.frame), window = phoneAccessibilityBounds(app.frame)
+    let start = sidebar.map { phoneAccessibilityBounds($0.frame).maxX + 1 } ?? window.minX
+    XCTAssertEqual(frame.minX, start + gutter, accuracy: 1, "The card \(card.frame) starts one gutter into its stage")
+    XCTAssertEqual(frame.maxX, window.maxX - gutter, accuracy: 1, "The card \(card.frame) ends one gutter before the window's edge")
 }
 
+/// INF-589 item 15: the Tasks list and the message box share one centred reading column on any width.
 @MainActor func verifyPhoneReadingColumn(_ surface: XCUIElement, column: ClosedRange<CGFloat>) {
     let frame = phoneAccessibilityBounds(surface.frame)
     XCTAssertEqual(frame.minX, column.lowerBound, accuracy: 1, "\(surface.identifier) \(surface.frame) starts where the message box does")

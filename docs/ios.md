@@ -147,17 +147,31 @@ Neither reconnection nor discovery queues or retries a mutation.
 ## Cards on the phone
 
 `PhoneCards(session:)` is the card-stage integration point: it fills its available column without adding navigation, a toolbar or the app's message box.
-It keeps one shown card with a next-card peek and a lower pager of two chevrons around the count, whose menu lists the current titles.
+It keeps one shown card in a row of cards (INF-3110, the captain's "Row with a lean") and a lower pager of two chevrons around the count, whose menu lists the current titles.
+While still, the previous and next cards sit beside the shown one, 8 points apart, so their edges show 8 points wide in the stage's side margins; the first card has no edge at its left and the last none at its right.
+While the row is still, a card beside the shown one is only its raised surface at the shown card's height (`PhoneCardRowEdge` in `PhoneCardRow.swift`), because an accessibility search sees through a hidden view and would find two of every control.
+The moment a swipe starts, or a chevron or key turns the page, the cards beside the shown one are built as real panes, each top-aligned at its own height, and once the row comes to rest they are plain edges again; a built side card takes no touches, keys or focus, its body is one closed element with no name, and it is not read until it settles as the shown card.
+A sideways swipe anywhere on the shown card, its face or its back, moves the row with the finger, and every card leans by the same angle, up to 3 degrees at the slide-on point, about its own foot.
+The first 10 points decide: travel at least 1.5 times as far sideways as up or down swipes, and anything else is the card's scroller's.
+A finger that rests half a second before it moves selects text, two fingers never swipe, and a past card stays put.
+Letting go past 35 percent of the card's width, or faster than 500 points a second, slides to the next card, swiping left bringing the one after and right the one before; anything less glides back.
+The count changes the moment the finger lifts, and the row glides the rest of the way over the page time (`--dur-page`) on the app's glide (`--ease-out`), never overshooting.
+At the first or last card the row moves a third as far as the finger and glides back.
+While the keyboard is up the swipe waits, and the chevrons still change cards; a card closed on another computer mid-swipe lets the swipe go.
+The chevrons and Shift-Command-[ and ] slide the row one card, as a swipe does.
+Under Reduce Motion the row stays still: the shown card dims as the finger moves and a chevron brightens at the side it heads to, and a page turn fades the new row in over `--dur-fade`.
+The body tells the app where its own sideways controls sit, so a swipe starting on one stays the body's: a script in its own content world, injected into every frame of the card's page and invisible to the body's scripts, reports the rectangles of sliders, canvases, draggable elements, elements whose `touch-action` keeps sideways panning or whose cursor grabs, and sideways scrollers (`CardClaims`), and the swipe ignores a touch that lands inside one.
+Elsewhere on the card the swipe runs alongside its other touch handling, the web view's own and the pull that puts the keyboard away, rather than giving way to it, since on an iPad either otherwise takes a sideways drag first; the card's scroller still waits for the swipe to decide.
 With no current card the stage shows the character alone, as the Mac does, and the pager hides.
 Shift-Command-[ and Shift-Command-] turn one page per press, as `cards.previous` and `cards.next` do on the Mac, and a sheet keeps them from the stage behind it (INF-1753).
-They are UIKit key commands on the window's root view controller with `repeatBehavior` `.nonRepeatable`, because a page turn builds the next card's web view and can hold the main thread past UIKit's key repeat delay, and SwiftUI's shortcuts repeat even with `buttonRepeatBehavior(.disabled)`.
+They are UIKit key commands on the window's root view controller with `repeatBehavior` `.nonRepeatable`, because a page turn builds the web view of the card it brings in and can hold the main thread past UIKit's key repeat delay, and SwiftUI's shortcuts repeat even with `buttonRepeatBehavior(.disabled)`.
 Before iOS 26 UIKit offers no way to stop that repeat.
 The stack follows the Mac's stage rule (`onStage` in `src/shared/cards.ts`): a new card awaiting its author's close-out stays out of the stage, pager and unread count until it is released.
 A replied-under card carrying `sentBackAt` keeps its place while its author answers.
 A card minimized on any Mac leaves the phone's stack and count, and waits in Tasks, as on the Mac (INF-1517).
 A tap on its row there sends `inf:cards:minimize` with `false`, which brings it back on every Mac too, and shows it on Home.
 A card is one framed surface that fits the stage: its head stays at the top, its choices stay at its foot, and the body and attachments scroll between them in one native scroller.
-The surface is the Mac's raised card (`PhoneCardSurface`): a solid fill, its thin edge, the light line inside its top and its drop shadows, read from the Mac's `--acrylic-shadow` by `scripts/generate-phone-theme.ts`; the next card's sliver is raised the same way.
+The surface is the Mac's raised card (`PhoneCardSurface`): a solid fill, its thin edge, the light line inside its top and its drop shadows, read from the Mac's `--acrylic-shadow` by `scripts/generate-phone-theme.ts`; the cards beside it in the row are raised the same way.
 The body's web view never scrolls, zooms or adds insets of its own; it takes its content's height inside that scroller, so there is only one scroll and nothing runs past the card's rounded frame.
 Until the body reports drawn, its web view is a 48-point placeholder that clips the body, so native code keeps the web view one closed accessibility element that takes no taps until it has laid the view out at the body's height.
 The page itself never hides the body: on iOS 27.0, a frame hidden from accessibility inside the page stays hidden after it is shown (INF-1651).
@@ -179,7 +193,6 @@ A home without that named change retains the legacy two-argument request and ses
 Older native readers ignore the optional fields; older desktop readers receive a capability-projected snapshot that their strict card decoder accepts.
 Full shared marks require updated owner and views; offline views keep last-known state until delivery resumes.
 Project filters stay local to each desktop window, with no new phone filter.
-Swiping the native head pages cards without capturing the body's horizontal form and canvas gestures.
 Ordinary arrivals keep the shown card in place; a new `holdsPlace` card comes forward, and a departure chooses an unread card first, else the card after the one that left, else the one before it, by the Mac's rule (`PhoneCardDeparture`, which `PhoneCardDepartureTests` holds to the Mac's recorded choices).
 On Home, unread cards besides the shown one are counted beside the pager ("1 new"), and a press shows the first of them; the new-card pill shows only on the other tabs, while a reply's pill shows on every tab.
 Form and reply drafts live only in memory and survive paging.
@@ -192,7 +205,6 @@ It asks the shared close dispatcher to put a decision away or read a note, never
 With an older core lacking `corner`, the phone uses the older safe minimize request, not its destructive close.
 An answer note carries the host’s Done, and its record carries the same Done after the note was put away.
 The task-record sheet reads its Hide minus and rest words from the record row, and Shift-Command-M hides that sheet without ending the task.
-On an iPad the head also maximizes the card to the stage's whole width.
 Putting a decision away retains its picks and typed words without a warning question.
 The corner's hint carries those same rest words.
 The words a phone card shows come from the Mac's owners through `PhoneCardWords.generated.swift`, written by `scripts/generate-phone-contract.ts`.
@@ -266,7 +278,8 @@ The phone containment review is in `docs/live-prototype-security.md`, “Phone c
 `PhoneWorkspace` supplies a stage, an optional Tasks view and an optional composer, with no draft or record state of its own.
 The composition installs `PhoneCards(session:)`, `PhoneTasks(session:)` and `MessageComposer(session:)` together.
 The composer stays mounted once, preserving its own text and photo state across tab and orientation changes; the shell never copies it into a tab or layout branch.
-The card with its pager, the message box, Tasks and Activity share one centred reading column, `PhoneColumn`, 560 points with its gutters, so on an iPad the message box lines up with the card above it.
+The message box, Tasks and Activity share one centred reading column, `PhoneColumn`, 560 points with its gutters.
+The card stage takes its whole width less 16-point gutters on any width, so on an iPad the card is wider than the message box and the card beside it shows the same 8-point edge as on an iPhone.
 On an iPhone on its side (compact height) the card gets the height: the bar keeps its one row, and the last turn and the notice wait until it is upright.
 There `AnyLayout` puts the removable photo strip beside the message capsule, retaining one field and its complete draft.
 The field displays up to two lines there, the controls retain 44-point targets, and warnings remain full-length; portrait and iPad keep the stacked arrangement.
@@ -831,7 +844,7 @@ If Xcode stops offering that method, or changes what it takes, the journey fails
 `talk-drafts` checks that Command-Return restores the field's observed empty value and writes exactly one captain message to the real home.
 `talk-drafts` exercises details, keyboard dismissal, both card-paging shortcuts and Send as first chords after relaunch, retaining the original button and draft assertions.
 The composed journey verifies keyboard dismissal and computer details after relaunch without changing its retained-text and retained-photo assertions.
-It also checks that the card and Tasks start and end where the message box does, the reading column.
+It also checks that Tasks starts and ends where the message box does, the reading column, and that the card starts and ends one gutter inside its stage.
 The fixture's display controls only change the launcher-owned simulator, never a developer's device or this Mac's appearance.
 App-hosted shell tests render each native character's still pose, play the greeting, every held reply and every fidget through the character's machine, and read Activity from the real test home; the native journey also verifies the computer-authored task key.
 The empty-stage character consumes the Mac's `firstmate_state.busy` event, the same conversation-state owner as the desktop, and the journey holds and completes a real first-mate turn through the mock provider to verify working and idle.

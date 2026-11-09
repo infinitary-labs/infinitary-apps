@@ -142,7 +142,6 @@ extension PhoneJourney {
         XCTAssertTrue(app.staticTexts["card-place"].exists)
         XCTAssertTrue(app.staticTexts["card-revised"].exists)
         XCTAssertTrue(app.buttons["put-aside-card"].exists)
-        XCTAssertEqual(app.buttons["maximize-card"].exists, UIDevice.current.userInterfaceIdiom == .pad)
         // The foot: the host's fact strip stays with the choices.
         XCTAssertTrue(app.webViews["card-facts"].staticTexts.firstMatch.waitForPresence(timeout: 20), app.debugDescription)
         // INF-3149: what happens after the merge leads the body, the captain's actions before the crew's steps.

@@ -4,7 +4,8 @@ import Observation
 import SwiftUI
 @preconcurrency import WebKit
 
-/// A separate, nonpersistent web process holds only the shown card. No account or Mac URL enters it.
+/// A separate, nonpersistent web process holds only its own card: the shown one or one beside it in the row. No account or
+/// Mac URL enters it.
 @MainActor @Observable final class CardWebHost: NSObject, WKScriptMessageHandlerWithReply, WKNavigationDelegate, WKUIDelegate {
     var height: CGFloat = 48
     var drawn = false
@@ -25,6 +26,9 @@ import SwiftUI
     private var watch = CardWatchdog()
     private var theme = "light"
     private(set) var revealed = false
+    /// INF-3110: the card sits beside the shown one in the row, so its body is one closed element with no name, which
+    /// no search reaches; WebKit ignores the hidden-children flag, so this is the only way to keep its page out.
+    var aside = false { didSet { if aside != oldValue { applyReach() } } }
     /// The height the page last reported its body drew at; `height` is the frame native code asks the view for.
     private var bodyHeight: CGFloat = 48
     private let fill: PhoneJSON
@@ -71,6 +75,9 @@ import SwiftUI
         self.assets = assets
         configuration.setURLSchemeHandler(assets, forURLScheme: "app-frame")
         configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "cardHost")
+        // INF-3110: the body's own sideways controls, read in a world of their own, which the row's swipe leaves alone.
+        configuration.userContentController.addUserScript(CardClaims.script)
+        configuration.userContentController.add(CardClaimsReader(), contentWorld: CardClaims.world, name: CardClaims.handler)
         let view = CardBodyView(frame: .zero, configuration: configuration)
         view.onLayout = { [weak self] in self?.revealIfShown() }
         view.allowsLinkPreview = false
@@ -88,6 +95,7 @@ import SwiftUI
         // WebKit ignores the hidden-children flag, and hiding the frame inside the page sticks on iOS 27.0.
         view.isAccessibilityElement = true; view.isUserInteractionEnabled = false
         self.view = view
+        applyReach()
         // Agent HTML is assigned to an opaque iframe's srcdoc, never interpolated into this parent.
         // Its own hash policy narrows this parent's inline permission. Neither realm can use the network.
         view.onWindow = { [weak self] in self?.loadOnWindow() }
@@ -133,6 +141,7 @@ import SwiftUI
         if let id = collection?.id { finishCollection(id, .failure(PhoneRequestError("This card did not answer. Your choice was not sent."))) }
         onReading = nil; onDrawn = nil; onLink = nil; onDraft = nil; onTask = nil
         view?.configuration.userContentController.removeScriptMessageHandler(forName: "cardHost", contentWorld: .page)
+        view?.configuration.userContentController.removeScriptMessageHandler(forName: CardClaims.handler, contentWorld: CardClaims.world)
         assets?.cancel(); assets = nil
         view?.stopLoading(); view?.navigationDelegate = nil; view?.uiDelegate = nil; view = nil
     }
@@ -153,9 +162,15 @@ import SwiftUI
         DispatchQueue.main.async { [weak self] in
             guard let self, self.isShown else { return }
             self.revealed = true
-            self.view?.isAccessibilityElement = false; self.view?.isUserInteractionEnabled = true
+            self.view?.isUserInteractionEnabled = true
+            self.applyReach()
             UIAccessibility.post(notification: .layoutChanged, argument: nil)
         }
+    }
+    private func applyReach() {
+        guard let view else { return }
+        view.accessibilityIdentifier = aside ? nil : part == .facts ? "card-facts" : "card-body"
+        view.isAccessibilityElement = aside || !revealed
     }
     private var isShown: Bool {
         guard drawn, !revealed, let view else { return false }
@@ -310,6 +325,9 @@ final class CardBodyView: WKWebView {
     override func layoutSubviews() { super.layoutSubviews(); onLayout?() }
     var onWindow: (() -> Void)?
     override func didMoveToWindow() { super.didMoveToWindow(); onWindow?() }
+    /// INF-3110: where the body's own sideways controls sit, in the view's points, as its frame last reported them.
+    var claimed: [CGRect] = []
+    func claims(_ point: CGPoint) -> Bool { claimed.contains { $0.contains(point) } }
 }
 
 struct CardWebView: UIViewRepresentable {

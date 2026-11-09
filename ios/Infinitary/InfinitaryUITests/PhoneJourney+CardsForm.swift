@@ -81,11 +81,39 @@ extension PhoneJourney {
         let refused = try await home("card-state", method: "GET")
         XCTAssertNil(refused["choice"] as? [String: Any])
         showCard(chart); showCard(choice)
-        // INF-209: sideways paging belongs to the native card head, outside authored gestures.
+        // INF-3110: a sideways swipe anywhere on the card changes cards, the head's and the body's alike; swiping left
+        // brings the next card and right the one before.
         app.staticTexts["card-title"].swipeLeft()
         XCTAssertTrue(cardHeading(chart).waitForPresence(timeout: 10))
-        app.staticTexts["card-title"].swipeRight()
+        waitForShownBodyRevealed()
+        // The swipe starts inside the body, near its top, which shows under the head whatever the body's length.
+        let inBody = app.webViews.matching(identifier: "card-body").firstMatch
+            .coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0)).withOffset(CGVector(dx: 0, dy: 24))
+        inBody.press(forDuration: 0.05, thenDragTo: inBody.withOffset(CGVector(dx: 220, dy: 0)), withVelocity: .fast, thenHoldForDuration: 0)
         XCTAssertTrue(cardHeading(choice).waitForPresence(timeout: 10))
+        waitForShownBodyRevealed()
+        picture("card-row")
+        let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
+        let place = pager.label
+        // A drag that starts on the body's own slider moves the slider and never the card.
+        // The swipe back builds the card it brings anew, and its body's controls reach accessibility after its first words.
+        let depth = app.webViews.sliders["Chart depth"]
+        XCTAssertTrue(depth.waitForPresence(timeout: 10), app.debugDescription)
+        reveal(depth)
+        let thumb = depth.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.5))
+        thumb.press(forDuration: 0.05, thenDragTo: depth.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.5)),
+                    withVelocity: .slow, thenHoldForDuration: 0.2)
+        let moved = NSPredicate { [app] _, _ in
+            app.webViews.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'Chart depth' AND label != 'Chart depth 8'")).firstMatch.exists
+        }
+        XCTAssertEqual(waitForPhonePredicate(moved, object: nil, timeout: 10), .completed, app.debugDescription)
+        XCTAssertTrue(cardHeading(choice).exists, "A drag on the body's slider changed cards")
+        // A mostly upward drag scrolls the card and never changes cards.
+        let scroll = app.scrollViews["card-scroll"]
+        let middle = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
+        middle.press(forDuration: 0.05, thenDragTo: middle.withOffset(CGVector(dx: -30, dy: -160)), withVelocity: .slow, thenHoldForDuration: 0.2)
+        XCTAssertTrue(cardHeading(choice).exists, "An upward drag on the card changed cards")
+        XCTAssertEqual(pager.label, place)
         // INF-1263: the paged-back body offers its text only where a tap reaches it. Read the body and the text in one
         // snapshot the moment the text appears; before the fix it appeared while the body was its 48-point placeholder.
         // INF-1651: iOS 27.0 first reports the text's frame relative to the web view, so where the text sits is read

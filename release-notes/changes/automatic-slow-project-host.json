@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "automatic-slow-project-host",
+      "kind": "fix",
+      "title": "Automatic keeps what it read about this Mac when your project's host is slow",
+      "body": "When the place your project lives took more than 5 seconds to answer, Automatic threw away everything it had read about this Mac, and a ready task waited with every check marked unknown. Now only the project-access check reads unknown, so the waiting task names the one check that could not finish.",
+      "area": "devices",
+      "noPicture": "The waiting task's message keeps its look; it now lists one reason instead of five.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

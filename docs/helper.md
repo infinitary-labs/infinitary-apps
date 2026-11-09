@@ -885,6 +885,7 @@ The resolver marks each platform field it filled that way (`inherited`), and the
 
 `inf:computer:placement` collects fresh compatibility separately from resource sampling: execution system/architecture, executable identities, read-only access to the exact credential-stripped project origin, and that computer's actual served model list.
 Its facts expire after ten seconds, include request travel, and invalidate on every connection transition; a timeout or missing fact is unknown, never spare capacity.
+This computer reads each fact side by side, and at Automatic's five-second limit it answers with what it has: a check still waiting, such as the project's host answering slowly, reads unknown on its own, and the facts already read still count.
 A computer's identity names the system whose CPU and memory its readings measure, the same for every user of it, never a username, pairing id, address or display name.
 A Mac's is its hashed platform UUID, and a Linux computer's its hashed hardware UUID from DMI, which its containers share too.
 Where only root may read that UUID, a Linux computer's is its hashed machine id, which every user of it reads; the app never runs as root.

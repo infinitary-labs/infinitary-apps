@@ -57,34 +57,54 @@ function identityHash(identity: string): string {
   return createHash("sha256").update(identity).digest("hex");
 }
 
-/** Read only: exact program identities and the particular project's reachable refs. */
+/**
+ * Read only: exact program identities and the particular project's reachable refs.
+ *
+ * Each check is read on its own, side by side, and `signal` ends the read:
+ * once it aborts, the read answers at once with what it has, and a check
+ * still waiting reads unknown on its own. A slow project host then costs
+ * only the project-access check, never the facts already read (INF-3150:
+ * the caller's limit used to drop the whole read, so every check read
+ * unknown).
+ */
 export async function readPlacementFacts(
   request: PlacementFactsRequest,
   cwd: string,
+  options: { signal?: AbortSignal } = {},
 ): Promise<PlacementFacts> {
-  await captureLoginPath();
+  const { signal } = options;
+  const ended = new Promise<undefined>((resolve) => {
+    if (signal?.aborted) resolve(undefined);
+    else signal?.addEventListener("abort", () => resolve(undefined), { once: true });
+  });
+  const until = <T>(work: Promise<T>): Promise<T | undefined> =>
+    signal ? Promise.race([work, ended]) : work;
+  const identity = until(physicalComputerId());
+  await until(captureLoginPath());
   const env = hostEnv();
   const tools: Record<string, PlacementFact> = {};
-  await Promise.all(
-    request.tools.map(async (tool) => {
-      try {
-        const found =
-          tool === "git"
-            ? await gitFound(env)
-            : tool === "claude"
-              ? (await primeClaudeExecutable(env)) !== undefined
-              : (env.PATH ?? "")
-                  .split(delimiter)
-                  .filter(Boolean)
-                  .some((dir) => isExecutable(join(dir, tool)));
-        tools[tool] = found ? "available" : "unavailable";
-      } catch {
-        tools[tool] = "unknown";
-      }
-    }),
-  );
-  let projectAccess: PlacementFact = "unknown";
-  if (request.origin) {
+  const read = async () => {
+    await Promise.all(
+      request.tools.map(async (tool) => {
+        try {
+          const found =
+            tool === "git"
+              ? await gitFound(env)
+              : tool === "claude"
+                ? (await primeClaudeExecutable(env)) !== undefined
+                : (env.PATH ?? "")
+                    .split(delimiter)
+                    .filter(Boolean)
+                    .some((dir) => isExecutable(join(dir, tool)));
+          tools[tool] = found ? "available" : "unavailable";
+        } catch {
+          tools[tool] = "unknown";
+        }
+      }),
+    );
+  };
+  const access = async (): Promise<PlacementFact> => {
+    if (!request.origin || signal?.aborted) return "unknown";
     try {
       // No clone, fetch, copied sign-ins, or generic signed-in inference.
       // The existing git runner supplies this computer's own forge sign-in.
@@ -92,20 +112,24 @@ export async function readPlacementFacts(
       await git(cwd, ["ls-remote", "--", request.origin, "HEAD"], {
         timeoutMs: 5_000,
         env: { GIT_TERMINAL_PROMPT: "0" },
+        ...(signal ? { signal } : {}),
       });
-      projectAccess = "available";
+      return "available";
     } catch {
       /* Unknown is never spare capacity. */
+      return "unknown";
     }
-  }
+  };
+  const [projectAccess] = await Promise.all([until(access()), until(read())]);
   const platform = thisDeviceSystem();
   return {
     ...(platform.system === "macos" || platform.system === "linux"
       ? { system: platform.system }
       : {}),
     ...(platform.chip ? { chip: platform.chip } : {}),
-    physicalComputerId: await physicalComputerId(),
-    tools,
-    projectAccess,
+    physicalComputerId: (await identity) ?? null,
+    // A copy, so a check that answers after the read ended changes nothing.
+    tools: Object.fromEntries(request.tools.map((tool) => [tool, tools[tool] ?? "unknown"])),
+    projectAccess: projectAccess ?? "unknown",
   };
 }

@@ -538,6 +538,7 @@ export class AutomaticPlacement {
     const started = this.now();
     const generation = id ? (this.generations.get(id) ?? 0) : 0;
     const request = { tools, ...(origin ? { origin } : {}) };
+    const ending = new AbortController();
     const reading = id
       ? this.options.work.ask(id, PLACEMENT_FACTS_ORDER, [request]).then((raw) => {
           const answer = placementFactsAnswerSchema.parse(raw);
@@ -556,7 +557,9 @@ export class AutomaticPlacement {
             generation,
           };
         })
-      : (this.options.localFacts ?? readPlacementFacts)(request, cwd).then((facts) => ({
+      : (this.options.localFacts ?? readPlacementFacts)(request, cwd, {
+          signal: ending.signal,
+        }).then((facts) => ({
           facts,
           started,
           generation,
@@ -566,7 +569,14 @@ export class AutomaticPlacement {
     const result = new Promise<Facts | null>((resolve) => {
       done = resolve;
     });
-    const timer = setTimeout(() => done(null), RESOURCE_READ_TIMEOUT_MS);
+    // At the limit this computer's read answers with what it has, a check
+    // still waiting reading unknown on its own (`readPlacementFacts`); a
+    // reader that does not answer then, and another computer's ask, read
+    // nothing.
+    const timer = setTimeout(() => {
+      ending.abort();
+      setTimeout(() => done(null), 0).unref();
+    }, RESOURCE_READ_TIMEOUT_MS);
     timer.unref();
     const held = { result, started: Infinity };
     this.reads.set(key, held);

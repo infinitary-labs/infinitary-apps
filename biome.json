@@ -336,6 +336,7 @@
         "!src/core/hostEnv.test.ts",
         "!src/core/jobs/jobManager.test.ts",
         "!src/core/placed/processResources.integration.test.ts",
+        "!src/core/placed/placementFacts.integration.test.ts",
         "!src/core/placed/loadLine.integration.test.ts",
         "!src/core/orchestrator/captainOverrides.checks.test.ts",
         "!src/core/orchestrator/crewBrief.context.test.ts",

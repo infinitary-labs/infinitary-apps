@@ -24,7 +24,13 @@ export const APP_GIT_IDENTITY = [
 export async function git(
   repoDir: string,
   args: string[],
-  options: { env?: Record<string, string>; timeoutMs?: number; trim?: boolean } = {},
+  options: {
+    env?: Record<string, string>;
+    timeoutMs?: number;
+    trim?: boolean;
+    /** Ends git when it aborts, as the timeout does. */
+    signal?: AbortSignal;
+  } = {},
 ): Promise<string> {
   // The app's own git when this build carries it (bundledGit.ts), else the
   // one the search path finds.
@@ -34,6 +40,7 @@ export async function git(
   const { stdout } = await execFileAsync(command.file, command.args, {
     maxBuffer: 16 * 1024 * 1024,
     ...(options.timeoutMs ? { timeout: options.timeoutMs } : {}),
+    ...(options.signal ? { signal: options.signal } : {}),
     env: {
       ...hostEnv(),
       ...options.env,

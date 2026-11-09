@@ -239,6 +239,14 @@ export type TaskRuntime = {
   lastTurnError?: string;
   /** The typed cut-off behind `lastTurnError`, when the backend reported one. */
   lastTurnCutOff?: CutOff;
+  /** `lastTurnError` is the model's context limit, as the backend typed it. */
+  lastTurnContextOverflow?: true;
+  /**
+   * This conversation is the one fresh conversation a context-limit failure
+   * opened (`CrewTurns.recoverContext`), and no turn in it has ended clean
+   * yet: a second context-limit failure is not recovered again.
+   */
+  contextRecovered?: true;
   /** A move asked for mid-turn, run once the turn ends (INF-849). */
   pendingMove?: MoveAsk;
   /**

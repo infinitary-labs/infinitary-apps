@@ -529,6 +529,7 @@ export class CrewToolHooks {
         // it into the failure report instead of "(no report)".
         task.lastTurnError = event.error;
         task.lastTurnCutOff = event.cutOff;
+        task.lastTurnContextOverflow = event.contextOverflow;
         break;
       }
       case "tool_start": {

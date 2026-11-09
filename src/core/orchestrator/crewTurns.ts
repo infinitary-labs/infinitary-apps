@@ -53,6 +53,12 @@ import { laneTurnText, renderWake, type TypedWake } from "./wakes";
 export const UNHEARD_END_NOTE =
   "its turn had already ended where it ran, but that end never arrived; ended here as interrupted";
 
+/**
+ * The message a conversation that replaced one the context limit failed
+ * opens on, when the failed turn carried nothing but the brief.
+ */
+const CONTEXT_CONTINUE_TEXT = "Carry on with your task from where its record shows it stands.";
+
 /** Lane rows that are the crewmate's own work, sent by nobody: they draw no spark (INF-759). */
 const OWN_LANE_KINDS: ReadonlySet<string> = new Set([
   "job-exit",
@@ -321,6 +327,7 @@ export class CrewTurns {
     task.explicitDeclared = undefined;
     task.lastTurnError = undefined;
     task.lastTurnCutOff = undefined;
+    task.lastTurnContextOverflow = undefined;
     task.lastEventAt = this.core.now();
     task.turnStartedAt = this.core.now();
     task.quietLevel = 0;
@@ -548,8 +555,17 @@ export class CrewTurns {
         : paused.unstarted === true);
     const providerError = paused ? undefined : task.lastTurnError;
     let cutOff = paused ? undefined : task.lastTurnCutOff;
+    // A turn the model's context limit failed is no outage: the same
+    // conversation fails the same way however long the retry waits, and
+    // every retry appends its rows to it again. The first one continues in
+    // one fresh conversation, as the first mate's does; a second one, in
+    // that fresh conversation, is the first mate's to act on.
+    const overflowed = providerError !== undefined && task.lastTurnContextOverflow === true;
     task.lastTurnError = undefined;
     task.lastTurnCutOff = undefined;
+    task.lastTurnContextOverflow = undefined;
+    const recoverContext = overflowed && !task.contextRecovered;
+    if (!providerError && !paused) task.contextRecovered = undefined;
     // A cut-off is a fact about the account, not only this turn: it stands
     // there until a fact changes (docs/quota.md "Typed cut-offs"). A turn on
     // another computer met it on that computer's own sign-in, which records
@@ -613,7 +629,22 @@ export class CrewTurns {
     const consumed = inFlight.filter((id) => !unread.has(id));
     task.inFlightInboxIds = [];
     if (inFlight.length > 0) {
-      if (providerError && !signInFailure) {
+      if (recoverContext) {
+        // Its words never reached a conversation that goes on: they go
+        // again, due now, as the fresh conversation's first turn - all but
+        // the brief, which the restart's own words already serve whole.
+        const brief = this.servedBrief(task.id);
+        const told = inFlight.filter((id) => {
+          const row = this.core.options.inbox.get(id);
+          return brief !== undefined && row?.facts === undefined && row?.text === brief;
+        });
+        this.core.options.inbox.ack(told);
+        this.core.options.inbox.reparkUndelivered(inFlight.filter((id) => !told.includes(id)));
+      } else if (overflowed) {
+        // They are in the conversation that overflowed, and sending them
+        // into it again only fails again: the first mate hears below.
+        this.core.options.inbox.ack(inFlight);
+      } else if (providerError && !signInFailure) {
         // A spent allowance is not asked again before its reset.
         this.core.options.inbox.releaseAfterProviderFailure(
           inFlight,
@@ -641,7 +672,8 @@ export class CrewTurns {
     // are the retry's, and each is still its own line on the task's
     // timeline. A failed turn that carried no guidance has no retry, so it
     // is reported as it always was.
-    const retrying = providerError !== undefined && !signInFailure && inFlight.length > 0;
+    const retrying =
+      providerError !== undefined && !signInFailure && !overflowed && inFlight.length > 0;
     const firstFailure = !retrying || outage.failures === 0;
     if (!providerError && !paused && outage.failures > 0)
       this.core.ladder.endOutage(task, outage.failures);
@@ -799,6 +831,13 @@ export class CrewTurns {
           this.signInCardBody(task),
           { taskId: task.id, ...(move ? { move } : {}) },
         );
+      } else if (recoverContext) {
+        // The fresh conversation carries the task on: a feed line, no wake.
+        this.core.options.broadcastEvent({
+          type: "firstmate_note",
+          text: `Task ${task.title} reached its conversation limit and continues with its brief in a new conversation.`,
+          taskId: task.id,
+        });
       } else if (firstFailure && !accountTells) {
         this.core.routeCrewEvent(task.id, failedOp, "agent");
       }
@@ -842,6 +881,8 @@ export class CrewTurns {
     task.pendingMove = undefined;
     if (this.core.options.tasks.get(task.id)?.pendingSettle) {
       this.core.settling.locks.releaseSettleBoundary(task.id);
+    } else if (recoverContext) {
+      void this.recoverContext(task);
     } else if (move) {
       // A move asked for mid-turn runs at this boundary, and delivers what
       // waits once the task reopens on its new provider (INF-849).
@@ -1052,6 +1093,70 @@ export class CrewTurns {
       wakeKind: IDLE_RULES.has(rule) ? "agent" : "crewmate-report",
       effect,
     });
+  }
+
+  /** The brief the task's first turn served, read back off its record. */
+  private servedBrief(taskId: string): string | undefined {
+    const briefed = this.core.options.tasks
+      .timeline(taskId)
+      .filter((event) => event.kind === "briefed")
+      .at(-1);
+    return briefed ? this.core.options.tasks.servedBrief(briefed) : undefined;
+  }
+
+  /**
+   * A turn the model's context limit failed, in a conversation that is not
+   * already the recovery: the crewmate lets that conversation go and opens
+   * a fresh one through the restart path, which tells it why and serves its
+   * brief and where the earlier transcript is kept; the rows the failed
+   * turn held go again as its first turn. The earlier conversation's file
+   * stays. A reopen that fails is a note on the task, and the first mate
+   * hears it as the failed turn it is.
+   */
+  private async recoverContext(task: TaskRuntime): Promise<void> {
+    if (this.core.tasks.get(task.id) !== task) return;
+    const from = this.core.options.tasks.get(task.id)?.sessionFile;
+    this.core.options.tasks.note(
+      task.id,
+      "its conversation reached the model's context limit, so it continues in a new one; the earlier one is kept",
+      { news: false },
+    );
+    this.core.sessions.releaseSession(task);
+    this.core.tasks.delete(task.id);
+    try {
+      if (!from) throw new Error("its earlier conversation is not on its record");
+      const resumed = await this.core.sessions.resumeTask(task.id, undefined, {
+        from,
+        changed: "context",
+      });
+      resumed.contextRecovered = true;
+      // The failed turn held only the brief, which the restart serves: the
+      // new conversation still takes its turn, on the restart's words.
+      if (this.core.facts.deliverableRows(task.id, this.core.now()).length > 0)
+        this.deliverPendingToTask(resumed);
+      else if (resumed.state === "idle" && !resumed.cancelled)
+        void this.runTurn(resumed, CONTEXT_CONTINUE_TEXT);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : String(caught);
+      this.core.options.tasks.note(task.id, `its new conversation could not open: ${message}`, {
+        news: true,
+      });
+      this.core.routeCrewEvent(
+        task.id,
+        {
+          facts: {
+            kind: "turn-failed",
+            task: { id: task.id, title: task.title },
+            crewmate: task.crewmate,
+            error: capWithOverflow(
+              `its conversation reached the model's context limit, and a new one could not open: ${message}`,
+              "turn-error",
+            ),
+          },
+        },
+        "agent",
+      );
+    }
   }
 
   /**

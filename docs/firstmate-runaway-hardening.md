@@ -103,3 +103,9 @@ As on any provider failure, a kept attachment is named as omitted rather than si
 The recovery makes the kept words due immediately and reports the new conversation in the feed without asking the captain to Retry.
 It makes one such attempt until a turn succeeds; a refusal in the fresh conversation follows the ordinary visible failure and backoff path rather than an automatic renewal loop.
 No failure line recommends a stronger model as a way out of the same oversized conversation.
+
+A crewmate's turn that fails with `contextOverflow` is no provider outage either (`CrewTurns.recoverContext`).
+The first one lets the full conversation go, keeps its file, and opens a fresh one through the conversation restart path (`changed: "context"`), which tells the crewmate why, serves its brief, and names where the earlier transcript is kept.
+The rows the failed turn held go again once, as the fresh conversation's first turn, except the brief row, which the restart already serves; a failed turn that held only the brief still takes that turn.
+The feed says so, and the first mate is not woken.
+A second refusal in that fresh conversation, before any turn there ends clean, is not retried: its rows are acknowledged, since they are already in the conversation that overflowed, and the first mate is woken once with the failed turn (`turn-failed`) to act on.

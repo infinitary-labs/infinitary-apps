@@ -156,6 +156,8 @@ export function crewmateContractStamp(
 export type CrewmateRestart =
   | SessionRenewal
   | { from: string; changed: "unopenable" }
+  /** The earlier one reached its model's context limit and could not go on (`CrewTurns.recoverContext`). */
+  | { from: string; changed: "context" }
   | { from: string; changed: "moved"; to: string }
   /** The task moved to another computer (docs/helper.md, "Moving a started task"). */
   | { from: string; changed: "computer"; to: string };
@@ -189,13 +191,15 @@ export function crewmateRestartText(input: {
   const why =
     restart.changed === "unopenable"
       ? "your earlier conversation could not be reopened, so you continue in a new one."
-      : restart.changed === "moved"
-        ? `your task moved to ${restart.to}, which cannot reopen a conversation another provider held, so you continue in a new one.`
-        : restart.changed === "computer"
-          ? `your task moved to ${restart.to}, where your working copy, your evidence, your card bodies and your handed files were moved with it, in the folders your instructions name now. Paths in your earlier messages and your brief name the folders on the computer it left, so use the ones your instructions name now.`
-          : restart.changed.includes("prompt")
-            ? `the app was updated, and the instructions and tools you started this task under changed. ${kept}`
-            : `${HERE.this}'s own instructions and skills changed since your earlier conversation began. ${kept}`;
+      : restart.changed === "context"
+        ? "your earlier conversation reached the model's context limit, so you continue in a new one."
+        : restart.changed === "moved"
+          ? `your task moved to ${restart.to}, which cannot reopen a conversation another provider held, so you continue in a new one.`
+          : restart.changed === "computer"
+            ? `your task moved to ${restart.to}, where your working copy, your evidence, your card bodies and your handed files were moved with it, in the folders your instructions name now. Paths in your earlier messages and your brief name the folders on the computer it left, so use the ones your instructions name now.`
+            : restart.changed.includes("prompt")
+              ? `the app was updated, and the instructions and tools you started this task under changed. ${kept}`
+              : `${HERE.this}'s own instructions and skills changed since your earlier conversation began. ${kept}`;
   return [
     `Your conversation has restarted: ${why} Your earlier conversation is not in this one.`,
     `You are continuing your task, not starting it. What you committed and changed is in your working copy, and your reports, your last card and your brief are on your task's record: read it with tasks (key ${input.taskKey}) before you act, and do not redo work it shows done.${input.earlier ? ` If you need more, the transcript of your earlier conversation is saved at ${input.earlier}; read only the parts you need.` : ""}`,

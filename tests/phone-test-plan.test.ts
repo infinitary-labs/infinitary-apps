@@ -11,6 +11,9 @@ import {
   phoneExecutionArguments,
   phoneJobs,
   phonePasses,
+  phoneSelectionRunsJourney,
+  phoneTestSelection,
+  phoneTestsStarted,
   RELAUNCH_PAIRS_PER_PART,
   relaunchPairs,
   runDeviceLanes,
@@ -529,4 +532,43 @@ describe("the relaunch soak's pair count", () => {
     for (const value of ["0", "11", "1.5", "two", "-1"])
       expect(() => relaunchPairs(value)).toThrow(/whole number from 1 to 10/);
   });
+});
+
+// Approved phone-check cut 2: a changed test repeats, not every test in its suite.
+it("repeats exact tests on iPhone and requires each selected test to have started", () => {
+  const output = readFileSync(
+    "tests/fixtures/phone-test-plan/rest-weak-link-xcodebuild.log",
+    "utf8",
+  );
+  const started = [...output.matchAll(/Test Case '-\[(\w+)\.(\w+) (test\w+)\]' started\./g)].map(
+    (match) => `${match[1]}/${match[2]}/${match[3]}`,
+  );
+  expect(started.length).toBeGreaterThan(1);
+  const tests = started.slice(0, 1);
+  const jobs = phonePasses(["iphone", "ipad"], {
+    parts: ["weak-link"],
+    repeats: ["weak-link"],
+    repeatTests: { "weak-link": tests },
+  });
+  expect(jobs.filter(({ round }) => round === 1).map(({ tests }) => tests)).toEqual([
+    undefined,
+    undefined,
+  ]);
+  expect(jobs.filter(({ round }) => round > 1)).toEqual(
+    [2, 3].map((round) => ({ part: "weak-link", device: "iphone", round, tests })),
+  );
+  expect(phoneTestSelection("weak-link", tests)).toEqual(
+    tests.map((test) => `-only-testing:${test}`),
+  );
+  expect(() => phoneTestSelection("cards-form", tests)).toThrow(/does not own/);
+  expect(phoneTestsStarted("weak-link", output, tests)).toBe(true);
+  expect(
+    phoneTestsStarted(
+      "weak-link",
+      output.replaceAll(tests[0]!.split("/").at(-1)!, "notTheSelectedTest"),
+      tests,
+    ),
+  ).toBe(false);
+  expect(phoneSelectionRunsJourney("rest", tests)).toBe(false);
+  expect(phoneSelectionRunsJourney("rest")).toBe(true);
 });

@@ -176,6 +176,7 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     const released = {
       github: { event_name: "workflow_dispatch", ref: "refs/heads/main" },
       inputs: { source_commit: source, device: "ipad" },
+      needs: {},
       vars: {},
       env: {},
       matrix: { device: "ipad" },

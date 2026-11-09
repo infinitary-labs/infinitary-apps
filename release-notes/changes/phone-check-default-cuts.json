@@ -1,0 +1,7 @@
+{
+  "entries": [],
+  "exclusions": [{
+    "id": "phone-check-default-cuts",
+    "reason": "Reduce branch phone-check work with explicit ownership, test-specific repeats and Linux preselection; release checks and app behavior stay unchanged."
+  }]
+}

@@ -15,6 +15,8 @@ name: phone
 # INF-2970's fix 1: a request runs its iPad and iPhone parts as two jobs, one per device, so
 # each takes its own phone Mac at once instead of one after the other on one; the edited-part
 # passes stay in the iPhone's job, on its build and simulator, as INF-2582 chose.
+# Approved phone-check cuts: Linux chooses the parts and device matrix before a Mac is taken.
+# Manual requests run the screenless weak-link suite on one device; release calls stay unchanged.
 # INF-3205: a request may name one device, as a call does, so a replacement proof runs that
 # device's job alone at the branch's current version with the same part selection.
 on:
@@ -98,6 +100,14 @@ jobs:
     name: ${{ format('{0} · Check phone check request', inputs.trigger || 'Manual request') }}
     # The phone release's call, which passes its resolved source, runs it on GitHub's hosted Ubuntu.
     runs-on: ${{ inputs.source_commit != '' && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').light || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    outputs:
+      devices: ${{ steps.request-select.outputs.devices }}
+      parts: ${{ steps.request-select.outputs.parts }}
+      ipad_parts: ${{ steps.request-select.outputs.ipad_parts }}
+      iphone_parts: ${{ steps.request-select.outputs.iphone_parts }}
+      repeat_parts: ${{ steps.request-select.outputs.repeat_parts }}
+      repeat_tests: ${{ steps.request-select.outputs.repeat_tests }}
+      full: ${{ steps.request-select.outputs.full }}
     steps:
       - name: Validate and record the manual phone request
         env:
@@ -121,18 +131,46 @@ jobs:
             }
           fi
           printf 'Phone request: every_part=%s affected=%s parts=%s device=%s task=%s reason=%s\n' "$EVERY_PART" "$AFFECTED" "$PARTS" "${DEVICE:-both}" "$TASK" "$REASON" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/checkout@v4
+        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && inputs.evidence_run == ''
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && inputs.evidence_run == ''
+        with:
+          node-version: 24
+      - id: request-select
+        name: Choose affected parts for a crewmate request
+        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && inputs.evidence_run == ''
+        run: |
+          coverage=(); if [ "$AFFECTED" != true ] || [ -n "$REQUESTED_PARTS" ]; then coverage=(--coverage "$REQUESTED_PARTS"); fi
+          node scripts/affected-phone.ts --request --base "$BASE_REF" --head HEAD --device "$DEVICE" "${coverage[@]}" --placement "$RUNNER_TEMP/phone-placement.json" >> "$GITHUB_OUTPUT"
+        env:
+          BASE_REF: ${{ inputs.base || 'origin/main' }}
+          DEVICE: ${{ inputs.device }}
+          AFFECTED: ${{ inputs.affected }}
+          REQUESTED_PARTS: ${{ inputs.parts }}
+      - name: Keep the chosen and left parts
+        if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.waits && inputs.evidence_run == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: phone-placement
+          path: ${{ runner.temp }}/phone-placement.json
+          if-no-files-found: error
+          retention-days: 14
   # Each job's name leads with the caller's trigger (scripts/ci-job-names.mjs).
   native-phone:
     needs: request
     name: ${{ inputs.evidence_run != '' && 'Manual request · Phone checks not requested' || format(inputs.waits && '{0} · Wait-clock tests ({1})' || '{0} · Phone checks ({1})', inputs.trigger || 'Manual request', matrix.device == 'ipad' && 'iPad' || 'iPhone') }}
-    if: inputs.evidence_run == ''
+    if: inputs.evidence_run == '' && needs.request.outputs.devices != '[]'
     # INF-2970's fix 1: one job per device, each on its own phone Mac; a call or a request may
     # name its one device (INF-3205).
     # One device failing never cancels the other, so each reports its own parts, as the release does.
     strategy:
       fail-fast: false
       matrix:
-        device: ${{ fromJSON(inputs.device && format('["{0}"]', inputs.device) || '["ipad","iphone"]') }}
+        device: ${{ fromJSON(needs.request.outputs.devices || (inputs.device && format('["{0}"]', inputs.device) || '["ipad","iphone"]')) }}
     # Required: no override or local fallback. The fleet serves this label only
     # from the two vBoxx VMs; a missing mapping supplies no runnable destination.
     runs-on: ${{ fromJSON(vars.MAC_QUEUES).phone }}
@@ -158,41 +196,27 @@ jobs:
           persist-credentials: false
       - name: Keep the Mac awake
         uses: ./.github/actions/keep-mac-awake
-      # INF-2125 P1: this job chooses its own parts, so no PC job stands before it. An
-      # affected request compares with its base and reads the whole history; a call checks
-      # out its resolved source alone.
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.source_commit || github.sha }}
           path: Application Support/firstmate
-          fetch-depth: ${{ github.event_name == 'workflow_dispatch' && '0' || '1' }}
+          fetch-depth: 1
           persist-credentials: false
-      # No package cache on a Mac (journeys.yml says why, INF-724).
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      # The Linux request job already chose parts before any phone Mac is reserved.
       - id: request-select
-        name: Choose affected parts for a crewmate request
+        name: Read the chosen parts
         if: github.event_name == 'workflow_dispatch' && !inputs.source_commit && !inputs.parts && !inputs.waits && inputs.evidence_run == ''
         run: |
-          coverage=(); if [ "$AFFECTED" != true ] || [ -n "$REQUESTED_PARTS" ]; then coverage=(--coverage "$REQUESTED_PARTS"); fi
-          node scripts/affected-phone.ts --request --base "$BASE_REF" --head HEAD "${coverage[@]}" --placement "$RUNNER_TEMP/phone-placement.json" >> "$GITHUB_OUTPUT"
+          printf 'parts=%s\nipad_parts=%s\niphone_parts=%s\nrepeat_parts=%s\nfull=%s\n' "$PARTS" "$IPAD_PARTS" "$IPHONE_PARTS" "$REPEAT_PARTS" "$FULL" >> "$GITHUB_OUTPUT"
         env:
-          BASE_REF: ${{ inputs.base || 'origin/main' }}
-          AFFECTED: ${{ inputs.affected }}
-          REQUESTED_PARTS: ${{ inputs.parts }}
-      # Both device jobs choose the same parts; the iPhone's, which runs every kept part, keeps them,
-      # and a request that names one device keeps them in that device's job (INF-3205).
-      - name: Keep the chosen and left parts
-        if: github.event_name == 'workflow_dispatch' && matrix.device == (inputs.device || 'iphone')
-        uses: actions/upload-artifact@v4
-        with:
-          name: phone-placement
-          path: ${{ runner.temp }}/phone-placement.json
-          if-no-files-found: ignore
-          retention-days: 14
-      # INF-2125 P1: with the chooser in this job, a job it keeps no part for ends here: an
-      # affected request that touched no part, or, on the iPad, one whose parts it only reaches.
+          PARTS: ${{ needs.request.outputs.parts }}
+          IPAD_PARTS: ${{ needs.request.outputs.ipad_parts }}
+          IPHONE_PARTS: ${{ needs.request.outputs.iphone_parts }}
+          REPEAT_PARTS: ${{ needs.request.outputs.repeat_parts }}
+          FULL: ${{ needs.request.outputs.full }}
       - id: scope
         name: Decide whether the device gate runs
         run: echo "gate=$GATE" >> "$GITHUB_OUTPUT"
@@ -267,6 +291,7 @@ jobs:
           if [ "$PHONE_FULL" = true ] && [ -z "$PHONE_IPHONE_PARTS" ]; then parts=(); fi
           # The gate leaves the iPhone-only parts and the further passes off the iPad itself.
           for part in $PHONE_REPEAT_PARTS; do parts+=(--repeat-part "$part"); done
+          if [ -n "$PHONE_REPEAT_TESTS" ]; then parts+=(--repeat-tests "$PHONE_REPEAT_TESTS"); fi
           evidence="$RUNNER_TEMP/phone"
           case "$PHONE_DEVICE" in
             ipad) device=(--ipad); evidence="$evidence/ipad" ;;
@@ -278,8 +303,9 @@ jobs:
           PHONE_DEVICE: ${{ matrix.device }}
           PHONE_FULL: ${{ steps.request-select.outputs.full }}
           PHONE_PARTS: ${{ inputs.parts || steps.request-select.outputs.parts }}
-          PHONE_IPHONE_PARTS: ${{ steps.request-select.outputs.iphone_parts }}
+          PHONE_IPHONE_PARTS: ${{ needs.request.outputs.iphone_parts }}
           PHONE_REPEAT_PARTS: ${{ steps.request-select.outputs.repeat_parts }}
+          PHONE_REPEAT_TESTS: ${{ needs.request.outputs.repeat_tests }}
           INFINITARY_PHONE_RELAUNCH_PAIRS: ${{ github.event_name == 'workflow_dispatch' && github.ref != 'refs/heads/main' && !inputs.source_commit && '1' || '' }}
           INFINITARY_PHONE_WAITS_ONLY: ${{ inputs.waits && '1' || '0' }}
           INFINITARY_STARVE_CHECK: ${{ inputs.starve && '1' || '0' }}

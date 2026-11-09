@@ -3,7 +3,8 @@ import { appendFileSync, readdirSync, readFileSync, writeFileSync } from "node:f
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import { PHONE_PARTS } from "./phone-test-plan.ts";
+import { PART_OWNERS, phoneFileOwners } from "./phone-part-owners.ts";
+import { PHONE_JOURNEY, PHONE_PARTS, partIdentifier } from "./phone-test-plan.ts";
 
 // INF-79 / INF-136: the captain requested the native gate on phone/shared-contract PRs.
 // Include the captain's approved gate setup inputs, not broad shared/core/package changes.
@@ -73,48 +74,7 @@ export const APP_TESTS = "ios/Infinitary/InfinitaryTests/";
 // INF-2125 direction C: a part's owned files are its family's, the part name before its first hyphen,
 // so each short part split from join, talk, cards or relaunch owns what that part owned.
 export const partFamily = (part: string) => part.split("-")[0]!;
-export const PART_OWNERS: Record<string, readonly string[]> = {
-  join: [
-    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/JoinLink.swift",
-    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneIdentity.swift",
-    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PinnedTransport.swift",
-    "ios/Infinitary/InfinitaryApp/CodeScanner.swift",
-    "ios/Infinitary/InfinitaryApp/NearbyMacs.swift",
-    "ios/Infinitary/InfinitaryApp/PhoneComputerSheet.swift",
-  ],
-  talk: [
-    "ios/Infinitary/InfinitaryApp/PhoneTasks.swift",
-    "ios/Infinitary/InfinitaryApp/MessageComposer.swift",
-    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneWork.swift",
-  ],
-  // INF-1878: INF-1735's relaunch pairs, split from talk, own no file, so talk stays the closest part for its own.
-  relaunch: [],
-  cards: [
-    "ios/Infinitary/CardRuntime/",
-    "ios/Infinitary/InfinitaryApp/CardAssets/",
-    "ios/Infinitary/InfinitaryApp/CardWebView.swift",
-    "ios/Infinitary/InfinitaryApp/CardMediaView.swift",
-    "ios/Infinitary/InfinitaryApp/PhoneCards.swift",
-    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/CardValues.swift",
-    "scripts/generate-phone-cards.ts",
-  ],
-  address: [
-    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/SSHJoin.swift",
-    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSSHKey.swift",
-    "ios/Infinitary/InfinitaryApp/PhoneAddressSheet.swift",
-  ],
-  // INF-2095: the pager's menu and the test hook its journey reads.
-  pick: ["ios/Infinitary/InfinitaryApp/PhoneCards.swift", "ios/Infinitary/InfinitaryApp/PhoneMenuTapProbe.swift"],
-  // INF-2568: Home's column and the card's frame, which the keyboard shortens.
-  keyboard: [
-    "ios/Infinitary/InfinitaryApp/PhoneCards.swift",
-    "ios/Infinitary/InfinitaryApp/PhoneWorkspace.swift",
-    "ios/Infinitary/InfinitaryApp/MessageComposer.swift",
-    // INF-3106: the keyboard-down button in the reply and the message box.
-    "ios/Infinitary/InfinitaryApp/PhoneHideKeyboard.swift",
-  ],
-  rest: ["ios/Infinitary/InfinitaryApp/PhoneCharacter.swift"],
-};
+export { PART_OWNERS } from "./phone-part-owners.ts";
 
 /** Swift source with comments blanked and string contents replaced, keeping every line break. */
 export function blankSwift(source: string, keepStrings = false, onInvalid?: () => void): string {
@@ -284,7 +244,7 @@ export function before(after: string | undefined, hunks: Hunk[]): string {
   return lines.join("\n");
 }
 
-export type PartReach = { part: string; distance: 0 | 1 | 2; why: string };
+export type PartReach = { part: string; distance: 0 | 1 | 2; why: string; repeat?: boolean; repeatTests?: string[] };
 /** A part table: each part's name and the journey test it runs, or the whole test class it names as its
  * `suite`, the last part running every test no other names. The gate's own is PHONE_PARTS; a recorded change
  * replays against the table of its own time. */
@@ -294,7 +254,8 @@ const suiteFile = (part: PartTable[number]) => "suite" in part ? `ios/Infinitary
 const names = (parts: PartTable) => parts.map((part) => part.name);
 /** The gate's own parts, in order. */
 const EVERY = names(PHONE_PARTS);
-const owners = (part: string) => PART_OWNERS[partFamily(part)] ?? [];
+const owners = (part: string) => PART_OWNERS[part] ?? Object.entries(PART_OWNERS)
+  .filter(([name]) => partFamily(name) === part).flatMap(([, files]) => files);
 
 /**
  * The declarations each part runs, by name, from its test and identifier references. The rest
@@ -344,7 +305,15 @@ export function partReach(
 ): PartReach[] {
   const every = names(parts);
   const edited = new Map<string, Set<string>>(every.map((part) => [part, new Set()]));
-  const everyPart = (why: string) => { for (const part of every) edited.get(part)!.add(why); };
+  const repeats = new Set<string>();
+  const repeatTests = new Map<string, Set<string>>();
+  const broadRepeats = new Set<string>();
+  const repeat = (part: string, test?: string) => {
+    repeats.add(part);
+    if (!test) broadRepeats.add(part);
+    else { const tests = repeatTests.get(part) ?? new Set<string>(); tests.add(test); repeatTests.set(part, tests); }
+  };
+  const everyPart = (why: string) => { for (const part of every) { edited.get(part)!.add(why); repeat(part); } };
   const tests = reasons.filter((path) => path.startsWith(UI_TESTS));
   const changed = testDiff === undefined ? undefined : diffHunks(testDiff);
   if (tests.length && (!changed || tests.some((path) => !changed.has(path))))
@@ -403,7 +372,22 @@ export function partReach(
           if (side.counts.get(each.name)! > 1 || side.globalReach.has(each.name))
             everyPart(`${each.name}: ambiguous name or global setup reference`);
           for (const part of every)
-            if (side.reached.get(part)!.has(each.name)) edited.get(part)!.add(each.name);
+            if (side.reached.get(part)!.has(each.name)) {
+              edited.get(part)!.add(each.name);
+              // Shared helpers get ordinary coverage; a helper exclusive to one test belongs to that test.
+              if (/^test[A-Z_]/.test(each.name)) {
+                // Old names still select coverage, but cannot be run after a test is renamed or removed.
+                const current = after.get(path) ?? "";
+                if (!swiftFunctions(current)?.some((fn) => fn.name === each.name)) continue;
+                const table = parts.find((entry) => "test" in entry && entry.test === each.name);
+                const text = current;
+                const classes = [...blankSwift(text).matchAll(/\bclass\s+(\w+)\s*:\s*XCTestCase\b/g)];
+                repeat(part, table ? `${PHONE_JOURNEY}/${each.name}` : classes.length === 1 ? `InfinitaryUITests/${classes[0]![1]}/${each.name}` : undefined);
+              } else if (every.filter((name) => side.reached.get(name)!.has(each.name)).length === 1) {
+                const table = parts.find((entry) => entry.name === part);
+                repeat(part, table && "test" in table ? partIdentifier(table) : undefined);
+              }
+            }
         }
       }
     }
@@ -415,11 +399,31 @@ export function partReach(
   for (const path of appTests) {
     const own = suites.filter((part) => suiteFile(part) === path).map((part) => part.name);
     const runs = own.length ? own : /Tests\.swift$/.test(path) ? [every.at(-1)!] : [every.at(-1)!, ...suites.map((part) => part.name)];
-    for (const part of runs) edited.get(part)!.add(`the app-hosted tests (${path})`);
+    for (const part of runs) {
+      edited.get(part)!.add(`the app-hosted tests (${path})`);
+      const hunks = changed?.get(path);
+      const text = read(path);
+      const sides = text === undefined || !hunks ? undefined : [
+        { text, lines: hunks.flatMap((hunk) => Array.from({ length: hunk.added }, (_, at) => hunk.newStart + at)) },
+        { text: before(text, hunks), lines: hunks.flatMap((hunk) => hunk.removed.map((_, at) => hunk.oldStart + at)) },
+      ];
+      if (!sides) repeat(part);
+      else for (const side of sides) {
+        const functions = swiftFunctions(side.text);
+        if (!functions) repeat(part);
+        else for (const fn of functions.filter((fn) => /^test[A-Z_]/.test(fn.name) &&
+          side.lines.some((line) => fn.start <= line && line <= fn.end))) {
+          if (!swiftFunctions(text!)?.some((current) => current.name === fn.name)) continue;
+          const classes = [...blankSwift(text!).matchAll(/\bclass\s+(\w+)\s*:\s*XCTestCase\b/g)];
+          repeat(part, classes.length === 1 ? `InfinitaryTests/${classes[0]![1]}/${fn.name}` : undefined);
+        }
+      }
+    }
   }
   return every.map((part): PartReach => {
     const own = [...edited.get(part)!];
-    if (own.length) return { part, distance: 0, why: `edits test code it runs: ${own.join(", ")}` };
+    if (own.length) return { part, distance: 0, repeat: repeats.has(part),
+      ...(repeatTests.has(part) && !broadRepeats.has(part) ? { repeatTests: [...repeatTests.get(part)!].sort() } : {}), why: `edits test code it runs: ${own.join(", ")}` };
     const owned = reasons.filter((path) => matches(owners(part), path));
     if (owned.length) return { part, distance: 1, why: `edits a file it owns: ${owned.join(", ")}` };
     return { part, distance: 2, why: `another phone input changed: ${reasons.join(", ")}` };
@@ -481,12 +485,15 @@ export function placeParts(
   });
 }
 
-/** Requested checks run every directly reached part; shared or unreadable inputs run all. */
+/** Requested coverage keeps every reached part. Harness-only changes get one short smoke part;
+ * unknown production ownership remains conservative (and the ownership check refuses it). */
 export function requestedParts(reasons: readonly string[], reach: PartReach[]): PartReach[] {
-  const unknown = reasons.some((path) =>
-    !path.startsWith(UI_TESTS) && !path.startsWith(APP_TESTS) &&
-    !Object.values(PART_OWNERS).some((owned) => matches(owned, path)));
-  return unknown ? reach : reach.filter((each) => each.distance < 2);
+  const unknown = reasons.some((path) => path.startsWith("ios/") &&
+    !path.startsWith(UI_TESTS) && !path.startsWith(APP_TESTS) && !phoneFileOwners(path).length);
+  if (unknown) return reach;
+  const selected = reach.filter((each) => each.distance < 2);
+  if (selected.length || !reasons.length) return selected;
+  return reach.filter((each) => each.part === "join-read" || (each.part === "join" && !reach.some((part) => part.part === "join-read")));
 }
 
 /** INF-2259: ordinary proof is round one, and each kept part whose test code changed takes two more
@@ -496,7 +503,7 @@ export function phoneRepeatPlan(parts: readonly string[], reach: readonly PartRe
   full: boolean; repeatParts: string[];
 } {
   const full = EVERY.every((part) => parts.includes(part));
-  return { full, repeatParts: EVERY.filter((part) => parts.includes(part) && reach.some((each) => each.part === part && each.distance === 0)) };
+  return { full, repeatParts: EVERY.filter((part) => parts.includes(part) && reach.some((each) => each.part === part && (each.repeat ?? each.distance === 0))) };
 }
 
 /** INF-2582 (the captain's "iPhone only; iPad waits for the release check"): on an affected request, a kept
@@ -512,6 +519,19 @@ export function ipadParts(parts: readonly string[], iphoneOnly: readonly string[
   return parts.filter((part) => !iphoneOnly.includes(part));
 }
 
+/** A manual request's devices, chosen on Linux. Release calls never use this plan. */
+export function requestDevicePlan(parts: readonly string[], reach: readonly PartReach[], {
+  explicit = false, device = "",
+}: { explicit?: boolean; device?: string } = {}): { iphoneOnly: string[]; devices: string[] } {
+  if (device && device !== "ipad" && device !== "iphone") throw new Error(`Unknown phone device: ${device}`);
+  const iphoneOnly = explicit ? [] : iphoneOnlyParts(parts, reach);
+  // Screenless weak-link coverage needs one device, but its own test still repeats on iPhone.
+  if (!device && parts.includes("weak-link") && !iphoneOnly.includes("weak-link")) iphoneOnly.push("weak-link");
+  const devices = ["ipad", "iphone"].filter((name) =>
+    (!device || device === name) && (name === "ipad" ? ipadParts(parts, iphoneOnly).length > 0 : parts.length > 0));
+  return { iphoneOnly, devices };
+}
+
 function main(): void {
   const { values } = parseArgs({ options: {
     base: { type: "string", default: "origin/main" },
@@ -522,6 +542,7 @@ function main(): void {
     request: { type: "boolean", default: false },
     // Explicit ordinary coverage, including an empty string for every live part.
     coverage: { type: "string" },
+    device: { type: "string" },
   } });
   const root = fileURLToPath(new URL("..", import.meta.url));
   const git = (args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 });
@@ -542,7 +563,7 @@ function main(): void {
   if (decision.run) {
     let testDiff: string | undefined;
     try {
-      testDiff = git(["diff", "-U0", "--no-renames", `${values.base}...${values.head}`, "--", UI_TESTS]);
+      testDiff = git(["diff", "-U0", "--no-renames", `${values.base}...${values.head}`, "--", UI_TESTS, APP_TESTS]);
     } catch { /* Counted as every part edited. */ }
     // The working tree is the change's head.
     const read = (path: string) => readFile(join(root, path));
@@ -565,10 +586,13 @@ function main(): void {
     kept = named.length ? EVERY.filter((part) => named.includes(part)) : [...EVERY];
   }
   const repeats = phoneRepeatPlan(kept, placement);
-  // Named parts and every-part requests run on both devices, as asked.
-  const iphoneOnly = values.request && values.coverage === undefined ? iphoneOnlyParts(kept, placement) : [];
+  const { iphoneOnly, devices } = requestDevicePlan(kept, placement, {
+    explicit: !values.request || values.coverage !== undefined, device: values.device,
+  });
+  console.log(`devices=${JSON.stringify(devices)}`);
   console.log(`full=${repeats.full}`);
   console.log(`repeat_parts=${repeats.repeatParts.join(" ")}`);
+  console.log(`repeat_tests=${JSON.stringify(Object.fromEntries(placement.filter((each) => each.repeatTests?.length).map((each) => [each.part, each.repeatTests])))}`);
   console.log(`iphone_parts=${iphoneOnly.join(" ")}`);
   console.log(`ipad_parts=${ipadParts(kept, iphoneOnly).join(" ")}`);
   const run = values.coverage === undefined ? decision.run : kept.length > 0;

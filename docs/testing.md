@@ -633,7 +633,8 @@ The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneH
 The runner's diagnostic inputs also select it: `scripts/phone-guest-observer.ts` and `tests/helpers/phoneWebStacks.ts`, `phoneGuestLaunches.ts`, `phoneLauncherLog.ts`, `phoneLookupWait.ts` and `phoneProxyLaunches.ts`.
 Setup the device gates never run does not select it: the chooser itself, the local test home `scripts/phone-test-home.ts`, and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh`.
 Changes to general shared modules, connection/device code, packages or the lockfile alone do not select the native gate.
-The chooser runs inside the `native-phone` job on the Mac, so no Linux job stands before it (INF-2125); it reads the comparison of the request's branch with its base, and an unreadable comparison selects the gate rather than silently skipping it.
+The chooser runs in the Linux `request` job before a phone Mac is reserved; it reads the comparison of the request's branch with its base, and an unreadable comparison selects the gate rather than silently skipping it.
+That job publishes the selection, keeps `phone-placement` and creates only the device jobs with work to run.
 When the chooser selects no gate, as for a change only to the generated contract's version line, the job ends before it installs anything.
 The `native-phone` job runs once per device, the iPad and the iPhone each in its own job on its own phone Mac at once, with fail-fast off (INF-2970's fix 1).
 Each runs the disposable `scripts/test-phone.ts` gate for its device only on the required `MAC_QUEUES.phone` queue ("Each Mac job's kind and size"), without an override or fallback.
@@ -649,7 +650,8 @@ Each placed vBoxx guest runs one simulator, its job's device's.
 
 An affected request runs every part the change reaches, by the chooser's distances below; a default request and the phone release run every part.
 The chooser (`scripts/affected-phone.ts`) gives each part a distance: 0 when the change edits UI test code the part runs, 1 when it edits a file in the part's owner table (`PART_OWNERS`), and 2 for any other phone input.
-A part's owned files are its family's, the part's name before its first hyphen, so each short part split from join, talk or cards owns what that part owned (INF-2125).
+`scripts/phone-part-owners.ts` explicitly assigns production files to their consuming parts, including shared files with multiple owners.
+`pnpm check` refuses a new production phone file with no owner; UI and app-hosted test files use their declaration consumers below.
 It reads a UI test change by its declarations: each changed line counts for the functions, supported top-level structs and enums, or literal constants around it, added lines in the new version and removed ones in the old.
 Each part reaches its test and follows identifier references through bodies and signatures, including function values, helper types and constants; a helper type owns its methods.
 The reader keeps string contents for references, including interpolation, so a matching word in a literal can conservatively select extra consumers.
@@ -658,7 +660,8 @@ The rest part also starts from every test no other part names, and a change to t
 A part that names an app-hosted class as its `suite` (`weak-link`, INF-2989) runs no UI test code: a change to that class's own file puts that part at 0 instead of the rest part, and a change to an app-hosted file that is not a test class, such as a shared helper, puts both at 0.
 A blank or comment-only line counts for nothing; an edited line outside a supported declaration, a duplicate declaration name, conditional compilation or a test file it cannot read or parse counts for every part.
 Unsupported declarations, including aliases, computed properties, attributed types and executable global initializers, keep full coverage rather than using a file exemption.
-An affected request keeps every part at 0 or 1, and every part when a shared input or an unreadable comparison leaves its reach unknown; a part at 2 is checked by the next phone release.
+An affected request keeps every part at 0 or 1, and every part when an unowned production file or an unreadable comparison leaves its reach unknown; a part at 2 is checked by the next phone release.
+A change confined to scripts, helpers or the workflow runs the short `join-read` part as a smoke check.
 The six-minute placement of a pull request's gate, `placeParts` in the chooser with the `--times` reading of a full gate's `part-times.json`, has no workflow caller since INF-2539; `tests/phone-chooser.test.ts` still holds it.
 The job summary names each kept part with its distance and reason, and the `phone-placement` artifact keeps the same as JSON.
 `tests/phone-chooser.test.ts` replays real changes merged to `main` through the chooser.
@@ -684,20 +687,26 @@ Branch requests also read the chooser for repeat accounting; the phone release's
 A release check of every part on `main` sends `{"ref":"main","return_run_details":true}`.
 The optional `base` input defaults to `origin/main`.
 This selection reuses `PART_OWNERS` and the Swift declaration reach reader, without a timing budget.
-Shared phone inputs and unreadable comparisons or test changes run every part instead.
-An affected request with no reached parts skips both devices' gates, and one whose every kept part runs on the iPhone alone skips the iPad's (the chooser's `ipad_parts`); the summary and the iPhone job's `phone-placement` artifact record the selection.
+Shared production inputs select every declared consumer; unreadable comparisons or test changes retain conservative full coverage.
+An affected request with no reached parts skips both devices' gates, and one whose every kept part runs on the iPhone alone skips the iPad's (the chooser's `ipad_parts`); the Linux job's summary and `phone-placement` artifact record the selection before either device job starts.
 Explicit `parts` still overrides automatic selection for diagnostic runs.
 The optional `device` input, `ipad` or `iphone`, starts that device's job alone, as the phone release's call does; empty, its default, starts both (INF-3205).
 That job runs with every other input as it would beside the other device's, so a replacement proof of one device sends the original request's inputs with `device`, at the branch's current version, which a rerun of the original run cannot reach since it keeps the original version.
-A request that names one device keeps `phone-placement` in that device's job, and an iPad request whose every kept part runs on the iPhone alone checks nothing, as the iPad's job of a both-device request would.
+An iPad request whose every kept part runs on the iPhone alone checks nothing, as the iPad's job of a both-device request would.
+To reproduce a known failure, send its one named `parts` value and `device` (`iphone` or `ipad`); named diagnostic parts do not add repeat rounds.
+The ordinary weak-link suite runs on the iPhone alone on manual requests unless a device is explicitly named; its own edited test code still gets its three iPhone rounds.
+Release calls continue to run every part on both devices, weak-link included.
 The `request` job refuses any other device, on every route, before a phone Mac is taken, and names the device in the request summary.
 The chooser compares ordinary coverage with the complete live part table, independent of order, and keeps `coverage`, `iphoneOnly` and `repeats` in `phone-placement`.
 INF-2582 direction A (the captain's choices "A: wait once and trim the soak" and "iPhone only; iPad waits for the release check") shapes the gate of an affected request in three ways.
 A part the change only reaches runs on the iPhone alone (the chooser's `iphone_parts`), and the iPad runs it in the next phone release; a part whose test code changed, or every part of a change the chooser could not read, runs on both devices.
-Its selection runs once, then its distance-zero edited-test parts run twice more on the iPhone alone in the iPhone job's same gate step (the iPad runs each once, INF-2732), on the build and simulator it started, so each device's job waits for a phone Mac once (`phonePasses` in `scripts/phone-test-plan.ts`).
+Its selection runs once, then only parts whose test's own code changed run twice more on the iPhone alone in the iPhone job's same gate step (the iPad runs each once, INF-2732), on the build and simulator it started, so each device's job waits for a phone Mac once (`phonePasses` in `scripts/phone-test-plan.ts`).
 This holds for a proper subset as for a complete selection (INF-2811), so a branch that edits one part's test code gets all three of that part's iPhone runs from its one affected request.
 A request on a branch runs one of each relaunch part's ten dark and light relaunch pairs (INF-1735), so 2 of the 20, through the gate's `--relaunch-pairs`; a request on `main` and the phone release run all 20.
 Named `parts` and every-part requests run their parts on both devices.
+Shared helpers and setup reach their consumers without repeating them; changed test bodies, signatures and helpers used by only one part retain three rounds.
+For a part containing a suite, the chooser carries exact changed-test identifiers into the two further rounds, so the other tests run only in ordinary coverage.
+An unreadable test identity conservatively repeats its containing part; each exact selection must witness every selected test starting.
 Unreadable test changes retain all-parts repeats; a product-only shared input does not invent edited tests.
 The iPhone runs a later pass only after its own ordinary pass, each pass of a part starts from a fresh test home and app, and in a complete selection or a request with edited-part passes the first failure stops every later part and pass, with no retries.
 Each pass keeps 90 minutes of the gate step's limit.

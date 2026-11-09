@@ -465,6 +465,7 @@ describe("the dispatched workflow's gate", () => {
     expect(phone.on.workflow_call.inputs.device).toMatchObject({ type: "string", default: "" });
     const contexts = {
       inputs,
+      needs: {},
       github: { sha: source, event_name: "workflow_dispatch", ref: "refs/heads/main" },
       env: {},
       steps: {},

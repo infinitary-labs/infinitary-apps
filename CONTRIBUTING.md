@@ -14,7 +14,8 @@ Pull requests from outside are not merged yet: the repository opens with the pub
   The PR's Linux check owns typecheck, lint/adherence and build; opening the PR can start proof and does not require a duplicate complete local gate.
   Portable journeys use Linux CI; every edited unit file runs three total times locally, including portable files; selected native journeys can run locally through the admitted build-to-cleanup route even in CI mode.
   An edited test file runs three total rounds, ordinary coverage plus two more; an affected unedited journey runs once per required platform.
-  A directly edited phone part runs three rounds on the iPhone and one on the iPad, all in its one affected phone request through CI, whatever the size of the selection.
+  A phone test whose own code changed runs three rounds on the iPhone and one on the iPad, all in its one affected phone request through CI, whatever the size of the selection.
+  Shared test helpers reach their consumers once rather than repeating them.
   Weakening, skipping or deleting a test still requires the captain's approval.
   Full local journeys remain prohibited, and full pre-merge verification is exceptional, not a response to breadth, confidence or care alone (`docs/testing.md`, "When to request full verification").
   Rolling main supplies broad coverage except the old journey set; a fully passing run automatically cuts its exact commit as an alpha, which runs every journey, unless the swept batch already ran them, and the release-specific gates without repeating main's checks.

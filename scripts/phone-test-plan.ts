@@ -134,6 +134,29 @@ export function partTestStarted(name: string, output: string): boolean {
   return output.includes(`Test Case '-[${PHONE_JOURNEY.replace("/", ".")} ${part.test}]' started.`);
 }
 
+/** Exact repeat selectors retain the ordinary part when the change could not be read. */
+export function phoneTestSelection(part: string, tests: readonly string[] = [], waits = false): string[] {
+  const selection = partSelection(part, waits);
+  if (!tests.length) return selection;
+  const matches = (test: string, selected: string) => test === selected || test.startsWith(`${selected}/`);
+  for (const test of tests) {
+    if (!/^(?:InfinitaryTests|InfinitaryUITests)\/\w+\/test\w+$/.test(test)) throw new Error(`Invalid phone test: ${test}`);
+    if (selection.some((arg) => arg.startsWith("-only-testing:") && !matches(test, arg.slice("-only-testing:".length))) ||
+      selection.some((arg) => arg.startsWith("-skip-testing:") && matches(test, arg.slice("-skip-testing:".length))))
+      throw new Error(`The ${part} part does not own ${test}`);
+  }
+  return tests.map((test) => `-only-testing:${test}`);
+}
+export function phoneSelectionRunsJourney(part: string, tests: readonly string[] = []): boolean {
+  return tests.length ? tests.some((test) => test.startsWith(`${PHONE_JOURNEY}/`)) : partRunsJourney(part);
+}
+export function phoneTestsStarted(part: string, output: string, tests: readonly string[] = []): boolean {
+  return tests.length ? tests.every((test) => {
+    const [target, suite, method] = test.split("/");
+    return output.includes(`Test Case '-[${target}.${suite} ${method}]' started.`);
+  }) : partTestStarted(part, output);
+}
+
 /** Every device's parts in start order: each part on the slower iPad first, then on the iPhone.
  * INF-1438: the gate runs each device's parts in this order on the one simulator it starts for that device. */
 export function phoneJobs(devices: PhoneDevice[], parts: readonly string[] = PHONE_PARTS.map((part) => part.name)) {
@@ -158,7 +181,7 @@ export function relaunchPairs(value: string | undefined): number {
 }
 
 /** One part's run in a gate: its device, its part, and which pass of the gate it belongs to. */
-export type PhoneJob = { device: PhoneDevice; part: string; round: number };
+export type PhoneJob = { device: PhoneDevice; part: string; round: number; tests?: readonly string[] };
 
 /** The passes after the ordinary one that a part whose test code changed takes (INF-2259: three in all). */
 export const PHONE_REPEAT_ROUNDS = [2, 3] as const;
@@ -170,8 +193,8 @@ export const PHONE_REPEAT_ROUNDS = [2, 3] as const;
  * once (INF-2732, the captain's "run each edited phone part three times on the iPhone and once on the iPad").
  * Each device's jobs are in the order its lane runs them (`runDeviceLanes`), and the iPad's lane starts
  * first, as `phoneJobs`. */
-export function phonePasses(devices: PhoneDevice[], { parts = [], iphoneOnly = [], repeats = [] }: {
-  parts?: readonly string[]; iphoneOnly?: readonly string[]; repeats?: readonly string[];
+export function phonePasses(devices: PhoneDevice[], { parts = [], iphoneOnly = [], repeats = [], repeatTests = {} }: {
+  parts?: readonly string[]; iphoneOnly?: readonly string[]; repeats?: readonly string[]; repeatTests?: Record<string, readonly string[]>;
 }): PhoneJob[] {
   for (const part of [...parts, ...iphoneOnly, ...repeats]) partSelection(part);
   const first = phoneJobs(devices, [...parts, ...iphoneOnly])
@@ -181,7 +204,7 @@ export function phonePasses(devices: PhoneDevice[], { parts = [], iphoneOnly = [
   return order.filter((device) => devices.includes(device)).flatMap((device) => [
     ...first.filter((job) => job.device === device),
     ...(device === "iphone"
-      ? PHONE_REPEAT_ROUNDS.flatMap((round) => phoneJobs([device], repeats).map((job) => ({ ...job, round })))
+      ? PHONE_REPEAT_ROUNDS.flatMap((round) => phoneJobs([device], repeats).map((job) => ({ ...job, round, ...(repeatTests[job.part]?.length ? { tests: repeatTests[job.part] } : {}) })))
       : []),
   ]);
 }

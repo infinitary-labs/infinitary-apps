@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  diffHunks,
   ipadParts,
   iphoneOnlyParts,
   type PartTable,
@@ -10,9 +11,12 @@ import {
   phoneDecision,
   phoneRepeatPlan,
   placeParts,
+  requestDevicePlan,
   requestedParts,
+  swiftFunctions,
   UI_TESTS,
 } from "../scripts/affected-phone";
+import { phoneFileOwners, unownedPhoneFiles } from "../scripts/phone-part-owners";
 import { PHONE_PARTS, phonePasses } from "../scripts/phone-test-plan";
 
 // INF-827 (the captain's approved INF-828 plan: "Run only the parts a change reaches; skip
@@ -152,9 +156,9 @@ describe("affected phone requests", () => {
     expect(request("2dbbedc52", false, true)).toEqual(["join", "talk"]);
     expect(request("2dbbedc52")).toEqual(BEFORE_SPLIT.map((part) => part.name));
   });
-  it("runs all parts for shared gate setup or an unreadable test diff", () => {
+  it("runs a smoke part for gate setup and all parts for an unreadable test diff", () => {
     const all = BEFORE_SPLIT.map((part) => part.name);
-    expect(request("a7aa5e974")).toEqual(all);
+    expect(request("a7aa5e974")).toEqual(["join"]);
     expect(request("2dbbedc52", true)).toEqual(all);
   });
 });
@@ -618,4 +622,118 @@ describe("app-hosted test changes", () => {
     ];
     expect(distanceZero(paths).sort()).toEqual(["rest", "weak-link"]);
   });
+});
+
+// Approved cuts 1–4: real source files and recorded changes drive selection, not invented call graphs.
+describe("the approved phone-check cuts", () => {
+  it("keeps the owners of shared production files and refuses missing ownership", () => {
+    const shared = "ios/Infinitary/InfinitaryApp/PhoneStyle.swift";
+    const file = readFileSync(shared, "utf8");
+    expect(file.length).toBeGreaterThan(0);
+    const reach = partReach([shared], "", [], () => undefined);
+    expect(requestedParts([shared], reach).map(({ part }) => part)).toEqual(
+      phoneFileOwners(shared),
+    );
+    expect(phoneFileOwners(shared)).toEqual(PHONE_PARTS.map(({ name }) => name));
+    // Removing an actual file's owner is precisely the missing-owner failure.
+    const moved = shared.replace("PhoneStyle", "PhoneStyleMoved");
+    expect(unownedPhoneFiles([shared, moved])).toEqual([moved]);
+    expect(
+      requestedParts(
+        [moved],
+        partReach([moved], "", [], () => undefined),
+      ),
+    ).toHaveLength(PHONE_PARTS.length);
+  });
+  it("runs only a short smoke part for the real workflow-only change", () => {
+    const recorded = change("a7aa5e974");
+    const reach = partReach(recorded.paths, "", [], () => undefined);
+    const parts = requestedParts(recorded.paths, reach).map(({ part }) => part);
+    expect(parts).toEqual(["join-read"]);
+    const packageTest = "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/TrustTests.swift";
+    const packageReach = partReach([packageTest], "", [], () => undefined);
+    expect(requestedParts([packageTest], packageReach).map(({ part }) => part)).toEqual([
+      "join-read",
+    ]);
+    expect(requestDevicePlan(parts, reach)).toEqual({ iphoneOnly: parts, devices: ["iphone"] });
+  });
+  it("covers shared test helpers once but repeats an edit inside a test itself", () => {
+    const recorded = JSON.parse(
+      readFileSync("tests/fixtures/phone-changes/declaration-consumers.json", "utf8"),
+    ) as Change & { parts: PartTable };
+    const shared = "ios/Infinitary/InfinitaryUITests/PhoneWaits.swift";
+    const source = recorded.testFiles[shared]!;
+    const line =
+      source.split("\n").findIndex((line) => line.startsWith("let phoneAnsweredFormPattern")) + 1;
+    const diff = `diff --git a/${shared} b/${shared}\n--- a/${shared}\n+++ b/${shared}\n@@ -${line} +${line} @@\n-${source.split("\n")[line - 1]}\n+${source.split("\n")[line - 1]} \n`;
+    expect(diffHunks(diff).get(shared)).toHaveLength(1);
+    const reach = partReach(
+      [shared],
+      diff,
+      Object.keys(recorded.testFiles),
+      (path) => recorded.testFiles[path],
+      recorded.parts,
+    );
+    const parts = requestedParts([shared], reach).map(({ part }) => part);
+    expect(parts.length).toBeGreaterThan(1);
+    expect(
+      reach.filter(({ distance }) => distance === 0).every(({ repeat }) => repeat === false),
+    ).toBe(true);
+    expect(phoneRepeatPlan(parts, reach).repeatParts).toEqual([]);
+    const short = change("cd98a3e86");
+    const own = partReach(
+      short.paths,
+      short.testDiff,
+      Object.keys(short.testFiles),
+      (path) => short.testFiles[path],
+    );
+    expect(phoneRepeatPlan(["talk-drafts"], own).repeatParts).toEqual(["talk-drafts"]);
+  });
+  it("reproduces one named part on one device without adding repeat rounds", () => {
+    const part = PHONE_PARTS.find(({ name }) => name === "cards-form")!.name;
+    for (const device of ["iphone", "ipad"] as const) {
+      const plan = requestDevicePlan([part], [], { explicit: true, device });
+      expect(plan.devices).toEqual([device]);
+      expect(phonePasses([device], { parts: [part] })).toEqual([{ part, device, round: 1 }]);
+    }
+  });
+  it("runs weak-link on one device for requests, while the release still runs both", () => {
+    expect(requestDevicePlan(["weak-link"], [], { explicit: true })).toEqual({
+      iphoneOnly: ["weak-link"],
+      devices: ["iphone"],
+    });
+    expect(requestDevicePlan(["weak-link"], [], { explicit: true, device: "ipad" })).toEqual({
+      iphoneOnly: [],
+      devices: ["ipad"],
+    });
+    expect(
+      phonePasses(["iphone", "ipad"], { parts: ["weak-link"] }).map(({ device }) => device),
+    ).toEqual(["ipad", "iphone"]);
+    expect(requestDevicePlan([], [])).toEqual({ iphoneOnly: [], devices: [] });
+  });
+});
+
+// Approved cut 2 also covers suite-owning parts, which contain more than one XCTest method.
+it("repeats only the edited app-hosted test within the weak-link suite", () => {
+  const path = "ios/Infinitary/InfinitaryTests/PhoneWeakLinkTests.swift";
+  const text = readFileSync(path, "utf8");
+  const own = swiftFunctions(text)!.find(({ name }) => name.startsWith("test"))!;
+  const line = text.split("\n")[own.start - 1]!;
+  const after = text
+    .split("\n")
+    .map((value, at) => (at === own.start - 1 ? `${value} ` : value))
+    .join("\n");
+  const diff = `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n@@ -${own.start} +${own.start} @@\n-${line}\n+${line} \n`;
+  const reach = partReach([path], diff, [], () => after);
+  expect(phoneRepeatPlan(["weak-link"], reach).repeatParts).toEqual(["weak-link"]);
+  expect(reach.find(({ part }) => part === "weak-link")!.repeatTests).toEqual([
+    `InfinitaryTests/PhoneWeakLinkTests/${own.name}`,
+  ]);
+  const renamed = `${own.name}Renamed`;
+  const renamedLine = line.replace(own.name, renamed);
+  const renameDiff = `diff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n@@ -${own.start} +${own.start} @@\n-${line}\n+${renamedLine}\n`;
+  const renamedReach = partReach([path], renameDiff, [], () => text.replace(line, renamedLine));
+  expect(renamedReach.find(({ part }) => part === "weak-link")!.repeatTests).toEqual([
+    `InfinitaryTests/PhoneWeakLinkTests/${renamed}`,
+  ]);
 });

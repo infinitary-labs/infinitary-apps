@@ -50,13 +50,14 @@ function eligible(
   });
   const ast = new Parser(
     new Lexer(`!!(${gateCondition()})`).lex().tokens,
-    ["steps", "github", "inputs", "env", "matrix"],
+    ["steps", "github", "inputs", "env", "matrix", "needs"],
     [],
   ).parse();
   return new Evaluator(
     ast,
     new data.Dictionary(
       { key: "steps", value: steps },
+      { key: "needs", value: new data.Dictionary() },
       {
         key: "matrix",
         value: new data.Dictionary({ key: "device", value: new data.StringData(device) }),
@@ -114,7 +115,14 @@ function holds(
   contexts: Plain,
   status: { failed?: boolean; cancelled?: boolean } = {},
 ): boolean {
-  contexts = { env: {}, steps: {}, inputs: {}, matrix: { device: "iphone" }, ...contexts };
+  contexts = {
+    needs: {},
+    env: {},
+    steps: {},
+    inputs: {},
+    matrix: { device: "iphone" },
+    ...contexts,
+  };
   const bare = expression.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
   const functions = STATUS.map((name) => ({ name, minArgs: 0, maxArgs: 0 }));
   const values: Record<string, boolean> = {
@@ -165,6 +173,7 @@ function stepsThatRun(
       {
         env: {},
         steps: seen,
+        needs: {},
         vars: { PHONE_VIRTUAL_MAC: virtualMac },
         inputs,
         github,
@@ -636,7 +645,10 @@ describe("the phone check on request", () => {
         ).toEqual([BOTH]);
     expect(
       ["", "ipad", "iphone"].map((device) =>
-        workflowValue(workflow.jobs[NATIVE_JOB].strategy.matrix.device, { inputs: { device } }),
+        workflowValue(workflow.jobs[NATIVE_JOB].strategy.matrix.device, {
+          inputs: { device },
+          needs: {},
+        }),
       ),
     ).toEqual([["ipad", "iphone"], ["ipad"], ["iphone"]]);
     expect(workflow.jobs[NATIVE_JOB].strategy["fail-fast"]).toBe(false);
@@ -659,7 +671,7 @@ describe("a request that names one device", () => {
   };
   // Each device job a request starts, by the native job's own matrix.
   const devices = (inputs: Plain) =>
-    workflowValue(native.strategy.matrix.device, { inputs }) as string[];
+    workflowValue(native.strategy.matrix.device, { inputs, needs: {} }) as string[];
   // The gate's limit and environment in a device's job, with the chooser's parts above.
   function gate(inputs: Plain, device: string) {
     const ran = stepsThatRun(OFF, false, inputs, BRANCH_REQUEST, chosen, device);
@@ -667,6 +679,7 @@ describe("a request that names one device", () => {
     const choosing = ran.some((each) => each.id === "request-select");
     const contexts = {
       github: BRANCH_REQUEST,
+      needs: { request: { outputs: chosen["request-select"] } },
       inputs,
       matrix: { device },
       runner: { temp: "/runner/temp" },
@@ -723,14 +736,12 @@ describe("a request that names one device", () => {
         }),
       ).toBe(parts !== "");
   });
-  it("keeps the part selection once a request, in the named device's job or the iPhone's", () => {
-    const keeps = (inputs: Plain) =>
-      devices(inputs).filter((device) =>
-        names(stepsThatRun(OFF, false, inputs, BRANCH_REQUEST, chosen, device)).includes(PLACEMENT),
-      );
-    expect(keeps({ affected: true })).toEqual(["iphone"]);
-    expect(keeps({ affected: true, device: "ipad" })).toEqual(["ipad"]);
-    expect(keeps({ affected: true, device: "iphone" })).toEqual(["iphone"]);
+  it("keeps the part selection in the Linux request job before reserving a phone Mac", () => {
+    const keeps = (workflow.jobs.request.steps as Step[]).find((step) => step.name === PLACEMENT)!;
+    expect(keeps).toBeDefined();
+    for (const device of ["", "ipad", "iphone"])
+      expect(holds(condition(keeps), { github: BRANCH_REQUEST, inputs: { device } })).toBe(true);
+    expect((native.steps as Step[]).some((step) => step.name === PLACEMENT)).toBe(false);
   });
 });
 
@@ -825,6 +836,7 @@ describe("complete-selection phone CI repeats", () => {
   it("hands the chooser's edited parts and iPhone-only parts to the one gate", () => {
     const chosen = {
       inputs: { parts: "" },
+      needs: { request: { outputs: { iphone_parts: "join-read rest" } } },
       steps: {
         "request-select": {
           outputs: {
@@ -867,4 +879,32 @@ describe("the relaunch soak", () => {
     ).toBe("");
     expect(relaunchPairs("") * 2).toBe(20);
   });
+});
+
+// Approved cut 4: the Linux request's matrix prevents an empty device from taking a phone Mac.
+it("uses the preselected device matrix and skips native work when Linux selects none", () => {
+  const native = workflow.jobs[NATIVE_JOB];
+  for (const devices of [["iphone"], ["ipad"], ["ipad", "iphone"]]) {
+    const needs = { request: { outputs: { devices: JSON.stringify(devices) } } };
+    expect(workflowValue(native.strategy.matrix.device, { inputs: {}, needs })).toEqual(devices);
+    expect(holds(native.if, { inputs: {}, needs })).toBe(true);
+  }
+  expect(holds(native.if, { inputs: {}, needs: { request: { outputs: { devices: "[]" } } } })).toBe(
+    false,
+  );
+  // A release call has no manual selection and keeps its existing two-device route.
+  expect(workflowValue(native.strategy.matrix.device, { inputs: {}, needs: {} })).toEqual([
+    "ipad",
+    "iphone",
+  ]);
+});
+
+// Release calls inherit their caller's dispatch event, but must never run manual preselection.
+it("leaves the release's resolved-source call out of manual selection and its artifact upload", () => {
+  const contexts = {
+    github: BRANCH_REQUEST,
+    inputs: { source_commit: "6073f484509752eb55ee1b1c85c38b82b4909cc3" },
+  };
+  for (const step of (workflow.jobs.request.steps as Step[]).slice(1))
+    expect(holds(condition(step), contexts), step.name ?? step.uses).toBe(false);
 });

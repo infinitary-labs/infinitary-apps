@@ -56,7 +56,8 @@ function toolset(overrides: Partial<TaskToolsDelegate> = {}) {
 }
 
 describe("task tools", () => {
-  it("records a practical wait as blocks, and keeps related for work neither task waits on", () => {
+  // INF-3167, the captain's choice A: a blocks link holds the start and the merge.
+  it("says a blocks link holds the start and the merge, and keeps related for work neither task waits on", () => {
     const link = createTaskTools({
       plan: () => ({ taskId: "ab12cd34", key: "SCR-3", text: "planned" }),
       update: () => ({ text: "updated", ok: true }),
@@ -70,8 +71,7 @@ describe("task tools", () => {
       startNow: async () => "started",
     }).find((tool) => tool.name === "link_tasks");
     expect(link?.description).toContain("related: work neither task is waiting on");
-    expect(link?.description).toContain("cannot start until");
-    expect(link?.description).not.toContain("cannot merge or close until");
+    expect(link?.description).toContain("neither starts nor merges until `from` closes");
     expect(link?.description).toContain("a cycle is refused as text");
     expect(link?.description).not.toContain("use it, not blocks");
   });

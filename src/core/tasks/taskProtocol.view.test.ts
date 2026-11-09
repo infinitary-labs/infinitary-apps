@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { taskProtocolFixture } from "../../../tests/helpers/taskProtocol";
 import { DecisionStore } from "../storage/decisionStore";
+import type { TaskRecord } from "../storage/taskStore";
 import { seedTask } from "./seedTask";
 import { queryTasks } from "./taskQuery";
 
@@ -467,7 +468,11 @@ describe("the task protocol (task-system P3)", () => {
   // INF-999: INF-778's summary read Blocked by INF-886 from a recorded wait
   // after the captain's words had released it, while the crewmate's own
   // reader named nothing. The captain chose "Blocked by only for a hold".
-  it("names the same waits on the board and in the tasks reader: only those that hold the task now", () => {
+  it("names the same waits on the board and in the tasks reader: every live wait holds the task until that work closes", () => {
+    // INF-3167, the captain's choice A: a recorded wait holds the waiter's
+    // merge as a blocks_me filing does, so a crewmate working past it is
+    // held by it all the same (INF-999 named it only while the crewmate
+    // stood idle on it).
     let posture: WorkPosture = { state: "idle", reason: "dependency" };
     const { tasks, protocol } = taskProtocolFixture({ workPosture: () => posture });
     for (const id of ["recorded", "marked"])
@@ -477,24 +482,26 @@ describe("the task protocol (task-system P3)", () => {
     tasks.graph.link("marked", "waiter", "blocks", "crewmate", true);
     const board = () => [...protocol.detail("waiter").blockedBy].sort();
     const reader = () =>
-      [
-        ...(queryTasks(tasks, { key: "waiter" }, undefined, undefined, undefined, () => posture)
-          .rows[0]?.blocked_by ?? []),
-      ].sort();
+      [...(queryTasks(tasks, { key: "waiter" }).rows[0]?.blocked_by ?? [])].sort();
     const keys = (...ids: string[]) => ids.map((id) => tasks.get(id)?.key).sort();
-    // Idle on its waits: the recorded wait holds it, the marked one its merge.
+    // Idle on its waits: both hold it.
     expect(board()).toEqual(keys("recorded", "marked"));
     expect(reader()).toEqual(board());
-    // Working past them: only the merge hold stands.
+    // Working past them: both still hold its merge, so both are named.
     posture = { state: "active", reason: "turn" };
-    expect(board()).toEqual(keys("marked"));
+    expect(board()).toEqual(keys("recorded", "marked"));
     expect(reader()).toEqual(board());
+    expect(protocol.detail("waiter").flags.blocked).toBe(true);
     // The captain's words pass the merge hold for the task: nothing holds it.
     seedDelivery(tasks, "waiter", {
       override: { words: "merge it, no need to wait", holds: ["waits"], until: "task", at: 1 },
     });
     expect(board()).toEqual([]);
     expect(reader()).toEqual([]);
+    // The row's flag says the same as its Blocked by: the override passed
+    // the hold, so the board, the reader and the crew summary read it free.
+    expect(protocol.detail("waiter").flags.blocked).toBe(false);
+    expect(tasks.graph.flagsOf(tasks.get("waiter") as TaskRecord).blocked).toBe(false);
   });
 
   it("shows only live blockers while retaining closed edges and the dropped-start gate", () => {
@@ -528,16 +535,18 @@ describe("the task protocol (task-system P3)", () => {
       expect(task.blockedBy).toEqual(["SCR-4", "SCR-5"]);
       expect(protocol.detail(task.id).blockedBy).toEqual(task.blockedBy);
     }
-    // A recorded wait holds the start. On work already under way it draws
-    // the same arrow and holds no close (INF-416 piece E).
+    // A recorded wait holds the start, and on work already under way the
+    // same arrow holds its close until the live work closes (INF-3167).
     expect(protocol.detail("open-dependent").flags.blocked).toBe(true);
-    expect(protocol.detail("active-dependent").flags.blocked).toBe(false);
-    expect(tasks.graph.blockerRefusal("active-dependent")).toBeUndefined();
-    // INF-999: INF-778 read Blocked by INF-886 while its crewmate worked on.
-    // A recorded wait holds no merge, so it holds a crewmate only while it
-    // stands idle on it: working past it, it names nothing.
+    expect(protocol.detail("active-dependent").flags.blocked).toBe(true);
+    expect(tasks.graph.blockerRefusal("active-dependent")?.tasks.map((row) => row.key)).toEqual([
+      "SCR-4",
+      "SCR-5",
+    ]);
+    // A crewmate working past its waits is still held by them (INF-3167;
+    // INF-999 had named them only while it stood idle on them).
     posture = { state: "active", reason: "turn" };
-    expect(protocol.detail("active-dependent").blockedBy).toEqual([]);
+    expect(protocol.detail("active-dependent").blockedBy).toEqual(["SCR-4", "SCR-5"]);
     expect(protocol.detail("open-dependent").blockedBy).toEqual(["SCR-4", "SCR-5"]);
     posture = { state: "idle", reason: "dependency" };
     tasks.close("planned", { status: "done", reason: "landed", actor: "captain" });

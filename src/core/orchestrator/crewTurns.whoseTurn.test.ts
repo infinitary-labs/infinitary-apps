@@ -347,8 +347,9 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       title: "Fix: task board Escape skips the open summary under load",
       status: "idle",
     });
-    // A merge it waits on, promised by a must-merge-first mark, and planned
-    // work that has not started, are no holds on its finding.
+    // Started work waiting on its merge through a blocks_me mark is waited
+    // on too (INF-3167: every wait reads the same); planned work that has
+    // not started is no hold on its finding.
     const merging = seedTask(tasks, { id: "inf-550", title: "Show the story", status: "idle" });
     tasks.graph.link(taskId, merging.id, "blocks", "host", true);
     const planned = seedTask(tasks, {
@@ -368,14 +369,20 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     expect(ledgerFacts.at(-1)).toMatchObject({
       kind: "report",
       excerpt: finding,
-      waiting: [{ id: held.id, key: held.key, title: held.title }],
+      waiting: [
+        { id: held.id, key: held.key, title: held.title },
+        { id: merging.id, key: merging.key, title: merging.title },
+      ],
     });
     expect(reportWakes(ops)).toHaveLength(1);
-    expect(reportWakes(ops)[0]).toContain(`through your link: ${held.key} "${held.title}".`);
+    expect(reportWakes(ops)[0]).toContain(
+      `through your link: ${held.key} "${held.title}", ${merging.key} "${merging.title}".`,
+    );
 
-    // The first mate passes the finding on and ends the wait: the next
+    // The first mate passes the finding on and ends the waits: the next
     // report from the still-running task holds nobody and stays quiet.
     supervisor.intake.unlinkTasks(taskId, held.id, "blocks");
+    supervisor.intake.unlinkTasks(taskId, merging.id, "blocks");
     await supervisor.steer.steerCrewmate(taskId, "go on");
     await tick();
     await report(crewmate, taskId, "Second clean phone run passed.");
@@ -649,7 +656,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
   // INF-1428's own part: a crewmate names the tasks it waits on in its
   // report, and the app records each as a link, never reading its words.
   describe("a report's waits_on (INF-1428)", () => {
-    it("records each named task as a wait that holds no merge, and refuses unknown, closed, own or circular keys", async () => {
+    it("records each named task as a wait that holds its merge until that task closes, and refuses unknown, closed, own or circular keys", async () => {
       const crewmate = fakeCrewmate();
       const { specs, tasks, taskId } = await reportedTask(crewmate, {
         hasRunningJobs: () => true,
@@ -689,8 +696,8 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       expect(tasks.graph.linksTo(taskId)).toEqual([
         expect.objectContaining({ fromId: secrets.id, type: "blocks", holdsMerge: false }),
       ]);
-      // A recorded wait holds no merge.
-      expect(tasks.graph.blockersHoldingClose(taskId)).toEqual([]);
+      // A recorded wait holds the merge until the named task closes (INF-3167).
+      expect(tasks.graph.blockersHoldingClose(taskId).map((row) => row.id)).toEqual([secrets.id]);
       expect(tasks.timeline(taskId).at(-1)).toMatchObject({ actor: "crewmate", kind: "linked" });
 
       // The task the report waits on already waits on it: a cycle.

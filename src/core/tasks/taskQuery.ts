@@ -3,7 +3,6 @@ import type { CaptainAction } from "@shared/requiredActions";
 import { foldForSearch } from "@shared/searchText";
 import { taskChangeOf } from "@shared/taskFacts";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
-import type { WorkPosture } from "@shared/workPosture";
 import { attachmentPath } from "../attachments";
 import type { CardResolution } from "../storage/cardStore";
 import type { TaskEventActor } from "../storage/taskEventStore";
@@ -272,8 +271,6 @@ export function queryTasks(
    */
   cardBody: (taskId: string) => string | undefined = () => undefined,
   resolution: (taskId: string) => CardResolution | undefined = () => undefined,
-  /** Each live task's work posture, read as the board reads it; absent says nothing is known. */
-  posture: (record: TaskRecord) => WorkPosture | undefined = () => undefined,
   reach: TaskQueryReach = {},
 ): { rows: TaskQueryRow[]; total: number; projects?: TaskQueryProject[]; order?: string[] } {
   if (input.projects) return { rows: [], total: 0, projects: projectRows(tasks, reach) };
@@ -283,7 +280,7 @@ export function queryTasks(
     const found = new Map(tasks.getMany(wanted).map((record) => [record.id, record]));
     const rows = wanted.flatMap((id) => {
       const record = found.get(id);
-      return record ? [toRow(tasks, record, projectKeys, repoName, undefined, posture)] : [];
+      return record ? [toRow(tasks, record, projectKeys, repoName)] : [];
     });
     return { rows, total: rows.length };
   }
@@ -325,7 +322,7 @@ export function queryTasks(
     // compact index and never carries bodies in bulk.
     .map((record) => {
       const resolved = one ? resolution(record.id) : undefined;
-      const row = toRow(tasks, record, projectKeys, repoName, one ? cardBody : undefined, posture);
+      const row = toRow(tasks, record, projectKeys, repoName, one ? cardBody : undefined);
       return {
         ...row,
         ...(one
@@ -378,7 +375,6 @@ function toRow(
   projectKeys: Map<string, string>,
   repoName: (repoId: string) => string | undefined,
   cardBody?: (taskId: string) => string | undefined,
-  posture: (record: TaskRecord) => WorkPosture | undefined = () => undefined,
 ): TaskQueryRow {
   const history = cardBody ? tasks.timeline(record.id) : [];
   const reports = cardBody
@@ -400,10 +396,9 @@ function toRow(
   // An active row names what holds it now, by the board's own rule
   // (./holdingWaits.ts); an open row also names a dropped blocker, which
   // can never clear, so the reader can act on it.
-  const now = record.status === "active" ? posture(record) : undefined;
   const blockedBy = (
     record.status === "active"
-      ? tasks.graph.waitsHolding(record.id, now?.state === "idle" && now.reason === "dependency")
+      ? tasks.graph.waitsHolding(record.id)
       : tasks.graph.waitingOn(record.id)
   ).map((blocker) => blocker.key || blocker.id);
   const blocks = tasks.graph.blocking(record.id).map((blocked) => blocked.key || blocked.id);

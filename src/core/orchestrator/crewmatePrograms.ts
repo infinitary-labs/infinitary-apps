@@ -14,10 +14,10 @@ export const PROGRAMS_RUNBOOK_ID = "programs";
  * only way a program starts. The program is filed through the same intake
  * the host has always checked programs with, found on the crewmate's task
  * as a follow-up is, never its child, and the crewmate's task always waits
- * on it, holding no merge (the captain's answer "always-wait"): its close
- * steers the crewmate once. The crewmate may also stop a program it
- * started, or raise its bound on the captain's words delivered into its
- * turn (`CrewSteer.carriesCaptainWords`).
+ * on it until it closes, start and merge alike (the captain's answer
+ * "always-wait"; INF-3167): its close steers the crewmate once. The
+ * crewmate may also stop a program it started, or raise its bound on the
+ * captain's words delivered into its turn (`CrewSteer.carriesCaptainWords`).
  */
 export class CrewmatePrograms {
   constructor(private readonly core: CrewCore) {}
@@ -88,7 +88,7 @@ export class CrewmatePrograms {
     task.filedThisTurn.push({ key: keyOf(program), title, blocks: false, program: true });
     // The sweep starts it now, as it starts any when-ready task whose gates are clear.
     this.core.intake.graphChanged();
-    return `Started program ${keyOf(program)} "${title}", found on your task, which now waits on it with no merge held. End your turn: its end steers you once, and then read its result with tasks key ${keyOf(program)}. If it reaches its bound you hear that instead.`;
+    return `Started program ${keyOf(program)} "${title}", found on your task, which now waits on it until it ends. End your turn: its end steers you once, and then read its result with tasks key ${keyOf(program)}. If it reaches its bound you hear that instead.`;
   }
 
   private change(task: TaskRuntime, input: StartProgramInput): string {

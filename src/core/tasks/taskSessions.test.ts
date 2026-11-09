@@ -152,7 +152,7 @@ describe("task conversation associations (INF-1288)", () => {
     tasks.turns.setSessionFile(task.id, claude);
     const reach = { sessionFolderOf: () => ({ dir, computer: "Home computer" }) };
     const query = () =>
-      queryTasks(tasks, { key: task.key }, undefined, undefined, undefined, undefined, reach);
+      queryTasks(tasks, { key: task.key }, undefined, undefined, undefined, reach);
     const rows = query().rows[0]?.sessions;
     expect(rows).toHaveLength(2);
     expect(rows?.find((row) => row.current)).toMatchObject({

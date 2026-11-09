@@ -568,7 +568,6 @@ export class CrewToolHooks {
       (repoId) => this.core.options.repos.get(repoId)?.name,
       (taskId) => this.core.cards.newestForTask(taskId)?.body,
       (taskId) => this.core.cards.newestResolutionForTask(taskId),
-      (record) => this.core.postures.workPosture(record),
       this.taskQueryReach(),
     );
   }

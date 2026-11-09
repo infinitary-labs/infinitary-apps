@@ -1045,9 +1045,12 @@ describe("closing an answer task another task builds on", () => {
     await reportAndIdle(checker, check.taskId, "checks: pass - ten of ten.");
     const checkKey = tasks.get(check.taskId)?.key ?? check.taskId;
     const buildKey = tasks.get(build.taskId)?.key ?? build.taskId;
-    // A recorded wait holds the start, not the merge (INF-416 piece E).
+    // A recorded wait holds the start and the merge until the step closes
+    // (INF-3167, the captain's choice A).
     expect(tasks.graph.blocking(check.taskId).map((row) => row.id)).toEqual([build.taskId]);
-    expect(tasks.graph.blockerRefusal(build.taskId)).toBeUndefined();
+    expect(tasks.graph.blockerRefusal(build.taskId)?.tasks.map((row) => row.id)).toEqual([
+      check.taskId,
+    ]);
 
     const result = await supervisor.settling.done.close(checkKey, { why: "answered" });
     expect(result).toMatchObject({ ok: true });

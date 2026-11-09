@@ -17,7 +17,7 @@ A guided way of working is a parent task with child tasks on the task graph the 
 Sequences are guidance, never a runner; never add a host rule that knows the word "sequence" (`docs/sequences.md`).
 Do not add a second queue, timer or scheduler to start work later: the ready query, `start_policy` and gates already decide when a task starts.
 Do not make a follow-up a child of the task it was found on: discovery is not containment, so use `discovered-from` (`file_followup`).
-Do not invent a new link type for a dependency: a wait is `blocks`, and a must-merge-first wait is the `holds_merge` mark on that edge.
+Do not invent a new link type for a dependency: a wait is `blocks`, and every one holds the waiter's start and merge until the other task closes; the `holds_merge` mark on an edge is history, not a second kind of wait (INF-3167).
 When a script should decide the steps (a loop, a fan-out, retries), use a program ([programs.md](programs.md)), which files its parts as ordinary child tasks.
 
 ## Owner and entry points
@@ -58,7 +58,7 @@ Every relation below is one kind of the checked relationship contract, with its 
 - Retry provenance: a stronger-model retry names the attempt it retries, a `retry-of` row; the escalation stamp beside it stays on the shape as a fact of how it ran.
 - Typed result: `result_schema` on the shape makes the report's `result` a checked JSON object, delivered to the first mate and to any task whose basis names it.
 
-Close rules: a parent closes only when every child is closed, except host delivery children (`isDeliveryChild`); a task does not close while a marked blocker is still live work (a soft hold the captain may override); a container no crewmate holds completes with its children.
+Close rules: a parent closes only when every child is closed, except host delivery children (`isDeliveryChild`); a task does not close while any blocker is still live work (a soft hold the captain may override); a container no crewmate holds completes with its children.
 An answer task closes `done/answered` on the captain's choice on its crewmate's card, unless the crewmate declared that card `continues`, or through `settle_task` done, why `answered`, when it was declared an internal step and a live task builds on it or waits on it.
 A reported, idle task whose result was handed on through verified file delivery or a captain result choice can also close `done/answered` without `internal_step`; the handoff receipt never bypasses unmerged-work, outstanding-work or relationship checks (`docs/task-graph.md`).
 An operation delivers a named effect, not code or an answer card, and is declared with the operation constraint; `in_folder` work is an operation too.
@@ -90,7 +90,7 @@ A graph refusal is tool text, never a thrown error or a silent no-op (`docs/task
 `TaskGraphRefusal` (a `blocks` cycle, a live-wait loop naming the full key loop) writes nothing and spends no repair attempt.
 A close refused by the rules returns a `SettleRefusal` with typed ways out that ride the settle wake.
 A declared work wait no owner moves wakes the self-resolving loop: the first mate tries consent-free alternatives, then commissions a bounded read-only internal step before asking the captain ([report sort](../docs/report-sort.md), "Self-resolving work waits").
-A host-record takeover uses `branch_from` and `files_from` immediately, with a related link rather than a must-merge-first edge from the stalled task.
+A host-record takeover uses `branch_from` and `files_from` immediately, with a related link rather than a `blocks` edge from the stalled task.
 A dropped blocker produces one deduped `[fm-op]` wake (`wakeDeadGate`); `link_tasks remove` or `update_task drop` are the ways out, and `start_now` refuses while the dead edge stands.
 Dropped work starts again as a fresh task joined by `replaced-by` (`TaskService.starts.startAgain`), never by reviving the old row.
 

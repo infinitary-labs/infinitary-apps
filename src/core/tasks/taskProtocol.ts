@@ -7,6 +7,7 @@ import {
   emptyTranscript,
 } from "@shared/crewTranscript";
 import type { FmEvent } from "@shared/events";
+import { overridePasses } from "@shared/holds";
 import type { ValidationEvidence } from "@shared/liveValidation";
 import { liveValidationSummary } from "@shared/liveValidationSummary";
 import type { ModelChoice } from "@shared/modelChoice";
@@ -1166,7 +1167,6 @@ export class TaskProtocol {
     const linksInto = new Map<string, TaskLink[]>();
     const blockersOf = new Map<string, TaskRecord[]>();
     const blockingOf = new Map<string, TaskRecord[]>();
-    const mergeHolds = new Set<string>();
     for (const link of links) {
       const incoming = linksInto.get(link.toId);
       if (incoming) incoming.push(link);
@@ -1177,7 +1177,6 @@ export class TaskProtocol {
       if (!from || !to) continue;
       push(blockersOf, link.toId, from);
       push(blockingOf, link.fromId, to);
-      if (link.holdsMerge) mergeHolds.add(`${link.toId}\0${link.fromId}`);
     }
     const children = childCounts ?? new Map<string, { total: number; closed: number }>();
     if (!childCounts) {
@@ -1225,7 +1224,6 @@ export class TaskProtocol {
       linksInto,
       blockersOf,
       blockingOf,
-      mergeHolds,
       children,
       filedFrom,
       decisionCards,
@@ -1284,14 +1282,7 @@ export class TaskProtocol {
     // rule the tasks reader shares (./holdingWaits.ts, INF-999). Dropped
     // edges remain in the graph and still gate STARTING, but closed work is
     // never presented as something still underway.
-    const holding = holdingWaits({
-      record,
-      blockers,
-      holdsMerge: (blocker) => graph.mergeHolds.has(`${record.id}\0${blocker.id}`),
-      tasks: graph.byId,
-      idleOnWaits: posture?.state === "idle" && posture.reason === "dependency",
-      baseline,
-    });
+    const holding = holdingWaits({ record, blockers, tasks: graph.byId, baseline });
     const blockedSince = waitsSince({
       record,
       holding,
@@ -1312,17 +1303,16 @@ export class TaskProtocol {
             baseline,
           });
     const open = record.status === "open";
-    // An active row shows the blockers that still hold its CLOSE - a
-    // marked edge, what a `blocks_me` follow-up files against the task a
-    // crewmate is holding (TaskService.graph.flagsOf). A recorded wait keeps its
-    // place in blockedBy and draws the arrow, and holds no close. A dropped
-    // blocker holds no close, so it is no dead wait there either.
-    const holdingClose = liveBlockers.filter((blocker) =>
-      graph.mergeHolds.has(`${record.id}\0${blocker.id}`),
-    );
+    // An active row shows the blockers that still hold its CLOSE: every live
+    // blocker, since a recorded wait holds the merge until that work closes
+    // (INF-3167; TaskService.graph.flagsOf), unless the captain's recorded
+    // override passed that hold (`overridePasses`, as Blocked by reads it).
+    // A dropped blocker holds no close, so it is no dead wait there either.
     const blocked = open
       ? waiting.length > 0
-      : record.status === "active" && holdingClose.length > 0;
+      : record.status === "active" &&
+        liveBlockers.length > 0 &&
+        !overridePasses(record.delivery, "waits", record.delivery?.headSha);
     // A gate holds an active row as it holds an open one (TaskService.graph.flagsOf).
     const held = (open || record.status === "active") && record.gate !== null;
     const deadBlocker = open && waiting.some((blocker) => blocker.status === "dropped");
@@ -1592,8 +1582,6 @@ type Graph = {
   linksInto: Map<string, TaskLink[]>;
   blockersOf: Map<string, TaskRecord[]>;
   blockingOf: Map<string, TaskRecord[]>;
-  /** `${toId}\0${fromId}` for a blocks edge that holds the close. */
-  mergeHolds: Set<string>;
   children: Map<string, { total: number; closed: number }>;
   filedFrom: Map<string, TaskLink>;
   decisionCards: Map<string, Card>;

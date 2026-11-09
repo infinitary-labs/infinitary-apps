@@ -525,13 +525,12 @@ export class IdleLadder {
   }
 
   /**
-   * The started work held on this task through a recorded wait (INF-735):
-   * every active task a `blocks` link from it reaches with no
-   * must-merge-first mark - the practical wait the Firstmate records, such
-   * as a hold on this task's finding. Its report may carry what that work
-   * waits for, which only the Firstmate can judge and pass on; the close
-   * that ends the wait may be days away. A marked edge and a baseline wait
-   * are waits on its merge, and its close still ends them.
+   * The started work waiting on this task through a recorded wait (INF-735,
+   * INF-3167): every active task a `blocks` link from it reaches, whoever
+   * recorded it. Its report may carry what that work waits for, which only
+   * the Firstmate can judge and pass on; the close that ends the wait may
+   * be days away. A baseline wait is a wait on its merge alone, and its
+   * close still ends it.
    */
   heldOn(record: TaskRecord): TaskRecord[] {
     return this.host.tasks.graph.activeWaiters(record.id);

@@ -565,7 +565,7 @@ describe("the task graph (R1)", () => {
     expect(tasks.get(b.id)?.status).toBe("open");
   });
 
-  it("a start refusal names the edge to remove, never dropping the blocker (FI3-244)", async () => {
+  it("a start refusal says the task starts when its work closes and names the dead edge to remove, never dropping the blocker (FI3-244, INF-3167)", async () => {
     const { supervisor, tasks } = setup(fakeCrewmate());
     const a = supervisor.intake.plan({ title: "A", intent: intentOf("a") });
     const c = supervisor.intake.plan({ title: "C", intent: intentOf("c") });
@@ -575,11 +575,16 @@ describe("the task graph (R1)", () => {
       blockedBy: [a.id, c.id],
     });
 
-    // Live blockers: the wait ends when their work is done, or with the edge gone.
+    // Live blockers: the task starts when their work closes; a wait is
+    // reshaped by split or fold, and removed only when it names the wrong
+    // task (INF-3167, the captain's choice A).
     const live = await supervisor.starts.startQueuedNow(b.key);
     expect(live).toContain(`${a.key} "A"`);
     expect(live).toContain(`${c.key} "C"`);
-    expect(live).toContain("remove the blocks edges with link_tasks remove");
+    expect(live).toContain(
+      "It starts when that work closes. When only part of that work gives what it needs, split that part into its own task or fold this task into it; remove a wait with link_tasks remove only when it names the wrong task.",
+    );
+    expect(live).not.toContain("to start it sooner");
     expect(live).toContain("Dropping a blocker never clears its wait.");
 
     // Dropping a blocker leaves its edge dead, still in the way: the refusal

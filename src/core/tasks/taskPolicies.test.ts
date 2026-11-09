@@ -183,15 +183,20 @@ describe("live task policies", () => {
       ciCapAt: 124,
     });
     // The parent edge is the review's one join (INF-1876): a care change
-    // adds no edge and removes none, the recorded wait stays and holds no
-    // close, and the record keeps its history.
+    // adds no edge and removes none, the recorded wait stays and holds the
+    // close until the dependency closes (INF-3167), and the record keeps
+    // its history.
     for (const rigor of ["quick", "reviewed", "standard"] as const) {
       tasks.updateFields(task.id, { policies: { rigor } }, "firstmate");
       expect(tasks.policiesOf(current(tasks, task.id))?.rigor.value).toBe(rigor);
       expect(tasks.graph.blockers(task.id).map((row) => row.id)).toEqual([dependency.id]);
-      expect(tasks.graph.blockersHoldingClose(task.id)).toEqual([]);
+      expect(tasks.graph.blockersHoldingClose(task.id).map((row) => row.id)).toEqual([
+        dependency.id,
+      ]);
       expect(tasks.get(review.id)?.parentId).toBe(task.id);
-      expect(tasks.graph.blockerRefusal(task.id)).toBeUndefined();
+      expect(tasks.graph.blockerRefusal(task.id)?.tasks.map((row) => row.id)).toEqual([
+        dependency.id,
+      ]);
     }
     expect(tasks.get(task.id)?.delivery).toMatchObject({
       reviewVerdict: "findings",

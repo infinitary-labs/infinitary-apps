@@ -43,7 +43,7 @@ function startWaitRefusal(
   const plural = (list: TaskRecord[]) => (list.length === 1 ? "" : "s");
   const dead = blockers.filter((blocker) => blocker.status === "dropped");
   if (dead.length === 0) {
-    return `${waits} It can start once that work is done; to start it sooner, remove the blocks edge${plural(blockers)} with link_tasks remove. Dropping a blocker never clears its wait. ${softHoldWords("start-waits", "firstmate")}`;
+    return `${waits} It starts when that work closes. When only part of that work gives what it needs, split that part into its own task or fold this task into it; remove a wait with link_tasks remove only when it names the wrong task. Dropping a blocker never clears its wait. ${softHoldWords("start-waits", "firstmate")}`;
   }
   const key = record.key || record.id;
   const edges = dead.map((blocker) => `blocks ${blocker.key || blocker.id} -> ${key}`).join(", ");

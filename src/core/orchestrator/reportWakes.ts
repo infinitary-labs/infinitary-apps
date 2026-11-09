@@ -369,15 +369,18 @@ function waitsText(waits: WakeWait[] | undefined): string {
 export const HELD_WORK_WORDS = "Started work waits on this task through your link:";
 
 /**
- * A report wake names the started work held on its task through a wait the
- * Firstmate recorded (INF-735), and is this rule's one home: a hold on a
- * task's finding ends when that task reports it, not when it closes. Whether
- * the report carries what the work waits for is the Firstmate's judgment.
+ * A report wake names the started work waiting on its task through any
+ * recorded wait (INF-735, INF-3167), and is this rule's one home: a wait
+ * on a step's report ends when that step reports it, not days later at a
+ * close. Every wait holds the waiter until this task closes, so the
+ * Firstmate ends a wait that was only on this finding and closes a step
+ * whose report was the whole of what the work needed. Whether the report
+ * carries what the work waits for is the Firstmate's judgment.
  */
 function waitingText(waiting: WakeKeyedTask[] | undefined): string {
   if (!waiting?.length) return "";
   const named = waiting.map((task) => `${task.key} "${task.title}"`).join(", ");
-  return ` ${HELD_WORK_WORDS} ${named}. If this report carries what such work waits for, such as a finding or an answer, pass it on now with steer_crewmate and end that wait with link_tasks remove; a wait on this task's merge stays.`;
+  return ` ${HELD_WORK_WORDS} ${named}. Every wait holds that work until this task closes. If this report carries what such work needs, such as a finding or an answer, pass it on now with steer_crewmate; then, when this task is a step whose report was all that work needed, close it with settle_task done, why answered, which ends the wait, and when only this finding was needed of a task that goes on, remove the wait with link_tasks remove. Any other wait ends when this task closes.`;
 }
 
 /**

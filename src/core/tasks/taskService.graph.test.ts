@@ -150,6 +150,74 @@ describe("the task graph (task-system P2)", () => {
       expect(() => work("d", { blockedBy: ["nope"] })).toThrow(/Unknown task/);
       expect(tasks.get("d")).toBeUndefined();
     });
+
+    // INF-3167, from the loop INF-3140 found: a parent waits on its own
+    // parts until they close, so the loop check counts each live task's
+    // open parts among its prerequisites, at a link and at a re-parent.
+    it("refuses a parent waiting on itself through its own part, and keeps a parent waiting on its part", () => {
+      const { tasks, work } = setup();
+      const parent = work("parent", { repoId: "r1" });
+      const child = work("child", { parentId: "parent" });
+      // The parent blocking its own part: the part would wait on the parent,
+      // which waits on the part until it closes.
+      expect(() => tasks.graph.link("parent", "child", "blocks", "firstmate")).toThrow(
+        TaskGraphRefusal,
+      );
+      expect(() => tasks.graph.link("parent", "child", "blocks", "firstmate")).toThrow(
+        new RegExp(
+          `^Refused: Circular wait: ${child.key} → ${parent.key} → ${child.key}\\. A task waits on its own open parts until they close.*split that part into its own task, or fold the waiter into the task it waits on; remove a wait only when it names the wrong task`,
+        ),
+      );
+      expect(tasks.graph.blockers("child")).toEqual([]);
+      // Through other tasks too: work the part waits on cannot wait on the parent.
+      const loose = work("loose", { repoId: "r1" });
+      tasks.graph.link("loose", "child", "blocks", "firstmate");
+      expect(() => tasks.graph.link("parent", "loose", "blocks", "firstmate")).toThrow(
+        new RegExp(
+          `^Refused: Circular wait: ${loose.key} → ${parent.key} → ${child.key} → ${loose.key}\\.`,
+        ),
+      );
+      // A closed part holds its parent no more, so it closes no loop.
+      tasks.close("child", { status: "dropped", reason: "cancelled", actor: "firstmate" });
+      expect(tasks.graph.link("parent", "loose", "blocks", "firstmate")).toBe(true);
+      // The parent waiting on its part is the containment it already has.
+      work("part", { parentId: "parent" });
+      expect(tasks.graph.link("part", "parent", "blocks", "firstmate")).toBe(true);
+      expect(tasks.graph.blockers("parent").map((row) => row.id)).toEqual(["part"]);
+    });
+
+    it("refuses a re-parent that would put a task under the task it waits on", () => {
+      const { tasks, work } = setup();
+      const parent = work("parent", { repoId: "r1" });
+      const loose = work("loose", { repoId: "r1" });
+      // loose waits on parent; under parent it would hold the close it waits for.
+      tasks.graph.link("parent", "loose", "blocks", "firstmate");
+      expect(() => tasks.setParent("loose", "parent", "firstmate")).toThrow(TaskGraphRefusal);
+      expect(() => tasks.setParent("loose", "parent", "firstmate")).toThrow(
+        new RegExp(
+          `^Refused: ${parent.key} would wait on its part ${loose.key}, which already waits on it\\. Circular wait: ${parent.key} → ${loose.key} → ${parent.key}\\.`,
+        ),
+      );
+      expect(tasks.get("loose")?.parentId).toBeNull();
+      // The other way round, a part its parent waits on, is accepted.
+      work("other", { repoId: "r1" });
+      tasks.graph.link("other", "parent", "blocks", "firstmate");
+      tasks.setParent("other", "parent", "firstmate");
+      expect(tasks.get("other")?.parentId).toBe("parent");
+    });
+
+    it("never counts the host's delivery child as a part its parent waits on", () => {
+      const { tasks, work } = setup();
+      work("builder", { repoId: "r1", status: "active" });
+      work("review", {
+        parentId: "builder",
+        shape: { kind: "review", kind_source: "host:review" },
+      });
+      // A review reading the builder's branch waits on nothing the builder
+      // waits on: the builder may block it without closing a loop.
+      expect(tasks.graph.link("builder", "review", "blocks", "firstmate")).toBe(true);
+      expect(tasks.graph.blockers("review").map((row) => row.id)).toEqual(["builder"]);
+    });
   });
 
   describe("hierarchy", () => {
@@ -699,10 +767,22 @@ describe("the task graph (task-system P2)", () => {
         tasks: [{ key: "NIA-3", title: "Unblock" }],
       });
       expect(waitsOn?.text).toBe(
-        'Cannot close NIA-1 while it waits on: NIA-3 "Unblock". Merge it first, drop it if the work is not wanted, or remove the wait with link_tasks remove.',
+        'Cannot close NIA-1 while it waits on: NIA-3 "Unblock". The wait ends when that task closes: merge it, close it with settle_task done, why answered, when it is a step whose report was all NIA-1 needed, or drop it if the work is not wanted; remove the wait with link_tasks remove only when it names the wrong task.',
       );
-      // No proceed override on a blocks_me promise: the ways only remove it.
-      expect(waitsOn?.ways.map((way) => ("tool" in way ? way.tool : way))).toEqual(["link_tasks"]);
+      // No proceed override on a wait: the ways close an answered step or
+      // remove a wait that names the wrong task (INF-3167).
+      expect(waitsOn?.ways).toEqual([
+        {
+          label: "Close NIA-3 as answered",
+          tool: "settle_task",
+          args: { task_id: blocking.id, mode: "done", why: "answered" },
+        },
+        {
+          label: "Remove the wait on NIA-3",
+          tool: "link_tasks",
+          args: { from: "NIA-3", to: "NIA-1", type: "blocks", remove: true },
+        },
+      ]);
       // An active origin must SHOW that it is held, not look free until the
       // merge refuses.
       expect(tasks.graph.flagsOf(tasks.get("origin") as never)).toMatchObject({
@@ -717,12 +797,14 @@ describe("the task graph (task-system P2)", () => {
       expect(tasks.graph.flagsOf(tasks.get("origin") as never).blocked).toBe(false);
     });
 
-    it("a recorded wait on running work draws the arrow and holds no merge", () => {
-      // INF-416 piece E. The captain chose the start only: link_tasks blocks
-      // keeps the edge, and only a promised hold (blocks_me here) refuses close.
+    it("a recorded wait on running work draws the arrow and holds its merge until the work closes", () => {
+      // INF-3167, the captain's choice A ("every wait holds the start and the
+      // merge until the other task closes"): link_tasks blocks on work under
+      // way holds its close like a blocks_me filing, whatever the edge's mark
+      // says (INF-416 piece E had the mark alone hold a close).
       const { tasks, work } = setup();
       work("origin", { repoId: "r1", status: "active" });
-      work("waiter");
+      const waiter = work("waiter");
       const queued = work("queued");
       tasks.graph.link("waiter", "origin", "blocks", "firstmate");
       tasks.graph.link("waiter", queued.id, "blocks", "firstmate");
@@ -731,10 +813,15 @@ describe("the task graph (task-system P2)", () => {
         type: "blocks",
         holdsMerge: false,
       });
-      expect(tasks.graph.blockerRefusal("origin")).toBeUndefined();
-      expect(tasks.graph.flagsOf(tasks.get("origin") as never).blocked).toBe(false);
-      // The same edge still holds the start of work that has not begun.
+      expect(tasks.graph.blockersHoldingClose("origin").map((row) => row.id)).toEqual(["waiter"]);
+      expect(tasks.graph.blockerRefusal("origin")?.tasks.map((row) => row.key)).toEqual([
+        waiter.key,
+      ]);
+      expect(tasks.graph.flagsOf(tasks.get("origin") as never).blocked).toBe(true);
+      // The same edge holds the start of work that has not begun.
       expect(tasks.graph.listReady().map((row) => row.id)).not.toContain(queued.id);
+      // Started work waiting on the waiter reads its reports (row 0b).
+      expect(tasks.graph.activeWaiters("waiter").map((row) => row.id)).toEqual(["origin"]);
 
       const { record: blocking } = tasks.fileFollowup({
         id: "fu",
@@ -749,9 +836,14 @@ describe("the task graph (task-system P2)", () => {
         tasks.graph.linksTo("origin").find((link) => link.fromId === blocking.id)?.holdsMerge,
       ).toBe(true);
       expect(tasks.graph.blockerRefusal("origin")?.tasks.map((row) => row.key)).toEqual([
+        waiter.key,
         blocking.key,
       ]);
-      expect(tasks.graph.flagsOf(tasks.get("origin") as never).blocked).toBe(true);
+      // The waited-on work's close, done or dropped, ends its hold.
+      tasks.close("waiter", { status: "done", reason: "landed", actor: "captain" });
+      tasks.close(blocking.id, { status: "dropped", reason: "cancelled", actor: "firstmate" });
+      expect(tasks.graph.blockerRefusal("origin")).toBeUndefined();
+      expect(tasks.graph.flagsOf(tasks.get("origin") as never).blocked).toBe(false);
     });
 
     // INF-1826 (the captain's Approve and build, q1 A and q2 yes): a replaced-by

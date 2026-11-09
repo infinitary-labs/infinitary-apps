@@ -95,7 +95,7 @@ describe("a crewmate's start_program (INF-3022)", () => {
     return { ...h, sessions, taskId, spec, endTurn, heard, part, report, repo };
   }
 
-  it("files the program found on the task, which waits on it holding no merge, and steers the crewmate once at its end", async () => {
+  it("files the program found on the task, which waits on it until it closes, and steers the crewmate once at its end", async () => {
     const h = await started();
     // What each commit shows once the program exists: a reader on another
     // connection reads between commits, as the program journey's test

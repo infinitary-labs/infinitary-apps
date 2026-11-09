@@ -147,8 +147,10 @@ describe("continuation instructions served at the seven moments", () => {
       'A merge\'s wake or settle_task result names the "Continue: …" tasks it filed, which start on their own; drop one only when another task does that work.',
     );
     expect(FIRSTMATE_PROMPT_CORE).toContain("no button on it can");
+    // INF-3167, the captain's choice A: every wait is recorded and holds
+    // the waiter's start and merge until the other task closes.
     expect(FIRSTMATE_PROMPT_CORE).toContain(
-      "A practical wait, such as another's commit or fix, is link_tasks blocks from the work waited on to the waiter that turn, even when not a strict prerequisite, so Tasks draws it.",
+      "Record every wait between tasks that turn as link_tasks blocks from the task whose close gives what the waiter needs: it holds the waiter's start and merge until that close.",
     );
   });
 });

@@ -658,10 +658,11 @@ export class ReportIntake {
   }
 
   /**
-   * Records a report's waits as `blocks` links (INF-1428): a recorded wait,
-   * holding no merge, which the idle ladder and the report's sort read like
-   * any other (docs/report-sort.md). A cycle refuses the report with the
-   * graph's own words. Returns the receipt's line, if any link was new.
+   * Records a report's waits as `blocks` links (INF-1428): each holds the
+   * task's merge until that work closes (INF-3167), and the idle ladder and
+   * the report's sort read it like any other (docs/report-sort.md). A cycle
+   * refuses the report with the graph's own words. Returns the receipt's
+   * line, if any link was new.
    */
   private linkReportedWaits(task: TaskRuntime, waitsOn: string[] | undefined): string | undefined {
     if (!waitsOn?.length) return undefined;

@@ -351,10 +351,11 @@ describe("the task graph (task-system P2)", () => {
     ]);
   });
 
-  it("lands past a recorded wait", async () => {
-    // INF-416 piece E, the captain's "the start only": a practical wait the
-    // first mate records holds the start and draws the arrow, and landTask
-    // merges past it. blocks_me is the promise that still refuses.
+  it("a recorded wait holds the merge until the work it names closes", async () => {
+    // INF-3167, the captain's choice A: a wait the first mate records holds
+    // the start, draws the arrow and holds the merge like a blocks_me
+    // filing; the waited-on task's close, or dropping it, clears the way.
+    // (INF-416 piece E had landTask merge past it.)
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate);
     const { taskId } = await supervisor.intake.commission({
@@ -381,6 +382,16 @@ describe("the task graph (task-system P2)", () => {
     crewmate.finishPrompt();
     await tick();
     expect(await supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain")).toBe(
+      `Cannot merge: Cannot close SCR-1 while it waits on: ${waiter.key} "Wait for the fixture". The wait ends when that task closes: merge it, close it with settle_task done, why answered, when it is a step whose report was all SCR-1 needed, or drop it if the work is not wanted; remove the wait with link_tasks remove only when it names the wrong task. ${softHoldWords("waits", "firstmate")}`,
+    );
+    expect(tasks.get(taskId)).toMatchObject({ status: "active" });
+    expect(supervisor.intake.dropTask(waiter.key ?? waiter.id, { reason: "not needed" })).toMatch(
+      /^Dropped/,
+    );
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    expect(await supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain")).toBe(
       'Merged "Fix the keychain prompt" into main.',
     );
     expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "landed" });
@@ -399,7 +410,7 @@ describe("the task graph (task-system P2)", () => {
     crewmate.finishPrompt();
     await tick();
     expect(await supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain")).toBe(
-      `Cannot merge: Cannot close SCR-1 while it waits on: SCR-2 "Rotate the signing key". Merge it first, drop it if the work is not wanted, or remove the wait with link_tasks remove. ${softHoldWords("waits", "firstmate")}`,
+      `Cannot merge: Cannot close SCR-1 while it waits on: SCR-2 "Rotate the signing key". The wait ends when that task closes: merge it, close it with settle_task done, why answered, when it is a step whose report was all SCR-1 needed, or drop it if the work is not wanted; remove the wait with link_tasks remove only when it names the wrong task. ${softHoldWords("waits", "firstmate")}`,
     );
     expect(tasks.get(taskId)?.status).toBe("active");
     // Dropping the blocker is one of the ways out the refusal names: work

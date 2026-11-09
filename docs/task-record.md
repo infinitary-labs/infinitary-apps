@@ -128,7 +128,7 @@ A missing proposal or dismissed note is not evidence, and successful folder work
 ## Relationships
 
 A task stands to other tasks in three stores under one read and one check contract (`src/core/tasks/taskRelationships.ts`, INF-1296 piece 2), and `TaskService` is the one writer of all three.
-Its parent is the `tasks.parent_id` column; its typed links (`blocks`, `related`, `discovered-from`, `replaced-by`) are rows of `task_links`, with `holdsMerge` a mark on a `blocks` row; and the three references it names one of each are rows of `task_references`: its `basis`, the task it branches from (`branch-source`) and the earlier attempt it retries (`retry-of`).
+Its parent is the `tasks.parent_id` column; its typed links (`blocks`, `related`, `discovered-from`, `replaced-by`) are rows of `task_links`, with `holdsMerge` a mark some `blocks` rows carry as history (every `blocks` row holds the merge, INF-3167); and the three references it names one of each are rows of `task_references`: its `basis`, the task it branches from (`branch-source`) and the earlier attempt it retries (`retry-of`).
 `TASK_RELATIONSHIP_RULES` keeps each kind's rule distinct: how many one task names, whether it holds a start, whether a cycle is refused, where the other task must be, and whether a name that resolves to no task is kept.
 Only `blocks` holds a start, so naming a basis or a branch source never adds a scheduling dependency; the ready query reads no reference.
 Each family is read where it is kept: the parent and children through `TaskService.graph` (`children`, `ancestors`), the links each way through `TaskService.graph.linksFrom` and `linksTo`, and the references through `TaskService.archive.recordedReferences`, with who recorded each and when, where the store kept that.

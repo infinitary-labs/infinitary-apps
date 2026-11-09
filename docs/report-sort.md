@@ -22,7 +22,7 @@ In order; the order IS the rule.
 | 0 | An open card currently waits for its author's answer (`cards.awaiting = answer`) | the crewmate's | no wake | `rule:thread-unanswered` |
 | 0a | The report declared `needs_firstmate`: a captain decision only the first mate can carry out (FI3-710) | the first mate's | wake, with what it must do | `rule:needs-firstmate` |
 | 0s | The task has started and went back to the backlog (INF-2062, `docs/task-board.md` "A started task in the backlog"), and the report declares neither finished work nor follow-ups it filed | nobody's: it waits for a Start | no wake | `rule:in-backlog` |
-| 0b | Started work waits on this task through a recorded wait: a `blocks` link from it with no must-merge-first mark (INF-735) | the first mate's, which passes on what that work waits for | wake, naming that work | `rule:waited-on` |
+| 0b | Started work waits on this task through a `blocks` link from it, whoever recorded it (INF-735, INF-3167) | the first mate's, which passes on what that work waits for | wake, naming that work | `rule:waited-on` |
 | 0c | The task's open review last returned findings or blocked (INF-1876): a typed verdict on the task, whose re-review waits for the head, evidence revision or validation state this report may bring | the first mate's, which alone steers the reviewer | wake, naming the review and what it read | `rule:review-reread` |
 | 1 | An open **decision** card for the task, a wait on the captain its crewmate declared in its report while a card of the task is on the captain's screen (FI3-435), or work its crewmate declared finished while a card of its own is still on the captain's screen (INF-731) | the captain's | no wake | `rule:captain-card` |
 | 1a | The report declared its work finished: the captain has read its outcome and nothing is left (FI3-435) | the first mate's, which closes the task | wake | `rule:finished` |
@@ -64,13 +64,13 @@ It may ride beside `finished` or `waiting_on_captain`; an empty one is refused.
 A report without it sorts exactly as before, and the receipt no longer promises a wake: it says whether the first mate is woken depends on the task's state.
 
 **A hold on a task's finding ends when that task reports it** (INF-735, INF-720's Fix 2: "file a fix so a hold on another task's finding ends when that task reports it").
-A wait the first mate records on started work is a `blocks` link with no must-merge-first mark (`docs/task-graph.md`), and the waiter reads as waiting on work underway, which nothing nudges until that work closes (row 3).
+A wait the first mate records on started work is a `blocks` link (`docs/task-graph.md`), and the waiter reads as waiting on work underway, which nothing nudges until that work closes (row 3).
 When the wait is for the work's finding, its close can be days after the finding: PR #184's task waited 2,393 minutes after INF-621 reported what it was held on, because INF-621's report came while its own work still ran and woke no one.
 So a report from a task that such a link holds active work on wakes the first mate on any backend, above a card on the captain's screen and every moving witness (`IdleLadder.heldOn`, `waitedOn` on the facts).
 The sorter shares its synchronous task projection, and the held-work read selects active waiters before composing their records, leaving closed waiters' retained payloads unread.
-Every report wake from that task names the work (`waiting` on the report's facts), and its words tell the first mate what to do: when the report carries what that work waits for, such as a finding or an answer, pass it on with `steer_crewmate` and end the wait with `link_tasks remove`; a wait on the task's merge stays.
+Every report wake from that task names the work (`waiting` on the report's facts), and its words tell the first mate what to do: when the report carries what that work waits for, such as a finding or an answer, pass it on with `steer_crewmate`; then, when this task is a step whose report was all that work needed, `settle_task` done, why `answered`, closes it and ends the wait, and when only the finding was needed of a task that goes on, `link_tasks remove` ends it; every other wait ends when the task closes, since each holds the waiter's start and merge (INF-3167).
 Whether it does is the first mate's judgment; the host reads the link, never the words.
-A must-merge-first mark, a baseline wait and a planned waiter that has not started are waits on the close, so they read as before.
+A baseline wait and a planned waiter that has not started read as before; a must-merge-first mark sets no wait apart any more, since every wait holds the close (INF-3167).
 The row sits below row 0, as the crewmate answers the captain's reply first, and below row 0a, which wakes anyway.
 
 **A note never holds the turn.**
@@ -108,8 +108,7 @@ A request beside it (`needs_firstmate`) still wakes at row 0a, so a reply that n
 **A wait on work nobody has started is the first mate's turn** (FI3-671, captain-approved 2026-10-03).
 Two typed waits stand on a task.
 A `baseline-blocked` diagnosis at its change's current head, while the checks are not green, names its `dependencyTask` (`standingDependencyWaits` in `src/core/tasks/dependencyWaits.ts`: derived, never stored, so a new head or a passing reading ends the wait by itself).
-A marked `blocks` edge from a task that has not closed holds its close (`blockersHoldingClose`: a `blocks_me` filing or a required action's prerequisite).
-A link the first mate records holds the start only.
+A `blocks` edge from a task that has not closed holds the waiter's start and its close alike (`blockersHoldingClose`), whether a `blocks_me` filing, a required action's prerequisite or a link the first mate records wrote it (INF-3167).
 When the named task is open and the ready sweep will not start it - on request, held, or waiting on blockers of its own (`TaskService.graph.awaitsStart`) - only the first mate or the captain can begin that work, so a report from the waiting task wakes the first mate on any backend, naming that work - which a moving witness would otherwise hold quiet.
 An open named task that cannot start until its own blockers close stands for those blockers (the wait chain, INF-1428, the captain's Approve and build on INF-1670's piece 2): its blockers are read the same way, so a chain that ends in work underway is a wait on work underway, and a chain that ends in work nobody has started names that work.
 An open task a dropped blocker holds is named itself, since nothing will free it.
@@ -133,7 +132,7 @@ Only the close wakes: a pull request that merges while its task stays open wakes
 The words say what the close means, naming the work's pull request when it has one: a link's done or dropped work no longer holds the task, so it carries on, and a wait that moved to it names the task whose work it took over (the waiter's `unlinked` event with `movedTo`, `docs/task-graph.md` "A wait follows moved work"); a baseline wait's done work means bring the change up to date, and its dropped work means lead the report with it, which the ordinary report sort routes without treating the dropped task as unstarted work.
 A baseline wait also hears the default branch before that close (`docs/forge.md`, "A main failure's wake"): one `main-check-observed` steer for each commit whose checks finished, for its crewmate to judge whether they clear the wait, and the close still resumes it.
 A record cancelled from its record or stall card runs the sweep at once, as every close does.
-A crewmate names a wait itself in its report: `report`'s top-level `waits_on` lists the keys of open tasks its work cannot go on without, and each is recorded as a `blocks` link from that task, actor crewmate, holding no merge (`TaskService.graph.linkWaits`, INF-1428).
+A crewmate names a wait itself in its report: `report`'s top-level `waits_on` lists the keys of open tasks its work cannot go on without, and each is recorded as a `blocks` link from that task, actor crewmate, which holds its start and merge until that task closes (`TaskService.graph.linkWaits`, INF-1428, INF-3167).
 A key whose work moved through `replaced-by` links is recorded on the task carrying it now, and refused, naming that task, when it is already done.
 The report is refused, with nothing linked, when a key is unknown, closed, its own task, or would close a cycle, or beside `finished`.
 The app never reads the report's words for a wait.

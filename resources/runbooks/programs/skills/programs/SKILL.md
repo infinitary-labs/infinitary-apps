@@ -14,7 +14,7 @@ Read the code first, so the script's `args` are real: the files, areas, question
 Choose `bound`, your upper bound on the script's `task()` calls.
 A program spends the captain's plan's allowance, one crewmate per part: when the bound is large, ask the captain on a card first, saying what each part does and the bound you propose.
 Call `start_program` with a sentence-case `title`, a one-sentence `goal`, the `script`, its `args` and the `bound`.
-It is filed in your project, found on your task, and starts at once; your task waits on it, holding no merge.
+It is filed in your project, found on your task, and starts at once; your task waits on it and cannot merge until it closes.
 End your turn: the program's end steers you once, and then you read its result with `tasks` and its key.
 A program carries the captain's words from your task, and premium parts only when your task carries the captain's premium request.
 A part of a program starts no program of its own: it says the need in its result, and the script decides.

@@ -39,7 +39,7 @@ it("holds an incomplete agent timeline read at its first cut when backdated hist
   let reads = 0;
   const tool = createTasksQueryTool((input) => {
     reads++;
-    return queryTasks(tasks, input, undefined, undefined, undefined, undefined, { timeline });
+    return queryTasks(tasks, input, undefined, undefined, undefined, { timeline });
   });
   const expected = timeline.sources(task.id);
   const first = parseTasksFieldPage((await tool.run({ key: task.key, field: "timeline" })).text);
@@ -89,19 +89,10 @@ it("loads the retained timeline only for the captain-approved explicit field req
   const task = pagedTask(tasks, timeline, "on-ask");
   const read = vi.spyOn(timeline, "sources");
   const reach = { timeline };
-  const ordinary = queryTasks(
-    tasks,
-    { key: task.key },
-    undefined,
-    undefined,
-    undefined,
-    undefined,
-    reach,
-  );
+  const ordinary = queryTasks(tasks, { key: task.key }, undefined, undefined, undefined, reach);
   const otherField = queryTasks(
     tasks,
     { key: task.key, field: "reports" },
-    undefined,
     undefined,
     undefined,
     undefined,
@@ -113,7 +104,6 @@ it("loads the retained timeline only for the captain-approved explicit field req
   const explicit = queryTasks(
     tasks,
     { key: task.key, field: "timeline" },
-    undefined,
     undefined,
     undefined,
     undefined,
@@ -133,7 +123,7 @@ it("shares one captured cut between a mixed-case key and canonical id, then rele
   let reads = 0;
   const tool = createTasksQueryTool((input) => {
     reads++;
-    return queryTasks(tasks, input, undefined, undefined, undefined, undefined, { timeline });
+    return queryTasks(tasks, input, undefined, undefined, undefined, { timeline });
   });
   const expected = timeline.sources(task.id);
   let page = parseTasksFieldPage(
@@ -167,7 +157,7 @@ it("supersedes the previous incomplete field read rather than retaining every ab
   let reads = 0;
   const tool = createTasksQueryTool((input) => {
     reads++;
-    return queryTasks(tasks, input, undefined, undefined, undefined, undefined, { timeline });
+    return queryTasks(tasks, input, undefined, undefined, undefined, { timeline });
   });
   const earlier = parseTasksFieldPage((await tool.run({ key: first.key, field: "timeline" })).text);
   expect(earlier?.nextOffset).toBeTruthy();

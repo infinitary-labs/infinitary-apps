@@ -255,8 +255,11 @@ describe("renderWake", () => {
     expect(held).toContain(
       'Started work waits on this task through your link: INF-595 "Fix: task board Escape skips the open summary under load".',
     );
+    // INF-3167: every wait holds the waiter until this task closes, so the
+    // words say how a wait on this report alone ends, and that the rest end
+    // at the close.
     expect(held).toContain(
-      "pass it on now with steer_crewmate and end that wait with link_tasks remove; a wait on this task's merge stays.",
+      "Every wait holds that work until this task closes. If this report carries what such work needs, such as a finding or an answer, pass it on now with steer_crewmate; then, when this task is a step whose report was all that work needed, close it with settle_task done, why answered, which ends the wait, and when only this finding was needed of a task that goes on, remove the wait with link_tasks remove. Any other wait ends when this task closes.",
     );
     expect(
       report([
@@ -264,7 +267,7 @@ describe("renderWake", () => {
         { id: "8bc93cc7", key: "INF-660", title: "Move phone checks off the Mac check lock" },
       ]),
     ).toContain(
-      `through your link: INF-595 "Fix: task board Escape skips the open summary under load", INF-660 "Move phone checks off the Mac check lock". If this report`,
+      `through your link: INF-595 "Fix: task board Escape skips the open summary under load", INF-660 "Move phone checks off the Mac check lock". Every wait holds that work until this task closes. If this report`,
     );
     // Nothing held on it, no words: the wake reads as it always did.
     expect(report()).not.toContain("waits on this task");

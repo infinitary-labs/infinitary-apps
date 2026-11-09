@@ -11,7 +11,7 @@ import { TaskService } from "./taskService";
 describe("task projection reads", () => {
   // INF-2255: posture's flags and the named waits must share the same
   // marked incoming edges, not reread them for every witness.
-  it("shares marked blocker reads across posture flags and wait facts, then sees a close", () => {
+  it("shares blocker reads across posture flags and wait facts, then sees a close", () => {
     const db = freshDatabase();
     const tasks = new TaskService({ db });
     try {
@@ -24,16 +24,14 @@ describe("task projection reads", () => {
         const rows = rowsRead(db, () => {
           for (let read = 0; read < 20; read += 1) {
             expect(tasks.graph.flagsOf(builder).blocked).toBe(true);
-            expect(tasks.graph.waitsHolding(builder.id, true).map((task) => task.id)).toEqual([
-              "fix",
-            ]);
+            expect(tasks.graph.waitsHolding(builder.id).map((task) => task.id)).toEqual(["fix"]);
           }
         });
         console.info(JSON.stringify({ intent: "INF-2255 marked blockers", reads: 20, rows }));
         expect(rows).toBe(tasks.graph.linksTo(builder.id).length);
         tasks.close("fix", { status: "done", reason: "settled", actor: "host" });
         expect(tasks.graph.flagsOf(builder).blocked).toBe(false);
-        expect(tasks.graph.waitsHolding(builder.id, true)).toEqual([]);
+        expect(tasks.graph.waitsHolding(builder.id)).toEqual([]);
       });
     } finally {
       db.close();

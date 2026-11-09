@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "every-wait-holds-the-merge",
+      "kind": "improvement",
+      "title": "A task that waits on another cannot merge until that task closes",
+      "body": "When one task waits on another, Infinitary now holds both its start and its merge until the other task closes, whoever recorded the wait. While its crewmate keeps working past the wait, the task's record and the crew summary say which task it waits on, so a merge is never offered while something it depends on is still unfinished. A wait that would make a task wait on one of its own parts is refused, with the way to repair it.",
+      "area": "tasks",
+      "picture": {
+        "dark": "every-wait-holds-the-merge-dark.webp",
+        "light": "every-wait-holds-the-merge-light.webp",
+        "alt": "A task's record names the task it waits on while its own checks still run"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

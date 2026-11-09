@@ -66,6 +66,7 @@ import { referenceRefusal } from "./taskRelationships";
 import { TaskStarts } from "./taskStarts";
 import { TaskTurns } from "./taskTurns";
 import { keyOrId, type TaskChangeListener, TaskWriter, withShapeKey } from "./taskWriter";
+import { liveWaitCycle, waitCycleWords } from "./waitCycles";
 
 /**
  * The one task writer (task-system design principle 2: one writer, one
@@ -1357,6 +1358,15 @@ export class TaskService {
       if (this.graph.ancestors(parentId).some((ancestor) => ancestor.id === id)) {
         throw new TaskGraphRefusal(
           `Refused: ${keyOrId(parent)} is already under ${keyOrId(record)}; making it the parent would close a cycle.`,
+        );
+      }
+      // A parent waits on its parts until they close (INF-3167): a part that
+      // waits on the task it would go under, directly or through other
+      // tasks, would wait on itself, the loop the link writer refuses too.
+      const cycle = liveWaitCycle(this, parentId, id, TaskService.blockerHoldsClose);
+      if (cycle) {
+        throw new TaskGraphRefusal(
+          `Refused: ${keyOrId(parent)} would wait on its part ${keyOrId(record)}, which already waits on it. ${waitCycleWords(this, cycle)}`,
         );
       }
       if (parent.projectId !== record.projectId) {

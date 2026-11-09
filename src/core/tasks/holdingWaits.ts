@@ -8,12 +8,10 @@ import { type DependencyWait, standingDependencyWaits } from "./dependencyWaits"
  * reader the crew and the first mate query (`taskQuery.ts`), INF-999.
  *
  * - Open work: every live blocker, since each holds its start.
- * - Active work: a blocker whose edge holds its merge, unless the captain's
- *   words passed that hold (the recorded override, `overridePasses`); the
- *   live work its standing baseline wait names; and a recorded wait - an
- *   edge that holds no merge - only while its crewmate stands idle on its
- *   waits (posture idle, reason dependency), since the idle ladder holds it
- *   there. A crewmate working past a recorded wait is not held by it.
+ * - Active work: every live blocker, since each holds its merge until that
+ *   work closes (INF-3167, the captain's choice A), unless the captain's
+ *   words passed that hold (the recorded override, `overridePasses`); and
+ *   the live work its standing baseline wait names.
  * - Closed work: nothing.
  *
  * Closed blockers stay graph history and are never named here.
@@ -22,23 +20,17 @@ export function holdingWaits(input: {
   record: TaskRecord;
   /** Every task a `blocks` edge into this one runs from. */
   blockers: readonly TaskRecord[];
-  /** Whether that edge carries the must-merge-first mark. */
-  holdsMerge: (blocker: TaskRecord) => boolean;
   /** Reads the task a standing baseline wait names. */
   tasks: { get(id: string): TaskRecord | undefined };
-  /** Its crewmate is idle on its waits now (work posture idle, reason dependency). */
-  idleOnWaits: boolean;
   /** A projection shares this row's derived baseline waits with its date read. */
   baseline?: readonly DependencyWait[];
 }): TaskRecord[] {
-  const { record, blockers, holdsMerge, tasks, idleOnWaits } = input;
+  const { record, blockers, tasks } = input;
   const live = blockers.filter(isLive);
   if (record.status === "open") return live;
   if (record.status !== "active") return [];
   const delivery = record.delivery;
-  const held = live.filter((blocker) =>
-    holdsMerge(blocker) ? !overridePasses(delivery, "waits", delivery?.headSha) : idleOnWaits,
-  );
+  const held = overridePasses(delivery, "waits", delivery?.headSha) ? [] : live;
   const baseline = (input.baseline ?? standingDependencyWaits(tasks, delivery))
     .map((wait) => wait.task)
     .filter((task) => isLive(task) && !isDeliveryChild(task));

@@ -79,7 +79,7 @@ export type ReportDeclaration = {
   /**
    * The tasks its crewmate says its task waits on (INF-1428, `waits_on`),
    * already resolved to live tasks: each is recorded as a `blocks` link
-   * from it, a recorded wait that holds no merge (`TaskService.graph.linkWaits`).
+   * from it, a recorded wait that holds its start and merge (`TaskService.graph.linkWaits`).
    */
   waitsOn?: string[];
 };

@@ -102,9 +102,10 @@ test("an active task names only its open and active blockers", async () => {
   expect(current?.blockedBy).toEqual(
     expect.arrayContaining([key("live-open"), key("live-active")]),
   );
-  // A recorded wait names the live blockers and draws the arrow. It does
-  // not mark the active row blocked: only a promised hold does (INF-416 piece E).
-  expect(current?.flags.blocked).toBe(false);
+  // A recorded wait names the live blockers, draws the arrow and marks the
+  // active row held: every wait holds the start and the merge until the
+  // other task closes (INF-3167), whoever recorded it.
+  expect(current?.flags.blocked).toBe(true);
   const detail = await page.evaluate(() => window.infinitary.tasks.detail("mixed"));
   expect(detail.blockedBy).toEqual(current?.blockedBy);
   await expect(recordCard(page).locator("[data-record-attention]")).toBeVisible();

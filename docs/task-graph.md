@@ -13,13 +13,15 @@ P0 made a task a durable record, P1 made every captain ask land on one; P2 gives
   The move is refused into a removed project, and into a project whose repository has no remote when a task it would take asks to ship as a pull request.
   A parent may carry a crewmate or be a pure container - a planned row that never dispatches on its own.
   **Discovery is not containment**: a follow-up a crewmate files is never a child of the task it was found on (see "Follow-ups are not children" below).
-- **Links** (`task_links`, primary key `(from, to, type)`): `blocks` - `to` is not ready until `from` closes successfully (`done`; dropped never clears).
-  A `holds_merge` mark on that edge, set only by a must-merge-first filing or a required action's prerequisite, is what holds `to`'s close while `from` is still live work.
+- **Links** (`task_links`, primary key `(from, to, type)`): `blocks` - `to` is not ready until `from` closes successfully (`done`; dropped never clears), and does not close while `from` is still live work, whoever recorded the edge (INF-3167, the captain's choice A: every wait holds the start and the merge until the other task closes).
+  The `holds_merge` mark a must-merge-first filing or a required action's prerequisite still writes on that edge is history: no reader branches on it, and no second kind of wait exists.
   `related` is informational; `discovered-from` - `from` was found while doing `to`, provenance with no effect on readiness or closing; `replaced-by` - `to` does `from`'s work now (a drop, a takeover or a fresh task), with no effect on readiness or closing either.
   Each link reads on both ends, and the links decide which tasks read another's milestones (`docs/task-record.md`, "Whom an event concerns").
   A `blocks` edge that would close a cycle is refused at insert (`TaskGraphRefusal`, surfaced as tool text): the walk follows `blocks` edges outward from `to` and must not reach `from`.
   Both ordinary insertion and baseline-diagnosis acceptance also call one live-wait reachability guard, normalizing blockers to waiter → prerequisite and reading `standingDependencyWaits` at the current non-green head.
   Only open or active endpoints participate in the mixed traversal; historical diagnoses, green deliveries, closed dependencies and informational links do not.
+  The guard also counts each live task's open parts among its prerequisites, since a parent closes only once its parts have (INF-3167, the loop INF-3140 found: a parent waiting on its own part), skipping the host's delivery children (`isHostRaisedShape`); `TaskService.setParent` runs the same guard, so a task is never put under a task it waits on.
+  The refusal's words (`waitCycleWords`) say how the loop is repaired: when only part of a task gives what the waiter needs, that part is split into its own task or the waiter is folded into the task it waits on, and a wait is removed only when it names the wrong task.
   A refusal names the complete task-key loop, writes no link or diagnosis, and spends no repair attempt.
   Structural ordinary-link refusal remains in force even for historical links, and dropped blockers retain their existing startup rules.
 - **Derived, never stored** (design principle 4): `blocked`, `held`, `ready`, `deadBlocker` come from `TaskService.graph.flagsOf` at read time.
@@ -84,16 +86,18 @@ A detached follow-up must stay findable, so its origin is shown wherever the par
 A parent closes only when every child is closed (`TaskService.graph.closeRefusal` names the open children by key) - except delivery machinery: a child the HOST commissioned as part of delivering its parent (a `host:*` kind_source: the independent review, and the independent assessment of a kept merge's undecided repair; `TaskService.isDeliveryChild`) carries no intent of its own, so it never holds the parent's close, keeps the parent the host gave it (`setParent` refuses), and is retired by the supervisor whenever the parent closes, in any direction (`docs/delivery-rigor.md`, the reviewed sequence).
 The parent edge is the only stored review-to-builder join: which review a builder's verdict came from is read off it (`TaskService.graph.verdictReviewOf`), never cached on the builder.
 The host records no `blocks` edge from a review onto its builder (INF-1876): whether a merge waits for the verdict is the care runbook's guidance, and the edge an earlier release recorded is removed at the upgrade (`docs/saved-data-compatibility.md`, "The review's edge").
-A task also does not close while something it waits on is still live work - open or active (`TaskService.graph.blockerRefusal`, over `blockersHoldingClose`): that is what `blocks_me` promises, and blocks edges otherwise gate dispatch alone, which says nothing about work already under way.
+A task also does not close while something it waits on is still live work - open or active (`TaskService.graph.blockerRefusal`, over `blockersHoldingClose`, which reads every live `blocks` edge into the task, INF-3167): a wait has one meaning whoever recorded it, so work still under way never readies the merge of what waits on it.
+Its refusal names the ways out: the blocker's close (its merge, or `settle_task` done, why `answered`, when it is a step whose report was all the waiter needed), dropping work that is not wanted, or `link_tasks remove` only when the wait names the wrong task.
 That wait is a soft hold (`waits`): the captain's recorded override passes it, and a close refused on it says so (`docs/delivery-rigor.md`, "The holds").
 A **dropped** blocker clears a close, and only a close - for readiness it is a wait that can never end and the first mate answers the dead-gate wake, but that wake names open rows only, so an active task held by a dropped blocker would strand with no way out.
 A `discard` abandons the work rather than completing it, so a wait never forbids it; only containment does (`closeGateRefusal`, `settleRefusals.ts`).
 A crewmate's merge card is refused at emit time while that same rule would refuse the click (`CrewmateCards.addCrewmateCard`; open children stay a click-time choice because the captain can override them).
-The `link_tasks` description says a blocks link holds the start, and says nothing about a merge.
+The `link_tasks` description says a blocks link holds the start and the merge until `from` closes.
 It says `related` is for work neither task is waiting on.
-The first mate records a practical wait as `blocks` that turn, even when it is not a strict prerequisite, so Tasks draws the arrow.
-A click refused by a promised hold reads in plain words on the feed (captain, 2026-10-01: a second Merge click was needed after a tracking-only wait).
-Because a marked edge gates closing, `flagsOf` reports `blocked` for **active** rows too: the task a `blocks_me` follow-up is filed against is exactly the one a crewmate is holding, and it must say it is held rather than look free until the merge refuses.
+The first mate records every wait between tasks as `blocks` that turn, from the task whose close gives what the waiter needs, so Tasks draws the arrow and the wait holds; when only part of a task would give it, it splits that part into its own step or folds the waiter into that task, never recording a wait that holds nothing (INF-3167).
+A click refused by a wait reads in plain words on the feed (captain, 2026-10-01: a second Merge click was needed after a tracking-only wait).
+Because every live edge gates closing, `flagsOf` reports `blocked` for **active** rows too: a task its crewmate works past a recorded wait must say it is held rather than look free until the merge refuses.
+When the captain's recorded override passed that hold (`overridePasses`, `docs/delivery-rigor.md` "The holds"), the row reads free, as its Blocked by and the close gate do.
 
 A task whose deliverable is an answer closes on a third path (captain F2 A): the captain's choice on its own crewmate's card closes the row `done/answered`, and `merge-pr` and `land` are refused on it outright, because it ships nothing.
 A card its crewmate declared `continues`, something it goes on from such as a consent, a card asking to send a kept write and a card handing the captain the task's browser (`browser_handoff`, INF-1322) are not that card: their choice reaches the crewmate and the row stays active (INF-1226, `docs/card-authoring.md` "An answer task's card is its deliverable").
@@ -164,8 +168,8 @@ The prompt's class 4 is "spawn or plan"; the C5 dispatch extractor sorts `create
 Crewmates (`src/core/pi/crewmateTaskTools.ts`, the same pair over Claude's tool server in `src/core/claude/claudeTaskTools.ts`): `file_followup` (title, goal, why, `blocks_me`, and for a test failure `test_failure` plus `test_path`) files an on-request task of its own - never a child - joined to the crewmate's task by a `discovered-from` edge and placed in its project and repo, and the first mate hears one `[fm-op]` that names the key, whether it holds the origin up, and the choices.
 The host stores `test_path` and answers with the existing key instead of filing a second open or active row for the same path; a test failure with no path is refused.
 A test that fails outside the crewmate's change is a follow-up only when it also fails on the untouched main line, otherwise one line in the report.
-A report's `waits_on` records an existing open task its work cannot go on without as a `blocks` link that holds no merge, on the task carrying its work when a `replaced-by` link moved it (`TaskService.graph.carrierOf`), refusing an unknown, closed, own or circular key (`TaskService.graph.linkWaits`; `docs/report-sort.md`, "A wait on work nobody has started is the first mate's turn").
-`start_program` (title, goal, script, `args`, bound; or `program` with a larger `bound` or `stop`) files a program in the crewmate's project, when-ready - never a child - joined to the crewmate's task by a `discovered-from` edge and a `blocks` link from it that holds no merge, so its close steers the crewmate (`docs/programs.md`, "Starting a program").
+A report's `waits_on` records an existing open task whose close gives what its work needs as a `blocks` link, which holds its start and merge like every wait, on the task carrying its work when a `replaced-by` link moved it (`TaskService.graph.carrierOf`), refusing an unknown, closed, own or circular key (`TaskService.graph.linkWaits`; `docs/report-sort.md`, "A wait on work nobody has started is the first mate's turn").
+`start_program` (title, goal, script, `args`, bound; or `program` with a larger `bound` or `stop`) files a program in the crewmate's project, when-ready - never a child - joined to the crewmate's task by a `discovered-from` edge and a `blocks` link from it, which holds the crewmate's merge like every wait and whose close steers the crewmate (`docs/programs.md`, "Starting a program").
 `note_progress` writes one `progress` event on the crewmate's own timeline with `feed = 0`.
 Both register through `CrewmateSpec.onFollowup` / `onProgress`.
 
@@ -211,9 +215,9 @@ The review names each key it checked, that key's fate, and the keys left uncheck
 
 The board/detail `blockedBy` list names only the waits that hold the task now, by one rule the board and the crew's tasks reader share (`holdingWaits`, INF-999).
 On open work that is every live (open or active) blocker.
-On active work it is a live blocker whose edge holds its merge, unless the captain's words passed that hold (the recorded override, `overridePasses`); a recorded wait only while its crewmate stands idle on its waits (posture idle, reason `dependency`), so the arrow still draws while it waits; and the live work a standing baseline wait names.
-A crewmate working past a recorded wait is not blocked by it, and a merge hold the captain released reads as released.
-Close refusals, the active blocked flag and the context's “cannot land until” line read only the marked edges (`blockersHoldingClose`).
+On active work it is every live blocker, since each holds the merge (INF-3167), unless the captain's words passed that hold (the recorded override, `overridePasses`), and the live work a standing baseline wait names.
+A crewmate working past a recorded wait is still held by it, and a hold the captain released reads as released.
+Close refusals, the active blocked flag and the context's “cannot land until” line read the same live edges (`blockersHoldingClose`).
 Done, dropped and discarded work stays in graph/timeline history, not in the record's “Waiting on” banner or “Waits on” facts.
 With no live blockers, that banner disappears.
 The baseline wait (FI3-250) holds no edge to its close, but the task waits on that work all the same.
@@ -274,7 +278,8 @@ A missed triage leaves an ordinary visible on-request filing.
 ## Combining repairs after a circular-wait refusal
 
 The crewmate reports the full task-key loop to the first mate rather than declaring another wait or retrying the refusal.
-The first mate chooses one existing repair owner and combines necessary patches with attribution, keeping existing permissions and repair records.
+When only part of a task gives what the waiter needs, the first mate splits that part into its own task or folds the waiter into the task it waits on, and removes a wait only when it names the wrong task (INF-3167).
+For two repairs of failing checks it chooses one existing repair owner and combines necessary patches with attribution, keeping existing permissions and repair records.
 It removes only waits made obsolete by that consolidation, has the owner verify the combined version including every failed check, and reconciles other tasks only after merge.
 The host refuses loops but never chooses an owner or stores another wait type.
 

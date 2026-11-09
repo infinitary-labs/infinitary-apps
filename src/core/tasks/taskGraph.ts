@@ -136,11 +136,15 @@ export class TaskGraph {
     private readonly tasks: TaskService,
   ) {}
 
-  /** Active work a finding holds, in link order, without composing closed waiter records. */
+  /**
+   * The started work waiting on this task through any `blocks` link from it
+   * (INF-735, INF-3167), in link order, without composing closed waiter
+   * records: its report may carry what that work waits for.
+   */
   activeWaiters(id: string): TaskRecord[] {
     const known = this.writer.projection?.activeWaiters.get(id);
     if (known) return known;
-    const links = this.linksFrom(id).filter((link) => link.type === "blocks" && !link.holdsMerge);
+    const links = this.linksFrom(id).filter((link) => link.type === "blocks");
     const active = new Map(
       this.writer.store
         .getActiveMany(links.map((link) => link.toId))
@@ -492,11 +496,12 @@ export class TaskGraph {
 
   /**
    * Derived flags for a live row; everything false once it is closed.
-   * `blocked` and `deadBlocker` hold for ACTIVE work too, and only for a
-   * marked edge: a follow-up filed with `blocks_me` lands on a task a
-   * crewmate is holding, and that is the one row that must show it. A
-   * recorded wait holds the start and draws the arrow, and the origin
-   * stays free to merge.
+   * `blocked` and `deadBlocker` hold for ACTIVE work too, for every live
+   * edge: a task its crewmate works past a recorded wait must show it is
+   * held, since the wait holds its start, draws the arrow and holds its
+   * merge until the work it names closes (INF-3167), unless the captain's
+   * recorded override passed that hold (`overridePasses`, as
+   * `blockerRefusal` and Blocked by read it).
    * `ready` stays a property of open, unstarted work.
    */
   flagsOf(record: TaskRecord): TaskFlags {
@@ -512,14 +517,18 @@ export class TaskGraph {
       };
     }
     if (record.status === "active") {
-      // Readiness is behind an active row, but a blocks edge filed mid-task
-      // still holds its close - so the row being held must say so rather
-      // than look free until the merge refuses. A dropped blocker does not
-      // hold a close (`blockerHoldsClose`), so it is no dead wait here. A
+      // Readiness is behind an active row, but a blocks edge recorded
+      // mid-task still holds its close - so the row being held must say so
+      // rather than look free until the merge refuses. A dropped blocker does
+      // not hold a close (`blockerHoldsClose`), so it is no dead wait here. A
       // gate holds an active row the way it holds an open one: a card up
       // for the captain, a round cap, or a timed wait (docs/task-graph.md).
+      // The captain's words pass the wait (the recorded override), so a
+      // released row reads free, as its Blocked by and the close gate do.
+      const delivery = record.delivery;
+      const passed = overridePasses(delivery, "waits", delivery?.headSha);
       return {
-        blocked: this.blockersHoldingClose(record.id).length > 0,
+        blocked: !passed && this.blockersHoldingClose(record.id).length > 0,
         held: record.gate !== null,
         ready: false,
         deadBlocker: false,
@@ -587,45 +596,39 @@ export class TaskGraph {
 
   /**
    * The blockers that still hold this task's close; empty when none do.
-   * Only a marked edge holds the close (INF-416 piece E): a `blocks_me`
-   * filing or a required action's prerequisite.
-   * A recorded wait keeps the edge, and the start, and holds nothing here.
+   * Every live `blocks` edge into the task holds it (INF-3167, the
+   * captain's choice A): a wait the first mate or a crewmate recorded, a
+   * `blocks_me` filing and a required action's prerequisite alike. The
+   * `holdsMerge` mark on an edge is kept as history and changes nothing.
    */
   blockersHoldingClose(id: string): TaskRecord[] {
-    return this.liveBlocks(id).flatMap(({ link, task }) => (link.holdsMerge ? [task] : []));
+    return this.liveBlocks(id).map(({ task }) => task);
   }
 
   /**
    * What the task's Blocked by names in the tasks reader, by the board's own
    * rule (./holdingWaits.ts, INF-999): the waits that hold it now.
-   * `idleOnWaits` says its crewmate stands idle on its waits.
    */
-  waitsHolding(id: string, idleOnWaits: boolean): TaskRecord[] {
+  waitsHolding(id: string): TaskRecord[] {
     const record = this.writer.store.get(id);
     if (!record) return [];
-    const marked = new Set(
-      this.linksTo(id)
-        .filter((link) => link.type === "blocks" && link.holdsMerge)
-        .map((link) => link.fromId),
-    );
-    return holdingWaits({
-      record,
-      blockers: this.blockers(id),
-      holdsMerge: (blocker) => marked.has(blocker.id),
-      tasks: this.writer.store,
-      idleOnWaits,
-    });
+    return holdingWaits({ record, blockers: this.blockers(id), tasks: this.writer.store });
   }
 
   /**
-   * The blocks rule at close time: a task that something must land before
-   * does not close until it has. This is what `file_followup`'s `blocks_me`
-   * promises ("your task cannot land until this does"); blocks edges
-   * otherwise gate dispatch alone, which says nothing about work already
-   * under way. Returns the refusal naming the blockers and the ways out.
+   * The blocks rule at close time: a task that waits on another does not
+   * close until that work has closed (INF-3167): what `file_followup`'s
+   * `blocks_me` promises ("your task cannot land until this does"), and
+   * what every other recorded wait means too, since a wait on part of a
+   * task's work is reshaped into its own task rather than held as a wait
+   * that holds nothing. Returns the refusal naming the blockers and the
+   * ways out: the blocker's close (its merge, or `settle_task` done, why
+   * `answered`, when it is a step whose report was all the waiter needed), dropping
+   * work that is not wanted, removing a wait that names the wrong task,
+   * or the captain's override.
    */
   blockerRefusal(id: string): SettleRefusal | undefined {
-    // The captain's override passes a must-merge-first wait (`waits`).
+    // The captain's override passes a wait on live work (`waits`).
     const record = this.writer.store.get(id);
     const delivery = record?.delivery;
     const passed = record !== undefined && overridePasses(delivery, "waits", delivery?.headSha);
@@ -634,19 +637,26 @@ export class TaskGraph {
     const task = settleRef(this.writer.store.get(id), id);
     const blockers = holding.map((blocker) => settleRef(blocker, blocker.id));
     const names = blockers.map(refName).join(", ");
-    const them = holding.length === 1 ? "it" : "them";
-    // No `proceed_with_open`: a blocks_me edge is the crewmate's own promise
-    // that its task cannot land until this does. The ways out land the
-    // blocker, drop it, retract the promise, or the captain's override.
+    const one = holding.length === 1;
+    const them = one ? "it" : "them";
+    // No `proceed_with_open`: the wait ends when the other task closes. The
+    // ways close a step whose report was all the waiter needed, or remove a
+    // wait that names the wrong task; a merge or a drop of the blocker is
+    // its own settle, and the captain's override passes the hold.
     const ways: SettleWay[] = [];
     for (const blocker of blockers) {
+      ways.push({
+        label: `Close ${blocker.key} as answered`,
+        tool: "settle_task",
+        args: { task_id: blocker.id, mode: "done", why: "answered" },
+      });
       ways.push({
         label: `Remove the wait on ${blocker.key}`,
         tool: "link_tasks",
         args: { from: blocker.key, to: task.key, type: "blocks", remove: true },
       });
     }
-    const text = `Cannot close ${task.key} while ${holding.length === 1 ? "it waits on" : `it waits on ${holding.length} tasks`}: ${names}. Merge ${them} first, drop ${them} if the work is not wanted, or remove the wait with link_tasks remove.`;
+    const text = `Cannot close ${task.key} while ${one ? "it waits on" : `it waits on ${holding.length} tasks`}: ${names}. The wait ends when ${one ? "that task closes" : "they close"}: merge ${them}, close ${one ? "it" : "one"} with settle_task done, why answered, when it is a step whose report was all ${task.key} needed, or drop ${them} if the work is not wanted; remove ${one ? "the" : "a"} wait with link_tasks remove only when it names the wrong task.`;
     return { refused: "waits-on", task, tasks: blockers, ways, text };
   }
 
@@ -669,9 +679,9 @@ export class TaskGraph {
 
   /**
    * The waits a crewmate's report names (INF-1428): one `blocks` link from
-   * each task to the waiting one, a recorded wait that holds no merge, all
-   * in one write - a cycle any of them would close refuses them all.
-   * Returns the tasks newly linked.
+   * each task to the waiting one, holding its start and its merge until
+   * that work closes (INF-3167), all in one write - a cycle any of them
+   * would close refuses them all. Returns the tasks newly linked.
    */
   linkWaits(waiterId: string, blockerIds: readonly string[], actor: TaskEventActor): string[] {
     const at = this.writer.now();

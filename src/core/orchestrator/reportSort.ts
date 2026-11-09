@@ -19,12 +19,13 @@
  *     approved by reply - never a reading of its words. After row 0, so
  *     the captain's reply is answered first; before every row that would
  *     otherwise hold the report quiet.
- *  0b. Started work waits on this task through a wait the Firstmate
- *     recorded (INF-735; `IdleLadder.heldOn`): wake, on any backend and
- *     whatever card is up or still moves. The report may carry what that
- *     work waits for - a finding, an answer - and only the Firstmate can
- *     judge it and pass it on, while the task's close, which ends the wait
- *     by itself, may be days away. A typed link, never a reading of words.
+ *  0b. Started work waits on this task through a recorded wait, whoever
+ *     recorded it (INF-735, INF-3167; `IdleLadder.heldOn`): wake, on any
+ *     backend and whatever card is up or still moves. The report may carry
+ *     what that work waits for - a finding, an answer - and only the
+ *     Firstmate can judge it and pass it on, while the task's close, which
+ *     ends the wait by itself, may be days away. A typed link, never a
+ *     reading of words.
  *  0c. The task's open review last returned findings or blocked
  *     (INF-1876): wake, whatever card is up or still moves. The report may
  *     bring the new head, evidence revision or validation state that

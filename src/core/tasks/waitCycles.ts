@@ -1,12 +1,20 @@
+import { isHostRaisedShape } from "../storage/changeProjection";
 import type { TaskRecord } from "../storage/taskStore";
 import { standingDependencyWaits } from "./dependencyWaits";
 
 export type WaitGraph = {
   get(id: string): TaskRecord | undefined;
-  graph: { blockers(id: string): TaskRecord[] };
+  graph: { blockers(id: string): TaskRecord[]; children(id: string): TaskRecord[] };
 };
 
-/** Before accepting waiter → prerequisite, follow only current, live waits back to waiter. */
+/**
+ * Before accepting waiter → prerequisite, follow only current, live waits
+ * back to waiter: the `blocks` edges into each task, its standing baseline
+ * waits, and its own live parts, since a parent closes only once its parts
+ * have (INF-3167, the loop INF-3140 found: a parent waiting on its own
+ * part). The host's delivery children (a review, a repair assessment) hold
+ * no parent's close and so count for nothing here.
+ */
 export function liveWaitCycle(
   tasks: WaitGraph,
   waiter: string,
@@ -28,6 +36,7 @@ export function liveWaitCycle(
     const prerequisites = [
       ...tasks.graph.blockers(id),
       ...standingDependencyWaits(tasks, task.delivery).map((wait) => wait.task),
+      ...tasks.graph.children(id).filter((child) => !isHostRaisedShape(child.shape)),
     ];
     for (const next of prerequisites) {
       if (live(next) && !seen.has(next.id)) stack.push([...path, next.id]);
@@ -35,6 +44,13 @@ export function liveWaitCycle(
   }
 }
 
+/**
+ * The refusal's words, served to the first mate and the crew alike
+ * (INF-3167, the captain's choice A): every wait holds the waiter's start
+ * and merge until the other task closes, and a task waits on its own
+ * parts, so the loop is repaired by reshaping the work, never by a wait
+ * that holds nothing. Two repairs of failing checks keep the one-owner way.
+ */
 export function waitCycleWords(tasks: Pick<WaitGraph, "get">, path: string[]): string {
-  return `Circular wait: ${path.map((id) => tasks.get(id)?.key || id).join(" → ")}. Report this loop to the first mate to choose one existing repair owner, combine attributed patches, remove only obsolete waits, verify the combined version, and reconcile after merge. No wait recorded or repair attempt spent; failing checks still prevent merging.`;
+  return `Circular wait: ${path.map((id) => tasks.get(id)?.key || id).join(" → ")}. A task waits on its own open parts until they close, and every wait holds the waiter until the other task closes. Report this loop to the first mate: when only part of a task gives what the waiter needs, split that part into its own task, or fold the waiter into the task it waits on; remove a wait only when it names the wrong task. Two repairs of failing checks keep one existing owner, who combines attributed patches, verifies the combined version and reconciles after merge. No wait recorded or repair attempt spent; failing checks still prevent merging.`;
 }

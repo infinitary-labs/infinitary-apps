@@ -402,7 +402,6 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         (repoId) => host.options.repos.get(repoId)?.name,
         (taskId) => host.options.supervisor.cards.newestBody(taskId),
         (taskId) => host.options.supervisor.cards.newestResolutionForTask(taskId),
-        (record) => host.options.supervisor.postures.workPosture(record),
         host.options.supervisor.toolHooks.taskQueryReach(),
       ),
   };

@@ -40,7 +40,8 @@ describe("migration 107 (the review's edge, INF-1876)", () => {
     older.graph.link("review", "builder", "blocks", "host", true);
     older.graph.link("earlier", "builder", "blocks", "host", true);
     // A must-merge-first filing, a required action's prerequisite and a
-    // wait the first mate recorded.
+    // wait the first mate recorded: every live one holds the close
+    // (INF-3167), and the marks stay on the rows as history.
     older.graph.link("continue", "builder", "blocks", "crewmate", true);
     older.graph.link("prerequisite", "builder", "blocks", "host", true);
     older.graph.link("finder", "builder", "blocks", "firstmate");
@@ -49,6 +50,7 @@ describe("migration 107 (the review's edge, INF-1876)", () => {
       "review",
       "continue",
       "prerequisite",
+      "finder",
     ]);
     before.close();
 
@@ -67,6 +69,7 @@ describe("migration 107 (the review's edge, INF-1876)", () => {
     expect(tasks.graph.blockersHoldingClose("builder").map((row) => row.id)).toEqual([
       "continue",
       "prerequisite",
+      "finder",
     ]);
     // The parent edge stays the one review-to-builder join: the live review
     // is still open, the closed one still done.

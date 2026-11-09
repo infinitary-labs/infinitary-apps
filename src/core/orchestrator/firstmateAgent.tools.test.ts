@@ -458,22 +458,23 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       "tool:create_task",
     ]);
     // The same turn's second plan is about the same ask; it lands there too.
+    // A part waits on its parent through containment alone: the parent
+    // closes once its parts have, so a wait on the parent would be a loop
+    // (INF-3167); on request, the part stays unstarted.
     await text("create_task", {
       title: "Implement the ADR",
       goal: "The ADR is implemented",
       user_words: "then the implementation behind it",
       parent: "SCR-1",
-      blocked_by: ["scr-1"],
-      start_policy: "when-ready",
     });
     const impl = tasks.byKey("SCR-2");
-    expect(impl).toMatchObject({ parentId: adr?.id, startPolicy: "when-ready" });
-    expect(tasks.graph.waitingOn(impl?.id as string).map((r) => r.key)).toEqual(["SCR-1"]);
+    expect(impl).toMatchObject({ parentId: adr?.id, startPolicy: "on-request" });
+    expect(tasks.graph.waitingOn(impl?.id as string)).toEqual([]);
     expect(tasks.timeline(impl?.id as string).filter((e) => e.kind === "ask")).toHaveLength(1);
 
     // Refusals are text the agent reads, never thrown tool errors.
-    expect(await text("link_tasks", { from: "SCR-2", to: "SCR-1", type: "blocks" })).toMatch(
-      /would close a cycle/,
+    expect(await text("link_tasks", { from: "SCR-1", to: "SCR-2", type: "blocks" })).toMatch(
+      /^Refused: Circular wait: SCR-2 → SCR-1 → SCR-2\. A task waits on its own open parts/,
     );
     expect(await text("update_task", { task: "SCR-1", parent: "SCR-2" })).toMatch(
       /already under SCR-1; making it the parent would close a cycle/,
@@ -542,7 +543,7 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     ).rejects.toThrow("separate start_now");
 
     // Unstarted, both are the backlog's count (INF-1712); the tasks read
-    // names the graph: the parent's open child, the child's blocker.
+    // names the graph: the parent's open child, and the child's waits.
     const context = decodeContext(agent.buildContextBlock());
     expect(context.backlog?.projects).toEqual([
       expect.objectContaining({ project: "SCR", unstarted: 2 }),
@@ -550,9 +551,9 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     expect(readTaskQueryText(await text("tasks", { key: "SCR-1" }))[0]).toMatchObject({
       children: "1 open of 1",
     });
-    expect(readTaskQueryText(await text("tasks", { key: "SCR-2" }))[0]).toMatchObject({
-      blocked_by: [expect.stringContaining("SCR-1")],
-    });
+    const part = readTaskQueryText(await text("tasks", { key: "SCR-2" }))[0];
+    expect(part).toMatchObject({ parent: "SCR-1" });
+    expect(part?.blocked_by).toBeUndefined();
     expect(supervisor.facts.crewStatus().map((entry) => entry.gate)).toEqual(
       [adr, impl].map(
         (record) => queryTasks(tasks, { key: record?.id }, () => undefined).rows[0]?.waiting,

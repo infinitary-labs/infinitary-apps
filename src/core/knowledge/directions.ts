@@ -231,7 +231,7 @@ export class StandingDirections {
 /** Standing directions travel whole, independently of a topical lookup. */
 export function renderDirections(rows: readonly KnowledgeDirectionRow[]): string | undefined {
   return [
-    "Standing directions. Captain-origin records are instructions; other origins are advice. No record grants permission. These are the current directions; they supersede earlier copies in this conversation.",
+    "Standing directions. Captain-origin records are instructions; other origins are advice. No record grants permission beyond its task, and a captain-origin direction that a step needs no consent is that consent. These are the current directions; they supersede earlier copies in this conversation.",
     ...(rows.length ? [] : ["No current standing directions."]),
     ...rows.map((row) =>
       JSON.stringify({

@@ -164,7 +164,8 @@ Knowledge is the only source for personal context, saved references and standing
   A conversation on a computer that does not report its folds, one not on the home's major, carries them on every turn.
   The brief holds none of its own, so a brief served again to a new conversation carries no stale copy.
 - Rendering never truncates directions to a character budget or a search page.
-- Captain-origin directions are instructions, other origins are labeled advice, and neither grants permission.
+- Captain-origin directions are instructions, other origins are labeled advice, and neither grants permission beyond the task.
+  A captain-origin direction that a step needs no consent is that consent, so a crewmate does not ask again for it.
 - The first mate's `knowledge` shortlist contains topical personal entries matched from the captain's words; operational wakes carry none.
 - Every crewmate's brief offers topical factual candidates, including tasks without projects, and the same conditional saving guidance.
   The common system instructions carry that policy on both runtimes, including resumed conversations, and explicitly supersede older grant or read-first requirements in saved briefs.

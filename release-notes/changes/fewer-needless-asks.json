@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "fewer-needless-asks",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crewmates stop asking about work you already allowed",
+      "body": "A crewmate fixes what its own change needs to pass without asking you first, including after you approve a plan. When one of your standing directions says a step needs no consent, a crewmate takes that as your consent. When the first mate is unsure, it reads what is already recorded and asks you only what only you can decide.",
+      "noPicture": "This changes when the first mate and crewmates ask you on a card, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

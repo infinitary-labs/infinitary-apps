@@ -189,7 +189,7 @@ There is no separate plan permission mark, and settlement receipts carry their e
 Backlog (`on-request`) means waits for the captain's word.
 Dragging an approved piece back to Backlog retains its blockers and holds, but it no longer starts automatically; prior plan approval does not authorize the first mate to queue it again.
 A captain-only action named in the plan does not hold the piece before it starts; its crewmate asks on a card when it reaches that action.
-Approval never authorizes credential commands, repair, permission changes or merges.
+Approval never authorizes credential commands, permission changes, merges, or repair outside the approved work; fixing the approved work's own failures is part of building it.
 The first mate reads each task's effective autonomy only to report who merges, never changing it without the captain's explicit request, even to match another task.
 Queue policy does not determine merge autonomy.
 The first mate interprets approval through `HANDOFF`; the host uses typed task state, not plan names, labels, hierarchy or prose.

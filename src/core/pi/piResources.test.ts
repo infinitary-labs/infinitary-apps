@@ -104,6 +104,23 @@ describe("where a crewmate keeps its evidence", () => {
   });
 });
 
+describe("what a crewmate asks before", () => {
+  // INF-3170, issue 6 (unnecessary approval escalations): only the extra work an
+  // untrue goal would require waits on a card; fixing what the crewmate's own
+  // change needs to pass is the change itself.
+  it("asks only before the extra work an untrue goal would require, never before fixing its own change", () => {
+    for (const backend of [undefined, "pi", "claude"] as const) {
+      const prompt = buildCrewmateSystemPrompt(backend);
+      expect(prompt).toContain(
+        "Ask on a card before extra work the untrue goal would require: name the mismatch, change and earlier choices it reverses.",
+      );
+      expect(prompt).toContain(
+        "Fixing what your own change needs to pass is part of it, not extra work.",
+      );
+    }
+  });
+});
+
 describe("continuation instructions served at the seven moments", () => {
   it("serves spawn, filing, completion, report triage and wrong-card steer in their existing channels", () => {
     // INF-1410 pointed delivery at the filing tool, which owns the full
@@ -270,7 +287,8 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
       // INF-87 P1/P4: Queued owns continuation; Backlog and authorization boundaries remain.
       "Acceptance queues approved plan pieces (when-ready)",
       "the host starts each as its prerequisites clear",
-      "It authorizes no credential command, repair, permission change or merge",
+      // INF-3170: the builder fixes its own work's failures without a second approval.
+      "It authorizes no credential command, permission change, merge, or repair outside the approved work; fixing the approved work's own failures is part of building it.",
       "Backlog (on-request) waits for the captain's word",
       "do not requeue a piece they moved there without fresh authorization",
       "At a captain-only action, its crewmate asks on a card",
@@ -561,7 +579,12 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1)", () => {
       "A crewmate's report is for you to act on, not to relay: what in it the captain must see or decide, steer its active author to show on its own card",
     );
     expect(core).toContain("nothing parks or returns on its own");
-    expect(core).toContain("WHEN IN DOUBT: ask, escalate, or delegate.");
+    // INF-3170: doubt sends the first mate to the record, not to the captain;
+    // escalation stays the captain's move.
+    expect(core).toContain(
+      "WHEN IN DOUBT: read the record or delegate a read, and ask the captain only what only they can decide.",
+    );
+    expect(core).not.toContain("ask, escalate, or delegate");
   });
 
   it("stays in the contract size band (v1 ~1,060 tokens; v1.1 adds the answer and boundary rules, v1.3 the routing rule, v1.5 the card-actions and filing rules, v1.6 the effect vocabulary, v1.7 the resumable-settle and structured-refusal rules, v2.8 the personalization case, v2.9 the personal-surface spawn rule, v3.0 the work-shape facts in place of the judged class, v3.1 the escalation trigger, v3.3 the reviewed tier's routing rule, v3.5 the task-level delivery ask, v3.9 the autonomy ask, v4.6 the sequences rule, v4.9 the not-signed-in rule, v4.11 install by talking, v4.14 the delegated thread answer)", () => {
@@ -1823,7 +1846,8 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.
   // INF-2744 names the captain's separate click by the merge card's name.
-  expect(hash(HANDOFF)).toBe("0d3e4ebb6aec5accb2f816242d63455bf036eae625a0b791227f167e695d85cf");
+  // INF-3170's approved plan keeps a builder's repair of its own work inside the approval.
+  expect(hash(HANDOFF)).toBe("24a07d2abefbb53d1c1c8a04010ef665d2f71ba115c0471c60793aa0e6032708");
 });
 
 // INF-880: the submitted words-only rule must survive procedure filtering on every tier.

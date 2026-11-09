@@ -59,6 +59,7 @@ Directions are instructions to weigh with the work, not data to search: they nev
 ## Authority
 
 - Authority is not permission: captain-origin directions are instructions, other origins are labeled advice, and neither grants permission to act beyond the task.
+  A captain-origin direction that a step needs no consent is that consent (`renderDirections`, `src/core/knowledge/directions.ts`).
 - The first mate alone adds, revises and retires directions, on its own judgment of what the captain wants, whatever began the turn (INF-638; `../docs/knowledge.md`, "Directions are the first mate's to keep").
   It does so through `app_change` with the `direction` line, whose `judgment` tier lets it act at any wake; each write is stamped `captain-turn`.
 - `record_knowledge` refuses a direction and points at `app_change`.

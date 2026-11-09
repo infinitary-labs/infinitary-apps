@@ -1,6 +1,7 @@
 import { openInMemoryDatabase } from "@core/storage/db";
 import { describe, expect, it } from "vitest";
 import type { KnowledgeActor } from "./access";
+import { renderDirections } from "./directions";
 import { KnowledgeService } from "./knowledgeService";
 
 /**
@@ -271,5 +272,33 @@ describe("the browser's directions", () => {
     const all = knowledge.directions.page({ scope: "all" });
     expect(all.state === "ready" && all.rows.map((row) => row.id)).toEqual(["mornings"]);
     expect(knowledge.directions.standing(crewOn(HARBOR.id))).toEqual([]);
+  });
+});
+
+describe("the directions an agent is served", () => {
+  // INF-3170, the captain: "no record grants permission beyond the task, and
+  // your direction that a step needs no consent is that consent".
+  it("says no record grants permission beyond its task, and a captain's no-consent direction is that consent", () => {
+    const served =
+      renderDirections([
+        {
+          id: "local-signing",
+          kind: "direction",
+          text: "In harbor, local development signing needs no consent from the captain.",
+          scope: HARBOR.id,
+          scopeName: HARBOR.name,
+          origin: "captain-turn",
+          authority: "instruction",
+          revision: 1,
+          updatedAt: 1_762_400_000_000,
+        },
+      ]) ?? "";
+    const heading = served.split("\n")[0];
+    expect(heading).toContain("No record grants permission beyond its task");
+    expect(heading).toContain(
+      "a captain-origin direction that a step needs no consent is that consent",
+    );
+    expect(heading).not.toContain("No record grants permission.");
+    expect(served).toContain("local development signing needs no consent");
   });
 });

@@ -530,7 +530,28 @@ export async function answer({ api, env, log, action, number, reason }) {
     held = entry.queue;
     except = entry.number;
   } else if (action !== "resume") throw new Error(`Unknown answer: ${action}.`);
-  const writes = resume(entries, { url, except });
+  let endedRun;
+  if (sent && held?.kind === "in-batch") {
+    const run = held.run;
+    const batch = await api.get(`${project(env)}/pipelines/${run}`);
+    if (!ENDED.has(batch.status)) {
+      const child = await checksPipeline(api, { ...env, pipelineId: run });
+      const jobs = child
+        ? await api.list(`${project(env)}/pipelines/${child.id}/jobs?per_page=100`)
+        : [];
+      if (jobs.some((job) => job.status === "failed")) {
+        // A parent cancellation does not reliably stop its child pipeline.
+        // End both before releasing any member to the next batch.
+        await api.send("POST", `${project(env)}/pipelines/${run}/cancel`);
+        if (child) await api.send("POST", `${project(env)}/pipelines/${child.id}/cancel`);
+        endedRun = run;
+        log(
+          `Batch run ${run} already has a failed check and a change was sent back, so it ends now.`,
+        );
+      }
+    }
+  }
+  const writes = resume(await readOpenQueue(api, env), { url, except, endedRun });
   for (const write of writes) await writeStatus(api, env, write);
   const words = answerWords({
     number: except,
@@ -538,6 +559,7 @@ export async function answer({ api, env, log, action, number, reason }) {
     queue: held,
     reason,
     resumed: writes.length,
+    endedRun,
     change: "merge request",
   });
   await closePause(api, env, words.issue);

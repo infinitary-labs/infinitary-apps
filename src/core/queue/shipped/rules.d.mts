@@ -55,7 +55,7 @@ export function formBatch(
 ): { action: "none" | "wait" | "sweep"; reason: string; members: Member[]; resumes: Member[] };
 export function resume(
   entries: readonly QueueEntry[],
-  options: { url: string; except?: number },
+  options: { url: string; except?: number; endedRun?: number },
 ): StatusWrite[];
 export function sendBack(
   entry: Member & { queue?: QueueState | null },
@@ -67,6 +67,7 @@ export function answerWords(options: {
   queue?: QueueState | null;
   reason: string;
   resumed: number;
+  endedRun?: number;
   change?: string;
 }): { issue: string; log: string };
 export function headList(members: readonly Member[]): string;

@@ -369,7 +369,30 @@ export async function answer({ github, context, core, action, number, reason }) 
     held = entry.queue;
     except = entry.number;
   } else if (action !== "resume") throw new Error(`Unknown answer: ${action}.`);
-  const writes = resume(entries, { url, except });
+  let endedRun;
+  if (sent && held?.kind === "in-batch") {
+    const run = held.run;
+    const { data: batch } = await github.rest.actions.getWorkflowRun({ ...repo, run_id: run });
+    if (batch.status !== "completed") {
+      const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+        ...repo,
+        run_id: run,
+        per_page: 100,
+      });
+      if (jobs.some((job) => FAILED.includes(job.conclusion))) {
+        // Cancel before releasing its members: a refused cancellation must
+        // not allow a second batch to run beside this one.
+        await github.rest.actions.cancelWorkflowRun({ ...repo, run_id: run });
+        endedRun = run;
+        core.notice(
+          `Batch run ${run} already has a failed check and a change was sent back, so it ends now.`,
+        );
+      }
+    }
+  }
+  // Read again after cancellation, so pushed or independently answered
+  // versions are not overwritten with the snapshot from before send-back.
+  const writes = resume(await readOpenQueue(github, repo), { url, except, endedRun });
   for (const write of writes) await writeStatus(github, repo, write);
   const words = answerWords({
     number: except,
@@ -377,6 +400,7 @@ export async function answer({ github, context, core, action, number, reason }) 
     queue: held,
     reason,
     resumed: writes.length,
+    endedRun,
   });
   await closePause(github, repo, words.issue);
   await startForm(github, context);

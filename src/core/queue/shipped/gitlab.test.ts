@@ -74,6 +74,7 @@ class Project {
   traces = new Map<number, string>();
   diffs = new Map<number, string[]>();
   started: unknown[] = [];
+  cancelled: number[] = [];
   issuesOff = false;
   /** Each member's role by user id: 40 is Maintainer, 30 Developer. The queue's own key is a Maintainer. */
   members = new Map<number, number>([
@@ -216,6 +217,12 @@ class Project {
           String(body?.target_url ?? ""),
         );
         return {};
+      }
+      if (method === "POST" && hit(/^\/pipelines\/(\d+)\/cancel$/)) {
+        const id = Number(found[1]);
+        this.cancelled.push(id);
+        this.pipelines.set(id, { id, status: "canceled" });
+        return this.pipelines.get(id);
       }
       if (method === "GET" && hit(/^\/pipelines\/(\d+)$/))
         return this.pipelines.get(Number(found[1]));
@@ -706,6 +713,44 @@ describe("the shipped queue on GitLab", () => {
     expect(readHeads("")).toEqual([]);
     expect(() => readHeads("12:main")).toThrow(/Not a batch member/);
   });
+
+  // Captain's accepted settled-batch fix, on both shipped hosts: the
+  // child's failed job and a successful send-back end parent and child,
+  // freeing the remaining approvals without waiting for other check jobs.
+  it.each(["failed", "running"])(
+    "handles a send-back while a child check reads %s and another still runs",
+    async (status) => {
+      const project = new Project();
+      for (const number of [96, 97]) {
+        project.open(number);
+        project.approve(number);
+      }
+      await formRun(project, 514);
+      project.open(98);
+      project.approve(98);
+      project.checks.set(514, { id: 614, status: "running", web_url: `${server}/p/614` });
+      project.jobs.set(614, [
+        { id: 610, name: "Unit tests", status, web_url: `${server}/jobs/610` },
+        { id: 611, name: "Journeys", status: "running", web_url: `${server}/jobs/611` },
+      ]);
+      await answer({
+        api: project.api(),
+        env: envOf(0),
+        log: () => {},
+        action: "send-back",
+        number: "97",
+        reason: "it breaks the cart",
+      });
+      const failed = status === "failed";
+      expect(project.queueOf(97)).toMatchObject({ kind: "failed" });
+      expect(project.cancelled).toEqual(failed ? [514, 614] : []);
+      expect(project.queueOf(96)).toMatchObject({ kind: failed ? "waiting" : "in-batch" });
+      expect(project.started).toEqual([{ ref: "main" }]);
+      const next = await formRun(project, 516);
+      expect(next.members.map((member) => member.number)).toEqual(failed ? [96, 98] : []);
+      expect(project.issues).toEqual([]);
+    },
+  );
 
   // The plan's checks-inherit-queue-writes answer: the batch's own code
   // cannot write infinitary/queue. On GitLab the queue's token reaches only

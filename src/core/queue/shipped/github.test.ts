@@ -60,6 +60,7 @@ class Project {
   logs = new Map<number, string>();
   files = new Map<number, string[]>();
   dispatches: unknown[] = [];
+  cancelled: number[] = [];
   /** Issues turned off in the project's settings: GitHub refuses a new issue. */
   issuesOff = false;
   private clock = Date.parse("2026-11-06T17:00:00Z");
@@ -143,6 +144,11 @@ class Project {
             data((this.files.get(pull_number) ?? []).map((filename) => ({ filename }))),
         },
         actions: {
+          cancelWorkflowRun: ({ run_id }: { run_id: number }) => {
+            this.cancelled.push(run_id);
+            this.runs.set(run_id, { id: run_id, status: "completed", conclusion: "cancelled" });
+            return data(undefined);
+          },
           getWorkflowRun: ({ run_id }: { run_id: number }) => data(this.runs.get(run_id)),
           listJobsForWorkflowRun: () => data(this.jobs),
           downloadJobLogsForWorkflowRun: ({ job_id }: { job_id: number }) => {
@@ -716,6 +722,46 @@ describe("the shipped queue on GitHub", () => {
     expect(project.queueOf(96)).toMatchObject({ kind: "waiting" });
     expect(project.issues).toEqual([]);
   });
+
+  // Captain's accepted settled-batch fix: a send-back ends an already-failed
+  // run, not a run with no failed check. REST job rows are the signal; no
+  // workflow timing or log wording decides whether the next batch can form.
+  it.each(["failure", null] as const)(
+    "handles a send-back while one batch check reads %s and another still runs",
+    async (conclusion) => {
+      const project = new Project();
+      for (const number of [96, 97]) {
+        project.open(number);
+        project.approve(number);
+      }
+      await formRun(project, 514);
+      project.open(98);
+      project.approve(98);
+      project.jobs = [
+        { id: 610, name: "Batch checks / Unit tests", conclusion, html_url: `${server}/jobs/610` },
+        {
+          id: 611,
+          name: "Batch checks / Journeys",
+          conclusion: null,
+          html_url: `${server}/jobs/611`,
+        },
+      ];
+      await answer({
+        ...runOf(project, 515).args,
+        action: "send-back",
+        number: "97",
+        reason: "it breaks the cart",
+      });
+      expect(project.queueOf(97)).toMatchObject({ kind: "failed" });
+      expect(project.cancelled).toEqual(conclusion ? [514] : []);
+      expect(project.queueOf(96)).toMatchObject({ kind: conclusion ? "waiting" : "in-batch" });
+      expect(project.queueOf(98)).toMatchObject({ kind: "waiting" });
+      expect(project.dispatches).toHaveLength(1);
+      const next = await formRun(project, 516);
+      expect(next.members.map((member) => member.number)).toEqual(conclusion ? [96, 98] : []);
+      expect(project.issues).toEqual([]);
+    },
+  );
 
   // The captain's answers on the review (checks-inherit-queue-writes, "Limit
   // the checks", and setup-grants): the batch's own code runs with a read of

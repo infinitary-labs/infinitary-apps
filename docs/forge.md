@@ -719,6 +719,9 @@ A green confirm passes the batch, and the run's summary names what failed, so a 
 A red confirm, or a failed job whose log named no test file, blames no change: every change in the batch pauses behind one issue labelled `infinitary-queue-paused`, which names the failed checks, the failed test files and the changes whose diffs touch each one.
 An approved change labelled `infinitary-queue-fix` ends the pause, and the next batch takes the paused changes, the waiting ones and the fix; a resume or a send-back by hand, each with a reason, also ends it.
 A send-back fails the change only on the version the queue holds it at, its current version while that reads paused or in a batch run (`sendBack`).
+When that send-back succeeds in a still-running batch with a failed check, the queue cancels the run, puts its remaining current members back to waiting and starts the next batch immediately, without a confirm.
+A send-back with no failed check leaves the run alone; failure alone also leaves it alone.
+On GitLab it cancels the parent and the checks child pipeline before releasing the members.
 When the pull request moved on since, as when its crewmate pushed the fix after the pause, the send-back writes nothing on it, the pause's issue says what that version reads instead, and the rest resume (`answerWords`); its new version joins a later batch once it is marked waiting.
 The files a project gets are generated from that source with a stamp line naming its host part's version (`GITHUB_QUEUE_PART`, `GITLAB_QUEUE_PART`, `src/core/queue/shipped.ts`), and `node scripts/generate-shipped-queue.ts` writes each part's into its folder of the `queue` runbook's `queue-setup` skill.
 Each part's version is how many source hashes its own list holds (`GITHUB_QUEUE_SOURCES`, `GITLAB_QUEUE_SOURCES`), hashing the rules and the files that part ships, so a change to one host's files moves only that host's version, and a change to the rules moves both.

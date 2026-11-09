@@ -22,6 +22,9 @@ On GitLab a pull request is a merge request, named `!N`.
 6. A red confirm, a failure whose log named no test file, or a red batch on GitLab, which has no confirm yet, pauses every change behind one issue labelled `infinitary-queue-paused`, and no change is blamed.
 7. A change labelled `infinitary-queue-fix` ends the pause once it is approved, and the next batch takes the paused changes, the waiting ones and the fix.
 8. A resume or a send-back by hand, with a reason, also ends it.
+9. A successful send-back from a still-running batch that already has a failed check cancels that run and starts the next batch immediately with the remaining changes.
+   On GitLab it cancels both the parent and its checks child pipeline.
+   Without a failed check the run continues; failure alone also leaves it alone.
 
 ## Planning it
 

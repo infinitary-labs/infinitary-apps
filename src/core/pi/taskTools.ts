@@ -99,6 +99,8 @@ export type TaskToolsDelegate = {
   }): string;
   /** He takes his override back. */
   withdrawOverride(input: { task: string }): string;
+  /** The captain takes back a yes the app recorded from their click on a card (INF-3170 piece 2). */
+  withdrawAllowance(input: { task: string; card: string }): string;
   /** A queued row starts now, past any reasoning re-ask (P0, WI-3). Refusals are text. */
   startNow(input: { task: string }): Promise<string>;
   startAgain(input: { task: string }): Promise<string>;
@@ -380,6 +382,11 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           description: "The captain takes back a merge they clicked; the work stays",
         }),
       ),
+      take_back_yes: Type.Optional(
+        Type.String({
+          description: "On the captain's words: the card id of a yes in the task's allowed facts",
+        }),
+      ),
       override: Type.Optional(
         Type.Object(
           {
@@ -437,6 +444,13 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         return { text: await delegate.startAgain({ task: params.task }) };
       }
       if (params.withdraw_merge) return { text: delegate.withdrawMerge({ task: params.task }) };
+      if (params.take_back_yes?.trim())
+        return {
+          text: delegate.withdrawAllowance({
+            task: params.task,
+            card: params.take_back_yes.trim(),
+          }),
+        };
       if (params.revise_required_action) {
         const revision = params.revise_required_action;
         if (!delegate.reviseRequiredAction)

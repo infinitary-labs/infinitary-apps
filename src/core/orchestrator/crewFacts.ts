@@ -17,6 +17,7 @@ import type { CrewStatusEntry } from "../pi/crewTools";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { INBOX_ATTEMPT_MAX, type InboxRow } from "../storage/inboxStore";
 import type { TaskRecord } from "../storage/taskStore";
+import { alreadyAllowed } from "../tasks/alreadyAllowed";
 import { hasStartQueueWait, queueWaitOf } from "../tasks/queueWait";
 import { TaskService } from "../tasks/taskService";
 import { crewTally } from "../tasks/workPresentation";
@@ -63,7 +64,8 @@ export class CrewFacts {
       rest.every(
         (row) =>
           row.facts?.kind === "task-policies-changed" ||
-          row.facts?.kind === "task-override-changed",
+          row.facts?.kind === "task-override-changed" ||
+          row.facts?.kind === "task-allowed-changed",
       )
     )
       return [];
@@ -326,6 +328,7 @@ export class CrewFacts {
         ciFactOf(record.delivery, this.core.now()),
       );
       const override = standingOverride(record.delivery, record.delivery?.headSha);
+      const allowed = alreadyAllowed(this.core.options.tasks, record).allowances;
       // A personal task carries no delivery: it builds in place, and
       // saying "local-only" here would be a posture the Firstmate could
       // act on. The brief omits the line for the same reason.
@@ -380,6 +383,9 @@ export class CrewFacts {
                 words: override.words,
               },
             }
+          : {}),
+        ...(allowed.length > 0
+          ? { allowed: allowed.map((entry) => ({ card: entry.card, covers: entry.covers })) }
           : {}),
         ...(refused
           ? {

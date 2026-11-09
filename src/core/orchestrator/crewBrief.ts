@@ -1,8 +1,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AttachmentRef } from "@shared/attachments";
+import { alreadyAllowedWords } from "@shared/captainAllowances";
 import { TURN_IMAGES_MAX, type TurnImage } from "@shared/cards";
-import { standingOverride, standingOverrideWords } from "@shared/holds";
 import type { Rigor } from "@shared/rigor";
 import type { RunbookFacts } from "@shared/runbooks";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
@@ -17,6 +17,7 @@ import type { KnowledgeService } from "../knowledge/knowledgeService";
 import type { MessageFile } from "../overflow";
 import { crewmateSourceCardsDir } from "../paths";
 import { LOCAL_MACHINE_ID } from "../session/session";
+import { alreadyAllowed } from "../tasks/alreadyAllowed";
 import { sha256OfFile } from "../tasks/handoverFiles";
 import type { CardService } from "./cardService";
 import { type CrewmateProcedureFacts, crewmateProcedureFor } from "./crewSession";
@@ -187,10 +188,15 @@ export class CrewBrief {
       sections.push([
         `Current task policies: ${JSON.stringify(policies)}. Read current policies before pushing or merging; later policy notices supersede this brief, not the scope.`,
       ]);
-    // The captain's override already standing when work (re)starts (INF-1216).
-    const standing = standingOverride(record?.delivery, record?.delivery?.headSha);
-    if (standing && record?.shape?.kind !== "review")
-      sections.push([standingOverrideWords(standing)]);
+    // What the captain already allowed when work (re)starts: the override
+    // standing on the task (INF-1216) and each yes the app recorded on it or
+    // on the work it does again (INF-3170 piece 2). A reviewer reads the
+    // builder's list in its own brief.
+    const allowed =
+      record && record.shape?.kind !== "review"
+        ? alreadyAllowedWords(alreadyAllowed(this.options.tasks, record), "crewmate")
+        : "";
+    if (allowed) sections.push([allowed]);
     const deliverable = deliverableOf(record);
     let base = brief;
     // Whatever the brief was rendered from: a crewmate's follow-up has no

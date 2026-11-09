@@ -214,6 +214,8 @@ export type EmittedCard = {
   browserHandoff?: { site: string; reason: string; after: string; savedFailed?: true };
   /** Bind the shown ordinary action to a recorded validation request. */
   validationDecision?: { request: string; action: string; gaps?: string[] };
+  /** The ordinary action whose click the app keeps as the captain's yes, and what it covers (`allows`). */
+  allows?: { action: string; covers: string };
   /**
    * The crewmate's risk assessment of its change (`risk`, only on its
    * merge card; docs/card-authoring.md "The risk chart"): the host
@@ -430,9 +432,17 @@ type EmitCardParams = Omit<Static<typeof crewmateCardParams>, "actions" | "risk"
   related?: string[];
   browser_button?: string;
   validation_request?: { request: string; action: string; gaps?: string[] };
+  allows?: { action: string; covers: string };
   browser_handoff?: { site: string; reason: string; after: string; saved_failed?: boolean };
   browser_page?: string;
 };
+
+/**
+ * The yes the app keeps (INF-3170 piece 2): a top-level parameter, so a
+ * Claude crewmate reads it whole.
+ */
+export const ALLOWS_PARAM =
+  "Mark the yes action of a consent ask: action names an ordinary action with no effect, covers says what a yes allows, as the card asks it. The captain's own click on it is recorded and served as already allowed to later turns of this task, its reviewer, a stronger-model retry and a takeover of its work, so none asks again.";
 
 /**
  * The saved-story rule, said once (INF-416 piece J). A top-level parameter,
@@ -496,6 +506,9 @@ const crewmateCardParams = Type.Object({
           "Bind an approval action to a recorded validation request; only the captain's click grants it, never a merge.",
       },
     ),
+  ),
+  allows: Type.Optional(
+    Type.Object({ action: Type.String(), covers: Type.String() }, { description: ALLOWS_PARAM }),
   ),
   body_file: Type.Optional(
     Type.String({
@@ -796,6 +809,7 @@ async function emitCard(
       ? { browserButton: params.browser_button }
       : {}),
     ...(params.validation_request ? { validationDecision: params.validation_request } : {}),
+    ...(params.allows ? { allows: params.allows } : {}),
     ...(options.browserButton && params.browser_handoff !== undefined
       ? {
           browserHandoff: {

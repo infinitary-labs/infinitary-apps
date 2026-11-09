@@ -219,6 +219,7 @@ export class CrewmateCards {
     checkedHead?: string,
     presentationChecked?: { revision: number; head: string },
   ): string | Promise<string> {
+    if (input.allows) allowsRefusal(input);
     if (input.presentationRevision !== undefined) {
       const revision = input.presentationRevision;
       // The story is shown on the merge card of the task's own change, with
@@ -503,6 +504,13 @@ export class CrewmateCards {
             shown.actions.find((action) => action.id === input.validationDecision?.action)?.label ??
               input.validationDecision.action,
           )
+        : "") +
+      (input.allows
+        ? allowsStrip(
+            shown.actions.find((action) => action.id === input.allows?.action)?.label ??
+              input.allows.action,
+            input.allows.covers,
+          )
         : "");
     const card = strip ? { ...shown, body: `${shown.body}${strip}` } : shown;
     // The merge card of a task that merges on its own is the app's own
@@ -542,6 +550,16 @@ export class CrewmateCards {
         task.title,
         task.session?.modelLabel() ?? task.session?.modelRef()?.id ?? "Unknown model",
         this.host.cardPlace(task.id),
+      );
+      // INF-3170 piece 2: the card's marked yes, bound to the offer it was
+      // shown on; a revision without one offers none.
+      const allowsOffer = input.allows ? this.host.cards.get(id)?.offerId : undefined;
+      this.options.tasks.delivery.offerAllowance(
+        task.id,
+        id,
+        input.allows && allowsOffer
+          ? { offer: allowsOffer, action: input.allows.action, covers: input.allows.covers.trim() }
+          : undefined,
       );
       if (input.validationDecision) {
         const offered = this.host.cards.get(id);
@@ -1189,4 +1207,38 @@ function cardRefusedMutation(
     display: "available",
     refusal,
   };
+}
+
+/**
+ * A crewmate's marked yes (`allows`, INF-3170 piece 2) names one ordinary
+ * action of the card - no effect, and not the validation approval, which
+ * keeps its own record - and says what the yes covers.
+ */
+function allowsRefusal(input: DeclaredCardInput): void {
+  const allows = input.allows;
+  if (!allows) return;
+  const action = input.actions.find((entry) => entry.id === allows.action);
+  if (!action || action.effect)
+    throw new Error(
+      `Card refused: allows names "${allows.action}", which is not an ordinary action of this card. Name the action whose click is the captain's yes, one with no effect.`,
+    );
+  if (input.validationDecision?.action === allows.action)
+    throw new Error(
+      "Card refused: allows and validation_request name the same action. A check approval keeps its own record; mark a different yes, or leave allows out.",
+    );
+  if (!allows.covers.trim())
+    throw new Error(
+      "Card refused: allows needs covers, saying what the captain's yes allows, as the card asks it.",
+    );
+}
+
+/** What the captain's yes on the marked action is kept as, drawn by the host after the lint. */
+function allowsStrip(label: string, covers: string): string {
+  return [
+    '<section class="inf-call" data-inf-call="allows">',
+    `<div class="inf-call-k">${escapeCardText(label)} is kept as your yes to</div>`,
+    `<div class="inf-call-line" data-inf-call-line>${escapeCardText(covers.trim())}</div>`,
+    '<p class="inf-muted">It holds for the rest of this task, its review, a retry on a stronger model and any task that takes over its work. Tell the first mate to take it back.</p>',
+    "</section>",
+  ].join("");
 }

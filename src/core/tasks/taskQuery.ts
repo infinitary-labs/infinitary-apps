@@ -7,6 +7,7 @@ import { attachmentPath } from "../attachments";
 import type { CardResolution } from "../storage/cardStore";
 import type { TaskEventActor } from "../storage/taskEventStore";
 import type { TaskDelivery, TaskRecord, TaskStatus } from "../storage/taskStore";
+import { alreadyAllowed } from "./alreadyAllowed";
 import { queueWaitOf } from "./queueWait";
 import { TaskService } from "./taskService";
 import type { TaskTimeline } from "./taskTimeline";
@@ -109,6 +110,12 @@ export type TaskQueryRow = {
   earlier_attempt?: string;
   policies?: EffectiveTaskPolicies;
   required_action?: CaptainAction;
+  /**
+   * On a by-key read, each yes the captain gave that this task's turns are
+   * served as already allowed (INF-3170 piece 2): its card, their click's
+   * words, what it covers, and the task it was given on when that is another.
+   */
+  allowed?: { card: string; words: string; covers: string; at: string; from?: string }[];
   key: string;
   task_id: string;
   first_release?: TaskDelivery["firstRelease"] | null;
@@ -430,6 +437,7 @@ function toRow(
   const policies = tasks.policiesOf(record);
   const pictures = cardBody ? picturesOf(tasks, record.id) : [];
   const builtOnBy = cardBody ? builtOnRows(tasks, record.id) : [];
+  const allowed = cardBody ? alreadyAllowed(tasks, record).allowances : [];
   return {
     key: record.key || record.id,
     task_id: record.id,
@@ -440,6 +448,17 @@ function toRow(
         }
       : {}),
     ...(record.delivery?.captainAction ? { required_action: record.delivery.captainAction } : {}),
+    ...(allowed.length > 0
+      ? {
+          allowed: allowed.map((entry) => ({
+            card: entry.card,
+            words: entry.words,
+            covers: entry.covers,
+            at: new Date(entry.at).toISOString(),
+            ...(entry.from ? { from: entry.from.key } : {}),
+          })),
+        }
+      : {}),
     ...(policies ? { policies } : {}),
     kind: record.kind,
     status: statusText(record),

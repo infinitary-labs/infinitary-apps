@@ -41,6 +41,7 @@ try {
       withdrawMerge: unavailable,
       override: unavailable,
       withdrawOverride: unavailable,
+      withdrawAllowance: unavailable,
       startNow: unavailable,
       startAgain: unavailable,
       link: unavailable,

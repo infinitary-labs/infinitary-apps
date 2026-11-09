@@ -400,6 +400,8 @@ export const placedCardSchema = z.object({
     .optional(),
   /** The page from its task's project that its browser button opens (docs/task-browser.md, "A page from the project"). */
   browserPage: z.string().optional(),
+  /** The ordinary action whose click the home keeps as the captain's yes, and what it covers (docs/delivery-rigor.md, "What the captain already allowed"). */
+  allows: z.object({ action: z.string(), covers: z.string() }).optional(),
 });
 
 const cardRefusalReasonSchema = z.enum(["checks", "ci-cap", "review", "shape", "other"]);

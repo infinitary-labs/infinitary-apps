@@ -7,6 +7,11 @@ import {
   type FiledAfterMergeStep,
   type FirstmateAfterMergeStep,
 } from "@shared/afterMerge";
+import {
+  type AllowanceOffer,
+  allowanceRowWords,
+  type CaptainAllowance,
+} from "@shared/captainAllowances";
 import type { ChangePresentationRecord } from "@shared/changePresentation";
 import type { KeptValidationInput } from "@shared/liveValidation";
 import {
@@ -483,6 +488,84 @@ export class TaskDeliveries {
       });
     });
     run();
+  }
+
+  /**
+   * The card this task's crewmate just showed (INF-3170 piece 2): with a
+   * marked yes it becomes the card's one allowance offer, replacing what an
+   * earlier offer of the same card declared; without one, the card offers
+   * no yes any more.
+   */
+  offerAllowance(id: string, card: string, offer?: Omit<AllowanceOffer, "card">): void {
+    this.writer.write(() => {
+      const record = this.writer.mustGet(id);
+      const kept = record.delivery?.allowanceOffers ?? [];
+      const others = kept.filter((entry) => entry.card !== card);
+      if (!offer && others.length === kept.length) return;
+      const allowanceOffers = offer ? [...others, { card, ...offer }] : others;
+      this.writer.writeDeliveryRecords(id, {
+        allowanceOffers: allowanceOffers.length > 0 ? allowanceOffers : undefined,
+      });
+    })();
+  }
+
+  /** The yes this card's offer declares on this action, if it declares one. */
+  allowanceOffer(id: string, card: string, offer: string | undefined, action: string) {
+    return this.writer.store
+      .get(id)
+      ?.delivery?.allowanceOffers?.find(
+        (entry) => entry.card === card && entry.offer === offer && entry.action === action,
+      );
+  }
+
+  /**
+   * Keep the captain's yes (INF-3170 piece 2): their own click on a marked
+   * action, with a timeline row quoting it. A second yes from the same card
+   * replaces the first, so a revised ask keeps one entry.
+   */
+  recordAllowance(id: string, entry: CaptainAllowance): void {
+    this.writer.write(() => {
+      const record = this.writer.mustGet(id);
+      const captainAllowances = [
+        ...(record.delivery?.captainAllowances ?? []).filter((kept) => kept.card !== entry.card),
+        entry,
+      ];
+      this.writer.writeDeliveryRecords(
+        id,
+        { captainAllowances },
+        {
+          kind: "note",
+          actor: "captain",
+          feed: true,
+          text: allowanceRowWords(entry),
+          data: { news: true },
+        },
+      );
+    })();
+  }
+
+  /** Take back the yes given on this card, on the captain's words through the first mate; a row says so. */
+  withdrawAllowance(id: string, card: string): CaptainAllowance | undefined {
+    let taken: CaptainAllowance | undefined;
+    this.writer.write(() => {
+      const record = this.writer.mustGet(id);
+      const kept = record.delivery?.captainAllowances ?? [];
+      taken = kept.find((entry) => entry.card === card);
+      if (!taken) return;
+      const rest = kept.filter((entry) => entry.card !== card);
+      this.writer.writeDeliveryRecords(
+        id,
+        { captainAllowances: rest.length > 0 ? rest : undefined },
+        {
+          kind: "note",
+          actor: "firstmate",
+          feed: true,
+          text: `You took back your yes: "${taken.words}"`,
+          data: { news: true, allowanceWithdrawn: taken },
+        },
+      );
+    })();
+    return taken;
   }
 
   /** The task's allowances while it is open; a closed or unknown task has none. */

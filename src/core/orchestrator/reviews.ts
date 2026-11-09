@@ -17,6 +17,7 @@ import { verifyKeptValidationEvidence } from "../pi/validationEvidence";
 import { tierFor } from "../routing/policy";
 import type { RouteResult } from "../routing/router";
 import type { MergeRepairAssessment, TaskRecord } from "../storage/taskStore";
+import { alreadyAllowed } from "../tasks/alreadyAllowed";
 import { TaskService } from "../tasks/taskService";
 import type { CardService } from "./cardService";
 import type { TaskRuntime } from "./crewRuntime";
@@ -148,6 +149,7 @@ export class Reviews {
       ...(captainCard ? { captainCard } : {}),
       history: reviewHistory(this.options.tasks, builder),
       ...(standing ? { override: standing } : {}),
+      allowed: alreadyAllowed(this.options.tasks, builder, headSha).allowances,
       proofFiles,
       validation: validation
         ? {

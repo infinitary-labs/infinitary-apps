@@ -130,6 +130,52 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         "The captain took back their standing override on this task: asking first hold again, and their earlier words no longer stand in for your consent asks.",
     },
   ],
+  // INF-3170 piece 2: the captain's yes on a crewmate's card, served as one list.
+  "task-allowed-changed": [
+    {
+      name: "a yes beside the override, one carried from the attempt it retries",
+      wake: {
+        facts: {
+          kind: "task-allowed-changed",
+          task: { id: TASK.id, key: "INF-2696", title: TASK.title },
+          allowed: {
+            override: { words: "merge it once it is green", holds: ["asks-first"], until: "task" },
+            allowances: [
+              {
+                words: 'Use my account, on the card "Run the sign-in check on your account"',
+                covers: "Signing in with the captain's own account for the sign-in check",
+                card: "card-1",
+                at: 1,
+                from: { key: "INF-2695", title: "Fix the sign-in check" },
+              },
+            ],
+          },
+        },
+      },
+      words: [
+        "Already allowed, as the app recorded it from the captain's own words and clicks on this task:",
+        "- The captain's standing override on this task, recorded by the first mate: their words pass asking first for the rest of this task: \"merge it once it is green\". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.",
+        '- The captain\'s yes on INF-2695 "Fix the sign-in check", whose work this is: "Use my account, on the card "Run the sign-in check on your account"". What it covers, as the crewmate that asked wrote it: "Signing in with the captain\'s own account for the sign-in check".',
+        "Where an ask of yours falls inside an entry, it is that consent: do not ask again. A write kept for their click, a browser handoff and anything no entry names still ask. Only the captain's words take an entry back.",
+      ].join("\n"),
+    },
+    {
+      name: "the last yes taken back",
+      wake: {
+        facts: {
+          kind: "task-allowed-changed",
+          task: { id: TASK.id, key: "INF-2696", title: TASK.title },
+          allowed: { allowances: [] },
+          takenBack: {
+            words: "Yes, use it",
+            covers: "The captain's plan's allowance for the load test",
+          },
+        },
+      },
+      words:
+        'The captain took back their yes "Yes, use it", which covered "The captain\'s plan\'s allowance for the load test": ask again before anything it covered.\n\nNothing is recorded as already allowed on this task now.',
+    },
+  ],
   "idle-nudge": [
     {
       name: "plain",

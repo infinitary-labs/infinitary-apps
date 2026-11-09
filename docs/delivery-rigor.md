@@ -570,6 +570,7 @@ The first mate's task line in its context and `crew_status` show the standing ov
 Every crewmate turn on the task is served the standing words: the brief carries them when the work starts with one standing, and each new override, or its withdrawal, is a `task-override-changed` notice on the task's lane that rides the next turn, on this computer or another, and starts none of its own.
 The crewmate reads them as its consent for what they reach among its own consent asks (`RIGOR_SAFETY`), such as the captain's plan's allowance, and judges which those are; keychain or signing access, writes outside the project and browser handoffs still ask.
 The reviewer's brief carries them on every review turn (`reviewerOverrideWords`), so access or a step they cover is not a finding.
+Both arrive as the first entry of the Already allowed list ("What the captain already allowed" below).
 When they pass the checks, its merge reads Merge the pull request on failed or running checks, since the click merges at once ("Its words" above).
 
 **The first mate's own cards and a story note.**
@@ -577,6 +578,29 @@ The `decisions` hold on a first mate merge counts a crewmate's question, a write
 Nor does it count a captain wait or gate on the task's own story note: the completion of work that merges on its own stays off the stack until the merge has a result ("Work that closed without the captain's click" in `docs/card-authoring.md`), so the captain reads it after the merge, the same as a wait on a merge offer (INF-2761).
 
 A refusal written with no kind at all is beyond the check; the weekly audit reads each week's changes for one, beside the limits ledger and the override counts (`docs/agents-reach.md`).
+
+## What the captain already allowed
+
+A yes the captain gives on a crewmate's own consent card is kept and served onward, so no later agent on the same work asks for it again (INF-3170 piece 2).
+The crewmate marks the yes action with `emit_card`'s `allows`: an ordinary action with no effect, and `covers`, what a yes allows, in the card's own words.
+The host refuses a mark on an action with an effect, on an action the card lacks, on the validation approval's own action, and with nothing it covers.
+The host draws a strip under the card's body saying what the click is kept as, and keeps the offer on the task beside the card's offer (`delivery.allowanceOffers`); a revision without a mark offers none.
+Only the captain's own click on that action records the yes (`delivery.captainAllowances`, `CaptainAllowance`): their click as words (`choiceWords`), what it covers and the card.
+A click from the card's own script records nothing, and a click on an older offer of the card is refused, so the card shows its current yes.
+The timeline gets a row quoting the yes.
+
+Every later crewmate turn reads one list headed Already allowed (`alreadyAllowedWords`): the standing override, then each recorded yes, oldest first.
+The brief carries it when the work starts.
+Each new yes, one taken back, or a `replaced-by` link that brings earlier work's yeses to a task (noticed just after the change, since a change listener writes nothing) is a `task-allowed-changed` notice carrying the whole list, on the lane of every started task whose work includes the changed one, the task itself, a stronger-model retry or a takeover of it; the notice rides the next turn and starts none of its own.
+The reviewer's brief carries the builder's list, so access or a step it covers is not a finding.
+`RIGOR_SAFETY` points at the list: a yes on it is that consent, and the crewmate judges whether an ask falls inside it.
+A write kept for the captain's click, a browser handoff and anything no entry names still ask; the app adds no stop, refuses nothing new and reads none of the words.
+
+A yes carries to the same work, the captain's pick on INF-3170: the task itself, its reviewer, a stronger-model retry (`escalate_from`, or an older `escalated` row) and a takeover of its work (`replaced-by`, or a task that continues its branch with `branch_from`, the captain's "Count branch takeovers"), read through the handed-over relation (`TaskCapture.handedOver`) and any number of earlier tasks (`sameWorkLineage`).
+A follow-up a merge files is new work and asks again.
+A close keeps the yeses, so the work that carries the task on still reads them.
+The first mate sees each yes in its task line (`allowed`, the card and what it covers) and in the task's by-key read, with the captain's words.
+Only the captain's words take a yes back: the first mate passes the yes's card as `update_task` `take_back_yes`, on the task or on the work that carries it, and the crewmate is told to ask again.
 
 ## Numbers (phase 4)
 

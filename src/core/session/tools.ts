@@ -116,6 +116,11 @@ export type EmittedCardInput = {
   /** Bind the shown ordinary action to a recorded validation request. */
   validationDecision?: { request: string; action: string; gaps?: string[] };
   /**
+   * The ordinary action whose click the app keeps as the captain's yes, and
+   * what that yes covers (`allows`, INF-3170 piece 2).
+   */
+  allows?: { action: string; covers: string };
+  /**
    * The HTML file in its task's project that a crewmate's browser button
    * opens (`browser_page`, docs/task-browser.md "A page from the project"):
    * the host checks it and turns the button into `attachment`, or refuses.

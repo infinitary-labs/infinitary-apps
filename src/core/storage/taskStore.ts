@@ -1,3 +1,4 @@
+import type { AllowanceOffer, CaptainAllowance } from "@shared/captainAllowances";
 import type {
   CheckRepairLedger,
   MergeRepairDeclaration,
@@ -508,6 +509,10 @@ export type TaskDelivery = {
    * card. `TaskService` is their one writer, and a close drops them.
    */
   integrationAllowances?: IntegrationAllowance[];
+  /** The crewmate's cards whose marked action records the captain's yes (INF-3170 piece 2). */
+  allowanceOffers?: AllowanceOffer[];
+  /** The captain's recorded yeses, kept past a close (docs/delivery-rigor.md, "What the captain already allowed"). */
+  captainAllowances?: CaptainAllowance[];
   /** The newest completion offers the host published, with the head each one's checks read. */
   completionOffers?: CompletionOffer[];
   /**

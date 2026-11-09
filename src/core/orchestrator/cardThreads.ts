@@ -968,6 +968,7 @@ export class CardThreads {
       raw.presentationRevision !== undefined && "presentation",
       raw.reviewTaskId && "review_task_id",
       raw.validationDecision && "validation_request",
+      raw.allows && "allows",
       (raw.browserButton !== undefined || raw.browserPage !== undefined || raw.browserHandoff) &&
         "browser controls",
     ].filter(Boolean);

@@ -465,6 +465,25 @@ export class CardActions {
         throw new CardChoiceUnavailableError("action-changed");
       }
     }
+    // INF-3170 piece 2: the captain's own click on a crewmate's marked yes
+    // is kept as what they allowed. A click on an older offer of the card,
+    // whose yes may have covered something else, is refused.
+    const allowanceOffer =
+      source === "chrome" && card.taskId && card.author === "crewmate"
+        ? this.core.options.tasks.delivery.allowanceOffer(
+            card.taskId,
+            card.id,
+            card.offerId,
+            actionId,
+          )
+        : undefined;
+    if (allowanceOffer && submission !== undefined) {
+      const gesture = cardSubmissionSchema.safeParse(submission);
+      if (!gesture.success || gesture.data.remounted || gesture.data.offerId !== card.offerId) {
+        this.core.cards.showOpenCard(card.id);
+        throw new CardChoiceUnavailableError("action-changed");
+      }
+    }
     // A crewmate's approval card lists the asks that joined it while it
     // waited (INF-2993 piece 2): a click answers exactly the asks of the
     // offer it showed, so a click on an older offer is refused and the card
@@ -519,6 +538,13 @@ export class CardActions {
               ticked:
                 answers?.find((answer) => answer.name === VALIDATION_GAPS_FIELD)?.values ?? [],
             });
+          if (allowanceOffer && card.taskId)
+            this.core.options.tasks.delivery.recordAllowance(card.taskId, {
+              words: choiceWords(chosen.label, card.title, anythingElseOf(answers)),
+              covers: allowanceOffer.covers,
+              card: card.id,
+              at: this.core.now(),
+            });
           carryOffer?.();
           if (card.taskId && associated?.delivery?.captainAction) {
             if (effect?.kind === "host" && effect.op === "confirm-required-action") {
@@ -569,6 +595,9 @@ export class CardActions {
         });
       throw new CardChoiceUnavailableError("action-changed");
     }
+    // The yes waits on the crewmate's lane ahead of the choice, as the
+    // whole list it now reads.
+    if (allowanceOffer && card.taskId) this.core.overrides.allowedNoticed(card.taskId);
     const choice: WakeChoice = {
       id: actionId,
       label: chosen.label,

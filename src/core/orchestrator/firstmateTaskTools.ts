@@ -347,6 +347,15 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         }
         return withdrawn.text;
       }),
+    withdrawAllowance: (input) =>
+      asText(() => {
+        const record = resolve(input.task);
+        host.asks.attach(record.id, "update_task");
+        const withdrawn = supervisor.overrides.withdrawAllowance(record.id, input.card);
+        if (withdrawn.ok)
+          tookEffect(record.id, `Took back your yes on ${record.key}: ${record.title}`);
+        return withdrawn.text;
+      }),
     startAgain: async (input) => {
       const record = resolve(input.task);
       const result = supervisor.starts.startAgain(record.id);

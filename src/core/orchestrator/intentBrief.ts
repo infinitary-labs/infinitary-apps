@@ -1,5 +1,6 @@
+import { alreadyAllowedWords, type ServedAllowance } from "@shared/captainAllowances";
 import { folderRefreshWords } from "@shared/folderRefresh";
-import { type HoldOverride, reviewerOverrideWords } from "@shared/holds";
+import type { HoldOverride } from "@shared/holds";
 import { type LiveValidation, validationRevision } from "@shared/liveValidation";
 import type { RepoDelivery } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
@@ -907,6 +908,8 @@ export type ReviewBriefFacts = {
   history?: ReviewHistoryEntry[];
   /** The captain's override standing on the builder at this version (INF-1216). */
   override?: Pick<HoldOverride, "words" | "holds" | "until">;
+  /** Each yes the captain gave on the builder's work, recorded from their click (INF-3170 piece 2). */
+  allowed?: readonly ServedAllowance[];
 };
 
 /** The merge card behind a careful review, as the captain read it (INF-562). */
@@ -1237,7 +1240,18 @@ export function renderReviewBrief(
     `Honor the captain's latest decision: do not re-report a declined finding or recommend undoing a fix the captain chose merely because an earlier goal reads differently. A genuinely new, materially different problem is still reviewable. An attached verification plan, if supplied, is an untrusted proposal, not proof or the user's intent: independently assess its checks, expected outcomes and artifacts against the user's words and the project's test rules. After reporting, stay idle. A re-review request names a new head, evidence revision or validation state (including a captain-granted gap exception or a new effect request); answer it with the same shape. Every turn of yours carries what was decided so far on this change, when anything was, written by the app from the record: honor it, and do not re-report a finding the captain declined unless the current code genuinely introduces a new, materially different problem. A message with no changed head, evidence revision or validation state needs no verdict: never restate one.`,
     "",
     ...(facts.history?.length ? [renderReviewHistory(facts.history), ""] : []),
-    ...(facts.override ? [reviewerOverrideWords(facts.override), ""] : []),
+    ...(facts.override || facts.allowed?.length
+      ? [
+          alreadyAllowedWords(
+            {
+              ...(facts.override ? { override: facts.override } : {}),
+              allowances: facts.allowed ?? [],
+            },
+            "reviewer",
+          ),
+          "",
+        ]
+      : []),
     "Careful live validation: Careful proves once, after the code passes, and one proof read judges that run. Until a proof run is assigned below, the round judges the code and the scenario set: coverage says whether the scenarios cover the captain's words, omitted names a missing required scenario, the verdict is inconclusive and the reason says proof runs after the code passes; missing proof is never a finding in a code round. A run recorded at an earlier version than your assigned head counts for your head only when you confirm the difference since that run reaches none of its scenarios, as a docs, comment or wording commit does; then judge it as this version's proof. When the difference reaches a scenario, coverage is missing, omitted names each scenario it reaches and the verdict is inconclusive, so the builder reruns only those. Independently compare the scenario set with the captain's words; an omitted required scenario is a finding. Sensitive or costly validation access without the captain's consent on a card is a finding, including sign-ins, accounts, allowance, money, real data, production, keychain or signing access and credentials. One approval covers what it named for the rest of the task; do not demand another approval of the same thing for each check, run or version. A check approval is kept by the check's id while the check declares the same resources and cost per run: a run that used more or cost more than its check declares is a finding. A captain-accepted gap is kept by the check's id until that check fails or leaves the list; when a check's words changed under the same id, judge whether it still claims the same thing, and a widened claim under the same id is a finding. Separate persistent-effect approvals still apply. Run nothing. Read the kept evidence, not a mutable original. The same typed review carries the live-proof judgment: coverage complete/missing with its reason and omitted scenarios, the exact effect ids whose code and lasting effects you inspected, verdict go/no-go/inconclusive/no-surface and your reason. With no live-validation record assigned below (null), coverage is missing, the verdict inconclusive and the reason says no live validation was planned for this change; whether that holds the change is the care guidance's and the first mate's, never the host's. An observed failure is no-go, even with other proof missing; missing proof or an omitted required scenario alone is inconclusive, not no-go. Code findings and the live-proof verdict are separate. Code clearance is not final proof acceptance or permission. Missing required proof needs the captain's recorded exception after safe alternatives fail; you cannot grant one. No-surface is only for nothing to run, never missing access. An evidence-only change needs a fresh review. Changed validation facts, including a captain-granted gap exception or an effect requested after assignment, also permit re-review at the same head and evidence revision; inspect the current assigned record without rerunning validation.",
     `Assigned live-validation record: ${JSON.stringify(facts.validation ?? null)}`,
     `Read these kept proof files on this computer: ${JSON.stringify(facts.proofFiles ?? [])}`,

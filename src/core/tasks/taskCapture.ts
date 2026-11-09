@@ -114,6 +114,22 @@ export class TaskCapture {
   }
 
   /**
+   * The tasks whose work this one was handed: the work it took over (a
+   * `replaced-by` link into it), the attempt it retries (`retry-of`) and the
+   * task whose branch it continues (`branch-source`). The cards' You asked
+   * line and what the captain already allowed (`sameWorkLineage`) read it.
+   */
+  handedOver(taskId: string): string[] {
+    return [
+      ...this.writer.links.listTo(taskId, "replaced-by").map((link) => link.fromId),
+      ...this.writer.references
+        .list(taskId)
+        .filter((entry) => entry.kind === "retry-of" || entry.kind === "branch-source")
+        .flatMap((entry) => this.tasks.graph.referenceTarget(entry)?.id ?? []),
+    ];
+  }
+
+  /**
    * Where a task's work came from, for its cards' line (INF-1610, INF-2326;
    * docs/card-authoring.md "The You asked line"): read from the saved
    * messages and origins through the task graph, never from any card's
@@ -123,13 +139,7 @@ export class TaskCapture {
     return originAbout(
       {
         get: (taskId) => this.writer.store.get(taskId),
-        handedOver: (taskId) => [
-          ...this.writer.links.listTo(taskId, "replaced-by").map((link) => link.fromId),
-          ...this.writer.references
-            .list(taskId)
-            .filter((entry) => entry.kind === "retry-of" || entry.kind === "branch-source")
-            .flatMap((entry) => this.tasks.graph.referenceTarget(entry)?.id ?? []),
-        ],
+        handedOver: (taskId) => this.handedOver(taskId),
         basis: (taskId) => {
           const basis = this.writer.references.list(taskId).find((entry) => entry.kind === "basis");
           return basis ? this.tasks.graph.referenceTarget(basis)?.id : undefined;

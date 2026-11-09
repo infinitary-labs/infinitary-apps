@@ -1,3 +1,4 @@
+import type { CaptainAllowance } from "@shared/captainAllowances";
 import { anythingElseOf, type Card, mergeEffectOf } from "@shared/cards";
 import {
   choiceWords,
@@ -11,6 +12,7 @@ import {
   standingOverride,
 } from "@shared/holds";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
+import { alreadyAllowed, sameWorkLineage } from "../tasks/alreadyAllowed";
 import { TaskService } from "../tasks/taskService";
 import type { CardService } from "./cardService";
 import type { TaskRuntime } from "./crewRuntime";
@@ -196,6 +198,68 @@ export class CaptainOverrides {
     });
     if (this.host.runtime(taskId)?.state === "streaming")
       void this.host.sweepTaskLane(taskId, this.host.now());
+  }
+
+  /**
+   * What the captain already allowed on a task changed (INF-3170 piece 2):
+   * a yes was recorded from their click, `takenBack` on their words, or the
+   * task now carries on earlier work (a `replaced-by` link). Every crewmate
+   * holding work whose lineage includes the task - the task itself, a
+   * stronger-model retry or a takeover of it - is served its whole list on
+   * its durable lane, as the override's notice is: it starts no turn, and a
+   * running turn hears it now. A task not yet started reads it in its
+   * brief, and a reviewer in every review turn's brief. A link that brings
+   * no yes sends nothing.
+   */
+  allowedNoticed(taskId: string, takenBack?: CaptainAllowance): void {
+    const tasks = this.options.tasks;
+    for (const record of tasks.listActive()) {
+      if (!sameWorkLineage(tasks, record).some((task) => task.id === taskId)) continue;
+      const allowed = alreadyAllowed(tasks, record);
+      if (!takenBack && allowed.allowances.length === 0) continue;
+      const newest = allowed.allowances.at(-1)?.at ?? 0;
+      this.options.inbox.enqueueSteerOnce(record.id, {
+        facts: {
+          kind: "task-allowed-changed",
+          task: { id: record.id, key: record.key, title: record.title },
+          allowed,
+          ...(takenBack ? { takenBack: { words: takenBack.words, covers: takenBack.covers } } : {}),
+        },
+        once: takenBack
+          ? `task-allowed:taken:${takenBack.card}:${takenBack.at}`
+          : `task-allowed:given:${newest}:${allowed.allowances.length}`,
+      });
+      if (this.host.runtime(record.id)?.state === "streaming")
+        void this.host.sweepTaskLane(record.id, this.host.now());
+    }
+  }
+
+  /**
+   * update_task take_back_yes (INF-3170 piece 2): the captain's words,
+   * heard by the first mate, take back the yes they gave on that card - on
+   * the task itself or on a task whose work it does again, where the yes is
+   * kept.
+   */
+  withdrawAllowance(taskId: string, card: string): { ok: boolean; text: string } {
+    const record = this.options.tasks.get(taskId);
+    if (!record) throw new Error(`Unknown task "${taskId}".`);
+    const handle = `${record.key || record.id} "${record.title}"`;
+    const holder = sameWorkLineage(this.options.tasks, record).find((task) =>
+      task.delivery?.captainAllowances?.some((entry) => entry.card === card.trim()),
+    );
+    const taken = holder
+      ? this.options.tasks.delivery.withdrawAllowance(holder.id, card.trim())
+      : undefined;
+    if (!holder || !taken)
+      return {
+        ok: false,
+        text: `${handle} has no yes recorded from card "${card.trim()}". Its crew facts list each yes with the card it was given on.`,
+      };
+    this.allowedNoticed(holder.id, taken);
+    return {
+      ok: true,
+      text: `Took back the captain's yes on ${handle}: "${taken.words}". Its crewmate asks again before anything it covered.`,
+    };
   }
 
   /**

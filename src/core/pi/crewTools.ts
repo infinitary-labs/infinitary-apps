@@ -133,6 +133,12 @@ export type CrewStatusEntry = {
    */
   override?: { passes: string; words: string };
   /**
+   * Each yes the captain gave that this task's turns are served as already
+   * allowed (INF-3170 piece 2): the card it was given on, which
+   * update_task take_back_yes names, and what it covers.
+   */
+  allowed?: { card: string; covers: string }[];
+  /**
    * The host's refusal of this task's completion card, standing until one
    * goes up (FI3-401): the card's title, when (ISO 8601), the typed reason
    * and the host's words for it. A report saying the card went up is wrong

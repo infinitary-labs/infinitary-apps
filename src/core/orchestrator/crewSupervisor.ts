@@ -170,6 +170,7 @@ export class CrewSupervisor {
   private readonly programs: ProgramRunner;
   /** The crew's side of a running program: its parts, its asks, its bound and its end. */
   private readonly crewPrograms: CrewPrograms;
+  private readonly stopAllowedLinks: () => void;
 
   constructor(private readonly options: CrewSupervisorOptions) {
     const now = options.now;
@@ -459,6 +460,18 @@ export class CrewSupervisor {
       syncCaptainGate: (taskId, at) => this.ladder.syncCaptainGate(taskId, at),
       runtime: (taskId) => this.tasks.get(taskId),
       sweepTaskLane: (taskId, at) => this.watch.sweepTaskLane(taskId, at),
+    });
+    // A task that now carries on earlier work reads that work's yeses too (INF-3170 piece 2).
+    // The notice writes, so it runs after the change notification, never inside it.
+    this.stopAllowedLinks = options.tasks.onChange(({ events }) => {
+      const carriers = events
+        .filter((event) => event.kind === "linked" && event.data?.type === "replaced-by")
+        .map((event) => event.taskId);
+      if (carriers.length > 0)
+        queueMicrotask(() => {
+          if (this.disposed) return;
+          for (const taskId of carriers) this.overrides.allowedNoticed(taskId);
+        });
     });
     this.briefs = new CrewBrief(options, {
       cards: this.cards,
@@ -1319,6 +1332,7 @@ export class CrewSupervisor {
   disposeAll(): Promise<void> {
     this.disposed = true;
     this.cards.dispose();
+    this.stopAllowedLinks();
     // Each program runs again from its record at the next start.
     this.programs.dispose();
     this.watch.stopWatchdog();

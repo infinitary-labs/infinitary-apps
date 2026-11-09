@@ -46936,6 +46936,21 @@
                   },
                   "browserPage": {
                     "type": "string"
+                  },
+                  "allows": {
+                    "type": "object",
+                    "properties": {
+                      "action": {
+                        "type": "string"
+                      },
+                      "covers": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "action",
+                      "covers"
+                    ]
                   }
                 },
                 "required": [

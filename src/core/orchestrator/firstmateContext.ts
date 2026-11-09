@@ -908,6 +908,9 @@ export class FirstmateContext {
               ? { check_back: `${iso(times.checkBackUntil)}: ${times.checkBackFor ?? ""}` }
               : {}),
             ...(entry?.override ? { override: entry.override.passes } : {}),
+            ...(entry?.allowed
+              ? { allowed: entry.allowed.map((yes) => `${yes.card}: ${yes.covers}`) }
+              : {}),
           },
         };
       });

@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { alreadyAllowedWords } from "@shared/captainAllowances";
 import { acceptedValidation } from "@shared/liveValidation";
 import { REVIEW_EARLIER_WORDS } from "@shared/vocabulary";
 import { describe, expect, it, vi } from "vitest";
@@ -348,6 +349,50 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(reread).toContain(`at head ${fixed}`);
       expect(reread).toContain(`git range-diff <default>..${passed} <default>..${fixed}`);
       expect(tasks.get(updateId)?.delivery).toMatchObject({ headSha: fixed, passedHead: passed });
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  // INF-3170 piece 2, the captain's pick: a yes carries to "That task, its
+  // reviewer, a stronger-model retry and a takeover of its work".
+  it("serves the reviewer each yes the captain gave on the builder's work, as already allowed", async () => {
+    const repo = gitRepo();
+    try {
+      const builder = fakeCrewmate();
+      const reviewer = fakeCrewmate();
+      const { supervisor, repos, workspace, tasks } = setup(builder, {
+        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+        crewmates: [reviewer],
+      });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId } = await supervisor.intake.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await tick();
+      const yes = {
+        words: 'Use my account, on the card "Run the meter check on your account"',
+        covers: "Signing in with the captain's own account for the meter check",
+        card: "card-meter",
+        at: 1,
+      };
+      tasks.delivery.recordAllowance(taskId, yes);
+      await reportTurn(builder, taskId, BUILDER_REPORT);
+      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
+
+      await supervisor.intake.commission({
+        title: "Review",
+        intent: intentOf("review it"),
+        shape: { review_of: taskId },
+      });
+      await vi.waitFor(() => expect(reviewer.promptCalls.length).toBeGreaterThan(0));
+      expect(reviewer.promptCalls[0]).toContain(
+        alreadyAllowedWords({ allowances: [yes] }, "reviewer"),
+      );
     } finally {
       repo.dispose();
     }

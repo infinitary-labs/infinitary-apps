@@ -196,6 +196,8 @@ jobs:
         # Scope Node headers to this install, never to Electron rebuilds.
         env:
           NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      # The run-root regression starts real Vitest Chromium too.
+      - uses: ./.github/actions/browser-chromium
       - run: pnpm test --project integration --shard="$SHARD/$SHARDS"
         env:
           SHARD: ${{ matrix.shard }}

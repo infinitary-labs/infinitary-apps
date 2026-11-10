@@ -348,6 +348,11 @@ jobs:
       - name: Read the temporary volume's filesystem type
         if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
         run: node -e 'console.log(require("fs").statfsSync(require("os").tmpdir()).type)'
+      # The native run-root regression includes the real Vitest browser.
+      - uses: ./Application Support/firstmate/.github/actions/browser-chromium
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
+        with:
+          working-directory: Application Support/firstmate
       - id: unit
         if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
         timeout-minutes: 60
@@ -687,14 +692,17 @@ jobs:
             projects: --project pure --project unit --project unit-isolated
             shard: 3
             shards: 3
+          # The run-root regression starts real Chromium in this cohort.
           - tests: Integration tests
             projects: --project integration
             shard: 1
             shards: 2
+            chromium: true
           - tests: Integration tests
             projects: --project integration
             shard: 2
             shards: 2
+            chromium: true
           # Probes can fail with no code change (docs/test-cohorts.md, "Probes"):
           # every one runs, across both groups, never a changed-path selection.
           - tests: Environment checks

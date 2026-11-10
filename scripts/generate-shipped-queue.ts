@@ -9,6 +9,7 @@ import {
   shippedFiles,
   shippedSourceHash,
 } from "../src/core/queue/shipped.ts";
+import { historyBreak } from "./shipped-queue-history.ts";
 
 // The shipped queue's files as the queue-setup skill hands them to a
 // crewmate (docs/forge.md, "The shipped queue"): for each host part, each
@@ -44,21 +45,23 @@ const PARTS: { part: QueueHostPart; list: string; was?: string }[] = [
 ];
 
 // A version once on the default branch keeps its hash: a change there
-// appends a version instead of rewriting one. A pull request's check runs on
-// its merge commit, whose first parent is the default branch; elsewhere the
-// fetched default branch stands in, and with neither there is nothing to
-// compare.
-const base = process.env.GITHUB_BASE_REF ? "HEAD^1" : "origin/main";
-const released = (() => {
+// appends a version instead of rewriting one (`historyBreak`). A pull
+// request's check runs on its merge commit, whose first parent is the
+// default branch, which is also where it started; elsewhere the fetched
+// default branch stands in, and this version started where it meets it, so
+// a branch older than the default branch need not hold the versions
+// appended since. With no default branch there is nothing to compare.
+const git = (...args: string[]) => {
   try {
-    return execFileSync("git", ["show", `${base}:src/core/queue/shipped.ts`], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
+    return execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
   } catch {
     return "";
   }
-})();
+};
+const base = process.env.GITHUB_BASE_REF ? "HEAD^1" : "origin/main";
+const fork = process.env.GITHUB_BASE_REF ? base : git("merge-base", "HEAD", base).trim() || base;
+const released = git("show", `${base}:src/core/queue/shipped.ts`);
+const started = fork === base ? released : git("show", `${fork}:src/core/queue/shipped.ts`);
 /** The hashes a named list holds in a version of `shipped.ts`. */
 function listed(text: string, name: string): string[] | undefined {
   const found = new RegExp(`export const ${name}: readonly string\\[\\] = \\[([^\\]]*)\\]`).exec(text);
@@ -72,10 +75,15 @@ for (const { part, list, was } of PARTS) {
     throw new Error(
       `The shipped queue's ${part.name} source changed: append ${hash} to ${list} in src/core/queue/shipped.ts, which moves its queue past version ${part.version}.`,
     );
-  const before = listed(released, list) ?? (was ? listed(released, was) : undefined) ?? [];
-  if (before.some((sha, index) => part.sources[index] !== sha))
+  const history = (text: string) => listed(text, list) ?? (was ? listed(text, was) : undefined) ?? [];
+  const broken = historyBreak(part.sources, history(released), history(started));
+  if (broken?.kind === "rewrote")
     throw new Error(
-      `${list} in src/core/queue/shipped.ts rewrote a version the default branch already has: restore it and append the new hash instead.`,
+      `${list} in src/core/queue/shipped.ts rewrote or dropped version ${broken.version}, which the default branch already has: restore it and append the new hash instead.`,
+    );
+  if (broken?.kind === "taken")
+    throw new Error(
+      `${list} in src/core/queue/shipped.ts holds another hash at version ${broken.version}, which the default branch has since taken: bring the branch up to date and append the new hash after the default branch's.`,
     );
 
   const out = join(skill, part.folder);

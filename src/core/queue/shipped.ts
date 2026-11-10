@@ -32,8 +32,8 @@ type ShippedSource = (typeof SHIPPED_SOURCES)[number];
  * moves that part's version, so a project on that host whose stamp is older
  * is offered the update as a pull request, while a project on another host
  * keeps its version. `scripts/generate-shipped-queue.ts` refuses a source
- * whose hash is not its list's last, and a list that does not keep the
- * default branch's as its start.
+ * whose hash is not its list's last, and a list that rewrites or drops a
+ * hash the default branch already has (`scripts/shipped-queue-history.ts`).
  */
 export const GITHUB_QUEUE_SOURCES: readonly string[] = [
   "1159b9f2fb307e12e2c42b53138621070b9c16059dffa9d7572d4499c7451e52",

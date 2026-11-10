@@ -739,7 +739,8 @@ On GitLab it cancels the parent and the checks child pipeline before releasing t
 When the pull request moved on since, as when its crewmate pushed the fix after the pause, the send-back writes nothing on it, the pause's issue says what that version reads instead, and the rest resume (`answerWords`); its new version joins a later batch once it is marked waiting.
 The files a project gets are generated from that source with a stamp line naming its host part's version (`GITHUB_QUEUE_PART`, `GITLAB_QUEUE_PART`, `src/core/queue/shipped.ts`), and `node scripts/generate-shipped-queue.ts` writes each part's into its folder of the `queue` runbook's `queue-setup` skill.
 Each part's version is how many source hashes its own list holds (`GITHUB_QUEUE_SOURCES`, `GITLAB_QUEUE_SOURCES`), hashing the rules and the files that part ships, so a change to one host's files moves only that host's version, and a change to the rules moves both.
-`pnpm check` refuses a source whose hash is not the last one its list holds, or a list that rewrites a hash the default branch already has, so every change to the queue ships as a new version.
+`pnpm check` refuses a source whose hash is not the last one its list holds, or a list that rewrites or drops a hash the default branch already has, so every change to the queue ships as a new version.
+A branch older than the default branch need not hold the hashes appended since it started; a pull request's check, on its merged result, holds them all (`scripts/shipped-queue-history.ts`).
 A project carries a copy, not a reference: a newer Infinitary offers the update as a pull request.
 Evidence: `src/core/queue/shipped/github.test.ts` and `src/core/queue/shipped/compose.test.ts`.
 

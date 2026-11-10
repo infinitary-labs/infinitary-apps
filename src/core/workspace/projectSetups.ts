@@ -118,7 +118,7 @@ export class ProjectSetups {
       : this.options.devices().filter((device) => deviceRunsWork(device.kind));
     if (runsOnAsk && !checked.origin)
       throw new Error(
-        `${checked.name} would be kept on ${HERE.this} only, so its tasks run here. Pass runsOn null.`,
+        `${checked.name} would be kept on ${HERE.this} only, so its tasks run there. Pass runsOn null.`,
       );
     const resolved = runsOnAsk ? resolveWorkComputer(runsOnAsk, computers) : runsOnAsk;
     const runsOn = resolved === RUNS_ON_THIS_MAC ? null : resolved;

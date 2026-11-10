@@ -162,10 +162,10 @@ describe("the words for a device", () => {
 
   it("says what Remove stops and what it did", () => {
     expect(deviceWords.removeStops({ ...mini, tasks: 1, runs: ["website"] })).toBe(
-      "Its task on website stops, and its unmerged work comes here first.",
+      "Its task on website stops, and its unmerged work comes to me first.",
     );
     expect(deviceWords.removeStops({ ...mini, tasks: 0 })).toBe(
-      "Its unmerged work comes here first.",
+      "Its unmerged work comes to me first.",
     );
     expect(deviceWords.removed({ ...mini, runs: ["website", "api"] })).toBe(
       "Removed Mac mini. website and api run on this computer now.",

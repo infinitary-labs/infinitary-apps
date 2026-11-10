@@ -1,6 +1,10 @@
 import { createServer, type Server } from "node:http";
 import type { BrowserViewer } from "@core/browser/browserViews";
-import { BROWSER_FROM_ANY_VIEW, EVERY_VIEW_ASKS } from "@core/connection/connection";
+import {
+  BROWSER_FROM_ANY_VIEW,
+  DEVICES_FROM_A_VIEW,
+  EVERY_VIEW_ASKS,
+} from "@core/connection/connection";
 import { listsChange } from "@core/connection/contractChanges";
 import { HomeLink, type HomeLinkOptions, type HomeLinkState } from "@core/devices/homeLink";
 import type { Joined, JoinedHome } from "@core/devices/joinedHome";
@@ -42,9 +46,8 @@ import { ViewLook } from "./viewLook";
  *   every window here: the other Mac sends this connection its pictures, and
  *   each goes to the windows that watch that task (docs/view.md, "A task's
  *   browser on a view").
- * - Everything else stays on the other Mac - its computers and phones, its
- *   Secrets, voice, panels and Observe - and is refused here without being
- *   sent.
+ * - Everything else stays on the other Mac - its Secrets, voice, panels and
+ *   Observe - and is refused here without being sent.
  *
  * Only the pushes a view shows reach the window; the other Mac's own look
  * is never one of them. A change asked while that Mac is out of reach is
@@ -58,8 +61,9 @@ import { ViewLook } from "./viewLook";
 
 /**
  * The pushes a view shows, with what its Settings follow: a sign-in's steps,
- * the sign-ins where projects live, integrations and Diagnostics. The rest
- * are the other Mac's own: its look, voice and panels.
+ * the sign-ins where projects live, integrations, Diagnostics, and the
+ * computers and phones with their sign-ins (`devices-from-a-view.md`). The
+ * rest are the other Mac's own: its look, voice and panels.
  */
 export const VIEW_PUSHES: ReadonlySet<PushChannel> = new Set<PushChannel>([
   "inf:event",
@@ -74,6 +78,13 @@ export const VIEW_PUSHES: ReadonlySet<PushChannel> = new Set<PushChannel>([
   "inf:forges",
   "inf:integrations",
   "inf:sharing",
+  "inf:devices",
+  "inf:devices:addresses",
+  "inf:devices:nearby",
+  "inf:devices:sign-ins",
+  "inf:devices:sign-in",
+  "inf:computers:presence",
+  "inf:computers:resources",
 ]);
 
 /** Channels answered from this Mac's own look. */
@@ -224,6 +235,9 @@ export class ViewBackend {
         ? { needsUpdateThere: true as const }
         : {}),
       ...(this.browserWaitsThere() ? { browserNeedsUpdateThere: true as const } : {}),
+      ...(state.homeChanges !== null && !listsChange(state.homeChanges, DEVICES_FROM_A_VIEW)
+        ? { devicesNeedUpdateThere: true as const }
+        : {}),
       ...(state.homeChanges !== null && !listsChange(state.homeChanges, SIGN_IN_RETURN)
         ? { returnsNeedUpdateThere: true as const }
         : {}),

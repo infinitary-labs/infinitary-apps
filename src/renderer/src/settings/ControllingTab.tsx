@@ -53,7 +53,7 @@ export function ControllingTabView({
     <div data-controlling="">
       <SectionLabel>Controlling</SectionLabel>
       <div className="fm-devices-say">
-        What you do here happens on {mac.name}. Its computers, Secrets and voice stay there.
+        What you do here happens on {mac.name}. Its Secrets and voice stay there.
       </div>
       <div className="fm-devices-box">
         {asking ? (

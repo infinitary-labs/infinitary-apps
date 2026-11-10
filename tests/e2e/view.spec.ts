@@ -13,7 +13,6 @@ import { TaskService } from "../../src/core/tasks/taskService";
 import {
   backWords,
   changesOffWords,
-  devicesNotHereWords,
   JOIN_CONFIRM_WORDS,
   JOIN_RUNS_WORK,
   joinRefusalWords,
@@ -26,8 +25,8 @@ import {
 import { builtinManifest } from "../../src/renderer/src/plugins/builtin/manifest";
 import type { Card } from "../../src/shared/cards";
 import { needsReauthCopy } from "../../src/shared/credentialHealth";
-import { COMPUTER, HOME } from "../../src/shared/deviceNames";
-import { deviceJoinedLine } from "../../src/shared/devices";
+import { COMPUTER } from "../../src/shared/deviceNames";
+import { deviceJoinedLine, PAIRING_LINK_PREFIX } from "../../src/shared/devices";
 import { feedLineFrom } from "../../src/shared/feed";
 import {
   RETURN_CONTROL_LABEL,
@@ -66,7 +65,7 @@ import {
  * it: a second app joins Firstmate on the first with a pasted link at its
  * own first launch, then shows that Mac's cards with their pictures, its
  * feed and its tasks; an answer in either app shows in the other; a button
- * that opens Devices there sends nothing and keeps its card; while
+ * that opens Devices opens that Mac's Devices here and makes its link; while
  * that Mac is out of reach the view says as of when and refuses changes,
  * which never reach it later; a restart there catches the view up; the view
  * itself restarts with no core of its own; and Leave returns it to its own
@@ -326,10 +325,10 @@ test("a second Mac joins at its first launch, controls this Firstmate, rides out
       );
       const board = await page.evaluate(() => window.infinitary.tasks.board());
       expect(board.tasks.map((task) => task.title)).toContain("Chart the harbour");
-      // Its computers stay there: this computer never asks for them.
-      await expect(page.evaluate(() => window.infinitary.devices.list())).rejects.toThrow(
-        `answered only on ${HOME.the}`,
-      );
+      // Its computers are that Mac's, asked there (INF-1352's plan, piece 2).
+      expect(
+        (await page.evaluate(() => window.infinitary.devices.list())).map((d) => d.name),
+      ).toEqual(["MacBook Air"]);
     });
 
     await test.step("an answer in either app shows in the other", async () => {
@@ -342,15 +341,17 @@ test("a second Mac joins at its first launch, controls this Firstmate, rides out
       await expectNoCard(page, HARBOUR_CHART);
     });
 
-    await test.step("a Devices button sends nothing, and its card stays on both Macs", async () => {
+    await test.step("a Devices button opens that Mac's Devices here and makes its link", async () => {
       const { page } = air as LaunchedApp;
       await showCard(page, INVITE_CARD);
       const card = shownCard(page, INVITE_CARD);
       await card.getByRole("button", { name: "Make a link", exact: true }).click();
-      await expect(card.getByRole("alert")).toContainText(devicesNotHereWords(seenPro("in-reach")));
+      await expect(page.locator("[data-devices]")).toBeVisible();
+      await expect(page.locator('[data-panel-state="open"] [data-device-link]')).toContainText(
+        PAIRING_LINK_PREFIX,
+      );
+      await page.getByRole("button", { name: "Back", exact: true }).click();
       await expect(page.locator('[data-screen-label="Settings"]')).toHaveCount(0);
-      for (const shown of [page, pro.page])
-        expect(await shownIds(shown)).toEqual(expect.arrayContaining(["invite"]));
     });
 
     await test.step("while that Mac is out of reach it says as of when, and refuses changes", async () => {

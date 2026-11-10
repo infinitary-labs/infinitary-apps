@@ -22,6 +22,16 @@ export const HERE = {
   This: "This computer",
 } as const;
 
+/**
+ * A sentence the first mate's computer says of itself as this computer,
+ * shown on another computer that controls it: there it names that computer
+ * by `name` instead (docs/view.md, "Settings on a view"). With no name, the
+ * sentence is shown where it was written, and stays as it is.
+ */
+export function hereAs(text: string, name: string | null): string {
+  return name === null ? text : text.replaceAll(HERE.This, name).replaceAll(HERE.this, name);
+}
+
 /** The computer where your first mate lives, named from another one that does not know its name. */
 export const HOME = {
   the: "the computer where your first mate lives",

@@ -122,6 +122,8 @@ const FALLBACKS = [
       "devices-command.spec.ts",
       "devices-address.spec.ts",
       "devices-ssh.spec.ts",
+      // A computer that controls the first mate adds and removes one from its own Devices.
+      "run-control.spec.ts",
     ],
   },
   {

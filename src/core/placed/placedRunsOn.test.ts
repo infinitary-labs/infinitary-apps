@@ -201,7 +201,7 @@ describe("a project that runs on a computer that runs work", () => {
     const home = at.home();
     const { repo } = await home.repos.setup({ kind: "init", name: "notes" });
     expect(() => home.repos.setRunsOn(repo.id, at.deviceId)).toThrow(
-      "notes: Kept on this computer only, so its tasks run here.",
+      "notes: Kept on this computer only, so its tasks run there.",
     );
     seedTask(home.tasks, { id: "t-notes", title: "notes", status: "queued", repoId: repo.id });
     await home.supervisor.starts.dispatchQueuedTask("t-notes");
@@ -630,7 +630,7 @@ describe("a task's own Runs on", () => {
     );
     seedTask(home.tasks, { id: "t-notes", title: "notes", status: "queued", repoId: notes.id });
     expect(refusal("t-notes")).toBe(
-      'KEY "notes" is in notes. Kept on this computer only, so its tasks run here.',
+      'KEY "notes" is in notes. Kept on this computer only, so its tasks run there.',
     );
     seedTask(home.tasks, {
       id: "t-review",
@@ -665,7 +665,7 @@ describe("a task's own Runs on", () => {
         shape: { runs_on_ask: at.deviceId },
       }),
     ).rejects.toThrow(
-      'Nothing was spawned. "notes" is in notes. Kept on this computer only, so its tasks run here.',
+      'Nothing was spawned. "notes" is in notes. Kept on this computer only, so its tasks run there.',
     );
     await expect(
       home.supervisor.intake.commission({

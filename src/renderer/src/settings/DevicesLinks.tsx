@@ -7,6 +7,7 @@ import {
 } from "@shared/devices";
 import { useEffect, useState } from "react";
 import { Button } from "../design";
+import { useHereAs } from "../devices/useFirstMatePlace";
 import type { DevicesTabViewProps, LinkPanel } from "./devicesState";
 import {
   type DevicePanelMake,
@@ -42,6 +43,7 @@ export function FirewallLine({
   firewall: DeviceFirewall;
   under?: "panel" | "address";
 }) {
+  const here = useHereAs();
   const { lines, way } = firewallWords(firewall);
   return (
     <div
@@ -50,7 +52,7 @@ export function FirewallLine({
       data-under={under}
       role="note"
     >
-      <div className="fm-devices-firewall-say">{lines.join(" ")}</div>
+      <div className="fm-devices-firewall-say">{here(lines.join(" "))}</div>
       <code className="fm-devices-firewall-way">{way}</code>
     </div>
   );
@@ -63,19 +65,20 @@ function wayState(count: number, on: boolean): { text: string; tone?: "busy" } {
 }
 
 export function WaysSection({ addresses, devices, busy, onCopyWay }: DevicesTabViewProps) {
+  const here = useHereAs();
   if (!addresses) return null;
   const local = addresses.addresses.filter((entry) => entry.network === "local");
   const priv = addresses.addresses.filter((entry) => entry.network === "private");
   const none = local.length === 0 && priv.length === 0;
   return (
     <>
-      <SectionLabel>{WAYS_WORDS.label}</SectionLabel>
+      <SectionLabel>{here(WAYS_WORDS.label)}</SectionLabel>
       {none ? (
         <SettingRow
           id="device-address"
           title="Address"
-          description={WAYS_WORDS.noNetwork}
-          control={<span className="fm-devices-address">{HERE.this} only</span>}
+          description={here(WAYS_WORDS.noNetwork)}
+          control={<span className="fm-devices-address">{here(HERE.this)} only</span>}
         />
       ) : (
         <div className="fm-devices-box" data-device-ways="">
@@ -111,7 +114,7 @@ export function WaysSection({ addresses, devices, busy, onCopyWay }: DevicesTabV
           <WayRow
             on={false}
             title={WAYS_WORDS.internet}
-            line={WAYS_WORDS.internetLine}
+            line={here(WAYS_WORDS.internetLine)}
             state={wayState(0, false)}
             way="internet"
           />
@@ -181,13 +184,14 @@ export function LinkPanelView({
   onDone,
   onMake,
 }: DevicesTabViewProps) {
+  const here = useHereAs();
   if (!panel) return null;
   if (panel.state === "joined")
     return (
       <div className="fm-devices-panel" data-panel-state="joined" role="status">
         <span className="fm-devices-dot" data-tone="ok" />
         <div style={{ flex: 1 }}>
-          <div style={{ color: "var(--fg-1)" }}>{panel.line}</div>
+          <div style={{ color: "var(--fg-1)" }}>{here(panel.line)}</div>
           {panel.work && (
             <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>
               Give it a project in Projects when you want it to run work.
@@ -253,6 +257,7 @@ function OpenLink({
   startCopied?: boolean;
   onStop: () => void;
 }) {
+  const here = useHereAs();
   const [copied, setCopied] = useState<"copied" | "failed" | null>(startCopied ? "copied" : null);
   useEffect(() => {
     if (copied !== "copied") return;
@@ -272,10 +277,10 @@ function OpenLink({
   return (
     <div className="fm-devices-panel" data-panel-state="open" data-panel-holds={words.thing}>
       <SectionLabel>{words.label}</SectionLabel>
-      <div className="fm-devices-panel-say">{words.say.join(" ")}</div>
+      <div className="fm-devices-panel-say">{here(words.say.join(" "))}</div>
       {make === "phone" && (
         <>
-          <div className="fm-devices-panel-say">{phoneRouteWords(invite.link)}</div>
+          <div className="fm-devices-panel-say">{here(phoneRouteWords(invite.link))}</div>
           <PhoneCode link={invite.link} />
         </>
       )}

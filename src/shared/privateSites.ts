@@ -84,7 +84,8 @@ export function listsPrivateSite(sites: readonly string[], hostname: string): bo
 export const PRIVATE_SITES_WORDS = {
   title: "Private sites",
   lead: "Sites on an office, home or VPN network that task browsers may open, on every computer. Add a name, or a suffix such as .corp.example.com for every name under it.",
-  empty: "None yet. Task browsers reach public websites and the pages your projects serve here.",
+  empty:
+    "None yet. Task browsers reach public websites and the pages your projects serve on the computer they run on.",
   field: "Private site",
   placeholder: "wiki.corp.example",
   add: "Add",

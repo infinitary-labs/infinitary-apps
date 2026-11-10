@@ -60,14 +60,6 @@ export function changesOffWords(mac: ViewMac): string {
   return `Changes are off until ${mac.name} is back`;
 }
 
-/**
- * What a card's button that opens the first mate's Devices section says:
- * its computers and phones are not changed from another computer yet.
- */
-export function devicesNotHereWords(mac: ViewMac): string {
-  return `${mac.name}'s computers and phones cannot be changed from here yet.`;
-}
-
 /** What this app says of something the first mate there is too old to answer. */
 export function updateThereWords(mac: ViewMac): string {
   return `Update Infinitary on ${mac.name} to do this from here.`;
@@ -126,14 +118,18 @@ export function browserWaitsForUpdate(thisMac: ThisMac | null): thisMac is ViewM
 }
 
 /**
- * What a card's button says when this app never sends it: one that opens
- * Devices, or one that hands the captain a task's browser or opens Settings
- * that a first mate on an older version cannot answer. Nothing is sent, and
- * the card stays on both computers. Null for every other button.
+ * What a card's button says when this app never sends it: one that hands
+ * the captain a task's browser, or one that opens Settings - Devices
+ * included - that a first mate on an older version cannot answer. Nothing is
+ * sent, and the card stays on both computers. Null for every other button.
  */
 export function doneThereWords(mac: ViewMac, action: Pick<CardAction, "effect">): string | null {
-  if (action.effect?.kind === "open" && action.effect.target === "devices")
-    return devicesNotHereWords(mac);
+  if (
+    action.effect?.kind === "open" &&
+    action.effect.target === "devices" &&
+    mac.devicesNeedUpdateThere
+  )
+    return updateThereWords(mac);
   if (takesTaskBrowser(action) && mac.browserNeedsUpdateThere) return browserNotHereWords(mac);
   if (opensSettings(action) && mac.needsUpdateThere) return updateThereWords(mac);
   return null;

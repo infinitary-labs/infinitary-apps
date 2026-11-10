@@ -54,9 +54,9 @@ const CLEAR: WindowFacts = { dialogOpen: false };
 
 describe("why a window command cannot run now", () => {
   // INF-1228, the captain's answer control=all: of a first mate started by a
-  // command, the tabs nobody could open there open here; Automation, already
-  // its own on any Mac that controls another, keeps its own rule.
-  it("opens Usage and Integrations on a computer that controls another", () => {
+  // command, the tabs nobody could open there open here. INF-1352's plan, piece 2
+  // (INF-1339): Automation and Pause all automations run from a view too.
+  it("opens Usage, Integrations and Automation on a computer that controls another", () => {
     const view = {
       role: "view",
       name: "Mac mini",
@@ -74,11 +74,10 @@ describe("why a window command cannot run now", () => {
       "usage.unit",
       "settings.integrations",
       "settings.panels",
+      "settings.automation",
+      "automation.pause-all",
     ] as const)
       expect(commandRefusal(command, windowed, CLEAR)).toBeNull();
-    expect(commandRefusal("settings.automation", windowed, CLEAR)).toBe(
-      "Automation is on Mac mini",
-    );
     // The captain's answer on the review: an older first mate is told apart before it is asked.
     for (const command of ["usage.unit", "allowance.recheck"] as const)
       expect(
@@ -139,7 +138,7 @@ describe("why a window command cannot run now", () => {
     );
   });
 
-  it("refuses Try again where Devices is not offered, as on a Mac that controls another", () => {
+  it("refuses Try again where Devices is not offered", () => {
     expect(commandRefusal("devices.try-again", HOME, CLEAR)).toBeNull();
     expect(commandRefusal("devices.try-again", { ...HOME, devicesShown: false }, CLEAR)).toBe(
       "Devices is on the computer where your first mate lives",

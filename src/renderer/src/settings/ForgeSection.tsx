@@ -23,6 +23,7 @@ import { type FormEvent, useCallback, useEffect, useId, useState } from "react";
 import { CopyCode } from "../accounts/CopyCode";
 import { useShellStore } from "../app/store";
 import { Button, Input, type InputProps, type StatusDotTone } from "../design";
+import { useHereAs } from "../devices/useFirstMatePlace";
 import { DeviceForgeRows } from "./DeviceForgeRows";
 import { ForgeBrowserAside } from "./ForgeBrowserAside";
 import { GitHubCliLine } from "./GitHubCliLine";
@@ -314,6 +315,7 @@ function KeyAside({
   const [checking, setChecking] = useState(false);
   const [problem, setProblem] = useState("");
   const ids = useId();
+  const here = useHereAs();
   const host = hostOfAddress(address);
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -343,7 +345,7 @@ function KeyAside({
       onSubmit={(event) => void submit(event)}
     >
       <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>
-        {forgeKeyIntro(host, form.server)}
+        {here(forgeKeyIntro(host, form.server))}
       </div>
       <div className="fm-forges-field">
         <label htmlFor={`${ids}-address`}>{FORGE_SECTION_WORDS.address}</label>

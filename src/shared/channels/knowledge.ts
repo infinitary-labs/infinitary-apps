@@ -28,47 +28,47 @@ export const knowledgeChannels = {
   // it and whether there is any to show (`held`: an entry, or a collection
   // that cannot be read), which the window asks before it registers the
   // Knowledge panel, and the browser's reads, scoped as Firstmate's are.
-  // Every build answers them. This Mac's own window only: a view of another
-  // Mac reads none.
+  // Every build answers them, to this computer's window and to a view
+  // (`devices-from-a-view.md`).
   "inf:knowledge:enabled": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([]),
     response: z.object({ enabled: z.boolean(), held: z.boolean() }),
   },
   "inf:knowledge:collections": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([]),
     response: knowledgeCollectionsSchema,
   },
   "inf:knowledge:graph": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([knowledgeGraphArgsSchema]),
     response: knowledgeGraphSchema,
   },
   "inf:knowledge:concepts": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([knowledgeConceptsArgsSchema]),
     response: knowledgeConceptsSchema,
   },
   "inf:knowledge:findings": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([knowledgeFindingsArgsSchema]),
     response: knowledgeFindingsSchema,
   },
   "inf:knowledge:entry": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([knowledgeEntryArgsSchema]),
     response: knowledgeEntryReadSchema,
   },
@@ -77,14 +77,14 @@ export const knowledgeChannels = {
   "inf:knowledge:directions": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([knowledgeDirectionsArgsSchema.optional()]),
     response: knowledgeDirectionsSchema,
   },
   "inf:knowledge:direction": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([knowledgeDirectionArgsSchema]),
     response: knowledgeDirectionReadSchema,
   },
@@ -95,7 +95,7 @@ export const knowledgeChannels = {
   "inf:knowledge:direction:set": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([knowledgeDirectionChangeSchema]),
     response: knowledgeDirectionChangedSchema,
   },
@@ -107,14 +107,14 @@ export const knowledgeChannels = {
   "inf:knowledge:refs": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([knowledgeRefsArgsSchema]),
     response: knowledgeRefsSchema,
   },
   "inf:knowledge:uses": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([knowledgeUsesArgsSchema]),
     response: knowledgeUsesSchema,
   },

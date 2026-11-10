@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { aDevice, COMPUTER, deviceNoun, HERE, HOME } from "./deviceNames";
+import { aDevice, COMPUTER, deviceNoun, HERE, HOME, hereAs } from "./deviceNames";
 import type { DeviceSystem } from "./devices";
 import { platformProfile } from "./platform";
+import { remoteLoginWords } from "./remoteLogin";
 
 describe("what a device is called (the captain's computer everywhere)", () => {
   it("calls every computer a computer, Macs included, and a phone a phone", () => {
@@ -32,5 +33,18 @@ describe("what a device is called (the captain's computer everywhere)", () => {
       many: "computers",
       Many: "Computers",
     });
+  });
+});
+
+// INF-1352's plan, piece 2: the sentences that still say "this computer" name the first mate's
+// computer when another computer shows them.
+describe("the first mate's computer named on a view", () => {
+  it("names it in a sentence its computer says of itself, and leaves it as written there", () => {
+    const said = remoteLoginWords.finding({ name: "Mac mini" });
+    expect(said).toContain(HERE.this);
+    expect(hereAs(said, "MacBook Pro")).toBe(said.replaceAll(HERE.this, "MacBook Pro"));
+    expect(hereAs(said, "MacBook Pro")).not.toContain(HERE.this);
+    expect(hereAs(`${HERE.This} only.`, "MacBook Pro")).toBe("MacBook Pro only.");
+    expect(hereAs(said, null)).toBe(said);
   });
 });

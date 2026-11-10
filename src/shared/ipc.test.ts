@@ -378,6 +378,10 @@ describe("ipc contract", () => {
       "inf:crew:counts",
       "inf:decisions:key:remove",
       "inf:decisions:key:set",
+      "inf:devices:add",
+      "inf:devices:address:set",
+      "inf:devices:addresses",
+      "inf:devices:change-address",
       "inf:devices:custom:address",
       "inf:devices:custom:cancel",
       "inf:devices:custom:check",
@@ -390,12 +394,21 @@ describe("ipc contract", () => {
       "inf:devices:forge-sign-in",
       "inf:devices:forge-sign-in-cli",
       "inf:devices:forge-sign-out",
+      "inf:devices:invite",
+      "inf:devices:keep",
+      "inf:devices:list",
+      "inf:devices:nearby",
+      "inf:devices:remove",
       "inf:devices:runs-on",
+      "inf:devices:shown",
       "inf:devices:sign-in",
       "inf:devices:sign-in:answer",
       "inf:devices:sign-in:cancel",
       "inf:devices:sign-ins",
       "inf:devices:sign-out",
+      "inf:devices:stop",
+      "inf:devices:try-again",
+      "inf:devices:update",
       "inf:feed:recent",
       "inf:forges:cancel",
       "inf:forges:changes",
@@ -417,6 +430,17 @@ describe("ipc contract", () => {
       "inf:integrations:sign-in",
       "inf:integrations:sign-in-cancel",
       "inf:integrations:sign-in-return",
+      "inf:knowledge:collections",
+      "inf:knowledge:concepts",
+      "inf:knowledge:direction",
+      "inf:knowledge:direction:set",
+      "inf:knowledge:directions",
+      "inf:knowledge:enabled",
+      "inf:knowledge:entry",
+      "inf:knowledge:findings",
+      "inf:knowledge:graph",
+      "inf:knowledge:refs",
+      "inf:knowledge:uses",
       "inf:models:available",
       "inf:models:reasoning:set",
       "inf:models:slots",
@@ -555,8 +579,9 @@ describe("ipc contract", () => {
   });
 
   // INF-1352's plan, the captain's answer one_rule=every-view: a view asks everything but
-  // what stays with the first mate's own computer: its devices, Secrets and own hardware.
-  // Its piece 3 moves a task's browser to every view: watched, sized and driven from any window.
+  // what stays with the first mate's own computer: its Secrets and own hardware. Piece 2
+  // brings its devices and Knowledge to every view; piece 3 moves a task's browser to every
+  // view: watched, sized and driven from any window.
   it("keeps on the first mate's computer only what is that computer's own", () => {
     const stays = CORE_INVOKE_CHANNELS.filter(
       (channel) => invokeContract[channel].reach === "home",
@@ -564,7 +589,7 @@ describe("ipc contract", () => {
     const views = new Set<string>(VIEW_INVOKE_CHANNELS);
     expect(stays.length).toBeGreaterThan(0);
     for (const channel of stays) expect(views.has(channel), channel).toBe(false);
-    for (const prefix of ["inf:devices:list", "inf:secrets:view"])
+    for (const prefix of ["inf:voice:status", "inf:secrets:view"])
       expect(stays.filter((channel) => channel === prefix)).toEqual([prefix]);
     for (const channel of [
       "inf:browser:watch",
@@ -575,7 +600,13 @@ describe("ipc contract", () => {
     ])
       expect(views.has(channel), channel).toBe(true);
     // Each signed-in Settings read a view of any first mate opens.
-    for (const channel of ["inf:accounts:list", "inf:settings:routing:get", "inf:repos:list"])
+    for (const channel of [
+      "inf:accounts:list",
+      "inf:settings:routing:get",
+      "inf:repos:list",
+      "inf:devices:list",
+      "inf:knowledge:enabled",
+    ])
       expect(views.has(channel), channel).toBe(true);
   });
 

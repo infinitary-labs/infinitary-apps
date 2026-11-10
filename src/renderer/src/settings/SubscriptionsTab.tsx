@@ -62,7 +62,7 @@ import {
 } from "./subscriptionsWords";
 import { useSettingSave } from "./useSettingSave";
 import "./subscriptions.css";
-import { useFirstMatePlace } from "../devices/useFirstMatePlace";
+import { useFirstMatePlace, useHereAs } from "../devices/useFirstMatePlace";
 
 /**
  * The Subscriptions tab, Instruments direction (captain's pick from the
@@ -593,7 +593,10 @@ export function AccountRow({
   useEffect(() => {
     if (renaming) setRenameValue(account.label);
   }, [renaming, account.label]);
+  const here = useHereAs();
   const view = rowView(account, quotaRow, Date.now());
+  // The account is the first mate's computer's, as its words say of it.
+  if (view.stateText) view.stateText = here(view.stateText);
   const repeated =
     view.dotLabel === "paused" && view.verdict?.text === "paused"
       ? view.verdict.text

@@ -5,6 +5,7 @@ import {
 } from "@shared/savedOutsideData";
 import { useRef, useState } from "react";
 import { Button } from "../design";
+import { useHereAs } from "../devices/useFirstMatePlace";
 import { SettingRow } from "./settingRows";
 
 /**
@@ -20,6 +21,7 @@ export function OutsideDataRow({ kept }: { kept: readonly KeptOutsideData[] }) {
   const [deleting, setDeleting] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const inFlight = useRef(false);
+  const here = useHereAs();
   if (kept.length === 0) return null;
   const words = SAVED_OUTSIDE_DATA_WORDS;
 
@@ -47,7 +49,7 @@ export function OutsideDataRow({ kept }: { kept: readonly KeptOutsideData[] }) {
     <SettingRow
       id="delete-outside-data"
       title={words.title(kept)}
-      description={note ?? words.description(kept)}
+      description={note ?? here(words.description(kept))}
       control={
         <Button
           variant={armed ? "danger" : "ghost"}

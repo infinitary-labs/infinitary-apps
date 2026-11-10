@@ -400,10 +400,13 @@ describe("the app as a view of another Mac", () => {
       platform: "other-os",
     });
     // What stays there is refused here, and never sent.
-    await expect(air.shell.dispatch("inf:devices:list", [])).rejects.toThrow(
+    await expect(air.shell.dispatch("inf:voice:status", [])).rejects.toThrow(
       "answered only on the computer where your first mate lives",
     );
-    expect(pro.asked).not.toContain("inf:devices:list");
+    expect(pro.asked).not.toContain("inf:voice:status");
+    // Its computers and phones are asked there (INF-1352's plan, piece 2).
+    await expect(air.shell.dispatch("inf:devices:list", [])).rejects.toThrow("malformed request");
+    expect(pro.asked).toContain("inf:devices:list");
     // Its look starts from the other Mac's, then is its own.
     expect((await air.shell.dispatch("inf:shell:preferences", [])).appearance).toMatchObject({
       theme: "light",
@@ -557,13 +560,14 @@ describe("the app as a view of another Mac", () => {
       "malformed request",
     );
     expect(mini.asked).toContain("inf:settings:routing:get");
-    // This Mac's own look stays here, and its devices stay there.
+    // This Mac's own look stays here, and its devices are asked there.
     await air.shell.dispatch("inf:settings:appearance:set", [{ theme: "dark", size: 110 }]);
     expect(air.shell.preferences.get().appearance).toEqual({ theme: "dark", size: 110 });
     await expect(
       air.shell.dispatch("inf:devices:invite", [{ kind: "view", at: "127.0.0.1:1" }]),
-    ).rejects.toThrow("answered only on the computer where your first mate lives");
-    expect(mini.asked.filter((channel) => /appearance|devices/.test(channel))).toEqual([]);
+    ).rejects.toThrow("malformed request");
+    expect(mini.asked.filter((channel) => /appearance/.test(channel))).toEqual([]);
+    expect(mini.asked).toContain("inf:devices:invite");
 
     // A sign-in's steps reach the window, and its page opens in this Mac's browser.
     const page = "https://auth.openai.com/oauth/authorize?client_id=app";
@@ -600,7 +604,18 @@ describe("the app as a view of another Mac", () => {
       role: "view",
       needsUpdateThere: true,
       returnsNeedUpdateThere: true,
+      devicesNeedUpdateThere: true,
     });
+
+    // One that answers every view's settings but not yet its devices (INF-1352's plan, piece 2).
+    const before = await otherMac({ changes: ["every-view-asks"] });
+    const mini = shell();
+    await mini.shell.start();
+    await mini.shell.join(await before.link());
+    await mini.until(() => mini.view().contact === "in-reach");
+    await mini.until(() => mini.shell.thisMac().role === "view");
+    expect(mini.shell.thisMac()).toMatchObject({ role: "view", devicesNeedUpdateThere: true });
+    expect(mini.shell.thisMac()).not.toHaveProperty("needsUpdateThere");
 
     const current = await otherMac();
     const pro = shell();
@@ -608,6 +623,7 @@ describe("the app as a view of another Mac", () => {
     await pro.shell.join(await current.link());
     await pro.until(() => pro.view().contact === "in-reach");
     expect(pro.shell.thisMac()).not.toHaveProperty("needsUpdateThere");
+    expect(pro.shell.thisMac()).not.toHaveProperty("devicesNeedUpdateThere");
     expect(pro.shell.thisMac()).not.toHaveProperty("returnsNeedUpdateThere");
   });
 
@@ -762,9 +778,12 @@ describe("the app as a view of another Mac", () => {
       fileCount: 1,
       fraction: 0.5,
     });
+    // Its computers and phones, which its Devices follows (INF-1352's plan, piece 2).
+    pro.events.emit("inf:devices", []);
     pro.events.emit("inf:models:changed", { ok: true });
     await air.until(() => air.pushes.some((push) => push.channel === "inf:models:changed"));
     expect(air.pushes.map((push) => push.channel)).toContain("inf:auth:notice");
+    expect(air.pushes.map((push) => push.channel)).toContain("inf:devices");
     expect(air.pushes.map((push) => push.channel)).not.toContain("inf:voice:progress");
     // A view's own look always has its panels off, so one with them on is the other Mac's.
     expect(

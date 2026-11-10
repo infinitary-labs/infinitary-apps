@@ -85,7 +85,8 @@ describe("changes coming back on for a window controlling another computer (docs
   it("takes down every line that said changes were off and keeps the words typed", () => {
     const lost = view("lost");
     const list = vi.fn(async () => []);
-    vi.stubGlobal("window", { infinitary: { cards: { list } } });
+    const shown = vi.fn(async () => ({ shown: true }));
+    vi.stubGlobal("window", { infinitary: { cards: { list }, devices: { shown } } });
     useShellStore.setState({
       thisMac: lost,
       inputText: "ship it",
@@ -107,6 +108,26 @@ describe("changes coming back on for a window controlling another computer (docs
     });
     // Back in reach on the same catch-up: nothing is read again.
     expect(list).not.toHaveBeenCalled();
+  });
+
+  // Review INF-3481 (f9): an ask made while that computer was away was refused,
+  // so Devices and its commands stayed hidden until the window reloaded.
+  it("asks again whether Devices is offered once that computer is back in reach", async () => {
+    const shown = vi.fn(async () => ({ shown: true }));
+    vi.stubGlobal("window", { infinitary: { devices: { shown } } });
+    useShellStore.setState({ thisMac: view("lost"), devicesShown: false });
+
+    state().applyThisMac({ ...view("lost"), heardAt: 1_800 });
+    expect(shown).not.toHaveBeenCalled();
+
+    state().applyThisMac(view("in-reach"));
+    await settle();
+    expect(shown).toHaveBeenCalledTimes(1);
+    expect(state().devicesShown).toBe(true);
+
+    // Still in reach: nothing is asked again.
+    state().applyThisMac({ ...view("in-reach"), heardAt: 2_500 });
+    expect(shown).toHaveBeenCalledTimes(1);
   });
 
   it("leaves the lines in place while changes stay off", () => {

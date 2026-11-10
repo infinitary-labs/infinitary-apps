@@ -41,7 +41,8 @@ import { useDeviceSignIns } from "./useDeviceSignIns";
  * here, in the aside under its group; what the captain types goes to that
  * computer once and this window keeps it only while the box shows it.
  *
- * Nothing here draws on a Mac that controls another (`inf:devices:shown`).
+ * A computer that controls the first mate draws it the same way, for that
+ * first mate's computers (docs/view.md, "Settings on a view").
  */
 
 const LABEL_STYLE = {

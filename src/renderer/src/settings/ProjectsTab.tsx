@@ -21,7 +21,7 @@ import { useShellStore } from "../app/store";
 import { Button, Disclosure, GroupedPills, Input, Switch } from "../design";
 import { useCutWords } from "../design/core/overflowTitle";
 import { useInPlaceReveal } from "../design/reveals";
-import { useFirstMatePlace } from "../devices/useFirstMatePlace";
+import { useFirstMatePlace, useHereAs } from "../devices/useFirstMatePlace";
 import { isView } from "../devices/viewWords";
 import { AddProject } from "./AddProject";
 import { FOLDER_THERE_WORDS } from "./addProjectWords";
@@ -540,6 +540,7 @@ function ProjectRow({
   onRunsOn: (deviceId: string | null) => void;
   runsOnError: string | null;
 }) {
+  const here = useHereAs();
   const personal = repo.kind === "personal";
   const shipped = personal ? undefined : queueShipped(repo);
   const runsWhere = computers ? runsOnWhere(repo, computers) : null;
@@ -761,7 +762,7 @@ function ProjectRow({
           {computers && (
             <PolicyRow
               title="Runs on"
-              description={runsOnDescription(repo)}
+              description={here(runsOnDescription(repo))}
               control={<RunsOnControl repo={repo} computers={computers} onChoose={onRunsOn} />}
             />
           )}

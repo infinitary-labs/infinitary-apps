@@ -708,8 +708,8 @@ describe("the knowledge browser's reads, gated at the protocol", () => {
     });
     for (const [channel, args] of READS) {
       await expect(booted.dispatch(channel, [...args] as never)).resolves.toHaveProperty("state");
-      // Only this Mac's own window asks them; a view of another Mac reads none.
-      expect(invokeContract[channel].reach).toBe("home");
+      // A view of this first mate asks them too (INF-1352's plan, piece 2).
+      expect(invokeContract[channel].reach).toBe("views");
     }
     expect(existsSync(join(userDataDir, "knowledge"))).toBe(false);
   }, 60_000);

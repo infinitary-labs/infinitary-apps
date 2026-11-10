@@ -65,7 +65,7 @@ The home keeps only the code's SHA-256, its kind, when it expires and a handle f
 Using it once spends it, ten minutes after it was made it expires, Stop it closes it sooner (`inf:devices:stop`, by the handle the invite answered), and a home restart forgets every open link.
 A device that uses a closed link is refused as `unknown`.
 
-`inf:devices:invite` answers the link to this Mac's own window and to nothing else.
+`inf:devices:invite` answers the link only to the window that asked: this Mac's own, or a computer that controls this first mate (below).
 This account's own `infinitary link` asks the running app's phone door for one instead, and prints it (`docs/run.md`, "A link by command"; below, "A phone that joins by its address").
 Its catalog action is the captain's own (`device-invite`, tier `hands`): the first mate can only offer the card whose button makes one there ("Asking the first mate", below), and `app_change` reads back only the list after a change.
 No log line, feed line, record entry, card or error carries a link or a code.
@@ -914,7 +914,7 @@ A computer that runs work never loses work that never merged to a removal (`Comp
 
 - **In reach**: each project whose Runs on names it runs on this Mac from then on, so a task that has not started follows its project here, and a task's own Runs on that names it is forgotten, so that task follows its parent's or its project's (`TaskService.placement.forgetRunsOn`); each task started there stops, as the captain's Stop stops one (`CrewSessions.stopTasksOn`); every task's conversation there is closed and its working copy retired once its kept work is here (`PlacedSessions.bringHome`), which refuses when a working copy there still holds work this Mac lacks; and only then is it taken off the list.
   Cut off, it removes what Infinitary set up there (`docs/helper.md`, "Removed").
-  Devices reads "Bringing website's unmerged work here…", then "Removing what Infinitary set up on Mac mini…" (`removal` on its row), and the feed "Removed Mac mini. website runs on this computer now.".
+  Devices reads "Bringing website's unmerged work to this computer…", then "Removing what Infinitary set up on Mac mini…" (`removal` on its row), and the feed "Removed Mac mini. website runs on this computer now.".
   When its work cannot all come here, it stays on the list and the tab says why.
 - **Out of reach**, `inf:devices:remove` refuses unless the captain chose: `when-back` keeps it on the list, saved, and removes it as above the next time it is in reach; Keep it (`inf:devices:keep`) takes that back; `now` stops its tasks here, marks their working copies as left there, runs its projects here, and takes it off the list at once.
   Its unmerged work stays on that computer.
@@ -926,18 +926,18 @@ A computer that runs work never loses work that never merged to a removal (`Comp
 
 | Channel | Reach | Catalog action |
 | --- | --- | --- |
-| `inf:devices:list` | home | the current value of both actions below |
-| `inf:devices:invite` | home | `device-invite`, tier `hands` |
-| `inf:devices:remove` | home | `device-remove`, tier `hands`; a computer that runs work out of reach takes `when-back` or `now` |
-| `inf:devices:keep` | home | none: it takes back the captain's own wait to remove a computer once it is back |
-| `inf:devices:try-again` | home | none: the captain's Try again, or the `devices.try-again` command, tries this Mac's own SSH connection once more and sets nothing |
-| `inf:devices:change-address` | home | none: the captain's Change address reaches a computer added by its address somewhere else, once a look there finds the same computer |
-| `inf:devices:add` | home | none: the captain's click adds the Mac at an address over Remote Login; `device-invite` with `how: "address"`, tier `hands`, only offers the card |
-| `inf:devices:update` | home | none: the captain's click updates Infinitary on a computer that runs work, over Remote Login or the connection; `device-update`, tier `hands`, only offers the card |
-| `inf:devices:shown` | home | none: whether Devices is offered here; every build's home answers `{ shown: true }`, and a Mac that controls another is not answered |
-| `inf:devices:stop` | home | none: it closes the captain's own open link and sets nothing |
-| `inf:devices:addresses` | home | none |
-| `inf:devices:address:set` | home | `device-address`, tier `hands` |
+| `inf:devices:list` | views | the current value of both actions below |
+| `inf:devices:invite` | views | `device-invite`, tier `hands` |
+| `inf:devices:remove` | views | `device-remove`, tier `hands`; a computer that runs work out of reach takes `when-back` or `now` |
+| `inf:devices:keep` | views | none: it takes back the captain's own wait to remove a computer once it is back |
+| `inf:devices:try-again` | views | none: the captain's Try again, or the `devices.try-again` command, tries this Mac's own SSH connection once more and sets nothing |
+| `inf:devices:change-address` | views | none: the captain's Change address reaches a computer added by its address somewhere else, once a look there finds the same computer |
+| `inf:devices:add` | views | none: the captain's click adds the Mac at an address over Remote Login; `device-invite` with `how: "address"`, tier `hands`, only offers the card |
+| `inf:devices:update` | views | none: the captain's click updates Infinitary on a computer that runs work, over Remote Login or the connection; `device-update`, tier `hands`, only offers the card |
+| `inf:devices:shown` | views | none: whether Devices is offered here; every build's home answers `{ shown: true }`, to its own window and to a computer that controls it |
+| `inf:devices:stop` | views | none: it closes the captain's own open link and sets nothing |
+| `inf:devices:addresses` | views | none |
+| `inf:devices:address:set` | views | `device-address`, tier `hands` |
 | `inf:devices:runs-on` | views | `project-runs-on`, tier `asked`: where a project's next task starts (`docs/helper.md`, "Runs on") |
 | `inf:devices:sign-ins` | views | the current value of `device-sign-in` |
 | `inf:devices:sign-in` | views | none: the captain's click starts it there; `device-sign-in`, tier `hands`, only offers the card (`docs/helper.md`, "Its own sign-ins") |
@@ -949,10 +949,11 @@ A computer that runs work never loses work that never merged to a removal (`Comp
 
 The list is also pushed whole, `inf:devices`, after any change to it, to what the home reads of a computer that runs work, or to whether a Mac that controls this first mate is connected.
 Every task write reads the list again, so each computer's count of running tasks comes from `TaskService.activeCountsByDevice`, which reads only the computer each running task runs on and composes no task record.
-A row marked `home` is the captain's own, on this Mac's window; a row marked `views` is also asked from a Mac that controls this first mate, as the captain.
-A paired view asks the core as the captain, and words typed on it reach the first mate as the captain's; so neither a request from a view nor the first mate can add or remove a device.
+Every row is marked `views`: it is asked from this Mac's window and from a computer that controls this first mate, as the captain at that computer (`devices-from-a-view`, `docs/view.md`, "Settings on a view").
+A link a view asks for is this Mac's link, answered to the window that asked; the computer it adds joins this Mac.
+A paired view asks the core as the captain, and words typed on it reach the first mate as the captain's; the first mate cannot add or remove a device, and only the captain's click, on this Mac or on a view, can.
 The first mate can read the list through `app_state` - each device's id, kind, name and when it joined - which holds nothing secret.
-A lost Mac cannot add another device, and cannot remove the others.
+A lost Mac or phone that still controls this first mate can make links and add and remove devices as the captain can, until the captain removes it here or from another computer; removing it cuts it off at once.
 Words typed on a paired view are the captain's own words (the captain's pick on FI3-709): in its input or under a card, they may ask the first mate for an own-words change - removing a project, disconnecting an account, signing out of GitHub, moving the projects folder or removing a panel - as words typed on this Mac may.
 A lost view can therefore ask for those until the captain removes it here, and it asks directly what a view may (`docs/view.md`, "What the window asks"): sign-ins and API keys, settings, projects, deleting tasks and purging their data.
 
@@ -960,7 +961,7 @@ A lost view can therefore ask for those until the captain removes it here, and i
 
 Every build offers the tab and the first mate's device cards: `inf:devices:shown` answers yes on every home, stable, alpha and development alike.
 The tab offers **+ A phone** on every build too; no flag gates it.
-On an app that controls another Mac the tab is that Mac's row with Leave instead, and that Mac is not asked `inf:devices:shown`.
+On an app that controls another Mac the tab is that Mac's row with Leave, then that Mac's own Devices, read and changed there; one too old to answer a view's devices shows "Update Infinitary on Mac mini to do this from here." in its place (`docs/view.md`, "Settings on a view").
 
 The tab after Usage, built to the agreed design in the design skill's `components/devices/DevicesTab` (`src/renderer/src/settings/DevicesTab.tsx`):
 
@@ -1075,7 +1076,7 @@ A link that expires with nothing paired stops the listener.
 | Guessing a link | Its code is 256 random bits, kept only as a hash and found by lookup. |
 | A link used to find the home again | Only a key already on the list is kept, and only the device holding it can show it in the handshake; the device sends it only after the link's address answers with the home's own key. The one change is that the link is spent: no new device joins and nothing about the listed one changes. |
 | The home's saved files are read later, from a backup | The list holds pins, which are public. The home's key would let someone answer as the home to its devices: show them a false stage and read what a view sends. It cannot be used to join the home or to learn a device's key. After any exposure, delete the folder and pair every device again. |
-| A paired Mac is lost or stolen | Remove cuts it off at once, and its key is useless afterwards. It cannot add a device, remove one, or keep itself on the list. Until it is removed, it is the captain at another computer: its typed words are the captain's own (FI3-709), and it can start work, answer cards, change settings and projects, sign accounts in and out, set API keys, delete tasks and purge their data (the requests `docs/view.md` lists, "What the window asks"). |
+| A paired Mac or phone is lost or stolen | Remove cuts it off at once, and its key is useless afterwards. Until it is removed it can make links, including for a computer that runs work, add a Mac by its address and remove the captain's other devices, as the captain can (`devices-from-a-view`); it cannot keep itself on the list once removed from another computer. Until it is removed, it is the captain at another computer: its typed words are the captain's own (FI3-709), and it can start work, answer cards, change settings and projects, sign accounts in and out, set API keys, delete tasks and purge their data (the requests `docs/view.md` lists, "What the window asks"). |
 | A view's saved grant is read later, from a backup of that Mac | It holds the view's own key (`userData/joined/home.json`, 0600, `docs/view.md`), which lets someone reach the home as that Mac until it is removed there. Leave deletes it, and Remove makes it useless. |
 | A computer that runs work reads the stage, or a view runs work | Kind is set at home, checked at the claim, and checked on every request. A `work` device is sent no push, asks only the work requests, as itself, and is answered them only about a task the home runs there; a view is refused them. |
 | A prompt-injected first mate | It can neither make a link nor remove a device: it can only offer the host's card, whose words the host writes from the list and whose button only the captain's click runs. `app_change` reads back the list, never a link. |

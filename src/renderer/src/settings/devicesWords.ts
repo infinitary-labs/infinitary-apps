@@ -132,12 +132,12 @@ export function removeLines(device: DeviceView): [string, ...string[]] {
   if (!device.inReach && device.otherVersion)
     return [
       `Remove ${label}? It takes no new work.`,
-      `${work} is still there. Update it, and its work comes here before ${label} is removed.`,
+      `${work} is still there. Update it, and its work comes to ${HERE.this} before ${label} is removed.`,
     ];
   if (!device.inReach)
     return [
       `Remove ${label}? It is ${awayWord(deviceConnecting(device))}.`,
-      `${work} is still there. Wait, and it comes here before ${label} is removed.`,
+      `${work} is still there. Wait, and it comes to ${HERE.this} before ${label} is removed.`,
     ];
   const tasks = device.tasks ?? 0;
   const stops =
@@ -145,7 +145,7 @@ export function removeLines(device: DeviceView): [string, ...string[]] {
       ? ""
       : `${tasks === 1 ? "Its task" : `Its ${tasks} tasks`}${runs.length > 0 ? ` on ${namesInWords(runs)}` : ""} ${tasks === 1 ? "stops" : "stop"}. `;
   return [
-    `Remove ${label}? Its unmerged work comes here first.`,
+    `Remove ${label}? Its unmerged work comes to ${HERE.this} first.`,
     `${stops}Infinitary then removes what it set up there, with its sign-ins.`,
     ...(runs.length > 0
       ? [`${namesInWords(runs)} ${runs.length === 1 ? "runs" : "run"} on ${HERE.this} after.`]
@@ -259,8 +259,8 @@ export function deviceSummary(device: DeviceView, signIns: DeviceSignIns | undef
   const runs = device.runs ?? [];
   if (device.removal === "bringing-work")
     return runs.length > 0
-      ? `Bringing ${namesInWords(runs)}'s unmerged work here…`
-      : "Bringing its unmerged work here…";
+      ? `Bringing ${namesInWords(runs)}'s unmerged work to ${HERE.this}…`
+      : `Bringing its unmerged work to ${HERE.this}…`;
   if (device.removal === "cleaning-up")
     return `Removing what Infinitary set up ${signInPlace({ ...device, onThisMac: device.onThisMac ?? false }).where}…`;
   const parts = [...controlling, runs.length > 0 ? `Runs ${namesInWords(runs)}` : RUNS_NO_PROJECT];

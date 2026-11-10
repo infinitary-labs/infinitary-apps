@@ -1,3 +1,4 @@
+import { HERE } from "@shared/deviceNames";
 import { hostOfAddress } from "@shared/forge";
 import {
   FORGE_BROWSER_WORDS,
@@ -11,6 +12,7 @@ import {
 } from "@shared/forges";
 import { type FormEvent, useId, useState } from "react";
 import { Button, Input } from "../design";
+import { useHereAs } from "../devices/useFirstMatePlace";
 
 /** One public application per GitLab host; reuse the shared code aside once it starts. */
 export function ForgeBrowserAside({
@@ -36,6 +38,7 @@ export function ForgeBrowserAside({
   const [checking, setChecking] = useState(false);
   const [failed, setFailed] = useState(false);
   const ids = useId();
+  const here = useHereAs();
   const host = hostOfAddress(address);
   // The reason rides the view's push, which may land just before or after the refusal.
   const problem = !failed
@@ -69,7 +72,8 @@ export function ForgeBrowserAside({
       onSubmit={(event) => void submit(event)}
     >
       <div className="fm-forges-browser-intro">
-        Sign in on {host ?? server.name} in your browser. Your sign-in stays on this computer.
+        Sign in on {host ?? server.name} in your browser.{" "}
+        {here(`Your sign-in stays on ${HERE.this}.`)}
       </div>
       <div className="fm-forges-field">
         <label htmlFor={`${ids}-address`}>{FORGE_SECTION_WORDS.address}</label>

@@ -239,7 +239,7 @@ describe("RepoRegistry.setRunsOn", () => {
 
     const notes = await registry.setup({ kind: "init", name: "notes" });
     expect(() => registry.setRunsOn(notes.repo.id, "mini-1")).toThrow(
-      "notes: Kept on this computer only, so its tasks run here.",
+      "notes: Kept on this computer only, so its tasks run there.",
     );
     expect(registry.setRunsOn(notes.repo.id, null).runsOn).toBeNull();
     const personal = registry.ensurePersonal(workspaceDir);

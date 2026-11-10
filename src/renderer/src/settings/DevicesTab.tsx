@@ -19,7 +19,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import "../accounts/connectChips.css";
 import { useShellStore } from "../app/store";
 import { thisDesktop } from "../design/core/desktop";
-import { isView } from "../devices/viewWords";
+import { useHereAs } from "../devices/useFirstMatePlace";
+import { isView, updateThereWords } from "../devices/viewWords";
 import { ControllingTab } from "./ControllingTab";
 import { AddressChange, DeviceRow, RemoveQuestion } from "./DeviceRow";
 import {
@@ -107,13 +108,28 @@ const plusIcon = (
 );
 
 /**
- * The tab: on a Mac that controls another, which Mac and Leave
- * (`ControllingTab`); on the Mac where Firstmate lives, its devices.
+ * The tab: the first mate's devices, and on a computer that controls it,
+ * which computer and Leave above them (`ControllingTab`, docs/view.md,
+ * "Settings on a view"). A first mate there too old to answer its devices
+ * to a view says so in their place.
  */
 export function DevicesTab() {
   const thisMac = useShellStore((s) => s.thisMac);
-  if (isView(thisMac)) return <ControllingTab mac={thisMac} />;
-  return <HomeDevicesTab />;
+  if (!isView(thisMac)) return <HomeDevicesTab />;
+  return (
+    <>
+      <ControllingTab mac={thisMac} />
+      <div style={{ marginTop: SECTION_GAP }}>
+        {thisMac.devicesNeedUpdateThere ? (
+          <div className="fm-devices-say" data-devices-wait="">
+            {updateThereWords(thisMac)}
+          </div>
+        ) : (
+          <HomeDevicesTab />
+        )}
+      </div>
+    </>
+  );
 }
 
 /** What an add by its address carries beyond the address: each the captain's own answer. */
@@ -567,27 +583,26 @@ function HomeDevicesTab() {
 
 export function DevicesTabView(props: DevicesTabViewProps) {
   const { devices, addresses, busy, problem } = props;
+  const here = useHereAs();
+  const fromAView = useShellStore((s) => isView(s.thisMac));
   return (
     <div data-devices="">
       <LinkPanelView {...props} />
       {problem && (
         <div style={{ marginBottom: 16 }}>
-          <SettingError error={problem} surface="devices" />
+          <SettingError error={here(problem)} surface="devices" />
         </div>
       )}
       <SectionLabel>Your devices</SectionLabel>
-      <div className="fm-devices-say">
-        Your first mate lives on {HERE.this}. Its tasks and conversation stay here. From any{" "}
-        {COMPUTER.one} you add you can control it, and any {COMPUTER.one} you add can run a
-        project's work. Running as another user on {HERE.this} only runs work.{" "}
-        {anotherUserHere(thisDesktop().mac ? "darwin" : "linux").readsHere}
-      </div>
+      <div className="fm-devices-say">{here(devicesIntro(fromAView))}</div>
       <div className="fm-devices-box" data-devices-list="" style={{ marginBottom: SECTION_GAP }}>
         <div className="fm-devices-row" data-device-row="this-mac">
           <span className="fm-devices-dot" data-tone="ok" />
           <span className="fm-devices-text">
-            <span className="fm-devices-name">{HERE.This}</span>
-            <span className="fm-devices-detail">Your first mate lives here</span>
+            <span className="fm-devices-name">{here(HERE.This)}</span>
+            <span className="fm-devices-detail">
+              Your first mate lives {fromAView ? "there" : "here"}
+            </span>
           </span>
         </div>
         {inListOrder(devices).map((device) =>
@@ -650,6 +665,19 @@ export function DevicesTabView(props: DevicesTabViewProps) {
       )}
     </div>
   );
+}
+
+/**
+ * What Your devices says first. On a computer that controls the first mate,
+ * "here" would name the wrong computer, so it names that one instead.
+ */
+function devicesIntro(fromAView: boolean): string {
+  // A computer that controls the first mate does not know that computer's
+  // system, so it says the sentence that holds on each.
+  const reads = fromAView
+    ? anotherUserHere("linux").reads
+    : anotherUserHere(thisDesktop().mac ? "darwin" : "linux").readsHere;
+  return `Your first mate lives on ${HERE.this}. Its tasks and conversation stay ${fromAView ? "there" : "here"}. From any ${COMPUTER.one} you add you can control it, and any ${COMPUTER.one} you add can run a project's work. Running as another user on ${HERE.this} only runs work. ${reads}`;
 }
 
 /**

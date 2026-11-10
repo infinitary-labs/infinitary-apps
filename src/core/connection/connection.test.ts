@@ -975,12 +975,7 @@ describe("the home's connection", () => {
     // The core's own refusal comes back as the answer.
     await expect(a.invoke("inf:cards:act", ["card-1"])).rejects.toThrow("malformed request");
 
-    for (const channel of [
-      "inf:voice:status",
-      "inf:devices:invite",
-      "inf:devices:remove",
-      "inf:devices:list",
-    ])
+    for (const channel of ["inf:voice:status", "inf:observe:enabled", "inf:plugins:personal:list"])
       await expect(a.invoke(channel as never, [{}])).rejects.toThrow(
         `answered only on ${HOME.the}`,
       );

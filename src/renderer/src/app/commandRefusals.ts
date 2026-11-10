@@ -316,19 +316,19 @@ const REFUSALS: Readonly<
     isView(s.thisMac) ? `Your runbooks folder is on ${s.thisMac.name}` : null,
   // Usage is the record of the Mac Firstmate lives on (docs/usage.md).
   "settings.usage": () => null,
-  // Automation is the home's own, like Usage: the schedules run on that Mac.
-  "settings.automation": refusedOnAView("Automation"),
+  // Automation is the home's, like Usage, and a view shows it (docs/automation.md).
+  "settings.automation": () => null,
   // Integrations sign in as the person on the home, like Projects.
   "settings.integrations": () => null,
   // Secrets stay the home's own (docs/secrets.md), and a build without
   // protected storage has no Secrets at all.
   "settings.secrets": (s) =>
     refusedOnAView("Secrets")(s) ?? (s.secretsShown ? null : "Secrets is not in this build"),
-  "automation.pause-all": refusedOnAView("Automation"),
+  "automation.pause-all": () => null,
   "usage.unit": refusedUntilUpdate,
   // The allowance is read where the first mate lives, from any Mac.
   "allowance.recheck": refusedUntilUpdate,
-  // Devices is the home's own: a Mac that controls another has none (docs/devices.md).
+  // The first mate's devices, from its window or a view of it (docs/devices.md).
   "devices.try-again": (s) => (s.devicesShown ? null : `Devices is on ${HOME.the}`),
 };
 

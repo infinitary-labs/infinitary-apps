@@ -56,20 +56,20 @@ export const deviceChannels = {
     request: z.tuple([]),
     response: computerResourcesSchema,
   },
-  // Devices and pairing (docs/devices.md). Home only: a paired view cannot
-  // list, invite or remove, so a lost Mac cannot add another. The invite's
-  // answer carries the link, for this Mac's own window alone.
+  // Devices and pairing (docs/devices.md). A paired view asks them too, as
+  // the captain at another computer (`devices-from-a-view.md`): the invite's
+  // answer carries the link to the window that asked.
   "inf:devices:list": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([]),
     response: z.array(deviceViewSchema),
   },
   "inf:devices:invite": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([deviceInviteRequestSchema]),
     response: deviceInviteSchema,
   },
@@ -87,7 +87,7 @@ export const deviceChannels = {
   "inf:devices:add": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([remoteLoginAddressSchema, remoteLoginAddOptionsSchema.optional()]),
     response: remoteLoginAddAnswerSchema,
   },
@@ -99,7 +99,7 @@ export const deviceChannels = {
   "inf:devices:nearby": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.boolean()]),
     response: nearbyMacsViewSchema,
   },
@@ -109,7 +109,7 @@ export const deviceChannels = {
   "inf:devices:update": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([
       z.string().min(1).max(64),
       z
@@ -130,14 +130,14 @@ export const deviceChannels = {
   "inf:devices:remove": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64), deviceRemoveWhenSchema.optional()]),
     response: deviceViewSchema,
   },
   "inf:devices:keep": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64)]),
     response: deviceViewSchema,
   },
@@ -147,7 +147,7 @@ export const deviceChannels = {
   "inf:devices:try-again": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64).optional()]),
     response: z.strictObject({ tried: z.number().int().nonnegative() }),
   },
@@ -157,15 +157,15 @@ export const deviceChannels = {
   "inf:devices:change-address": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64), remoteLoginAddressSchema]),
     response: z.union([deviceViewSchema, remoteLoginRefusedAnswerSchema]),
   },
-  // Every build offers Devices, including a phone, on the home computer.
+  // Every build offers Devices, including a phone, on the home computer and its views.
   "inf:devices:shown": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([]),
     response: z.object({ shown: z.boolean() }),
   },
@@ -173,7 +173,7 @@ export const deviceChannels = {
   "inf:devices:stop": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64)]),
     response: okSchema,
   },
@@ -182,14 +182,14 @@ export const deviceChannels = {
   "inf:devices:addresses": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([]),
     response: deviceAddressesSchema,
   },
   "inf:devices:address:set": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64).nullable()]),
     response: deviceAddressesSchema,
   },

@@ -8,6 +8,7 @@ import {
   taskResourceWords,
 } from "@shared/resources";
 import { useEffect, useState } from "react";
+import { useHereAs } from "../../devices/useFirstMatePlace";
 import { resourcePushes } from "../../plugins/reads/appExecutor";
 import { RecordCell } from "./TaskFacts";
 
@@ -18,6 +19,8 @@ import { RecordCell } from "./TaskFacts";
  */
 export function TaskResourceUse({ taskId }: { taskId: string }) {
   const [view, setView] = useState<ComputerResourcesView>();
+  // The first mate's own computer, named from one that controls it.
+  const here = useHereAs();
   useEffect(() => {
     let live = true;
     let generation = 0;
@@ -55,7 +58,7 @@ export function TaskResourceUse({ taskId }: { taskId: string }) {
   const runs =
     view?.computers.flatMap((computer) => {
       const own = computer.load?.runs.filter((run) => run.taskId === taskId) ?? [];
-      const label = computer.computerId === null ? HERE.this : computer.label;
+      const label = computer.computerId === null ? here(HERE.this) : computer.label;
       if (!own.length) return [];
       if (computer.load?.status !== "fresh") return [`Run status unavailable on ${label}`];
       return own.map((run) => loadRunWords(run, label));

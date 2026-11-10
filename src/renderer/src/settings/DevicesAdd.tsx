@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button, Input } from "../design";
 import { focusWithRing } from "../design/focus";
 import { NearbyList, PortField, sshMustBeOn } from "../devices/NearbyList";
+import { useHereAs } from "../devices/useFirstMatePlace";
 import type { DevicesTabViewProps } from "./devicesState";
 import { type AddingMac, addingWords } from "./devicesWords";
 
@@ -77,6 +78,7 @@ export function AddressQuestion({
   onAddAt,
   onCancelAddress,
 }: DevicesTabViewProps) {
+  const here = useHereAs();
   // The address with the port typed beside it, or null while either is not one.
   const typed = addressAtPort(addressDraft, portDraft);
   const trying = adding.some((mac) => mac.address === typed);
@@ -117,7 +119,7 @@ export function AddressQuestion({
               data-tone="warn"
               data-device-address-refusal=""
             >
-              {line}
+              {here(line)}
             </div>
           ))}
         </div>
@@ -179,11 +181,12 @@ export function ConfirmQuestion({
   onConfirm,
   onCancelConfirm,
 }: DevicesTabViewProps & { question: RemoteLoginConfirmQuestion }) {
+  const here = useHereAs();
   const [found, compare] = remoteLoginWords.confirmQuestion(question.address);
   return (
     <div className="fm-devices-aside" data-device-confirm-question={question.address}>
-      <div className="fm-devices-question">{found}</div>
-      <div className="fm-devices-aside-say">{compare}</div>
+      <div className="fm-devices-question">{here(found)}</div>
+      <div className="fm-devices-aside-say">{here(compare)}</div>
       <div className="fm-devices-check" data-device-check-line="">
         {question.line}
       </div>
@@ -210,6 +213,7 @@ export function PasswordQuestion({
   onPassword,
   onCancelPassword,
 }: DevicesTabViewProps & { question: RemoteLoginPasswordQuestion }) {
+  const here = useHereAs();
   const [typed, setTyped] = useState("");
   const [found, say] =
     question.for === "update"
@@ -233,8 +237,8 @@ export function PasswordQuestion({
         onPassword(question, password);
       }}
     >
-      <div className="fm-devices-question">{found}</div>
-      <div className="fm-devices-aside-say">{say}</div>
+      <div className="fm-devices-question">{here(found)}</div>
+      <div className="fm-devices-aside-say">{here(say)}</div>
       {wrong && (
         <div role="alert">
           {wrong.map((line) => (
@@ -244,7 +248,7 @@ export function PasswordQuestion({
               data-tone="warn"
               data-device-password-refusal=""
             >
-              {line}
+              {here(line)}
             </div>
           ))}
         </div>
@@ -282,13 +286,14 @@ export function LeaveQuestion({
   onLeaveAndAdd,
   onCancelLeave,
 }: DevicesTabViewProps & { question: RemoteLoginLeaveQuestion }) {
+  const here = useHereAs();
   const [found, ...said] = remoteLoginWords.leaveQuestion(question);
   return (
     <div className="fm-devices-aside" data-device-leave-question={question.address}>
-      <div className="fm-devices-question">{found}</div>
+      <div className="fm-devices-question">{here(found)}</div>
       {said.map((line) => (
         <div key={line} className="fm-devices-aside-say">
-          {line}
+          {here(line)}
         </div>
       ))}
       <div className="fm-devices-aside-actions">
@@ -305,6 +310,7 @@ export function LeaveQuestion({
 
 /** A Mac being added by its address: an idle dot, and where its setup stands. */
 export function AddingRow({ mac }: { mac: AddingMac }) {
+  const here = useHereAs();
   return (
     <div
       className="fm-devices-row"
@@ -318,7 +324,9 @@ export function AddingRow({ mac }: { mac: AddingMac }) {
         <span className="fm-devices-detail">
           a {COMPUTER.one} · {mac.address}
         </span>
-        <span className="fm-devices-summary">{addingWords(mac, mac.name ?? mac.address)}</span>
+        <span className="fm-devices-summary">
+          {here(addingWords(mac, mac.name ?? mac.address))}
+        </span>
       </span>
     </div>
   );

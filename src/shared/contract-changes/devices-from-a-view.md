@@ -1,0 +1,3 @@
+A home answers a paired view its computers and phones and its Knowledge: the thirteen `inf:devices:*` requests that list, link, add, update, remove and find its devices, and the eleven `inf:knowledge:*` requests, now have `reach` `views`.
+A view shows the pushes those follow: `inf:devices`, `inf:devices:addresses`, `inf:devices:nearby`, `inf:devices:sign-ins`, `inf:devices:sign-in`, `inf:computers:presence` and `inf:computers:resources`, which every home already sends it.
+A home without this change refuses those requests from a view, as before; once a view's window knows that its home does not list this change, its Devices section and its Devices card buttons say the home needs an update, and it shows no Knowledge.

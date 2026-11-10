@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type { HandoverOffer } from "@shared/actions";
 import type { Card } from "@shared/cards";
 import { CONNECTION_CLOSE, CONNECTION_PORT } from "@shared/connection";
-import { deviceJoinedLine, parsePairingLink } from "@shared/devices";
+import { deviceJoinedLine, PAIRING_LINK_PREFIX, parsePairingLink } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import { NOTICE_ACCEPTED } from "@shared/integrations";
 import {
@@ -247,24 +247,29 @@ describe("the connection serves the core to paired devices", () => {
     expect(reads).toContain("inf:tasks:board");
     for (const channel of reads) await view.invoke(channel, []);
 
-    // A paired view cannot list, invite or remove: a lost Mac adds no other.
-    for (const [channel, args] of [
-      ["inf:voice:status", []],
-      ["inf:devices:list", []],
-      ["inf:devices:invite", [{ kind: "mac" }]],
-      ["inf:devices:remove", [grant.deviceId]],
-    ] as const)
-      await expect(view.invoke(channel, [...args])).rejects.toThrow(
-        "answered only on the computer where your first mate lives",
-      );
+    // INF-1352's plan, piece 2 (the captain's one_rule=every-view): a paired
+    // view lists, links and removes the first mate's devices, as the captain
+    // at another computer, while this computer's own voice stays here.
+    expect((await view.invoke("inf:devices:list", [])).map((device) => device.id)).toContain(
+      grant.deviceId,
+    );
+    const invite = await view.invoke("inf:devices:invite", [{ kind: "mac" }]);
+    expect(invite.link.startsWith(PAIRING_LINK_PREFIX)).toBe(true);
+    await view.invoke("inf:devices:stop", [invite.id]);
+    await expect(view.invoke("inf:voice:status", [])).rejects.toThrow(
+      "answered only on the computer where your first mate lives",
+    );
     await expect(view.invoke("inf:app:choose-folder", [])).rejects.toThrow(
       "not a request this home answers",
     );
     await expect(view.invoke("inf:cards:act", ["only-one-argument"])).rejects.toThrow(
       "malformed request",
     );
-    await core.dispatch("inf:devices:remove", [grant.deviceId]);
+    // Removing the view itself from there cuts it off, as Remove here does, before it answers.
+    const removing = view.invoke("inf:devices:remove", [grant.deviceId]).catch(() => null);
     expect(await view.closed).toBe(CONNECTION_CLOSE.unpaired);
+    expect(core.services.devices.list().map((device) => device.id)).not.toContain(grant.deviceId);
+    void removing;
   });
 
   it("shows a view a card's picture, recording and font by name, and says in the feed when a view leaves", async () => {

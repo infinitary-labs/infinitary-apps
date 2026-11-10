@@ -174,7 +174,7 @@ describe("card action receipts", () => {
     useShellStore.setState({ pendingPrivateSite: null, settingsSection: null, view: "home" });
   });
 
-  it("on a computer controlling another, sends no click that opens Devices there and says it cannot be done yet (docs/view.md)", async () => {
+  it("on a computer controlling another, opens Devices here, and asks for an update first when the first mate there is too old (docs/view.md)", async () => {
     const ipc = request();
     // The pause card, as the host builds it: move Firstmate, or sign in again.
     const paused = card({
@@ -209,18 +209,20 @@ describe("card action receipts", () => {
         { id: "not-now", label: "Not now" },
       ],
     });
+    const view = {
+      role: "view",
+      name: "MacBook Pro",
+      address: "192.168.1.20",
+      joinedAt: 0,
+      contact: "in-reach",
+      readOnly: null,
+      heardAt: 0,
+      caughtUp: 0,
+    } as const;
+    // INF-1352's plan, piece 2: a first mate too old to answer a view's devices is not asked.
     useShellStore.setState({
       cards: [paused, link],
-      thisMac: {
-        role: "view",
-        name: "MacBook Pro",
-        address: "192.168.1.20",
-        joinedAt: 0,
-        contact: "in-reach",
-        readOnly: null,
-        heardAt: 0,
-        caughtUp: 0,
-      },
+      thisMac: { ...view, devicesNeedUpdateThere: true },
     });
     await useShellStore.getState().actOnCard("link", "open");
     expect(ipc.act).not.toHaveBeenCalled();
@@ -228,7 +230,7 @@ describe("card action receipts", () => {
       cards: [paused, link],
       pendingCardActions: {},
       cardActionErrors: {
-        link: "MacBook Pro's computers and phones cannot be changed from here yet.",
+        link: "Update Infinitary on MacBook Pro to do this from here.",
       },
       view: "home",
       settingsSection: null,
@@ -241,8 +243,24 @@ describe("card action receipts", () => {
     ipc.resolve();
     await moved;
     expect(useShellStore.getState().cards).toEqual([link]);
-    // On the Mac where Firstmate lives the same click is sent and opens Settings.
-    useShellStore.setState({ thisMac: { role: "home", left: null } });
+    // On a current one, and on the Mac where Firstmate lives, the same click is sent and opens Settings.
+    useShellStore.setState({ thisMac: view, cardActionErrors: {} });
+    const here = useShellStore.getState().actOnCard("link", "open");
+    expect(ipc.act).toHaveBeenLastCalledWith("link", "open", "chrome", undefined, gesture());
+    ipc.resolve({ effect: { kind: "open", target: "devices", make: "link" } });
+    await here;
+    expect(useShellStore.getState()).toMatchObject({
+      view: "settings",
+      settingsSection: "devices",
+      pendingDeviceArrival: { make: "link" },
+    });
+    useShellStore.setState({
+      cards: [link],
+      thisMac: { role: "home", left: null },
+      view: "home",
+      settingsSection: null,
+      pendingDeviceArrival: null,
+    });
     const opened = useShellStore.getState().actOnCard("link", "open");
     expect(ipc.act).toHaveBeenLastCalledWith("link", "open", "chrome", undefined, gesture());
     ipc.resolve({ effect: { kind: "open", target: "devices", make: "link" } });

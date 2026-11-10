@@ -26,6 +26,7 @@ import { type FormEvent, useCallback, useEffect, useId, useRef, useState } from 
 import { useCopyCode } from "../accounts/CopyCode";
 import { useShellStore } from "../app/store";
 import { Badge, Button, Input, RowMenu, StatusDot, type StatusDotTone, Switch } from "../design";
+import { useHereAs } from "../devices/useFirstMatePlace";
 import {
   googleUpdateThereWords,
   isView,
@@ -897,13 +898,14 @@ function InboxSection({
   onTurn: (on: boolean) => void;
   onLink: () => void;
 }) {
+  const here = useHereAs();
   const on = inbox !== undefined && !inbox.paused;
   return (
     <div className="fm-forges-box fm-integrations-inbox" data-inbox-section={on ? "on" : "off"}>
       <div className="fm-integrations-inbox-head">
         <div>
           <div className="fm-integrations-inbox-title">{INBOX_WORDS.title}</div>
-          <p className="fm-integrations-door-lead">{INBOX_WORDS.intro}</p>
+          <p className="fm-integrations-door-lead">{here(INBOX_WORDS.intro)}</p>
         </div>
         <Switch checked={on} disabled={!loaded} aria-label={INBOX_WORDS.toggle} onChange={onTurn} />
       </div>
@@ -1059,6 +1061,7 @@ function IntegrationKeys({
 }) {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const words = INTEGRATION_SECRET_WORDS;
+  const here = useHereAs();
   return (
     <div className="fm-integrations-keys" data-integration-keys={integration.id}>
       <div className="fm-integrations-keys-head">{words.heading}</div>
@@ -1074,7 +1077,7 @@ function IntegrationKeys({
             <li key={slot.name} data-integration-key={slot.name} data-kept={slot.kept}>
               <span className="fm-integrations-action-label">{slot.label}</span>
               <span className="fm-forges-state" data-tone={slot.kept ? undefined : "danger"}>
-                {slot.kept ? words.kept : words.missing}
+                {slot.kept ? here(words.kept) : words.missing}
               </span>
               <form
                 className="fm-integrations-key-entry"
@@ -1107,7 +1110,7 @@ function IntegrationKeys({
           );
         })}
       </ul>
-      <p className="fm-integrations-keys-note">{words.stays}</p>
+      <p className="fm-integrations-keys-note">{here(words.stays)}</p>
     </div>
   );
 }
@@ -1129,6 +1132,7 @@ function McpAddForm({
   const [connecting, setConnecting] = useState(false);
   const [problem, setProblem] = useState("");
   const ids = useId();
+  const here = useHereAs();
   const ready = name.trim() !== "" && runs.trim() !== "";
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -1176,7 +1180,7 @@ function McpAddForm({
         />
       </div>
       <div id={`${ids}-hint`} style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
-        {INTEGRATIONS_MCP_WORDS.runsHint}
+        {here(INTEGRATIONS_MCP_WORDS.runsHint)}
       </div>
       <span
         role="status"

@@ -112,7 +112,7 @@ describe("the published contract", () => {
       expect(published.requests).not.toHaveProperty(channel);
     expect(published.requests["inf:cards:act"]).toMatchObject({ effect: "change", reach: "views" });
     expect(published.requests["inf:feed:recent"]).toMatchObject({ effect: "read", reach: "views" });
-    expect(published.requests["inf:devices:invite"]).toMatchObject({ reach: "home" });
+    expect(published.requests["inf:secrets:view"]).toMatchObject({ reach: "home" });
     expect(published.requests["inf:work:report"]).toMatchObject({
       effect: "change",
       reach: "work",

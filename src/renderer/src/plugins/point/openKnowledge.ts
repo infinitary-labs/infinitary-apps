@@ -18,7 +18,7 @@ import type { ContributionRegistry } from "../registry";
  *
  * These surfaces live only while the Knowledge panel does: it is registered
  * only in a build that keeps knowledge and has some to show (its gate,
- * `startGatedPanels`), so a stable build, a view of another Mac and an
+ * `startGatedPanels`), so a stable build, a view of an older first mate and an
  * alpha with nothing recorded link nothing and list nothing.
  */
 

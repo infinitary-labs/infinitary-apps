@@ -3,7 +3,7 @@ import { type RepoView, runsHereOnly } from "@shared/repos";
 import { type DeviceSignIns, devicePlace, signInPlace } from "@shared/signIns";
 import { useEffect, useState } from "react";
 import "./devices.css";
-import { COMPUTER } from "@shared/deviceNames";
+import { COMPUTER, HERE } from "@shared/deviceNames";
 import { awayWord } from "@shared/devices";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
 
@@ -16,8 +16,8 @@ import { useFirstMatePlace } from "../devices/useFirstMatePlace";
  */
 
 /**
- * The computers that run work, as the home last heard each, or null on a
- * Mac that controls another. Follows every change the home pushes.
+ * The computers that run work, as the home last heard each, or null where
+ * the first mate offers no Devices. Follows every change the home pushes.
  */
 export function useWorkComputers(): DeviceSignIns[] | null {
   const [computers, setComputers] = useState<DeviceSignIns[] | null>(null);
@@ -109,6 +109,6 @@ export function runsOnDescription(repo: RepoView): string {
     return "Choose a compatible computer with room for each new task. A started task stays there.";
   return (
     runsHereOnly(repo) ??
-    `Where its tasks run. While that ${COMPUTER.one} is out of reach they wait, and never run here instead.`
+    `Where its tasks run. While that ${COMPUTER.one} is out of reach they wait, and never run on ${HERE.this} instead.`
   );
 }

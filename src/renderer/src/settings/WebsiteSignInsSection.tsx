@@ -6,7 +6,7 @@ import {
 } from "@shared/taskBrowser";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "../design";
-import { useFirstMatePlace } from "../devices/useFirstMatePlace";
+import { useFirstMatePlace, useHereAs } from "../devices/useFirstMatePlace";
 import { ROW_GAP, SECTION_GAP, SectionLabel, SettingError } from "./settingRows";
 
 /**
@@ -48,6 +48,7 @@ export function WebsiteSignInsSectionView({
   onRemove: (site: string) => void;
   onAutomatic?: (signIn: SavedSignIn, automatic: boolean) => void;
 }) {
+  const here = useHereAs();
   if (!view?.available) return null;
   return (
     <div data-website-sign-ins="" style={{ marginTop: SECTION_GAP }}>
@@ -157,7 +158,7 @@ export function WebsiteSignInsSectionView({
       </ul>
       {view.signIns.length > 0 && (
         <p style={{ color: "var(--fg-3)", fontSize: "var(--text-xs)" }}>
-          {AUTOMATIC_SIGN_IN_NOTICE}
+          {here(AUTOMATIC_SIGN_IN_NOTICE)}
         </p>
       )}
       <SettingError error={error} surface="website-sign-ins" />

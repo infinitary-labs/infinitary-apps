@@ -2,7 +2,7 @@ import { PRIVATE_SITES_WORDS, type PrivateSitesView } from "@shared/privateSites
 import { useCallback, useEffect, useState } from "react";
 import { useShellStore } from "../app/store";
 import { Button, Input } from "../design";
-import { useFirstMatePlace } from "../devices/useFirstMatePlace";
+import { useFirstMatePlace, useHereAs } from "../devices/useFirstMatePlace";
 import { ROW_GAP, SECTION_GAP, SectionLabel, SettingError } from "./settingRows";
 
 /**
@@ -136,6 +136,7 @@ export function PrivateSitesSectionView({
 
 export function PrivateSitesSection() {
   const place = useFirstMatePlace();
+  const here = useHereAs();
   const arriving = useShellStore((s) => s.pendingPrivateSite);
   const [view, setView] = useState<PrivateSitesView | null>(null);
   const [draft, setDraft] = useState("");
@@ -192,7 +193,7 @@ export function PrivateSitesSection() {
       view={view}
       draft={draft}
       busy={busy}
-      error={error}
+      error={error && here(error)}
       onDraft={setDraft}
       onAdd={() => {
         const site = draft.trim();

@@ -206,7 +206,7 @@ Browsing reads and never writes: rotating, selecting, filtering and opening evid
 The Knowledge panel is an ordinary app panel folder, `src/panels/knowledge/` (`docs/ui-plugins.md`, "The app's own panels are ordinary folders"), under Tasks at the bottom of the right rail, collapsed at first.
 It waits on the `knowledge` gate (`AppPanelFolder.gate`, `src/shared/surfaces.ts`), which is open while this build keeps knowledge and has some to show: an entry in a collection the window reads, or an active direction, or a collection that cannot be read (`KnowledgeService.held`).
 The window asks `inf:knowledge:enabled` once the captain's own panels have their places, and again after each `knowledge_changed`, each project that comes or goes, and registers the panel, its card and its command while the gate is open (`startGatedPanels`, `src/renderer/src/plugins/builtin/index.ts`).
-A view of another Mac, which is refused the question, and a profile with nothing recorded have none of them, and the first entry the crew records brings them; a purge takes them away again.
+A view of another computer asks the first mate's computer (`reach: "views"`), so it shows that computer's Knowledge; a view of a first mate too old to answer it, and a profile with nothing recorded, have none of them, and the first entry the crew records brings them; a purge takes them away again.
 It takes its place on that rail however many panels the rail already holds.
 The core lists the panel among the first mate's surfaces on the same gate (`listSurfaces`).
 The panel lists up to four active directions in their own words, captain instructions before advice and each group newest first, with project names as quiet tags.
@@ -293,7 +293,7 @@ The window finds the ids a body writes (`knowledgeIdsIn`, `src/shared/knowledge.
 A click or Enter puts the browser up at the front with its inspector on that entry, from the captain's own gesture only (`openKnowledgeEntry`, `src/renderer/src/plugins/point/openKnowledge.ts`); Hide returns to the answer.
 Opening one records no use, checks nothing and runs no card effect: it is navigation, on a past card too.
 
-The window links only while it has the Knowledge browser - the Knowledge panel is registered, so the build keeps knowledge and has some to show (`useKnowledgeHere`) - so a view of another Mac and a profile with nothing recorded ask nothing, link nothing and show every answer as its author wrote it.
+The window links only while it has the Knowledge browser - the Knowledge panel is registered, so the build keeps knowledge and has some to show (`useKnowledgeHere`) - so a view of a first mate too old to answer it and a profile with nothing recorded ask nothing, link nothing and show every answer as its author wrote it.
 
 ### Knowledge used on a task
 

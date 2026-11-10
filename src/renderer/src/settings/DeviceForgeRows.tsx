@@ -22,7 +22,8 @@ import { useDeviceSignIns } from "./useDeviceSignIns";
  * computer: its code to read is drawn in the aside under the row, and that
  * computer finishes the sign-in itself. Nothing is typed here.
  *
- * Nothing here draws on a Mac that controls another (`inf:devices:shown`).
+ * A computer that controls the first mate draws it the same way, for that
+ * first mate's computers (docs/view.md, "Settings on a view").
  */
 
 export type DeviceForgeRow = {

@@ -15,7 +15,6 @@ import {
   changesOff,
   changesOffWords,
   clockTime,
-  devicesNotHereWords,
   doneThereWords,
   firstMatePlace,
   googleUpdateThereWords,
@@ -28,6 +27,7 @@ import {
   RETURN_PASTE_WORDS,
   sectionWaitsForUpdate,
   topLine,
+  updateThereWords,
   type ViewMac,
 } from "./viewWords";
 
@@ -144,17 +144,19 @@ describe("controlling another Mac", () => {
   });
 
   // INF-1352's plan, the captain's answer one_rule=every-view: a button that opens Settings
-  // opens it here on any view; Devices comes later, and says so first. Its piece 3 shows a
-  // task's browser on every view, unless the first mate there is too old to send its pictures.
+  // opens it here on any view, Devices too (piece 2), unless the first mate there is too old to
+  // answer it. Its piece 3 shows a task's browser on every view, unless the first mate there is
+  // too old to send its pictures.
   it("does a card's Settings button here and says what cannot be done yet", () => {
     const open = (target: "subscriptions" | "projects" | "settings" | "devices") => ({
       effect: { kind: "open", target } as const,
     });
-    for (const target of ["subscriptions", "projects", "settings"] as const)
+    for (const target of ["subscriptions", "projects", "settings", "devices"] as const)
       expect(doneThereWords(PRO, open(target))).toBeNull();
-    expect(doneThereWords(PRO, open("devices"))).toBe(
-      "MacBook Pro's computers and phones cannot be changed from here yet.",
-    );
+    // A first mate too old to answer a view's devices asks for its update instead.
+    const noDevices: ViewMac = { ...PRO, devicesNeedUpdateThere: true };
+    expect(doneThereWords(noDevices, open("devices"))).toBe(updateThereWords(noDevices));
+    expect(doneThereWords(noDevices, open("settings"))).toBeNull();
     const browser = { effect: { kind: "open", target: "browser" } as const };
     expect(doneThereWords(PRO, browser)).toBeNull();
     const older: ViewMac = { ...PRO, browserNeedsUpdateThere: true };
@@ -169,7 +171,7 @@ describe("controlling another Mac", () => {
     });
     expect(firstMatePlace(PRO)).toEqual({ this: "MacBook Pro", This: "MacBook Pro" });
     expect(firstMatePlace(null)).toEqual(HERE);
-    for (const words of [devicesNotHereWords(PRO), browserNotHereWords(PRO)])
+    for (const words of [updateThereWords(PRO), browserNotHereWords(PRO)])
       expect(words).not.toMatch(NEVER);
   });
 

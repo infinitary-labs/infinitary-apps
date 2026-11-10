@@ -5,14 +5,15 @@ An explicit computer remains the captain's choice.
 **Runs on**, the fourth row of an expanded project in Settings → Projects, after Care.
 It appears for eligible projects even before another computer is added, and for other projects once a device that runs work is on the list.
 The title "Runs on", the description "Where its tasks run.
-While that computer is out of reach they wait, and never run here instead.", and one select, the same kind as the address select in Devices, so it holds any number of devices (captain's question about many computers).
+While that computer is out of reach they wait, and never run on this computer instead.", and one select, the same kind as the address select in Devices, so it holds any number of devices (captain's question about many computers).
 Closed, the select shows "Automatic" or the chosen device's name.
 Automatic's description is "Choose a compatible computer with room for each new task.
 A started task stays there."
 Automatic uses the same select, Tab reach, arrow keys and focus ring; there is no extra command or task editor.
 Open, it lists "Automatic", "This computer", then the group "Your computers" with each computer by name, then the group "As another user" with "Running as Builder".
 An option for a device that cannot take work now names why after a middle dot: "MacBook Air · no sign-ins yet", "Mac mini · out of reach" ("Mac mini · connecting" while its connection is being made; Subscriptions' device sign-ins and the device forge rows say it the same way).
-A project kept on this computer only shows "This computer" as text, with the description "Kept on this computer only, so its tasks run here."
+A project kept on this computer only shows "This computer" as text, with the description "Kept on this computer only, so its tasks run there."
+On a computer that controls the first mate, "this computer" in both names the first mate's computer.
 The personal workspace stays on this computer too, locked like its other rows.
 Collapsed, an Automatic project adds the accent badge "runs automatically".
 A project that runs elsewhere adds one accent `Badge` after the others: "runs on Mac mini", or "runs as Builder".

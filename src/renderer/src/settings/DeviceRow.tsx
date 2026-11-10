@@ -13,6 +13,7 @@ import { runsForAnotherFirstmate, sshConnectionWords } from "@shared/sshConnecti
 import { useState } from "react";
 import { Button, Input } from "../design";
 import { sshMustBeOn } from "../devices/NearbyList";
+import { useHereAs } from "../devices/useFirstMatePlace";
 import type { DevicesTabViewProps } from "./devicesState";
 import {
   addingWords,
@@ -48,6 +49,7 @@ export function DeviceRow({
   onTryAgain,
   onAskChangeAddress,
 }: DevicesTabViewProps & { device: DeviceView }) {
+  const here = useHereAs();
   const label = deviceLabel(device);
   if (!deviceRunsWork(device.kind)) {
     const summary = deviceSummary(device, undefined);
@@ -60,7 +62,7 @@ export function DeviceRow({
         <span className="fm-devices-dot" data-tone={device.inReach ? "ok" : "warn"} />
         <span className="fm-devices-text">
           <span className="fm-devices-name">{device.name}</span>
-          <span className="fm-devices-detail">{deviceDetail(device, now)}</span>
+          <span className="fm-devices-detail">{here(deviceDetail(device, now))}</span>
           {summary && <span className="fm-devices-summary">{summary}</span>}
         </span>
         <Button
@@ -117,21 +119,27 @@ export function DeviceRow({
       />
       <span className="fm-devices-text">
         <span className="fm-devices-name">{label}</span>
-        <span className="fm-devices-detail">{deviceDetail(device, now)}</span>
+        <span className="fm-devices-detail">{here(deviceDetail(device, now))}</span>
         <span className="fm-devices-summary" role={finding || moved ? "status" : undefined}>
-          {finding
-            ? addingWords(finding, label)
-            : moved
-              ? remoteLoginWords.reachingRow(moved.address)
-              : updatingHere
-                ? copy?.download
-                  ? remoteLoginWords.downloading(label, copy.download.received, copy.download.total)
-                  : copy?.state === "sending"
-                    ? remoteLoginWords.sendingRow(label, copy.sent ?? 0)
-                    : copy?.state === "starting"
-                      ? remoteLoginWords.startingRow(label)
-                      : remoteLoginWords.updatingRow(device)
-                : deviceSummary(device, own)}
+          {here(
+            finding
+              ? addingWords(finding, label)
+              : moved
+                ? remoteLoginWords.reachingRow(moved.address)
+                : updatingHere
+                  ? copy?.download
+                    ? remoteLoginWords.downloading(
+                        label,
+                        copy.download.received,
+                        copy.download.total,
+                      )
+                    : copy?.state === "sending"
+                      ? remoteLoginWords.sendingRow(label, copy.sent ?? 0)
+                      : copy?.state === "starting"
+                        ? remoteLoginWords.startingRow(label)
+                        : remoteLoginWords.updatingRow(device)
+                  : deviceSummary(device, own),
+          )}
         </span>
         {startupProblem && !settling && (
           <span className="fm-devices-summary" data-device-startup="">
@@ -142,22 +150,22 @@ export function DeviceRow({
         )}
         {stranded && (
           <span className="fm-devices-summary" data-device-stranded="">
-            {stranded}
+            {here(stranded)}
           </span>
         )}
         {held && (
           <span className="fm-devices-summary" data-device-held="">
-            {held}
+            {here(held)}
           </span>
         )}
         {stopped && (
           <span className="fm-devices-version" data-tone="warn" data-device-ssh-stopped="">
-            {stopped}
+            {here(stopped)}
           </span>
         )}
         {other && !updatingHere && (
           <span className="fm-devices-version" data-tone={other.takesWork ? undefined : "warn"}>
-            {deviceWords.otherVersion(other)}
+            {here(deviceWords.otherVersion(other))}
           </span>
         )}
       </span>
@@ -251,6 +259,7 @@ export function AddressChange({
   onAddAt,
   onAskChangeAddress,
 }: DevicesTabViewProps & { device: DeviceView }) {
+  const here = useHereAs();
   const adding = device.heldOnLocalNetwork === true;
   const [address, setAddress] = useState(device.remoteLogin ?? "");
   const typed = address.trim();
@@ -269,11 +278,13 @@ export function AddressChange({
       }}
     >
       <label className="fm-devices-question" htmlFor={id}>
-        {sshConnectionWords.changeAddress(device)}
+        {here(sshConnectionWords.changeAddress(device))}
       </label>
       <div className="fm-devices-aside-say">
         {!adding
-          ? `The address you use with SSH for it now. ${HERE.This} checks it is the same ${COMPUTER.one} first.`
+          ? here(
+              `The address you use with SSH for it now. ${HERE.This} checks it is the same ${COMPUTER.one} first.`,
+            )
           : device.user
             ? `The address you use with SSH for it, as ${device.user}. ${sshMustBeOn()}`
             : `The address you use with SSH for it. ${sshMustBeOn()}`}
@@ -313,6 +324,7 @@ export function RemoveQuestion({
   onAskRemove,
   onRemove,
 }: DevicesTabViewProps & { device: DeviceView }) {
+  const here = useHereAs();
   const keep = (
     <Button
       variant="ghost"
@@ -324,7 +336,7 @@ export function RemoveQuestion({
       Keep it
     </Button>
   );
-  const lines = removeLines(device);
+  const lines = removeLines(device).map(here);
   return (
     <div className="fm-devices-row" data-device-removing={device.id}>
       <span className="fm-devices-dot" />

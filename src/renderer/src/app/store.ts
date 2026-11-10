@@ -133,8 +133,8 @@ type ShellCore = {
   applyThisMac: (thisMac: ThisMac) => void;
   /**
    * Whether Settings -> Devices is offered here (`inf:devices:shown`,
-   * docs/devices.md): its commands are listed only then. False until read,
-   * and on a Mac that controls another.
+   * docs/devices.md): its commands are listed only then. False until read;
+   * a computer that controls the first mate reads it from that computer.
    */
   devicesShown: boolean;
   /**
@@ -185,6 +185,14 @@ function readReleaseNotes(): void {
   void window.infinitary.releaseNotes
     .list()
     .then((releaseNotes) => useShellStore.setState({ releaseNotes }))
+    .catch(() => {});
+}
+
+/** Whether Settings -> Devices is offered (`inf:devices:shown`); unanswered, the last known stays. */
+function readDevicesShown(): void {
+  void window.infinitary.devices
+    .shown()
+    .then(({ shown }) => useShellStore.setState({ devicesShown: shown }))
     .catch(() => {});
 }
 
@@ -262,6 +270,12 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       }));
     }
     if (isView(before) && isView(thisMac) && thisMac.caughtUp > before.caughtUp) get().resync();
+    if (
+      isView(thisMac) &&
+      thisMac.contact === "in-reach" &&
+      !(isView(before) && before.contact === "in-reach")
+    )
+      readDevicesShown();
   },
   resync: () => {
     set({ cardsSnapshotLoaded: false });
@@ -291,11 +305,10 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         if (!get().thisMac) set({ thisMac });
       })
       .catch(() => {});
-    // Asked once: a build offers Devices or not for as long as it runs.
-    void window.infinitary.devices
-      .shown()
-      .then(({ shown }) => set({ devicesShown: shown }))
-      .catch(() => {});
+    // Asked once: a build offers Devices or not for as long as it runs. A
+    // view asks that first mate, so an ask refused while it is away is asked
+    // again when it comes back in reach (applyThisMac).
+    readDevicesShown();
     // Asked once too: a build keeps protected storage or not for as long as it runs.
     void window.infinitary.secrets
       .shown()

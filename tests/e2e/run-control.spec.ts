@@ -1,8 +1,10 @@
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { joinHome } from "@core/helper/join";
 import { expect, type Page, test } from "@playwright/test";
 import { COMPUTER } from "@shared/deviceNames";
+import { PAIRING_LINK_PREFIX } from "@shared/devices";
 import { INTEGRATION_KIND_NAMES, INTEGRATION_NOTICES } from "@shared/integrations";
 import electronPath from "electron";
 import { HOST_CARD_PRIORITY, PROVIDER_SIGN_IN_TITLE } from "../../src/core/orchestrator/hostCards";
@@ -21,6 +23,11 @@ import {
   startGoogleStandIn,
 } from "../helpers/googleStandIn";
 import { scratchDir } from "../helpers/scratchDirs";
+import { BUILDER, linkInTab, openDevices } from "./deviceFixtures";
+import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
+import { type HelperRun, startHelper } from "./helperRun";
+import { knowledgePanel, OPEN_KNOWLEDGE } from "./knowledgeBrowser";
+import { seedKnowledge } from "./knowledgeSeed";
 import {
   builtAppDir,
   defaultClaudeStubDir,
@@ -41,30 +48,32 @@ import { pressKey, runFromSearch } from "./windowKeys";
  * "everything the window does, including subscription and custom API
  * sign-ins, projects, computers, phones, integrations, and card buttons that
  * open Settings", for a first mate started by a command (docs/run.md,
- * "Control from another computer"), and INF-1352's plan, piece 1, the
+ * "Control from another computer"), and INF-1352's plan, pieces 1 and 2, the
  * captain's answer one_rule=every-view: the same from a first mate with its
  * window. Promised result: from another computer's Infinitary, a card's Open
- * settings button opens Settings there; its Projects, Intelligence, Usage and
- * Integrations open by keys; a projects folder typed there is checked and
- * saved where the first mate lives; and a Google sign-in started there opens
- * Google's page in that computer's browser, never the first mate's, and is
- * kept where the first mate lives. INF-3454's plan, the captain's answers
- * direction=catch-here and proof=linux-journey: Google's return is caught by
- * the computer the person is at and handed to the first mate, or pasted
- * when that computer cannot listen on its port. Data: the real built app
- * started as `<app> run`, or as the ordinary app with its window, in a
- * disposable HOME and data folder, with the mock provider, a mock Claude
- * client and the Google stand-in, and a second app at its first launch that
- * joins with a link; no credentials or real Keychain. Google's stand-in
- * sends the browser back to 127.0.0.1 at the first mate's port: on Linux the
- * joined app listens at 127.0.0.2 instead, so the test plays its computer's
- * browser there and the return is caught; with the window, the first mate
- * holds that port on this one computer, so the joined app asks for the
- * address and the test pastes it. Completion: the joined app's Settings
- * rows, the page each app's recorded browser opened, and the first mate's
- * saved data. Platform: Linux needs Xvfb for the run, and is where the
- * return is caught; a Mac pastes it. Shared resources: loopback ports this
- * test claims, and the first mate's sign-in port at 127.0.0.2.
+ * settings button opens Settings there; its Projects, Intelligence, Usage,
+ * Automation and Integrations open by keys; a projects folder typed there is
+ * checked and saved where the first mate lives; a Google sign-in started there
+ * opens Google's page in that computer's browser, never the first mate's, and
+ * is kept where the first mate lives; and its Devices adds a stand-in computer
+ * to the first mate and removes it again, and its Knowledge shows there.
+ * INF-3454's plan, the captain's answers direction=catch-here and
+ * proof=linux-journey: Google's return is caught by the computer the person
+ * is at and handed to the first mate, or pasted when that computer cannot
+ * listen on its port. Data: the real built app started as `<app> run`, or as
+ * the ordinary app with its window, in a disposable HOME and data folder,
+ * with the mock provider, a mock Claude client and the Google stand-in, and a
+ * second app at its first launch that joins with a link; no credentials or
+ * real Keychain. Google's stand-in sends the browser back to 127.0.0.1 at the
+ * first mate's port: on Linux the joined app listens at 127.0.0.2 instead, so
+ * the test plays its computer's browser there and the return is caught; with
+ * the window, the first mate holds that port on this one computer, so the
+ * joined app asks for the address and the test pastes it. Completion: the
+ * joined app's Settings rows, the page each app's recorded browser opened,
+ * and the first mate's saved data. Platform: Linux needs Xvfb for the run,
+ * and is where the return is caught; a Mac pastes it. Shared resources:
+ * loopback ports this test claims, and the first mate's sign-in port at
+ * 127.0.0.2.
  */
 
 /** The joined computer's name, and the name the run's computer goes by. */
@@ -302,6 +311,9 @@ test("another computer controls a first mate started by a command: its Settings,
   await test.step("its Settings sections open by keys, beside this computer's own look and keys", async () => {
     await runFromSearch(app, page, "settings.usage");
     await expect(settingsSection(page, "usage")).toBeVisible();
+    // INF-1339: Automation opens by its command too.
+    await runFromSearch(app, page, "settings.automation");
+    await expect(settingsSection(page, "automation")).toBeVisible();
     const tabs = page.getByRole("tab");
     for (const id of [
       "general",
@@ -357,11 +369,13 @@ test("another computer controls a first mate started by a command: its Settings,
   expect(existsSync(join(data, "integrations", "google.json"))).toBe(true);
 });
 
-test("another computer controls a first mate with its window: a card's Settings button and a sign-in opened there, not on the first mate's computer", async () => {
+test("another computer controls a first mate with its window: a card's Settings button and a sign-in opened there, not on the first mate's computer, and its computers and Knowledge", async () => {
   test.setTimeout(240_000);
   const data = scratchDir("run-control-windowed-");
   signInCard(data);
+  await seedKnowledge(data);
   google = await startGoogleStandIn();
+  const runs: HelperRun[] = [];
   const home = await launchApp({
     userDataDir: data,
     env: {
@@ -385,7 +399,65 @@ test("another computer controls a first mate with its window: a card's Settings 
     expect(await openedThere()).toEqual([]);
     // The Google sign-in is kept in the first mate's own folder, never here.
     expect(existsSync(join(data, "integrations", "google.json"))).toBe(true);
+
+    await test.step("its Knowledge shows here and opens", async () => {
+      // The panels sit on the home screen, so Settings closes first.
+      await (view as LaunchedApp).page.keyboard.press("Escape");
+      await expect((view as LaunchedApp).page.locator("[data-screen-label]")).not.toHaveAttribute(
+        "data-screen-label",
+        "Settings",
+      );
+      const panel = knowledgePanel(view?.page as Page);
+      await expect(panel).toBeAttached({ timeout: 30_000 });
+      // Its command opens it, by keys, whatever room the rail gives the panel.
+      await runFromSearch((view as LaunchedApp).app, (view as LaunchedApp).page, OPEN_KNOWLEDGE);
+      await expect(
+        (view as LaunchedApp).page.locator('[data-panel-card="knowledge/browser"]'),
+      ).toBeVisible();
+    });
+
+    await test.step("its Devices adds a stand-in computer to the first mate and removes it", async () => {
+      const { page } = view as LaunchedApp;
+      await page.keyboard.press("Escape");
+      await openDevices(page);
+      // A command for another user of the first mate's computer, made here.
+      await pressKey(page.locator('[data-device-add="user"]'), "Enter");
+      const made = (await linkInTab(page).textContent()) ?? "";
+      const link = made.slice(made.indexOf(PAIRING_LINK_PREFIX), made.lastIndexOf("'"));
+      const dataDir = scratchDir("run-control-stand-in-");
+      const joined = await joinHome({
+        text: link,
+        dataDir,
+        io: { say: () => {}, ask: async () => "yes" },
+        device: { name: "iMac", user: BUILDER },
+        timeoutMs: 5_000,
+      });
+      if (!joined.ok) throw new Error(joined.reason);
+      const deviceId = joined.grant.deviceId;
+      await pressKey(page.getByRole("button", { name: "Done", exact: true }), "Enter");
+      const started = startHelper({ dataDir, say: () => {}, retryMs: [50], log: () => {} });
+      if (!started.ok) throw new Error(started.reason);
+      runs.push(started.run);
+      await expect
+        .poll(() => started.run.state().contact, { timeout: FIRST_CONTACT_TIMEOUT_MS })
+        .toBe("in-reach");
+      // It is the first mate's computer, listed there and here.
+      expect(
+        (await home.page.evaluate(() => window.infinitary.devices.list())).map(({ id }) => id),
+      ).toContain(deviceId);
+      const row = page.locator(`[data-device-row="${deviceId}"]`);
+      await expect(row).toBeVisible();
+      await pressKey(row.getByRole("button", { name: /^Remove / }), "Enter");
+      const question = page.locator(`[data-device-removing="${deviceId}"]`);
+      await pressKey(question.getByRole("button", { name: "Remove", exact: true }), "Enter");
+      expect(await started.run.ended).toBe("removed");
+      await expect(row).toHaveCount(0);
+      expect(
+        (await home.page.evaluate(() => window.infinitary.devices.list())).map(({ id }) => id),
+      ).not.toContain(deviceId);
+    });
   } finally {
+    await Promise.all(runs.map((run) => run.stop()));
     await home.close();
   }
 });

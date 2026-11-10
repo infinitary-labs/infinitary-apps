@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "devices-from-a-view",
+      "kind": "feature",
+      "title": "Manage your first mate's computers and phones from any computer that controls it",
+      "body": "On a computer that controls your first mate on another, Settings → Devices now shows that computer's own devices under Leave: make a link or a command, add a computer by its address, and update or remove one, all from where you sit. A card's Devices button opens it there too, Knowledge shows on that computer, and Open Automation and Pause all automations work from it. Sentences that used to say \"this computer\" name the computer your first mate lives on.",
+      "area": "devices",
+      "picture": {
+        "dark": "devices-from-a-view-dark.webp",
+        "light": "devices-from-a-view-light.webp",
+        "alt": "Settings → Devices on a computer controlling Mac mini: the Controlling row with Leave, then Mac mini's own devices with Remove and the ways to add one"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

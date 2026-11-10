@@ -6,6 +6,7 @@ import {
 } from "@shared/forges";
 import { useState } from "react";
 import { Button } from "../design";
+import { useHereAs } from "../devices/useFirstMatePlace";
 
 /**
  * The one line under a GitHub sign-in (`docs/forge.md`, "GitHub CLI's
@@ -27,6 +28,7 @@ export function GitHubCliLine({
   /** Asks that computer instead of this one. */
   ask?: () => Promise<ForgeCliSignInResult>;
 }) {
+  const here = useHereAs();
   const [asking, setAsking] = useState(false);
   const [problem, setProblem] = useState("");
   const use = async () => {
@@ -46,7 +48,7 @@ export function GitHubCliLine({
   return (
     <div className="fm-forges-cli" data-forge-cli={address}>
       <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
-        {where ? forgeCliOffer(where) : FORGE_CLI_WORDS.offer}
+        {here(where ? forgeCliOffer(where) : FORGE_CLI_WORDS.offer)}
       </div>
       <div className="fm-forges-aside-actions">
         <Button
@@ -66,7 +68,7 @@ export function GitHubCliLine({
         data-forge-cli-problem=""
         style={{ display: "block", fontSize: "var(--text-sm)", color: "var(--danger)" }}
       >
-        {problem}
+        {here(problem)}
       </span>
     </div>
   );

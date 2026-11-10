@@ -8,6 +8,7 @@ import {
   builtinSurface,
 } from "@shared/surfaces";
 import { useShellStore } from "../../app/store";
+import { isView } from "../../devices/viewWords";
 import {
   FramedPanelBody,
   type FramedPanelContent,
@@ -264,9 +265,10 @@ function gateHolder(host: PluginHost, gate: AppPanelGate, title: string) {
  * keeps knowledge and there is some to show: the window asks the core at
  * start, and again after each change to knowledge and each project that
  * comes or goes; the panel, its card and its command come and go with the
- * answer. A build that keeps no knowledge - a stable one, or a view of
- * another Mac, which is refused the question - asks once and registers
- * nothing.
+ * answer, a view's from the first mate's computer, asked again each time
+ * that computer comes back in reach. A build that keeps no
+ * knowledge - a stable one, or a view of a first mate too old to answer the
+ * question - asks once and registers nothing.
  *
  * The Automation panel (docs/automation.md, "The Automation panel") while a
  * saved rule exists: the window follows the same `automation.list` read
@@ -316,6 +318,16 @@ export function startGatedPanels(host: PluginHost): () => void {
       });
   };
   ask();
+  // A view's window starts before its first mate is in reach, and an ask then
+  // is refused: it asks again each time that computer comes back in reach.
+  const offReach = useShellStore.subscribe((state, before) => {
+    if (
+      isView(state.thisMac) &&
+      state.thisMac.contact === "in-reach" &&
+      !(isView(before.thisMac) && before.thisMac.contact === "in-reach")
+    )
+      ask();
+  });
 
   const automationGate = gateHolder(host, "automation", "Automation");
   const offRules = appReadExecutor().subscribe(
@@ -336,6 +348,7 @@ export function startGatedPanels(host: PluginHost): () => void {
   return () => {
     stopped = true;
     off?.();
+    offReach();
     offRules();
     knowledgeGate.stop();
     automationGate.stop();

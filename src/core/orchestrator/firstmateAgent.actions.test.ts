@@ -144,7 +144,7 @@ describe("FirstmateAgent", () => {
     expect((await change("device-remove", { deviceId: "mini-1" })).text).toMatch(/offered on/);
     const remove = card("Remove Mac mini?");
     expect(remove.body).toBe(
-      "<p>Its task on website stops, and its unmerged work comes here first.</p>\n<p>Then I remove what I set up there, with its sign-ins. Only your click can remove it.</p>",
+      "<p>Its task on website stops, and its unmerged work comes to me first.</p>\n<p>Then I remove what I set up there, with its sign-ins. Only your click can remove it.</p>",
     );
     expect(remove.actions.find((action) => action.default)).toMatchObject({
       label: "Remove Mac mini",

@@ -76,7 +76,7 @@ export const QUEUE_KEY_WORDS = {
     `Your sign-in cannot read this project's keys on ${place}. Making one needs the Maintainer role on the project, and on gitlab.com a Premium or Ultimate plan.`,
   make: "Make the queue's key",
   remake: "Make a new key",
-  made: "Made the queue's key. It stays in your project's CI settings, never on this computer.",
+  made: "Made the queue's key. It stays in your project's CI settings, never on your computers.",
 } as const;
 
 /**

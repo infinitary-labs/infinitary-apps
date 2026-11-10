@@ -152,6 +152,9 @@ export type PairedDevices = {
 /** One rule for every view (`every-view-asks.md`). */
 export const EVERY_VIEW_ASKS = contractChange("every-view-asks");
 
+/** A view asks the home's computers, phones and Knowledge (`devices-from-a-view.md`). */
+export const DEVICES_FROM_A_VIEW = contractChange("devices-from-a-view");
+
 /**
  * Any view asks every request of a task's browser, and the home sends its
  * pictures as `live` frames (`browser-from-any-view.md`).

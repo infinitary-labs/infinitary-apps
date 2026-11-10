@@ -584,7 +584,7 @@ export const deviceInviteRequestSchema = z.strictObject({
 });
 export type DeviceInviteRequest = z.infer<typeof deviceInviteRequestSchema>;
 
-/** A link the home made, for this Mac's own window and nothing else. */
+/** A link the home made, for the window that asked: this Mac's own, or a computer that controls it. */
 export const deviceInviteSchema = z.strictObject({
   /** The link's own handle, which Stop it names; not a secret, and not the link. */
   id: z.string().min(1).max(64),
@@ -775,6 +775,12 @@ export const thisMacSchema = z.discriminatedUnion("role", [
      * false when it could not, so Settings asks for the address instead.
      */
     signInReturn: z.strictObject({ id: z.string().min(1).max(64), caught: z.boolean() }).optional(),
+    /**
+     * The first mate there does not answer a view its computers, phones
+     * and Knowledge (the `devices-from-a-view` contract change), so Devices
+     * waits for an update there (docs/view.md, "A first mate on an older version").
+     */
+    devicesNeedUpdateThere: z.literal(true).optional(),
   }),
 ]);
 export type ThisMac = z.infer<typeof thisMacSchema>;
@@ -900,13 +906,17 @@ export const deviceWords = {
     return other.takesWork ? has : `${has} It takes no new work until it is updated.`;
   },
 
-  /** What a computer that runs work stops when it is removed, before its work comes here. */
+  /**
+   * What a computer that runs work stops when it is removed, before its work
+   * comes to the first mate: said in the first mate's voice on its Remove
+   * card, which every computer that controls it shows too.
+   */
   removeStops(device: DeviceView): string {
     const tasks = device.tasks ?? 0;
     const runs = device.runs ?? [];
-    if (tasks === 0) return "Its unmerged work comes here first.";
+    if (tasks === 0) return "Its unmerged work comes to me first.";
     const which = `${tasks === 1 ? "Its task" : `Its ${tasks} tasks`}${runs.length > 0 ? ` on ${namesInWords(runs)}` : ""}`;
-    return `${which} ${tasks === 1 ? "stops" : "stop"}, and its unmerged work comes here first.`;
+    return `${which} ${tasks === 1 ? "stops" : "stop"}, and its unmerged work comes to me first.`;
   },
 
   /** The feed's line once Remove did what it does. */

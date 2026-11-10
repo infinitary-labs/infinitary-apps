@@ -152,14 +152,15 @@ There is no code to scan beside a link until the iPhone app exists (captain's pi
 **Remove** works for every device but This computer, as one question in place, `RemoveProject`'s shape, with a ghost "Keep it" focused so Enter never removes:
 - A computer that runs no work: "Remove MacBook Air?
   It is cut off at once." over "To come back, it needs a new link.", with a danger "Remove".
+- On a computer that controls the first mate, every sentence below that says this computer names the first mate's computer instead.
 - A computer or a user that runs work: "Remove Mac mini?
-  Its unmerged work comes here first." over "Its task on website stops.
+  Its unmerged work comes to this computer first." over "Its task on website stops.
   Infinitary then removes what it set up there, with its sign-ins." and "website and api run on this computer after.", with a danger "Remove".
-  The row then reads "Bringing website's unmerged work here…", then "Removing what Infinitary set up on Mac mini…", and leaves the list.
+  The row then reads "Bringing website's unmerged work to this computer…", then "Removing what Infinitary set up on Mac mini…", and leaves the list.
 - Out of reach: "Remove Mac mini?
   It is out of reach."
   ("It is connecting." while its connection is being made) over "Its unmerged work on website is still there.
-  Wait, and it comes here before Mac mini is removed.", with a secondary "Remove when it is back" and a danger "Remove now".
+  Wait, and it comes to this computer before Mac mini is removed.", with a secondary "Remove when it is back" and a danger "Remove now".
   Waiting turns the mono line to "out of reach · removed when it is back" ("connecting · removed when it is back" for a computer whose connection is being made), with a ghost "Keep it" in place of Remove.
   "Remove now" leaves that work on the other computer, and Infinitary removes what it set up there when that computer is back.
 - A computer that left your first mate: "Remove Mac mini?
@@ -205,7 +206,7 @@ It stays above the list until the next action, as any refusal but a computer tha
 The row keeps its existing type, spacing, focus and disabled controls.
 Remove on a computer that takes no new work asks as for one out of reach, with its own first line: "Remove Mac mini?
 It takes no new work." over "Its unmerged work on website is still there.
-Update it, and its work comes here before Mac mini is removed.", with a secondary "Remove once it is updated" and a danger "Remove now".
+Update it, and its work comes to this computer before Mac mini is removed.", with a secondary "Remove once it is updated" and a danger "Remove now".
 Waiting turns its mono line to "takes no new work · removed once it is updated".
 
 **How other devices find this computer.**
@@ -245,7 +246,7 @@ Each card's button is the captain's own click on the card's chrome; it opens thi
 - "add my mini by a command" yields "Add a computer by a command": "Make the command here, then run it once in Terminal on that computer." and "It works once, for ten minutes, or thirty when it downloads Infinitary there.
   Only your click can make it, so I never see it.", with "Make the command" and "Not now".
 - "run work as another user on this computer" and "add my mini at sam@mini.local" are in `AddAMac.prompt.md`.
-- "remove the mini" yields "Remove Mac mini?": "Its task on website stops, and its unmerged work comes here first." and "Then I remove what I set up there, with its sign-ins.
+- "remove the mini" yields "Remove Mac mini?": "Its task on website stops, and its unmerged work comes to me first." and "Then I remove what I set up there, with its sign-ins.
   Only your click can remove a computer.", with a danger default "Remove Mac mini" and a ghost "Keep it".
   The click opens this tab and removes it on arrival.
 

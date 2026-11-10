@@ -21,18 +21,22 @@ The update notice at the top bar's right is this computer's own, the same notice
 Appearance holds this computer's own size, theme, window wash and crew model names (captain's pick), starting from the other computer's when it joins, under the line "Set on this computer only.
 MacBook Pro keeps its own."
 Devices holds the micro label `CONTROLLING`, the line "What you do here happens on MacBook Pro.
-Its computers, Secrets and voice stay there.", and one row in the Devices list's shape: a `StatusDot`, the name, the mono line "joined today 14:06 · 192.168.1.20", and a small secondary "Leave".
+Its Secrets and voice stay there.", and one row in the Devices list's shape: a `StatusDot`, the name, the mono line "joined today 14:06 · 192.168.1.20", and a small secondary "Leave".
+Under it, a section gap below, is MacBook Pro's own Devices tab, as MacBook Pro shows it: its computers and phones, its ways to add one, and each row's Update and Remove, read and changed there.
+Its intro says "Your first mate lives on MacBook Pro.
+Its tasks and conversation stay there.
+From any computer you add you can control it, and any computer you add can run a project's work.
+Running as another user on MacBook Pro only runs work.
+Like every user on MacBook Pro, it can read the files your home folder lets other users read.", the sentence that holds on each system, since this computer does not know MacBook Pro's.
+MacBook Pro's own row reads "Your first mate lives there", and every sentence MacBook Pro says of itself as "this computer" names MacBook Pro instead.
 
-**A card button that opens Devices there.**
-A card's button whose click opens MacBook Pro's Devices section - Make a link, Make the command, Add it, Update it, Remove - stays enabled and in its place, and its click sends nothing.
-Its `note` says before the click, on rest, the pointer's or the keyboard's focus, and the card's concise inline line (`../core/Button.prompt.md`) says after it: "MacBook Pro's computers and phones cannot be changed from here yet."
-The card stays on both computers, so its button is still there on MacBook Pro, and no Settings tab opens here.
-A button that opens any other Settings section - Sign in, a project's Sign in again, Open settings - is sent and opens that section here.
+**A card button that opens Settings.**
+A card's button whose click opens a Settings section - Sign in, a project's Sign in again, Open settings, and MacBook Pro's Devices with Make a link, Make the command, Add it, Update it, Remove - is sent and opens that section here, doing what it asks on arrival.
 While changes are off, these buttons are marked off like the rest.
 
 **A first mate on an older version.**
 Where MacBook Pro is too old to answer what a view asks, a Settings section shows the one line "Update Infinitary on MacBook Pro to do this from here." in place of its rows, and a card's button that opens Settings stays in its place, sends nothing and says the same.
-Appearance, Keyboard, Automation and Devices are unchanged.
+Appearance, Keyboard and Automation are unchanged; Devices keeps its `CONTROLLING` row and Leave, and shows the same line under it in place of MacBook Pro's list.
 
 **A crewmate's request to take over its browser.**
 A task's browser shows its page here as on MacBook Pro, so a request card's button that hands it to the captain - `Open browser and sign in`, `Sign in myself`, `Open browser and pay` - works from here: the card is answered on both computers and the browser view opens here, its pictures sent from MacBook Pro, with Take control and the captain's typing going back to the page there.

@@ -209,7 +209,7 @@ describe("Runs on (docs/helper.md)", () => {
       "The personal workspace stays on this computer.",
     );
     expect(runsHereOnly({ kind: "project", origin: null })).toBe(
-      "Kept on this computer only, so its tasks run here.",
+      "Kept on this computer only, so its tasks run there.",
     );
     expect(runsHereOnly({ kind: "project", origin: "https://github.com/o/website.git" })).toBe(
       null,

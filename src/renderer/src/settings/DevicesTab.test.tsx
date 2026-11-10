@@ -791,13 +791,13 @@ describe("Settings -> Devices", () => {
 
   it("asks before removing a computer that runs work, and how when it is out of reach", () => {
     expect(removeLines(BUILDER)).toEqual([
-      "Remove Running as Builder? Its unmerged work comes here first.",
+      "Remove Running as Builder? Its unmerged work comes to this computer first.",
       "Its task on website stops. Infinitary then removes what it set up there, with its sign-ins.",
       "website runs on this computer after.",
     ]);
     expect(removeLines(MINI)).toEqual([
       "Remove Mac mini? It is out of reach.",
-      "Its unmerged work on website and api is still there. Wait, and it comes here before Mac mini is removed.",
+      "Its unmerged work on website and api is still there. Wait, and it comes to this computer before Mac mini is removed.",
     ]);
     const away = render({ devices: [MINI], removing: "mini" });
     expect(away).toContain("Remove when it is back");
@@ -810,7 +810,7 @@ describe("Settings -> Devices", () => {
 
   it("says where a removal stands, and offers Keep it while it waits for the computer", () => {
     expect(deviceSummary({ ...MINI, inReach: true, removal: "bringing-work" }, undefined)).toBe(
-      "Bringing website and api's unmerged work here…",
+      "Bringing website and api's unmerged work to this computer…",
     );
     expect(deviceSummary({ ...BUILDER, removal: "cleaning-up" }, undefined)).toBe(
       "Removing what Infinitary set up as Builder…",
@@ -932,14 +932,14 @@ describe("Settings -> Devices", () => {
     expect(row).not.toContain("Try again");
     expect(row).not.toContain("Change address");
 
-    // Its work never comes here, so Remove asks nothing about waiting for it.
+    // Its work never comes to this computer, so Remove asks nothing about waiting for it.
     expect(removeLines(left)).toEqual([
       "Remove Mac mini? It runs work for another first mate now.",
       "Its unmerged work on website and api stays there. Nothing changes there for the other first mate.",
     ]);
     const asking = render({ devices: [left], removing: "mini" });
     expect(asking).not.toContain("Remove when it is back");
-    expect(asking).not.toContain("comes here");
+    expect(asking).not.toContain("comes to");
     expect(asking).toContain("Remove now");
     expect(asking.indexOf("Keep it")).toBeLessThan(asking.indexOf("Remove now"));
     // Stopped for any other reason, it may still come back, and Remove may wait for it.
@@ -957,7 +957,7 @@ describe("Settings -> Devices", () => {
     };
     expect(removeLines(noWork)).toEqual([
       "Remove Mac mini? It takes no new work.",
-      "Its unmerged work on website and api is still there. Update it, and its work comes here before Mac mini is removed.",
+      "Its unmerged work on website and api is still there. Update it, and its work comes to this computer before Mac mini is removed.",
     ]);
     const asking = render({ devices: [noWork], removing: "mini" });
     expect(asking).toContain("Remove once it is updated");

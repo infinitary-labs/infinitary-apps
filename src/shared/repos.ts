@@ -481,7 +481,7 @@ export function queueSettingsWarning(
  */
 export function runsHereOnly(repo: Pick<RepoView, "kind" | "origin">): string | null {
   if (repo.kind === "personal") return `The personal workspace stays on ${HERE.this}.`;
-  if (!repo.origin) return `Kept on ${HERE.this} only, so its tasks run here.`;
+  if (!repo.origin) return `Kept on ${HERE.this} only, so its tasks run there.`;
   return null;
 }
 

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "trim-crewmate-delivery-guidance",
+      "reason": "Shortens the crewmate's delivery guidance without changing its rules or a visible surface."
+    }
+  ]
+}

@@ -547,11 +547,12 @@ private struct PhoneCardPane: View {
         .onChange(of: [paneHeight, headHeight, footHeight]) { shapeFrame() }
         .onChange(of: replyFocus == nil) { _, unfocused in if unfocused { shapeFrame() } }
         // Only the shown card speaks for the reply's focus; one that slides aside lets its field go.
-        .onChange(of: shown && replyFocus != nil, initial: shown) { was, focused in
+        // INF-3427: a text box in the body that holds the keyboard counts as the card's own field here too.
+        .onChange(of: shown && (replyFocus != nil || host.typing), initial: shown) { was, focused in
             if shown || was { messageContext.replyFocused = focused }
         }
         .onChange(of: shown) { _, shown in connectHost(); if !shown { replyFocus = nil } }
-        .onDisappear { if shown && replyFocus != nil { messageContext.replyFocused = false } }
+        .onDisappear { if shown && (replyFocus != nil || host.typing) { messageContext.replyFocused = false } }
         .onAppear { connectHost(); readThread(); if let facts = host.facts { showFacts(facts) } }
         .onChange(of: host.facts) { _, facts in if let facts { showFacts(facts) } }
         .onChange(of: session.contact) { _, contact in if contact == "in-reach" { readThread(); markSeen() } }

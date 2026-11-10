@@ -53,6 +53,7 @@
   "InfinitaryTests/RecoveryTests/testSavedMacErrorsDistinguishProtectionFromOtherReadFailures",
   "InfinitaryUITests/PhoneJourney/testActivityAndCatchUp",
   "InfinitaryUITests/PhoneJourney/testAwayLeaveAndRemoved",
+  "InfinitaryUITests/PhoneJourney/testCardBodyFieldKeyboard",
   "InfinitaryUITests/PhoneJourney/testCardForm",
   "InfinitaryUITests/PhoneJourney/testCardMediaAndBody",
   "InfinitaryUITests/PhoneJourney/testCharacterAndPastChoices",

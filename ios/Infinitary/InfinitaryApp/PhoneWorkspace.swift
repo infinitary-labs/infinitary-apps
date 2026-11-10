@@ -16,8 +16,9 @@ import Observation
     var pastCard: String?
     /// INF-1524: a card's draft button, for the message box to take its words, unsent.
     var draft: String?
-    /// INF-2568: the software keyboard is up, and a card's reply field holds its focus; a phone on its side then has no
-    /// room for the pager or, while a reply types, the message box beside the field (`PhoneCards`, `PhoneWorkspace.home`).
+    /// INF-2568: the software keyboard is up, and a card's reply field, or a text box in its body (INF-3427), holds its
+    /// focus; a phone on its side then has no room for the pager or, while it types, the message box beside the field
+    /// (`PhoneCards`, `PhoneWorkspace.home`).
     var keyboardUp = false
     var replyFocused = false
     var fields: [String: String] {

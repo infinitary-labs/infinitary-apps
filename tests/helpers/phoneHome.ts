@@ -1552,6 +1552,46 @@ export async function startPhoneHome(
         case "POST show-merge-past":
           result = await core.dispatch("inf:cards:show-past", [cardIDs.merge]);
           break;
+        // INF-3427: a decision whose text box sits at the end of a body longer than the room the keyboard leaves.
+        case "POST field-card": {
+          const title = "Pick the release window";
+          const sections = [
+            [
+              "Tonight",
+              "The checks on the newest version passed an hour ago. Shipping tonight puts the fix in front of people before the weekend. Nobody is watching the reports overnight, so a problem waits until morning.",
+            ],
+            [
+              "Tomorrow morning",
+              "The crew can watch the first hour of reports. Two other changes are waiting behind this one and would go out together. The release notes need one more picture.",
+            ],
+            [
+              "After the weekend",
+              "Every change waiting now goes out in one release. People keep the old behavior for three more days. The batch is larger, so a problem is harder to trace to one change.",
+            ],
+            [
+              "What changed since yesterday",
+              "The settings screen keeps its scroll place again. The message box no longer jumps when a photo is attached. The task list counts finished tasks the same way on every computer.",
+            ],
+          ];
+          core.services.supervisor.addFirstmateCard({
+            id: "phone-field-card",
+            title,
+            body: `<p>Choose when the next release goes out. Each window trades speed against how closely the crew can watch it.</p>
+              ${sections.map(([head, text]) => `<h3>${head}</h3><p>${text}</p>`).join("\n")}
+              <fieldset data-inf-options-only><legend>Which window?</legend>
+              <label><input type="radio" name="window" required value="tonight"> Tonight</label>
+              <label><input type="radio" name="window" required value="morning"> Tomorrow morning</label>
+              <label><input type="radio" name="window" required value="weekend"> After the weekend</label></fieldset>
+              <label for="crew-note">Anything the crew should know</label>
+              <input id="crew-note" name="crew-note" style="display:block;width:100%;box-sizing:border-box">`,
+            actions: [
+              { id: "ship", label: "Use this window", default: true },
+              { id: "wait", label: "Not now" },
+            ],
+          });
+          result = { title };
+          break;
+        }
         case "POST hero-card": {
           // INF-1892: the earlier choice now stays put aside. Give this separate
           // entrance choice its own title so Tasks restores the card it names.

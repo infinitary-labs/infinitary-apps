@@ -63,6 +63,8 @@ export const PHONE_PARTS = [
   { name: "keyboard-scrolling", test: "testKeyboardOverScrollingCard", photos: false },
   // INF-3106: each way out of a card's reply keyboard and the message box's, the keyboard-down button among them.
   { name: "keyboard-ways-out", test: "testKeyboardWaysOut", photos: false },
+  // INF-3427: a text box inside a card body stays in view with the keyboard up.
+  { name: "body-field", test: "testCardBodyFieldKeyboard", photos: false },
   // INF-2989: the weak link checks (INF-2668, INF-2669) wait out real links and silences, about five minutes a
   // device, which doubled the rest part they joined. An app-hosted class of their own, so a change to the other
   // app-hosted tests repeats only the rest part and a change to these repeats only them.

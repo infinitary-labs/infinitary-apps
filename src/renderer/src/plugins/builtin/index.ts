@@ -130,7 +130,15 @@ export const builtinBindings: PluginBindings = {
     // On a Mac that controls another, the same rules, which run there (docs/automation.md).
     automation: { Component: AutomationTab, onAView: true, onAnOlderFirstMate: true },
     integrations: { Component: IntegrationsTab, onAView: true },
-    secrets: { Component: SecretsTab },
+    secrets: {
+      Component: SecretsTab,
+      // A build without protected storage offers no tab: nothing to open and not use.
+      enabled: () =>
+        window.infinitary.secrets
+          .shown()
+          .then((result) => result.shown)
+          .catch(() => false),
+    },
     devices: {
       Component: DevicesTab,
       // On a Mac that controls another it holds Leave; otherwise the core's word.

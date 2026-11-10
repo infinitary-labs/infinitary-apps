@@ -64,7 +64,7 @@ function SearchPanel({
     query,
     (id) => windowCommandRefusal(id, { ...shell, commandSearchOpen: false }),
     bindings,
-    { devices: shell.devicesShown },
+    { devices: shell.devicesShown, secrets: shell.secretsShown },
     panels,
     thisDesktop().keys,
   );

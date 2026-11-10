@@ -280,7 +280,8 @@ New secret policy is Ask; Never overrides Ask, then Allow, with all required sec
 Fresh human authentication, 300-second request expiry and one-use program approval remain required.
 The optional 600-second/20-use permission applies only to supported brokered reads through the protected owner, not unrestricted commands or renewal.
 Settings → Secrets exposes searchable metadata, Activity/Permissions/History/Recovery, trusted Add/Replace, rehearsal, End access and export/storage display through the disabled-by-default host seam.
-Without that capability, the section shows only its disabled status and the fact that existing sign-ins remain unchanged.
+Without that capability, Settings offers no Secrets tab and command search no Open Secrets: nothing a person can open and not use.
+The window asks `inf:secrets:shown` once, which answers from the host seam without opening storage.
 Native recovery must be proved alongside custody before production enablement.
 No reveal, partial-value display, clipboard export or agent-authored secret-entry form is planned.
 

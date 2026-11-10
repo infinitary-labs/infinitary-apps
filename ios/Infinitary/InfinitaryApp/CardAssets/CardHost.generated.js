@@ -8654,7 +8654,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       repeat: false,
       risk: "navigate",
       keys: [],
-      searchWords: ["secret", "key", "approval", "recovery"]
+      searchWords: ["secret", "key", "approval", "recovery"],
+      section: "secrets"
     },
     // Every running automation paused at once, as Settings → Automation's
     // Pause all does; it opens Automation so the change is seen. No default key.

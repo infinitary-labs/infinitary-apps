@@ -66,7 +66,7 @@ Each command in `KEYBOARD_COMMANDS` has:
 - a risk, what running it may change: `view` (how the window looks), `edit` (the focused field's words), `navigate` (where focus is and what the window shows, with nothing saved) or `close` (a card it closes);
 - its default keys, the first of which a menu and a hint show; a window command may have none and is then chosen by name in command search.
 - optionally other words command search finds it by (`searchWords`), the words a person might type for it that its label does not hold.
-- optionally the Settings section it acts in (`section`), which this build may not offer: command search and Keyboard settings list it only where that section shows (`commandOffered`, read from the shell's `devicesShown`), and it is refused anywhere else.
+- optionally the Settings section it acts in (`section`), which this build may not offer: command search and Keyboard settings list it only where that section shows (`commandOffered`, read from the shell's `devicesShown` and `secretsShown`), and it is refused anywhere else.
   A key is one chord or, for a window command, two pressed one after the other (`KeyBinding`, "Two-key shortcuts").
 
 A command that opens, closes or moves focus never repeats while its key is held; only the size keys and a message field's edits do.

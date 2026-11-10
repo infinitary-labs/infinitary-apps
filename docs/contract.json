@@ -39964,6 +39964,25 @@
         ]
       }
     },
+    "inf:secrets:shown": {
+      "effect": "read",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "shown": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "shown"
+        ]
+      }
+    },
     "inf:secrets:view": {
       "effect": "read",
       "reach": "home",

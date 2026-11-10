@@ -135,6 +135,11 @@ export class SecretsSettings {
     if (settled) this.receiptChanged(settled);
   }
 
+  /** Whether this build keeps protected storage at all; it never opens the storage to answer. */
+  shown(): boolean {
+    return !!this.options.open;
+  }
+
   async view(): Promise<SecretsView> {
     const owner = await this.ready().catch(() => undefined);
     const epoch = this.viewEpoch;

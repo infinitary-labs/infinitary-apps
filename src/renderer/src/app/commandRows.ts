@@ -3,6 +3,7 @@ import {
   type Bindings,
   COMMAND_IDS,
   type CommandId,
+  type CommandSections,
   isCatalogCommand,
   isWindowCommand,
   KEYBOARD_COMMANDS,
@@ -55,11 +56,12 @@ export function commandMatches(
 /**
  * Whether this build offers a command where it acts: one whose Settings
  * section this build does not show - Devices, behind the multi-machine
- * gate - is never listed (docs/keyboard.md, "A command").
+ * gate, or Secrets without protected storage - is never listed
+ * (docs/keyboard.md, "A command").
  */
-export function commandOffered(id: CommandId, sections: { devices: boolean }): boolean {
+export function commandOffered(id: CommandId, sections: CommandSections): boolean {
   const { section } = KEYBOARD_COMMANDS[id] as KeyboardCommand;
-  return section === undefined || sections[section];
+  return section === undefined || sections[section] === true;
 }
 
 /**
@@ -73,7 +75,7 @@ export function commandRows(
   query: string,
   refusal: (id: WindowCommandId | PanelCommandId) => string | null,
   bindings: Bindings,
-  sections: { devices: boolean } = { devices: false },
+  sections: CommandSections = {},
   panels: readonly PanelCommand[] = [],
   /** Whose words a key is drawn in (docs/keyboard.md, "Keys on each system"). */
   system: KeySystem = "mac",

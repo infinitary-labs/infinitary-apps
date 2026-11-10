@@ -82,7 +82,10 @@ function rowText(id: AnyCommandId, bindings: Bindings, panels: readonly PanelCom
 export function KeyboardTab() {
   const snapshot = useInstalledKeymap();
   // A command whose section this build does not offer is not listed here either.
-  const sections = { devices: useShellStore((s) => s.devicesShown) };
+  const sections = {
+    devices: useShellStore((s) => s.devicesShown),
+    secrets: useShellStore((s) => s.secretsShown),
+  };
   const [query, setQuery] = useState("");
   const [recording, setRecordingState] = useState<Recording | null>(null);
   // Keys arrive faster than the section draws: each reads the last one's keys here.

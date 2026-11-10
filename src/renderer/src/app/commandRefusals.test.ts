@@ -46,6 +46,7 @@ const HOME: RefusalState = {
   },
   thisMac: null,
   devicesShown: true,
+  secretsShown: true,
   pendingCardActions: {},
   lastTurn: { you: "Is it done?", reply: { text: "Not yet." } },
 };
@@ -101,6 +102,13 @@ describe("why a window command cannot run now", () => {
     expect(commandRefusal("settings.secrets", HOME, CLEAR)).toBeNull();
     expect(commandRefusal("settings.secrets", { ...HOME, thisMac: view }, CLEAR)).toBe(
       "Secrets is on Mac mini",
+    );
+  });
+
+  // INF-1690's accepted answer: a build without protected storage has no Secrets to open.
+  it("refuses Open Secrets in a build without protected storage", () => {
+    expect(commandRefusal("settings.secrets", { ...HOME, secretsShown: false }, CLEAR)).toBe(
+      "Secrets is not in this build",
     );
   });
 

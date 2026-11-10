@@ -54,6 +54,7 @@ export type RefusalState = Pick<
   | "releaseNotes"
   | "thisMac"
   | "devicesShown"
+  | "secretsShown"
   | "pendingCardActions"
   | "lastTurn"
 >;
@@ -313,8 +314,10 @@ const REFUSALS: Readonly<
   "settings.automation": refusedOnAView("Automation"),
   // Integrations sign in as the person on the home, like Projects.
   "settings.integrations": () => null,
-  // Secrets stay the home's own (docs/secrets.md).
-  "settings.secrets": refusedOnAView("Secrets"),
+  // Secrets stay the home's own (docs/secrets.md), and a build without
+  // protected storage has no Secrets at all.
+  "settings.secrets": (s) =>
+    refusedOnAView("Secrets")(s) ?? (s.secretsShown ? null : "Secrets is not in this build"),
   "automation.pause-all": refusedOnAView("Automation"),
   "usage.unit": refusedUntilUpdate,
   // The allowance is read where the first mate lives, from any Mac.

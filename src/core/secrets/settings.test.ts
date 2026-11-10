@@ -324,6 +324,8 @@ describe("trusted Secrets settings", () => {
       withdraw: () => {},
       changed: () => {},
     });
+    // INF-1690's accepted answer: such a build offers no Secrets tab at all.
+    expect(settings.shown()).toBe(false);
     expect(await settings.view()).toMatchObject({
       availability: "not-enabled",
       entries: [],
@@ -339,6 +341,7 @@ describe("trusted Secrets settings", () => {
 
   it("secure entry seals the value and returns versioned metadata without disclosing it", async () => {
     const f = fixture();
+    expect(f.settings.shown()).toBe(true);
     expect((await f.settings.view()).availability).toBe("uninitialized");
     const view = await f.settings.put(INPUT);
     expect(secretsViewSchema.safeParse(view).success).toBe(true);

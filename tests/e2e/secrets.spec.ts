@@ -40,7 +40,7 @@ import {
 import { settingsSection } from "./settings";
 import { shownCard } from "./stack";
 import { setThemeViaSettings } from "./theme";
-import { focusOn, pressKey, runFromSearch } from "./windowKeys";
+import { commandSearch, focusOn, pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
 
 const LABEL = "Staging deployment";
 const REFERENCE = "staging-deploy";
@@ -706,19 +706,27 @@ for (const theme of ["dark", "light"] as const) {
   });
 }
 
-// INF-3042: Open Secrets must land in the section even when the shipped build
-// has no controls; the real command search and disabled production view run.
-test("Open Secrets focuses its heading when protected storage is disabled", async () => {
+// INF-1690's accepted answer: "No tab at all until storage is enabled; nothing a
+// person can open and not use." The shipped composition, with no protected
+// storage, through the real Settings tabs and command search. Completion: the
+// gated Devices tab shows, and Open Integrations is listed where Open Secrets
+// would be. Prerequisites: Electron and the built renderer.
+test("a build without protected storage offers no Secrets tab or command", async () => {
   const launched = await launchApp({ withMockProvider: true });
+  const { app, page } = launched;
   try {
-    await runFromSearch(launched.app, launched.page, "settings.secrets");
-    await expect(
-      settingsSection(launched.page, "secrets").getByRole("heading", {
-        name: SECRETS_WORDS.title,
-        exact: true,
-      }),
-    ).toBeFocused();
-    await expect(settingsSection(launched.page, "secrets")).toContainText(SECRETS_WORDS.disabled);
+    expect(await page.evaluate(() => window.infinitary.secrets.shown())).toEqual({ shown: false });
+    await runFromSearch(app, page, "settings.open");
+    const tabs = page.getByRole("tablist", { name: "Settings sections" });
+    // Devices is gated by an answer from the core too; once it shows, Secrets' has come back.
+    await expect(tabs.getByRole("tab", { name: "Devices", exact: true })).toBeVisible();
+    await expect(tabs.getByRole("tab", { name: SECRETS_WORDS.title, exact: true })).toHaveCount(0);
+    await expect(settingsSection(page, "secrets")).toHaveCount(0);
+    const search = commandSearch(page);
+    await pressWindowKey(app, "k", ["meta"]);
+    await search.field.fill("open");
+    await expect(search.row("settings.integrations")).toBeVisible();
+    await expect(search.row("settings.secrets")).toHaveCount(0);
   } finally {
     await launched.close();
   }

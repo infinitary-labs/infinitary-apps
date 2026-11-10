@@ -138,6 +138,12 @@ type ShellCore = {
    */
   devicesShown: boolean;
   /**
+   * Whether Settings -> Secrets is offered here (`inf:secrets:shown`,
+   * docs/secrets.md): a build without protected storage has no tab and its
+   * command is not listed. False until read, and on a Mac that controls another.
+   */
+  secretsShown: boolean;
+  /**
    * Reads the stage again from the Mac this one controls, after a gap it
    * could not replay (that Mac restarted, or this one was away too long).
    */
@@ -238,6 +244,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   pendingDeviceForgeSignIn: null,
   thisMac: null,
   devicesShown: false,
+  secretsShown: false,
   applyThisMac: (thisMac) => {
     const before = get().thisMac;
     set({ thisMac });
@@ -288,6 +295,11 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     void window.infinitary.devices
       .shown()
       .then(({ shown }) => set({ devicesShown: shown }))
+      .catch(() => {});
+    // Asked once too: a build keeps protected storage or not for as long as it runs.
+    void window.infinitary.secrets
+      .shown()
+      .then(({ shown }) => set({ secretsShown: shown }))
       .catch(() => {});
     window.infinitary.cards.onCards((cards) => get().applyCards(cards));
     // The project focus holds other projects' cards back (docs/project-focus.md "The card stack").

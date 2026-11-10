@@ -1,9 +1,8 @@
 import { expect, test } from "vitest";
 import { type Locator, page, userEvent } from "vitest/browser";
-import { builtinManifest } from "../../src/renderer/src/plugins/builtin/manifest";
 import { SETTINGS_COLUMN_PX } from "../../src/renderer/src/settings/SettingsScreen";
 import { fakeBridge } from "./bridge";
-import { freshHome } from "./freshHome";
+import { freshHome, offeredSettingsSections } from "./freshHome";
 import { APP_WINDOW, openWindow } from "./window";
 
 // The captain's ask: "keep all settings tab a consistent width, so the left
@@ -18,7 +17,8 @@ test("the Settings tab list and section keep one place whether or not the sectio
   const bar = document.createElement("style");
   bar.textContent = '[data-screen-label="Settings"]::-webkit-scrollbar { width: 15px; }';
   document.head.append(bar);
-  const bridge = fakeBridge(freshHome());
+  const home = freshHome();
+  const bridge = fakeBridge(home);
   await openWindow(bridge);
   await userEvent.click(page.getByRole("button", { name: "Settings", exact: true }));
   const tabs = page.getByRole("tablist", { name: "Settings sections" });
@@ -32,14 +32,19 @@ test("the Settings tab list and section keep one place whether or not the sectio
   // enough that some sections scroll and others do not.
   for (const width of [APP_WINDOW.width, SETTINGS_COLUMN_PX + 232]) {
     await page.viewport(width, APP_WINDOW.height);
-    await placesKept(width, tabs, screen);
+    await placesKept(width, tabs, screen, offeredSettingsSections(home));
   }
   expect([...new Set(bridge.unanswered)]).toEqual([]);
 });
 
-async function placesKept(width: number, tabs: Locator, screen: HTMLElement): Promise<void> {
+async function placesKept(
+  width: number,
+  tabs: Locator,
+  screen: HTMLElement,
+  sections: readonly { label: string }[],
+): Promise<void> {
   const places: { label: string; scrolls: boolean; tabsLeft: number; sectionWidth: number }[] = [];
-  for (const { label } of builtinManifest.contributes.settingsSections) {
+  for (const { label } of sections) {
     const tab = tabs.getByRole("tab", { name: label, exact: true });
     await userEvent.click(tab);
     await expect.element(tab).toHaveAttribute("aria-selected", "true");

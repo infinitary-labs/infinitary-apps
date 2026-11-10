@@ -2,7 +2,8 @@
 
 Settings → Secrets follows Settings' shared column, row gaps, type and tokens.
 It sits after Integrations and before Devices, with a command-search entry and no conflicting default key.
-That command focuses the section heading, which stays present while loading and when storage is disabled or the list is empty; Tab reaches its controls.
+A build without protected storage has neither the tab nor the command: nothing a person can open and not use.
+That command focuses the section heading, which stays present while loading, when storage is locked or unavailable, and when the list is empty; Tab reaches its controls.
 The top line names protected storage's actual state, and a quiet sentence distinguishes existing unmigrated sign-ins from protected entries.
 Nothing calls an unavailable or unmigrated value protected.
 

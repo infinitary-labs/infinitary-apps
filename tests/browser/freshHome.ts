@@ -4,6 +4,7 @@ import { inject } from "vitest";
 import { commands } from "vitest/browser";
 import "../helpers/browserProvided";
 import { InstalledKeymap } from "../../src/main/keyboard";
+import { builtinManifest } from "../../src/renderer/src/plugins/builtin/manifest";
 import type { FreshHomeAnswers } from "../helpers/browserProvided";
 import { type Answers, NoAnswer } from "./bridge";
 
@@ -26,6 +27,19 @@ export function freshHome(): Answers {
  */
 export async function seededHome(input?: unknown): Promise<Answers> {
   return homeAnswers(await commands.seededHome(input));
+}
+
+/**
+ * The Settings sections the app declares that `home` offers: Secrets only
+ * where the home keeps protected storage, as its own answer says
+ * (docs/secrets.md), which a fresh home does not.
+ */
+export function offeredSettingsSections(home: Answers) {
+  const secrets = home["inf:secrets:shown"];
+  const secretsShown = typeof secrets === "object" && secrets.shown;
+  return builtinManifest.contributes.settingsSections.filter(
+    (section) => section.id !== "secrets" || secretsShown,
+  );
 }
 
 /**

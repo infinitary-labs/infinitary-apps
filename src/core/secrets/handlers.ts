@@ -10,6 +10,7 @@ type SecretHandlers = {
 /** The core dispatcher validates requests and authority before these controller calls. */
 export function secretsHandlers(services: Pick<CoreServices, "secrets">): SecretHandlers {
   return {
+    "inf:secrets:shown": () => ({ shown: services.secrets.shown() }),
     "inf:secrets:view": () => services.secrets.view(),
     "inf:secrets:entry": (input) => services.secrets.put(input),
     "inf:secrets:action": (input) => services.secrets.action(input),

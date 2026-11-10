@@ -38,6 +38,15 @@ export const secretsChannels = {
     request: z.tuple([secretDecisionInputSchema]),
     response: secretDecisionSchema,
   },
+  // Whether this build keeps protected storage at all: a build without it offers no Secrets
+  // tab, and the answer opens nothing (docs/secrets.md, "A build without protected storage").
+  "inf:secrets:shown": {
+    effect: "read",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([]),
+    response: z.object({ shown: z.boolean() }),
+  },
   "inf:secrets:view": {
     effect: "read",
     surface: "core",

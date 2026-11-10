@@ -30,6 +30,14 @@ describe("command search's list", () => {
     ]);
   });
 
+  // INF-1690's accepted answer: no Secrets tab, and so no Open Secrets, until storage is enabled.
+  it("lists Open Secrets only where this build keeps protected storage", () => {
+    const ids = (secrets: boolean) =>
+      commandRows("open secrets", () => null, DEFAULT_BINDINGS, { secrets }).map((row) => row.id);
+    expect(ids(true)).toEqual(["settings.secrets"]);
+    expect(ids(false)).toEqual([]);
+  });
+
   it("lists a command that acts in Devices only where this build offers Devices", () => {
     const ids = (devices: boolean) =>
       commandRows("reach your macs", () => null, DEFAULT_BINDINGS, { devices }).map(

@@ -141,6 +141,8 @@ import type { MicAccess, RecognizerPlace, VoiceDownloadProgress, VoiceStatus } f
 /** The one frozen API surface the preload exposes as `window.infinitary`. */
 export type FirstmateApi = {
   secrets: {
+    /** Whether this build keeps protected storage; without it Settings offers no Secrets tab. */
+    shown: () => Promise<{ shown: boolean }>;
     view: () => Promise<SecretsView>;
     entry: (input: SecretEntryInput) => Promise<SecretsView>;
     action: (input: SecretAction) => Promise<SecretsView>;

@@ -641,6 +641,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       onChange: (listener) => subscribe("inf:forges", listener),
     },
     secrets: {
+      shown: () => invoke("inf:secrets:shown"),
       view: () => invoke("inf:secrets:view"),
       entry: (input) => invoke("inf:secrets:entry", input),
       action: (input) => invoke("inf:secrets:action", input),

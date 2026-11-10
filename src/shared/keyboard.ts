@@ -72,6 +72,10 @@ export type WindowCommandRunner = "main" | "shell";
  */
 export type CommandRisk = "view" | "edit" | "navigate" | "close";
 
+/** A Settings section a build may not offer, and whether this one does; one unread is not offered. */
+export type CommandSection = "devices" | "secrets";
+export type CommandSections = Partial<Record<CommandSection, boolean>>;
+
 export type KeyboardCommand = {
   /** What the command does, in the words a person reads in a list of commands. */
   label: string;
@@ -92,11 +96,12 @@ export type KeyboardCommand = {
   searchWords?: readonly string[];
   /**
    * The Settings section it acts in, which this build may not offer, such
-   * as Devices behind the multi-machine gate (docs/devices.md): command
-   * search and Keyboard settings list it only where that section shows, and
-   * it is refused anywhere else.
+   * as Devices behind the multi-machine gate (docs/devices.md) or Secrets in
+   * a build without protected storage (docs/secrets.md): command search and
+   * Keyboard settings list it only where that section shows, and it is
+   * refused anywhere else.
    */
-  section?: "devices";
+  section?: CommandSection;
 } & (
   | { scope: "window"; runs: WindowCommandRunner }
   | { scope: "message-field" | "main-message"; runs?: never }
@@ -583,6 +588,7 @@ export const KEYBOARD_COMMANDS = {
     risk: "navigate",
     keys: [],
     searchWords: ["secret", "key", "approval", "recovery"],
+    section: "secrets",
   },
   // Every running automation paused at once, as Settings → Automation's
   // Pause all does; it opens Automation so the change is seen. No default key.

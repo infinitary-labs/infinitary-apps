@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "cancelled-panel-build-ends",
+      "kind": "fix",
+      "title": "Your panels pick up your own edits again after you cancel a panel build",
+      "body": "Cancelling a panel build while its crewmate sat idle between turns left the app treating the build as still running. Your panels stayed on their last saved version, and your later edits were credited to the cancelled task. The cancel now ends the build, so your edits reach your panels as you save them.",
+      "area": "other",
+      "noPicture": "The fix changes which version a panel loads after a cancel, which a single picture of the panel cannot tell apart.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

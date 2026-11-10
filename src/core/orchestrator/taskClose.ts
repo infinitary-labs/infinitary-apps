@@ -501,6 +501,10 @@ export class TaskClosing {
     typed?: TypedFailure,
   ): void {
     const record = this.host.tasks.get(taskId);
+    // A record closed with no crewmate running - its conversation let go
+    // between turns - ends its build in the personal workspace here, or
+    // later edits there keep naming a closed task (INF-3307 row 16).
+    this.host.endLiveTask(taskId);
     const sentence = status === "cancelled" ? this.takeClosingSentence(taskId, actor) : undefined;
     this.closeAndPurge([taskId], () => {
       if (status === "cancelled") {

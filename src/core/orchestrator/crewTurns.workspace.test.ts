@@ -473,6 +473,34 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     expect(h.sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "captain-card" });
   });
 
+  // INF-3307's audit, row 16: a personal task whose conversation was let go
+  // between turns is still building in the workspace's eyes; cancelling it
+  // then must end that, or the workspace credits later edits to a closed task.
+  it("ends the live build of a personal task cancelled after its conversation was released", async () => {
+    const crewmate = fakeCrewmate();
+    const h = liveSetup(crewmate);
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Tokyo clock",
+      intent: { goal: "g", userWords: "w", kind: "personal-ui" },
+    });
+    await tick();
+    crewmate.emit({ type: "assistant_delta", taskId, text: "Built the clock." });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await vi.waitFor(() => expect(h.commits).toHaveLength(1));
+    await tick();
+    expect(h.live.begun).toEqual([taskId]);
+    expect(await h.supervisor.sessions.releaseConversation(taskId)).toBe(true);
+    expect(h.live.ended).not.toContain(taskId);
+    await h.supervisor.sessions.interruptCrewmate(taskId, "cancel", {
+      actor: "captain",
+      via: "shell",
+      decision: null,
+    });
+    expect(h.tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
+    expect(h.live.ended).toContain(taskId);
+  });
+
   it("refuses a personal-ui commission when this build has no personal workspace", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate);

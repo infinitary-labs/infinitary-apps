@@ -1,5 +1,7 @@
 import { existsSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { resolveSettings } from "@anthropic-ai/claude-agent-sdk";
+import { CLAUDE_ACCESS_IN_USE_TEXT } from "@shared/claudeAccess";
 import { CLAUDE_CLIENT_MISSING_TEXT, claudeClientOutdatedText } from "@shared/claudeClient";
 import type { AuthNotice, AuthPromptView } from "@shared/providers";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
@@ -9,6 +11,7 @@ import { isNonTerminalFailureReason } from "../accounts/credentialHealth";
 import { asAView } from "../askedFromAView";
 import type { HostKeychain } from "../host";
 import type { AuthInteractionBridge } from "../pi/piAuth";
+import { readClaudeAccess } from "./claudeAccess";
 import {
   CLAUDE_LOGIN_UNFINISHED_TEXT,
   CLAUDE_LOGIN_UNFINISHED_THERE_TEXT,
@@ -1655,5 +1658,136 @@ describe("parseStatus", () => {
       JSON.stringify({ loggedIn: true, subscriptionType: "some_new_tier" }),
     );
     expect(status.identity?.plan).toBe("some_new_tier");
+  });
+});
+
+/**
+ * Claude access an organization or the person set up for Claude Code: a
+ * token command the client runs (INF-3449, the captain's "Approve and
+ * build" on INF-3435's plan: Connect "with no browser sign-in", and of the
+ * person's own settings, "Yes. Take the gateway address and token command
+ * from the person's own Claude settings too"). The access is read by the
+ * client library's own reader over a scratch Claude folder holding the
+ * person's settings file; the organization's tier is the library's
+ * server-managed payload, since the installed file needs administrator
+ * rights to write.
+ */
+describe("ClaudeAuthBackend on access set up for Claude Code", () => {
+  const OWN = {
+    apiKeyHelper: "~/bin/gateway-token",
+    env: { ANTHROPIC_BASE_URL: "https://llm-gateway.example.com" },
+  };
+
+  beforeEach(() => {
+    resetStoreLeasesForTest();
+    clearClaudeCredentialCache();
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    clearClaudeCredentialCache();
+  });
+
+  /** The person's own settings file, where Claude Code keeps it. */
+  function ownSettings(settings: Record<string, unknown>): void {
+    const dir = scratchDir("infinitary-claude-access-settings-");
+    writeFileSync(join(dir, "settings.json"), JSON.stringify(settings));
+    vi.stubEnv("CLAUDE_CONFIG_DIR", dir);
+  }
+
+  function backendOver(store: string, client: FakeClient, organization?: Record<string, unknown>) {
+    return new ClaudeAuthBackend({
+      run: client.run,
+      available: () => true,
+      readStore: fakeStore,
+      configDir: () => store,
+      access: () =>
+        readClaudeAccess(
+          organization
+            ? (options) => resolveSettings({ ...options, serverManagedSettings: organization })
+            : undefined,
+        ),
+    });
+  }
+
+  it("connects on the person's own token command and opens no browser", async () => {
+    ownSettings(OWN);
+    const client = fakeClient();
+    const store = accountDir("access-own");
+    const backend = backendOver(store, client);
+    const relay = bridge();
+
+    await backend.login({
+      ...accountRef(accountDir("access-own-vault")),
+      type: "oauth",
+      bridge: relay,
+    });
+
+    expect(client.calls, "the client was asked to sign in").toEqual([]);
+    expect(relay.notices.map((notice) => notice.message)).toEqual([
+      CLAUDE_ACCESS_IN_USE_TEXT["claude-settings"],
+    ]);
+    const health = await backend.health(accountRef(store));
+    expect(health).toMatchObject({
+      state: "healthy",
+      authType: "api_key",
+      access: "claude-settings",
+    });
+    expect(health.identity, "a token command has no plan").toBeUndefined();
+    expect((await backend.status(accountRef(store))).connected).toBe(true);
+  });
+
+  it("checks the access again on the row's Try again, never with a browser sign-in", async () => {
+    ownSettings(OWN);
+    const client = fakeClient();
+    const store = accountDir("access-again");
+    const backend = backendOver(store, client);
+
+    await backend.login({
+      ...accountRef(accountDir("access-again-vault")),
+      type: "oauth",
+      bridge: bridge(),
+      again: true,
+    });
+
+    expect(client.calls.some((call) => call.args[1] === "login")).toBe(false);
+  });
+
+  it("serves the organization's access ahead of a subscription in the store", async () => {
+    vi.stubEnv("CLAUDE_CONFIG_DIR", scratchDir("infinitary-claude-access-none-"));
+    const client = fakeClient({ identity: { email: "kun@example.com", plan: "max" } });
+    const store = accountDir("access-org");
+    const backend = backendOver(store, client, { apiKeyHelper: "/opt/corp/bin/claude-token" });
+    writeFileSync(join(store, "credential"), "a-subscription-login");
+
+    const health = await backend.health(accountRef(store));
+
+    expect(health).toMatchObject({ state: "healthy", authType: "api_key", access: "organization" });
+    expect(health.stamp?.login).toMatch(/^access:/);
+  });
+
+  it("leaves a refused token command to the client, which runs it again itself", async () => {
+    ownSettings(OWN);
+    const client = fakeClient();
+    const store = accountDir("access-renew");
+    const backend = backendOver(store, client);
+
+    expect(await backend.renew(accountRef(store), "vendor_rejected")).toEqual({
+      outcome: "unsupported",
+    });
+    expect(client.calls).toEqual([]);
+  });
+
+  it("reads the subscription as before when no token command is set", async () => {
+    ownSettings({ model: "opus" });
+    const client = fakeClient({ identity: { email: "kun@example.com", plan: "max" } });
+    const store = accountDir("access-none");
+    const backend = backendOver(store, client);
+    writeFileSync(join(store, "credential"), "a-subscription-login");
+
+    const health = await backend.health(accountRef(store));
+
+    expect(health.state).toBe("healthy");
+    expect(health.authType).toBe("oauth");
+    expect(health.access).toBeUndefined();
   });
 });

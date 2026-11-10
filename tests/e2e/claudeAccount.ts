@@ -2,6 +2,8 @@
  * INF-2394: fixture ownership follows the product reader.
  * @journey-area src/core/claude/
  */
+import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { type LaunchedApp, type LaunchOptions, launchApp } from "./launch";
 import { signedInClaudeHome } from "./mockClaudeClient";
@@ -46,4 +48,34 @@ export async function expectClaudeConnected(page: Page, accountId: string): Prom
     contentType: "application/json",
   });
   expect(reading.connected).toBe(true);
+}
+
+/**
+ * A HOME whose own Claude Code settings name a gateway, as a company's
+ * gateway hands them out: a token command printing `token` and the
+ * `address` it is sent to, beside keys the app must leave out
+ * (`src/core/claude/claudeAccess.ts` reads it). No Claude login is in it.
+ */
+export function claudeSettingsGateway(address: string, token: string) {
+  return (homeDir: string): void => {
+    const bin = join(homeDir, "bin");
+    mkdirSync(bin, { recursive: true });
+    const command = join(bin, "gateway-token");
+    writeFileSync(command, `#!/bin/sh\nprintf '%s\\n' '${token}'\n`);
+    chmodSync(command, 0o755);
+    const claude = join(homeDir, ".claude");
+    mkdirSync(claude, { recursive: true, mode: 0o700 });
+    writeFileSync(
+      join(claude, "settings.json"),
+      `${JSON.stringify(
+        {
+          apiKeyHelper: command,
+          env: { ANTHROPIC_BASE_URL: address, DISABLE_TELEMETRY: "1" },
+          model: "opus",
+        },
+        null,
+        2,
+      )}\n`,
+    );
+  };
 }

@@ -593,11 +593,13 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
       // it swapped out instead.
       if (this.asked === undefined && recorded) this.asked = this.record.swappedFrom(this.id);
       const project = await this.projectResources();
+      const access = await this.deps.accessSettings?.().catch(() => undefined);
       const options = claudeSessionOptions({
         spec: this.spec,
         env,
         executable: resolveClaudeExecutable(env),
         stderr: (data) => this.note(data.trimEnd()),
+        ...(access ? { access } : {}),
         attachment: {
           ...(this.asked ? { model: this.asked } : {}),
           ...(this.instructions?.text ? { served: this.instructions.text } : {}),

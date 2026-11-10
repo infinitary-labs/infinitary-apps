@@ -21,7 +21,7 @@ import { type ManagedAuth, quotaEntryForPiProvider } from "../quota/auth";
 import { managedFromClaudeStore } from "../quota/claudeAuthResolve";
 import { createQuotaFetcher } from "../quota/fetchQuota";
 import { createQuotaHttp, type QuotaHttp } from "../quota/http";
-import type { ProviderOutcome } from "../quota/outcome";
+import { claudeAccessOutcome, type ProviderOutcome } from "../quota/outcome";
 import { mergeStaleProviders } from "../quota/quotaService";
 import { lowestLeft } from "../quota/spentAllowance";
 
@@ -172,6 +172,12 @@ export async function startComputerAccounts(
   // read tries again: with no Retry here, a refusal is never held.
   const claudeUnread = new Map<string, ProviderOutcome>();
   const resolveClaude = async (accountId: string): Promise<ManagedAuth | undefined> => {
+    // Access set up for Claude Code here serves no subscription allowance.
+    const access = await claude.access();
+    if (access) {
+      claudeUnread.set(accountId, claudeAccessOutcome(access.source));
+      return undefined;
+    }
     const dir = claudeDir();
     clearKeychainLock(dir);
     const read = await readClaudeStore(dir, { keychain, allowPrompt: false, persistLock: false });

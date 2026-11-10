@@ -33,6 +33,7 @@ import { buildProviderViews } from "./accounts/providerViews";
 import { initAttachmentsDir } from "./attachments";
 import { recoverAtBoot } from "./bootRecovery";
 import { openTaskChannel, startTaskBrowsers } from "./browser/homeTaskBrowsers";
+import { accessFlagSettings, readClaudeAccess } from "./claude/claudeAccess";
 import { ClaudeAuthBackend } from "./claude/claudeAuth";
 import { primeClaudeExecutable } from "./claude/claudeCli";
 import { defaultClaudeConfigDir } from "./claude/claudeQuota";
@@ -533,6 +534,7 @@ export async function createServices(
     vault,
     served,
     auth,
+    claudeAccess: () => claudeBackend.access(),
     broadcast: (snapshot) => {
       placedWork.observe("home", snapshot);
       onQuotaRefreshed();
@@ -596,6 +598,7 @@ export async function createServices(
         onRateLimit: (accountId, reading) => recordClaudeRateLimit(accountId, reading),
         onServed: (accountId) => vault.noteAccepted(accountId),
         log: (line) => console.warn(`[claude-session] ${line}`),
+        accessSettings: async () => accessFlagSettings(await readClaudeAccess()),
       }),
     ),
   };
@@ -982,6 +985,7 @@ export async function createServices(
       selectForSpawn: (taskId, provider, crew) => accounts.selectForSpawn(taskId, provider, crew),
       reselectForResume: (taskId, accountId) => accounts.reselectForResume(taskId, accountId),
       labelOf: (accountId) => accounts.labelOf(accountId),
+      accessOf: (accountId) => vault.accessSync(accountId),
     },
     taskSelection: host.recordProcess ? (input) => recordReader.tasks(input) : undefined,
     // Whoever observes a typed cut-off records it on the account.

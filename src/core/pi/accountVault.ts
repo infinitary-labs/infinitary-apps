@@ -9,6 +9,7 @@ import {
   type CutOffClass,
   isLapsedRefresh,
 } from "@shared/authFailure";
+import { CLAUDE_ACCESS_ACCOUNT_LABEL, type ClaudeAccessSource } from "@shared/claudeAccess";
 import { isClientIssueReason } from "@shared/claudeClient";
 import {
   CUSTOM_API_PROVIDER_PREFIX,
@@ -295,6 +296,8 @@ export class AccountVault {
           ...(account.lastConnectedAt ? { lastConnectedAt: account.lastConnectedAt } : {}),
           ...(status.identity?.label ? { identity: status.identity.label } : {}),
           ...(status.identity?.plan ? { plan: status.identity.plan } : {}),
+          ...(status.access ? { access: status.access } : {}),
+          ...(status.gateway ? { gateway: status.gateway } : {}),
           ...(status.detail && isClientIssueReason(status.reason) ? { detail: status.detail } : {}),
           ...(cutOff
             ? {
@@ -721,6 +724,14 @@ export class AccountVault {
     return this.registry.accounts.find((entry) => entry.id === accountId)?.login;
   }
 
+  /**
+   * Where a Claude account's access comes from when it is not a
+   * subscription, as its backend last said (`CredentialHealth.access`).
+   */
+  accessSync(accountId: string): ClaudeAccessSource | undefined {
+    return this.lastStatus.get(accountId)?.access;
+  }
+
   /** Who the account's own client last said is signed in (an email), when it says. */
   identitySync(accountId: string): string | undefined {
     return this.lastStatus.get(accountId)?.identity?.label;
@@ -729,12 +740,15 @@ export class AccountVault {
   /**
    * A fresh credential read (health or allowance) names the current store.
    * No token crosses this seam. Refusal facts keep their persisted stamps;
-   * Claude's row follows the current identity, not the old saved label.
+   * Claude's row follows the current identity, not the old saved label:
+   * on access set up for Claude Code that identity is the access, never
+   * the subscription's email it carried before.
    */
   noteCredentialRead(
     accountId: string,
     stamp: CredentialStamp | undefined,
     identity?: { label?: string },
+    access?: ClaudeAccessSource,
   ): void {
     this.settleCutOff(accountId, stamp);
     if (this.noteLogin(accountId, stamp?.login)) {
@@ -742,12 +756,9 @@ export class AccountVault {
       this.statusReadAt.delete(accountId);
     }
     const account = this.registry.accounts.find((entry) => entry.id === accountId);
-    if (
-      account?.providerId === CLAUDE_PROVIDER_ID &&
-      identity?.label &&
-      account.label !== identity.label
-    ) {
-      account.label = identity.label;
+    const current = access ? CLAUDE_ACCESS_ACCOUNT_LABEL : identity?.label;
+    if (account?.providerId === CLAUDE_PROVIDER_ID && current && account.label !== current) {
+      account.label = current;
       this.saveRegistry();
       this.healthReadAt.delete(accountId);
       this.statusReadAt.delete(accountId);
@@ -841,7 +852,7 @@ export class AccountVault {
       }
       // A fresh read is where a changed login or client clears a cut-off.
       if (read) {
-        this.noteCredentialRead(accountId, health.stamp, health.identity);
+        this.noteCredentialRead(accountId, health.stamp, health.identity, health.access);
       }
       this.lastHealth.set(accountId, health);
       const reported = this.withCutOff(accountId, health);
@@ -1314,7 +1325,8 @@ export class AccountVault {
         this.lastStatus.set(ref.accountId, statusFromHealth(health));
         this.healthReadAt.set(ref.accountId, Date.now());
         this.statusReadAt.set(ref.accountId, Date.now());
-        return health.identity?.label;
+        // Claude on access set up for Claude Code is named for the access.
+        return health.access ? CLAUDE_ACCESS_ACCOUNT_LABEL : health.identity?.label;
       })
       .catch(() => undefined);
     if (identity) return identity.slice(0, 64);

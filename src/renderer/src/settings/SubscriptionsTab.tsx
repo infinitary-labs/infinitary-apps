@@ -1,4 +1,10 @@
 import { ACCOUNT_LABEL_MAX, type AccountView, standingCutOff } from "@shared/accounts";
+import {
+  CLAUDE_ACCESS_LABEL,
+  CLAUDE_ACCESS_REFUSED_TEXT,
+  CLAUDE_ACCESS_TRY_AGAIN_LABEL,
+  CLAUDE_GATEWAY_LABEL,
+} from "@shared/claudeAccess";
 import { isCustomApiProvider } from "@shared/customApi";
 import type { AuthNotice, AuthPromptView, ProviderView } from "@shared/providers";
 import { API_KEY_LABEL, CLAUDE_PROVIDER_ID, catalogEntry } from "@shared/providers";
@@ -287,6 +293,12 @@ type RowView = {
   stateTone?: "danger";
   /** The only inline action: nothing moves on this row until it is pressed. */
   signIn: boolean;
+  /**
+   * The inline action's own words when they are not Sign in: on Claude
+   * access set up for Claude Code it checks that access again and opens
+   * nothing.
+   */
+  signInLabel?: string;
   /** A Keychain VALUE refusal: retry the read (may raise the macOS ask). */
   retry: boolean;
 };
@@ -370,7 +382,19 @@ export function rowView(
   // internal account id - it means nothing to the person reading it.
   const identity = account.identity ?? row?.account;
   const plan = account.plan ?? row?.plan;
-  const sub = [plan ?? kindCopy[account.kind], identity].filter(Boolean).join(" · ");
+  // Claude access set up for Claude Code has no plan and no email: the row
+  // says where it comes from instead, never a subscription's email an
+  // earlier reading kept. A subscription whose requests go to an address in
+  // Claude Code's settings says so after its plan.
+  const sub = account.access
+    ? CLAUDE_ACCESS_LABEL[account.access]
+    : [
+        plan ?? kindCopy[account.kind],
+        identity,
+        account.gateway ? CLAUDE_GATEWAY_LABEL[account.gateway] : undefined,
+      ]
+        .filter(Boolean)
+        .join(" · ");
   const signedIn = account.kind === "api_key" ? `${API_KEY_LABEL} set` : "signed in";
   const claudeFirstRun = kind === "disconnected" && account.providerId === CLAUDE_PROVIDER_ID;
   const dot: { tone: StatusDotTone; label: string } =
@@ -442,7 +466,9 @@ export function rowView(
       if (row.detail) view.stateText = row.detail;
     } else {
       view.stateText = row.detail ?? emptyQuotaText(row.status);
-      return view;
+      // Access set up for Claude Code is never measured, so its hold would
+      // never show behind the allowance line: the hold says it instead.
+      return account.access ? withHold(view, account, now) : view;
     }
   }
   view.meters = (row?.windows ?? []).map((window) => {
@@ -473,7 +499,15 @@ function withHold(view: RowView, account: AccountView, now: number): RowView {
   view.dotLabel = hold.class === "signed_out" ? SIGNED_OUT_HOLD_LABEL : REFUSED_HOLD_LABEL;
   view.stateText = hold.class === "signed_out" ? SIGNED_OUT_HOLD_TEXT : REFUSED_HOLD_TEXT;
   view.stateTone = "danger";
-  if (hold.class === "signed_out") view.signIn = true;
+  if (hold.class === "signed_out") {
+    view.signIn = true;
+    // A refused token command is renewed where the person renews it for
+    // Claude Code; the row's button checks again and opens no browser.
+    if (account.access) {
+      view.stateText = CLAUDE_ACCESS_REFUSED_TEXT[account.access];
+      view.signInLabel = CLAUDE_ACCESS_TRY_AGAIN_LABEL;
+    }
+  }
   return view;
 }
 
@@ -726,7 +760,7 @@ export function AccountRow({
               pending={signingIn}
               pendingLabel="Connecting..."
             >
-              Sign in
+              {view.signInLabel ?? "Sign in"}
             </Button>
           )}
           {view.retry && onRetry && (

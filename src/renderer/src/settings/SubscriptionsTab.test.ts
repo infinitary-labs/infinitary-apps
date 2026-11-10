@@ -1,4 +1,11 @@
 import type { AccountView } from "@shared/accounts";
+import {
+  CLAUDE_ACCESS_ALLOWANCE_TEXT,
+  CLAUDE_ACCESS_LABEL,
+  CLAUDE_ACCESS_REFUSED_TEXT,
+  CLAUDE_ACCESS_TRY_AGAIN_LABEL,
+  CLAUDE_GATEWAY_LABEL,
+} from "@shared/claudeAccess";
 import { CLAUDE_CLIENT_MISSING_TEXT, claudeClientOutdatedText } from "@shared/claudeClient";
 import type { QuotaProviderView } from "@shared/quota";
 import { KEYCHAIN_VALUE_FAILURE_DETAIL } from "@shared/quota";
@@ -518,5 +525,73 @@ describe("Subscriptions rowView: a withholding cut-off", () => {
     expect(view.stateText).toBe(REFUSED_HOLD_TEXT);
     expect(view.signIn).toBe(false);
     expect(view.meters).toHaveLength(1);
+  });
+});
+
+/**
+ * A Claude row on access an organization or the person set up for Claude
+ * Code (INF-3449, the accepted plan: "The row says the access is set up by
+ * the organization, shows no plan, and shows the allowance as not measured,
+ * never zero"; a refused token command is renewed where Claude Code's is,
+ * never through a browser sign-in).
+ */
+describe("Subscriptions rowView: Claude access set up for Claude Code", () => {
+  const organization: AccountView = { ...account, kind: "api_key", access: "organization" };
+  const notMeasured: QuotaProviderView = {
+    provider: "claude",
+    label: "Claude",
+    accountId: "acct_cl1",
+    status: "not_measured",
+    stale: false,
+    windows: [],
+    detail: CLAUDE_ACCESS_ALLOWANCE_TEXT.organization,
+  };
+
+  it("names the organization in place of a plan and says the allowance is not measured", () => {
+    const view = rowView({ ...organization, plan: "max" }, notMeasured, Date.now());
+    expect(view.sub).toBe(CLAUDE_ACCESS_LABEL.organization);
+    expect(view.meters).toHaveLength(0);
+    expect(view.stateText).toBe(CLAUDE_ACCESS_ALLOWANCE_TEXT.organization);
+    expect(view.signIn).toBe(false);
+  });
+
+  it("asks to renew a refused token command and offers Try again, never Sign in", () => {
+    const view = rowView(
+      { ...organization, cutOff: { class: "signed_out", since: 1 } },
+      notMeasured,
+      Date.now(),
+    );
+    expect(view.stateText).toBe(CLAUDE_ACCESS_REFUSED_TEXT.organization);
+    expect(view.signIn).toBe(true);
+    expect(view.signInLabel).toBe(CLAUDE_ACCESS_TRY_AGAIN_LABEL);
+  });
+
+  it("drops the email a subscription reading left behind once the access serves", () => {
+    // An account signed in with a subscription before the update keeps the
+    // email its last readings named; on access, it is not who signs in.
+    const view = rowView(
+      { ...organization, identity: "kun@example.com" },
+      { ...notMeasured, account: "kun@example.com" },
+      Date.now(),
+    );
+    expect(view.sub).toBe(CLAUDE_ACCESS_LABEL.organization);
+  });
+
+  it("says a subscription's requests go to the address in Claude Code's settings", () => {
+    const view = rowView(
+      { ...account, identity: "kun@example.com", plan: "Max", gateway: "claude-settings" },
+      undefined,
+      Date.now(),
+    );
+    expect(view.sub).toBe(`Max · kun@example.com · ${CLAUDE_GATEWAY_LABEL["claude-settings"]}`);
+  });
+
+  it("names the person's own Claude Code settings when the access is theirs", () => {
+    const view = rowView(
+      { ...account, kind: "api_key", access: "claude-settings" },
+      notMeasured,
+      Date.now(),
+    );
+    expect(view.sub).toBe(CLAUDE_ACCESS_LABEL["claude-settings"]);
   });
 });

@@ -4,6 +4,7 @@ import {
   type CutOffClass,
   isAuthFailureMessage,
 } from "./authFailure";
+import { CLAUDE_ACCESS_REFUSED_LINE, type ClaudeAccessSource } from "./claudeAccess";
 import { HERE } from "./deviceNames";
 
 /**
@@ -70,7 +71,12 @@ type Rule = {
 };
 
 /** A failure a typed backend reported: its cut-off class, when it has one. */
-export type TypedFailure = { cutOff?: CutOff };
+/**
+ * A typed failure: its cut-off class and, for a lost sign-in on Claude
+ * access set up for Claude Code, where that access comes from, which is
+ * renewed there and never by a sign-in here.
+ */
+export type TypedFailure = { cutOff?: CutOff; access?: ClaudeAccessSource };
 
 const SIGN_IN_LINE = "the provider did not accept your sign-in - sign in again";
 const ALLOWANCE_LINE = "your plan's allowance ran out - it comes back when it resets";
@@ -217,6 +223,8 @@ const WORD_RULES = RULES.filter((rule) => !rule.readsClass);
 
 /** The plain line for a raw error, or the fallback; a typed failure by its class. */
 export function plainProblem(error: string | undefined, typed?: TypedFailure): string {
+  if (typed?.cutOff?.class === "signed_out" && typed.access)
+    return CLAUDE_ACCESS_REFUSED_LINE[typed.access];
   if (typed?.cutOff) return CUT_OFF_LINES[typed.cutOff.class];
   const raw = error?.trim() ?? "";
   if (!raw) return PLAIN_PROBLEM_FALLBACK;
@@ -239,7 +247,11 @@ export function typedFailureOf(
     CUT_OFF_CLASSES.includes((cutOff as { class?: unknown }).class as CutOffClass)
   ) {
     const { class: cls, resetsAt } = cutOff as { class: CutOffClass; resetsAt?: unknown };
-    return { cutOff: { class: cls, ...(typeof resetsAt === "number" ? { resetsAt } : {}) } };
+    const access = data.access;
+    return {
+      cutOff: { class: cls, ...(typeof resetsAt === "number" ? { resetsAt } : {}) },
+      ...(access === "organization" || access === "claude-settings" ? { access } : {}),
+    };
   }
   return {};
 }

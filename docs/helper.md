@@ -492,7 +492,7 @@ No new kind of message carries it: both directions ride the connection's own `in
 A home opens one for a task whose record names this computer (`task_execution.device_id`, below), which a project's Runs on sets (below, "Runs on").
 
 - **What runs here.**
-  The real Pi or Claude conversation, with the crewmate's file tools and shell in the task's own working copy here (below, "Its working copies"), and this Mac's own sign-ins: Claude on this macOS user's own client and login, and Pi with an agent folder of its own (`startConversations`, `src/core/helper/conversations.ts`).
+  The real Pi or Claude conversation, with the crewmate's file tools and shell in the task's own working copy here (below, "Its working copies"), and this Mac's own sign-ins: Claude on this macOS user's own client and login, or the token command set up for Claude Code here (`docs/claude-client.md`, "Access a company set up"), and Pi with an agent folder of its own (`startConversations`, `src/core/helper/conversations.ts`).
   A Pi conversation binds to one of this computer's own accounts for its provider (`bindHere`): the one the home named when it is this computer's, else the one preferred here, else the first that can serve; with none it is refused as having no sign-in here, and never borrows the home's.
   A Claude conversation names this computer's own Claude account the same way, from the sign-ins it already keeps without loading them for it, and with none here it runs on this user's login under no account (`CLAUDE_LOGIN_HERE`), never under the home's.
   The conversation's state names that account to the home (`PlacedState.accountId`), so what its turns spend and meet is that account's (below, "Its own sign-ins").
@@ -1076,6 +1076,7 @@ Nothing of the home's sign-ins is sent here, and nothing of these goes to the ho
   What the captain types - a pasted code or address, a key - comes back once inside `inf:sign-ins:answer`; it is in this computer's store afterwards, as any sign-in's is, and the home keeps it nowhere.
   A sign-in whose home goes out of reach, or whose computer stops, stops.
 - **Claude** adopts the login already on this computer; with none, it signs in with a code pasted back (`pasteCode`, `ClaudeAuthBackend`).
+  A token command set up for Claude Code here, by an organization or in this user's own Claude settings, comes first: Claude connects with that access and signs nothing in (`docs/claude-client.md`, "Access a company set up").
   The row's Sign in again, which shows only once Anthropic refused that login, signs in with a code pasted back over it, and counts only a new login.
   It looks for that login in its file and in this macOS user's saved passwords, where macOS keeps it, through the same reader as Claude's allowance below, and reads only whether the login is there, never asking.
   Before a new sign-in over a login it cannot find, Claude Code itself must say it is not signed in: its word that it is adopts the login, and no word refuses the sign-in in a sentence, because the new sign-in would replace that user's login and sign out every Claude Code session running there.
@@ -1113,7 +1114,8 @@ Nothing of the home's sign-ins is sent here, and nothing of these goes to the ho
   The home books each turn's usage on the account the conversation's state names (`CrewMachines.servingAccount`), or on none when it names none, and its sign-in card for that task says to sign in again on this computer ("on Mac mini").
   A task an earlier build started here may still name one of the home's accounts on its record, and the home reads nothing of that account for it.
 - **Claude's allowance, never asking.**
-  Claude's is read with this macOS user's own login, the way the home reads its own (`docs/quota.md`): its file, else the saved passwords through the app's child-process reader (`src/main/host/electronKeychain.ts`), which the work mode loads with the first read (`savedPasswords`, `src/main/work.ts`).
+  While a token command is set up for Claude Code here, Claude's allowance is not measured and nothing below is read for it, as at the home (`docs/claude-client.md`, "Access a company set up").
+  Otherwise Claude's is read with this macOS user's own login, the way the home reads its own (`docs/quota.md`): its file, else the saved passwords through the app's child-process reader (`src/main/host/electronKeychain.ts`), which the work mode loads with the first read (`savedPasswords`, `src/main/work.ts`).
   Nothing here ever lets macOS ask: nobody may be at this screen to answer, and the read would wait on the dialog.
   So a sign-in asks nothing, every read here passes `allowPrompt: false`, the child-process adapter forces interaction off, and the work mode offers no unlock.
   Metadata, the exact-item permission check and the guarded Apple-first value read all run outside the work process, so a slow saved-password answer cannot freeze its connection.

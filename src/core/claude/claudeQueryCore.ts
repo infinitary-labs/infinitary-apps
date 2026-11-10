@@ -4,6 +4,7 @@ import type { SessionClock } from "../session/bounds";
 import type { ControlProfile, SessionImage } from "../session/session";
 import { bareToolName } from "../storage/sessionReader";
 import type { SessionRecordStore } from "../storage/sessionRecordStore";
+import type { ClaudeAccessSettings } from "./claudeAccess";
 import { type ClaudeClientCheck, checkClaudeClient, claudeClientIssueText } from "./claudeCli";
 import {
   type ClaudeNormalizeResult,
@@ -77,6 +78,13 @@ export type ClaudeSessionDeps = {
   checkClient?: (env: NodeJS.ProcessEnv) => Promise<ClaudeClientCheck>;
   /** The SDK's query; tests script one. */
   query?: ClaudeQueryFactory;
+  /**
+   * The person's own Claude Code token command and address, read as each
+   * client starts and handed to it as the app's flag settings
+   * (`claudeAccess.ts`). Production reads them with the client library's
+   * settings reader; tests that leave it out hand the client none.
+   */
+  accessSettings?: () => Promise<ClaudeAccessSettings>;
 };
 
 /** Where a session's notes go: the deps' log, or the console. */

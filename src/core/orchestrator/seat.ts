@@ -132,16 +132,21 @@ export type SeatPause = { class: SeatPauseClass; resetsAt?: number };
  * docs/architecture.md §16 "A paused seat"): that it is saved, what stopped
  * the seat - `sentence` is `Flagship.pauseSentence` - and the way back that
  * still reaches the captain once he has closed the pause card: the class's
- * own fact, or another model for Firstmate in Settings.
+ * own fact, or another model for Firstmate in Settings. `access` is a lost
+ * sign-in on Claude access set up for Claude Code, renewed where Claude
+ * Code's is.
  */
 export function keptMessageWords(
   sentence: string,
   pause: SeatPauseClass,
   provider: string,
+  access?: boolean,
 ): string {
   const wayBack: Record<SeatPauseClass, string> = {
     no_headroom: "Your first mate answers it when the allowance resets",
-    signed_out: "Your first mate answers it once you sign in again",
+    signed_out: access
+      ? "Your first mate answers it once that sign-in is renewed"
+      : "Your first mate answers it once you sign in again",
     refused: `Your first mate answers it once ${provider} answers again`,
     client: `Your first mate answers it once ${provider} can run on ${HERE.this}`,
     unavailable: "Your first mate answers it once an account can run it",

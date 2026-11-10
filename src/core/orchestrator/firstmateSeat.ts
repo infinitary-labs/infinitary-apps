@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import { isAuthFailureMessage } from "@shared/authFailure";
+import { CLAUDE_ACCESS_RENEW_WORDS, claudeAccessRefusedText } from "@shared/claudeAccess";
 import { isCustomApiProvider } from "@shared/customApi";
 import { isRunawayProviderError } from "@shared/plainProblem";
 import { backendForProvider, catalogEntry } from "@shared/providers";
@@ -684,8 +685,10 @@ export class FirstmateSeat {
     const providerName =
       providerId && flagship ? flagship.providerNameOf(providerId) : "its provider";
     const other = providerId ? flagship?.otherProviderOption(providerId) : undefined;
+    const access = flagship?.accessOf(accountId);
     return {
       pause: pause.class,
+      ...(access ? { access } : {}),
       body: this.pauseCardBody(accountId, pause, providerName, other?.providerName),
       ...(flagship?.labelOf(accountId) ? { accountId } : {}),
       providerName,
@@ -727,8 +730,12 @@ export class FirstmateSeat {
         : `${flagship.pauseSentence(accountId, pause)} Your messages are kept.`;
     if (moveTo) return `${said} Move your first mate to ${moveTo} in the meantime?`;
     if (pause.class === "refused") return `${said} Then choose Try ${providerName} again.`;
-    if (pause.class === "signed_out")
-      return `${said} Your first mate picks them up once you sign in.`;
+    if (pause.class === "signed_out") {
+      const access = flagship.accessOf(accountId);
+      return access
+        ? `${said} ${CLAUDE_ACCESS_RENEW_WORDS[access]}`
+        : `${said} Your first mate picks them up once you sign in.`;
+    }
     return `${said} Your first mate picks them up once it can run.`;
   }
 
@@ -1020,10 +1027,13 @@ export class FirstmateSeat {
   /** Auth-vs-generic dispatch for every failure channel (create, throw, provider). */
   raiseSessionFailureCard(message: string): void {
     if (isAuthFailureMessage(message) || message.includes("No signed-in model")) {
+      const account = this.seatAccount();
+      const access = account ? this.options.flagship?.accessOf(account) : undefined;
       this.options.supervisor.cards.hostCards.addAuthDecisionCard(
         AUTH_CARD_ID,
         "firstmate",
         this.signInCardBody(),
+        access ? { access } : undefined,
       );
       return;
     }
@@ -1065,6 +1075,10 @@ export class FirstmateSeat {
       const connection = label ? `${label}, your custom connection` : "its custom connection";
       return `Your first mate could not reach ${connection}. In Settings → Intelligence, press Edit on ${label ? "it" : "that connection"}, then Save to check it again.`;
     }
+    // Claude access set up for Claude Code is renewed where the person
+    // renews it for Claude Code, never with a sign-in here.
+    const access = account ? flagship?.accessOf(account) : undefined;
+    if (access) return claudeAccessRefusedText("Your first mate", access);
     const name = provider ? catalogEntry(provider)?.name : undefined;
     return name
       ? `Your first mate could not reach ${name}, which needs you to sign in again.`

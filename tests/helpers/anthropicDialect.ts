@@ -116,6 +116,8 @@ export type StubRequest = {
     thinking?: { type?: string };
   };
   raw: string;
+  /** What the request signed in with: its `x-api-key`, or its bearer token. */
+  credential?: string;
 };
 
 export type Reply = (request: StubRequest, res: ServerResponse) => void;
@@ -169,7 +171,15 @@ export async function startStubApi(
         answerText({ n: 0 }, res, "ok");
         return;
       }
-      const request: StubRequest = { n: requests.length + 1, body, raw };
+      const bearer = req.headers.authorization?.replace(/^Bearer\s+/i, "");
+      const key = req.headers["x-api-key"];
+      const credential = typeof key === "string" ? key : bearer;
+      const request: StubRequest = {
+        n: requests.length + 1,
+        body,
+        raw,
+        ...(credential ? { credential } : {}),
+      };
       requests.push(request);
       open.add(res);
       res.on("close", () => open.delete(res));

@@ -1,4 +1,10 @@
 import { type Card, type CardAction, FIRSTMATE_CARD_META } from "@shared/cards";
+import {
+  CLAUDE_ACCESS_PAUSE_TITLE,
+  CLAUDE_ACCESS_SIGN_IN_TITLE,
+  CLAUDE_ACCESS_TRY_AGAIN_LABEL,
+  type ClaudeAccessSource,
+} from "@shared/claudeAccess";
 import { NEEDS_REAUTH_CONSEQUENCE, restoreAccountEffect } from "@shared/credentialHealth";
 import { HERE } from "@shared/deviceNames";
 import { deviceForgeSignInBody, deviceForgeSignInTitle } from "@shared/deviceSetup";
@@ -54,6 +60,11 @@ export type FirstmatePauseCard = {
   move?: { providerId: string; providerName: string };
   /** A spent allowance is being read again: no second recheck is offered. */
   checking?: boolean;
+  /**
+   * Where the paused account's Claude access comes from when it is not a
+   * subscription: a lost sign-in is then renewed where Claude Code's is.
+   */
+  access?: ClaudeAccessSource;
 };
 
 /** The spent-allowance card's way back: read the allowance again. */
@@ -131,7 +142,10 @@ export function firstmatePauseCardId(input: FirstmatePauseCard): string {
 export function firstmatePauseCard(id: string, input: FirstmatePauseCard): HostCard {
   return hostCard({
     id,
-    title: firstmatePauseTitle(input.pause, input.providerName),
+    title:
+      input.pause === "signed_out" && input.access
+        ? CLAUDE_ACCESS_PAUSE_TITLE
+        : firstmatePauseTitle(input.pause, input.providerName),
     meta: FIRSTMATE_CARD_META,
     body: input.body,
     actions: firstmatePauseActions(input),
@@ -181,7 +195,9 @@ function firstmatePauseActions(input: FirstmatePauseCard): CardAction[] {
         ? [
             {
               id: "sign-in",
-              label: "Sign in",
+              // The access's way back checks it again and opens nothing,
+              // as the account row's own button does.
+              label: input.access ? CLAUDE_ACCESS_TRY_AGAIN_LABEL : "Sign in",
               variant: input.move ? "secondary" : "primary",
               ...(input.move ? {} : { default: true }),
               effect: restoreAccountEffect(input.accountId),
@@ -257,13 +273,19 @@ export function authDecisionCard(
     restoreAccountId?: string;
     taskId?: string;
     move?: { arg: string; modelName: string };
+    /** Claude access set up for Claude Code was refused: renewed there, not signed in here. */
+    access?: ClaudeAccessSource;
   },
 ): HostCard {
   const restoreAccountId = options?.restoreAccountId;
   return hostCard({
     id,
     ...(options?.taskId ? { taskId: options.taskId } : {}),
-    title: restoreAccountId ? body : PROVIDER_SIGN_IN_TITLE,
+    title: restoreAccountId
+      ? body
+      : options?.access
+        ? CLAUDE_ACCESS_SIGN_IN_TITLE
+        : PROVIDER_SIGN_IN_TITLE,
     meta,
     body: restoreAccountId ? NEEDS_REAUTH_CONSEQUENCE : body,
     actions: [

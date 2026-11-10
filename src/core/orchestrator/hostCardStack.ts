@@ -1,4 +1,5 @@
 import type { Card } from "@shared/cards";
+import type { ClaudeAccessSource } from "@shared/claudeAccess";
 import { deviceForgeSignInCardId } from "@shared/deviceSetup";
 import type { CardServiceHost } from "./cardStackTypes";
 import {
@@ -95,6 +96,7 @@ export class HostCardStack {
       restoreAccountId?: string;
       taskId?: string;
       move?: { arg: string; modelName: string };
+      access?: ClaudeAccessSource;
     },
   ): void {
     if (this.cards.has(id)) return;

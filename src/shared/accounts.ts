@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { CUT_OFF_CLASSES } from "./authFailure";
+import { CLAUDE_ACCESS_SOURCES } from "./claudeAccess";
 
 /**
  * Account views for the multi-account broker (the AccountVault). An account
@@ -45,6 +46,18 @@ export const accountViewSchema = z.object({
   identity: z.string().optional(),
   /** The plan the provider reports ("Max", "Pro"), when it reports one. */
   plan: z.string().optional(),
+  /**
+   * Where a Claude account's access comes from when it is not a
+   * subscription sign-in: a token command set up for Claude Code by an
+   * organization, or in the person's own Claude Code settings
+   * (`src/shared/claudeAccess.ts`). Absent for a subscription.
+   */
+  access: z.enum(CLAUDE_ACCESS_SOURCES).optional(),
+  /**
+   * Who set the address a Claude subscription's requests go to, when Claude
+   * Code's settings name an address and no token command. Absent otherwise.
+   */
+  gateway: z.enum(CLAUDE_ACCESS_SOURCES).optional(),
   /**
    * Why this account cannot serve right now although its credential is
    * fine, in the backend's own sentence: a Claude account whose machine has

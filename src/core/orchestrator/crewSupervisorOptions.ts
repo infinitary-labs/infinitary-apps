@@ -1,6 +1,7 @@
 import type { CutOff } from "@shared/authFailure";
 import type { Card, CardAnswer, CardThread, TurnImage } from "@shared/cards";
 import type { CheckChangeInput } from "@shared/checkRepair";
+import type { ClaudeAccessSource } from "@shared/claudeAccess";
 import type { ComputerReach } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import type { IntegrationApprovalChoice } from "@shared/integrations";
@@ -145,6 +146,8 @@ export type AccountAttachment = {
     accountId: string | null,
   ): { accountId?: string; changed: boolean } | Promise<{ accountId?: string; changed: boolean }>;
   labelOf(accountId: string): string | undefined;
+  /** Where a Claude account's access comes from when it is not a subscription. */
+  accessOf?(accountId: string): ClaudeAccessSource | undefined;
 };
 
 export type CrewSupervisorOptions = {

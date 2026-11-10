@@ -7,6 +7,11 @@
  * (tests/helpers/crewHarness.ts) and reads what it answers, the cards and the record.
  */
 import { readFileSync } from "node:fs";
+import {
+  CLAUDE_ACCESS_REFUSED_LINE,
+  CLAUDE_ACCESS_SIGN_IN_TITLE,
+  claudeAccessRefusedText,
+} from "@shared/claudeAccess";
 import { NEEDS_REAUTH_CONSEQUENCE } from "@shared/credentialHealth";
 import { PLAIN_PROBLEM_FALLBACK } from "@shared/plainProblem";
 import { CLAUDE_PROVIDER_ID, COPILOT_PROVIDER_ID } from "@shared/providers";
@@ -22,6 +27,7 @@ import {
   setup,
   syncCardId,
   tick,
+  workComputer,
 } from "../../../tests/helpers/crewHarness";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
 import { piSessionEvents } from "../pi/piEvents";
@@ -644,6 +650,79 @@ describe("CrewSupervisor", () => {
       "Problem: the provider did not accept your sign-in - sign in again",
     );
   });
+
+  // INF-3449 review: Claude access set up for Claude Code is renewed where
+  // the person renews it for Claude Code, and only this computer's access is
+  // known here; a task on another computer keeps that computer's sign-in words.
+  it.each([
+    { on: "this computer", device: undefined },
+    { on: "another computer", device: "mini" },
+  ])(
+    "words the sign-in card for Claude access from Claude Code settings on $on",
+    async ({ device }) => {
+      const crewmate = {
+        ...fakeCrewmate(),
+        controlProfile: {
+          ...PI_CONTROL_PROFILE,
+          backgroundWork: "client",
+          failureSignals: "typed",
+        },
+        modelRef: () => ({ provider: CLAUDE_PROVIDER_ID, id: "claude-opus" }),
+      } satisfies FakeCrewmate;
+      const { supervisor, cards, tasks } = setup(crewmate, {
+        accounts: {
+          selectForSpawn: () => "acct_claude",
+          reselectForResume: () => ({ changed: false }),
+          labelOf: () => undefined,
+          accessOf: () => "organization",
+        },
+        routedModel: { provider: CLAUDE_PROVIDER_ID, id: "claude-opus" },
+        ...(device
+          ? {
+              machines: workComputer(device, "Mac mini", {
+                cutOffOf: () => undefined,
+                folders: () => undefined,
+              }),
+            }
+          : {}),
+      });
+      const { taskId } = await supervisor.intake.commission({
+        title: "t",
+        intent: intentOf("work"),
+      });
+      await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+      if (device) tasks.placement.setDevice(taskId, device);
+      crewmate.emit({
+        type: "turn_failed",
+        taskId,
+        error: "Failed to reach Claude.",
+        cutOff: { class: "signed_out" },
+      });
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.finishPrompt();
+      await vi.waitFor(() =>
+        expect(cards().find((card) => card.id === `card-auth-${taskId}`)).toBeDefined(),
+      );
+      const signIn = cards().find((card) => card.id === `card-auth-${taskId}`);
+      expect(signIn?.body).toBe(
+        device
+          ? "The crewmate on Mac mini could not reach Claude, which needs you to sign in again on Mac mini."
+          : claudeAccessRefusedText("The crewmate", "organization"),
+      );
+      // Its title names the refused access too, never a sign-in to redo.
+      expect(signIn?.title).toBe(device ? PROVIDER_SIGN_IN_TITLE : CLAUDE_ACCESS_SIGN_IN_TITLE);
+      // And so does its feed line, read back from the record.
+      const failed = tasks
+        .timeline(taskId)
+        .filter((event) => event.kind === "failed")
+        .at(-1);
+      expect(taskFeedLine(tasks.get(taskId) as TaskRecord, failed as TaskEvent)?.text).toBe(
+        device
+          ? "Problem: the provider did not accept your sign-in - sign in again"
+          : `Problem: ${CLAUDE_ACCESS_REFUSED_LINE.organization}`,
+      );
+    },
+  );
 
   it("never reads a sign-in from a typed backend's words, and keeps other cut-offs on the provider-failure path", async () => {
     const crewmate = {

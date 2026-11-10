@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { MachineLoginOutcome } from "@shared/accounts";
+import { CLAUDE_ACCESS_IN_USE_TEXT } from "@shared/claudeAccess";
 import { CLAUDE_CHIP_INSTALL_NOTE, CLAUDE_CLIENT_MISSING_TEXT } from "@shared/claudeClient";
 import { HERE } from "@shared/deviceNames";
 import {
@@ -16,6 +17,7 @@ import {
 import type { CredentialHealth, RenewalOutcome, RenewReason } from "../accounts/credentialHealth";
 import { askedFromAView } from "../askedFromAView";
 import { absentKeychain, type HostKeychain } from "../host";
+import { type ClaudeAccess, type ClaudeAccessRead, readClaudeAccess } from "./claudeAccess";
 import {
   CLAUDE_AUTH_STATUS_ARGS,
   type ClaudeClientCheck,
@@ -163,6 +165,14 @@ export type ClaudeAuthBackendOptions = {
    * replaced.
    */
   pasteCode?: boolean;
+  /**
+   * Claude access an organization or the person set up for Claude Code (a
+   * token command, `claudeAccess.ts`). Production reads it with the client
+   * library's own settings reader; a test that injects `readStore` or
+   * `available` and not this gets none, so no unit test reads the
+   * developer's own Claude settings.
+   */
+  access?: () => Promise<ClaudeAccessRead>;
 };
 
 export class ClaudeAuthBackend implements AccountBackend {
@@ -174,6 +184,7 @@ export class ClaudeAuthBackend implements AccountBackend {
   private readonly configDir: () => string;
   private readonly now: () => number;
   private readonly pasteCode: boolean;
+  private readonly readAccess: () => Promise<ClaudeAccessRead>;
 
   constructor(options: ClaudeAuthBackendOptions = {}) {
     const keychain = options.keychain ?? absentKeychain;
@@ -194,6 +205,18 @@ export class ClaudeAuthBackend implements AccountBackend {
     this.configDir = options.configDir ?? defaultClaudeConfigDir;
     this.now = options.now ?? Date.now;
     this.pasteCode = options.pasteCode ?? false;
+    this.readAccess =
+      options.access ??
+      (options.readStore || options.available ? async () => ({}) : () => readClaudeAccess());
+  }
+
+  /**
+   * The token command the client would sign in with, when an organization
+   * or the person set one up for Claude Code. It comes ahead of a
+   * subscription sign-in, as it does in the client.
+   */
+  async access(): Promise<ClaudeAccess | undefined> {
+    return (await this.readAccess()).access;
   }
 
   /**
@@ -243,6 +266,19 @@ export class ClaudeAuthBackend implements AccountBackend {
     // existing machine login changes nothing here - nothing could run it.
     const issue = claudeClientIssueText(await this.client());
     if (issue) throw new Error(issue);
+    // The access an organization or the person set up for Claude Code is
+    // what the client signs in with: nothing to sign in to here, no browser,
+    // on Connect and on the row's Try again alike.
+    const access = await this.access();
+    if (access) {
+      request.bridge.notify({
+        providerId: request.providerId,
+        accountId: request.accountId,
+        kind: "info",
+        message: CLAUDE_ACCESS_IN_USE_TEXT[access.source],
+      });
+      return;
+    }
     const dir = this.configDir();
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     if (this.pasteCode) {
@@ -562,6 +598,9 @@ export class ClaudeAuthBackend implements AccountBackend {
    */
   async renew(_account: AccountRef, reason: RenewReason): Promise<RenewalOutcome> {
     if (reason !== "vendor_rejected") return { outcome: "unsupported" };
+    // The client runs the token command again itself after a refusal; the
+    // app has nothing of its own to renew.
+    if (await this.access()) return { outcome: "unsupported" };
     const dir = this.configDir();
     const claimed = await tryExclusiveStoreTask(dir, async (): Promise<RenewalOutcome> => {
       const options = { preferKeychain: true, bypassCache: true };
@@ -595,14 +634,20 @@ export class ClaudeAuthBackend implements AccountBackend {
   async health(_account: AccountRef): Promise<CredentialHealth> {
     void _account;
     const client = await this.client();
-    const dir = this.configDir();
-    // Health, identity and the real-refusal stamp come from one silent read.
-    const read = await this.readStore(dir);
-    const credential = this.credentialHealth(read);
-    const stored = claudeCredentialStamp(read);
     const version = client.state === "missing" ? undefined : client.version;
-    const stamp = { ...stored, ...(version ? { client: version } : {}) };
-    const health = Object.keys(stamp).length > 0 ? { ...credential, stamp } : credential;
+    const { access, gateway } = await this.readAccess();
+    // A token command set up for Claude Code is what the client signs in
+    // with, ahead of any subscription in the store: the store is not read,
+    // and the access's digest is the login a refusal is recorded under. An
+    // address alone leaves the subscription serving, through that address.
+    const health: CredentialHealth = access
+      ? {
+          state: "healthy",
+          authType: "api_key",
+          access: access.source,
+          stamp: { login: `access:${access.digest}`, ...(version ? { client: version } : {}) },
+        }
+      : { ...(await this.storeHealth(version)), ...(gateway ? { gateway } : {}) };
     // The client is a fact beside the credential (F14): a live login with
     // no client to run it is degraded with the sentence, never a sign-out,
     // and a sign-out stays a sign-out whatever the client's state.
@@ -612,6 +657,14 @@ export class ClaudeAuthBackend implements AccountBackend {
     }
     const detail = claudeClientIssueText(client);
     return { ...health, state: "degraded", reason: issue, ...(detail ? { detail } : {}) };
+  }
+
+  /** Health, identity and the real-refusal stamp from one silent read of the store. */
+  private async storeHealth(version: string | undefined): Promise<CredentialHealth> {
+    const read = await this.readStore(this.configDir());
+    const credential = this.credentialHealth(read);
+    const stamp = { ...claudeCredentialStamp(read), ...(version ? { client: version } : {}) };
+    return Object.keys(stamp).length > 0 ? { ...credential, stamp } : credential;
   }
 
   /** A store we cannot read is stale, never evidence that a login went away. */

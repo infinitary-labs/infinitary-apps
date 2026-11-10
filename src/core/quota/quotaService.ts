@@ -7,6 +7,7 @@ import {
 import type { AppDatabase } from "../storage/db";
 import { QuotaSnapshotStore } from "../storage/quotaSnapshotStore";
 import type { QuotaFetchResult } from "./fetchQuota";
+import { CLAUDE_ACCESS_REASON } from "./outcome";
 
 /**
  * The quota sensor (decision D-7): fetch usage windows from first-party
@@ -181,7 +182,9 @@ export class QuotaService {
  * says how old they are. The single exception is `auth_required`, which by
  * construction reaches this point only after a delegated renewal failed to fix
  * a vendor rejection - the one state that is evidence the credential itself is
- * finished, and so the only one that may clear a card. Not knowing (a timeout,
+ * finished, and so the only one that may clear a card - beside a Claude
+ * account now on access set up for Claude Code, whose allowance is not
+ * measured at all. Not knowing (a timeout,
  * a rate limit, an unreadable store, a renewal that could not run) never
  * throws away a real reading. Keyed per account, so one account's failure can
  * never borrow a sibling's windows.
@@ -200,6 +203,10 @@ export function mergeStaleProviders(
     providers: next.providers.map((provider) => {
       if (provider.status === "ok" || provider.status === "auth_required") return provider;
       if (provider.windows.length > 0) return provider;
+      // A Claude account now on access set up for Claude Code is not
+      // measured by decision, not for want of a reading: the subscription's
+      // last windows are no longer its allowance.
+      if (provider.reason === CLAUDE_ACCESS_REASON) return provider;
       const last = prior.get(keyOf(provider));
       if (!last || last.windows.length === 0) return provider;
       const windows = last.windows.filter((window) => stillApplies(window, now));

@@ -3,6 +3,7 @@ import { fileSizeWords } from "@shared/attachments";
 import { type CutOff, isAuthFailureMessage } from "@shared/authFailure";
 import type { TurnImage } from "@shared/cards";
 import { isRepairAssessment } from "@shared/checkRepair";
+import { type ClaudeAccessSource, claudeAccessRefusedText } from "@shared/claudeAccess";
 import { isCustomApiProvider } from "@shared/customApi";
 import type { FmEvent } from "@shared/events";
 import { reportSummary } from "@shared/feed";
@@ -402,6 +403,10 @@ export class CrewTurns {
       const connection = label ? `${label}, your custom connection` : "its custom connection";
       return `${crewmate} could not reach ${connection}. In Settings → Intelligence, press Edit on ${label ? "it" : "that connection"}${where ? ` ${where}` : ""}, then Save to check it again.`;
     }
+    // Claude access set up for Claude Code is renewed where the person
+    // renews it for Claude Code, never with a sign-in here.
+    const access = this.localAccess(task);
+    if (access) return claudeAccessRefusedText(crewmate, access, where);
     const name = PROVIDER_CATALOG.find((entry) => entry.id === provider)?.name;
     return `${crewmate} could not reach ${name ?? "its subscription"}, which needs you to sign in again${where ? ` ${where}` : ""}.`;
   }
@@ -716,8 +721,11 @@ export class CrewTurns {
       // A typed backend's provider failure keeps its class for the record,
       // so the feed line reads the class, never the words.
       let typed: TypedFailure | undefined;
+      // A lost sign-in on Claude access set up for Claude Code says so, so
+      // its line asks to renew it there, never to sign in here.
+      const access = cutOff?.class === "signed_out" ? this.localAccess(task) : undefined;
       if (providerError !== undefined && task.session?.controlProfile.failureSignals === "typed") {
-        typed = cutOff ? { cutOff } : {};
+        typed = cutOff ? { cutOff, ...(access ? { access } : {}) } : {};
       } else if (providerError !== undefined && cutOff) {
         // A prose backend's failure with a typed class (xAI's 402) keeps the
         // class too, so the feed line reads the class and not the words.
@@ -922,6 +930,18 @@ export class CrewTurns {
     });
   }
 
+  /**
+   * The task's Claude access set up for Claude Code, when it runs here. Only
+   * this Mac's access is known here: a task on another computer ran on that
+   * computer's own sign-in (docs/helper.md, "Its own sign-ins").
+   */
+  private localAccess(task: TaskRuntime): ClaudeAccessSource | undefined {
+    const local = this.core.facts.machineOf(task.id) === LOCAL_MACHINE_ID;
+    return task.accountId && local
+      ? this.core.options.accounts?.accessOf?.(task.accountId)
+      : undefined;
+  }
+
   private async presentSignInCard(task: TaskRuntime): Promise<void> {
     let move: { arg: string; modelName: string } | undefined;
     try {
@@ -936,11 +956,12 @@ export class CrewTurns {
     }
     const record = this.core.options.tasks.get(task.id);
     if (!record || TaskService.isClosed(record) || this.core.tasks.get(task.id) !== task) return;
+    const access = this.localAccess(task);
     this.core.cards.hostCards.addAuthDecisionCard(
       crewSignInCardId(task.id),
       task.title,
       this.signInCardBody(task),
-      { taskId: task.id, ...(move ? { move } : {}) },
+      { taskId: task.id, ...(move ? { move } : {}), ...(access ? { access } : {}) },
     );
   }
 

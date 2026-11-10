@@ -293,6 +293,7 @@ A session runs turns when it names a session (`--session-id=`, `--resume=`) or a
   Neither the client nor the app inherits the session that ran the tests: the e2e global setup drops its `CLAUDECODE`, `AI_AGENT`, `CLAUDE_*` and `ANTHROPIC_*`, and `tests/e2e/launch.ts` builds the app's environment without them (`tests/helpers/runnerSession.ts`).
   A run from a Claude crewmate therefore hands the client no messaging socket, token, session id or effort, and the client's entrypoint and SDK version are the SDK's own, as in CI; every `CLAUDE_*` it sees is the app's or the box's.
   The shim records each lookup and answers "not found" (exit 44).
+  With `credential: "settings"` the box hands the client neither the dummy key nor `ANTHROPIC_BASE_URL`, so only the session's own settings can name a token command and an address (`claudeAccess.integration.test.ts`).
   A set `CLAUDE_CONFIG_DIR` already suffixes the Keychain service name (`docs/claude-client.md`).
   The spec asserts both: every lookup names a suffixed service (measured on client 2.1.234: `Claude Code-<hash>` and `Claude Code-credentials-<hash>`), and every request carries the dummy key and no `authorization` header.
   The bundled binary runs windowless on macOS, so the plan's hand-written protocol fallback was not needed.

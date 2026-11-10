@@ -406,6 +406,7 @@ export class TaskTurns {
           fatal: false,
           ...(typed ? { failureSignals: "typed" } : {}),
           ...(typed?.cutOff ? { cutOff: typed.cutOff } : {}),
+          ...(typed?.access ? { access: typed.access } : {}),
         },
       });
     });

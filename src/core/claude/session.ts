@@ -29,8 +29,10 @@ import { ClaudeTranscriptLookup } from "./claudeTranscript";
  * built-ins (W1 S6), the crewmate's with the client's own coding set - and
  * the adapted decision model's one-shot question (W1 S10).
  *
- * Every Claude session runs the machine's default login and nothing ambient
- * (`claudeEnvFor`), nothing of the person's own Claude setup
+ * Every Claude session runs the machine's default login, or the token
+ * command an organization or the person set up for Claude Code with its
+ * address (`claudeAccess.ts`, as flag settings), and nothing ambient
+ * (`claudeEnvFor`), nothing else of the person's own Claude setup
  * (`settingSources: []`, `strictMcpConfig: true`, and the client's auto
  * memory off: `CLAUDE_SESSION_ENV`), no built-in tool unless the spec asks
  * for the coding set - which also brings its working copy's own instruction
@@ -247,7 +249,8 @@ export function createClaudeSessionFactory(deps: ClaudeSessionDeps): SessionFact
       // Held for the session's life: the client refreshes its own login
       // inside the run, and the refresh token behind it is single use.
       const release = await acquireSessionLease(deps.configDir);
-      return new ClaudeOneShotSession(spec, binding.accountId, env, deps, release);
+      const access = await deps.accessSettings?.().catch(() => undefined);
+      return new ClaudeOneShotSession(spec, binding.accountId, env, deps, release, access);
     },
   };
 }

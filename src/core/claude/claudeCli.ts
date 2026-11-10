@@ -401,7 +401,10 @@ export function claudeEnvFor(base: NodeJS.ProcessEnv = hostEnv()): NodeJS.Proces
   // CD-1=B: the vendor's own default login, never a per-account store.
   delete env.CLAUDE_CONFIG_DIR;
   // Ambient credentials would silently serve a key the user never connected
-  // here. The machine login is the only credential source a run of ours may have.
+  // here. The machine login, and a token command an organization or the
+  // person set up for Claude Code with the address it is sent to
+  // (`claudeAccess.ts`, handed over as settings, never as environment), are
+  // the only credential sources a run of ours may have.
   delete env.ANTHROPIC_API_KEY;
   delete env.ANTHROPIC_AUTH_TOKEN;
   delete env.CLAUDE_CODE_OAUTH_TOKEN;

@@ -8,6 +8,7 @@ import { SESSION_COMPACTION_TOKENS } from "../session/compaction";
 import type { SessionSpec } from "../session/session";
 import type { BoundTool } from "../session/tools";
 import { CLAUDE_SEAT_TOOL_SERVER } from "../storage/sessionReader";
+import type { ClaudeAccessSettings } from "./claudeAccess";
 import { claudeEnvFor } from "./claudeCli";
 import {
   type ClaudeProjectResources,
@@ -52,7 +53,8 @@ export const CLAUDE_SESSION_ENV = { CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1" } as co
  * message with a `Co-Authored-By` trailer and each pull request description
  * with a "Generated with Claude Code" line; empty text hides both
  * (`claudeAttribution.integration.test.ts`). Flag settings are the app's
- * own layer, so the person's own Claude settings stay unread.
+ * own layer, so the person's own Claude settings stay unread, but for the
+ * token command and address a session signs in with (`claudeAccess.ts`).
  */
 export const CLAUDE_CODING_SETTINGS = { attribution: { commit: "", pr: "" } } as const;
 
@@ -141,6 +143,11 @@ type ClaudeSessionOptionsInput = {
   env: NodeJS.ProcessEnv;
   executable: string | undefined;
   stderr: (data: string) => void;
+  /**
+   * The person's own Claude Code token command and address, the only keys
+   * of their settings a session is handed (`claudeAccess.ts`).
+   */
+  access?: ClaudeAccessSettings;
   /**
    * A rolling session's client attachment: the model it asks for (never
    * one the client swapped in), the captain's text served right now, and
@@ -234,7 +241,11 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
         ...outputCap,
       },
       // The person's own Claude configuration is not the app's: a session
-      // imports no settings on any machine. Nor is a project's: its settings
+      // imports no settings source on any machine. Of the person's own
+      // settings only the token command and address it signs in with ride
+      // the flag settings (`accessFlagSettings`), and an organization's
+      // managed settings reach the client whatever this says. Nor is a
+      // project's configuration the app's: its settings
       // file would bring its hooks, permission rules and environment, so a
       // coding session is handed its working copy's instructions and skills
       // instead (`claudeProjectResources.ts`).
@@ -289,8 +300,10 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
           }
         : {}),
       // A coding session's commits and pull requests carry no attribution,
-      // and with a skill staged no hook runs.
+      // and with a skill staged no hook runs. The person's own token command
+      // and address, when they set them up for Claude Code, ride along.
       settings: {
+        ...input.access,
         ...CLAUDE_COMPACTION_SETTINGS,
         ...(coding ? CLAUDE_CODING_SETTINGS : {}),
         ...(staged ? { disableAllHooks: true } : {}),
@@ -337,8 +350,9 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
       CLAUDE_CODE_MAX_OUTPUT_TOKENS: undefined,
       ...outputCap,
     },
-    settings: CLAUDE_COMPACTION_SETTINGS,
-    // The person's own Claude configuration is not the app's.
+    settings: { ...input.access, ...CLAUDE_COMPACTION_SETTINGS },
+    // The person's own Claude configuration is not the app's, but for the
+    // token command and address above.
     settingSources: [],
     // The spec's instruction is the only system prompt the app supplies: no
     // preset (the client still adds its identity line).

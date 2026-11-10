@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { type Query, query as sdkQuery } from "@anthropic-ai/claude-agent-sdk";
 import type { FmUsage } from "@shared/events";
 import type { ModelSession, SessionEvent, SessionSpec } from "../session/session";
+import type { ClaudeAccessSettings } from "./claudeAccess";
 import { resolveClaudeExecutable } from "./claudeCli";
 import type { ClaudeNormalizeResult, ClaudeTurnFailure } from "./claudeEvents";
 import { claudeModelName } from "./claudeModels";
@@ -51,6 +52,8 @@ export class ClaudeOneShotSession extends ClaudeQueryCore<SessionEvent> implemen
     private readonly deps: ClaudeSessionDeps,
     /** Hands the account's store back; the lease ignores a second call. */
     private readonly releaseLease: () => void,
+    /** The person's own token command and address, read as the session opened. */
+    private readonly access?: ClaudeAccessSettings,
   ) {
     super(spec.owner);
   }
@@ -87,6 +90,7 @@ export class ClaudeOneShotSession extends ClaudeQueryCore<SessionEvent> implemen
       env: this.env,
       executable: resolveClaudeExecutable(this.env),
       stderr: (data) => this.deps.log?.(data.trimEnd()),
+      ...(this.access ? { access: this.access } : {}),
     });
     let query: Query;
     try {

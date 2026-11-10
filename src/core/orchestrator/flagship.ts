@@ -1,4 +1,5 @@
 import type { CutOffClass } from "@shared/authFailure";
+import { CLAUDE_ACCESS_PAUSED_SENTENCE, type ClaudeAccessSource } from "@shared/claudeAccess";
 import { isClientIssueReason } from "@shared/claudeClient";
 import { isCustomApiProvider } from "@shared/customApi";
 import { HERE } from "@shared/deviceNames";
@@ -66,6 +67,8 @@ export type FlagshipVaultView = {
   cutOff(accountId: string): { class: CutOffClass; resetsAt?: number } | undefined;
   /** The captain's "Try again" on a refusal; answers whether one stood. */
   tryAgain(accountId: string): boolean;
+  /** Where a Claude account's access comes from when it is not a subscription. */
+  accessSync?(accountId: string): ClaudeAccessSource | undefined;
   /** Who the account's own client last said is signed in, when it says. */
   identitySync?(accountId: string): string | undefined;
   runtimeFor(accountId: string): Promise<ModelRuntime>;
@@ -325,8 +328,12 @@ export class Flagship {
     const label = account?.label ?? "Its account";
     const provider = account ? this.providerNameOf(account.providerId) : "Its provider";
     switch (pause.class) {
-      case "signed_out":
-        return signedOutSentence(label);
+      case "signed_out": {
+        // Claude access set up for Claude Code is renewed where the person
+        // renews it for Claude Code, never by a sign-in here.
+        const access = this.accessOf(accountId);
+        return access ? CLAUDE_ACCESS_PAUSED_SENTENCE[access] : signedOutSentence(label);
+      }
       case "no_headroom": {
         const reset = this.resetText(accountId);
         return `${allowanceSpentWords(label)}${reset ? ` (${reset})` : ""}.`;
@@ -373,6 +380,11 @@ export class Flagship {
 
   labelOf(accountId: string): string | undefined {
     return this.options.vault.get(accountId)?.label;
+  }
+
+  /** Where a Claude account's access comes from when it is not a subscription. */
+  accessOf(accountId: string): ClaudeAccessSource | undefined {
+    return this.options.vault.accessSync?.(accountId);
   }
 
   providerOf(accountId: string): string | undefined {

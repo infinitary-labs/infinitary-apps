@@ -10,6 +10,7 @@ import {
 } from "@anthropic-ai/claude-agent-sdk";
 import { CLAUDE_CLIENT_MISSING_TEXT } from "@shared/claudeClient";
 import { atUtilityQos } from "../utilityQos";
+import type { ClaudeAccessSettings } from "./claudeAccess";
 import { claudeEnvFor, compareVersions, resolveClaudeExecutable } from "./claudeCli";
 import { CLAUDE_MODELS } from "./claudeModels";
 
@@ -172,6 +173,8 @@ export async function readClaudeModelCatalog(
     factory?: ClaudeCatalogQueryFactory;
     /** Run the client at utility QoS: the in-app read is background work. */
     utilityQos?: boolean;
+    /** The person's own token command and address, as a session is handed them (`claudeAccess.ts`). */
+    settings?: ClaudeAccessSettings;
   } = {},
 ): Promise<ClaudeModelRow[]> {
   const executable = resolveClaudeExecutable();
@@ -190,6 +193,9 @@ export async function readClaudeModelCatalog(
       // The user's own machine-wide Claude configuration is theirs: the
       // catalog under test is the one a crewmate run would see.
       settingSources: [],
+      ...(options.settings && Object.keys(options.settings).length > 0
+        ? { settings: options.settings }
+        : {}),
       // Only the app's own tool servers, here none: the person's
       // connectors, plugins and project `.mcp.json` never mount.
       strictMcpConfig: true,

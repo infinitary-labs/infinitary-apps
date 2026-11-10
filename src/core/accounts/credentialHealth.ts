@@ -1,3 +1,4 @@
+import type { ClaudeAccessSource } from "@shared/claudeAccess";
 import { isClientIssueReason } from "@shared/claudeClient";
 
 /**
@@ -62,6 +63,17 @@ export type CredentialHealth = {
   expiresAt?: number;
   authType?: "oauth" | "api_key";
   identity?: { label?: string; plan?: string };
+  /**
+   * Where a Claude account's access comes from when it is not a
+   * subscription sign-in: a token command an organization or the person set
+   * up for Claude Code (`src/shared/claudeAccess.ts`).
+   */
+  access?: ClaudeAccessSource;
+  /**
+   * Who set the address a Claude subscription's requests go to, when Claude
+   * Code's settings name one and no token command (`ClaudeAccessRead.gateway`).
+   */
+  gateway?: ClaudeAccessSource;
   /**
    * What the store and its client look like from outside, when the backend
    * can say: the stamp a cut-off is recorded under, so it clears only when

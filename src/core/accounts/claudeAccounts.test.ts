@@ -1,9 +1,11 @@
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { CLAUDE_ACCESS_ACCOUNT_LABEL } from "@shared/claudeAccess";
 import type { AuthNotice, AuthPromptView } from "@shared/providers";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import type { ClaudeAccessRead } from "../claude/claudeAccess";
 import type { ClaudeStoreRead } from "../claude/claudeQuota";
 import type { HostKeychain, HostKeychainOutcome } from "../host";
 import { appPathsFor } from "../paths";
@@ -77,7 +79,7 @@ const fileStore = async (configDir: string): Promise<ClaudeStoreRead> => {
     : { state: "absent" };
 };
 
-function vault() {
+function vault(access: () => Promise<ClaudeAccessRead> = async () => ({})) {
   const paths = appPathsFor(scratchDir("infinitary-claude-vault-"));
   const store = scratchDir("infinitary-claude-default-");
   return {
@@ -91,6 +93,7 @@ function vault() {
           available: () => true,
           configDir: () => store,
           readStore: fileStore,
+          access,
         }),
       ],
       modelsForAccount: ({ providerId }) =>
@@ -202,6 +205,56 @@ describe("Claude accounts in the vault", () => {
     );
     expect(failing.list()).toEqual([]);
     expect(existsSync(join(paths.accountsDir, CLAUDE_PROVIDER_ID))).toBe(false);
+  });
+});
+
+/**
+ * An account signed in with a subscription before the update finds Claude
+ * Code's settings naming access of their own (the captain on the review:
+ * "On update, matching Claude Code, with the account row and release note
+ * saying so"). The client signs in with that access from then on, so the
+ * row stops naming the subscription's email and says where the access is.
+ */
+describe("an existing Claude account when Claude Code's settings set up access", () => {
+  it("switches to a token command on the next reading, renamed for the access", async () => {
+    let read: ClaudeAccessRead = {};
+    const { vault: subject } = vault(async () => read);
+    const account = await subject.add(CLAUDE_PROVIDER_ID, "oauth", bridge());
+    expect(account.label).toBe("kun@example.com");
+
+    read = { access: { source: "organization", digest: "0123456789abcdef" } };
+    await subject.status(account.id, { refresh: true });
+    const [view] = await subject.views();
+    expect(view).toMatchObject({
+      label: CLAUDE_ACCESS_ACCOUNT_LABEL,
+      access: "organization",
+      connected: true,
+    });
+    expect(view?.identity).toBeUndefined();
+  });
+
+  it("names a new account for the access when it connects on one", async () => {
+    const { vault: subject } = vault(async () => ({
+      access: { source: "claude-settings", digest: "0123456789abcdef" },
+    }));
+    const account = await subject.add(CLAUDE_PROVIDER_ID, "oauth", bridge());
+    expect(account.label).toBe(CLAUDE_ACCESS_ACCOUNT_LABEL);
+  });
+
+  it("keeps the subscription's email when only an address is set, and names whose it is", async () => {
+    let read: ClaudeAccessRead = {};
+    const { vault: subject } = vault(async () => read);
+    const account = await subject.add(CLAUDE_PROVIDER_ID, "oauth", bridge());
+
+    read = { gateway: "claude-settings" };
+    await subject.status(account.id, { refresh: true });
+    const [view] = await subject.views();
+    expect(view).toMatchObject({
+      label: "kun@example.com",
+      identity: "kun@example.com",
+      gateway: "claude-settings",
+    });
+    expect(view?.access).toBeUndefined();
   });
 });
 

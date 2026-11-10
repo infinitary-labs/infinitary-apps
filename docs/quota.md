@@ -69,6 +69,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 ## Keeping the Claude reading current
 
 - Health, allowance, identity and login ownership use `readClaudeStore`: one `present`, `absent` or `unreadable` result carrying the access token, advisory expiry and current identity from Claude Code's config.
+  A token command set up for Claude Code comes first: while one is set, health is that access, the allowance is not measured and the store is not read for it (`docs/claude-client.md`, "Access a company set up").
   File credentials and the account config are cached by modification date; a Keychain value is cached only when the item reports its modification date, and is invalidated by a changed item or config.
   Access expiry alone does not discard a cached value, and concurrent equivalent reads share their work.
   Retry and the read around the idle status request bypass the value cache; an explicit permission request never joins a silent read.

@@ -1,3 +1,4 @@
+import { CLAUDE_ACCESS_ALLOWANCE_TEXT, type ClaudeAccessSource } from "@shared/claudeAccess";
 import {
   KEYCHAIN_VALUE_FAILURE_DETAIL,
   type KeychainValueFailure,
@@ -28,6 +29,23 @@ export const CREDENTIAL_UNAVAILABLE: ProviderOutcome = {
   windows: [],
   reason: "credential_unavailable",
 };
+
+/** Why a Claude account on access set up for Claude Code is not measured. */
+export const CLAUDE_ACCESS_REASON = "claude_access";
+
+/**
+ * A Claude account on access an organization or the person set up for
+ * Claude Code: the limits are the gateway's, and Infinitary reads none of
+ * them. Not measured, never a zero, and never a sign-in to redo.
+ */
+export function claudeAccessOutcome(source: ClaudeAccessSource): ProviderOutcome {
+  return {
+    status: "not_measured",
+    windows: [],
+    reason: CLAUDE_ACCESS_REASON,
+    detail: CLAUDE_ACCESS_ALLOWANCE_TEXT[source],
+  };
+}
 
 /**
  * The Claude Keychain VALUE read was declined, denied, timed out, or

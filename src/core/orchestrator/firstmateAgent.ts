@@ -1110,6 +1110,7 @@ export class FirstmateAgent {
       flagship.pauseSentence(paused.accountId, pause),
       pause.class,
       providerName,
+      flagship.accessOf(paused.accountId) !== undefined,
     );
     this.keepReplyLine([askId], { text, eligibility: "queued" });
     this.options.broadcastEvent({ type: "firstmate_note", text });
@@ -1500,9 +1501,20 @@ export class FirstmateAgent {
     // working line turns straight into it; an answer in a card's replies
     // is an answer on that card, and its words are the line too.
     if (!failed && threadAnswer && repliedUnder.size > 0) this.turn.replyFacts.acted = true;
+    // A lost sign-in on Claude access set up for Claude Code is renewed
+    // where Claude Code's is, never by a sign-in here.
+    const access =
+      failed && cutOff?.class === "signed_out" && this.seat.boundAccountId
+        ? this.options.flagship?.accessOf(this.seat.boundAccountId)
+        : undefined;
     this.replyToLastMessage(
       [...this.turn.read],
-      failed ? plainProblem(end.failure?.error, cutOff ? { cutOff } : undefined) : undefined,
+      failed
+        ? plainProblem(
+            end.failure?.error,
+            cutOff ? { cutOff, ...(access ? { access } : {}) } : undefined,
+          )
+        : undefined,
     );
     this.options.broadcastEvent({ type: "firstmate_state", busy: false });
     if (!failed && threadAnswer) {

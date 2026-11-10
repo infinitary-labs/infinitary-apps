@@ -6,6 +6,7 @@ import {
 } from "@shared/credentialHealth";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import type { QuotaSnapshotView } from "@shared/quota";
+import type { ClaudeAccess } from "../claude/claudeAccess";
 import type { ClaudeRateLimit } from "../claude/claudeEvents";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
 import {
@@ -27,7 +28,7 @@ import { createQuotaFetcher } from "./fetchQuota";
 import { createFixtureRefresh } from "./fixture";
 import { createQuotaHttp } from "./http";
 import { needsReauthTargets } from "./needsReauth";
-import type { ProviderOutcome } from "./outcome";
+import { claudeAccessOutcome, type ProviderOutcome } from "./outcome";
 import { PushedQuotaStore, pushedProviderViews, withRejectedReadings } from "./pushedQuota";
 import { type QuotaRefresh, QuotaService } from "./quotaService";
 import { lowestLeft, recordCutOff } from "./spentAllowance";
@@ -95,6 +96,8 @@ export function startHomeQuota(options: {
   auth: PiAuthService;
   /** Each new snapshot, once read. */
   broadcast: (snapshot: QuotaSnapshotView) => void;
+  /** Claude access an organization or the person set up for Claude Code (`ClaudeAuthBackend.access`). */
+  claudeAccess?: () => Promise<ClaudeAccess | undefined>;
 }): HomeQuota {
   const { host, db, vault, served, auth } = options;
   const pushedQuota = new PushedQuotaStore(db);
@@ -128,6 +131,13 @@ export function startHomeQuota(options: {
     // resolves through its Pi runtime. Infinitary never mints Anthropic OAuth.
     const claudeDir = claudeStoreDirOf(vault, accountId);
     if (claudeDir !== undefined) {
+      // Access set up for Claude Code serves no subscription allowance, and
+      // its sign-in is not the store's: the store is not read.
+      const access = await options.claudeAccess?.();
+      if (access) {
+        quotaUnresolved.set(accountId, claudeAccessOutcome(access.source));
+        return undefined;
+      }
       const read = await readClaudeStore(claudeDir, {
         keychain: host.keychain,
         allowPrompt: resolve?.allowPrompt,

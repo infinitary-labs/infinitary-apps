@@ -5890,6 +5890,20 @@
                           "plan": {
                             "type": "string"
                           },
+                          "access": {
+                            "type": "string",
+                            "enum": [
+                              "organization",
+                              "claude-settings"
+                            ]
+                          },
+                          "gateway": {
+                            "type": "string",
+                            "enum": [
+                              "organization",
+                              "claude-settings"
+                            ]
+                          },
                           "detail": {
                             "type": "string"
                           },
@@ -16174,6 +16188,20 @@
             "plan": {
               "type": "string"
             },
+            "access": {
+              "type": "string",
+              "enum": [
+                "organization",
+                "claude-settings"
+              ]
+            },
+            "gateway": {
+              "type": "string",
+              "enum": [
+                "organization",
+                "claude-settings"
+              ]
+            },
             "detail": {
               "type": "string"
             },
@@ -16291,6 +16319,20 @@
           "plan": {
             "type": "string"
           },
+          "access": {
+            "type": "string",
+            "enum": [
+              "organization",
+              "claude-settings"
+            ]
+          },
+          "gateway": {
+            "type": "string",
+            "enum": [
+              "organization",
+              "claude-settings"
+            ]
+          },
           "detail": {
             "type": "string"
           },
@@ -16385,6 +16427,20 @@
           },
           "plan": {
             "type": "string"
+          },
+          "access": {
+            "type": "string",
+            "enum": [
+              "organization",
+              "claude-settings"
+            ]
+          },
+          "gateway": {
+            "type": "string",
+            "enum": [
+              "organization",
+              "claude-settings"
+            ]
           },
           "detail": {
             "type": "string"
@@ -58034,6 +58090,20 @@
                     "plan": {
                       "type": "string"
                     },
+                    "access": {
+                      "type": "string",
+                      "enum": [
+                        "organization",
+                        "claude-settings"
+                      ]
+                    },
+                    "gateway": {
+                      "type": "string",
+                      "enum": [
+                        "organization",
+                        "claude-settings"
+                      ]
+                    },
                     "detail": {
                       "type": "string"
                     },
@@ -68455,6 +68525,20 @@
                           "plan": {
                             "type": "string"
                           },
+                          "access": {
+                            "type": "string",
+                            "enum": [
+                              "organization",
+                              "claude-settings"
+                            ]
+                          },
+                          "gateway": {
+                            "type": "string",
+                            "enum": [
+                              "organization",
+                              "claude-settings"
+                            ]
+                          },
                           "detail": {
                             "type": "string"
                           },
@@ -69667,6 +69751,20 @@
                           },
                           "plan": {
                             "type": "string"
+                          },
+                          "access": {
+                            "type": "string",
+                            "enum": [
+                              "organization",
+                              "claude-settings"
+                            ]
+                          },
+                          "gateway": {
+                            "type": "string",
+                            "enum": [
+                              "organization",
+                              "claude-settings"
+                            ]
                           },
                           "detail": {
                             "type": "string"
@@ -73079,6 +73177,20 @@
                   },
                   "plan": {
                     "type": "string"
+                  },
+                  "access": {
+                    "type": "string",
+                    "enum": [
+                      "organization",
+                      "claude-settings"
+                    ]
+                  },
+                  "gateway": {
+                    "type": "string",
+                    "enum": [
+                      "organization",
+                      "claude-settings"
+                    ]
                   },
                   "detail": {
                     "type": "string"

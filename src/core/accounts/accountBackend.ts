@@ -1,4 +1,5 @@
 import type { MachineLoginOutcome } from "@shared/accounts";
+import type { ClaudeAccessSource } from "@shared/claudeAccess";
 import { REFRESH_TOKEN_LAPSED } from "@shared/credentialHealth";
 import type { BackendId } from "@shared/providers";
 import type { AuthInteractionBridge } from "../pi/piAuth";
@@ -42,6 +43,10 @@ export type AccountStatus = {
    * Pi reports a Copilot account's GitHub username, read when it signs in.
    */
   identity?: { label?: string; plan?: string };
+  /** Where a Claude account's access comes from, when not a subscription (CredentialHealth). */
+  access?: ClaudeAccessSource;
+  /** Who set the address a Claude subscription's requests go to (CredentialHealth). */
+  gateway?: ClaudeAccessSource;
   /**
    * Why connectedness could not be confirmed by the client's own status
    * read. Present only when this is not a positive client determination.
@@ -155,6 +160,8 @@ export function statusFromHealth(health: CredentialHealth): AccountStatus {
     connected: true,
     ...(health.authType ? { authType: health.authType } : {}),
     ...(health.identity ? { identity: health.identity } : {}),
+    ...(health.access ? { access: health.access } : {}),
+    ...(health.gateway ? { gateway: health.gateway } : {}),
     ...(health.reason ? { reason: health.reason } : {}),
     ...(health.detail ? { detail: health.detail } : {}),
   };

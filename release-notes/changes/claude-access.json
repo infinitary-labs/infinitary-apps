@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "claude-access",
+      "kind": "feature",
+      "title": "Claude uses your company's Claude Code setup",
+      "body": "If your organization set up Claude Code with a token command and gateway address, or you set them in your own Claude Code settings, Claude in Infinitary now uses them too, with no browser sign-in. A Claude account you already connected switches when you update: its row reads Claude Code access, its use may be billed through that access instead of your Claude plan, and its allowance is no longer measured. If your settings name only an address, the row says requests go through it. If the access is refused, renew it as you do for Claude Code, then press Try again.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "claude-access-dark.webp",
+        "light": "claude-access-light.webp",
+        "alt": "The Claude account row is named Claude Code access and reads from your Claude Code settings, with a line saying the allowance is not measured, and no Sign in button."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

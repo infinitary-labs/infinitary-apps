@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import type { CutOff } from "@shared/authFailure";
 import type { Card } from "@shared/cards";
+import type { ClaudeAccessSource } from "@shared/claudeAccess";
 import type { FmEvent } from "@shared/events";
 import { vi } from "vitest";
 import { createClaudeSessionFactory } from "../../src/core/claude/session";
@@ -52,6 +53,8 @@ export type FlagshipAccount = {
   detail?: string;
   /** A standing cut-off, as the vault records it (`noteCutOff`). */
   cutOff?: { class: "signed_out" | "no_headroom" | "refused"; resetsAt?: number };
+  /** Claude access set up for Claude Code, as the vault reads it (`accessSync`). */
+  access?: ClaudeAccessSource;
 };
 
 /** Which runtime a Pi-bound spec was served on (the test runtimes carry a kind). */
@@ -173,6 +176,7 @@ export function setupWithFlagship(options: {
     withheldReason: (accountId) => withheldOf(find(accountId)),
     withheldDetail: (accountId) => find(accountId)?.detail,
     cutOff: (accountId) => find(accountId)?.cutOff,
+    accessSync: (accountId) => find(accountId)?.access,
     tryAgain: (accountId) => {
       tryAgains.push(accountId);
       const account = find(accountId);

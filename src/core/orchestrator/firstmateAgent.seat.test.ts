@@ -1,5 +1,14 @@
 import type { CutOff } from "@shared/authFailure";
 import { type Card, onStage } from "@shared/cards";
+import {
+  CLAUDE_ACCESS_PAUSE_TITLE,
+  CLAUDE_ACCESS_PAUSED_SENTENCE,
+  CLAUDE_ACCESS_REFUSED_LINE,
+  CLAUDE_ACCESS_RENEW_WORDS,
+  CLAUDE_ACCESS_SIGN_IN_TITLE,
+  CLAUDE_ACCESS_TRY_AGAIN_LABEL,
+  claudeAccessRefusedText,
+} from "@shared/claudeAccess";
 import { clockTime } from "@shared/quota";
 import { describe, expect, it, vi } from "vitest";
 import { CLAUDE_ACCOUNT } from "../../../tests/helpers/claudeFlagship";
@@ -117,6 +126,60 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     expect(seat.prompts).toHaveLength(2);
     expect(seat.prompts[1]).toContain("hello");
     expect(t.ledger.at(-1)?.reasons[0]).toBe("seat serves-again");
+  });
+
+  // INF-3449's approved plan: when Claude refuses access set up for Claude
+  // Code, the seat says the sign-in needs renewing the way Claude Code's is,
+  // and never asks for a Claude sign-in here.
+  it("a refused Claude access pauses the seat and asks to renew it, never to sign in", async () => {
+    const t = await claudeLoginSeat();
+    t.account(CLAUDE_ACCOUNT).access = "claude-settings";
+    await t.agent.converse("hello");
+    const seat = t.sessions[0] as FakeSession;
+    await cutOffTurn(seat, { class: "signed_out" });
+
+    const sentence = CLAUDE_ACCESS_PAUSED_SENTENCE["claude-settings"];
+    // The line under the captain's message says it too.
+    expect(t.events).toContainEqual(
+      expect.objectContaining({
+        type: "firstmate_reply",
+        text: CLAUDE_ACCESS_REFUSED_LINE["claude-settings"],
+        problem: true,
+      }),
+    );
+    const card = t.cards()[0] as Card;
+    expect(card.title).toBe(CLAUDE_ACCESS_PAUSE_TITLE);
+    expect(card.body).toBe(
+      `${sentence} Your messages are kept. ${CLAUDE_ACCESS_RENEW_WORDS["claude-settings"]}`,
+    );
+    // Its way back checks the access again, as the account row's button does.
+    expect(card.actions).toEqual([
+      expect.objectContaining({
+        label: CLAUDE_ACCESS_TRY_AGAIN_LABEL,
+        effect: { kind: "host", op: "restore-account", arg: CLAUDE_ACCOUNT },
+      }),
+    ]);
+    expect(notes(t.events)).toContain(`Your first mate paused: ${sentence}`);
+
+    // A message kept meanwhile names the same way back.
+    await t.agent.converse("still there?");
+    await tick();
+    const kept = keptMessageWords(sentence, "signed_out", "Claude", true);
+    expect(notes(t.events)).toContain(kept);
+    expect(`${card.title} ${card.body} ${kept}`).not.toMatch(/sign in/i);
+  });
+
+  // The same plan: the first mate's sign-in card, raised when a failure
+  // carries no cut-off class, names the refused access in its title too.
+  it("titles the first mate's sign-in card for a refused Claude access, never a sign-in", async () => {
+    const t = await claudeLoginSeat();
+    t.account(CLAUDE_ACCOUNT).access = "claude-settings";
+    await t.agent.converse("hello");
+    (t.sessions[0] as FakeSession).rejectNextPrompt("401 authentication_error: invalid x-api-key");
+    await tick();
+    const card = t.cards().find((each) => each.id === "card-fm-auth");
+    expect(card?.title).toBe(CLAUDE_ACCESS_SIGN_IN_TITLE);
+    expect(card?.body).toBe(claudeAccessRefusedText("Your first mate", "claude-settings"));
   });
 
   it("a Mac with no client to run the seat pauses it with the client's sentence, not a failure (W1 S12)", async () => {

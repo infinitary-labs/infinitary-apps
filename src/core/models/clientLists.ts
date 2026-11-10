@@ -1,4 +1,5 @@
 import { CLAUDE_CLIENT_MISSING_TEXT } from "@shared/claudeClient";
+import { accessFlagSettings, readClaudeAccess } from "../claude/claudeAccess";
 import { claudeClientVersion, resolveClaudeExecutable } from "../claude/claudeCli";
 import {
   type ClaudeModelRow,
@@ -26,7 +27,13 @@ export function claudeListReader(options: {
   read?: () => Promise<ClaudeModelRow[]>;
   clientVersion?: () => Promise<string | undefined>;
 }): CatalogReader {
-  const read = options.read ?? (() => readClaudeModelCatalog({ utilityQos: true }));
+  const read =
+    options.read ??
+    (async () =>
+      readClaudeModelCatalog({
+        utilityQos: true,
+        settings: accessFlagSettings(await readClaudeAccess()),
+      }));
   const version =
     options.clientVersion ??
     (async () => {

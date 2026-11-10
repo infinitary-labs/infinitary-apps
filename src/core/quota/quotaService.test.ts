@@ -1,6 +1,7 @@
 import type { QuotaSnapshotView } from "@shared/quota";
 import { describe, expect, it, vi } from "vitest";
 import { openInMemoryDatabase } from "../storage/db";
+import { claudeAccessOutcome } from "./outcome";
 import { mergeStaleProviders, QuotaService } from "./quotaService";
 
 const SNAPSHOT: QuotaSnapshotView = {
@@ -219,6 +220,24 @@ describe("mergeStaleProviders", () => {
       expect(merged.providers[0]?.windows).toHaveLength(2);
     },
   );
+
+  // The captain's answer on INF-3449: an account that switches to access set
+  // up for Claude Code on update has its allowance no longer measured, so the
+  // subscription's last reading is not carried onto it.
+  it("carries no subscription reading onto a Claude account now on access set up for Claude Code", () => {
+    const outcome = claudeAccessOutcome("claude-settings");
+    const next: QuotaSnapshotView = {
+      generatedAt: "later",
+      fetchedAt: 2000,
+      providers: [{ provider: "claude", label: "Claude", stale: false, ...outcome }],
+    };
+    const merged = mergeStaleProviders(next, SNAPSHOT, 3000);
+    expect(merged.providers[0]).toMatchObject({
+      status: "not_measured",
+      windows: [],
+      detail: outcome.detail,
+    });
+  });
 
   it("drops a carried-forward window whose own reset has already passed", () => {
     const previous: QuotaSnapshotView = {

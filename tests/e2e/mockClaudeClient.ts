@@ -64,9 +64,12 @@ export type MockClaudeTurns = {
    * a dummy subscription token, with which the client runs the way a
    * person's Claude login does - it reads the plan-window headers a reply
    * carries and pushes its rate-limit readings, which an API key never
-   * sees. Either one only ever reaches `baseUrl`.
+   * sees. Either one only ever reaches `baseUrl`. With `settings` the
+   * client is handed neither a credential nor `baseUrl`: the session's own
+   * settings name the token command and the address, the way Claude Code
+   * set up by an organization or in a person's settings file signs in.
    */
-  credential?: "api-key" | "subscription";
+  credential?: "api-key" | "subscription" | "settings";
   /** The client's own retries of a failed request; its default when absent. */
   maxRetries?: number;
 };
@@ -166,9 +169,13 @@ export function writeMockClaudeClient(dir: string, options: MockClaudeClientOpti
     client: options.turns.client ?? sdkBundledClaudeClient(),
     shimDir: prepared.shimDir,
     credential:
-      options.turns.credential === "subscription"
-        ? { CLAUDE_CODE_OAUTH_TOKEN: MOCK_CLAUDE_OAUTH_TOKEN }
-        : { ANTHROPIC_API_KEY: MOCK_CLAUDE_API_KEY },
+      options.turns.credential === "settings"
+        ? {}
+        : options.turns.credential === "subscription"
+          ? { CLAUDE_CODE_OAUTH_TOKEN: MOCK_CLAUDE_OAUTH_TOKEN }
+          : { ANTHROPIC_API_KEY: MOCK_CLAUDE_API_KEY },
+    address:
+      options.turns.credential === "settings" ? {} : { ANTHROPIC_BASE_URL: options.turns.baseUrl },
     retries:
       options.turns.maxRetries === undefined
         ? {}
@@ -233,10 +240,10 @@ if (turns !== null && runsTurns) {
   for (const name of ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CODE_OAUTH_REFRESH_TOKEN"]) {
     delete env[name];
   }
-  Object.assign(env, turns.credential, turns.retries, {
+  delete env.ANTHROPIC_BASE_URL;
+  Object.assign(env, turns.credential, turns.address, turns.retries, {
     CLAUDE_CONFIG_DIR: configDir,
     TMPDIR: tmp,
-    ANTHROPIC_BASE_URL: turns.baseUrl,
     INFINITARY_MOCK_CLAUDE_KEYCHAIN_LOG: join(home, ${JSON.stringify(STATE_DIR)}, "keychain-lookups.log"),
     CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
     DISABLE_AUTOUPDATER: "1",
@@ -382,13 +389,14 @@ if [ "$input" = 1 ] && [ "$turn" = 1 ]; then
   mkdir -p "$CLAUDE_CONFIG_DIR" "$TMPDIR" || exit 2
   chmod 700 "$CLAUDE_CONFIG_DIR" || exit 2
   unset ANTHROPIC_API_KEY ANTHROPIC_AUTH_TOKEN CLAUDE_CODE_OAUTH_TOKEN CLAUDE_CODE_OAUTH_REFRESH_TOKEN
+  unset ANTHROPIC_BASE_URL
   if [ "$mock_credential" = subscription ]; then
     export CLAUDE_CODE_OAUTH_TOKEN=${shellLiteral(MOCK_CLAUDE_OAUTH_TOKEN)}
-  else
+  elif [ "$mock_credential" != settings ]; then
     export ANTHROPIC_API_KEY=${shellLiteral(MOCK_CLAUDE_API_KEY)}
   fi
   if [ -n "$mock_retries" ]; then export CLAUDE_CODE_MAX_RETRIES="$mock_retries"; fi
-  export ANTHROPIC_BASE_URL="$mock_base_url"
+  if [ "$mock_credential" != settings ]; then export ANTHROPIC_BASE_URL="$mock_base_url"; fi
   export INFINITARY_MOCK_CLAUDE_KEYCHAIN_LOG="$HOME/${STATE_DIR}/keychain-lookups.log"
   export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1
   export DISABLE_AUTOUPDATER=1

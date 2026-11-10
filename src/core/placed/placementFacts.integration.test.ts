@@ -1,13 +1,17 @@
 import { createServer, type Socket } from "node:net";
 import { HERE } from "@shared/deviceNames";
+import type { DeviceView } from "@shared/devices";
+import { PROTOCOL_VERSION } from "@shared/ipc";
 import {
   AUTOMATIC_COMPUTER,
   PLACEMENT_DEMANDS,
+  PLACEMENT_FACTS_ORDER,
   type PlacementWait,
   placementWait,
 } from "@shared/placement";
 import type { RepoView } from "@shared/repos";
-import type { ResourceObservation } from "@shared/resources";
+import { RESOURCE_ORDER, type ResourceObservation } from "@shared/resources";
+import type { ComputerSignIns } from "@shared/signIns";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import {
@@ -23,9 +27,10 @@ import { TaskService } from "../tasks/taskService";
 import { AutomaticPlacement } from "./automaticPlacement";
 import { ComputerResourceFeed } from "./computerResourceFeed";
 import { ComputerResources } from "./computerResources";
+import { answerPlacementFacts } from "./placementFacts";
 import type { WorkDevices } from "./workDevices";
 
-// One start waits out Automatic's 5 s limit on this computer's read, then
+// Each start waits out Automatic's 5 s limit on this computer's read, then
 // answers; 15 s covers three times that.
 vi.setConfig({ testTimeout: 15_000 });
 
@@ -153,6 +158,147 @@ describe("Automatic placement when the project host is slow to answer", () => {
       const answer = await placement.choose(record, ledger, record.title, { kind: "fix" });
       const expected: PlacementWait = placementWait(
         [{ name: HERE.This, rejections: ["project-unknown"], capacity: null }],
+        PLACEMENT_DEMANDS.standard,
+      );
+      expect(answer).toMatchObject({ wait: expected });
+    } finally {
+      placement.dispose();
+      feed.dispose();
+    }
+  });
+});
+
+/** The Mac mini, paired to run work and joined as another user of this Mac. */
+const macMini: DeviceView = {
+  id: "mac-mini",
+  kind: "mac",
+  name: "Mac mini",
+  pairedAt: Date.parse("2026-10-01T09:00:00Z"),
+};
+
+/**
+ * An order's or an answer's way between this Mac and the Mac mini on a home
+ * network. Any travel at all put the Mac mini's answer past the home's limit,
+ * since its own read used to end only at that same limit.
+ */
+const TRAVEL_MS = 20;
+
+/** The Mac mini's own sign-ins, as it lists them for its home: Claude, serving Opus there. */
+const signedInThere: ComputerSignIns = {
+  providers: [],
+  accounts: [
+    {
+      id: "acct_claude_there",
+      providerId: "anthropic-claude",
+      kind: "subscription_oauth",
+      label: "Claude",
+      enabled: true,
+      connected: true,
+      pinned: false,
+      createdAt: Date.parse("2026-10-01T09:05:00Z"),
+    },
+  ],
+  quota: null,
+  served: [
+    {
+      accountId: "acct_claude_there",
+      models: [{ provider: "anthropic-claude", id: "claude-opus-5-5" }],
+    },
+  ],
+};
+
+/**
+ * INF-3164, filed from INF-3150's fix: a computer that runs work answers
+ * the home's placement ask with the same read, but nothing ended it at
+ * Automatic's limit. Its project-access check has its own 5 s limit, while
+ * the home's 5 s limit on the ask runs from before the ask leaves and covers
+ * its travel, so a slow project host there still dropped the whole answer,
+ * and every check of that computer read unknown.
+ */
+describe("Automatic placement when a computer that runs work finds the project host slow", () => {
+  it("names only that computer's project access, keeping the rest of its answer", async () => {
+    const home = thisDeviceSystem();
+    const ledger: RepoView = {
+      id: "repo-ledger",
+      name: "ledger",
+      path: scratchDir("infinitary-placement-facts-"),
+      setupKind: "clone",
+      kind: "project",
+      origin,
+      host: { kind: "git", name: "127.0.0.1" },
+      delivery: "direct-pr",
+      autonomy: false,
+      rigor: null,
+      runsOn: AUTOMATIC_COMPUTER,
+    };
+    const tasks = new TaskService({ db: freshDatabase(), strict: true });
+    /** The Mac mini's own folder, where its git runs. */
+    const there = scratchDir("infinitary-placement-facts-there-");
+    let sequence = 0;
+    // The connection carries each order and answer as JSON, across the
+    // network between the two computers; the Mac mini answers with the code
+    // its work mode runs.
+    const travel = <T>(value: T): Promise<T> =>
+      new Promise((resolve) =>
+        setTimeout(() => resolve(JSON.parse(JSON.stringify(value))), TRAVEL_MS),
+      );
+    const work = {
+      onWorkDevice: () => () => {},
+      inReach: (id: string) => id === macMini.id,
+      version: () => ({ contract: PROTOCOL_VERSION }),
+      ask: async (id: string, order: string, args: unknown) => {
+        if (id !== macMini.id) throw new Error(`${id} is not paired.`);
+        const arrived = await travel(args);
+        if (order === RESOURCE_ORDER) return travel(reading(++sequence));
+        if (order === PLACEMENT_FACTS_ORDER)
+          return travel(await answerPlacementFacts(arrived, there, async () => signedInThere));
+        throw new Error(`The Mac mini takes no ${order} here.`);
+      },
+    } as unknown as WorkDevices;
+    const resources = new ComputerResources({
+      local: { read: async () => reading(++sequence) },
+      work,
+    });
+    const feed = new ComputerResourceFeed({
+      resources,
+      computers: () => [
+        { computerId: null, label: HERE.This },
+        { computerId: macMini.id, label: macMini.name },
+      ],
+      onComputers: () => () => {},
+      onContact: () => () => {},
+      emit: () => {},
+    });
+    const placement = new AutomaticPlacement({
+      tasks,
+      resources: feed,
+      work,
+      devices: () => [macMini],
+      router: {
+        prepare: preparePolicyOnlyRoute,
+        inOrder: orderPolicyOnlyRoute,
+        dynamicEnabled: () => true,
+        preview: () => opus,
+        commit: (_taskId: string, preview: RoutePreview) => preview.result,
+      } as unknown as Router,
+      repo: () => ledger,
+      catalog: () => [],
+      running: () => false,
+      home: () => home,
+    });
+    try {
+      const record = seedTask(tasks, {
+        id: "footer",
+        title: "Fix the ledger footer",
+        repoId: ledger.id,
+        status: "queued",
+      });
+      const answer = await placement.choose(record, ledger, record.title, { kind: "fix" });
+      const expected: PlacementWait = placementWait(
+        [
+          { name: HERE.This, rejections: ["project-unknown"], capacity: null },
+          { name: macMini.name, rejections: ["project-unknown"], capacity: null },
+        ],
         PLACEMENT_DEMANDS.standard,
       );
       expect(answer).toMatchObject({ wait: expected });

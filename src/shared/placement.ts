@@ -6,7 +6,7 @@ import {
   deviceChipSchema,
   deviceSystemSchema,
 } from "./devices";
-import { computerResourceReadingSchema } from "./resources";
+import { computerResourceReadingSchema, RESOURCE_READ_TIMEOUT_MS } from "./resources";
 import { computerSignInsSchema } from "./signIns";
 
 /** Work platforms only; a paired phone or an unsupported OS is not a worker. */
@@ -77,6 +77,18 @@ export const AUTOMATIC_WORD = "Automatic";
 export const PLACEMENT_FACTS_ORDER = "inf:computer:placement";
 export const PLACEMENT_FACTS_SINCE = "8.0.0";
 export const PLACEMENT_FACT_MAX_AGE_MS = 10_000;
+/**
+ * The ask's way to a computer that runs work and its answer's way back: the
+ * home's limit on the ask (`RESOURCE_READ_TIMEOUT_MS`) runs from before the
+ * ask leaves, so that computer's own read must end this much sooner.
+ */
+const PLACEMENT_FACTS_TRAVEL_MS = 1_000;
+/**
+ * How long a computer that runs work reads its placement facts before it
+ * answers with what it has (`answerPlacementFacts`), so the answer reaches
+ * the home within the home's limit (INF-3164).
+ */
+export const PLACEMENT_FACTS_ANSWER_MS = RESOURCE_READ_TIMEOUT_MS - PLACEMENT_FACTS_TRAVEL_MS;
 
 const factSchema = z.enum(["available", "unavailable", "unknown"]);
 // Project and task can each name 32 different programs, plus the implicit Git requirement.

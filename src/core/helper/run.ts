@@ -6,7 +6,7 @@ import type { DeviceGrant } from "@shared/devices";
 import { isFileOrderChannel } from "@shared/files";
 import type { WorkInvokeChannel } from "@shared/ipc";
 import { LOAD_ORDER, loadOrders } from "@shared/load";
-import { PLACEMENT_FACTS_ORDER, placementFactsRequestSchema } from "@shared/placement";
+import { PLACEMENT_FACTS_ORDER } from "@shared/placement";
 import { RESOURCE_ORDER, type ResourceMemory, resourceOrders } from "@shared/resources";
 import { isSignInOrderChannel } from "@shared/signIns";
 import {
@@ -19,7 +19,6 @@ import {
   WORK_UPDATE_ORDER,
   type WorkDownloadAnswer,
   type WorkUpdateAnswer,
-  workOrders,
 } from "@shared/work";
 import type { WebSocket } from "ws";
 import { dialHome } from "../devices/dial";
@@ -31,7 +30,7 @@ import type { HostChildSpawner, HostKeychain } from "../host";
 import { hostEnv } from "../hostEnv";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { LoadLine } from "../placed/loadLine";
-import { readPlacementFacts } from "../placed/placementFacts";
+import { answerPlacementFacts } from "../placed/placementFacts";
 import { readProcesses } from "../placed/processResources";
 import { ResourceSampler } from "../placed/resourceSampler";
 import type { ComputerAccounts } from "./accounts";
@@ -558,14 +557,9 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
         return progress;
       }
       if (channel === PLACEMENT_FACTS_ORDER) {
-        const [request] = workOrders[PLACEMENT_FACTS_ORDER].request.parse(args);
-        const [facts, accounts] = await Promise.all([
-          readPlacementFacts(placementFactsRequestSchema.parse(request), dataDir),
-          signingIn()
-            .then((held) => held.host.list())
-            .catch(() => null),
-        ]);
-        return { ...facts, signIns: accounts };
+        return answerPlacementFacts(args, dataDir, () =>
+          signingIn().then((held) => held.host.list()),
+        );
       }
       if (channel === LOAD_ORDER) {
         const [request] = loadOrders[LOAD_ORDER].request.parse(args);

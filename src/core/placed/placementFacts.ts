@@ -3,7 +3,15 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { delimiter, join } from "node:path";
 import { promisify } from "node:util";
-import type { PlacementFact, PlacementFacts, PlacementFactsRequest } from "@shared/placement";
+import {
+  PLACEMENT_FACTS_ANSWER_MS,
+  PLACEMENT_FACTS_ORDER,
+  type PlacementFact,
+  type PlacementFacts,
+  type PlacementFactsRequest,
+} from "@shared/placement";
+import type { ComputerSignIns } from "@shared/signIns";
+import { type WorkOrderResponse, workOrders } from "@shared/work";
 import { primeClaudeExecutable } from "../claude/claudeCli";
 import { gitFound } from "../helper/found";
 import { captureLoginPath, hostEnv } from "../hostEnv";
@@ -73,12 +81,9 @@ export async function readPlacementFacts(
   options: { signal?: AbortSignal } = {},
 ): Promise<PlacementFacts> {
   const { signal } = options;
-  const ended = new Promise<undefined>((resolve) => {
-    if (signal?.aborted) resolve(undefined);
-    else signal?.addEventListener("abort", () => resolve(undefined), { once: true });
-  });
+  const ended = signal ? aborted(signal) : undefined;
   const until = <T>(work: Promise<T>): Promise<T | undefined> =>
-    signal ? Promise.race([work, ended]) : work;
+    ended ? Promise.race([work, ended]) : work;
   const identity = until(physicalComputerId());
   await until(captureLoginPath());
   const env = hostEnv();
@@ -132,4 +137,37 @@ export async function readPlacementFacts(
     tools: Object.fromEntries(request.tools.map((tool) => [tool, tools[tool] ?? "unknown"])),
     projectAccess: projectAccess ?? "unknown",
   };
+}
+
+/** Resolves once `signal` aborts, at once when it already has. */
+function aborted(signal: AbortSignal): Promise<undefined> {
+  return new Promise((resolve) => {
+    if (signal.aborted) resolve(undefined);
+    else signal.addEventListener("abort", () => resolve(undefined), { once: true });
+  });
+}
+
+/**
+ * What a computer that runs work answers the home's placement ask
+ * (`PLACEMENT_FACTS_ORDER`): its facts and its own sign-ins, read side by side.
+ *
+ * It ends the read at `PLACEMENT_FACTS_ANSWER_MS`, the home's limit less the
+ * ask's travel, and answers with what it has: a check still waiting, such as
+ * a slow project host, reads unknown on its own, and sign-ins not yet listed
+ * read as none known. INF-3164: nothing ended this read, and its
+ * project-access check's own 5 s limit outlived the home's, so the home
+ * dropped the whole answer and every check of that computer read unknown.
+ */
+export async function answerPlacementFacts(
+  args: unknown,
+  cwd: string,
+  signIns: () => Promise<ComputerSignIns | null>,
+): Promise<WorkOrderResponse<typeof PLACEMENT_FACTS_ORDER>> {
+  const [request] = workOrders[PLACEMENT_FACTS_ORDER].request.parse(args);
+  const signal = AbortSignal.timeout(PLACEMENT_FACTS_ANSWER_MS);
+  const [facts, accounts] = await Promise.all([
+    readPlacementFacts(request, cwd, { signal }),
+    Promise.race([signIns().catch(() => null), aborted(signal).then(() => null)]),
+  ]);
+  return { ...facts, signIns: accounts };
 }

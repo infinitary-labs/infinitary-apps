@@ -20,7 +20,7 @@ import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import type { FreezeLine } from "../freeze/freezeRecorder";
 import type { FreezeLocation, VersionSummary } from "../freeze/freezeTally";
 import { capWithOverflow } from "../overflow";
-import type { PressureTaskShare } from "../placed/resourcePressure";
+import type { PressureLeftover, PressureTaskShare } from "../placed/resourcePressure";
 import { FIX_LABEL } from "../queue/shipped/rules.mjs";
 import type { SeatPauseClass } from "./seat";
 import type { SeatDigestTurn } from "./seatDigest";
@@ -34,6 +34,9 @@ export type NoticeFacts =
       label: string;
       pressure: "warning" | "critical";
       tasks: PressureTaskShare[];
+      /** Close outcomes only: neither liveness nor current memory use was measured. */
+      recordedLeftovers?: PressureLeftover[];
+      leftoverUse?: "unknown";
       other?: { cpuCores?: number; residentBytes: number; processCount: number };
       processCount?: number;
       swapUsedBytes?: number;

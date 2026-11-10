@@ -2,11 +2,12 @@ import { feedLineFrom } from "@shared/feed";
 import type { ComputerResourcesView } from "@shared/resources";
 import { describe, expect, it } from "vitest";
 import { renderWake, type TypedWake } from "../orchestrator/wakes";
-import { ResourcePressure } from "./resourcePressure";
+import { type PressureLeftover, ResourcePressure } from "./resourcePressure";
 
 const TASK_SHARES = [{ taskId: "task", processCount: 1, residentBytes: 45040 * 1024 }];
 
-// INF-1621: one wake for each macOS pressure fact, not every two-second sample.
+// INF-1621's recorded Mac reading; INF-3497 finding 5 keeps already-seen
+// facts quiet even when a normal reading intervenes.
 const view = (
   pressure: "normal" | "warning" | "critical",
   sequence: number,
@@ -96,8 +97,8 @@ describe("accepted load plan pressure notification", () => {
     pressure.observe(view("critical", 4));
     pressure.observe(view("normal", 5));
     pressure.observe(view("warning", 6));
-    expect(wakes).toHaveLength(3);
-    expect(new Set(wakes.map((wake) => wake.once)).size).toBe(3);
+    expect(wakes).toHaveLength(2);
+    expect(new Set(wakes.map((wake) => wake.once)).size).toBe(2);
   });
 });
 
@@ -155,7 +156,7 @@ describe("a memory warning in the feed", () => {
     const outside = { processCount: 977, residentBytes: Math.round(39685.3 * MB), cpuCores: 1.62 };
     pressure.observe(view("warning", 1, idle, "Kun's Mac mini", outside));
     expect(activity).toEqual([
-      "Kun's Mac mini · Memory pressure warning · Programs outside your tasks use the most: 1.62 processors · 38.76 GB resident · 977 processes",
+      "Kun's Mac mini · Memory pressure warning · Programs not linked to open tasks use the most: 1.62 processors · 38.76 GB resident · 977 processes",
     ]);
   });
 
@@ -172,5 +173,134 @@ describe("a memory warning in the feed", () => {
       delete (reading.observation as { processes?: unknown }).processes;
     pressure.observe(unsampled);
     expect(activity).toEqual(["This computer · Memory pressure critical · Task use unavailable"]);
+  });
+});
+
+// INF-3497 finding 5: one line per episode and wakes
+// only when a reading carries a new typed fact, not byte drift or level flips.
+describe("the accepted pressure episode fix", () => {
+  const leftover: PressureLeftover = {
+    id: "task-event:closed:1",
+    taskId: "closed",
+    key: "INF-1629",
+    report: {
+      stops: [{ label: "scratch machine", outcome: "failed", exitCode: 1 }],
+      programs: [{ pid: 4118, name: "sleep", outcome: "survived" }],
+      holders: "checked",
+    },
+  };
+
+  it("names recorded leftovers without claiming their current use or waking on repeated facts", () => {
+    const wakes: TypedWake[] = [];
+    const activity: string[] = [];
+    const pressure = new ResourcePressure({
+      taskKey: (id) => id,
+      leftovers: () => [leftover],
+      notify: (wake) => wakes.push(wake),
+      activity: (fact) => activity.push(fact.text),
+    });
+    pressure.observe(view("warning", 1));
+    pressure.observe(view("critical", 2));
+    pressure.observe(view("warning", 3));
+    pressure.observe(
+      view(
+        "critical",
+        4,
+        TASK_SHARES.map((share) => ({ ...share, residentBytes: share.residentBytes + 1024 })),
+      ),
+    );
+    expect(activity).toEqual([
+      'This computer · Memory pressure warning · Leftovers recorded at close: INF-1629: stop "scratch machine" failed, sleep survived · Current use unknown',
+    ]);
+    expect(wakes).toHaveLength(2);
+    expect(wakes[0]?.facts).toMatchObject({
+      recordedLeftovers: [leftover],
+      leftoverUse: "unknown",
+    });
+    expect(wakes[1]?.facts).toMatchObject({ pressure: "critical" });
+    // Unknown and a missing computer are not evidence that the episode ended.
+    pressure.observe({
+      computers: [
+        {
+          computerId: null,
+          label: "This computer",
+          reading: { status: "unknown", reason: "timeout" },
+        },
+      ],
+    });
+    pressure.observe({ computers: [] });
+    pressure.observe(view("warning", 5));
+    expect(activity).toHaveLength(1);
+    expect(wakes).toHaveLength(2);
+    pressure.observe(view("normal", 6));
+    pressure.observe(view("warning", 7));
+    expect(activity).toHaveLength(1);
+    expect(wakes).toHaveLength(2);
+    pressure.observe(
+      view(
+        "warning",
+        8,
+        TASK_SHARES.map((share) => ({ ...share, taskId: "new-work" })),
+      ),
+    );
+    expect(activity).toHaveLength(2);
+    expect(wakes).toHaveLength(3);
+    expect(new Set(wakes.map((wake) => wake.once)).size).toBe(wakes.length);
+  });
+
+  it("wakes for newly recorded leftovers and newly observed tasks even at the same pressure", () => {
+    const wakes: TypedWake[] = [];
+    const activity: string[] = [];
+    let leftovers: PressureLeftover[] = [];
+    const pressure = new ResourcePressure({
+      taskKey: (id) => id,
+      leftovers: () => leftovers,
+      notify: (wake) => wakes.push(wake),
+      activity: (fact) => activity.push(fact.text),
+    });
+    pressure.observe(view("warning", 1));
+    leftovers = [leftover];
+    pressure.observe(view("warning", 1));
+    pressure.observe(view("warning", 2));
+    expect(wakes).toHaveLength(2);
+    expect(wakes[1]?.facts).toMatchObject({ recordedLeftovers: [leftover] });
+    pressure.observe(
+      view("warning", 3, [...TASK_SHARES, { ...TASK_SHARES[0]!, taskId: "another" }]),
+    );
+    expect(wakes).toHaveLength(3);
+    expect(activity).toHaveLength(1);
+    expect(new Set(wakes.map((wake) => wake.once)).size).toBe(wakes.length);
+  });
+
+  it("keeps computers separate and wakes once when process use becomes available", () => {
+    const wakes: TypedWake[] = [];
+    const activity: string[] = [];
+    const pressure = new ResourcePressure({
+      taskKey: (id) => id,
+      leftovers: (id) => (id === "work" ? [leftover] : []),
+      notify: (wake) => wakes.push(wake),
+      activity: (fact) => activity.push(fact.text),
+    });
+    const unknown = view("warning", 1);
+    const reading = unknown.computers[0]!.reading;
+    if (reading.status === "fresh") reading.observation.processes = { status: "unknown" };
+    pressure.observe(unknown);
+    pressure.observe(view("warning", 2));
+    pressure.observe(view("warning", 3));
+    const remote = view("critical", 1);
+    remote.computers[0]!.computerId = "work";
+    pressure.observe(remote);
+    pressure.observe(view("normal", 4));
+    pressure.observe(remote);
+    const remoteReading = remote.computers[0]!.reading;
+    if (remoteReading.status === "fresh")
+      remoteReading.observation.memory.memoryPressure = "warning";
+    pressure.observe(remote);
+    expect(wakes).toHaveLength(3);
+    expect(activity).toHaveLength(2);
+    expect(activity[0]).toContain("Task use unavailable");
+    expect(activity[1]).toContain(leftover.key);
+    expect(wakes[0]?.facts).not.toHaveProperty("recordedLeftovers");
+    expect(wakes[2]?.facts).toMatchObject({ computerId: "work", recordedLeftovers: [leftover] });
   });
 });

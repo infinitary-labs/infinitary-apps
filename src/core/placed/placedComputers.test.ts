@@ -511,5 +511,14 @@ describe("a closed task's files on a computer that runs work", () => {
         .filter((event) => event.text.startsWith("Leftovers at close:"))
         .map((event) => event.text),
     ).toEqual(['Leftovers at close: stop "scratch machine" ran.']);
+    // INF-3497 finding 5: memory notices use the report's computer, not
+    // whichever computer the task happens to be placed on when read later.
+    expect(
+      home.tasks.timeline("t-moved").find((event) => event.data?.leftoverPrograms)?.data,
+    ).toMatchObject({
+      leftoversComputerId: at.deviceId,
+      leftoversUnresolved: false,
+      leftoverPrograms: report,
+    });
   });
 });

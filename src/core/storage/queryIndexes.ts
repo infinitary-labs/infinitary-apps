@@ -59,6 +59,10 @@ export function createQueryIndexes(db: AppDatabase): void {
     CREATE INDEX IF NOT EXISTS task_events_restart_outcome ON task_events (task_id, at DESC, id DESC)
       WHERE kind = 'note'
       AND CASE WHEN json_valid(data_json) THEN json_type(data_json, '$.restartOutcome') END = 'object';
+    CREATE INDEX IF NOT EXISTS task_events_leftovers ON task_events (
+      json_extract(data_json, '$.leftoversComputerId'), at, id
+    ) WHERE kind = 'note'
+      AND CASE WHEN json_valid(data_json) THEN json_extract(data_json, '$.leftoversUnresolved') END = 1;
     CREATE INDEX IF NOT EXISTS tasks_specification ON tasks (specification_id);
     CREATE INDEX IF NOT EXISTS captain_asks_at ON captain_asks (at);
     CREATE INDEX IF NOT EXISTS captain_asks_turn ON captain_asks (turn_state, at);

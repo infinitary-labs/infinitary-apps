@@ -1393,8 +1393,12 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       const same = JSON.stringify(report);
       const already = this.options.tasks
         .timeline(task)
-        .some((event) => JSON.stringify(leftoversOf(event.data)) === same);
-      if (!already) noteLeftovers(this.options.tasks, task, report);
+        .some(
+          (event) =>
+            event.data?.leftoversComputerId === deviceId &&
+            JSON.stringify(leftoversOf(event.data)) === same,
+        );
+      if (!already) noteLeftovers(this.options.tasks, task, report, deviceId);
     }
     return answer;
   }

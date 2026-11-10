@@ -94,6 +94,7 @@ import { readKeptValidationEvidence } from "./pi/validationEvidence";
 import { AutomaticPlacement } from "./placed/automaticPlacement";
 import type { PlacedBrowsers } from "./placed/placedBrowsers";
 import { PlacedSessions } from "./placed/placedSessions";
+import { recordedPressureLeftovers } from "./placed/pressureLeftovers";
 import { ResourcePressure } from "./placed/resourcePressure";
 import { createMediatedFetch } from "./plugins/mediatedFetch";
 import { PluginInstaller } from "./plugins/pluginInstaller";
@@ -1578,6 +1579,7 @@ export async function createServices(
   });
   const resourcePressure = new ResourcePressure({
     taskKey: (id) => tasks.resolve(id)?.key ?? id,
+    leftovers: (computerId) => recordedPressureLeftovers(tasks, computerId),
     notify: (wake) => notifyFirstmate(wake, "scheduled"),
     activity: (fact) => broadcastEvent({ type: "firstmate_note", text: fact.text, tone: "warn" }),
   });

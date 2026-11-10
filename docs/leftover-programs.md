@@ -25,6 +25,11 @@ The working copy's retirement and the temporary folder's removal (`TaskTempFiles
 4. Each other holder gets an end request, then a kill after five seconds; its birth is read before each signal, so a number the system gave a new program is never signalled.
 5. One timeline line names each stop and program and how it went; its data carries the typed report (`leftoversReportSchema`, `src/shared/leftoverPrograms.ts`) under `leftoverPrograms`.
    A stop that failed or did not finish, or a program that survived, makes the line news, and `leftoversKept` reads them back for later work.
+   New reports also retain their computer (`leftoversComputerId`, null for this computer) and whether they left an unresolved outcome (`leftoversUnresolved`), so memory pressure can seek those reports without reading the closed history.
+
+Memory pressure names those recorded unresolved outcomes by task on their recorded computer, without claiming the programs are still running or assigning them measured memory (`docs/heavy-runs.md`, "Capacity and pressure").
+Older reports without computer provenance are not guessed onto a computer, and a successful stop or ended program is not named as a leftover.
+The pressure notice offers no cleanup action.
 
 A close with no stops and no holders writes nothing.
 Windows has no holder reading, so only the registered stops run there.

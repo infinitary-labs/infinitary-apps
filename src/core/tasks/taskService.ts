@@ -675,6 +675,11 @@ export class TaskService {
     return this.writer.events.listFor(id);
   }
 
+  /** Recorded unresolved leftovers, seeking only this computer's close reports. */
+  leftoverNotes(computerId: string | null): TaskEvent[] {
+    return this.writer.events.leftoverNotes(computerId);
+  }
+
   /** Latest host-observed recovery fact; no session is opened by this read. */
   restartObservation(id: string): Pick<TaskEvent, "at" | "text"> | undefined {
     return this.writer.events.latestRestartObservation(id);

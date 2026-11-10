@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "pressure-episodes",
+      "kind": "fix",
+      "provenance": { "origin": "change" },
+      "area": "devices",
+      "title": "Memory warnings name recorded task leftovers",
+      "body": "Memory warnings name unfinished cleanup from closed tasks when it was recorded on that computer. One warning covers each pressure episode, and the first mate hears only new facts rather than repeated readings.",
+      "noPicture": "The change is a diagnostic Activity line whose recorded-close wording and repeated-notice suppression are checked with isolated resource readings."
+    }
+  ]
+}

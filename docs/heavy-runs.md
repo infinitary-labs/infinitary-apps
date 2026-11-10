@@ -81,7 +81,11 @@ This is admission accounting, not a prediction or a promise of physical isolatio
 A normal request cannot pass an earlier waiting request, even if the later request is smaller.
 A macOS warning or critical pressure reading suspends new admissions; normal pressure and fresh capacity allow the same line to advance.
 The existing resource-pressure Activity and first-mate wake remain the only pressure notices.
-Activity shows one line per pressure change: the computer, the level and what holds the most memory, the task holding the most or the programs outside every task when they hold more; the first-mate wake carries every task's share (`src/core/placed/resourcePressure.ts`).
+Activity shows at most one line while a computer remains under pressure; a fresh normal reading permits another line only when a later pressure reading carries new facts (`src/core/placed/resourcePressure.ts`).
+Normal/warning oscillations with the same facts stay quiet, and missing readings never establish recovery.
+The line names unresolved leftovers recorded at finished tasks' closes on that computer, when present, with current use explicitly unknown; otherwise it names the largest measured open-task share or the programs not linked to open tasks.
+The first mate receives the first pressure fact, the first critical reading, newly observed task identities, newly available process use and newly recorded unresolved close reports, not changes in byte counts alone.
+The wake keeps every measured task share separate from the recorded close outcomes.
 No pressure change kills, pauses, slows or moves a running program.
 The registered soft hold `load-line` passes only through the existing recorded captain override; the command has no bypass flag.
 

@@ -300,6 +300,20 @@ export class TaskEventStore {
       .get(taskId) as Pick<TaskEvent, "at" | "text"> | undefined;
   }
 
+  /** Only unresolved close reports from this computer, not the closed history. */
+  leftoverNotes(computerId: string | null): TaskEvent[] {
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM task_events INDEXED BY task_events_leftovers
+       WHERE kind = 'note'
+       AND CASE WHEN json_valid(data_json) THEN json_extract(data_json, '$.leftoversUnresolved') END = 1
+       AND json_extract(data_json, '$.leftoversComputerId') IS ?
+       ORDER BY at, id`,
+      )
+      .all(computerId) as Row[];
+    return rows.map(fromRow);
+  }
+
   /** The newest event of `kind` on a task whose data holds an object under `key`. */
   latestWithObject(taskId: string, kind: TaskEventKind, key: string): TaskEvent | undefined {
     const row = this.db

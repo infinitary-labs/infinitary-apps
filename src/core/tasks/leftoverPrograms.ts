@@ -214,12 +214,17 @@ export function noteLeftovers(
   tasks: Pick<TasksPart, "note">,
   taskId: string,
   report: LeftoversReport,
+  computerId: string | null = null,
 ): void {
   if (!reportsAnything(report)) return;
   const kept = leftoversKept(report);
   tasks.note(taskId, leftoversLine(report), {
     news: kept.stops.length > 0 || kept.programs.length > 0,
-    data: { [LEFTOVERS_DATA_KEY]: report },
+    data: {
+      [LEFTOVERS_DATA_KEY]: report,
+      leftoversComputerId: computerId,
+      leftoversUnresolved: kept.stops.length > 0 || kept.programs.length > 0,
+    },
   });
 }
 

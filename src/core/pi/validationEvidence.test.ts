@@ -2,6 +2,7 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import { mkdir, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { DEMO_POSTER } from "../../../tests/e2e/demoFixtures";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
@@ -184,5 +185,42 @@ describe("INF-125 selected proof custody", () => {
         root,
       ),
     ).rejects.toThrow();
+  });
+
+  it("INF-3389: refuses a note or script as a kind a run record does not keep, never as a picture", async () => {
+    const { root, input } = await fixture();
+    // Real files of each kind: the Careful guidance's own Markdown and this module's own script.
+    const note = await readFile(
+      fileURLToPath(
+        new URL("../../../resources/runbooks/care/skills/careful-change/SKILL.md", import.meta.url),
+      ),
+      "utf8",
+    );
+    const script = await readFile(
+      fileURLToPath(new URL("./validationEvidence.ts", import.meta.url)),
+      "utf8",
+    );
+    const keep = async (name: string, bytes: string) => {
+      const path = join(root.evidenceDir, name);
+      await writeFile(path, bytes);
+      const selected = { id: "selected", path, description: `The selected ${name}` };
+      return keepValidationEvidence({ ...input, evidence: [selected] }, root);
+    };
+    for (const [name, bytes] of [
+      ["proof-completion.md", note],
+      ["proof-script.ts", script],
+    ] as const) {
+      const refused = keep(name, bytes);
+      await expect(refused).rejects.toThrow("is not a kind a run record keeps");
+      await expect(refused).rejects.toThrow(".txt, .json or .log");
+    }
+    // The kind the refusal names keeps the same note as text.
+    const kept = await keep("proof-completion.txt", note);
+    if (kept.kind !== "run") throw new Error("Expected a run");
+    expect(kept.evidence[0]?.text).toBe(note);
+    // A file named as a picture is still checked as one.
+    await expect(keep("misnamed.png", note)).rejects.toThrow(
+      "is not a structurally valid PNG, JPEG or WebP",
+    );
   });
 });

@@ -737,8 +737,8 @@ No-surface means nothing to run, not missing access, and needs the reviewer's re
 ### Kept proof and exact-version gates
 
 `TaskService` alone writes validation plans, runs, reviews and permissions into the existing delivery record.
-The existing `report` tool keeps selected UTF-8 text, JSON or log transcripts, pictures, and recordings with inspected posters through the card-media owner before recording their digests.
-It refuses databases and directories; selected text totals at most 1 MB, individual media at most 16 MB, and the selected proof at most 64 MB.
+The existing `report` tool keeps selected UTF-8 `.txt`, `.json` or `.log` transcripts, PNG, JPEG or WebP pictures, and MP4 or GIF recordings with inspected posters through the card-media owner before recording their digests.
+It refuses any other kind of file by its extension, before any picture check, and refuses directories; selected text totals at most 1 MB, individual media at most 16 MB, and the selected proof at most 64 MB.
 The kept bytes live in the task's cards folder until the task record is purged, not in its seven-day evidence folder.
 Delivery rows contain only evidence metadata; validation events contain compact references, never the complete validation history or transcript bytes.
 The task record reads only bounded retained text for presentation; it does not read media or re-hash proof on each refresh.

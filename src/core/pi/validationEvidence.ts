@@ -2,7 +2,12 @@ import { createHash } from "node:crypto";
 import { readFileSync, realpathSync, statSync } from "node:fs";
 import { mkdir, readdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
-import { type CardPictureExtension, cardMediaUrl, cardPictureUrl } from "@shared/cardPictures";
+import {
+  CARD_MEDIA_KINDS,
+  type CardPictureExtension,
+  cardMediaUrl,
+  cardPictureUrl,
+} from "@shared/cardPictures";
 import type {
   KeptValidationInput,
   LiveValidationInput,
@@ -13,6 +18,10 @@ import { type CardPictureRoot, containedFile, verifyCardImages } from "./cardIma
 const digest = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
 const attribute = (text: string) =>
   text.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;");
+/** The selected kinds a run record keeps, by extension; only a picture's is checked as an image. */
+const TEXT_EXTENSIONS = [".txt", ".json", ".log"];
+const PICTURE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp"];
+const RECORDING_EXTENSIONS = CARD_MEDIA_KINDS.map((kind) => `.${kind}`);
 /** Keep selected proof with the existing contained picture/media owner, not seven-day scratch. */
 export async function keepValidationEvidence(
   input: LiveValidationInput,
@@ -36,7 +45,12 @@ export async function keepValidationEvidence(
   let textTotal = 0;
   for (const source of input.evidence) {
     const extension = extname(source.path).toLowerCase();
-    if ([".txt", ".json", ".log"].includes(extension)) {
+    const moving = RECORDING_EXTENSIONS.includes(extension);
+    if (!moving && !PICTURE_EXTENSIONS.includes(extension) && !TEXT_EXTENSIONS.includes(extension))
+      throw new Error(
+        `Validation evidence refused: ${source.path} is not a kind a run record keeps. Keep text as a .txt, .json or .log file, a picture as a PNG, JPEG or WebP, and a recording as an MP4 or GIF with its poster.`,
+      );
+    if (TEXT_EXTENSIONS.includes(extension)) {
       const file = await containedFile(source.path, homes, "Validation evidence refused");
       const info = await stat(file);
       if (!info.isFile() || info.size === 0 || info.size > 1024 * 1024)
@@ -68,7 +82,6 @@ export async function keepValidationEvidence(
         text,
       });
     } else {
-      const moving = [".mp4", ".gif"].includes(extension);
       if (moving && !source.poster)
         throw new Error("A validation recording needs its still poster.");
       const image = `<img src="${attribute(moving ? source.poster! : source.path)}" alt="${attribute(source.description)}">`;
@@ -198,7 +211,7 @@ export function readKeptValidationEvidence(
 ): ValidationEvidence[] {
   let total = 0;
   return evidence.map((item) => {
-    if (![".txt", ".json", ".log"].includes(extname(item.file))) return item;
+    if (!TEXT_EXTENSIONS.includes(extname(item.file))) return item;
     try {
       if (basename(item.file) !== item.file || !item.file.startsWith(`${taskId}-`))
         throw new Error("The proof does not belong to this task.");

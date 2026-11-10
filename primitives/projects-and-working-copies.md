@@ -36,6 +36,8 @@ Each of the three is a repository default with a per-task ask on the captain's o
 Each ordinary project may carry nullable scope text describing what work belongs there, saved by `RepoRegistry.configure`; the personal workspace takes none.
 The first mate receives the scopes only when changed or after context loss (compaction or session attachment), and makes the routing judgment itself.
 A dispatch starts the task's worktree from `origin`'s default branch fetched at dispatch, from the last fetched commit when the fetch fails, and from the repository's own commit when it has no `origin`.
+The host's `git worktree` commands run one at a time per canonical common Git directory, so concurrent starts and pool maintenance never read another command's unfinished administrative files.
+Linked checkouts and aliases share that queue; unrelated repositories and ordinary Git commands do not wait on it, and a failed command releases it without a retry.
 A personal-workspace task has no worktree (its directory is the workspace), takes no rigor tier, refuses every settle mode, and closes as "built in place" when its report is committed.
 
 Verified operations close `done/finished` from reported evidence through the existing settle owner, retiring an isolated working copy when one exists.

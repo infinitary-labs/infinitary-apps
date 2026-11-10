@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import type { FreezeLine } from "../../src/core/freeze/freezeRecorder";
 import { appPathsFor } from "../../src/core/paths";
+import { git } from "../../src/core/workspace/git";
 import { readFreezes } from "../helpers/freezeRecord";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedCaptainSizedRecord } from "./captainSizedRecord";
@@ -9,6 +10,7 @@ import { launchApp, SHORT_TICK } from "./launch";
 import { REACT_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { reportLine, startedLine, taskKey } from "./rails";
+import { readSavedData } from "./savedData";
 import {
   FREEZE_BURST_TITLES,
   FREEZE_BURST_WORDS,
@@ -189,10 +191,26 @@ test("the main thread never spends 250 ms of its own processor time at once on a
     ]);
     await expect.poll(() => burst.outcome().state).toBe("closed");
     await waitForFirstmateIdle(page);
+    // The intermittent failure was two rejected Git starts, not a measured
+    // freeze: one add read another's unfinished commondir. Keep all nine
+    // start/report assertions, and verify their actual isolated checkouts too.
+    const worktrees = readSavedData(userDataDir, (db) =>
+      burstKeys.map(
+        (key) =>
+          db
+            .prepare("SELECT key, worktree_dir AS cwd, branch FROM tasks WHERE key = ?")
+            .get(key) as { key: string; cwd: string; branch: string },
+      ),
+    );
+    expect(new Set(worktrees.map((tree) => tree.cwd)).size).toBe(FREEZE_BURST_TITLES.length);
+    for (const tree of worktrees) {
+      expect(await git(tree.cwd, ["symbolic-ref", "--short", "HEAD"])).toBe(tree.branch);
+    }
     console.log(
       JSON.stringify({
         scenario: "concurrent crewmate starts",
         startedAndReported: burstKeys,
+        isolatedCheckouts: worktrees,
         windowDraft: draft,
       }),
     );

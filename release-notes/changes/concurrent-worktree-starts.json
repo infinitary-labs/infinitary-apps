@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "concurrent-worktree-starts",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Starting several tasks together is more reliable",
+      "body": "Tasks starting together no longer interfere while creating their working copies in the same project. Each task still gets its own branch and files.",
+      "noPicture": "This fixes an intermittent working-copy creation failure without changing a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

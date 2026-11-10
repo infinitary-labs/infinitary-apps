@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { realpath } from "node:fs/promises";
 import { promisify } from "node:util";
 import { bundledGit, gitHelperResetParameters, hostEnv } from "../hostEnv";
 import { atUtilityQos } from "../utilityQos";
@@ -31,6 +32,40 @@ export async function git(
     /** Ends git when it aborts, as the timeout does. */
     signal?: AbortSignal;
   } = {},
+): Promise<string> {
+  if (args[0] !== "worktree") return runGit(repoDir, args, options);
+  // Git publishes a worktree's administrative files one at a time. Another
+  // worktree command can read its still-empty commondir (or prune it) before
+  // add finishes. Pool moves/prunes and new starts share this same queue.
+  // Resolve the common directory, not the checkout: linked trees and aliases
+  // all mutate the same bookkeeping. Other repositories remain independent.
+  const common = await realpath(
+    await runGit(repoDir, ["rev-parse", "--path-format=absolute", "--git-common-dir"], {
+      ...options,
+      trim: true,
+    }),
+  );
+  const previous = worktreeCommands.get(common) ?? Promise.resolve();
+  const command = previous.catch(() => {}).then(() => runGit(repoDir, args, options));
+  worktreeCommands.set(common, command);
+  try {
+    return await command;
+  } finally {
+    if (worktreeCommands.get(common) === command) worktreeCommands.delete(common);
+  }
+}
+
+const worktreeCommands = new Map<string, Promise<string>>();
+
+async function runGit(
+  repoDir: string,
+  args: string[],
+  options: {
+    env?: Record<string, string>;
+    timeoutMs?: number;
+    trim?: boolean;
+    signal?: AbortSignal;
+  },
 ): Promise<string> {
   // The app's own git when this build carries it (bundledGit.ts), else the
   // one the search path finds.

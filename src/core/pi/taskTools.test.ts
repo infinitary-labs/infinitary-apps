@@ -43,6 +43,7 @@ function toolset(overrides: Partial<TaskToolsDelegate> = {}) {
     update: vi.fn(() => ({ text: "Updated SCR-3: title", ok: true })),
     drop: vi.fn(() => "Dropped SCR-3"),
     withdrawMerge: vi.fn(() => "Withdrew the captain's kept merge approval on SCR-3."),
+    pin: vi.fn(() => "Pinned SCR-3 to the top of Tasks: Panel build."),
     override: vi.fn(() => "Recorded the captain's override on SCR-3."),
     withdrawOverride: vi.fn(() => "Took back the captain's override on SCR-3."),
     withdrawAllowance: vi.fn(() => "Took back the captain's yes on SCR-3."),
@@ -64,6 +65,7 @@ describe("task tools", () => {
       update: () => ({ text: "updated", ok: true }),
       drop: () => "dropped",
       withdrawMerge: () => "withdrew",
+      pin: () => "pinned",
       override: () => "overrode",
       withdrawOverride: () => "took back",
       withdrawAllowance: () => "took back",
@@ -258,6 +260,20 @@ describe("task tools", () => {
     expect(delegate.withdrawMerge).toHaveBeenCalledWith({ task: "SCR-3" });
     expect(delegate.update).not.toHaveBeenCalled();
     expect(delegate.drop).not.toHaveBeenCalled();
+  });
+
+  // INF-3127, the captain's choice "The first mate pins and unpins by your words".
+  it("update_task pinned pins or unpins alone and refuses beside another edit", async () => {
+    const { delegate, byName } = toolset();
+    const result = await byName.get("update_task")?.execute("p1", { task: "SCR-3", pinned: true });
+    expect(result?.content[0]?.text).toBe("Pinned SCR-3 to the top of Tasks: Panel build.");
+    expect(delegate.pin).toHaveBeenCalledWith({ task: "SCR-3", pinned: true });
+    const mixed = await byName
+      .get("update_task")
+      ?.execute("p2", { task: "SCR-3", pinned: false, priority: 1 });
+    expect(mixed?.content[0]?.text).toMatch(/Pass only task and pinned/);
+    expect(delegate.pin).toHaveBeenCalledTimes(1);
+    expect(delegate.update).not.toHaveBeenCalled();
   });
 
   it("update_task start_now starts a queued row now, and only that (cards/tasks/agents P0)", async () => {

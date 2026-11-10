@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "pin-a-task-by-asking",
+      "kind": "feature",
+      "area": "firstmate",
+      "title": "Ask your first mate to pin or unpin a task",
+      "body": "Tell your first mate to pin a task and it moves to the Pinned section at the top of Tasks, whatever state it is in; ask it to unpin and the task goes back under its state. The task's record says your first mate pinned or unpinned it.",
+      "noPicture": "Asking puts the task in the same Pinned section the pin button already shows, so there is no new view to picture.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

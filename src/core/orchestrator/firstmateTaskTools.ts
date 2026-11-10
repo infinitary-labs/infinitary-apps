@@ -308,6 +308,20 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         }
         return withdrawn.text;
       }),
+    pin: (input) =>
+      asText(() => {
+        const record = resolve(input.task);
+        host.asks.attach(record.id, "update_task");
+        const pinned = tasks.setPinned(record.id, input.pinned, { actor: "firstmate" });
+        if (!pinned.ok) return pinned.text;
+        const words = input.pinned
+          ? `Pinned ${record.key} to the top of Tasks: ${record.title}`
+          : `Unpinned ${record.key}: ${record.title}`;
+        if (!pinned.changed)
+          return `${record.key} is already ${input.pinned ? "pinned" : "not pinned"}; nothing changed.`;
+        tookEffect(record.id, words);
+        return `${words}.`;
+      }),
     override: (input) =>
       asText(() => {
         const record = resolve(input.task);

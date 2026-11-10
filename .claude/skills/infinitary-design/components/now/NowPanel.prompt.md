@@ -87,6 +87,7 @@ Its accessible name and rest label say what a press does, `Pin FI3-12` or `Unpin
 One press pins or unpins at once (`tasks.pin`), with no question; the row moves into or out of Pinned when the board does.
 The keyboard reaches it as it reaches the Start: → from a row goes to the row's first button, ← and → move between its buttons, ← from the first goes back to the row, and Enter or Space presses it.
 The task board's tile menu offers Pin or Unpin (`TaskBoard.prompt.md`), and the task record's header carries the same pin button beside its corner (`TaskRecord`).
+The first mate pins and unpins a task on the captain's words (`update_task` `pinned`), and the record's Activity says it was the first mate.
 
 ## Earlier work in the filter (FI3-579, piece 3)
 

@@ -15,6 +15,7 @@ function toolset() {
     update: vi.fn(() => ({ text: "Updated SCR-3: title", ok: true })),
     drop: vi.fn(() => "Dropped SCR-3"),
     withdrawMerge: vi.fn(() => "Withdrew the captain's kept merge approval on SCR-3."),
+    pin: vi.fn(() => "Pinned SCR-3 to the top of Tasks: Panel build."),
     override: vi.fn(() => "Recorded the captain's override on SCR-3."),
     withdrawOverride: vi.fn(() => "Took back the captain's override on SCR-3."),
     withdrawAllowance: vi.fn(() => "Took back the captain's yes on SCR-3."),

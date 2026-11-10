@@ -84,6 +84,8 @@ export type TaskToolsDelegate = {
   drop(input: { task: string; reason: string; confirm?: boolean; replacedBy?: string }): string;
   /** Withdraw the captain's kept merge approval on his words; the work stays (FI3-304). */
   withdrawMerge(input: { task: string }): string;
+  /** Pin a task to the top of Tasks, or unpin it, on the captain's words (INF-3127). */
+  pin(input: { task: string; pinned: boolean }): string;
   /** Correct a required action's words, keeping its filing (docs/required-actions.md). */
   reviseRequiredAction?(input: RequiredActionRevisionInput): string;
   /**
@@ -392,6 +394,9 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
             "Captain's words only: this task's cost limit in estimated dollars, over it and everything under it, as a number such as 75; none for no limit, follow for its project's or the app's. Lifts a cost-limit hold it now clears.",
         }),
       ),
+      // The captain's pin (INF-3127), served bare: the name says it, and the
+      // refusal says it goes alone.
+      pinned: Type.Optional(Type.Boolean()),
       withdraw_merge: Type.Optional(
         Type.Boolean({
           description: "The captain takes back a merge they clicked; the work stays",
@@ -457,6 +462,18 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
             text: "Pass only task and start_again. Edit the replacement separately after it exists.",
           };
         return { text: await delegate.startAgain({ task: params.task }) };
+      }
+      if (params.pinned !== undefined) {
+        if (
+          Object.keys(params).some(
+            (key) =>
+              key !== "task" &&
+              key !== "pinned" &&
+              params[key as keyof typeof params] !== undefined,
+          )
+        )
+          return { text: "Pass only task and pinned. Make other edits in a separate call." };
+        return { text: delegate.pin({ task: params.task, pinned: params.pinned }) };
       }
       if (params.withdraw_merge) return { text: delegate.withdrawMerge({ task: params.task }) };
       if (params.take_back_yes?.trim())

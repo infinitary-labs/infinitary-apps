@@ -39,6 +39,7 @@ try {
       update: unavailable,
       drop: unavailable,
       withdrawMerge: unavailable,
+      pin: unavailable,
       override: unavailable,
       withdrawOverride: unavailable,
       withdrawAllowance: unavailable,

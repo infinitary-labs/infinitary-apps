@@ -285,12 +285,47 @@ describe("FirstmateAgent reply line", () => {
     },
   );
 
+  // INF-3127, the captain's choice "The first mate pins and unpins by your words".
+  it("pins and unpins a task on the captain's words, naming it on the line and the record", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("file the release checklist");
+    const tools = toolsOf(f.specs);
+    const title = "Write the release checklist";
+    await tools
+      .get("create_task")
+      ?.execute("file", { title, goal: title, user_words: "file the release checklist" });
+    const work = f.tasks.list().find((row) => row.title === title);
+    await finish(f);
+    await f.agent.converse(`pin ${work?.key}`);
+    await tools.get("update_task")?.execute("pin", { task: work?.key, pinned: true });
+    await finish(f);
+    expect(f.tasks.get(work?.id ?? "")?.pinnedAt).not.toBeNull();
+    expect(f.tasks.listPinned().map((row) => row.id)).toEqual([work?.id]);
+    expect(f.tasks.capture.lastTurn()?.reply?.text).toBe(
+      `Pinned ${work?.key} to the top of Tasks: ${title}`,
+    );
+    await f.agent.converse(`unpin ${work?.key}`);
+    await tools.get("update_task")?.execute("unpin", { task: work?.key, pinned: false });
+    await finish(f);
+    expect(f.tasks.listPinned()).toEqual([]);
+    expect(f.tasks.capture.lastTurn()?.reply?.text).toBe(`Unpinned ${work?.key}: ${title}`);
+    const pins = f.tasks
+      .timeline(work?.id ?? "")
+      .filter((event) => event.data && "pin" in event.data)
+      .map((event) => [event.actor, event.data?.pin]);
+    expect(pins).toEqual([
+      ["firstmate", "pinned"],
+      ["firstmate", "unpinned"],
+    ]);
+  });
+
   it.each([
     "unchanged",
     "missing-link",
     "refused-start",
     "refused-drop",
     "withdraw-without-approval",
+    "unpin-unpinned",
   ])("does not announce a record success for %s", async (action) => {
     const f = setup({ silent: true });
     await f.agent.converse("file the work");
@@ -319,6 +354,7 @@ describe("FirstmateAgent reply line", () => {
         ...(action === "refused-start" ? { start_now: true } : {}),
         ...(action === "refused-drop" ? { drop: true, reason: "Not needed" } : {}),
         ...(action === "withdraw-without-approval" ? { withdraw_merge: true } : {}),
+        ...(action === "unpin-unpinned" ? { pinned: false } : {}),
       });
     await finish(f);
     expect(f.tasks.capture.lastTurn()?.reply).toBeNull();

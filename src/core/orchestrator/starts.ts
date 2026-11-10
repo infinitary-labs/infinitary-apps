@@ -1174,7 +1174,7 @@ export class CrewStarts {
       const because = gate
         ? gateClearedText(gate)
         : blockers.length > 0
-          ? `${blockers.map((blocker) => `task ${blocker.id}`).join(" and ")} finished`
+          ? `${blockers.map((blocker) => `"${blocker.title}" (${blocker.key})`).join(" and ")} finished`
           : undefined;
       if (!options.requested?.spawned)
         this.core.options.broadcastEvent({

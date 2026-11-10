@@ -17,7 +17,42 @@
 # stops after the package it is installing. apt-get then waits for dpkg's
 # lock should anything else hold it. Every wait lasts as long as the calling
 # step lets it.
+#
+# A mirror can also stall the list refresh partway: a connection that keeps
+# sending a little never trips apt's own timer, which ends only a connection
+# silent for 30 seconds, so apt-get update would wait until the step's limit
+# ends the job. apt prints a line as it starts each file or gives one up, so
+# a refresh that prints nothing for $quiet seconds has stalled: this ends it
+# and starts a fresh one, with new connections, up to $tries refreshes in all.
 set -euo pipefail
+
+# Longer than apt's own longest silence, about a minute while it retries a
+# silent connection, and short enough that every try and the install fit in
+# the ten minutes each install step allows.
+quiet=90
+tries=3
+
+# One apt-get update, its lines passed through. It answers apt-get's own exit
+# status, or 124 when apt printed nothing for $quiet seconds and was ended.
+refresh_lists() {
+  local lines pid line status=0
+  exec {lines}< <(exec sudo apt-get -o DPkg::Lock::Timeout=-1 update 2>&1)
+  pid=$!
+  while :; do
+    IFS= read -r -t "$quiet" -u "$lines" line || { status=$?; break; }
+    printf '%s\n' "$line"
+  done
+  if [ "$status" -gt 128 ]; then
+    # sudo passes the signal on to apt-get, whose download methods end with it.
+    sudo kill -TERM "$pid" 2>/dev/null || true
+    wait "$pid" || true
+    exec {lines}<&-
+    return 124
+  fi
+  if [ -n "$line" ]; then printf '%s\n' "$line"; fi
+  exec {lines}<&-
+  wait "$pid"
+}
 
 echo 'APT::Periodic::Enable "0";' | sudo tee /etc/apt/apt.conf.d/99-runner-no-automatic-updates >/dev/null
 said=""
@@ -31,5 +66,15 @@ until sudo flock --nonblock /var/lib/apt/daily_lock true; do
   fi
   sleep 1
 done
-sudo apt-get -o DPkg::Lock::Timeout=-1 update
+try=1
+until refresh_lists; do
+  status=$?
+  if [ "$status" -ne 124 ]; then exit "$status"; fi
+  if [ "$try" -ge "$tries" ]; then
+    echo "apt-install: the package lists stalled $tries times in a row, each time printing nothing for $quiet seconds; giving up"
+    exit 124
+  fi
+  try=$((try + 1))
+  echo "apt-install: the package lists printed nothing for $quiet seconds, so the download has stalled; starting it again (try $try of $tries)"
+done
 sudo apt-get -o DPkg::Lock::Timeout=-1 install -y "$@"

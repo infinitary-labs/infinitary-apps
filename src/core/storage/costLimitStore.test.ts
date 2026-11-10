@@ -81,4 +81,27 @@ describe("CostLimitStore", () => {
     expect(store.hold("a")).toBeUndefined();
     db.close();
   });
+
+  // Accepted session-audit finding 1: nearest explicit task answer wins, even No limit.
+  it("reads answers through nested parts, with own answers and follow taking precedence", () => {
+    const { db, store, task } = ledger();
+    task("plan");
+    task("piece", "plan");
+    task("review", "piece");
+    task("other");
+    expect(store.taskLimit("review")).toBeUndefined();
+    store.setLimit("task", "plan", { usd: 100 }, NOW);
+    expect(store.taskLimit("review")).toEqual({ limit: { usd: 100 }, taskId: "plan" });
+    store.setLimit("task", "piece", { none: true }, NOW);
+    expect(store.taskLimit("review")).toEqual({ limit: { none: true }, taskId: "piece" });
+    store.setLimit("task", "review", { usd: 50 }, NOW);
+    expect(store.taskLimit("review")).toEqual({ limit: { usd: 50 }, taskId: "review" });
+    store.setLimit("task", "review", null, NOW);
+    expect(store.taskLimit("review")).toEqual({ limit: { none: true }, taskId: "piece" });
+    store.setLimit("task", "piece", null, NOW);
+    expect(store.taskLimit("review")).toEqual({ limit: { usd: 100 }, taskId: "plan" });
+    expect(store.taskLimit("other")).toBeUndefined();
+    expect(store.taskLimit("missing")).toBeUndefined();
+    db.close();
+  });
 });

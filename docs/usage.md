@@ -111,7 +111,8 @@ FI3-993 took the lines from between rows, grouped Where it went by project, and 
 
 A task, and everything under it, that passes its cost limit stops at a safe point and asks the captain before it spends more (INF-3112's plan, built by INF-3131).
 The limit is an amount in the same estimated dollars the ledger keeps, or no limit, and it is a ceiling, never a forecast.
-Three places set it, and the first that is set wins, read live: the task itself, its project, then the app (`effectiveCostLimit`, `src/shared/costLimit.ts`).
+The first explicit answer wins, read live: the task itself, the nearest task above it, its project, then the app (`CostLimitStore.taskLimit` and `effectiveCostLimit`).
+A raised amount or No limit on a task covers its parts unless a part has its own answer.
 The app's own limit starts at $50, the captain's choice drawn from their own ledger, and lives in Settings → Intelligence (`CostLimitRow.tsx`), whose row also says how many of the task families that spent anything in the last 30 days would have asked under it.
 Settings → Projects adds Cost limit beside Care: Follow app, Own amount or No limit, saved through `project-settings` as `costLimit` (`null`, `{ usd }`, or `{ none: true }`).
 The first mate changes the app's value through the asked `cost-limit` action and a project's value through the existing asked `project-settings` action, with the same authority and trail as the controls.
@@ -133,9 +134,9 @@ An open record refreshes after model responses (including a part's), project con
   A task whose limit is no limit, or whose captain's words passed the `cost-limit` hold (`docs/delivery-rigor.md`, "The holds"), is skipped.
 - A hold stops every running turn in the family at its next safe point, as an update does (`stopSafely`), and holds their lanes so nothing new is delivered (`CrewFacts.laneHeld`).
   A turn already past its limit when the response arrives can spend up to one more turn's cost before it stops, and the card says so.
-- The host raises one card, `card-cost-<task>`, which the first mate answers: Allow more raises the task's own limit by one step, its project's or the app's limit, past what it has spent; No limit for this task lifts it; Stop here sends the family's started work to the backlog with its work kept.
+- The host raises one card, `card-cost-<task>`, which the first mate answers: Allow more raises the task's own limit by one step, the nearest answer above it or its project's or the app's limit, past what it has spent; No limit for this task lifts it; Stop here sends the family's started work to the backlog with its work kept.
   The first two resume each stopped turn with a `turn-resumed` row.
-- The captain's words move it too: `update_task`'s `cost_limit` sets the task's own limit, `none` lifts it and `follow` returns it to its project's or the app's, and the `override` passes the hold for the task's current version.
+- The captain's words move it too: `update_task`'s `cost_limit` sets the task's own limit, `none` lifts it and `follow` returns it to the nearest answer above it, then its project's or the app's, and the `override` passes the hold for the task's current version.
 - Responses the ledger could not price add nothing to the spend, and the card counts them.
 
 ## Keys

@@ -711,7 +711,7 @@ export async function createServices(
   taskCostOf = (record) => ({
     ...costLimitStore.familySpend(record.id),
     ...effectiveCostLimit({
-      task: costLimitStore.limitOf("task", record.id),
+      task: costLimitStore.taskLimit(record.id)?.limit,
       project: record.repoId ? repos.get(record.repoId)?.costLimit : null,
       app: settings.getTaskCostLimit(),
     }),

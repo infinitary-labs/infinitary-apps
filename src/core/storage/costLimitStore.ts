@@ -44,6 +44,22 @@ export class CostLimitStore {
     }
   }
 
+  /** The nearest explicit answer on this task or above it, before project/app defaults. */
+  taskLimit(taskId: string): { limit: CostLimit; taskId: string } | undefined {
+    const seen = new Set<string>();
+    let id: string | null = taskId;
+    while (id && !seen.has(id)) {
+      seen.add(id);
+      const limit = this.limitOf("task", id);
+      if (limit) return { limit, taskId: id };
+      const row = prepared(this.db, "SELECT parent_id FROM tasks WHERE id = ?").get(id) as
+        | { parent_id: string | null }
+        | undefined;
+      id = row?.parent_id ?? null;
+    }
+    return undefined;
+  }
+
   /** Sets one task's or one project's limit; null lets it follow the next level again. */
   setLimit(scope: CostLimitScope, ownerId: string, limit: CostLimit | null, at: number): void {
     if (limit === null) {

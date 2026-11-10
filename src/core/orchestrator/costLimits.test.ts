@@ -94,6 +94,7 @@ describe("CostLimits", () => {
     const card = h.cards().find((each) => each.id === costCardId(h.taskId));
     expect(card?.title).toBe("Rewrite the importer passed its $50 limit");
     expect(card?.body).toContain("spent about $51.50");
+    expect(card?.body).toContain("Its crewmate stopped at a safe point");
     expect(card?.actions?.map((action) => [action.label, action.default ?? false])).toEqual([
       ["Allow $50 more", true],
       ["No limit for this task", false],
@@ -197,6 +198,182 @@ describe("CostLimits", () => {
     await tick();
     expect(h.store().hold(taskId)).toMatchObject({ spentUsd: 52 });
     expect(h.supervisor.costLimits.heldBy("part-1")?.taskId).toBe(taskId);
+    await h.supervisor.disposeAll();
+  });
+
+  // Accepted session-audit finding 1: one spending answer covers the task's parts.
+  it.each(["allow-more", "no-limit"] as const)(
+    "applies the parent's %s answer to a part instead of asking twice",
+    async (answer) => {
+      const h = costSetup();
+      h.tasks.create({
+        id: "plan",
+        kind: "work",
+        title: "Ship the importer",
+        prompt: "",
+        repoId: null,
+        status: "open",
+        actor: "host",
+      });
+      const part = h.tasks.create({
+        id: "part",
+        kind: "work",
+        title: "Importer tests",
+        prompt: "",
+        repoId: null,
+        parentId: "plan",
+        status: "open",
+        actor: "host",
+      });
+      h.usage().record({
+        taskId: "part",
+        usage: { input: 90_000, output: 3_000, cost: 51.42 },
+        at: Date.now(),
+      });
+      h.supervisor.costLimits.recorded("part");
+      await tick();
+      const card = h.cards().find((each) => each.id === costCardId("plan"));
+      expect(card?.body).toContain("Work under this task stops at a safe point");
+      expect(card?.body).not.toContain("Its crewmate stopped");
+      expect(h.store().hold("plan")).toBeDefined();
+      h.supervisor.cardActions.act(costCardId("plan"), answer);
+      await tick();
+      h.supervisor.costLimits.recorded("part");
+      expect(h.supervisor.costLimits.limitFor(part)?.limit).toEqual(
+        answer === "allow-more" ? { usd: 100 } : { none: true },
+      );
+      expect(h.store().hold("plan")).toBeUndefined();
+      expect(h.store().hold("part")).toBeUndefined();
+      expect(h.cards().filter((each) => each.id.startsWith("card-cost-"))).toHaveLength(0);
+      if (answer === "allow-more") {
+        h.usage().record({
+          taskId: "part",
+          usage: { input: 90_000, output: 3_000, cost: 51.42 },
+          at: Date.now(),
+        });
+        h.supervisor.costLimits.recorded("part");
+        expect(h.store().hold("plan")?.limitUsd).toBe(100);
+        expect(h.store().hold("part")).toBeUndefined();
+      }
+      await h.supervisor.disposeAll();
+    },
+  );
+
+  it("releases a part's existing hold when the nearest answer above it now clears it", async () => {
+    const h = costSetup();
+    h.tasks.create({
+      id: "plan",
+      kind: "work",
+      title: "Ship the importer",
+      prompt: "",
+      repoId: null,
+      status: "open",
+      actor: "host",
+    });
+    const part = h.tasks.create({
+      id: "part",
+      kind: "work",
+      title: "Importer tests",
+      prompt: "",
+      repoId: null,
+      parentId: "plan",
+      status: "open",
+      actor: "host",
+    });
+    h.supervisor.costLimits.setTaskLimit("plan", { none: true });
+    h.supervisor.costLimits.setTaskLimit("part", { usd: 50 });
+    h.usage().record({
+      taskId: "part",
+      usage: { input: 90_000, output: 3_000, cost: 51.42 },
+      at: Date.now(),
+    });
+    h.supervisor.costLimits.recorded("part");
+    expect(h.store().hold("part")).toBeDefined();
+    // A part's explicit answer still wins over a changed parent's answer.
+    h.supervisor.costLimits.setTaskLimit("plan", { usd: 100 });
+    expect(h.store().hold("part")).toBeDefined();
+    h.supervisor.costLimits.setTaskLimit("part", null);
+    await tick();
+    expect(h.store().hold("part")).toBeUndefined();
+    expect(h.supervisor.costLimits.limitFor(part)?.limit).toEqual({ usd: 100 });
+    await h.supervisor.disposeAll();
+  });
+
+  it("falls back to project then app only when no task above has answered", async () => {
+    const h = costSetup();
+    const plan = h.tasks.create({
+      id: "plan",
+      kind: "work",
+      title: "Ship the importer",
+      prompt: "",
+      repoId: "repo-fm",
+      status: "open",
+      actor: "host",
+    });
+    const part = h.tasks.create({
+      id: "part",
+      kind: "work",
+      title: "Importer tests",
+      prompt: "",
+      repoId: "repo-fm",
+      parentId: plan.id,
+      status: "open",
+      actor: "host",
+    });
+    expect(h.supervisor.costLimits.limitFor(part)).toEqual({
+      limit: DEFAULT_COST_LIMIT,
+      source: "app",
+    });
+    h.store().setLimit("project", "repo-fm", { usd: 75 }, Date.now());
+    expect(h.supervisor.costLimits.limitFor(part)).toEqual({
+      limit: { usd: 75 },
+      source: "project",
+    });
+    h.supervisor.costLimits.setTaskLimit(plan.id, { none: true });
+    expect(h.supervisor.costLimits.limitFor(part)).toEqual({
+      limit: { none: true },
+      source: "task",
+    });
+    h.supervisor.costLimits.setTaskLimit(plan.id, null);
+    expect(h.supervisor.costLimits.limitFor(part)).toEqual({
+      limit: { usd: 75 },
+      source: "project",
+    });
+    await h.supervisor.disposeAll();
+  });
+
+  it("takes down an old inherited-default hold after an answer above it", async () => {
+    const h = costSetup();
+    const plan = h.tasks.create({
+      id: "plan",
+      kind: "work",
+      title: "Ship the importer",
+      prompt: "",
+      repoId: null,
+      status: "open",
+      actor: "host",
+    });
+    const part = h.tasks.create({
+      id: "part",
+      kind: "work",
+      title: "Importer tests",
+      prompt: "",
+      repoId: null,
+      parentId: plan.id,
+      status: "open",
+      actor: "host",
+    });
+    // A saved hold from before the parent answered: it used the old app default.
+    h.store().placeHold({ taskId: part.id, limitUsd: 50, spentUsd: 51.42, at: Date.now() });
+    h.usage().record({
+      taskId: part.id,
+      usage: { input: 90_000, output: 3_000, cost: 51.42 },
+      at: Date.now(),
+    });
+    h.supervisor.costLimits.setTaskLimit(plan.id, { usd: 100 });
+    await tick();
+    expect(h.supervisor.costLimits.heldBy(part.id)).toBeUndefined();
+    expect(h.supervisor.costLimits.limitFor(part)?.limit).toEqual({ usd: 100 });
     await h.supervisor.disposeAll();
   });
 });

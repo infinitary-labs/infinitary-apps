@@ -5,8 +5,8 @@ import { z } from "zod";
  * plan): an amount in estimated US dollars, the same estimate Settings →
  * Usage shows, past which a task asks the captain before it spends more.
  * It counts the task and everything under it, its parts and its review
- * included. Three places set it, and the first that is set wins, read
- * live: the task itself, its project, then the app.
+ * included. The first explicit answer wins, read live: the task itself, the nearest
+ * task above it, its project, then the app.
  */
 
 /**
@@ -29,7 +29,7 @@ export type CostLimitSource = "task" | "project" | "app";
 /** The app's own limit when nothing was saved: the default. */
 export const DEFAULT_COST_LIMIT: CostLimit = { usd: COST_LIMIT_DEFAULT_USD };
 
-/** The limit a task follows: its own, else its project's, else the app's. */
+/** The limit a task follows: nearest task answer, else its project's, else the app's. */
 export function effectiveCostLimit(levels: {
   task?: CostLimit | null | undefined;
   project?: CostLimit | null | undefined;

@@ -70,7 +70,7 @@ export class CostLimits {
     const facts = this.options.costLimits;
     if (!facts) return undefined;
     return effectiveCostLimit({
-      task: facts.store.limitOf("task", record.id),
+      task: facts.store.taskLimit(record.id)?.limit,
       project: record.repoId ? facts.store.limitOf("project", record.repoId) : null,
       app: facts.appLimit(),
     });
@@ -146,6 +146,7 @@ export class CostLimits {
     const facts = this.options.costLimits;
     if (!facts) return limit;
     const inherited = effectiveCostLimit({
+      task: record.parentId ? facts.store.taskLimit(record.parentId)?.limit : null,
       project: record.repoId ? facts.store.limitOf("project", record.repoId) : null,
       app: facts.appLimit(),
     }).limit;
@@ -164,12 +165,17 @@ export class CostLimits {
     const source = this.limitFor(record)?.source ?? "app";
     const setAt =
       source === "task"
-        ? "the limit set for this task"
+        ? this.options.costLimits?.store.taskLimit(record.id)?.taskId === record.id
+          ? "the limit set for this task"
+          : "the limit set for the work above it"
         : source === "project"
           ? "the limit set for its project"
           : "the limit in Settings → Intelligence";
     const hasParts = this.options.tasks.graph.children(record.id).length > 0;
     const counted = hasParts ? "This task and the work under it have" : "This task has";
+    const stopped = record.assignee
+      ? "Its crewmate stopped at a safe point: the step it was running finished, and nothing new starts until you answer."
+      : "Work under this task stops at a safe point, and nothing new starts until you answer.";
     return {
       id: costCardId(record.id),
       taskId: record.id,
@@ -178,7 +184,7 @@ export class CostLimits {
       title: costHoldTitle(record.title, limit),
       meta: "",
       body: [
-        `<p>${counted} spent about ${formatUsd(spent)}, past ${setAt}, ${formatUsd(limit)}. Its crewmate stopped at a safe point: the step it was running finished, and nothing new starts until you answer.</p>`,
+        `<p>${counted} spent about ${formatUsd(spent)}, past ${setAt}, ${formatUsd(limit)}. ${stopped}</p>`,
         `<p>Allow ${formatUsd(step)} more lets it go on until ${formatUsd(next)}. No limit for this task lets it finish without asking again. Stop here moves it to the backlog with its work kept. To set another amount, reply here.</p>`,
         `<p class="inf-muted">The amount is the estimate Settings → Usage shows, at the models' listed prices, not your bill. Some models report their cost only when a turn ends, so a task can pass its limit by up to one turn.${unpriced > 0 ? ` ${unpriced === 1 ? "One response" : `${unpriced} responses`} could not be priced and ${unpriced === 1 ? "adds" : "add"} nothing here.` : ""}</p>`,
       ].join(""),
@@ -259,8 +265,8 @@ export class CostLimits {
   /**
    * Sets one task's own limit, on the captain's click or their words
    * (`update_task cost_limit`): a hold it no longer passes is lifted, and
-   * its family carries on. Null lets the task follow its project's or the
-   * app's limit again.
+   * its family carries on. Null lets the task follow the nearest answer
+   * above it, then its project's or the app's limit again.
    */
   setTaskLimit(taskId: string, limit: CostLimit | null): void {
     const facts = this.options.costLimits;
@@ -270,13 +276,19 @@ export class CostLimits {
     const usd = limitUsd(this.limitFor(record)?.limit ?? { none: true });
     const words =
       limit === null
-        ? "its cost limit follows its project or the app again"
+        ? "its cost limit follows the work above it, its project or the app again"
         : usd === null
           ? "no cost limit for this task"
           : `its cost limit is now ${formatUsd(usd)}`;
     this.options.tasks.note(taskId, words, { news: true });
-    const hold = facts.store.hold(taskId);
-    if (hold && (usd === null || facts.store.familySpend(taskId).usd < usd)) this.release(taskId);
+    // An answer above a part also changes the limit beneath an already raised card.
+    for (const member of this.family(taskId)) {
+      const hold = facts.store.hold(member.id);
+      if (!hold) continue;
+      const effective = limitUsd(this.limitFor(member)?.limit ?? { none: true });
+      if (effective === null || facts.store.familySpend(member.id).usd < effective)
+        this.release(member.id);
+    }
   }
 
   /**

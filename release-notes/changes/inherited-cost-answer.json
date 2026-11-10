@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "inherited-cost-answer",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "One spending-limit answer covers a task's parts",
+      "body": "When you raise a task's spending limit or choose No limit, its parts follow that answer unless they have their own. A task with only parts no longer says its own crewmate stopped.",
+      "noPicture": "The main change is which saved answer a part follows, rather than a new control or layout.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

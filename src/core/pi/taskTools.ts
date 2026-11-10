@@ -391,7 +391,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       cost_limit: Type.Optional(
         Type.String({
           description:
-            "Captain's words only: this task's cost limit in estimated dollars, over it and everything under it, as a number such as 75; none for no limit, follow for its project's or the app's. Lifts a cost-limit hold it now clears.",
+            "Captain's words only: this task's cost limit in estimated dollars, over it and everything under it, as a number such as 75; none for no limit, follow for the nearest answer above it, then its project's or the app's. Parts follow this answer unless they have their own. Lifts cost-limit holds it now clears.",
         }),
       ),
       // The captain's pin (INF-3127), served bare: the name says it, and the

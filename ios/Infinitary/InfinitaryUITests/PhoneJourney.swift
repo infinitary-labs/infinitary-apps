@@ -227,11 +227,15 @@ import XCTest
                 problems.append("\(cover.identifier) covers it at \(cover.frame)")
             }
         }
-        // INF-2568: only on an iPhone on its side, while a card's reply holds the keyboard, does the message box step
-        // aside, undrawn and under its own name; anywhere else it stays in view.
-        let window = app.windows.firstMatch.frame
-        let phoneOnItsSide = UIDevice.current.userInterfaceIdiom == .phone && window.width > window.height
-        if any("phone-composer-aside").exists, !(phoneOnItsSide && field.identifier == "card-reply") {
+        // INF-3468, the captain: "hide pager and everything below the card (the main chat input etc) to make more space".
+        // On an iPhone or an iPad, upright or on its side, while a card's reply holds the keyboard the message box steps
+        // aside, undrawn and under its own name, and the pager leaves; while the message box holds it, it stays in view.
+        let aside = any("phone-composer-aside").exists
+        if field.identifier == "card-reply" {
+            if !aside { problems.append("the message box stayed in view") }
+            if any("card-pager").exists { problems.append("the pager stayed in view") }
+            cardReplyRoom(f, keyTop: keyTop, into: &problems)
+        } else if aside {
             problems.append("the message box stepped aside")
         }
         // The captain named both fields: whichever one holds the keyboard, the message box stays above it too.
@@ -246,6 +250,33 @@ import XCTest
         print(line)
         picture("keyboard " + situation)
         if !problems.isEmpty { failures.append(line) }
+    }
+
+    /// INF-3468, the captain: "have a little margin between the focused textbox and the bottom edge of the card", and the
+    /// captain's pick of where a card's reply comes to rest: with the card's choices showing under it where they fit,
+    /// otherwise with 16 points, the box's inset from the card's sides, between it and the card's visible foot. Where the
+    /// card shows less room than the box and that margin, as on an iPhone on its side, the caret's line is the rule
+    /// (the field's foot above the keyboard, checked by the caller).
+    func cardReplyRoom(_ f: CGRect, keyTop: CGFloat, into problems: inout [String]) {
+        let any = { (id: String) in self.app.descendants(matching: .any).matching(identifier: id).firstMatch }
+        let card = [any("card-back"), any("card-frame"), app.scrollViews["card-scroll"].firstMatch].first { $0.exists }
+        guard let card else { problems.append("no card around the reply"); return }
+        let bar = app.navigationBars.firstMatch
+        let top = max(card.frame.minY, bar.exists ? bar.frame.maxY : app.windows.firstMatch.frame.minY)
+        let foot = min(card.frame.maxY, keyTop)
+        let margin: CGFloat = 16
+        // The box a person sees is the reply's whole rounded field: its words, which XCUITest frames without the field's
+        // padding, and the send circle at its foot.
+        let send = app.buttons["send-reply"]
+        let box = send.exists ? f.union(send.frame) : f
+        guard box.height + margin <= foot - top else { return }
+        let choices = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'card-action-' OR identifier == 'note-done'"))
+            .allElementsBoundByIndex
+        let under = choices.contains { $0.exists && $0.frame.minY >= box.maxY - 0.5 && $0.frame.maxY <= foot + 0.5 && $0.frame.height > 0 }
+        if !under && box.maxY > foot - margin + 0.5 {
+            problems.append(String(format: "no choice shows under it and its foot is %.0f pt above the card's visible foot, under the %.0f pt margin",
+                                   foot - box.maxY, margin))
+        }
     }
 
     /// Fails the test with every situation the keyboard checks recorded.
@@ -356,7 +387,10 @@ import XCTest
     func reveal(_ element: XCUIElement) {
         let scroll = app.scrollViews["card-scroll"]
         let body = app.webViews.matching(identifier: "card-body").firstMatch
-        for _ in 0..<8 {
+        // INF-3468: a drag that moved the element is progress, not a try, so a long card is read down to its element however
+        // far the card starts from it; the card's scroll ends, so the drags do too. A try is a drag that moved nothing, or a swipe.
+        var tries = 0
+        while tries < 8 {
             // INF-1651: after the card moves, iOS 27.0 reports a body element's frame one layout behind, partly outside
             // the body, until the card scrolls. A control's own frame can overhang the body by a point.
             let stale = body.exists && body.frame.intersects(element.frame)
@@ -369,9 +403,12 @@ import XCTest
                element.frame.minY < view.minY - 1 || element.frame.maxY > view.maxY + 1 {
                 let dy = max(-view.height * 0.4, min(view.height * 0.4, view.midY - element.frame.midY))
                 let start = scroll.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                let before = element.frame.midY
                 start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: dy)), withVelocity: .slow, thenHoldForDuration: 0.3)
+                if !element.exists || abs(element.frame.midY - before) < 1 { tries += 1 }
                 continue
             }
+            tries += 1
             if element.isHittable && !stale { return }
             // Use the card's actual viewport: a whole-screen swipe hits the keyboard while replying.
             if stale || (element.exists && element.frame.maxY < scroll.frame.minY) { scroll.swipeDown() }

@@ -6,7 +6,9 @@ import XCTest
 /// decision whose text box sits at the end of a longer body. Completion: with the keyboard up on the input, the input lies
 /// wholly inside the card's visible scroller, below the bar and above the keyboard's drawn top and the message box, and
 /// keeps the keyboard's focus; typed words show in it. On an iPhone on its side, where the room left is shorter than the
-/// box, the box fills that room with its middle, where its line types, inside it. It fails when the body's page slides inside its own web view or
+/// box, the box fills that room with its middle, where its line types, inside it. INF-3468: with the keyboard up the box
+/// keeps 16 points above the visible card's foot where the room holds it, and the pager and message box step aside, back
+/// once the keyboard closes. It fails when the body's page slides inside its own web view or
 /// when the card's scroller leaves the field under its foot, as both did before.
 extension PhoneJourney {
     func testCardBodyFieldKeyboard() async throws {
@@ -129,6 +131,21 @@ extension PhoneJourney {
         } else {
             if f.minY < top - 0.5 { problems.append(String(format: "its top is %.0f pt above the visible card's top", top - f.minY)) }
             if f.maxY > foot + 0.5 { problems.append(String(format: "its foot is %.0f pt below the visible card's foot", f.maxY - foot)) }
+            // INF-3468, the captain: "have a little margin between the focused textbox and the bottom edge of the card":
+            // 16 points under the box, where the room holds the box and that margin.
+            if keyboardExpected && f.height + 16 <= foot - top && f.maxY > foot - 16 + 0.5 {
+                problems.append(String(format: "its foot is %.0f pt above the visible card's foot, under the 16 pt margin", foot - f.maxY))
+            }
+        }
+        // INF-3468, the captain: "hide pager and everything below the card (the main chat input etc) to make more space.
+        // they come back when the keyboard gets collapsed".
+        let aside = any("phone-composer-aside").exists, pager = any("card-pager").exists
+        if keyboardExpected {
+            if !aside { problems.append("the message box stayed in view") }
+            if pager { problems.append("the pager stayed in view") }
+        } else {
+            if aside || !composer.exists { problems.append("the message box is not in view") }
+            if !pager { problems.append("the pager is not in view") }
         }
         if f.maxY < top || f.minY > foot { problems.append("it is wholly out of view") }
         if keyboardExpected && field.exists {

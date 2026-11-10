@@ -17,10 +17,13 @@ import Observation
     /// INF-1524: a card's draft button, for the message box to take its words, unsent.
     var draft: String?
     /// INF-2568: the software keyboard is up, and a card's reply field, or a text box in its body (INF-3427), holds its
-    /// focus; a phone on its side then has no room for the pager or, while it types, the message box beside the field
-    /// (`PhoneCards`, `PhoneWorkspace.home`).
+    /// focus; a phone on its side then has no room for the pager (`PhoneCards`).
     var keyboardUp = false
     var replyFocused = false
+    /// INF-3468, the captain: "hide pager and everything below the card (the main chat input etc) to make more space.
+    /// they come back when the keyboard gets collapsed". On an iPhone or an iPad, upright or on its side, while a text box
+    /// in the card holds the keyboard, the pager and the message box with its last turn step aside for the card.
+    var composerAside: Bool { keyboardUp && replyFocused }
     var fields: [String: String] {
         if let taskID { return ["taskId": taskID] }
         guard cardsVisible else { return [:] }
@@ -221,18 +224,19 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
                         .accessibilityIdentifier(composerAside ? "phone-composer-aside" : "phone-composer")
                         .padding(.horizontal, PhoneTheme.space4)
                         .padding(.bottom, PhoneTheme.space2)
-                        // INF-2568: on a phone on its side the keyboard leaves about two lines of room, so while a card's
-                        // reply types the message box steps aside for it, kept in place so its draft stays.
+                        // INF-2568 and INF-3468, the captain: "hide pager and everything below the card (the main chat
+                        // input etc) to make more space". While a text box in a card holds the keyboard, the message box,
+                        // the last turn and its notes step aside, kept in place so the draft stays, and the card keeps
+                        // the message box's 8 points above the keyboard.
                         .frame(height: composerAside ? 0 : nil, alignment: .top)
                         .opacity(composerAside ? 0 : 1).allowsHitTesting(!composerAside).accessibilityHidden(composerAside)
+                        .padding(.bottom, composerAside ? PhoneTheme.space2 : 0)
                 }
             }
         }.phoneSceneBackdrop().background(PhoneTheme.background)
     }
 
-    private var composerAside: Bool {
-        phoneOnItsSide(verticalSize) && messageContext.keyboardUp && messageContext.replyFocused
-    }
+    private var composerAside: Bool { messageContext.composerAside }
 
     /// INF-1062, the captain's pick: the computer's name left the bar, so one line under it on every tab says the reach
     /// with its time while the computer is not in reach, and nothing while it is. INF-589 item 11: said once.

@@ -4,12 +4,12 @@ import XCTest
 extension PhoneJourney {
     /// INF-3106, the report: "replying to a card/thread, the keyboard could not be closed", and the captain's Approve and
     /// build of direction B: a keyboard-down button inside the field beside the send arrow, a pull down anywhere on the
-    /// card, its head included, a tap on the card's head and the bar's Done, on an iPhone and an iPad.
-    /// Data: the first mate card with two choices and a two-message thread (`flip-card`). Completion: while the keyboard
-    /// is up for the card's reply, on its face and its thread, or for the message box, the button shows before send on
-    /// send's center line, at one line and two; each way out closes the keyboard and the typed words stay; the button is
-    /// gone once the keyboard is down. Platform: either device's simulator with its software keyboard. Resources: this
-    /// test's own fresh app and test home; no photo, signing material or real account.
+    /// card, its head included, a tap on the card's head and the bar's Done, on an iPhone and an iPad. Data: the first mate
+    /// card with two choices and a two-message thread (`flip-card`). Completion: while the keyboard is up for the card's
+    /// reply, on its face and its thread, or for the message box, the button shows before send on send's center line, at
+    /// one line and two; each way out closes the keyboard and the typed words stay; the button is gone once the keyboard is
+    /// down, and the pager and message box are back (INF-3468). Platform: either device's simulator with its software
+    /// keyboard. Resources: this test's own fresh app and test home; no photo, signing material or real account.
     func testKeyboardWaysOut() async throws {
         try await launchJoined()
         let fixture = try await home("flip-card")
@@ -34,9 +34,11 @@ extension PhoneJourney {
         keyboardWayOut("face, the keyboard-down button", reply, keeps: "Hold the four builds", into: &failures) { tapOnPhone(hide) }
         XCTAssertTrue(hide.waitForAbsence(timeout: 5), "The keyboard-down button stays with the keyboard down")
         focusForPhoneTyping(reply, in: app)
-        keyboardWayOut("face, a pull down from the head", reply, keeps: "Hold the four builds", into: &failures) { pullDown(from: heading) }
+        keyboardWayOut("face, a pull down from the head", reply, keeps: "Hold the four builds", into: &failures) { pullDown(from: shownPart(of: heading)) }
         focusForPhoneTyping(reply, in: app)
-        keyboardWayOut("face, a tap on the head", reply, keeps: "Hold the four builds", into: &failures) { tapOnPhone(heading) }
+        keyboardWayOut("face, a tap on the head", reply, keeps: "Hold the four builds", into: &failures) {
+            tapOnPhone(shownPart(of: heading))
+        }
 
         // The card's thread: the same button, pull and tap on the thread's head.
         let cue = app.buttons["thread-cue"]
@@ -48,7 +50,10 @@ extension PhoneJourney {
         picture("3-thread-reply")
         keyboardWayOut("thread, the keyboard-down button", reply, keeps: "Hold the four builds", into: &failures) { tapOnPhone(hide) }
         focusForPhoneTyping(reply, in: app)
-        keyboardWayOut("thread, a pull down from the head", reply, keeps: "Hold the four builds", into: &failures) { pullDown(from: threadTitle) }
+        keyboardWayOut("thread, a pull down from the head", reply, keeps: "Hold the four builds", into: &failures) {
+            waitForSteadyTarget(threadTitle)
+            pullDown(from: threadTitle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)))
+        }
         focusForPhoneTyping(reply, in: app)
         keyboardWayOut("thread, a tap on the head", reply, keeps: "Hold the four builds", into: &failures) { tapOnPhone(threadTitle) }
         focusForPhoneTyping(reply, in: app)
@@ -90,15 +95,31 @@ extension PhoneJourney {
         close()
         let closed = keyboard.waitForAbsence(timeout: 5)
         let kept = (field.value as? String)?.contains(words) == true
+        // INF-3468, the captain: the pager and the message box "come back when the keyboard gets collapsed".
+        let any = { (id: String) in self.app.descendants(matching: .any).matching(identifier: id).firstMatch }
+        let back = any("phone-composer").waitForPresence(timeout: 5) && any("card-pager").waitForPresence(timeout: 5)
+            && !any("phone-composer-aside").exists
         let line = "KEYBOARD WAY OUT \(situation): keyboard " + (closed ? "closed" : "stayed up") + (kept ? "" : ", words lost")
+            + (back ? "" : ", the pager or message box did not come back")
         print(line)
-        if !closed || !kept { failures.append(line) }
+        if !closed || !kept || !back { failures.append(line) }
     }
 
-    /// A slow pull down, as a thumb pulls, starting on the element and ending well below it.
-    private func pullDown(from element: XCUIElement) {
+    /// INF-3468: while the face's reply types, the face rises so the choices under the field show (the captain's pick),
+    /// and the head it rises past goes under the pane's top edge. A thumb presses the part of the head that still shows,
+    /// so the check presses the element's part below the bar, near its foot: the card's frame reports the risen part
+    /// too, and the pane's top edge sits a little below the bar's foot.
+    private func shownPart(of element: XCUIElement) -> XCUICoordinate {
         waitForSteadyTarget(element)
-        let start = element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let bar = app.navigationBars.firstMatch
+        let frame = element.frame
+        let top = max(frame.minY, bar.exists ? bar.frame.maxY : frame.minY)
+        let y = top < frame.maxY ? frame.maxY - min((frame.maxY - top) / 2, 8) : frame.midY
+        return app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX, dy: y))
+    }
+
+    /// A slow pull down, as a thumb pulls, starting at the point and ending well below it.
+    private func pullDown(from start: XCUICoordinate) {
         start.press(forDuration: 0.1, thenDragTo: start.withOffset(CGVector(dx: 0, dy: 160)), withVelocity: .slow, thenHoldForDuration: 0.1)
     }
 }

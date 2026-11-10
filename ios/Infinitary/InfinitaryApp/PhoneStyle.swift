@@ -14,6 +14,13 @@ enum PhoneColumn {
     UIDevice.current.userInterfaceIdiom == .phone && vertical == .compact
 }
 
+/// INF-3468, the captain: "have a little margin between the focused textbox and the bottom edge of the card".
+enum PhoneTyping {
+    /// The room under a card's text box that holds the keyboard: 16 points, the same as the box's inset from the card's
+    /// sides (the captain's pick).
+    static let margin = PhoneTheme.space4
+}
+
 /// The app's own field, as the Mac draws its input: the panel fill, a hairline and the control radius.
 struct PhoneFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {

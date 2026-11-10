@@ -48,7 +48,9 @@ struct PhoneCards: View {
             // INF-589 item 11: with no card to page, the pager hides. INF-1517: cards put aside wait in Tasks, as on the Mac.
             // INF-2095: the pager shows once its menu holds the stack, so it never draws a count its menu lacks.
             // INF-2568: on a phone on its side the keyboard leaves about two lines of room, which the field typed in needs.
-            if !session.stack.isEmpty && !pagerMenu.items.isEmpty && !(phoneOnItsSide(verticalSize) && messageContext.keyboardUp) { pager }
+            // INF-3468: on any device, while a text box in the card holds the keyboard, the pager steps aside for the card.
+            if !session.stack.isEmpty && !pagerMenu.items.isEmpty
+                && !(messageContext.keyboardUp && (phoneOnItsSide(verticalSize) || messageContext.replyFocused)) { pager }
         }
         // INF-3110, the captain's "widen the card only": the card takes the stage's whole width less its gutters on any width,
         // so a card beside it shows the same 8-point edge on an iPad as on an iPhone; the message box keeps the column.
@@ -506,6 +508,12 @@ private struct PhoneCardPane: View {
     /// Counts the moments the face's scroller follows its focused field's caret: the field taking the focus or growing,
     /// and the keyboard shortening the scroller.
     @State private var replyGrew = 0
+    /// INF-3468: where the face's field sits in the card's scrolled content, its height, and the room the scroller shows,
+    /// which say where the field comes to rest while it types in a card whose whole frame scrolls.
+    @State private var replyInContent: CGRect?
+    @State private var replyHeight: CGFloat = 0
+    @State private var scrollRoom: CGFloat = 0
+    @State private var scrollFrame: CGFloat = 0
     /// A scroller on the card is moving: dragged, settling from a drag, or following the caret.
     @State private var scrollMoving = false
 
@@ -686,7 +694,22 @@ private struct PhoneCardPane: View {
     private var turnAngle: Double { flipped ? 180 : 0 }
 
     private static let paneSpace = "card-pane"
-    private static let replyAnchor = "card-reply-row"
+    /// INF-3468: the face's field with the margin under it, and the foot of the card's scrolled content.
+    private static let replyRest = "card-reply-rest"
+    private static let contentEnd = "card-content-end"
+    private static let contentSpace = "card-content"
+    /// INF-3468, the captain's pick: a typing reply comes to rest with the card's choices showing under it where the
+    /// field, the choices and the card's foot fit in the room; otherwise with the margin under it.
+    private var typingOverflows: Bool {
+        ((replyFocus == .face && !pinsFrame) || messageContext.composerAside) && contentHeight > scrollFrame + 0.5
+            && scrollFrame > 0
+    }
+
+    private var restsWithChoices: Bool {
+        guard let field = replyInContent, scrollRoom > 0 else { return false }
+        let end = contentHeight - (typingOverflows ? PhoneTyping.margin : 0)
+        return end - field.minY <= scrollRoom && end - field.maxY >= PhoneTyping.margin
+    }
 
     /// INF-2568: how far the face rises in its pane while its pinned reply types and the card stands taller than the room
     /// the keyboard leaves. It rises as far as shows the card's foot, the choices under the field, but never so far that
@@ -696,7 +719,8 @@ private struct PhoneCardPane: View {
         guard replyFocus == .face, pinsFrame, paneHeight > 0, let field = faceReplyFrame else { return 0 }
         let overflow = surfaceHeight - paneHeight
         guard overflow > 0 else { return 0 }
-        return min(max(min(overflow, field.minY), field.maxY - paneHeight, 0), overflow)
+        // INF-3468: where the choices do not show, the field keeps the margin above the card's foot.
+        return min(max(min(overflow, field.minY), field.maxY + PhoneTyping.margin - paneHeight, 0), overflow)
     }
 
     private func followCaret() { if replyFocus == .face { replyGrew += 1 } }
@@ -746,7 +770,14 @@ private struct PhoneCardPane: View {
                         content.padding([.horizontal], PhoneTheme.space4).padding(.bottom, PhoneTheme.space4)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         if hasFoot && !pinsFrame { measuredFoot }
+                        Color.clear.frame(height: 0).id(Self.contentEnd)
+                        // INF-3468: the reply, or a text box at the body's foot, sits a little less than the margin above
+                        // the end of the card's content, so while a card's box types in a card that runs past its scroller,
+                        // the content runs the margin further and the box can rest with the margin under it. A card that
+                        // shows whole keeps still, its head in view.
+                        if typingOverflows { Color.clear.frame(height: PhoneTyping.margin).allowsHitTesting(false) }
                     }
+                    .coordinateSpace(.named(Self.contentSpace))
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
                 }
                 .frame(maxHeight: contentHeight > 0 ? contentHeight : nil)
@@ -761,9 +792,17 @@ private struct PhoneCardPane: View {
                 // INF-2568: SwiftUI scrolls a field into view as it takes the focus, but only its top line, and not as it
                 // grows or as the keyboard shortens the scroller, so a reply inside the scroller keeps its foot, where the
                 // caret types, in view.
-                .onScrollGeometryChange(for: CGFloat.self) { $0.containerSize.height } action: { _, _ in followCaret() }
+                // The room is what shows: the scroller runs under the top bar, which its insets leave out.
+                .onScrollGeometryChange(for: [CGFloat].self) { geometry in
+                    [geometry.containerSize.height, geometry.contentInsets.top]
+                } action: { _, frame in
+                    scrollFrame = frame[0]; scrollRoom = frame[0] - frame[1]; followCaret()
+                }
                 .onChange(of: replyFocus) { followCaret() }
-                .onChange(of: replyGrew) { if !pinsFrame { scroller.scrollTo(Self.replyAnchor, anchor: .bottom) } }
+                // INF-3468: the field comes to rest with the choices under it, or with the margin under it.
+                .onChange(of: replyGrew) {
+                    if !pinsFrame { scroller.scrollTo(restsWithChoices ? Self.contentEnd : Self.replyRest, anchor: .bottom) }
+                }
             }
             if hasFoot && pinsFrame { measuredFoot }
         }
@@ -1024,11 +1063,18 @@ private struct PhoneCardPane: View {
             // INF-2565: a pane built again while its back shows starts turned, and its latest line gives way as the field does.
             if !messages.isEmpty { latestLine.modifier(PhoneFaceOnly(angle: turnAngle)) }
             if takesReply {
-                replyField(.face).modifier(PhoneFaceOnly(angle: turnAngle)).id(Self.replyAnchor)
+                replyField(.face).modifier(PhoneFaceOnly(angle: turnAngle))
+                    // INF-3468: the field and the margin under it, the place a typing field in a scrolling card rests.
+                    .background(alignment: .top) {
+                        Color.clear.frame(height: replyHeight + PhoneTyping.margin).allowsHitTesting(false).id(Self.replyRest)
+                    }
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.paneSpace)) } action: { frame in
                         if pinsFrame { faceReplyFrame = frame }
                     }
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { _ in followCaret() }
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.contentSpace)) } action: { frame in
+                        if !pinsFrame { replyInContent = frame }
+                    }
+                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in replyHeight = height; followCaret() }
             }
             if card.isPast, let words = sentWords {
                 Text("\(PhoneCardWords.sentWithChoice) \(words)").font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary)

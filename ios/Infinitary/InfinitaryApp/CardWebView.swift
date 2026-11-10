@@ -85,6 +85,9 @@ import SwiftUI
         // INF-3110: the body's own sideways controls, read in a world of their own, which the row's swipe leaves alone.
         configuration.userContentController.addUserScript(CardClaims.script)
         configuration.userContentController.add(CardClaimsReader(), contentWorld: CardClaims.world, name: CardClaims.handler)
+        // INF-3468: where the body's focused text box sits, so the card keeps a margin under the whole box as it types.
+        configuration.userContentController.addUserScript(CardFocus.script)
+        configuration.userContentController.add(CardFocusReader(), contentWorld: CardFocus.world, name: CardFocus.handler)
         let view = CardBodyView(frame: .zero, configuration: configuration)
         view.onLayout = { [weak self] in self?.revealIfShown() }
         view.onTyping = { [weak self] typing in self?.typing = typing }
@@ -151,6 +154,7 @@ import SwiftUI
         onReading = nil; onDrawn = nil; onLink = nil; onDraft = nil; onTask = nil
         view?.configuration.userContentController.removeScriptMessageHandler(forName: "cardHost", contentWorld: .page)
         view?.configuration.userContentController.removeScriptMessageHandler(forName: CardClaims.handler, contentWorld: CardClaims.world)
+        view?.configuration.userContentController.removeScriptMessageHandler(forName: CardFocus.handler, contentWorld: CardFocus.world)
         assets?.cancel(); assets = nil
         view?.stopLoading(); view?.navigationDelegate = nil; view?.uiDelegate = nil; view = nil
     }
@@ -347,6 +351,10 @@ final class CardBodyView: WKWebView {
     /// where the card's scroller draws it; and nothing moved the card's scroller to the field. The web view's page now
     /// stays at its top, and the card's scroller brings the caret's line, with room around it, into the room it shows.
     private var offsetWatch: NSKeyValueObservation?
+    /// INF-3468: the card's content runs the margin further once the keyboard has made it overflow, after the first
+    /// reveal ran, so a grown content size reveals the typing box again.
+    private var contentWatch: NSKeyValueObservation?
+    private weak var watchedScroller: UIScrollView?
     private var keyboardWatch: [NSObjectProtocol] = []
     private var revealQueued = false
     private func watchTyping(_ on: Bool) {
@@ -399,6 +407,11 @@ final class CardBodyView: WKWebView {
     /// The keyboard's last frame on the screen, its accessory bar included: on an iPhone, WebKit's own bar with a form's
     /// previous, next and Done stands above the keys, and the card's scroller does not count it as the keyboard's.
     private var keyboardFrame: CGRect?
+    /// INF-3468: the body's focused text box, in the view's points, as its frame last reported it; nil while none has
+    /// the focus.
+    var focusedBox: CGRect? {
+        didSet { if focusedBox != oldValue && typing { queueReveal() } }
+    }
     private func revealTyping() {
         guard let window, let typing = firstResponder(in: self) as? UITextInput,
               let range = typing.selectedTextRange, let scroller = enclosingScroller() else { return }
@@ -414,11 +427,28 @@ final class CardBodyView: WKWebView {
             if keys.minY < window.bounds.maxY - 1 { foot = min(foot, keys.minY) }
         }
         top = max(top, window.bounds.minY)
-        // The field's own padding and edge lie around its caret's line; where the room is short, the line comes first.
-        let margin = min(PhoneTheme.space4, max(0, (foot - top - line.height) / 2))
         var move: CGFloat = 0
-        if line.maxY + margin > foot { move = line.maxY + margin - foot }
-        if line.minY - margin - move < top { move = line.minY - margin - top }
+        // INF-3468, the captain: "have a little margin between the focused textbox and the bottom edge of the card". The
+        // whole box comes into view with the margin under it, when the box holds the caret and fits with its margin.
+        let box = focusedBox.map { convert($0, to: window) }
+        if let box, box.minY - 1 <= line.midY, line.midY <= box.maxY + 1, box.height + PhoneTyping.margin <= foot - top {
+            if box.maxY + PhoneTyping.margin > foot { move = box.maxY + PhoneTyping.margin - foot }
+            if box.minY - move < top { move = box.minY - top }
+        } else {
+            // The field's own padding and edge lie around its caret's line; where the room is short, the line comes first.
+            let margin = min(PhoneTheme.space4, max(0, (foot - top - line.height) / 2))
+            if line.maxY + margin > foot { move = line.maxY + margin - foot }
+            if line.minY - margin - move < top { move = line.minY - margin - top }
+        }
+        if watchedScroller !== scroller {
+            watchedScroller = scroller
+            contentWatch = scroller.observe(\.contentSize, options: [.old, .new]) { [weak self] _, change in
+                MainActor.assumeIsolated {
+                    guard let self, self.typing, change.oldValue != change.newValue else { return }
+                    self.queueReveal()
+                }
+            }
+        }
         guard abs(move) > 0.5 else { return }
         let lowest = max(-inset.top, scroller.contentSize.height + inset.bottom - scroller.bounds.height)
         let y = min(max(scroller.contentOffset.y + move, -inset.top), lowest)
@@ -467,6 +497,56 @@ struct CardWebView: UIViewRepresentable {
     static func dismantleUIView(_ slot: CardWebSlot, coordinator: ()) {
         for view in slot.subviews { view.removeFromSuperview() }
         if !slot.host.kept { slot.host.close() }
+    }
+}
+
+/// INF-3468: the body's focused text box, read in a content world of its own from every frame of the card's page, as
+/// `CardClaims` reads its sideways controls, invisible to the body's own scripts. A box is an input that takes typed
+/// words, a text area or an editable element; anything else that holds the focus reports none.
+@MainActor enum CardFocus {
+    static let world = WKContentWorld.world(name: "card-focus")
+    static let handler = "cardFocus"
+
+    static let script = WKUserScript(source: """
+    (() => {
+      if (window === window.top) return;
+      const unTyped = new Set(["button", "checkbox", "color", "file", "hidden", "image", "radio", "range", "reset", "submit"]);
+      const typed = (element) => !!element && (element.localName === "textarea" || element.isContentEditable
+        || (element.localName === "input" && !unTyped.has(element.type)));
+      let queued = false, last = "";
+      const measure = () => {
+        queued = false;
+        const element = document.activeElement;
+        let box = null;
+        if (typed(element)) {
+          const rect = element.getBoundingClientRect();
+          // Rounded outward, so the box's reported foot is never above the edge the screen draws, which the margin is under.
+          if (rect.width > 0 && rect.height > 0) {
+            const left = Math.floor(rect.left), top = Math.floor(rect.top);
+            box = [left, top, Math.ceil(rect.right) - left, Math.ceil(rect.bottom) - top];
+          }
+        }
+        const said = JSON.stringify(box);
+        if (said === last) return;
+        last = said;
+        try { window.webkit.messageHandlers.\(handler).postMessage(box ?? []); } catch {}
+      };
+      const queue = () => { if (!queued) { queued = true; requestAnimationFrame(measure); } };
+      addEventListener("focusin", queue, true);
+      addEventListener("focusout", queue, true);
+      addEventListener("input", queue, true);
+      new ResizeObserver(queue).observe(document.documentElement);
+    })();
+    """, injectionTime: .atDocumentEnd, forMainFrameOnly: false, in: world)
+}
+
+/// Keeps the focused box a card's body frame reported on its view; only a child frame's report counts.
+@MainActor final class CardFocusReader: NSObject, WKScriptMessageHandler {
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard !message.frameInfo.isMainFrame, let body = message.webView as? CardBodyView,
+              let box = message.body as? [NSNumber] else { return }
+        body.focusedBox = box.count == 4
+            ? CGRect(x: box[0].doubleValue, y: box[1].doubleValue, width: box[2].doubleValue, height: box[3].doubleValue) : nil
     }
 }
 

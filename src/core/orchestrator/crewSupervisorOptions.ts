@@ -138,15 +138,18 @@ export type AccountAttachment = {
     taskId: string,
     piProviderId: string,
     crew?: { model: string },
-  ): string | undefined;
+  ): string | undefined | Promise<string | undefined>;
   reselectForResume(
     taskId: string,
     accountId: string | null,
-  ): { accountId?: string; changed: boolean };
+  ): { accountId?: string; changed: boolean } | Promise<{ accountId?: string; changed: boolean }>;
   labelOf(accountId: string): string | undefined;
 };
 
 export type CrewSupervisorOptions = {
+  taskSelection?: (
+    input: import("../storage/taskSelection").TaskSelectionInput,
+  ) => Promise<import("../storage/taskSelection").TaskSelection>;
   automaticPlacement?: AutomaticPlacement;
   /**
    * Starts the process a program's script runs in (docs/programs.md).

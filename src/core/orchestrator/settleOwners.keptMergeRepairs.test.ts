@@ -40,8 +40,14 @@ import {
   repairTurn,
 } from "../../../tests/helpers/crewHarnessGit";
 import { deferred } from "../../../tests/helpers/deferred";
+import { AT, CODEX, row, snapshot } from "../../../tests/helpers/placedWorkRecord";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { ForgePull } from "../forge";
+import { buildModelsCatalog } from "../quota/catalog";
+import type { QuotaService } from "../quota/quotaService";
+import { type PreparedRouteOptions, Router } from "../routing/router";
+import { DecisionStore } from "../storage/decisionStore";
+import { SettingsStore } from "../storage/settingsStore";
 import { seedTask } from "../tasks/seedTask";
 import { CardChoiceUnavailableError } from "./cardActions";
 import type { PrOutcome } from "./changeMerge";
@@ -745,6 +751,50 @@ describe("CrewSupervisor", () => {
       await vi.waitFor(() => expect(harness.reviewer.promptCalls).toHaveLength(1));
       return { ...harness, assessorId };
     }
+
+    // Regression: repeated preflight must not mistake asynchronous preparation for a failed assessment.
+    it("preserves one reserved assessment while placement is preparing", async () => {
+      let router: Router | undefined;
+      const h = await kept({
+        realRouter: (db) => {
+          const rows = [row("codex", "home-codex", 84)];
+          router = new Router({
+            decisions: new DecisionStore(db),
+            settings: new SettingsStore(db),
+            quota: {
+              latestModels: () => buildModelsCatalog([CODEX], rows, new Date(AT).toISOString(), AT),
+              latest: () => snapshot(AT, rows),
+            } as QuotaService,
+            availableModels: () => [CODEX],
+          });
+          return router;
+        },
+      });
+      if (!router) throw new Error("assessment needs its real routing owner");
+      const ready = deferred<PreparedRouteOptions>();
+      const preparing = vi.spyOn(router, "prepare").mockReturnValue(ready.promise);
+      await repairTurn(h, async () => {
+        h.forge.headSha = REPAIRED;
+        await h.declare(repair("unknown"));
+      });
+      await vi.waitFor(() => expect(preparing).toHaveBeenCalledTimes(1));
+      const assessorId = h.authorization()?.undecided?.assessment?.taskId;
+      if (!assessorId) throw new Error("repair assessment was not reserved");
+      expect(h.tasks.get(assessorId)).toBeUndefined();
+      await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
+      expect(preparing).toHaveBeenCalledTimes(1);
+      expect(h.authorization()).toMatchObject({
+        status: "standing",
+        undecided: { assessment: { taskId: assessorId } },
+      });
+      ready.resolve({ placed: { work: [], samples: [], charges: {} } });
+      await vi.waitFor(() =>
+        expect(h.tasks.get(assessorId)).toMatchObject({ parentId: h.taskId, status: "active" }),
+      );
+      expect(h.authorization()?.status).toBe("standing");
+      expect(h.forge.merges).toEqual([]);
+      await h.supervisor.disposeAll();
+    });
 
     it("files one independent assessment of an unknown repair under the builder, and merges once it finds the work kept", async () => {
       const harness = await assessed();

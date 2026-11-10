@@ -182,8 +182,17 @@ export class HostOps {
           from,
           ...(offered.length > 0 ? { offered: offered.join(":") } : {}),
         });
-        if (!moved.ok)
-          this.core.options.broadcastEvent({ type: "firstmate_note", text: moved.text, taskId });
+        const answered = (answer: { ok: boolean; text: string }) => {
+          if (!answer.ok)
+            this.core.options.broadcastEvent({ type: "firstmate_note", text: answer.text, taskId });
+        };
+        void moved.then(answered).catch((error) => {
+          this.core.options.broadcastEvent({
+            type: "firstmate_note",
+            text: `The task could not move: ${error instanceof Error ? error.message : String(error)}`,
+            taskId,
+          });
+        });
         return {};
       }
       case "continue-task":

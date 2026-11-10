@@ -56,14 +56,31 @@ type Sample = { provider: string; model: string; level: string; cost: number };
  * against, read once: the finished read is the slow one, and reading it
  * again per account of every model froze the main process (INF-2056).
  */
-export type PlacedWorkData = { work: Work[]; samples: Sample[] };
+export type PlacedWorkData = {
+  work: Work[];
+  samples: Sample[];
+  /** Already evaluated in the record process; no history crosses to main. */
+  charges?: Record<string, PlacedCharge | null>;
+  /** The readings this prepared charge belongs to; retained locally by the caller. */
+  readings?: QuotaProviderView[];
+};
+export function placedReadingKey(row: QuotaProviderView): string {
+  return JSON.stringify(row);
+}
+export type PlacedWorkRead = {
+  rows: QuotaProviderView[];
+  now: number;
+  observations: { source: string; snapshot: QuotaSnapshotView }[];
+  prices: Record<string, number>;
+};
+export type PlacedWorkAnswer = { data: PlacedWorkData; prices: Record<string, number> };
 
 type UsageTotals = { logged: number | null; metered: number | null };
 type PlacedCharge = Omit<ChargeFact, "baseSpendPriority">;
 type Evaluation = {
   readings: Reading[];
   prices: ReturnType<SettingsStore["getAllowancePrices"]>;
-  charges: WeakMap<QuotaProviderView, PlacedCharge | undefined>;
+  charges: Map<string, PlacedCharge | undefined>;
   usage: Map<number, Map<string, UsageTotals>>;
   expected: Map<string, number | undefined>;
 };
@@ -74,9 +91,11 @@ export class PlacedWorkScores {
   private readonly cycles = new Map<string, Cycle>();
   /** The work snapshot owns these reads, never a later routing evaluation. */
   private readonly evaluations = new WeakMap<PlacedWorkData, Evaluation>();
+  private readonly observations = new Map<string, QuotaSnapshotView>();
   constructor(
     private readonly db: AppDatabase,
-    private readonly settings: SettingsStore,
+    private readonly settings: Pick<SettingsStore, "getAllowancePrices" | "setAllowancePrices">,
+    private readonly background?: (input: PlacedWorkRead) => Promise<PlacedWorkAnswer>,
   ) {}
 
   private login(row: QuotaProviderView): string {
@@ -90,6 +109,13 @@ export class PlacedWorkScores {
   }
 
   observe(source: string, snapshot: QuotaSnapshotView): void {
+    if (this.background) {
+      this.observations.set(source, snapshot);
+      void this.prepare([]).catch((error) =>
+        console.warn("[routing] a quota reading could not be scored:", error),
+      );
+      return;
+    }
     for (const row of snapshot.providers) {
       if (!row.accountId || row.status !== "ok" || row.stale) continue;
       const at = row.measuredAt ?? snapshot.fetchedAt;
@@ -192,7 +218,42 @@ export class PlacedWorkScores {
 
   /** The work to score against at `now`; one evaluation reads it once. */
   data(now: number): PlacedWorkData {
+    if (this.background) throw new Error("placed work must be prepared off-thread");
     return { work: this.work(), samples: this.finished(now) };
+  }
+
+  /** Concurrent callers are batched by the record reader, with no main-thread SQL. */
+  async prepare(rows: QuotaProviderView[], now = Date.now()): Promise<PlacedWorkData> {
+    if (!this.background) return this.data(now);
+    const observations = [...this.observations].map(([source, snapshot]) => ({ source, snapshot }));
+    const prices = this.settings.getAllowancePrices();
+    let answer: PlacedWorkAnswer;
+    try {
+      answer = await this.background({
+        rows,
+        now,
+        observations,
+        prices,
+      });
+    } catch (error) {
+      // A charge is optional; a failed reader must not stop work or read history here.
+      console.warn("[routing] placed-work adjustment unavailable:", error);
+      return { work: [], samples: [], charges: {}, readings: rows };
+    }
+    if (JSON.stringify(answer.prices) !== JSON.stringify(this.settings.getAllowancePrices()))
+      this.settings.setAllowancePrices(answer.prices);
+    return { ...answer.data, readings: rows };
+  }
+
+  /** Score all requested readings against the same batch's work, inside the reader. */
+  preparedCharges(rows: QuotaProviderView[], data: PlacedWorkData): PlacedWorkData {
+    return {
+      work: [],
+      samples: [],
+      charges: Object.fromEntries(
+        rows.map((row) => [placedReadingKey(row), this.charge(row, data) ?? null]),
+      ),
+    };
   }
 
   private expected(work: Work, samples: Sample[], logged: number): number | undefined {
@@ -214,8 +275,8 @@ export class PlacedWorkScores {
   score(
     row: QuotaProviderView,
     now: number,
-    model?: string,
-    data: PlacedWorkData = this.data(now),
+    model: string | undefined,
+    data: PlacedWorkData,
   ): {
     spendPriority?: number;
     lastsThroughReset?: boolean;
@@ -262,24 +323,26 @@ export class PlacedWorkScores {
    * allowance and time-to-reset calculations still run in score.
    */
   private charge(row: QuotaProviderView, data: PlacedWorkData): PlacedCharge | undefined {
+    const key = placedReadingKey(row);
+    if (data.charges) return data.charges[key] ?? undefined;
     let evaluation = this.evaluations.get(data);
     if (!evaluation) {
       evaluation = {
         readings: [...this.readings.values()],
         prices: this.settings.getAllowancePrices(),
-        charges: new WeakMap(),
+        charges: new Map(),
         usage: new Map(),
         expected: new Map(),
       };
       this.evaluations.set(data, evaluation);
     }
-    if (evaluation.charges.has(row)) return evaluation.charges.get(row);
+    if (evaluation.charges.has(key)) return evaluation.charges.get(key);
     const { readings, prices } = evaluation;
     const reading =
       readings.find((r) => r.row.accountId === row.accountId && r.at === row.measuredAt) ??
       readings.find((r) => r.row.accountId === row.accountId);
     if (!reading || !row.accountId) {
-      evaluation.charges.set(row, undefined);
+      evaluation.charges.set(key, undefined);
       return undefined;
     }
     const login = this.login(row);
@@ -342,7 +405,7 @@ export class PlacedWorkScores {
       measuredAt: reading.at,
       windows,
     };
-    evaluation.charges.set(row, charge);
+    evaluation.charges.set(key, charge);
     return charge;
   }
 
@@ -357,9 +420,9 @@ export class PlacedWorkScores {
     catalog: CatalogModelView[],
     rows: QuotaProviderView[],
     now: number,
-    bound?: (model: CatalogModelView, data: PlacedWorkData) => string | undefined,
+    bound: ((model: CatalogModelView, data: PlacedWorkData) => string | undefined) | undefined,
+    data: PlacedWorkData,
   ): RankedModel[] {
-    const data = this.data(now);
     return catalog.map((model) => {
       const candidates = rows
         .filter((row) => row.provider === model.provider)

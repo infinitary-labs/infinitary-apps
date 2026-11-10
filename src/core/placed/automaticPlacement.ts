@@ -177,26 +177,33 @@ export class AutomaticPlacement {
       // Routing was disabled after commitment: its existing default owner takes
       // the turn, but neither the computer nor preparation order moves.
       if (!this.options.router.dynamicEnabled()) return { computerId: id };
-      const preview = this.options.router.preview(
-        prompt,
-        shape,
-        facts.pool ? { pool: facts.pool } : {},
-      );
-      // Only the home starts on its runtime default when routing names no model.
-      if (
-        !preview ||
-        (!preview.result.choice && id !== null) ||
-        (preview.requiresReasoningWait && !options.ignoreAsk)
-      )
-        return undefined;
-      const choice = preview.result.choice;
-      return {
-        computerId: id,
-        routed: this.options.router.commit(record.id, preview),
-        ...(choice
-          ? { accountId: facts.pool?.modelAccounts.get(`${choice.provider}/${choice.id}`) }
-          : {}),
-      };
+      return this.options.router.inOrder(async () => {
+        const prepared = await this.options.router.prepare(facts.pool ? { pool: facts.pool } : {});
+        if (
+          !this.stillCurrent(record, repo) ||
+          this.now() - facts.started > PLACEMENT_FACT_MAX_AGE_MS ||
+          (id &&
+            (!this.options.work.inReach(id) ||
+              facts.generation !== (this.generations.get(id) ?? 0)))
+        )
+          return undefined;
+        const preview = this.options.router.preview(prompt, shape, prepared);
+        // Only the home starts on its runtime default when routing names no model.
+        if (
+          !preview ||
+          (!preview.result.choice && id !== null) ||
+          (preview.requiresReasoningWait && !options.ignoreAsk)
+        )
+          return undefined;
+        const choice = preview.result.choice;
+        return {
+          computerId: id,
+          routed: this.options.router.commit(record.id, preview),
+          ...(choice
+            ? { accountId: facts.pool?.modelAccounts.get(`${choice.provider}/${choice.id}`) }
+            : {}),
+        };
+      });
     }
     const home = this.options.home?.() ?? thisDeviceSystem();
     const requirements = resolvePlacementRequirements({
@@ -242,219 +249,230 @@ export class AutomaticPlacement {
         return undefined;
     }
     if (!this.stillCurrent(record, repo)) return undefined;
-    let now = this.now();
-    const live = this.options.resources.snapshot();
-    this.reconcile();
-    const candidates: PlacementCandidate[] = computers.map((computer, index) => {
-      const read = facts[index];
-      const valid =
-        read &&
-        now >= read.started &&
-        now - read.started <= PLACEMENT_FACT_MAX_AGE_MS &&
-        (computer.computerId === null ||
-          (this.options.work.inReach(computer.computerId) &&
-            read.generation === (this.generations.get(computer.computerId) ?? 0)));
-      const model =
-        valid && (computer.computerId === null || read.pool)
-          ? (this.options.router.preview(prompt, shape, read.pool ? { pool: read.pool } : {}) ??
-            null)
-          : null;
-      // An explicit start_now already owns acceptance of the existing fallback.
-      if (model && options.ignoreAsk) model.requiresReasoningWait = false;
-      return {
-        computerId: computer.computerId,
-        inReach: computer.computerId === null || this.options.work.inReach(computer.computerId),
-        ...(computer.computerId !== null &&
-        this.options.takesNoWorkUntilUpdated?.(computer.computerId)
-          ? { olderFirstmate: true }
-          : {}),
-        ...(computer.computerId !== null && this.options.reachOf
-          ? { reach: this.options.reachOf(computer.computerId) }
-          : {}),
-        workEnabled: true,
-        ...(valid ? { system: read.facts.system, chip: read.facts.chip } : {}),
-        physicalComputerId: valid ? read.facts.physicalComputerId : null,
-        tools: valid ? read.facts.tools : {},
-        projectAccess: valid ? read.facts.projectAccess : "unknown",
-        resources: live.computers.find((row) => row.computerId === computer.computerId)
-          ?.reading ?? { status: "unknown", reason: "missing" },
-        model,
-        // The home starts a task with no routed model on its runtime default;
-        // a computer that runs work refuses one (`CrewStarts.startTask`).
-        runtimeDefault: computer.computerId === null,
-      };
-    });
-    let routed: RouteResult | undefined;
-    let wait: AutomaticWait | undefined;
-    let onDefault: { computerId: string | null; name: string } | undefined;
-    let leftOut: NamedLeftOut[] = [];
-    const committed = this.options.tasks.placement.commitPlacement(record.id, (pending) => {
-      now = this.now();
-      const atCommit = this.options.resources.snapshot();
-      for (const [index, candidate] of candidates.entries()) {
-        candidate.resources = atCommit.computers.find(
-          (row) => row.computerId === candidate.computerId,
-        )?.reading ?? { status: "unknown", reason: "missing" };
+    return this.options.router.inOrder(async () => {
+      const routingOptions = await Promise.all(
+        facts.map((read) => this.options.router.prepare(read?.pool ? { pool: read.pool } : {})),
+      );
+      if (!this.stillCurrent(record, repo)) return undefined;
+      let now = this.now();
+      const live = this.options.resources.snapshot();
+      this.reconcile();
+      const candidates: PlacementCandidate[] = computers.map((computer, index) => {
         const read = facts[index];
-        if (!read || now < read.started || now - read.started > PLACEMENT_FACT_MAX_AGE_MS) {
-          candidate.physicalComputerId = null;
-          candidate.projectAccess = "unknown";
-          candidate.model = null;
-        }
-      }
-      // Read the direct relationship and CURRENT execution inside the synchronous
-      // commitment, after all asynchronous facts. A null device is home only
-      // once execution is recorded; an unstarted answer supplies no locality.
-      const current = this.options.tasks.get(record.id);
-      const relation = current && !existing ? this.options.tasks.graph.basisOf(current) : null;
-      const basis = relation?.verified ? this.options.tasks.resolve(relation.ref) : undefined;
-      const basisComputer =
-        basis && basis.startedAt !== null ? { computerId: basis.deviceId ?? null } : undefined;
-      const decision = evaluatePlacement({
-        requirements,
-        candidates,
-        ...(basisComputer ? { basisComputer } : {}),
-        reservations: pending.flatMap((task) =>
-          task.placement
-            ? [
-                {
-                  orderId: task.placement.snapshot.orderId,
-                  physicalComputerId: task.placement.snapshot.physicalComputerId,
-                  demand: task.placement.snapshot.demand,
-                },
-              ]
-            : [],
-        ),
-        ...(existing ? { boundComputer: { computerId: existing.snapshot.computerId } } : {}),
+        const valid =
+          read &&
+          now >= read.started &&
+          now - read.started <= PLACEMENT_FACT_MAX_AGE_MS &&
+          (computer.computerId === null ||
+            (this.options.work.inReach(computer.computerId) &&
+              read.generation === (this.generations.get(computer.computerId) ?? 0)));
+        const prepared = routingOptions[index];
+        const model =
+          valid && prepared && (computer.computerId === null || read.pool)
+            ? (this.options.router.preview(prompt, shape, prepared) ?? null)
+            : null;
+        // An explicit start_now already owns acceptance of the existing fallback.
+        if (model && options.ignoreAsk) model.requiresReasoningWait = false;
+        return {
+          computerId: computer.computerId,
+          inReach: computer.computerId === null || this.options.work.inReach(computer.computerId),
+          ...(computer.computerId !== null &&
+          this.options.takesNoWorkUntilUpdated?.(computer.computerId)
+            ? { olderFirstmate: true }
+            : {}),
+          ...(computer.computerId !== null && this.options.reachOf
+            ? { reach: this.options.reachOf(computer.computerId) }
+            : {}),
+          workEnabled: true,
+          ...(valid ? { system: read.facts.system, chip: read.facts.chip } : {}),
+          physicalComputerId: valid ? read.facts.physicalComputerId : null,
+          tools: valid ? read.facts.tools : {},
+          projectAccess: valid ? read.facts.projectAccess : "unknown",
+          resources: live.computers.find((row) => row.computerId === computer.computerId)
+            ?.reading ?? { status: "unknown", reason: "missing" },
+          model,
+          // The home starts a task with no routed model on its runtime default;
+          // a computer that runs work refuses one (`CrewStarts.startTask`).
+          runtimeDefault: computer.computerId === null,
+        };
       });
-      const chosen = decision.chosen;
-      const nameOf = (id: string | null) =>
-        computers.find((row) => row.computerId === id)?.name ?? "The other computer";
-      leftOut = leftOutComputers({
-        project: repo.placementRequirements,
-        requirements,
-        candidates,
-        evaluations: decision.candidates,
-      }).map((left) => ({
-        ...left,
-        name: nameOf(left.computerId),
-        ...(chosen ? { took: nameOf(chosen.computerId) } : {}),
-      }));
-      if (!chosen) {
-        const held = floorHold(decision.candidates);
-        // A fresh reading's system, else the one the computer last said.
-        const unserved = unservedSystems(
-          requirements.systems,
-          computers.map((computer, index) => ({
-            name: computer.name,
-            system: candidates[index]?.system ?? computer.system,
-          })),
-        );
-        wait = {
-          wait: placementWait(
-            decision.candidates.map((row) => ({
+      let routed: RouteResult | undefined;
+      let wait: AutomaticWait | undefined;
+      let onDefault: { computerId: string | null; name: string } | undefined;
+      let leftOut: NamedLeftOut[] = [];
+      const committed = this.options.tasks.placement.commitPlacement(record.id, (pending) => {
+        now = this.now();
+        const atCommit = this.options.resources.snapshot();
+        for (const [index, candidate] of candidates.entries()) {
+          candidate.resources = atCommit.computers.find(
+            (row) => row.computerId === candidate.computerId,
+          )?.reading ?? { status: "unknown", reason: "missing" };
+          const read = facts[index];
+          if (!read || now < read.started || now - read.started > PLACEMENT_FACT_MAX_AGE_MS) {
+            candidate.physicalComputerId = null;
+            candidate.projectAccess = "unknown";
+            candidate.model = null;
+          }
+        }
+        // Read the direct relationship and CURRENT execution inside the synchronous
+        // commitment, after all asynchronous facts. A null device is home only
+        // once execution is recorded; an unstarted answer supplies no locality.
+        const current = this.options.tasks.get(record.id);
+        const relation = current && !existing ? this.options.tasks.graph.basisOf(current) : null;
+        const basis = relation?.verified ? this.options.tasks.resolve(relation.ref) : undefined;
+        const basisComputer =
+          basis && basis.startedAt !== null ? { computerId: basis.deviceId ?? null } : undefined;
+        const decision = evaluatePlacement({
+          requirements,
+          candidates,
+          ...(basisComputer ? { basisComputer } : {}),
+          reservations: pending.flatMap((task) =>
+            task.placement
+              ? [
+                  {
+                    orderId: task.placement.snapshot.orderId,
+                    physicalComputerId: task.placement.snapshot.physicalComputerId,
+                    demand: task.placement.snapshot.demand,
+                  },
+                ]
+              : [],
+          ),
+          ...(existing ? { boundComputer: { computerId: existing.snapshot.computerId } } : {}),
+        });
+        const chosen = decision.chosen;
+        const nameOf = (id: string | null) =>
+          computers.find((row) => row.computerId === id)?.name ?? "The other computer";
+        leftOut = leftOutComputers({
+          project: repo.placementRequirements,
+          requirements,
+          candidates,
+          evaluations: decision.candidates,
+        }).map((left) => ({
+          ...left,
+          name: nameOf(left.computerId),
+          ...(chosen ? { took: nameOf(chosen.computerId) } : {}),
+        }));
+        if (!chosen) {
+          const held = floorHold(decision.candidates);
+          // A fresh reading's system, else the one the computer last said.
+          const unserved = unservedSystems(
+            requirements.systems,
+            computers.map((computer, index) => ({
+              name: computer.name,
+              system: candidates[index]?.system ?? computer.system,
+            })),
+          );
+          wait = {
+            wait: placementWait(
+              decision.candidates.map((row) => ({
+                name: nameOf(row.computerId),
+                rejections: row.rejections,
+                ...(row.reach ? { reach: row.reach } : {}),
+                capacity: row.capacity,
+              })),
+              requirements.demand,
+            ),
+            ...(held ? { held } : {}),
+            ...(unserved ? { unserved } : {}),
+            ...(leftOut.length ? { leftOut } : {}),
+          };
+          return undefined;
+        }
+        routed = this.options.router.commit(record.id, chosen.model);
+        const model = chosen.model.result.choice;
+        // A commitment names its model. The runtime default names none, so that
+        // start takes the existing unrouted start there, the way it would with
+        // routing off, and holds no reservation.
+        if (!model) {
+          onDefault = { computerId: chosen.computerId, name: nameOf(chosen.computerId) };
+          return undefined;
+        }
+        // The chosen candidate is retained even for a fleet exceeding the explanation cap.
+        const rows = [...decision.candidates]
+          .sort(
+            (a, b) =>
+              Number(b.computerId === chosen.computerId) -
+              Number(a.computerId === chosen.computerId),
+          )
+          .slice(0, 64);
+        const snapshot: PlacementSnapshot = {
+          version: 1,
+          at: Date.now(),
+          computerId: chosen.computerId,
+          computerName: nameOf(chosen.computerId),
+          physicalComputerId: chosen.physicalComputerId,
+          orderId: `prepare:${randomUUID()}`,
+          ...(origin ? { origin } : {}),
+          ...(decision.basisPreferred && basis && basisComputer
+            ? {
+                basis: {
+                  taskId: basis.id,
+                  taskKey: basis.key,
+                  computerId: basisComputer.computerId,
+                },
+              }
+            : {}),
+          demand: requirements.demand,
+          model,
+          acceptedFallback: options.ignoreAsk === true,
+          requirements: {
+            systems: requirements.systems,
+            chips: requirements.chips,
+            tools: requirements.tools,
+            profile: requirements.profile,
+            ...(requirements.inherited.length ? { inherited: requirements.inherited } : {}),
+          },
+          candidateCount: decision.candidates.length,
+          candidates: rows.map((row) => {
+            const read =
+              facts[computers.findIndex((computer) => computer.computerId === row.computerId)];
+            const said = candidates.find((each) => each.computerId === row.computerId);
+            return {
+              computerId: row.computerId,
               name: nameOf(row.computerId),
+              physicalComputerId: row.physicalComputerId,
               rejections: row.rejections,
               ...(row.reach ? { reach: row.reach } : {}),
+              missingTools: row.missingTools,
+              ...(said?.system ? { system: said.system } : {}),
+              ...(said?.chip ? { chip: said.chip } : {}),
+              reading: row.resources,
+              factsAgeMs: read ? Math.max(0, now - read.started) : null,
               capacity: row.capacity,
-            })),
-            requirements.demand,
-          ),
-          ...(held ? { held } : {}),
-          ...(unserved ? { unserved } : {}),
+              reserved: row.reserved,
+              remaining: row.remaining,
+              model: row.model?.result.choice ?? null,
+              preferenceRank: Number.isFinite(row.model?.preferenceRank)
+                ? (row.model?.preferenceRank ?? null)
+                : null,
+            };
+          }),
+        };
+        return snapshot;
+      });
+      if (onDefault && routed) {
+        this.options.tasks.note(record.id, placementReason({ computerName: onDefault.name }), {
+          news: true,
+          feed: true,
+        });
+        return {
+          computerId: onDefault.computerId,
+          routed,
           ...(leftOut.length ? { leftOut } : {}),
         };
-        return undefined;
       }
-      routed = this.options.router.commit(record.id, chosen.model);
-      const model = chosen.model.result.choice;
-      // A commitment names its model. The runtime default names none, so that
-      // start takes the existing unrouted start there, the way it would with
-      // routing off, and holds no reservation.
-      if (!model) {
-        onDefault = { computerId: chosen.computerId, name: nameOf(chosen.computerId) };
-        return undefined;
-      }
-      // The chosen candidate is retained even for a fleet exceeding the explanation cap.
-      const rows = [...decision.candidates]
-        .sort(
-          (a, b) =>
-            Number(b.computerId === chosen.computerId) - Number(a.computerId === chosen.computerId),
-        )
-        .slice(0, 64);
-      const snapshot: PlacementSnapshot = {
-        version: 1,
-        at: Date.now(),
-        computerId: chosen.computerId,
-        computerName: nameOf(chosen.computerId),
-        physicalComputerId: chosen.physicalComputerId,
-        orderId: `prepare:${randomUUID()}`,
-        ...(origin ? { origin } : {}),
-        ...(decision.basisPreferred && basis && basisComputer
-          ? {
-              basis: { taskId: basis.id, taskKey: basis.key, computerId: basisComputer.computerId },
-            }
-          : {}),
-        demand: requirements.demand,
-        model,
-        acceptedFallback: options.ignoreAsk === true,
-        requirements: {
-          systems: requirements.systems,
-          chips: requirements.chips,
-          tools: requirements.tools,
-          profile: requirements.profile,
-          ...(requirements.inherited.length ? { inherited: requirements.inherited } : {}),
-        },
-        candidateCount: decision.candidates.length,
-        candidates: rows.map((row) => {
-          const read =
-            facts[computers.findIndex((computer) => computer.computerId === row.computerId)];
-          const said = candidates.find((each) => each.computerId === row.computerId);
-          return {
-            computerId: row.computerId,
-            name: nameOf(row.computerId),
-            physicalComputerId: row.physicalComputerId,
-            rejections: row.rejections,
-            ...(row.reach ? { reach: row.reach } : {}),
-            missingTools: row.missingTools,
-            ...(said?.system ? { system: said.system } : {}),
-            ...(said?.chip ? { chip: said.chip } : {}),
-            reading: row.resources,
-            factsAgeMs: read ? Math.max(0, now - read.started) : null,
-            capacity: row.capacity,
-            reserved: row.reserved,
-            remaining: row.remaining,
-            model: row.model?.result.choice ?? null,
-            preferenceRank: Number.isFinite(row.model?.preferenceRank)
-              ? (row.model?.preferenceRank ?? null)
-              : null,
-          };
-        }),
-      };
-      return snapshot;
-    });
-    if (onDefault && routed) {
-      this.options.tasks.note(record.id, placementReason({ computerName: onDefault.name }), {
-        news: true,
-        feed: true,
-      });
+      if (!committed || !routed) return wait;
+      const pool =
+        facts[computers.findIndex((row) => row.computerId === committed.snapshot.computerId)]?.pool;
       return {
-        computerId: onDefault.computerId,
-        routed,
+        computerId: committed.snapshot.computerId,
+        ...(routed ? { routed } : {}),
         ...(leftOut.length ? { leftOut } : {}),
+        accountId: pool?.modelAccounts.get(
+          `${committed.snapshot.model.provider}/${committed.snapshot.model.id}`,
+        ),
       };
-    }
-    if (!committed || !routed) return wait;
-    const pool =
-      facts[computers.findIndex((row) => row.computerId === committed.snapshot.computerId)]?.pool;
-    return {
-      computerId: committed.snapshot.computerId,
-      ...(routed ? { routed } : {}),
-      ...(leftOut.length ? { leftOut } : {}),
-      accountId: pool?.modelAccounts.get(
-        `${committed.snapshot.model.provider}/${committed.snapshot.model.id}`,
-      ),
-    };
+    });
   }
 
   /** A sample begun after running was confirmed includes demand; never subtract it twice.

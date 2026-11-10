@@ -1,11 +1,13 @@
 import { cpSync, writeFileSync } from "node:fs";
 import { connect as netConnect } from "node:net";
 import { join } from "node:path";
-import { vi } from "vitest";
+import { beforeAll, vi } from "vitest";
 import { startConnection } from "../../src/core/connection/connection";
 import { absentKeychain, type HostCapabilities } from "../../src/core/host";
 import type { Core } from "../../src/core/index";
+import { forkChildProcess } from "../../src/core/sql/forkChildProcess";
 import { claimedPort } from "./claimedPort";
+import { bundleRecordProcess } from "./recordProcessBundle";
 import { scratchDir } from "./scratchDirs";
 
 /**
@@ -16,6 +18,13 @@ import { scratchDir } from "./scratchDirs";
  * seam the core extraction introduced. Each file boots its own core from
  * these parts.
  */
+
+// A booted core has the same separate read process as the desktop host.
+// Bundle its real entry once per file, before a core can start.
+let recordProcessEntry: string;
+beforeAll(async () => {
+  recordProcessEntry = await bundleRecordProcess();
+}, 60_000);
 
 type OpenedUrl = string;
 
@@ -84,6 +93,7 @@ export function fakeHost(
         },
       },
       keychain: absentKeychain,
+      recordProcess: forkChildProcess(recordProcessEntry),
     },
   };
 }

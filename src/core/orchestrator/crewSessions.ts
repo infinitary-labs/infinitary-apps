@@ -577,7 +577,7 @@ export class CrewSessions {
       );
     // A task on a computer that runs work binds that computer's own
     // account again there; no account of this Mac's is chosen for it.
-    const attachment: { accountId?: string; changed: boolean } = move
+    const selecting = move
       ? { ...(move.accountId ? { accountId: move.accountId } : {}), changed: false }
       : machine !== LOCAL_MACHINE_ID
         ? { changed: false }
@@ -587,6 +587,7 @@ export class CrewSessions {
               ...(record.accountId ? { accountId: record.accountId } : {}),
               changed: false,
             });
+    const attachment = selecting instanceof Promise ? await selecting : selecting;
     if (attachment.changed) {
       this.core.options.tasks.placement.setAccountId(record.id, attachment.accountId ?? null);
       const moved = attachment.accountId

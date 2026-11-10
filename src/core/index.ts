@@ -97,6 +97,7 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
       services.personal.dispose();
       // The query process holds a read snapshot while it runs: stop it.
       services.sql.dispose();
+      const records = services.recordReader.dispose();
       services.deviceSignIns.dispose();
       services.automaticPlacement.dispose();
       services.loadLine.dispose();
@@ -113,7 +114,7 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
       services.launchWatch.dispose();
       // Stop the Diagnostics retry and let an event already on the wire finish.
       void services.sharing.close(1_000);
-      return crew;
+      return Promise.all([crew, records]).then(() => undefined);
     },
   };
 }

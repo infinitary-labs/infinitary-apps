@@ -409,7 +409,7 @@ export class CrewStarts {
       // model; the selector picks which account of its provider serves it.
       // A task on a computer that runs work is served by that computer's
       // own account, which its binding names, never one of this Mac's.
-      const accountId =
+      const selectingAccount =
         routedModel && !placed
           ? this.core.options.accounts?.selectForSpawn(taskId, routedModel.provider, {
               model: routedModel.id,
@@ -417,6 +417,8 @@ export class CrewStarts {
           : placed
             ? spec.placementAccount
             : undefined;
+      const accountId =
+        selectingAccount instanceof Promise ? await selectingAccount : selectingAccount;
       if (
         routedModel &&
         !placed &&

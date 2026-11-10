@@ -505,39 +505,41 @@ export class TaskIntake {
       shape,
       builder.deviceId ?? null,
       avoidProvider,
+      (routed) => {
+        // Two asks for the same review at once - the captain's click and the
+        // first mate's spawn - open one review: the second finds the first.
+        const raced = this.host.openReviewOf(builder.id);
+        if (raced) {
+          throw new Error(
+            `${handle} already has a review open: ${raced.key || raced.id} "${raced.title}". Steer it to re-review at the new head instead of spawning another.`,
+          );
+        }
+        this.options.tasks.create({
+          id: taskId,
+          kind: "work",
+          title,
+          prompt: brief,
+          intent,
+          repoId: builder.repoId,
+          difficulty: routed?.bucket ?? tierFor(shape).bucket ?? null,
+          shape,
+          status: "active",
+          // The review is the builder's own delivery machinery: a CHILD of the
+          // builder (the one stored join), host-fenced against re-parenting,
+          // excluded from the children-open close gate, and retired by the
+          // builder's close whatever its direction (`retireDeliveryChildren`).
+          parentId: builder.id,
+          ...(input.priority !== undefined ? { priority: input.priority } : {}),
+        });
+        this.options.tasks.placement.setDevice(taskId, builder.deviceId ?? null);
+        this.options.tasks.delivery.recordChangeEvidence(taskId, {
+          headSha,
+          ...(facts.changeReading ? { reviewChange: facts.changeReading } : {}),
+          ...(passedHead ? { passedHead } : {}),
+          validationAssignment: validationAssignment(builder.delivery?.liveValidation, headSha),
+        });
+      },
     );
-    // Two asks for the same review at once - the captain's click and the
-    // first mate's spawn - open one review: the second finds the first.
-    const raced = this.host.openReviewOf(builder.id);
-    if (raced) {
-      throw new Error(
-        `${handle} already has a review open: ${raced.key || raced.id} "${raced.title}". Steer it to re-review at the new head instead of spawning another.`,
-      );
-    }
-    this.options.tasks.create({
-      id: taskId,
-      kind: "work",
-      title,
-      prompt: brief,
-      intent,
-      repoId: builder.repoId,
-      difficulty: routed?.bucket ?? tierFor(shape).bucket ?? null,
-      shape,
-      status: "active",
-      // The review is the builder's own delivery machinery: a CHILD of the
-      // builder (the one stored join), host-fenced against re-parenting,
-      // excluded from the children-open close gate, and retired by the
-      // builder's close whatever its direction (`retireDeliveryChildren`).
-      parentId: builder.id,
-      ...(input.priority !== undefined ? { priority: input.priority } : {}),
-    });
-    this.options.tasks.placement.setDevice(taskId, builder.deviceId ?? null);
-    this.options.tasks.delivery.recordChangeEvidence(taskId, {
-      headSha,
-      ...(facts.changeReading ? { reviewChange: facts.changeReading } : {}),
-      ...(passedHead ? { passedHead } : {}),
-      validationAssignment: validationAssignment(builder.delivery?.liveValidation, headSha),
-    });
     // No hold: the parent edge is the one join, a child out of the close
     // gate holds nothing, and whether a merge waits for the verdict is the
     // care runbook's guidance, never a host edge (INF-1876).

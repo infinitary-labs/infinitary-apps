@@ -27,6 +27,7 @@ import {
 } from "./taskRecordMigrations";
 import { migrateTaskRecordRetirement } from "./taskRecordProjection";
 import { REPETITION_TABLES } from "./taskRepetitionStore";
+import { registerTaskSearch } from "./taskSelection";
 import {
   createViews,
   dropViews,
@@ -161,6 +162,7 @@ export function openDatabase(userDataDir: string, throughVersion?: number): AppD
   // an advisory cache target, not a preallocation or a bound on the database.
   db.pragma("cache_size = -32768");
   registerViewFunctions(db);
+  registerTaskSearch(db);
   migrate(db, throughVersion);
   // A home that already moved still names the older folder on a task held
   // elsewhere. The rewrite is idempotent, and a folder with no move record
@@ -173,6 +175,7 @@ export function openDatabase(userDataDir: string, throughVersion?: number): AppD
 export function openInMemoryDatabase(throughVersion?: number): AppDatabase {
   const db = new Database(":memory:");
   registerViewFunctions(db);
+  registerTaskSearch(db);
   migrate(db, throughVersion);
   return db;
 }

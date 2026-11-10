@@ -2,7 +2,9 @@ import { AUTOMATIC_COMPUTER } from "@shared/placement";
 import type { QuotaProviderView, QuotaSnapshotView } from "@shared/quota";
 import type { RepoView } from "@shared/repos";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { fakeCrewmate, setup } from "../../../tests/helpers/crewHarness";
 import { freshDatabase } from "../../../tests/helpers/database";
+import { AT, CODEX, FINISHED, GROK, row, snapshot } from "../../../tests/helpers/placedWorkRecord";
 import { AutomaticPlacement } from "../placed/automaticPlacement";
 import { ComputerResourceFeed } from "../placed/computerResourceFeed";
 import { ComputerResources } from "../placed/computerResources";
@@ -18,41 +20,7 @@ import { AccountSelector } from "./accountRouter";
 import { PlacedWorkScores } from "./placedWork";
 import { Router } from "./router";
 
-// INF-443 acceptance, using INF-438's recorded 19%/84% readings, reset instants,
-// $289.61 + $0.60 usage and the 24 finished-task costs reconstructed from its
-// published scatter plot (0.1 pixel precision, not claimed as original ledger rows).
-const AT = Date.parse("2026-10-18T18:07:00Z");
-const FINISHED = [
-  4.95, 8.37, 9, 10.17, 10.56, 14.22, 14.27, 17.83, 21.78, 22.9, 23.49, 23.68, 24.2, 24.34, 24.68,
-  29.22, 36.95, 45.8, 57.39, 58.34, 73.29, 100.63, 101.56, 126.02,
-];
-const GROK = { provider: "xai", id: "grok-4.7", name: "Grok" };
-const CODEX = { provider: "openai-codex", id: "gpt-6-sol", name: "Codex" };
-function row(provider = "grok", accountId = "mini-grok", remaining = 19): QuotaProviderView {
-  return {
-    provider,
-    accountId,
-    label: provider,
-    status: "ok",
-    stale: false,
-    windows: [
-      {
-        id: "weekly",
-        label: "Weekly",
-        percentRemaining: remaining,
-        windowSeconds: 604800,
-        resetsAtMs: Date.parse(
-          provider === "grok" ? "2026-10-20T03:59:00Z" : "2026-10-24T21:09:00Z",
-        ),
-      },
-    ],
-  };
-}
-function snapshot(at: number, providers: QuotaProviderView[]): QuotaSnapshotView {
-  return { fetchedAt: at, generatedAt: new Date(at).toISOString(), providers };
-}
-function world(samples = FINISHED, sampleModel = GROK, level = "medium") {
-  const db = freshDatabase();
+function world(samples = FINISHED, sampleModel = GROK, level = "medium", db = freshDatabase()) {
   const settings = new SettingsStore(db);
   const tasks = new TaskService({ db, now: () => AT });
   const decisions = new DecisionStore(db);
@@ -137,12 +105,15 @@ describe("INF-443 learned placed-work ranking", () => {
             basis_verified: true,
           },
           {
-            pool: {
-              available: [GROK, CODEX],
-              catalog: catalog.models,
-              readings: rows,
-              note: "Mac mini",
+            ...{
+              pool: {
+                available: [GROK, CODEX],
+                catalog: catalog.models,
+                readings: rows,
+                note: "Mac mini",
+              },
             },
+            placed: w.scores.data(AT),
           },
         )!.choice!.provider,
       );
@@ -174,7 +145,9 @@ describe("INF-443 learned placed-work ranking", () => {
     w.seed("new", "mini");
     w.route("new");
     w.scores.observe("mini", snapshot(AT, [row()]));
-    expect(w.scores.score(row(), AT).charge!.windows[0]!.points).toBe(0);
+    expect(w.scores.score(row(), AT, undefined, w.scores.data(AT)).charge!.windows[0]!.points).toBe(
+      0,
+    );
     w.learn();
     const price = w.settings.getAllowancePrices();
     expect(Object.values(price)[0]).toBeGreaterThan(0);
@@ -185,7 +158,10 @@ describe("INF-443 learned placed-work ranking", () => {
     const reset = row("grok", "mini-grok", 100);
     reset.windows[0]!.resetsAtMs! += 604800000;
     restarted.observe("mini", snapshot(AT + 1000, [reset]));
-    expect(restarted.score(reset, AT + 1000).charge!.windows[0]!.points).toBeGreaterThan(0);
+    expect(
+      restarted.score(reset, AT + 1000, undefined, restarted.data(AT + 1000)).charge!.windows[0]!
+        .points,
+    ).toBeGreaterThan(0);
     w.db.close();
   });
 
@@ -195,11 +171,11 @@ describe("INF-443 learned placed-work ranking", () => {
     // 22% of Grok's week left with 33.9 hours to go lasts at its observed burn.
     const reading = row("grok", "mini-grok", 22);
     expect(effectiveFromProvider(reading, AT).lastsThroughReset).toBe(true);
-    expect(w.scores.score(reading, AT).lastsThroughReset).toBe(true);
+    expect(w.scores.score(reading, AT, undefined, w.scores.data(AT)).lastsThroughReset).toBe(true);
     // One running task placed there brings the projection short of the reset.
     w.seed("running", "mini");
     w.route("running");
-    const scored = w.scores.score(reading, AT);
+    const scored = w.scores.score(reading, AT, undefined, w.scores.data(AT));
     expect(scored.charge!.windows[0]!.points).toBeGreaterThan(2);
     expect(scored.lastsThroughReset).toBe(false);
     w.db.close();
@@ -210,20 +186,28 @@ describe("INF-443 learned placed-work ranking", () => {
     w.learn();
     w.seed("running", "mini");
     w.route("running");
-    const first = w.scores.score(row(), AT).charge!.windows[0]!.points;
+    const first = w.scores.score(row(), AT, undefined, w.scores.data(AT)).charge!.windows[0]!
+      .points;
     w.log("running", 20, AT - 100);
-    const partial = w.scores.score(row(), AT).charge!.windows[0]!.points;
+    const partial = w.scores.score(row(), AT, undefined, w.scores.data(AT)).charge!.windows[0]!
+      .points;
     expect(partial).toBeCloseTo(
       (FINISHED.reduce((sum, cost) => sum + cost, 0) / FINISHED.length - 20) * (38 / 290.21),
     );
     w.log("running", 30, AT + 100);
-    expect(w.scores.score(row(), AT + 100).charge!.windows[0]!.points).toBeGreaterThan(partial);
+    expect(
+      w.scores.score(row(), AT + 100, undefined, w.scores.data(AT + 100)).charge!.windows[0]!
+        .points,
+    ).toBeGreaterThan(partial);
     w.tasks.close("running", { status: "done", reason: "finished", actor: "host" });
-    expect(w.scores.score(row(), AT).charge!.windows[0]!.points).toBeGreaterThan(0);
+    expect(
+      w.scores.score(row(), AT, undefined, w.scores.data(AT)).charge!.windows[0]!.points,
+    ).toBeGreaterThan(0);
     w.scores.observe("mini", snapshot(AT + 200, [row("grok", "mini-grok", 18)]));
-    expect(w.scores.score(row("grok", "mini-grok", 18), AT + 200).charge!.windows[0]!.points).toBe(
-      0,
-    );
+    expect(
+      w.scores.score(row("grok", "mini-grok", 18), AT + 200, undefined, w.scores.data(AT + 200))
+        .charge!.windows[0]!.points,
+    ).toBe(0);
     w.db.close();
   });
 
@@ -246,14 +230,86 @@ describe("INF-443 learned placed-work ranking", () => {
       availableModels: () => [GROK],
     });
     expect(
-      router.decide("next", "Build", { kind: "implement", basis_verified: true })!.choice,
+      router.decide(
+        "next",
+        "Build",
+        { kind: "implement", basis_verified: true },
+        { placed: w.scores.data(AT) },
+      )!.choice,
     ).toMatchObject({ provider: "xai" });
     expect(
-      router.decide("pin", "Build", { kind: "unclear", override_model_id: GROK.id })!.choice,
+      router.decide(
+        "pin",
+        "Build",
+        { kind: "unclear", override_model_id: GROK.id },
+        { placed: w.scores.data(AT) },
+      )!.choice,
     ).toMatchObject({ provider: "xai" });
     w.db.close();
   });
-  it("the second Automatic start sees the first committed charge before either attaches to an account", async () => {
+  // Regression: the responsiveness repair must preserve ordered commitment for simultaneous starts.
+  it.each(["existing", "new"] as const)(
+    "orders nine simultaneous %s task starts through the committed placed-work score",
+    async (state) => {
+      vi.useFakeTimers();
+      vi.setSystemTime(AT);
+      let w: ReturnType<typeof world> | undefined;
+      const h = setup(fakeCrewmate(), {
+        realRouter: (db) => {
+          const record = world(FINISHED, GROK, "medium", db);
+          w = record;
+          record.learn();
+          const rows = [row("grok", "home-grok"), row("codex", "home-codex", 84)];
+          return new Router({
+            settings: record.settings,
+            decisions: record.decisions,
+            placedWork: record.scores,
+            quota: {
+              latestModels: () =>
+                buildModelsCatalog([GROK, CODEX], rows, new Date(AT).toISOString(), AT),
+              latest: () => snapshot(AT, rows),
+            } as QuotaService,
+            availableModels: () => [GROK, CODEX],
+          });
+        },
+      });
+      if (!w || !h.router) throw new Error("normal placement needs its real routing owner");
+      const ids = Array.from({ length: 9 }, (_, index) => `normal-${index}`);
+      if (state === "existing")
+        for (const id of ids) seedTask(h.tasks, { id, title: "Audit", status: "queued" });
+      const shape = { kind: "implement", basis: "plan", basis_verified: true } as const;
+      const routed = await Promise.all(
+        ids.map((id) =>
+          h.supervisor.placement.routeTask(
+            id,
+            "Audit",
+            shape,
+            null,
+            undefined,
+            state === "new"
+              ? () => {
+                  seedTask(h.tasks, { id, title: "Audit", status: "queued" });
+                }
+              : undefined,
+          ),
+        ),
+      );
+      expect(routed.map((route) => route?.choice?.provider)).toEqual([
+        GROK.provider,
+        ...ids.slice(1).map(() => CODEX.provider),
+      ]);
+      const failed = h.router.inOrder(async () => {
+        throw new Error("placement refused");
+      });
+      const next = h.router.inOrder(async () => "next placement");
+      await expect(failed).rejects.toThrow("placement refused");
+      await expect(next).resolves.toBe("next placement");
+      await h.supervisor.disposeAll();
+      w.db.close();
+    },
+  );
+
+  it("concurrent Automatic starts see the first committed charge before either attaches to an account", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(AT);
     const w = world();
@@ -336,14 +392,16 @@ describe("INF-443 learned placed-work ranking", () => {
         status: "queued",
       });
       const shape = { kind: "implement", basis: "plan", basis_verified: true } as const;
-      await placement.choose(first, repo, first.title, shape);
-      await placement.choose(second, repo, second.title, shape);
+      await Promise.all([
+        placement.choose(first, repo, first.title, shape),
+        placement.choose(second, repo, second.title, shape),
+      ]);
       expect(w.decisions.latestRouting(first.id)?.provider).toBe("xai");
       expect(w.decisions.latestRouting(second.id)?.provider).toBe("openai-codex");
       expect(w.tasks.get(first.id)?.accountId).toBeNull();
       console.log(
         JSON.stringify({
-          scenario: "successive Automatic starts before account attachment",
+          scenario: "concurrent Automatic starts before account attachment",
           first: w.decisions.latestRouting(first.id),
           second: w.decisions.latestRouting(second.id),
         }),
@@ -362,7 +420,8 @@ describe("INF-443 learned placed-work ranking", () => {
       w.learn();
       w.seed("new", "mini");
       w.route("new", { ...GROK, id: "grok-4.3" });
-      const points = w.scores.score(row(), AT).charge!.windows[0]!.points;
+      const points = w.scores.score(row(), AT, undefined, w.scores.data(AT)).charge!.windows[0]!
+        .points;
       expect(points > 0).toBe(count >= 5);
       w.db.close();
     },
@@ -410,17 +469,19 @@ describe("INF-443 learned placed-work ranking", () => {
       accountId: "c1",
       assignee: "crewmate",
     });
-    const first = w.scores.score(one, AT).charge!.windows;
+    const first = w.scores.score(one, AT, undefined, w.scores.data(AT)).charge!.windows;
     expect(first[0]!.pointsPerDollar).toBeCloseTo(0.1);
     expect(first[1]!.pointsPerDollar).toBeCloseTo(0.05);
     expect(first[0]!.points).toBeCloseTo(first[1]!.points * 2);
-    expect(w.scores.score(two, AT).charge!.windows.every((window) => window.points === 0)).toBe(
-      true,
-    );
+    expect(
+      w.scores
+        .score(two, AT, undefined, w.scores.data(AT))
+        .charge!.windows.every((window) => window.points === 0),
+    ).toBe(true);
     w.db.close();
   });
 
-  it("account selection records the charge and still uses actual headroom for the flagship reserve", () => {
+  it("account selection records the charge and still uses actual headroom for the flagship reserve", async () => {
     const w = world();
     w.learn();
     w.seed("placed", "mini");
@@ -438,7 +499,7 @@ describe("INF-443 learned placed-work ranking", () => {
         markSelected: () => {},
       },
     });
-    expect(selector.selectForSpawn("next", "xai")).toBe("mini-grok");
+    expect(await selector.selectForSpawn("next", "xai")).toBe("mini-grok");
     const saved = w.db.prepare("SELECT facts_json FROM decisions WHERE kind = 'account'").get() as {
       facts_json: string;
     };
@@ -465,7 +526,12 @@ describe("INF-443 learned placed-work ranking", () => {
       const id = `cold-${i}`;
       w.seed(id, "mini");
       expect(
-        router.decide(id, "Build", { kind: "implement", basis_verified: true })?.choice?.provider,
+        router.decide(
+          id,
+          "Build",
+          { kind: "implement", basis_verified: true },
+          { placed: w.scores.data(AT) },
+        )?.choice?.provider,
       ).toBe("xai");
     }
     expect(w.settings.getAllowancePrices()).toEqual({});
@@ -491,11 +557,13 @@ describe("INF-443 learned placed-work ranking", () => {
     const reading = row("grok", "mini-grok", 22);
     w.seed("running", "mini");
     w.route("running");
-    const scored = w.scores.score(reading, AT);
+    const scored = w.scores.score(reading, AT, undefined, w.scores.data(AT));
     expect(scored.lastsThroughReset).toBe(false);
     expect(scored.band).toBe("room");
     // A fresh reading at the floor moves it.
-    expect(w.scores.score(row("grok", "mini-grok", 9), AT).band).toBe("near_floor");
+    expect(w.scores.score(row("grok", "mini-grok", 9), AT, undefined, w.scores.data(AT)).band).toBe(
+      "near_floor",
+    );
     w.db.close();
   });
 
@@ -554,7 +622,11 @@ describe("INF-443 learned placed-work ranking", () => {
       return originalGet.apply(this, args);
     };
     try {
-      const preview = router.preview("Build", { kind: "implement", basis_verified: true });
+      const preview = router.preview(
+        "Build",
+        { kind: "implement", basis_verified: true },
+        { placed: w.scores.data(AT) },
+      );
       expect(preview?.result.choice?.provider).toBe("xai");
       expect(finished).toHaveBeenCalledTimes(1);
       expect(work).toHaveBeenCalledTimes(1);
@@ -579,7 +651,11 @@ describe("INF-443 learned placed-work ranking", () => {
       // A later evaluation sees new usage, rather than reusing this one's charge.
       const before = preview?.candidates?.[0]?.charge?.windows[0]?.points;
       w.log("running", Math.max(...FINISHED) + 1, AT + 1);
-      const next = router.preview("Build", { kind: "implement", basis_verified: true });
+      const next = router.preview(
+        "Build",
+        { kind: "implement", basis_verified: true },
+        { placed: w.scores.data(AT) },
+      );
       expect(next?.candidates?.[0]?.charge?.windows[0]?.points).toBeGreaterThan(before!);
     } finally {
       statement.get = originalGet;
@@ -597,13 +673,20 @@ describe("INF-443 learned placed-work ranking", () => {
     const w = world();
     const rows = [row("grok", "home-grok", 84), row("grok", "mini-grok", 19)];
     w.scores.observe("home", snapshot(AT, rows));
-    const [best] = w.scores.catalog([{ provider: "grok", id: GROK.id, label: "Grok" }], rows, AT);
+    const [best] = w.scores.catalog(
+      [{ provider: "grok", id: GROK.id, label: "Grok" }],
+      rows,
+      AT,
+      undefined,
+      w.scores.data(AT),
+    );
     expect(best).toMatchObject({ accountId: "home-grok", effectivePercentRemaining: 84 });
     const [bound] = w.scores.catalog(
       [{ provider: "grok", id: GROK.id, label: "Grok" }],
       rows,
       AT,
       () => "mini-grok",
+      w.scores.data(AT),
     );
     expect(bound).toMatchObject({
       accountId: "mini-grok",

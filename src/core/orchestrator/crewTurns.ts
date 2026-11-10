@@ -843,20 +843,7 @@ export class CrewTurns {
         // restart renumbers.
         // Its default moves the task to the app's pick when another
         // provider serves (INF-849); Open settings stays beside it.
-        const plan = this.core.moves.planMove(task.id);
-        const move =
-          "refused" in plan || !plan.from
-            ? undefined
-            : {
-                arg: `${task.id}:${plan.from}:${offeringKey(plan.choice)}`,
-                modelName: this.modelName(plan.choice),
-              };
-        this.core.cards.hostCards.addAuthDecisionCard(
-          crewSignInCardId(task.id),
-          task.title,
-          this.signInCardBody(task),
-          { taskId: task.id, ...(move ? { move } : {}) },
-        );
+        void this.presentSignInCard(task);
       } else if (recoverContext) {
         // The fresh conversation carries the task on: a feed line, no wake.
         this.core.options.broadcastEvent({
@@ -933,6 +920,28 @@ export class CrewTurns {
     void this.core.settling.kept.runMergeAuthorization(task.id).catch((caught: unknown) => {
       console.warn("[crew] kept merge could not run:", caught);
     });
+  }
+
+  private async presentSignInCard(task: TaskRuntime): Promise<void> {
+    let move: { arg: string; modelName: string } | undefined;
+    try {
+      const plan = await this.core.moves.planMove(task.id);
+      if (!("refused" in plan) && plan.from)
+        move = {
+          arg: `${task.id}:${plan.from}:${offeringKey(plan.choice)}`,
+          modelName: this.modelName(plan.choice),
+        };
+    } catch (error) {
+      console.warn("[crew] another model could not be evaluated:", error);
+    }
+    const record = this.core.options.tasks.get(task.id);
+    if (!record || TaskService.isClosed(record) || this.core.tasks.get(task.id) !== task) return;
+    this.core.cards.hostCards.addAuthDecisionCard(
+      crewSignInCardId(task.id),
+      task.title,
+      this.signInCardBody(task),
+      { taskId: task.id, ...(move ? { move } : {}) },
+    );
   }
 
   /**

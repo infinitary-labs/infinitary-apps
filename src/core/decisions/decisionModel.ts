@@ -208,7 +208,10 @@ export type AdaptedDecisionModelOptions = {
   capabilityFor?: ModelCapabilityLookup;
   quotaModels: () => ModelsCatalogView | undefined;
   /** AccountSelector.selectForSpawn, so the burn is attributable. */
-  selectAccount: (taskId: string, piProviderId: string) => string | undefined;
+  selectAccount: (
+    taskId: string,
+    piProviderId: string,
+  ) => string | undefined | Promise<string | undefined>;
   /** The flagship account answers only as a last resort. */
   flagshipAccountId: () => string | null;
   runtimeFor: (accountId: string) => Promise<ModelRuntime>;
@@ -496,7 +499,8 @@ export class AdaptedDecisionModel implements DecisionModel {
     let lastResort: { model: { provider: string; id: string }; accountId: string } | undefined;
     for (const model of this.candidateModels()) {
       if (!this.answers(model)) continue;
-      const accountId = this.options.selectAccount(attribution, model.provider);
+      const selecting = this.options.selectAccount(attribution, model.provider);
+      const accountId = selecting instanceof Promise ? await selecting : selecting;
       if (!accountId) {
         const unmanaged = this.unmanaged(model);
         if (unmanaged) return unmanaged;
@@ -550,7 +554,8 @@ export class AdaptedDecisionModel implements DecisionModel {
     attribution: string,
   ): Promise<BoundCandidate | undefined> {
     if (!this.canBind(model)) return undefined;
-    const accountId = this.options.selectAccount(attribution, model.provider);
+    const selecting = this.options.selectAccount(attribution, model.provider);
+    const accountId = selecting instanceof Promise ? await selecting : selecting;
     if (!accountId) return this.unmanaged(model);
     try {
       return await this.bindAccount(model, accountId);

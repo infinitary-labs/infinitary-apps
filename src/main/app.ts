@@ -504,6 +504,7 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
           : {}),
         keychainProcessPath: join(mainDir, "keychainProcessMain.js"),
         sqlProcessPath: join(mainDir, "sqlProcess.js"),
+        recordProcessPath: join(mainDir, "recordProcess.js"),
         axiProcessPath: join(mainDir, "axiProcess.js"),
         programProcessPath: join(mainDir, "programProcess.js"),
         panelProcessPath: join(mainDir, "panelProcess.js"),

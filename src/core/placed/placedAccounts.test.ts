@@ -15,6 +15,10 @@ import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { manualClock } from "../../../tests/helpers/manualClock";
 import { piStubRuntime } from "../../../tests/helpers/piStubRuntime";
 import { homeWorkspace } from "../../../tests/helpers/placedHome";
+import {
+  orderPolicyOnlyRoute,
+  preparePolicyOnlyRoute,
+} from "../../../tests/helpers/policyOnlyRouting";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
   type SDKUserMessage,
@@ -263,6 +267,8 @@ function startHome(options: {
     },
   };
   const router = {
+    prepare: preparePolicyOnlyRoute,
+    inOrder: orderPolicyOnlyRoute,
     decide: () => ({ choice: options.routedTo, bucket: "high" as const, rule: "R8" as const }),
     servedProvider: () => options.routedTo.provider,
     modelLabel: (ref: { provider: string; id: string }) => ref.id,
@@ -550,7 +556,9 @@ describe("a task on another computer, on that computer's own sign-in", () => {
     // Nothing of it is this Mac's: its Firstmate and crew keep serving.
     expect(home.noteCutOff).not.toHaveBeenCalled();
     expect(servingHere(home.vault, at.thisMacAccount)).toEqual(before);
-    expect(home.selector.selectForSpawn("t-next-here", CLAUDE_PROVIDER_ID)).toBe(at.thisMacAccount);
+    expect(await home.selector.selectForSpawn("t-next-here", CLAUDE_PROVIDER_ID)).toBe(
+      at.thisMacAccount,
+    );
     // The turn's usage is booked on that computer's own account.
     expect(home.recordUsage).toHaveBeenCalledWith(
       expect.objectContaining({ taskId: "t-signed-out", accountId: at.computerAccount }),

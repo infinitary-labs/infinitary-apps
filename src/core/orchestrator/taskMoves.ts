@@ -160,17 +160,18 @@ export class TaskMoves {
    * the model named, as R0 pins one - never recorded. A refusal is text:
    * a task not started or closed, one on another computer, none that serves.
    */
-  planMove(
-    taskId: string,
-    model?: string,
-  ):
-    | { refused: string }
-    | {
-        record: TaskRecord;
-        from: string | undefined;
-        preview: RoutePreview;
-        choice: { provider: string; id: string };
-      } {
+  async planMove(taskId: string, model?: string) {
+    const source = this.modelMoveSource(taskId);
+    if ("refused" in source) return source;
+    const prepared = await this.options.router?.prepare();
+    return this.preparedMove(taskId, model, prepared);
+  }
+
+  async requestMove(taskId: string, ask: MoveAsk) {
+    return this.requestPreparedMove(taskId, ask, await this.planMove(taskId, ask.model));
+  }
+
+  private modelMoveSource(taskId: string): { record: TaskRecord } | { refused: string } {
     const record = this.options.tasks.get(taskId);
     if (!record) return { refused: `Unknown task "${taskId}".` };
     const handle = `${record.key || record.id} "${record.title}"`;
@@ -180,17 +181,38 @@ export class TaskMoves {
       return {
         refused: `${handle} runs on another computer, so it stays on that computer's own subscriptions.`,
       };
+    return { record };
+  }
+
+  private preparedMove(
+    taskId: string,
+    model: string | undefined,
+    prepared: import("../routing/router").PreparedRouteOptions | undefined,
+  ):
+    | { refused: string }
+    | {
+        record: TaskRecord;
+        from: string | undefined;
+        preview: RoutePreview;
+        choice: { provider: string; id: string };
+      } {
+    const source = this.modelMoveSource(taskId);
+    if ("refused" in source) return source;
+    const { record } = source;
+    const handle = `${record.key || record.id} "${record.title}"`;
     const router = this.options.router;
     const from =
       router?.servedProvider(taskId) ??
       (record.model ? parseOfferingKey(record.model).provider || undefined : undefined);
     if (!model && !from) return { refused: `${handle} has no provider on its record to move off.` };
     const { override_model_id: _named, ...shape } = this.host.queuedShape(record);
-    const preview = router?.preview(
-      record.prompt,
-      model ? { ...shape, override_model_id: model } : shape,
-      model || !from ? {} : { withoutProvider: from },
-    );
+    const preview =
+      router && prepared
+        ? router.preview(record.prompt, model ? { ...shape, override_model_id: model } : shape, {
+            ...prepared,
+            ...(model || !from ? {} : { withoutProvider: from }),
+          })
+        : undefined;
     if (!preview)
       return { refused: "Automatic model choice is off, so the app cannot pick another model." };
     const choice = preview.result.choice;
@@ -217,8 +239,11 @@ export class TaskMoves {
    * working copy and record. A crewmate mid-turn moves once that turn ends,
    * and is never cut short. A refusal is text and changes nothing.
    */
-  requestMove(taskId: string, ask: MoveAsk): { ok: boolean; text: string } {
-    const plan = this.planMove(taskId, ask.model);
+  private requestPreparedMove(
+    taskId: string,
+    ask: MoveAsk,
+    plan: Awaited<ReturnType<TaskMoves["planMove"]>>,
+  ): { ok: boolean; text: string } {
     if ("refused" in plan) return { ok: false, text: plan.refused };
     const { record, from, choice } = plan;
     const handle = `${record.key || record.id} "${record.title}"`;
@@ -252,56 +277,73 @@ export class TaskMoves {
     if (this.moving.has(taskId)) return;
     this.moving.add(taskId);
     try {
-      const runtime = this.host.runtime(taskId);
-      if (runtime && runtime.turn.busy) {
-        runtime.turn.queueMove(ask);
-        return;
-      }
-      const plan = this.planMove(taskId, ask.model);
-      const refused = "refused" in plan ? plan.refused : this.offerGone(plan, ask);
-      if (refused || "refused" in plan) {
-        this.options.broadcastEvent({ type: "firstmate_note", text: refused ?? "", taskId });
-        return;
-      }
-      const { record, from, preview, choice } = plan;
-      const who = ask.by === "captain" ? "the captain" : "the first mate";
-      preview.reasons.push(
-        ask.model
-          ? `moved by ${who} to the model named`
-          : `moved by ${who} off ${from ?? "its provider"}`,
-      );
-      this.options.router?.commit(taskId, preview);
-      const accountId = this.options.accounts?.selectForSpawn(taskId, choice.provider, {
-        model: choice.id,
-      });
-      if (runtime) {
-        this.host.releaseSession(runtime);
-        this.host.forgetRuntime(taskId);
-      }
-      const fromName = from ? this.providerName(from) : "its provider";
-      const toName = this.providerName(choice.provider);
-      this.options.tasks.placement.recordMove(taskId, {
-        model: choice,
-        accountId: accountId ?? null,
-        actor: ask.by,
-        text: `${who} moved it from ${fromName} to ${this.host.modelName(choice)} on ${toName}`,
-        data: {
-          moved: {
-            from: record.model,
-            to: offeringKey(choice),
-            ...(accountId ? { accountId } : {}),
+      const move = async () => {
+        const runtime = this.host.runtime(taskId);
+        if (runtime && runtime.turn.busy) {
+          runtime.turn.queueMove(ask);
+          return;
+        }
+        const plan = await this.planMove(taskId, ask.model);
+        const refused = "refused" in plan ? plan.refused : this.offerGone(plan, ask);
+        if (refused || "refused" in plan) {
+          this.options.broadcastEvent({ type: "firstmate_note", text: refused ?? "", taskId });
+          return;
+        }
+        if (runtime && runtime.turn.busy) {
+          runtime.turn.queueMove(ask);
+          return;
+        }
+        const { record, from, preview, choice } = plan;
+        const who = ask.by === "captain" ? "the captain" : "the first mate";
+        preview.reasons.push(
+          ask.model
+            ? `moved by ${who} to the model named`
+            : `moved by ${who} off ${from ?? "its provider"}`,
+        );
+        const selecting = this.options.accounts?.selectForSpawn(taskId, choice.provider, {
+          model: choice.id,
+        });
+        const accountId = selecting instanceof Promise ? await selecting : selecting;
+        if (runtime && runtime.turn.busy) {
+          runtime.turn.queueMove(ask);
+          return;
+        }
+        const current = this.options.tasks.get(taskId);
+        if (!current || current.status !== "active" || this.host.disposed()) return;
+        this.options.router?.commit(taskId, preview);
+        if (runtime) {
+          this.host.releaseSession(runtime);
+          this.host.forgetRuntime(taskId);
+        }
+        const fromName = from ? this.providerName(from) : "its provider";
+        const toName = this.providerName(choice.provider);
+        this.options.tasks.placement.recordMove(taskId, {
+          model: choice,
+          accountId: accountId ?? null,
+          actor: ask.by,
+          text: `${who} moved it from ${fromName} to ${this.host.modelName(choice)} on ${toName}`,
+          data: {
+            moved: {
+              from: record.model,
+              to: offeringKey(choice),
+              ...(accountId ? { accountId } : {}),
+            },
           },
-        },
-      });
+        });
+        const level = preview.result.servedBucket ?? preview.result.bucket;
+        return {
+          model: choice,
+          ...(accountId ? { accountId } : {}),
+          thinkingLevel: this.effortFor(record, choice, level),
+          providerName: toName,
+        };
+      };
+      const router = this.options.router;
+      const prepared = router ? await router.inOrder(move) : await move();
+      if (!prepared) return;
       this.host.clearSignInCard(taskId);
       this.options.inbox.movedProvider(taskId);
-      const level = preview.result.servedBucket ?? preview.result.bucket;
-      const resumed = await this.host.resumeTask(taskId, {
-        model: choice,
-        ...(accountId ? { accountId } : {}),
-        thinkingLevel: this.effortFor(record, choice, level),
-        providerName: toName,
-      });
+      const resumed = await this.host.resumeTask(taskId, prepared);
       this.host.deliverPendingToTask(resumed);
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
@@ -715,9 +757,10 @@ export class TaskMoves {
       let accountId: string | undefined;
       if (move.to === RUNS_ON_THIS_MAC) {
         const model = this.modelOfTask(record);
-        accountId = model
+        const selecting = model
           ? this.options.accounts?.selectForSpawn(taskId, model.provider)
           : undefined;
+        accountId = selecting instanceof Promise ? await selecting : selecting;
         if (model && this.options.accounts && !accountId)
           throw new Error(
             `${HERE.this} has no signed-in account that serves ${this.host.modelName(model)}`,

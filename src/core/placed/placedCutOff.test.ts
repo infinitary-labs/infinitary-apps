@@ -684,11 +684,11 @@ function postureOf(at: World, taskId: string) {
 }
 
 /** What this Mac's own Claude account serves for its Firstmate and crew. */
-function servingHere(at: World) {
+async function servingHere(at: World) {
   return {
     cutOff: at.home.vault.cutOff(at.thisMacAccount)?.class ?? null,
     serves: at.home.vault.servesSync(at.thisMacAccount),
-    selected: at.home.selector.selectForSpawn("t-local-probe", CLAUDE_PROVIDER_ID),
+    selected: await at.home.selector.selectForSpawn("t-local-probe", CLAUDE_PROVIDER_ID),
   };
 }
 
@@ -696,7 +696,7 @@ describe("a task on another Mac while that Mac's own sign-in is cut off", () => 
   it("signed out there: held with one card, a second task waits, and both go on by themselves once signed in there", async () => {
     const at = await world();
     const { home } = at;
-    const before = servingHere(at);
+    const before = await servingHere(at);
 
     // The first task's turn meets the lost sign-in there, and what the Mac
     // mini tells unasked of it comes late: the home asks it before the turn ends.
@@ -781,7 +781,7 @@ describe("a task on another Mac while that Mac's own sign-in is cut off", () => 
     expect(home.tasks.get("t2")?.deviceId).toBe(at.deviceId);
 
     // This Mac's own Claude served throughout, and holds nothing of it.
-    expect(servingHere(at)).toEqual(before);
+    expect(await servingHere(at)).toEqual(before);
     expect(home.noteCutOff).not.toHaveBeenCalled();
   });
 

@@ -71,6 +71,7 @@ export type ReviewsHost = {
  * the builder, and how an assessment's verdict decides the kept merge.
  */
 export class Reviews {
+  private readonly preparingAssessments = new Set<string>();
   constructor(
     private readonly options: CrewSupervisorOptions,
     private readonly host: ReviewsHost,
@@ -226,7 +227,11 @@ export class Reviews {
     if (open) {
       const assessor = this.options.tasks.get(open.taskId);
       const live = assessor !== undefined && !TaskService.isClosed(assessor);
-      if (live && this.host.now() - open.at <= ASSESSMENT_BOUND_MS) return;
+      if (
+        (live || this.preparingAssessments.has(open.taskId)) &&
+        this.host.now() - open.at <= ASSESSMENT_BOUND_MS
+      )
+        return;
       this.repairDecided(builderId, open.taskId, "failed");
       if (live) void this.retireAssessments(builderId, "it ran past its time");
       return;
@@ -234,88 +239,105 @@ export class Reviews {
     // One still reading a repair the crewmate has since replaced answers nothing.
     void this.retireAssessments(builderId, "a newer repair replaced the one it read");
     const assessorId = randomUUID().slice(0, 8);
-    // Recorded before it exists, so a second read finds it and starts none,
-    // and one that cannot be made ends the approval like one that cannot finish.
-    this.options.tasks.delivery.recordPermissionRecords(builder.id, {
-      mergeAuthorization: {
-        ...authorization,
-        undecided: { ...undecided, assessment: { taskId: assessorId, at: this.host.now() } },
-      },
-    });
-    const title = `Assess repair: ${builder.title}`.slice(0, 64);
-    let brief: string;
-    let routed: RouteResult | undefined;
-    try {
-      const delivery = builder.delivery;
-      brief = renderRepairAssessmentBrief({
-        builderTitle: builder.title,
-        change: `${delivery?.changeLabel ?? `#${authorization.target.prNumber}`}${
-          delivery?.prUrl ? ` ${delivery.prUrl}` : ""
-        }`,
-        ...(builder.intent?.userWords ? { userWords: builder.intent.userWords } : {}),
-        approvedHead: authorization.approvedHead,
-        fromHead: undecided.fromHead,
-        toHead: undecided.toHead,
-        newBase: undecided.newBase,
-        paths: undecided.paths ?? { approved: [], repaired: undecided.changedPaths },
-        evidence: undecided.evidence,
-        validation: undecided.validation,
-      });
-      // The host establishes the kind, the way it does a review's: never
-      // classified, its basis the builder, delivery machinery under it.
-      const shape = withBasisVerdict(this.options.tasks, {
-        kind: "review",
-        kind_source: REPAIR_ASSESSMENT_SOURCE,
-        basis: builder.id,
-      });
-      // Independent: the ladder prefers a provider other than the builder's.
-      const avoidProvider = this.options.router?.servedProvider(builder.id);
-      routed = this.options.router?.decide(
-        assessorId,
-        brief,
-        shape,
-        avoidProvider ? { avoidProvider } : {},
-      );
-      this.options.tasks.create({
-        id: assessorId,
-        kind: "work",
-        title,
-        prompt: brief,
-        intent: {
-          goal: `Assess whether bringing "${builder.title}" up to date kept the approved change.`,
-          userWords: builder.intent?.userWords ?? "",
-          constraints: [],
-        },
-        repoId: builder.repoId,
-        difficulty: routed?.bucket ?? tierFor(shape).bucket ?? null,
-        shape,
-        status: "active",
-        parentId: builder.id,
-        actor: "host",
-      });
-    } catch (caught) {
-      console.warn("[crew] a repair assessment could not be made:", caught);
-      this.repairDecided(builderId, assessorId, "failed");
-      return;
-    }
-    this.options.tasks.note(
-      builder.id,
-      `An independent assessment of the repair to ${undecided.toHead} started: ${title}.`,
-      { news: true, data: { repairAssessment: assessorId } },
-    );
-    void this.host
-      .startTask({
-        taskId: assessorId,
-        title,
-        brief,
-        repoId: builder.repoId,
-        routed,
-        fresh: true,
-      })
-      .catch((caught: unknown) => {
-        console.warn("[crew] a repair assessment could not start:", caught);
+    this.preparingAssessments.add(assessorId);
+    void (async () => {
+      const title = `Assess repair: ${builder.title}`.slice(0, 64);
+      let brief: string;
+      let routed: RouteResult | undefined;
+      try {
+        // Recorded before it exists, so a second read finds it and starts none,
+        // and one that cannot be made ends the approval like one that cannot finish.
+        this.options.tasks.delivery.recordPermissionRecords(builder.id, {
+          mergeAuthorization: {
+            ...authorization,
+            undecided: { ...undecided, assessment: { taskId: assessorId, at: this.host.now() } },
+          },
+        });
+
+        const delivery = builder.delivery;
+        brief = renderRepairAssessmentBrief({
+          builderTitle: builder.title,
+          change: `${delivery?.changeLabel ?? `#${authorization.target.prNumber}`}${
+            delivery?.prUrl ? ` ${delivery.prUrl}` : ""
+          }`,
+          ...(builder.intent?.userWords ? { userWords: builder.intent.userWords } : {}),
+          approvedHead: authorization.approvedHead,
+          fromHead: undecided.fromHead,
+          toHead: undecided.toHead,
+          newBase: undecided.newBase,
+          paths: undecided.paths ?? { approved: [], repaired: undecided.changedPaths },
+          evidence: undecided.evidence,
+          validation: undecided.validation,
+        });
+        // The host establishes the kind, the way it does a review's: never
+        // classified, its basis the builder, delivery machinery under it.
+        const shape = withBasisVerdict(this.options.tasks, {
+          kind: "review",
+          kind_source: REPAIR_ASSESSMENT_SOURCE,
+          basis: builder.id,
+        });
+        // Independent: the ladder prefers a provider other than the builder's.
+        const avoidProvider = this.options.router?.servedProvider(builder.id);
+        const create = async () => {
+          const router = this.options.router;
+          const prepared = await router?.prepare(avoidProvider ? { avoidProvider } : {});
+          const current = this.options.tasks.get(builder.id);
+          if (
+            !current ||
+            TaskService.isClosed(current) ||
+            standingAuthorization(current.delivery)?.undecided?.assessment?.taskId !== assessorId
+          )
+            return;
+          routed =
+            router && prepared ? router.decide(assessorId, brief, shape, prepared) : undefined;
+          this.options.tasks.create({
+            id: assessorId,
+            kind: "work",
+            title,
+            prompt: brief,
+            intent: {
+              goal: `Assess whether bringing "${builder.title}" up to date kept the approved change.`,
+              userWords: builder.intent?.userWords ?? "",
+              constraints: [],
+            },
+            repoId: builder.repoId,
+            difficulty: routed?.bucket ?? tierFor(shape).bucket ?? null,
+            shape,
+            status: "active",
+            parentId: builder.id,
+            actor: "host",
+          });
+        };
+        const router = this.options.router;
+        if (router) await router.inOrder(create);
+        else await create();
+        if (!this.options.tasks.get(assessorId)) return;
+      } catch (caught) {
+        console.warn("[crew] a repair assessment could not be made:", caught);
         this.repairDecided(builderId, assessorId, "failed");
-      });
+        return;
+      } finally {
+        this.preparingAssessments.delete(assessorId);
+      }
+      this.options.tasks.note(
+        builder.id,
+        `An independent assessment of the repair to ${undecided.toHead} started: ${title}.`,
+        { news: true, data: { repairAssessment: assessorId } },
+      );
+      void this.host
+        .startTask({
+          taskId: assessorId,
+          title,
+          brief,
+          repoId: builder.repoId,
+          routed,
+          fresh: true,
+        })
+        .catch((caught: unknown) => {
+          console.warn("[crew] a repair assessment could not start:", caught);
+          this.repairDecided(builderId, assessorId, "failed");
+        });
+    })();
   }
 
   /**

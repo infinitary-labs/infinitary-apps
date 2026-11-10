@@ -36,6 +36,7 @@ export type ElectronHostOptions = {
   keychainProcessPath?: string | undefined;
   /** The built `sqlProcess` entry: the query process behind the `sql` read. */
   sqlProcessPath?: string | undefined;
+  recordProcessPath?: string | undefined;
   /** The built `axiProcess` entry: the process that runs one task command. */
   axiProcessPath?: string | undefined;
   /** The built `programProcess` entry: the process that runs one program's script. */
@@ -120,6 +121,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
     isolatedUserDataDir,
     keychainProcessPath,
     sqlProcessPath,
+    recordProcessPath,
     axiProcessPath,
     programProcessPath,
     panelProcessPath,
@@ -200,6 +202,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
       });
       return picked.canceled ? [] : picked.filePaths;
     }),
+    ...(recordProcessPath ? { recordProcess: createSqlProcessSpawner(recordProcessPath) } : {}),
     ...(sqlProcessPath ? { sqlProcess: createSqlProcessSpawner(sqlProcessPath) } : {}),
     ...(axiProcessPath ? { axiProcess: createAxiProcessSpawner(axiProcessPath) } : {}),
     ...(programProcessPath

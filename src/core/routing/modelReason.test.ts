@@ -45,7 +45,11 @@ describe("modelReasonOf", () => {
       kind: "research",
       program_part: { call: 0, hash: "call", label: "read", intelligence: "low" },
     };
-    expect(router.decide("part", "Read the meter's output", shape)).toMatchObject({
+    expect(
+      router.decide("part", "Read the meter's output", shape, {
+        placed: { work: [], samples: [], charges: {} },
+      }),
+    ).toMatchObject({
       rule: "R11",
       bucket: "low",
     });
@@ -59,7 +63,7 @@ describe("modelReasonOf", () => {
   it("reads the rule, both slots and the basis key off the decision the router recorded", () => {
     const { router, reasonOf } = setup();
     const shape: WorkShape = { kind: "fix", basis: "basis-task", basis_verified: true };
-    router.decide("task-1", "build it", shape);
+    router.decide("task-1", "build it", shape, { placed: { work: [], samples: [], charges: {} } });
     const reason = reasonOf("task-1", shape);
     expect(reason).toEqual({ rule: "R6", asked: "medium", served: "medium", basis: "FI3-419" });
     expect(reason && modelReasonLine(reason)).toBe("Fixing a bug already reproduced in FI3-419");
@@ -68,7 +72,7 @@ describe("modelReasonOf", () => {
   it("carries the slot that served when the slot asked for could not", () => {
     const { router, reasonOf } = setup();
     const shape: WorkShape = { kind: "research" };
-    router.decide("task-1", "find out", shape);
+    router.decide("task-1", "find out", shape, { placed: { work: [], samples: [], charges: {} } });
     expect(reasonOf("task-1", shape)).toEqual({
       rule: "R2",
       asked: "high",
@@ -80,7 +84,9 @@ describe("modelReasonOf", () => {
   it("reads R10 from the persisted decision, including an unavailable low slot", () => {
     const { router, decisions, reasonOf } = setup();
     const shape: WorkShape = { kind: "retrieval", kind_source: "classifier:test" };
-    router.decide("lookup", "Read the setting", shape);
+    router.decide("lookup", "Read the setting", shape, {
+      placed: { work: [], samples: [], charges: {} },
+    });
     expect(reasonOf("lookup", shape)).toEqual({ rule: "R10", asked: "low", served: "medium" });
     decisions.recordRouting({
       taskId: "lookup",
@@ -98,13 +104,13 @@ describe("modelReasonOf", () => {
   it("knows a named model that served from one that was not available", () => {
     const { router, reasonOf } = setup();
     const named: WorkShape = { kind: "unclear", override_model_id: MODEL.id };
-    router.decide("task-1", "do it", named);
+    router.decide("task-1", "do it", named, { placed: { work: [], samples: [], charges: {} } });
     expect(reasonOf("task-1", named)).toMatchObject({ rule: "R0", named: true });
     const qualified: WorkShape = { kind: "unclear", override_model_id: "openai-codex/gpt-5.5" };
-    router.decide("task-2", "do it", qualified);
+    router.decide("task-2", "do it", qualified, { placed: { work: [], samples: [], charges: {} } });
     expect(reasonOf("task-2", qualified)).toMatchObject({ rule: "R0", named: true });
     const missing: WorkShape = { kind: "unclear", override_model_id: "gpt-9" };
-    router.decide("task-3", "do it", missing);
+    router.decide("task-3", "do it", missing, { placed: { work: [], samples: [], charges: {} } });
     const reason = reasonOf("task-3", missing);
     expect(reason).toMatchObject({ rule: "R0", served: "medium" });
     expect(reason?.named).toBeUndefined();
@@ -117,7 +123,7 @@ describe("modelReasonOf", () => {
       pins: [{ provider: "codex", id: "gpt-5.5" }],
     });
     const shape: WorkShape = { kind };
-    router.decide("task-1", "tidy", shape);
+    router.decide("task-1", "tidy", shape, { placed: { work: [], samples: [], charges: {} } });
     const reason = reasonOf("task-1", shape);
     expect(reason).toMatchObject({ rule: kind === "retrieval" ? "R10" : "R7", pinned: true });
     expect(reason && modelReasonLine(reason)).toBe("You pinned this model in Settings");
@@ -129,7 +135,7 @@ describe("modelReasonOf", () => {
       kind: "fix",
       escalation: { from: "FI3-411", attempt: 1, floor: "medium" },
     };
-    router.decide("task-1", "again", escalated);
+    router.decide("task-1", "again", escalated, { placed: { work: [], samples: [], charges: {} } });
     expect(reasonOf("task-1", escalated)).toMatchObject({ rule: "R1b", escalatedFrom: "FI3-411" });
 
     const review: WorkShape = { kind: "review", kind_source: "host:review" };
@@ -158,7 +164,12 @@ describe("modelReasonOf", () => {
   it("says nothing for a task that never routed or that runs on another model", () => {
     const { decisions, router, reasonOf } = setup();
     expect(reasonOf("task-1", { kind: "chore" })).toBeUndefined();
-    router.decide("task-1", "tidy", { kind: "chore" });
+    router.decide(
+      "task-1",
+      "tidy",
+      { kind: "chore" },
+      { placed: { work: [], samples: [], charges: {} } },
+    );
     expect(
       modelReasonOf(
         { id: "task-1", model: "anthropic/claude-sonnet-5-5", shape: null, parentId: null },

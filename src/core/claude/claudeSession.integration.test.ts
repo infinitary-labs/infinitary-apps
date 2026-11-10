@@ -18,6 +18,10 @@ import { clientRecords, enqueued } from "../../../tests/helpers/claudeSeatHarnes
 import { codingSpec } from "../../../tests/helpers/codingSession";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { fakeSessionFactory } from "../../../tests/helpers/fakeSession";
+import {
+  orderPolicyOnlyRoute,
+  preparePolicyOnlyRoute,
+} from "../../../tests/helpers/policyOnlyRouting";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { CrewSupervisor } from "../orchestrator/crewSupervisor";
 import { appPathsFor } from "../paths";
@@ -316,6 +320,8 @@ function crewOn(b: ReturnType<typeof box>) {
     sessions: { pi: fakeSessionFactory("pi"), claude: b.factory },
     bind: async () => ({ backend: "claude", accountId: "acct_claude" }),
     router: {
+      prepare: preparePolicyOnlyRoute,
+      inOrder: orderPolicyOnlyRoute,
       decide: () => ({
         choice: { provider: CLAUDE_MODEL_PROVIDER, id: MODEL },
         bucket: "high",

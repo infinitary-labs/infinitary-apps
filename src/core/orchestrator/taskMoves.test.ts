@@ -366,34 +366,37 @@ describe("a started task's move", () => {
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
     const record = h.tasks.get(taskId);
 
-    expect(h.supervisor.moves.requestMove("nope", { by: "captain" })).toEqual({
+    expect(await h.supervisor.moves.requestMove("nope", { by: "captain" })).toEqual({
       ok: false,
       text: 'Unknown task "nope".',
     });
-    const notStarted = h.supervisor.moves.requestMove("queued", { by: "captain" });
+    const notStarted = await h.supervisor.moves.requestMove("queued", { by: "captain" });
     expect(notStarted).toEqual({
       ok: false,
       text: `${handle(queued)} is ${describeStatus(queued)}; only started work moves.`,
     });
-    expect(h.supervisor.moves.requestMove("elsewhere", { by: "captain" })).toEqual({
+    expect(await h.supervisor.moves.requestMove("elsewhere", { by: "captain" })).toEqual({
       ok: false,
       text: `${handle(elsewhere)} runs on another computer, so it stays on that computer's own subscriptions.`,
     });
     expect(
-      h.supervisor.moves.requestMove(taskId, { by: "firstmate", model: "xai/grok-5" }),
+      await h.supervisor.moves.requestMove(taskId, { by: "firstmate", model: "xai/grok-5" }),
     ).toEqual({
       ok: false,
       text: `xai/grok-5 cannot take ${handle(record)} now, so it stays where it runs.`,
     });
     expect(
-      h.supervisor.moves.requestMove(taskId, { by: "firstmate", model: "github-copilot/gpt-5.1" }),
+      await h.supervisor.moves.requestMove(taskId, {
+        by: "firstmate",
+        model: "github-copilot/gpt-5.1",
+      }),
     ).toEqual({
       ok: false,
       text: `${handle(record)} already runs on github-copilot/gpt-5.1.`,
     });
     // A move asked mid-turn is taken and waits for the turn to end; what it
     // says then is taskMoves.computer.test.ts's.
-    const asked = h.supervisor.moves.requestMove(taskId, { by: "captain" });
+    const asked = await h.supervisor.moves.requestMove(taskId, { by: "captain" });
     expect(asked.ok).toBe(true);
     // Nothing moved: the record keeps its model and the turn was never cut.
     expect(h.tasks.get(taskId)?.model).toBe("github-copilot/gpt-5.1");
@@ -416,7 +419,7 @@ describe("a started task's move", () => {
     crewmate.finishPrompt();
     await tick();
     h.sessions.open.mockRejectedValueOnce(new Error("Codex did not answer"));
-    expect(h.supervisor.moves.requestMove(taskId, { by: "captain" }).ok).toBe(true);
+    expect((await h.supervisor.moves.requestMove(taskId, { by: "captain" })).ok).toBe(true);
     await vi.waitFor(() =>
       expect(h.events).toContainEqual({
         type: "firstmate_note",
@@ -434,7 +437,7 @@ describe("a started task's move", () => {
   it("refuses a move to another provider for a task that names none to move off", async () => {
     const h = setup(fakeCrewmate());
     const record = seedTask(h.tasks, { id: "bare", title: "Check the meter", status: "completed" });
-    expect(h.supervisor.moves.requestMove("bare", { by: "firstmate" })).toEqual({
+    expect(await h.supervisor.moves.requestMove("bare", { by: "firstmate" })).toEqual({
       ok: false,
       text: `${handle(record)} has no provider on its record to move off.`,
     });

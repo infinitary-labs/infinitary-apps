@@ -9,6 +9,11 @@ import { launchApp, SHORT_TICK } from "./launch";
 import { REACT_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { reportLine, startedLine, taskKey } from "./rails";
+import {
+  FREEZE_BURST_TITLES,
+  FREEZE_BURST_WORDS,
+  scriptFreezeBurst,
+} from "./scenarios/freezeBurst";
 import { boardEntry, openBoardButton } from "./taskBoard";
 import { typeInto } from "./windowKeys";
 
@@ -18,8 +23,9 @@ import { typeInto } from "./windowKeys";
  * actual app on a record the captain's size with the freeze recorder on,
  * drives the work that repeats - first mate turns, which read the open
  * messages before and after each, a crewmate's start through its first
- * report, the minute passes with the answer-delivery sweep, the task board
- * and typing - and fails, naming the call path, on any stretch of the main
+ * report, several starts issued together while typing, the minute passes
+ * with the answer-delivery sweep, the task board and typing - and fails,
+ * naming the call path, on any stretch of the main
  * thread's own processor time at or over the line.
  *
  * The line counts processor time, never wall time: a busy test computer
@@ -29,8 +35,10 @@ import { typeInto } from "./windowKeys";
  * (scripts/main-thread-waits.ts).
  *
  * Promised result: no recorded stall reaches the line. Data: the captain's
- * readings (captainSizedRecord.ts). Completion signal: the minute passes the
- * app reports on its own output. Prerequisites: none beyond a built app;
+ * readings (captainSizedRecord.ts), plus the reported nine-start burst.
+ * Completion signals: every start and first report, retained window input,
+ * and the minute passes the app reports on its own output.
+ * Prerequisites: none beyond a built app;
  * the recorder works the same on Linux and the Mac. Shared resources: none.
  */
 
@@ -152,6 +160,42 @@ test("the main thread never spends 250 ms of its own processor time at once on a
     await expect(startedLine(page, startedKey).first()).toBeVisible({ timeout: 30_000 });
     await expect(reportLine(page, startedKey).first()).toBeVisible({ timeout: 30_000 });
     await waitForFirstmateIdle(page);
+    // The captain's several-start case: all requests come from one first-mate
+    // turn, not nine sequential asks. The same recorder covers their complete
+    // start paths while the window also accepts a draft, without a timing sleep.
+    if (!app.mockProvider) throw new Error("The freeze burst needs its scripted provider");
+    const burst = scriptFreezeBurst(app.mockProvider);
+    step(
+      `while ${FREEZE_BURST_TITLES.length} crewmates started together and the window accepted typing`,
+    );
+    await say(page, FREEZE_BURST_WORDS);
+    const draft = "How are the session audits coming along";
+    const [burstKeys] = await Promise.all([
+      Promise.all(
+        FREEZE_BURST_TITLES.map(async (title) => {
+          const key = await taskKey(page, title);
+          await expect(startedLine(page, key).first()).toBeVisible({ timeout: 30_000 });
+          await expect(reportLine(page, key).first()).toBeVisible({ timeout: 30_000 });
+          return key;
+        }),
+      ),
+      (async () => {
+        const duringBurst = promptInput(page);
+        await duringBurst.click();
+        await typeInto(duringBurst, draft, { delay: 20 });
+        await expect(duringBurst).toHaveValue(draft);
+        await duringBurst.fill("");
+      })(),
+    ]);
+    await expect.poll(() => burst.outcome().state).toBe("closed");
+    await waitForFirstmateIdle(page);
+    console.log(
+      JSON.stringify({
+        scenario: "concurrent crewmate starts",
+        startedAndReported: burstKeys,
+        windowDraft: draft,
+      }),
+    );
     step("while the task board opened");
     await openBoardButton(page).click();
     await expect(boardEntry(page)).toBeVisible();

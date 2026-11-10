@@ -162,11 +162,16 @@ function startCrewTask(userDataDir: string): string {
     });
     const id = "audit-notes";
     seedTask(tasks, { id, title: TITLE, status: "queued" });
-    const routed = router.decide(id, TITLE, {
-      kind: "implement",
-      basis: "plan",
-      basis_verified: true,
-    });
+    const routed = router.decide(
+      id,
+      TITLE,
+      {
+        kind: "implement",
+        basis: "plan",
+        basis_verified: true,
+      },
+      { placed: { work: [], samples: [], charges: {} } },
+    );
     // INF-1714's acceptance: the larger remaining allowance wins over a near-floor one.
     expect(routed?.choice).toEqual(CLAUDE);
     decisions.recordAccount({

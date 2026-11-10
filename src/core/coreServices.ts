@@ -132,6 +132,7 @@ export type CoreServices = {
   pluginFetch: MediatedFetch;
   /** The `sql` read's engine: the query process over the published views. */
   sql: SqlService;
+  recordReader: import("./recordReads/recordReader").RecordReader;
   /** Personal extensions (talk-to-personalize Step 2): the seeded workspace, compiled and served. */
   personal: PersonalExtensions;
   /** What the window did with each panel, as it last said (`inf:plugins:personal:mounts`). */

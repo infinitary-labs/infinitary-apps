@@ -10,6 +10,10 @@ import type { RepoView } from "@shared/repos";
 import type { ResourceObservation } from "@shared/resources";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
+import {
+  orderPolicyOnlyRoute,
+  preparePolicyOnlyRoute,
+} from "../../../tests/helpers/policyOnlyRouting";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { captureLoginPath } from "../hostEnv";
 import { thisDeviceSystem } from "../platform";
@@ -128,6 +132,8 @@ describe("Automatic placement when the project host is slow to answer", () => {
       work,
       devices: () => [],
       router: {
+        prepare: preparePolicyOnlyRoute,
+        inOrder: orderPolicyOnlyRoute,
         dynamicEnabled: () => true,
         preview: () => opus,
         commit: (_taskId: string, preview: RoutePreview) => preview.result,

@@ -107,12 +107,22 @@ export type RouteOptions = {
   pool?: RoutingPool;
 };
 
+export type PreparedRouteOptions = RouteOptions & { placed: PlacedWorkData };
+
 /**
  * Binds the pure routing engine to live inputs (quota catalog, Pi
  * availability, persisted pins, user slots) and records every decision
  * with its reasons - the "why this model" surface.
  */
 export class Router {
+  private placement: Promise<unknown> = Promise.resolve();
+
+  /** Preparation through commitment is one ordered operation across all placement callers. */
+  inOrder<T>(operation: () => Promise<T>): Promise<T> {
+    const next = this.placement.then(operation);
+    this.placement = next.catch(() => undefined);
+    return next;
+  }
   dynamicEnabled(): boolean {
     return this.options.settings.getRoutingSettings().dynamicRouting;
   }
@@ -141,10 +151,19 @@ export class Router {
       crewAccount?: (
         piProviderId: string,
         model: string,
-        placed?: PlacedWorkData,
+        placed: PlacedWorkData,
       ) => string | undefined;
     },
   ) {}
+
+  /** Read and score history apart from the window before the synchronous policy runs. */
+  async prepare(options: RouteOptions = {}): Promise<PreparedRouteOptions> {
+    const rows = options.pool
+      ? (options.pool.readings ?? [])
+      : (this.options.quota.latest()?.providers ?? []);
+    const placed = await this.options.placedWork?.prepare(rows);
+    return { ...options, placed: placed ?? { work: [], samples: [], charges: {}, readings: rows } };
+  }
 
   reasoningChoice(ref: PiModelRef, slot: Slot) {
     return this.options.slots?.reasoningChoice(ref, slot);
@@ -168,7 +187,7 @@ export class Router {
     taskId: string,
     prompt: string,
     shape: WorkShape,
-    options: RouteOptions = {},
+    options: PreparedRouteOptions,
   ): RouteResult | undefined {
     const evaluation = this.preview(prompt, shape, options);
     if (!evaluation) return undefined;
@@ -209,7 +228,7 @@ export class Router {
     taskId: string,
     prompt: string,
     shape: WorkShape,
-    options: RouteOptions = {},
+    options: PreparedRouteOptions,
   ): RouteResult {
     return this.commit(taskId, this.evaluate(prompt, shape, options));
   }
@@ -219,12 +238,16 @@ export class Router {
    * The ordinary decide path uses this same evaluation and remains the writer.
    * Call again at commitment: this preview is evidence, not a model reservation.
    */
-  preview(prompt: string, shape: WorkShape, options: RouteOptions = {}): RoutePreview | undefined {
+  preview(
+    prompt: string,
+    shape: WorkShape,
+    options: PreparedRouteOptions,
+  ): RoutePreview | undefined {
     if (!this.dynamicEnabled()) return undefined;
     return this.evaluate(prompt, shape, options);
   }
 
-  private evaluate(prompt: string, shape: WorkShape, options: RouteOptions): RoutePreview {
+  private evaluate(prompt: string, shape: WorkShape, options: PreparedRouteOptions): RoutePreview {
     const settings = this.options.settings.getRoutingSettings();
     // Saved Always use choices apply only while Dynamic routing is on.
     const pins = settings.dynamicRouting ? settings.pins : [];
@@ -245,15 +268,17 @@ export class Router {
           pool.modelAccounts?.get(servedModelKey(model)) ??
           pool.accounts?.get(servedProviderOf(model.provider))
       : crewAccount
-        ? (model: CatalogModelView, placed?: PlacedWorkData) =>
+        ? (model: CatalogModelView, placed: PlacedWorkData) =>
             crewAccount(servedProviderOf(model.provider), model.id, placed)
         : undefined;
     const catalog =
       this.options.placedWork?.catalog(
         rawCatalog,
-        pool ? (pool.readings ?? []) : (this.options.quota.latest()?.providers ?? []),
+        options.placed?.readings ??
+          (pool ? (pool.readings ?? []) : (this.options.quota.latest()?.providers ?? [])),
         Date.now(),
         bound,
+        options.placed,
       ) ?? rawCatalog;
     const available = kept(options.pool?.available ?? this.options.availableModels());
     const routable = this.options.slots?.routable(available);

@@ -58,6 +58,7 @@ import { afterEach, beforeEach, type Mock, vi } from "vitest";
 import { completionCardBody } from "./completionCard";
 import { freshDatabase as openInMemoryDatabase } from "./database";
 import { type FakeSession, type FakeSessionOptions, fakeBinding, fakeSession } from "./fakeSession";
+import { orderPolicyOnlyRoute, preparePolicyOnlyRoute } from "./policyOnlyRouting";
 import { scratchDir } from "./scratchDirs";
 
 /** Schema-valid answers whose JSON exceeds the footer bound. One value cannot, so this is several. */
@@ -460,6 +461,8 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     (extras.routedModel || extras.routeResult
       ? {
           reasoningChoice: extras.reasoningChoice ?? (() => undefined),
+          prepare: preparePolicyOnlyRoute,
+          inOrder: orderPolicyOnlyRoute,
           decide: (
             taskId: string,
             prompt: string,

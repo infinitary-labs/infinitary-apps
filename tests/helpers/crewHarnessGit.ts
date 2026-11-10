@@ -215,6 +215,7 @@ export async function approved(
     checkWatch?: boolean;
     /** The project merges its pull requests through its queue. */
     queue?: boolean;
+    realRouter?: import("./crewHarness").SetupExtras["realRouter"];
   } = {},
 ) {
   const forge = new KeptForge(where.kind);
@@ -230,6 +231,7 @@ export async function approved(
   };
   const harness = setup(crewmate, {
     crewmates: [reviewer],
+    ...(where.realRouter ? { realRouter: where.realRouter } : {}),
     checkCi: (id) => service().checks.readForOffer(id),
     mergePullRequest: (id, guard, beforeDispatch) =>
       service().merges.merge(id, guard, beforeDispatch),
@@ -310,7 +312,7 @@ export async function approved(
   };
 }
 /** That card clicked once, and the host refusing the merge for a conflict. */
-export async function kept(where: { kind?: "github" | "gitlab" } = {}) {
+export async function kept(where: Parameters<typeof approved>[0] = {}) {
   const harness = await approved(where);
   harness.forge.refuse = new ForgeError(
     "refused",

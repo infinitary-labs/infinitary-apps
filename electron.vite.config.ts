@@ -69,6 +69,7 @@ export default defineConfig({
           // The query process behind the `sql` read, also a utility process:
           // a runaway statement is stopped by killing it (src/core/sql/).
           sqlProcess: resolve(__dirname, "src/core/sql/sqlProcess.ts"),
+          recordProcess: resolve(__dirname, "src/core/recordReads/recordProcess.ts"),
           // The voice helper, a utility process that holds the Whisper model
           // (src/main/voice/voiceHelper.ts, docs/architecture.md section 8).
           voiceHelper: resolve(__dirname, "src/main/voice/voiceHelperEntry.ts"),

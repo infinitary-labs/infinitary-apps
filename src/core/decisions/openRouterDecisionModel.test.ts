@@ -36,6 +36,32 @@ it("honors caller cancellation while the selected account runtime is still being
   });
 });
 
+// Finding A makes account selection asynchronous; cancellation must still prevent runtime construction.
+it("does not construct a runtime after cancellation overtakes account selection", async () => {
+  let selected!: (account: string) => void;
+  const account = new Promise<string>((resolve) => {
+    selected = resolve;
+  });
+  const runtimeFor = vi.fn(() => new Promise<never>(() => {}));
+  const model = new OpenRouterDecisionModel({
+    model: "typesafe/jev-1.13",
+    selectAccount: () => account,
+    runtimeFor,
+  });
+  const controller = new AbortController();
+  const pending = model.decide(
+    { purpose: "kind" },
+    { facts: { title: "fix" } },
+    questions,
+    controller.signal,
+  );
+  controller.abort();
+  expect((await pending).answers.kind?.reason).toBe("aborted");
+  selected("acct");
+  await account;
+  expect(runtimeFor).not.toHaveBeenCalled();
+});
+
 it("bounds runtime construction as well as the request to fifteen seconds", async () => {
   const deadline = new AbortController();
   const clock = vi.spyOn(AbortSignal, "timeout").mockReturnValue(deadline.signal);

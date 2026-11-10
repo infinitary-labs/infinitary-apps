@@ -159,19 +159,30 @@ export class TaskPlacement {
     shape: WorkShape,
     machine: string | null,
     avoidProvider?: string,
+    publish?: (routed: RouteResult | undefined) => void,
   ): Promise<RouteResult | undefined> {
     const router = this.options.router;
-    if (!router) return undefined;
+    if (!router) {
+      publish?.(undefined);
+      return undefined;
+    }
     const preference = avoidProvider ? { avoidProvider } : {};
     const pool = machine ? await this.options.machines?.served(machine) : undefined;
-    if (machine && !pool) return undefined;
-    const options = { ...preference, ...(pool ? { pool } : {}) };
-    // Routing off must not delegate the initial model/account to Pi's
-    // account-less base runtime. The router still owns eligibility.
-    return (
-      router.decide(taskId, prompt, shape, options) ??
-      router.initialChoice(taskId, prompt, shape, options)
-    );
+    if (machine && !pool) {
+      publish?.(undefined);
+      return undefined;
+    }
+    return router.inOrder(async () => {
+      const options = await router.prepare({ ...preference, ...(pool ? { pool } : {}) });
+      // Routing off must not delegate the initial model/account to Pi's
+      // account-less base runtime. The router still owns eligibility.
+      const routed =
+        router.decide(taskId, prompt, shape, options) ??
+        router.initialChoice(taskId, prompt, shape, options);
+      // A review created after routing becomes visible before the next work read.
+      publish?.(routed);
+      return routed;
+    });
   }
 
   /**

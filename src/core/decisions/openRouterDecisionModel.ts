@@ -22,7 +22,7 @@ export class OpenRouterDecisionModel implements DecisionModel {
   constructor(
     private readonly options: {
       model: string;
-      selectAccount: (taskId: string) => string | undefined;
+      selectAccount: (taskId: string) => string | undefined | Promise<string | undefined>;
       runtimeFor: (accountId: string) => Promise<ModelRuntime>;
       onUnauthorized?: (accountId: string) => Promise<unknown>;
       baseUrl?: string;
@@ -78,7 +78,9 @@ export class OpenRouterDecisionModel implements DecisionModel {
       bound.addEventListener("abort", stop, { once: true });
     });
     const work = async (): Promise<DecisionRun> => {
-      const accountId = this.options.selectAccount(caller.taskId ?? caller.purpose);
+      const selecting = this.options.selectAccount(caller.taskId ?? caller.purpose);
+      const accountId = selecting instanceof Promise ? await selecting : selecting;
+      if (bound.aborted) return fail(stopReason());
       if (!accountId) return fail("no-account");
       const runtime = await this.options.runtimeFor(accountId);
       if (bound.aborted) return fail(stopReason());

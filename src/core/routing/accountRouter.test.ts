@@ -58,7 +58,7 @@ function pool(
 }
 
 describe("AccountSelector", () => {
-  it("selects the best-headroom account at spawn and records the decision", () => {
+  it("selects the best-headroom account at spawn and records the decision", async () => {
     const db = openInMemoryDatabase();
     const accounts = pool([{ id: "acct_a" }, { id: "acct_b" }]);
     const selector = new AccountSelector({
@@ -73,7 +73,7 @@ describe("AccountSelector", () => {
       flagshipAccountId: () => null,
       decisions: new DecisionStore(db),
     });
-    const chosen = selector.selectForSpawn("task-1", "openai-codex");
+    const chosen = await selector.selectForSpawn("task-1", "openai-codex");
     expect(chosen).toBe("acct_b");
     expect(accounts.marked).toEqual(["acct_b"]);
     const row = db
@@ -85,7 +85,7 @@ describe("AccountSelector", () => {
   });
 
   // INF-443 piece 2: the record shows each account's reading and fate.
-  it("saves every account's reading and what became of it", () => {
+  it("saves every account's reading and what became of it", async () => {
     const db = openInMemoryDatabase();
     const selector = new AccountSelector({
       pool: pool([{ id: "acct_a" }, { id: "acct_b" }, { id: "acct_c", enabled: false }]),
@@ -99,7 +99,7 @@ describe("AccountSelector", () => {
       flagshipAccountId: () => null,
       decisions: new DecisionStore(db),
     });
-    selector.selectForSpawn("task-1", "openai-codex");
+    await selector.selectForSpawn("task-1", "openai-codex");
     const row = db
       .prepare("SELECT facts_json FROM decisions WHERE kind = 'account' AND task_id = ?")
       .get("task-1") as { facts_json: string };
@@ -113,17 +113,17 @@ describe("AccountSelector", () => {
     });
   });
 
-  it("returns undefined when the provider has no accounts (base runtime serves)", () => {
+  it("returns undefined when the provider has no accounts (base runtime serves)", async () => {
     const selector = new AccountSelector({
       pool: pool([]),
       quota: { latest: () => undefined },
       flagshipAccountId: () => null,
       decisions: new DecisionStore(openInMemoryDatabase()),
     });
-    expect(selector.selectForSpawn("task-1", "openai-codex")).toBeUndefined();
+    expect(await selector.selectForSpawn("task-1", "openai-codex")).toBeUndefined();
   });
 
-  it("protects the flagship account from crewmate selection", () => {
+  it("protects the flagship account from crewmate selection", async () => {
     const selector = new AccountSelector({
       pool: pool([{ id: "acct_flag" }, { id: "acct_b" }]),
       quota: {
@@ -136,10 +136,10 @@ describe("AccountSelector", () => {
       flagshipAccountId: () => "acct_flag",
       decisions: new DecisionStore(openInMemoryDatabase()),
     });
-    expect(selector.selectForSpawn("task-1", "openai-codex")).toBe("acct_b");
+    expect(await selector.selectForSpawn("task-1", "openai-codex")).toBe("acct_b");
   });
 
-  it("keeps a healthy recorded account at resume without a new decision", () => {
+  it("keeps a healthy recorded account at resume without a new decision", async () => {
     const db = openInMemoryDatabase();
     const selector = new AccountSelector({
       pool: pool([{ id: "acct_a", connected: true }]),
@@ -147,12 +147,12 @@ describe("AccountSelector", () => {
       flagshipAccountId: () => null,
       decisions: new DecisionStore(db),
     });
-    const result = selector.reselectForResume("task-1", "acct_a");
+    const result = await selector.reselectForResume("task-1", "acct_a");
     expect(result).toEqual({ accountId: "acct_a", changed: false });
     expect(db.prepare("SELECT COUNT(*) AS n FROM account_decisions").get()).toEqual({ n: 0 });
   });
 
-  it("re-selects a sibling at resume when the recorded account is gone", () => {
+  it("re-selects a sibling at resume when the recorded account is gone", async () => {
     const db = openInMemoryDatabase();
     db.prepare(
       "INSERT INTO decisions (kind, task_id, provider, model, bucket, reasons_json, at) VALUES ('routing', ?, ?, ?, ?, ?, ?)",
@@ -163,11 +163,11 @@ describe("AccountSelector", () => {
       flagshipAccountId: () => null,
       decisions: new DecisionStore(db),
     });
-    const result = selector.reselectForResume("task-1", "acct_removed");
+    const result = await selector.reselectForResume("task-1", "acct_removed");
     expect(result).toEqual({ accountId: "acct_b", changed: true });
   });
 
-  it("reports a change with no replacement when nothing can serve the resume", () => {
+  it("reports a change with no replacement when nothing can serve the resume", async () => {
     const db = openInMemoryDatabase();
     const selector = new AccountSelector({
       pool: pool([]),
@@ -175,7 +175,7 @@ describe("AccountSelector", () => {
       flagshipAccountId: () => null,
       decisions: new DecisionStore(db),
     });
-    expect(selector.reselectForResume("task-1", "acct_removed")).toEqual({ changed: true });
+    expect(await selector.reselectForResume("task-1", "acct_removed")).toEqual({ changed: true });
     expect(vi.isMockFunction(selector.selectForSpawn)).toBe(false);
   });
 });
@@ -187,7 +187,7 @@ describe("AccountSelector", () => {
  * routing never reached because the pool had already dropped its models.
  */
 describe("an account withheld from serving", () => {
-  it("is skipped with its reason, and a withheld account elsewhere is named too", () => {
+  it("is skipped with its reason, and a withheld account elsewhere is named too", async () => {
     const db = openInMemoryDatabase();
     const accounts = pool([
       { id: "acct_held", connected: true, withheld: "refused" },
@@ -222,7 +222,7 @@ describe("an account withheld from serving", () => {
       decisions: new DecisionStore(db),
     });
 
-    expect(selector.selectForSpawn("task-1", "openai-codex")).toBe("acct_ok");
+    expect(await selector.selectForSpawn("task-1", "openai-codex")).toBe("acct_ok");
     const [row] = db
       .prepare("SELECT reasons_json FROM account_decisions WHERE task_id = ?")
       .all("task-1") as { reasons_json: string }[];
@@ -259,7 +259,7 @@ describe("selecting an account of a provider with no quota reading at all", () =
     };
   }
 
-  it("still binds one, and records that the choice had no headroom to compare", () => {
+  it("still binds one, and records that the choice had no headroom to compare", async () => {
     const db = openInMemoryDatabase();
     const accounts = openRouterPool(["acct_or1", "acct_or2"]);
     const selector = new AccountSelector({
@@ -270,7 +270,7 @@ describe("selecting an account of a provider with no quota reading at all", () =
       decisions: new DecisionStore(db),
     });
 
-    const chosen = selector.selectForSpawn("task-or", "openrouter");
+    const chosen = await selector.selectForSpawn("task-or", "openrouter");
     expect(chosen).toBeDefined();
     expect(accounts.marked).toEqual([chosen]);
     const [row] = db

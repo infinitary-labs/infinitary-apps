@@ -161,7 +161,7 @@ describe("the host's own operations, as HostOps runs them", () => {
     expect(h.events.filter((event) => event.type === "firstmate_note")).toEqual([]);
 
     // A sign-in card's Move on a task the record does not hold says why in the feed.
-    const refusal = h.supervisor.moves.requestMove("t-gone", {
+    const refusal = await h.supervisor.moves.requestMove("t-gone", {
       by: "captain",
       from: "openai-codex",
     });
@@ -170,7 +170,7 @@ describe("the host's own operations, as HostOps runs them", () => {
       hostCard(h, "c-move", { kind: "host", op: "move-task", arg: "t-gone:openai-codex" }),
       "go",
     );
-    expect(notes(h, "t-gone")).toEqual([refusal.text]);
+    await vi.waitFor(() => expect(notes(h, "t-gone")).toEqual([refusal.text]));
 
     // A stall card's Start on work that cannot start says why in the feed, and starts nothing.
     seedTask(h.tasks, { id: "t-dropped", title: "Old idea", status: "cancelled" });

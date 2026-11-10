@@ -99,6 +99,7 @@ import { PluginInstaller } from "./plugins/pluginInstaller";
 import { PluginRecords } from "./plugins/pluginRecords";
 import { ShellPreferencesService } from "./preferences/shellPreferences";
 import { claudeStoreDirOf, startHomeQuota } from "./quota/homeQuota";
+import { RecordReader } from "./recordReads/recordReader";
 import { DecisionKindClassifier } from "./routing/decisionKindClassifier";
 import { startHomeRouting } from "./routing/homeRouting";
 import { modelChoiceOf } from "./routing/modelChoice";
@@ -221,6 +222,7 @@ export async function createServices(
   // The `sql` read (plugin data surface, Phase B): a process of its own with
   // its own read-only connection, started on the first query. The database
   // path goes to it and to no plugin.
+  const recordReader = new RecordReader(host.recordProcess, join(paths.userData, "firstmate.db"));
   const sql = new SqlService({
     spawner: host.sqlProcess,
     databasePath: join(paths.userData, "firstmate.db"),
@@ -516,7 +518,11 @@ export async function createServices(
   let reconcileFirstRun: () => void = () => {};
   let onCardsChanged: () => void = () => {};
   let onCaptainTurnAccepted: () => void = () => {};
-  const placedWork = new PlacedWorkScores(db, settings);
+  const placedWork = new PlacedWorkScores(
+    db,
+    settings,
+    host.recordProcess ? (input) => recordReader.placed(input) : undefined,
+  );
   // The quota sensor, its catalog and the readings sessions push (docs/quota.md).
   const homeQuota = startHomeQuota({
     host,
@@ -970,7 +976,12 @@ export async function createServices(
     inbox,
     router,
     accountlessServes: () => auth.servesAnyModel(),
-    accounts,
+    accounts: {
+      selectForSpawn: (taskId, provider, crew) => accounts.selectForSpawn(taskId, provider, crew),
+      reselectForResume: (taskId, accountId) => accounts.reselectForResume(taskId, accountId),
+      labelOf: (accountId) => accounts.labelOf(accountId),
+    },
+    taskSelection: host.recordProcess ? (input) => recordReader.tasks(input) : undefined,
     // Whoever observes a typed cut-off records it on the account.
     noteCutOff,
     // Crew delivery reads that fact: a lane is held while a cut-off stands
@@ -1845,6 +1856,7 @@ export async function createServices(
     },
     pluginFetch: createMediatedFetch(),
     sql,
+    recordReader,
     personal,
     panelMounts,
     ...(browsers ? { browsers } : {}),

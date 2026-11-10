@@ -30,7 +30,7 @@ import {
   type SessionEvent,
 } from "../session/session";
 import {
-  queryTasks,
+  queryTasksAsync,
   type TaskQueryInput,
   type TaskQueryReach,
   type TaskQueryRow,
@@ -565,8 +565,8 @@ export class CrewToolHooks {
    * the same query the Firstmate and supervision read, so a crewmate can
    * search the backlog before filing a follow-up.
    */
-  private queryTasks(input: TaskQueryInput): { rows: TaskQueryRow[]; total: number } {
-    return queryTasks(
+  private queryTasks(input: TaskQueryInput): Promise<{ rows: TaskQueryRow[]; total: number }> {
+    return queryTasksAsync(
       this.core.options.tasks,
       input,
       (repoId) => this.core.options.repos.get(repoId)?.name,
@@ -584,6 +584,7 @@ export class CrewToolHooks {
    */
   taskQueryReach(): TaskQueryReach {
     return {
+      select: this.core.options.taskSelection,
       timeline: this.core.options.taskTimeline,
       pendingResponses: (taskId) => this.core.options.inbox.pendingResponses(taskId),
       projectFolder: (repoId) => this.core.options.repos.get(repoId)?.path,

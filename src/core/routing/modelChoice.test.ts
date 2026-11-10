@@ -77,7 +77,9 @@ describe("modelChoiceOf (INF-1714)", () => {
     const w = world();
     seedTask(w.tasks, { id: "audit-1", title: "Audit the release notes", status: "queued" });
     expect(modelChoiceOf(w.record("audit-1"), new DecisionStore(w.db))).toBeUndefined();
-    const routed = w.router.decide("audit-1", "Audit the release notes", BUILD);
+    const routed = w.router.decide("audit-1", "Audit the release notes", BUILD, {
+      placed: { work: [], samples: [], charges: {} },
+    });
     expect(routed?.choice).toEqual(CLAUDE);
     w.tasks.starts.dispatch("audit-1", {
       workspace: WORKSPACE,

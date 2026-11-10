@@ -279,10 +279,12 @@ describe("a crewmate's session, as CrewSessions holds it", () => {
     await vi.waitFor(() => expect(h.sessionSpecs).toHaveLength(2));
     // The captain moves it meanwhile: the move waits for that open to end.
     expect(
-      h.supervisor.moves.requestMove(taskId, {
-        by: "captain",
-        model: "openai-codex/gpt-6.1-sol",
-      }).ok,
+      (
+        await h.supervisor.moves.requestMove(taskId, {
+          by: "captain",
+          model: "openai-codex/gpt-6.1-sol",
+        })
+      ).ok,
     ).toBe(true);
     await tick();
     expect(h.sessionSpecs).toHaveLength(2);

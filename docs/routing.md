@@ -216,7 +216,22 @@ That snapshot is historical, never a fresh observation after restart; `docs/help
 `PlacedWorkScores` (`src/core/routing/placedWork.ts`, INF-443 piece 3) adjusts the spend-priority score for work already placed, without changing the allowance reading.
 The router uses it for the home and each computer's pool, and account selection uses it too.
 One evaluation's `PlacedWorkData` shares the work and finished samples, allowance prices, per-reading window charges and per-task usage totals across model ranking and account binding.
-The snapshot belongs to that synchronous evaluation; a later preview reads new usage, routes and observations rather than retaining its charges.
+The app prepares these charges in the read-only record process (`src/core/recordReads/`), apart from the window's main thread.
+Concurrent requests collected in one event-loop batch share one committed work and finished-sample snapshot, including the per-task usage reads used by every account in that batch.
+The process returns only per-reading window charges; task history never crosses back to the window's process.
+A later batch reads committed usage and routes again, with no timed cache, and the local scoring policy uses the same readings that produced its charges.
+Quota observations and price learning run in that process too, while `SettingsStore` remains the one writer of learned prices.
+Callers replay their current snapshots to seed a restarted reader; an equal replay in a running reader never repeats learning's usage queries.
+Task starts, Automatic placement and moves share one ordered preparation, decision and commitment chain, so each new placement sees its predecessor’s committed charge.
+A review whose task row follows routing is created within that chain, including an independent repair assessment.
+Computer facts and session reopening stay outside that chain.
+Opening the reader and receiving an answer each have a ten-second bound.
+A missing, stopped or timed-out reader rejects its pending requests rather than running history reads on the main thread.
+Placement and account selection then proceed with the original allowance readings and no placed-work charges; agent task searches report the reader’s error rather than an empty result.
+The next request can open a new reader.
+A host without the record-process capability retains in-process scoring and matching task selection through their existing owners.
+Failure of a configured reader never selects that synchronous path.
+`Router.prepare` supplies required scoring data to routing; `AccountSelector.selectForSpawn` and `reselectForResume` are asynchronous attachment points, and synchronous policy previews require their already-prepared data.
 The charge is independent of the candidate model, while each model's effective allowance, raw band and time-to-reset score are still derived separately.
 The settings meters, 0% eligibility check, flagship reserve, pins, requested tier and reset waits still read the unadjusted meter.
 An unpriced allowance takes no charge, as the captain selected in question 7; there is no one-task restriction or shipped starting price.

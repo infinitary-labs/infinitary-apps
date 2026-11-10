@@ -54,12 +54,13 @@ export class AccountSelector {
    * model's scope and ranked by the crew allowance bands, as routing ranked
    * the model (INF-1714); a decision model's call names none.
    */
-  selectForSpawn(
+  private recordSpawn(
     taskId: string,
     piProviderId: string,
-    crew?: { model: string },
+    crew: { model: string } | undefined,
+    placed: PlacedWorkData | undefined,
   ): string | undefined {
-    const decision = this.decide(piProviderId, crew);
+    const decision = this.decide(piProviderId, crew, placed);
     if (!decision) return undefined;
     this.options.decisions.recordAccount({
       taskId,
@@ -78,17 +79,55 @@ export class AccountSelector {
     return decision.accountId;
   }
 
+  async selectForSpawn(
+    taskId: string,
+    provider: string,
+    crew?: { model: string },
+  ): Promise<string | undefined> {
+    const placed = await this.options.placedWork?.prepare(
+      this.options.quota.latest()?.providers ?? [],
+    );
+    return this.recordSpawn(taskId, provider, crew, placed);
+  }
+
+  /** A resume keeps a healthy account; otherwise prepare and bind a serving sibling. */
+  async reselectForResume(
+    taskId: string,
+    accountId: string | null,
+  ): Promise<{ accountId?: string; changed: boolean }> {
+    if (accountId) {
+      const account = this.options.pool.list().find((row) => row.id === accountId);
+      if (account?.enabled && this.options.pool.connectedSync(accountId) !== false)
+        return { accountId, changed: false };
+    }
+    const routed = this.options.decisions.latestRouting(taskId);
+    if (!routed?.provider) return { changed: Boolean(accountId) };
+    const selected = await this.selectForSpawn(
+      taskId,
+      routed.provider,
+      routed.model ? { model: routed.model } : undefined,
+    );
+    return {
+      ...(selected ? { accountId: selected } : {}),
+      changed: selected !== (accountId ?? undefined),
+    };
+  }
+
   /**
    * The account a crewmate's spawn on `model` would bind now, recording
    * nothing: routing ranks the model by this account's reading, so the
    * model and the account that serves it are judged on the same facts.
    * `placed` is the work the routing evaluation already read.
    */
-  crewAccount(piProviderId: string, model: string, placed?: PlacedWorkData): string | undefined {
+  crewAccount(piProviderId: string, model: string, placed: PlacedWorkData): string | undefined {
     return this.decide(piProviderId, { model }, placed)?.accountId;
   }
 
-  private decide(piProviderId: string, crew?: { model: string }, placed?: PlacedWorkData) {
+  private decide(
+    piProviderId: string,
+    crew: { model: string } | undefined,
+    placed: PlacedWorkData | undefined,
+  ) {
     const candidates = this.candidatesFor(piProviderId, crew?.model, placed);
     if (candidates.length === 0) return undefined;
     const pinned = this.options.pool.pinnedAccount(piProviderId);
@@ -102,37 +141,6 @@ export class AccountSelector {
         : {}),
       ...(crew ? { bands: true } : {}),
     });
-  }
-
-  /**
-   * A resume is an attachment point: the recorded account is re-checked and
-   * kept when still healthy; a dead or removed account triggers a fresh
-   * selection for the task's provider (its routing decision) so the
-   * transcript survives on a sibling.
-   */
-  reselectForResume(
-    taskId: string,
-    accountId: string | null,
-  ): { accountId?: string; changed: boolean } {
-    // A resume is a crewmate's: its account is ranked for the routed model.
-    if (accountId) {
-      const record = this.options.pool.list().find((account) => account.id === accountId);
-      if (record?.enabled && this.options.pool.connectedSync(accountId) !== false) {
-        return { accountId, changed: false };
-      }
-    }
-    const routed = this.options.decisions.latestRouting(taskId);
-    const provider = routed?.provider ?? undefined;
-    if (!provider) return { changed: Boolean(accountId) };
-    const reselected = this.selectForSpawn(
-      taskId,
-      provider,
-      routed?.model ? { model: routed.model } : undefined,
-    );
-    return {
-      ...(reselected ? { accountId: reselected } : {}),
-      changed: reselected !== (accountId ?? undefined),
-    };
   }
 
   /** The user label of an account, for user-facing copy. */
@@ -157,21 +165,21 @@ export class AccountSelector {
 
   private candidatesFor(
     piProviderId: string,
-    model?: string,
-    placed?: PlacedWorkData,
+    model: string | undefined,
+    placed: PlacedWorkData | undefined,
   ): AccountCandidate[] {
     const snapshot = this.options.quota.latest();
+    const rows = placed?.readings ?? snapshot?.providers;
     const quotaId = quotaEntryForPiProvider(piProviderId)?.quotaId;
     const now = Date.now();
     // Every account is scored against one read of the placed work.
     const placedWork = this.options.placedWork;
-    let data = placed;
+    const data = placed;
     return this.options.pool.list(piProviderId).map((account) => {
-      const row = snapshot?.providers.find(
+      const row = rows?.find(
         (provider) => provider.accountId === account.id && provider.provider === quotaId,
       );
       const effective = effectiveFromProvider(row, now, model);
-      if (row && placedWork) data ??= placedWork.data(now);
       const score = row && data ? placedWork?.score(row, now, model, data) : undefined;
       const connected = this.options.pool.connectedSync(account.id);
       const withheld = this.options.pool.withheldReason(account.id);

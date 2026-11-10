@@ -63,7 +63,7 @@ describe("CrewSupervisor", () => {
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
     crewmate.finishPrompt();
     await tick();
-    expect(supervisor.moves.requestMove(taskId, { by: "captain", from: "xai" })).toEqual({
+    expect(await supervisor.moves.requestMove(taskId, { by: "captain", from: "xai" })).toEqual({
       ok: false,
       text: `${tasks.get(taskId)?.key} "t" already moved off Grok.`,
     });
@@ -84,7 +84,7 @@ describe("CrewSupervisor", () => {
     crewmate.finishPrompt();
     await tick();
     expect(
-      supervisor.moves.requestMove(taskId, {
+      await supervisor.moves.requestMove(taskId, {
         by: "captain",
         from: COPILOT_PROVIDER_ID,
         offered: "xai/grok-5",
@@ -120,7 +120,7 @@ describe("CrewSupervisor", () => {
     });
     const { taskId } = await supervisor.intake.commission({ title: "t", intent: intentOf("work") });
     await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
-    const asked = supervisor.moves.requestMove(taskId, {
+    const asked = await supervisor.moves.requestMove(taskId, {
       by: "firstmate",
       model: "openai-codex/gpt-6.1-sol",
     });

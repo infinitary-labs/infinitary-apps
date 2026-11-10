@@ -499,6 +499,8 @@ export type HostCapabilities = {
    * `sql` read has no engine and every query fails.
    */
   readonly sqlProcess?: HostChildSpawner;
+  /** Read-only placement scoring and bounded task selection, apart from the window. */
+  readonly recordProcess?: HostChildSpawner;
   /**
    * Starts the process that runs one task command (`infinitary-browser-axi`,
    * src/core/axi/axiProcess.ts): axi-sdk-js writes `process.exitCode`, so

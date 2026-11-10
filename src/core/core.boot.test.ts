@@ -18,10 +18,12 @@ import { EMIT_CARD_TOOL } from "./pi/cardTool";
 import { catalogRefreshesSettled } from "./pi/modelRuntime";
 import type { PlacedSessions } from "./placed/placedSessions";
 import { PluginRecords } from "./plugins/pluginRecords";
+import { PlacedWorkScores } from "./routing/placedWork";
 import { bindTool } from "./session/tools";
 import { openDatabase } from "./storage/db";
 import { SettingsStore } from "./storage/settingsStore";
 import { seedTask } from "./tasks/seedTask";
+import { queryTasksAsync } from "./tasks/taskQuery";
 import { TaskService } from "./tasks/taskService";
 import { WorkspaceService } from "./workspace/workspaceService";
 
@@ -62,7 +64,7 @@ describe("the dev-only local orchestrator (roadmap 1.7)", () => {
   }
 
   afterEach(async () => {
-    core?.dispose();
+    await core?.dispose();
     core = undefined;
     await catalogRefreshesSettled();
     rmSync(userDataDir, { recursive: true, force: true });
@@ -71,6 +73,76 @@ describe("the dev-only local orchestrator (roadmap 1.7)", () => {
     delete process.env.INFINITARY_LOCAL_ORCHESTRATOR_URL;
     delete process.env.INFINITARY_LOCAL_ORCHESTRATOR_MODEL;
   });
+
+  // Regression: service composition must honor the host's optional reader capability.
+  it.each(["absent", "available", "failed"] as const)(
+    "agent search and scoring honor the %s record-process capability",
+    async (state) => {
+      const mainHistory = vi.spyOn(PlacedWorkScores.prototype, "data");
+      try {
+        const booted = await boot(
+          false,
+          true,
+          state === "absent"
+            ? { recordProcess: undefined }
+            : state === "failed"
+              ? {
+                  recordProcess: {
+                    spawn: () => {
+                      throw new Error("configured reader failed");
+                    },
+                  },
+                }
+              : {},
+        );
+        const tasks = booted.services.tasks;
+        seedTask(tasks, {
+          id: "archived-audit",
+          title: "Audit the session report",
+          status: "cancelled",
+        });
+        seedTask(tasks, {
+          id: "other-history",
+          title: "Update the release notes",
+          status: "cancelled",
+        });
+        const processSearch = vi.spyOn(booted.services.recordReader, "tasks");
+        const searching = queryTasksAsync(
+          tasks,
+          { text: "audit", status: "dropped" },
+          undefined,
+          undefined,
+          undefined,
+          booted.services.supervisor.toolHooks.taskQueryReach(),
+        );
+        if (state === "failed") await expect(searching).rejects.toThrow("configured reader failed");
+        else {
+          const found = await searching;
+          expect(found.rows.map((row) => row.task_id)).toEqual(["archived-audit"]);
+          expect(found.total).toBe(1);
+        }
+        expect(processSearch).toHaveBeenCalledTimes(state === "absent" ? 0 : 1);
+        seedTask(tasks, {
+          id: "ranking",
+          title: "Audit the next session",
+          status: "queued",
+          startPolicy: "on-request",
+        });
+        mainHistory.mockClear();
+        await booted.services.supervisor.placement.routeTask(
+          "ranking",
+          "Audit the next session",
+          { kind: "implement", basis: "plan", basis_verified: true },
+          null,
+        );
+        if (state === "absent") expect(mainHistory).toHaveBeenCalled();
+        else expect(mainHistory).not.toHaveBeenCalled();
+      } finally {
+        mainHistory.mockRestore();
+      }
+    },
+    60_000,
+  );
 
   it("an unpackaged checkout seats the Firstmate on the named model: the gate closes and the feed says where", async () => {
     const booted = await boot(false);

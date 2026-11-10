@@ -44,7 +44,9 @@ describe("Router", () => {
       }),
       availableModels: () => [{ provider: "openai-codex", id: "gpt-5.5" }],
     });
-    const result = router.decide("task-1", "add a settings row", UNCLEAR);
+    const result = router.decide("task-1", "add a settings row", UNCLEAR, {
+      placed: { work: [], samples: [], charges: {} },
+    });
     expect(result?.choice).toEqual({ provider: "openai-codex", id: "gpt-5.5" });
     expect(result?.rule).toBe("R8");
     const row = db.prepare("SELECT * FROM routing_decisions WHERE task_id = ?").get("task-1") as {
@@ -153,7 +155,9 @@ describe("Router", () => {
       shape: WorkShape = UNCLEAR,
     ): { bucket: string; served: string | null } {
       const { db, router } = routerWithSlot(slot);
-      router.decide("task-tier", "work from its recorded shape", shape);
+      router.decide("task-tier", "work from its recorded shape", shape, {
+        placed: { work: [], samples: [], charges: {} },
+      });
       return db
         .prepare("SELECT bucket, served FROM routing_decisions WHERE task_id = ?")
         .get("task-tier") as { bucket: string; served: string | null };
@@ -223,7 +227,9 @@ describe("Router", () => {
         slots,
         withheldModels: () => [{ ...opus, reason: "signed_out" }],
       });
-      return router.decide("task-held", "tidy the hull fittings", UNCLEAR);
+      return router.decide("task-held", "tidy the hull fittings", UNCLEAR, {
+        placed: { work: [], samples: [], charges: {} },
+      });
     }
     expect(decideWithOpusAt(64)).toMatchObject({
       bucket: "high",
@@ -252,12 +258,17 @@ describe("Router", () => {
       }),
       availableModels: () => [{ provider: "openai-codex", id: "gpt-5.5" }],
     });
-    const result = router.decide("task-shape", "fix the flaky retry test", {
-      kind: "fix",
-      kind_source: "classifier:xai/grok-4.6",
-      basis: "FM3K-12",
-      basis_verified: true,
-    });
+    const result = router.decide(
+      "task-shape",
+      "fix the flaky retry test",
+      {
+        kind: "fix",
+        kind_source: "classifier:xai/grok-4.6",
+        basis: "FM3K-12",
+        basis_verified: true,
+      },
+      { placed: { work: [], samples: [], charges: {} } },
+    );
     // R6: a fix on a verified basis is the captain's medium rule.
     expect(result?.bucket).toBe("medium");
     expect(result?.rule).toBe("R6");
@@ -286,11 +297,16 @@ describe("Router", () => {
       }),
       availableModels: () => [{ provider: "openai-codex", id: "gpt-5.5" }],
     });
-    const result = router.decide("task-unverified", "implement the thing", {
-      kind: "implement",
-      basis: "FM3K-99",
-      basis_verified: false,
-    });
+    const result = router.decide(
+      "task-unverified",
+      "implement the thing",
+      {
+        kind: "implement",
+        basis: "FM3K-99",
+        basis_verified: false,
+      },
+      { placed: { work: [], samples: [], charges: {} } },
+    );
     // R3: an unverified spec never buys the cheaper tier.
     expect(result?.rule).toBe("R3");
     expect(result?.bucket).toBe("high");
@@ -310,7 +326,11 @@ describe("Router", () => {
       quota: fakeQuota(undefined),
       availableModels: () => [],
     });
-    expect(router.decide("task-2", "anything", UNCLEAR)).toBeUndefined();
+    expect(
+      router.decide("task-2", "anything", UNCLEAR, {
+        placed: { work: [], samples: [], charges: {} },
+      }),
+    ).toBeUndefined();
     expect(db.prepare("SELECT COUNT(*) as n FROM routing_decisions").get()).toEqual({ n: 0 });
   });
 
@@ -369,6 +389,7 @@ describe("Router", () => {
       "task-skips",
       "investigate the race condition in the retry helper",
       UNCLEAR,
+      { placed: { work: [], samples: [], charges: {} } },
     );
     expect(result?.choice).toEqual({ provider: "openai-codex", id: "gpt-5.6-terra" });
     const row = db
@@ -396,7 +417,9 @@ describe("Router", () => {
         { provider: "openai-codex", id: "gpt-6-astra" },
       ],
     });
-    const result = router.decide("task-pin", "use gpt-6-astra for this", override("gpt-6-astra"));
+    const result = router.decide("task-pin", "use gpt-6-astra for this", override("gpt-6-astra"), {
+      placed: { work: [], samples: [], charges: {} },
+    });
     expect(result?.choice).toEqual({ provider: "openai-codex", id: "gpt-6-astra" });
     const row = db
       .prepare("SELECT reasons_json FROM routing_decisions WHERE task_id = ?")
@@ -426,6 +449,7 @@ describe("Router", () => {
       "task-fable-pin",
       "use Anthropic Fable for this",
       override("anthropic-claude/claude-fable-5"),
+      { placed: { work: [], samples: [], charges: {} } },
     );
     expect(result?.choice).toEqual({ provider: "anthropic-claude", id: "claude-fable-5" });
   });
@@ -448,6 +472,7 @@ describe("Router", () => {
       "task-no-pin",
       "use a model nobody offers",
       override("anthropic-claude/claude-fable-5"),
+      { placed: { work: [], samples: [], charges: {} } },
     );
     expect(result?.choice).toEqual({ provider: "openai-codex", id: "gpt-5.6-luna" });
     const row = db
@@ -493,7 +518,9 @@ describe("Router", () => {
     });
     // A prompt long enough that the 128k model genuinely cannot hold it
     // (700k characters is ~175k tokens, plus the session's own headroom).
-    const result = router.decide("task-context", "x".repeat(700_000), UNCLEAR);
+    const result = router.decide("task-context", "x".repeat(700_000), UNCLEAR, {
+      placed: { work: [], samples: [], charges: {} },
+    });
     expect(result?.choice).toEqual({ provider: "openai-codex", id: "gpt-5.6-luna" });
     const row = db
       .prepare("SELECT reasons_json FROM routing_decisions WHERE task_id = ?")
@@ -534,10 +561,15 @@ describe("Router", () => {
         quotaModels: () => undefined,
       }),
     });
-    const result = router.decide("task-chore", "tidy the rivet gauge", {
-      kind: "chore",
-      kind_source: "classifier:test",
-    });
+    const result = router.decide(
+      "task-chore",
+      "tidy the rivet gauge",
+      {
+        kind: "chore",
+        kind_source: "classifier:test",
+      },
+      { placed: { work: [], samples: [], charges: {} } },
+    );
     expect(result?.choice).toEqual({ provider: "anthropic-claude", id: low });
     expect(result?.servedBucket).toBeUndefined();
     expect(result?.unserveable).toBeUndefined();
@@ -564,7 +596,9 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
       ],
     });
     // The builder routed to codex (no slot record: everything is medium).
-    const builder = router.decide("builder", "fix the meter test", UNCLEAR);
+    const builder = router.decide("builder", "fix the meter test", UNCLEAR, {
+      placed: { work: [], samples: [], charges: {} },
+    });
     expect(builder?.choice?.provider).toBe("openai-codex");
     expect(router.servedProvider("builder")).toBe("openai-codex");
     expect(router.servedProvider("never-routed")).toBeUndefined();
@@ -576,7 +610,10 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
       basis_verified: true,
     };
     const placed = router.decide("reviewer", "review the PR", review, {
-      avoidProvider: "openai-codex",
+      ...{
+        avoidProvider: "openai-codex",
+      },
+      placed: { work: [], samples: [], charges: {} },
     });
     expect(placed?.choice).toEqual({ provider: "xai", id: "grok-4.6" });
     expect(placed?.rule).toBe("R9");
@@ -617,14 +654,19 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
       availableModels: () => available,
     });
     const moved = router.preview("promote the alpha", UNCLEAR, {
-      withoutProvider: "github-copilot",
+      ...{
+        withoutProvider: "github-copilot",
+      },
+      placed: { work: [], samples: [], charges: {} },
     });
     expect(moved?.result.choice).toEqual({ provider: "openai-codex", id: "gpt-5.5" });
     expect(moved?.reasons).toContain("left out github-copilot, the provider the task moved off");
     available = [{ provider: "github-copilot", id: "gpt-5.5" }];
     expect(
-      router.preview("promote the alpha", UNCLEAR, { withoutProvider: "github-copilot" })?.result
-        .choice,
+      router.preview("promote the alpha", UNCLEAR, {
+        ...{ withoutProvider: "github-copilot" },
+        placed: { work: [], samples: [], charges: {} },
+      })?.result.choice,
     ).toBeUndefined();
   });
 
@@ -649,7 +691,10 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
       catalog: [{ provider: "claude", id: "claude-sonnet-5-5", label: "Claude Sonnet 5.5" }],
       note: "Mac mini's own sign-ins (anthropic-claude): 1 model",
     };
-    const there = router.decide("placed", "add a settings row", UNCLEAR, { pool });
+    const there = router.decide("placed", "add a settings row", UNCLEAR, {
+      ...{ pool },
+      placed: { work: [], samples: [], charges: {} },
+    });
     expect(there?.choice).toEqual({ provider: "anthropic-claude", id: "claude-sonnet-5-5" });
     const row = db
       .prepare("SELECT provider, model, reasons_json FROM routing_decisions WHERE task_id = ?")
@@ -663,17 +708,29 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
       ...settings.getRoutingSettings(),
       pins: [{ provider: "codex", id: "gpt-5.5" }],
     });
-    expect(router.decide("pinned", "add a settings row", UNCLEAR, { pool })?.choice).toEqual({
+    expect(
+      router.decide("pinned", "add a settings row", UNCLEAR, {
+        ...{ pool },
+        placed: { work: [], samples: [], charges: {} },
+      })?.choice,
+    ).toEqual({
       provider: "anthropic-claude",
       id: "claude-sonnet-5-5",
     });
     // A computer signed in to nothing serves nothing, rather than this Mac's model.
     const empty = router.decide("bare", "add a settings row", UNCLEAR, {
-      pool: { available: [], catalog: [], note: "Mac mini's own sign-ins (none): 0 models" },
+      ...{
+        pool: { available: [], catalog: [], note: "Mac mini's own sign-ins (none): 0 models" },
+      },
+      placed: { work: [], samples: [], charges: {} },
     });
     expect(empty?.choice).toBeUndefined();
     // Here, the same task takes this Mac's own.
-    expect(router.decide("here", "add a settings row", UNCLEAR)?.choice).toEqual({
+    expect(
+      router.decide("here", "add a settings row", UNCLEAR, {
+        placed: { work: [], samples: [], charges: {} },
+      })?.choice,
+    ).toEqual({
       provider: "openai-codex",
       id: "gpt-5.5",
     });
@@ -715,7 +772,9 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
         { provider: "anthropic-claude", id: "opus" },
       ],
     });
-    router.decide("task-1", "add a settings row", UNCLEAR);
+    router.decide("task-1", "add a settings row", UNCLEAR, {
+      placed: { work: [], samples: [], charges: {} },
+    });
     const row = db
       .prepare("SELECT facts_json FROM decisions WHERE kind = 'routing' AND task_id = ?")
       .get("task-1") as { facts_json: string };

@@ -15,6 +15,10 @@ import type { ResourceObservation } from "@shared/resources";
 import type { WorkShape } from "@shared/routingPolicy";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
+import {
+  orderPolicyOnlyRoute,
+  preparePolicyOnlyRoute,
+} from "../../../tests/helpers/policyOnlyRouting";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { ForgeSignInStore, ForgeSignIns } from "../forge";
 import type { RoutePreview, Router } from "../routing/router";
@@ -137,6 +141,8 @@ function world(
     now,
   });
   const router = {
+    prepare: preparePolicyOnlyRoute,
+    inOrder: orderPolicyOnlyRoute,
     dynamicEnabled: () => true,
     preview: () => opus,
     commit: (_taskId: string, preview: RoutePreview) => preview.result,

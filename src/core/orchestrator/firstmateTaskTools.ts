@@ -3,7 +3,7 @@ import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import type { TaskToolsDelegate } from "../pi/taskTools";
 import type { TaskRecord } from "../storage/taskRecords";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
-import { queryTasks } from "../tasks/taskQuery";
+import { queryTasksAsync } from "../tasks/taskQuery";
 import type { DeliveryNote } from "./answerDelivery";
 import type { AskCapture } from "./askCapture";
 import { captainWordsIn } from "./captainOverrides";
@@ -87,9 +87,9 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         text: `Planned ${record.key} "${record.title}" (task_id ${record.id})${waiting ? ` - ${waiting}` : ""}.`,
       };
     },
-    update: (input) => {
+    update: async (input) => {
       try {
-        const text = (() => {
+        const text = await (async () => {
           const record = resolve(input.task);
           // Resolve before any write. An unknown prerequisite is a tool error,
           // and two references to one task count once. INF-416 piece I: add
@@ -217,7 +217,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
             () => {},
           );
           const move = moveTo
-            ? supervisor.moves.requestMove(record.id, { by: "firstmate", model: moveTo })
+            ? await supervisor.moves.requestMove(record.id, { by: "firstmate", model: moveTo })
             : undefined;
           const backlog = toBacklog
             ? supervisor.hostOps.moveToBacklog(
@@ -431,7 +431,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
     },
     readCard: (cardId) => supervisor.crewmateCards.readCard(cardId),
     query: (input) =>
-      queryTasks(
+      queryTasksAsync(
         tasks,
         input,
         (repoId) => host.options.repos.get(repoId)?.name,

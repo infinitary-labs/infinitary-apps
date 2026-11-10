@@ -486,10 +486,12 @@ describe("CrewSupervisor", () => {
 
       // The first mate moves it; the next launch reopens it where it moved.
       expect(
-        reopened.fresh.moves.requestMove(taskId, {
-          by: "firstmate",
-          model: "openai-codex/gpt-6.1-sol",
-        }).ok,
+        (
+          await reopened.fresh.moves.requestMove(taskId, {
+            by: "firstmate",
+            model: "openai-codex/gpt-6.1-sol",
+          })
+        ).ok,
       ).toBe(true);
       await tick();
       expect(reopened.specs.at(-1)).toMatchObject({ model: codex, thinkingLevel: "low" });

@@ -38,7 +38,10 @@ export function startHomeDecisions(options: {
     "availableModels" | "namedModels" | "capabilityFor" | "quotaModels" | "sessions" | "noteCutOff"
   >;
   /** AccountSelector.selectForSpawn, so the burn is attributable. */
-  selectAccount: (taskId: string, piProviderId: string) => string | undefined;
+  selectAccount: (
+    taskId: string,
+    piProviderId: string,
+  ) => string | undefined | Promise<string | undefined>;
   recordUsage: NonNullable<DecisionModelsOptions["recordUsage"]>;
   onNote: (text: string) => void;
 }): DecisionModels {

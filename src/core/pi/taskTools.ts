@@ -80,7 +80,7 @@ export type TaskToolsDelegate = {
     /** Where the captain said it runs: a device id or `this-mac`; null follows its parent's or project's again. */
     runsOn?: string | null;
     placementRequirements?: PlacementRequirements | null;
-  }): { text: string; ok: boolean };
+  }): { text: string; ok: boolean } | Promise<{ text: string; ok: boolean }>;
   drop(input: { task: string; reason: string; confirm?: boolean; replacedBy?: string }): string;
   /** Withdraw the captain's kept merge approval on his words; the work stays (FI3-304). */
   withdrawMerge(input: { task: string }): string;
@@ -114,11 +114,13 @@ export type TaskToolsDelegate = {
   link(input: { from: string; to: string; type: TaskLinkType; remove?: boolean }): string;
   /** One card as it stands, before a revision or an answer on it (docs/card-threads.md). */
   readCard?(cardId: string): string;
-  query(input: TaskQueryInput): {
-    rows: TaskQueryRow[];
-    total: number;
-    projects?: TaskQueryProject[];
-  };
+  query(input: TaskQueryInput):
+    | {
+        rows: TaskQueryRow[];
+        total: number;
+        projects?: TaskQueryProject[];
+      }
+    | Promise<{ rows: TaskQueryRow[]; total: number; projects?: TaskQueryProject[] }>;
 };
 
 const PRIORITY = Type.Optional(
@@ -572,7 +574,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         ...(params.verdict !== undefined ? { verdict: params.verdict } : {}),
       };
       const hasEdits = Object.keys(edits).some((key) => key !== "task" && key !== "direction");
-      const updated = hasEdits || !params.start_now ? delegate.update(edits) : undefined;
+      const updated = hasEdits || !params.start_now ? await delegate.update(edits) : undefined;
       if (updated && !updated.ok) return { text: updated.text };
       if (params.start_now) {
         const started = await delegate.startNow({ task: params.task });
@@ -1089,12 +1091,7 @@ export const TASKS_QUERY_TOOL = crewmateTool({
  * only started work and the backlog is read here (INF-1712).
  */
 export function createTasksQueryTool(
-  query: (input: TaskQueryInput) => {
-    rows: TaskQueryRow[];
-    total: number;
-    projects?: TaskQueryProject[];
-    order?: string[];
-  },
+  query: NonNullable<CrewmateToolDelegate["onQueryTasks"]>,
   readCard?: (cardId: string) => string,
 ) {
   return bindTool(TASKS_QUERY_TOOL, {

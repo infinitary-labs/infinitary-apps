@@ -55,6 +55,7 @@ import {
   type TaskReferenceKind,
 } from "../storage/taskReferenceStore";
 import { TaskRepetitionStore } from "../storage/taskRepetitionStore";
+import { selectTasks, type TaskSelectionInput } from "../storage/taskSelection";
 import { compactBrief, expandBrief, reportHash } from "./briefReceipt";
 import { latestResultOf, type ReportEntry, reportEntryOf, type TaskResult } from "./reportEntry";
 import { TaskArchive } from "./taskArchive";
@@ -551,6 +552,10 @@ export class TaskService {
 
   byKey(key: string): TaskRecord | undefined {
     return this.writer.store.byKey(key);
+  }
+
+  select(input: TaskSelectionInput) {
+    return selectTasks(this.options.db, input);
   }
 
   list(): TaskRecord[] {

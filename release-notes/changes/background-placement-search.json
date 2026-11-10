@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "background-placement-search",
+      "kind": "improvement",
+      "title": "Starting several crewmates keeps the window responsive",
+      "body": "Starting several crewmates at once, or a crewmate searching older tasks, no longer pauses the window.",
+      "area": "crewmates",
+      "noPicture": "The window looks the same; the change removes pauses while work starts and agents search older tasks.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

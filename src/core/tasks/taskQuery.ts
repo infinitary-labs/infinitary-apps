@@ -7,6 +7,7 @@ import { attachmentPath } from "../attachments";
 import type { CardResolution } from "../storage/cardStore";
 import type { TaskEventActor } from "../storage/taskEventStore";
 import type { TaskDelivery, TaskRecord, TaskStatus } from "../storage/taskRecords";
+import type { TaskSelection, TaskSelectionInput } from "../storage/taskSelection";
 import { alreadyAllowed } from "./alreadyAllowed";
 import { queueWaitOf } from "./queueWait";
 import { TaskService } from "./taskService";
@@ -66,6 +67,7 @@ export type TaskQueryPlace = { computer: string; evidence_folder?: string };
 
 /** What the core's composition supplies beyond the record; each absent says nothing. */
 export type TaskQueryReach = {
+  select?: (input: TaskSelectionInput) => Promise<TaskSelection>;
   pendingResponses?: (taskId: string) => import("@shared/crewResponses").ResponseRequest[];
   timeline?: Pick<TaskTimeline, "sources">;
   /** A project's folder on the computer where the first mate lives. */
@@ -248,13 +250,6 @@ export function builtOnRows(tasks: TaskService, id: string): TaskQueryBuiltOn[] 
 export const TASK_QUERY_DEFAULT_LIMIT = 30;
 export const TASK_QUERY_MAX_LIMIT = 100;
 
-const STATUS_ORDER: Record<TaskStatus, number> = {
-  active: 0,
-  open: 1,
-  done: 2,
-  dropped: 3,
-};
-
 function statusText(record: TaskRecord): string {
   if (record.status === "active") return record.activity ?? "active";
   return record.status;
@@ -265,6 +260,30 @@ function matchesStatus(record: TaskRecord, status: TaskQueryInput["status"]): bo
   if (status === "live") return !TaskService.isClosed(record);
   if (status === "closed") return record.status === "done" || record.status === "dropped";
   return record.status === status;
+}
+
+/** Production search: resolve small identities here, select the matching page off-thread. */
+export async function queryTasksAsync(
+  ...args: Parameters<typeof queryTasks>
+): Promise<ReturnType<typeof queryTasks>> {
+  const [tasks, input, , , , reach] = args;
+  if (!reach?.select || input.key || input.ids || input.projects) return queryTasks(...args);
+  const project = input.project?.trim()
+    ? (tasks.projects.byKey(input.project) ?? tasks.projects.get(input.project))
+    : undefined;
+  const parent = input.parent?.trim() ? tasks.resolve(input.parent) : undefined;
+  if ((input.project?.trim() && !project) || (input.parent?.trim() && !parent))
+    return { rows: [], total: 0 };
+  const selection = await reach.select({
+    ...(project ? { projectId: project.id } : {}),
+    ...(parent ? { parentId: parent.id } : {}),
+    status: input.status,
+    text: input.text,
+    snapshot: input.snapshot,
+    limit: Math.max(1, Math.min(input.limit ?? TASK_QUERY_DEFAULT_LIMIT, TASK_QUERY_MAX_LIMIT)),
+    skip: Math.max(0, Math.floor(input.skip ?? 0)),
+  });
+  return queryTasks(tasks, input, args[2], args[3], args[4], reach, selection);
 }
 
 export function queryTasks(
@@ -279,6 +298,7 @@ export function queryTasks(
   cardBody: (taskId: string) => string | undefined = () => undefined,
   resolution: (taskId: string) => CardResolution | undefined = () => undefined,
   reach: TaskQueryReach = {},
+  selection?: TaskSelection,
 ): { rows: TaskQueryRow[]; total: number; projects?: TaskQueryProject[]; order?: string[] } {
   if (input.projects) return { rows: [], total: 0, projects: projectRows(tasks, reach) };
   if (input.ids) {
@@ -305,26 +325,39 @@ export function queryTasks(
   if (input.key?.trim() && !one) return { rows: [], total: 0 };
   const typed = input.text?.trim();
   const needle = typed ? foldForSearch(typed) : undefined;
-  const pool = one ? [one] : parent ? tasks.graph.children(parent.id) : tasks.list();
-  const matched = pool
-    .filter((record) => !project || record.projectId === project.id)
-    .filter((record) => matchesStatus(record, input.status))
-    .filter(
-      (record) =>
-        !needle ||
-        foldForSearch(record.title).includes(needle) ||
-        foldForSearch(record.goal ?? "").includes(needle),
-    )
-    .sort(
-      (a, b) =>
-        STATUS_ORDER[a.status] - STATUS_ORDER[b.status] ||
-        a.priority - b.priority ||
-        b.updatedAt - a.updatedAt,
-    );
+  const selected = one
+    ? undefined
+    : (selection ??
+      tasks.select({
+        ...(project ? { projectId: project.id } : {}),
+        ...(parent ? { parentId: parent.id } : {}),
+        status: input.status,
+        text: input.text,
+        snapshot: input.snapshot,
+        limit,
+        skip: Math.max(0, Math.floor(input.skip ?? 0)),
+      }));
+  const matched = one
+    ? [one]
+        .filter((record) => !project || record.projectId === project.id)
+        .filter((record) => matchesStatus(record, input.status))
+        .filter(
+          (record) =>
+            !needle ||
+            foldForSearch(record.title).includes(needle) ||
+            foldForSearch(record.goal ?? "").includes(needle),
+        )
+    : (() => {
+        const records = new Map(
+          tasks.getMany(selected?.ids ?? []).map((record) => [record.id, record]),
+        );
+        return (selected?.ids ?? []).flatMap((id) => {
+          const record = records.get(id);
+          return record ? [record] : [];
+        });
+      })();
   const projectKeys = new Map(tasks.projects.list().map((entry) => [entry.id, entry.key]));
-  const skip = one ? 0 : Math.max(0, Math.floor(input.skip ?? 0));
   const rows = matched
-    .slice(skip, skip + limit)
     // A by-key fetch is one row and reads the whole answer; a list is the
     // compact index and never carries bodies in bulk.
     .map((record) => {
@@ -369,10 +402,8 @@ export function queryTasks(
     });
   return {
     rows,
-    total: matched.length,
-    ...(input.snapshot && !one && matched.length > rows.length
-      ? { order: matched.map((record) => record.id) }
-      : {}),
+    total: selected?.total ?? matched.length,
+    ...(selected?.order ? { order: selected.order } : {}),
   };
 }
 

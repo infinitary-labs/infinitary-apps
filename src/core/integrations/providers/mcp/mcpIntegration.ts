@@ -221,11 +221,14 @@ export function mcpIntegration(options: McpIntegrationOptions): IntegrationBindi
     const server = serverOf(id);
     const starting = connect(server);
     links.set(id, starting);
+    let started: Link | undefined;
     try {
-      const link = await starting;
-      await refresh(id, link);
-      return touch(id, link);
+      started = await starting;
+      await refresh(id, started);
+      return touch(id, started);
     } catch (error) {
+      // A server that started but could not list is closed here, or its program runs on.
+      await started?.client.close().catch(() => undefined);
       if (links.get(id) === starting) links.delete(id);
       if (servers.some((entry) => entry.id === id)) update(id, { health: "unavailable" });
       throw error;

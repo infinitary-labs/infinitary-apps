@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -621,6 +622,40 @@ describe("an MCP server that cannot connect", () => {
       await new Promise<void>((done) => redirecting.close(() => done()));
     }
     expect(service.view().integrations).toEqual([]);
+  });
+});
+
+// INF-3307's audit, row 9: a started server whose tool listing failed was
+// dropped without being closed, so each look - an Automation rule's every
+// minute, or Check again - left one more program running.
+describe("a connected server that fails its tool listing (INF-3367)", () => {
+  /** The programs on this computer started with this notes file. */
+  const runningWith = (file: string): number[] =>
+    execFileSync("ps", ["-A", "-o", "pid=,command="], { encoding: "utf8" })
+      .split("\n")
+      .filter((line) => line.includes(file))
+      .map((line) => Number.parseInt(line.trim(), 10));
+
+  it("is closed, leaving no program running per attempt", async () => {
+    const root = scratchDir("mcp-integration");
+    const { service, close } = serviceIn(root);
+    opened.push({ service, close });
+    const served = await serve("legacy", "stdio", root);
+    const file = join(root, "notes.json");
+    const { id } = await service.add("mcp", { name: "Notes", runs: served.runs });
+    expect(runningWith(file)).toHaveLength(1);
+
+    publishNotes(file, {
+      notes: served.notes(),
+      unavailable: "The notes service's sign-in has lapsed; sign in again.",
+    });
+    try {
+      for (let attempt = 0; attempt < 3; attempt += 1) await service.check(id);
+      expect(service.view().integrations[0]?.health).toBe("unavailable");
+      expect(runningWith(file)).toEqual([]);
+    } finally {
+      for (const pid of runningWith(file)) process.kill(pid);
+    }
   });
 });
 

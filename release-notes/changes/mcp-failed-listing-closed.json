@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "mcp-failed-listing-closed",
+      "kind": "fix",
+      "area": "settings",
+      "title": "A tool server that cannot list its tools no longer leaves programs running",
+      "body": "When a connected tool server started but could not list its tools, Infinitary left its program running and started another on the next try. It now closes the server each time, so a broken server no longer piles up programs on your computer.",
+      "noPicture": "This stops background programs from piling up without changing a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

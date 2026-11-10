@@ -23,6 +23,7 @@ import { StdioServerTransport as LegacyStdioTransport } from "@modelcontextproto
 import { StreamableHTTPServerTransport as LegacyHttpTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import {
   isInitializeRequest,
+  type JSONRPCMessage,
   SubscribeRequestSchema,
   UnsubscribeRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
@@ -32,8 +33,12 @@ import { z } from "zod";
 
 export type StandInEra = "legacy" | "modern";
 
-/** The notes the server holds, the way a person keeps them. */
-export type NotesBook = { notes: string[] };
+/**
+ * The notes the server holds, the way a person keeps them. A book that
+ * names why it is `unavailable` - its service's own sign-in lapsed - still
+ * starts over stdio but refuses to list its tools (INF-3367).
+ */
+export type NotesBook = { notes: string[]; unavailable?: string };
 
 export const NOTES_URI = "notes://all";
 
@@ -323,7 +328,26 @@ async function serveNotesStdio(era: StandInEra, file: string): Promise<void> {
   } else {
     const server = legacyNotes(book, added);
     servers.push(server.server);
-    await server.connect(new LegacyStdioTransport());
+    const transport = new LegacyStdioTransport();
+    await server.connect(transport);
+    const answer = transport.onmessage;
+    transport.onmessage = (message: JSONRPCMessage) => {
+      const { unavailable } = JSON.parse(readFileSync(file, "utf8")) as NotesBook;
+      if (
+        unavailable &&
+        "method" in message &&
+        message.method === "tools/list" &&
+        "id" in message
+      ) {
+        void transport.send({
+          jsonrpc: "2.0",
+          id: message.id,
+          error: { code: -32603, message: unavailable },
+        });
+        return;
+      }
+      answer?.(message);
+    };
   }
 }
 

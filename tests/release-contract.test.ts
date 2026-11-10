@@ -1174,6 +1174,13 @@ describe("the private alpha (roadmap 1.2)", () => {
       // Folded for the terminal, but the same words in the same order.
       expect((first ?? "").replace(/\s+/g, " ").trim()).toBe(notice.replace(/\s+/g, " "));
       expect(channel.join(" ")).toMatch(/This is the (stable|alpha) channel/);
+      // Approved company-operator wording: people reading either cask see
+      // the company, not its founder, and the product's feedback channel.
+      const disclosure = (first ?? "").replace(/\s+/g, " ").trim();
+      expect(disclosure).toContain("so Infinitary Labs, Inc. can see");
+      expect(disclosure).toMatch(
+        /Feedback is welcome on the Infinitary Discord: https:\/\/discord\.gg\/Wsy2NpnZDu$/,
+      );
     }
     expect(notice).toMatch(/^Infinitary is in private alpha/);
     expect(notice).toContain("no warranty");
@@ -1193,11 +1200,8 @@ describe("the private alpha (roadmap 1.2)", () => {
     expect(notice).toContain("never anything you typed");
     expect(notice).toContain("the Diagnostics switch in Settings turns it off");
     expect(notice).toContain("license follow at the public beta");
-    // Feedback goes to the captain's Discord; the invite ends the notice, so
-    // no trailing punctuation rides into the link.
-    expect(notice).toMatch(
-      /Feedback is welcome on Kun's Discord: https:\/\/discord\.gg\/Wsy2NpnZDu$/,
-    );
+    // The rendered disclosure above keeps the feedback invite at the end,
+    // with no trailing punctuation riding into the link.
   });
 
   const brew = (() => {

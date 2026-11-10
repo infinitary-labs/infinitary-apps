@@ -3,7 +3,7 @@
 Roadmap 1.4.
 Diagnostics was turned on by default by the captain's decision of 2026-09-22 ("on from the first cask ... opt-out, disclosed in the notice") and, the same day, widened from one anonymous daily count to the event set below with an anonymous install ID (captain: "i need accurate accounting for user funnel and retention").
 This page is the one home for what may leave this machine for us, and the code that keeps the promise.
-`DATA-TERMS.md` is draft 3 of the terms, unpublished and not in force.
+`DATA-TERMS.md` is draft 4 of the terms, unpublished and not in force.
 It describes Diagnostics as it ships, and counsel reviews it before it is published with the public beta.
 Until then this page and the alpha notice (`packaging/alpha-notice.txt`) are what describe the build.
 
@@ -13,7 +13,7 @@ Two switches on Settings → General → Sharing are the only things that send a
 
 | Switch | Default | What leaves | Where it goes today |
 | --- | --- | --- | --- |
-| Diagnostics | **On** - the switch is the opt-out | The allowlisted events below, each with the app version and an anonymous random install ID, and nothing else | The endpoint the captain operates, whose ids a release build carries; a source or dev build has none and sends nowhere |
+| Diagnostics | **On** - the switch is the opt-out | The allowlisted events below, each with the app version and an anonymous random install ID, and nothing else | The endpoint Infinitary Labs, Inc. operates, whose ids a release build carries; a source or dev build has none and sends nowhere |
 | Contribution | Off | Redacted records of the first mate's own decisions: the R2 `decided` task events, in the shapes the corpus export packages, run through the same redaction | Nowhere yet. The switch is absent from every build until the terms are published (`DATA_TERMS.published`), and there is no sender - the seam is `contributionSender` on the service |
 
 ### The policy: no personal data, no user content
@@ -165,7 +165,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 ### The two documents (roadmap 1.1, captain locks F4c and F6b)
 
 `DATA-TERMS.md` is the one-way data promise in the Cursor-shaped wording with the F4c reciprocity mechanisms; `LICENSE` is Apache-2.0 with `NOTICE`; `CONTRIBUTING.md` carries no DCO (F6b).
-All three are UNPUBLISHED until the public beta: the repository stays private, the terms name the company through a placeholder, and no build collects anything under them (the contribution switch is absent from every build until `DATA_TERMS.published` flips at the beta; the one thing a build sends is Diagnostics - the allowlisted anonymous events with an anonymous install ID, on by default since the captain's decisions of 2026-09-22 - described by `docs/sharing.md`, the alpha notice and the draft terms, which counsel reviews before they are published at the beta).
+All three are UNPUBLISHED until the public beta: the repository stays private, the draft terms name Infinitary Labs, Inc., and no build collects anything under them (the contribution switch is absent from every build until `DATA_TERMS.published` flips at the beta; the one thing a build sends is Diagnostics - the allowlisted anonymous events with an anonymous install ID, on by default since the captain's decisions of 2026-09-22 - described by `docs/sharing.md`, the alpha notice and the draft terms, which counsel reviews before they are published at the beta).
 A change to the terms is a new version of the file the app ships beside the code that sends the payload, never a silent edit; counsel reviews before publication.
 
 - The two switches (roadmap 1.4, captain lock F4c; Diagnostics on by default and set to the event set with an anonymous install ID by the captain on 2026-09-22; `docs/sharing.md` is the one home): what may leave this machine FOR US is Settings → General → Sharing, no feature gated on either.

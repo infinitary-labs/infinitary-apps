@@ -3,7 +3,7 @@ import { settingFrom } from "@shared/envSettings";
 // is the one home). It carries only the events `src/shared/diagnostics.ts`
 // declares - each with its declared enum/boolean/number fields, the app
 // version and the anonymous install ID - to the self-hosted Umami instance
-// the captain operates. The body is built in one place
+// Infinitary Labs, Inc. operates. The body is built in one place
 // (`buildDiagnosticBody`), and the client re-checks every body against the
 // same allowlist before it posts (`diagnosticBodyViolation`), so nothing
 // outside the policy can leave even through a caller that builds its own.

@@ -31,4 +31,4 @@ Pull requests from outside are not merged yet: the repository opens with the pub
 
 ## Reporting a security issue
 
-Write to the maintainer privately rather than opening an issue.
+Write privately to Infinitary Labs, Inc. at help@getinfinitary.com rather than opening an issue.

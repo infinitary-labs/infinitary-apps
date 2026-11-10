@@ -1,10 +1,10 @@
 # Data terms
 
-**Status: draft 3. Not in force, not published.** These terms name the company as the party, and the company does not exist yet. Until it is formed and these terms are published with the public beta, nothing is collected under them, and the contribution switch is absent from every build. Counsel reviews this document before publication. The version in force is the one in the repository beside the code that sends the payload.
+**Status: draft 4. Not in force, not published.** These terms name Infinitary Labs, Inc. as the party. Until these terms are published with the public beta, nothing is collected under them, and the contribution switch is absent from every build. Counsel reviews this document before publication. The version in force is the one in the repository beside the code that sends the payload.
 
 ## 1. Who we are and what this covers
 
-"We" and "us" mean [the company] ("the company") [placeholder: its name goes here before these terms are published]. "Infinitary" or "the app" means the desktop application published from this repository. "You" means the person running it.
+"We" and "us" mean Infinitary Labs, Inc., a Delaware corporation ("the company"). Contact us at help@getinfinitary.com. "Infinitary" or "the app" means the desktop application published from this repository. "You" means the person running it.
 
 These terms cover two things and nothing else: what the app sends us when you turn a switch on, and what we may do with it. Your sign-ins to the AI providers you already pay for go from your machine to those providers directly, under their terms, and are not covered here because they never pass through us.
 

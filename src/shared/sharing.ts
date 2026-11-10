@@ -42,7 +42,7 @@ export const DATA_TERMS = {
   /** The file, beside the code that sends the payload. */
   file: "DATA-TERMS.md",
   /** The version of the terms this build ships; a widening bumps it. */
-  version: "draft-3",
+  version: "draft-4",
 } as const;
 
 /**

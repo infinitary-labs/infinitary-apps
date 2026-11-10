@@ -49,8 +49,8 @@ linux:
     - node_modules/@koromix/koffi-linux-*/**
   icon: packaging/build/icon.png
   category: Development
-  maintainer: Kun Chen <3233006+kunchenguid@users.noreply.github.com>
-  vendor: Kun Chen
+  maintainer: Infinitary Labs, Inc. <help@getinfinitary.com>
+  vendor: Infinitary Labs, Inc.
   synopsis: "Your own AI studio: a first mate and crew that work for you"
   description: Infinitary is a desktop app with a first mate that plans your work and a crew of AI agents that each do one task, on this computer, with your own AI subscriptions.
   # Never --no-sandbox: Chromium's sandbox stays on (docs/linux-packages.md,

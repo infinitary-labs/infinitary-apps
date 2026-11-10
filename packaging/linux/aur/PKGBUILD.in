@@ -1,7 +1,7 @@
 # Infinitary for Arch Linux and Omarchy, from its Ubuntu package
 # (docs/linux-packages.md). scripts/linux-recipes.ts fills in the @ fields;
 # never edit a rendered copy by hand.
-# Maintainer: Kun Chen <3233006+kunchenguid@users.noreply.github.com>
+# Maintainer: Infinitary Labs, Inc. <help@getinfinitary.com>
 pkgname=@PKGNAME@
 pkgver=@PKGVER@
 pkgrel=1

@@ -33,13 +33,28 @@ export GIT_AUTHOR_NAME="Infinitary batch" GIT_AUTHOR_EMAIL="batch@infinitary.inv
 export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME" GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
 export GIT_AUTHOR_DATE="2000-01-01T00:00:00Z" GIT_COMMITTER_DATE="2000-01-01T00:00:00Z"
 
-# A merge needs the history back to each change's merge base.
+# A merge needs the history back to each change's merge base: its commits
+# and folders, never every past version of every file. Git downloads a
+# file's contents only once the merge or the checkout reads them, so a
+# shallow checkout's history stays a small, quick download.
 if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
-  git fetch --quiet --no-tags --unshallow origin
+  git fetch --quiet --no-tags --filter=blob:none --unshallow origin
 fi
 
+# Whether the clone holds a commit, without downloading it: after the fetch
+# above, reading a missing commit would download it with its whole history
+# again, where the fetch that follows a failed check takes only what the
+# clone lacks. Listing it with --missing never downloads, on every git: an
+# older one prints nothing for a missing commit, a newer one prints it after
+# a "?".
+present() {
+  case "$(git rev-list --missing=print --no-walk "$1" 2>/dev/null)" in
+    "" | "?"*) return 1 ;;
+  esac
+}
+
 if [ "$mode" = apply ]; then
-  git cat-file -e "$start^{commit}" 2>/dev/null || git fetch --quiet --no-tags origin "$start"
+  present "$start" || git fetch --quiet --no-tags origin "$start"
   base="$(git rev-parse "$start^{commit}")"
 else
   # The default branch now, never the version the job checked out: a change
@@ -53,7 +68,7 @@ head="$base"
 for pair in "$@"; do
   number="${pair%%:*}"
   version="${pair#*:}"
-  git cat-file -e "$version^{commit}" 2>/dev/null || git fetch --quiet --no-tags origin "$version"
+  present "$version" || git fetch --quiet --no-tags origin "$version"
   if result="$(git merge-tree --write-tree --no-messages "$head" "$version")"; then
     head="$(git commit-tree "${result%%$'\n'*}" -p "$head" -p "$version" -m "Batch: #$number")"
     [ "$mode" = apply ] || echo "merged $number"

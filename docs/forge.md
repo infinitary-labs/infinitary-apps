@@ -707,6 +707,8 @@ Its rules are written once and name no host (`shipped/rules.mjs`): which waiting
 A batch forms only once the last green batch has merged, and it composes onto the default branch as the compose step fetches it after the form job read the queue, never the version the job checked out or its pipeline started on (`compose.sh compose`, INF-3053).
 A change that merged in between is no longer open, so the read does not wait for it, and only that later version carries it; so once a passed batch's changes merge, the default branch has the batch's tree unless something merged outside the queue.
 The form job names that version as the batch's `base`, which every check job composes onto.
+A check job whose checkout is shallow first downloads the history its merges need as commits and folders only, and git downloads a file's contents only once a merge or the checkout reads them, so a short network drop has little download to cut (INF-3502).
+Its check for a change's commit downloads nothing on any git version, so a commit no branch carries, such as a fork's, comes by a fetch that sends only what the clone lacks, never with the whole history again.
 A host part runs those rules where the project lives; GitHub's is an Actions workflow, a composite step that composes the batch and a script that reads and writes through GitHub's API (`shipped/workflow.yml`, `shipped/action.yml`, `shipped/compose.sh`, `shipped/github.mjs`).
 The project writes one file of its own, `.github/workflows/infinitary-batch-checks.yml`, which runs the checks the captain chose on the composed batch.
 As shipped, the queue calls it with only a read of the project and hands down no secret, so the batch's own code cannot write the queue's statuses or issues.

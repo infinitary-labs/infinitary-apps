@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,6 +36,8 @@ function project() {
   const root = scratchDir("infinitary-queue-compose-");
   const origin = join(root, "origin");
   run(root, "init", "-q", "-b", "main", origin);
+  // GitHub and GitLab both serve a fetch that leaves file contents out.
+  run(origin, "config", "uploadpack.allowFilter", "true");
   writeFileSync(join(origin, "notes.md"), "one\ntwo\nthree\n");
   run(origin, "add", ".");
   run(origin, "commit", "-q", "-m", "main");
@@ -59,6 +61,52 @@ function project() {
     return clone;
   };
   return { origin, changes, job };
+}
+
+/** How many distinct objects a clone holds, never downloading one. */
+const objectsHeld = (clone: string) =>
+  execFileSync("git", ["cat-file", "--batch-all-objects", "--batch-check=%(objectname)"], {
+    cwd: clone,
+    env: git,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "ignore"],
+  })
+    .trim()
+    .split("\n").length;
+
+/**
+ * How many objects the project sent a job, read from git's trace of the
+ * job's commands: what each pack the project wrote for a fetch held.
+ */
+function objectsSent(trace: string): number {
+  const events = readFileSync(trace, "utf8")
+    .split("\n")
+    .filter(Boolean)
+    .map(
+      (line) =>
+        JSON.parse(line) as {
+          event: string;
+          sid: string;
+          argv?: string[];
+          category?: string;
+          key?: string;
+          value?: string;
+        },
+    );
+  const serving = events
+    .filter(
+      (event) => event.event === "start" && /(^|[/-])upload-pack$/.test(event.argv?.[0] ?? ""),
+    )
+    .map((event) => `${event.sid}/`);
+  return events
+    .filter(
+      (event) =>
+        event.event === "data" &&
+        event.category === "pack-objects" &&
+        event.key === "write_pack_file/wrote" &&
+        serving.some((sid) => event.sid.startsWith(sid)),
+    )
+    .reduce((sum, event) => sum + Number(event.value), 0);
 }
 
 const script = (cwd: string, ...args: string[]) =>
@@ -138,6 +186,67 @@ describe("composing a batch of the shipped queue", () => {
     const conflict = script(job(), "apply", base, tree, ...heads, `903:${changes.third}`);
     expect(conflict.status).toBe(1);
     expect(conflict.stdout).toContain("Batch did not compose");
+  });
+
+  // INF-3502: batch run 42807252338's Mac check job failed when the
+  // connection reset 2 min 39 s into its compose step's first act, a
+  // download of the project's whole history with every past version of every
+  // file. A shallow check job now downloads the history's commits and
+  // folders, and only the file contents its merges and checkout read; and a
+  // fork's change, which no branch carries, comes alone rather than with the
+  // whole history a second time.
+  it("applies the batch in a shallow check job, downloading no past file contents and nothing twice", () => {
+    const { origin, changes, job } = project();
+    // A file rewritten on main before the batch: no merge reads its drafts.
+    const versions = Array.from({ length: 8 }, (_, draft) => {
+      writeFileSync(join(origin, "history.md"), `draft ${draft}\n`);
+      run(origin, "add", ".");
+      run(origin, "commit", "-q", "-m", `draft ${draft}`);
+      return run(origin, "rev-parse", "HEAD:history.md");
+    });
+    const drafts = versions.slice(0, -1);
+    // A fork's change, which only its pull request's own ref carries.
+    run(origin, "checkout", "-q", "-b", "fork", "main");
+    writeFileSync(join(origin, "fork.md"), "from a fork\n");
+    run(origin, "add", ".");
+    run(origin, "commit", "-q", "-m", "fork");
+    run(origin, "checkout", "-q", "main");
+    const fork = run(origin, "rev-parse", "fork");
+    run(origin, "update-ref", "refs/pull/905/head", fork);
+    run(origin, "branch", "-q", "-D", "fork");
+    const heads = [`901:${changes.first}`, `905:${fork}`];
+    const { base, tree } = readComposition(script(job(), "compose", "main", ...heads).stdout, [
+      { number: 901, head: changes.first },
+      { number: 905, head: fork },
+    ]);
+
+    const check = job();
+    const held = objectsHeld(check);
+    const trace = join(scratchDir("infinitary-queue-trace-"), "events.json");
+    const applied = spawnSync(
+      "bash",
+      ["--noprofile", "--norc", compose, "apply", base, tree, ...heads],
+      {
+        cwd: check,
+        env: { ...git, GIT_TRACE2_EVENT: trace },
+        encoding: "utf8",
+      },
+    );
+    expect(applied.status, applied.stderr).toBe(0);
+    expect(run(check, "rev-parse", "HEAD^{tree}")).toBe(tree);
+    expect(run(check, "show", "HEAD:notes.md")).toBe("ONE\ntwo\nthree");
+    expect(run(check, "show", "HEAD:fork.md")).toBe("from a fork");
+    // The drafts stay where the project lives until something reads them.
+    const missing = run(check, "rev-list", "--objects", "--missing=print", "--all")
+      .split("\n")
+      .filter((line) => line.startsWith("?"))
+      .map((line) => line.slice(1));
+    expect(missing).toEqual(expect.arrayContaining(drafts));
+    // Every object the project sent is one the clone lacked: the clone gained
+    // at least as many, with the batch's own merge commits besides.
+    const sent = objectsSent(trace);
+    expect(sent).toBeGreaterThan(0);
+    expect(sent).toBeLessThanOrEqual(objectsHeld(check) - held);
   });
 
   // INF-3053: batch run 43 checked out main, then a change green in the

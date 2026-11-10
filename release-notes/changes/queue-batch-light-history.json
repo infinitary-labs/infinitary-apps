@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "queue-batch-light-history",
+      "kind": "fix",
+      "area": "projects",
+      "title": "A short network drop no longer pauses a project's queue",
+      "body": "Each check of a batch began by downloading the project's whole history with every past version of every file, and a connection that dropped during that download failed the batch and paused the queue. A check now downloads only the history a batch's merges need and the files they read, a fraction of the size. Your first mate offers a project's queue the update.",
+      "noPicture": "The change is in how a project's queue checks each batch; no screen in the app looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

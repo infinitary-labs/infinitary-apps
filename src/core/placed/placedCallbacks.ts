@@ -276,6 +276,7 @@ export async function answerCall(
 /** A report a turn gave before this Mac restarted, given to the turn this Mac follows now. */
 export async function replayReport(session: PlacedSession, line: CallLine): Promise<void> {
   if (!line.report) return;
+  session.followReport();
   const { text, summary, declared } = line.report;
   try {
     await session.callbacks?.onReport?.(

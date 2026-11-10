@@ -384,6 +384,7 @@
         "!src/core/orchestrator/handedResult.test.ts",
         "!src/core/placed/placedCallbacks.test.ts",
         "!src/core/placed/placedReach.test.ts",
+        "!src/core/placed/placedRestartRecovery.test.ts",
         "!src/core/placed/placedJobs.test.ts",
         "!src/core/placed/placedWorkingCopies.test.ts",
         "!src/core/placed/placedSignIns.test.ts",

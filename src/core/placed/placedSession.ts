@@ -98,8 +98,8 @@ export class PlacedSession implements ModelSession {
    * can name its turn before that event arrives.
    */
   private running: { turn: number; orderId: string; adopted: boolean; seen: boolean } | undefined;
-  /** The crewmate carries on by itself there: its start was taken here, its end not yet. */
-  private continuing = false;
+  /** A client continuation, or a replayed report whose prompt's start is before the kept checkpoint. */
+  private continuing: "client" | "report" | undefined;
   /** The newest turn that ended there. */
   private lastEnded = 0;
   private undelivered: string[] = [];
@@ -165,7 +165,7 @@ export class PlacedSession implements ModelSession {
    * computer answers that it no longer works (`endedThere`).
    */
   isStreaming(): boolean {
-    return this.running !== undefined || this.prompts.size > 0 || this.continuing;
+    return this.running !== undefined || this.prompts.size > 0 || this.continuing !== undefined;
   }
 
   subscribe(listener: (event: SessionEvent) => void): () => void {
@@ -315,11 +315,11 @@ export class PlacedSession implements ModelSession {
         });
         return;
       case "continuation_started":
-        this.continuing = true;
+        this.continuing = "client";
         this.emit(event);
         return;
       case "continuation_ended": {
-        this.continuing = false;
+        this.continuing = undefined;
         const { interrupted, ...ended } = event;
         this.emit(interrupted ? { ...ended, error: this.link.interrupted(false) } : ended);
         return;
@@ -377,7 +377,7 @@ export class PlacedSession implements ModelSession {
     const running = entry.running;
     if (!running) {
       if (current && entry.state?.streaming && !this.isStreaming()) {
-        this.continuing = true;
+        this.continuing = "client";
         this.emit({ type: "continuation_started" });
       }
       return;
@@ -395,7 +395,7 @@ export class PlacedSession implements ModelSession {
    */
   async endedThere(): Promise<void> {
     if (this.continuing) {
-      this.continuing = false;
+      this.continuing = undefined;
       this.emit({ type: "continuation_ended", unheard: true });
     }
     const running = this.running;
@@ -404,6 +404,18 @@ export class PlacedSession implements ModelSession {
         { type: "turn_ended", turn: running.turn, outcome: "interrupted", undelivered: [] },
         true,
       );
+  }
+
+  /**
+   * A restored report belongs to a turn even when its start was before the
+   * kept model-message checkpoint and the computer has already quit. Own
+   * that boundary here too, so its terminal event or live idle answer ends
+   * the same turn the supervisor follows.
+   */
+  followReport(): void {
+    if (this.isStreaming()) return;
+    this.continuing = "report";
+    this.emit({ type: "continuation_started" });
   }
 
   /** The computer is back: what it could not be asked goes now, in order. */
@@ -468,7 +480,9 @@ export class PlacedSession implements ModelSession {
       asked.resolve();
       return;
     }
-    if (running?.adopted)
+    const report = this.continuing === "report";
+    if (report) this.continuing = undefined;
+    if (running?.adopted || report)
       this.emit(
         unheard
           ? { type: "continuation_ended", unheard: true }

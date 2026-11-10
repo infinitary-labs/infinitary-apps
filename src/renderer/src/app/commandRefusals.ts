@@ -18,7 +18,13 @@ import {
   tabTargetOf,
   tabTaskOf,
 } from "../cards/taskTabs";
-import { changesOff, changesOffWords, controlsAll, isView } from "../devices/viewWords";
+import {
+  changesOff,
+  changesOffWords,
+  isView,
+  updateThereWords,
+  waitsForUpdate,
+} from "../devices/viewWords";
 import { mainMessageRefusal } from "./composer";
 import { isHeldEntry, type StackEntry, shownEntry, stackOf } from "./stack";
 import type { ShellState } from "./store";
@@ -129,20 +135,14 @@ function tabRefusal(s: RefusalState, command: TabCommand): string | null {
     : "This card has no such tab";
 }
 
-/** A Mac that controls another has no Usage tab: the usage is the other Mac's. */
-function usageRefusal(s: RefusalState): string | null {
-  return usageRefusalFor("Usage")(s);
+/** A tab that is the other computer's alone. */
+function refusedOnAView(tab: string): (s: RefusalState) => string | null {
+  return (s) => (isView(s.thisMac) ? `${tab} is on ${s.thisMac.name}` : null);
 }
 
-/**
- * A tab that is the other Mac's; of a first mate started by a command, whose
- * computer has no window, `ofACommand` tabs open here instead (docs/run.md).
- */
-function usageRefusalFor(tab: string, ofACommand = true): (s: RefusalState) => string | null {
-  return (s) =>
-    isView(s.thisMac) && !(ofACommand && controlsAll(s.thisMac))
-      ? `${tab} is on ${s.thisMac.name}`
-      : null;
+/** What a first mate on an older version cannot answer from here. */
+function refusedUntilUpdate(s: RefusalState): string | null {
+  return waitsForUpdate(s.thisMac) ? updateThereWords(s.thisMac) : null;
 }
 
 /** The pager's way: where the shown entry stands in the stack. */
@@ -291,8 +291,8 @@ const REFUSALS: Readonly<
   "settings.open": (s) => (s.view === "settings" ? "Settings is already open" : null),
   // From anywhere, Settings included: it goes to the Keyboard tab.
   "settings.keyboard": () => null,
-  // The arrangement is saved where the first mate lives (docs/view.md).
-  "settings.panels": usageRefusalFor("Panels"),
+  // On a Mac that controls another, its own arrangement (docs/view.md).
+  "settings.panels": () => null,
   // From anywhere, Settings included: it goes home to the note.
   "updates.show": (_s, facts) => (facts.updateAvailable ? null : "No update is available"),
   // Only while an update saves work: once the copy is replaced, it cannot wait.
@@ -304,21 +304,21 @@ const REFUSALS: Readonly<
     s.releaseNotes && s.releaseNotes.notes.length > 0 ? null : "No release notes yet",
   // From anywhere, Settings included: it goes home to the note.
   "firstmate.reply": (s) => (s.lastTurn?.reply ? null : "Your first mate has not replied yet"),
-  "settings.runbooks": usageRefusalFor("Runbooks"),
+  "settings.runbooks": () => null,
   "runbooks.open-folder": (s) =>
     isView(s.thisMac) ? `Your runbooks folder is on ${s.thisMac.name}` : null,
   // Usage is the record of the Mac Firstmate lives on (docs/usage.md).
-  "settings.usage": usageRefusal,
+  "settings.usage": () => null,
   // Automation is the home's own, like Usage: the schedules run on that Mac.
-  "settings.automation": usageRefusalFor("Automation", false),
+  "settings.automation": refusedOnAView("Automation"),
   // Integrations sign in as the person on the home, like Projects.
-  "settings.integrations": usageRefusalFor("Integrations"),
-  // Secrets stay the home's own, even of a first mate started by a command (docs/secrets.md).
-  "settings.secrets": usageRefusalFor("Secrets", false),
-  "automation.pause-all": usageRefusalFor("Automation", false),
-  "usage.unit": usageRefusal,
+  "settings.integrations": () => null,
+  // Secrets stay the home's own (docs/secrets.md).
+  "settings.secrets": refusedOnAView("Secrets"),
+  "automation.pause-all": refusedOnAView("Automation"),
+  "usage.unit": refusedUntilUpdate,
   // The allowance is read where the first mate lives, from any Mac.
-  "allowance.recheck": () => null,
+  "allowance.recheck": refusedUntilUpdate,
   // Devices is the home's own: a Mac that controls another has none (docs/devices.md).
   "devices.try-again": (s) => (s.devicesShown ? null : `Devices is on ${HOME.the}`),
 };

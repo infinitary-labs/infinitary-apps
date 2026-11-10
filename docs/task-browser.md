@@ -291,7 +291,7 @@ The page reaches the view as pictures, never as itself.
 While a view watches (`inf:browser:watch`, a shell channel), the host streams the hidden page's own pictures over the browser's protocol - one when watching starts and one each time the page changes - and sends each to that window alone on `inf:browser:frame`; the view draws the newest on a canvas, fitted to its width or at the page's own size.
 The page never enters the app's window, so the app's own menus, More's included, draw over it, and nothing the captain does in the view reaches the page.
 A window that unwatches, loads another document or goes stops its pictures.
-An app controlling this Mac from another shows no page: its view says the task's browser shows only on this Mac (`docs/view.md`, "A task's browser on a view").
+An app controlling this Mac from another shows no page: its view says the task's browser on this Mac cannot be shown there yet (`docs/view.md`, "A task's browser on a view").
 
 The page lays out at 1280 by 800 (`TASK_BROWSER_PAGE`) unless the captain maximizes the view (the design skill's ResponseCard, "Maximize").
 Maximized, the view gives the page its room: the place under its row and the browser's lines, above its foot line, which it asks for on `inf:browser:size`, a shell channel, and asks again when the window's size settles.

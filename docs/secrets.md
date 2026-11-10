@@ -215,7 +215,7 @@ A paired view reaches this through three channels, each answered in `SecretsSett
   It raises a host card only while Secrets is set up and open and the key is a P-256 key the home does not already hold for that device.
 - `inf:secrets:decide` carries one signed Allow or one Deny.
 
-A computer that controls a first mate started by a command asks these three and no other Secrets request (`RUN_HOME_ONLY_CHANNELS`, `docs/run.md`, "Control from another computer").
+A computer that controls a first mate asks these three and no other Secrets request (the other Secrets channels' `reach` is `home`, `docs/view.md`, "What the window asks").
 Secrets settings, entry, rehearsal, history, permissions and recovery stay on the home, and its Secrets tab and command are not offered there.
 
 Enrollment is the captain's on this computer.

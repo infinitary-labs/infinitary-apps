@@ -18,7 +18,7 @@ describe("Settings column", () => {
     expect(style.boxSizing).toBe("border-box");
   });
 
-  it("offers a Mac that controls another only its own keys, its own look, the automations that run there and Leave, and all but Observe of a first mate started by a command", () => {
+  it("offers a computer that controls another every section but Secrets and Observe", () => {
     const remove = registerBuiltinPlugin(pluginHost);
     try {
       const sections = orderSettingsSections(pluginHost.settingsSections.list());
@@ -32,20 +32,11 @@ describe("Settings column", () => {
         heardAt: null,
         caughtUp: 1,
       } as const;
-      expect(sectionsFor(sections, view).map((section) => section.id)).toEqual([
-        "appearance",
-        "keyboard",
-        "automation",
-        "devices",
-      ]);
       expect(sectionsFor(sections, { role: "home", left: null })).toEqual(sections);
       expect(sectionsFor(sections, null)).toEqual(sections);
-      // INF-1228, the captain's answer control=all: nobody sits at a first
-      // mate started by a command, so its Settings are opened from here,
-      // beside this Mac's own look and keys.
-      expect(
-        sectionsFor(sections, { ...view, startedByCommand: true }).map((section) => section.id),
-      ).toEqual([
+      // INF-1352's plan, the captain's answer one_rule=every-view: every first mate's Settings
+      // are opened from here, beside this computer's own look and keys.
+      expect(sectionsFor(sections, view).map((section) => section.id)).toEqual([
         "general",
         "appearance",
         "panels", // INF-2344: the arrangement is the first mate's, arranged from here.

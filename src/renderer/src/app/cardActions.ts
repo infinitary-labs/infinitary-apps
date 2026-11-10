@@ -164,9 +164,10 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         ?.actions.find((action) => action.id === actionId);
       const there = isView(thisMac) && chosen ? doneThereWords(thisMac, chosen) : null;
       if (there) {
-        // That Settings section, or the task's browser page, stays on the
-        // other Mac (docs/view.md): nothing is sent, so the card stays on both
-        // Macs and says where to do it.
+        // Devices and the task's browser page stay on the other computer, and
+        // a first mate on an older version answers no Settings section from
+        // here (docs/view.md): nothing is sent, so the card stays on both
+        // computers and says what to do.
         set((s) => ({ cardActionErrors: { ...s.cardActionErrors, [cardId]: there } }));
         return;
       }

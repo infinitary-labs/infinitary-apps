@@ -304,7 +304,7 @@ The main process's own commands, the size keys, are never refused by the page.
 - `firstmate.reply`, Open the first mate's reply, goes home and opens the first mate's newest reply whole as a note at the front of the stack, as a click on the reply line above the input does, after the line has faded too (`docs/composer.md` "The reply note").
   It works from Settings too, and refuses until a reply is saved ("Your first mate has not replied yet").
 - `settings.usage`, Open Usage, opens Settings at its Usage tab with focus on the unit switch; it works from Settings too (`docs/usage.md`).
-- `settings.panels`, Arrange panels, opens Settings at its Panels tab with focus on its rows' stop ("Lists and Settings"); it works from Settings too, and refuses on a Mac that controls another, where the panels' layout is that Mac's (INF-2344).
+- `settings.panels`, Arrange panels, opens Settings at its Panels tab with focus on its rows' stop ("Lists and Settings"); it works from Settings too, and on a Mac that controls another it arranges that Mac's own layout (`docs/view.md`, "Settings on a view").
 - `settings.automation`, Open Automation, opens Settings at its Automation tab with focus on New automation; it works from Settings too (`docs/automation.md`).
 - `settings.integrations`, Open Integrations, opens Settings at its Integrations tab with focus on its first row's chevron, or on its first chip while nothing is connected; it works from Settings too (`docs/integrations.md`).
 - Open Keyboard settings, Open Usage, Open Automation and Open Integrations put focus there once the tab draws it, which a window that paints late does many frames after the command (`openSettingsAt`).
@@ -313,7 +313,6 @@ The main process's own commands, the size keys, are never refused by the page.
 - `usage.unit`, Switch Usage units, switches every amount in Usage between tokens and estimated dollars, which the core keeps, and opens Usage the same way.
 - `allowance.recheck`, Recheck allowance, reads which login each account's store names and its allowance again, the way the spent-allowance card's button does, so a switched Claude login is heard at once (`docs/quota.md`, "A changed login").
 - `devices.try-again`, Try again to reach your computers, opens Settings at Devices and tries this Mac's own SSH connection once more to every Mac it stopped trying (`docs/devices.md`, "Through the home's SSH").
-  Both refuse on a Mac that controls another, which has no Usage tab.
 - `project-focus.open`, Focus on a project, opens the top bar's project pill into its row with focus on the checked pill, where the arrows, Home and End move and Enter picks (`docs/project-focus.md`); it refuses in Settings and while there is only one project.
 - `project-focus.clear`, Show all projects, lets the window's project focus go; it refuses while every project is shown.
 - While Keyboard settings records a key every shell command refuses ("Settings is recording a key"), after the dictation key's pick.

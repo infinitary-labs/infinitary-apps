@@ -114,29 +114,28 @@ export function recordTemplate(taskId: string, knowledge = false): FrameTemplate
 
 export const builtinBindings: PluginBindings = {
   settingsSections: {
-    // Of a first mate started by a command, the sections nobody could open
-    // there are opened from the computer that controls it (docs/run.md).
-    general: { Component: GeneralTab, onAViewOfACommand: true },
+    // A view shows every section but those that are only the first mate's
+    // computer's own: its Secrets (docs/view.md, "Settings on a view").
+    general: { Component: GeneralTab, onAView: true },
     // On a Mac that controls another, its own look (docs/view.md).
-    appearance: { Component: AppearanceTab, onAView: true },
+    appearance: { Component: AppearanceTab, onAView: true, onAnOlderFirstMate: true },
     // On a Mac that controls another, its own keys (docs/keyboard.md).
-    // The arrangement is saved where the first mate lives, and a Mac that
-    // controls another cannot change it (docs/view.md); one started by a
-    // command is arranged from here (docs/run.md).
-    panels: { Component: PanelsTab, onAViewOfACommand: true },
-    keyboard: { Component: KeyboardTab, onAView: true },
-    projects: { Component: ProjectsTab, onAViewOfACommand: true },
-    subscriptions: { Component: SubscriptionsTab, onAViewOfACommand: true },
-    runbooks: { Component: RunbooksTab, onAViewOfACommand: true },
-    usage: { Component: UsageTab, onAViewOfACommand: true },
+    // On a Mac that controls another, its own arrangement (docs/view.md).
+    panels: { Component: PanelsTab, onAView: true },
+    keyboard: { Component: KeyboardTab, onAView: true, onAnOlderFirstMate: true },
+    projects: { Component: ProjectsTab, onAView: true },
+    subscriptions: { Component: SubscriptionsTab, onAView: true },
+    runbooks: { Component: RunbooksTab, onAView: true },
+    usage: { Component: UsageTab, onAView: true },
     // On a Mac that controls another, the same rules, which run there (docs/automation.md).
-    automation: { Component: AutomationTab, onAView: true },
-    integrations: { Component: IntegrationsTab, onAViewOfACommand: true },
+    automation: { Component: AutomationTab, onAView: true, onAnOlderFirstMate: true },
+    integrations: { Component: IntegrationsTab, onAView: true },
     secrets: { Component: SecretsTab },
     devices: {
       Component: DevicesTab,
       // On a Mac that controls another it holds Leave; otherwise the core's word.
       onAView: true,
+      onAnOlderFirstMate: true,
       enabled: async () =>
         (await window.infinitary.devices
           .thisMac()

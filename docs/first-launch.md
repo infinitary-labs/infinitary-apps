@@ -37,7 +37,7 @@ The caption names the connection ("Check Operator gateway again to begin"), then
 The words live in `src/renderer/src/app/firstRunGateWords.ts`, and the input reads "check your connection first" (`GATED_CHECK_PLACEHOLDER`).
 **Check again** runs the check right there (`inf:accounts:custom:recheck`); a failure takes the sentence's place above the button, and a passing check closes the gate without a restart.
 A short window keeps that sentence, since it says what the check may cost before it is pressed, and the band scrolls.
-The provider chips stay below it for a person who would rather connect a subscription, and a Mac that controls another's first mate is told to check it there.
+The provider chips stay below it for a person who would rather connect a subscription, and a Mac that controls another's first mate runs the same check there.
 
 A person with only Claude on this Mac completes the first launch on it: the Claude chip goes straight to the Mac's own login (Claude signs in one way), the gate closes, and the first mate - seated on Claude (`docs/architecture.md` §16.1) - owns the host-presented welcome and answers the first turn.
 `tests/e2e/first-launch.spec.ts` runs it against the mock provider through the SDK's own client, as a user the Keychain holds no Claude login for, so the sign-in never reaches the person's own (`tests/e2e/claudeSeat.ts`).

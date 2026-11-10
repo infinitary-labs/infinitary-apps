@@ -5,7 +5,7 @@ import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
 import { useRestLabel } from "../design";
 import { hasShellPainted } from "../design/reveals";
-import { showsSection } from "../devices/viewWords";
+import { sectionWaitsForUpdate, showsSection, updateThereWords } from "../devices/viewWords";
 import type { SettingsSectionContribution } from "../plugins/contributions";
 import { FrameMount } from "../plugins/frames/FrameMount";
 import { orderSettingsSections, pluginHost, useContributions } from "../plugins/host";
@@ -85,9 +85,10 @@ function useOfferedSections(sections: readonly SettingsSectionContribution[]) {
 }
 
 /** The sections this app shows (`showsSection`, docs/view.md). */
-export function sectionsFor<
-  T extends Pick<SettingsSectionContribution, "onAView" | "onAViewOfACommand">,
->(sections: readonly T[], thisMac: ThisMac | null): T[] {
+export function sectionsFor<T extends Pick<SettingsSectionContribution, "onAView">>(
+  sections: readonly T[],
+  thisMac: ThisMac | null,
+): T[] {
   return sections.filter((section) => showsSection(thisMac, section));
 }
 
@@ -197,6 +198,14 @@ export function SettingsScreen() {
             >
               {tab.frame ? (
                 <FrameSection key={tab.id} section={tab} />
+              ) : sectionWaitsForUpdate(thisMac, tab) ? (
+                <p
+                  key={tab.id}
+                  data-settings-waits-for-update=""
+                  style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}
+                >
+                  {updateThereWords(thisMac)}
+                </p>
               ) : (
                 <tab.Component key={tab.id} />
               )}

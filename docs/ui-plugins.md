@@ -796,7 +796,7 @@ Every panel's place is one saved arrangement ("Preferences by talking"), and the
 - **Settings → Panels** (`src/renderer/src/settings/PanelsTab.tsx`, the design skill's `components/core/PanelsSettings.prompt.md`) lists each rail's top and bottom groups in order, every panel the app knows among them, with the window's word on why one does not draw (`panelRowState`), a switch that hides or shows it, the keys, and Reset to defaults.
   A row drags as a header does, and the keyboard moves it.
   Reset to defaults asks once more on the same button, then puts every panel where it asks to be in its declared order (`defaultArrangement`), clears the placements and More picks saved before the arrangement, and keeps each panel's collapse and visibility.
-  The tab is offered only where the window's layout writes reach the first mate's computer (`settings.panels` refuses on a Mac that controls another, `docs/view.md`).
+  On a Mac that controls another, the tab arranges that Mac's own layout and writes nothing to the first mate's computer (`docs/view.md`, "Settings on a view").
 - **The first mate's `panel` action** moves one panel to a slot's middle, or just above or below another ("Preferences by talking").
 
 A move names one panel on the Activity feed, with where it now sits ("Tokyo moved to the right rail, top, above Tasks"); a change that moves several at once is one line.

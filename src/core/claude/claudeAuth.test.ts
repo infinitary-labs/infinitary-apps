@@ -6,6 +6,7 @@ import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { isNonTerminalFailureReason } from "../accounts/credentialHealth";
+import { asAView } from "../askedFromAView";
 import type { HostKeychain } from "../host";
 import type { AuthInteractionBridge } from "../pi/piAuth";
 import {
@@ -1054,13 +1055,13 @@ describe("ClaudeAuthBackend on a computer that runs work: a code pasted back", (
     return { run, seen };
   }
 
-  function computer(store: string, run: RunClaude) {
+  function computer(store: string, run: RunClaude, pasteCode = true) {
     return new ClaudeAuthBackend({
       run,
       available: () => true,
       readStore: fakeStore,
       configDir: () => store,
-      pasteCode: true,
+      pasteCode,
     });
   }
 
@@ -1104,6 +1105,34 @@ describe("ClaudeAuthBackend on a computer that runs work: a code pasted back", (
     ]);
     expect(client.seen.pasted).toBe("good-code#s1");
     expect(existsSync(join(store, "credential"))).toBe(true);
+  });
+
+  // A sign-in asked from another computer opens where the person is
+  // (docs/view.md, "Pages it would open"), and the first mate's own window
+  // still lets the client open its browser.
+  it("opens a paired view's sign-in on that view, and no browser on the first mate's computer", async () => {
+    const client = pasteClient();
+    const opened: string[] = [];
+    const { relay } = pasting(async () => "good-code#s1");
+    relay.openExternal = async (url) => {
+      opened.push(url);
+    };
+    await asAView(() => login(computer(accountDir("view"), client.run, false), relay));
+    expect(client.seen.browser).toBe(NO_BROWSER);
+    expect(opened).toEqual([CODE_PAGE]);
+    expect(client.seen.pasted).toBe("good-code#s1");
+  });
+
+  it("lets the client open its browser for the first mate's own window", async () => {
+    const client = pasteClient();
+    const opened: string[] = [];
+    const { relay } = pasting(async () => "good-code#s1");
+    relay.openExternal = async (url) => {
+      opened.push(url);
+    };
+    await login(computer(accountDir("window"), client.run, false), relay);
+    expect(client.seen.browser).toBeUndefined();
+    expect(opened).toEqual([]);
   });
 
   it("adopts a login already there, and asks for nothing", async () => {

@@ -39,7 +39,7 @@ import { CARD_MAX_HEIGHT, cardFloor } from "../design/cards/ResponseCard";
 import { thisDesktop } from "../design/core/desktop";
 import { useOverflowTitle } from "../design/core/overflowTitle";
 import { useRestLabel } from "../design/core/restLabel";
-import { browserShownThereWords, isView } from "../devices/viewWords";
+import { browserShownThereWords, isView, waitsForUpdate } from "../devices/viewWords";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 import { RecordPaneChrome } from "./RecordPaneChrome";
 import { recordPillToneOf } from "./recordFooter";
@@ -598,6 +598,7 @@ export function TaskBrowserView({
   // On a Mac controlling another, the page shows only there (docs/view.md).
   const thisMac = useShellStore((s) => s.thisMac);
   const there = isView(thisMac) ? browserShownThereWords(thisMac) : null;
+  const waits = waitsForUpdate(thisMac);
 
   useEffect(() => {
     setDetail(null);
@@ -643,7 +644,7 @@ export function TaskBrowserView({
     setRememberFor(null);
     setSavedState(undefined);
     let active = true;
-    if (captain && currentSite && shellView === "home") {
+    if (captain && !waits && currentSite && shellView === "home") {
       void window.infinitary.browser
         .signIns()
         .then((view) => {
@@ -661,7 +662,7 @@ export function TaskBrowserView({
     return () => {
       active = false;
     };
-  }, [captain, currentSite, currentKey, shellView]);
+  }, [captain, waits, currentSite, currentKey, shellView]);
   // The record keeps the card the view came from, so Hide on it returns there too.
   const openRecord = () =>
     useShellStore.getState().openRecord(taskId, from ? { cardId: from.cardId } : undefined);

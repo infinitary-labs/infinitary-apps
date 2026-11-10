@@ -17,13 +17,14 @@ import {
   devicesNotHereWords,
   doneThereWords,
   firstMatePlace,
+  googleOnFirstMateWords,
   JOIN_RUNS_WORK,
   joinRefusalWords,
   leftLine,
   namedNoticeWords,
   notSentWords,
   pillWords,
-  settingsThereWords,
+  sectionWaitsForUpdate,
   topLine,
   type ViewMac,
 } from "./viewWords";
@@ -106,39 +107,54 @@ describe("controlling another Mac", () => {
     expect(words).not.toMatch(NEVER);
   });
 
-  it("says a card's button that opens Settings is done on the Mac it controls", () => {
-    const words = settingsThereWords(PRO);
-    expect(words).toBe("Do this on MacBook Pro. Its settings and sign-ins stay there.");
-    expect(words).not.toMatch(NEVER);
+  // The captain's answer on the review of one rule for every view: an older first mate gets
+  // words before anything is asked of it, and a card that would need it is never sent.
+  it("says the other computer needs an update when its first mate is too old", () => {
+    const older: ViewMac = { ...PRO, needsUpdateThere: true };
+    const words = "Update Infinitary on MacBook Pro to do this from here.";
+    for (const target of ["subscriptions", "projects", "settings"] as const)
+      expect(doneThereWords(older, { effect: { kind: "open", target } })).toBe(words);
+    expect(
+      doneThereWords(older, { effect: { kind: "host", op: "restore-account", arg: "a1" } }),
+    ).toBe(words);
+    // A task's saved sign-in needs nothing new of that first mate, so it is still sent.
+    expect(
+      doneThereWords(older, { effect: { kind: "open", target: "browser", savedSignIn: true } }),
+    ).toBeNull();
+    expect(doneThereWords(older, {})).toBeNull();
+    expect(sectionWaitsForUpdate(older, {})).toBe(true);
+    expect(sectionWaitsForUpdate(older, { onAnOlderFirstMate: true })).toBe(false);
+    expect(sectionWaitsForUpdate(PRO, {})).toBe(false);
   });
 
-  // INF-1228, the captain's answer control=all: of a first mate started by a
-  // command, a button that opens Settings opens it here; Devices and a
-  // task's browser come later, and the button says so before the click.
-  it("does a card's Settings button here for a first mate started by a command, and says what cannot be done yet", () => {
-    const mini: ViewMac = { ...PRO, name: "Mac mini", startedByCommand: true };
+  // The captain's answer on the same review: Google's page returns to the first mate's computer.
+  it("says Google's sign-in must be done on the first mate's computer for now", () => {
+    expect(googleOnFirstMateWords(PRO)).toContain("Sign in to Google on MacBook Pro for now.");
+    expect(googleOnFirstMateWords(PRO)).not.toMatch(NEVER);
+  });
+
+  // INF-1352's plan, the captain's answer one_rule=every-view: a button that opens Settings
+  // opens it here on any view; Devices and a task's browser come later, and say so first.
+  it("does a card's Settings button here and says what cannot be done yet", () => {
     const open = (target: "subscriptions" | "projects" | "settings" | "devices") => ({
       effect: { kind: "open", target } as const,
     });
-    for (const target of ["subscriptions", "projects", "settings"] as const) {
-      expect(doneThereWords(mini, open(target))).toBeNull();
-      expect(doneThereWords(PRO, open(target))).toBe(settingsThereWords(PRO));
-    }
-    expect(doneThereWords(mini, open("devices"))).toBe(
-      "Mac mini's computers and phones cannot be changed from here yet.",
+    for (const target of ["subscriptions", "projects", "settings"] as const)
+      expect(doneThereWords(PRO, open(target))).toBeNull();
+    expect(doneThereWords(PRO, open("devices"))).toBe(
+      "MacBook Pro's computers and phones cannot be changed from here yet.",
     );
     const browser = { effect: { kind: "open", target: "browser" } as const };
-    expect(doneThereWords(mini, browser)).toBe(
-      "This task's browser on Mac mini cannot be shown here yet.",
+    expect(doneThereWords(PRO, browser)).toBe(
+      "This task's browser on MacBook Pro cannot be shown here yet.",
     );
-    expect(browserShownThereWords(mini)).toEqual({
-      lead: "This task's browser on Mac mini cannot be shown here yet.",
-      detail: "A command started Infinitary on Mac mini, with no window to show it in.",
+    expect(browserShownThereWords(PRO)).toEqual({
+      lead: "This task's browser on MacBook Pro cannot be shown here yet.",
+      detail: "Only a window on MacBook Pro can show it for now.",
     });
-    expect(firstMatePlace(mini)).toEqual({ this: "Mac mini", This: "Mac mini" });
-    expect(firstMatePlace(PRO)).toEqual(HERE);
+    expect(firstMatePlace(PRO)).toEqual({ this: "MacBook Pro", This: "MacBook Pro" });
     expect(firstMatePlace(null)).toEqual(HERE);
-    for (const words of [devicesNotHereWords(mini), browserNotHereWords(mini)])
+    for (const words of [devicesNotHereWords(PRO), browserNotHereWords(PRO)])
       expect(words).not.toMatch(NEVER);
   });
 

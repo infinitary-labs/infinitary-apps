@@ -83,10 +83,11 @@ A Mac (`mac`, `docs/devices.md`) both controls that Mac's first mate from its wi
   The top bar shows the same update notice, with this Mac's version, channel and upgrade command, and the version in its line opens that version's release page here.
   The other Mac is never asked: its own notice is about its own app.
 - Anything else is refused here, without being sent: "answered only on the computer where your first mate lives".
-- Of a first mate a command started, with nobody at that computer, every `home` channel but those that stay there is asked of it too (`docs/run.md`, "Control from another computer").
+  That is what stays with the first mate's computer (`reach: "home"`): its computers and phones and the addresses they find it at, a task's browser and a page from a task's project, its Secrets (`docs/secrets.md`, "Remote decisions"), and what is only ever that computer's own - its look, dictation, voice model, panels and their extensions, Knowledge, Observe, release notes, Dock and update.
+  Whatever started the first mate, a view asks every other request (`docs/connection.md`, "Requests").
 
-Only the pushes a view shows reach the window (`VIEW_PUSHES`): the feed's events, the cards and their threads, quota, model names and the task board.
-The other Mac's look, settings, sign-ins, voice and panels are its own.
+Only the pushes a view shows reach the window (`VIEW_PUSHES`): the feed's events, the cards and their threads, quota, model names, the task board, a sign-in's steps, the sign-ins where projects live, integrations and Diagnostics.
+The other Mac's look, voice and panels are its own.
 
 A file given to the input or a reply goes to the other Mac only inside the message: a picture or text file as its chip, any other file not at all, because a path on this Mac means nothing there (`docs/composer.md`, "Files").
 The input's line names that Mac: "Only pictures and text files can go to MacBook Pro.
@@ -95,6 +96,24 @@ Other files were not added."
 Frames are built by this app, as on the Mac where the first mate lives; a card picture's name is asked of the other Mac (`inf:cards:picture`, a `views` read that answers the home's own copy as base64), and the frame scheme serves the answer (`src/main/frames/frameProtocol.ts`).
 A project font a preview's `@font-face` names is asked of the other Mac the same way (`inf:cards:typeface`, a `views` read of a minted font name answering the home's own copy as base64), and the frame scheme's `typefaces` host serves the answer; a font the home cannot answer is not served, and the preview draws in the app's own typefaces (`docs/card-authoring.md`, "Fonts by reference").
 A card's demo recording plays in this app's picture viewer a range at a time (a GIF demo is asked whole, in the same pieces, each time Play is pressed): each range is asked of the other Mac at most one piece of 1 MB at a time (`inf:cards:media`, a `views` read of a minted recording name, an offset and a length, answering that piece as base64 and the whole file's size), never kept, since the player asks again for what it needs.
+
+## Pages it would open
+
+A page the first mate would open in a browser for a view's request, such as a sign-in's consent page, goes to the computers that control it as the push `inf:app:open-page` instead of opening on the first mate's computer (`asAView`, `src/core/askedFromAView.ts`), and each of those computers' Infinitary opens it in its own browser once, as it arrives; one a welcome replays after a drop is old news and is not opened (`ViewBackend.openPage`).
+A page the first mate's own window asks for opens on that computer, as a command's first mate has none and sends all of them to its views (`docs/run.md`, "Control from another computer").
+A Claude sign-in asked from a view runs the client with no browser on the first mate's computer, and the link the client prints opens on the view instead (`loginWithBrowser`, `src/core/claude/claudeAuth.ts`).
+A sign-in that shows a code or asks for a pasted answer shows it on this computer as in the window.
+A sign-in whose page sends the browser back to the first mate's own loopback address finishes only when that browser runs on the same computer, or through the sign-in's code or a pasted address where the provider offers one.
+Google has neither, so its notice on a view says to sign in on the first mate's computer for now (`googleOnFirstMateWords`); the button stays, because a view on that same computer finishes.
+
+## A first mate on an older version
+
+A first mate that does not list the `every-view-asks` contract change refuses what a view of it could not ask before, so this app says so rather than asking (`needsUpdateThere`, read from its welcome).
+A Settings section that needs an answer from it shows "Update Infinitary on Mac mini to do this from here." in place of its rows; Appearance, Keyboard, Automation and Devices work as ever.
+A card's button that opens Settings sends nothing and says the same, so the card stays on both computers; the first launch says it in place of its chips, and Switch Usage units and the allowance recheck refuse with those words.
+Once a window knows that version, nothing asks it the wider set on its own either: the diagnostics notice and the one-time sharing ask stay away, Automation's When choice lists no integration events, and a task browser's saved sign-in is not read.
+A read a window makes as it first opens, before it knows that version, can still reach it, such as the home screen's sharing read, or Automation's list when Settings is opened that early.
+A first mate with its own window refuses that read quietly; one started by a command answers it under its old rule, so the diagnostics notice can appear there.
 
 ## Notifications
 
@@ -138,41 +157,35 @@ On macOS it dials through macOS's own nc, as every device does (`docs/devices.md
 
 ## Settings on a view
 
-Settings shows four tabs: Appearance, this Mac's own look ("Set on this computer only.
-MacBook Pro keeps its own."); Keyboard, this Mac's own keys; Automation, the other Mac's own automations, read and changed there, where they run (`docs/automation.md`, "On a computer that controls another"); and Devices, which on a view is `ControllingTab` (`src/renderer/src/settings/ControllingTab.tsx`): which Mac this one controls, when it joined and at what address, and Leave.
-Everything else stays on the other Mac: its settings, sign-ins, projects, voice, panels, Observe, notifications and Diagnostics.
-Its Notifications switch governs this Mac's notifications too ("Notifications", above).
-Of a first mate a command started, General, Projects, Intelligence, Usage and Integrations show here too, asked of that computer (`docs/run.md`, "Control from another computer").
+Settings shows every section of the first mate's computer but Secrets and Observe, each read and changed there, beside Appearance, this Mac's own look ("Set on this computer only.
+MacBook Pro keeps its own."), Keyboard, this Mac's own keys, and Panels, this Mac's own layout; Automation is the other Mac's own automations, read and changed there, where they run (`docs/automation.md`, "On a computer that controls another"), and Devices is `ControllingTab` (`src/renderer/src/settings/ControllingTab.tsx`): which Mac this one controls, when it joined and at what address, and Leave.
+The Notifications switch there governs this Mac's notifications too ("Notifications", above).
+Its words name the computer the first mate lives on where they would say this computer (`firstMatePlace`, `useFirstMatePlace`).
+General leaves out that computer's Start at login, Dock, dictation and panels, which are its own (`GeneralTab`).
+A project's folder is typed as its path on that computer, since a folder picker here shows only this computer's folders: Choose folder on the projects folder's line under Add project, and Folder on Mac mini in Add project (`FOLDER_THERE_WORDS`, `src/renderer/src/settings/addProjectWords.ts`); that computer checks the path and says why one cannot be used.
+Their keyboard commands work there (`src/renderer/src/app/commandRefusals.ts`).
 
 ## Card buttons that open Settings
 
-A card's button whose click opens one of the other Mac's Settings sections is never sent from a view (`opensSettings`, `src/shared/cards.ts`): an `open` effect on any section but a task's browser, or the host's `restore-account` op, which the core answers with Subscriptions.
-That covers Sign in again, a project's sign-in, Make a link or the command, Add it, Update it, Remove, and Open settings.
-Sent, the other Mac would retire the card before this Mac opened a tab that cannot do it.
-Instead `actOnCard` sends nothing, and the card says where to do it (`settingsThereWords`, through `doneThereWords`), on the button's rest, the pointer's or the keyboard's focus, and, once clicked, as its inline line: "Do this on MacBook Pro.
-Its settings and sign-ins stay there."
+A card's button whose click opens a Settings section is sent, and opens that section here, but one that opens Devices says that computer's computers and phones cannot be changed from here yet and sends nothing (`devicesNotHereWords`, through `doneThereWords`), on the button's rest, the pointer's or the keyboard's focus, and, once clicked, as its inline line.
 The card stays on both Macs, so its button is still there on the other Mac.
 The card's other buttons, such as Move to Grok beside Sign in, are sent as before, and while changes are off every button is marked off.
-Of a first mate a command started, such a button is sent and opens its section here, but one that opens Devices says that computer's computers and phones cannot be changed from here yet (`docs/run.md`, "Control from another computer").
 
 ## A task's browser on a view
 
-A task's browser shows its page only in the window of the Mac where the first mate lives: every `inf:browser:*` request is that Mac's own, and no browser push reaches a view (`docs/task-browser.md`, "The view").
+A task's browser shows its page only in a window of the Mac where the first mate lives: every `inf:browser:*` request is that Mac's own, and no browser push reaches a view (`docs/task-browser.md`, "The view").
 
 - **Taking it over.**
   A crewmate's request card's open-browser action - Open browser and sign in, Sign in myself, Open browser and pay - is never sent from a view (`takesTaskBrowser`, `src/shared/cards.ts`).
   Sent, the other Mac would answer the card on both Macs and pause the browser for the captain there, while this Mac opened a view with no page.
-  Instead `actOnCard` sends nothing, and the card says where to do it (`browserThereWords`, through `doneThereWords`), on the button's rest, the pointer's or the keyboard's focus, and, once clicked, as its inline line: "Do this on MacBook Pro.
-  This task's browser shows only there."
+  Instead `actOnCard` sends nothing, and the card says so (`browserNotHereWords`, through `doneThereWords`), on the button's rest, the pointer's or the keyboard's focus, and, once clicked, as its inline line: "This task's browser on MacBook Pro cannot be shown here yet."
   The card stays on both Macs, and the browser stays paused for the captain's help on the other Mac.
 - **A saved sign-in.**
   Use my saved sign-in needs no one at the page, so a view sends it as any other choice: the other Mac gives the browser the site's sign-in and hands it back to its crewmate, and the card is answered on both Macs.
   The answer's browser effect opens nothing here.
   When the sign-in cannot be used, the browser stays paused there and the feed says why, as on that Mac (`docs/task-browser.md`, "Saved sign-ins").
 - **The view itself.**
-  The card's door and the record's Open still open the task's browser view, which shows the stopped panel's shape in place of a page (`browserShownThereWords`): "This task's browser shows only on MacBook Pro." over "Watch it and take control of it there.", with no Open again.
-- **Of a first mate a command started**, nobody can watch it there, and showing it here is the next part of INF-1228's piece 6 (`docs/run.md`, "Not yet").
-  Until then the take-over and the view say so (`browserNotHereWords`): "This task's browser on MacBook Pro cannot be shown here yet.", the view over "A command started Infinitary on MacBook Pro, with no window to show it in."
+  The card's door and the record's Open still open the task's browser view, which shows the stopped panel's shape in place of a page (`browserShownThereWords`): "This task's browser on MacBook Pro cannot be shown here yet." over "Only a window on MacBook Pro can show it for now.", with no Open again.
 
 ## Leave, and Remove at the other Mac
 
@@ -197,16 +210,16 @@ The first-launch gate stays derived (`docs/first-launch.md`); the line only says
 - `src/core/devices/homeLink.test.ts`: the device's side against the real connection and pairing - welcome with the other Mac's name, a read held while reaching, a change refused while out of reach and never sent, an exact catch-up after a drop, a request in flight refused and not asked again, Remove seen live and while away, Leave heard and unheard.
 - `src/main/shell.test.ts`: the switch - joining stops this Mac's core and asks the other Mac, a view's own look, what is refused without being sent, pushes filtered, starting as a view with no core, Leave in place or by relaunch, Remove there, each join refusal, a second join refused while the first claims its link, and this Mac's own update notice and release page while the other Mac is newer, never asked of it.
   Its notifications: the other Mac's new card and finished report post here as that Mac's notifier makes them, never with this window in front or for what was there at joining, follow that Mac's switch, post after a replay and seed after a reload.
-  Of a first mate a command started: what it asks of that Mac, its sign-in's steps shown, a page it sends opened here once and a replayed one not, and none of that from a first mate with its window.
+  What it asks of that Mac, its sign-in's steps shown, a page it sends opened here once and a replayed one not.
 - `src/core/core.connection.test.ts`, "the connection serves the core to paired devices": a card picture by its name from the real core, a demo recording's pieces with its size, a project font by its name, and Leave named in the feed.
-- `src/renderer/src/devices/viewWords.test.tsx`: the words, the top line, the join aside's steps and Leave's question, and of a first mate a command started the card buttons it sends, its browser's words and where its Settings say it lives.
+- `src/renderer/src/devices/viewWords.test.tsx`: the words, the top line, the join aside's steps and Leave's question, the card buttons it sends, its browser's words and where its Settings say it lives.
 - `src/renderer/src/attachments/intake.test.ts`: on a view, a dropped or chosen picture or text file is applied and any other file is refused by one notice, never a path.
 - `src/shared/cards.test.ts` and `src/core/orchestrator/cardActions.merge.test.ts`: which buttons open Settings, and that the core's answer to each click agrees.
-- `src/renderer/src/app/cardActions.test.ts`, "card action receipts": on a view, a button that opens Settings sends nothing and the card says where to do it, while its other buttons are sent; a request card's take-over sends nothing and says so, while its saved sign-in is sent and opens no browser view.
+- `src/renderer/src/app/cardActions.test.ts`, "card action receipts": on a view, a button that opens Devices sends nothing and the card says so, while its other buttons, those that open other Settings sections included, are sent; a request card's take-over sends nothing and says so, while its saved sign-in is sent and opens no browser view.
 - `tests/e2e/update-channels.spec.ts`, "a Mac controlling a newer Firstmate on another Mac is offered its own update": the other Mac's newer contract named in the top bar, this Mac's own offer there, its release page opened here, and the other Mac offered nothing.
 - `src/main/shell.test.ts`, "a Mac that controls another and runs its work": joining with a link for a Mac keeps the grant for its work and sets it up in the background, a Mac a command added opens as a view with its work's grant and never again as the device it left, and a grant that only runs work stays the work's; `src/core/helper/fromWindow.test.ts` the work folder's side.
 - `tests/e2e/view.spec.ts`, "a Mac joined at its first launch also runs that Mac's work": the home standing in another Mac for each app, a link pasted at first launch joins a Mac that controls and, its work started, is in reach to run work; a Mac a command added opens Infinitary there and controls with no first launch and no new link, and its Leave says it stops its work too.
 - `src/core/devices/remoteLoginLink.test.ts`, "asking a computer for a link by its address", and `src/core/devices/phoneDoor.test.ts`, "the computer link command": the key line then a link, a port kept with its key line, not open, this app's own link, the password once, and the command under each login shell with each reason it makes no link.
 - `tests/e2e/join-by-address.spec.ts`: a fresh app, by keys only, joins another app on the same computer by its address over a local SSH server, answers the key line, controls it and is listed as a Mac.
-- `tests/e2e/view.spec.ts`: two apps on one Mac - a fresh app joins at its first launch, shows the other's cards with their pictures, its feed and its tasks, an answer in either shows in the other, a button that opens Settings there sends nothing and keeps its card on both Macs, out of reach refuses changes and never sends them, a restart there catches it up, it restarts as a view with its record untouched, and Leave returns it to its own first launch.
+- `tests/e2e/view.spec.ts`: two apps on one Mac - a fresh app joins at its first launch, shows the other's cards with their pictures, its feed and its tasks, an answer in either shows in the other, a button that opens Devices there sends nothing and keeps its card on both Macs, out of reach refuses changes and never sends them, a restart there catches it up, it restarts as a view with its record untouched, and Leave returns it to its own first launch.
   A second journey drops a picture, a text file and a PDF on a view: the picture and the text reach the other Mac's first mate and are kept there, and the PDF, dropped or chosen, on the input or a reply, is refused with no path of this Mac sent.

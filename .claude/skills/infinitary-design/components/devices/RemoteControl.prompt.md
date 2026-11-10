@@ -14,27 +14,29 @@ Under it the stage is the ordinary one: the card stack and its pager, the Activi
 A picture or text file dropped on or chosen for the input or a reply becomes a chip and goes to MacBook Pro with the message, as it would there.
 Any other file stays out of the message, because MacBook Pro cannot open a file on this computer: no path is typed, and the composer's line reads "Only pictures and text files can go to MacBook Pro.
 Other files were not added."
-Voice, panels the person added, Observe and sign-ins stay on the computer that holds the first mate and do not appear here.
+Voice, panels the person added and Observe stay on the computer that holds the first mate and do not appear here.
 The update notice at the top bar's right is this computer's own, the same notice and panel the computer that holds the first mate shows for itself, naming this computer's version.
 
-**Settings** has two tabs.
+**Settings** shows the first mate's own sections, read and changed on MacBook Pro, but Secrets and Observe, beside this computer's Appearance, Keyboard and Devices.
 Appearance holds this computer's own size, theme, window wash and crew model names (captain's pick), starting from the other computer's when it joins, under the line "Set on this computer only.
 MacBook Pro keeps its own."
 Devices holds the micro label `CONTROLLING`, the line "What you do here happens on MacBook Pro.
-Its settings, sign-ins and voice stay there.", and one row in the Devices list's shape: a `StatusDot`, the name, the mono line "joined today 14:06 · 192.168.1.20", and a small secondary "Leave".
+Its computers, Secrets and voice stay there.", and one row in the Devices list's shape: a `StatusDot`, the name, the mono line "joined today 14:06 · 192.168.1.20", and a small secondary "Leave".
 
-**A card button that opens Settings there.**
-A card's button whose click opens one of MacBook Pro's Settings sections - Sign in, a project's Sign in again, Make a link, Make the command, Add it, Update it, Remove, Open settings - stays enabled and in its place, and its click sends nothing.
-Its `note` says before the click, on rest, the pointer's or the keyboard's focus, and the card's concise inline line (`../core/Button.prompt.md`) says after it: "Do this on MacBook Pro.
-Its settings and sign-ins stay there."
+**A card button that opens Devices there.**
+A card's button whose click opens MacBook Pro's Devices section - Make a link, Make the command, Add it, Update it, Remove - stays enabled and in its place, and its click sends nothing.
+Its `note` says before the click, on rest, the pointer's or the keyboard's focus, and the card's concise inline line (`../core/Button.prompt.md`) says after it: "MacBook Pro's computers and phones cannot be changed from here yet."
 The card stays on both computers, so its button is still there on MacBook Pro, and no Settings tab opens here.
-The card's other buttons, such as "Move to Grok" beside "Sign in", work from here as before.
-While changes are off, this button is marked off like the rest.
+A button that opens any other Settings section - Sign in, a project's Sign in again, Open settings - is sent and opens that section here.
+While changes are off, these buttons are marked off like the rest.
+
+**A first mate on an older version.**
+Where MacBook Pro is too old to answer what a view asks, a Settings section shows the one line "Update Infinitary on MacBook Pro to do this from here." in place of its rows, and a card's button that opens Settings stays in its place, sends nothing and says the same.
+Appearance, Keyboard, Automation and Devices are unchanged.
 
 **A crewmate's request to take over its browser.**
 A task's browser shows its page only on MacBook Pro, so a request card's button that hands it to the captain - `Open browser and sign in`, `Sign in myself`, `Open browser and pay` - stays enabled and in its place, and its click sends nothing.
-Its `note` says before the click, on rest, and the card's inline line says after it: "Do this on MacBook Pro.
-This task's browser shows only there."
+Its `note` says before the click, on rest, and the card's inline line says after it: "This task's browser on MacBook Pro cannot be shown here yet."
 The card stays on both computers and the browser stays paused for the captain's help on MacBook Pro.
 `Use my saved aurora.example sign-in` needs no one at the page, so it works from here: the browser on MacBook Pro signs in and goes back to its crewmate, the card is answered on both computers, and no browser view opens here.
 `Leave waiting` works from here as before.

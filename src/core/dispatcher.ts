@@ -50,6 +50,7 @@ import { devicePlace } from "@shared/signIns";
 import type { AppPanelGates } from "@shared/surfaces";
 import { resolveWorkComputer } from "@shared/workComputer";
 import type { RunbookView } from "../shared/runbooks";
+import { asAView } from "./askedFromAView";
 import { addedPrivateSite, privateSiteChannels } from "./browser/privateSites";
 import { CONTRACT_CHANGES } from "./connection/contractChanges";
 import type { CoreServices } from "./coreServices";
@@ -1699,9 +1700,9 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return Promise.reject(
         new Error(`${channel} is not a request a computer that runs work asks.`),
       );
-    return route(channel as Exclude<C, WorkInvokeChannel>, rawArgs, actor) as Promise<
-      InvokeResponse<C>
-    >;
+    const answer = () =>
+      route(channel as Exclude<C, WorkInvokeChannel>, rawArgs, actor) as Promise<InvokeResponse<C>>;
+    return actor?.kind === "captain" && actor.view ? asAView(answer) : answer();
   }) as CoreDispatch;
 
   function route<C extends Exclude<CoreInvokeChannel, WorkInvokeChannel>>(

@@ -26,6 +26,7 @@ import { type FormEvent, useCallback, useEffect, useId, useRef, useState } from 
 import { useCopyCode } from "../accounts/CopyCode";
 import { useShellStore } from "../app/store";
 import { Badge, Button, Input, RowMenu, StatusDot, type StatusDotTone, Switch } from "../design";
+import { googleOnFirstMateWords, isView } from "../devices/viewWords";
 import "./integrations.css";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 import { forgeRowView, HostChip, plusIcon, SignInAside, useForgeHostSignIn } from "./ForgeSection";
@@ -82,6 +83,7 @@ const EMPTY: IntegrationsView = { integrations: [], addable: [] };
 const NO_FORGES: ForgesView = { signIns: [], hosts: [], flow: null, ended: null };
 
 export function IntegrationsTab() {
+  const thisMac = useShellStore((s) => s.thisMac);
   const [view, setView] = useState<IntegrationsView>(EMPTY);
   const [forges, setForges] = useState<ForgesView>(NO_FORGES);
   const [loaded, setLoaded] = useState(false);
@@ -294,6 +296,9 @@ export function IntegrationsTab() {
     <IntegrationNoticeAside
       kind={notice}
       notice={noticeWords}
+      {...(notice === "google" && isView(thisMac)
+        ? { there: googleOnFirstMateWords(thisMac) }
+        : {})}
       onAccept={() => acceptNotice(notice)}
       onCancel={cancelNotice}
     />
@@ -485,11 +490,14 @@ export function IntegrationsTab() {
 function IntegrationNoticeAside({
   kind,
   notice,
+  there,
   onAccept,
   onCancel,
 }: {
   kind: IntegrationKind;
   notice: IntegrationNotice;
+  /** On a computer that controls a first mate: what this sign-in needs there. */
+  there?: string;
   onAccept: () => void;
   onCancel: () => void;
 }) {
@@ -511,6 +519,11 @@ function IntegrationNoticeAside({
           {notice.title}
         </div>
         <p className="fm-integrations-notice-lead">{notice.lead}</p>
+        {there && (
+          <p className="fm-integrations-notice-lead" data-integration-notice-there="">
+            {there}
+          </p>
+        )}
         {notice.groups.map((group, index) => (
           <div key={group.heading} className="fm-integrations-notice-group">
             <div id={`${ids}-${index}`} className="fm-integrations-notice-head">

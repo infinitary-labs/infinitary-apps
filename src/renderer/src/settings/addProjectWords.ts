@@ -13,10 +13,9 @@ export function newProjectWords(folder: string, place: { this: string } = HERE):
 export const FOLDER_HERE_WORDS = `Folder on ${HERE.this}`;
 
 /**
- * On a computer that controls a first mate a command started, a folder is
- * added from that computer by its path there, since a folder picker here
- * shows only this computer's folders (docs/run.md, "Control from another
- * computer").
+ * On a computer that controls another, a folder is added from that computer
+ * by its path there, since a folder picker here shows only this computer's
+ * folders (docs/view.md, "Settings on a view").
  */
 export const FOLDER_THERE_WORDS = {
   button: (mac: string) => `Folder on ${mac}`,

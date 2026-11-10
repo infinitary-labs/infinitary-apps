@@ -455,9 +455,8 @@ function DictationRow() {
 }
 
 export function GeneralTab() {
-  // On a computer that controls a first mate a command started, its login,
-  // Dock, dictation and panels are that computer's own, with nobody there:
-  // their rows stay off this tab (docs/run.md, "Control from another computer").
+  // On a computer that controls another, its login, Dock, dictation and panels
+  // are that computer's own: their rows stay off this tab (docs/view.md).
   const remote = isView(useShellStore((s) => s.thisMac));
   // Presence (D-17): dock on, start-at-login off by default; both live in
   // main (login item with the OS, dock visibility persisted).

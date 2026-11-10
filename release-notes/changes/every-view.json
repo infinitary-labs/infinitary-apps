@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "every-view-settings",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Do more from any computer that controls your first mate",
+      "body": "A computer that controls your first mate now shows its Settings, whether or not a window is open beside it: General, Projects, Intelligence, Runbooks, Usage and Integrations. Sign in to a subscription from where you are, and a sign-in page opens in that computer's browser. Each computer keeps its own look and voice.",
+      "picture": {
+        "dark": "every-view-settings-dark.webp",
+        "light": "every-view-settings-light.webp",
+        "alt": "Settings on a computer that controls a first mate, open at Intelligence, with the AI subscriptions to add and the sections General, Projects, Runbooks, Usage and Integrations in the list."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

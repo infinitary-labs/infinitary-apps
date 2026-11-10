@@ -116,7 +116,6 @@ export function quotaFixture(prefix: string, providers: unknown[] = []): string 
 /** The connection a booted core serves its paired devices on, at a loopback port of its own. */
 export async function serveConnection(
   core: Core,
-  options: { startedByCommand?: boolean } = {},
 ): Promise<{ connection: ReturnType<typeof startConnection>; at: string }> {
   const port = await claimedPort();
   return {
@@ -126,7 +125,6 @@ export async function serveConnection(
       events: core.events,
       devices: core.services.devices,
       port,
-      ...(options.startedByCommand ? { startedByCommand: true } : {}),
     }),
   };
 }

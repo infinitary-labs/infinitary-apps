@@ -1541,8 +1541,9 @@ export function requestWriteEffectOf(
  * Whether a click on this action opens a Settings section of the Mac where
  * Firstmate lives: an open effect on any section, or the host's
  * restore-account op, which the core answers with Subscriptions. A task's
- * browser is not Settings. An app controlling that Mac from another keeps
- * none of those sections, so it sends no such click (docs/view.md).
+ * browser is not Settings. An app controlling a first mate on an older
+ * version sends no such click, since that first mate cannot answer it
+ * (docs/view.md, "A first mate on an older version").
  */
 export function opensSettings(action: Pick<CardAction, "effect">): boolean {
   const effect = action.effect;

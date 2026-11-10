@@ -174,7 +174,7 @@ describe("card action receipts", () => {
     useShellStore.setState({ pendingPrivateSite: null, settingsSection: null, view: "home" });
   });
 
-  it("on a Mac controlling another, sends no click that opens Settings there and says where to do it (docs/view.md)", async () => {
+  it("on a computer controlling another, sends no click that opens Devices there and says it cannot be done yet (docs/view.md)", async () => {
     const ipc = request();
     // The pause card, as the host builds it: move Firstmate, or sign in again.
     const paused = card({
@@ -222,14 +222,14 @@ describe("card action receipts", () => {
         caughtUp: 0,
       },
     });
-    await useShellStore.getState().actOnCard("paused", "sign-in");
     await useShellStore.getState().actOnCard("link", "open");
     expect(ipc.act).not.toHaveBeenCalled();
-    const there = "Do this on MacBook Pro. Its settings and sign-ins stay there.";
     expect(useShellStore.getState()).toMatchObject({
       cards: [paused, link],
       pendingCardActions: {},
-      cardActionErrors: { paused: there, link: there },
+      cardActionErrors: {
+        link: "MacBook Pro's computers and phones cannot be changed from here yet.",
+      },
       view: "home",
       settingsSection: null,
       pendingRestoreAccountId: null,
@@ -293,7 +293,7 @@ describe("card action receipts", () => {
       cards: [asked],
       pendingCardActions: {},
       cardActionErrors: {
-        asked: "Do this on MacBook Pro. This task's browser shows only there.",
+        asked: "This task's browser on MacBook Pro cannot be shown here yet.",
       },
       records: [],
     });

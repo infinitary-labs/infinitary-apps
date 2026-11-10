@@ -109,7 +109,7 @@ export const activityChannels = {
   "inf:usage:summary": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([usageQuerySchema]),
     response: usageSummarySchema,
   },
@@ -118,7 +118,7 @@ export const activityChannels = {
   "inf:usage:tasks": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([usageTasksQuerySchema]),
     response: usageTasksSchema,
   },

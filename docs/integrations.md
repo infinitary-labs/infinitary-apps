@@ -309,7 +309,7 @@ Delete Gmail and Calendar content shows whether or not Google is connected, sinc
 The "MCP server" chip is always there: its form takes a name and what the server runs, and Connect opens the new row on the server's tools, or says in the form why it could not.
 GitHub, GitLab and GitHub Enterprise sign-ins live here; Projects keeps a pointer line and other computers' own GitHub sign-ins.
 A card's `open` effect that names `projects` with a forge host in `signIn` lands on this tab (`openedSection`), so older cards and the host's "Sign in to GitHub again" card still arrive where the sign-in lives; one with `signIn: "google"` lands here and opens Google's notice, whose accept opens Google's page.
-Like Projects, the tab does not show on a paired view.
+Like Projects, the tab shows on a paired view too, read and changed on the first mate's computer (`docs/view.md`, "Settings on a view").
 
 ## How the first mate reaches them
 

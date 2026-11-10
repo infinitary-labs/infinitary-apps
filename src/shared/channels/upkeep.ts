@@ -19,21 +19,21 @@ export const upkeepChannels = {
   "inf:settings:decisions": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([]),
     response: decisionsViewSchema,
   },
   "inf:settings:decisions:set": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([decisionsSettingsSchema]),
     response: decisionsViewSchema,
   },
   "inf:decisions:key:set": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     /** The user's own key, write-only: the response is the row's new state. */
     request: z.tuple([decisionModelIdSchema, z.string().min(1)]),
     response: decisionsViewSchema,
@@ -41,7 +41,7 @@ export const upkeepChannels = {
   "inf:decisions:key:remove": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([decisionModelIdSchema]),
     response: decisionsViewSchema,
   },
@@ -138,7 +138,7 @@ export const upkeepChannels = {
   "inf:retention:purge": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([]),
     response: z.object({ purgedTasks: z.number() }),
   },
@@ -151,7 +151,7 @@ export const upkeepChannels = {
   "inf:retention:scope": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([]),
     response: z.object({
       knowledge: z.boolean(),
@@ -167,7 +167,7 @@ export const upkeepChannels = {
   "inf:retention:delete-outside": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([]),
     response: outsideDataDeletedSchema,
   },

@@ -53,7 +53,6 @@ import {
   CORE_INVOKE_CHANNELS,
   type CoreInvokeChannel,
   invokeContract,
-  isRunViewInvokeChannel,
   isViewInvokeChannel,
   isWorkInvokeChannel,
   PROTOCOL_VERSION,
@@ -64,7 +63,7 @@ import { copyStream, type FarBuild } from "../devices/farBuilds";
 import type { CoreActor, CoreDispatch } from "../dispatcher";
 import type { CoreEventBus } from "../events";
 import { listenAddresses, listenOn } from "./addresses";
-import { CONTRACT_CHANGES } from "./contractChanges";
+import { CONTRACT_CHANGES, contractChange, listsChange } from "./contractChanges";
 import { readsFrameParts } from "./frameParts";
 import {
   DEFAULT_JOURNAL_LIMITS,
@@ -148,12 +147,13 @@ export type PairedDevices = {
   ): void;
 };
 
+/** One rule for every view (`every-view-asks.md`). */
+export const EVERY_VIEW_ASKS = contractChange("every-view-asks");
+
 /**
  * What a connection in each role may ask (docs/devices.md): a view the
  * channels whose reach is `views`, as the captain at another Mac, naming the
- * device so a phone's own usage events go under its own ID, and of a
- * first mate started by a command every `home` channel but those that stay
- * there (docs/run.md, "Control from another computer"); a computer's work
+ * device so a phone's own usage events go under its own ID; a computer's work
  * the channels whose reach is `work`, as itself, about a conversation it
  * holds for this home (src/shared/work.ts).
  */
@@ -161,12 +161,9 @@ function askerOf(
   device: PairedDevice,
   role: DeviceRole,
   channel: CoreInvokeChannel,
-  startedByCommand: boolean,
 ): CoreActor | null {
   if (role === "view")
-    return (startedByCommand ? isRunViewInvokeChannel(channel) : isViewInvokeChannel(channel))
-      ? { kind: "captain", view: device.id }
-      : null;
+    return isViewInvokeChannel(channel) ? { kind: "captain", view: device.id } : null;
   return isWorkInvokeChannel(channel) ? { kind: "device", deviceId: device.id } : null;
 }
 
@@ -266,12 +263,6 @@ export type ConnectionOptions = {
   maxBufferedBytes?: number;
   /** Where the connection says it could not listen. */
   onProblem?: (text: string) => void;
-  /**
-   * The first mate was started by a command, with no window (docs/run.md):
-   * a view's welcome says so, and a view asks every `home` channel but
-   * those that stay on this computer (`RUN_HOME_ONLY_CHANNELS`).
-   */
-  startedByCommand?: boolean;
   /**
    * This Mac's own name, which the welcome tells a device (a view says the
    * Mac it controls by it). Read at each welcome; absent, the welcome names
@@ -544,7 +535,6 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
   const homeVersion = options.protocolVersion ?? PROTOCOL_VERSION;
   const viewFloor = options.viewFloor ?? VIEW_FLOOR;
   const homeChanges = options.changes ?? CONTRACT_CHANGES.names;
-  const startedByCommand = options.startedByCommand === true;
   const speaks = options.speaks ?? OWN_SPELLING;
   let run: Run | null = null;
   let closed = false;
@@ -790,7 +780,11 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           ...(role === "work" && client.device.onThisMac !== undefined
             ? { onHomeMac: client.device.onThisMac }
             : {}),
-          ...(role === "view" && startedByCommand ? { startedByCommand: true } : {}),
+          // A view from before one rule for every view still waits to hear this
+          // before it asks the wider set (`every-view-asks.md`).
+          ...(role === "view" && !listsChange(hello.changes, EVERY_VIEW_ASKS)
+            ? { startedByCommand: true }
+            : {}),
           spellings: SPELLINGS,
           ...(homeChanges.length ? { changes: homeChanges } : {}),
         }),
@@ -846,9 +840,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         return;
       }
       const channel = frame.channel as CoreInvokeChannel;
-      const actor = client.role
-        ? askerOf(client.device, client.role, channel, startedByCommand)
-        : null;
+      const actor = client.role ? askerOf(client.device, client.role, channel) : null;
       if (!actor) {
         reply({
           ok: false,

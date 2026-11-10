@@ -104,7 +104,7 @@ FI3-993 took the lines from between rows, grouped Where it went by project, and 
 - Estimated dollars are approximate pay-as-you-go value, never a bill, a share of a subscription, an allowance or savings; a partial total says how many records it covers.
 - Milestones count finished tasks at 1, 10, 25 and 50 over all retained history, and keep the last reached after 50.
   There are no streaks, scores, notifications, token targets or anything that rewards spending more.
-- Usage is this Mac's own: a Mac that controls another has no Usage tab, and its two commands refuse there.
+- A computer that controls a first mate shows that first mate's Usage, read there, and its two commands work the same (`docs/view.md`, "Settings on a view").
 - It re-reads after every model response and task change while it is open.
 
 ## The cost limit

@@ -751,11 +751,11 @@ export const thisMacSchema = z.discriminatedUnion("role", [
     caughtUp: z.number().int().nonnegative(),
     runsWork: z.boolean().optional(),
     /**
-     * The first mate there was started by a command, with no window, so
-     * this app controls everything its window would (docs/run.md, "Control
-     * from another computer").
+     * The first mate there is too old to answer what every view now asks
+     * (the `every-view-asks` contract change), so its settings and sign-ins
+     * wait for an update there (docs/view.md, "A first mate on an older version").
      */
-    startedByCommand: z.boolean().optional(),
+    needsUpdateThere: z.literal(true).optional(),
   }),
 ]);
 export type ThisMac = z.infer<typeof thisMacSchema>;

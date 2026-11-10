@@ -15,12 +15,11 @@ import {
   HOST_INVOKE_CHANNELS,
   INVOKE_CHANNELS,
   invokeContract,
-  isRunViewInvokeChannel,
+  isViewInvokeChannel,
   PROTOCOL_VERSION,
   PUSH_CHANNELS,
   parseInvokeRequest,
   pushContract,
-  RUN_HOME_ONLY_CHANNELS,
   VIEW_FLOOR,
   VIEW_INVOKE_CHANNELS,
   WORK_INVOKE_CHANNELS,
@@ -312,15 +311,36 @@ describe("ipc contract", () => {
    * without a deliberate classification is refused to views - and widening
    * this list fails here until it is meant.
    */
-  it("lets a paired view ask only the stage's own requests", () => {
+  it("lets a paired view ask every request but what stays on the first mate's own computer", () => {
     for (const channel of CORE_INVOKE_CHANNELS)
       expect(["views", "home", "work"], channel).toContain(invokeContract[channel].reach);
     for (const channel of HOST_INVOKE_CHANNELS)
       expect("reach" in invokeContract[channel], channel).toBe(false);
     expect([...VIEW_INVOKE_CHANNELS].sort()).toEqual([
+      "inf:accounts:add",
+      "inf:accounts:custom:address",
+      "inf:accounts:custom:cancel",
+      "inf:accounts:custom:check",
+      "inf:accounts:custom:connect",
+      "inf:accounts:custom:discover",
+      "inf:accounts:custom:list",
+      "inf:accounts:custom:prepare",
+      "inf:accounts:custom:profiles",
+      "inf:accounts:custom:recheck",
+      "inf:accounts:custom:review",
+      "inf:accounts:custom:save",
+      "inf:accounts:list",
+      "inf:accounts:pin",
+      "inf:accounts:remove",
+      "inf:accounts:rename",
+      "inf:accounts:set-enabled",
+      "inf:accounts:sign-in",
       "inf:app:first-run",
       "inf:app:first-run:crew-word",
       "inf:app:healthcheck",
+      "inf:auth:cancel",
+      "inf:auth:prompt-reply",
+      "inf:auth:providers",
       "inf:automation:delete",
       "inf:automation:history",
       "inf:automation:list",
@@ -328,6 +348,12 @@ describe("ipc contract", () => {
       "inf:automation:preview",
       "inf:automation:save",
       "inf:automation:state",
+      "inf:browser:private-sites",
+      "inf:browser:private-sites:add",
+      "inf:browser:private-sites:remove",
+      "inf:browser:sign-ins",
+      "inf:browser:sign-ins:automatic",
+      "inf:browser:sign-ins:remove",
       "inf:cards:act",
       "inf:cards:close",
       "inf:cards:list",
@@ -343,29 +369,109 @@ describe("ipc contract", () => {
       "inf:cards:show-past",
       "inf:cards:thread",
       "inf:cards:typeface",
-      // INF-1066: the native scene reads public computer presence and initial busy state.
       "inf:computers:presence",
       "inf:computers:resources",
       "inf:conversation:last-turn",
       "inf:conversation:state",
       "inf:converse",
       "inf:crew:counts",
+      "inf:decisions:key:remove",
+      "inf:decisions:key:set",
+      "inf:devices:custom:address",
+      "inf:devices:custom:cancel",
+      "inf:devices:custom:check",
+      "inf:devices:custom:connect",
+      "inf:devices:custom:discover",
+      "inf:devices:custom:profiles",
+      "inf:devices:custom:recheck",
+      "inf:devices:custom:review",
+      "inf:devices:custom:save",
+      "inf:devices:forge-sign-in",
+      "inf:devices:forge-sign-in-cli",
+      "inf:devices:forge-sign-out",
+      "inf:devices:runs-on",
+      "inf:devices:sign-in",
+      "inf:devices:sign-in:answer",
+      "inf:devices:sign-in:cancel",
+      "inf:devices:sign-ins",
+      "inf:devices:sign-out",
       "inf:feed:recent",
+      "inf:forges:cancel",
+      "inf:forges:changes",
+      "inf:forges:list",
+      "inf:forges:projects",
+      "inf:forges:sign-in",
+      "inf:forges:sign-in-browser",
+      "inf:forges:sign-in-cli",
+      "inf:forges:sign-in-key",
+      "inf:forges:sign-out",
+      "inf:integrations:add",
+      "inf:integrations:check",
+      "inf:integrations:configure",
+      "inf:integrations:inbox-link",
+      "inf:integrations:list",
+      "inf:integrations:remove",
+      "inf:integrations:rule",
+      "inf:integrations:secret",
+      "inf:integrations:sign-in",
+      "inf:integrations:sign-in-cancel",
+      "inf:models:available",
+      "inf:models:reasoning:set",
       "inf:models:slots",
+      "inf:models:slots:reset",
+      "inf:models:slots:set",
+      "inf:models:speed:set",
       "inf:projects:list",
+      "inf:quota:models",
+      "inf:quota:refresh",
       "inf:quota:snapshot",
+      "inf:repos:configure",
+      "inf:repos:folder",
+      "inf:repos:folder:set",
       "inf:repos:list",
-      // A phone's Secrets approvals (INF-1109, docs/secrets.md "Remote decisions").
+      "inf:repos:queue-answer",
+      "inf:repos:queue-credential",
+      "inf:repos:queue-credential-create",
+      "inf:repos:removal",
+      "inf:repos:remove",
+      "inf:repos:setup",
+      "inf:retention:delete-outside",
+      "inf:retention:purge",
+      "inf:retention:scope",
       "inf:secrets:approvals",
       "inf:secrets:decide",
       "inf:secrets:enroll",
       "inf:settings:appearance:get",
+      "inf:settings:cost-limit:get",
+      "inf:settings:cost-limit:set",
+      "inf:settings:decisions",
+      "inf:settings:decisions:set",
+      "inf:settings:firstmate-account:get",
+      "inf:settings:firstmate-account:set",
+      "inf:settings:firstmate-model:get",
+      "inf:settings:firstmate-model:set",
       "inf:settings:layout:get",
+      "inf:settings:local-orchestrator:get",
+      "inf:settings:local-orchestrator:set",
       "inf:settings:notifications:get",
-      // INF-2631: a paired phone hands its own usage events to its computer's Diagnostics.
+      "inf:settings:notifications:set",
+      "inf:settings:personal-resources:get",
+      "inf:settings:personal-resources:set",
+      "inf:settings:routing:get",
+      "inf:settings:routing:set",
+      "inf:settings:runbooks:copy",
+      "inf:settings:runbooks:get",
+      "inf:settings:runbooks:set",
+      "inf:settings:sharing:ask",
+      "inf:settings:sharing:get",
       "inf:settings:sharing:phone",
+      "inf:settings:sharing:preview",
+      "inf:settings:sharing:set",
+      "inf:settings:sharing:viewed",
       "inf:shell:preferences",
+      "inf:task:abort",
       "inf:task:close-done",
+      "inf:task:delete",
       "inf:task:interrupt",
       "inf:task:move",
       "inf:task:move-options",
@@ -379,6 +485,8 @@ describe("ipc contract", () => {
       "inf:tasks:detail",
       "inf:tasks:opened",
       "inf:tasks:search",
+      "inf:usage:summary",
+      "inf:usage:tasks",
     ]);
   });
 
@@ -442,26 +550,34 @@ describe("ipc contract", () => {
       expect(VIEW_INVOKE_CHANNELS as readonly string[]).not.toContain(channel);
   });
 
-  // INF-1228, the captain's answer control=all: a view of a first mate
-  // started by a command asks what its window would, but for the requests
-  // that stay on that computer, each one only its window could ask.
-  it("lets a view of a first mate started by a command ask every request of its window but those that stay there", () => {
-    for (const channel of RUN_HOME_ONLY_CHANNELS)
-      expect(invokeContract[channel].reach, channel).toBe("home");
-    for (const channel of VIEW_INVOKE_CHANNELS) expect(isRunViewInvokeChannel(channel)).toBe(true);
-    for (const channel of WORK_INVOKE_CHANNELS) expect(isRunViewInvokeChannel(channel)).toBe(false);
+  // INF-1352's plan, the captain's answer one_rule=every-view: a view asks everything but
+  // what stays with the first mate's own computer: its devices, Secrets, task browser and own hardware.
+  it("keeps on the first mate's computer only what is that computer's own", () => {
+    const stays = CORE_INVOKE_CHANNELS.filter(
+      (channel) => invokeContract[channel].reach === "home",
+    );
+    const views = new Set<string>(VIEW_INVOKE_CHANNELS);
+    expect(stays.length).toBeGreaterThan(0);
+    for (const channel of stays) expect(views.has(channel), channel).toBe(false);
+    for (const prefix of ["inf:devices:list", "inf:secrets:view", "inf:browser:take"])
+      expect(stays.filter((channel) => channel === prefix)).toEqual([prefix]);
+    // Each signed-in Settings read a view of any first mate opens.
+    for (const channel of ["inf:accounts:list", "inf:settings:routing:get", "inf:repos:list"])
+      expect(views.has(channel), channel).toBe(true);
   });
 
-  // INF-1109's accepted Secrets boundary (docs/secrets.md, "Remote decisions"): bringing it up to
-  // date with INF-1228's control from another computer grants no new authority, so a view of a
-  // first mate started by a command asks only the Secrets requests every paired view asks.
-  it("keeps Secrets on the computer of a first mate started by a command", () => {
+  // INF-1109's accepted Secrets boundary (docs/secrets.md, "Remote decisions"): a view asks only
+  // the Secrets requests every paired view asks, whatever started its first mate.
+  it("keeps Secrets on the first mate's computer", () => {
     const secrets = CORE_INVOKE_CHANNELS.filter((channel) => channel.startsWith("inf:secrets:"));
     const home = secrets.filter((channel) => invokeContract[channel].reach === "home");
     expect(home.length).toBeGreaterThan(0);
-    for (const channel of home) expect(isRunViewInvokeChannel(channel), channel).toBe(false);
-    for (const channel of secrets.filter((one) => invokeContract[one].reach === "views"))
-      expect(isRunViewInvokeChannel(channel), channel).toBe(true);
+    for (const channel of home) expect(isViewInvokeChannel(channel), channel).toBe(false);
+    expect(secrets.filter((one) => invokeContract[one].reach === "views").sort()).toEqual([
+      "inf:secrets:approvals",
+      "inf:secrets:decide",
+      "inf:secrets:enroll",
+    ]);
   });
 });
 

@@ -30,7 +30,7 @@ import { useShellStore } from "../app/store";
 import { KeyedText } from "../cards/TaskKey";
 import { Button, GroupedChecks, Input, Row, StatusDot } from "../design";
 import { focusWithRing } from "../design/focus";
-import { isView } from "../devices/viewWords";
+import { isView, waitsForUpdate } from "../devices/viewWords";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 import {
   AUTOMATION_MIN_MINUTES,
@@ -90,18 +90,20 @@ type Listenable = {
  */
 function useListenable(): Listenable[] {
   const [view, setView] = useState<IntegrationsView | null>(null);
+  const waits = useShellStore((s) => waitsForUpdate(s.thisMac));
   useEffect(() => {
     let live = true;
-    window.infinitary.integrations
-      .list()
-      .then((next) => live && setView(next))
-      .catch(() => {});
+    if (!waits)
+      window.infinitary.integrations
+        .list()
+        .then((next) => live && setView(next))
+        .catch(() => {});
     const off = window.infinitary.integrations.onChange((next) => setView(next));
     return () => {
       live = false;
       off();
     };
-  }, []);
+  }, [waits]);
   return (view?.integrations ?? []).flatMap((integration) =>
     (integration.events ?? []).map((event) => ({
       value: `${integration.id}/${event.name}`,

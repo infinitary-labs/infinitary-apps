@@ -405,10 +405,9 @@ export const homeFrameSchema = z.union([
      */
     onHomeMac: z.boolean().optional(),
     /**
-     * For a view: the first mate was started by a command, with no window,
-     * so a view asks everything its window would but what stays there
-     * (`RUN_HOME_ONLY_CHANNELS`, docs/run.md "Control from another
-     * computer"). Absent otherwise, and from an older home.
+     * Sent only to a view from before one rule for every view
+     * (`every-view-asks.md`), which waits to hear it before it asks what
+     * every view now may. Nothing reads it now; the next major removes it.
      */
     startedByCommand: z.literal(true).optional(),
     spellings: spellingsSchema,

@@ -148,7 +148,7 @@ export function CustomApiForm({
   const api = client ?? hereClient;
   const apiRef = useRef(api);
   apiRef.current = api;
-  // A first mate started by a command keeps its connections where it lives.
+  // The first mate keeps its connections where it lives.
   const home = useFirstMatePlace();
   const who = place?.who ?? home.this;
   const [profiles, setProfiles] = useState<CustomCapabilityProfile[]>([]);

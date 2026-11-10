@@ -52,7 +52,7 @@ function shown(id: string, overrides: Partial<Card> = {}): Card {
 
 /** The Mac where Firstmate lives: what it was asked, its pairing, and links to it. */
 async function otherMac(
-  options: { protocolVersion?: string; viewFloor?: number; startedByCommand?: boolean } = {},
+  options: { protocolVersion?: string; viewFloor?: number; changes?: readonly string[] } = {},
   pairingOptions: { joinsFromAnotherMac?: boolean } = {},
 ) {
   const asked: string[] = [];
@@ -350,10 +350,10 @@ describe("the app as a view of another Mac", () => {
       platform: "other-os",
     });
     // What stays there is refused here, and never sent.
-    await expect(air.shell.dispatch("inf:settings:routing:get", [])).rejects.toThrow(
+    await expect(air.shell.dispatch("inf:devices:list", [])).rejects.toThrow(
       "answered only on the computer where your first mate lives",
     );
-    expect(pro.asked).not.toContain("inf:settings:routing:get");
+    expect(pro.asked).not.toContain("inf:devices:list");
     // Its look starts from the other Mac's, then is its own.
     expect((await air.shell.dispatch("inf:shell:preferences", [])).appearance).toMatchObject({
       theme: "light",
@@ -373,6 +373,12 @@ describe("the app as a view of another Mac", () => {
     // A push the stage shows reaches the window; the other Mac's look never does.
     pro.events.emit("inf:models:changed", { ok: true });
     pro.events.emit("inf:shell:preferences", DEFAULT_SHELL_PREFERENCES);
+    pro.events.emit("inf:voice:progress", {
+      file: "model.onnx",
+      fileIndex: 0,
+      fileCount: 1,
+      fraction: 0.5,
+    });
     await air.until(() => air.pushes.some((push) => push.channel === "inf:models:changed"));
     expect(
       air.pushes.filter(
@@ -487,15 +493,14 @@ describe("the app as a view of another Mac", () => {
     ).toBe(true);
   });
 
-  // INF-1228, the captain's answer control=all: nobody sits at a first mate
-  // started by a command, so this Mac does what its window would there.
-  it("of a first mate started by a command, asks what its window would and opens the pages it sends", async () => {
-    const mini = await otherMac({ startedByCommand: true });
+  // INF-1352's plan, the captain's answer one_rule=every-view: this Mac does what the first
+  // mate's own window would, whatever started it.
+  it("asks what the first mate's own window would and opens the pages it sends", async () => {
+    const mini = await otherMac();
     const air = shell();
     await air.shell.start();
     await air.shell.join(await mini.link());
     await air.until(() => air.view().contact === "in-reach");
-    expect(air.view()).toMatchObject({ role: "view", startedByCommand: true });
 
     // Its Settings are asked there; the stand-in core's refusal is its answer.
     await expect(air.shell.dispatch("inf:settings:routing:get", [])).rejects.toThrow(
@@ -532,23 +537,56 @@ describe("the app as a view of another Mac", () => {
     expect(air.opened).toEqual([page]);
   });
 
-  it("of a first mate with its window, shows neither its sign-ins nor the pages it would open", async () => {
+  // The captain's answer on the review of one rule for every view: a home too old to list the
+  // change is told apart, so the window can say it needs an update instead of asking.
+  it("knows when the first mate there is too old to answer what every view asks", async () => {
+    const older = await otherMac({ changes: [] });
+    const air = shell();
+    await air.shell.start();
+    await air.shell.join(await older.link());
+    await air.until(() => air.view().contact === "in-reach");
+    await air.until(() => air.shell.thisMac().role === "view");
+    expect(air.shell.thisMac()).toMatchObject({ role: "view", needsUpdateThere: true });
+
+    const current = await otherMac();
+    const pro = shell();
+    await pro.shell.start();
+    await pro.shell.join(await current.link());
+    await pro.until(() => pro.view().contact === "in-reach");
+    expect(pro.shell.thisMac()).not.toHaveProperty("needsUpdateThere");
+  });
+
+  // The other computer's look and voice are its own: they never reach this window.
+  it("shows what its Settings follow and none of the other computer's own look", async () => {
     const pro = await otherMac();
     const air = shell();
     await air.shell.start();
     await air.shell.join(await pro.link());
     await air.until(() => air.view().contact === "in-reach");
-    expect(air.view().startedByCommand).toBeUndefined();
     pro.events.emit("inf:auth:notice", {
       providerId: "openai-codex",
       kind: "info",
       message: "Signing in.",
     });
-    pro.events.emit("inf:app:open-page", { url: "https://auth.openai.com/oauth/authorize" });
+    pro.events.emit("inf:shell:preferences", DEFAULT_SHELL_PREFERENCES);
+    pro.events.emit("inf:voice:progress", {
+      file: "model.onnx",
+      fileIndex: 0,
+      fileCount: 1,
+      fraction: 0.5,
+    });
     pro.events.emit("inf:models:changed", { ok: true });
     await air.until(() => air.pushes.some((push) => push.channel === "inf:models:changed"));
-    expect(air.opened).toEqual([]);
-    expect(air.pushes.map((push) => push.channel)).not.toContain("inf:auth:notice");
+    expect(air.pushes.map((push) => push.channel)).toContain("inf:auth:notice");
+    expect(air.pushes.map((push) => push.channel)).not.toContain("inf:voice:progress");
+    // A view's own look always has its panels off, so one with them on is the other Mac's.
+    expect(
+      air.pushes.filter(
+        (push) =>
+          push.channel === "inf:shell:preferences" &&
+          (push.payload as ShellPreferences).panels.enabled,
+      ),
+    ).toEqual([]);
   });
 
   it("answers this Mac's own update notice while the other Mac is newer, and never asks it", async () => {

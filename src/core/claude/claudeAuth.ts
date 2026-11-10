@@ -14,6 +14,7 @@ import {
   statusFromHealth,
 } from "../accounts/accountBackend";
 import type { CredentialHealth, RenewalOutcome, RenewReason } from "../accounts/credentialHealth";
+import { askedFromAView } from "../askedFromAView";
 import { absentKeychain, type HostKeychain } from "../host";
 import {
   CLAUDE_AUTH_STATUS_ARGS,
@@ -302,7 +303,9 @@ export class ClaudeAuthBackend implements AccountBackend {
   }
 
   /**
-   * The vendor's own login on this computer. The client opens the browser.
+   * The vendor's own login on this computer. The client opens the browser,
+   * but for a paired view's request, where no browser opens here and the
+   * link it prints opens on that view (docs/view.md, "Pages it would open").
    * The link it prints is kept, so the person can open that page again, and
    * a code the page shows can be pasted back: stdin stays open for that,
    * and cancelling the prompt stops the client. The whole wait, including
@@ -317,6 +320,7 @@ export class ClaudeAuthBackend implements AccountBackend {
   private async loginWithBrowser(request: AccountLoginRequest, dir: string): Promise<void> {
     const started = Date.now();
     const { bridge } = request;
+    const fromAView = askedFromAView();
     let pasted: (code: string) => void = () => {};
     let stopped: (reason: unknown) => void = () => {};
     const paste = new Promise<string>((resolve, reject) => {
@@ -348,6 +352,7 @@ export class ClaudeAuthBackend implements AccountBackend {
         try {
           ran = await this.run(["auth", "login", "--claudeai"], dir, {
             timeoutMs: left,
+            ...(fromAView ? { env: { BROWSER: NO_BROWSER } } : {}),
             paste,
             onStdout: (chunk) => {
               output += chunk;
@@ -355,6 +360,7 @@ export class ClaudeAuthBackend implements AccountBackend {
               const link = pasteCodeLink(output);
               if (!link) return;
               asked = true;
+              if (fromAView) bridge.openExternal(link).catch(() => {});
               bridge.notify({
                 providerId: request.providerId,
                 accountId: request.accountId,

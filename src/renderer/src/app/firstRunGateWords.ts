@@ -56,18 +56,9 @@ export function freshCheckLine(check: { label: string; models: readonly string[]
   return `Your first mate answers from ${check.label}, and ${need} one fresh check. Checking may use billable tokens and sends only test text, never your work.`;
 }
 
-/** On a Mac that controls another's Firstmate, the check happens there. */
-export function freshCheckThere(mac: string): string {
-  return `Check it on ${mac}, where your first mate lives.`;
-}
-
-/**
- * The line under the heading on a computer that controls a first mate a
- * command started, which has no window of its own to sign in from
- * (docs/run.md, "Control from another computer").
- */
+/** The line under the heading on a computer that controls another (docs/view.md). */
 export function gateRunLine(mac: string): string {
-  return `Connect one for your first mate on ${mac}. A command started it there, so it signs in from here.`;
+  return `Connect one for your first mate on ${mac}. It signs in from here.`;
 }
 
 export const FRESH_CHECK_ACTION = "Check again";

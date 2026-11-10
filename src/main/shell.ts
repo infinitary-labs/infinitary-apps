@@ -86,7 +86,7 @@ export type ShellOptions = {
   updates: UpdateChecker;
   /**
    * Opens a page in this computer's browser, for a view of a first mate
-   * started by a command (`ViewBackendOptions.openPage`).
+   * (`ViewBackendOptions.openPage`).
    */
   openPage?: (url: string) => Promise<void>;
   now?: () => number;

@@ -2,8 +2,14 @@ import { z } from "zod";
 import { PASTE_FILE_MAX_BYTES, PASTE_FILES_MAX } from "../composer";
 
 /**
- * Who may ask a core channel: a paired view as well as this Mac, this Mac
- * alone, or a computer that runs work alone.
+ * Who may ask a core channel: a paired view as well as this computer, this
+ * computer alone, or a computer that runs work alone. `home` is what stays
+ * with the first mate's own computer: its computers and phones and the
+ * address they find it at, a task's browser and a page from a task's
+ * project, its Secrets, and its own look, voice, panels and their
+ * extensions, Knowledge, Observe, release notes, Dock and update. A view
+ * asks everything else, whatever started that first mate
+ * (docs/connection.md, "Requests").
  */
 type ChannelReach = "views" | "home" | "work";
 

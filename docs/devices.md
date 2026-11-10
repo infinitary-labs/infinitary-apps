@@ -938,23 +938,23 @@ A computer that runs work never loses work that never merged to a removal (`Comp
 | `inf:devices:stop` | home | none: it closes the captain's own open link and sets nothing |
 | `inf:devices:addresses` | home | none |
 | `inf:devices:address:set` | home | `device-address`, tier `hands` |
-| `inf:devices:runs-on` | home | `project-runs-on`, tier `asked`: where a project's next task starts (`docs/helper.md`, "Runs on") |
-| `inf:devices:sign-ins` | home | the current value of `device-sign-in` |
-| `inf:devices:sign-in` | home | none: the captain's click starts it there; `device-sign-in`, tier `hands`, only offers the card (`docs/helper.md`, "Its own sign-ins") |
-| `inf:devices:sign-in:answer` | home | none: what the captain typed goes to that computer once and is kept nowhere here |
-| `inf:devices:sign-in:cancel` | home | none |
-| `inf:devices:sign-out` | home | none |
-| `inf:devices:forge-sign-in` | home | none: the captain's click in Settings -> Projects starts that computer's own GitHub sign-in there (`docs/forge.md`, "A computer's own sign-in") |
-| `inf:devices:forge-sign-out` | home | none |
+| `inf:devices:runs-on` | views | `project-runs-on`, tier `asked`: where a project's next task starts (`docs/helper.md`, "Runs on") |
+| `inf:devices:sign-ins` | views | the current value of `device-sign-in` |
+| `inf:devices:sign-in` | views | none: the captain's click starts it there; `device-sign-in`, tier `hands`, only offers the card (`docs/helper.md`, "Its own sign-ins") |
+| `inf:devices:sign-in:answer` | views | none: what the captain typed goes to that computer once and is kept nowhere here |
+| `inf:devices:sign-in:cancel` | views | none |
+| `inf:devices:sign-out` | views | none |
+| `inf:devices:forge-sign-in` | views | none: the captain's click in Settings -> Projects starts that computer's own GitHub sign-in there (`docs/forge.md`, "A computer's own sign-in") |
+| `inf:devices:forge-sign-out` | views | none |
 
 The list is also pushed whole, `inf:devices`, after any change to it, to what the home reads of a computer that runs work, or to whether a Mac that controls this first mate is connected.
 Every task write reads the list again, so each computer's count of running tasks comes from `TaskService.activeCountsByDevice`, which reads only the computer each running task runs on and composes no task record.
-Every action is the captain's own, on this Mac's window.
+A row marked `home` is the captain's own, on this Mac's window; a row marked `views` is also asked from a Mac that controls this first mate, as the captain.
 A paired view asks the core as the captain, and words typed on it reach the first mate as the captain's; so neither a request from a view nor the first mate can add or remove a device.
 The first mate can read the list through `app_state` - each device's id, kind, name and when it joined - which holds nothing secret.
 A lost Mac cannot add another device, and cannot remove the others.
 Words typed on a paired view are the captain's own words (the captain's pick on FI3-709): in its input or under a card, they may ask the first mate for an own-words change - removing a project, disconnecting an account, signing out of GitHub, moving the projects folder or removing a panel - as words typed on this Mac may.
-A lost view can therefore ask for those until the captain removes it here.
+A lost view can therefore ask for those until the captain removes it here, and it asks directly what a view may (`docs/view.md`, "What the window asks"): sign-ins and API keys, settings, projects, deleting tasks and purging their data.
 
 ## Settings -> Devices
 
@@ -1046,7 +1046,7 @@ For another user on this Mac added by its address, the update card says "This co
 A user added by a command instead starts again on this computer's own installed app, as before.
 
 The button's effect is `open` on `devices` with `make` (`link`, `command` or `user-command`), `add: <address>`, `update: <id>` or `remove: <id>`; the captain's click opens Settings -> Devices, which makes the link or the command, adds the Mac or updates Infinitary there, or removes the device, on arrival.
-On a Mac controlling this one, the same button sends nothing and says to do it on this Mac (`docs/view.md`, "Card buttons that open Settings").
+On a Mac controlling this one, the same button sends nothing and says this Mac's computers and phones cannot be changed from there yet (`docs/view.md`, "Card buttons that open Settings").
 A value a line does not read, such as an address that is not one, is refused as `app_change`'s answer, and no card is offered for it; so is updating a computer out of reach, whose version the home cannot tell, or one on this Mac's version already.
 `app_state` carries each computer's `otherVersion`, so the first mate can say which run another version.
 A computer that runs work out of reach is not removed on arrival: its question opens instead, so the captain chooses whether to wait for it.
@@ -1075,7 +1075,7 @@ A link that expires with nothing paired stops the listener.
 | Guessing a link | Its code is 256 random bits, kept only as a hash and found by lookup. |
 | A link used to find the home again | Only a key already on the list is kept, and only the device holding it can show it in the handshake; the device sends it only after the link's address answers with the home's own key. The one change is that the link is spent: no new device joins and nothing about the listed one changes. |
 | The home's saved files are read later, from a backup | The list holds pins, which are public. The home's key would let someone answer as the home to its devices: show them a false stage and read what a view sends. It cannot be used to join the home or to learn a device's key. After any exposure, delete the folder and pair every device again. |
-| A paired Mac is lost or stolen | Remove cuts it off at once, and its key is useless afterwards. It cannot add a device, remove one, or keep itself on the list. Until it is removed, a view's typed words are the captain's own words, so it can ask the first mate for an own-words change, as the captain chose (FI3-709); it can also start work and answer cards. |
+| A paired Mac is lost or stolen | Remove cuts it off at once, and its key is useless afterwards. It cannot add a device, remove one, or keep itself on the list. Until it is removed, it is the captain at another computer: its typed words are the captain's own (FI3-709), and it can start work, answer cards, change settings and projects, sign accounts in and out, set API keys, delete tasks and purge their data (the requests `docs/view.md` lists, "What the window asks"). |
 | A view's saved grant is read later, from a backup of that Mac | It holds the view's own key (`userData/joined/home.json`, 0600, `docs/view.md`), which lets someone reach the home as that Mac until it is removed there. Leave deletes it, and Remove makes it useless. |
 | A computer that runs work reads the stage, or a view runs work | Kind is set at home, checked at the claim, and checked on every request. A `work` device is sent no push, asks only the work requests, as itself, and is answered them only about a task the home runs there; a view is refused them. |
 | A prompt-injected first mate | It can neither make a link nor remove a device: it can only offer the host's card, whose words the host writes from the list and whose button only the captain's click runs. `app_change` reads back the list, never a link. |

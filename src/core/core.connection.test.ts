@@ -238,7 +238,7 @@ describe("the connection serves the core to paired devices", () => {
 
     // A paired view cannot list, invite or remove: a lost Mac adds no other.
     for (const [channel, args] of [
-      ["inf:settings:routing:get", []],
+      ["inf:voice:status", []],
       ["inf:devices:list", []],
       ["inf:devices:invite", [{ kind: "mac" }]],
       ["inf:devices:remove", [grant.deviceId]],
@@ -481,7 +481,7 @@ describe("a first mate started by a command, controlled from another computer", 
     process.env.PI_OFFLINE = "1";
     shell = fakeHost(userDataDir);
     core = await startCore(shell.host, { startedByCommand: true });
-    ({ connection, at } = await serveConnection(core, { startedByCommand: true }));
+    ({ connection, at } = await serveConnection(core));
   }, 60_000);
 
   afterAll(async () => {
@@ -496,8 +496,6 @@ describe("a first mate started by a command, controlled from another computer", 
     const view = await connectClient(
       await claimLink(link, { ...AT_FIRST_LAUNCH, name: "MacBook Air" }),
     );
-    expect(view.welcome.startedByCommand).toBe(true);
-    // A request only its window could ask before.
     expect(await view.invoke("inf:accounts:list", [])).toEqual(
       await core.dispatch("inf:accounts:list", []),
     );
@@ -506,6 +504,49 @@ describe("a first mate started by a command, controlled from another computer", 
     const page = await view.push((push) => push.channel === "inf:app:open-page");
     expect((page.payload as { url: string }).url).toMatch(/^https:\/\//);
     expect(shell.opened).toEqual([]);
+  });
+});
+
+describe("a first mate with its window, asked from another computer", () => {
+  // INF-1352's plan, the captain's answer one_rule=every-view: a page the first mate opens for
+  // a view opens where the person is, and one its own window asks opens on its own computer.
+  let userDataDir: string;
+  let core: Core;
+  let shell: ReturnType<typeof fakeHost>;
+  let connection: ReturnType<typeof startConnection>;
+  let at: string;
+
+  beforeAll(async () => {
+    userDataDir = scratchDir("infinitary-core-windowed-");
+    process.env.PI_OFFLINE = "1";
+    shell = fakeHost(userDataDir);
+    core = await startCore(shell.host);
+    ({ connection, at } = await serveConnection(core));
+  }, 60_000);
+
+  afterAll(async () => {
+    await connection?.close();
+    await core?.dispose();
+    rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  it("opens a page a view asks there, and one its window asks on its own computer", async () => {
+    const { link } = await core.dispatch("inf:devices:invite", [{ kind: "mac", at }]);
+    await connection.settled();
+    const view = await connectClient(
+      await claimLink(link, { ...AT_FIRST_LAUNCH, name: "MacBook Air" }),
+    );
+    expect(await view.invoke("inf:accounts:list", [])).toEqual(
+      await core.dispatch("inf:accounts:list", []),
+    );
+
+    await core.dispatch("inf:update:open-release", [], { kind: "captain", view: "air" });
+    const page = await view.push((push) => push.channel === "inf:app:open-page");
+    expect((page.payload as { url: string }).url).toMatch(/^https:\/\//);
+    expect(shell.opened).toEqual([]);
+
+    await core.dispatch("inf:update:open-release", []);
+    expect(shell.opened).toHaveLength(1);
   });
 });
 

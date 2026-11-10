@@ -125,29 +125,16 @@ The link reaches this command's output alone: the door writes it to no log, and 
 
 ## Control from another computer
 
-Nobody sits at a computer whose first mate a command started, so another computer's Infinitary that joins it controls everything its window would (INF-1228's approved plan, piece 6, the captain's answer control=all: "everything the window does, including subscription and custom API sign-ins, projects, computers, phones, integrations, and card buttons that open Settings").
-The connection's welcome to a view says so with `startedByCommand: true` (`docs/connection.md`, "The handshake and the numbering"), and the view's `thisMac` carries it (`controlsAll`, `src/renderer/src/devices/viewWords.ts`).
-A first mate with its window sends no such field, and a view of it stays as `docs/view.md` says.
+Another computer's Infinitary that joins a first mate a command started controls it as it controls any first mate (`docs/view.md`, "What the window asks"), and the same rule answers a view of a first mate with its window.
+What is left to a command's own first mate is its window's absence:
 
-- **What a view asks.**
-  The connection answers such a view every `home` request as well as every `views` one, as the captain at another computer, but those that stay on this computer (`RUN_HOME_ONLY_CHANNELS` and `isRunViewInvokeChannel`, `src/shared/ipc.ts`): its computers and phones and the addresses they find it at, a task's browser and a page from a task's project, its Secrets (`docs/secrets.md`, "Remote decisions"), and what is only ever this computer's own - its look, voice, panels and their extensions, Knowledge, Observe, release notes, Dock and update.
-  The view asks the same set (`ViewBackend.dispatch`) and also shows the pushes its Settings follow: a sign-in's steps, the sign-ins where projects live, integrations and Diagnostics (`RUN_VIEW_PUSHES`, `src/main/view/viewBackend.ts`).
-  Its look, keys and update notice stay its own, as on any view.
-- **Settings.**
-  Settings shows General, Projects, Intelligence, Usage and Integrations as well as the four tabs any view shows (`onAViewOfACommand`, `showsSection`), and their keyboard commands work there (`src/renderer/src/app/commandRefusals.ts`).
-  Their words name the computer the first mate lives on where they would say this computer (`firstMatePlace`, `useFirstMatePlace`).
-  General leaves out that computer's Start at login, Dock, dictation and panels, which are its own and have nobody there.
-  A project's folder is typed as its path on that computer, since a folder picker here shows only this computer's folders: Choose folder on the projects folder's line under Add project, and Folder on Mac mini in Add project (`FOLDER_THERE_WORDS`, `src/renderer/src/settings/addProjectWords.ts`); that computer checks the path and says why one cannot be used.
+- **Pages it would open.**
+  Every page such a first mate would open in a browser, a sign-in's consent page included, goes to each computer that controls it as the push `inf:app:open-page` (`startCore`'s `startedByCommand`, `src/core/index.ts`), since nobody sits at its computer; `docs/view.md`, "Pages it would open", says what the view does with it.
+- **General.**
+  General leaves out that computer's Start at login, Dock, dictation and panels, which are its own and have nobody there, as on any view.
 - **First launch.**
   Its first launch shows the subscription chips under the line `gateRunLine` makes: "Connect one for your first mate on Mac mini.
-  A command started it there, so it signs in from here."
-- **Pages it would open.**
-  A page the first mate would open in a browser, such as a sign-in's consent page, goes to each computer that controls it as the push `inf:app:open-page` instead (`startCore`'s `startedByCommand`, `src/core/index.ts`), and that computer's Infinitary opens it in its own browser, once, as it arrives; one a welcome replays after a drop is old news and is not opened (`ViewBackend.openPage`).
-  A sign-in that shows a code or asks for a pasted answer shows it on that computer as in the window.
-  A sign-in whose page sends the browser back to the first mate's own loopback address finishes only when that browser runs on the same computer, or through the sign-in's code or a pasted address where the provider offers one.
-- **Card buttons.**
-  A card's button that opens a Settings section is sent and opens it there (`docs/view.md`, "Card buttons that open Settings"), but one that opens Devices, whose computers and phones cannot be changed from another computer yet, says so and sends nothing (`devicesNotHereWords`).
-  A request card's take-over of a task's browser says the browser cannot be shown there yet (`browserNotHereWords`).
+  It signs in from here."
 
 ## After an update
 

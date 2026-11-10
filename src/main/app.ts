@@ -632,8 +632,6 @@ export async function startApp(
             ...(standInContract ? { protocolVersion: standInContract } : {}),
             ...(Number.isInteger(standInViewFloor) ? { viewFloor: standInViewFloor } : {}),
             ...(standInSpelling ? { speaks: standInSpelling } : {}),
-            // ...and a view of it asks what its window would (docs/run.md).
-            startedByCommand: windowless,
           }),
         broadcast: (channel, payload) => {
           broadcast(channel, payload as never);
@@ -650,8 +648,8 @@ export async function startApp(
           if (!isolatedUserDataDir) app.relaunch();
           app.quit();
         },
-        // A page a first mate started by a command would open opens here,
-        // where the person is (docs/run.md, "Control from another computer").
+        // A page the first mate would open for this view opens here, where
+        // the person is (docs/view.md, "Pages it would open").
         openPage: async (url) => {
           if (isAllowedOpenExternalUrl(url)) await host.openExternal(url);
         },

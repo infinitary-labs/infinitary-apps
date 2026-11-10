@@ -1039,7 +1039,7 @@
     },
     "inf:task:abort": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -1065,7 +1065,7 @@
     },
     "inf:task:delete": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -1772,7 +1772,7 @@
     },
     "inf:repos:setup": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -2155,7 +2155,7 @@
     },
     "inf:repos:removal": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -2204,7 +2204,7 @@
     },
     "inf:repos:remove": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -2234,7 +2234,7 @@
     },
     "inf:repos:configure": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -2678,7 +2678,7 @@
     },
     "inf:repos:queue-answer": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -2763,7 +2763,7 @@
     },
     "inf:repos:queue-credential": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -2804,7 +2804,7 @@
     },
     "inf:repos:queue-credential-create": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -2838,7 +2838,7 @@
     },
     "inf:repos:folder": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -2861,7 +2861,7 @@
     },
     "inf:repos:folder:set": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -5355,7 +5355,7 @@
     },
     "inf:devices:runs-on": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -5657,7 +5657,7 @@
     },
     "inf:devices:sign-ins": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -6594,7 +6594,7 @@
     },
     "inf:devices:sign-in": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -6639,7 +6639,7 @@
     },
     "inf:devices:sign-in:answer": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -6682,7 +6682,7 @@
     },
     "inf:devices:sign-in:cancel": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -6709,7 +6709,7 @@
     },
     "inf:devices:sign-out": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -6742,7 +6742,7 @@
     },
     "inf:devices:forge-sign-in": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -6776,7 +6776,7 @@
     },
     "inf:devices:forge-sign-in-cli": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -6856,7 +6856,7 @@
     },
     "inf:devices:forge-sign-out": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -6890,7 +6890,7 @@
     },
     "inf:devices:custom:address": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -6984,7 +6984,7 @@
     },
     "inf:devices:custom:profiles": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -7039,7 +7039,7 @@
     },
     "inf:devices:custom:review": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -7116,7 +7116,7 @@
     },
     "inf:devices:custom:connect": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -7565,7 +7565,7 @@
     },
     "inf:devices:custom:check": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -7793,7 +7793,7 @@
     },
     "inf:devices:custom:discover": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -7840,7 +7840,7 @@
     },
     "inf:devices:custom:cancel": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -7873,7 +7873,7 @@
     },
     "inf:devices:custom:save": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -8099,7 +8099,7 @@
     },
     "inf:devices:custom:recheck": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -13949,7 +13949,7 @@
     },
     "inf:auth:providers": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -14025,7 +14025,7 @@
     },
     "inf:auth:prompt-reply": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -14061,7 +14061,7 @@
     },
     "inf:auth:cancel": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -14081,7 +14081,7 @@
     },
     "inf:accounts:custom:profiles": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -14128,7 +14128,7 @@
     },
     "inf:accounts:custom:review": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -14198,7 +14198,7 @@
     },
     "inf:accounts:custom:address": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -14287,7 +14287,7 @@
     },
     "inf:accounts:custom:connect": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -14731,7 +14731,7 @@
     },
     "inf:accounts:custom:prepare": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -15107,7 +15107,7 @@
     },
     "inf:accounts:custom:check": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -15326,7 +15326,7 @@
     },
     "inf:accounts:custom:discover": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -15366,7 +15366,7 @@
     },
     "inf:accounts:custom:cancel": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -15392,7 +15392,7 @@
     },
     "inf:accounts:custom:save": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -15611,7 +15611,7 @@
     },
     "inf:accounts:custom:recheck": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -15827,7 +15827,7 @@
     },
     "inf:accounts:custom:list": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -16040,7 +16040,7 @@
     },
     "inf:accounts:list": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -16132,7 +16132,7 @@
     },
     "inf:accounts:add": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -16248,7 +16248,7 @@
     },
     "inf:accounts:sign-in": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -16343,7 +16343,7 @@
     },
     "inf:accounts:remove": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -16369,7 +16369,7 @@
     },
     "inf:accounts:rename": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -16400,7 +16400,7 @@
     },
     "inf:accounts:set-enabled": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -16429,7 +16429,7 @@
     },
     "inf:accounts:pin": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -16465,7 +16465,7 @@
     },
     "inf:forges:list": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -16720,7 +16720,7 @@
     },
     "inf:forges:projects": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -16780,7 +16780,7 @@
     },
     "inf:forges:sign-in": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -16826,7 +16826,7 @@
     },
     "inf:forges:sign-in-browser": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -16892,7 +16892,7 @@
     },
     "inf:forges:sign-in-key": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -16987,7 +16987,7 @@
     },
     "inf:forges:sign-in-cli": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -17061,7 +17061,7 @@
     },
     "inf:forges:cancel": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -17316,7 +17316,7 @@
     },
     "inf:forges:sign-out": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -17579,7 +17579,7 @@
     },
     "inf:forges:changes": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -17672,7 +17672,7 @@
     },
     "inf:integrations:list": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -17966,7 +17966,7 @@
     },
     "inf:integrations:configure": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -18298,7 +18298,7 @@
     },
     "inf:integrations:rule": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -18606,7 +18606,7 @@
     },
     "inf:integrations:remove": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -18907,7 +18907,7 @@
     },
     "inf:integrations:check": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -19208,7 +19208,7 @@
     },
     "inf:integrations:secret": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -19525,7 +19525,7 @@
     },
     "inf:integrations:add": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -19855,7 +19855,7 @@
     },
     "inf:integrations:sign-in": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -20190,7 +20190,7 @@
     },
     "inf:integrations:sign-in-cancel": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -20484,7 +20484,7 @@
     },
     "inf:integrations:inbox-link": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -20778,7 +20778,7 @@
     },
     "inf:settings:firstmate-account:get": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -20796,7 +20796,7 @@
     },
     "inf:settings:firstmate-account:set": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -20960,7 +20960,7 @@
     },
     "inf:quota:refresh": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -21093,7 +21093,7 @@
     },
     "inf:quota:models": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -21160,7 +21160,7 @@
     },
     "inf:settings:routing:get": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -21198,7 +21198,7 @@
     },
     "inf:settings:routing:set": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -21269,7 +21269,7 @@
     },
     "inf:settings:firstmate-model:get": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -21299,7 +21299,7 @@
     },
     "inf:settings:firstmate-model:set": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -21354,7 +21354,7 @@
     },
     "inf:settings:local-orchestrator:get": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -21435,7 +21435,7 @@
     },
     "inf:settings:local-orchestrator:set": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -21539,7 +21539,7 @@
     },
     "inf:models:available": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -21879,7 +21879,7 @@
     },
     "inf:models:slots:set": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -22211,7 +22211,7 @@
     },
     "inf:models:speed:set": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -22539,7 +22539,7 @@
     },
     "inf:models:reasoning:set": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -22884,7 +22884,7 @@
     },
     "inf:models:slots:reset": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "anyOf": [
           {
@@ -23212,7 +23212,7 @@
     },
     "inf:settings:decisions": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -23493,7 +23493,7 @@
     },
     "inf:settings:decisions:set": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -23882,7 +23882,7 @@
     },
     "inf:decisions:key:set": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -24174,7 +24174,7 @@
     },
     "inf:decisions:key:remove": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -25192,7 +25192,7 @@
     },
     "inf:retention:purge": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -25211,7 +25211,7 @@
     },
     "inf:retention:scope": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -25258,7 +25258,7 @@
     },
     "inf:retention:delete-outside": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -36444,7 +36444,7 @@
     },
     "inf:browser:sign-ins": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -36488,7 +36488,7 @@
     },
     "inf:browser:sign-ins:automatic": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -36546,7 +36546,7 @@
     },
     "inf:browser:sign-ins:remove": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -36597,7 +36597,7 @@
     },
     "inf:browser:private-sites": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -36625,7 +36625,7 @@
     },
     "inf:browser:private-sites:add": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -36682,7 +36682,7 @@
     },
     "inf:browser:private-sites:remove": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -37812,7 +37812,7 @@
     },
     "inf:settings:sharing:get": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -38044,7 +38044,7 @@
     },
     "inf:settings:sharing:set": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -38289,7 +38289,7 @@
     },
     "inf:settings:sharing:viewed": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -38531,7 +38531,7 @@
     },
     "inf:settings:sharing:preview": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -38631,7 +38631,7 @@
     },
     "inf:settings:sharing:ask": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -39014,7 +39014,7 @@
     },
     "inf:settings:runbooks:get": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -39062,7 +39062,7 @@
     },
     "inf:settings:runbooks:copy": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -39123,7 +39123,7 @@
     },
     "inf:settings:runbooks:set": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -39180,7 +39180,7 @@
     },
     "inf:settings:personal-resources:get": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -39191,7 +39191,7 @@
     },
     "inf:settings:personal-resources:set": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -39208,7 +39208,7 @@
     },
     "inf:settings:cost-limit:get": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -39278,7 +39278,7 @@
     },
     "inf:settings:cost-limit:set": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -39392,7 +39392,7 @@
     },
     "inf:settings:notifications:set": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -44569,7 +44569,7 @@
     },
     "inf:usage:summary": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -46767,7 +46767,7 @@
     },
     "inf:usage:tasks": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [

@@ -1,5 +1,5 @@
 Settings → Usage (the captain's pick on FI3-925: the Overview direction, estimated dollars offered, quiet milestones on): the model usage Infinitary records across the fleet, in tokens or estimated dollars.
-A wide tab after Intelligence; on a computer that controls another it is not there.
+A wide tab after Intelligence; on a computer that controls another it shows that first mate's usage.
 What is recorded and how the numbers are summed are the app's `docs/usage.md`; this page is how they look and read.
 
 **Header.**

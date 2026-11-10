@@ -84,12 +84,6 @@ export type HomeLinkState = {
   readonly heardAt: number | null;
   /** The home took this device off its list; it never dials again. */
   readonly removed: boolean;
-  /**
-   * For a view: the newest welcome said the first mate was started by a
-   * command, so this view asks what its window would (docs/run.md,
-   * "Control from another computer"). False before any welcome.
-   */
-  readonly startedByCommand: boolean;
 };
 
 /** A request the device could not put to the home: it is out of reach, or it went mid-request. */
@@ -220,7 +214,6 @@ export class HomeLink {
     onHomeMac: null,
     heardAt: null,
     removed: false,
-    startedByCommand: false,
   };
   private lastHeard: number | null = null;
   /** The newest push the latest welcome numbered: one at or before it is a replay. */
@@ -549,7 +542,6 @@ export class HomeLink {
       name: frame.name ?? this.current.name,
       takesWork: frame.takesWork ?? null,
       onHomeMac: frame.onHomeMac ?? this.current.onHomeMac,
-      startedByCommand: frame.startedByCommand === true,
     });
     try {
       this.options.onCaughtUp?.(frame.catchUp);
@@ -720,8 +712,7 @@ export class HomeLink {
       next.takesWork === this.current.takesWork &&
       next.onHomeMac === this.current.onHomeMac &&
       next.heardAt === this.current.heardAt &&
-      next.removed === this.current.removed &&
-      next.startedByCommand === this.current.startedByCommand
+      next.removed === this.current.removed
     )
       return;
     this.current = next;

@@ -1,3 +1,4 @@
+import { askedFromAView } from "./askedFromAView";
 import type { CoreServices } from "./coreServices";
 import { type CoreDispatch, createCoreDispatcher } from "./dispatcher";
 import { CoreEventBus } from "./events";
@@ -33,21 +34,22 @@ export type Core = {
 export type CoreOptions = {
   /**
    * The app was started by a command, with no window (docs/run.md): nobody
-   * sits at this computer to see a page it opens, so a page it would open
-   * in a browser, such as a sign-in's, goes to each computer that controls
-   * it instead (`inf:app:open-page`).
+   * sits at this computer to see a page it opens, so every page it would
+   * open in a browser goes to each computer that controls it instead, as a
+   * page a view's own request opens always does (`inf:app:open-page`).
    */
   startedByCommand?: boolean;
 };
 
 export async function startCore(given: HostCapabilities, options: CoreOptions = {}): Promise<Core> {
   const events = new CoreEventBus();
-  const host: HostCapabilities = options.startedByCommand
-    ? {
-        ...given,
-        openExternal: async (url) => events.emit("inf:app:open-page", { url }),
-      }
-    : given;
+  const host: HostCapabilities = {
+    ...given,
+    openExternal: async (url) =>
+      options.startedByCommand || askedFromAView()
+        ? events.emit("inf:app:open-page", { url })
+        : given.openExternal(url),
+  };
   const services = await createServices(host, events.emit);
   const dispatch = createCoreDispatcher({
     services,

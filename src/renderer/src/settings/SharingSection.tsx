@@ -14,8 +14,10 @@ import {
 import type React from "react";
 import { useEffect, useState } from "react";
 import termsSource from "../../../../DATA-TERMS.md?raw";
+import { useShellStore } from "../app/store";
 import { Button, Disclosure, Empty, Switch } from "../design";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
+import { waitsForUpdate } from "../devices/viewWords";
 import { ROW_GAP, SECTION_GAP, SectionLabel, SettingError, SettingRow } from "./settingRows";
 import { useSettingSave } from "./useSettingSave";
 
@@ -535,14 +537,15 @@ export function SharingSection() {
  */
 export function useSharingSave(recoveryHint?: string) {
   const save = useSettingSave(() => window.infinitary.settings.getSharing(), recoveryHint);
+  const waits = useShellStore((s) => waitsForUpdate(s.thisMac));
   useEffect(() => {
-    void save.refresh();
+    if (!waits) void save.refresh();
     try {
       return window.infinitary.settings.onSharing(save.apply);
     } catch {
       return undefined;
     }
-  }, [save.refresh, save.apply]);
+  }, [save.refresh, save.apply, waits]);
   return save;
 }
 

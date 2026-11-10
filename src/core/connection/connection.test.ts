@@ -11,11 +11,12 @@ import { HOME } from "@shared/deviceNames";
 import { type DeviceGrant, type DeviceKind, parsePairingLink } from "@shared/devices";
 import { ENDED_CLOSE, ENDED_CORNER, endedLineWords } from "@shared/endedCard";
 import {
+  CORE_INVOKE_CHANNELS,
   type CoreInvokeChannel,
   HOME_CAPABILITIES,
-  isRunViewInvokeChannel,
+  invokeContract,
+  isViewInvokeChannel,
   PROTOCOL_VERSION,
-  RUN_HOME_ONLY_CHANNELS,
 } from "@shared/ipc";
 import { publishedContract } from "@shared/publishedContract";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -43,6 +44,7 @@ import {
   type ViewDeviceContact,
   type WorkDeviceContact,
 } from "./connection";
+import { contractChange } from "./contractChanges";
 import { FRAME_PARTS } from "./frameParts";
 
 /**
@@ -789,7 +791,7 @@ describe("the home's connection", () => {
       const asked = Object.entries(contract.requests)
         .filter(
           ([channel, declared]) =>
-            isRunViewInvokeChannel(channel as CoreInvokeChannel) && carriesLines(declared.response),
+            isViewInvokeChannel(channel as CoreInvokeChannel) && carriesLines(declared.response),
         )
         .map(([channel]) => channel)
         .sort();
@@ -974,7 +976,7 @@ describe("the home's connection", () => {
     await expect(a.invoke("inf:cards:act", ["card-1"])).rejects.toThrow("malformed request");
 
     for (const channel of [
-      "inf:settings:routing:set",
+      "inf:voice:status",
       "inf:devices:invite",
       "inf:devices:remove",
       "inf:devices:list",
@@ -989,30 +991,35 @@ describe("the home's connection", () => {
     expect(at.asked.map((ask) => ask.channel)).toEqual(["inf:app:healthcheck", "inf:cards:act"]);
   });
 
-  // INF-1228, the captain's answer control=all: a computer that controls a
-  // first mate started by a command, which has no window, does everything
-  // that window would; a home with its window keeps the rule above.
-  it("answers a view of a first mate started by a command every home request but those that stay there", async () => {
-    const run = await home({ startedByCommand: true });
-    const grant = await run.join("view");
-    const a = await connectClient(grant);
-    expect(a.welcome.startedByCommand).toBe(true);
+  // INF-1352's plan, the captain's answer one_rule=every-view: a paired computer is the captain
+  // at another computer, whatever started this first mate, but for what stays with this computer.
+  it("answers a view every views request as the captain, and refuses what stays on this computer", async () => {
+    const windowed = await home();
+    const grant = await windowed.join("view");
+    const a = await connectClient(grant, { changes: [contractChange("every-view-asks")] });
+    expect(a.welcome.startedByCommand).toBeUndefined();
 
     await expect(a.invoke("inf:settings:routing:set", [{}])).rejects.toThrow("malformed request");
-    for (const channel of RUN_HOME_ONLY_CHANNELS)
+    const stays = CORE_INVOKE_CHANNELS.filter(
+      (channel) => invokeContract[channel].reach === "home",
+    );
+    expect(stays.length).toBeGreaterThan(0);
+    for (const channel of stays)
       await expect(a.invoke(channel, [{}])).rejects.toThrow(`answered only on ${HOME.the}`);
     await expect(a.invoke("inf:work:progress", [{}])).rejects.toThrow(
       "asked only by a computer that runs work",
     );
-    expect(run.asked.map((ask) => ask.channel)).toEqual(["inf:settings:routing:set"]);
-    expect(run.asked[0]?.actor).toEqual({ kind: "captain", view: grant.deviceId });
+    expect(windowed.asked.map((ask) => ask.channel)).toEqual(["inf:settings:routing:set"]);
+    expect(windowed.asked[0]?.actor).toEqual({ kind: "captain", view: grant.deviceId });
+  });
 
-    // Only a view hears it, and only from a home a command started.
-    const builder = await connectClient(await run.join("work", "Builder"));
+  // `every-view-asks.md`: a view from before the change waits for this field before it asks.
+  it("still tells a view from before one rule that it asks the wider set, and no one else", async () => {
+    const at = await home();
+    const older = await connectClient(await at.join("view"));
+    expect(older.welcome.startedByCommand).toBe(true);
+    const builder = await connectClient(await at.join("work", "Builder"));
     expect(builder.welcome.startedByCommand).toBeUndefined();
-    const windowed = await home();
-    const b = await connectClient(await windowed.join("view"));
-    expect(b.welcome.startedByCommand).toBeUndefined();
   });
 
   it("answers a device on the home's major in full, and only the reads of any other", async () => {

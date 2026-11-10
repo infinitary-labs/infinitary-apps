@@ -200,7 +200,7 @@ export const deviceChannels = {
   "inf:devices:runs-on": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1), z.string().min(1).max(64).nullable()]),
     response: repoViewSchema,
   },
@@ -212,14 +212,14 @@ export const deviceChannels = {
   "inf:devices:sign-ins": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([]),
     response: z.array(deviceSignInsSchema),
   },
   "inf:devices:sign-in": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([
       z.string().min(1).max(64),
       z.string().min(1).max(256),
@@ -231,7 +231,7 @@ export const deviceChannels = {
   "inf:devices:sign-in:answer": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([
       signInIdSchema,
       z.string().min(1).max(128),
@@ -242,14 +242,14 @@ export const deviceChannels = {
   "inf:devices:sign-in:cancel": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([signInIdSchema]),
     response: okSchema,
   },
   "inf:devices:sign-out": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64), z.string().min(1).max(256)]),
     response: okSchema,
   },
@@ -260,7 +260,7 @@ export const deviceChannels = {
   "inf:devices:forge-sign-in": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64), forgeHostSchema]),
     response: z.object({ signInId: signInIdSchema }),
   },
@@ -269,14 +269,14 @@ export const deviceChannels = {
   "inf:devices:forge-sign-in-cli": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64), forgeHostSchema]),
     response: forgeCliSignInResultSchema,
   },
   "inf:devices:forge-sign-out": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64), forgeHostSchema]),
     response: okSchema,
   },
@@ -287,21 +287,21 @@ export const deviceChannels = {
   "inf:devices:custom:address": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64), z.string().max(4096)]),
     response: customApiAddressSchema,
   },
   "inf:devices:custom:profiles": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64)]),
     response: z.array(customCapabilityProfileSchema),
   },
   "inf:devices:custom:review": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([
       z.string().min(1).max(64),
       z.string().max(4096),
@@ -313,14 +313,14 @@ export const deviceChannels = {
   "inf:devices:custom:connect": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64), customApiConnectInputSchema]),
     response: customApiConnectResultSchema,
   },
   "inf:devices:custom:check": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([
       z.string().min(1).max(64),
       z.string().min(1).max(128),
@@ -331,28 +331,28 @@ export const deviceChannels = {
   "inf:devices:custom:discover": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64), z.string().min(1).max(128)]),
     response: z.array(customListedModelSchema),
   },
   "inf:devices:custom:cancel": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64), z.string().min(1).max(128)]),
     response: okSchema,
   },
   "inf:devices:custom:save": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64), z.string().min(1).max(128), z.boolean()]),
     response: customApiViewSchema,
   },
   "inf:devices:custom:recheck": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64), z.string().min(1).max(256)]),
     response: customApiViewSchema,
   },

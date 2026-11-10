@@ -18,35 +18,22 @@ export function isView(thisMac: ThisMac | null): thisMac is ViewMac {
 }
 
 /**
- * This app controls a first mate started by a command (docs/run.md,
- * "Control from another computer"): nobody sits at that computer, so its
- * Settings, its sign-ins and the card buttons that open them are here.
- */
-export function controlsAll(thisMac: ThisMac | null): boolean {
-  return isView(thisMac) && thisMac.startedByCommand === true;
-}
-
-/**
  * Whether this app shows a Settings section: all of them where the first mate
- * lives; on a Mac that controls another, those it keeps (docs/view.md), and
- * of a first mate started by a command those nobody could open there.
+ * lives; on a computer that controls another, those a view shows (docs/view.md).
  */
 export function showsSection(
   thisMac: ThisMac | null,
-  section: { readonly onAView?: boolean; readonly onAViewOfACommand?: boolean },
+  section: { readonly onAView?: boolean },
 ): boolean {
-  if (!isView(thisMac)) return true;
-  return section.onAView === true || (controlsAll(thisMac) && section.onAViewOfACommand === true);
+  return !isView(thisMac) || section.onAView === true;
 }
 
 /**
  * Where the first mate lives, as a sentence in its Settings names it: this
- * computer, or that computer by its name from one that controls all of it.
+ * computer, or that computer by its name from one that controls it.
  */
 export function firstMatePlace(thisMac: ThisMac | null): { this: string; This: string } {
-  return isView(thisMac) && controlsAll(thisMac)
-    ? { this: thisMac.name, This: thisMac.name }
-    : HERE;
+  return isView(thisMac) ? { this: thisMac.name, This: thisMac.name } : HERE;
 }
 
 /**
@@ -74,65 +61,60 @@ export function changesOffWords(mac: ViewMac): string {
 }
 
 /**
- * What a card's button that opens one of the other Mac's Settings sections
- * says, as its tooltip and once clicked: nothing is sent, and the card
- * stays on both Macs.
- */
-export function settingsThereWords(mac: ViewMac): string {
-  return `Do this on ${mac.name}. Its settings and sign-ins stay there.`;
-}
-
-/**
- * What a crewmate's request card's button that hands the captain its task's
- * browser says, as its tooltip and once clicked: the page shows only on the
- * other Mac, so nothing is sent, and the card stays on both Macs.
- */
-export function browserThereWords(mac: ViewMac): string {
-  return `Do this on ${mac.name}. This task's browser shows only there.`;
-}
-
-/**
- * What a card's button that opens the Devices section of a first mate
- * started by a command says: its computers and phones are not changed from
- * another computer yet, and nobody sits at that one.
+ * What a card's button that opens the first mate's Devices section says:
+ * its computers and phones are not changed from another computer yet.
  */
 export function devicesNotHereWords(mac: ViewMac): string {
   return `${mac.name}'s computers and phones cannot be changed from here yet.`;
 }
 
-/** What a request card's take-over button of a first mate started by a command says. */
+/** What this app says of something the first mate there is too old to answer. */
+export function updateThereWords(mac: ViewMac): string {
+  return `Update Infinitary on ${mac.name} to do this from here.`;
+}
+
+/** Whether the first mate there is too old to answer what this version asks of it. */
+export function waitsForUpdate(thisMac: ThisMac | null): thisMac is ViewMac {
+  return isView(thisMac) && thisMac.needsUpdateThere === true;
+}
+
+/** Whether a Settings section waits for an update on the first mate's computer. */
+export function sectionWaitsForUpdate(
+  thisMac: ThisMac | null,
+  section: { readonly onAnOlderFirstMate?: boolean },
+): thisMac is ViewMac {
+  return waitsForUpdate(thisMac) && !section.onAnOlderFirstMate;
+}
+
+/** What Google's notice says on a computer that controls a first mate. */
+export function googleOnFirstMateWords(mac: ViewMac): string {
+  return `Sign in to Google on ${mac.name} for now. Google's page returns to that computer, so it cannot finish from another one.`;
+}
+
+/** What a request card's button that hands the captain a task's browser says. */
 export function browserNotHereWords(mac: ViewMac): string {
   return `This task's browser on ${mac.name} cannot be shown here yet.`;
 }
 
 /**
  * What a card's button says when this app never sends it: one that opens
- * one of the other Mac's Settings sections, or one that hands the captain a
- * task's browser. Of a first mate started by a command, every Settings
- * section is here but Devices. Null for every other button.
+ * Devices, one that hands the captain a task's browser, or one that opens
+ * Settings a first mate on an older version cannot answer. Nothing is sent,
+ * and the card stays on both computers. Null for every other button.
  */
 export function doneThereWords(mac: ViewMac, action: Pick<CardAction, "effect">): string | null {
-  if (mac.startedByCommand === true) {
-    if (action.effect?.kind === "open" && action.effect.target === "devices")
-      return devicesNotHereWords(mac);
-    if (takesTaskBrowser(action)) return browserNotHereWords(mac);
-    return null;
-  }
-  if (opensSettings(action)) return settingsThereWords(mac);
-  if (takesTaskBrowser(action)) return browserThereWords(mac);
+  if (action.effect?.kind === "open" && action.effect.target === "devices")
+    return devicesNotHereWords(mac);
+  if (takesTaskBrowser(action)) return browserNotHereWords(mac);
+  if (opensSettings(action) && mac.needsUpdateThere) return updateThereWords(mac);
   return null;
 }
 
-/** What a task's browser view shows in place of its page, which shows only on the other Mac. */
+/** What a task's browser view shows in place of its page, which shows only on the other computer. */
 export function browserShownThereWords(mac: ViewMac): { lead: string; detail: string } {
-  if (mac.startedByCommand === true)
-    return {
-      lead: browserNotHereWords(mac),
-      detail: `A command started Infinitary on ${mac.name}, with no window to show it in.`,
-    };
   return {
-    lead: `This task's browser shows only on ${mac.name}.`,
-    detail: "Watch it and take control of it there.",
+    lead: browserNotHereWords(mac),
+    detail: `Only a window on ${mac.name} can show it for now.`,
   };
 }
 

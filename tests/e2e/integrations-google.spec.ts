@@ -217,6 +217,8 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
     const notice = tab.locator('[data-integration-notice="google"]');
     await expect(notice).toBeFocused();
     await expect(notice).toHaveAccessibleName(NOTICE.title);
+    // The line that says to sign in on the first mate's computer is a view's alone.
+    await expect(notice.locator("[data-integration-notice-there]")).toHaveCount(0);
     // What it uses and where it goes: the AI provider, other computers, saved task records.
     for (const item of NOTICE.groups.flatMap((group) => group.items))
       await expect(notice).toContainText(item.text);

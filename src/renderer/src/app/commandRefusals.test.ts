@@ -55,7 +55,7 @@ describe("why a window command cannot run now", () => {
   // INF-1228, the captain's answer control=all: of a first mate started by a
   // command, the tabs nobody could open there open here; Automation, already
   // its own on any Mac that controls another, keeps its own rule.
-  it("opens Usage and Integrations on a Mac that controls a first mate started by a command", () => {
+  it("opens Usage and Integrations on a computer that controls another", () => {
     const view = {
       role: "view",
       name: "Mac mini",
@@ -67,25 +67,27 @@ describe("why a window command cannot run now", () => {
       caughtUp: 1,
     } as const;
     const windowed = { ...HOME, thisMac: view };
-    const run = { ...HOME, thisMac: { ...view, startedByCommand: true } };
     // INF-2344: the arrangement is saved where the first mate lives, so Arrange panels is too.
     for (const command of [
       "settings.usage",
       "usage.unit",
       "settings.integrations",
       "settings.panels",
-    ] as const) {
-      expect(commandRefusal(command, windowed, CLEAR)).toMatch(/ is on Mac mini$/);
-      expect(commandRefusal(command, run, CLEAR)).toBeNull();
-    }
-    expect(commandRefusal("settings.automation", run, CLEAR)).toBe(
-      commandRefusal("settings.automation", windowed, CLEAR),
+    ] as const)
+      expect(commandRefusal(command, windowed, CLEAR)).toBeNull();
+    expect(commandRefusal("settings.automation", windowed, CLEAR)).toBe(
+      "Automation is on Mac mini",
     );
+    // The captain's answer on the review: an older first mate is told apart before it is asked.
+    for (const command of ["usage.unit", "allowance.recheck"] as const)
+      expect(
+        commandRefusal(command, { ...HOME, thisMac: { ...view, needsUpdateThere: true } }, CLEAR),
+      ).toBe("Update Infinitary on Mac mini to do this from here.");
   });
 
   // INF-1109's accepted Secrets boundary (docs/secrets.md, "Remote decisions"): its Settings stay
   // on the home, so their command is refused wherever the tab is not offered.
-  it("keeps the Secrets command on the home of a first mate started by a command", () => {
+  it("keeps the Secrets command on the home", () => {
     const view = {
       role: "view",
       name: "Mac mini",
@@ -97,10 +99,9 @@ describe("why a window command cannot run now", () => {
       caughtUp: 1,
     } as const;
     expect(commandRefusal("settings.secrets", HOME, CLEAR)).toBeNull();
-    for (const thisMac of [view, { ...view, startedByCommand: true }] as const)
-      expect(commandRefusal("settings.secrets", { ...HOME, thisMac }, CLEAR)).toBe(
-        "Secrets is on Mac mini",
-      );
+    expect(commandRefusal("settings.secrets", { ...HOME, thisMac: view }, CLEAR)).toBe(
+      "Secrets is on Mac mini",
+    );
   });
 
   it("refuses Try again where Devices is not offered, as on a Mac that controls another", () => {

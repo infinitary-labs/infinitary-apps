@@ -342,8 +342,7 @@ describe("the device's side of the connection", () => {
   // INF-3153: Subscriptions asks `accounts.add(id, type, undefined)` with no
   // enterprise host, and JSON wrote the empty argument as null, which the home refused.
   it("sends a request whose last arguments are empty as the home's contract reads it", async () => {
-    // Only a home started by a command answers its view's Settings.
-    const at = await home({ startedByCommand: true });
+    const at = await home();
     const air = follow(await at.join());
     air.link.start();
     await air.until(() => air.link.state().contact === "in-reach");
@@ -401,18 +400,14 @@ describe("the device's side of the connection", () => {
     expect(older.joined()).toBe(0);
   });
 
-  // INF-1228, the captain's answer control=all: a view of a first mate
-  // started by a command asks what its window would.
-  it("hears from the welcome whether the first mate was started by a command", async () => {
+  // `every-view-asks.md`: an older home still says a command started it, and a view reads on.
+  it("reads the welcome of an older home that still says a command started it", async () => {
     const run = follow(await (await home({ startedByCommand: true })).join());
     run.link.start();
     await run.until(() => run.link.state().contact === "in-reach");
-    expect(run.link.state().startedByCommand).toBe(true);
-
-    const windowed = follow(await (await home()).join());
-    windowed.link.start();
-    await windowed.until(() => windowed.link.state().contact === "in-reach");
-    expect(windowed.link.state().startedByCommand).toBe(false);
+    await expect(
+      run.link.invoke("inf:accounts:add", ["claude", "oauth", undefined]),
+    ).resolves.toEqual({ added: ["claude", "oauth"] });
   });
 
   it("holds a read asked while it is still reaching the home, and sends it once welcomed", async () => {

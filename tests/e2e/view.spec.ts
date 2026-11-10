@@ -10,6 +10,7 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import {
   backWords,
+  devicesNotHereWords,
   JOIN_CONFIRM_WORDS,
   JOIN_RUNS_WORK,
   joinRefusalWords,
@@ -40,7 +41,7 @@ import { cardReply, expectNoCard, showCard, shownCard } from "./stack";
  * it: a second app joins Firstmate on the first with a pasted link at its
  * own first launch, then shows that Mac's cards with their pictures, its
  * feed and its tasks; an answer in either app shows in the other; a button
- * that opens Settings there sends nothing and keeps its card; while
+ * that opens Devices there sends nothing and keeps its card; while
  * that Mac is out of reach the view says as of when and refuses changes,
  * which never reach it later; a restart there catches the view up; the view
  * itself restarts with no core of its own; and Leave returns it to its own
@@ -59,7 +60,7 @@ const INVITE_CARD = "Connect your iMac";
 /** The host's sign-in card for the home's Claude account, in the host's own words. */
 const SIGN_IN_CARD = needsReauthCopy("Claude", "Work");
 /** Settings sections that stay on the Mac where Firstmate lives, by id. */
-const HOME_ONLY_SECTIONS = ["general", "projects", "subscriptions", "usage", "observe"] as const;
+const HOME_ONLY_SECTIONS = ["secrets", "observe"] as const;
 
 /** A Settings tab's label, as the built-in manifest names it. */
 function sectionLabel(id: string): string {
@@ -291,8 +292,8 @@ test("a second Mac joins at its first launch, controls this Firstmate, rides out
       );
       const board = await page.evaluate(() => window.infinitary.tasks.board());
       expect(board.tasks.map((task) => task.title)).toContain("Chart the harbour");
-      // Its own settings stay there: this Mac is never asked for them.
-      await expect(page.evaluate(() => window.infinitary.settings.getRouting())).rejects.toThrow(
+      // Its computers stay there: this computer never asks for them.
+      await expect(page.evaluate(() => window.infinitary.devices.list())).rejects.toThrow(
         `answered only on ${HOME.the}`,
       );
     });
@@ -307,22 +308,15 @@ test("a second Mac joins at its first launch, controls this Firstmate, rides out
       await expectNoCard(page, HARBOUR_CHART);
     });
 
-    await test.step("a button that opens Settings there sends nothing, and its card stays on both Macs", async () => {
+    await test.step("a Devices button sends nothing, and its card stays on both Macs", async () => {
       const { page } = air as LaunchedApp;
-      for (const [title, button] of [
-        [INVITE_CARD, "Make a link"],
-        [SIGN_IN_CARD, "Sign in"],
-      ] as const) {
-        await showCard(page, title);
-        const card = shownCard(page, title);
-        await card.getByRole("button", { name: button, exact: true }).click();
-        // The card says to do it on that Mac, and this Mac's Settings stay shut.
-        await expect(card.getByRole("alert")).toContainText("MacBook Pro");
-        await expect(page.locator('[data-screen-label="Settings"]')).toHaveCount(0);
-      }
-      for (const shown of [page, pro.page]) {
-        expect(await shownIds(shown)).toEqual(expect.arrayContaining(["invite", "sign-in-claude"]));
-      }
+      await showCard(page, INVITE_CARD);
+      const card = shownCard(page, INVITE_CARD);
+      await card.getByRole("button", { name: "Make a link", exact: true }).click();
+      await expect(card.getByRole("alert")).toContainText(devicesNotHereWords(seenPro("in-reach")));
+      await expect(page.locator('[data-screen-label="Settings"]')).toHaveCount(0);
+      for (const shown of [page, pro.page])
+        expect(await shownIds(shown)).toEqual(expect.arrayContaining(["invite"]));
     });
 
     await test.step("while that Mac is out of reach it says as of when, and refuses changes", async () => {

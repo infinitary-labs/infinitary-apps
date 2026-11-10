@@ -110,6 +110,22 @@ export const secretApprovalDeviceSchema = z.strictObject({
   label: z.string(),
   generation: z.number().int().positive(),
   code: z.string(),
+  /** The paired device that offered this key, whose row in Settings -> Devices carries its switch. */
+  paired: z.string().optional(),
+  /** The card that stops its approvals is waiting for the captain. */
+  stopping: z.boolean().optional(),
+});
+/**
+ * A paired phone on its way to approving uses (docs/secrets.md, "Remote
+ * decisions"): the captain turned its switch on in Settings -> Devices and the
+ * home waits for it to offer its key (`waiting`), or its key's card, with the
+ * code to compare, is up (`comparing`).
+ */
+export const secretPhoneSetupSchema = z.strictObject({
+  paired: z.string(),
+  state: z.enum(["waiting", "comparing"]),
+  /** The card with the code to compare, while it is up. */
+  card: z.string().optional(),
 });
 export const secretsViewSchema = z.strictObject({
   availability: z.enum([
@@ -131,6 +147,8 @@ export const secretsViewSchema = z.strictObject({
   recoveryAvailable: z.boolean(),
   reads: z.array(secretReadPermissionSchema),
   devices: z.array(secretApprovalDeviceSchema),
+  /** Paired phones the captain is turning on; absent from an older home. */
+  phones: z.array(secretPhoneSetupSchema).optional(),
   message: z.string().nullable(),
   /**
    * Only on the answer to a Settings entry: the record it saved, so an entry
@@ -179,6 +197,9 @@ export const secretActionSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("backup-recovery") }),
   z.strictObject({ kind: z.literal("restore-recovery") }),
   z.strictObject({ kind: z.literal("forget-device"), device: z.string() }),
+  // Settings -> Devices' switch on a paired phone: ask it to offer its key, or stop asking.
+  z.strictObject({ kind: z.literal("ask-phone"), paired: z.string().min(1).max(64) }),
+  z.strictObject({ kind: z.literal("cancel-phone"), paired: z.string().min(1).max(64) }),
 ]);
 
 /**
@@ -204,6 +225,11 @@ export const secretApprovalsSchema = z.strictObject({
     .nullable(),
   /** An enrollment offer from this device is waiting on the computer. */
   offered: z.boolean(),
+  /**
+   * The captain turned on this paired device's switch in Settings -> Devices,
+   * so it offers its key now; absent from an older home.
+   */
+  asked: z.boolean().optional(),
   waiting: z.array(
     z.strictObject({
       request: z.string(),
@@ -319,7 +345,7 @@ export const SECRETS_WORDS = {
   end: "End access",
   devicesRegion: "Devices that approve uses",
   noDevices:
-    "No iPhone or iPad approves uses. To add one, open Settings in Infinitary on it and set up approvals.",
+    "No iPhone or iPad approves uses. To add one, turn on Approves secret uses beside it in Settings → Devices.",
   stopApprovals: "Stop approvals",
   history: "History stays here until you delete it. Exports contain metadata, never secret values.",
   noReveal: "The value stays hidden after saving. Only an approved use can receive it.",
@@ -404,4 +430,15 @@ export const SECRET_DEVICE_WORDS = {
   keep: "Keep approvals",
   stopped: (label: string) => `${label} no longer approves Secrets uses.`,
   unchanged: "Nothing changed. Confirmation failed or Secrets changed while you were deciding.",
+  /** The switch on a paired phone's row in Settings -> Devices. */
+  approves: "Approves secret uses",
+  on: (code: string) =>
+    `Each Allow there asks for its Face ID, Touch ID or passcode. Code ${code}.`,
+  waiting: (name: string) => `Waiting for ${name}. Open Infinitary there to show its code.`,
+  comparing: (name: string) =>
+    `${name} offered its key. Check that the card's code matches the one ${name} shows.`,
+  compare: "Compare codes",
+  showCard: "Show the card",
+  stopping: "Confirm on the card to stop its approvals.",
+  cancelled: "The switch was turned off before this phone was confirmed.",
 } as const;

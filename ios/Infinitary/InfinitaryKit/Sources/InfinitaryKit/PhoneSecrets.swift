@@ -44,6 +44,9 @@ public struct PhoneApprovals: Decodable, Sendable, Equatable {
     public let home: String?
     public let device: Enrollment?
     public let offered: Bool
+    /// The person turned this phone's Approves secret uses switch on in Settings → Devices on the computer, so this
+    /// phone offers its key now. An older home never says it.
+    public let asked: Bool?
     public let waiting: [Use]
 }
 
@@ -56,22 +59,27 @@ public struct PhoneApprovals: Decodable, Sendable, Equatable {
     public private(set) var damage: ApprovalKey.Damage?
     public private(set) var problem: String?
     public private(set) var busy = false
+    /// The name this phone offers with its key, the same one it joined with: iPhone or iPad.
+    public let label: String
     @ObservationIgnored private let session: any SecretsHome
     @ObservationIgnored private let loadKey: () throws -> ApprovalKey?
     @ObservationIgnored private let createKey: () throws -> ApprovalKey
     @ObservationIgnored private let replaceKey: (ApprovalKey.Damage) throws -> ApprovalKey
     @ObservationIgnored private var loaded = false
     @ObservationIgnored private var reading = 0
+    /// The offer this phone makes by itself when the computer asks. It runs on its own, as the switch's does: the
+    /// card it raises pushes a Secrets change that cancels the read which started it.
+    @ObservationIgnored private(set) var asking: Task<Void, Never>?
 
-    public convenience init(session: ReadOnlySession, loadKey: @escaping () throws -> ApprovalKey? = ApprovalKey.load,
+    public convenience init(session: ReadOnlySession, label: String, loadKey: @escaping () throws -> ApprovalKey? = ApprovalKey.load,
                             createKey: @escaping () throws -> ApprovalKey = ApprovalKey.create,
                             replaceKey: @escaping (ApprovalKey.Damage) throws -> ApprovalKey = ApprovalKey.replace) {
-        self.init(home: session, loadKey: loadKey, createKey: createKey, replaceKey: replaceKey)
+        self.init(home: session, label: label, loadKey: loadKey, createKey: createKey, replaceKey: replaceKey)
     }
 
-    init(home: any SecretsHome, loadKey: @escaping () throws -> ApprovalKey?, createKey: @escaping () throws -> ApprovalKey,
-         replaceKey: @escaping (ApprovalKey.Damage) throws -> ApprovalKey) {
-        self.session = home; self.loadKey = loadKey; self.createKey = createKey; self.replaceKey = replaceKey
+    init(home: any SecretsHome, label: String = "iPhone", loadKey: @escaping () throws -> ApprovalKey?,
+         createKey: @escaping () throws -> ApprovalKey, replaceKey: @escaping (ApprovalKey.Damage) throws -> ApprovalKey) {
+        self.session = home; self.label = label; self.loadKey = loadKey; self.createKey = createKey; self.replaceKey = replaceKey
     }
 
     public enum Standing: Equatable { case unavailable, none, damaged, offered, enrolled, replaced }
@@ -89,13 +97,21 @@ public struct PhoneApprovals: Decodable, Sendable, Equatable {
     public func use(card: String) -> PhoneApprovals.Use? { approvals?.waiting.first { $0.card == card } }
 
     /// Reads the home's answer again. A home without phone approvals refuses the read, and the phone shows none.
+    /// When the person turned this phone's switch on at the computer (INF-1690 piece 4), the phone offers its key
+    /// at once, as its own switch does: the computer then shows the code to compare, and nothing is enrolled until
+    /// the person confirms there. A key the home holds without knowing which paired phone it belongs to is offered
+    /// again so the home can link it, through the same comparison. A damaged record waits for the person's choice.
     public func read() async {
         if !loaded { loadKept() }
         reading += 1
         let current = reading
         do {
             let answer = try await session.request(.secretApprovals, args: [["device": key?.device ?? Self.unenrolled]], as: PhoneApprovals.self)
-            if current == reading { approvals = answer }
+            guard current == reading else { return }
+            approvals = answer
+            if answer.asked == true, !busy, [.none, .replaced, .enrolled].contains(standing) {
+                asking = Task { await self.setUp(label: self.label) }
+            }
         } catch {
             if current == reading { approvals = nil }
         }
@@ -186,7 +202,7 @@ public struct PhoneApprovals: Decodable, Sendable, Equatable {
     /// challenge, expiry and decision. Nothing is sent when the confirmation fails.
     public func allow(_ use: PhoneApprovals.Use) async throws -> Outcome {
         guard let key, standing == .enrolled, let enrolled = approvals?.device, let home = approvals?.home, let nonce = use.nonce
-        else { throw PhoneError.refused("Set up approvals in Settings first.") }
+        else { throw PhoneError.refused("Turn on Approves secret uses in Settings first.") }
         let message = PhoneDecision.message(home: home, device: key.device, generation: enrolled.generation,
             request: use.request, digest: use.digest, nonce: nonce, expires: use.expires)
         let signature = try await key.sign(message, reason: use.giving)

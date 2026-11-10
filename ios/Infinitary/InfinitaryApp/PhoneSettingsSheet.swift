@@ -76,42 +76,61 @@ struct PhoneSettingsSheet: View {
     }
 
     /// INF-1109's phone approvals (docs/secrets.md, "Remote decisions"): only while the computer offers Secrets.
+    /// INF-1690 piece 4: one switch, Approves secret uses, the same one Settings → Devices shows beside this phone on
+    /// the computer. Turning it on offers this phone's key, and the computer's code comparison stays the one
+    /// confirmation. Turning it off is the computer's, which confirms that too, so here it says where.
     private func approvals(_ secrets: PhoneSecrets) -> some View {
         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
             Text("Secrets approvals").font(PhoneFont.headline)
-            switch secrets.standing {
-            case .offered:
-                Text("Confirm on \(session.mac.name). Check that it shows this code:")
-                    .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-                Text(secrets.key?.code ?? "").font(PhoneFont.title.monospacedDigit()).foregroundStyle(PhoneTheme.text)
-                    .accessibilityLabel("Code \(secrets.key?.code ?? "")").accessibilityIdentifier("approval-code")
-                Text("If the codes differ, choose Not now there.").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-            case .enrolled:
-                Text("\(device) can allow uses of your secrets. Each Allow asks for \(ApprovalKey.confirmation).")
-                    .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("approval-enrolled")
-                Text("Code \(secrets.key?.code ?? "")").font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
-                Text("To stop, open Settings → Secrets on \(session.mac.name).").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-            case .replaced:
-                Text("\(session.mac.name) holds an earlier approval from \(thisDevice). Set up approvals again to use this one.")
-                    .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-                setUp(secrets, "Set up again")
-            case .damaged:
+            if secrets.standing == .damaged {
                 // INF-1109: a record this phone reads but cannot decode. Only this choice replaces it, under a new
                 // device name, so the computer confirms the new key like a first one and keeps any earlier one.
                 // Short enough that the button stays in view at the sheet's medium height on an iPad.
                 Text("\(device)’s approval setup is damaged. Set up approvals again replaces it, then \(session.mac.name) asks you to confirm a new code.")
                     .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("approval-damaged")
                 setUp(secrets, "Set up approvals again", again: true)
-                Text("If \(session.mac.name) still lists an earlier approval from \(thisDevice), stop it in Settings → Secrets there.")
+                Text("If \(session.mac.name) still lists an earlier approval from \(thisDevice), turn it off in Settings → Devices there.")
                     .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-            case .none, .unavailable:
-                Text("Allow uses of your secrets from \(thisDevice), with \(ApprovalKey.confirmation) each time. \(session.mac.name) asks you to confirm first.")
-                    .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-                setUp(secrets, "Set up approvals")
+            } else {
+                approvalSwitch(secrets)
+                switch secrets.standing {
+                case .offered:
+                    Text("Confirm on \(session.mac.name). Check that it shows this code:")
+                        .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                    Text(secrets.key?.code ?? "").font(PhoneFont.title.monospacedDigit()).foregroundStyle(PhoneTheme.text)
+                        .accessibilityLabel("Code \(secrets.key?.code ?? "")").accessibilityIdentifier("approval-code")
+                    Text("If the codes differ, choose Not now there.").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                case .enrolled:
+                    Text("\(device) can allow uses of your secrets. Each Allow asks for \(ApprovalKey.confirmation).")
+                        .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("approval-enrolled")
+                    Text("Code \(secrets.key?.code ?? "")").font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
+                    Text("To turn it off, open Settings → Devices on \(session.mac.name).").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                case .replaced:
+                    Text("\(session.mac.name) holds an earlier approval from \(thisDevice). Turn this on again to use this one.")
+                        .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                case .none, .unavailable, .damaged:
+                    Text("Allow uses of your secrets from \(thisDevice), with \(ApprovalKey.confirmation) each time. \(session.mac.name) asks you to confirm first.")
+                        .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                }
             }
             if let problem = secrets.problem {
                 Text(problem).font(PhoneFont.callout).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("approval-problem")
             }
+        }
+    }
+
+    /// On while this phone approves or waits for the computer's confirmation; only turning it on acts here.
+    private func approvalSwitch(_ secrets: PhoneSecrets) -> some View {
+        let on = secrets.standing == .enrolled || secrets.standing == .offered
+        return HStack(spacing: PhoneTheme.space3) {
+            Text("Approves secret uses").font(PhoneFont.body).foregroundStyle(PhoneTheme.text)
+            Spacer(minLength: 0)
+            Toggle("Approves secret uses", isOn: Binding(get: { on }, set: { turnedOn in
+                if turnedOn, !on { Task { await secrets.setUp(label: label) } }
+            }))
+            .labelsHidden().tint(PhoneTheme.accent)
+            .disabled(on || secrets.busy || !session.canChange)
+            .accessibilityIdentifier("approval-switch")
         }
     }
 

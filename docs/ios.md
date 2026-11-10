@@ -317,7 +317,7 @@ The launch screen, which iOS draws before the app runs, keeps the device's own a
 While Settings is open the control holds focus and the left and right arrow keys move the choice, with no command of its own; an unseen shortcut under the sheet never hears an unmodified arrow.
 `PhoneLookTests` holds the saved choice, and the join-read part chooses Dark on a light simulator, sees it drawn dark before and after a relaunch, and chooses Device again by keyboard.
 Both open at half height on the system's glass and can be pulled up, with the same headings and spacing; Leave, or Forget while out of reach, is the computer sheet's second section under its own heading.
-While the computer's Secrets are set up and open, Settings also shows Secrets approvals: Set up approvals, the code to compare with the computer's card, or that this device can allow uses.
+While the computer's Secrets are set up and open, Settings also shows Secrets approvals: the Approves secret uses switch, the code to compare with the computer's card, or that this device can allow uses, and Set up approvals again in place of the switch for a damaged record.
 While the keyboard is open, Done takes Settings' place in the leading slot and the Hide keyboard command (Shift-Command-K) dismisses it without sending or clearing the draft.
 The dismissal command does not belong to the keyboard’s transient accessory view.
 Apple's iPhone keyboard has no hide key and no app may add one, so while the software keyboard is up for a card's reply or the message box, a keyboard-down button sits inside that field just before its send circle, on an iPhone and an iPad alike (INF-3106, `PhoneHideKeyboard.swift`).
@@ -902,8 +902,8 @@ The launcher truncates the actual saved Mac only inside its owned simulator's ap
 Each part starts from its own fresh home and a clean app on its device's one simulator; the Xcode scheme's `PHONE_TEST_HOME` setting names that home's private control interface.
 Native package tests exercise the Mac-produced link and certificate fixture and certificate/public-key compatibility without using a Mac Keychain.
 They check the Secrets approval key's storage through a stand-in that answers with the Keychain's own statuses.
-With a stand-in home that answers as `SecretsSettings` does, they check that Set up approvals keeps a kept key the phone could not read before and replaces only a record it refuses.
-They check that a damaged record is refused by loading, Set up approvals and a new key, that a locked phone never offers to set up again, and that only Set up approvals again replaces it, leaving it on a failed read, an unsupported device, a changed record or a failed write.
+With a stand-in home that answers as `SecretsSettings` does, they check that turning on Approves secret uses keeps a kept key the phone could not read before and replaces only a record it refuses.
+They check that a damaged record is refused by loading, by turning on Approves secret uses and by a new key, that a locked phone never offers to set up again, and that only Set up approvals again replaces it, leaving it on a failed read, an unsupported device, a changed record or a failed write.
 App-hosted tests repair a missing certificate in the disposable simulator's own Keychain and inject protected-data read failures to check retry and the joining explanation.
 An app-hosted test replaces the approval key in that Keychain and reads the new key under the same device name.
 Its cleanup deletes the approval record only in a simulator build, because XCTest still calls teardown after setup refuses, and a test shows that teardown asked as a device leaves the record in place.

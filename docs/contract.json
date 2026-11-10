@@ -40046,6 +40046,9 @@
           "offered": {
             "type": "boolean"
           },
+          "asked": {
+            "type": "boolean"
+          },
           "waiting": {
             "type": "array",
             "items": {
@@ -40244,6 +40247,9 @@
             ]
           },
           "offered": {
+            "type": "boolean"
+          },
+          "asked": {
             "type": "boolean"
           },
           "waiting": {
@@ -40844,6 +40850,12 @@
                 },
                 "code": {
                   "type": "string"
+                },
+                "paired": {
+                  "type": "string"
+                },
+                "stopping": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -40851,6 +40863,31 @@
                 "label",
                 "generation",
                 "code"
+              ]
+            }
+          },
+          "phones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "paired": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "waiting",
+                    "comparing"
+                  ]
+                },
+                "card": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "paired",
+                "state"
               ]
             }
           },
@@ -41322,6 +41359,12 @@
                 },
                 "code": {
                   "type": "string"
+                },
+                "paired": {
+                  "type": "string"
+                },
+                "stopping": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -41329,6 +41372,31 @@
                 "label",
                 "generation",
                 "code"
+              ]
+            }
+          },
+          "phones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "paired": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "waiting",
+                    "comparing"
+                  ]
+                },
+                "card": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "paired",
+                "state"
               ]
             }
           },
@@ -41571,6 +41639,44 @@
                 "required": [
                   "kind",
                   "device"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "ask-phone"
+                  },
+                  "paired": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "required": [
+                  "kind",
+                  "paired"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "cancel-phone"
+                  },
+                  "paired": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "required": [
+                  "kind",
+                  "paired"
                 ],
                 "additionalProperties": false
               }
@@ -41949,6 +42055,12 @@
                 },
                 "code": {
                   "type": "string"
+                },
+                "paired": {
+                  "type": "string"
+                },
+                "stopping": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -41956,6 +42068,31 @@
                 "label",
                 "generation",
                 "code"
+              ]
+            }
+          },
+          "phones": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "paired": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "waiting",
+                    "comparing"
+                  ]
+                },
+                "card": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "paired",
+                "state"
               ]
             }
           },

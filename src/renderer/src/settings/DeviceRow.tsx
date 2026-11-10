@@ -7,6 +7,7 @@ import {
   deviceLabel,
   deviceRunsWork,
   deviceWords,
+  isPhone,
 } from "@shared/devices";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import { runsForAnotherFirstmate, sshConnectionWords } from "@shared/sshConnection";
@@ -26,6 +27,7 @@ import {
   strandedLine,
   wayBack,
 } from "./devicesWords";
+import { PhoneApprovals } from "./PhoneApprovals";
 
 /**
  * One device in Settings -> Devices (design skill
@@ -64,6 +66,7 @@ export function DeviceRow({
           <span className="fm-devices-name">{device.name}</span>
           <span className="fm-devices-detail">{here(deviceDetail(device, now))}</span>
           {summary && <span className="fm-devices-summary">{summary}</span>}
+          {isPhone(device) && <PhoneApprovals paired={device.id} name={device.name} />}
         </span>
         <Button
           variant="secondary"

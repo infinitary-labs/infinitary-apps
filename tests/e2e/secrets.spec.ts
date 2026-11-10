@@ -1,8 +1,10 @@
 import { execFile } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { userInfo } from "node:os";
 import { delimiter, join } from "node:path";
 import { promisify } from "node:util";
+import { claimLink } from "@core/devices/dial";
 import { expect, test } from "@playwright/test";
 import { decode } from "@toon-format/toon";
 import { hostEnv } from "../../src/core/hostEnv";
@@ -18,6 +20,7 @@ import {
   SECRETS_WORDS,
   secretRefSchema,
 } from "../../src/shared/secrets";
+import { connectClient } from "../helpers/connectionClient";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { askFirstmate } from "./lastTurn";
@@ -39,6 +42,15 @@ import { shownCard } from "./stack";
 import { setThemeViaSettings } from "./theme";
 import { commandSearch, focusOn, pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
 
+/**
+ * A link for a Mac used from this Mac itself, as the stand-in phone pairs: it
+ * joins as a view that only controls, and says it is a phone when it connects.
+ */
+const PAIRED_FROM_HERE = {
+  kind: "mac",
+  window: true,
+  user: { name: userInfo().username, uid: process.getuid?.() ?? userInfo().uid },
+} as const;
 const LABEL = "Staging deployment";
 const REFERENCE = "staging-deploy";
 /** The reference the controller makes from LABEL when Settings adds it; the page asks for none. */
@@ -372,15 +384,19 @@ test("recovery controls keep files private and restore without replaying history
   }
 });
 
-// Intent: INF-1109's device enrollment, built by INF-1202. A phone's offered
-// approval key reaches this computer as a card whose code the captain compares,
-// only that card's confirmation here enrolls it, and Settings lists it with Stop
-// approvals, which asks once more. The phone's own offer comes through the
-// controller's enrollment hook with a real P-256 key, as `inf:secrets:enroll`
-// delivers it; the phone's screens are the phone check's (PhoneJourney's
-// testSecretsApprovals). Completion: the device list empties. Prerequisites:
-// Electron and the built renderer. No phone, native store or network.
-test("a phone's approval key is enrolled and stopped only on this computer", async () => {
+// Intent: INF-1109's device enrollment, built by INF-1202, set up where INF-1690
+// piece 4 put it, the captain's pick: "In Devices, as a switch on the paired
+// iPhone: Approves key uses. The code comparison stays as the one confirmation,
+// with the same key underneath." A paired phone's row in Settings -> Devices
+// carries the switch; turning it on asks that phone for its key, whose card the
+// captain compares and confirms here, and turning it off asks once more on the
+// card that stops it. The phone is a stand-in on the real connection, asking
+// `inf:secrets:approvals` and `inf:secrets:enroll` with a real P-256 key as the
+// phone does; the phone's screens are the phone check's (PhoneJourney's
+// testSecretsApprovals). Completion: the switch reads off again and the Secrets
+// list empties. Prerequisites: Electron and the built renderer. No phone, native
+// store or network.
+test("a paired phone's switch in Devices enrolls its key only through the code card on this computer", async () => {
   const PHONE = { device: "8F3C2A1E-5B7D-4C9A-9E21-0D4B6F8A7C35", label: "Kun’s iPhone" };
   const key = generateKeyPairSync("ec", { namedCurve: "prime256v1" })
     .publicKey.export({ format: "der", type: "spki" })
@@ -388,22 +404,51 @@ test("a phone's approval key is enrolled and stopped only on this computer", asy
   const launched = await launchSecrets();
   const { app, page } = launched;
   const section = settingsSection(page, "secrets");
+  let phone: Awaited<ReturnType<typeof connectClient>> | undefined;
   try {
-    await app.evaluate(
-      async (_electron, offer) => {
-        const services = (globalThis as SecretsJourneyGlobal).secretsJourney.core.services;
-        await services.secrets.put({
-          ref: "calendar",
-          label: "Planning calendar",
-          value: "invented-planning-calendar-token",
-          expectedVersion: 0,
-          expectedRevision: null,
-          environment: "Personal",
-        });
-        await services.secrets.enroll(offer);
-      },
-      { ...PHONE, key },
-    );
+    await app.evaluate(async () => {
+      const services = (globalThis as SecretsJourneyGlobal).secretsJourney.core.services;
+      await services.secrets.put({
+        ref: "calendar",
+        label: "Planning calendar",
+        value: "invented-planning-calendar-token",
+        expectedVersion: 0,
+        expectedRevision: null,
+        environment: "Personal",
+      });
+    });
+    const { link } = await page.evaluate(() => window.infinitary.devices.invite({ kind: "mac" }));
+    const grant = await claimLink(link, { ...PAIRED_FROM_HERE, name: PHONE.label });
+    phone = await connectClient(grant, { system: { system: "ios", chip: "arm64" } });
+    const asked = async () =>
+      (await phone?.invoke("inf:secrets:approvals", [{ device: PHONE.device }]))?.asked;
+    // Settings opens from command search; Devices is its tab.
+    const toDevices = async () => {
+      await runFromSearch(app, page, "settings.secrets");
+      await page.getByRole("tab", { name: "Devices", exact: true }).click();
+      await expect(page.locator("[data-devices]")).toBeVisible();
+    };
+    expect(await asked()).toBe(false);
+
+    await toDevices();
+    const row = page.locator(`[data-device-row="${grant.deviceId}"]`);
+    const approves = row.getByRole("switch", {
+      name: `${PHONE.label} ${SECRET_DEVICE_WORDS.approves.toLowerCase()}`,
+      exact: true,
+    });
+    await expect(approves).toHaveAttribute("aria-checked", "false");
+    await focusOn(approves);
+    await pressKey(approves, "Space");
+    await expect(approves).toHaveAttribute("aria-checked", "true");
+    await expect(row).toContainText(SECRET_DEVICE_WORDS.waiting(PHONE.label));
+    await expect.poll(asked).toBe(true);
+
+    // The phone offers its key, as it does once it reads that it was asked.
+    await phone.invoke("inf:secrets:enroll", [{ ...PHONE, key }]);
+    await expect(row).toContainText(SECRET_DEVICE_WORDS.comparing(PHONE.label));
+    const compare = row.getByRole("button", { name: SECRET_DEVICE_WORDS.compare, exact: true });
+    await focusOn(compare);
+    await pressKey(compare, "Enter");
     const enrollment = shownCard(page, SECRET_DEVICE_WORDS.enrollTitle(PHONE.label));
     await expect(enrollment).toBeVisible();
     await expect(
@@ -414,16 +459,39 @@ test("a phone's approval key is enrolled and stopped only on this computer", asy
       "Enter",
     );
     await expect(enrollment).toHaveCount(0);
+    // Confirmed, the home asks the phone no more.
+    await expect.poll(asked).toBe(false);
 
+    await toDevices();
+    await expect(approves).toHaveAttribute("aria-checked", "true");
+    await expect(row).toContainText(SECRET_DEVICE_WORDS.on(approvalCode(key)));
     await runFromSearch(app, page, "settings.secrets");
     await secretsArea(page, "phone");
     const devices = section.getByRole("region", { name: SECRETS_WORDS.devicesRegion });
     await expect(devices.getByText(PHONE.label, { exact: true })).toBeVisible();
     await expect(devices.getByText(`Code ${approvalCode(key)}`, { exact: true })).toBeVisible();
+
+    // Turning the switch off asks on the Stop approvals card; Keep approvals leaves the phone approving.
+    await toDevices();
+    await focusOn(approves);
+    await pressKey(approves, "Space");
+    const stopping = shownCard(page, SECRET_DEVICE_WORDS.stopTitle(PHONE.label));
+    await expect(stopping).toBeVisible();
+    await pressKey(
+      stopping.getByRole("button", { name: SECRET_DEVICE_WORDS.keep, exact: true }),
+      "Enter",
+    );
+    await expect(stopping).toHaveCount(0);
+    await toDevices();
+    await expect(approves).toHaveAttribute("aria-checked", "true");
+    await expect(row).toContainText(SECRET_DEVICE_WORDS.on(approvalCode(key)));
+
+    // Settings -> Secrets' own Stop approvals raises the same card, and confirming it turns the switch off.
+    await runFromSearch(app, page, "settings.secrets");
+    await secretsArea(page, "phone");
     const stop = devices.getByRole("button", { name: SECRETS_WORDS.stopApprovals, exact: true });
     await focusOn(stop);
     await pressKey(stop, "Enter");
-    const stopping = shownCard(page, SECRET_DEVICE_WORDS.stopTitle(PHONE.label));
     await expect(stopping).toBeVisible();
     await pressKey(
       stopping.getByRole("button", { name: SECRETS_WORDS.stopApprovals, exact: true }),
@@ -435,11 +503,14 @@ test("a phone's approval key is enrolled and stopped only on this computer", asy
     await expect(section.getByRole("region", { name: SECRETS_WORDS.devicesRegion })).toContainText(
       SECRETS_WORDS.noDevices,
     );
+    await toDevices();
+    await expect(approves).toHaveAttribute("aria-checked", "false");
     // The enrollment and the stop each asked for this computer's own confirmation once.
     expect(
       await app.evaluate(() => (globalThis as SecretsJourneyGlobal).secretsJourney.confirmations),
     ).toBe(2);
   } finally {
+    await phone?.close();
     await launched.close();
   }
 });

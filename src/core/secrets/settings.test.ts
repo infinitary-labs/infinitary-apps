@@ -13,6 +13,7 @@ import {
 import { describe, expect, it, vi } from "vitest";
 import { disposableCustody } from "../../../tests/helpers/disposableCustody";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { asAView } from "../askedFromAView";
 import type { HostSecretsRecovery } from "../host";
 import { approvalCode, decisionMessage } from "./approvals";
 import { httpSecretBroker } from "./httpBroker";
@@ -876,6 +877,108 @@ describe("a phone's Secrets approvals", () => {
       generation: 1,
       key: phone.key,
     });
+  });
+
+  // Intent: INF-1690 piece 4, the captain's pick: "In Devices, as a switch on the
+  // paired iPhone: Approves key uses. The code comparison stays as the one
+  // confirmation, with the same key underneath." The paired device is the one the
+  // connection names for a view's request (`asAView`), as the dispatcher runs it.
+  it("Devices' switch asks one paired phone for its key, which enrolls under that phone only through the code card", async () => {
+    const f = fixture();
+    await f.settings.put(INPUT);
+    const phone = phoneKey();
+    const PAIRED = "pocket-phone";
+    expect(await asAView(() => f.settings.approvals(PHONE), { view: PAIRED })).toMatchObject({
+      asked: false,
+    });
+
+    await f.settings.action({ kind: "ask-phone", paired: PAIRED });
+    expect((await f.settings.view()).phones).toEqual([{ paired: PAIRED, state: "waiting" }]);
+    // Only the phone the switch belongs to is asked.
+    expect(
+      (await asAView(() => f.settings.approvals(PHONE), { view: "another-phone" })).asked,
+    ).toBe(false);
+    expect((await asAView(() => f.settings.approvals(PHONE), { view: PAIRED })).asked).toBe(true);
+
+    await asAView(
+      () => f.settings.enroll({ device: PHONE, label: "Kun’s iPhone", key: phone.key }),
+      { view: PAIRED },
+    );
+    const card = f.cards.at(-1);
+    expect(card?.title).toBe(SECRET_DEVICE_WORDS.enrollTitle("Kun’s iPhone"));
+    expect(card?.body).toContain(approvalCode(phone.key));
+    expect((await f.settings.view()).phones).toEqual([
+      { paired: PAIRED, state: "comparing", card: card?.id },
+    ]);
+    expect((await f.settings.view()).devices).toEqual([]);
+
+    await f.click(SECRET_DEVICE_WORDS.confirm);
+    const view = await f.settings.view();
+    expect(view.phones).toEqual([]);
+    expect(view.devices).toEqual([
+      {
+        device: PHONE,
+        label: "Kun’s iPhone",
+        generation: 1,
+        code: approvalCode(phone.key),
+        paired: PAIRED,
+      },
+    ]);
+    expect((await asAView(() => f.settings.approvals(PHONE), { view: PAIRED })).asked).toBe(false);
+    expect(f.confirms()).toBe(1);
+
+    // Off asks once more, on the card that stops its approvals.
+    await f.settings.action({ kind: "forget-device", device: PHONE });
+    expect((await f.settings.view()).devices[0]?.stopping).toBe(true);
+    await f.click(SECRETS_WORDS.stopApprovals);
+    expect((await f.settings.view()).devices).toEqual([]);
+    expect(f.confirms()).toBe(2);
+  });
+
+  it("a key enrolled before the home linked it to a paired phone links through the same comparison", async () => {
+    const f = fixture();
+    await f.settings.put(INPUT);
+    const phone = phoneKey();
+    await enrolled(f, phone.key);
+    const raised = f.cards.length;
+    // The same key from the same unlinked request raises nothing.
+    await f.settings.enroll({ device: PHONE, label: "Kun’s iPhone", key: phone.key });
+    expect(f.cards).toHaveLength(raised);
+
+    await f.settings.action({ kind: "ask-phone", paired: "pocket-phone" });
+    await asAView(
+      () => f.settings.enroll({ device: PHONE, label: "Kun’s iPhone", key: phone.key }),
+      { view: "pocket-phone" },
+    );
+    expect(f.cards).toHaveLength(raised + 1);
+    expect(f.cards.at(-1)?.body).not.toContain("This replaces");
+    await f.click(SECRET_DEVICE_WORDS.confirm);
+    expect((await f.settings.view()).devices).toEqual([
+      {
+        device: PHONE,
+        label: "Kun’s iPhone",
+        generation: 2,
+        code: approvalCode(phone.key),
+        paired: "pocket-phone",
+      },
+    ]);
+  });
+
+  it("turning the switch off before the code is confirmed takes the card down and enrolls nothing", async () => {
+    const f = fixture();
+    await f.settings.put(INPUT);
+    await f.settings.action({ kind: "ask-phone", paired: "pocket-phone" });
+    await asAView(
+      () => f.settings.enroll({ device: PHONE, label: "Kun’s iPhone", key: phoneKey().key }),
+      { view: "pocket-phone" },
+    );
+    const card = f.cards.at(-1);
+    await f.settings.action({ kind: "cancel-phone", paired: "pocket-phone" });
+    expect(f.withdrawn).toContain(card?.id);
+    expect((await f.settings.view()).phones).toEqual([]);
+    await f.click(SECRET_DEVICE_WORDS.confirm);
+    expect((await f.settings.view()).devices).toEqual([]);
+    expect(f.confirms()).toBe(0);
   });
 
   it("offers nothing before Secrets are set up, or for a key that is not a P-256 approval key", async () => {

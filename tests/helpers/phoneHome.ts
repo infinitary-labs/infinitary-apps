@@ -17,6 +17,7 @@ import { AFTER_MERGE_LEAD } from "@shared/afterMerge";
 import { CARD_LEAVE } from "@shared/cardLeave";
 import { ANYTHING_ELSE_ANSWER, type CardMessage, PAST_CARD_WORDS_LEAD } from "@shared/cards";
 import { SCENE_OBSERVATIONS_SINCE } from "@shared/contractFeatures";
+import { isPhone } from "@shared/devices";
 import { ENDED_CHIP_LABEL, ENDED_CLOSE_LABEL, endedLineWords } from "@shared/endedCard";
 import type { FmEvent } from "@shared/events";
 import { PROTOCOL_VERSION, VIEW_FLOOR } from "@shared/ipc";
@@ -853,6 +854,47 @@ export async function startPhoneHome(
             title: card.title,
             code: card.body.match(/\d{4} \d{4}/)?.[0] ?? null,
             devices: view.devices,
+            confirmed: secretConfirms - before,
+          };
+          break;
+        }
+        // INF-1690 piece 4: the Approves secret uses switch on the paired phone's row in Settings -> Devices, as the
+        // captain turns it on there. The phone offers its key by itself; nothing enrolls until secrets-confirm.
+        case "POST secrets-ask": {
+          const phone = core.services.devices.list().find(isPhone);
+          if (!phone) throw new Error("No phone is paired with this computer");
+          await core.dispatch("inf:secrets:action", [{ kind: "ask-phone", paired: phone.id }]);
+          result = { paired: phone.id };
+          break;
+        }
+        // The switch turned off for every approving device: each raises its Stop approvals card, and the captain's
+        // click on it stops that device's approvals after this computer's own confirmation.
+        case "POST secrets-stop": {
+          const before = secretConfirms;
+          for (const { device } of (await core.services.secrets.view()).devices) {
+            await core.dispatch("inf:secrets:action", [{ kind: "forget-device", device }]);
+            const card = (await core.dispatch("inf:cards:list", [])).find(
+              (one) => one.id === `card-secrets-forget-device-${device}`,
+            );
+            const stop = card?.actions.find(
+              (action) => action.label === SECRETS_WORDS.stopApprovals,
+            );
+            if (!card || !stop) throw new Error(`No Stop approvals card is waiting for ${device}`);
+            let unsubscribe = () => {};
+            const decided = new Promise<void>((resolve) => {
+              unsubscribe = core.events.subscribe((channel) => {
+                if (channel === "inf:secrets:changed") resolve();
+              });
+            });
+            try {
+              await core.dispatch("inf:cards:act", [card.id, stop.id, "chrome"]);
+              await within(decided, "The stop decision did not end on this computer");
+            } finally {
+              unsubscribe();
+            }
+          }
+          result = {
+            devices: (await core.services.secrets.view()).devices,
             confirmed: secretConfirms - before,
           };
           break;

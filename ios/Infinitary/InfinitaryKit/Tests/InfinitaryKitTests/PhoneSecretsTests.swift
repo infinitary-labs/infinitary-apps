@@ -4,7 +4,7 @@ import Testing
 @testable import InfinitaryKit
 
 /// INF-1250's finding in INF-1109's PhoneSecrets: a phone that could not read its kept approval key while it was
-/// locked reads that key again when the person taps Set up approvals once it is unlocked, so the computer keeps
+/// locked reads that key again when the person turns on Approves secret uses once it is unlocked, so the computer keeps
 /// the enrollment it holds instead of asking to enroll a replacement. Only a record the phone refuses is replaced.
 /// The Keychain stand-in answers as the phone's Keychain does; the home stand-in answers as the home's
 /// SecretsSettings.approvals and enroll do (src/core/secrets/settings.ts).
@@ -15,7 +15,11 @@ import Testing
         var enrolled: (device: String, key: String)?
         /// The uses waiting now, each as SecretsSettings.approvals describes it.
         var waiting: [[String: Any]] = []
+        /// The person turned this phone's switch on in Settings → Devices, as SecretsSettings.approvals says.
+        var asked: Bool?
         private(set) var offered: [String] = []
+        /// Runs when a key is offered, before the answer arrives: the home's card raises a Secrets change then.
+        var onEnroll: () -> Void = {}
 
         func request<T: Decodable & Sendable>(_ channel: PhoneRequest, args: [Any], as: T.Type) async throws -> T {
             let input = try #require(args.first as? [String: Any])
@@ -24,15 +28,18 @@ import Testing
             case .secretApprovals: break
             case .secretEnroll:
                 let key = try #require(input["key"] as? String)
-                if enrolled?.device != device || enrolled?.key != key { offered.append(key) }
+                if enrolled?.device != device || enrolled?.key != key || asked == true { offered.append(key) }
+                onEnroll()
             default: throw PhoneError.invalidReply
             }
+            // As ReadOnlySession.request: an answer that arrives after its caller was cancelled is not taken.
+            try Task.checkCancellation()
             let holds = enrolled.flatMap { $0.device == device ? $0 : nil }
             let answer: [String: Any] = [
                 "availability": "available", "home": "c41a5779-70bc-400b-929d-19f4c4ed06ea",
                 "device": holds.map { ["label": "iPhone", "generation": 1, "key": $0.key] as [String: Any] } ?? NSNull(),
                 "offered": !offered.isEmpty, "waiting": waiting,
-            ]
+            ].merging(asked.map { ["asked": $0] } ?? [:]) { $1 }
             return try JSONDecoder().decode(T.self, from: JSONSerialization.data(withJSONObject: answer))
         }
     }
@@ -63,6 +70,63 @@ import Testing
         #expect(keychain.writes == writes)
     }
 
+    /// INF-1690 piece 4, the captain's pick: "In Devices, as a switch on the paired iPhone: Approves key uses. The code
+    /// comparison stays as the one confirmation, with the same key underneath." When the computer says the switch was
+    /// turned on there, the phone offers its key by itself, once, and the computer's code card does the rest. A home
+    /// that never says so (an older one) or says no gets nothing offered.
+    @Test func theComputersSwitchOffersThisPhonesKey() async throws {
+        let keychain = ApprovalStorageTests.Keychain()
+        let home = Home()
+        let secrets = Self.secrets(home, keychain)
+        await secrets.read()
+        #expect(secrets.standing == .none)
+        home.asked = false
+        await secrets.read()
+        #expect(home.offered.isEmpty, "Nothing is offered until the computer asks")
+
+        home.asked = true
+        await secrets.read()
+        await secrets.asking?.value
+        let key = try #require(secrets.key)
+        #expect(home.offered == [key.publicKey])
+        #expect(secrets.standing == .offered)
+        await secrets.read()
+        #expect(home.offered == [key.publicKey], "An offer the computer holds is not made again")
+    }
+
+    /// INF-1690 piece 4: a key the computer holds from before it recorded which paired phone offered it is offered
+    /// again when the computer asks, the same key, so the computer can link it through the same code comparison.
+    @Test func anEnrolledKeyIsOfferedAgainWhenTheComputerAsks() async throws {
+        let keychain = ApprovalStorageTests.Keychain()
+        let kept = try ApprovalKey.create(on: .simulator, in: keychain)
+        let writes = keychain.writes
+        let home = Home()
+        home.enrolled = (kept.device, kept.publicKey)
+        home.asked = true
+        let secrets = Self.secrets(home, keychain)
+        await secrets.read()
+        await secrets.asking?.value
+        #expect(home.offered == [kept.publicKey])
+        #expect(keychain.writes == writes, "The same key underneath")
+    }
+
+    /// INF-3506's finding: the code card the offer raises pushes a Secrets change, which cancels the read that saw
+    /// the computer's ask. The offer still completes, and the phone shows no problem.
+    @Test func theCardsOwnChangeDoesNotCancelTheOffer() async throws {
+        let keychain = ApprovalStorageTests.Keychain()
+        let home = Home()
+        home.asked = true
+        let secrets = Self.secrets(home, keychain)
+        let reading = Task { await secrets.read() }
+        home.onEnroll = { reading.cancel() }
+        await reading.value
+        await secrets.asking?.value
+        let key = try #require(secrets.key)
+        #expect(home.offered == [key.publicKey])
+        #expect(secrets.problem == nil)
+        #expect(secrets.standing == .offered)
+    }
+
     /// INF-3042: real Secrets receipt states distinguish acceptance from waiting, refusal and uncertainty.
     @Test func onlyTheRequestedDecisionIsAccepted() {
         for state in ["executing", "completed"] {
@@ -88,7 +152,7 @@ import Testing
         home.enrolled = (kept.device, kept.publicKey)
         let secrets = Self.secrets(home, keychain)
 
-        // The phone is locked when it first reads: it holds no key, so Settings offers Set up approvals.
+        // The phone is locked when it first reads: it holds no key, so Settings shows the Approves secret uses switch off.
         keychain.reading = errSecInteractionNotAllowed
         await secrets.read()
         #expect(secrets.key == nil)
@@ -156,7 +220,7 @@ import Testing
         #expect(secrets.key == nil)
         #expect(secrets.problem == nil, "A damaged record is not a phone to unlock")
 
-        // Set up approvals refuses the damaged record: nothing is written or offered.
+        // Turning on Approves secret uses refuses the damaged record: nothing is written or offered.
         await secrets.setUp(label: "iPhone")
         #expect(secrets.standing == .damaged)
         #expect(secrets.problem == nil)

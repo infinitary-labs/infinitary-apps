@@ -1763,7 +1763,9 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       );
     const answer = () =>
       route(channel as Exclude<C, WorkInvokeChannel>, rawArgs, actor) as Promise<InvokeResponse<C>>;
-    return actor?.kind === "captain" && actor.view ? asAView(answer, actor.viewChanges) : answer();
+    return actor?.kind === "captain" && actor.view
+      ? asAView(answer, { view: actor.view, changes: actor.viewChanges })
+      : answer();
   }) as CoreDispatch;
 
   function route<C extends Exclude<CoreInvokeChannel, WorkInvokeChannel>>(

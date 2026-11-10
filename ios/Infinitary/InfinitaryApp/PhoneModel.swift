@@ -349,7 +349,7 @@ struct AddressJoin: Equatable {
         session.onEmote = { emote in CharacterCues.reacted(emote) }
         session.onSceneSignal = { signal in CharacterCues.signal(signal) }
         connection = session
-        secrets = PhoneSecrets(session: session)
+        secrets = PhoneSecrets(session: session, label: UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone")
         session.found(addresses: nearby.macs.map(\.address))
         if foreground { session.start() }
     }

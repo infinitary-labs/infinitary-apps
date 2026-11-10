@@ -219,16 +219,23 @@ A paired view reaches this through three channels, each answered in `SecretsSett
 - `inf:secrets:approvals` reads one device's enrollment and the uses waiting now, described as their approval cards describe them; a use's challenge goes only to an enrolled device.
   Each requested secret comes with its name, environment label, reference and version as the use prepared them, never its value, so two secrets with the same name stay apart.
 - `inf:secrets:enroll` offers a device's key.
-  It raises a host card only while Secrets is set up and open and the key is a P-256 key the home does not already hold for that device.
+  It raises a host card only while Secrets is set up and open and the key is a P-256 key the home does not already hold for that device, or the key it holds offered from a paired phone it has not linked that key to.
 - `inf:secrets:decide` carries one signed Allow or one Deny.
 
 A computer that controls a first mate asks these three and no other Secrets request (the other Secrets channels' `reach` is `home`, `docs/view.md`, "What the window asks").
 Secrets settings, entry, rehearsal, history, permissions and recovery stay on the home, and its Secrets tab and command are not offered there.
 
 Enrollment is the captain's on this computer.
+It is set up where the phone is listed: Settings → Devices shows a switch, Approves secret uses, on each paired phone's row while Secrets are set up and open (`PhoneApprovals.tsx`).
+Turning it on (`ask-phone`) asks that phone, and only that one, to offer its key: its next `inf:secrets:approvals` answers `asked`, and the phone offers its key by itself.
+The row then says it waits for the phone, then that the phone offered its key, with Compare codes, which shows the card.
+Turning it off before the card is confirmed (`cancel-phone`) stops asking and takes the card down; turning it off once the phone approves raises the Stop approvals card.
+The asking is process-local, like the cards it leads to, and enrolls nothing by itself.
+The home records the paired device whose request offered the key (`paired` on the enrolled device, named by the connection through `askingView`), so the switch reads on for that phone's row; it is a name, never authority.
+The same key offered again from a paired phone the home has not linked it to, such as a key enrolled before the home recorded which phone it came from, raises the same card, and confirming it links the key at the next generation.
 The card shows eight digits from SHA-256 of the offered key (`approvalCode`), which the phone computes from its own key and shows in its Settings; the captain compares them, and only Confirm and allow on this computer, with this computer's fresh confirmation, saves the device into the authority file at its next generation.
 The phone's own copy of that card says to do it on the computer.
-Settings → Secrets → Approve from your phone lists each enrolled device with its code and Stop approvals, which asks for the same confirmation.
+Settings → Secrets → Approve from your phone also lists each enrolled device with its code and Stop approvals, which asks for the same confirmation.
 A change of devices moves the authority revision, so a use already waiting under the earlier authority is invalidated rather than run.
 A restore from a recovery backup keeps no enrolled device ("Recovery boundary"), so each phone sets up approvals again.
 
@@ -236,13 +243,14 @@ On the phone (`ApprovalKey.swift`, `PhoneSecrets.swift`), the key lives in the S
 A device refuses a software key, whether kept or loaded, and signs with none; without a Secure Enclave it keeps no key rather than falling back to one.
 A new key keeps the phone's device name and replaces the kept record in one write, so the earlier key stays when that write fails.
 A Keychain the phone cannot read now stops the replacement, rather than counting as no key.
-Set up approvals reads the kept key again before it makes a new one, so a key the phone could not read while it was locked keeps its enrollment; only a record the phone refuses, a software key on a device (`PhoneError.unusableApproval`), is replaced.
-A record the Keychain gives back whole but the phone cannot decode is damaged (`PhoneError.damagedApproval`), never a read that failed: loading, Set up approvals and a new key all refuse it and write nothing.
+The phone's Settings shows the same switch, Approves secret uses, which turning on offers its key as the computer's asking does; while it approves the switch stays on and says to turn it off in Settings → Devices on the computer, which confirms that too.
+Offering the key (`setUp`) reads the kept key again before it makes a new one, so a key the phone could not read while it was locked keeps its enrollment; only a record the phone refuses, a software key on a device (`PhoneError.unusableApproval`), is replaced.
+A record the Keychain gives back whole but the phone cannot decode is damaged (`PhoneError.damagedApproval`), never a read that failed: loading, offering the key and a new key all refuse it and write nothing.
 Settings then says the phone's approval setup is damaged and offers Set up approvals again, the only choice that replaces it.
 It reads the record again, and only while it is still the same damaged bytes does it make the supported key and replace the record in one write.
 A failed read, a device that cannot keep a key, a changed record or a failed write leaves those bytes as they were; nothing deletes the record first or falls back to a software key on a device.
 The damaged record's device name cannot be read back, so the new key takes a new one, which the computer enrolls only after the ordinary code comparison and its own confirmation.
-An enrollment the computer holds under the earlier name stays until the captain stops it in Settings → Secrets; nothing it allowed carries over.
+An enrollment the computer holds under the earlier name stays until the captain stops it in Settings → Devices or Settings → Secrets; nothing it allowed carries over.
 Each Allow evaluates a fresh `LAContext` with no reuse, naming exactly what it gives, before the key signs; a failed confirmation sends nothing.
 A use's approval card on the phone shows Allow once and Deny in place of the computer's own choices; a phone that is not enrolled shows only Deny and says where to set up.
 Only an executing or completed Allow, or a denied Deny, marks the phone's choice accepted; waiting, refusal and uncertain outcomes retain their explanation instead.

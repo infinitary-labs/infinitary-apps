@@ -1143,7 +1143,7 @@ private struct PhoneCardPane: View {
                     .accessibilityLabel(secret.named).accessibilityIdentifier("approval-secret-\(secret.ref)")
             }
             Text(allows ? "Each Allow here asks for \(ApprovalKey.confirmation)."
-                : "To allow here, set up approvals in Settings. You can also allow on \(session.mac.name).")
+                : "To allow here, turn on Approves secret uses in Settings. You can also allow on \(session.mac.name).")
                 .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("approval-note")
             PhoneChoiceRow {
                 if allows {

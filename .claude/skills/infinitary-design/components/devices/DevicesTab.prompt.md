@@ -37,6 +37,19 @@ The box's foot is the `ConnectChips` row shape: the micro label `ADD` and three 
 A phone opens the scan-code panel described in `PhoneView.prompt.md`, including the current TestFlight-only availability.
 Every build shows all three chips, installed and development alike.
 
+**Approving secret uses** (INF-1690 piece 4, captain's pick: "In Devices, as a switch on the paired iPhone").
+While Secrets are set up and open on this computer, each phone's row adds, under its summary, the core `Switch` with its label "Approves secret uses" after it, then one `--text-sm --fg-2` line that says where it stands.
+A build without protected storage, or storage that is not open, draws no switch.
+Off, there is no line.
+Turned on, it reads on at once and the line says "Waiting for Kun's iPhone.
+Open Infinitary there to show its code."; once the phone offers its key it says "Kun's iPhone offered its key.
+Check that the card's code matches the one Kun's iPhone shows.", with a small secondary Button "Compare codes" that shows the host's code card, which stays the one confirmation, asking for this computer's own Touch ID or password.
+Confirmed, the line reads "Each Allow there asks for its Face ID, Touch ID or passcode.
+Code 1234 5678."
+Turning it off before the card is confirmed takes the card down; turning it off once the phone approves shows the Stop approvals card, and until that is decided the switch stays on, the line reads "Confirm on the card to stop its approvals." and a small secondary "Show the card" shows it again.
+The switch takes Tab and answers Space, like every switch.
+On the phone, its Settings shows the same switch under Secrets approvals; it only turns on there, and while on it says to turn it off in Settings → Devices on the computer.
+
 **Bringing a computer back.**
 A computer that runs work looks for this computer where its link or command said, so after this computer's address changes it stays out of reach until it hears where this computer is now (`AddAMac.prompt.md`, "Finding this computer again").
 Another user on this computer looks for it at the address a computer uses for itself, which a new network never moves, so only a change of where Infinitary listens on this computer itself strands it.

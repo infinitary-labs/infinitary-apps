@@ -429,11 +429,12 @@ import XCTest
             XCTAssertTrue(close.waitForAbsence(timeout: 10))
         }
 
-        // Settings offers this phone's key; the computer raises its card with the code this phone shows.
+        // Settings offers this phone's key when its Approves secret uses switch is turned on (INF-1690 piece 4); the
+        // computer raises its card with the code this phone shows.
         openSettings()
-        let setUp = app.buttons["approval-set-up"]
+        let setUp = app.switches["approval-switch"]
         XCTAssertTrue(setUp.waitForPresence(timeout: 20), app.debugDescription)
-        XCTAssertEqual(setUp.label, "Set up approvals")
+        XCTAssertEqual(setUp.value as? String, "0", "The switch starts off")
         // INF-1109: UIKit dropped the setup press while Settings was still sliding in, so it is pressed once Settings
         // holds still. The touch owner records delivery but is forbidden to repeat this press.
         waitForSteadyTarget(setUp)
@@ -470,6 +471,7 @@ import XCTest
         XCTAssertTrue(cardHeading(enrollment).waitForAbsence(timeout: 20), app.debugDescription)
         openSettings()
         XCTAssertTrue(app.staticTexts["approval-enrolled"].waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertEqual(app.switches["approval-switch"].value as? String, "1", "The switch reads on once the computer confirmed")
         picture("secrets-settings-enrolled")
         closeSettings()
 
@@ -619,6 +621,35 @@ import XCTest
         openSettings()
         XCTAssertTrue(app.staticTexts["approval-enrolled"].waitForPresence(timeout: 20), app.debugDescription)
         picture("secrets-settings-damaged-enrolled")
+        closeSettings()
+
+        // INF-1690 piece 4: the switch on this phone's row in Settings → Devices on the computer. With every approval
+        // stopped there, turning it on makes this phone offer its kept key by itself, the same key underneath. The
+        // code card that offer raises pushes a Secrets change, which must not cancel the offer (INF-3506).
+        let stopped = try await home("secrets-stop")
+        XCTAssertEqual((stopped["devices"] as? [Any])?.count, 0, "Stopping on the computer leaves no approving device")
+        XCTAssertEqual(stopped["confirmed"] as? Int, 2, "Each stop asked for this computer's own confirmation")
+        openSettings()
+        let switchedOff = app.switches["approval-switch"]
+        XCTAssertTrue(switchedOff.waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertTrue(waitForPhonePredicate(NSPredicate(format: "value == '0'"), object: switchedOff, timeout: 20) == .completed,
+                      "The switch reads off once the computer stopped its approvals: \(app.debugDescription)")
+        _ = try await home("secrets-ask")
+        let askedCode = app.staticTexts["approval-code"]
+        XCTAssertTrue(askedCode.waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertEqual(askedCode.label.replacingOccurrences(of: "Code ", with: ""), newCode, "The phone offers the key it keeps")
+        XCTAssertEqual(app.switches["approval-switch"].value as? String, "1", "The switch reads on while the computer compares codes")
+        XCTAssertFalse(app.staticTexts["approval-problem"].exists, "The card's own change does not cancel the offer: \(app.debugDescription)")
+        picture("secrets-settings-asked")
+        closeSettings()
+        let linked = try await home("secrets-confirm")
+        XCTAssertEqual(linked["code"] as? String, newCode, "The computer's card shows the code this phone shows")
+        XCTAssertEqual(linked["confirmed"] as? Int, 1, "Only the computer's code card enrolls the key")
+        openSettings()
+        XCTAssertTrue(app.staticTexts["approval-enrolled"].waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertEqual(app.switches["approval-switch"].value as? String, "1")
+        XCTAssertFalse(app.staticTexts["approval-problem"].exists, app.debugDescription)
+        picture("secrets-settings-asked-enrolled")
         closeSettings()
     }
 

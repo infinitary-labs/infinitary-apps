@@ -38,7 +38,7 @@ Four rows under the list open in place, each a disclosure with its name on the l
 Saved decisions are the existing Never, Ask and Allow rules, each in one plain sentence that names its secret, such as Never give Planning calendar to anyone., with Remove.
 Remove proposes the rules without that one on the host's rules card, which needs fresh system confirmation; a click alone grants nothing.
 The page has no rule editor, dropdowns or program rehearsal form.
-Approve from your phone lists each enrolled device with the code compared when it enrolled, beside Stop approvals.
+Approve from your phone lists each enrolled device with the code compared when it enrolled, beside Stop approvals; with none, it says to turn on Approves secret uses beside the phone in Settings → Devices, where approvals are set up (`components/devices/DevicesTab`, "Approving secret uses").
 What happened reports metadata, storage use and export, with explicit deletion on a host-authored confirmation card and no automatic retention cutoff; each record names its secrets, state, time, reason and recipient.
 History labels imported records as recovered history, with their source and recovery time under a disclosure, never as live approvals.
 Keep a copy uses native file choices; a separately held recovery key never enters a card, a conversation or an agent-readable reply.

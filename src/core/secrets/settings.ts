@@ -14,6 +14,7 @@ import {
   type SecretRehearsalInput,
   type SecretsView,
 } from "@shared/secrets";
+import { askingView } from "../askedFromAView";
 import type { HostSecretsRecovery } from "../host";
 import { escapeCardText } from "../orchestrator/cardText";
 import { secretApprovalBody } from "./approvalCard";
@@ -71,6 +72,14 @@ export class SecretsSettings {
   private choosingRecovery = false;
   /** Uses whose approval card is up: a phone draws its own Allow and Deny on that card. */
   private readonly useCards = new Set<string>();
+  /**
+   * Paired phones whose switch the captain turned on in Settings -> Devices:
+   * each offers its key when it next reads its approvals. Process-local, like
+   * the cards it leads to; nothing is enrolled until the code card is confirmed.
+   */
+  private readonly askedPhones = new Set<string>();
+  /** The paired device each waiting enrollment offer came from, by its approval device. */
+  private readonly offeredFrom = new Map<string, string>();
   private viewEpoch = 0;
 
   constructor(private readonly options: SecretsSettingsOptions) {
@@ -183,16 +192,53 @@ export class SecretsSettings {
       history,
       historyBytes: await owner.protected.storageUse(),
       reads: owner.protected.readPermissions(),
-      devices: (authority?.devices ?? []).map(({ device, label, generation, publicKey }) => ({
-        device,
-        label,
-        generation,
-        code: approvalCode(publicKey),
-      })),
+      devices: (authority?.devices ?? []).map(
+        ({ device, label, generation, publicKey, paired }) => ({
+          device,
+          label,
+          generation,
+          code: approvalCode(publicKey),
+          ...(paired ? { paired } : {}),
+          ...(this.offering(`forget-device-${device}`) ? { stopping: true } : {}),
+        }),
+      ),
+      phones: this.phoneSetups(),
     };
     // Recovery can replace the owner; other changes can invalidate its snapshot
     // while native status or metadata is being read.
     return this.owner === owner && this.viewEpoch === epoch ? snapshot : this.view();
+  }
+
+  /** Whether a card of this group still waits for the captain's choice. */
+  private offering(group: string): boolean {
+    return [...this.offers.values()].some((offer) => offer.group === group);
+  }
+
+  /** Paired phones on their way to approving: a key's card is up, or the home waits for the key. */
+  private phoneSetups(): NonNullable<SecretsView["phones"]> {
+    const comparing = new Map(
+      [...this.offeredFrom]
+        .filter(([device]) => this.offering(`enroll-${device}`))
+        .map(([device, paired]) => [paired, `card-secrets-enroll-${device}`]),
+    );
+    return [
+      ...[...comparing].map(([paired, card]) => ({ paired, state: "comparing" as const, card })),
+      ...[...this.askedPhones]
+        .filter((paired) => !comparing.has(paired))
+        .map((paired) => ({ paired, state: "waiting" as const })),
+    ];
+  }
+
+  /** The switch on a paired phone turned off before its key enrolled: stop asking, and take down its card. */
+  private cancelPhone(paired: string): void {
+    this.askedPhones.delete(paired);
+    for (const [device, from] of this.offeredFrom) {
+      if (from !== paired) continue;
+      this.offeredFrom.delete(device);
+      const group = `enroll-${device}`;
+      for (const [id, offer] of this.offers) if (offer.group === group) this.offers.delete(id);
+      this.options.withdraw(`card-secrets-${group}`, SECRET_DEVICE_WORDS.cancelled);
+    }
   }
 
   /** When a secret was last asked for, and the title of the task that asked, when it is known. */
@@ -371,6 +417,12 @@ export class SecretsSettings {
         );
         break;
       }
+      case "ask-phone":
+        this.askedPhones.add(action.paired);
+        break;
+      case "cancel-phone":
+        this.cancelPhone(action.paired);
+        break;
       case "delete-history":
         this.offer(
           "delete-history",
@@ -510,6 +562,7 @@ export class SecretsSettings {
    * value, rule or other device crosses.
    */
   async approvals(device: string): Promise<SecretApprovals> {
+    const view = askingView();
     const owner = await this.ready().catch(() => undefined);
     const authority = owner?.protected.authority();
     const enrolled = authority?.devices.find((one) => one.device === device);
@@ -553,7 +606,8 @@ export class SecretsSettings {
       device: enrolled
         ? { label: enrolled.label, generation: enrolled.generation, key: enrolled.publicKey }
         : null,
-      offered: [...this.offers.values()].some((offer) => offer.group === `enroll-${device}`),
+      offered: this.offering(`enroll-${device}`),
+      asked: !!view && this.askedPhones.has(view),
       waiting,
     };
   }
@@ -564,17 +618,27 @@ export class SecretsSettings {
    * same device enrolls it at the next generation.
    */
   async enroll(input: SecretEnrollInput): Promise<SecretApprovals> {
+    // The paired device that asks, so its row in Settings -> Devices carries the switch.
+    const paired = askingView();
     const owner = await this.ready().catch(() => undefined);
     const current = owner?.protected
       .authority()
       ?.devices.find((one) => one.device === input.device);
-    // Only Secrets that are set up and open can take an approval device.
+    // Only Secrets that are set up and open can take an approval device. The same
+    // key offered again from a paired device the home has not linked it to links
+    // it, through the same comparison and confirmation as a new key.
     if (
       owner &&
       (await owner.protected.status()) === "available" &&
       approvalKey(input.key) &&
-      current?.publicKey !== input.key
+      (current?.publicKey !== input.key || (!!paired && current.paired !== paired))
     ) {
+      if (paired) this.offeredFrom.set(input.device, paired);
+      else this.offeredFrom.delete(input.device);
+      const settled = () => {
+        if (paired) this.askedPhones.delete(paired);
+        this.offeredFrom.delete(input.device);
+      };
       const label = escapeCardText(input.label);
       this.offer(
         `enroll-${input.device}`,
@@ -584,7 +648,7 @@ export class SecretsSettings {
         <p><code class="inf-mono" style="font-size:14px">${approvalCode(input.key)}</code></p>
         <p>If the codes differ, choose Not now.</p>
         <p>Each Allow from ${label} needs its Face ID, Touch ID or passcode, for that one use. It never receives a secret, and your rules still apply.</p>
-        ${current ? `<p>This replaces the approvals ${escapeCardText(current.label)} could give before.</p>` : ""}
+        ${current && current.publicKey !== input.key ? `<p>This replaces the approvals ${escapeCardText(current.label)} could give before.</p>` : ""}
         <p>The system will ask you to confirm.</p>`,
         [
           {
@@ -601,17 +665,19 @@ export class SecretsSettings {
                       label: input.label,
                       generation: (previous?.generation ?? 0) + 1,
                       publicKey: input.key,
+                      ...(paired ? { paired } : {}),
                     },
                   ];
                 },
                 `Let ${input.label} approve Secrets uses.`,
               );
+              settled();
               this.message = saved
                 ? SECRET_DEVICE_WORDS.enrolled(input.label)
                 : SECRET_DEVICE_WORDS.unchanged;
             },
           },
-          { label: SECRET_DEVICE_WORDS.notNow, run: async () => {} },
+          { label: SECRET_DEVICE_WORDS.notNow, run: async () => settled() },
         ],
       );
       this.options.changed();

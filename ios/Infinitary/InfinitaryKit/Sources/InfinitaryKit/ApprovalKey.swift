@@ -245,7 +245,7 @@ public struct ApprovalKey: Sendable, Equatable {
     #endif
 
     static let unsupported = "This device cannot keep a Secrets approval. Set a passcode, then try again."
-    static let unusable = "This phone’s saved Secrets approval cannot be used. Set up approvals again."
+    static let unusable = "This phone’s saved Secrets approval cannot be used. Turn on Approves secret uses in Settings again."
     static let notConfirmed = "Not confirmed. Nothing was allowed."
     static let notKept = "Could not keep this phone’s Secrets approval. Unlock your phone and try again."
     static let damaged = "This phone’s saved Secrets approval is damaged. Set up approvals again in Settings."

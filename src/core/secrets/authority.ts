@@ -40,6 +40,12 @@ export type ApprovalDevice = {
   generation: number;
   /** SPKI DER, base64. */
   publicKey: string;
+  /**
+   * The paired device whose request offered this key, so Settings -> Devices
+   * shows the switch on that device's row. A name, never authority: absent on
+   * a key enrolled before the home recorded it.
+   */
+  paired?: string;
 };
 
 /** The protected record that produces authority: rules, approval devices and the home they bind to. */
@@ -263,7 +269,9 @@ function validAuthority(authority: Authority): boolean {
         Number.isInteger(device.generation) &&
         device.generation > 0 &&
         typeof device.publicKey === "string" &&
-        device.publicKey.length > 0
+        device.publicKey.length > 0 &&
+        (device.paired === undefined ||
+          (typeof device.paired === "string" && device.paired.length > 0))
       );
     })
   );

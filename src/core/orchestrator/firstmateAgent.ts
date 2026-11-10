@@ -354,6 +354,34 @@ function beginTurn(turn: FirstmateTurn, asked: readonly string[]): void {
   turn.read.clear();
 }
 
+/** One conclusion for every owner settling a running turn. */
+type TurnEnd =
+  | { kind: "clean"; failure?: never }
+  | {
+      kind: "broke" | "failed";
+      failure: {
+        reason: TurnFailureReason;
+        error: string | undefined;
+        cutOff: CutOff | undefined;
+        pausing: boolean;
+        recoverContext: boolean;
+      };
+    };
+
+function endedTurn(turn: FirstmateTurn, threw: boolean, recoveryAttempted: boolean): TurnEnd {
+  if (!threw && !turn.failed) return { kind: "clean" };
+  return {
+    kind: threw ? "broke" : "failed",
+    failure: {
+      reason: turn.failureKind ?? turnFailureReason(turn.error, turn.failed),
+      error: turn.error,
+      cutOff: turn.cutOff,
+      pausing: turn.cutOff !== undefined && turn.pausing,
+      recoverContext: turn.contextOverflow && !recoveryAttempted && !threw,
+    },
+  };
+}
+
 type PersonalizeOptions = Pick<
   PersonalizeDelegate,
   "personal" | "removePersonal" | "uninstallPlugin" | "personalWorkspaceDir" | "gates" | "mounts"
@@ -418,8 +446,6 @@ function aboutCardIdFromRef(ref: string | null | undefined): string | undefined 
 
 export class FirstmateAgent {
   private directionsBlocked = false;
-  /** The whole last user turn, so a retry keeps its attachments. */
-  private lastUserTurn: TurnPayload | undefined;
   private running = false;
   /**
    * The app is quitting: a turn that settles now is the next boot's to
@@ -612,10 +638,6 @@ export class FirstmateAgent {
       retryConverse: () => {
         this.seat.runawayRefused = false;
         this.seat.runawayStreak = 0;
-        if (this.lastUserTurn) {
-          void this.converse(this.lastUserTurn);
-          return;
-        }
         // The failed turn's words wait on the lane: Retry makes them due now.
         this.options.inbox.endOutage(FIRSTMATE_RECIPIENT);
         void this.drainInbox();
@@ -678,11 +700,10 @@ export class FirstmateAgent {
       // the saved ask also excludes any uncreated introduction on recovery.
       console.warn("[firstmate] acceptance witness could not be recorded:", error);
     }
-    this.lastUserTurn = turn;
     const unavailable = this.options.knowledge?.availability();
     if (unavailable?.state === "unavailable") {
       const problem = `Your first mate has paused new work because standing directions could not be read. ${unavailable.reason}`;
-      this.asks.endTurn({ asks: [ask.id], failed: true, closingText: problem, error: problem });
+      this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
       this.replyToLastMessage([ask.id], plainProblem(problem));
       this.settleTurn({ trigger: "captain", failed: true, reason: "error" });
       this.delivery.endTurn({ asks: [ask.id], held: true, unread: [] });
@@ -698,21 +719,14 @@ export class FirstmateAgent {
     const session = await this.seat.ensureSession();
     if (!session && this.seat.pausedAtAttach) {
       // Paused at the attach: the words wait on the inbox like admission's.
-      this.parkCaptainTurn(trimmed, kept, aboutCardId, ask.id);
+      this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
       this.keptReceipt(ask.id);
       return;
     }
     if (!session) {
-      // No session could be built (no signed-in model, a broken account
-      // store): the card is up, and the ask this turn opened must not be
-      // left stranded until the next boot files it. It ends now, failed,
-      // and lands as its own question task the way any failed turn's does.
-      this.asks.endTurn({
-        asks: [ask.id],
-        failed: true,
-        closingText: "Your first mate could not start a session",
-        error: this.seat.sessionFailure,
-      });
+      // No session could be built: the card is up, and Retry serves the
+      // same durable message once a session can start.
+      this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
       this.replyToLastMessage([ask.id], plainProblem(this.seat.sessionFailure));
       this.settleTurn({ trigger: "captain", failed: true, reason: "no_session" });
       this.delivery.endTurn({ asks: [ask.id], held: true, unread: [] });
@@ -740,7 +754,7 @@ export class FirstmateAgent {
       // answer: a new message would meet its refusals if it rode in as a
       // steer, so it waits on the lane for a turn of its own, and the retry
       // does not judge a message it never read.
-      this.parkCaptainTurn(trimmed, kept, aboutCardId, ask.id);
+      this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
       this.unreadAsks.add(ask.id);
       return;
     }
@@ -766,12 +780,12 @@ export class FirstmateAgent {
     // here, at the idle boundary - never mid-turn.
     const admitted = await this.seat.admitTurn(session);
     if (!admitted) {
-      this.parkCaptainTurn(trimmed, kept, aboutCardId, ask.id);
+      this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
       this.keptReceipt(ask.id);
       return;
     }
     if (this.delivery.outputOnly) {
-      this.parkCaptainTurn(trimmed, kept, aboutCardId, ask.id);
+      this.park({ words: trimmed, attachments: kept, aboutCardId, askId: ask.id });
       this.unreadAsks.add(ask.id);
       return;
     }
@@ -1075,23 +1089,6 @@ export class FirstmateAgent {
   }
 
   /**
-   * Benched: park the captain's turn durably; it delivers when the seat can
-   * serve again. The inbox stores text only, so attachments cannot ride
-   * along - say so in the parked turn instead of losing them silently. The
-   * drain frames it as the captain's words under a fresh context block.
-   */
-  private parkCaptainTurn(
-    words: string,
-    kept: AttachmentRef[] | undefined,
-    aboutCardId: string | undefined,
-    askId: string,
-  ): void {
-    this.park({ words, attachments: kept, aboutCardId, askId });
-    // The row is the words now: a Retry must not send them a second time.
-    this.lastUserTurn = undefined;
-  }
-
-  /**
    * The receipt for a captain message the paused seat keeps (FI3-592): the
    * reply line beside the message says it at once, and one feed line per
    * message keeps it, so the captain sees where his words went even after
@@ -1322,7 +1319,12 @@ export class FirstmateAgent {
       // judged now. Its lane rows stay in flight and its messages open, so the
       // next boot reconciles it as it does a crash (docs/task-capture.md).
       if (this.disposed) this.running = false;
-      else this.closeTurn(session, threw, inboxRows);
+      else
+        this.closeTurn(
+          session,
+          endedTurn(this.turn, threw, this.contextRecoveryAttempted),
+          inboxRows,
+        );
     }
   }
 
@@ -1333,7 +1335,7 @@ export class FirstmateAgent {
    */
   private closeTurn(
     session: ModelSession,
-    threw: boolean,
+    end: TurnEnd,
     inboxRows: { id: number; attempts: number }[] | undefined,
   ): void {
     let asks: { id: string; taskId: string | null; via: string | null }[] = [];
@@ -1346,15 +1348,17 @@ export class FirstmateAgent {
     // before a spent allowance's reset. One that threw spends its attempt
     // and is due again one grace later.
     // Set by the turn's own events, which the reset above cannot see.
-    const cutOff = this.turn.cutOff as CutOff | undefined;
+    const failed = end.failure !== undefined;
+    const cutOff = end.failure?.cutOff;
+    const pausing = end.failure?.pausing ?? false;
     if (inboxRows && inboxRows.length > 0) {
       const ids = inboxRows.map((row) => row.id);
-      if (!threw && this.turn.failed) {
+      if (end.kind === "failed") {
         this.options.inbox.releaseAfterProviderFailure(
           ids,
           cutOff?.resetsAt !== undefined ? { notBefore: cutOff.resetsAt } : {},
         );
-      } else if (threw) {
+      } else if (end.kind === "broke") {
         this.options.inbox.release(ids);
         if (inboxRows.some((row) => row.attempts + 1 === INBOX_ATTEMPT_MAX)) {
           // The firstmate lane never escalates to a card - operational
@@ -1368,46 +1372,38 @@ export class FirstmateAgent {
       } else {
         this.options.inbox.ack(ids);
       }
-    }
-    // A Start this turn read and did not start begins as it is, and its wake
-    // is then served.
-    if (inboxRows && inboxRows.length > 0) {
-      const began = this.options.supervisor.hostOps.firstmateTurnEnded(
-        inboxRows.map((row) => row.id),
-        threw ? "broke" : this.turn.failed ? "failed" : "clean",
-      );
+      // A Start this turn read and did not start begins as it is.
+      const began = this.options.supervisor.hostOps.firstmateTurnEnded(ids, end.kind);
       this.options.inbox.ack(began);
     }
     // The provider answered: whatever was backing off on this lane is due now.
-    if (!threw && !this.turn.failed) this.options.inbox.endOutage(FIRSTMATE_RECIPIENT);
+    if (!failed) this.options.inbox.endOutage(FIRSTMATE_RECIPIENT);
     // The captain's live words ride no row until here.
     const live = this.turn.liveCaptain;
     this.turn.liveCaptain = undefined;
-    const pausing = cutOff !== undefined && this.turn.pausing;
-    // The captain's words the turn answered none of - the live ones and
-    // every steer it took in, oldest first - go back on the lane as theirs,
-    // and the row is then their one copy: Retry drains it, never re-sends.
-    const words = [...(live ? [live] : []), ...this.acceptedSteers];
-    if (pausing) {
-      // Paused: due when the seat serves again.
-      this.acceptedSteers = [];
-      for (const entry of words) this.park(entry);
-      this.lastUserTurn = undefined;
-    } else if (this.turn.failed && !threw) {
-      // Failed at the provider and paused nothing: they wait through the
-      // honest retry beside the failure card, never due at once (and never
-      // before a spent allowance's reset). Retry makes them due now.
-      this.acceptedSteers = [];
+    if (failed) {
+      // Retry drains the original words, never re-sends them. A thrown
+      // turn's unread tail still uses redeliverUndeliveredSteers below.
+      const words = [
+        ...(live ? [live] : []),
+        ...this.acceptedSteers.filter(
+          (entry) =>
+            end.kind !== "broke" || pausing || (entry.askId && this.turn.read.has(entry.askId)),
+        ),
+      ];
+      this.acceptedSteers =
+        end.kind === "broke" && !pausing
+          ? this.acceptedSteers.filter((entry) => !entry.askId || !this.turn.read.has(entry.askId))
+          : [];
       const ids = words.map((entry) => this.park(entry));
-      this.options.inbox.markDelivered(ids);
-      this.options.inbox.releaseAfterProviderFailure(
-        ids,
-        cutOff?.resetsAt !== undefined ? { notBefore: cutOff.resetsAt } : {},
-      );
-      if (ids.length > 0) this.lastUserTurn = undefined;
-    } else if (!threw) {
-      // A clean turn answered what it carried: nothing is left to retry.
-      this.lastUserTurn = undefined;
+      if (!pausing) {
+        this.options.inbox.markDelivered(ids);
+        this.options.inbox.releaseAfterProviderFailure(
+          ids,
+          cutOff?.resetsAt !== undefined ? { notBefore: cutOff.resetsAt } : {},
+        );
+      }
+    } else {
       this.options.supervisor.cards.hostCards.withdrawHostCard(
         FIRSTMATE_FAILURE_CARD_ID,
         "recovered",
@@ -1424,9 +1420,9 @@ export class FirstmateAgent {
       const waiting = this.delivery.waitingOnLane();
       this.asks.endTurn({
         asks: readAsks.filter((id) => !waiting.includes(id)),
-        failed: threw || this.turn.failed,
+        failed,
         closingText: this.turn.closingText,
-        error: this.turn.error,
+        error: end.failure?.error,
       });
       asks = readAsks.map((id) => {
         const ask = this.options.tasks.capture.getAsk(id);
@@ -1435,11 +1431,10 @@ export class FirstmateAgent {
     } catch (caught) {
       console.warn("[firstmate] ask capture failed at turn end:", caught);
     }
-    const failed = threw || this.turn.failed;
     const decision = this.decisions.finish({
       served: session.servedState(),
       outcome: failed ? "failed" : "clean",
-      error: failed ? this.turn.error : undefined,
+      error: end.failure?.error,
       inbox: inboxRows && inboxRows.length > 0 ? (failed ? "released" : "acked") : "none",
       asks,
     });
@@ -1454,7 +1449,7 @@ export class FirstmateAgent {
     }
     const trigger: TurnTrigger = this.turn.origin === "captain-turn" ? "captain" : "operation";
     this.recordDigest(trigger, failed);
-    const recoverContext = this.turn.contextOverflow && !this.contextRecoveryAttempted && !threw;
+    const recoverContext = end.failure?.recoverContext ?? false;
     if (!failed) this.contextRecoveryAttempted = false;
     if (recoverContext) {
       this.contextRecoveryAttempted = true;
@@ -1478,11 +1473,11 @@ export class FirstmateAgent {
       });
     }
     this.settleTurn(
-      failed
+      end.failure
         ? {
             trigger,
             failed: true,
-            reason: this.turn.failureKind ?? turnFailureReason(this.turn.error, this.turn.failed),
+            reason: end.failure.reason,
           }
         : { trigger, failed: false },
     );
@@ -1507,7 +1502,7 @@ export class FirstmateAgent {
     if (!failed && threadAnswer && repliedUnder.size > 0) this.turn.replyFacts.acted = true;
     this.replyToLastMessage(
       [...this.turn.read],
-      failed ? plainProblem(this.turn.error, cutOff ? { cutOff } : undefined) : undefined,
+      failed ? plainProblem(end.failure?.error, cutOff ? { cutOff } : undefined) : undefined,
     );
     this.options.broadcastEvent({ type: "firstmate_state", busy: false });
     if (!failed && threadAnswer) {

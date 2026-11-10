@@ -698,17 +698,28 @@ describe("FirstmateAgent capture", () => {
     expect(tasks.list().filter((record) => record.kind === "question")).toHaveLength(0);
   });
 
-  it("a failed turn that keeps no words for a retry marks the ask failed and still files it", async () => {
-    const { agent, session, tasks } = setup();
+  // Audit row 5: a thrown turn must keep the same ask for Retry, not file
+  // a failed question and open another ask when the captain retries.
+  it("keeps a thrown turn's ask open and files its answer once after Retry", async () => {
+    const { agent, session, tasks, supervisor, specs } = setup({ silent: true });
     await agent.converse("ship it");
-    session.rejectNextPrompt("mock provider exploded");
+    const original = tasks.capture.listAsks()[0]!;
+    session.rejectNextPrompt("Connection error.");
     await tick();
-    const [ask] = tasks.capture.listAsks();
-    expect(ask?.turnState).toBe("failed");
-    const question = tasks.get(ask?.taskId ?? "");
-    expect(question?.kind).toBe("question");
-    expect(question?.outcome).toContain("hit a problem:");
-    expect(question?.outcome).toContain("mock provider exploded");
+    expect(tasks.capture.getAsk(original.id)).toMatchObject({ turnState: "open", taskId: null });
+    expect(tasks.list().filter((record) => record.kind === "question")).toEqual([]);
+    supervisor.cardActions.act("card-fm-turn-failure", "retry-firstmate");
+    await drained(session, 2);
+    await toolsOf(specs).get("emit_card")?.execute("answer", {
+      title: "Ready to ship",
+      body: "<p>The checks passed.</p>",
+    });
+    session.emitTurnEnd("Answered.");
+    session.resolveNextPrompt();
+    await tick();
+    expect(tasks.capture.listAsks()).toMatchObject([{ id: original.id, turnState: "closed" }]);
+    const question = tasks.get(tasks.capture.getAsk(original.id)?.taskId ?? "");
+    expect(question).toMatchObject({ kind: "question", outcome: "<p>The checks passed.</p>" });
   });
 
   it("keeps a message a provider-failed turn read open, for the retry turn that answers it", async () => {
@@ -839,7 +850,7 @@ describe("FirstmateAgent capture", () => {
     ]);
   });
 
-  it("files a message refused before any turn alone, and leaves a waiting one to its own turn", async () => {
+  it("keeps both a preparation-refused message and an unread message for the turn that serves them", async () => {
     const { agent, session, specs, tasks, db, knowledge } = setup();
     notifyProse(db, agent, "[fm-op] PR #12 checks passed", "agent");
     await drained(session, 1);
@@ -860,13 +871,16 @@ describe("FirstmateAgent capture", () => {
       turnState: "open",
       taskId: null,
     });
-    expect(tasks.list().filter((record) => record.kind === "question")).toMatchObject([
-      { title: "and the alpha?" },
+    expect(tasks.capture.listOpenAsks().map((ask) => ask.text)).toEqual([
+      "is the flaky login test fixed yet?",
+      "and the alpha?",
     ]);
+    expect(tasks.list().filter((record) => record.kind === "question")).toEqual([]);
     unreadable.mockRestore();
     agent.pokeInbox();
     await drained(session, 2);
     await toolsOf(specs).get("emit_card")?.execute("c1", {
+      ask_id: waiting?.id,
       title: "The login test is fixed",
       body: "<p>It passed ten runs in a row.</p>",
     });
@@ -877,6 +891,7 @@ describe("FirstmateAgent capture", () => {
       turnState: "closed",
       attachedVia: "tool:emit_card",
     });
+    expect(tasks.capture.listOpenAsks()).toEqual([]);
   });
 
   // INF-1712: the roster lists started work; the backlog is a count, and

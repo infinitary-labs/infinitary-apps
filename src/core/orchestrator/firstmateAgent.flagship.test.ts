@@ -826,10 +826,12 @@ describe("the Claude seat under the agent (W1 S6)", () => {
     // The client exits with the steer still in its queue.
     firstClient.end();
     await recoveredInput;
-    await vi.waitFor(() => expect(turns).toHaveLength(2));
-    // Not lost: the agent delivers it as a turn of its own, on a new attachment.
+    // Audit row 5: neither the unread steer nor the failed live input is lost.
+    // The unread steer runs first; its success makes the held live input due.
+    await vi.waitFor(() => expect(turns).toHaveLength(3));
     expect(seat.scripted.attachments).toHaveLength(2);
     expect(inputText(seat.scripted.harness().inputs[0])).toContain("[user]\nalso this");
+    expect(inputText(seat.scripted.harness().inputs[1])).toContain("[user]\nstart work");
     await seat.closed();
   });
 });

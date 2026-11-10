@@ -20,7 +20,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { appPathsFor } from "../paths";
 import type { ModelRuntime } from "../pi/types";
 import { CardStore } from "../storage/cardStore";
-import { InboxStore } from "../storage/inboxStore";
+import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import { ScheduleStore } from "../storage/scheduleStore";
 import { SettingsStore } from "../storage/settingsStore";
 import { TaskService } from "../tasks/taskService";
@@ -395,6 +395,34 @@ describe("FirstmateAgent", () => {
     expect(specs[0]?.model).toEqual({ provider: "fm-mock", id: "mock-1" });
   });
 
+  // Audit row 5: the shared turn end must preserve the durable inbox's
+  // distinction between a thrown attempt and a resolved provider failure.
+  it.each(["thrown", "provider"] as const)(
+    "releases an operational %s failure with its own retry accounting",
+    async (failure) => {
+      const f = setup();
+      const inbox = new InboxStore(f.db);
+      notifyProse(f.db, f.agent, "[fm-op] The checks passed", "agent");
+      await drained(f.session, 1);
+      const id = inbox.inFlight(FIRSTMATE_RECIPIENT)[0]!.id;
+      if (failure === "thrown") f.session.rejectNextPrompt("Connection error.");
+      else {
+        f.session.emitTurnFailed("Connection error.");
+        f.session.resolveNextPrompt();
+      }
+      await tick();
+      expect(inbox.get(id)).toMatchObject({
+        deliveredAt: null,
+        attempts: failure === "thrown" ? 1 : 0,
+        failures: failure === "thrown" ? 0 : 1,
+      });
+      expect(f.tasks.capture.listAsks()).toEqual([]);
+      expect(f.turns).toEqual([
+        { trigger: "operation", failed: true, reason: failure === "thrown" ? "error" : "provider" },
+      ]);
+    },
+  );
+
   it("tells its listener how each turn settled: who it answered and, failed, only the kind", async () => {
     const { agent, db, session, turns } = setup();
     await agent.converse("hello");
@@ -632,12 +660,13 @@ describe("FirstmateAgent", () => {
       "Codex, Grok, Claude, Kimi Code or Copilot, or OpenRouter with an API key",
     );
     expect(card.actions[0]?.effect).toEqual({ kind: "open", target: "subscriptions" });
-    // The ask the turn opened is not stranded until the next boot: it ends
-    // now, failed, as its own question task (task-system P1).
-    expect(tasks.capture.listOpenAsks()).toEqual([]);
-    const filed = tasks.list().find((record) => record.kind === "question");
-    expect(filed?.title).toBe("hello");
-    expect(filed?.outcome).toContain("No signed-in model");
+    // Audit row 5: the original ask waits durably for a session, rather
+    // than being filed failed and duplicated when the captain retries.
+    expect(tasks.capture.listOpenAsks()).toMatchObject([
+      { text: "hello", turnState: "open", delivery: "held", taskId: null },
+    ]);
+    expect(new InboxStore(db).allFor(FIRSTMATE_RECIPIENT)).toHaveLength(1);
+    expect(tasks.list().filter((record) => record.kind === "question")).toEqual([]);
   });
 
   it("reset clears the rolling session and the inbox", async () => {

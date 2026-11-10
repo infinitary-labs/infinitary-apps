@@ -36,9 +36,11 @@ An answer given while the first mate handles a crewmate's report saves that repo
    - The operate tools that still file through `filingOperations` in `firstmateTools.ts` are `schedule_prompt`, `record_knowledge` (`docs/knowledge.md`), `flag_missed_escalation`, `flag_duplicate`, `personalize` and `install_plugin` (`setup_repo` and `unregister_repo` are retired); each files an `operation` task `done/settled` with the tool result as outcome, in the repo's project or Scratch.
 3. At turn end (`AskCapture.endTurn`) every open ask the backend read closes, apart from one whose words wait on the lane for a retry.
    One nothing attached goes to the hinted task, else becomes a standalone `question` task in Scratch titled by the ask's first sentence with the turn's closing text as outcome; either way `attached_via = host:fallback`.
-   A turn that failed at the provider or paused on a cut-off puts the captain's words it read back on the lane, so their messages stay open, and the turn that serves those words again attaches and closes them.
-   A message whose words a failed turn keeps for no retry (the live words of a turn that threw, which Retry sends again as a new message) is marked `failed` and still filed.
-   A message refused before any turn (standing directions unreadable, no session) closes alone, the same way.
+   A failed turn, whether its model resolves with a failure or throws, puts the captain's live words and read steers back on the lane with their original ask ids; a cut-off that pauses the seat keeps them due for when it serves again.
+   Those messages stay open, and the turn that serves their words again attaches and closes them.
+   A message refused before any turn (standing directions unreadable, no session) also waits on that lane with its original ask id.
+   Retry makes the saved words due and drains the lane; it never opens a second ask or keeps a separate in-process copy of the message.
+   A running turn computes one `TurnEnd` in `runTurn` after the model settles, and `closeTurn` uses that value for the lane, capture, decision, reply, delivery check and recovery rather than reclassifying the mutable turn fields.
    A quit mid-turn is reconciled at the next boot the same way, apart from a message whose parked words are still on the lane (`AnswerDeliveryCheck.waitingOnLane`), which stays open for the turn that serves them.
    Its question task's outcome reads "hit a problem: the app closed before this turn ended".
    A normal quit leaves the turn it cuts as a crash does: the session it lets go of settles that turn, and a turn that settles once the agent is disposed files no message, acknowledges no lane row and judges nothing.

@@ -764,6 +764,88 @@ describe("FirstmateAgent answer delivery", () => {
     expect(states(f)).toEqual(["covered", "covered"]);
   });
 
+  // Audit row 5: recovery is shared by resolved provider errors and throws.
+  // The durable lane must own the live input and read steers exactly once.
+  it.each(["provider", "thrown"] as const)(
+    "recovers live words and steers after a %s failure without a second ask",
+    async (failure) => {
+      const f = setup({ silent: true });
+      const inbox = new InboxStore(f.db);
+      await f.agent.converse({ text: "count the fenders", images: [pngImage] });
+      await f.agent.converse("also count the lines");
+      const originalIds = f.tasks.capture.listAsks().map((ask) => ask.id);
+      if (failure === "thrown") f.session.rejectNextPrompt("Connection error.");
+      else {
+        f.session.emitTurnFailed("Connection error.");
+        f.session.resolveNextPrompt();
+      }
+      await tick();
+      expect(states(f)).toEqual(["held", "held"]);
+      const parked = inbox.allFor(FIRSTMATE_RECIPIENT);
+      expect(parked).toHaveLength(2);
+      expect(f.session.prompts).toHaveLength(1);
+      expect(retries(f)).toEqual([]);
+      f.supervisor.cardActions.act("card-fm-turn-failure", "retry-firstmate");
+      await drained(f.session, 2);
+      const userWords = f.session.prompts[1]!.slice(f.session.prompts[1]!.indexOf("[user]"));
+      for (const words of ["count the fenders", "also count the lines"])
+        expect(userWords.split(words)).toHaveLength(2);
+      expect(f.session.promptImages[1]).toEqual([
+        { mimeType: pngImage.mimeType, data: pngImage.data },
+      ]);
+      await toolsOf(f.specs).get("emit_card")?.execute("answer", note("counts", "The counts"));
+      await finish(f);
+      expect(f.tasks.capture.listAsks().map((ask) => ask.id)).toEqual(originalIds);
+      expect(states(f)).toEqual(["covered", "covered"]);
+      expect(inbox.allFor(FIRSTMATE_RECIPIENT)).toEqual([]);
+      expect(noticeOf(f)).toBeUndefined();
+      console.log(
+        JSON.stringify({
+          intent: "audit row 5 same-ask recovery",
+          failure,
+          asks: f.tasks.capture
+            .listAsks()
+            .map(({ id, turnState, delivery }) => ({ id, turnState, delivery })),
+          lane: inbox.allFor(FIRSTMATE_RECIPIENT),
+          prompts: f.session.prompts.length,
+        }),
+      );
+    },
+  );
+
+  // Deleting Retry's resend path must also preserve messages rejected before
+  // a model starts (audit row 5's one-ask requirement).
+  it.each(["session", "directions"] as const)(
+    "retries a %s preparation failure on its original ask",
+    async (failure) => {
+      const options = {
+        silent: true,
+        failCreate: failure === "session" ? "Conversation could not start." : "",
+      };
+      const f = setup(options);
+      const unavailable =
+        failure === "directions"
+          ? vi
+              .spyOn(f.knowledge!, "availability")
+              .mockReturnValue({ state: "unavailable", reason: "The folder could not be read." })
+          : undefined;
+      await f.agent.converse("count the fenders");
+      const originalIds = f.tasks.capture.listAsks().map((ask) => ask.id);
+      expect(new InboxStore(f.db).allFor(FIRSTMATE_RECIPIENT)).toHaveLength(1);
+      expect(f.session.prompts).toEqual([]);
+      options.failCreate = "";
+      unavailable?.mockRestore();
+      if (failure === "session")
+        f.supervisor.cardActions.act("card-fm-turn-failure", "retry-firstmate");
+      else f.agent.pokeInbox();
+      await drained(f.session, 1);
+      await toolsOf(f.specs).get("emit_card")?.execute("answer", note("fenders", "Twelve fenders"));
+      await finish(f);
+      expect(f.tasks.capture.listAsks().map((ask) => ask.id)).toEqual(originalIds);
+      expect(states(f)).toEqual(["covered"]);
+    },
+  );
+
   it("holds a message a failed turn read and judges it when a turn serves it again", async () => {
     const f = setup({ silent: true });
     await f.agent.converse("hello");

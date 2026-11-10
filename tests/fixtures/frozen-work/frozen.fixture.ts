@@ -11,6 +11,11 @@ import { afterEach, expect, it, vi } from "vitest";
 const signals = process.env.INFINITARY_FROZEN_WORK_SIGNALS ?? "";
 const budget = Number(process.env.INFINITARY_FROZEN_WORK_BUDGET);
 
+/** The worker's load clock, which `tests/helpers/waitWindow.ts` starts on an ordinary run. */
+const loadClock = (globalThis as { [key: symbol]: { now(): number } | undefined })[
+  Symbol.for("infinitary.unitLoadClock")
+];
+
 /** Whether `file` is there, saying so from inside the wait, once its window is set. */
 function arrived(file: string): boolean {
   writeFileSync(join(signals, "waiting"), "");
@@ -40,7 +45,28 @@ it(
 it(
   "a missing file",
   async () => {
-    await expect.poll(() => arrived(join(signals, "never"))).toBe(true);
+    // Both read before the poll sets its window's deadline and its wall cap, so
+    // a count under the window means that deadline had not come when the wait
+    // ended, and an attempt timed past the cap here may only be early for the poll's.
+    const startedAt = performance.now();
+    const before = loadClock?.now();
+    const attemptsMs: number[] = [];
+    try {
+      await expect
+        .poll(() => {
+          attemptsMs.push(performance.now() - startedAt);
+          return arrived(join(signals, "never"));
+        })
+        .toBe(true);
+    } finally {
+      // The load time the wait counted and when each attempt came, written as
+      // it ends, before vitest reports it.
+      if (loadClock && before !== undefined)
+        writeFileSync(
+          join(signals, "poll.json"),
+          JSON.stringify({ countedMs: loadClock.now() - before, attemptsMs }),
+        );
+    }
   },
   budget,
 );

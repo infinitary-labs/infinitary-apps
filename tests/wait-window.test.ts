@@ -38,13 +38,20 @@ async function frozenWriter(file: string): Promise<void> {
 /** How a run is frozen once its test is waiting: one long stop, or long stops with slivers of running between. */
 type Freeze = { stopMs: number; runMs: number } | undefined;
 
-/** The test's result, its file's - where a failed hook is reported - and how long the frozen work took. */
+/** A poll's own record, as it ended: the load time it counted, and when each attempt came after it started. */
+type Poll = { countedMs: number; attemptsMs: number[] };
+
+/**
+ * The test's result, its file's - where a failed hook is reported - how long
+ * the frozen work took, and the poll's own record when the test has a poll.
+ */
 type Outcome = {
   status: string;
   error: string;
   fileStatus: string;
   fileError: string;
   waitedMs: number;
+  poll: Poll | undefined;
 };
 
 /**
@@ -147,12 +154,14 @@ async function frozenRun(
   const result = file?.assertionResults.find((test) => test.title === title);
   if (!file || !result || !waitingAt || !doneAt)
     throw new Error(`The run did not finish its test:\n${output}`);
+  const poll = join(signals, "poll.json");
   return {
     status: result.status,
     error: result.failureMessages.join("\n"),
     fileStatus: file.status,
     fileError: file.message,
     waitedMs: doneAt - waitingAt,
+    poll: existsSync(poll) ? (JSON.parse(readFileSync(poll, "utf8")) as Poll) : undefined,
   };
 }
 
@@ -226,11 +235,25 @@ describe("a test's time limit and its waits, on the load clock", () => {
     expect(quietMissing.error).toContain("expected false to be true");
     expect(quietMissing.waitedMs).toBeGreaterThanOrEqual(window - 50);
     expect(quietMissing.waitedMs).toBeLessThan(window * slowed + 3_000);
+    // Its load clock counted the window: the load clock, not the wall cap, ended it.
+    expect(quietMissing.poll?.countedMs).toBeGreaterThanOrEqual(window);
 
+    // The poll's own mismatch, not the test's limit, ended the test, once its
+    // wall cap had passed and while its load clock had not yet counted its
+    // window: the wall cap ended it. Each claim is an order of events or the
+    // run's own work, never a wall-clock window, since the run reports its
+    // failure only in its 20 ms slivers, and a busy runner gives it less of
+    // each one (INF-857: "make them robust even during heavy load").
     expect(starvedMissing.status).toBe("failed");
     expect(starvedMissing.error).toContain("expected false to be true");
     expect(starvedMissing.waitedMs).toBeGreaterThanOrEqual(waitCap(window));
-    expect(starvedMissing.waitedMs).toBeLessThan(waitCap(window) + 3 * 3_000);
+    expect(starvedMissing.poll?.countedMs).toBeLessThan(window);
+    // The cap ended it as soon as the run next ran: past the cap, an attempt in
+    // that sliver and the last one vitest makes once its window is over. A
+    // late cap adds an attempt for each sliver the run runs before it fires.
+    const pastCap = starvedMissing.poll?.attemptsMs.filter((at) => at >= waitCap(window));
+    expect(pastCap?.length).toBeGreaterThanOrEqual(1);
+    expect(pastCap?.length).toBeLessThanOrEqual(2);
     // Four runs side by side, each with a deliberate freeze; the longest waits out its 30 s cap.
   }, 90_000);
 });

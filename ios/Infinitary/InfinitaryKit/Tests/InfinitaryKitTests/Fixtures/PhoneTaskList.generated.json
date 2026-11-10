@@ -783,6 +783,204 @@
             "pinnedAt": 1793984100000
           },
           {
+            "id": "t-2922",
+            "key": "INF-2922",
+            "projectId": "p-inf",
+            "parentId": null,
+            "kind": "work",
+            "title": "Rebuild the north pier",
+            "goal": "Rebuild the north pier",
+            "priority": 2,
+            "status": "active",
+            "activity": "idle",
+            "closedReason": null,
+            "startPolicy": "when-ready",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": "crewmate",
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793979720000,
+            "updatedAt": 1793984340000,
+            "startedAt": 1793981700000,
+            "closedAt": null,
+            "workPosture": {
+              "state": "inactive",
+              "reason": "inactive"
+            },
+            "pinnedAt": 1793982600000
+          },
+          {
+            "id": "t-2923",
+            "key": "INF-2923",
+            "projectId": "p-inf",
+            "parentId": "t-2922",
+            "kind": "work",
+            "title": "Sink the harbour piles",
+            "goal": "Sink the harbour piles",
+            "priority": 2,
+            "status": "active",
+            "activity": "running",
+            "closedReason": null,
+            "startPolicy": "when-ready",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": "crewmate",
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793979780000,
+            "updatedAt": 1793984340000,
+            "startedAt": 1793982900000,
+            "closedAt": null,
+            "workPosture": {
+              "state": "active",
+              "reason": "turn"
+            }
+          },
+          {
+            "id": "t-2924",
+            "key": "INF-2924",
+            "projectId": "p-inf",
+            "parentId": "t-2923",
+            "kind": "work",
+            "title": "Lay the deck",
+            "goal": "Lay the deck",
+            "priority": 2,
+            "status": "active",
+            "activity": "running",
+            "closedReason": null,
+            "startPolicy": "when-ready",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": "crewmate",
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793979840000,
+            "updatedAt": 1793984340000,
+            "startedAt": 1793983500000,
+            "closedAt": null,
+            "workPosture": {
+              "state": "active",
+              "reason": "turn"
+            }
+          },
+          {
+            "id": "t-2925",
+            "key": "INF-2925",
+            "projectId": "p-inf",
+            "parentId": "t-2922",
+            "kind": "work",
+            "title": "Order the deck planks",
+            "goal": "Order the deck planks",
+            "priority": 1,
+            "status": "open",
+            "activity": null,
+            "closedReason": null,
+            "startPolicy": "on-request",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": null,
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793979900000,
+            "updatedAt": 1793984340000,
+            "startedAt": null,
+            "closedAt": null
+          },
+          {
+            "id": "t-2926",
+            "key": "INF-2926",
+            "projectId": "p-inf",
+            "parentId": "t-2922",
+            "kind": "work",
+            "title": "Measure the old pier",
+            "goal": "Measure the old pier",
+            "priority": 2,
+            "status": "done",
+            "activity": null,
+            "closedReason": "landed",
+            "startPolicy": "when-ready",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": null,
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793979960000,
+            "updatedAt": 1793984340000,
+            "startedAt": 1793973600000,
+            "closedAt": 1793979000000
+          },
+          {
             "id": "t-2912",
             "key": "INF-2912",
             "projectId": "p-inf",
@@ -938,7 +1136,7 @@
         {
           "section": "pinned",
           "folds": false,
-          "count": 4,
+          "count": 9,
           "rows": [
             {
               "key": "INF-2909",
@@ -954,6 +1152,81 @@
               "mark": "backlog",
               "reason": "Held",
               "home": "backlog"
+            },
+            {
+              "key": "INF-2922",
+              "depth": 0,
+              "word": "",
+              "trailing": {
+                "name": "Infinitary",
+                "place": "",
+                "outOfReach": false,
+                "connecting": false,
+                "reach": "out of reach"
+              },
+              "mark": "idle",
+              "reason": "No continuing work",
+              "home": "working"
+            },
+            {
+              "key": "INF-2925",
+              "depth": 1,
+              "word": "",
+              "trailing": {
+                "name": "Infinitary",
+                "place": "",
+                "outOfReach": false,
+                "connecting": false,
+                "reach": "out of reach"
+              },
+              "mark": "backlog",
+              "reason": "Starts when you press Start",
+              "home": "working"
+            },
+            {
+              "key": "INF-2923",
+              "depth": 1,
+              "word": "",
+              "trailing": {
+                "name": "Infinitary",
+                "place": "",
+                "outOfReach": false,
+                "connecting": false,
+                "reach": "out of reach"
+              },
+              "mark": "working",
+              "reason": "",
+              "home": "working"
+            },
+            {
+              "key": "INF-2924",
+              "depth": 2,
+              "word": "",
+              "trailing": {
+                "name": "Infinitary",
+                "place": "",
+                "outOfReach": false,
+                "connecting": false,
+                "reach": "out of reach"
+              },
+              "mark": "working",
+              "reason": "",
+              "home": "working"
+            },
+            {
+              "key": "INF-2926",
+              "depth": 1,
+              "word": "",
+              "trailing": {
+                "name": "Infinitary",
+                "place": "",
+                "outOfReach": false,
+                "connecting": false,
+                "reach": "out of reach"
+              },
+              "mark": "done",
+              "reason": "",
+              "home": "landed"
             },
             {
               "key": "INF-2911",
@@ -2080,6 +2353,204 @@
             "pinnedAt": 1793984100000
           },
           {
+            "id": "t-2922",
+            "key": "INF-2922",
+            "projectId": "p-inf",
+            "parentId": null,
+            "kind": "work",
+            "title": "Rebuild the north pier",
+            "goal": "Rebuild the north pier",
+            "priority": 2,
+            "status": "active",
+            "activity": "idle",
+            "closedReason": null,
+            "startPolicy": "when-ready",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": "crewmate",
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793979720000,
+            "updatedAt": 1793984340000,
+            "startedAt": 1793981700000,
+            "closedAt": null,
+            "workPosture": {
+              "state": "inactive",
+              "reason": "inactive"
+            },
+            "pinnedAt": 1793982600000
+          },
+          {
+            "id": "t-2923",
+            "key": "INF-2923",
+            "projectId": "p-inf",
+            "parentId": "t-2922",
+            "kind": "work",
+            "title": "Sink the harbour piles",
+            "goal": "Sink the harbour piles",
+            "priority": 2,
+            "status": "active",
+            "activity": "running",
+            "closedReason": null,
+            "startPolicy": "when-ready",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": "crewmate",
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793979780000,
+            "updatedAt": 1793984340000,
+            "startedAt": 1793982900000,
+            "closedAt": null,
+            "workPosture": {
+              "state": "active",
+              "reason": "turn"
+            }
+          },
+          {
+            "id": "t-2924",
+            "key": "INF-2924",
+            "projectId": "p-inf",
+            "parentId": "t-2923",
+            "kind": "work",
+            "title": "Lay the deck",
+            "goal": "Lay the deck",
+            "priority": 2,
+            "status": "active",
+            "activity": "running",
+            "closedReason": null,
+            "startPolicy": "when-ready",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": "crewmate",
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793979840000,
+            "updatedAt": 1793984340000,
+            "startedAt": 1793983500000,
+            "closedAt": null,
+            "workPosture": {
+              "state": "active",
+              "reason": "turn"
+            }
+          },
+          {
+            "id": "t-2925",
+            "key": "INF-2925",
+            "projectId": "p-inf",
+            "parentId": "t-2922",
+            "kind": "work",
+            "title": "Order the deck planks",
+            "goal": "Order the deck planks",
+            "priority": 1,
+            "status": "open",
+            "activity": null,
+            "closedReason": null,
+            "startPolicy": "on-request",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": null,
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793979900000,
+            "updatedAt": 1793984340000,
+            "startedAt": null,
+            "closedAt": null
+          },
+          {
+            "id": "t-2926",
+            "key": "INF-2926",
+            "projectId": "p-inf",
+            "parentId": "t-2922",
+            "kind": "work",
+            "title": "Measure the old pier",
+            "goal": "Measure the old pier",
+            "priority": 2,
+            "status": "done",
+            "activity": null,
+            "closedReason": "landed",
+            "startPolicy": "when-ready",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": null,
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793979960000,
+            "updatedAt": 1793984340000,
+            "startedAt": 1793973600000,
+            "closedAt": 1793979000000
+          },
+          {
             "id": "t-2912",
             "key": "INF-2912",
             "projectId": "p-inf",
@@ -2231,7 +2702,7 @@
         {
           "section": "pinned",
           "folds": false,
-          "count": 4,
+          "count": 9,
           "rows": [
             {
               "key": "INF-2909",
@@ -2247,6 +2718,81 @@
               "mark": "backlog",
               "reason": "Held",
               "home": "backlog"
+            },
+            {
+              "key": "INF-2922",
+              "depth": 0,
+              "word": "",
+              "trailing": {
+                "name": "",
+                "place": "",
+                "outOfReach": false,
+                "connecting": false,
+                "reach": "out of reach"
+              },
+              "mark": "idle",
+              "reason": "No continuing work",
+              "home": "working"
+            },
+            {
+              "key": "INF-2925",
+              "depth": 1,
+              "word": "",
+              "trailing": {
+                "name": "",
+                "place": "",
+                "outOfReach": false,
+                "connecting": false,
+                "reach": "out of reach"
+              },
+              "mark": "backlog",
+              "reason": "Starts when you press Start",
+              "home": "working"
+            },
+            {
+              "key": "INF-2923",
+              "depth": 1,
+              "word": "",
+              "trailing": {
+                "name": "",
+                "place": "",
+                "outOfReach": false,
+                "connecting": false,
+                "reach": "out of reach"
+              },
+              "mark": "working",
+              "reason": "",
+              "home": "working"
+            },
+            {
+              "key": "INF-2924",
+              "depth": 2,
+              "word": "",
+              "trailing": {
+                "name": "",
+                "place": "",
+                "outOfReach": false,
+                "connecting": false,
+                "reach": "out of reach"
+              },
+              "mark": "working",
+              "reason": "",
+              "home": "working"
+            },
+            {
+              "key": "INF-2926",
+              "depth": 1,
+              "word": "",
+              "trailing": {
+                "name": "",
+                "place": "",
+                "outOfReach": false,
+                "connecting": false,
+                "reach": "out of reach"
+              },
+              "mark": "done",
+              "reason": "",
+              "home": "landed"
             },
             {
               "key": "INF-2911",
@@ -3373,6 +3919,204 @@
             "pinnedAt": 1793984100000
           },
           {
+            "id": "t-2922",
+            "key": "INF-2922",
+            "projectId": "p-inf",
+            "parentId": null,
+            "kind": "work",
+            "title": "Rebuild the north pier",
+            "goal": "Rebuild the north pier",
+            "priority": 2,
+            "status": "active",
+            "activity": "idle",
+            "closedReason": null,
+            "startPolicy": "when-ready",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": "crewmate",
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793979720000,
+            "updatedAt": 1793984340000,
+            "startedAt": 1793981700000,
+            "closedAt": null,
+            "workPosture": {
+              "state": "inactive",
+              "reason": "inactive"
+            },
+            "pinnedAt": 1793982600000
+          },
+          {
+            "id": "t-2923",
+            "key": "INF-2923",
+            "projectId": "p-inf",
+            "parentId": "t-2922",
+            "kind": "work",
+            "title": "Sink the harbour piles",
+            "goal": "Sink the harbour piles",
+            "priority": 2,
+            "status": "active",
+            "activity": "running",
+            "closedReason": null,
+            "startPolicy": "when-ready",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": "crewmate",
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793979780000,
+            "updatedAt": 1793984340000,
+            "startedAt": 1793982900000,
+            "closedAt": null,
+            "workPosture": {
+              "state": "active",
+              "reason": "turn"
+            }
+          },
+          {
+            "id": "t-2924",
+            "key": "INF-2924",
+            "projectId": "p-inf",
+            "parentId": "t-2923",
+            "kind": "work",
+            "title": "Lay the deck",
+            "goal": "Lay the deck",
+            "priority": 2,
+            "status": "active",
+            "activity": "running",
+            "closedReason": null,
+            "startPolicy": "when-ready",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": "crewmate",
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793979840000,
+            "updatedAt": 1793984340000,
+            "startedAt": 1793983500000,
+            "closedAt": null,
+            "workPosture": {
+              "state": "active",
+              "reason": "turn"
+            }
+          },
+          {
+            "id": "t-2925",
+            "key": "INF-2925",
+            "projectId": "p-inf",
+            "parentId": "t-2922",
+            "kind": "work",
+            "title": "Order the deck planks",
+            "goal": "Order the deck planks",
+            "priority": 1,
+            "status": "open",
+            "activity": null,
+            "closedReason": null,
+            "startPolicy": "on-request",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": null,
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793979900000,
+            "updatedAt": 1793984340000,
+            "startedAt": null,
+            "closedAt": null
+          },
+          {
+            "id": "t-2926",
+            "key": "INF-2926",
+            "projectId": "p-inf",
+            "parentId": "t-2922",
+            "kind": "work",
+            "title": "Measure the old pier",
+            "goal": "Measure the old pier",
+            "priority": 2,
+            "status": "done",
+            "activity": null,
+            "closedReason": "landed",
+            "startPolicy": "when-ready",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": null,
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793979960000,
+            "updatedAt": 1793984340000,
+            "startedAt": 1793973600000,
+            "closedAt": 1793979000000
+          },
+          {
             "id": "t-2912",
             "key": "INF-2912",
             "projectId": "p-inf",
@@ -3641,8 +4385,23 @@
         {
           "section": "pinned",
           "folds": false,
-          "count": 3,
+          "count": 4,
           "rows": [
+            {
+              "key": "INF-2923",
+              "depth": 0,
+              "word": "",
+              "trailing": {
+                "name": "Infinitary",
+                "place": "",
+                "outOfReach": false,
+                "connecting": false,
+                "reach": "out of reach"
+              },
+              "mark": "working",
+              "reason": "",
+              "home": "working"
+            },
             {
               "key": "INF-2911",
               "depth": 0,

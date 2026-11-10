@@ -95,7 +95,9 @@ import { failedCountWords, newCountWords } from "./words";
  * backlog row's Start, a pin that is filled while the task is pinned. One
  * press pins or unpins it (`tasks.pin`), and the row moves at once into
  * Pinned, the panel's own group at its top, or back to its state's group,
- * with focus following it. → from the row, or from its Start, reaches it.
+ * with focus following it; its parts move with it, under it, and only the
+ * task pressed is pinned (INF-3512). → from the row, or from its Start,
+ * reaches it.
  *
  * The rows of the tasks whose records are open on the stack are tinted
  * (`view.openTaskIds`), including a record paged away from.

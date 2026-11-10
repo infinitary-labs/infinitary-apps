@@ -1,7 +1,7 @@
 import Foundation
 
 /// INF-2928 piece 1, the captain's direction A: the phone's Tasks list is the Mac's Tasks panel (src/panels/now/rows.ts),
-/// read from one board in one pass. Pinned tasks list first, alone (INF-3127). Only groups with rows show, each in the Mac's order: priority, then oldest first, and
+/// read from one board in one pass. Pinned tasks list first, each with its parts under it (INF-3127, INF-3512). Only groups with rows show, each in the Mac's order: priority, then oldest first, and
 /// Done newest closed first, with a part under its parent in the same group. A search keeps the groups, narrows them by
 /// title or key as the Mac's does, and adds the computer's older matches as Earlier.
 /// INF-2764: it is built only while the list shows, and sorts positions in the board rather than copies of every task.
@@ -42,14 +42,14 @@ public struct PhoneTaskList: Sendable {
         public let section: Section
         public let rows: [Row]
         public let aside: [PhoneCard]
-        /// Where each pinned row would list unpinned (the Mac's `home`): its wait line follows it.
+        /// Where each row in Pinned would list otherwise (the Mac's `home`): its wait line follows it.
         var homes: [String: PhoneTaskGroup] = [:]
         public var id: String { section.id }
         public var count: Int { rows.count + aside.count }
         /// Crew filings here not opened yet, and starts that failed (`newFilingCount`, `failedStartCount`).
         public var new: Int { rows.filter { $0.task.filingNew == true }.count }
         public var failed: Int { rows.filter { $0.task.startNotice != nil }.count }
-        /// The group a row lists under by its state: this section's own, or, in Pinned, where it would list unpinned.
+        /// The group a row lists under by its state: this section's own, or, in Pinned, where it would list otherwise.
         public func home(of task: PhoneTask) -> PhoneTaskGroup? {
             switch section {
             case .group(let group): group
@@ -89,28 +89,65 @@ public struct PhoneTaskList: Sendable {
         func matches(_ title: String, _ key: String = "") -> Bool {
             words.isEmpty || Self.fold(title).contains(words) || Self.fold(key).contains(words)
         }
+        // INF-3127: a pinned task lists in Pinned at the top, whatever its state or age, in the order it was pinned,
+        // newest last. INF-3512: its parts, and theirs, move there with it, under it, by priority then age, each still
+        // unpinned; only parts some group would list come along, and each task lists once (the Mac's `pinnedRowsOf`).
+        var pinned: [Row] = []
+        var held = Set<String>()
+        var pins = tasks.indices.filter { tasks[$0].pinnedAt != nil }
+        if !pins.isEmpty {
+            pins.sort { a, b in
+                let (p, q) = (tasks[a].pinnedAt ?? 0, tasks[b].pinnedAt ?? 0)
+                return p != q ? p < q : a < b
+            }
+            var indexOf: [String: Int] = [:]
+            var partsOf: [String: [Int]] = [:]
+            for (index, task) in tasks.enumerated() {
+                if indexOf[task.id] == nil { indexOf[task.id] = index }
+                if let parent = task.parentId { partsOf[parent, default: []].append(index) }
+            }
+            for parent in partsOf.keys {
+                partsOf[parent]?.sort { a, b in
+                    let (x, y) = (tasks[a], tasks[b])
+                    let (p, q) = (x.priority ?? 0, y.priority ?? 0)
+                    if p != q { return p < q }
+                    return x.createdAt != y.createdAt ? x.createdAt < y.createdAt : a < b
+                }
+            }
+            // Whether a parent, or one of its own parents, is pinned: then the task lists under it.
+            func pinnedAbove(_ index: Int) -> Bool {
+                var seen: Set<String> = [tasks[index].id]
+                var up = tasks[index].parentId
+                while let id = up, seen.insert(id).inserted {
+                    guard let parent = indexOf[id] else { return false }
+                    if tasks[parent].pinnedAt != nil { return true }
+                    up = tasks[parent].parentId
+                }
+                return false
+            }
+            func place(_ index: Int, _ depth: Int) {
+                let task = tasks[index]
+                guard held.insert(task.id).inserted else { return }
+                // A search narrows Pinned like any group: a part whose parent it hides moves up in its place.
+                let shown = (task.pinnedAt != nil || groups[task.id] != nil) && matches(task.title, task.key)
+                if shown { pinned.append(Row(task: task, depth: min(depth, Self.maxDepth))) }
+                for part in partsOf[task.id] ?? [] { place(part, shown ? depth + 1 : depth) }
+            }
+            for index in pins where !pinnedAbove(index) { place(index, 0) }
+            // Pinned tasks whose parents only name each other have no top; they still list.
+            for index in pins { place(index, 0) }
+        }
         var positions: [PhoneTaskGroup: [Int]] = [:]
         var groupOf: [String: PhoneTaskGroup] = [:]
-        // INF-3127: a pinned task lists once, in Pinned at the top, whatever its state or age, in the order it was
-        // pinned, newest last; its parts stay in their own groups unless pinned too.
-        var pinned: [Int] = []
         for (at, task) in tasks.enumerated() {
-            if task.pinnedAt != nil {
-                if matches(task.title, task.key) { pinned.append(at) }
-                continue
-            }
-            guard let group = groups[task.id], matches(task.title, task.key) else { continue }
+            guard !held.contains(task.id), let group = groups[task.id], matches(task.title, task.key) else { continue }
             positions[group, default: []].append(at)
             groupOf[task.id] = group
         }
         var parts: [Part] = []
         if !pinned.isEmpty {
-            pinned.sort { a, b in
-                let (p, q) = (tasks[a].pinnedAt ?? 0, tasks[b].pinnedAt ?? 0)
-                return p != q ? p < q : a < b
-            }
-            parts.append(Part(section: .pinned, rows: pinned.map { Row(task: tasks[$0], depth: 0) }, aside: [],
-                              homes: Dictionary(pinned.compactMap { at in groups[tasks[at].id].map { (tasks[at].id, $0) } },
+            parts.append(Part(section: .pinned, rows: pinned, aside: [],
+                              homes: Dictionary(pinned.compactMap { row in groups[row.task.id].map { (row.task.id, $0) } },
                                                 uniquingKeysWith: { first, _ in first })))
         }
         for group in PhoneTaskGroup.allCases {

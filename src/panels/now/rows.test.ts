@@ -5,6 +5,8 @@ import { taskMovesOf } from "../../shared/taskMoves";
 import {
   earlierRowsOf,
   hasSingleRegisteredRepoProject,
+  isPinned,
+  type NowRow,
   newestListedWrite,
   newFilingCount,
   onRail,
@@ -359,14 +361,6 @@ describe("the Pinned group (INF-3127)", () => {
     expect(rows.has("landed")).toBe(false);
   });
 
-  it("keeps a pinned task's parts in their own group, at the top level", () => {
-    const parent = task({ id: "p", key: "FI3-40", status: "active", pinnedAt: 5 });
-    const part = task({ id: "c", key: "FI3-41", parentId: "p", status: "active" });
-    const rows = rowsOf(board({ tasks: [parent, part] }), noFilter);
-    expect(rows.get("pinned")?.map((row) => row.task.key)).toEqual(["FI3-40"]);
-    expect(rows.get("working")?.map((row) => [row.task.key, row.depth])).toEqual([["FI3-41", 0]]);
-  });
-
   it("narrows by a search like any group, and lists none when nothing is pinned", () => {
     const rows = rowsOf(board({ tasks: [working, backlog, oldDone] }), {
       query: "retire",
@@ -381,6 +375,178 @@ describe("the Pinned group (INF-3127)", () => {
     const pinnedOnly = board({ projects: [project(), scratch], tasks: [unpinned, elsewhere] });
     expect(onRail(board({ tasks: [{ ...oldDone, kind: "operation" }] }))).toBe(true);
     expect(projectChipsOf(pinnedOnly).map((chip) => chip.key)).toContain("SCR");
+  });
+});
+
+/**
+ * The captain's words (INF-3512): "when pinning a parent task, i think all
+ * child tasks should move with it into the pinned section (only at
+ * presentation layer, child tasks aren't really "pinned" in their data)".
+ * The board is the captain's own case: a working parent, pinned, whose
+ * parts were listing at the top level of Working beside unrelated work.
+ */
+describe("a pinned task's parts in Pinned (INF-3512)", () => {
+  const parent = task({
+    id: "p",
+    key: "FI3-1354",
+    title: "Every window reaches its frame",
+    createdAt: 10,
+    pinnedAt: 500,
+  });
+  const devices = task({
+    id: "c1",
+    key: "FI3-1357",
+    title: "Devices, phones and the home window",
+    parentId: "p",
+    activity: "running",
+    createdAt: 11,
+  });
+  const home = task({
+    id: "c2",
+    key: "FI3-1359",
+    title: "The home window becomes the frame",
+    parentId: "p",
+    createdAt: 12,
+  });
+  const beside = task({
+    id: "c3",
+    key: "FI3-1360",
+    title: "Opening Infinitary beside a window",
+    parentId: "p",
+    priority: 1,
+    createdAt: 13,
+  });
+  // A part of a part, and parts in other states: one not started, one done this week, one dropped.
+  const deep = task({
+    id: "g1",
+    key: "FI3-1362",
+    title: "Measure the frame",
+    parentId: "c2",
+    activity: "running",
+    createdAt: 14,
+  });
+  const later = task({
+    id: "c4",
+    key: "FI3-1361",
+    title: "The window starts the companion",
+    parentId: "p",
+    status: "open",
+    activity: null,
+    startPolicy: "on-request",
+    createdAt: 15,
+  });
+  const done = task({
+    id: "c5",
+    key: "FI3-1363",
+    title: "Name the frame",
+    parentId: "p",
+    status: "done",
+    activity: null,
+    closedAt: 400,
+    createdAt: 16,
+  });
+  const dropped = task({
+    id: "c6",
+    key: "FI3-1364",
+    title: "Draw a second frame",
+    parentId: "p",
+    status: "dropped",
+    activity: null,
+    closedAt: 450,
+    createdAt: 17,
+  });
+  const other = task({ id: "o", key: "FI3-1400", title: "Survey the reef", createdAt: 20 });
+  const tasks = [parent, devices, home, beside, deep, later, done, dropped, other];
+  const listed = (rows: Map<string, NowRow[]>, group: string) =>
+    rows.get(group as never)?.map((row) => [row.task.key, row.depth]);
+
+  it("lists them under it in Pinned, by priority then age, and in no other group", () => {
+    const rows = rowsOf(board({ tasks }), noFilter);
+    expect(listed(rows, "pinned")).toEqual([
+      ["FI3-1354", 0],
+      ["FI3-1360", 1],
+      ["FI3-1357", 1],
+      ["FI3-1359", 1],
+      ["FI3-1362", 2],
+      ["FI3-1361", 1],
+      ["FI3-1363", 1],
+    ]);
+    // Only the unrelated work stays in Working; the dropped part lists nowhere, as it never did.
+    expect(listed(rows, "working")).toEqual([["FI3-1400", 0]]);
+    expect(rows.has("backlog")).toBe(false);
+    expect(rows.has("landed")).toBe(false);
+    const listedKeys = [...rows.values()].flat().map((row) => row.task.key);
+    expect(listedKeys).not.toContain("FI3-1364");
+    expect(new Set(listedKeys).size).toBe(listedKeys.length);
+  });
+
+  it("keeps each part unpinned, reading where it would list otherwise", () => {
+    const pinned = rowsOf(board({ tasks }), noFilter).get("pinned") ?? [];
+    expect(pinned.filter((row) => isPinned(row.task)).map((row) => row.task.key)).toEqual([
+      "FI3-1354",
+    ]);
+    expect(pinned.map((row) => [row.task.key, row.home])).toEqual([
+      ["FI3-1354", "working"],
+      ["FI3-1360", "working"],
+      ["FI3-1357", "working"],
+      ["FI3-1359", "working"],
+      ["FI3-1362", "working"],
+      ["FI3-1361", "working"],
+      ["FI3-1363", "landed"],
+    ]);
+  });
+
+  it("sends them back under their parent in their own groups once it is unpinned", () => {
+    const unpinned = tasks.map((row) =>
+      row === parent ? { ...parent, pinnedAt: undefined } : row,
+    );
+    const rows = rowsOf(board({ tasks: unpinned }), noFilter);
+    expect(rows.has("pinned")).toBe(false);
+    expect(listed(rows, "working")).toEqual([
+      ["FI3-1354", 0],
+      ["FI3-1360", 1],
+      ["FI3-1357", 1],
+      ["FI3-1359", 1],
+      ["FI3-1362", 2],
+      ["FI3-1361", 1],
+      ["FI3-1400", 0],
+    ]);
+    expect(listed(rows, "landed")).toEqual([["FI3-1363", 0]]);
+  });
+
+  it("lists a part pinned itself once, under its parent, and at the top alone once its parent is unpinned", () => {
+    const pinnedPart = { ...home, pinnedAt: 100 };
+    const both = rowsOf(board({ tasks: [parent, pinnedPart, deep, other] }), noFilter);
+    expect(listed(both, "pinned")).toEqual([
+      ["FI3-1354", 0],
+      ["FI3-1359", 1],
+      ["FI3-1362", 2],
+    ]);
+    const partAlone = rowsOf(
+      board({ tasks: [{ ...parent, pinnedAt: undefined }, pinnedPart, deep, other] }),
+      noFilter,
+    );
+    expect(listed(partAlone, "pinned")).toEqual([
+      ["FI3-1359", 0],
+      ["FI3-1362", 1],
+    ]);
+    expect(listed(partAlone, "working")).toEqual([
+      ["FI3-1354", 0],
+      ["FI3-1400", 0],
+    ]);
+  });
+
+  it("narrows by a search like any group, a part moving up where its parent is hidden", () => {
+    const rows = rowsOf(board({ tasks }), { query: "frame", projectId: null });
+    expect(listed(rows, "pinned")).toEqual([
+      ["FI3-1354", 0],
+      ["FI3-1359", 1],
+      ["FI3-1362", 2],
+      ["FI3-1363", 1],
+    ]);
+    const parts = rowsOf(board({ tasks }), { query: "measure", projectId: null });
+    expect(listed(parts, "pinned")).toEqual([["FI3-1362", 0]]);
+    expect(parts.has("working")).toBe(false);
   });
 });
 

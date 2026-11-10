@@ -33,8 +33,8 @@ export { NOW_GROUPS, type NowGroup };
  * `earlier` is the search's own group (FI3-579 piece 3): closed work the
  * board does not list, found only by typed words. `pinned` is the panel's
  * own group at its top (INF-3127): every task the captain pinned, whatever
- * its state, listed there alone. Neither is a board group, so the shared
- * rule the board and the phone read (`nowGroupOf`) keeps its five.
+ * its state, with its parts under it. Neither is a board group, so the
+ * shared rule the board and the phone read (`nowGroupOf`) keeps its five.
  */
 export type PanelGroup = "pinned" | NowGroup | "earlier";
 
@@ -63,7 +63,7 @@ export type NowRow = {
   task: PanelTaskRow;
   group: PanelGroup;
   depth: number;
-  /** Where a pinned row would list unpinned (INF-3127): its Start and wait line follow it. */
+  /** Where a row in Pinned would list otherwise (INF-3127): its Start and wait line follow it. */
   home?: NowGroup | null;
 };
 
@@ -227,20 +227,17 @@ export function isCardOnly(task: PanelTaskRow): boolean {
 /**
  * Rows per group: sorted by priority then age (landed newest first), a
  * child placed under its parent when both are in the same group. A pinned
- * task lists once, in Pinned alone, whatever its state or age, in the
- * order it was pinned, newest last (INF-3127); its parts stay in their own
- * groups unless pinned too.
+ * task lists in Pinned, whatever its state or age, in the order it was
+ * pinned, newest last (INF-3127), and its parts move there with it, under
+ * it (INF-3512, `pinnedRowsOf`); each task lists once.
  */
 export function rowsOf(board: PanelTaskBoard, filter: NowFilter): Map<PanelGroup, NowRow[]> {
   const taskGroups = groupsOf(board);
+  const pinned = pinnedRowsOf(board, taskGroups, filter);
   const byGroup = new Map<NowGroup, PanelTaskRow[]>();
   const groupById = new Map<string, NowGroup>();
-  const pinned: PanelTaskRow[] = [];
   for (const task of board.tasks) {
-    if (isPinned(task)) {
-      if (matches(task, filter)) pinned.push(task);
-      continue;
-    }
+    if (pinned.held.has(task.id)) continue;
     const group = taskGroups.get(task.id) ?? null;
     if (!group || !matches(task, filter)) continue;
     groupById.set(task.id, group);
@@ -249,18 +246,7 @@ export function rowsOf(board: PanelTaskBoard, filter: NowFilter): Map<PanelGroup
     byGroup.set(group, list);
   }
   const rows = new Map<PanelGroup, NowRow[]>();
-  if (pinned.length > 0) {
-    pinned.sort((a, b) => (a.pinnedAt ?? 0) - (b.pinnedAt ?? 0));
-    rows.set(
-      "pinned",
-      pinned.map((task) => ({
-        task,
-        group: "pinned" as const,
-        depth: 0,
-        home: taskGroups.get(task.id) ?? null,
-      })),
-    );
-  }
+  if (pinned.rows.length > 0) rows.set("pinned", pinned.rows);
   for (const [group, tasks] of byGroup) {
     tasks.sort((a, b) =>
       group === "landed"
@@ -287,6 +273,63 @@ export function rowsOf(board: PanelTaskBoard, filter: NowFilter): Map<PanelGroup
     rows.set(group, ordered);
   }
   return rows;
+}
+
+/**
+ * The Pinned rows, and every task they hold, which lists in no other group.
+ * The captain's words (INF-3512): "when pinning a parent task, i think all child tasks
+ * should move with it into the pinned section (only at presentation layer,
+ * child tasks aren't really "pinned" in their data)". So a pinned task's
+ * parts, and theirs, list under it here, by priority then age, and leave
+ * their own groups, each still reading as unpinned; only parts some group
+ * would list come along. A part pinned itself lists once, under its pinned
+ * parent. A search narrows Pinned like any group: a part whose parent it
+ * hides moves up in its place.
+ */
+function pinnedRowsOf(
+  board: PanelTaskBoard,
+  groups: ReadonlyMap<string, NowGroup | null>,
+  filter: NowFilter,
+): { rows: NowRow[]; held: ReadonlySet<string> } {
+  const pins = board.tasks.filter(isPinned);
+  if (pins.length === 0) return { rows: [], held: new Set() };
+  pins.sort((a, b) => (a.pinnedAt ?? 0) - (b.pinnedAt ?? 0));
+  const byId = new Map(board.tasks.map((task) => [task.id, task]));
+  const partsOf = new Map<string, PanelTaskRow[]>();
+  for (const task of board.tasks) {
+    if (task.parentId === null) continue;
+    const parts = partsOf.get(task.parentId) ?? [];
+    parts.push(task);
+    partsOf.set(task.parentId, parts);
+  }
+  for (const parts of partsOf.values())
+    parts.sort((a, b) => a.priority - b.priority || a.createdAt - b.createdAt);
+  // Whether a parent, or one of its own parents, is pinned: then the task lists under it.
+  const pinnedAbove = (task: PanelTaskRow) => {
+    const seen = new Set([task.id]);
+    for (let up = task.parentId; up !== null && !seen.has(up); ) {
+      seen.add(up);
+      const parent = byId.get(up);
+      if (!parent) return false;
+      if (isPinned(parent)) return true;
+      up = parent.parentId;
+    }
+    return false;
+  };
+  const rows: NowRow[] = [];
+  const held = new Set<string>();
+  const place = (task: PanelTaskRow, depth: number) => {
+    if (held.has(task.id)) return;
+    held.add(task.id);
+    const home = groups.get(task.id) ?? null;
+    const shown = (isPinned(task) || home !== null) && matches(task, filter);
+    if (shown) rows.push({ task, group: "pinned", depth: Math.min(depth, MAX_DEPTH), home });
+    for (const part of partsOf.get(task.id) ?? []) place(part, shown ? depth + 1 : depth);
+  };
+  for (const task of pins) if (!pinnedAbove(task)) place(task, 0);
+  // Pinned tasks whose parents only name each other have no top; they still list.
+  for (const task of pins) place(task, 0);
+  return { rows, held };
 }
 
 /**

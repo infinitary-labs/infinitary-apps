@@ -76,10 +76,14 @@ Only backlog rows carry it; queued rows start by themselves, and the task board 
 
 The captain's words: "when a task is pinned, it always show in a "pinned" section in the tasks panel at the top, no matter what state it's in".
 Pinned is the panel's own first group, above waiting on you, under the same micro uppercase label, `pinned`, with no count and never folded; it is absent while nothing is pinned.
-A pinned task lists there alone, whatever its state or age, done and dropped work included, and leaves its own group; its parts stay in their own groups, at the top level, unless pinned too.
-Its rows keep the order they were pinned in, newest last, each at the top level, reading as every other row does: the mark, the key, the title, the one dim word and the trailing words.
+A pinned task lists there, whatever its state or age, done and dropped work included, and leaves its own group.
+Its parts, and theirs, move there with it (INF-3512, the captain's words: "when pinning a parent task, i think all child tasks should move with it into the pinned section (only at presentation layer, child tasks aren't really "pinned" in their data)"): each lists under it, indented as a part is in any group, by priority then age, and leaves its own group.
+A part that moved there is not pinned: its pin stays an outline, and pinning or unpinning the parent writes nothing to it, so unpinning the parent sends each part back to its own group.
+Only parts some group would list move; a dropped part lists nowhere, as before.
+A part pinned itself lists once, under its pinned parent, and at the top level of Pinned once its parent is unpinned.
+The top-level rows keep the order they were pinned in, newest last, each reading as every other row does: the mark, the key, the title, the one dim word and the trailing words.
 A pinned task that waits for a free crewmate keeps its dated wait line, and a pinned backlog task keeps its Start.
-A search narrows Pinned like any group.
+A search narrows Pinned like any group; a part whose parent the search hides moves up in its place.
 
 Every task row carries a pin button that shows on the row's rest or focus, the same 22px square hairline button as the Start, 4px in from the row's right end and after the Start where a row has both.
 It is the Lucide pin icon (`PinGlyph`), 14px at stroke 1.5 in `--fg-2`, with no text: an outline while the task is unpinned, and filled in `--fg-1` while it is pinned.

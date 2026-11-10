@@ -50,6 +50,41 @@ describe("pinning a task (INF-3127)", () => {
     }
   });
 
+  // The captain's words (INF-3512): a pinned parent's child tasks move with
+  // it into Pinned "only at presentation layer, child tasks aren't really
+  // "pinned" in their data". The Tasks panel moves them (src/panels/now/rows.ts).
+  it("writes nothing to a pinned task's parts, which the board still holds unpinned", () => {
+    const f = taskProtocolFixture();
+    try {
+      f.tasks.create({ id: "parent", title: "Move the docs site", prompt: "", repoId: "r1" });
+      f.tasks.create({
+        id: "part",
+        title: "Copy the pages",
+        prompt: "",
+        repoId: "r1",
+        parentId: "parent",
+      });
+      const before = f.tasks.get("part");
+      const pinnedAt = f.tick();
+      f.tasks.setPinned("parent", true, { actor: "captain", panel: "now" });
+      expect(f.tasks.get("parent")?.pinnedAt).toBe(pinnedAt);
+      expect(f.tasks.get("part")).toEqual(before);
+      expect(f.tasks.timeline("part").filter((event) => event.data && "pin" in event.data)).toEqual(
+        [],
+      );
+      for (const board of [f.protocol.board(), f.fresh()]) {
+        const pins = board.tasks.map((task) => [task.id, task.pinnedAt ?? null]).sort();
+        expect(pins).toEqual([
+          ["parent", pinnedAt],
+          ["part", null],
+        ]);
+      }
+    } finally {
+      f.protocol.dispose();
+      f.db.close();
+    }
+  });
+
   it("refuses a task it does not know and writes nothing", () => {
     const f = taskProtocolFixture();
     try {

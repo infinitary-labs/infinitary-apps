@@ -1,8 +1,13 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   devicePhotos,
+  endPhoneGate,
   PHONE_PARTS,
+  type PhoneDevice,
+  type PhoneJob,
+  type PhonePassEnd,
   partIdentifier,
   partRunsJourney,
   partSelection,
@@ -11,6 +16,7 @@ import {
   phoneExecutionArguments,
   phoneJobs,
   phonePasses,
+  phonePassName,
   phoneSelectionRunsJourney,
   phoneTestSelection,
   phoneTestsStarted,
@@ -20,6 +26,7 @@ import {
   runSideBySide,
   testHomeKeys,
 } from "../scripts/phone-test-plan";
+import { scratchDir } from "./helpers/scratchDirs";
 
 // INF-662 piece 1 (the captain's "Approve and build"): one build serves the iPhone and the
 // iPad at once, so each device's copy of the built test plan must name its own test home.
@@ -518,6 +525,73 @@ describe("every pass in one gate", () => {
       "iphone talk-tasks 2",
     ]);
     expect(outcomes.filter(Boolean)).toHaveLength(5);
+  });
+});
+
+// INF-827: a full gate keeps each part's minutes on each device as part-times.json, which phone.yml
+// uploads in each device's phone logs (docs/testing.md, "Actions artifact retention"); since INF-2582 the
+// release check runs a full gate of one device on each phone Mac. INF-3243: a shadowed flag kept every
+// gate from writing it. The plan is the one scripts/test-phone.ts builds for a gate that names no part,
+// run through the gate's own lanes on a stand-in device that times each pass as the gate does.
+describe("a gate's end", () => {
+  const everyPart = PHONE_PARTS.map(({ name }) => name);
+  const gate = async (jobs: PhoneJob[], fails?: string, stopEarly = false) =>
+    runDeviceLanes<PhoneJob, PhoneDevice, PhonePassEnd>(
+      jobs,
+      2,
+      {
+        open: async (device) => device,
+        run: async (job) => {
+          const began = performance.now();
+          await Promise.resolve();
+          const outcome = phonePassName(job) === fails ? "failed" : "passed";
+          return { outcome, ms: performance.now() - began };
+        },
+        close: async () => {},
+      },
+      stopEarly ? ({ outcome }) => outcome === "failed" : undefined,
+    );
+  const kept = (evidence: string) => join(evidence, "part-times.json");
+
+  it("writes every part's minutes on each device of a full gate, and still writes them when a part fails", async () => {
+    for (const devices of [["iphone"], ["ipad"], ["ipad", "iphone"]] satisfies PhoneDevice[][]) {
+      const jobs = phonePasses(devices, { parts: everyPart });
+      const ends = await gate(jobs);
+      const evidence = scratchDir("infinitary-phone-gate-end-");
+      endPhoneGate(jobs, ends, evidence);
+      const times = JSON.parse(readFileSync(kept(evidence), "utf8"));
+      expect(Object.keys(times).sort()).toEqual([...everyPart].sort());
+      for (const [index, { device, part }] of jobs.entries())
+        expect(times[part][device]).toBe(ends[index]?.ms);
+      for (const part of everyPart)
+        expect(Object.keys(times[part]).sort()).toEqual([...devices].sort());
+    }
+    // The release check keeps discovering after a failed part, so its gate ran every part to its end.
+    const jobs = phonePasses(["ipad"], { parts: everyPart });
+    const failing = jobs.map(phonePassName).at(-1);
+    const ends = await gate(jobs, failing);
+    const evidence = scratchDir("infinitary-phone-gate-end-");
+    expect(() => endPhoneGate(jobs, ends, evidence)).toThrow(
+      `The phone gate failed: ${failing}; see its results in ${evidence}`,
+    );
+    expect(Object.keys(JSON.parse(readFileSync(kept(evidence), "utf8"))).sort()).toEqual(
+      [...everyPart].sort(),
+    );
+  });
+
+  it("writes none for a gate of named parts, or one that stopped at its first failed part", async () => {
+    const named = phonePasses(["iphone"], { parts: everyPart.slice(1) });
+    const namedEvidence = scratchDir("infinitary-phone-gate-end-");
+    endPhoneGate(named, await gate(named), namedEvidence);
+    expect(existsSync(kept(namedEvidence))).toBe(false);
+    const jobs = phonePasses(["iphone"], { parts: everyPart });
+    const [first, ...rest] = jobs.map(phonePassName);
+    const ends = await gate(jobs, first, true);
+    const evidence = scratchDir("infinitary-phone-gate-end-");
+    expect(() => endPhoneGate(jobs, ends, evidence)).toThrow(
+      `The phone gate failed: ${first}; it never started ${rest.join(", ")}; see its results in ${evidence}`,
+    );
+    expect(existsSync(kept(evidence))).toBe(false);
   });
 });
 

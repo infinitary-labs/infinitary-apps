@@ -24,7 +24,7 @@ import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-le
 import { phoneRecording } from "./phone-recording.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
 import { phoneSharedCacheFolder, phoneSimulator, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
-import { devicePhotos, PHONE_PARTS, type PhoneDevice, type PhoneJob, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phonePasses, phoneStopsEarly, relaunchPairs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
+import { devicePhotos, endPhoneGate, PHONE_PARTS, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phonePasses, phoneStopsEarly, relaunchPairs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
 const refusal = ciModeRefusal("phone");
@@ -400,18 +400,12 @@ const everyPartOn = async (starting: Map<PhoneDevice, Promise<Lane>>) => {
     return values.both ? join(evidence, device, name) : join(evidence, name);
   };
   if (values.both) for (const device of devices) mkdirSync(join(evidence, device), { recursive: true });
-  // INF-827: each part's minutes on each device, kept as part-times.json in a full gate's logs.
-  const times: Record<string, Record<string, number>> = {};
-  const gate = async (job: PhoneJob, lane: Lane, stopping: AbortSignal) => {
-    const { device, part, round } = job;
-    const name = round === 1 ? `${device} ${part}` : `${device} ${part} round ${round}`;
+  const gate = async (job: PhoneJob, lane: Lane, stopping: AbortSignal): Promise<PhonePassEnd> => {
+    const { device, part } = job;
+    const name = phonePassName(job);
     const began = Date.now();
     const minutes = () => ((Date.now() - began) / 60_000).toFixed(1);
-    const ended = (outcome: "passed" | "stopped" | "failed") => {
-      // A part's minutes are its ordinary pass's.
-      if (round === 1) (times[part] ??= {})[device] = Date.now() - began;
-      return { name, outcome };
-    };
+    const ended = (outcome: PhonePassEnd["outcome"]) => ({ outcome, ms: Date.now() - began });
     console.log(`${name}: began at ${new Date(began).toISOString()}`);
     try {
       await readyForPart(lane, name);
@@ -460,17 +454,8 @@ const everyPartOn = async (starting: Map<PhoneDevice, Promise<Lane>>) => {
       await deleteSimulator(owned);
     },
   }, values["stop-early"] ? (({ outcome }) => outcome === "failed") : undefined);
-  const named = (outcome: string) => outcomes.filter((each) => each?.outcome === outcome).map((each) => each!.name);
-  const [failed, stopped] = [named("failed"), named("stopped")];
-  const unstarted = jobs.filter((_, index) => !outcomes[index])
-    .map(({ device, part, round }) => round === 1 ? `${device} ${part}` : `${device} ${part} round ${round}`);
-  // Only a full gate, every part on each of its devices run to its end, writes them; a gate of one device
-  // writes its own (INF-2582: the release check runs each device on its own phone Mac).
-  if (!named && !values.waits && !stopped.length && !unstarted.length)
-    writeFileSync(join(evidence, "part-times.json"), `${JSON.stringify(times, null, 2)}\n`);
-  if (failed.length) throw new Error([`The phone gate failed: ${failed.join(", ")}`,
-    ...(stopped.length ? [`it stopped ${stopped.join(", ")}`] : []),
-    ...(unstarted.length ? [`it never started ${unstarted.join(", ")}`] : []), `see its results in ${evidence}`].join("; "));
+  // A full gate keeps its part times; any failed part fails it.
+  endPhoneGate(jobs, outcomes, evidence);
 };
 // A test plan copy beside the built one, naming this device's own test home.
 const planFor = async (built: string, url: string) => {

@@ -1,3 +1,6 @@
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+
 // INF-662 piece 1: the phone check builds once and gives each device's tests their own
 // test home. Xcode writes the scheme's PHONE_TEST_HOME, empty, into each test target's
 // environment in the built test plan (.xctestrun, format 1: one key per target).
@@ -207,6 +210,37 @@ export function phonePasses(devices: PhoneDevice[], { parts = [], iphoneOnly = [
       ? PHONE_REPEAT_ROUNDS.flatMap((round) => phoneJobs([device], repeats).map((job) => ({ ...job, round, ...(repeatTests[job.part]?.length ? { tests: repeatTests[job.part] } : {}) })))
       : []),
   ]);
+}
+
+/** A pass's name in the gate's log and in its failure: the part on its device, and its round after the first. */
+export function phonePassName({ device, part, round }: PhoneJob): string {
+  return round === 1 ? `${device} ${part}` : `${device} ${part} round ${round}`;
+}
+
+/** How one pass of the gate ended, and the milliseconds from its start to that end. */
+export type PhonePassEnd = { outcome: "passed" | "stopped" | "failed"; ms: number };
+
+/** The end of a gate, from its passes in plan order and how each ended (undefined for one that never started).
+ * INF-827: a full gate keeps each part's minutes on each of its devices as part-times.json in its evidence folder,
+ * a part's minutes being its ordinary pass's. A gate is full when every part has an ordinary pass on each of its
+ * devices and every pass ran to its end, so a gate of one device keeps its own (INF-2582: the release check runs
+ * each device on its own phone Mac). Any failed pass then fails the gate, naming the passes it stopped and the
+ * ones it never started. */
+export function endPhoneGate(jobs: readonly PhoneJob[], ends: readonly (PhonePassEnd | undefined)[], evidence: string): void {
+  const ended = (outcome: PhonePassEnd["outcome"]) => jobs.filter((_, index) => ends[index]?.outcome === outcome).map(phonePassName);
+  const [failed, stopped] = [ended("failed"), ended("stopped")];
+  const unstarted = jobs.filter((_, index) => !ends[index]).map(phonePassName);
+  const devices = [...new Set(jobs.map((job) => job.device))];
+  const everyPart = devices.length > 0 && devices.every((device) => PHONE_PARTS.every(({ name }) =>
+    jobs.some((job) => job.device === device && job.part === name && job.round === 1)));
+  if (everyPart && !stopped.length && !unstarted.length) {
+    const times: Record<string, Partial<Record<PhoneDevice, number>>> = {};
+    for (const [index, job] of jobs.entries()) if (job.round === 1) (times[job.part] ??= {})[job.device] = ends[index]!.ms;
+    writeFileSync(join(evidence, "part-times.json"), `${JSON.stringify(times, null, 2)}\n`);
+  }
+  if (failed.length) throw new Error([`The phone gate failed: ${failed.join(", ")}`,
+    ...(stopped.length ? [`it stopped ${stopped.join(", ")}`] : []),
+    ...(unstarted.length ? [`it never started ${unstarted.join(", ")}`] : []), `see its results in ${evidence}`].join("; "));
 }
 
 /** INF-2052: a device's Photos, made ready in two stages. `watched` begins the wait for Photos to open its library

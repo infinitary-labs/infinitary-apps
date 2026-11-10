@@ -620,7 +620,7 @@ Without the folder the simulator uses the runtime's own cache and stores its wor
 `xcrun simctl runtime dyld_shared_cache remove` takes the folder away without administrator rights; a folder that holds a cache stays, and a Mac with no such folder runs nothing.
 A removal that fails, or leaves the folder, is printed while the gate goes on, and the observers then have only their live logs and the unreadable-record rule below.
 A part's results are in its own folder, inside the device's folder with `--both`, and `--part` runs only the named parts.
-A `--both` run of every part writes each part's minutes on each device to `part-times.json` in the evidence folder, a record no workflow reads since INF-2539 removed the pull request's part budget.
+A gate of every part, on one device or with `--both`, writes each part's minutes on each of its devices to `part-times.json` in the evidence folder once every part has run to its end (`endPhoneGate` in `scripts/phone-test-plan.ts`), a record no workflow reads since INF-2539 removed the pull request's part budget.
 The build is `xcodebuild build-for-testing` for any simulator, and each part runs `test-without-building` from a copy of the built test plan that names its own test home and selects its tests.
 The simulators of the devices that run side by side start while that build runs, so the first parts begin as it ends; a device past `--simulators` starts its own when a place frees (INF-2125).
 The Swift package tests and the build share one folder of fetched package repositories, so the build fetches nothing the package tests already did.

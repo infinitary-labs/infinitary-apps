@@ -239,7 +239,10 @@ describe("queued task wait facts (nightly audit finding 4)", () => {
         queryTasks(f.tasks, { key: "build" }, () => undefined).rows[0]?.waiting,
       ).toBeUndefined();
       f.tick();
-      f.tasks.starts.failManualStart("build", "The project folder could not be prepared");
+      f.tasks.starts.returnStart("build", {
+        kind: "failed",
+        reason: "The project folder could not be prepared",
+      });
       expect(f.view("build").queueWait?.since).toBe(f.now());
     } finally {
       f.protocol.dispose();

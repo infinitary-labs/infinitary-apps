@@ -7,16 +7,17 @@ import { type ComputerMoveView, isUnstartedWork, type TaskView } from "./tasks";
  * skill's TaskRecord): every open record ends in one row of buttons - the end
  * slot at its left edge, the next slot at its right (FI3-948) - read only
  * from the task's typed fields, never from its prose. It says nothing of its
- * own: the status reason and the body's attention box say what happens
- * next. Dropped work may start again; Done records have none.
+ * own at rest - the status reason and the body's attention box say what
+ * happens next - except why a start could not begin, beside Try again. Dropped work may start again; Done records have none.
  *
  * - `end`: the one way to end the task from its record, labelled Drop task
  *   in every state (the captain's `end_verb`). Before the work starts it is
  *   the footer's own `drop-task` (the record stays, nothing to keep); once
  *   started it is the stall card's `stop-task`, which ends the task and
  *   keeps a copy of its unfinished work. Null where no host op ends the
- *   row: the Firstmate's own decision and operation rows, and work returned
- *   to the queue after it started.
+ *   row: the Firstmate's own decision and operation rows, and open work an
+ *   earlier version returned to the queue still marked started (a start
+ *   that began no crewmate now leaves it never started, `returnStart`).
  * - `next`: `start` on open work that waits for the captain's word - on
  *   request, held or not - and on started work back in the backlog
  *   (INF-2062), with no parts (`blocked`, and disabled, while

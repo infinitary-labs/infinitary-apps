@@ -34,7 +34,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
 import { Router } from "../routing/router";
 import { SettingsStore } from "../storage/settingsStore";
-import { seedTask } from "../tasks/seedTask";
+import { couldNotStartOf, seedTask } from "../tasks/seedTask";
 import { git } from "../workspace/git";
 
 /**
@@ -418,12 +418,11 @@ describe("a task that runs on a computer that runs work", () => {
     const who = home.placed.placeOf(at.deviceId).who;
     expect(home.tasks.get("t-bare")).toMatchObject({
       status: "open",
-      gate: {
-        kind: "captain",
-        ref: "dispatch-failed",
-        reason: `${who} has no subscription of its own that can take this task now. Sign it in to one in Settings → Intelligence.`,
-      },
+      gate: null,
     });
+    expect(couldNotStartOf(home.tasks.get("t-bare"))).toBe(
+      `${who} has no subscription of its own that can take this task now. Sign it in to one in Settings → Intelligence.`,
+    );
     // Neither this Mac's Codex nor anything else was chosen in its place.
     expect(home.decisions.routing({ taskIds: ["t-bare"], chosen: true })).toEqual([]);
     expect(at.bound).toEqual([]);

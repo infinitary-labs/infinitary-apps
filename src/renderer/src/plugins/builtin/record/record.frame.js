@@ -8,7 +8,8 @@
  * live validation. Cards lists every card the task showed; Activity is its
  * timeline. The host owns identity/state/close, the tabs and the action bar:
  * every button, Show the card included, is the bar's (FI3-565 piece 4), and
- * the bar says nothing of its own (FI3-948). Its
+ * the bar says nothing of its own (FI3-948) but why a start could not begin.
+ * Its
  * actions are `open-card`, a Cards row link (FI3-579 piece 1); and, where
  * the window has knowledge, `open-knowledge`, a Knowledge used row that
  * opens the revision the work used in the Knowledge browser's inspector

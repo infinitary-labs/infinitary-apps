@@ -115,10 +115,9 @@ export function RecordPaneChrome({
           <span
             data-record-status-reason=""
             style={{
-              color: reading.reason.startsWith("Could not start")
-                ? "var(--warn)"
-                : reading.reason === "Checking whether it started" ||
-                    reading.reason === "Still starting. You can keep working."
+              color:
+                reading.reason === "Checking whether it started" ||
+                reading.reason === "Still starting. You can keep working."
                   ? "var(--fg-2)"
                   : "var(--fg-3)",
               fontSize: "var(--text-sm)",
@@ -198,8 +197,9 @@ export type RecordMove = {
  * the host's own row of buttons, read only from the task's typed state
  * (`recordBarOf`) - the end slot (Drop task) at its left edge and the next
  * slot (Start, Continue, Show the card, or nothing) at its right, so neither
- * moves between states. It says nothing of its own: the status reason and
- * the body's attention box say what happens next. Closed records, and open
+ * moves between states. It says nothing of its own at rest - the status
+ * reason and the body's attention box say what happens next - except why a
+ * start could not begin, said between the slots beside Try again. Closed records, and open
  * rows with no button, have none.
  *
  * Drop task asks once, inline: Cancel takes the end slot and focus, the
@@ -223,6 +223,7 @@ export function RecordPaneFooter({
   taskId,
   taskKey,
   revision,
+  notice,
   onRun,
   onShowCard,
   move,
@@ -235,6 +236,8 @@ export function RecordPaneFooter({
   taskKey: string;
   /** Changes whenever the record does: a pending click clears on it. */
   revision: unknown;
+  /** Why its last start did not happen, said between the slots at rest, beside Try again. */
+  notice?: string;
   onRun: (op: TaskLifecycleOp, review?: DropTaskReview) => Promise<unknown>;
   onShowCard: () => void;
   move?: RecordMove;
@@ -506,6 +509,15 @@ export function RecordPaneFooter({
       );
     }
     if (move?.computerMove) between = computerMoveLine(move.computerMove);
+    else if (notice)
+      between = (
+        <span
+          data-record-start-notice=""
+          style={{ color: "var(--warn)", overflowWrap: "anywhere" }}
+        >
+          {notice}
+        </span>
+      );
     if (offersDone)
       doneButton = (
         <Button
@@ -589,8 +601,8 @@ export function RecordPaneFooter({
           {endButton}
         </div>
         {/* Between the slots: empty at rest, the confirm sentence while Drop
-            task asks, the computers while Move to a computer picks, and where
-            a move stands while one does. */}
+            task asks, the computers while Move to a computer picks, where a
+            move stands while one does, and why a start could not begin. */}
         <div
           {...(asking ? { "data-record-confirm": end } : {})}
           {...(askingDone ? { "data-record-confirm": "close-done" } : {})}

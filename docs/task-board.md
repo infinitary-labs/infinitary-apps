@@ -92,7 +92,10 @@ Dragging a tile to Queued that nothing holds is a Start.
 A Start tells the first mate first (`captain-start`, `docs/inbox.md`): it applies the standing directions that bear on the task, then starts it.
 Dragging a task that waits to Queued tells the first mate the same way and starts nothing; the ready sweep starts it when its wait ends.
 A confirmed failure returns it to Backlog with Could not start, and the Backlog header counts those tasks.
-A start the first mate asked for - a spawn, a review or its `start_now` - that fails does the same, keeping any working copy the start made for the retry (`TaskStarts.failManualStart` with `onRequest`), and the first mate hears that the task is still open (`queued-start-failed` with `open`).
+Every start that began no crewmate ends in one place (`TaskStarts.returnStart`), whoever started it: the captain's Start, the ready sweep, or the first mate.
+It leaves the task open and never started, so its record always offers Drop task: Could not start in Backlog, which Start tries again, or, when a sign-in refused it, queued behind that sign-in until it is back.
+The record says Could not start and its reason in its bar, between Drop task and Try again, never in its title row.
+A start the first mate asked for - a spawn, a review or its `start_now` - keeps any working copy the start made for the retry, and the first mate hears that the task is still open (`queued-start-failed` with `open`).
 A start behind the first mate's answer queues a backlog task while it starts (`TaskStarts.queueForStart`), so a quit that stops it tells nobody it failed and the next launch's ready sweep starts it, and a wait it ends in starts it when that wait ends; a failure puts it back in Backlog, and once it starts it is back on request (`TaskStarts.keepOnRequest`), as a started backlog task always was.
 
 ## A tile is a pointing gesture

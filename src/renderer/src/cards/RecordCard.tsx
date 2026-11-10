@@ -278,8 +278,9 @@ export function RecordCard({
             clock - since >= 15_000 &&
             (shown.startAttempt?.phase === "preparing" || shown.activity === "starting")
           ? "Still starting. You can keep working."
-          : shown.startNotice
-            ? `Could not start. ${shown.startNotice.reason}`
+          : // Could not start is said beside Try again, in the bar.
+            shown.startNotice
+            ? ""
             : base.status.reason;
     return reason === base.status.reason ? base : { ...base, status: { ...base.status, reason } };
   }, [shown, modelName, clock, minute]);
@@ -333,6 +334,7 @@ export function RecordCard({
             taskId={taskId}
             taskKey={shown.key}
             revision={shown}
+            notice={shown.startNotice ? `Could not start. ${shown.startNotice.reason}` : undefined}
             onRun={runOp}
             onShowCard={() => void showCard().catch(() => {})}
             move={{

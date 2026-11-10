@@ -547,7 +547,7 @@ describe("the task graph (task-system P2)", () => {
     });
 
     it("queues and unqueues never-started work on the captain's word, and refuses started work and parents without writing", () => {
-      const { tasks, work, tick } = setup();
+      const { db, tasks, work, tick } = setup();
       const blocker = work("blocker");
       const leaf = work("leaf", { startPolicy: "on-request", priority: 2 });
       tasks.graph.link(blocker.id, leaf.id, "blocks", "captain");
@@ -604,17 +604,29 @@ describe("the task graph (task-system P2)", () => {
         text: queuePartsRefusal(parent.key),
       });
       expect(tasks.get(parent.id)?.startPolicy).toBe("on-request");
+      // An older version's failed start left the row open and still marked started.
       const started = work("started", { startPolicy: "on-request" });
       expect(tasks.starts.claimForDispatch(started.id)).toBe(true);
-      tasks.starts.requeue(
-        started.id,
-        { kind: "at-time", until: 9_999_999 },
-        "no account was free",
-      );
-      expect(tasks.get(started.id)).toMatchObject({ status: "open" });
+      db.prepare("UPDATE tasks SET status = 'open', activity = NULL WHERE id = 'started'").run();
+      expect(tasks.get(started.id)).toMatchObject({
+        status: "open",
+        startedAt: expect.any(Number),
+      });
       expect(tasks.starts.setQueued(started.id, "queue-task", { actor: "captain" })).toEqual({
         ok: false,
         text: queueStartedRefusal(started.key),
+      });
+      // INF-3307 row 4: a start that began no crewmate leaves the task never started, so it queues.
+      const returned = work("returned", { startPolicy: "on-request" });
+      expect(tasks.starts.claimForDispatch(returned.id)).toBe(true);
+      tasks.starts.returnStart(returned.id, {
+        kind: "held",
+        gate: { kind: "at-time", until: 9_999_999, reason: "no account was free" },
+      });
+      expect(tasks.get(returned.id)).toMatchObject({ status: "open", startedAt: null });
+      expect(tasks.starts.setQueued(returned.id, "queue-task", { actor: "captain" })).toEqual({
+        ok: true,
+        changed: true,
       });
       tasks.close(blocker.id, { status: "done", reason: "landed", actor: "host" });
       expect(tasks.starts.setQueued(blocker.id, "unqueue-task", { actor: "captain" })).toEqual({

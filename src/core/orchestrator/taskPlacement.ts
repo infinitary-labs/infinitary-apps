@@ -33,6 +33,7 @@ import type { RouteResult } from "../routing/router";
 import { LOCAL_MACHINE_ID, type SessionBinding } from "../session/session";
 import type { TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
+import { UNCONFIRMED_START_RETURNED } from "../tasks/taskStarts";
 import type { CardService } from "./cardService";
 import type { PlacementRecord, TaskRuntime } from "./crewRuntime";
 import type { CrewmateComputers } from "./crewSession";
@@ -669,7 +670,7 @@ export class TaskPlacement {
     const record = this.options.tasks.get(taskId);
     if (record?.gate?.ref === gate.ref) return;
     if (record?.status === "open") this.options.tasks.placement.setGate(taskId, gate, gate.reason);
-    else this.options.tasks.starts.requeue(taskId, gate, gate.reason);
+    else this.options.tasks.starts.returnStart(taskId, { kind: "held", gate });
   }
 
   /**
@@ -820,7 +821,10 @@ export class TaskPlacement {
       }
       if (record.placement) continue; // its durable order, not roster absence, owns reconciliation
       if (record.deviceId && this.host.outOfReach(id)) continue;
-      this.options.tasks.starts.releaseUnconfirmedStart(id);
+      this.options.tasks.starts.returnStart(id, {
+        kind: "retry",
+        text: UNCONFIRMED_START_RETURNED,
+      });
     }
   }
 

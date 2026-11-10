@@ -32,6 +32,26 @@ import { keyOrId, type TaskWriter } from "./taskWriter";
 
 /** The record's status line when a start whose outcome is unknown goes back to the queue. */
 export const UNCONFIRMED_START_RETURNED = "returned to the queue - the start was not confirmed";
+/** The same line for a start a quit cut short, found at the next launch. */
+const UNFINISHED_START_RETURNED = "returned to the queue - the start did not finish";
+
+/**
+ * How a start that began no crewmate ends (INF-3307's audit, row 4), which
+ * `TaskStarts.returnStart` writes in one place. Every outcome leaves the
+ * task open and never started, so its record offers Drop task:
+ * - `retry`: the outcome is unknown, not a failure, and whatever started it
+ *   tries again; its line reaches Activity only with `feed`, as one a quit
+ *   cut short does.
+ * - `held`: it waits behind a gate, such as a sign-in, that clears it.
+ * - `failed`: Could not start, back in the backlog for your word. With
+ *   `feed`, Activity says so with its reason: the queue's own start, which
+ *   nobody asked for (the captain kept that line); whoever asked hears it
+ *   from the reply instead.
+ */
+export type StartReturn =
+  | { kind: "retry"; text: string; feed?: true }
+  | { kind: "held"; gate: TaskGate }
+  | { kind: "failed"; reason: string; feed?: true };
 
 export type DispatchInput = {
   workspace: {
@@ -311,7 +331,7 @@ export class TaskStarts {
    * Take an open work row out of the ready query before any await on the
    * start path. Returns false when another caller already claimed it or
    * the row is not open work. `dispatch` later fills workspace facts;
-   * `requeue` returns a failed start to the queue.
+   * `returnStart` ends a start that began no crewmate.
    */
   /**
    * Accepted starts that have not been claimed yet. The board reads this so
@@ -349,7 +369,7 @@ export class TaskStarts {
    * A start begun behind the first mate's answer on a backlog task queues it
    * (INF-3060): a quit before the start finishes leaves it for the next
    * launch's sweep, as it leaves a spawn. A failure puts it back in the
-   * backlog (`failManualStart` with `onRequest`), and a start puts it back
+   * backlog (`returnStart`), and a start puts it back
    * on request (`keepOnRequest`).
    */
   queueForStart(id: string): void {
@@ -396,37 +416,6 @@ export class TaskStarts {
   }
 
   /**
-   * Contact came back and no session was recorded. Back to open, no failure
-   * notice: an unknown outcome is not a confirmed failure.
-   */
-  releaseUnconfirmedStart(id: string): void {
-    const at = this.writer.now();
-    const run = this.writer.write(() => {
-      const record = this.writer.store.get(id);
-      if (!record || record.status === "done" || record.status === "dropped") return;
-      this.startAttempts.delete(id);
-      if (record.status !== "active" || record.worktreeDir || record.sessionFile) return;
-      this.writer.patch(id, {
-        status: "open",
-        activity: null,
-        assignee: null,
-        model: null,
-        startedAt: null,
-        updatedAt: at,
-      });
-      this.writer.addEvent({
-        taskId: id,
-        at,
-        actor: "host",
-        kind: "status",
-        text: UNCONFIRMED_START_RETURNED,
-        feed: false,
-      });
-    });
-    run();
-  }
-
-  /**
    * A program began running in the host's runner (INF-799). It stays open,
    * since no crewmate holds it, and its first run is one event on its
    * timeline - never startedAt, which says a crewmate started and draws the
@@ -456,29 +445,36 @@ export class TaskStarts {
   }
 
   /**
-   * A confirmed manual start did not begin. Back to open, start policy kept,
-   * the reason stored so a reopened view still says why. A start the first
-   * mate asked for (INF-3060) also waits for its go, `onRequest`: the sweep
-   * never starts it again on its own, and update_task start_now does.
+   * A start that began no crewmate goes back to open, never started, as its
+   * outcome says (`StartReturn`); a closed task stays closed. An unknown
+   * outcome returns only a claimed row that holds no conversation and, on
+   * this Mac, no working copy: anything else began. One that failed or waits
+   * behind a gate also gives up the working copy its start named.
    */
-  failManualStart(id: string, reason: string, options: { onRequest?: true } = {}): void {
+  returnStart(id: string, outcome: StartReturn): void {
     const at = this.writer.now();
     const run = this.writer.write(() => {
       const record = this.writer.store.get(id);
-      if (!record || record.status === "done" || record.status === "dropped") return;
       this.startAttempts.delete(id);
+      if (!record || record.status === "done" || record.status === "dropped") return;
+      if (outcome.kind === "retry" && !beganNothing(record)) return;
+      const unclaimed =
+        outcome.kind === "failed"
+          ? { gate: null, startNotice: JSON.stringify({ reason: outcome.reason }) }
+          : outcome.kind === "held"
+            ? { gate: outcome.gate }
+            : {};
       this.writer.patch(id, {
         status: "open",
         activity: null,
-        gate: null,
-        worktreeDir: "",
-        branch: "",
-        workspaceState: "none",
         assignee: null,
         model: null,
         startedAt: null,
-        startNotice: JSON.stringify({ reason }),
-        ...(options.onRequest ? { startPolicy: "on-request" as const } : {}),
+        ...(outcome.kind === "retry"
+          ? {}
+          : { repoDir: "", worktreeDir: "", branch: "", workspaceState: "none" as const }),
+        ...unclaimed,
+        ...(outcome.kind === "failed" ? { startPolicy: "on-request" as const } : {}),
         updatedAt: at,
       });
       this.writer.addEvent({
@@ -486,9 +482,18 @@ export class TaskStarts {
         at,
         actor: "host",
         kind: "status",
-        text: `could not start - ${reason}`,
-        data: { startNotice: { reason } },
-        feed: false,
+        ...(outcome.kind === "retry"
+          ? { text: outcome.text, feed: outcome.feed ?? false }
+          : outcome.kind === "held"
+            ? {
+                text: `returned to the queue${outcome.gate.reason ? ` - ${outcome.gate.reason}` : ""}`,
+                data: { gate: outcome.gate },
+              }
+            : {
+                text: `could not start - ${outcome.reason}`,
+                data: { startNotice: { reason: outcome.reason } },
+                feed: outcome.feed ?? false,
+              }),
       });
     });
     run();
@@ -597,73 +602,28 @@ export class TaskStarts {
     run();
   }
 
-  /** A dispatch that failed returns the row to the queue behind a gate. */
-  requeue(id: string, gate: TaskGate, reason: string): void {
-    const at = this.writer.now();
-    const run = this.writer.write(() => {
-      this.writer.mustGet(id);
-      this.writer.patch(id, {
-        status: "open",
-        activity: null,
-        gate,
-        repoDir: "",
-        worktreeDir: "",
-        branch: "",
-        workspaceState: "none",
-        assignee: null,
-        model: null,
-        updatedAt: at,
-      });
-      this.writer.addEvent({
-        taskId: id,
-        at,
-        actor: "host",
-        kind: "status",
-        text: `returned to the queue - ${reason}`,
-        data: { gate },
-      });
-    });
-    run();
-  }
-
   /**
    * A previous process claimed a row and died before `dispatch` wrote a
    * worktree. Put those rows back on the ready query (no captain gate) so
    * the next sweep retries instead of leaving them interrupted and stuck.
    */
   private releaseUnstartedDispatches(): void {
-    // A task on a computer that runs work has no working copy here; its start
-    // finished once its conversation there was recorded. So did a task that
-    // builds in place (the personal workspace has no worktree): it is back on
-    // the queue only when no conversation was ever recorded for it.
-    const orphans = this.writer.store
-      .listByStatus("active")
-      .filter(
-        (record) =>
-          record.kind === "work" &&
-          (record.deviceId ? !record.sessionFile : !record.worktreeDir && !record.sessionFile),
-      );
-    if (orphans.length === 0) return;
-    const run = this.writer.write(() => {
-      const at = this.writer.now();
-      for (const record of orphans) {
-        this.writer.patch(record.id, {
-          status: "open",
-          activity: null,
-          gate: null,
-          assignee: null,
-          model: null,
-          updatedAt: at,
-        });
-        this.writer.addEvent({
-          taskId: record.id,
-          at,
-          actor: "host",
-          kind: "status",
-          text: "returned to the queue - the start did not finish",
-        });
-      }
-    });
-    run();
+    for (const record of this.writer.store.listByStatus("active"))
+      if (record.kind === "work" && beganNothing(record))
+        this.returnStart(record.id, { kind: "retry", text: UNFINISHED_START_RETURNED, feed: true });
   }
+}
+
+/**
+ * A claimed start that has not begun: no conversation was recorded and, on
+ * this Mac, no working copy written. A task on a computer that runs work has
+ * no working copy here, and one that builds in place has none at all: its
+ * start finished once its conversation was recorded.
+ */
+function beganNothing(record: TaskRecord): boolean {
+  return (
+    record.status === "active" &&
+    !record.sessionFile &&
+    (!record.worktreeDir || Boolean(record.deviceId))
+  );
 }

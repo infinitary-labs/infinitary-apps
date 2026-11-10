@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "failed-start-drop-or-retry",
+      "kind": "fix",
+      "title": "A task whose start fails can be tried again or dropped",
+      "body": "When a queued task could not start, for example because its working copy could not be made, it used to sit in Queued waiting for a decision with no buttons, and only the first mate could move it. It now goes back to Backlog, and its record says Could not start and why beside Try again and Drop task. A task waiting for a sign-in before it starts can also be dropped.",
+      "area": "tasks",
+      "picture": {
+        "dark": "failed-start-drop-or-retry-dark.webp",
+        "light": "failed-start-drop-or-retry-light.webp",
+        "alt": "A task record in Backlog with Drop task, the Could not start reason and Try again along its bottom"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -178,8 +178,8 @@ describe("recovering a basis before implementation starts", () => {
     );
   });
 
-  it("refuses changing a live, closed or previously started task's spec", () => {
-    const { tasks } = setup();
+  it("refuses changing a live, closed or previously started task's spec, and keeps it open to change after a start that began no crewmate", () => {
+    const { db, tasks } = setup();
     const plan = tasks.create({ id: "plan", title: "Plan", prompt: "p", repoId: "r1" });
     for (const status of ["active", "done", "dropped"] as const) {
       const record = tasks.create({
@@ -199,11 +199,21 @@ describe("recovering a basis before implementation starts", () => {
         "has not started",
       );
     }
+    // An older version's failed start left the row open and still marked started.
     seedTask(tasks, { id: "started", title: "Started", status: "running" });
-    tasks.starts.requeue("started", { kind: "captain" }, "failed start");
+    db.prepare(
+      "UPDATE tasks SET status = 'open', activity = NULL, assignee = NULL WHERE id = 'started'",
+    ).run();
+    expect(tasks.get("started")).toMatchObject({ status: "open", startedAt: expect.any(Number) });
     expect(() => tasks.updateFields("started", { basis: plan.key }, "firstmate")).toThrow(
       "has not started",
     );
+    // INF-3307 row 4: a start that failed before its crewmate began leaves the task never started.
+    seedTask(tasks, { id: "returned", title: "Returned", status: "running" });
+    tasks.starts.returnStart("returned", { kind: "failed", reason: "its working copy failed" });
+    expect(tasks.updateFields("returned", { basis: plan.key }, "firstmate")).toEqual([
+      `basis ${plan.key}`,
+    ]);
   });
 });
 
@@ -273,7 +283,7 @@ describe("naming a model for a filed task (FI3-436)", () => {
   it("names a model on queued work a failed start returned, but not on work a crewmate holds or closed", () => {
     const { tasks } = setup();
     seedTask(tasks, { id: "requeued", title: "Requeued", status: "running" });
-    tasks.starts.requeue("requeued", { kind: "captain" }, "failed start");
+    tasks.starts.returnStart("requeued", { kind: "failed", reason: "failed start" });
     expect(tasks.updateFields("requeued", { model: "gpt-6-astra" }, "firstmate")).toEqual([
       "model gpt-6-astra",
     ]);
@@ -485,10 +495,11 @@ describe("TaskService (task-system P0)", () => {
     expect(again.timeline("t").at(-1)).toMatchObject({
       kind: "status",
       text: "returned to the queue - the start did not finish",
+      feed: true,
     });
   });
 
-  it("requeues a failed dispatch behind a gate and reopens a closed park row", () => {
+  it("returns a start held for a sign-in to the queue behind its gate, never started", () => {
     const { tasks } = setup();
     tasks.create({
       id: "q",
@@ -502,18 +513,23 @@ describe("TaskService (task-system P0)", () => {
       accountId: null,
       assignee: "crewmate 2",
     });
-    tasks.starts.requeue(
-      "q",
-      { kind: "captain", ref: "dispatch-failed", reason: "boom" },
-      "could not start: boom",
-    );
+    const gate = {
+      kind: "captain" as const,
+      ref: "forge-sign-in:github.com",
+      reason: "waiting for GitHub sign-in",
+    };
+    tasks.starts.returnStart("q", { kind: "held", gate });
     expect(tasks.get("q")).toMatchObject({
       status: "open",
       activity: null,
       worktreeDir: "",
       workspaceState: "none",
       assignee: null,
-      gate: { kind: "captain", ref: "dispatch-failed", reason: "boom" },
+      startedAt: null,
+      gate,
+    });
+    expect(tasks.timeline("q").at(-1)).toMatchObject({
+      text: "returned to the queue - waiting for GitHub sign-in",
     });
     expect(tasks.listOpen().map((r) => r.id)).toEqual(["q"]);
   });

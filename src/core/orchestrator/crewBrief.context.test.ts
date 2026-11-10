@@ -24,7 +24,7 @@ import { renderReferenceImport } from "../knowledge/context";
 import { KnowledgeService } from "../knowledge/knowledgeService";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
 import type { CrewMachines } from "../placed/crewMachines";
-import { seedTask } from "../tasks/seedTask";
+import { couldNotStartOf, seedTask } from "../tasks/seedTask";
 import { TaskProtocol } from "../tasks/taskProtocol";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
@@ -454,9 +454,9 @@ describe("finding context is not starting code (INF-1964)", () => {
       expect(bringBranchHome).not.toHaveBeenCalled();
       if (recovery === "basis" && moved) {
         expect(tasks.get(filing.id)?.status).toBe("open");
-        expect(tasks.get(filing.id)?.gate).toMatchObject({
-          reason: "The starting work belongs to a different project.",
-        });
+        expect(couldNotStartOf(tasks.get(filing.id))).toBe(
+          "The starting work belongs to a different project.",
+        );
         expect(sourceRef).not.toHaveBeenCalled();
         expect(crew.promptCalls).toHaveLength(0);
         return;

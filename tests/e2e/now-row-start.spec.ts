@@ -50,7 +50,10 @@ function seeded(): string {
   seed("rs-blocked", "Sound the channel");
   tasks.graph.link("rs-first", "rs-blocked", "blocks", "host");
   seed("rs-again", "Sound the shoal");
-  tasks.starts.failManualStart("rs-again", "its working copy could not be made");
+  tasks.starts.returnStart("rs-again", {
+    kind: "failed",
+    reason: "its working copy could not be made",
+  });
   db.close();
   return userDataDir;
 }

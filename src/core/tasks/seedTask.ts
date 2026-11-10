@@ -121,3 +121,9 @@ export function legacyStateOf(record: TaskRecord | undefined): string | undefine
   if (record.status === "active") return record.activity ?? "active";
   return record.closedReason ?? record.status;
 }
+
+/** Why the record's last start could not begin (Could not start), for assertions. */
+export function couldNotStartOf(record: TaskRecord | undefined): string | undefined {
+  if (!record?.startNotice) return undefined;
+  return (JSON.parse(record.startNotice) as { reason: string }).reason;
+}

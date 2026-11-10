@@ -117,7 +117,7 @@ const emptyEffects: DropEffects = { parts: [], waiting: [], underway: [] };
 
 function bar(
   state: RecordBar | null,
-  extra: { effects?: DropEffects | null; closeDone?: boolean } = {},
+  extra: { effects?: DropEffects | null; closeDone?: boolean; notice?: string } = {},
 ): Node {
   const html = renderToStaticMarkup(
     <RecordPaneFooter
@@ -126,6 +126,7 @@ function bar(
       taskId="task-84"
       taskKey="FI3-84"
       revision={0}
+      {...(extra.notice !== undefined ? { notice: extra.notice } : {})}
       onRun={() => Promise.resolve()}
       onShowCard={() => {}}
       {...(extra.closeDone !== undefined
@@ -203,6 +204,14 @@ describe("task record action bar", () => {
       end: DROP_TASK_LABEL,
       next: "Done",
     });
+  });
+  // The captain, on the task record: "showing the could not start message in the title is really odd. it should be closer to the try again button".
+  it("says why the last start did not happen between Drop task and Try again", () => {
+    const root = bar(open({ next: "try-again" }), {
+      notice: "Could not start. a branch named 'fm/task-x' already exists",
+    });
+    expect(slots(root)).toEqual({ end: DROP_TASK_LABEL, next: "Try again" });
+    expect(words(root)).toBe("Could not start. a branch named 'fm/task-x' already exists");
   });
   it("renders Start again alone in the next slot without confirmation", () => {
     const root = bar({ end: null, next: "start-again", blocked: false });

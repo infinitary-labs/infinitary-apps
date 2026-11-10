@@ -36,7 +36,8 @@ Records have no thread or reply row.
 **Its footer is the action bar: one shape in every open state; judgment calls stay on cards** (the captain's 4A, 2026-09-28, reversing the 2026-09-09 read-only record; Drop task, FI3-243; one bar, FI3-565 direction A piece 4, with the captain's `end_verb` "Drop task in every state" and `end_while_waiting` "yes"; Drop task at the left edge, FI3-948, the captain's layout B).
 Every open record ends in one row of buttons read only from the task's typed state (`recordBarOf`), under the body, `--space-3` above it: the end slot holds the row's left edge and the next slot its right edge, in every state, so neither button moves when the state changes.
 The row's edges line up with the body's labels.
-The row has no sentence of its own: the reason beside the status pill and the body's attention box already say what happens next (FI3-948, the captain's "A crewmate is working ... feels unnecessary").
+The row has no sentence of its own at rest: the reason beside the status pill and the body's attention box already say what happens next (FI3-948, the captain's "A crewmate is working ... feels unnecessary").
+The one exception is a start that could not begin, which says Could not start and its concrete reason between Drop task and Try again, in `--warn`, and never in the title row (the captain, 2026-11-09: "showing the could not start message in the title is really odd. it should be closer to the try again button").
 A row with no button draws nothing, and Done records have no bar.
 A Dropped work record has only Start again in its next slot unless a replacement or stronger-model retry superseded it, or it has parts.
 
@@ -45,7 +46,7 @@ A Dropped work record has only Start again in its next slot unless a replacement
 | Backlog | Drop task | `Start` | - |
 | Backlog, started before | Drop task | `Close as done`, `Start` | - |
 | Starting | empty | `Starting`, unavailable | Still starting. You can keep working. after 15 seconds, or Checking whether it started if contact is lost. |
-| Backlog, could not start | Drop task | `Try again` | The concrete reason. |
+| Backlog, could not start | Drop task | `Try again` | - (the bar says Could not start and the concrete reason between its buttons) |
 | Backlog or Queued, blocked | Drop task | `Start`, disabled | Waiting on FI3-6 (a dropped dependency: A task it waits on was dropped, Ask your first mate about its dependencies before starting.) |
 | Backlog or Queued, with parts | Drop task | empty | Its 5 parts do the work, 3 closed, 2 still open. |
 | Queued, held or not | Drop task | empty - no Start now | - (held: what it waits for and what ends the wait, Waiting for a premium model, You asked for premium, and no premium model has allowance now. It starts by itself once one does. Ask your first mate to start it sooner on another model.) |
@@ -58,7 +59,7 @@ A Dropped work record has only Start again in its next slot unless a replacement
 `Drop task` (secondary) is the one verb that drops a task from its record, whatever its state.
 Before the work starts it drops the record and the task never starts; once started it ends the task as the captain's cancel, keeping a copy of its unfinished work.
 The record whose Drop task was confirmed closes once the host accepts the drop, as it does on Start; the task stays dropped on its record, which the Tasks panel opens again with `Start again`.
-A row no host operation can end - the first mate's own decision and operation rows, or work returned to the queue after it started - leaves the end slot empty.
+A row no host operation can end - the first mate's own decision and operation rows - leaves the end slot empty.
 The next slot holds the one primary: `Start` on work that waits for your word - on request, held or not, with no parts - and, disabled, on blocked work.
 Once Start is accepted the next slot reads `Starting` and is unavailable, and Drop task, queue and unqueue cannot race it.
 The record whose Start was pressed closes on that acceptance, not when the crewmate begins; a refusal keeps it open with the inline line under the row.
@@ -111,7 +112,7 @@ A cardless paused task says “Work is paused” with its latest report summary,
 Queued work a gate holds has never reported, so its box says what the gate waits for and what ends the wait instead, in the words `taskHoldWords` gives (`src/shared/taskHold.ts`): a premium ask or a stronger-model retry waiting for a model at its level with allowance, or a level's allowance, a plan's allowance or a time the first mate set.
 A later dismissed note in Now never hides that report, and continuing checks, jobs or replies show no paused box.
 A declared captain wait alone never prints “Waiting on you”; only a reachable ready decision does.
-What happens next is the status reason's and the attention box's to say, never a sentence of the bar's, and the body has no buttons.
+What happens next is the status reason's and the attention box's to say, never a sentence of the bar's, except why a start could not begin, said beside Try again; the body has no buttons.
 There is no second newest line: Now is the record's one.
 Then one row of facts under a `--line-1` hairline, the summary's footer row grown by what the record adds (FI3-1159, the captain's layout B, now in the body): MODEL with its intelligence badge beside the name, REASONING, the PULL REQUEST with its checks as one state, REVIEW, DELIVERY (`Pull request · Default care`), RUNS ON, a dim mono USE cell beside it (the captain's pick: "A Use cell beside Runs on, dim mono") and RUN while a heavy run is declared, then the footnote saying why that model (`components/now/NowPanel`, Shared task facts).
 The row scrolls with the body; nothing of it is pinned to the footer.

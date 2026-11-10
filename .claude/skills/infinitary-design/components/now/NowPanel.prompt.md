@@ -89,7 +89,7 @@ Their shared base reason remains unchanged for lists; the permitted desktop deta
 A row, a board tile, the summary and the record header do not add a second tooltip for that status, because the words are already shown; a standalone mark still names itself.
 The words are Backlog, Queued, Starting, Working, Idle, Interrupted, Waiting on you, Done and Dropped.
 Starting is the still open cyan ring, used only while a start is being prepared, and it is not Working.
-A confirmed manual start that did not begin reads Backlog · Could not start, and the Tasks row adds the dim word could not start.
+A confirmed start that did not begin, whether you started it or the queue did, reads Backlog · Could not start, and the Tasks row adds the dim word could not start.
 Open work reads by its start policy, as the panel groups it: Backlog waits for Start, Queued starts by itself.
 A blocker, a hold or a parent's parts is the reason beside the word, never another word: `Queued · Blocked by another task`, `Queued · Held`, `Backlog · Its 2 parts do the work`.
 Open, working or idle work whose computer is out of reach keeps its mark's shape in `--warn` and reads `Idle · Mac mini is out of reach`; while its connection is being made it keeps its mark as it was and reads `Idle · Mac mini is connecting`, with no warn mark; while it is connected and catching up it keeps its mark as it was and reads `Idle · Catching up with Mac mini since 12:57 PM`; in each case, unless a blocker, a hold or its parts give the reason (`../devices/RunsOn.prompt.md`); Interrupted, Starting and Waiting on you keep their own.

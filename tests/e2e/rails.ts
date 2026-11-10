@@ -744,7 +744,12 @@ export async function expectRecordTaskStatus(page: Page): Promise<void> {
   if (!id) throw new Error("No shown task record");
   const task = await page.evaluate((id) => window.infinitary.tasks.detail(id), id);
   // INF-2362: the record moves owned waits to its attention box, unlike a list row.
-  const reading = taskWaitStatus(task, taskStatusOf(task), Date.now());
+  const waited = taskWaitStatus(task, taskStatusOf(task), Date.now());
+  // INF-3362: why a start could not begin moves from the mark to the bar, beside Try again.
+  const reading = task.startNotice ? { ...waited, reason: "" } : waited;
+  if (task.startNotice) {
+    await expect(pane.locator("[data-record-start-notice]")).toContainText(task.startNotice.reason);
+  }
   await expect(pane.locator("[data-task-mark]")).toHaveAttribute("data-task-mark", reading.mark);
   await expect(pane.locator("[data-task-mark]")).toHaveAttribute(
     "aria-label",

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { seedTask } from "./seedTask";
 import { TaskService } from "./taskService";
+import { UNCONFIRMED_START_RETURNED } from "./taskStarts";
 
 /**
  * The start and answer-delivery releases the crew supervisor and the answer
@@ -61,7 +62,7 @@ describe("a start that came back unconfirmed", () => {
     tasks.starts.markStartChecking("build");
     tick(40);
 
-    tasks.starts.releaseUnconfirmedStart("build");
+    tasks.starts.returnStart("build", { kind: "retry", text: UNCONFIRMED_START_RETURNED });
 
     const record = tasks.get("build");
     expect(record).toMatchObject({
@@ -96,7 +97,7 @@ describe("a start that came back unconfirmed", () => {
     tasks.starts.markStartChecking("build");
     const events = tasks.timeline("build").length;
 
-    tasks.starts.releaseUnconfirmedStart("build");
+    tasks.starts.returnStart("build", { kind: "retry", text: UNCONFIRMED_START_RETURNED });
 
     expect(tasks.get("build")).toMatchObject({ status: "active", worktreeDir: "/work/build" });
     expect(tasks.starts.startAttemptOf("build")).toBeUndefined();
@@ -112,7 +113,7 @@ describe("a start that came back unconfirmed", () => {
       sessionFile: "/sessions/build.jsonl",
     });
 
-    tasks.starts.releaseUnconfirmedStart("build");
+    tasks.starts.returnStart("build", { kind: "retry", text: UNCONFIRMED_START_RETURNED });
 
     expect(tasks.get("build")).toMatchObject({
       status: "active",
@@ -127,7 +128,7 @@ describe("a start that came back unconfirmed", () => {
     const closed = tasks.get("build");
     const events = tasks.timeline("build").length;
 
-    tasks.starts.releaseUnconfirmedStart("build");
+    tasks.starts.returnStart("build", { kind: "retry", text: UNCONFIRMED_START_RETURNED });
 
     expect(tasks.get("build")).toEqual(closed);
     expect(tasks.timeline("build")).toHaveLength(events);
@@ -139,7 +140,7 @@ describe("a start that came back unconfirmed", () => {
     tasks.starts.beginStartAttempt("build");
     const open = tasks.get("build");
 
-    tasks.starts.releaseUnconfirmedStart("build");
+    tasks.starts.returnStart("build", { kind: "retry", text: UNCONFIRMED_START_RETURNED });
 
     expect(tasks.starts.startAttemptOf("build")).toBeUndefined();
     expect(tasks.get("build")?.status).toBe(open?.status);

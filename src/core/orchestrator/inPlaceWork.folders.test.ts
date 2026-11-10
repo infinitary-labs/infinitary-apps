@@ -27,7 +27,7 @@ import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { type Forge, ForgeError, type ForgePull } from "../forge";
 import { crewmateComputersNote } from "../pi/piResources";
 import type { CrewMachines } from "../placed/crewMachines";
-import { seedTask } from "../tasks/seedTask";
+import { couldNotStartOf, seedTask } from "../tasks/seedTask";
 import type { TaskService } from "../tasks/taskService";
 import { git } from "../workspace/git";
 import { type ChangeDelivery, createChangeDelivery } from "./changeDelivery";
@@ -389,8 +389,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     if (!repair) throw new Error("no repair task was filed");
     const header = h.tasks.get("header01");
     expect(header?.status).toBe("open");
-    expect(header?.gate).toMatchObject({ kind: "captain", ref: "dispatch-failed" });
-    expect(header?.gate?.reason).toContain(
+    expect(couldNotStartOf(header)).toContain(
       `Your project's folder ${h.folder} is missing, so this task cannot start on this computer. Infinitary started ${repair.key} "${FOLDER_REPAIR_TITLE}" to bring it back.`,
     );
     expect(repair.shape?.in_place).toMatchObject({
@@ -405,7 +404,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
 
     // A second task finds the same repair standing, and nothing new is filed.
     await h.supervisor.starts.dispatchQueuedTask("footer01");
-    expect(h.tasks.get("footer01")?.gate?.reason).toContain(
+    expect(couldNotStartOf(h.tasks.get("footer01"))).toContain(
       `${repair.key} "${FOLDER_REPAIR_TITLE}" is already bringing it back.`,
     );
     expect(h.repairs()).toHaveLength(1);
@@ -472,8 +471,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     await h.supervisor.starts.dispatchQueuedTask(queued.id);
     const waiting = h.tasks.get(queued.id);
     expect(waiting?.status).toBe("open");
-    expect(waiting?.gate).toMatchObject({ kind: "captain", ref: "dispatch-failed" });
-    expect(waiting?.gate?.reason).toContain(
+    expect(couldNotStartOf(waiting)).toContain(
       `Your project's folder ${h.folder} is missing, so this task cannot start on this computer. ${repair.key} "${FOLDER_REPAIR_TITLE}" is already bringing it back.`,
     );
     expect(folderRepairs()).toHaveLength(1);
@@ -509,11 +507,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
     await vi.waitFor(
-      () =>
-        expect(h.tasks.get(repair.id)?.gate).toMatchObject({
-          kind: "captain",
-          ref: "dispatch-failed",
-        }),
+      () => expect(couldNotStartOf(h.tasks.get(repair.id))).toBeDefined(),
       REAL_GIT_WAIT,
     );
     expect(h.sessions.open.mock.calls[0]?.[0].cwd).toBe(parent);
@@ -524,7 +518,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     h.sessions.open.mockRejectedValueOnce(unchecked);
     await h.supervisor.starts.dispatchQueuedTask(repair.id, { requested: { by: "captain" } });
     expect(h.sessions.open).toHaveBeenCalledTimes(2);
-    expect(h.tasks.get(repair.id)?.gate?.reason).toContain(unchecked.message);
+    expect(couldNotStartOf(h.tasks.get(repair.id))).toContain(unchecked.message);
     untouched();
     expect(await git(moved, ["rev-parse", "--abbrev-ref", "HEAD"])).toBe("main");
     await h.supervisor.disposeAll();
@@ -554,11 +548,7 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     const [repair] = h.repairs();
     if (!repair) throw new Error("no repair task was filed");
     await vi.waitFor(
-      () =>
-        expect(h.tasks.get(repair.id)?.gate).toMatchObject({
-          kind: "captain",
-          ref: "dispatch-failed",
-        }),
+      () => expect(couldNotStartOf(h.tasks.get(repair.id))).toBeDefined(),
       REAL_GIT_WAIT,
     );
     expect(h.sessions.open.mock.calls[0]?.[0].cwd).toBe(parent);

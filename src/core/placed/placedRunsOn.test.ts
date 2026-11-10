@@ -16,7 +16,7 @@ import {
   world,
 } from "../../../tests/helpers/placedWorld";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { seedTask } from "../tasks/seedTask";
+import { couldNotStartOf, seedTask } from "../tasks/seedTask";
 import { git } from "../workspace/git";
 
 /**
@@ -160,7 +160,7 @@ describe("a project that runs on a computer that runs work", () => {
     await home.supervisor.starts.dispatchQueuedTask("t-after");
     expect(home.tasks.get("t-next")?.deviceId).toBe(at.deviceId);
     expect(home.tasks.get("t-after")?.deviceId ?? null).toBeNull();
-    expect(home.tasks.get("t-after")?.gate?.reason).toBe(
+    expect(couldNotStartOf(home.tasks.get("t-after"))).toBe(
       "A placed task asked this Mac's workspace for createTaskWorktree.",
     );
   });
@@ -191,7 +191,7 @@ describe("a project that runs on a computer that runs work", () => {
     await home.supervisor.starts.dispatchQueuedTask(taskId);
     expect(home.tasks.get(taskId)?.deviceId ?? null).toBeNull();
     // This test's home keeps no working copies, so the start here is refused there.
-    expect(home.tasks.get(taskId)?.gate?.reason).toBe(
+    expect(couldNotStartOf(home.tasks.get(taskId))).toBe(
       "A placed task asked this Mac's workspace for createTaskWorktree.",
     );
   });
@@ -208,7 +208,7 @@ describe("a project that runs on a computer that runs work", () => {
     // It started here: this test's home keeps no working copies of its own,
     // so this Mac's workspace refusing to make one is the start here.
     expect(home.tasks.get("t-notes")?.deviceId ?? null).toBeNull();
-    expect(home.tasks.get("t-notes")?.gate?.reason).toBe(
+    expect(couldNotStartOf(home.tasks.get("t-notes"))).toBe(
       "A placed task asked this Mac's workspace for createTaskWorktree.",
     );
   });
@@ -337,7 +337,7 @@ describe("a task's own Runs on", () => {
     });
     await home.supervisor.starts.dispatchQueuedTask("t-here");
     expect(home.tasks.get("t-here")?.deviceId ?? null).toBeNull();
-    expect(home.tasks.get("t-here")?.gate?.reason).toBe(STARTED_HERE);
+    expect(couldNotStartOf(home.tasks.get("t-here"))).toBe(STARTED_HERE);
   });
 
   it("waits by its own name for the computer the captain named, stays when its project moves, and runs here once reset", async () => {
@@ -394,7 +394,7 @@ describe("a task's own Runs on", () => {
     expect(home.tasks.get("t-own")?.shape?.runs_on_ask).toBeUndefined();
     await home.supervisor.starts.dispatchQueuedTask("t-own");
     expect(home.tasks.get("t-own")?.deviceId ?? null).toBeNull();
-    expect(home.tasks.get("t-own")?.gate?.reason).toBe(STARTED_HERE);
+    expect(couldNotStartOf(home.tasks.get("t-own"))).toBe(STARTED_HERE);
   });
 
   it("keeps a task on this Mac when the captain says so while its project runs on the computer", async () => {
@@ -411,7 +411,7 @@ describe("a task's own Runs on", () => {
     expect(askRunsOn(home, "t-stays", "this-mac")).toBe("Runs on: This computer (This task)");
     await home.supervisor.starts.dispatchQueuedTask("t-stays");
     expect(home.tasks.get("t-stays")?.deviceId ?? null).toBeNull();
-    expect(home.tasks.get("t-stays")?.gate?.reason).toBe(STARTED_HERE);
+    expect(couldNotStartOf(home.tasks.get("t-stays"))).toBe(STARTED_HERE);
   });
 
   // Intent: INF-409's goal - a Runs on changed while a start waits on a
@@ -449,7 +449,7 @@ describe("a task's own Runs on", () => {
       model: CODEX_MEDIUM_STARTER,
     });
     expect(home.tasks.get("t-moved")?.deviceId ?? null).toBeNull();
-    expect(home.tasks.get("t-moved")?.gate?.reason).toBe(STARTED_HERE);
+    expect(couldNotStartOf(home.tasks.get("t-moved"))).toBe(STARTED_HERE);
     // Nothing was tried there.
     expect(at.bound).toEqual([]);
     expect(at.holds()).toEqual({ tasks: [], workingCopies: [] });
@@ -485,7 +485,7 @@ describe("a task's own Runs on", () => {
     // Tried here, never held behind that computer's own GitHub sign-in
     // (whose wait its project, still set to run there, says by itself).
     expect(home.tasks.get("t-github")?.deviceId ?? null).toBeNull();
-    expect(home.tasks.get("t-github")?.gate?.reason).toBe(STARTED_HERE);
+    expect(couldNotStartOf(home.tasks.get("t-github"))).toBe(STARTED_HERE);
     expect(at.holds()).toEqual({ tasks: [], workingCopies: [] });
   });
 

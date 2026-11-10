@@ -102,7 +102,7 @@ describe("the task graph (R1)", () => {
     expect(tasks.get(taskId)?.status).toBe("active");
   });
 
-  it("a failed queued start requeues without leaving a runtime, and a retry can start", async () => {
+  it("a failed queued start returns without leaving a runtime, and a retry can start", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, sessions, workspace } = setup(crewmate);
     const { taskId } = await supervisor.intake.commission({
@@ -114,10 +114,7 @@ describe("the task graph (R1)", () => {
       new Error("a branch named 'fm/task-x' already exists"),
     );
     await supervisor.starts.dispatchQueuedTask(taskId);
-    expect(tasks.get(taskId)).toMatchObject({
-      status: "open",
-      gate: { kind: "captain", ref: "dispatch-failed" },
-    });
+    expect(tasks.get(taskId)).toMatchObject({ status: "open", startPolicy: "on-request" });
     expect(supervisor.facts.crewCounts()).toMatchObject({ working: 0, idle: 0 });
     expect(sessions.open).not.toHaveBeenCalled();
 

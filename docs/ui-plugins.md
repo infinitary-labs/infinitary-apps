@@ -344,20 +344,22 @@ Closing the last stack entry is a shell-only act that reveals the character.
 
 The captain's picks on the task popup board (2026-09-28: "1C 2B 3C 4A", then "ship") reversed the read-only record: **the record's buttons are lifecycle toggles only; judgment calls stay on cards.**
 FI3-565 direction A piece 4 gave them one shape: every open record's footer is the action bar (`RecordPaneFooter`, `cards/RecordPaneChrome.tsx`) - one row of buttons under the fact strip, the end slot at its left edge and the next slot at its right (FI3-948, the captain's layout B), so neither button moves between states.
-The bar says nothing of its own: the status reason beside the pill says what happens next, and the body's attention box carries what the reason cannot - a blocker, a dropped dependency, a parent whose parts do the work, a hold or another need.
+The bar says nothing of its own at rest: the status reason beside the pill says what happens next, and the body's attention box carries what the reason cannot - a blocker, a dropped dependency, a parent whose parts do the work, a hold or another need.
+The one exception is a start that could not begin: Could not start and its reason sit between Drop task and Try again, never in the title row (`RecordPaneFooter`'s `notice`).
 Its state is read only from the task's typed fields through the shared `recordBarOf` (`src/shared/recordBar.ts`), never its prose; Done records and rows with no button have no bar; eligible dropped work offers Start again in the next slot (`docs/task-record.md`, "Starting dropped work again").
 The design skill's `TaskRecord` owns the layout and the attention box's words.
 
 | Task (typed, through the shared status) | End slot | Next slot |
 |---|---|---|
 | Backlog: open work on request, held or not, no parts, no blockers | Drop task | Start (primary) |
+| Backlog, could not start: open work on request with a start notice | Drop task | Try again (primary); Could not start and its reason between the slots |
 | Backlog or Queued with live blockers, or a dropped dependency edge | Drop task | Start, disabled; the attention box names what it waits on |
 | Backlog or Queued with parts of its own | Drop task. Open parts refuse the drop. | empty: the status reason and the attention box say the parts do the work |
 | Queued: when-ready work, held for a later start or not | Drop task | empty: no Start now |
 | Working or Idle | Drop task | empty: nothing needs the captain |
 | Interrupted | Drop task | Continue (primary) |
 | Waiting on you: a ready decision card | Drop task | Show the card (primary) |
-| The first mate's own decision or operation rows, or work returned to the queue after it started | empty: no host op ends it | as above |
+| The first mate's own decision or operation rows | empty: no host op ends it | as above |
 | Dropped without a replacement or parts | empty | Start again |
 | Done | no bar | no bar |
 

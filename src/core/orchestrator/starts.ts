@@ -28,6 +28,7 @@ import { OpenReads } from "../session/openReads";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import type { TaskGate, TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
+import { UNCONFIRMED_START_RETURNED } from "../tasks/taskStarts";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import type { DispatchBase, WorktreeAcquisition } from "../workspace/workspaceService";
 import type { CrewBrief } from "./crewBrief";
@@ -68,10 +69,41 @@ export class StartFailure extends Error {
   }
 }
 
-/** What a failed start's wake says went wrong: the cause, never the tool's framing. */
+/**
+ * What a failed start says went wrong where you read it - the record's
+ * Could not start, its Activity line and the reply - and in the wake about
+ * a start the first mate asked for: the cause alone, in one line (the
+ * captain's "Show only the cause"); the queue's own wake keeps the whole
+ * message for the first mate to read. A command's failure keeps only the
+ * program's own last error line, such as git's fatal line, never the
+ * command, and names each folder it gives by its name alone; with no words
+ * of its own it says only that the command failed. A sentence
+ * Infinitary wrote itself keeps its first line whole, such as the missing
+ * folder it names for repair.
+ */
 export function startFailureReason(caught: unknown): string {
-  if (caught instanceof StartFailure) return caught.reason;
-  return caught instanceof Error ? caught.message : String(caught);
+  const message =
+    caught instanceof StartFailure
+      ? caught.reason
+      : caught instanceof Error
+        ? caught.message
+        : String(caught);
+  const lines = message
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (!message.startsWith("Command failed:")) return lines[0] ?? "";
+  // A program's own words after the command line: its last error line, its
+  // folders by name, a path only where one starts (never a ref or address).
+  const said = lines.slice(1);
+  return (
+    said.findLast((line) => /^(fatal|error):/.test(line)) ??
+    said.at(-1) ??
+    "the command failed"
+  )
+    .replace(/^(fatal|error):\s*/, "")
+    .replace(/'(?:~|\/)[^']*\/([^'/]+)'/g, "'$1'")
+    .replace(/(^|[\s'"([])(?:~|\/)[^\s'"]*\/([^\s'"/]+)/g, "$1$2");
 }
 
 /**
@@ -238,6 +270,11 @@ export class CrewStarts {
      * back to the backlog with Could not start, as an asked one does.
      */
     backlog?: boolean;
+    /**
+     * The queue's own start, which nobody asked for: one that fails says so
+     * in Activity, since no reply or note will.
+     */
+    swept?: boolean;
     /** Pictures the brief carries beyond those the task's messages keep (`TaskIntake.commission`). */
     messageFiles?: readonly MessageFile[];
     attachments?: readonly AttachmentRef[];
@@ -521,7 +558,10 @@ export class CrewStarts {
         // A missing reply proves neither success nor failure. Keep the choice,
         // order and demand; the next attempt reconciles this same preparation.
         this.core.tasks.delete(taskId);
-        this.core.options.tasks.starts.releaseUnconfirmedStart(taskId);
+        this.core.options.tasks.starts.returnStart(taskId, {
+          kind: "retry",
+          text: UNCONFIRMED_START_RETURNED,
+        });
         this.core.options.tasks.starts.markStartChecking(taskId);
         this.core.placement.sayAutomaticWait(this.core.options.tasks.get(taskId) ?? record);
         return { taskId, crewmate: "queued" };
@@ -537,84 +577,24 @@ export class CrewStarts {
           record.placement.snapshot.orderId,
           "ended",
         );
-      if (caught instanceof ForgeAuthRequiredError && this.core.tasks.get(taskId) === task) {
-        await task.unsubscribe?.();
-        task.session?.dispose();
-        this.core.tasks.delete(taskId);
-        this.core.cards.deleteRowsForTask(taskId);
-        if (task.workspace) {
-          await this.core.options.workspace.removeTaskWorktree(task.workspace).catch(() => {});
-        }
-        if (!spec.fresh) throw caught;
-        if (placed) {
-          // The computer's own clone was refused for want of its own sign-in
-          // there: the task waits for that sign-in, never this Mac's.
-          this.core.placement.holdForDeviceForge(taskId, machine, caught.host);
-          const waiting = this.core.options.tasks.get(taskId);
-          if (waiting)
-            this.core.placement.sayPlacedWait(this.core.placement.waitSubject(waiting), machine, {
-              kind: "forge",
-              host: caught.host,
-            });
-          this.core.cards.scheduleBroadcast();
-          this.core.facts.broadcastCrewCounts();
-          return { taskId, crewmate: "queued" };
-        }
-        this.core.options.tasks.starts.requeue(
-          taskId,
-          {
-            kind: "captain",
-            ref: `forge-sign-in:${caught.host}`,
-            reason: `waiting for ${caught.place} sign-in`,
-          },
-          `waiting for ${caught.place} sign-in before starting`,
-        );
-        this.core.cards.hostCards.addForgeSignInCard(
-          forgeSignInCardId(caught.host),
-          caught.host,
-          caught.place,
-          0,
-          { reauth: false },
-        );
-        this.core.cards.scheduleBroadcast();
-        this.core.facts.broadcastCrewCounts();
-        return { taskId, crewmate: "queued" };
-      }
-      if (this.core.tasks.get(taskId) !== task) {
+      if (this.core.tasks.get(taskId) !== task) throw new StartFailure(message);
+      const forge = caught instanceof ForgeAuthRequiredError;
+      // Its answer named the task, or the captain started it from the
+      // backlog: the working copy stays for the start that tries again.
+      const keep = !forge && (spec.asked || spec.backlog);
+      if (spec.fresh && !forge && !keep) {
+        await this.core.sessions.cleanupFailedSpawn(task);
         throw new StartFailure(message);
       }
-      if (spec.asked || spec.backlog) {
-        // Its answer named the task, or the captain started it from the
-        // backlog, so it stays: open, waiting for the first mate's go, with
-        // the working copy its retry starts on.
-        await task.unsubscribe?.();
-        task.session?.dispose();
-        this.core.tasks.delete(taskId);
-        this.core.cards.deleteRowsForTask(taskId);
-        this.core.options.tasks.starts.failManualStart(taskId, message, { onRequest: true });
-        this.core.cards.scheduleBroadcast();
-        this.core.facts.broadcastCrewCounts();
-      } else if (!spec.fresh) {
-        // A failed dispatch returns the row to the queue behind a captain
-        // gate - never deleted, never hot-retried by the sweep. Do not
-        // requeue or delete when this attempt does not own the runtime.
-        await task.unsubscribe?.();
-        task.session?.dispose();
-        this.core.tasks.delete(taskId);
-        this.core.cards.deleteRowsForTask(taskId);
-        if (task.workspace) {
-          await this.core.options.workspace.removeTaskWorktree(task.workspace).catch(() => {});
-        }
-        this.core.options.tasks.starts.requeue(
-          taskId,
-          { kind: "captain", ref: "dispatch-failed", reason: message },
-          `could not start: ${message}`,
-        );
-        this.core.cards.scheduleBroadcast();
-        this.core.facts.broadcastCrewCounts();
-      } else {
-        await this.core.sessions.cleanupFailedSpawn(task);
-      }
+      await task.unsubscribe?.();
+      task.session?.dispose();
+      this.core.tasks.delete(taskId);
+      this.core.cards.deleteRowsForTask(taskId);
+      if (task.workspace && !keep)
+        await this.core.options.workspace.removeTaskWorktree(task.workspace).catch(() => {});
+      this.settleFailedStart(taskId, caught, machine, spec.swept === true);
+      // A review held for its sign-in is queued: nobody waits on it to fail.
+      if (forge && spec.fresh) return { taskId, crewmate: "queued" };
       throw new StartFailure(message);
     }
     this.core.options.broadcastEvent({
@@ -885,18 +865,72 @@ export class CrewStarts {
   }
 
   /**
-   * A start the first mate asked for that failed before its crewmate and
-   * working copy began stays open for its go, update_task start_now, as
-   * `startTask`'s asked failure leaves one that got further.
+   * The one settle of a start that began no crewmate (INF-3307's audit,
+   * row 4). A refusal for want of a sign-in waits behind that sign-in, here
+   * or on the computer it runs on; any other failure is Could not start,
+   * back in the backlog for the captain's Start or the first mate's
+   * start_now. Either way the task is open and never started, so its record
+   * offers Drop task.
    */
-  private keepFailedAskedStart(taskId: string, reason: string): void {
+  private settleFailedStart(
+    taskId: string,
+    caught: unknown,
+    machine: string,
+    swept: boolean,
+  ): void {
+    if (!(caught instanceof ForgeAuthRequiredError)) {
+      this.core.options.tasks.starts.returnStart(taskId, {
+        kind: "failed",
+        reason: startFailureReason(caught),
+        ...(swept ? { feed: true as const } : {}),
+      });
+    } else if (machine !== LOCAL_MACHINE_ID) {
+      this.core.placement.holdForDeviceForge(taskId, machine, caught.host);
+      const waiting = this.core.options.tasks.get(taskId);
+      if (waiting)
+        this.core.placement.sayPlacedWait(this.core.placement.waitSubject(waiting), machine, {
+          kind: "forge",
+          host: caught.host,
+        });
+    } else {
+      this.core.options.tasks.starts.returnStart(taskId, {
+        kind: "held",
+        gate: {
+          kind: "captain",
+          ref: `forge-sign-in:${caught.host}`,
+          reason: `waiting for ${caught.place} sign-in`,
+        },
+      });
+      this.core.cards.hostCards.addForgeSignInCard(
+        forgeSignInCardId(caught.host),
+        caught.host,
+        caught.place,
+        0,
+        { reauth: false },
+      );
+    }
+    this.core.cards.scheduleBroadcast();
+    this.core.facts.broadcastCrewCounts();
+  }
+
+  /**
+   * A start that failed outside `startTask`'s own settle: after its claim
+   * and before its working copy began or, for one the first mate asked for,
+   * before its claim. A `StartFailure` was settled where it ran.
+   */
+  private settleOutsideStart(
+    taskId: string,
+    caught: unknown,
+    asked: boolean,
+    swept: boolean,
+  ): void {
+    if (caught instanceof StartFailure || this.core.tasks.has(taskId)) return;
     const record = this.core.options.tasks.get(taskId);
-    if (!record || record.startNotice || this.core.tasks.has(taskId)) return;
-    if (
-      record.status === "open" ||
-      (record.status === "active" && !record.worktreeDir && !record.sessionFile)
-    )
-      this.core.options.tasks.starts.failManualStart(taskId, reason, { onRequest: true });
+    if (!record) return;
+    const claimed = record.status === "active" && !record.worktreeDir && !record.sessionFile;
+    const unclaimed = asked && record.status === "open" && !record.startNotice;
+    if (claimed || unclaimed)
+      this.settleFailedStart(taskId, caught, record.deviceId ?? LOCAL_MACHINE_ID, swept);
   }
 
   /**
@@ -933,7 +967,7 @@ export class CrewStarts {
           // A quit stopped it; it did not fail (`dispatchOnce`).
           if (this.core.disposed()) return;
           const reason = startFailureReason(caught);
-          this.keepFailedAskedStart(taskId, reason);
+          this.settleOutsideStart(taskId, caught, true, false);
           const open = this.core.options.tasks.get(taskId)?.status === "open";
           this.core.routeCrewEvent(
             taskId,
@@ -1129,6 +1163,7 @@ export class CrewStarts {
         fresh: false,
         ...(asked ? { asked } : {}),
         ...(options.requested?.backlog ? { backlog: true } : {}),
+        ...(options.requested ? {} : { swept: true }),
         ...(options.message?.attachments.length
           ? { attachments: options.message.attachments }
           : {}),
@@ -1187,8 +1222,7 @@ export class CrewStarts {
       // sweep, and nobody is told.
       if (options.requested?.behind && this.core.disposed()) return;
       const message = caught instanceof Error ? caught.message : String(caught);
-      if (asked && !(caught instanceof ForgeAuthRequiredError))
-        this.keepFailedAskedStart(taskId, startFailureReason(caught));
+      this.settleOutsideStart(taskId, caught, asked, !options.requested);
       const current = this.core.options.tasks.get(taskId);
       this.core.routeCrewEvent(
         taskId,
@@ -1207,59 +1241,6 @@ export class CrewStarts {
         },
         "agent",
       );
-      if (
-        caught instanceof ForgeAuthRequiredError &&
-        current?.status === "active" &&
-        current.deviceId &&
-        current.deviceId !== LOCAL_MACHINE_ID
-      ) {
-        // Refused on that computer for want of its own sign-in: held for it.
-        this.core.placement.holdForDeviceForge(taskId, current.deviceId, caught.host);
-        this.core.placement.sayPlacedWait(
-          this.core.placement.waitSubject(current),
-          current.deviceId,
-          {
-            kind: "forge",
-            host: caught.host,
-          },
-        );
-        this.core.cards.scheduleBroadcast();
-      } else if (caught instanceof ForgeAuthRequiredError && current?.status === "active") {
-        this.core.options.tasks.starts.requeue(
-          taskId,
-          {
-            kind: "captain",
-            ref: `forge-sign-in:${caught.host}`,
-            reason: `waiting for ${caught.place} sign-in`,
-          },
-          `waiting for ${caught.place} sign-in before starting`,
-        );
-        this.core.cards.hostCards.addForgeSignInCard(
-          forgeSignInCardId(caught.host),
-          caught.host,
-          caught.place,
-          0,
-          { reauth: false },
-        );
-        this.core.cards.scheduleBroadcast();
-      } else if (
-        current?.status === "active" &&
-        !current.worktreeDir &&
-        !this.core.tasks.has(taskId)
-      ) {
-        if (
-          options.requested?.by === "captain" &&
-          (current.startPolicy === "on-request" || options.requested.backlog)
-        ) {
-          this.core.options.tasks.starts.failManualStart(taskId, message, { onRequest: true });
-        } else {
-          this.core.options.tasks.starts.requeue(
-            taskId,
-            { kind: "captain", ref: "dispatch-failed", reason: message },
-            `could not start: ${message}`,
-          );
-        }
-      }
       this.core.facts.broadcastCrewCounts();
       return true;
     }
@@ -1307,8 +1288,9 @@ export class CrewStarts {
       return;
     }
     if (audience === "captain" && record.startPolicy === "on-request" && !now.startNotice) {
-      this.core.options.tasks.starts.failManualStart(now.id, "it did not start", {
-        onRequest: true,
+      this.core.options.tasks.starts.returnStart(now.id, {
+        kind: "failed",
+        reason: "it did not start",
       });
       return;
     }

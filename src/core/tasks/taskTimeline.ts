@@ -1,3 +1,4 @@
+import { noteText } from "@shared/cardNotes";
 import type { CardMessage, CardObservation, CardObservationKind } from "@shared/cards";
 import { cardWords } from "@shared/cardWords";
 import { reportSummary } from "@shared/feed";
@@ -194,7 +195,7 @@ export class TaskTimeline {
                     text: TIMELINE_BRIEF_REVISED,
                     details: `${record.event.text}\n\n${JSON.stringify(record.specification, null, 2)}`,
                   }
-                : { text: record.brief ?? record.event.text }),
+                : { text: record.brief ?? this.options.tasks.capture.eventReceipt(record.event) }),
             };
           case "card-message":
             return { entry, text: record.message.text };
@@ -398,7 +399,15 @@ export class TaskTimeline {
     };
     const activityGroups = new Map<string, number>();
     const actionIds = new Map(actions.map((action) => [action, actionId(action)]));
-    for (const row of condenseActivity(own, label, { concerned: others, keyOf, actions })) {
+    for (const row of condenseActivity(
+      own.map((event) => ({ ...event, text: tasks.capture.eventReceipt(event) })),
+      label,
+      {
+        concerned: others.map((event) => ({ ...event, text: tasks.capture.eventReceipt(event) })),
+        keyOf,
+        actions,
+      },
+    )) {
       for (const action of row.actions ?? []) {
         const id = actionIds.get(action as SourcedAction);
         if (id) activityGroups.set(id, row.id);
@@ -692,13 +701,14 @@ function observationSummary(observation: CardObservation, title: string | undefi
 }
 
 function messageEntry(taskId: string, message: CardMessage): Placed {
+  const words = [message.text, ...(message.notes ?? []).map(noteText)].filter(Boolean).join("\n");
   return {
     entry: entry({
       id: messageId(message.id),
       taskId,
       at: message.at,
       actor: { kind: message.who },
-      summary: oneLine(reportSummary(message.text) || message.text),
+      summary: oneLine(reportSummary(words) || words),
       content: {
         kind: "card-message",
         version: 1,

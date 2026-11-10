@@ -698,6 +698,9 @@ The captain's Approve and build chose the author's own row with the app checking
 
 ### The card's one field
 
+The desktop annotation popover is a temporary host-owned exception, described in `docs/card-threads.md`, “Pointing at a card”.
+Authors still add no second field for general comments.
+
 INF-680 (the captain: "every decision card has a "anything else?" input box at the bottom of the card body, so i can leave additional comments before clicking one of the action buttons") gave a decision a box for words that go with a click.
 INF-924 made that box and the reply row one field, on the captain's Approve and build: "i meant always showing the text input. after typing, pressing "chat" or "enter" will send the reply without making a choice. pressing any other choice will send the text along with the choice", with the placeholder "anything to add?".
 

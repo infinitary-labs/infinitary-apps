@@ -12,6 +12,7 @@ import {
   FRAME_PICTURE_ALT_MAX,
   PICTURE_STRIP_SHOWN,
 } from "./bridge";
+import { FRAME_ANNOTATION_SCRIPT } from "./frameAnnotationScript";
 import { READ_VALUE_DECODER } from "./readTransfer";
 
 /**
@@ -230,6 +231,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
   var LABEL_MAX = ${CARD_QUESTION_LABEL_MAX};
   var QUESTIONS_MAX_BYTES = ${CARD_QUESTIONS_MAX_BYTES};
   var WRITTEN_MAX = ${CARD_WRITTEN_MAX};
+  ${FRAME_ANNOTATION_SCRIPT}
   var nextId = 1;
   var pending = {};
   var subscriptions = {};
@@ -631,6 +633,12 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
       else tagPictures();
     } else if (data.type === "focus") {
       returnFocus();
+    } else if (data.type === "annotation") {
+      if (data.document !== documentId) return;
+      annotation.enabled = true; annotation.mode = data.mode === true;
+      annotation.queued = data.queued || []; annotation.current = data.current || null;
+      paintAnnotations();
+      if (data.focus) { window.getSelection()?.removeAllRanges(); document.body.tabIndex = -1; document.body.focus(); }
     } else if (data.type === "reveal") {
       if (data.document !== documentId || !Number.isSafeInteger(data.seq) || !Number.isSafeInteger(data.start)) return;
       var stamp = document.querySelector("[data-inf-revision-offer]");
@@ -643,11 +651,18 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
       resize();
       requestAnimationFrame(function () {
         if (!target.isConnected) { post({type: "revealed", seq: data.seq, offerId: data.offerId}); return; }
-        var rect = target.getBoundingClientRect();
+        var range = data.span ? annotationRange(target, data.span) : null;
+        if (data.span && !range) { post({type: "revealed", seq: data.seq, offerId: data.offerId}); return; }
+        var rect = (range || target).getBoundingClientRect();
         if (!target.getClientRects().length) { post({type: "revealed", seq: data.seq, offerId: data.offerId}); return; }
         document.querySelectorAll("[data-inf-revision-highlight]").forEach(function (el) { el.removeAttribute("data-inf-revision-highlight"); });
-        target.setAttribute("data-inf-revision-highlight", "");
-        setTimeout(function () { target.removeAttribute("data-inf-revision-highlight"); }, 1000);
+        if (range && globalThis.CSS && CSS.highlights) {
+          CSS.highlights.set("inf-point-reveal", new Highlight(range));
+          setTimeout(function () { CSS.highlights.delete("inf-point-reveal"); }, 1000);
+        } else {
+          target.setAttribute("data-inf-revision-highlight", "");
+          setTimeout(function () { target.removeAttribute("data-inf-revision-highlight"); }, 1000);
+        }
         if (data.keyboard) { if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1"); target.focus({preventScroll: true}); }
         post({ type: "revealed", seq: data.seq, offerId: data.offerId, top: rect.top + window.scrollY, height: rect.height });
       });
@@ -1802,4 +1817,4 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-9tiZIGMkf3qXNDO+dAprln04r0eS5c+SoPTrJfENuxM=";
+export const FRAME_BRIDGE_SHA256 = "sha256-0eHiwjilBXWmC+NF+t6Gnd796C+X0Kwuin4iOjS5jvI=";

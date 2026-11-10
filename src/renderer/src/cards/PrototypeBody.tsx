@@ -19,6 +19,7 @@ import type {
 } from "../plugins/frames/frameController";
 import { GESTURE_FOCUS_FRAMES, whenFrameHoldsFocus } from "../plugins/frames/frameFocus";
 import { describeFocus, openFrameLink } from "../plugins/frames/frameLink";
+import { dismissEmptyAnnotation, syncAnnotation, useAnnotationBridge } from "./annotationBridge";
 import { CARD_BODY_WORDS } from "./cardBodyWords";
 import { DrawnAtWidth } from "./drawnAtWidth";
 import {
@@ -50,6 +51,7 @@ export function cardBodyHeight(reported: number, floor = MIN_BODY_HEIGHT): numbe
 }
 
 type BodyProps = {
+  cardId?: string;
   /** Translate original offer offsets past host facts removed into the footer. */
   revisionStart?: (start: number) => number;
   revision?: {
@@ -398,6 +400,7 @@ function cardFrameSpec(
     onBorn: () => {
       drawing.forget();
       props.onBorn?.();
+      syncAnnotation(props.cardId);
     },
     // A link takes the captain out of the app, into the browser: only the
     // captain's own click or Enter on it. Each step that stops it says why
@@ -442,6 +445,7 @@ function cardFrameSpec(
     // where the reading keys scroll it and Tab goes back in.
     onEscape: () =>
       fromCaptain(() => {
+        if (dismissEmptyAnnotation(props.cardId)) return;
         if (props.revision?.returnFocus()) return;
         const card = frameRef.current?.closest<HTMLElement>('[data-window-region="card"]');
         if (card && available(card)) focusWithRing(card, { preventScroll: true });
@@ -678,6 +682,14 @@ function SrcdocCardBody(props: SrcdocProps) {
   );
   useCollect(props.collectRef, controllerRef, frameRef);
   useBodyReveal(props, controllerRef, frameRef);
+  useAnnotationBridge(
+    props.cardId,
+    props.body,
+    controllerRef,
+    frameRef,
+    props.admit,
+    props.revisionStart,
+  );
   // A page without a script holds only its animations, so its held drawing
   // is the one the card shows.
   useActivation(controllerRef, props.active ?? true);
@@ -818,6 +830,14 @@ function ScriptedCardBody(props: SrcdocProps) {
   );
   useCollect(props.collectRef, controllerRef, frameRef);
   useBodyReveal(props, controllerRef, frameRef);
+  useAnnotationBridge(
+    props.cardId,
+    props.body,
+    controllerRef,
+    frameRef,
+    props.admit,
+    props.revisionStart,
+  );
   useActivation(controllerRef, active);
 
   if (state.phase === "stopped" || state.phase === "failed") {

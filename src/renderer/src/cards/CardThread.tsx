@@ -1,4 +1,5 @@
 import { fileSizeWords } from "@shared/attachments";
+import { queuedNotesWords } from "@shared/cardNotes";
 import {
   CARD_CHAT_LABEL,
   CARD_REPLY_HINT,
@@ -42,6 +43,7 @@ import {
   useFileDrop,
 } from "../design/core/FileControls";
 import { PastedTextChip } from "../design/voice/VoiceInput";
+import { AnnotationControls, NO_NOTES, NoteAnchor, QueuedNotes } from "./AnnotationControls";
 import { FOLLOW_SLACK_PX } from "./CrewmateView";
 import type { CollectAnswers } from "./PrototypeBody";
 import { RevisionLinks } from "./RevisionNavigation";
@@ -153,7 +155,8 @@ export function ChatButton({
   const sendReply = useShellStore((s) => s.sendReply);
   const length = composeTurnText(draft, []).length;
   const over = limitBand(length, CARD_REPLY_MAX_CHARS) === "over";
-  const something = length > 0 || images.length > 0 || pastes.length > 0;
+  const notes = useShellStore((s) => s.replyNotes[cardId] ?? NO_NOTES);
+  const something = length > 0 || images.length > 0 || pastes.length > 0 || notes.length > 0;
   const lit = something && !over;
   return (
     <Button
@@ -292,8 +295,12 @@ export function ReplyRow({
   // alone is nothing, and past the limit nothing leaves.
   const length = composeTurnText(draft, []).length;
   const over = limitBand(length, CARD_REPLY_MAX_CHARS) === "over";
+  const notes = useShellStore((s) => s.replyNotes[cardId] ?? NO_NOTES);
   const canSend =
-    !sending && !over && !preparing && (length > 0 || images.length > 0 || pastes.length > 0);
+    !sending &&
+    !over &&
+    !preparing &&
+    (length > 0 || images.length > 0 || pastes.length > 0 || notes.length > 0);
   return (
     <div
       data-card-reply={cardId}
@@ -308,6 +315,7 @@ export function ReplyRow({
       }}
     >
       {lead}
+      {!inThread && <QueuedNotes cardId={cardId} />}
       {(pastes.length > 0 || preparing) && (
         <div style={{ display: "flex", gap: "var(--space-2)", overflowX: "auto" }}>
           {pastes.map((paste) => (
@@ -378,6 +386,7 @@ export function ReplyRow({
         </div>
       )}
       <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "flex-end" }}>
+        <AnnotationControls cardId={cardId} collect={collect} />
         <div
           style={{
             position: "relative",
@@ -442,7 +451,11 @@ export function ReplyRow({
             }}
             onFocus={() => setFocus(true)}
             onBlur={() => setFocus(false)}
-            style={{ width: "100%", fontSize: "var(--text-sm)", lineHeight: "var(--leading-body)" }}
+            style={{
+              width: "100%",
+              fontSize: "var(--text-sm)",
+              lineHeight: "var(--leading-body)",
+            }}
           />
         </div>
         {/* Centred on the field's last line, at every height. */}
@@ -581,9 +594,16 @@ export function ThreadCue({
   onOpen: (byKey: boolean) => void;
 }) {
   const messages = useShellStore((s) => s.threads[cardId]) ?? [];
+  const notes = useShellStore((s) => s.replyNotes[cardId] ?? NO_NOTES);
   const waiting = useThreadWait(card);
   const doing = useReplyDoing(card, messages, working === true);
   const keys = useCommandKeys("cards.thread");
+  if (!messages.length && notes.length)
+    return (
+      <Button variant="ghost" keys={keys.keys} onClick={(event) => onOpen(byKey(event))}>
+        {queuedNotesWords(notes.length)}
+      </Button>
+    );
   return (
     <LatestLine
       cardId={cardId}
@@ -668,10 +688,13 @@ export function LiveMessageList({
   working?: boolean;
 }) {
   const waiting = useThreadWait(card);
+  const notes = useShellStore((s) => (card.id ? (s.replyNotes[card.id] ?? NO_NOTES) : NO_NOTES));
   const doing = useReplyDoing(card, messages, working === true);
   return (
     <MessageList
       messages={messages}
+      pending={card.id ? <QueuedNotes cardId={card.id} /> : undefined}
+      pendingCount={notes.length}
       working={working}
       doing={doing}
       waiting={waiting}
@@ -764,6 +787,8 @@ type Unread = { from: number; count: number };
  */
 export function MessageList({
   messages,
+  pending,
+  pendingCount = 0,
   working = false,
   doing,
   waiting,
@@ -772,6 +797,8 @@ export function MessageList({
   endedAt,
 }: {
   messages: readonly CardMessage[];
+  pending?: ReactNode;
+  pendingCount?: number;
   working?: boolean;
   /** What the crewmate is doing on the reply, beside `working` (`useReplyDoing`). */
   doing?: string | undefined;
@@ -838,7 +865,7 @@ export function MessageList({
     const from = placed.current;
     placed.current = count;
     // Nothing to hold to while the thread is empty.
-    if (!node || (count === 0 && tail === undefined)) return;
+    if (!node || (count === 0 && tail === undefined && pendingCount === 0)) return;
     const arrived = messages.slice(from);
     if (arrived.some((message) => message.who === "captain")) {
       // The captain's own reply: the foot, to watch the author take it up.
@@ -863,7 +890,7 @@ export function MessageList({
           : node.scrollHeight;
     }
     measure();
-  }, [count, tail, measure]);
+  }, [count, tail, pendingCount, measure]);
   // The list changing size, as the card or the reply field grows, keeps a
   // following foot in view and measures again, so a jump down leaves once
   // the whole thread fits.
@@ -927,6 +954,7 @@ export function MessageList({
         {later.map((message) => (
           <Message key={message.id} message={message} own={own} />
         ))}
+        {pending}
         {working ? (
           <WorkingRow entrance={workingEntrance} doing={doing} />
         ) : (
@@ -1097,6 +1125,12 @@ function Message({ message, own }: { message: CardMessage; own: string | undefin
             })}
           </span>
         ) : null}
+        {message.notes?.map((note) => (
+          <div key={JSON.stringify([note.key, note.start, note.span])} className="inf-sent-note">
+            <NoteAnchor cardId={message.cardId} note={note} />
+            <span>{note.comment || "No comment"}</span>
+          </div>
+        ))}
         {message.who === "host" && <RevisionLinks message={message} />}
         {message.who === "captain" && message.answers?.length ? (
           <ReplySettings answers={message.answers} at={message.at} />

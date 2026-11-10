@@ -64,10 +64,6 @@ export const WALKS: Record<string, { walks: string[]; reason: string }> = {
     walks: ["SCAN captain_asks USING INDEX captain_asks_at"],
     reason: "reads the newest message through captain_asks_at and stops at its LIMIT",
   },
-  "SELECT text, reply FROM captain_asks ORDER BY at DESC, rowid DESC LIMIT 2": {
-    walks: ["SCAN captain_asks USING INDEX captain_asks_at"],
-    reason: "reads the two newest messages through captain_asks_at and stops at its LIMIT",
-  },
   "SELECT * FROM captain_asks ORDER BY at, rowid": {
     walks: ["SCAN captain_asks USING INDEX captain_asks_at"],
     reason: "every message, oldest first, for tests and the offline scripts (AskStore.list)",

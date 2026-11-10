@@ -176,6 +176,7 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   const maximizeKeys = useCommandKeys("cards.maximize");
   const minimizeKeys = useCommandKeys("cards.minimize");
   const cards = useShellStore((s) => s.cards);
+  const replyNotes = useShellStore((s) => s.replyNotes);
   const entrancesReady = useShellStore((s) => s.cardsSnapshotLoaded);
   const bootCardId = useShellStore((s) => s.bootCardId);
   const cardIndex = useShellStore((s) => s.cardIndex);
@@ -260,6 +261,7 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   const facts: ViewFacts = {
     layout,
     threads,
+    replyNotes,
     closedThreadIds,
     cardDrags,
     defaultCardSize,

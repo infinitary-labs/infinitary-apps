@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { afterMergeShownListSchema } from "./afterMerge.ts";
 import { cardCornerSchema, noteDoneSchema } from "./cardLeave.ts";
+import { cardNotesSchema, pointedAtLines } from "./cardNotes.ts";
 import { SPELLINGS } from "./codeNames.ts";
 import { cardEndedSchema } from "./endedCard.ts";
 import { HOST_OPS } from "./hostOps.ts";
@@ -879,6 +880,11 @@ export function replyWithSettings(text: string, answers?: readonly CardAnswer[])
     : text;
 }
 
+/** Every agent-facing card read retains annotations, including a note-only reply. */
+export function cardMessageText(message: Pick<CardMessage, "text" | "notes">): string {
+  return [message.text, ...pointedAtLines(message.notes ?? [])].filter(Boolean).join("\n");
+}
+
 /** The answers' JSON size, which a footer click may not take past CARD_ANSWERS_MAX_BYTES. */
 export function cardAnswersBytes(answers: readonly CardAnswer[]): number {
   return new TextEncoder().encode(JSON.stringify(answers)).byteLength;
@@ -1357,6 +1363,7 @@ export const cardMutationSchema = z.object({
 export type CardMutation = z.infer<typeof cardMutationSchema>;
 
 export const cardMessageSchema = z.strictObject({
+  notes: cardNotesSchema.optional(),
   revision: cardRevisionSchema.optional(),
   revisionShown: revisionShownSchema.optional(),
   /** Who wrote a line on a card that is not theirs (`major-15.md`). */

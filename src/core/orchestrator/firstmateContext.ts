@@ -1,6 +1,7 @@
 import {
   type Card,
   cardAnswerLines,
+  cardMessageText,
   cardPresentation,
   cardWord,
   isPreviewBody,
@@ -346,7 +347,10 @@ export class FirstmateContext {
         const about = card.taskId
           ? `on ${task?.key || card.taskId} (task_id: ${card.taskId})`
           : "no task";
-        const excerpt = last.text.replace(/\s+/g, " ").trim().slice(0, THREAD_EXCERPT_CHARS);
+        const excerpt = cardMessageText(last)
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, THREAD_EXCERPT_CHARS);
         return `- card ${card.id} "${card.title}" ${about}: ${count} message${
           count === 1 ? "" : "s"
         }, last from ${last.who} ${ageText(now - last.at)} - "${excerpt}" (${THREAD_OWED_WORDS[owed]})`;

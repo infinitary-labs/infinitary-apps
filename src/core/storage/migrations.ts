@@ -1309,6 +1309,7 @@ export const MIGRATIONS: readonly Migration[] = [
   // are kept in `card_close_control_restore`.
   restoreCloseControls,
   addTaskPin,
+  (db) => addColumn(db, "card_messages", "notes_json", "TEXT"),
 ];
 
 /**

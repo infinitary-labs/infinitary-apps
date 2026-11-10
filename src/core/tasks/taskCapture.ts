@@ -9,7 +9,13 @@ import {
   JUDGEABLE_DELIVERY,
 } from "../orchestrator/answerDelivery";
 import type { MessageFile } from "../overflow";
-import type { AskAttachedVia, AskImage, AskRecord, AskTurnState } from "../storage/askStore";
+import {
+  type AskAttachedVia,
+  type AskImage,
+  type AskRecord,
+  type AskTurnState,
+  askReceipt,
+} from "../storage/askStore";
 import type { TaskEvent, TaskEventActor } from "../storage/taskEventStore";
 import type { TaskCoverageFields, TaskRecord } from "../storage/taskRecords";
 import {
@@ -27,6 +33,7 @@ export type OpenAskInput = {
   /** The turn id. */
   id: string;
   text: string;
+  receipt?: string;
   images?: AskImage[];
   /** The message's own copies of `images` (`src/core/attachments.ts`). */
   attachments?: AttachmentRef[];
@@ -96,6 +103,14 @@ export class TaskCapture {
 
   getAsk(id: string): AskRecord | undefined {
     return this.writer.asks.get(id);
+  }
+
+  /** The view's ask receipt; the saved event and exact model history remain untouched. */
+  eventReceipt(event: Pick<TaskEvent, "kind" | "text" | "data" | "ref">): string {
+    if (event.kind !== "ask") return event.text;
+    const id = typeof event.data?.askId === "string" ? event.data.askId : event.ref;
+    const ask = id ? this.getAsk(id) : undefined;
+    return ask ? askReceipt({ text: event.text, deliveryFacts: ask.deliveryFacts }) : event.text;
   }
 
   /** Asks whose turn has not closed - the host's turn scope. */
@@ -487,7 +502,11 @@ export class TaskCapture {
       attachedAt: null,
       turnState: "open",
       delivery: "pending",
-      deliveryFacts: { entries: [], ...(input.retryOf ? { retryOf: input.retryOf } : {}) },
+      deliveryFacts: {
+        entries: [],
+        ...(input.retryOf ? { retryOf: input.retryOf } : {}),
+        ...(input.receipt !== undefined ? { receipt: input.receipt } : {}),
+      },
       noticeCardId: null,
       followed: true,
       continues: null,

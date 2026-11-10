@@ -1,4 +1,5 @@
 import { ANSWER_DONE_LABEL } from "@shared/cardLeave";
+import type { CardNote } from "@shared/cardNotes";
 import {
   CARD_REPLY_MAX_CHARS,
   type Card,
@@ -8,6 +9,7 @@ import {
   type CardMutation,
   type CardObservation,
   type CardThread,
+  cardMessageText,
   cardMutationSchema,
   cardTakesReplies,
   onStage,
@@ -67,6 +69,7 @@ export type CardContribution = {
 
 /** A thread line's facts beyond its words (`CardService.addMessage`). */
 export type MessageFacts = {
+  notes?: CardNote[];
   contributor?: CardContributor;
   answersMessage?: number;
   clarification?: true;
@@ -448,7 +451,9 @@ export class CardThreads {
       open,
       ...(card.lifecycleId ? { lifecycle: card.lifecycleId } : {}),
       ...(card.offerId ? { revision: card.offerId } : {}),
-      ...(question ? { waitingOn: { messageId: question.id, text: question.text } } : {}),
+      ...(question
+        ? { waitingOn: { messageId: question.id, text: cardMessageText(question) } }
+        : {}),
       choices: card.actions.map((action) => ({
         id: action.id,
         label: action.label,
@@ -459,7 +464,7 @@ export class CardThreads {
         id: message.id,
         who: message.who,
         at: message.at,
-        text: message.text,
+        text: cardMessageText(message),
         ...(message.contributor ? { by: message.contributor.label } : {}),
         ...(message.answersMessage !== undefined ? { answers: message.answersMessage } : {}),
         ...(message.clarification ? { clarification: true } : {}),

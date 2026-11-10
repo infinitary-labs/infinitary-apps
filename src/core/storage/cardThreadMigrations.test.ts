@@ -24,6 +24,9 @@ describe("clearing the answers interim lines kept", () => {
     // own migrations leave them in place.
     older.exec("ALTER TABLE cards ADD COLUMN after_merge_json TEXT");
     older.exec("ALTER TABLE cards ADD COLUMN ended_json TEXT");
+    // The current thread reader also names the later optional notes column;
+    // lend it to this fixture without changing the interim-answer repair.
+    older.exec("ALTER TABLE card_messages ADD COLUMN notes_json TEXT");
     const before = setup(older);
     seedTask(before.tasks, { id: "t1", title: "Fix the meter", status: "idle" });
     const cards = before.make();

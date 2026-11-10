@@ -48,6 +48,7 @@ import {
 import type { WorkPosture } from "@shared/workPosture";
 import type { CoreEventSink } from "../events";
 import { reviewCoversHead } from "../orchestrator/reviewCarry";
+import { askReceipt } from "../storage/askStore";
 import { currentChange, taskPullRequestsOf } from "../storage/changeProjection";
 import type { ProjectRecord } from "../storage/projectStore";
 import type { TaskEvent } from "../storage/taskEventStore";
@@ -544,7 +545,8 @@ export class TaskProtocol {
         actor: event.actor,
         kind: event.kind,
         // A receipt reads as the brief it served, not its stored references.
-        text: event.kind === "briefed" ? tasks.servedBrief(event) : event.text,
+        text:
+          event.kind === "briefed" ? tasks.servedBrief(event) : tasks.capture.eventReceipt(event),
         data: event.data,
         ref: event.ref,
         feed: event.feed,
@@ -598,7 +600,7 @@ export class TaskProtocol {
           at: event.at,
           actor: event.actor,
           kind: event.kind,
-          text: event.text,
+          text: tasks.capture.eventReceipt(event),
           data: event.data,
           ref: event.ref,
           feed: event.feed,
@@ -677,14 +679,21 @@ export class TaskProtocol {
       closing: closingOf(record, events, tasks.graph.carriedOn(id)),
       problem: problemOf(events),
       ...(hold ? { hold: taskHoldWords(hold) } : {}),
-      asks: tasks.capture.asksFor(id).map((ask) => ({
-        id: ask.id,
-        at: ask.at,
-        text: ask.text,
-        images: ask.images.length,
-        attachedVia: ask.attachedVia,
-        turnState: ask.turnState,
-      })),
+      asks: tasks.capture.asksFor(id).flatMap((ask) => {
+        const text = askReceipt(ask);
+        // Preserve the window's verbatim-word match when projection changes the wording.
+        if (text !== ask.text && ask.text === record.intent?.userWords) return [];
+        return [
+          {
+            id: ask.id,
+            at: ask.at,
+            text,
+            images: ask.images.length,
+            attachedVia: ask.attachedVia,
+            turnState: ask.turnState,
+          },
+        ];
+      }),
       ...(isUnstartedWork(record) ? { dropEffects: tasks.dropEffects(id) } : {}),
       ...(browser ? { browser } : {}),
     };
@@ -753,7 +762,7 @@ export class TaskProtocol {
       if (isProvenanceOnly(event)) continue;
       const record = recordOf(event.taskId);
       if (!record) continue;
-      broadcastEvent(taskEventOf(record, event));
+      broadcastEvent(taskEventOf(record, { ...event, text: tasks.capture.eventReceipt(event) }));
     }
     const tiers = this.tiersOf(
       change.taskIds.flatMap((taskId) => {

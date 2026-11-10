@@ -1,3 +1,4 @@
+import { type CardNote, pointedAtLines } from "@shared/cardNotes";
 /**
  * The captain's own moves as a lane hears them: a card's choice, close or
  * thread reply, a line in the Crewmate tab, a returned browser, a project
@@ -99,6 +100,7 @@ export type CaptainFacts =
       /** The captain's words, verbatim. */
       words: string;
       answers?: CardAnswer[];
+      notes?: CardNote[];
     }
   | {
       /**
@@ -384,6 +386,7 @@ export const CAPTAIN_WORDS: KindWords<CaptainFacts> = {
     [
       threadReplyLead(facts),
       facts.words,
+      ...pointedAtLines(facts.notes ?? []),
       ...(facts.answers?.length ? [REPLY_SETTINGS_HEAD, ...cardAnswerLines(facts.answers)] : []),
     ].join("\n"),
   "browser-returned": (facts) => renderBrowserReturned(facts),

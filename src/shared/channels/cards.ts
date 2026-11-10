@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { cardNotesSchema } from "../cardNotes";
 import { CARD_MEDIA_PIECE_BYTES, CARD_MEDIA_TYPES, CARD_TYPEFACE_TYPES } from "../cardPictures";
 import {
   CARD_REPLY_MAX_CHARS,
@@ -213,6 +214,7 @@ export const cardChannels = {
           files: pastedFilesSchema.optional(),
           images: z.array(turnImageSchema).max(TURN_IMAGES_MAX).optional(),
           answers: cardAnswersSchema.optional(),
+          notes: cardNotesSchema.optional(),
         }),
       ]),
       z.unknown().optional(),

@@ -41,7 +41,12 @@ export type DeliveryEntry =
   | { outcome: "refused"; tool: string; reason: DeliveryRefusal; ref?: string; at: number };
 
 /** The facts saved for one message, oldest first. `retryOf` links an Ask again to its message. */
-export type DeliveryFacts = { entries: DeliveryEntry[]; retryOf?: string };
+export type DeliveryFacts = {
+  entries: DeliveryEntry[];
+  retryOf?: string;
+  /** The readable receipt when the saved turn text also carries model-only detail. */
+  receipt?: string;
+};
 
 /** An entry as the recorder takes it: the check stamps `at`. */
 export type DeliveryNote = DeliveryEntry extends infer E
@@ -85,13 +90,14 @@ function entryOf(value: unknown): DeliveryEntry | undefined {
 export function parseDeliveryFacts(json: string | null | undefined): DeliveryFacts {
   if (!json) return { entries: [] };
   try {
-    const parsed = JSON.parse(json) as { entries?: unknown; retryOf?: unknown };
+    const parsed = JSON.parse(json) as { entries?: unknown; retryOf?: unknown; receipt?: unknown };
     const entries = Array.isArray(parsed.entries)
       ? parsed.entries.flatMap((value) => entryOf(value) ?? [])
       : [];
     return {
       entries,
       ...(typeof parsed.retryOf === "string" ? { retryOf: parsed.retryOf } : {}),
+      ...(typeof parsed.receipt === "string" ? { receipt: parsed.receipt } : {}),
     };
   } catch {
     return { entries: [] };

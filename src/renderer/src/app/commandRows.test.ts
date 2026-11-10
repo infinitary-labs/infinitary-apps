@@ -3,6 +3,7 @@ import {
   COMMAND_IDS,
   DEFAULT_BINDINGS,
   KEYBOARD_COMMANDS,
+  keyHint,
   panelCommandId,
 } from "@shared/keyboard";
 import { resolveBindings } from "@shared/keymap";
@@ -116,6 +117,13 @@ describe("command search's list", () => {
         refusal: null,
       },
       { id: "cards.maximize", label: "Maximize or restore card", keys: undefined, refusal: null },
+      // The approved desktop annotation plan makes Point at a searchable keyboard command.
+      {
+        id: "cards.point-at",
+        label: KEYBOARD_COMMANDS["cards.point-at"].label,
+        keys: keyHint("cards.point-at", DEFAULT_BINDINGS),
+        refusal: null,
+      },
       {
         id: "cards.thread",
         label: "Show or hide the card's thread",
@@ -146,6 +154,7 @@ describe("command search's list", () => {
       ["cards.done", undefined],
       ["cards.decline", undefined],
       ["cards.maximize", undefined],
+      ["cards.point-at", keyHint("cards.point-at", bindings)],
       ["cards.thread", "⌘\\"],
       ["cards.show-cards", undefined],
     ]);

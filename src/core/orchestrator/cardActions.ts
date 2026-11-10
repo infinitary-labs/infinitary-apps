@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { attachmentWords } from "@shared/attachments";
+import { type CardNote, cardNotesSchema, noteText } from "@shared/cardNotes";
 import {
   anythingElseOf,
   CARD_ANSWERS_BOUND_REFUSAL,
@@ -12,6 +13,7 @@ import {
   cardAnswersBytes,
   cardAnswersSchema,
   cardChromeValueSchema,
+  cardMessageText,
   cardSubmissionSchema,
   cardTakesReplies,
   mergeEffectOf,
@@ -116,6 +118,7 @@ export class CardActions {
     submission?: unknown,
     answers?: CardAnswer[],
     files?: { text: string; name?: string }[],
+    notes?: CardNote[],
   ): CardThread {
     const id = cardId.trim();
     // An ended card keeps its reply field (INF-3071): the words reach its
@@ -137,7 +140,9 @@ export class CardActions {
     }
     const typed = rawText.trim();
     const hasImages = Boolean(images?.length);
-    if (!typed && !hasImages && !files?.length) throw new Error("A reply needs some words.");
+    if (notes) cardNotesSchema.parse(notes);
+    if (!typed && !hasImages && !files?.length && !notes?.length)
+      throw new Error("A reply needs some words.");
     if (typed.length > CARD_REPLY_MAX_CHARS) {
       throw new Error(`A reply is at most ${CARD_REPLY_MAX_CHARS} characters.`);
     }
@@ -149,15 +154,15 @@ export class CardActions {
     }
     const messageFiles: MessageFile[] = [];
     const text = withPastedFiles(typed, files, messageFiles);
-    const context = replyWithSettings(text, answers);
+    const context = replyWithSettings(cardMessageText({ text, notes }), answers);
     // The thread names what rode along: a picture is a line, never markup.
     // The row keeps the text as the author read it; the thread reads the
     // settings back apart from his words (`CardStore.messages`, FI3-617).
     const shown = hasImages
-      ? `${context}${context ? "\n" : ""}[attached ${attachmentWords(
+      ? `${replyWithSettings(text, answers)}${text ? "\n" : ""}[attached ${attachmentWords(
           (images ?? []).map((image) => ({ name: image.name || image.mimeType.slice(6) })),
         )}]`
-      : context;
+      : replyWithSettings(text, answers);
     // A note its closed task kept has no crewmate left to answer: the
     // Firstmate takes the reply, as it does on its own card.
     const closedTask = card.taskId ? this.core.options.tasks.get(card.taskId) : undefined;
@@ -173,19 +178,25 @@ export class CardActions {
     const asked = this.core.cards.addMessage(
       id,
       "captain",
-      shown || "sent a picture",
+      shown || (notes?.length ? "" : "sent a picture"),
       submission,
       answers,
+      undefined,
+      false,
+      { notes },
     );
     if (toFirstmate) {
+      const delivery: [messageFiles?: MessageFile[], receipt?: string] = notes?.length
+        ? [
+            messageFiles.length ? messageFiles : undefined,
+            [typed, ...notes.map(noteText)].filter(Boolean).join("\n"),
+          ]
+        : messageFiles.length
+          ? [messageFiles]
+          : [];
       this.core
         .hooks()
-        .converseAboutCard?.(
-          id,
-          context,
-          hasImages ? images : undefined,
-          ...(messageFiles.length ? [messageFiles] : []),
-        );
+        .converseAboutCard?.(id, context, hasImages ? images : undefined, ...delivery);
       return this.core.cards.thread(id);
     }
     const taskId = card.taskId;
@@ -208,6 +219,7 @@ export class CardActions {
           },
           words: text,
           answers,
+          notes,
         },
       };
       void this.core.steer

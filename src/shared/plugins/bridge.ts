@@ -266,7 +266,31 @@ export const frameBoxSchema = z.object({
 });
 export type FrameBox = z.infer<typeof frameBoxSchema>;
 
+export const frameAnnotationTargetSchema = z.object({
+  start: z.number().int().nonnegative(),
+  kind: z.string().min(1).max(32),
+  excerpt: z.string().max(240),
+  span: z
+    .object({
+      start: z.number().int().nonnegative(),
+      end: z.number().int().nonnegative(),
+      endPart: z.number().int().nonnegative().optional(),
+    })
+    .refine((s) => s.endPart !== undefined || s.end > s.start)
+    .optional(),
+});
+export type FrameAnnotationTarget = z.infer<typeof frameAnnotationTargetSchema>;
+
 export const frameMessageSchema = z.discriminatedUnion("type", [
+  z.object({
+    fm: fmMarker,
+    type: z.literal("annotate"),
+    document: z.string(),
+    target: frameAnnotationTargetSchema,
+    box: frameBoxSchema,
+    focus: z.boolean(),
+  }),
+  z.object({ fm: fmMarker, type: z.literal("point-exit"), document: z.string() }),
   z.object({
     fm: fmMarker,
     type: z.literal("revealed"),
@@ -405,12 +429,22 @@ type FrameResponse = {
 export type HostMessage =
   | {
       fm: typeof FRAME_BRIDGE_VERSION;
+      type: "annotation";
+      document: string;
+      mode: boolean;
+      queued: FrameAnnotationTarget[];
+      current?: FrameAnnotationTarget;
+      focus?: boolean;
+    }
+  | {
+      fm: typeof FRAME_BRIDGE_VERSION;
       type: "reveal";
       document: string;
       seq: number;
       offerId: string;
       start: number;
       keyboard: boolean;
+      span?: { start: number; end: number; endPart?: number };
     }
   /**
    * The document may report its drawing. `latePictures`: the host's pictures can arrive long after the body,

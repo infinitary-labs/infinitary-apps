@@ -13,6 +13,7 @@ import {
   type PersonalStoreResponse,
   personalStoreRequestSchema,
 } from "@shared/personal/manifest";
+import type { FrameAnnotationTarget } from "@shared/plugins/bridge";
 import {
   ACTION_VALUE_MAX_BYTES,
   FRAME_BRIDGE_VERSION,
@@ -71,6 +72,8 @@ export type FrameInset = { width: number; height: number };
 
 export type FrameMountSpec = {
   pluginId: string;
+  onAnnotation?: (target: FrameAnnotationTarget, box: FrameBox, focusComment: boolean) => void;
+  onPointExit?: () => void;
   revision?: { offerId: string; starts: readonly number[] };
   /** Read-catalog names the plugin declared (its manifest's capabilities.reads). */
   reads: readonly string[];
@@ -511,6 +514,19 @@ export class FrameController {
         this.listenToStore();
         this.spec.onBorn?.();
         return;
+      case "annotate":
+        if (
+          this.spec.onAnnotation &&
+          this.spec.revision?.starts.includes(message.target.start) &&
+          (message.target.span?.endPart === undefined ||
+            (message.target.span.endPart >= message.target.start &&
+              this.spec.revision.starts.includes(message.target.span.endPart)))
+        )
+          this.spec.onAnnotation(message.target, message.box, message.focus);
+        return;
+      case "point-exit":
+        this.spec.onPointExit?.();
+        return;
       case "revealed": {
         const pending = this.revealing;
         if (
@@ -609,11 +625,39 @@ export class FrameController {
     }
   }
 
+  annotate(
+    mode: boolean,
+    queued: FrameAnnotationTarget[],
+    current?: FrameAnnotationTarget,
+    focus = false,
+  ): void {
+    if (!this.ready || !this.documentId || !this.spec.onAnnotation) return;
+    this.port.post({
+      fm: V,
+      type: "annotation",
+      document: this.documentId,
+      mode,
+      queued,
+      ...(current ? { current } : {}),
+      focus,
+    });
+  }
+
+  revealAnnotation(
+    target: FrameAnnotationTarget,
+  ): Promise<{ top: number; height: number } | undefined> {
+    const offer = this.spec.revision?.offerId;
+    return offer
+      ? this.reveal(offer, target.start, false, target.span)
+      : Promise.resolve(undefined);
+  }
+
   /** Reveal a known target on this exact offer; a retired or silent document answers nothing. */
   reveal(
     offerId: string,
     start: number,
     keyboard: boolean,
+    span?: { start: number; end: number; endPart?: number },
   ): Promise<{ top: number; height: number } | undefined> {
     if (
       this.disposed ||
@@ -641,6 +685,7 @@ export class FrameController {
         offerId,
         start,
         keyboard,
+        ...(span ? { span } : {}),
       });
     });
   }

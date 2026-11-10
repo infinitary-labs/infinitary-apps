@@ -1,3 +1,4 @@
+import { cardNavigationParts } from "@shared/cardParts";
 import {
   PERSONAL_STORE_VALUE_MAX_BYTES,
   type PersonalStoreChange,
@@ -8,6 +9,11 @@ import { FRAME_MAX_IN_FLIGHT, FRAME_MAX_SUBSCRIPTIONS } from "@shared/plugins/br
 import type { MediatedFetchResult } from "@shared/plugins/fetch";
 import { PANEL_SERVER_ACTION } from "@shared/plugins/frameDocument";
 import { describe, expect, it, vi } from "vitest";
+import {
+  ANNOTATION_BODY,
+  ANNOTATION_RANGE,
+  ANNOTATION_RANGE_END,
+} from "../../../../../tests/fixtures/cardAnnotations";
 import { COALESCE_MS, type ReadApi, ReadExecutor } from "../reads/executor";
 import {
   FRAME_WATCHDOG_INTERVAL_MS,
@@ -1490,5 +1496,55 @@ it("reveals only an allowed target on the requested offer and document", async (
   const stale = controller.reveal("offer", 12, false);
   controller.expectDocument();
   expect(await stale).toBeUndefined();
+  controller.dispose();
+});
+
+// Intent: the approved annotation plan admits only this document's known part identities, including both range endpoints.
+it("admits annotation picks only for current known parts and range endpoints", () => {
+  const parts = cardNavigationParts(ANNOTATION_BODY),
+    first = parts[0],
+    last = parts[1];
+  if (!first || !last) throw new Error("example annotation parts missing");
+  const onAnnotation = vi.fn();
+  const { controller } = harness({
+    onAnnotation,
+    revision: { offerId: "annotation-offer", starts: parts.map((part) => part.start) },
+  });
+  controller.receive({ fm: 2, type: "ready", document: "annotation-document" });
+  const target = {
+    start: first.start,
+    kind: "text",
+    excerpt: `${ANNOTATION_RANGE}.\n${ANNOTATION_RANGE_END}`,
+    span: {
+      start: ANNOTATION_BODY.indexOf(ANNOTATION_RANGE) - "<p>".length,
+      end: ANNOTATION_RANGE_END.length,
+      endPart: last.start,
+    },
+  };
+  const box = { top: 10, bottom: 24, left: 16, right: 180 };
+  controller.receive({
+    fm: 2,
+    type: "annotate",
+    document: "annotation-document",
+    target,
+    box,
+    focus: false,
+  });
+  expect(onAnnotation).toHaveBeenCalledWith(target, box, false);
+  onAnnotation.mockClear();
+  for (const message of [
+    { document: "retired-document", target },
+    { document: "annotation-document", target: { ...target, start: ANNOTATION_BODY.length } },
+    {
+      document: "annotation-document",
+      target: { ...target, span: { ...target.span, endPart: ANNOTATION_BODY.length } },
+    },
+    {
+      document: "annotation-document",
+      target: { ...target, start: last.start, span: { ...target.span, endPart: first.start } },
+    },
+  ])
+    controller.receive({ fm: 2, type: "annotate", box, focus: false, ...message });
+  expect(onAnnotation).not.toHaveBeenCalled();
   controller.dispose();
 });

@@ -1,4 +1,5 @@
 import { NOTE_DONE_ACTION_ID } from "@shared/cardLeave";
+import { queuedNotesWords } from "@shared/cardNotes";
 import {
   CARD_FILES_FIRST,
   type Card,
@@ -160,11 +161,15 @@ export function StackedCard({
   );
   const messages = useShellStore((s) => s.threads[card.id]) ?? [];
   const answers = useShellStore((s) => s.cardAnswers[card.id]);
-  // A file or picture goes only as a reply: the choices wait until it has.
+  // A file, picture or queued note goes only as a reply: the choices wait until it has.
+  const noteCount = useShellStore((s) => s.replyNotes[card.id]?.length ?? 0);
+  const notesFirst = noteCount > 0;
+  const pendingReplyWords = notesFirst ? "Send the notes as a reply first" : CARD_FILES_FIRST;
   const filesFirst = useShellStore(
     (s) =>
-      reply !== undefined &&
-      ((s.replyImages[card.id]?.length ?? 0) > 0 || (s.replyPastes[card.id]?.length ?? 0) > 0),
+      notesFirst ||
+      (reply !== undefined &&
+        ((s.replyImages[card.id]?.length ?? 0) > 0 || (s.replyPastes[card.id]?.length ?? 0) > 0)),
   );
   const setCardAnswers = useShellStore((s) => s.setCardAnswers);
   const [showing, setShowing] = useState<"card" | "thread">("card");
@@ -221,8 +226,13 @@ export function StackedCard({
   const noteDone = !bare && card.actions.length === 0 ? card.noteDone : undefined;
   const pressNote = useShellStore((s) => s.pressNote);
   const footer =
-    card.actions.length > 0 || reply !== undefined || noteDone ? (
+    card.actions.length > 0 || reply !== undefined || noteDone || notesFirst ? (
       <>
+        {notesFirst && (
+          <span className="inf-annotation-count" data-card-note-count="" aria-live="polite">
+            {queuedNotesWords(noteCount)}
+          </span>
+        )}
         {asking && (
           <span
             data-card-answers=""
@@ -251,7 +261,7 @@ export function StackedCard({
               color: "var(--fg-3)",
             }}
           >
-            {CARD_FILES_FIRST}
+            {pendingReplyWords}
           </span>
         )}
         {(groups.length > 0 ? groups : [{ key: "choices", actions: [] }]).map(
@@ -315,7 +325,7 @@ export function StackedCard({
                       noticeCovers
                         ? undefined
                         : (actionOff ??
-                          (filesFirst ? CARD_FILES_FIRST : thereWords(action)) ??
+                          (filesFirst ? pendingReplyWords : thereWords(action)) ??
                           undefined)
                     }
                     // The notice shows the reason in place of the label; a
@@ -442,6 +452,7 @@ export function StackedCard({
           <LiveMessageList card={card} messages={messages} working={threadWorking} />
         ) : (
           <HtmlCardBody
+            cardId={cardTakesReplies(card) ? card.id : undefined}
             // What happens after the merge leads the body and scrolls away with it (INF-3149).
             lead={afterMergeStrip(card.requiredActions, card.afterMerge)}
             body={body}

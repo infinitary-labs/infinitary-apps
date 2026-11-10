@@ -65,6 +65,7 @@ import { copyStream, type FarBuild } from "../devices/farBuilds";
 import type { CoreActor, CoreDispatch } from "../dispatcher";
 import type { CoreEventBus } from "../events";
 import { listenAddresses, listenOn } from "./addresses";
+import { threadLinesFor } from "./cardCompatibility";
 import { CONTRACT_CHANGES, contractChange, listsChange } from "./contractChanges";
 import { readsFrameParts } from "./frameParts";
 import {
@@ -439,8 +440,10 @@ export function pushFrameIn(entry: JournalEntry, spelling: Spelling): string {
   return entry.frame.startsWith(was) ? head(channel) + entry.frame.slice(was.length) : entry.frame;
 }
 
+const CARD_ANNOTATIONS = contractChange("card-annotations");
+
 /** Which added card fields a view's card decoder reads. */
-type CardReads = { updates: boolean; ended: boolean };
+type CardReads = { updates: boolean; ended: boolean; annotations: boolean };
 
 /**
  * Keep old desktop strict card decoders working: a snapshot leaves out each
@@ -453,36 +456,6 @@ function legacyCardSnapshot(value: unknown, reads: CardReads): unknown {
     ...(reads.updates ? { currentUpdateId, currentUpdateSeen } : {}),
     ...(reads.ended ? { ended } : {}),
   }));
-}
-
-/**
- * A desktop from before shared cards decodes thread lines strictly: its
- * copy of a thread, or of a past card's, leaves out who contributed a line,
- * which captain message it answers and whether it is a clarification
- * (docs/card-threads.md, "Shared cards"). Phones ignore unknown fields.
- */
-function legacyThreadLines(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(legacyThreadLines);
-  if (!value || typeof value !== "object") return value;
-  const record = value as Record<string, unknown>;
-  if (!Array.isArray(record.messages)) {
-    return "cards" in record && Array.isArray(record.cards)
-      ? { ...record, cards: record.cards.map(legacyThreadLines) }
-      : value;
-  }
-  return {
-    ...record,
-    messages: record.messages.map((message) => {
-      if (!message || typeof message !== "object") return message;
-      const {
-        contributor: _contributor,
-        answersMessage: _answers,
-        clarification: _clarification,
-        ...line
-      } = message as Record<string, unknown>;
-      return line;
-    }),
-  };
 }
 
 /**
@@ -508,9 +481,15 @@ function cardPushFor(
   const spelled = pushFrameIn(entry, spelling);
   const text =
     taskAllow || !entry.channel.startsWith("inf:cards") ? spelled : frameWithoutTaskAllow(spelled);
-  if (!sharedCards && THREAD_CHANNELS.has(entry.channel)) {
+  if ((!sharedCards || !reads.annotations) && THREAD_CHANNELS.has(entry.channel)) {
     const frame = JSON.parse(text);
-    return JSON.stringify({ ...frame, payload: legacyThreadLines(frame.payload) });
+    return JSON.stringify({
+      ...frame,
+      payload: threadLinesFor(frame.payload, {
+        sharing: sharedCards,
+        annotations: reads.annotations,
+      }),
+    });
   }
   if ((reads.updates && reads.ended) || entry.channel !== "inf:cards") return text;
   const frame = JSON.parse(text);
@@ -803,6 +782,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       client.cardReads = {
         updates: hello.system === "ios" || readsSeenUpdate(hello.protocolVersion, hello.changes),
         ended: hello.system === "ios" || readsEndedCards(hello.protocolVersion, hello.changes),
+        // Native annotation rendering follows the desktop piece; until then it reads the plain lines.
+        annotations: hello.system !== "ios" && listsChange(hello.changes, CARD_ANNOTATIONS),
       };
       client.sharedCards =
         hello.system === "ios" || readsSharedCards(hello.protocolVersion, hello.changes);
@@ -953,8 +934,12 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           value:
             channel === "inf:cards:list"
               ? legacyCardSnapshot(value, client.cardReads)
-              : THREAD_CHANNELS.has(channel) && !client.sharedCards
-                ? legacyThreadLines(value)
+              : THREAD_CHANNELS.has(channel) &&
+                  (!client.sharedCards || !client.cardReads.annotations)
+                ? threadLinesFor(value, {
+                    sharing: client.sharedCards,
+                    annotations: client.cardReads.annotations,
+                  })
                 : value,
         });
       } catch (error) {
@@ -983,7 +968,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         spelling: FIRST_SPELLING,
         appVersion: undefined,
         changes: undefined,
-        cardReads: { updates: false, ended: false },
+        cardReads: { updates: false, ended: false, annotations: false },
         sharedCards: false,
         taskAllow: false,
         access: "read",

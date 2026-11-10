@@ -77,6 +77,11 @@ export type AskRecord = {
   crewmateAskedAt: number | null;
 };
 
+/** Captain-facing words; model readers keep the original text and its full target detail. */
+export function askReceipt(ask: Pick<AskRecord, "text" | "deliveryFacts">): string {
+  return ask.deliveryFacts.receipt ?? ask.text;
+}
+
 type Row = {
   id: string;
   at: number;
@@ -211,7 +216,9 @@ export class AskStore {
         ask.attachedAt,
         ask.turnState,
         ask.delivery,
-        ask.deliveryFacts.entries.length > 0 || ask.deliveryFacts.retryOf
+        ask.deliveryFacts.entries.length > 0 ||
+          ask.deliveryFacts.retryOf ||
+          ask.deliveryFacts.receipt !== undefined
           ? JSON.stringify(ask.deliveryFacts)
           : null,
         ask.noticeCardId,
@@ -351,13 +358,23 @@ export class AskStore {
   /** The two newest messages and their reply lines: the last turn above the input. */
   lastTurn(): LastTurn | null {
     const [row, before] = this.db
-      .prepare("SELECT text, reply FROM captain_asks ORDER BY at DESC, rowid DESC LIMIT 2")
-      .all() as Pick<Row, "text" | "reply">[];
+      .prepare(
+        "SELECT text, reply, delivery_facts FROM captain_asks WHERE at <= (SELECT MAX(at) FROM captain_asks) ORDER BY at DESC, rowid DESC LIMIT 2",
+      )
+      .all() as Pick<Row, "text" | "reply" | "delivery_facts">[];
     if (!row) return null;
     return {
-      you: row.text,
+      you: askReceipt({ text: row.text, deliveryFacts: parseDeliveryFacts(row.delivery_facts) }),
       reply: replyOf(row.reply),
-      previous: before ? { you: before.text, reply: replyOf(before.reply) } : null,
+      previous: before
+        ? {
+            you: askReceipt({
+              text: before.text,
+              deliveryFacts: parseDeliveryFacts(before.delivery_facts),
+            }),
+            reply: replyOf(before.reply),
+          }
+        : null,
     };
   }
 

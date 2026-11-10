@@ -2,7 +2,12 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import type { AttachmentRef } from "@shared/attachments";
 import type { MessageFile } from "../overflow";
-import type { AskAttachedVia, AskImage, AskRecord } from "../storage/askStore";
+import {
+  type AskAttachedVia,
+  type AskImage,
+  type AskRecord,
+  askReceipt,
+} from "../storage/askStore";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { SavedOrigin } from "../tasks/taskOrigin";
 import type { TaskService } from "../tasks/taskService";
@@ -37,6 +42,7 @@ export const ASK_TITLE_MAX = 64;
 
 export type OpenTurnAsk = {
   text: string;
+  receipt?: string;
   images?: AskImage[];
   /** The message's own copies of its pictures, kept when it was accepted. */
   attachments?: AttachmentRef[] | undefined;
@@ -113,6 +119,7 @@ export class AskCapture {
     const record = this.tasks.capture.openAsk({
       id: randomUUID().slice(0, 8),
       text: input.text,
+      ...(input.receipt !== undefined ? { receipt: input.receipt } : {}),
       messageFiles: input.messageFiles ?? [],
       images: input.images ?? [],
       ...(input.attachments?.length ? { attachments: input.attachments } : {}),
@@ -249,7 +256,7 @@ export class AskCapture {
       : input.closingText?.trim() || null;
     const task = this.tasks.capture.fileQuestion({
       id: randomUUID().slice(0, 8),
-      title: askTitle(ask.text, ask.images),
+      title: askTitle(askReceipt(ask), ask.images),
       outcome,
       actor: "host",
       fallback: "question",

@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "card-annotations",
+      "kind": "feature",
+      "title": "Point at parts of a card and send your comments together",
+      "body": "Select words, or use Point at to pick a part of a card. Queue it as-is or add a comment, then send several notes together with Chat. Your notes stay linked to the words or parts you picked.",
+      "area": "cards",
+      "provenance": {
+        "origin": "change"
+      },
+      "picture": {
+        "dark": "card-annotations-dark.webp",
+        "light": "card-annotations-light.webp",
+        "alt": "A card’s thread shows two queued notes, one with a comment, an unsent count below the reply field, and a cursor icon outside its left edge"
+      }
+    }
+  ]
+}

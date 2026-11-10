@@ -1,3 +1,4 @@
+import type { CardNote } from "@shared/cardNotes";
 import {
   type Card,
   type CardMessage,
@@ -57,6 +58,7 @@ export type EntryView = {
 export type ViewFacts = {
   layout: ShellLayout;
   threads: Record<string, CardMessage[]>;
+  replyNotes?: Record<string, CardNote[]>;
   closedThreadIds: string[];
   cardDrags: Record<string, number>;
   defaultCardSize: DefaultCardSize;
@@ -79,7 +81,10 @@ export function entryView(
   // An ended card's thread opens on its app line (INF-3071), which the
   // thread draws after its messages, whether or not it was collapsed.
   const ended = !isHeldEntry(entry) && entry.ended !== undefined;
-  const count = (facts.threads[entry.id] ?? []).length + (ended ? 1 : 0);
+  const count =
+    (facts.threads[entry.id] ?? []).length +
+    (facts.replyNotes?.[entry.id]?.length ?? 0) +
+    (ended ? 1 : 0);
   // A past card's thread is always beside it when it has one: read-only, so
   // there is nothing to collapse and no reply row (design skill, "Past card").
   const collapsed =

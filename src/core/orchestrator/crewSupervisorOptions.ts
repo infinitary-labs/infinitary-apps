@@ -112,6 +112,8 @@ export type FirstmateHooks = {
     text: string,
     images?: TurnImage[],
     messageFiles?: MessageFile[],
+    /** Reader-facing receipt; the text above stays the full model input. */
+    receipt?: string,
   ) => void;
   /** Apply the rung-2 ladder move: rebind Firstmate to another provider. */
   moveFlagship?: (providerId: string) => void;

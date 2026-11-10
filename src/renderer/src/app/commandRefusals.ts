@@ -57,7 +57,8 @@ export type RefusalState = Pick<
   | "secretsShown"
   | "pendingCardActions"
   | "lastTurn"
->;
+> &
+  Partial<Pick<ShellState, "replyNotes">>;
 
 /** What a refusal reads beyond the store: the window's own facts. */
 export type WindowFacts = {
@@ -282,13 +283,23 @@ const REFUSALS: Readonly<
   "cards.show-browser": (s) => tabRefusal(s, "cards.show-browser"),
   "cards.next-tab": (s) => tabRefusal(s, "cards.next-tab"),
   "cards.previous-tab": (s) => tabRefusal(s, "cards.previous-tab"),
+  "cards.point-at": (s) => {
+    const refused = cardRefusal(s);
+    if (refused) return refused;
+    const entry = shownEntry(s);
+    return !entry || isHeldEntry(entry) || !cardTakesReplies(entry)
+      ? "This card takes no reply"
+      : null;
+  },
   "cards.thread": (s) => {
     const refused = cardRefusal(s);
     if (refused) return refused;
     if (s.recording) return RECORDING;
     const entry = shownEntry(s);
     if (!entry || isHeldEntry(entry) || !cardTakesReplies(entry)) return "This card takes no reply";
-    return (s.threads[entry.id]?.length ?? 0) > 0 ? null : "This card has no thread yet";
+    return (s.threads[entry.id]?.length ?? 0) + (s.replyNotes?.[entry.id]?.length ?? 0) > 0
+      ? null
+      : "This card has no thread yet";
   },
   "cards.thread-new": (s, facts) => {
     const refused = cardRefusal(s);

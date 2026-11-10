@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { type CardNote, cardNotesSchema } from "@shared/cardNotes";
 import {
   CARD_CAPTURE_VERSION,
   type Card,
@@ -260,13 +261,14 @@ type MessageRow = {
   text: string;
   at: number;
   ref_json: string | null;
+  notes_json: string | null;
   revision_json: string | null;
   contributor_json: string | null;
   answers_message: number | null;
   clarification: number | null;
 };
 
-const MESSAGE_COLUMNS = `m.id, m.card_id, m.who, m.text, m.at, m.revision_json,
+const MESSAGE_COLUMNS = `m.notes_json, m.id, m.card_id, m.who, m.text, m.at, m.revision_json,
   m.contributor_json, m.answers_message, m.clarification,
   (SELECT o.payload_json FROM card_observations o
     WHERE o.card_id = m.card_id AND o.kind = 'message_ref' AND o.message_id = m.id
@@ -296,6 +298,14 @@ function messageOf(row: MessageRow): CardMessage {
       if (revision.success) message.revision = revision.data;
     } catch {
       /* An unreadable association never becomes guessed links. */
+    }
+  }
+  if (row.notes_json) {
+    try {
+      const notes = cardNotesSchema.safeParse(JSON.parse(row.notes_json));
+      if (notes.success) message.notes = notes.data;
+    } catch {
+      /* An unreadable note never removes the rest of the thread. */
     }
   }
   if (row.who !== "captain" || row.ref_json === null) return message;
@@ -914,6 +924,7 @@ export class CardStore {
     text: string;
     at?: number;
     revision?: CardRevisionLinks;
+    notes?: CardNote[];
     /** Who wrote it, when that is not the card's own author (`major-15.md`). */
     contributor?: CardContributor;
     /** The captain message this line answers and ends. */
@@ -927,8 +938,8 @@ export class CardStore {
     const result = this.db
       .prepare(
         `INSERT INTO card_messages
-          (card_id, who, text, at, revision_json, contributor_json, answers_message, clarification, response_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (card_id, who, text, at, revision_json, contributor_json, answers_message, clarification, response_id, notes_json)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         input.cardId,
@@ -940,6 +951,7 @@ export class CardStore {
         input.answersMessage ?? null,
         input.clarification ? 1 : null,
         input.responseId ?? null,
+        input.notes?.length ? JSON.stringify(cardNotesSchema.parse(input.notes)) : null,
       );
     return {
       id: Number(result.lastInsertRowid),
@@ -948,6 +960,7 @@ export class CardStore {
       text: input.text,
       at,
       ...(input.revision ? { revision: input.revision } : {}),
+      ...(input.notes?.length ? { notes: input.notes } : {}),
       ...(input.contributor ? { contributor: input.contributor } : {}),
       ...(input.answersMessage !== undefined ? { answersMessage: input.answersMessage } : {}),
       ...(input.clarification ? { clarification: true as const } : {}),

@@ -138,3 +138,8 @@ The line sits among the messages by when the card ended, so a line written after
 When the first mate starts work from the user's reply under a card, the thread gets one app line in the quiet row: "Your first mate started INF-12 from your reply here."; for work that waits it says "filed" and adds "It starts when its wait ends."
 The task's key is a link to that task, as every key the window draws is.
 It is written on an open card, an ended one and a closed one alike, and it stays on the thread, so the past card shows it too.
+
+### Pointing at a card
+
+The canonical annotation behavior is in `docs/card-threads.md`, “Pointing at a card”.
+Follow that section for selection, native Copy, focus, queuing, keyboard behavior, highlighting and unavailable views.

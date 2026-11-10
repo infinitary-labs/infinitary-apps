@@ -331,6 +331,15 @@ export const KEYBOARD_COMMANDS = {
   },
   // The shown card's thread folded into the card's foot, or beside it again
   // (docs/card-threads.md, "The shell"): ⌘\ as a sidebar is shown or hidden.
+  "cards.point-at": {
+    label: "Point at a part of the card",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [{ key: "a", meta: true, shift: true }],
+    searchWords: ["annotate", "comment", "select", "note"],
+  },
   "cards.thread": {
     label: "Show or hide the card's thread",
     scope: "window",

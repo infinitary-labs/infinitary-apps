@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { threadJumpWords } from "../../src/renderer/src/cards/threadWords";
+import { POINT_AT } from "../../src/shared/cardNotes";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import {
@@ -21,7 +22,8 @@ import { pressKey, runFromSearch } from "./windowKeys";
  * messages." Through the real path - a crewmate on the mock provider whose
  * answer the journey holds - the captain rereads a long reply from its
  * start while the answer lands: the thread stays, the jump down counts the
- * new lines, and the keys reach it: Shift+Tab and Enter, then command search.
+ * new lines, and the keys reach it: Shift+Tab through the reply controls,
+ * then Enter and command search. The approved inline cursor remains a Tab stop.
  * Data: a reply of 25 lines, the crewmate's acknowledgement, then its
  * revision line and answer. Completion: the list's own scroll position and
  * the jump down's words; it runs on the desktop lane.
@@ -82,8 +84,11 @@ test("a thread read above keeps its place as the answer lands, and its jump down
   await expect(thread.locator('[data-thread-message="host"]')).toHaveCount(1);
   expect(await list.evaluate((node) => node.scrollTop)).toBe(0);
 
-  // Shift+Tab from the reply field reaches the jump down, and Enter takes the thread to the new lines.
+  // The captain-approved cursor is the first stop before the field; the jump is before it.
+  const point = shownEntry(page).getByRole("button", { name: POINT_AT, exact: true });
   await pressKey(reply.field, "Shift+Tab");
+  await expect(point).toBeFocused();
+  await pressKey(point, "Shift+Tab");
   await expect(jump).toBeFocused();
   await pressKey(jump, "Enter");
   await expect(thread.locator('[data-thread-message="host"]')).toBeInViewport();

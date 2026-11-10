@@ -3,7 +3,7 @@ import { frameCsp } from "@shared/plugins/containment";
 import { buildFrameDocument } from "@shared/plugins/frameDocument";
 import { expect, test } from "vitest";
 import { commands } from "vitest/browser";
-import { cardStylesheet } from "../../src/renderer/src/cards/prototypeSrcdoc";
+import { cardBodyMarkup, cardStylesheet } from "../../src/renderer/src/cards/prototypeSrcdoc";
 
 /**
  * INF-3107 (the captain's Approve and build: "tapped diagrams now open the
@@ -67,7 +67,7 @@ const press = (id: string) =>
     return new Promise((done) => requestAnimationFrame(done));
   }, id);
 
-async function mounted(): Promise<Heard[]> {
+async function mounted(annotations = false): Promise<Heard[]> {
   const heard: Heard[] = [];
   const frame = document.createElement("iframe");
   frame.name = FRAME;
@@ -82,13 +82,15 @@ async function mounted(): Promise<Heard[]> {
         frame.contentWindow?.postMessage({ fm: FRAME_BRIDGE_VERSION, ...message }, "*");
       post({ type: "keys", pictures: true, escape: false });
       post({ type: "initialize", document: data.document });
+      if (annotations)
+        post({ type: "annotation", document: data.document, mode: false, queued: [] });
     }
   });
   frame.srcdoc = buildFrameDocument({
     csp: frameCsp([await scriptHash(KEEPS_ITS_PRESS)]),
     theme: "dark",
     style: cardStylesheet(),
-    html: BODY,
+    html: annotations ? cardBodyMarkup(BODY).html : BODY,
     script: KEEPS_ITS_PRESS,
   });
   document.body.replaceChildren(frame);
@@ -173,4 +175,35 @@ test("Enter on a diagram the keyboard reached opens it", async () => {
     return new Promise((done) => requestAnimationFrame(done));
   }, null);
   expect(opened(heard)[0]?.pictures?.[0]?.alt).toBe(WIDE_LABEL);
+});
+
+/** Intent: the explicit review repair keeps a focused picture's Enter after a text annotation. */
+test("Enter on a focused drawing opens it after the text selection is gone", async () => {
+  const heard = await mounted(true);
+  await inFrame(() => {
+    const paragraph = document.querySelector("p");
+    const node = paragraph?.firstChild;
+    if (!node) throw new Error("missing actual plan paragraph");
+    const words = "three pieces",
+      start = (node.textContent ?? "").indexOf(words);
+    const range = document.createRange();
+    range.setStart(node, start);
+    range.setEnd(node, start + words.length);
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    paragraph?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true }));
+  }, null);
+  await expect.poll(() => heard.filter((message) => message.type === "annotate").length).toBe(1);
+  await inFrame(() => {
+    window.getSelection()?.removeAllRanges();
+    const diagram = document.getElementById("wide") as HTMLElement & SVGElement;
+    diagram.focus();
+    diagram.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }),
+    );
+    return new Promise((done) => requestAnimationFrame(done));
+  }, null);
+  expect(opened(heard)[0]?.pictures?.[0]?.alt).toBe(WIDE_LABEL);
+  expect(heard.filter((message) => message.type === "annotate")).toHaveLength(1);
 });

@@ -550,7 +550,7 @@ export const taskEventViewSchema = z.object({
   at: z.number(),
   actor: taskEventActorSchema,
   kind: taskEventKindSchema,
-  /** The timeline line, as recorded. */
+  /** The captain-facing event line; the saved event remains the exact source record. */
   text: z.string(),
   data: z.record(z.string(), z.unknown()).nullable(),
   ref: z.string().nullable(),

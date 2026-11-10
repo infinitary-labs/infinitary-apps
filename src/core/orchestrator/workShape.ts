@@ -1,5 +1,10 @@
 import { cardPictureFiles } from "@shared/cardPictures";
-import { cardAnswerLines, cardAnswersSchema, replyWithSettings } from "@shared/cards";
+import {
+  cardAnswerLines,
+  cardAnswersSchema,
+  cardMessageText,
+  replyWithSettings,
+} from "@shared/cards";
 import { softHoldWords } from "@shared/holds";
 import { deliveryForRecord } from "@shared/repos";
 import {
@@ -399,10 +404,10 @@ export function sourceFacts(
   const thread = card
     ? cards
         .messages(card.id)
-        .filter((message) => message.text.trim())
+        .filter((message) => message.text.trim() || message.notes?.length)
         .map((message) => ({
           who: message.who,
-          text: replyWithSettings(message.text, message.answers),
+          text: replyWithSettings(cardMessageText(message), message.answers),
         }))
     : [];
   // The choice, the answers and the body all come off that one card, so a

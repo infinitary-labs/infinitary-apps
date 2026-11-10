@@ -1,4 +1,5 @@
 import { type Card, onStage } from "@shared/cards";
+import { askReceipt } from "../storage/askStore";
 import { FIRSTMATE_RECIPIENT, type InboxRow, type InboxStore } from "../storage/inboxStore";
 import type { TaskService } from "../tasks/taskService";
 import {
@@ -358,7 +359,7 @@ export class AnswerDeliveryCheck {
   private notify(id: string, chain?: AskChain): void {
     const ask = this.host.tasks.capture.getAsk(id);
     if (!ask || ask.delivery === "unresolved") return;
-    this.host.raiseNotice(noticeCard(id, ask.text, ask.deliveryFacts.entries));
+    this.host.raiseNotice(noticeCard(id, askReceipt(ask), ask.deliveryFacts.entries));
     this.host.tasks.capture.markAskUnresolved(id, noticeCardId(id));
     for (const other of chain?.ids ?? []) {
       if (other !== id) this.host.tasks.capture.setAskDelivery(other, "unresolved");

@@ -305,3 +305,9 @@ The pins protect the lib's integrity, not its correctness.
     Uncapped now; it can only hang the card's own frame, which the watchdog tears down.
 - [x] Content provenance
   - Bodies come only from the task's own crewmate session or the first mate through the emit_card tool, and are never interpreted outside the sandbox (no innerHTML in the app document).
+
+## Desktop annotation comments
+
+Desktop annotation targets name only parts the current card declared for revision navigation, with bounded excerpts and text offsets.
+The host admits a pick only from the frame holding focus and draws the comment popover outside the authored document.
+Only the host's reply send delivers queued comments; the frame receives target identities and highlight state, never those comments.

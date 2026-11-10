@@ -312,6 +312,11 @@ export async function dragCardTo(page: Page, width: number): Promise<void> {
   await expect(edge).toHaveAttribute("aria-valuenow", String(width));
 }
 
+/** The approved annotation flow reads its card's thread, including the column beside the body. */
+export function cardThread(page: Page, cardId: string): Locator {
+  return page.locator(`[data-card-thread=${JSON.stringify(cardId)}]:visible`);
+}
+
 /**
  * The shown card's one field and its Chat (INF-924): the field above the
  * card's choices with Chat at the right edge of their row, or both at the

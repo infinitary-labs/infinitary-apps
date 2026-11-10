@@ -1,4 +1,5 @@
 import { NOTE_DONE_ACTION_ID } from "@shared/cardLeave";
+import type { CardNote } from "@shared/cardNotes";
 import type {
   Card,
   CardActionSource,
@@ -24,7 +25,7 @@ import {
   pasteRefusal,
 } from "@shared/composer";
 import { openedSection } from "@shared/integrations";
-import type { FrameAnswers } from "@shared/plugins/bridge";
+import type { FrameAnswers, FrameBox } from "@shared/plugins/bridge";
 import { isPreparing } from "../attachments/intake";
 import type { ImageAttachment } from "../design";
 import { changesOff, changesOffWords, doneThereWords, isView } from "../devices/viewWords";
@@ -58,6 +59,9 @@ export type CardSlice = {
   threadsLoaded: Record<string, true>;
   /** What the captain has typed under each card and not yet sent. */
   replyDrafts: Record<string, string>;
+  replyNotes: Record<string, CardNote[]>;
+  pointAtCard: string | null;
+  annotationPick: { cardId: string; note: CardNote; box: FrameBox; focusComment?: boolean } | null;
   /** Replies in flight, by card: the send control's own guard. */
   sendingReplies: Record<string, true>;
   /** A rejected reply, by card, shown under the row until the next keystroke. */
@@ -144,6 +148,9 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
     threads: {},
     threadsLoaded: {},
     replyDrafts: {},
+    replyNotes: {},
+    pointAtCard: null,
+    annotationPick: null,
     sendingReplies: {},
     replyErrors: {},
     replyNotices: {},
@@ -409,6 +416,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         };
       }),
     sendReply: async (cardId, collect) => {
+      const notes = get().replyNotes[cardId] ?? [];
       const draft = get().replyDrafts[cardId] ?? "";
       const text = composeTurnText(draft, []);
       const images = get().replyImages[cardId] ?? [];
@@ -417,7 +425,10 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         text,
         ...(name ? { name } : {}),
       }));
-      if ((!text && images.length === 0 && files.length === 0) || get().sendingReplies[cardId])
+      if (
+        (!text && images.length === 0 && files.length === 0 && notes.length === 0) ||
+        get().sendingReplies[cardId]
+      )
         return;
       if (isPreparing(cardId)) {
         set((s) => ({ replyNotices: { ...s.replyNotices, [cardId]: "files-preparing" as const } }));
@@ -436,6 +447,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
       set((s) => ({
         // Clear before collecting settings or crossing the core boundary.
         replyDrafts: withoutKey(s.replyDrafts, cardId),
+        replyNotes: withoutKey(s.replyNotes, cardId),
         replyPastes: withoutKey(s.replyPastes, cardId),
         replyImages: withoutKey(s.replyImages, cardId),
         replyNotices: withoutKey(s.replyNotices, cardId),
@@ -452,9 +464,10 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         }
         // Sending hands the turn to the author; the card stays where it is.
         const payload =
-          images.length > 0 || files.length > 0 || answers?.length
+          images.length > 0 || files.length > 0 || answers?.length || notes.length > 0
             ? {
                 text: text || undefined,
+                ...(notes.length ? { notes } : {}),
                 ...(files.length ? { files } : {}),
                 ...(answers?.length ? { answers } : {}),
                 images: images.map((image) => ({
@@ -477,6 +490,7 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         // and chips on refusal. Nothing moves and nothing needs retyping.
         set((s) => ({
           replyDrafts: { ...s.replyDrafts, [cardId]: draft },
+          replyNotes: { ...s.replyNotes, [cardId]: notes },
           replyPastes: { ...s.replyPastes, [cardId]: pastes },
           replyImages: { ...s.replyImages, [cardId]: images },
           replyErrors: { ...s.replyErrors, [cardId]: message },

@@ -11279,6 +11279,77 @@
                 "items": {
                   "type": "object",
                   "properties": {
+                    "notes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "start": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "key": {
+                            "type": "string",
+                            "maxLength": 65536
+                          },
+                          "endKey": {
+                            "type": "string",
+                            "maxLength": 65536
+                          },
+                          "kind": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 32
+                          },
+                          "excerpt": {
+                            "type": "string",
+                            "maxLength": 240
+                          },
+                          "span": {
+                            "type": "object",
+                            "properties": {
+                              "start": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "end": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "endPart": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "start",
+                              "end"
+                            ]
+                          },
+                          "comment": {
+                            "type": "string",
+                            "maxLength": 4000
+                          },
+                          "line": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "start",
+                          "key",
+                          "kind",
+                          "excerpt",
+                          "comment",
+                          "line"
+                        ]
+                      }
+                    },
                     "revision": {
                       "type": "object",
                       "properties": {
@@ -11678,6 +11749,77 @@
             "items": {
               "type": "object",
               "properties": {
+                "notes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "start": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "key": {
+                        "type": "string",
+                        "maxLength": 65536
+                      },
+                      "endKey": {
+                        "type": "string",
+                        "maxLength": 65536
+                      },
+                      "kind": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32
+                      },
+                      "excerpt": {
+                        "type": "string",
+                        "maxLength": 240
+                      },
+                      "span": {
+                        "type": "object",
+                        "properties": {
+                          "start": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "end": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "endPart": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "start",
+                          "end"
+                        ]
+                      },
+                      "comment": {
+                        "type": "string",
+                        "maxLength": 4000
+                      },
+                      "line": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "start",
+                      "key",
+                      "kind",
+                      "excerpt",
+                      "comment",
+                      "line"
+                    ]
+                  }
+                },
                 "revision": {
                   "type": "object",
                   "properties": {
@@ -12575,6 +12717,77 @@
                 "items": {
                   "type": "object",
                   "properties": {
+                    "notes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "start": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "key": {
+                            "type": "string",
+                            "maxLength": 65536
+                          },
+                          "endKey": {
+                            "type": "string",
+                            "maxLength": 65536
+                          },
+                          "kind": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 32
+                          },
+                          "excerpt": {
+                            "type": "string",
+                            "maxLength": 240
+                          },
+                          "span": {
+                            "type": "object",
+                            "properties": {
+                              "start": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "end": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "endPart": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "start",
+                              "end"
+                            ]
+                          },
+                          "comment": {
+                            "type": "string",
+                            "maxLength": 4000
+                          },
+                          "line": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "start",
+                          "key",
+                          "kind",
+                          "excerpt",
+                          "comment",
+                          "line"
+                        ]
+                      }
+                    },
                     "revision": {
                       "type": "object",
                       "properties": {
@@ -13360,6 +13573,77 @@
             "items": {
               "type": "object",
               "properties": {
+                "notes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "start": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "key": {
+                        "type": "string",
+                        "maxLength": 65536
+                      },
+                      "endKey": {
+                        "type": "string",
+                        "maxLength": 65536
+                      },
+                      "kind": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32
+                      },
+                      "excerpt": {
+                        "type": "string",
+                        "maxLength": 240
+                      },
+                      "span": {
+                        "type": "object",
+                        "properties": {
+                          "start": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "end": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "endPart": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "start",
+                          "end"
+                        ]
+                      },
+                      "comment": {
+                        "type": "string",
+                        "maxLength": 4000
+                      },
+                      "line": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "start",
+                      "key",
+                      "kind",
+                      "excerpt",
+                      "comment",
+                      "line"
+                    ]
+                  }
+                },
                 "revision": {
                   "type": "object",
                   "properties": {
@@ -13775,6 +14059,77 @@
                       ],
                       "additionalProperties": false
                     }
+                  },
+                  "notes": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "start": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "key": {
+                          "type": "string",
+                          "maxLength": 65536
+                        },
+                        "endKey": {
+                          "type": "string",
+                          "maxLength": 65536
+                        },
+                        "kind": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 32
+                        },
+                        "excerpt": {
+                          "type": "string",
+                          "maxLength": 240
+                        },
+                        "span": {
+                          "type": "object",
+                          "properties": {
+                            "start": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "end": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "endPart": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "start",
+                            "end"
+                          ]
+                        },
+                        "comment": {
+                          "type": "string",
+                          "maxLength": 4000
+                        },
+                        "line": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "start",
+                        "key",
+                        "kind",
+                        "excerpt",
+                        "comment",
+                        "line"
+                      ]
+                    }
                   }
                 }
               }
@@ -13799,6 +14154,77 @@
             "items": {
               "type": "object",
               "properties": {
+                "notes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "start": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "key": {
+                        "type": "string",
+                        "maxLength": 65536
+                      },
+                      "endKey": {
+                        "type": "string",
+                        "maxLength": 65536
+                      },
+                      "kind": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32
+                      },
+                      "excerpt": {
+                        "type": "string",
+                        "maxLength": 240
+                      },
+                      "span": {
+                        "type": "object",
+                        "properties": {
+                          "start": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "end": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "endPart": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "start",
+                          "end"
+                        ]
+                      },
+                      "comment": {
+                        "type": "string",
+                        "maxLength": 4000
+                      },
+                      "line": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "start",
+                      "key",
+                      "kind",
+                      "excerpt",
+                      "comment",
+                      "line"
+                    ]
+                  }
+                },
                 "revision": {
                   "type": "object",
                   "properties": {
@@ -43524,6 +43950,77 @@
                   "items": {
                     "type": "object",
                     "properties": {
+                      "notes": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "start": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "key": {
+                              "type": "string",
+                              "maxLength": 65536
+                            },
+                            "endKey": {
+                              "type": "string",
+                              "maxLength": 65536
+                            },
+                            "kind": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 32
+                            },
+                            "excerpt": {
+                              "type": "string",
+                              "maxLength": 240
+                            },
+                            "span": {
+                              "type": "object",
+                              "properties": {
+                                "start": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "end": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "endPart": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "start",
+                                "end"
+                              ]
+                            },
+                            "comment": {
+                              "type": "string",
+                              "maxLength": 4000
+                            },
+                            "line": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0,
+                              "maximum": 9007199254740991
+                            }
+                          },
+                          "required": [
+                            "start",
+                            "key",
+                            "kind",
+                            "excerpt",
+                            "comment",
+                            "line"
+                          ]
+                        }
+                      },
                       "revision": {
                         "type": "object",
                         "properties": {
@@ -61585,6 +62082,77 @@
             "items": {
               "type": "object",
               "properties": {
+                "notes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "start": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "key": {
+                        "type": "string",
+                        "maxLength": 65536
+                      },
+                      "endKey": {
+                        "type": "string",
+                        "maxLength": 65536
+                      },
+                      "kind": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32
+                      },
+                      "excerpt": {
+                        "type": "string",
+                        "maxLength": 240
+                      },
+                      "span": {
+                        "type": "object",
+                        "properties": {
+                          "start": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "end": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "endPart": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "start",
+                          "end"
+                        ]
+                      },
+                      "comment": {
+                        "type": "string",
+                        "maxLength": 4000
+                      },
+                      "line": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "start",
+                      "key",
+                      "kind",
+                      "excerpt",
+                      "comment",
+                      "line"
+                    ]
+                  }
+                },
                 "revision": {
                   "type": "object",
                   "properties": {

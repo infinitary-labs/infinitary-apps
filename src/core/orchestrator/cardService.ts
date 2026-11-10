@@ -1073,6 +1073,7 @@ export class CardService {
         cardId,
         who,
         text,
+        notes: facts.notes,
         ...(revision ? { revision } : {}),
         ...(facts.contributor ? { contributor: facts.contributor } : {}),
         ...(records ? { answersMessage } : {}),
@@ -1117,7 +1118,6 @@ export class CardService {
     }
     return message;
   }
-
   /** The Firstmate's closing words as its line on a card it answers (`CardThreads`). */
   recordFirstmateThreadAnswer(cardId: string, text: string): boolean {
     return this.threads.recordFirstmateThreadAnswer(cardId, text);

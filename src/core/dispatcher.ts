@@ -620,6 +620,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         submission,
         payload.answers,
         payload.files,
+        payload.notes,
       );
     },
 

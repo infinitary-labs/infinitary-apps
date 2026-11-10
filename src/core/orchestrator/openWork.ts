@@ -3,6 +3,7 @@ import {
   type Card,
   type CardMessage,
   type CardThread,
+  cardMessageText,
   cardPresentation,
   type PastCard,
   replyWithSettings,
@@ -339,7 +340,7 @@ function threadLine(message: CardMessage) {
 }
 
 function captainWords(message: CardMessage | undefined): string | undefined {
-  return message && replyWithSettings(message.text, message.answers);
+  return message && replyWithSettings(cardMessageText(message), message.answers);
 }
 
 const OWED: Record<ThreadOwed, string> = {

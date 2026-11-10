@@ -1,4 +1,4 @@
-import type { AskRecord } from "../storage/askStore";
+import { type AskRecord, askReceipt } from "../storage/askStore";
 import type { TaskEvent } from "../storage/taskEventStore";
 import type { TaskRecord } from "../storage/taskRecords";
 
@@ -193,7 +193,7 @@ export function originAbout(reader: OriginReader, id: string): TaskOriginLine | 
     const found = ownOrigin(reader, taskId);
     if (!found) continue;
     if (found.kind === "asked")
-      return { kind: "asked", at: found.ask.at, text: found.ask.text, through };
+      return { kind: "asked", at: found.ask.at, text: askReceipt(found.ask), through };
     // The words sit on the reporting task, one further back.
     if (found.kind === "relayed")
       return { kind: "asked", at: found.at, text: found.text, through: through + 1 };
@@ -212,7 +212,7 @@ export function originAbout(reader: OriginReader, id: string): TaskOriginLine | 
   }
   for (const { id: taskId, through } of order) {
     const ask = ownSaying(reader, taskId);
-    if (ask) return { kind: "said", at: ask.at, text: ask.text, through };
+    if (ask) return { kind: "said", at: ask.at, text: askReceipt(ask), through };
   }
   const nearest = order.find((entry) => entry.through > 0);
   const task = nearest && reader.get(nearest.id);

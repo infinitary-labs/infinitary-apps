@@ -134,6 +134,8 @@ describe("the command catalog", () => {
       "cards.decline",
       "cards.maximize",
       "cards.next-revision",
+      // The approved annotation plan adds Point at to the shell's command catalog.
+      "cards.point-at",
       "cards.thread",
       "cards.thread-new",
       "cards.show-info",

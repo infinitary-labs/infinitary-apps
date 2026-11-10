@@ -266,6 +266,11 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
     toShownPart(cardBody, (body) =>
       body.dispatchEvent(new Event("fm-next-revision", { bubbles: true })),
     ),
+  "cards.point-at": () =>
+    toShownPart(
+      (id) => shownPart(id, `[data-card-point-at="${CSS.escape(id)}"]`),
+      (button) => button.click(),
+    ),
   "cards.thread": () => onShownCard((stage) => stage.thread?.()),
   "cards.thread-new": () => toShownPart(threadJumpButton, (button) => button.click()),
   "cards.show-info": () => toTab("cards.show-info"),

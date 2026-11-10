@@ -1,0 +1,114 @@
+.inf-annotation-count {
+  flex: 1 1 100%;
+  min-width: 0;
+  white-space: nowrap;
+}
+.inf-annotation-count,
+.inf-annotation-hint,
+.inf-annotation-actions > span {
+  font: var(--text-xs) / 1.5 var(--font-mono);
+  color: var(--fg-3);
+}
+.inf-queued-note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-s);
+  font-size: var(--text-sm);
+}
+.inf-annotation-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+.inf-annotation-actions > span {
+  margin-right: auto;
+}
+.inf-note-anchor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 100%;
+  font-size: var(--text-xs);
+}
+.inf-note-anchor button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  color: var(--fg-2);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+.inf-note-anchor button:hover {
+  color: var(--accent);
+}
+.inf-note-anchor button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.inf-note-anchor span {
+  color: var(--fg-3);
+}
+.inf-annotation-popover {
+  position: fixed;
+  z-index: 20;
+  box-sizing: border-box;
+  width: 320px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+  overflow: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-m);
+  background: var(--bg-2);
+  color: var(--fg-1);
+  box-shadow: var(--shadow-card);
+  font: var(--text-sm) / var(--leading-body) var(--font-ui);
+}
+.inf-annotation-popover strong {
+  font-weight: 500;
+}
+.inf-annotation-popover blockquote {
+  margin: var(--space-2) 0;
+  color: var(--fg-3);
+  font-size: var(--text-xs);
+  max-height: 80px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+.inf-annotation-popover textarea {
+  box-sizing: border-box;
+  width: 100%;
+  resize: vertical;
+  max-height: 160px;
+  padding: var(--space-2);
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-s);
+  background: var(--bg-1);
+  color: var(--fg-1);
+  font: inherit;
+}
+.inf-annotation-popover textarea:focus {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.inf-annotation-popover textarea::placeholder {
+  color: var(--fg-3);
+}
+.inf-annotation-hint {
+  margin: var(--space-2) 0;
+}
+.inf-sent-note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  padding: var(--space-1) 0;
+}

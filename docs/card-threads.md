@@ -510,3 +510,36 @@ An older computer is refused rather than trusted to drop the new fields (`takesW
 A computer that runs work refuses these writes and reads to a home on another work major.
 A home refuses a write on someone else's card from a work computer on another major before writing anything.
 A desktop view below major 14 that does not name `shared-cards` gets thread lines without the contributor, the answered message and the clarification flag, in every answer and push that carries them (`THREAD_CHANNELS` in `src/core/connection/connection.ts`); a phone ignores fields it does not know.
+
+### Pointing at a card
+
+On desktop cards that take replies, the cursor icon at the left of the input row or Point at in command search enters whole-part selection.
+The shared icon button sits outside the bordered field, bottom-aligned as the reply grows, and shows Point at with its command key on rest, without a native tooltip.
+The choices row keeps the queued-note count visible while notes wait.
+Its default key is ⇧⌘A (Ctrl+Shift+A on Linux).
+Arrow keys move through the body parts, Enter opens an annotation popover, and Escape leaves Point at.
+Selecting text opens the same popover even when Point at is off, retaining the native selection and frame focus so usual Copy still works.
+Tab, Enter or a click enters its comment field; picking a whole part focuses the field directly.
+The host draws the popover outside the authored frame, with the excerpt, an optional comment, Cancel and Queue.
+The popover stays below modal views, keeping its draft while the picture viewer or command search covers it.
+Enter in the comment field queues the note, and Command+Enter queues and sends all queued notes (Ctrl+Enter on Linux).
+Escape closes an empty popover; with a comment it explains that Cancel discards it.
+This temporary host comment box is the annotation exception to the one-field rule, not another field an author creates.
+Queuing the first note opens the existing thread, where notes show Not sent with Edit and Remove in its scroller.
+Chat or Enter in the ordinary reply field sends them together as one reply.
+A text note highlights only its selected range, including while queued and when revealed from its thread anchor.
+A whole-part note highlights its part instead.
+Notes identify parts by their normalized revision-navigation identity, preserving moved unchanged parts without guessing edited ones.
+A missing part says “This part is no longer in the card”.
+A view without the body bridge says “This part cannot be shown in this view”, rather than declaring the part missing.
+Edit in that view explains that editing is unavailable, rather than silently doing nothing.
+The author reads a Pointed at block after the captain's words, with the kind, excerpt, range offsets, body line and optional comment.
+The captain's reply receipt uses readable note labels and comments, not the model's positional detail or escaped text.
+The saved receipt stays readable after reload and Ask again, while the original detailed text remains the model's input.
+A task's You asked and You said labels and a fallback question's title use the same readable receipt.
+Ask-event Activity, Now and readable timeline text use that receipt without rewriting the saved event or exact model history.
+The record preserves its verbatim-word duplicate match before projecting an ask, so the same message is not listed twice.
+The frame receives only targets, range offsets and selection state, never the captain's comments.
+Draft notes live with this window's reply draft; sent notes persist on the card's thread.
+
+Desktop readers without the annotation change and the phone receive readable Pointed at lines instead of the structured note field.

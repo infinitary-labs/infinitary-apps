@@ -106,8 +106,11 @@ export function voiceSlice(set: ShellSet, get: ShellGet): VoiceSlice {
         return;
       }
       set((s) => ({
+        // A newer recording replaces one still transcribing: its words are
+        // dropped, and only this generation could have cleared Transcribing.
         voiceGeneration: s.voiceGeneration + 1,
         recording: true,
+        transcribing: false,
         // A line about microphone access stays until a hold works.
         voiceNotice: s.voiceNotice?.kind === "mic" ? s.voiceNotice : null,
       }));

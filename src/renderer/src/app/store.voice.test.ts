@@ -169,6 +169,21 @@ describe('a recording that ends (docs/composer.md, "Voice")', () => {
     expect(state()).toMatchObject({ recording: true, inputText: "" });
   });
 
+  // INF-3307's audit, row 11: abandoning a second recording while the first
+  // transcribed left the box saying Transcribing, with nothing to clear it.
+  it("stops saying Transcribing once a newer recording replaces one, even when that one is abandoned", async () => {
+    await record();
+    state().acceptRecording();
+    const first = transcribed;
+    await record();
+
+    state().abandonRecording();
+    first.resolve("old words");
+    await settle();
+
+    expect(state()).toMatchObject({ recording: false, transcribing: false, inputText: "" });
+  });
+
   it("abandons a recording without a word reaching the box", async () => {
     useShellStore.setState({ inputText: "typed" });
     await record();

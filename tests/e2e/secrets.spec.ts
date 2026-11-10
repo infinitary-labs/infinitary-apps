@@ -9,7 +9,9 @@ import { hostEnv } from "../../src/core/hostEnv";
 import { approvalCode } from "../../src/core/secrets/approvals";
 import { SECRETS_COMMAND, type UseReceipt } from "../../src/core/secrets/requests";
 import { newReference } from "../../src/core/secrets/settings";
+import { secretName } from "../../src/shared/secretNames";
 import {
+  decisionWords,
   SECRET_DEVICE_WORDS,
   SECRET_STATE_WORDS,
   SECRETS_RECOVERY_WORDS,
@@ -31,12 +33,7 @@ import {
   PROTECTED_USE_TITLE,
   protectedSecretUse,
 } from "./scenarios/protectedSecretUse";
-import {
-  launchSecrets,
-  type SecretsJourneyGlobal,
-  secretReference,
-  secretsArea,
-} from "./secretsHarness";
+import { launchSecrets, type SecretsJourneyGlobal, secretsArea } from "./secretsHarness";
 import { settingsSection } from "./settings";
 import { shownCard } from "./stack";
 import { setThemeViaSettings } from "./theme";
@@ -44,14 +41,18 @@ import { commandSearch, focusOn, pressKey, pressWindowKey, runFromSearch } from 
 
 const LABEL = "Staging deployment";
 const REFERENCE = "staging-deploy";
+/** The reference the controller makes from LABEL when Settings adds it; the page asks for none. */
+const ENTERED = newReference(LABEL, []);
 const TOKEN = "invented-staging-proof-token";
 
 // Intent: INF-1109's Settings secure entry and trusted exact-use approval, and
 // the captain's keyboard ruling. Real renderer, IPC, AXI, sealed files and
 // recipient process; only platform custody and human confirmation stand in.
 // Completion: the recipient runs once, its output never reaches AXI, and the
-// saved card contains metadata rather than the value. Prerequisites: Electron,
+// saved card contains metadata rather than the value, and the secret's row names
+// the task that used it (INF-1690 piece 1). Prerequisites: Electron,
 // the built renderer and /bin/sh. No shared account, native store or network.
+const USING_TASK = { id: "secrets-ui-proof-task", title: "Check the staging deployment" };
 test("secure entry and an exact command meet at the app's trusted approval", async () => {
   const cwd = realpathSync(scratchDir("secrets-journey-recipient-"));
   const marker = join(cwd, "executions");
@@ -75,11 +76,7 @@ test("secure entry and an exact command meet at the app's trusted approval", asy
     await expect(value).toBeFocused();
     await expect(value).toHaveAttribute("type", "password");
     await value.fill(TOKEN);
-    // The captain's simpler entry flow: name then value; a custom reference is optional detail.
-    const reference = await secretReference(page);
-    // Saving now allocates a readable reference; an explicit override remains optional.
-    await expect(reference).toHaveValue("");
-    await reference.fill(REFERENCE);
+    // The captain's simpler entry flow: name then value; saving makes the reference.
     const save = section.getByRole("button", { name: SECRETS_WORDS.save, exact: true });
     await pressKey(save, "Enter");
     await expect(section.getByRole("status")).toHaveText(SECRETS_WORDS.saved);
@@ -88,13 +85,14 @@ test("secure entry and an exact command meet at the app's trusted approval", asy
 
     // Grant only the closed facade, just as the local task channel does.
     // A task name is not authority; listing names does not approve a use.
-    const shell = await app.evaluate(() => {
+    const shell = await app.evaluate((_electron, task) => {
       const services = (globalThis as SecretsJourneyGlobal).secretsJourney.core.services;
       if (!services.taskCommands) throw new Error("No task channel in the isolated app.");
+      services.tasks.create({ ...task, prompt: task.title, repoId: null });
       return services.taskCommands.grant("secrets-ui-proof", {
-        secrets: services.secrets.commandFor({ task: "" }),
+        secrets: services.secrets.commandFor({ task: task.id }),
       });
-    });
+    }, USING_TASK);
     const [bin] = shell.path;
     if (!bin) throw new Error("The task channel supplied no command folder.");
     const run = async (args: string[]) => {
@@ -110,7 +108,7 @@ test("secure entry and an exact command meet at the app's trusted approval", asy
     const args = [
       "inject",
       "--env",
-      JSON.stringify({ SERVICE_TOKEN: REFERENCE }),
+      JSON.stringify({ SERVICE_TOKEN: ENTERED }),
       "--reason",
       "Check the staging deployment",
       "--id",
@@ -160,6 +158,10 @@ test("secure entry and an exact command meet at the app's trusted approval", asy
       expect(text, file).not.toContain(Buffer.from(TOKEN).toString("base64"));
     }
     await runFromSearch(app, page, "settings.secrets");
+    // The row says which task used the secret, by the task's own title.
+    await expect(
+      section.getByRole("listitem").filter({ hasText: LABEL }).locator("summary"),
+    ).toContainText(USING_TASK.title);
     await secretsArea(page, "history");
     const history = section.getByRole("region", { name: SECRETS_WORDS.historyRegion });
     await expect(history).toContainText(SECRET_STATE_WORDS.completed);
@@ -300,7 +302,6 @@ test("recovery controls keep files private and restore without replaying history
     await runFromSearch(app, page, "settings.secrets");
     await pressKey(section.getByRole("button", { name: SECRETS_WORDS.add, exact: true }), "Enter");
     await section.getByLabel(SECRETS_WORDS.name, { exact: true }).fill(LABEL);
-    await (await secretReference(page)).fill(REFERENCE);
     await section.getByLabel(SECRETS_WORDS.value, { exact: true }).fill(TOKEN);
     await pressKey(section.getByRole("button", { name: SECRETS_WORDS.save, exact: true }), "Enter");
     await expect(section.getByRole("status")).toHaveText(SECRETS_WORDS.saved);
@@ -317,9 +318,9 @@ test("recovery controls keep files private and restore without replaying history
         });
         return { home: (await settings.view()).home, request: receipt.request };
       },
-      { cwd, ref: REFERENCE },
+      { cwd, ref: ENTERED },
     );
-    const area = await secretsArea(page, "recovery");
+    const area = await secretsArea(page, "copy");
     const recovery = section.getByRole("region", {
       name: SECRETS_RECOVERY_WORDS.region,
       exact: true,
@@ -415,7 +416,7 @@ test("a phone's approval key is enrolled and stopped only on this computer", asy
     await expect(enrollment).toHaveCount(0);
 
     await runFromSearch(app, page, "settings.secrets");
-    await secretsArea(page, "rules");
+    await secretsArea(page, "phone");
     const devices = section.getByRole("region", { name: SECRETS_WORDS.devicesRegion });
     await expect(devices.getByText(PHONE.label, { exact: true })).toBeVisible();
     await expect(devices.getByText(`Code ${approvalCode(key)}`, { exact: true })).toBeVisible();
@@ -430,7 +431,7 @@ test("a phone's approval key is enrolled and stopped only on this computer", asy
     );
     await expect(stopping).toHaveCount(0);
     await runFromSearch(app, page, "settings.secrets");
-    await secretsArea(page, "rules");
+    await secretsArea(page, "phone");
     await expect(section.getByRole("region", { name: SECRETS_WORDS.devicesRegion })).toContainText(
       SECRETS_WORDS.noDevices,
     );
@@ -517,6 +518,8 @@ printf '%s' "$SERVICE_TOKEN"
 
 // Captain's INF-1109 UX request: everyday entry needs only a name and value;
 // references remain stable through replacement, and Cancel never saves a value.
+// INF-1690 piece 1: the form asks for a name, the masked value and an optional
+// place, and never for a reference.
 // The actual renderer, IPC and sealed owner run in launchSecrets' disposable
 // home; custody/confirmation stand in. No native store, account or network.
 test("simple entry generates a stable reference and returns keyboard focus", async () => {
@@ -529,9 +532,12 @@ test("simple entry generates a stable reference and returns keyboard focus", asy
     await pressKey(add, "Enter");
     const name = section.getByLabel(SECRETS_WORDS.name, { exact: true });
     const value = section.getByLabel(SECRETS_WORDS.value, { exact: true });
-    const reference = section.getByLabel(SECRETS_WORDS.reference, { exact: true });
+    const place = section.getByLabel(SECRETS_WORDS.place, { exact: true });
+    const form = section.getByRole("form", { name: SECRETS_WORDS.add, exact: true });
     await expect(name).toBeFocused();
-    await expect(reference).not.toBeVisible();
+    await expect(place).toBeVisible();
+    // Name, value and place are the whole form: there is no reference to invent.
+    await expect(form.locator("input")).toHaveCount(3);
     await name.fill("   ");
     await pressKey(name, "Tab");
     await expect(value).toBeFocused();
@@ -540,7 +546,6 @@ test("simple entry generates a stable reference and returns keyboard focus", asy
     await pressKey(save, "Enter");
     await expect(section.getByText(SECRETS_WORDS.nameRequired, { exact: true })).toBeVisible();
     await expect(name).toBeFocused();
-    await expect(reference).not.toBeVisible();
     await name.fill(LABEL);
     await pressKey(save, "Enter");
     await expect(add).toBeFocused();
@@ -561,7 +566,7 @@ test("simple entry generates a stable reference and returns keyboard focus", asy
     // Editing a row hidden by the search after saving still returns focus to Add.
     const search = section.getByLabel(SECRETS_WORDS.search, { exact: true });
     await search.fill(LABEL);
-    const row = section.getByRole("group").filter({ hasText: LABEL });
+    const row = section.getByRole("listitem").filter({ hasText: LABEL });
     await pressKey(row.locator("summary"), "Enter");
     await pressKey(row.getByRole("button", { name: SECRETS_WORDS.replace, exact: true }), "Enter");
     const renamed = "Website preview deployment";
@@ -676,30 +681,62 @@ for (const theme of ["dark", "light"] as const) {
           }, receipt.request),
         )
         .toMatchObject({ receipt: { state: "denied" }, confirmations: 0 });
+      // INF-1690 piece 1: saved decisions are plain sentences on the page, each
+      // naming exactly its secret, and Remove asks on the host's rules card.
+      const rules = entries.map((entry) => ({
+        id: `never-${entry.ref}`,
+        effect: "never" as const,
+        secret: entry.ref,
+      }));
+      await app.evaluate(async (_electron, rules) => {
+        const s = (globalThis as SecretsJourneyGlobal).secretsJourney.core.services.secrets;
+        await s.action({ kind: "save-rules", rules });
+      }, rules);
+      // e2e-typed-words: the host's rules card title and answer, authored in SecretsSettings.
+      const rulesTitle = "Save these Secrets rules?";
+      const confirmRules = async () => {
+        const rulesCard = shownCard(page, rulesTitle);
+        await expect(cardBody(page, rulesTitle).locator("body")).toBeVisible();
+        await runFromSearch(app, page, "focus.card-actions");
+        // e2e-typed-words: the rules card's confirming answer, authored in SecretsSettings.
+        await pressKey(
+          rulesCard.getByRole("button", { name: "Confirm and save", exact: true }),
+          "Enter",
+        );
+        await expect(rulesCard).toHaveCount(0);
+      };
+      await confirmRules();
       await runFromSearch(app, page, "settings.secrets");
-      await secretsArea(page, "rules");
-      await pressKey(
-        section.getByRole("button", { name: SECRETS_WORDS.addRule, exact: true }),
-        "Enter",
-      );
-      const secretChoice = section.getByRole("combobox", {
-        name: SECRETS_WORDS.ruleSecret,
+      await secretsArea(page, "decisions");
+      const decisions = section.getByRole("region", {
+        name: SECRETS_WORDS.decisionsRegion,
         exact: true,
       });
-      await expect(secretChoice).toBeVisible();
-      const options = await secretChoice
-        .locator("option")
-        .evaluateAll((nodes) =>
-          nodes.map((node) => ({ ref: node.getAttribute("value"), label: node.textContent })),
-        );
-      for (const entry of entries) {
-        const label = options.find((option) => option.ref === entry.ref)?.label;
-        expect(label).toContain(entry.label);
-        expect(label).toContain(entry.ref);
-        expect(label).toContain(entry.environment);
-      }
-      await secretChoice.selectOption("website-production-mirror");
-      await expect(secretChoice).toHaveValue("website-production-mirror");
+      const sentences = rules.map((rule) => decisionWords(rule, secretName(entries, rule.secret)));
+      expect(new Set(sentences).size).toBe(entries.length);
+      for (const sentence of sentences)
+        await expect(decisions.getByText(sentence, { exact: true })).toBeVisible();
+      for (const ref of ["website-production", "website-production-mirror"])
+        expect(sentences.filter((sentence) => sentence.includes(`${ref})`))).toHaveLength(1);
+      expect(await overflows(decisions)).toBe(0);
+      await regionShot(decisions, test.info().outputPath(`saved-decisions-${theme}.png`));
+      const mirror = decisions.getByRole("listitem").filter({ hasText: sentences[1] as string });
+      await focusOn(mirror.getByRole("button", { name: SECRETS_WORDS.remove, exact: true }));
+      await pressKey(
+        mirror.getByRole("button", { name: SECRETS_WORDS.remove, exact: true }),
+        "Enter",
+      );
+      await confirmRules();
+      // The card closes before the confirmed save is written, so read until it lands.
+      await expect
+        .poll(() =>
+          app.evaluate(async () =>
+            (globalThis as SecretsJourneyGlobal).secretsJourney.core.services.secrets
+              .view()
+              .then((view) => view.rules.map((rule) => rule.secret)),
+          ),
+        )
+        .toEqual(["website-production", "website-staging", "billing-read"]);
     } finally {
       await launched.close();
     }
@@ -775,12 +812,12 @@ test("Secrets controls explain only their current refusal", async () => {
     await expect(
       section.getByRole("heading", { name: SECRETS_WORDS.title, exact: true }),
     ).toBeFocused();
-    await secretsArea(page, "rules");
-    const addRule = section.getByRole("button", { name: SECRETS_WORDS.addRule, exact: true });
-    await expect(addRule).toHaveAttribute("aria-disabled", "true");
-    await expect(addRule).toHaveAttribute("aria-description", /.+/);
-    await pressKey(section.getByRole("button", { name: SECRETS_WORDS.add, exact: true }), "Enter");
+    const add = section.getByRole("button", { name: SECRETS_WORDS.add, exact: true });
+    await pressKey(add, "Enter");
     await ready(section.getByRole("button", { name: "Cancel", exact: true }));
+    // While the form is open, Add is refused and says why.
+    await expect(add).toHaveAttribute("aria-disabled", "true");
+    await expect(add).toHaveAttribute("aria-description", /.+/);
     await section.getByLabel(SECRETS_WORDS.name, { exact: true }).fill(LABEL);
     await section.getByLabel(SECRETS_WORDS.value, { exact: true }).fill(TOKEN);
     await pressKey(section.getByRole("button", { name: SECRETS_WORDS.save, exact: true }), "Enter");
@@ -789,13 +826,11 @@ test("Secrets controls explain only their current refusal", async () => {
     await expect(
       section.getByRole("heading", { name: SECRETS_WORDS.title, exact: true }),
     ).toBeFocused();
-    await ready(addRule);
-    // e2e-typed-words: the button's current explanation is the regression boundary.
-    await ready(section.getByRole("button", { name: "Review rule changes", exact: true }));
+    await ready(add);
     await pressKey(section.locator("summary").filter({ hasText: LABEL }), "Enter");
-    // e2e-typed-words: the button's current explanation is the regression boundary.
-    await ready(section.getByRole("button", { name: "Forget locally", exact: true }));
-    await secretsArea(page, "recovery");
+    await ready(section.getByRole("button", { name: SECRETS_WORDS.replace, exact: true }));
+    await ready(section.getByRole("button", { name: SECRETS_WORDS.forget, exact: true }));
+    await secretsArea(page, "copy");
     await ready(
       section.getByRole("button", { name: SECRETS_RECOVERY_WORDS.saveButton, exact: true }),
     );

@@ -20,6 +20,7 @@ import { secretApprovalBody } from "./approvalCard";
 import { approvalCode, approvalKey, type RemoteDecision } from "./approvals";
 import type { ApprovalDevice } from "./authority";
 import { type BrokeredUse, type SecretBroker, validBrokeredUse } from "./brokers";
+import type { HistoryItem } from "./journal";
 import type { ProtectedSecrets, ProtectedSecretsOptions } from "./protected";
 import { SHORT_READ_SECONDS, SHORT_READ_USES } from "./readAccess";
 import type { RecipientFacts } from "./recipient";
@@ -44,6 +45,8 @@ export type SecretsSettingsOptions = {
   changed: () => void;
   /** A waiting requester hears the terminal receipt through the existing task inbox, never values. */
   settled?: (task: string, receipt: EndedUseReceipt) => void;
+  /** A task's title, so the Secrets page can say which task last used a secret. */
+  taskTitle?: (task: string) => string | undefined;
   now?: ProtectedSecretsOptions["now"];
 };
 type Owner = { protected: ProtectedSecrets; requests: SecretRequests };
@@ -172,8 +175,7 @@ export class SecretsSettings {
           revision,
           updatedAt,
           environment: environment ?? "",
-          lastRequest:
-            history.filter((item) => item.secrets.includes(ref)).at(-1)?.requestedAt ?? null,
+          ...this.lastUse(history.filter((item) => item.secrets.includes(ref)).at(-1)),
         }),
       ),
       uses: owner.requests.receipts().map((receipt) => this.receiptView(owner, receipt)),
@@ -191,6 +193,17 @@ export class SecretsSettings {
     // Recovery can replace the owner; other changes can invalidate its snapshot
     // while native status or metadata is being read.
     return this.owner === owner && this.viewEpoch === epoch ? snapshot : this.view();
+  }
+
+  /** When a secret was last asked for, and the title of the task that asked, when it is known. */
+  private lastUse(item: HistoryItem | undefined): {
+    lastRequest: number | null;
+    lastTask?: string;
+  } {
+    if (!item) return { lastRequest: null };
+    const task = this.taskOf.get(item.request)?.values().next().value ?? intentTask(item.intent);
+    const title = task ? this.options.taskTitle?.(task) : undefined;
+    return { lastRequest: item.requestedAt, ...(title ? { lastTask: title } : {}) };
   }
 
   private receiptView(owner: Owner, receipt: UseReceipt): SecretsView["uses"][number] {
@@ -768,10 +781,9 @@ export class SecretsSettings {
         if (!validInjection(copied)) throw new Error("Invalid injection request.");
         const owner = await this.ready();
         if (!owner) return { request: copied.id, state: "unavailable" as const };
-        // Namespace idempotency, not authority: two tasks may choose the same local intent name.
         const receipt = await owner.requests.inject({
           ...copied,
-          id: JSON.stringify([context.task, copied.id]),
+          id: taskIntent(context.task, copied.id),
         });
         this.track(owner, receipt, context.task);
         if (receipt.state === "waiting") this.offerUse(owner, receipt.request);
@@ -807,6 +819,27 @@ export class SecretsSettings {
   }
   async takeBrokerResult(request: string): Promise<unknown> {
     return (await this.ready())?.protected.takeBrokerResult(request);
+  }
+}
+
+/** Namespace idempotency, not authority: two tasks may choose the same local intent name. */
+function taskIntent(task: string, id: string): string {
+  return JSON.stringify([task, id]);
+}
+
+/** The task a crewmate's intent names (`taskIntent`), or undefined for any other intent. */
+function intentTask(intent: string): string | undefined {
+  try {
+    const parsed: unknown = JSON.parse(intent);
+    return Array.isArray(parsed) &&
+      parsed.length === 2 &&
+      typeof parsed[0] === "string" &&
+      parsed[0] !== "" &&
+      typeof parsed[1] === "string"
+      ? parsed[0]
+      : undefined;
+  } catch {
+    return undefined;
   }
 }
 

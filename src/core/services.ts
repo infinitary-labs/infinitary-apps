@@ -1119,6 +1119,7 @@ export async function createServices(
     raise: (card) => supervisor.cards.hostCards.raiseHostCard(card),
     withdraw: (id, reason) => supervisor.cards.hostCards.withdrawHostCard(id, reason),
     settled: (taskId, receipt) => supervisor.steer.secretsUseEnded(taskId, receipt),
+    taskTitle: (taskId) => tasks.get(taskId)?.title,
     changed: () => emit("inf:secrets:changed", {}),
   });
   supervisor.hostOps.setSecretsDecision((offer) => secrets.decide(offer));

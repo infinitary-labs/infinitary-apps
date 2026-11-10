@@ -4,35 +4,51 @@ Settings → Secrets follows Settings' shared column, row gaps, type and tokens.
 It sits after Integrations and before Devices, with a command-search entry and no conflicting default key.
 A build without protected storage has neither the tab nor the command: nothing a person can open and not use.
 That command focuses the section heading, which stays present while loading, when storage is locked or unavailable, and when the list is empty; Tab reaches its controls.
-The top line names protected storage's actual state, and a quiet sentence distinguishes existing unmigrated sign-ins from protected entries.
-Nothing calls an unavailable or unmigrated value protected.
+The page is built around the two things a person does: keeping a secret here, and deciding a use on the exact-use card.
+Everything rarer sits in quiet rows under the list.
 
-## Entries and secure entry
+## The first line
 
-A search field searches metadata only, beside Add secret.
-Each row leads with the secret's name and optional environment; its disclosure carries the reference, saved version, last request, Replace value and Forget locally.
-When both name and environment repeat, the collapsed row also shows the reference; a permission's secret chooser always carries the full identity.
+The first line counts the secrets kept on this computer and says the crew uses them but never sees them.
+A badge appears only when something is wrong (storage locked, unavailable or needing recovery), beside a notice that says what to do; a working store says nothing about itself.
+Nothing calls an unavailable value protected.
+A request waiting for an answer is one line naming its secrets, with Review request, which opens the host's exact-use card.
+
+## Secret rows and secure entry
+
+A search field searches names, places and the task that last used each secret, beside Add secret.
+Each row leads with the secret's name and its place (the optional environment) as a tag, and ends with what last happened, in muted words: Used today by Deploy the site, Used Nov 3, Not used yet, Waiting for your answer or In use now.
+The task is named by its own title; a request no task made names only when.
 A request timestamp is never called proof that a value was used.
+A reference appears only when another secret has the same name and place; the row never shows a saved version or a raw timestamp.
+Opening a row offers Replace, Forget and that secret's saved decisions.
+A temporary read shows on the secret's own row as Reading until a time, beside End access; there is no separate temporary-access section.
 Discovery is global: crew can find the names without receiving the values or permission to use them.
 There is no project/computer linking control.
 Add and Replace open an app-authored inline form, never an agent card or contributed frame.
+The form asks for a name, the masked value and an optional place, and never for a reference: saving creates a readable, stable reference from the name.
 The value field is a password input with no reveal button, autocomplete or clipboard action; submission clears the field before awaiting the response.
-Name and the masked value are the primary fields; saving creates a readable, stable reference from the name rather than requiring the person to invent one.
-A new form leaves its optional reference blank; a replacement keeps its existing reference read-only.
-Optional environment and reference editing sit under More details, with an invalid custom reference opening that disclosure.
-The form labels every field, explains that the recipient is trusted with the value, and keeps Cancel beside Save.
+The form labels every field, explains that the value stays hidden, and keeps Cancel beside Save.
 Opening focuses Name; closing returns focus after the saved list has rendered, to the original control or Add secret if a renamed row no longer matches the search.
 Nothing shows an existing value, prefix or encoded substitute.
 
-## Activity, Permissions and History
+## Quiet rows
 
-The existing GroupedPills control exposes Activity, Permissions, History and Recovery, using native radio keys and the shared focus ring.
-An unavailable production capability shows one concise state instead of empty future controls.
-Activity shows pending and finished requests with the actual secret names, state, reason, recipient and checked facts; Review request opens the host's exact-use card and Cancel withdraws only an unused request.
-Temporary access is a separate, clearly named group with End access, not an unexplained first empty list.
-Uses and rehearsal keep arguments, working folder, destination and operation in the open, with digests and full delivery facts under a disclosure.
-A bounded-read row names its destination, remaining uses and expiration, beside End access.
-The confirmation card names the checked destination or program, secret versions and requester’s reason, with the exact arguments and working folder or destination and operation in the open.
+Four rows under the list open in place, each a disclosure with its name on the left and a short muted summary on the right: Saved decisions (how many), Approve from your phone (the phone's name, or Not set up), What happened (how many uses and the newest) and Keep a copy.
+Saved decisions are the existing Never, Ask and Allow rules, each in one plain sentence that names its secret, such as Never give Planning calendar to anyone., with Remove.
+Remove proposes the rules without that one on the host's rules card, which needs fresh system confirmation; a click alone grants nothing.
+The page has no rule editor, dropdowns or program rehearsal form.
+Approve from your phone lists each enrolled device with the code compared when it enrolled, beside Stop approvals.
+What happened reports metadata, storage use and export, with explicit deletion on a host-authored confirmation card and no automatic retention cutoff; each record names its secrets, state, time, reason and recipient.
+History labels imported records as recovered history, with their source and recovery time under a disclosure, never as live approvals.
+Keep a copy uses native file choices; a separately held recovery key never enters a card, a conversation or an agent-readable reply.
+It says in short sentences that the copy and the key are kept apart, that there is no key reset, and that restoring replaces values, clears saved decisions, phone approvals and temporary access, and keeps history.
+Each operation requires fresh system confirmation after file choice, and cancellation grants nothing.
+An interrupted save reports partial files without deleting an earlier working pair; an unknown restore asks the person to inspect the selected entries rather than replaying it.
+
+## The exact-use card
+
+The confirmation card names the checked destination or program, secret versions and requester's reason, with the exact arguments and working folder or destination and operation in the open.
 Requested secrets are a prominent named list, with each prepared environment, reference and saved version available to distinguish duplicate names.
 The shared approval body describes confirmation without naming a device, and clearly labels temporary access as computer-only; an enrolled phone keeps its own pinned identities and confirmation instructions.
 Its columns wrap with the available width, leaving room for the recipient without hiding identities.
@@ -42,20 +58,7 @@ Digests and the complete delivery facts fold under Checked files and delivery.
 The recipient-trust caveat, separate external-action consent and lack of isolation for later-loaded files stay in the open.
 Allow once always needs fresh system confirmation; eligible reads additionally offer the chosen ten-minute/twenty-use permission.
 No card asks for a secret value.
-
-Permissions explains that a block wins, new uses ask, and saved access covers one exact use; these are the existing Never, Ask and Allow rules, not an inferred judgment.
-The ordinary rule controls stay visible; program rehearsal sits under an explicit advanced disclosure rather than opening a technical form by default.
-Rehearsal checks a program's explicit arguments, working folder and reference mapping without running it or reading values.
-A rule chooses every use or the rehearsed command; an existing exact rule keeps its saved choice.
-The person never has to copy an operation digest into a rule.
-Saving proposed rules opens a host-authored exact-change card and needs fresh system confirmation; a form alone grants nothing.
-History reports metadata, storage use and export, with explicit deletion on a host-authored confirmation card and no automatic retention cutoff.
-Recovery uses native file choices; a separately held recovery key never enters a card, a conversation or an agent-readable reply.
-Save encrypted backup explains the two separate files, the absence of a key reset and the risk of storing both together.
-Restore from backup explains that values are replaced, permissions and device approvals reset, and existing history retained.
-Each operation requires fresh system confirmation after file choice, and cancellation grants nothing.
-An interrupted save reports partial files without deleting an earlier working pair; an unknown restore asks the person to inspect the selected entries rather than replaying it.
-History labels imported records as recovered history, with their source and recovery time under a disclosure, never as live approvals.
+Saving proposed rules opens a host-authored exact-change card and needs fresh system confirmation.
 
 ## Availability and keyboard
 

@@ -147,14 +147,11 @@ async function showArea(area: FixtureArea): Promise<unknown> {
     `(() => {
       const scope = document.querySelector('[role="tabpanel"][data-settings-section="secrets"]');
       if (!scope) return { refused: 'Secrets settings are not shown.' };
-      const groups = [...scope.querySelectorAll('[role="radiogroup"]')].filter(group =>
-        group.getAttribute('aria-label') === ${JSON.stringify(SECRETS_WORDS.area)}
+      const matches = [...scope.querySelectorAll('details[data-secrets-area]')].filter(row =>
+        row.getAttribute('data-secrets-area') === ${JSON.stringify(area)} && row.getClientRects().length
       );
-      const matches = groups.length === 1 ? [...groups[0].querySelectorAll('input[type="radio"]')].filter(input =>
-        !input.disabled && input.getClientRects().length && input.value === ${JSON.stringify(area)}
-      ) : [];
       if (matches.length !== 1) return { refused: 'The fixed Secrets view is not available.' };
-      matches[0].click();
+      matches[0].open = true;
       return { selected: ${JSON.stringify(area)} };
     })()`,
     true,
@@ -282,10 +279,10 @@ startApp(mainDir, null, {
           record({ event: "requested", receipt });
           return receipt;
         }
-        case "uses":
-        case "rules":
+        case "decisions":
+        case "phone":
         case "history":
-        case "recovery":
+        case "copy":
           return showArea(operation);
         case "capture":
           return photograph();

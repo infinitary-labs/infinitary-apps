@@ -2,7 +2,7 @@ import { chmod } from "node:fs/promises";
 import { createServer } from "node:net";
 
 /** Fixed views of existing metadata; no arbitrary selector or value reaches the renderer. */
-export const FIXTURE_AREAS = ["uses", "rules", "history", "recovery"] as const;
+export const FIXTURE_AREAS = ["decisions", "phone", "history", "copy"] as const;
 export type FixtureArea = (typeof FIXTURE_AREAS)[number];
 
 /** INF-1109: own-window proof controls, never evaluation, text entry or authentication. */

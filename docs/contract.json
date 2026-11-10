@@ -40061,6 +40061,9 @@
                       "type": "null"
                     }
                   ]
+                },
+                "lastTask": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -40536,6 +40539,9 @@
                       "type": "null"
                     }
                   ]
+                },
+                "lastTask": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -41160,6 +41166,9 @@
                       "type": "null"
                     }
                   ]
+                },
+                "lastTask": {
+                  "type": "string"
                 }
               },
               "required": [

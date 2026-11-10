@@ -1,16 +1,15 @@
+import { needsReference, secretName } from "@shared/secretNames";
 import {
+  decisionWords,
   SECRET_APPROVAL_WORDS,
-  SECRET_OVERVIEW_FACTS,
   SECRET_STATE_WORDS,
   SECRETS_AREAS,
   SECRETS_RECOVERY_WORDS,
   SECRETS_WORDS,
   type SecretAction,
   type SecretEntryInput,
-  type SecretRehearsal,
   type SecretsView,
   secretEntryInputSchema,
-  secretRehearsalInputSchema,
 } from "@shared/secrets";
 import {
   type FormEvent,
@@ -22,20 +21,18 @@ import {
   useState,
 } from "react";
 import { useShellStore } from "../app/store";
-import { Badge, Button, GroupedPills, Input } from "../design";
-import { SecretChoices } from "./SecretChoices";
+import { Badge, Button, Input } from "../design";
 import { LABEL_GAP, ROW_GAP, SECTION_GAP, SettingError } from "./settingRows";
 import "./secrets.css";
 
 type Entry = SecretsView["entries"][number];
 type Rule = SecretsView["rules"][number];
 type Area = (typeof SECRETS_AREAS)[number]["value"];
-const STATUS: Record<SecretsView["availability"], string> = {
-  "not-enabled": "Not enabled",
-  available: "Protected storage ready",
+type Act = (action: SecretAction) => Promise<void>;
+/** A badge only when something is wrong; a working store says nothing about itself. */
+const PROBLEM: Partial<Record<SecretsView["availability"], string>> = {
   locked: "Storage locked",
   unavailable: "Storage unavailable",
-  uninitialized: "Ready to add secrets",
   lost: "Recovery needed",
   tampered: "Permissions need recovery",
 };
@@ -45,11 +42,10 @@ export function SecretsTab() {
   const [view, setView] = useState<SecretsView | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [area, setArea] = useState<Area>("uses");
+  const [opened, setOpened] = useState<ReadonlySet<Area>>(new Set());
   const [editing, setEditing] = useState<Entry | "new" | null>(null);
   const [busy, setBusy] = useState(false);
   const searchId = useId();
-  const areaId = useId();
   const entryTrigger = useRef<HTMLButtonElement | null>(null);
   const returnEntryFocus = useRef(false);
   const root = useRef<HTMLElement>(null);
@@ -81,7 +77,7 @@ export function SecretsTab() {
       off();
     };
   }, []);
-  const act = async (input: SecretAction) => {
+  const act: Act = async (input) => {
     setError(null);
     setBusy(true);
     try {
@@ -106,27 +102,34 @@ export function SecretsTab() {
     returnEntryFocus.current = true;
     setEditing(null);
   };
-  const identityCounts = new Map<string, number>();
-  for (const entry of view?.entries ?? []) {
-    const identity = JSON.stringify([entry.label, entry.environment]);
-    identityCounts.set(identity, (identityCounts.get(identity) ?? 0) + 1);
-  }
-  const entries = (view?.entries ?? [])
+  const toggleArea = (area: Area, open: boolean) =>
+    setOpened((current) => {
+      if (current.has(area) === open) return current;
+      const next = new Set(current);
+      if (open) next.add(area);
+      else next.delete(area);
+      return next;
+    });
+  const all = view?.entries ?? [];
+  const query = search.toLocaleLowerCase();
+  const entries = all
     .filter((entry) =>
-      [entry.label, entry.ref, entry.environment]
+      [entry.label, entry.environment, entry.lastTask ?? ""]
         .join(" ")
         .toLocaleLowerCase()
-        .includes(search.toLocaleLowerCase()),
+        .includes(query),
     )
     .sort((a, b) => a.label.localeCompare(b.label) || a.ref.localeCompare(b.ref));
   const canWrite = view?.availability === "available" || view?.availability === "uninitialized";
   const notEnabled = view?.availability === "not-enabled";
   const recoveryNeeded = view?.availability === "lost" || view?.availability === "tampered";
+  const problem = view ? PROBLEM[view.availability] : undefined;
   const entryNote = !canWrite
     ? SECRETS_WORDS.unavailable
     : editing
       ? "Finish the open secret form first."
       : undefined;
+  const waiting = (view?.uses ?? []).filter((use) => use.state === "waiting");
   return (
     <section
       ref={root}
@@ -145,14 +148,13 @@ export function SecretsTab() {
           <h2 data-secrets-heading="" tabIndex={-1}>
             {SECRETS_WORDS.title}
           </h2>
-          {!notEnabled && <p>{SECRETS_WORDS.intro}</p>}
+          {view && !notEnabled && <p>{SECRETS_WORDS.count(all.length)}</p>}
         </div>
-        {view && <Badge tone="neutral">{STATUS[view.availability]}</Badge>}
+        {problem && <Badge tone="warn">{problem}</Badge>}
       </header>
       {notEnabled ? (
         <div className="fm-secrets-empty">
           <p role="status">{SECRETS_WORDS.disabled}</p>
-          <p className="fm-secrets-muted">{SECRETS_WORDS.migration}</p>
         </div>
       ) : !view ? (
         <p role="status">Reading Secrets…</p>
@@ -169,7 +171,7 @@ export function SecretsTab() {
               <Button
                 variant="secondary"
                 onClick={() =>
-                  recoveryNeeded ? setArea("recovery") : void act({ kind: "unlock" })
+                  recoveryNeeded ? toggleArea("copy", true) : void act({ kind: "unlock" })
                 }
                 pending={busy}
               >
@@ -177,8 +179,26 @@ export function SecretsTab() {
               </Button>
             </div>
           )}
+          {waiting.map((use) => (
+            <div key={use.request} className="fm-secrets-notice" data-secret-waiting="">
+              <p>
+                {SECRETS_WORDS.waitingFor(
+                  use.secrets.length
+                    ? use.secrets.map((secret) => secretName(all, secret.ref)).join(", ")
+                    : use.recipient || SECRETS_WORDS.title,
+                )}
+              </p>
+              <Button
+                variant="secondary"
+                pending={busy}
+                onClick={() => void act({ kind: "review-use", request: use.request })}
+              >
+                {SECRETS_WORDS.waiting}
+              </Button>
+            </div>
+          ))}
           <div className="fm-secrets-toolbar">
-            {view.entries.length > 0 ? (
+            {all.length > 0 && (
               <label htmlFor={searchId} className="fm-secrets-grow">
                 <span className="fm-secrets-visually-hidden">{SECRETS_WORDS.search}</span>
                 <Input
@@ -188,8 +208,6 @@ export function SecretsTab() {
                   placeholder={SECRETS_WORDS.search}
                 />
               </label>
-            ) : (
-              <h3 className="fm-secrets-grow">Your secrets</h3>
             )}
             <Button
               data-secret-add=""
@@ -211,99 +229,224 @@ export function SecretsTab() {
               }}
             />
           )}
-          <div className="fm-secrets-entries">
-            {entries.length === 0 ? (
-              <div className="fm-secrets-empty">
-                <p>
-                  {view.entries.length
-                    ? "No matching secrets."
-                    : canWrite
-                      ? "No secrets added yet."
-                      : "Secrets will appear when storage is available."}
-                </p>
-                {!view.entries.length && canWrite && !editing && (
-                  <p className="fm-secrets-muted">
-                    Add a credential your crew needs. Its name is visible to the crew; its value
-                    stays hidden.
-                  </p>
-                )}
-              </div>
-            ) : (
-              entries.map((entry) => (
-                <details key={entry.ref} className="fm-secrets-entry">
-                  <summary>
-                    <strong>{entry.label}</strong>
-                    {entry.environment && (
-                      <span className="fm-secrets-entry-environment">{entry.environment}</span>
-                    )}
-                    {(identityCounts.get(JSON.stringify([entry.label, entry.environment])) ?? 0) >
-                      1 && (
-                      <span className="fm-secrets-entry-reference fm-secrets-mono">
-                        {entry.ref}
-                      </span>
-                    )}
-                  </summary>
-                  <dl className="fm-secrets-facts">
-                    <dt>Reference</dt>
-                    <dd className="fm-secrets-mono">{entry.ref}</dd>
-                    <dt>Saved version</dt>
-                    <dd className="fm-secrets-mono">{entry.version}</dd>
-                    <dt>Last request</dt>
-                    <dd className="fm-secrets-mono">{dateOf(entry.lastRequest)}</dd>
-                  </dl>
-                  <div className="fm-secrets-actions">
-                    <Button
-                      variant="secondary"
-                      off={!canWrite || editing !== null}
-                      note={entryNote}
-                      onClick={(event) => beginEntry(entry, event.currentTarget)}
-                    >
-                      {SECRETS_WORDS.replace}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      off={busy || !canWrite}
-                      note={
-                        !canWrite
-                          ? SECRETS_WORDS.unavailable
-                          : busy
-                            ? "Wait for the current change to finish."
-                            : undefined
-                      }
-                      onClick={() => void act({ kind: "forget", ref: entry.ref })}
-                    >
-                      Forget locally
-                    </Button>
-                  </div>
-                </details>
-              ))
-            )}
-          </div>
-          <div className="fm-secrets-section">
-            <GroupedPills
-              name={SECRETS_WORDS.area}
-              htmlName={areaId}
-              value={area}
-              options={SECRETS_AREAS}
-              onChange={setArea}
-            />
-          </div>
-          {area === "uses" && <Uses view={view} act={act} busy={busy} />}
-          {area === "rules" && (
-            <>
-              <Rules view={view} act={act} busy={busy} />
+          {entries.length === 0 ? (
+            <div className="fm-secrets-empty">
+              <p>
+                {all.length
+                  ? SECRETS_WORDS.noMatch
+                  : canWrite
+                    ? SECRETS_WORDS.noneYet
+                    : SECRETS_WORDS.waitingStorage}
+              </p>
+            </div>
+          ) : (
+            <ul className="fm-secrets-entries">
+              {entries.map((entry) => (
+                <SecretRow
+                  key={entry.ref}
+                  entry={entry}
+                  view={view}
+                  act={act}
+                  busy={busy}
+                  canWrite={canWrite}
+                  entryNote={entryNote}
+                  onReplace={(trigger) => beginEntry(entry, trigger)}
+                />
+              ))}
+            </ul>
+          )}
+          <div className="fm-secrets-areas">
+            <QuietRow
+              area="decisions"
+              summary={view.rules.length ? String(view.rules.length) : ""}
+              open={opened.has("decisions")}
+              onToggle={toggleArea}
+            >
+              <section className="fm-secrets-area" aria-label={SECRETS_WORDS.decisionsRegion}>
+                <Decisions view={view} rules={view.rules} act={act} busy={busy} />
+              </section>
+            </QuietRow>
+            <QuietRow
+              area="phone"
+              summary={
+                view.devices.length
+                  ? view.devices.map((device) => device.label).join(", ")
+                  : SECRETS_WORDS.noPhone
+              }
+              open={opened.has("phone")}
+              onToggle={toggleArea}
+            >
               <ApprovalDevices view={view} act={act} busy={busy} />
-            </>
-          )}
-          {area === "history" && <History view={view} act={act} busy={busy} refresh={refresh} />}
-          {area === "recovery" && (
-            <Recovery view={view} act={act} busy={busy || editing !== null} />
-          )}
-          <p className="fm-secrets-migration fm-secrets-muted">{SECRETS_WORDS.migration}</p>
+            </QuietRow>
+            <QuietRow
+              area="history"
+              summary={historySummary(view.history)}
+              open={opened.has("history")}
+              onToggle={toggleArea}
+            >
+              <History view={view} act={act} busy={busy} refresh={refresh} />
+            </QuietRow>
+            <QuietRow area="copy" summary="" open={opened.has("copy")} onToggle={toggleArea}>
+              <Recovery view={view} act={act} busy={busy || editing !== null} />
+            </QuietRow>
+          </div>
         </>
       )}
       <SettingError error={error} surface="secrets" />
     </section>
+  );
+}
+
+/** One secret: its name, its place, and what last happened with it; opening it offers its changes. */
+function SecretRow({
+  entry,
+  view,
+  act,
+  busy,
+  canWrite,
+  entryNote,
+  onReplace,
+}: {
+  entry: Entry;
+  view: SecretsView;
+  act: Act;
+  busy: boolean;
+  canWrite: boolean;
+  entryNote: string | undefined;
+  onReplace: (trigger: HTMLButtonElement) => void;
+}) {
+  const uses = view.uses.filter((use) => use.secrets.some((secret) => secret.ref === entry.ref));
+  const reads = view.reads.filter((read) => read.secrets.includes(entry.ref));
+  const rules = view.rules.filter((rule) => rule.secret === entry.ref);
+  const status = uses.some((use) => use.state === "executing")
+    ? SECRETS_WORDS.inUse
+    : uses.some((use) => use.state === "waiting")
+      ? SECRETS_WORDS.waitingRow
+      : entry.lastRequest === null
+        ? SECRETS_WORDS.notUsed
+        : SECRETS_WORDS.used(dayOf(entry.lastRequest), entry.lastTask);
+  return (
+    <li className="fm-secrets-key">
+      <details className="fm-secrets-entry">
+        <summary>
+          <span className="fm-secrets-key-name">
+            <strong>{entry.label}</strong>
+            {entry.environment && (
+              <span className="fm-secrets-entry-environment">{entry.environment}</span>
+            )}
+            {needsReference(view.entries, entry) && (
+              <span className="fm-secrets-entry-reference fm-secrets-mono">{entry.ref}</span>
+            )}
+          </span>
+          <span className="fm-secrets-key-status">{status}</span>
+        </summary>
+        <div className="fm-secrets-key-body">
+          <div className="fm-secrets-actions">
+            <Button
+              variant="secondary"
+              off={!canWrite || entryNote !== undefined}
+              note={entryNote}
+              onClick={(event) => onReplace(event.currentTarget)}
+            >
+              {SECRETS_WORDS.replace}
+            </Button>
+            <Button
+              variant="ghost"
+              off={busy || !canWrite}
+              note={
+                !canWrite
+                  ? SECRETS_WORDS.unavailable
+                  : busy
+                    ? "Wait for the current change to finish."
+                    : undefined
+              }
+              onClick={() => void act({ kind: "forget", ref: entry.ref })}
+            >
+              {SECRETS_WORDS.forget}
+            </Button>
+          </div>
+          {rules.length > 0 && <Decisions view={view} rules={rules} act={act} busy={busy} />}
+        </div>
+      </details>
+      {reads.map((read) => (
+        <div key={read.id} className="fm-secrets-key-read">
+          <span>{SECRETS_WORDS.readingUntil(timeOf(read.expires))}</span>
+          <Button variant="secondary" onClick={() => void act({ kind: "end-read", id: read.id })}>
+            {SECRETS_WORDS.end}
+          </Button>
+        </div>
+      ))}
+    </li>
+  );
+}
+
+/** A rare thing, kept under the list: one quiet row that opens in place. */
+function QuietRow({
+  area,
+  summary,
+  open,
+  onToggle,
+  children,
+}: {
+  area: Area;
+  summary: string;
+  open: boolean;
+  onToggle: (area: Area, open: boolean) => void;
+  children: React.ReactNode;
+}) {
+  const label = SECRETS_AREAS.find((option) => option.value === area)?.label;
+  return (
+    <details
+      className="fm-secrets-quiet"
+      data-secrets-area={area}
+      open={open}
+      onToggle={(event) => onToggle(area, event.currentTarget.open)}
+    >
+      <summary>
+        <span>{label}</span>
+        {summary && <span className="fm-secrets-quiet-summary">{summary}</span>}
+      </summary>
+      <div className="fm-secrets-quiet-body">{children}</div>
+    </details>
+  );
+}
+
+/** Saved decisions in plain sentences. Removing one asks for confirmation on a card; nothing here edits a decision. */
+function Decisions({
+  view,
+  rules,
+  act,
+  busy,
+}: {
+  view: SecretsView;
+  rules: readonly Rule[];
+  act: Act;
+  busy: boolean;
+}) {
+  if (rules.length === 0) return <p className="fm-secrets-muted">{SECRETS_WORDS.noDecisions}</p>;
+  const writable = view.availability === "available";
+  return (
+    <ul className="fm-secrets-decisions">
+      {rules.map((rule) => (
+        <li key={rule.id} className="fm-secrets-row">
+          <span>{decisionWords(rule, secretName(view.entries, rule.secret))}</span>
+          <Button
+            variant="ghost"
+            pending={busy}
+            off={!writable}
+            note={writable ? undefined : SECRETS_WORDS.unavailable}
+            onClick={() =>
+              void act({
+                kind: "save-rules",
+                rules: view.rules.filter((saved) => saved.id !== rule.id),
+              })
+            }
+          >
+            {SECRETS_WORDS.remove}
+          </Button>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -318,10 +461,8 @@ function SecureEntry({
 }) {
   const prefix = useId();
   const [label, setLabel] = useState(entry?.label ?? "");
-  const [ref, setRef] = useState(entry?.ref ?? "");
   const [value, setValue] = useState("");
   const [environment, setEnvironment] = useState(entry?.environment ?? "");
-  const [advanced, setAdvanced] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const form = useRef<HTMLFormElement>(null);
@@ -330,8 +471,9 @@ function SecureEntry({
   }, []);
   const save = async (event: FormEvent) => {
     event.preventDefault();
+    // A new secret names no reference: the controller makes a stable one from its name.
     const input: SecretEntryInput = {
-      ...(ref ? { ref } : {}),
+      ...(entry ? { ref: entry.ref } : {}),
       label,
       value,
       environment,
@@ -341,16 +483,9 @@ function SecureEntry({
     const parsed = secretEntryInputSchema.safeParse(input);
     if (!parsed.success) {
       const field = parsed.error.issues[0]?.path[0];
-      setError(
-        field === "label"
-          ? SECRETS_WORDS.nameRequired
-          : field === "ref"
-            ? SECRETS_WORDS.referenceInvalid
-            : SECRETS_WORDS.valueRequired,
-      );
-      if (field === "ref") setAdvanced(true);
+      setError(field === "label" ? SECRETS_WORDS.nameRequired : SECRETS_WORDS.valueRequired);
       requestAnimationFrame(() => {
-        const id = `${prefix}-${field === "label" ? "name" : field === "ref" ? "ref" : "value"}`;
+        const id = `${prefix}-${field === "label" ? "name" : "value"}`;
         form.current?.ownerDocument.getElementById(id)?.focus();
       });
       return;
@@ -384,7 +519,7 @@ function SecureEntry({
       autoComplete="off"
       aria-label={entry ? SECRETS_WORDS.replace : SECRETS_WORDS.add}
     >
-      <h3>{entry ? `${SECRETS_WORDS.replace}: ${entry.label}` : SECRETS_WORDS.add}</h3>
+      <h3>{entry ? `${SECRETS_WORDS.replace} ${entry.label}` : SECRETS_WORDS.add}</h3>
       <label htmlFor={`${prefix}-name`}>
         {SECRETS_WORDS.name}
         <Input
@@ -410,42 +545,16 @@ function SecureEntry({
         />
       </label>
       <p className="fm-secrets-muted">{SECRETS_WORDS.noReveal}</p>
-      <details
-        open={advanced}
-        onToggle={(event) => setAdvanced(event.currentTarget.open)}
-        className="fm-secrets-advanced"
-      >
-        <summary>{SECRETS_WORDS.details}</summary>
-        <div className="fm-secrets-optional-fields">
-          <label htmlFor={`${prefix}-env`}>
-            {SECRETS_WORDS.environment} (optional)
-            <Input
-              id={`${prefix}-env`}
-              value={environment}
-              disabled={busy}
-              onChange={(event) => setEnvironment(event.target.value)}
-              placeholder="For example, staging or production"
-            />
-          </label>
-          <label htmlFor={`${prefix}-ref`}>
-            {SECRETS_WORDS.reference}
-            <Input
-              id={`${prefix}-ref`}
-              readOnly={!!entry}
-              placeholder={entry ? undefined : "Created from the name when you save"}
-              mono
-              value={ref}
-              disabled={busy}
-              onChange={(event) => setRef(event.target.value)}
-            />
-          </label>
-          <p className="fm-secrets-muted">
-            {entry
-              ? "The crew uses this stable reference to request the secret. Replacing the value keeps the same reference."
-              : "Leave blank to create a readable reference from the name. Once saved, it does not change."}
-          </p>
-        </div>
-      </details>
+      <label htmlFor={`${prefix}-place`}>
+        {SECRETS_WORDS.place}
+        <Input
+          id={`${prefix}-place`}
+          value={environment}
+          disabled={busy}
+          onChange={(event) => setEnvironment(event.target.value)}
+          placeholder={SECRETS_WORDS.placeHint}
+        />
+      </label>
       <SettingError error={error} surface="secret-entry" />
       <div className="fm-secrets-actions">
         <Button type="submit" pending={busy} pendingLabel="Saving…">
@@ -468,361 +577,10 @@ function SecureEntry({
   );
 }
 
-function Uses({
-  view,
-  act,
-  busy,
-}: {
-  view: SecretsView;
-  act: (action: SecretAction) => Promise<void>;
-  busy: boolean;
-}) {
-  return (
-    <section className="fm-secrets-area" aria-label="Secret uses">
-      <h3>Requests</h3>
-      {view.uses.length === 0 ? (
-        <p className="fm-secrets-muted">
-          No requests yet. When the crew needs a secret, its request appears here.
-        </p>
-      ) : (
-        view.uses.map((use) => (
-          <details key={use.request} className="fm-secrets-entry" open={use.state === "waiting"}>
-            <summary>
-              <strong>
-                {use.secrets.length
-                  ? use.secrets.map((secret) => secret.label).join(", ")
-                  : use.recipient || "Secret request"}
-              </strong>
-              <span className="fm-secrets-request-state">{SECRET_STATE_WORDS[use.state]}</span>
-            </summary>
-            <p className="fm-secrets-mono">{use.recipient}</p>
-            <p>{use.reason}</p>
-            <CheckedFacts facts={use.facts} />
-            {use.exitCode !== undefined && (
-              <p className="fm-secrets-mono">Exit status {use.exitCode}</p>
-            )}
-            {use.state === "waiting" && (
-              <div className="fm-secrets-actions">
-                <Button
-                  variant="secondary"
-                  pending={busy}
-                  onClick={() => void act({ kind: "review-use", request: use.request })}
-                >
-                  {SECRETS_WORDS.waiting}
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => void act({ kind: "cancel-use", request: use.request })}
-                >
-                  Cancel request
-                </Button>
-              </div>
-            )}
-          </details>
-        ))
-      )}
-      <h3>{SECRETS_WORDS.temporaryAccess}</h3>
-      {view.reads.length === 0 ? (
-        <p className="fm-secrets-muted">{SECRETS_WORDS.noAccess}</p>
-      ) : (
-        view.reads.map((read) => (
-          <div key={read.id} className="fm-secrets-row">
-            <div>
-              <strong>{read.label}</strong>
-              <p className="fm-secrets-mono">{read.destination}</p>
-              <p className="fm-secrets-mono">
-                {read.remaining} uses left · ends {dateOf(read.expires)}
-              </p>
-            </div>
-            <Button variant="secondary" onClick={() => void act({ kind: "end-read", id: read.id })}>
-              {SECRETS_WORDS.end}
-            </Button>
-          </div>
-        ))
-      )}
-    </section>
-  );
-}
-
-function Rules({
-  view,
-  act,
-  busy,
-}: {
-  view: SecretsView;
-  act: (action: SecretAction) => Promise<void>;
-  busy: boolean;
-}) {
-  const [draft, setDraft] = useState<Rule[]>(view.rules);
-  const [rehearsal, setRehearsal] = useState<SecretRehearsal>(null);
-  const id = useId();
-  return (
-    <section className="fm-secrets-area" aria-label="Secret rules">
-      <h3>Permissions</h3>
-      <p>
-        New uses ask for approval. A saved permission covers one exact use; a block always wins.
-      </p>
-      {draft.map((rule, i) => (
-        <div className="fm-secrets-rule" key={rule.id}>
-          <label htmlFor={`${id}-secret-${i}`}>
-            {SECRETS_WORDS.ruleSecret}
-            <select
-              id={`${id}-secret-${i}`}
-              value={rule.secret}
-              onChange={(event) =>
-                setDraft((rows) =>
-                  rows.map((row, at) => (at === i ? { ...row, secret: event.target.value } : row)),
-                )
-              }
-            >
-              <SecretChoices entries={view.entries} selected={rule.secret} />
-            </select>
-          </label>
-          <label htmlFor={`${id}-effect-${i}`}>
-            Rule
-            <select
-              id={`${id}-effect-${i}`}
-              value={rule.effect}
-              onChange={(event) =>
-                setDraft((rows) =>
-                  rows.map((row, at) =>
-                    at === i ? { ...row, effect: event.target.value as Rule["effect"] } : row,
-                  ),
-                )
-              }
-            >
-              <option value="ask">Ask each time</option>
-              <option value="never">Never allow</option>
-              <option value="allow">Allow this exact use</option>
-            </select>
-          </label>
-          <label htmlFor={`${id}-operation-${i}`}>
-            Applies to
-            <select
-              id={`${id}-operation-${i}`}
-              value={rule.operation ?? ""}
-              onChange={(event) =>
-                setDraft((rows) =>
-                  rows.map((row, at) =>
-                    at === i ? { ...row, operation: event.target.value || undefined } : row,
-                  ),
-                )
-              }
-            >
-              <option value="" disabled={rule.effect === "allow"}>
-                {rule.effect === "allow" ? "Choose a rehearsed command" : "Every use"}
-              </option>
-              {rule.operation && rule.operation !== rehearsal?.operation && (
-                <option value={rule.operation}>Saved exact operation</option>
-              )}
-              {rehearsal && <option value={rehearsal.operation}>Rehearsed command</option>}
-            </select>
-          </label>
-          <Button
-            variant="ghost"
-            onClick={() => setDraft((rows) => rows.filter((_row, at) => at !== i))}
-          >
-            Remove rule
-          </Button>
-        </div>
-      ))}
-      <div className="fm-secrets-actions">
-        <Button
-          variant="secondary"
-          off={view.entries.length === 0}
-          note={view.entries.length === 0 ? "Add a secret first." : undefined}
-          onClick={() =>
-            setDraft((rows) => [
-              ...rows,
-              {
-                id: crypto.randomUUID(),
-                secret: view.entries[0]?.ref ?? "",
-                effect: "ask",
-                ...(rehearsal ? { operation: rehearsal.operation } : {}),
-              },
-            ])
-          }
-        >
-          {SECRETS_WORDS.addRule}
-        </Button>
-        <Button
-          variant="secondary"
-          pending={busy}
-          off={
-            view.availability !== "available" ||
-            draft.some((rule) => rule.effect === "allow" && !rule.operation)
-          }
-          note={
-            view.availability !== "available"
-              ? SECRETS_WORDS.unavailable
-              : draft.some((rule) => rule.effect === "allow" && !rule.operation)
-                ? "Allow needs the exact operation from a rehearsal."
-                : undefined
-          }
-          onClick={() => void act({ kind: "save-rules", rules: draft })}
-        >
-          Review rule changes
-        </Button>
-      </div>
-      <details className="fm-secrets-advanced">
-        <summary>{SECRETS_WORDS.advancedPermissions}</summary>
-        <Rehearsal onChecked={setRehearsal} />
-      </details>
-      {rehearsal && (
-        <div className="fm-secrets-rehearsal" role="status">
-          <h3>Rehearsal: {rehearsal.effect}</h3>
-          <p>No program ran and no secret value was read.</p>
-          <p>Choose Rehearsed command in a rule to use these checked facts.</p>
-          <CheckedFacts facts={rehearsal.facts} />
-        </div>
-      )}
-    </section>
-  );
-}
-
-function CheckedFacts({ facts }: { facts: NonNullable<SecretRehearsal>["facts"] }) {
-  const list = (rows: typeof facts) => (
-    <dl className="fm-secrets-facts">
-      {rows.map((fact) => (
-        <div key={fact.name}>
-          <dt>{fact.name}</dt>
-          <dd className="fm-secrets-mono">{fact.value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-  return (
-    <>
-      {list(facts.filter((fact) => SECRET_OVERVIEW_FACTS.includes(fact.name)))}
-      <details>
-        <summary>Checked files and delivery</summary>
-        {list(facts)}
-      </details>
-    </>
-  );
-}
-
-function Rehearsal({ onChecked }: { onChecked: (result: SecretRehearsal) => void }) {
-  const id = useId();
-  const [program, setProgram] = useState("");
-  const [args, setArgs] = useState("");
-  const [cwd, setCwd] = useState("");
-  const [mapping, setMapping] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const check = async (event: FormEvent) => {
-    event.preventDefault();
-    setError(null);
-    const lines = mapping.split("\n").filter(Boolean);
-    if (lines.some((line) => !line.includes("="))) {
-      setError("Write one VARIABLE=reference on each line.");
-      return;
-    }
-    const env = Object.fromEntries(
-      lines.map((line) => {
-        const at = line.indexOf("=");
-        return [line.slice(0, at).trim(), line.slice(at + 1).trim()];
-      }),
-    );
-    const parsed = secretRehearsalInputSchema.safeParse({
-      argv: [program, ...(args === "" ? [] : args.split("\n"))],
-      cwd,
-      env,
-    });
-    if (!parsed.success) {
-      setError("Name a program, a working folder and valid references.");
-      return;
-    }
-    setBusy(true);
-    try {
-      const result = await window.infinitary.secrets.rehearse(parsed.data);
-      onChecked(result);
-      if (!result) setError("This operation could not be checked. Nothing ran.");
-    } catch {
-      setError("This operation could not be checked. Nothing ran.");
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <form
-      className="fm-secrets-form"
-      aria-label="Rehearsal"
-      onSubmit={(event) => void check(event)}
-    >
-      <h3>Rehearse an exact command</h3>
-      <p>This checks the program and rules without running it or reading a secret value.</p>
-      <label htmlFor={`${id}-program`}>
-        Program
-        <Input
-          id={`${id}-program`}
-          mono
-          required
-          value={program}
-          onChange={(event) => setProgram(event.target.value)}
-          placeholder="/bin/sh"
-        />
-      </label>
-      <label htmlFor={`${id}-args`}>
-        Arguments, one per line
-        <textarea
-          id={`${id}-args`}
-          value={args}
-          onChange={(event) => setArgs(event.target.value)}
-          placeholder="scripts/check-staging.sh"
-        />
-      </label>
-      <label htmlFor={`${id}-cwd`}>
-        Working folder
-        <Input
-          id={`${id}-cwd`}
-          mono
-          required
-          value={cwd}
-          onChange={(event) => setCwd(event.target.value)}
-        />
-      </label>
-      <Button
-        variant="ghost"
-        type="button"
-        onClick={() => {
-          void window.infinitary.app.chooseFolder().then((folder) => {
-            if (folder) setCwd(folder);
-          });
-        }}
-      >
-        Choose working folder
-      </Button>
-      <label htmlFor={`${id}-mapping`}>
-        Variable to reference, one per line
-        <textarea
-          id={`${id}-mapping`}
-          value={mapping}
-          onChange={(event) => setMapping(event.target.value)}
-          placeholder="SERVICE_TOKEN=staging-deploy"
-        />
-      </label>
-      <SettingError error={error} surface="secret-rehearsal" />
-      <Button variant="secondary" type="submit" pending={busy}>
-        Rehearse without running
-      </Button>
-    </form>
-  );
-}
-
 /** INF-1109's phone approvals (docs/secrets.md, "Remote decisions"): each enrolled device, and the way to stop it. */
-function ApprovalDevices({
-  view,
-  act,
-  busy,
-}: {
-  view: SecretsView;
-  act: (action: SecretAction) => Promise<void>;
-  busy: boolean;
-}) {
+function ApprovalDevices({ view, act, busy }: { view: SecretsView; act: Act; busy: boolean }) {
   return (
     <section className="fm-secrets-area" aria-label={SECRETS_WORDS.devicesRegion}>
-      <h3>{SECRETS_WORDS.devicesRegion}</h3>
       {view.devices.length === 0 ? (
         <p className="fm-secrets-muted">{SECRETS_WORDS.noDevices}</p>
       ) : (
@@ -830,7 +588,7 @@ function ApprovalDevices({
           <div key={device.device} className="fm-secrets-row">
             <div>
               <strong>{device.label}</strong>
-              <p className="fm-secrets-mono">Code {device.code}</p>
+              <p className="fm-secrets-muted">Code {device.code}</p>
             </div>
             <Button
               variant="ghost"
@@ -853,16 +611,15 @@ function History({
   refresh,
 }: {
   view: SecretsView;
-  act: (action: SecretAction) => Promise<void>;
+  act: Act;
   busy: boolean;
   refresh: () => Promise<void>;
 }) {
   const [message, setMessage] = useState<string | null>(null);
   return (
     <section className="fm-secrets-area" aria-label={SECRETS_WORDS.historyRegion}>
-      <h3>History</h3>
       <p>{SECRETS_WORDS.history}</p>
-      <p className="fm-secrets-mono">{view.historyBytes.toLocaleString()} bytes stored</p>
+      <p className="fm-secrets-muted">{SECRETS_WORDS.storageUse(sizeOf(view.historyBytes))}</p>
       <div className="fm-secrets-actions">
         <Button
           variant="secondary"
@@ -886,11 +643,11 @@ function History({
       {view.history.length === 0 ? (
         <p>No history recorded.</p>
       ) : (
-        view.history.map((item) => (
+        [...view.history].reverse().map((item) => (
           <div className="fm-secrets-history" key={item.request}>
             <div className="fm-secrets-actions">
-              <strong>{item.program}</strong>
-              <span className="fm-secrets-mono">
+              <strong>{item.secrets.map((ref) => secretName(view.entries, ref)).join(", ")}</strong>
+              <span className="fm-secrets-muted">
                 {SECRET_STATE_WORDS[item.state]} · {dateOf(item.requestedAt)}
               </span>
             </div>
@@ -902,8 +659,8 @@ function History({
                 <p className="fm-secrets-mono">Recovered: {dateOf(item.recoveredAt ?? null)}</p>
               </details>
             )}
-            <p className="fm-secrets-mono">
-              {item.secrets.join(", ")}
+            <p className="fm-secrets-muted">
+              <span className="fm-secrets-mono">{item.program}</span>
               {item.approval ? ` · ${SECRET_APPROVAL_WORDS[item.approval]}` : ""}
               {item.reconciled && !item.recoveredFrom
                 ? ` · ${SECRETS_RECOVERY_WORDS.reconciledAfterRestart}`
@@ -916,31 +673,18 @@ function History({
   );
 }
 
-function Recovery({
-  view,
-  act,
-  busy,
-}: {
-  view: SecretsView;
-  act: (input: SecretAction) => Promise<void>;
-  busy: boolean;
-}) {
+function Recovery({ view, act, busy }: { view: SecretsView; act: Act; busy: boolean }) {
   const ready = view.recoveryAvailable && view.availability === "available";
   const restoreReady = view.recoveryAvailable && view.availability !== "locked";
   const waiting = "Finish the open secret form or current change first.";
   return (
     <section className="fm-secrets-area" aria-label={SECRETS_RECOVERY_WORDS.region}>
-      <h3>Recovery</h3>
       {!view.recoveryAvailable && <p role="status">{SECRETS_RECOVERY_WORDS.unavailable}</p>}
       <div className="fm-secrets-recovery-choice">
         <div>
-          <h3>Back up your secrets</h3>
           <p>
-            Save an encrypted archive and a separate recovery key. Keep them apart: anyone with both
-            can read the saved values.
-          </p>
-          <p className="fm-secrets-muted">
-            There is no key reset. Never put the recovery key in a card or conversation.
+            Save an encrypted copy and a separate recovery key. Keep them apart: anyone with both
+            can read the saved values. There is no key reset.
           </p>
         </div>
         <Button
@@ -962,12 +706,10 @@ function Recovery({
       </div>
       <div className="fm-secrets-recovery-choice">
         <div>
-          <h3>Restore from a backup</h3>
           <p>
-            Restoring replaces stored values and clears permissions, phone approvals and temporary
-            access. Running uses must finish first.
+            Restoring replaces stored values and clears saved decisions, phone approvals and
+            temporary access. History stays, and it never allows a use.
           </p>
-          <p className="fm-secrets-muted">History stays. Recovered history cannot grant access.</p>
         </div>
         <Button
           variant="secondary"
@@ -987,17 +729,39 @@ function Recovery({
         </Button>
       </div>
       <p className="fm-secrets-muted">
-        Choose the files, then confirm with your computer. Cancelling confirmation changes nothing.
+        Choose the files, then confirm with your computer. Cancelling changes nothing. Never put the
+        recovery key in a card or conversation.
       </p>
-      <details className="fm-secrets-advanced">
-        <summary>About retained history</summary>
-        <p>
-          Old records stay even if a lost key means they can no longer be checked. Delete history
-          only when you choose to.
-        </p>
-      </details>
     </section>
   );
+}
+
+function historySummary(history: SecretsView["history"]): string {
+  if (history.length === 0) return SECRETS_WORDS.noHistory;
+  const newest = Math.max(...history.map((item) => item.requestedAt));
+  return SECRETS_WORDS.historySummary(history.length, dayOf(newest));
+}
+
+/** Today, yesterday, or the month and day. */
+function dayOf(at: number): string {
+  const day = new Date(at);
+  const today = new Date();
+  const start = (date: Date) =>
+    new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  const days = Math.round((start(today) - start(day)) / 86_400_000);
+  if (days === 0) return SECRETS_WORDS.today;
+  if (days === 1) return SECRETS_WORDS.yesterday;
+  return day.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function timeOf(at: number): string {
+  return new Date(at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+
+function sizeOf(bytes: number): string {
+  if (bytes < 1024) return `${bytes} ${bytes === 1 ? "byte" : "bytes"}`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function dateOf(at: number | null): string {

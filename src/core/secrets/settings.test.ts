@@ -38,6 +38,11 @@ const INPUT = {
   expectedRevision: null,
   environment: "Personal",
 } satisfies SecretEntryInput;
+/** The tasks the fixture's home knows by title; any other task id is one it no longer knows. */
+const TASK_TITLES: Record<string, string> = {
+  "task-a": "Check the planning calendar",
+  "task-b": "Plan the week",
+};
 type Raised = Omit<Card, "author" | "priority" | "status" | "createdAt">;
 
 function fixture() {
@@ -104,6 +109,7 @@ function fixture() {
       settled: (task, receipt) => {
         ended.push({ task, receipt });
       },
+      taskTitle: (task) => TASK_TITLES[task],
       changed: () => {},
       now: () => now,
     });
@@ -652,6 +658,51 @@ describe("trusted Secrets settings", () => {
     expect(f.ended).toEqual([]);
     await a.cancel(first.request);
     await b.cancel(second.request);
+  });
+
+  it("names the task that last asked for each secret, across a restart", async () => {
+    // INF-1690 piece 1 (the captain's direction B): each row on the Secrets
+    // page says which task used the secret and when.
+    const f = fixture();
+    await f.settings.put(INPUT);
+    expect((await f.settings.view()).entries[0]).toMatchObject({ lastRequest: null });
+    expect((await f.settings.view()).entries[0]).not.toHaveProperty("lastTask");
+    const cwd = await realpath(f.dir);
+    const asked = await f.settings.commandFor({ task: "task-a" }).inject({
+      id: "planning-check",
+      reason: "Check the approved planning key",
+      cwd,
+      argv: ["/bin/sh", "-c", "exit 0"],
+      env: { SERVICE_TOKEN: "calendar" },
+    });
+    expect((await f.settings.view()).entries[0]).toMatchObject({
+      lastRequest: 1000,
+      lastTask: TASK_TITLES["task-a"],
+    });
+    // The history keeps the asking task, so a reopened home still names it.
+    expect((await f.make().view()).entries[0]?.lastTask).toBe(TASK_TITLES["task-a"]);
+    await f.settings.commandFor({ task: "task-a" }).cancel(asked.request);
+    f.advance(1000);
+    await f.request("brokered-for-b", "task-b");
+    expect((await f.settings.view()).entries[0]).toMatchObject({
+      lastRequest: 2000,
+      lastTask: TASK_TITLES["task-b"],
+    });
+    // A request no task made, or one by a task the home no longer knows, names only when.
+    f.advance(1000);
+    await f.request("brokered-without-task");
+    expect((await f.settings.view()).entries[0]).toMatchObject({ lastRequest: 3000 });
+    expect((await f.settings.view()).entries[0]).not.toHaveProperty("lastTask");
+    f.advance(1000);
+    await f.settings.commandFor({ task: "task-gone" }).inject({
+      id: "planning-check",
+      reason: "Check the approved planning key",
+      cwd,
+      argv: ["/bin/sh", "-c", "exit 0"],
+      env: { SERVICE_TOKEN: "calendar" },
+    });
+    expect((await f.settings.view()).entries[0]).toMatchObject({ lastRequest: 4000 });
+    expect((await f.settings.view()).entries[0]).not.toHaveProperty("lastTask");
   });
 
   it("delivers one terminal receipt to each waiting requester, never the broker's value or result", async () => {

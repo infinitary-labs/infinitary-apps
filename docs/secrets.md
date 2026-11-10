@@ -119,12 +119,19 @@ Rehearsal evaluates a use against the rules and returns its checked facts withou
 `SecretsSettings` in `src/core/secrets/settings.ts` is the app's Settings/controller interface, constructed without access when the host supplies no Secrets capability.
 The core dispatcher composes its routes from `src/core/secrets/handlers.ts`, retaining request validation and authority checks in the dispatcher before calling the controller.
 Home-only channels serve its metadata and captain controls; the native export dialog writes metadata history through the private-file owner.
-Settings → Secrets leads with searchable names and optional environments, beside Add secret; each entry opens its reference, saved version, last request, Replace value and Forget locally.
-Secure entry asks for a name and masked value, leaves the new reference absent for the controller to create when saving, and keeps the optional environment and custom reference under More details.
+Settings → Secrets is built around keeping a secret; deciding a use happens on the exact-use card.
+Its first line counts the secrets kept on this computer, and a badge appears only when storage is locked, unavailable or needs recovery.
+A waiting request shows as one line naming its secrets, with Review request, which opens the exact-use card.
+Searchable rows lead with each secret's name and its place (the optional environment) as a tag, and say which task last asked for it and when, or that it is waiting, in use or not used yet.
+The view's `lastTask` carries that task's title: the controller reads it from the task its own coordinator saw, or from the task a crewmate's intent names in the history (`taskIntent`), so it survives a restart; a request no task made, or by a task the home no longer knows, names only when.
+A reference appears only when another secret has the same name and place.
+Opening a row offers Replace, Forget and that secret's saved decisions; a temporary read shows on the row as Reading until a time, beside End access.
+Secure entry asks for a name, the masked value and an optional place, never a reference: the controller makes one from the name when saving.
 The form locates the returned entry through the controller's `saved` receipt; replacements keep their existing reference and exact-record checks.
-Activity, Permissions, History and Recovery use the shared keyboard-native grouped controls; program rehearsal sits under the advanced disclosure in Permissions.
+Four quiet rows below the list open in place: Saved decisions, Approve from your phone, What happened (history) and Keep a copy (recovery).
+Saved decisions are the existing Never, Ask and Allow rules in plain sentences, each with Remove, which proposes the rules without it on the host's rules card; the page has no rule editor and no rehearsal form, so the rehearsal request has no Settings caller.
 The exact-use card leads with each requested secret's name and safe identity, then the checked recipient and operation, with the requester's explanation kept separate.
-History offers export, explicit deletion and storage use.
+What happened offers export, explicit deletion and storage use.
 Adding a secret needs no reference: the controller makes a stable one from its name, never one an existing entry, a saved rule or the history names, and answers with it.
 A replacement names its reference; one without a reference is refused.
 The command-search entry focuses the Secrets heading in every availability state, and the forms and their actions use the ordinary keyboard controls.
@@ -221,7 +228,7 @@ Secrets settings, entry, rehearsal, history, permissions and recovery stay on th
 Enrollment is the captain's on this computer.
 The card shows eight digits from SHA-256 of the offered key (`approvalCode`), which the phone computes from its own key and shows in its Settings; the captain compares them, and only Confirm and allow on this computer, with this computer's fresh confirmation, saves the device into the authority file at its next generation.
 The phone's own copy of that card says to do it on the computer.
-Settings → Secrets → Permissions lists each enrolled device with its code and Stop approvals, which asks for the same confirmation.
+Settings → Secrets → Approve from your phone lists each enrolled device with its code and Stop approvals, which asks for the same confirmation.
 A change of devices moves the authority revision, so a use already waiting under the earlier authority is invalidated rather than run.
 A restore from a recovery backup keeps no enrolled device ("Recovery boundary"), so each phone sets up approvals again.
 
@@ -259,7 +266,7 @@ It is local evidence, not an immutable audit log.
 
 These remain before any production use:
 
-- Live proof of Settings → Secrets with trusted secure entry, Activity, Permissions, History, export and storage use, rehearsal and End access.
+- Live proof of Settings → Secrets with trusted secure entry, the secret rows, saved decisions, phone approvals, history with export and storage use, and End access.
 - Composing both platforms' native adapters for production and checking the installed Linux policy through polkit itself.
 - Fresh human confirmation and the platform's custody shown working in the app on both platforms.
 - Explicit production-enablement approval, separate from acceptance of the Linux same-user limit above.
@@ -279,7 +286,7 @@ Shell support includes exact one-off commands/scripts and reusable reviewed scri
 New secret policy is Ask; Never overrides Ask, then Allow, with all required secrets evaluated conjunctively.
 Fresh human authentication, 300-second request expiry and one-use program approval remain required.
 The optional 600-second/20-use permission applies only to supported brokered reads through the protected owner, not unrestricted commands or renewal.
-Settings → Secrets exposes searchable metadata, Activity/Permissions/History/Recovery, trusted Add/Replace, rehearsal, End access and export/storage display through the disabled-by-default host seam.
+Settings → Secrets exposes searchable metadata with each secret's last use, saved decisions, phone approvals, history and recovery, trusted Add/Replace, End access and export/storage display through the disabled-by-default host seam.
 Without that capability, Settings offers no Secrets tab and command search no Open Secrets: nothing a person can open and not use.
 The window asks `inf:secrets:shown` once, which answers from the host seam without opening storage.
 Native recovery must be proved alongside custody before production enablement.
@@ -324,7 +331,7 @@ The private native writer in `src/main/host/secretRecoveryFiles.ts` creates the 
 A partial save leaves its newly created files in place and reports that the pair is incomplete; two destinations cannot commit atomically.
 Native file dialogs choose both destinations or source files without sending their paths or contents through renderer, task or general IPC channels.
 The reader accepts only regular files and an exact-length recovery key, refuses final symbolic links, and never prints a parse error containing archived data.
-Settings → Secrets → Recovery explains separate key storage, replacement of values, reset permissions, retained history and incomplete or unknown outcomes.
+Settings → Secrets → Keep a copy explains separate key storage, replacement of values, reset permissions, retained history and incomplete or unknown outcomes.
 Cancelling file choice or native confirmation grants nothing and changes no stored values.
 
 `src/core/secrets/recoveryHome.ts` provides the private activation boundary for a durably staged generation with a fresh root and empty authority.
@@ -384,7 +391,7 @@ Recovery uses two fixed disposable destinations through the real private-file re
 The client exits unsuccessfully on an explicit refusal, a connection without a reply or an unreadable reply, and never prints a partial response as a result.
 An answered control is not proof of a completed native action: read its durable outcome before another action, and never repeat an uncertain use or recovery write.
 The commands inspect metadata, prepare one invented recipient, navigate the app's Secrets controls, capture its own renderer or request a clean quit.
-The fixed `uses`, `rules`, `history` and `recovery` controls select those views through the shown Secrets selector; they accept no selector, path or editable value.
+The fixed `decisions`, `phone`, `history` and `copy` controls open those quiet rows of the shown Secrets page; they accept no selector, path or editable value.
 There is no evaluation, text-entry, generic click, desktop capture, password input or authentication command.
 The fixture refuses controls and captures while native confirmation or an initiated native action is pending; metadata status remains available.
 It also refuses a picture when any frame contains a password entry control, without reading that control's value.

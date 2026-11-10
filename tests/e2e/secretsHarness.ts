@@ -1,38 +1,32 @@
 import { symlinkSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join, resolve } from "node:path";
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import type { Core } from "../../src/core";
 import type { httpSecretBroker } from "../../src/core/secrets/httpBroker";
-import { SECRETS_AREAS, SECRETS_WORDS } from "../../src/shared/secrets";
+import { SECRETS_AREAS } from "../../src/shared/secrets";
 import type { DisposableCustody } from "../helpers/disposableCustody";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchOptions, launchApp } from "./launch";
 import { settingsSection } from "./settings";
 import { focusOn, pressKey } from "./windowKeys";
 
-/** The Secrets navigation owner: all journeys use the same native radio/keyboard path. */
+/**
+ * The Secrets quiet rows' owner: all journeys open a row under the list the
+ * same way, by its summary and the keyboard, and get that summary back.
+ */
 export async function secretsArea(page: Page, area: (typeof SECRETS_AREAS)[number]["value"]) {
   const label = SECRETS_AREAS.find((option) => option.value === area)?.label;
-  if (!label) throw new Error("Unknown Secrets section.");
-  const radio = settingsSection(page, "secrets")
-    .getByRole("radiogroup", { name: SECRETS_WORDS.area, exact: true })
-    .getByRole("radio", { name: label, exact: true });
-  await focusOn(radio);
-  await pressKey(radio, "Space");
-  return radio;
-}
-
-/** Custom references live in entry's optional details; all callers open them through this owner. */
-export async function secretReference(page: Page) {
-  const section = settingsSection(page, "secrets");
-  const reference = section.getByLabel(SECRETS_WORDS.reference, { exact: true });
-  if (!(await reference.isVisible())) {
-    const details = section.getByText(SECRETS_WORDS.details, { exact: true });
-    await focusOn(details);
-    await pressKey(details, "Enter");
+  if (!label) throw new Error("Unknown Secrets row.");
+  const row = settingsSection(page, "secrets").locator(`details[data-secrets-area="${area}"]`);
+  const summary = row.locator(":scope > summary");
+  await expect(summary).toContainText(label);
+  if ((await row.getAttribute("open")) === null) {
+    await focusOn(summary);
+    await pressKey(summary, "Enter");
   }
-  return reference;
+  await expect(row).toHaveAttribute("open", "");
+  return summary;
 }
 
 /** Test-owned host resources only; the app, controller, IPC, native chrome and sealed files are real. */

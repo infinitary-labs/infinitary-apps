@@ -41,6 +41,11 @@ export const secretMetadataSchema = z.strictObject({
   updatedAt: z.number(),
   environment: z.string(),
   lastRequest: z.number().nullable(),
+  /**
+   * The title of the task that made the last request, when the home still
+   * knows it (`secrets-last-task.md`): what the Secrets page names beside when.
+   */
+  lastTask: z.string().optional(),
 });
 export const secretUseSchema = z.strictObject({
   request: z.string(),
@@ -272,17 +277,23 @@ export const SECRET_OVERVIEW_FACTS: readonly string[] = [
 export const SHORT_READ_SECONDS = 600;
 export const SHORT_READ_USES = 20;
 
+/**
+ * The quiet rows under the Secrets list, each opening in place: saved
+ * decisions, phone approvals, what happened and a copy kept elsewhere.
+ */
 export const SECRETS_AREAS = [
-  { value: "uses", label: "Activity" },
-  { value: "rules", label: "Permissions" },
-  { value: "history", label: "History" },
-  { value: "recovery", label: "Recovery" },
+  { value: "decisions", label: "Saved decisions" },
+  { value: "phone", label: "Approve from your phone" },
+  { value: "history", label: "What happened" },
+  { value: "copy", label: "Keep a copy" },
 ] as const;
 
 export const SECRETS_WORDS = {
   title: "Secrets",
-  intro: "All crew can find these names. Values are shared only with approved uses.",
-  migration: "Your existing sign-ins stay in their current storage.",
+  count: (count: number) =>
+    count === 0
+      ? "Add a secret your crew needs. Your crew uses it but never sees it."
+      : `${count} ${count === 1 ? "secret" : "secrets"} kept on this computer. Your crew uses ${count === 1 ? "it" : "them"} but never sees ${count === 1 ? "it" : "them"}.`,
   disabled: "Protected storage is not enabled in this build.",
   unavailable: "Secrets could not open its protected storage. No access was granted.",
   stale: "This secret changed. Read its current version before replacing it.",
@@ -290,21 +301,21 @@ export const SECRETS_WORDS = {
   value: "Secret value",
   nameRequired: "Enter a name for this secret.",
   valueRequired: "Enter the secret value.",
-  referenceInvalid:
-    "Use a reference of up to 64 letters, numbers, dots, dashes or underscores, starting with a letter or number.",
   name: "Name",
-  reference: "Reference",
-  environment: "Environment",
+  place: "Place (optional)",
+  placeHint: "For example, staging or production",
   save: "Save secret",
-  area: "Secrets sections",
   historyRegion: "Secrets history",
   approvalTitle: "Allow secret access?",
   add: "Add secret",
-  replace: "Replace value",
+  replace: "Replace",
+  forget: "Forget",
   once: "Allow once",
   short: `Allow up to ${SHORT_READ_SECONDS / 60} minutes`,
   deny: "Deny",
   waiting: "Review request",
+  waitingFor: (names: string) =>
+    `${names} ${names.includes(", ") ? "are" : "is"} waiting for your answer.`,
   end: "End access",
   devicesRegion: "Devices that approve uses",
   noDevices:
@@ -312,14 +323,38 @@ export const SECRETS_WORDS = {
   stopApprovals: "Stop approvals",
   history: "History stays here until you delete it. Exports contain metadata, never secret values.",
   noReveal: "The value stays hidden after saving. Only an approved use can receive it.",
-  details: "More details",
-  advancedPermissions: "Check a program before saving a permission",
   search: "Search secrets",
-  temporaryAccess: "Temporary access",
-  addRule: "Add rule",
-  ruleSecret: "Secret",
-  noAccess: "No temporary access is active.",
+  noMatch: "No matching secrets.",
+  noneYet: "No secrets added yet.",
+  waitingStorage: "Secrets will appear when storage is available.",
+  decisionsRegion: "Saved decisions",
+  noDecisions: "No saved decisions. Every use asks you first.",
+  remove: "Remove",
+  notUsed: "Not used yet",
+  inUse: "In use now",
+  waitingRow: "Waiting for your answer",
+  readingUntil: (time: string) => `Reading until ${time}`,
+  used: (when: string, task?: string) => (task ? `Used ${when} by ${task}` : `Used ${when}`),
+  today: "today",
+  yesterday: "yesterday",
+  noPhone: "Not set up",
+  historySummary: (count: number, newest: string) =>
+    `${count} ${count === 1 ? "use" : "uses"}, newest ${newest}`,
+  noHistory: "Nothing yet",
+  storageUse: (size: string) => `${size} kept on this computer`,
 } as const;
+
+/** A saved decision in one plain sentence, naming the secret it covers (`secretName`). */
+export function decisionWords(rule: z.infer<typeof secretRuleSchema>, name: string): string {
+  if (rule.effect === "never")
+    return rule.operation
+      ? `Never give ${name} to one exact run.`
+      : `Never give ${name} to anyone.`;
+  if (rule.effect === "allow") return `Always give ${name} to one exact run.`;
+  return rule.operation
+    ? `Ask before giving ${name} to one exact run.`
+    : `Ask before giving ${name} to anyone.`;
+}
 
 export const SECRETS_RECOVERY_WORDS = {
   region: "Secrets recovery",

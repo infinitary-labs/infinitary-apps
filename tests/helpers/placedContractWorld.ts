@@ -93,14 +93,26 @@ function callbacksOf(spec: SessionSpec): CrewmateToolDelegate {
   };
 }
 
-export async function placedContractWorld(
-  inner: ContractWorld,
+/** The home owners a placed case can read without inventing a second ledger. */
+type ContractPlacement = {
+  db: ReturnType<typeof freshDatabase>;
+  tasks: TaskService;
+  paths: ReturnType<typeof appPathsFor>;
+  devices: WorkDevices;
+  deviceId: string;
+  placed: PlacedSessions;
+};
+
+export async function placedContractWorld<T extends Pick<ContractWorld, "factory" | "binding">>(
+  inner: T,
   options: {
     protocolVersion?: string;
     /** A historical minor-boundary case runs against a matching-major home. */
     homeProtocolVersion?: string;
     now?: () => number;
     schedule?: (ms: number, run: () => void) => () => void;
+    /** A native work-side case uses the production conversation composition. */
+    conversations?: Parameters<typeof startHelper>[0]["conversations"];
   } = {},
 ) {
   // The home.
@@ -189,21 +201,23 @@ export async function placedContractWorld(
     protocolVersion: options.protocolVersion,
     say: () => {},
     retryMs: [20],
-    conversations: async ({ dataDir: dir, ask, homeChanges, homeVersion }) => {
-      const host = new SessionHost({
-        tasks: new PlacedTasks(dir),
-        ask,
-        // What the home's welcome listed, as the work mode hands it on.
-        ...(homeChanges ? { homeChanges } : {}),
-        // The real welcome owns work compatibility; a missing version grants no new events.
-        ...(homeVersion ? { homeVersion } : {}),
-        factories: { [inner.factory.backend]: inner.factory },
-        bind: async () => inner.binding,
-        tools: [lookUpThere],
-        log: () => {},
-      });
-      return { host, close: () => host.close() };
-    },
+    conversations:
+      options.conversations ??
+      (async ({ dataDir: dir, ask, homeChanges, homeVersion }) => {
+        const host = new SessionHost({
+          tasks: new PlacedTasks(dir),
+          ask,
+          // What the home's welcome listed, as the work mode hands it on.
+          ...(homeChanges ? { homeChanges } : {}),
+          // The real welcome owns work compatibility; a missing version grants no new events.
+          ...(homeVersion ? { homeVersion } : {}),
+          factories: { [inner.factory.backend]: inner.factory },
+          bind: async () => inner.binding,
+          tools: [lookUpThere],
+          log: () => {},
+        });
+        return { host, close: () => host.close() };
+      }),
   });
   if (!run.ok) throw new Error(run.reason);
   started.runs.push(run.run);
@@ -228,7 +242,14 @@ export async function placedContractWorld(
     factory,
     machine: deviceId,
     homeDir: folders.work,
-    placement: { tasks, paths: appPathsFor(homeRoot), devices, deviceId },
+    placement: {
+      db,
+      tasks,
+      paths: appPathsFor(homeRoot),
+      devices,
+      deviceId,
+      placed,
+    } as ContractPlacement,
   };
 }
 

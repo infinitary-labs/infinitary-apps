@@ -8,7 +8,9 @@ import {
   scriptedClaudeQuery,
   scriptedRecordsFlushed,
 } from "../../../tests/helpers/scriptedClaudeQuery";
+import { seatSpec } from "../../../tests/helpers/seatSession";
 import type { SessionEvent } from "../session/session";
+import type { ClaudeCallCost } from "./claudeCallUsage";
 import { encodeClaudeProjectDir } from "./claudeTranscript";
 
 afterEach(scriptedRecordsFlushed);
@@ -307,4 +309,83 @@ it("drains a wedged continuation's interrupted result without a new failure", as
   expect(events.filter((event) => event.type === "continuation_ended")).toHaveLength(1);
   session.dispose();
   await session.closed();
+});
+
+// Intent: a priced first-mate result must not
+// announce success before the failure that protects its runaway streak.
+it("announces a failed first-mate result before its queued usage boundary", async () => {
+  const call: ClaudeCallCost = {
+    requestId: "req_failed_cost",
+    model: "claude-haiku-4-5",
+    input: 42,
+    output: 7,
+    cost: 0.000077,
+  };
+  let receive: ((report: ClaudeCallCost) => void) | undefined;
+  const { factory } = scriptedClaudeQuery({
+    onInput: (_message, emit) => {
+      emit({
+        type: "stream_event",
+        event: { type: "message_start", message: { id: "msg_failed_cost", model: call.model } },
+      });
+      emit({
+        type: "assistant",
+        request_id: call.requestId,
+        message: { id: "msg_failed_cost", model: call.model, content: [] },
+      });
+      emit({ type: "stream_event", event: { type: "message_stop" } });
+      if (!receive) throw new Error("the cost receiver was not attached");
+      receive(call);
+      // The pinned client's synthetic output-cap error, after its last API call.
+      emit({
+        type: "assistant",
+        error: "max_output_tokens",
+        message: {
+          content: [{ type: "text", text: "The response exceeded the output token maximum." }],
+        },
+      });
+      emit({
+        type: "result",
+        is_error: true,
+        result: "The response exceeded the output token maximum.",
+        modelUsage: {
+          [call.model]: { inputTokens: call.input, outputTokens: call.output, costUSD: call.cost },
+        },
+      });
+    },
+  });
+  const dir = scratchDir("infinitary-claude-priced-failure-");
+  const session = await scriptedClaudeFactory({
+    configDir: dir,
+    query: factory,
+    costReportingAllowed: async () => true,
+    costReports: {
+      subscribe: async (_id, report) => {
+        receive = report;
+        return { env: {}, redact: (text) => text, close: () => {} };
+      },
+    },
+  }).open(
+    seatSpec({
+      cwd: dir,
+      sessionsDir: dir,
+      binding: { backend: "claude", accountId: "dummy" },
+      model: { provider: "anthropic-claude", id: call.model },
+      tools: [],
+    }),
+  );
+  const events: SessionEvent[] = [];
+  session.subscribe((event) => events.push(event));
+  try {
+    await session.prompt("Summarize the result.");
+    const failure = events.findIndex((event) => event.type === "turn_failed");
+    expect(failure).toBeGreaterThanOrEqual(0);
+    expect(events.findIndex((event) => event.type === "turn_end")).toBeGreaterThan(failure);
+    expect(events.filter((event) => event.type === "turn_end" && event.usage?.cost)).toHaveLength(
+      1,
+    );
+  } finally {
+    session.dispose();
+    await session.closed();
+  }
 });

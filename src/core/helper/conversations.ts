@@ -4,6 +4,7 @@ import type { WorkInvokeChannel } from "@shared/ipc";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import type { PlacedSpec } from "@shared/work";
 import { accessFlagSettings, readClaudeAccess } from "../claude/claudeAccess";
+import { claudeCostReportingAllowed } from "../claude/claudeCostPolicy";
 import { defaultClaudeConfigDir } from "../claude/claudeQuota";
 import { createClaudeSessionFactory } from "../claude/session";
 import { ForgeSignInStore } from "../forge";
@@ -280,6 +281,7 @@ export async function startConversations(options: {
         },
         log: (line) => log(`claude: ${line}`),
         accessSettings: async () => accessFlagSettings(await readClaudeAccess()),
+        costReportingAllowed: () => claudeCostReportingAllowed(),
       }),
     },
     bind: async (binding) =>

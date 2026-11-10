@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "claude-live-spend",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Claude spending can pause work during a long turn",
+      "body": "Completed Claude calls can update estimated spending while a crewmate is still working, so the spending limit can ask sooner. If live reports are unavailable, the usual end-of-turn report still records spending without counting it twice.",
+      "noPicture": "This changes when spending reaches the existing limit, not the appearance of its card or the Usage page.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

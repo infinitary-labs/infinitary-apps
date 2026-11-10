@@ -22,7 +22,9 @@ import {
 } from "../session/session";
 import { claimStagingFolder, type StagingFolder } from "../session/stagingFolders";
 import type { SessionRecordStore } from "../storage/sessionRecordStore";
+import { ClaudeCallUsage } from "./claudeCallUsage";
 import { resolveClaudeExecutable } from "./claudeCli";
+import { type ClaudeCostSubscription, hasClaudeReporting } from "./claudeCostReports";
 import {
   type ClaudeNormalizeResult,
   type ClaudeTurnFailure,
@@ -80,6 +82,7 @@ type Connection = {
   done: Promise<void>;
   /** Hands this client's lease on the account's store back. */
   release: () => void;
+  costReports?: ClaudeCostSubscription;
 };
 
 /** One prompt's caller, owned by its starting or running turn. */
@@ -116,6 +119,7 @@ type RollingConfig = {
 export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements ModelSession {
   readonly controlProfile = CLAUDE_CONTROL_PROFILE;
   private connection: Connection | undefined;
+  private calls = this.callUsage();
   /**
    * The model every attachment asks the client for: the spec's, else the
    * one a resumed session ran on before the client swapped it, else the
@@ -583,6 +587,8 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     // resume reads its transcript copy here, and that read can fail.
     const input = new MessageQueue();
     let query: Query;
+    let costReports: ClaudeCostSubscription | undefined;
+    const calls = this.callUsage();
     try {
       this.stillServing(mine);
       // A session the client has recorded resumes; one it has not (no turn
@@ -594,11 +600,24 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
       if (this.asked === undefined && recorded) this.asked = this.record.swappedFrom(this.id);
       const project = await this.projectResources();
       const access = await this.deps.accessSettings?.().catch(() => undefined);
+      if (
+        !hasClaudeReporting(env) &&
+        (await this.deps.costReportingAllowed?.().catch(() => false))
+      ) {
+        try {
+          costReports = await this.deps.costReports?.subscribe(this.id, (report) =>
+            calls.report({ ...report, model: canonicalClaudeModelId({ value: report.model }) }),
+          );
+        } catch {
+          this.note("local cost reporting unavailable; retaining turn-end accounting");
+        }
+        this.stillServing(mine);
+      }
       const options = claudeSessionOptions({
         spec: this.spec,
         env,
         executable: resolveClaudeExecutable(env),
-        stderr: (data) => this.note(data.trimEnd()),
+        stderr: (data) => this.note((costReports?.redact(data) ?? data).trimEnd()),
         ...(access ? { access } : {}),
         attachment: {
           ...(this.asked ? { model: this.asked } : {}),
@@ -608,8 +627,10 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
           toolGate: this.safeStop.toolGate,
         },
       });
+      if (costReports) options.env = { ...options.env, ...costReports.env };
       query = (this.deps.query ?? sdkQuery)({ prompt: input, options });
     } catch (caught) {
+      costReports?.close();
       release();
       throw caught;
     }
@@ -618,6 +639,7 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     // delta), and nothing the last client said about its turn - a pushed
     // reading, an error, a tool in flight - classifies this one's.
     this.normalizer = createNormalizerState();
+    this.calls = calls;
     if (this.spec.builtins === "coding")
       this.emit({ type: "background_work_changed", count: undefined });
     const connection: Connection = {
@@ -628,6 +650,7 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
       closing: false,
       done: Promise.resolve(),
       release,
+      ...(costReports ? { costReports } : {}),
     };
     this.connection = connection;
     connection.done = this.pumpQuery(query);
@@ -734,7 +757,21 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
       });
   }
 
+  private callUsage(): ClaudeCallUsage {
+    return new ClaudeCallUsage(
+      (usage) => this.emit({ type: "turn_end", taskId: this.taskId, usage }),
+      (model) => canonicalClaudeModelId({ value: model }),
+    );
+  }
+
+  protected normalized(result: ClaudeNormalizeResult, message: unknown): ClaudeNormalizeResult {
+    return (message as { type?: unknown } | null)?.type === "result"
+      ? { ...result, events: this.calls.settle(result.events, this.normalizer.totals) }
+      : result;
+  }
+
   protected observe(message: unknown, result: ClaudeNormalizeResult): void {
+    this.calls.observe(message, this.answering ?? this.asked);
     const record = message as {
       type?: unknown;
       subtype?: unknown;
@@ -859,6 +896,7 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     this.connection = undefined;
     if (this.spec.builtins === "coding")
       this.emit({ type: "background_work_changed", count: undefined });
+    connection.costReports?.close();
     connection.release();
     this.record.mirror(connection.sessionId);
     if (this.turn.kind === "running" && this.turn.by === "continuation") this.settle(STOPPED_TEXT);

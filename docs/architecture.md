@@ -42,9 +42,11 @@ House references this architecture deliberately stays consistent with:
   See `docs/custom-api.md` for the profiles, storage/retention limits and packaged transport evidence.
 - **The app brings its own git** (git integration phase 2, `docs/forge.md` "The app's own git"): dugite-native's macOS git for both architectures ships in the bundle (`Contents/Resources/git/`, GPLv2, named in `NOTICE`), every host git runs it, and a crewmate's shell finds it first on its search path.
   It reaches nothing the git egress above does not already name; a Mac with no developer tools needs none.
-- **Nothing listens unless a device is paired.**
-  The app accepts no network connection until a device is paired with it or a link to pair one is open; then it listens on loopback and at most one chosen private address of this Mac, never a wildcard, speaks only TLS 1.3 pinned to the home's own key, and refuses browsers and unproven devices before any frame (`docs/connection.md`, `docs/devices.md`).
-  The one other listener is a task browser's connection guard: on loopback alone, only while that browser is open, answering only that browser's session, which signs in with a secret made for it, and carrying nothing but its tunnels to public addresses.
+- **Listeners have explicit scopes.**
+  The device-connection listener accepts no connection until a device is paired with it or a link to pair one is open; then it listens on loopback and at most one chosen private address of this Mac, never a wildcard, speaks only TLS 1.3 pinned to the home's own key, and refuses browsers and unproven devices before any frame (`docs/connection.md`, `docs/devices.md`).
+  A task browser's connection guard also listens: on loopback alone, only while that browser is open, answering only that browser's session, which signs in with a secret made for it, and carrying nothing but its tunnels to public addresses.
+  Claude call-cost recording also permits one private loopback receiver per session factory on the computer running work, with an unguessable route per client attachment (`docs/usage.md`, "Claude calls during a turn").
+  It accepts only app-scoped cost reports, persists no content or identity data, and stops when its last attachment ends; it grants no external endpoint or general listening permission.
 - **BYO subscriptions.**
   Users authenticate with their own plans.
   We never provide model access and never hold user credentials anywhere but the user's machine.

@@ -46,6 +46,9 @@ const physical = (way: string): LimitEntry => ({ rests: "physical limit", way })
 
 /** Each limit that rests on a fact, consent or a physical limit, by file, with its way out. */
 export const LIMITS: Record<string, Record<string, LimitEntry>> = {
+  "src/core/claude/claudeCostReports.ts": {
+    CLAUDE_COST_REPORT_BODY_MAX: physical("a local export over 1 MiB is refused; terminal usage accounting remains available"),
+  },
   "src/core/axi/channel.ts": {
     CAP_MARGIN_MS: physical("the op keeps running; the shell's next command gets its kept answer"),
     REQUEST_MAX: physical("refused in words: arguments too long; the 1 MiB bound is not named"),

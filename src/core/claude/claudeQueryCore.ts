@@ -6,6 +6,7 @@ import { bareToolName } from "../storage/sessionReader";
 import type { SessionRecordStore } from "../storage/sessionRecordStore";
 import type { ClaudeAccessSettings } from "./claudeAccess";
 import { type ClaudeClientCheck, checkClaudeClient, claudeClientIssueText } from "./claudeCli";
+import type { ClaudeCostReports } from "./claudeCostReports";
 import {
   type ClaudeNormalizeResult,
   type ClaudeNormalizerState,
@@ -56,6 +57,10 @@ export type ClaudeSessionDeps = {
    * and where the client keeps a rolling session's own transcript.
    */
   configDir: string;
+  /** Whether managed settings permit app-local cost exports; absence keeps terminal accounting. */
+  costReportingAllowed?: () => Promise<boolean>;
+  /** One lazy receiver for all this factory's rolling attachments. */
+  costReports?: Pick<ClaudeCostReports, "subscribe">;
   /**
    * The host's one clock: every rolling session reads it, and its record's
    * copy and its client hygiene ride its ticks.
@@ -241,7 +246,10 @@ export abstract class ClaudeQueryCore<E extends { type: string }> {
   }
 
   private apply(message: unknown): void {
-    const result = fmEventsFromClaudeMessage(message, this.taskId, this.normalizer);
+    const result = this.normalized(
+      fmEventsFromClaudeMessage(message, this.taskId, this.normalizer),
+      message,
+    );
     const type = (message as { type?: unknown } | null)?.type;
     this.observe(message, result);
     if (type !== "result") {
@@ -256,6 +264,11 @@ export abstract class ClaudeQueryCore<E extends { type: string }> {
     } else {
       this.resultClean(result);
     }
+  }
+
+  /** A rolling session reconciles call reports before the ordinary result is routed. */
+  protected normalized(result: ClaudeNormalizeResult, _message: unknown): ClaudeNormalizeResult {
+    return result;
   }
 
   /** Every message, before it is routed: ids, model, activity, the session's own signals. */

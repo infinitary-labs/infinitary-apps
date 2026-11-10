@@ -10,6 +10,7 @@ import {
   type SessionSpec,
 } from "../session/session";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
+import { ClaudeCostReports } from "./claudeCostReports";
 import { ClaudeOneShotSession } from "./claudeOneShotSession";
 import {
   CLAUDE_CONTROL_PROFILE,
@@ -142,6 +143,7 @@ import { ClaudeTranscriptLookup } from "./claudeTranscript";
  * session owns a timer.
  */
 export function createClaudeSessionFactory(deps: ClaudeSessionDeps): SessionFactory {
+  deps = { ...deps, costReports: deps.costReports ?? new ClaudeCostReports() };
   const live = new Set<ClaudeRollingSession>();
   let unregisterTick: (() => void) | undefined;
   const track = (clock: SessionClock, session: ClaudeRollingSession) => {

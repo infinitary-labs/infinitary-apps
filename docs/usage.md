@@ -18,7 +18,8 @@ How it looks and reads is the design skill's `components/usage/UsageTab.prompt.m
 
 ## What the ledger records
 
-Each session's `turn_end` carries the turn's usage (`FmUsage`, `src/shared/events.ts`), and `UsageStore.record` writes it.
+Each session's `turn_end` carries reported usage (`FmUsage`, `src/shared/events.ts`), and `UsageStore.record` writes it.
+A rolling Claude session can report each completed call before its enclosing turn ends; its final result carries only the unrecorded remainder.
 A completed Pi context-shortening call carries its reported usage on the progress tool's `tool_end`, not a conversational turn end.
 The session delivers one completion per call, including manual, threshold and overflow recovery; failed, aborted and unreported calls supply no usage.
 The first mate and crewmate owners record it under the serving task, account and requested model, including calls settling while a task closes.
@@ -26,7 +27,8 @@ Usage subscribers refresh on these completions as well as ordinary replies.
 
 - **Models.**
   Claude reports a running total for every model a turn called (`modelUsage`: the main loop, subagents, compaction).
-  The normalizer (`claudeEvents.ts`) subtracts each model's last totals and reports each model's own share in `usage.models`; the ledger writes one row per model, named by the model Claude says served it, `model_source = 'served'`.
+  The normalizer (`claudeEvents.ts`) subtracts each model's last result totals and reports each model's own share in `usage.models`.
+  Local call reports (`claudeCallUsage.ts`) queue matched requests as they arrive, flush them at the next main `message_start` or result, and subtract those same counters from the result delta; the ledger writes each share once, named by the model Claude says served it, `model_source = 'served'`.
   Claude books a refusal fallback's retry under the model that answered it, so the turn a fallback happened in has a row for each model (`docs/claude-client.md`, "The model that answers").
   A reported total below its previously reported value means the client started counting over for that model, so its reported figures are the turn's own and its old baselines are discarded; a result reported twice spends nothing.
   An omitted field stays unknown for that result and retains its last known baseline until it returns, rather than resetting or charging its previous total again.
@@ -44,6 +46,30 @@ Usage subscribers refresh on these completions as well as ordinary replies.
   The summary counts a record as priced only when its cost is above zero, so an older zero is never read as free.
   Custom models borrow listed price metadata only from an exact model-id match in the local catalog (`docs/custom-api.md`); unmatched ids or unreported counts stay unavailable.
   Nothing is repriced: a record keeps the estimate it was written with.
+
+## Claude calls during a turn
+
+Rolling Claude sessions use the client's standard OpenTelemetry request-cost export, not its experimental live usage request.
+`ClaudeCostReports` (`src/core/claude/claudeCostReports.ts`) owns one lazy receiver per factory on the computer running the session, bound to `127.0.0.1` with an unguessable path per client attachment.
+The client keeps its five-second default log batching; the app makes no allowance request or transcript-history scan for these reports.
+It disables content, metric and trace exports for this app-owned path, projects only required request-cost fields, and never persists the raw export, prompts, identity metadata or endpoint secret.
+The last attachment removes its route and stops the receiver; a failed startup or malformed export never fails the model prompt.
+An existing reporting choice in the host environment, a managed reporting setting, a policy helper or an unavailable policy read keeps result-only accounting rather than overwriting that configuration (`claudeCostPolicy.ts`).
+The policy read loads no personal settings or credential.
+
+A provider request ID must join a completed SDK-streamed call to the client's price; model IDs use the existing canonical model-name owner.
+A repeated content block or export counts once, exports can arrive in either order, and settling a result forgets its pending request IDs so a late report cannot charge it again.
+A price arriving during text or a running tool is not a turn boundary; queued charges wait for the next main request or result so live text, tool records and runaway state are not cleared mid-turn.
+Result-boundary charges follow the ordinary failure classification, and cost rounding uses the client's cumulative counter scale rather than only a small turn delta.
+Counters and prices never match calls by equal amounts or arrival-time guesses.
+A resumed attachment gets a fresh receiver route and request set, without replaying earlier session-file rows.
+Calls without a usable ID or streamed completion, model-label mismatches and advisor iterations whose price cannot be split remain on the ordinary terminal path.
+The ordinary result normalizer keeps its cumulative-counter and restart rules; live recording does not replace it or fetch a second total.
+A failed or interrupted turn still records the measured calls and its final unrecorded remainder.
+
+A delivered report can trigger the existing cost-limit owner before the turn ends, but this is not a hard time or dollar ceiling.
+Batching, a missing report and the next safe stopping point can delay the hold.
+If live reporting is unavailable, the existing terminal report still records spend; if the client crashes without that report, it cannot supply the missing usage either.
 
 ## The summary
 

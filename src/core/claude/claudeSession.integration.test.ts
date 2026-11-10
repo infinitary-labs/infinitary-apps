@@ -12,6 +12,7 @@ import {
   type StubApi,
   type StubRequest,
   startStubApi,
+  writeAnthropicEvent,
   writeAnthropicToolUse,
 } from "../../../tests/helpers/anthropicDialect";
 import { clientRecords, enqueued } from "../../../tests/helpers/claudeSeatHarness";
@@ -28,14 +29,21 @@ import { appPathsFor } from "../paths";
 import type { Router } from "../routing/router";
 import type { SessionEvent } from "../session/session";
 import { CardStore } from "../storage/cardStore";
+import { CostLimitStore } from "../storage/costLimitStore";
 import { InboxStore } from "../storage/inboxStore";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
 import { UsageStore } from "../storage/usageStore";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import type { WorkspaceService } from "../workspace/workspaceService";
+import { ClaudeCostReports } from "./claudeCostReports";
 import { createNormalizerState, fmEventsFromClaudeMessage } from "./claudeEvents";
-import { CLAUDE_MODEL_PROVIDER, MessageQueue, userMessage } from "./claudeQueryCore";
+import {
+  CLAUDE_MODEL_PROVIDER,
+  type ClaudeSessionDeps,
+  MessageQueue,
+  userMessage,
+} from "./claudeQueryCore";
 import { claudeSessionOptions } from "./claudeSessionOptions";
 import { hasActiveSession, resetStoreLeasesForTest } from "./claudeStoreLease";
 import { createClaudeSessionFactory } from "./session";
@@ -97,7 +105,10 @@ afterEach(async () => {
 });
 
 /** One throwaway HOME with the boxed client in it, and Claude's factory over it. */
-function box(stubApi: StubApi = api) {
+function box(
+  stubApi: StubApi = api,
+  reporting: Pick<ClaudeSessionDeps, "costReports" | "costReportingAllowed"> = {},
+) {
   const home = scratchDir("infinitary-claude-coding-home-");
   const stub = writeMockClaudeClient(home, {
     turns: { baseUrl: stubApi.url, credential: "subscription", maxRetries: 0 },
@@ -109,6 +120,7 @@ function box(stubApi: StubApi = api) {
   const env = { PATH: process.env.PATH ?? "", HOME: home, INFINITARY_CLAUDE_CLI: stub };
   const factory = createClaudeSessionFactory({
     configDir,
+    ...reporting,
     env: () => env,
     clock: { now: () => Date.now(), register: () => () => {} },
     log: () => {},
@@ -162,6 +174,28 @@ function latestUserTurn(request: StubRequest | undefined): string {
 }
 
 describe("the client's own turns, measured on the real client", () => {
+  it("keeps resumed client usage once when the default-batched reports arrive too late (approved fallback)", async () => {
+    const b = box(api, { costReportingAllowed: async () => true });
+    api.answer((request, res) => answerText(request, res, "Forty rivets."));
+    const session = await b.factory.open(b.spec);
+    const events: SessionEvent[] = [];
+    session.subscribe((event) => events.push(event));
+    try {
+      await session.prompt("Count the port hatch rivets.");
+      await session.detach();
+      await session.prompt("Count the starboard hatch rivets.");
+      const usage = events.flatMap((event) =>
+        event.type === "turn_end" && event.usage ? [event.usage] : [],
+      );
+      expect(usage).toHaveLength(2);
+      expect(usage[0]).toMatchObject({ input: 42, output: 7, cost: expect.any(Number) });
+      expect(usage[1]).toEqual(usage[0]);
+    } finally {
+      session.dispose();
+      await session.closed();
+    }
+  });
+
   it.each([false, true])("serves Haiku 5.5 at medium, or low for Quick (%s)", async (quick) => {
     const b = box();
     const first = api.requests.length;
@@ -293,7 +327,7 @@ describe("the client's own turns, measured on the real client", () => {
  * the box's Claude factory in the box's worktree, and the real usage ledger
  * in a fresh database. The workspace is faked; nothing here is about git.
  */
-function crewOn(b: ReturnType<typeof box>) {
+function crewOn(b: ReturnType<typeof box>, limit?: number, onUsage?: () => void) {
   const paths = appPathsFor(scratchDir("infinitary-claude-crew-"));
   const db = freshDatabase();
   const tasks = new TaskService({ db, strict: true });
@@ -336,7 +370,13 @@ function crewOn(b: ReturnType<typeof box>) {
     cardStore: new CardStore(db),
     inbox: new InboxStore(db),
     paths,
-    recordUsage: (input) => usage.record({ ...input, at: Date.now() }),
+    ...(limit !== undefined
+      ? { costLimits: { store: new CostLimitStore(db), appLimit: () => ({ usd: limit }) } }
+      : {}),
+    recordUsage: (input) => {
+      usage.record({ ...input, at: Date.now() });
+      onUsage?.();
+    },
     broadcastEvent: (event) => {
       if (event.type === "tool_start") toolStarted();
     },
@@ -377,6 +417,119 @@ describe("a crewmate's turn a close cuts, on the real client", () => {
       await vi.waitFor(() => expect(hasActiveSession(configDir)).toBe(false), {
         timeout: 5_000,
       });
+    }
+  });
+
+  it("uses local reports to hold a real Claude turn before its result, with no second charge (approved local-cost direction)", async () => {
+    const receiver = new ClaudeCostReports();
+    let received!: () => void;
+    const priceReceived = new Promise<void>((resolve) => {
+      received = resolve;
+    });
+    const b = box(crewApi, {
+      costReportingAllowed: async () => true,
+      costReports: {
+        subscribe: (id, report) =>
+          receiver.subscribe(id, (cost) => {
+            report(cost);
+            received();
+          }),
+      },
+    });
+    const first = crewApi.requests.length;
+    let held: { request: StubRequest; res: ServerResponse } | undefined;
+    crewApi.answer((request, res) => {
+      if (request.n - first !== 1) {
+        held = { request, res };
+        return;
+      }
+      res.writeHead(200, {
+        "content-type": "text/event-stream",
+        "request-id": `req_cost_${request.n}`,
+      });
+      writeAnthropicEvent(res, "message_start", {
+        type: "message_start",
+        message: {
+          id: `msg_cost_${request.n}`,
+          type: "message",
+          role: "assistant",
+          model: MODEL,
+          content: [],
+          stop_reason: null,
+          stop_sequence: null,
+          usage: { input_tokens: 42, output_tokens: 0 },
+        },
+      });
+      writeAnthropicToolUse(res, 0, {
+        id: `toolu_cost_${request.n}`,
+        name: "Bash",
+        args: { command: "printf forty", description: "Count the rivets" },
+      });
+      finishAnthropicStream(res, "tool_use", 7);
+    });
+    const outstandingAtRecording: number[] = [];
+    const crew = crewOn(b, 0.00005, () => outstandingAtRecording.push(crewApi.openRequests()));
+    crews.push({ crew, configDir: b.configDir });
+    const { taskId } = await crew.supervisor.intake.commission({
+      title: "Count the rivets within the spending limit",
+      intent: { goal: "Count the rivets on the hatch.", userWords: "count the rivets" },
+    });
+    await vi.waitFor(() => expect(held).toBeDefined(), { timeout: 5_000 });
+    // A delivered price is queued, not a turn_end in the middle of work.
+    await priceReceived;
+    expect(crew.rows(taskId)).toEqual([]);
+    expect(crew.supervisor.costLimits.heldBy(taskId)).toBeUndefined();
+    if (!held) throw new Error("the next inference never arrived");
+    beginAnthropicStream(held.res, 42, held.request.n);
+    // The next main message_start flushes the predecessor's queued price.
+    await vi.waitFor(() => expect(crew.supervisor.costLimits.heldBy(taskId)).toBeDefined(), {
+      timeout: 10_000,
+    });
+    expect(outstandingAtRecording[0]).toBeGreaterThan(0);
+    const before = crew.rows(taskId);
+    expect(before).toEqual([
+      {
+        provider: CLAUDE_MODEL_PROVIDER,
+        model: MODEL,
+        input: 42,
+        output: 7,
+        cost: expect.any(Number),
+      },
+    ]);
+    expect(crew.supervisor.costLimits.heldBy(taskId)?.spentUsd).toBe(before[0]?.cost);
+    await crew.supervisor.disposeAll();
+    await vi.waitFor(() => expect(hasActiveSession(b.configDir)).toBe(false));
+    expect(crew.rows(taskId)).toEqual(before);
+    console.log(
+      "Local cost hold evidence",
+      JSON.stringify({ before, after: crew.rows(taskId), outstandingAtRecording }),
+    );
+  });
+
+  it("a failed local receiver leaves the real Claude prompt and its terminal usage working (approved fallback)", async () => {
+    const b = box(crewApi, {
+      costReportingAllowed: async () => true,
+      costReports: {
+        subscribe: async () => {
+          throw new Error("receiver unavailable");
+        },
+      },
+    });
+    crewApi.answer((request, res) => answerText(request, res, "Forty rivets."));
+    const session = await b.factory.open(b.spec);
+    const events: SessionEvent[] = [];
+    session.subscribe((event) => events.push(event));
+    try {
+      await session.prompt("Count the rivets.");
+      expect(events.some((event) => event.type === "turn_failed")).toBe(false);
+      const usage = events.flatMap((event) =>
+        event.type === "turn_end" && event.usage ? [event.usage] : [],
+      );
+      expect(usage).toHaveLength(1);
+      expect(usage[0]).toMatchObject({ input: 42, output: 7, cost: expect.any(Number) });
+    } finally {
+      session.dispose();
+      await session.closed();
     }
   });
 

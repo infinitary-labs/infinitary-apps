@@ -1,10 +1,11 @@
-import { askedFromAView } from "./askedFromAView";
+import { askedFromAView, askingViewLists } from "./askedFromAView";
 import type { CoreServices } from "./coreServices";
 import { type CoreDispatch, createCoreDispatcher } from "./dispatcher";
 import { CoreEventBus } from "./events";
 import type { HostCapabilities } from "./host";
 import type { AppPaths } from "./paths";
 import { createServices } from "./services";
+import { SIGN_IN_RETURN, SIGN_IN_RETURN_WORDS, SignInReturns } from "./signInReturns";
 import { recordStartAtLogin } from "./storage/startAtLoginRecord";
 
 /**
@@ -43,17 +44,32 @@ export type CoreOptions = {
 
 export async function startCore(given: HostCapabilities, options: CoreOptions = {}): Promise<Core> {
   const events = new CoreEventBus();
+  const signInReturns = new SignInReturns();
+  const elsewhere = () => options.startedByCommand === true || askedFromAView();
   const host: HostCapabilities = {
     ...given,
     openExternal: async (url) =>
-      options.startedByCommand || askedFromAView()
-        ? events.emit("inf:app:open-page", { url })
-        : given.openExternal(url),
+      elsewhere() ? events.emit("inf:app:open-page", { url }) : given.openExternal(url),
+    // A sign-in page whose browser comes back to this computer's loopback
+    // address goes to the computers that control it with its port, so the
+    // one the person is at catches the return and hands it here (docs/view.md,
+    // "A sign-in that returns to the first mate's computer").
+    openSignInPage: async (url, to) => {
+      if (!elsewhere()) return given.openExternal(url);
+      if (askedFromAView() && !askingViewLists(SIGN_IN_RETURN))
+        throw new Error(SIGN_IN_RETURN_WORDS.updateHere);
+      const id = signInReturns.open(to);
+      to.ended.addEventListener("abort", () => events.emit("inf:app:sign-in-ended", { id }), {
+        once: true,
+      });
+      events.emit("inf:app:sign-in-page", { url, id, port: to.port });
+    },
   };
   const services = await createServices(host, events.emit);
   const dispatch = createCoreDispatcher({
     services,
     host,
+    signInReturns,
     emit: events.emit,
     onActionRecorded: (id, action, value) =>
       services.firstmate.appActionRecorded(id, action, value),

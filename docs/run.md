@@ -129,7 +129,8 @@ Another computer's Infinitary that joins a first mate a command started controls
 What is left to a command's own first mate is its window's absence:
 
 - **Pages it would open.**
-  Every page such a first mate would open in a browser, a sign-in's consent page included, goes to each computer that controls it as the push `inf:app:open-page` (`startCore`'s `startedByCommand`, `src/core/index.ts`), since nobody sits at its computer; `docs/view.md`, "Pages it would open", says what the view does with it.
+  Every page such a first mate would open in a browser goes to each computer that controls it as the push `inf:app:open-page` (`startCore`'s `startedByCommand`, `src/core/index.ts`), since nobody sits at its computer; `docs/view.md`, "Pages it would open", says what the view does with it.
+  Google's sign-in page goes as `inf:app:sign-in-page` instead, so that computer can pass the browser's return back (`docs/view.md`, "A sign-in that returns to the first mate's computer").
 - **General.**
   General leaves out that computer's Start at login, Dock, dictation and panels, which are its own and have nobody there, as on any view.
 - **First launch.**
@@ -178,7 +179,6 @@ With FileVault on, a Mac starts nothing until someone unlocks its disk at boot.
 
 The rest of INF-1228's plan follows in order, each on its own: from another computer, its computers and phones, through the same pairing (piece 6).
 A task's browser is shown and taken over from another computer as from the first mate's own (`docs/view.md`, "A task's browser on a view").
-Google's sign-in from another computer waits too: its page sends the browser back to the first mate's own loopback address.
 Claude signs in only where someone is logged in: a Mac nobody is logged in to keeps Claude's login locked in its Keychain, and the crew there uses other subscriptions (captain's pick on question 3).
 Moving an existing record to another account is planned separately (question 7).
 

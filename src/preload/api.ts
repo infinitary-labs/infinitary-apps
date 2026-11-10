@@ -658,6 +658,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
           invoke("inf:integrations:sign-in", kind, consent),
         ),
       cancelSignIn: () => invoke("inf:integrations:sign-in-cancel"),
+      signInReturn: (id, address) => invoke("inf:integrations:sign-in-return", { id, address }),
       linkInbox: () => invoke("inf:integrations:inbox-link"),
       configure: (id, patch) => invoke("inf:integrations:configure", id, patch),
       rule: (id, action, allowed) => invoke("inf:integrations:rule", id, action, allowed),

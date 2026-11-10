@@ -53,6 +53,8 @@ const PUSHES: Record<Exclude<CorePushChannel, "inf:event">, ReadApi["onPush"]> =
   // (docs/task-browser.md, "The view"): no read names it; the browser view
   // subscribes directly.
   "inf:browser:frame": (_channel, listener) => window.infinitary.browser.onFrame(listener),
+  "inf:app:sign-in-page": () => () => {},
+  "inf:app:sign-in-ended": () => () => {},
   "inf:auth:prompt": (_channel, listener) => window.infinitary.auth.onPrompt(listener),
   "inf:auth:notice": (_channel, listener) => window.infinitary.auth.onNotice(listener),
   // Personal extensions (talk-to-personalize Step 2): no read names these

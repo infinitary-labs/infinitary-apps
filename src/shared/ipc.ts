@@ -263,6 +263,25 @@ export type RecordedKey = z.infer<typeof recordedKeySchema>;
 /** A page to open in a browser, by its address (`inf:app:open-page`). */
 export const openPageSchema = z.object({ url: z.string().min(1).max(4096) }).strict();
 
+/** A return's id, as the first mate's computer names a waiting sign-in's (`sign-in-return.md`). */
+export const signInReturnIdSchema = z.string().min(1).max(64);
+
+/**
+ * A sign-in page whose browser comes back to the first mate's computer's
+ * loopback address at `port`, and the return's id
+ * (`inf:app:sign-in-page`, `sign-in-return.md`).
+ */
+export const signInPageSchema = z
+  .object({
+    url: z.string().min(1).max(4096),
+    id: signInReturnIdSchema,
+    port: z.number().int().min(1).max(65_535),
+  })
+  .strict();
+
+/** The sign-in a return waited for stopped waiting (`inf:app:sign-in-ended`). */
+export const signInEndedSchema = z.object({ id: signInReturnIdSchema }).strict();
+
 /** Push channels (main to renderer). Payloads are validated in the preload. */
 export const pushContract = {
   "inf:secrets:changed": { payload: z.object({}), surface: "core" },
@@ -342,6 +361,12 @@ export const pushContract = {
   // sits at its computer: each computer that controls it opens the page
   // instead (docs/view.md, "Pages it would open").
   "inf:app:open-page": { payload: openPageSchema, surface: "core" },
+  // A sign-in page whose browser comes back to the first mate's own loopback
+  // address, for each computer that controls it to open and catch its return
+  // at that port, until the sign-in ends (docs/view.md, "A sign-in that
+  // returns to the first mate's computer").
+  "inf:app:sign-in-page": { payload: signInPageSchema, surface: "core" },
+  "inf:app:sign-in-ended": { payload: signInEndedSchema, surface: "core" },
 } as const;
 
 export type PushChannel = keyof typeof pushContract;

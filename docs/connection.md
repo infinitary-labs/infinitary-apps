@@ -108,6 +108,7 @@ A computer that runs work asks its work requests again after a drop under the sa
 Every core channel of the contract (`src/shared/ipc.ts`, with its groups of channels in `src/shared/channels/`) declares its `reach`, and the type of the contract refuses one that does not.
 A view of any first mate, with its window or started by a command, asks everything but what stays with that first mate's computer (`reach: "home"`): its computers and phones and the addresses they find it at, Secrets but the three a remote decision needs, and what is only ever that computer's own (look, dictation, voice model, panels and their data, Knowledge, Observe, SQL, release notes, Dock and update).
 A page the first mate would open in a browser for a view's request goes to its views as the push `inf:app:open-page`, and a first mate started by a command, with nobody at its computer, sends every such page that way.
+A sign-in whose browser returns to the first mate's own loopback address goes as `inf:app:sign-in-page` instead, and the view passes the return back with `inf:integrations:sign-in-return` (`docs/view.md`, "A sign-in that returns to the first mate's computer").
 `src/shared/ipc.test.ts` pins the list, so widening it is deliberate.
 
 ## Live pushes

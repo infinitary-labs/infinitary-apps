@@ -1,3 +1,4 @@
+import { createServer, type Server } from "node:http";
 import type { BrowserViewer } from "@core/browser/browserViews";
 import { BROWSER_FROM_ANY_VIEW, EVERY_VIEW_ASKS } from "@core/connection/connection";
 import { listsChange } from "@core/connection/contractChanges";
@@ -5,6 +6,7 @@ import { HomeLink, type HomeLinkOptions, type HomeLinkState } from "@core/device
 import type { Joined, JoinedHome } from "@core/devices/joinedHome";
 import type { HostNotifications } from "@core/host";
 import { CardNotifier } from "@core/notifications";
+import { SIGN_IN_RETURN } from "@core/signInReturns";
 import type { UpdateChecker } from "@core/update/updateChecker";
 import { cardsSnapshotSchema } from "@shared/cards";
 import { sideToUpdate } from "@shared/contractFeatures";
@@ -18,6 +20,8 @@ import {
   PROTOCOL_VERSION,
   type PushChannel,
   parseInvokeRequest,
+  signInEndedSchema,
+  signInPageSchema,
 } from "@shared/ipc";
 import { readKeepingUnknown } from "@shared/openLists";
 import { type ShellPreferences, shellPreferencesSchema } from "@shared/preferences";
@@ -114,6 +118,13 @@ export type ViewBackendOptions = {
    * opened there (`inf:app:open-page`). Absent, such a page is not opened.
    */
   openPage?: (url: string) => Promise<void>;
+  /**
+   * The loopback address this computer catches a sign-in's return on
+   * (docs/view.md, "A sign-in that returns to the first mate's computer"):
+   * 127.0.0.1, as the provider sends the browser there; a test playing two
+   * computers on one Linux PC gives another of its own addresses.
+   */
+  returnHost?: string;
   /** Opens the link to the other Mac; tests stand in their own. */
   link?: (options: HomeLinkOptions) => Link;
   /**
@@ -142,6 +153,8 @@ export class ViewBackend {
    */
   private readonly watching = new Map<string, Map<BrowserViewer, TaskBrowserSize | null>>();
   private readonly viewers = new WeakSet<BrowserViewer>();
+  /** The sign-in there whose return this computer waits for, and its listener while it has one. */
+  private signInReturn: { id: string; caught: boolean; server: Server | null } | null = null;
 
   constructor(private readonly options: ViewBackendOptions) {
     this.joined = options.joined;
@@ -163,6 +176,8 @@ export class ViewBackend {
       onPush: (channel, payload, replayed) => {
         if (channel === "inf:cards") this.observeCards(payload);
         if (channel === "inf:app:open-page") this.openPage(payload, replayed);
+        if (channel === "inf:app:sign-in-page") void this.openSignInPage(payload, replayed);
+        if (channel === "inf:app:sign-in-ended") this.signInEnded(payload);
         if (VIEW_PUSHES.has(channel as PushChannel))
           options.broadcast(channel as PushChannel, payload);
       },
@@ -178,6 +193,8 @@ export class ViewBackend {
         // nothing: the missed pushes follow, and a card that became ready
         // while this Mac could not hear it is news.
         if (catchUp === "reload") {
+          // Whether the sign-in there still waits is not known: its page again starts anew.
+          this.endSignInReturn();
           this.notifier.forget();
           void this.seedNotifier();
           this.caughtUp += 1;
@@ -207,6 +224,12 @@ export class ViewBackend {
         ? { needsUpdateThere: true as const }
         : {}),
       ...(this.browserWaitsThere() ? { browserNeedsUpdateThere: true as const } : {}),
+      ...(state.homeChanges !== null && !listsChange(state.homeChanges, SIGN_IN_RETURN)
+        ? { returnsNeedUpdateThere: true as const }
+        : {}),
+      ...(this.signInReturn
+        ? { signInReturn: { id: this.signInReturn.id, caught: this.signInReturn.caught } }
+        : {}),
     };
   }
 
@@ -288,6 +311,8 @@ export class ViewBackend {
     if (this.disposed) return;
     this.disposed = true;
     this.watching.clear();
+    this.signInReturn?.server?.close();
+    this.signInReturn = null;
     this.link.close();
   }
 
@@ -408,6 +433,95 @@ export class ViewBackend {
     });
   }
 
+  /**
+   * A sign-in page whose browser comes back to the other computer's loopback
+   * address (docs/view.md, "A sign-in that returns to the first mate's
+   * computer"): this computer listens on the same port of its own, then
+   * opens the page here. What the browser brings back goes to the other
+   * computer, and its answer back to the browser. When the port is taken
+   * here, Settings asks for the address the browser ended on instead.
+   */
+  private async openSignInPage(payload: unknown, replayed: boolean): Promise<void> {
+    if (replayed || !this.options.openPage || this.disposed) return;
+    const page = signInPageSchema.safeParse(payload);
+    if (!page.success) return;
+    this.endSignInReturn();
+    const { id, port, url } = page.data;
+    const waiting: { id: string; caught: boolean; server: Server | null } = {
+      id,
+      caught: false,
+      server: null,
+    };
+    this.signInReturn = waiting;
+    const server = createServer((request, response) => {
+      if (request.method !== "GET") {
+        response.writeHead(405, { connection: "close" }).end();
+        return;
+      }
+      void this.handBack(waiting, request.url ?? "/").then(({ status, page: answer }) => {
+        response.writeHead(status, {
+          "content-type": "text/html; charset=utf-8",
+          connection: "close",
+        });
+        response.end(answer);
+      });
+    });
+    waiting.caught = await new Promise<boolean>((resolve) => {
+      server.once("error", () => resolve(false));
+      server.listen(port, this.options.returnHost ?? "127.0.0.1", () => resolve(true));
+    });
+    if (this.signInReturn !== waiting) {
+      server.close();
+      return;
+    }
+    if (waiting.caught) waiting.server = server;
+    this.changed();
+    void this.options.openPage(url).catch(() => {
+      // The sign-in's own steps still offer its page again.
+    });
+  }
+
+  /** Hands the browser's return to the other computer, answering the page it said. */
+  private async handBack(
+    waiting: { id: string; caught: boolean; server: Server | null },
+    address: string,
+  ): Promise<{ status: number; page: string }> {
+    try {
+      const answer = (await this.link.invoke("inf:integrations:sign-in-return", [
+        { id: waiting.id, address },
+      ])) as InvokeResponse<"inf:integrations:sign-in-return">;
+      // Taken once: nothing else reaches the other computer through here.
+      if (answer.status === 200) {
+        waiting.server?.close();
+        waiting.server = null;
+      }
+      return answer;
+    } catch (refusal) {
+      // Out of reach, or no longer waiting: Settings asks for the address.
+      if (this.signInReturn === waiting && waiting.caught) {
+        waiting.caught = false;
+        this.changed();
+      }
+      return { status: 502, page: returnLostPage((refusal as Error).message) };
+    }
+  }
+
+  /** The sign-in there stopped waiting: this computer stops listening for it. */
+  private signInEnded(payload: unknown): void {
+    const ended = signInEndedSchema.safeParse(payload);
+    if (!ended.success || this.signInReturn?.id !== ended.data.id) return;
+    this.endSignInReturn();
+  }
+
+  private endSignInReturn(): void {
+    const waiting = this.signInReturn;
+    if (!waiting) return;
+    this.signInReturn = null;
+    waiting.server?.close();
+    waiting.server?.closeAllConnections();
+    this.changed();
+  }
+
   private observeCards(payload: unknown): void {
     const cards = readKeepingUnknown(cardsSnapshotSchema, payload);
     if (cards.success) this.notifier.observe(cards.data);
@@ -516,6 +630,16 @@ export class ViewBackend {
       this.pictureBytes -= kept.byteLength;
     }
   }
+}
+
+/**
+ * The page the browser shows when its return could not reach the first
+ * mate's computer: what happened, and the way through Settings.
+ */
+function returnLostPage(why: string): string {
+  const words = `${why} If Infinitary is still waiting, copy this page's address and paste it in Settings, Integrations.`;
+  const escaped = words.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`);
+  return `<!doctype html><meta charset="utf-8"><title>Infinitary</title><body style="font:15px system-ui;margin:3em">${escaped}</body>`;
 }
 
 /** Whether the two Firstmates are too far apart for this Mac to make changes, and which is newer. */

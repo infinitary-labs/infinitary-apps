@@ -1010,7 +1010,11 @@ describe("the home's connection", () => {
       "asked only by a computer that runs work",
     );
     expect(windowed.asked.map((ask) => ask.channel)).toEqual(["inf:settings:routing:set"]);
-    expect(windowed.asked[0]?.actor).toEqual({ kind: "captain", view: grant.deviceId });
+    expect(windowed.asked[0]?.actor).toEqual({
+      kind: "captain",
+      view: grant.deviceId,
+      viewChanges: [contractChange("every-view-asks")],
+    });
   });
 
   // `every-view-asks.md`: a view from before the change waits for this field before it asks.

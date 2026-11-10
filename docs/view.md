@@ -103,8 +103,24 @@ A page the first mate would open in a browser for a view's request, such as a si
 A page the first mate's own window asks for opens on that computer, as a command's first mate has none and sends all of them to its views (`docs/run.md`, "Control from another computer").
 A Claude sign-in asked from a view runs the client with no browser on the first mate's computer, and the link the client prints opens on the view instead (`loginWithBrowser`, `src/core/claude/claudeAuth.ts`).
 A sign-in that shows a code or asks for a pasted answer shows it on this computer as in the window.
-A sign-in whose page sends the browser back to the first mate's own loopback address finishes only when that browser runs on the same computer, or through the sign-in's code or a pasted address where the provider offers one.
-Google has neither, so its notice on a view says to sign in on the first mate's computer for now (`googleOnFirstMateWords`); the button stays, because a view on that same computer finishes.
+A sign-in whose page sends the browser back to the first mate's own loopback address, as Google's does, comes back through this computer ("A sign-in that returns to the first mate's computer" below).
+
+## A sign-in that returns to the first mate's computer
+
+Google's sign-in for an installed app sends the browser back to `127.0.0.1` at a port the first mate's computer listens on, which reaches nothing on another computer (INF-3454's plan, the captain's answer direction=catch-here).
+So a sign-in asked from a view hands the view its page and the port, as the push `inf:app:sign-in-page` with a return id, in place of `inf:app:open-page` (`openSignInPage`, `src/core/index.ts`).
+The view listens on the same port of its own loopback address, opens the page once, and passes the path and query the browser brings back to the first mate's computer (`inf:integrations:sign-in-return`, `ViewBackend.openSignInPage`).
+The first mate's computer hands it only to its own waiting sign-in's port, only with GET, and only once: a return the sign-in took with 200 spends the id, and one that ended or was cancelled refuses it (`SignInReturns`, `src/core/signInReturns.ts`).
+Only the one-time code and the sign-in's state cross, and the code is useless without the check the waiting sign-in keeps; Google's keys stay on the first mate's computer.
+The browser then shows the sign-in's own page, passed back as it answered, and the view stops listening.
+
+When the view cannot listen on that port, such as when the first mate runs on the same computer, or the first mate's computer refused what it passed on, Settings → Integrations asks for the address the browser ended on (`RETURN_PASTE_WORDS`, `src/renderer/src/devices/viewWords.ts`).
+A pasted address gives only its path and query; its host and port are never used, and anything but an `http` loopback address is refused.
+The wait ends with the push `inf:app:sign-in-ended`, whatever ended the sign-in, and the field goes with it; a reconnect that reads everything again clears it too, while one that replays what it missed keeps it and keeps listening.
+A browser that comes back while the connection is down is not passed on, since a request that changes something is refused while the first mate's computer is out of reach: the browser shows a page saying it could not reach that computer, and Settings asks for the address.
+A first mate that does not list the `sign-in-return` contract change sends the view nothing for this sign-in, so the view's Google notice says to update that computer and its accept stays off (`googleUpdateThereWords`).
+A view that does not list it is refused before any page opens, with words saying to update the view; the first mate's own window, and a first mate started by a command, sign in as before at home.
+A development run may set the loopback address the view listens on with `INFINITARY_SIGN_IN_RETURN_HOST`, so two development runs on one Linux PC each play a computer of their own; a packaged app ignores it.
 
 ## A first mate on an older version
 

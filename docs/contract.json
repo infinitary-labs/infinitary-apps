@@ -20328,6 +20328,55 @@
         ]
       }
     },
+    "inf:integrations:sign-in-return": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "address": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              }
+            },
+            "required": [
+              "id",
+              "address"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer",
+            "minimum": 100,
+            "maximum": 599
+          },
+          "page": {
+            "type": "string",
+            "maxLength": 16384
+          }
+        },
+        "required": [
+          "status",
+          "page"
+        ]
+      }
+    },
     "inf:integrations:sign-in-cancel": {
       "effect": "change",
       "reach": "views",
@@ -69546,6 +69595,48 @@
         },
         "required": [
           "url"
+        ]
+      }
+    },
+    "inf:app:sign-in-page": {
+      "payload": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "port": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535
+          }
+        },
+        "required": [
+          "url",
+          "id",
+          "port"
+        ]
+      }
+    },
+    "inf:app:sign-in-ended": {
+      "payload": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        },
+        "required": [
+          "id"
         ]
       }
     }

@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createServer, type Server } from "node:http";
+import type { SignInReturnTo } from "../../../signInReturns";
 import type { GoogleClient, GoogleEndpoints } from "./client";
 
 /**
@@ -11,6 +12,10 @@ import type { GoogleClient, GoogleEndpoints } from "./client";
  * state ties the browser's answer to this page; anything else that reaches
  * the listener is turned away. The listener closes as soon as the browser
  * answers, or the sign-in is cancelled.
+ *
+ * The page may open on another computer that controls this first mate: it
+ * is told the port, catches the browser's return there and hands it to this
+ * listener (src/core/signInReturns.ts), until the sign-in ends.
  */
 
 /** What Google issued: kept by the binding in the integration's key store, never shown. */
@@ -27,8 +32,11 @@ export type LoopbackSignInOptions = {
   client: GoogleClient;
   endpoints: GoogleEndpoints;
   scopes: readonly string[];
-  /** Opens the consent page in the person's browser. */
-  open: (url: string) => Promise<void>;
+  /**
+   * Opens the consent page in the person's browser, saying the port the
+   * browser comes back to and when the sign-in stops waiting.
+   */
+  open: (url: string, to: SignInReturnTo) => Promise<void>;
   signal: AbortSignal;
   now: () => number;
   fetch?: typeof fetch;
@@ -57,6 +65,7 @@ export async function signInOnLoopback(options: LoopbackSignInOptions): Promise<
   const challenge = base64url(createHash("sha256").update(verifier).digest());
   const state = base64url(randomBytes(16));
   const server = createServer();
+  const ended = new AbortController();
   try {
     const port = await listen(server, options.signal);
     const redirectUri = `http://127.0.0.1:${port}`;
@@ -77,10 +86,11 @@ export async function signInOnLoopback(options: LoopbackSignInOptions): Promise<
     const answered = waitForCode(server, state, options.signal);
     // A cancel while the page is still opening is read below, not lost.
     answered.catch(() => {});
-    await options.open(consent.href);
+    await options.open(consent.href, { port, ended: ended.signal });
     const code = await answered;
     return await exchange(options, code, verifier, redirectUri);
   } finally {
+    ended.abort();
     server.close();
     server.closeAllConnections();
   }

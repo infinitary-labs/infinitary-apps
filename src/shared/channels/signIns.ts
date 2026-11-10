@@ -351,6 +351,21 @@ export const signInChannels = {
     request: z.tuple([integrationKindSchema, integrationSignInConsentSchema.optional()]),
     response: z.object({ id: integrationIdSchema, view: integrationsViewSchema }).strict(),
   },
+  // What the browser brought back to a sign-in's return on the computer the
+  // person is at, as its path, or the address it ended on, pasted: handed to
+  // the port that sign-in listens on, once, with the page it answered
+  // (`sign-in-return.md`).
+  "inf:integrations:sign-in-return": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([
+      z.object({ id: z.string().min(1).max(64), address: z.string().min(1).max(4096) }).strict(),
+    ]),
+    response: z
+      .object({ status: z.number().int().min(100).max(599), page: z.string().max(16_384) })
+      .strict(),
+  },
   "inf:integrations:sign-in-cancel": {
     effect: "change",
     surface: "core",

@@ -1606,6 +1606,8 @@ export type ActionActor =
       projectBefore?: unknown;
       /** The paired view (a phone, or a Mac that controls this one) that asked, by its device id. */
       view?: string;
+      /** The contract changes that paired view's hello listed, as its connection heard them. */
+      viewChanges?: readonly string[];
     }
   | {
       kind: "firstmate";

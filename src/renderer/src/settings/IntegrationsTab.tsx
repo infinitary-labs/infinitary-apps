@@ -26,7 +26,12 @@ import { type FormEvent, useCallback, useEffect, useId, useRef, useState } from 
 import { useCopyCode } from "../accounts/CopyCode";
 import { useShellStore } from "../app/store";
 import { Badge, Button, Input, RowMenu, StatusDot, type StatusDotTone, Switch } from "../design";
-import { googleOnFirstMateWords, isView } from "../devices/viewWords";
+import {
+  googleUpdateThereWords,
+  isView,
+  RETURN_PASTE_WORDS,
+  type ViewMac,
+} from "../devices/viewWords";
 import "./integrations.css";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 import { forgeRowView, HostChip, plusIcon, SignInAside, useForgeHostSignIn } from "./ForgeSection";
@@ -276,11 +281,26 @@ export function IntegrationsTab() {
       githubCli={forges.githubCli === true}
     />
   );
+  // On a computer that controls a first mate, a return this computer could
+  // not catch is pasted instead (docs/view.md, "A sign-in that returns to the
+  // first mate's computer").
+  const uncaught =
+    isView(thisMac) && thisMac.signInReturn && !thisMac.signInReturn.caught
+      ? { mac: thisMac, id: thisMac.signInReturn.id }
+      : null;
   const browserAside = browser && (
     <div className="fm-connect-aside fm-forges-aside" data-integration-signing-in={browser}>
       <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>
         {INTEGRATIONS_BROWSER_SIGN_IN_WORDS.waiting(INTEGRATION_KIND_NAMES[browser])}
       </div>
+      {uncaught && (
+        <ReturnPaste
+          key={uncaught.id}
+          mac={uncaught.mac}
+          id={uncaught.id}
+          name={INTEGRATION_KIND_NAMES[browser]}
+        />
+      )}
       <div className="fm-forges-aside-actions">
         <Button variant="secondary" size="sm" onClick={() => signInAgain(browser)}>
           {INTEGRATIONS_BROWSER_SIGN_IN_WORDS.again}
@@ -296,8 +316,8 @@ export function IntegrationsTab() {
     <IntegrationNoticeAside
       kind={notice}
       notice={noticeWords}
-      {...(notice === "google" && isView(thisMac)
-        ? { there: googleOnFirstMateWords(thisMac) }
+      {...(notice === "google" && isView(thisMac) && thisMac.returnsNeedUpdateThere
+        ? { there: googleUpdateThereWords(thisMac) }
         : {})}
       onAccept={() => acceptNotice(notice)}
       onCancel={cancelNotice}
@@ -496,7 +516,10 @@ function IntegrationNoticeAside({
 }: {
   kind: IntegrationKind;
   notice: IntegrationNotice;
-  /** On a computer that controls a first mate: what this sign-in needs there. */
+  /**
+   * On a computer that controls a first mate too old to take this sign-in
+   * from here: the update it needs, in place of the accept.
+   */
   there?: string;
   onAccept: () => void;
   onCancel: () => void;
@@ -541,7 +564,7 @@ function IntegrationNoticeAside({
         ))}
         <p className="fm-integrations-notice-closing">{notice.closing}</p>
         <div className="fm-forges-aside-actions">
-          <Button variant="primary" size="sm" onClick={onAccept}>
+          <Button variant="primary" size="sm" onClick={onAccept} disabled={there !== undefined}>
             {notice.accept}
           </Button>
           <Button variant="ghost" size="sm" onClick={onCancel}>
@@ -550,6 +573,63 @@ function IntegrationNoticeAside({
         </div>
       </section>
     </div>
+  );
+}
+
+/**
+ * The address the browser ended on, pasted, for a sign-in whose return this
+ * computer could not catch: sent to the first mate's computer, which hands
+ * it to the waiting sign-in; its refusal shows under the field.
+ */
+function ReturnPaste({ mac, id, name }: { mac: ViewMac; id: string; name: string }) {
+  const [typed, setTyped] = useState("");
+  const [sending, setSending] = useState(false);
+  const [refusal, setRefusal] = useState<string | null>(null);
+  const send = (event: FormEvent) => {
+    event.preventDefault();
+    if (!typed.trim()) return;
+    setSending(true);
+    setRefusal(null);
+    window.infinitary.integrations
+      .signInReturn(id, typed.trim())
+      .then(({ status }) => {
+        if (status !== 200) setRefusal(RETURN_PASTE_WORDS.refused);
+      })
+      .catch((caught: unknown) =>
+        setRefusal(caught instanceof Error ? caught.message : String(caught)),
+      )
+      .finally(() => setSending(false));
+  };
+  return (
+    <form data-integration-return-paste="" onSubmit={send}>
+      <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}>
+        {RETURN_PASTE_WORDS.lead(name)}
+      </div>
+      <div
+        style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 8 }}
+      >
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <Input
+            mono
+            value={typed}
+            placeholder={RETURN_PASTE_WORDS.placeholder}
+            onChange={(event) => setTyped(event.target.value)}
+            aria-label={RETURN_PASTE_WORDS.label(name)}
+          />
+        </div>
+        <Button variant="primary" size="sm" type="submit" disabled={!typed.trim() || sending}>
+          {RETURN_PASTE_WORDS.send(mac)}
+        </Button>
+      </div>
+      {refusal && (
+        <div
+          role="alert"
+          style={{ fontSize: "var(--text-sm)", color: "var(--danger)", marginTop: 8 }}
+        >
+          {refusal}
+        </div>
+      )}
+    </form>
   );
 }
 

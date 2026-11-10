@@ -18,13 +18,14 @@ import {
   devicesNotHereWords,
   doneThereWords,
   firstMatePlace,
-  googleOnFirstMateWords,
+  googleUpdateThereWords,
   JOIN_RUNS_WORK,
   joinRefusalWords,
   leftLine,
   namedNoticeWords,
   notSentWords,
   pillWords,
+  RETURN_PASTE_WORDS,
   sectionWaitsForUpdate,
   topLine,
   type ViewMac,
@@ -128,10 +129,18 @@ describe("controlling another Mac", () => {
     expect(sectionWaitsForUpdate(PRO, {})).toBe(false);
   });
 
-  // The captain's answer on the same review: Google's page returns to the first mate's computer.
-  it("says Google's sign-in must be done on the first mate's computer for now", () => {
-    expect(googleOnFirstMateWords(PRO)).toContain("Sign in to Google on MacBook Pro for now.");
-    expect(googleOnFirstMateWords(PRO)).not.toMatch(NEVER);
+  // INF-3454's plan, the captain's answer direction=catch-here: a first mate too old to take
+  // Google's return from here is named, before any page opens, and so is the paste.
+  it("names the first mate's computer to update for Google, and the address to paste", () => {
+    expect(googleUpdateThereWords(PRO)).toContain("Update Infinitary on MacBook Pro");
+    for (const words of [
+      googleUpdateThereWords(PRO),
+      RETURN_PASTE_WORDS.lead("Google"),
+      RETURN_PASTE_WORDS.send(PRO),
+      RETURN_PASTE_WORDS.refused,
+    ])
+      expect(words).not.toMatch(NEVER);
+    expect(RETURN_PASTE_WORDS.send(PRO)).toContain("MacBook Pro");
   });
 
   // INF-1352's plan, the captain's answer one_rule=every-view: a button that opens Settings

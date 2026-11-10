@@ -1,3 +1,4 @@
+import { createServer } from "node:http";
 import { userInfo } from "node:os";
 import { join } from "node:path";
 import { type BrowserViewer, BrowserViews } from "@core/browser/browserViews";
@@ -87,6 +88,8 @@ async function otherMac(
     watchers: (taskId: string) => pages.sinks.get(taskId)?.size ?? 0,
   };
   const views = new BrowserViews(() => pages as never);
+  /** What a sign-in's return from another computer brought here, as each was handed on. */
+  const returns: unknown[] = [];
   const dispatch = (async (channel, args, _actor, viewer) => {
     asked.push(channel);
     if (viewer && channel === "inf:browser:watch")
@@ -101,6 +104,10 @@ async function otherMac(
       return { ok: true };
     }
     if (channel === "inf:cards:list") return stage.cards;
+    if (channel === "inf:integrations:sign-in-return") {
+      returns.push((args as unknown[])[0]);
+      return { status: 200, page: "Signed in to Google." };
+    }
     if (channel === "inf:settings:notifications:get") return stage.notifications;
     if (channel === "inf:app:healthcheck")
       return {
@@ -141,6 +148,7 @@ async function otherMac(
     asked,
     stage,
     pages,
+    returns,
     events,
     pairing,
     at,
@@ -588,7 +596,11 @@ describe("the app as a view of another Mac", () => {
     await air.shell.join(await older.link());
     await air.until(() => air.view().contact === "in-reach");
     await air.until(() => air.shell.thisMac().role === "view");
-    expect(air.shell.thisMac()).toMatchObject({ role: "view", needsUpdateThere: true });
+    expect(air.shell.thisMac()).toMatchObject({
+      role: "view",
+      needsUpdateThere: true,
+      returnsNeedUpdateThere: true,
+    });
 
     const current = await otherMac();
     const pro = shell();
@@ -596,6 +608,63 @@ describe("the app as a view of another Mac", () => {
     await pro.shell.join(await current.link());
     await pro.until(() => pro.view().contact === "in-reach");
     expect(pro.shell.thisMac()).not.toHaveProperty("needsUpdateThere");
+    expect(pro.shell.thisMac()).not.toHaveProperty("returnsNeedUpdateThere");
+  });
+
+  // INF-3454's plan, the captain's answer direction=catch-here: a sign-in page whose browser
+  // comes back to the other computer's loopback address is caught here at its port and
+  // handed back; when the port is taken here, the window asks for the address instead.
+  it("catches a sign-in's return at its port here and hands it to the other computer, once", async () => {
+    const pro = await otherMac();
+    const air = shell();
+    await air.shell.start();
+    await air.shell.join(await pro.link());
+    await air.until(() => air.view().contact === "in-reach");
+
+    const port = await claimedPort();
+    const page = "https://accounts.google.com/o/oauth2/v2/auth?client_id=app";
+    pro.events.emit("inf:app:sign-in-page", { url: page, id: "return-1", port });
+    await air.until(() => air.opened.includes(page));
+    expect(air.view().signInReturn).toEqual({ id: "return-1", caught: true });
+    expect(air.pushes.map((push) => push.channel)).not.toContain("inf:app:sign-in-page");
+
+    // The browser here comes back from Google's page.
+    const back = await fetch(`http://127.0.0.1:${port}/?state=s1&code=4%2F0Aan&scope=gmail`);
+    expect(back.status).toBe(200);
+    expect(await back.text()).toBe("Signed in to Google.");
+    expect(pro.returns).toEqual([
+      { id: "return-1", address: "/?state=s1&code=4%2F0Aan&scope=gmail" },
+    ]);
+    // Taken once: nothing more reaches the other computer through here.
+    await expect(fetch(`http://127.0.0.1:${port}/?state=s1&code=again`)).rejects.toThrow();
+    expect(pro.returns).toHaveLength(1);
+
+    pro.events.emit("inf:app:sign-in-ended", { id: "return-1" });
+    await air.until(() => air.view().signInReturn === undefined);
+  });
+
+  it("asks for the address when something here already holds the sign-in's port", async () => {
+    const pro = await otherMac();
+    const air = shell();
+    await air.shell.start();
+    await air.shell.join(await pro.link());
+    await air.until(() => air.view().contact === "in-reach");
+
+    const holder = createServer((_request, response) => response.end("someone else"));
+    const port = await claimedPort();
+    await new Promise<void>((resolve) => holder.listen(port, "127.0.0.1", resolve));
+    stops.push(() => new Promise<void>((resolve) => holder.close(() => resolve())));
+    const page = "https://accounts.google.com/o/oauth2/v2/auth?client_id=app&taken";
+    pro.events.emit("inf:app:sign-in-page", { url: page, id: "return-2", port });
+    await air.until(() => air.opened.includes(page));
+    expect(air.view().signInReturn).toEqual({ id: "return-2", caught: false });
+    // The program that holds it still answers its own, and nothing is handed on.
+    expect(await (await fetch(`http://127.0.0.1:${port}/`)).text()).toBe("someone else");
+    expect(pro.returns).toEqual([]);
+
+    // The sign-in's end there clears the ask here.
+    pro.events.emit("inf:app:sign-in-ended", { id: "return-2" });
+    await air.until(() => air.view().signInReturn === undefined);
   });
 
   // INF-1352's plan, piece 3: any view watches a task's browser as pictures over the

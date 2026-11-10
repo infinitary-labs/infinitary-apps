@@ -772,6 +772,13 @@ export type FirstmateApi = {
     ) => Promise<{ id: string; view: IntegrationsView }>;
     /** End the sign-in waiting for the browser. */
     cancelSignIn: () => Promise<IntegrationsView>;
+    /**
+     * On a computer that controls a first mate: the address the browser ended
+     * on, pasted, for the sign-in there whose return this computer could not
+     * catch (docs/view.md, "A sign-in that returns to the first mate's
+     * computer"), with what that sign-in answered.
+     */
+    signInReturn: (id: string, address: string) => Promise<{ status: number; page: string }>;
     /** Link the inbox's command into /usr/local/bin, where that is free and writable. */
     linkInbox: () => Promise<IntegrationsView>;
     configure: (id: string, patch: IntegrationSettingsPatch) => Promise<IntegrationsView>;

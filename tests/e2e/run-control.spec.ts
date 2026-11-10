@@ -3,13 +3,13 @@ import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { COMPUTER } from "@shared/deviceNames";
-import { INTEGRATION_NOTICES } from "@shared/integrations";
+import { INTEGRATION_KIND_NAMES, INTEGRATION_NOTICES } from "@shared/integrations";
 import electronPath from "electron";
 import { HOST_CARD_PRIORITY, PROVIDER_SIGN_IN_TITLE } from "../../src/core/orchestrator/hostCards";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { RUN_WORDS } from "../../src/main/runCommand";
-import { googleOnFirstMateWords } from "../../src/renderer/src/devices/viewWords";
+import { RETURN_PASTE_WORDS } from "../../src/renderer/src/devices/viewWords";
 import { builtinManifest } from "../../src/renderer/src/plugins/builtin/manifest";
 import { FOLDER_THERE_WORDS } from "../../src/renderer/src/settings/addProjectWords";
 import { claimedPort } from "../helpers/claimedPort";
@@ -48,16 +48,23 @@ import { pressKey, runFromSearch } from "./windowKeys";
  * Integrations open by keys; a projects folder typed there is checked and
  * saved where the first mate lives; and a Google sign-in started there opens
  * Google's page in that computer's browser, never the first mate's, and is
- * kept where the first mate lives. Data: the real built app started as
- * `<app> run`, or as the ordinary app with its window, in a disposable HOME
- * and data folder, with the mock provider, a mock Claude client and the
- * Google stand-in, and a second app at its first launch that joins with a
- * link; no credentials or real Keychain. Google's stand-in sends its page
- * back to the first mate's own loopback address, which the test reaches
- * because both apps run on one computer. Completion: the joined app's
- * Settings rows, the page each app's recorded browser opened, and the first
- * mate's saved data. Platform: Linux needs Xvfb for the run. Shared
- * resources: loopback ports this test claims.
+ * kept where the first mate lives. INF-3454's plan, the captain's answers
+ * direction=catch-here and proof=linux-journey: Google's return is caught by
+ * the computer the person is at and handed to the first mate, or pasted
+ * when that computer cannot listen on its port. Data: the real built app
+ * started as `<app> run`, or as the ordinary app with its window, in a
+ * disposable HOME and data folder, with the mock provider, a mock Claude
+ * client and the Google stand-in, and a second app at its first launch that
+ * joins with a link; no credentials or real Keychain. Google's stand-in
+ * sends the browser back to 127.0.0.1 at the first mate's port: on Linux the
+ * joined app listens at 127.0.0.2 instead, so the test plays its computer's
+ * browser there and the return is caught; with the window, the first mate
+ * holds that port on this one computer, so the joined app asks for the
+ * address and the test pastes it. Completion: the joined app's Settings
+ * rows, the page each app's recorded browser opened, and the first mate's
+ * saved data. Platform: Linux needs Xvfb for the run, and is where the
+ * return is caught; a Mac pastes it. Shared resources: loopback ports this
+ * test claims, and the first mate's sign-in port at 127.0.0.2.
  */
 
 /** The joined computer's name, and the name the run's computer goes by. */
@@ -182,33 +189,70 @@ async function cardOpensSettingsHere(page: Page): Promise<void> {
   });
 }
 
-/** A Google sign-in started on this computer opens here, and comes back to the first mate. */
-async function googleSignInOpensHere(
+/**
+ * How the browser's return reaches the first mate: `caught` by this
+ * computer's own listener at another address of its own, as a second
+ * computer's would be, or `pasted` when this computer cannot listen on the
+ * port because the first mate's computer, the same one here, holds it.
+ */
+type ReturnWay = "caught" | "pasted";
+
+/** The loopback address the joined app catches Google's return on, as a second computer would. */
+const VIEW_RETURN_HOST = "127.0.0.2";
+
+/** On Linux any 127.x address is this computer's own; a Mac has only 127.0.0.1. */
+const RETURN_WAY: ReturnWay = process.platform === "linux" ? "caught" : "pasted";
+
+/**
+ * A Google sign-in started on this computer opens here, its return comes
+ * back here, caught or pasted, and the sign-in is kept where the first mate
+ * lives.
+ */
+async function googleSignInFromHere(
   { app, page }: LaunchedApp,
   opened: () => Promise<string[]>,
+  way: ReturnWay,
 ): Promise<void> {
-  await test.step("a Google sign-in started here opens Google's page here and is kept where the first mate lives", async () => {
+  await test.step(`a Google sign-in started here opens Google's page here, its return ${way} here, and is kept where the first mate lives`, async () => {
     const stand = google as GoogleStandIn;
     await runFromSearch(app, page, "settings.integrations");
     const tab = settingsSection(page, "integrations");
     await pressKey(tab.locator('[data-integration-add="google"] button'), "Enter");
     const notice = tab.locator('[data-integration-notice="google"]');
-    const mac = await page.evaluate(() => window.infinitary.devices.thisMac());
-    if (mac.role !== "view") throw new Error("This step runs on a view");
-    await expect(notice.locator("[data-integration-notice-there]")).toHaveText(
-      googleOnFirstMateWords(mac),
-    );
+    // Both computers can take the return: the notice says nothing of the other computer.
+    await expect(notice).toBeVisible();
+    await expect(notice.locator("[data-integration-notice-there]")).toHaveCount(0);
     const accept = INTEGRATION_NOTICES.google?.accept ?? "";
     await pressKey(notice.getByRole("button", { name: accept, exact: true }), "Enter");
     await expect.poll(async () => (await opened()).length, { timeout: 30_000 }).toBe(1);
     const [consent = ""] = await opened();
     expect(consent.startsWith(`${stand.base}/o/oauth2/v2/auth?`)).toBe(true);
-    // This computer's browser: Google's page sends it back to the first mate.
-    const back = await fetch(consent);
-    expect(await back.text()).toContain("Signed in to Google");
+    // This computer's browser approves on Google's page, which sends it back to 127.0.0.1.
+    const approved = await fetch(consent, { redirect: "manual" });
+    const back = new URL(approved.headers.get("location") ?? "");
+    expect(back.hostname).toBe("127.0.0.1");
+    const paste = tab.locator("[data-integration-return-paste]");
+    if (way === "caught") {
+      await expect
+        .poll(() => page.evaluate(() => window.infinitary.devices.thisMac()))
+        .toMatchObject({ role: "view", signInReturn: { caught: true } });
+      // 127.0.0.1 on this computer is VIEW_RETURN_HOST in the journey's two-computer play.
+      back.hostname = VIEW_RETURN_HOST;
+      const shown = await fetch(back);
+      expect(await shown.text()).toContain("Signed in to Google");
+      await expect(paste).toHaveCount(0);
+    } else {
+      // The first mate's own listener holds the port here, so Settings asks for the address.
+      const google = INTEGRATION_KIND_NAMES.google;
+      const field = paste.getByLabel(RETURN_PASTE_WORDS.label(google));
+      await expect(field).toBeVisible();
+      await field.fill(back.href);
+      await pressKey(field, "Enter");
+    }
     await expect(tab.locator('[data-integration-row="google"]')).toContainText(
       `as ${STAND_IN_ACCOUNT}`,
     );
+    await expect(paste).toHaveCount(0);
   });
 }
 
@@ -243,7 +287,12 @@ test("another computer controls a first mate started by a command: its Settings,
   expect(await asked.exited, asked.error()).toBe(0);
   const link = String((JSON.parse(asked.out()) as { link: string }).link);
 
-  view = await launchApp({ env: { INFINITARY_DEVICE_NAME: VIEW_NAME } });
+  view = await launchApp({
+    env: {
+      INFINITARY_DEVICE_NAME: VIEW_NAME,
+      ...(RETURN_WAY === "caught" ? { INFINITARY_SIGN_IN_RETURN_HOST: VIEW_RETURN_HOST } : {}),
+    },
+  });
   const { app, page } = view;
   const opened = await recordOpened(app);
   await joinWith(page, link);
@@ -288,7 +337,7 @@ test("another computer controls a first mate started by a command: its Settings,
     await expect(row.locator("[data-projects-folder-path]")).toHaveText(folder);
   });
 
-  await googleSignInOpensHere(view, opened);
+  await googleSignInFromHere(view, opened, RETURN_WAY);
 
   // What the first mate keeps, read from its own data once its run stops.
   run.child.kill("SIGTERM");
@@ -332,7 +381,7 @@ test("another computer controls a first mate with its window: a card's Settings 
     await joinWith(view.page, invite.link);
 
     await cardOpensSettingsHere(view.page);
-    await googleSignInOpensHere(view, opened);
+    await googleSignInFromHere(view, opened, "pasted");
     expect(await openedThere()).toEqual([]);
     // The Google sign-in is kept in the first mate's own folder, never here.
     expect(existsSync(join(data, "integrations", "google.json"))).toBe(true);

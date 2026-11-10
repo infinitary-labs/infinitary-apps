@@ -169,9 +169,12 @@ function askerOf(
   device: PairedDevice,
   role: DeviceRole,
   channel: CoreInvokeChannel,
+  changes: readonly string[] | undefined,
 ): CoreActor | null {
   if (role === "view")
-    return isViewInvokeChannel(channel) ? { kind: "captain", view: device.id } : null;
+    return isViewInvokeChannel(channel)
+      ? { kind: "captain", view: device.id, ...(changes ? { viewChanges: changes } : {}) }
+      : null;
   return isWorkInvokeChannel(channel) ? { kind: "device", deviceId: device.id } : null;
 }
 
@@ -367,6 +370,8 @@ type Client = {
   spelling: Spelling;
   /** The version of Firstmate its hello said it runs, when it said one. */
   appVersion: string | undefined;
+  /** The contract changes its hello listed, when it listed any. */
+  changes: readonly string[] | undefined;
   /** Older desktop card decoders are strict; only capable desktops receive the added fields. */
   cardReads: CardReads;
   /** Whether it reads a thread line's contributor fields (`SHARED_CARDS_SINCE`). */
@@ -791,6 +796,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       client.speaks = hello.protocolVersion;
       client.spelling = spellingFor(readSpellings(hello.spellings), speaks);
       client.appVersion = hello.appVersion;
+      client.changes = hello.changes;
       client.cardReads = {
         updates: hello.system === "ios" || readsSeenUpdate(hello.protocolVersion, hello.changes),
         ended: hello.system === "ios" || readsEndedCards(hello.protocolVersion, hello.changes),
@@ -896,7 +902,9 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         return;
       }
       const channel = frame.channel as CoreInvokeChannel;
-      const actor = client.role ? askerOf(client.device, client.role, channel) : null;
+      const actor = client.role
+        ? askerOf(client.device, client.role, channel, client.changes)
+        : null;
       if (!actor) {
         reply({
           ok: false,
@@ -971,6 +979,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         speaks: "",
         spelling: FIRST_SPELLING,
         appVersion: undefined,
+        changes: undefined,
         cardReads: { updates: false, ended: false },
         sharedCards: false,
         taskAllow: false,

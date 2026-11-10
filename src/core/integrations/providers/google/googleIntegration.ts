@@ -17,7 +17,12 @@ import {
   lookForMail,
   runGmailAction,
 } from "./gmail";
-import { GOOGLE_REQUEST_TIMEOUT_MS, issuedFrom, signInOnLoopback } from "./signIn";
+import {
+  GOOGLE_REQUEST_TIMEOUT_MS,
+  issuedFrom,
+  type LoopbackSignInOptions,
+  signInOnLoopback,
+} from "./signIn";
 import { GoogleSignInStore } from "./store";
 
 /**
@@ -59,8 +64,8 @@ export type GoogleIntegrationOptions = {
   secrets: IntegrationSecrets;
   client: GoogleClient;
   endpoints: GoogleEndpoints;
-  /** Opens Google's consent page in the person's browser. */
-  open: (url: string) => Promise<void>;
+  /** Opens Google's consent page in the person's browser (`LoopbackSignInOptions.open`). */
+  open: LoopbackSignInOptions["open"];
   now: () => number;
   /** The row changed on its own (its health), so Settings reads it again. */
   changed: () => void;

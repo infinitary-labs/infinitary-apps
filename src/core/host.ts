@@ -456,6 +456,13 @@ export type HostCapabilities = {
   /** Opens an already-vetted url in the user's default browser. */
   openExternal: (url: string) => Promise<void>;
   /**
+   * Opens a sign-in's already-vetted page whose provider sends the browser
+   * back to this computer's loopback address, at the port `to` names
+   * (docs/view.md, "A sign-in that returns to the first mate's computer").
+   * The core sets it; absent, the page opens as `openExternal` opens one.
+   */
+  openSignInPage?: (url: string, to: import("./signInReturns").SignInReturnTo) => Promise<void>;
+  /**
    * Quits and starts the app again once an update installed itself
    * (docs/alpha.md "Updates on Linux"), from `execPath` when the program
    * itself was replaced, as an AppImage is. Absent on a host that cannot.

@@ -86,10 +86,31 @@ export function sectionWaitsForUpdate(
   return waitsForUpdate(thisMac) && !section.onAnOlderFirstMate;
 }
 
-/** What Google's notice says on a computer that controls a first mate. */
-export function googleOnFirstMateWords(mac: ViewMac): string {
-  return `Sign in to Google on ${mac.name} for now. Google's page returns to that computer, so it cannot finish from another one.`;
+/**
+ * What Google's notice says on a computer that controls a first mate too old
+ * to take its sign-in's return from here (docs/view.md, "A sign-in that
+ * returns to the first mate's computer"), in place of its accept.
+ */
+export function googleUpdateThereWords(mac: ViewMac): string {
+  return `Update Infinitary on ${mac.name} to sign in to Google from here.`;
 }
+
+/**
+ * What Settings says on a computer that controls a first mate when its
+ * browser's return could not be caught here, so the address it ended on is
+ * pasted instead (docs/view.md, "A sign-in that returns to the first mate's
+ * computer").
+ */
+export const RETURN_PASTE_WORDS = {
+  lead: (name: string) =>
+    `Approve on ${name}'s page. Your browser then ends on a page that cannot be reached. Copy that page's address and paste it here.`,
+  label: (name: string) => `The address your browser ended on after ${name}`,
+  placeholder: "paste the address",
+  send: (mac: ViewMac) => `Send to ${mac.name}`,
+  /** A pasted address the waiting sign-in turned away, such as one from an earlier sign-in. */
+  refused:
+    "That address is not this sign-in's. Paste the address your browser ended on after this sign-in.",
+} as const;
 
 /**
  * What a request card's button that hands the captain a task's browser says

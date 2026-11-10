@@ -49,7 +49,7 @@ export type HomeIntegrations = {
 export type IntegrationsCrew = Pick<CrewSupervisor, "integrationAsks" | "sessions">;
 
 export function startHomeIntegrations(options: {
-  host: Pick<HostCapabilities, "app" | "openExternal">;
+  host: Pick<HostCapabilities, "app" | "openExternal" | "openSignInPage">;
   paths: Pick<AppPaths, "integrationsDir">;
   standIns: Pick<StandIns, "integrationDir" | "inboxLinkDir">;
   /** The folder of the app's own task commands, the inbox's among them. */
@@ -129,10 +129,10 @@ export function startHomeIntegrations(options: {
               root: paths.integrationsDir,
               secrets: integrationSecrets,
               ...google,
-              open: async (url) => {
+              open: async (url, to) => {
                 if (!isAllowedOpenExternalUrl(url))
                   throw new Error("The Google sign-in page's address was refused.");
-                await host.openExternal(url);
+                await (host.openSignInPage ? host.openSignInPage(url, to) : host.openExternal(url));
               },
               now,
               changed: () => integrationsChanged(),

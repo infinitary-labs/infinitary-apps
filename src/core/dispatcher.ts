@@ -72,6 +72,7 @@ import { releaseNotesView } from "./releaseNotes/shown";
 import { secretsHandlers } from "./secrets/handlers";
 import { plainSettingsChannels } from "./settingsChannels";
 import type { PhoneDiagnosticEvent } from "./sharing/sharingService";
+import { SIGN_IN_RETURN_WORDS, type SignInReturns } from "./signInReturns";
 import type { ScheduleRecord } from "./storage/scheduleStore";
 import { recordStartAtLogin } from "./storage/startAtLoginRecord";
 import { ProjectKeyRefusal } from "./tasks/projectKey";
@@ -184,6 +185,8 @@ export type CoreDispatcherOptions = {
   emit: CoreEventSink;
   /** The first mate's change recorded: its operation, its catalog line, and what it says. */
   onActionRecorded?: (id: string, action: ActionName, value: Record<string, unknown>) => void;
+  /** The waiting sign-ins another computer may hand a browser's return to (`startCore`). */
+  signInReturns?: SignInReturns;
 };
 
 export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispatch {
@@ -1117,6 +1120,13 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       if (kind === "inbox") services.integrationInbox.added(say);
       return signedIn;
     },
+    // What a browser on the computer the person is at brought back to a
+    // sign-in waiting here (docs/view.md, "A sign-in that returns to the
+    // first mate's computer").
+    "inf:integrations:sign-in-return": ({ id, address }) => {
+      if (!options.signInReturns) throw new Error(SIGN_IN_RETURN_WORDS.gone);
+      return options.signInReturns.deliver(id, address);
+    },
     "inf:integrations:sign-in-cancel": () => {
       services.integrations.cancelSignIn();
       return services.integrations.view();
@@ -1753,7 +1763,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       );
     const answer = () =>
       route(channel as Exclude<C, WorkInvokeChannel>, rawArgs, actor) as Promise<InvokeResponse<C>>;
-    return actor?.kind === "captain" && actor.view ? asAView(answer) : answer();
+    return actor?.kind === "captain" && actor.view ? asAView(answer, actor.viewChanges) : answer();
   }) as CoreDispatch;
 
   function route<C extends Exclude<CoreInvokeChannel, WorkInvokeChannel>>(

@@ -416,6 +416,7 @@ describe("ipc contract", () => {
       "inf:integrations:secret",
       "inf:integrations:sign-in",
       "inf:integrations:sign-in-cancel",
+      "inf:integrations:sign-in-return",
       "inf:models:available",
       "inf:models:reasoning:set",
       "inf:models:slots",

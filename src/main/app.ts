@@ -579,6 +579,13 @@ export async function startApp(
       const standInSpelling = isDev
         ? readSpellings([settingFrom(process.env, "WIRE_SPELLING")?.trim() ?? ""])?.[0]
         : undefined;
+      // ...and the loopback address a view catches a sign-in's return on, so
+      // two development runs on one Linux PC each play a computer of their
+      // own (docs/view.md, "A sign-in that returns to the first mate's
+      // computer"); a packaged app ignores it.
+      const standInReturnHost = isDev
+        ? settingFrom(process.env, "SIGN_IN_RETURN_HOST")?.trim() || undefined
+        : undefined;
       // This user's work: a computer that joins here runs its home's work
       // there, and a computer a command or its address added controls its
       // home with the grant its work keeps (docs/view.md, "A Mac that runs work").
@@ -653,6 +660,7 @@ export async function startApp(
         openPage: async (url) => {
           if (isAllowedOpenExternalUrl(url)) await host.openExternal(url);
         },
+        ...(standInReturnHost ? { returnHost: standInReturnHost } : {}),
         // A view runs no core, and still tells this Mac when its own app has an update.
         updates: createInstalledUpdateChecker({
           app: host.app,

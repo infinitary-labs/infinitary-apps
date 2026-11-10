@@ -5,10 +5,12 @@ import type { Card } from "@shared/cards";
 import { CONNECTION_CLOSE, CONNECTION_PORT } from "@shared/connection";
 import { deviceJoinedLine, parsePairingLink } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
+import { NOTICE_ACCEPTED } from "@shared/integrations";
 import {
   HOME_CAPABILITIES,
   invokeContract,
   PROTOCOL_VERSION,
+  signInPageSchema,
   VIEW_INVOKE_CHANNELS,
 } from "@shared/ipc";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -28,12 +30,21 @@ import {
 import { claimedPort } from "../../tests/helpers/claimedPort";
 import { connectClient, type ReceivedPush } from "../../tests/helpers/connectionClient";
 import { projectFontBytes } from "../../tests/helpers/fontFixture";
+import {
+  type GoogleStandIn,
+  STAND_IN_ACCOUNT,
+  STAND_IN_CLIENT_ID,
+  STAND_IN_CLIENT_SECRET,
+  startGoogleStandIn,
+} from "../../tests/helpers/googleStandIn";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import { startConnection } from "./connection/connection";
+import { CONTRACT_CHANGES } from "./connection/contractChanges";
 import { claimLink } from "./devices/dial";
 import { type Core, startCore } from "./index";
 import { createAppTools } from "./pi/appTools";
 import { catalogRefreshesSettled } from "./pi/modelRuntime";
+import { SIGN_IN_RETURN_WORDS } from "./signInReturns";
 import type { AskRecord } from "./storage/askStore";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
@@ -547,6 +558,94 @@ describe("a first mate with its window, asked from another computer", () => {
 
     await core.dispatch("inf:update:open-release", []);
     expect(shell.opened).toHaveLength(1);
+  });
+});
+
+describe("a Google sign-in asked from another computer", () => {
+  // INF-3454's plan, the captain's answer direction=catch-here: the computer the person is at
+  // gets Google's page with its port, catches the browser's return and hands it back; a
+  // computer without the change is named before any page opens.
+  let userDataDir: string;
+  let core: Core;
+  let shell: ReturnType<typeof fakeHost>;
+  let connection: ReturnType<typeof startConnection>;
+  let at: string;
+  let google: GoogleStandIn;
+  const env = {
+    INFINITARY_GOOGLE_CLIENT_ID: STAND_IN_CLIENT_ID,
+    INFINITARY_GOOGLE_CLIENT_SECRET: STAND_IN_CLIENT_SECRET,
+  };
+
+  beforeAll(async () => {
+    userDataDir = scratchDir("infinitary-core-google-return-");
+    process.env.PI_OFFLINE = "1";
+    google = await startGoogleStandIn();
+    Object.assign(process.env, env, { INFINITARY_GOOGLE_URL: google.base });
+    shell = fakeHost(userDataDir);
+    core = await startCore(shell.host);
+    ({ connection, at } = await serveConnection(core));
+  }, 60_000);
+
+  afterAll(async () => {
+    await connection?.close();
+    await core?.dispose();
+    await google?.close();
+    for (const name of [...Object.keys(env), "INFINITARY_GOOGLE_URL"]) delete process.env[name];
+    rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  const join = async (name: string, changes?: readonly string[]) => {
+    const { link } = await core.dispatch("inf:devices:invite", [{ kind: "mac", at }]);
+    await connection.settled();
+    return connectClient(await claimLink(link, { ...AT_FIRST_LAUNCH, name }), {
+      ...(changes ? { changes } : {}),
+    });
+  };
+
+  it("names the computer to update before any page opens, then finishes from the computer the person is at", async () => {
+    const older = await join("MacBook Air");
+    await expect(
+      older.invoke("inf:integrations:sign-in", ["google", NOTICE_ACCEPTED]),
+    ).rejects.toThrow(SIGN_IN_RETURN_WORDS.updateHere);
+    expect(older.pushes.some((push) => push.channel === "inf:app:sign-in-page")).toBe(false);
+
+    const newer = await join("MacBook Pro", CONTRACT_CHANGES.names);
+    const signedIn = newer.invoke("inf:integrations:sign-in", ["google", NOTICE_ACCEPTED]);
+    signedIn.catch(() => {});
+    const page = signInPageSchema.parse(
+      (await newer.push((push) => push.channel === "inf:app:sign-in-page")).payload,
+    );
+    expect(page.url.startsWith(`${google.base}/o/oauth2/v2/auth?`)).toBe(true);
+    // The computer the person is at follows Google's page back to its own loopback address.
+    const consent = await fetch(page.url, { redirect: "manual" });
+    const back = new URL(consent.headers.get("location") ?? "");
+    expect(back.port).toBe(String(page.port));
+    const answer = await newer.invoke("inf:integrations:sign-in-return", [
+      { id: page.id, address: `${back.pathname}${back.search}` },
+    ]);
+    expect(answer).toMatchObject({ status: 200 });
+    expect((answer as { page: string }).page).toContain("Signed in to Google");
+    await signedIn;
+    const ended = await newer.push((push) => push.channel === "inf:app:sign-in-ended");
+    expect(ended.payload).toEqual({ id: page.id });
+    const row = (await core.dispatch("inf:integrations:list", [])).integrations.find(
+      (integration) => integration.kind === "google",
+    );
+    expect(row?.account).toBe(STAND_IN_ACCOUNT);
+    // Once: the same return is not handed on again, and nothing opened on the first mate's computer.
+    await expect(
+      newer.invoke("inf:integrations:sign-in-return", [{ id: page.id, address: back.href }]),
+    ).rejects.toThrow(SIGN_IN_RETURN_WORDS.gone);
+    expect(shell.opened).toEqual([]);
+
+    // The first mate's own window signs in as before: its page opens on its own computer.
+    const atHome = core.dispatch("inf:integrations:sign-in", ["google", NOTICE_ACCEPTED]);
+    atHome.catch(() => {});
+    await waitFor(() => shell.opened.length === 1, 10_000);
+    expect(shell.opened[0]?.startsWith(`${google.base}/o/oauth2/v2/auth?`)).toBe(true);
+    expect(newer.pushes.filter((push) => push.channel === "inf:app:sign-in-page")).toHaveLength(1);
+    await core.dispatch("inf:integrations:sign-in-cancel", []);
+    await expect(atHome).rejects.toThrow();
   });
 });
 

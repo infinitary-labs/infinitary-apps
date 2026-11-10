@@ -762,6 +762,19 @@ export const thisMacSchema = z.discriminatedUnion("role", [
      * Infinitary there (docs/view.md, "A task's browser on a view").
      */
     browserNeedsUpdateThere: z.literal(true).optional(),
+    /**
+     * The first mate there cannot take a sign-in's return from this computer
+     * (the `sign-in-return` contract change), so a sign-in whose page comes
+     * back to that computer waits for an update there (docs/view.md, "A
+     * sign-in that returns to the first mate's computer").
+     */
+    returnsNeedUpdateThere: z.literal(true).optional(),
+    /**
+     * A sign-in there waits for its page's return from this computer, by the
+     * return's id: `caught` while this computer listens for the browser, and
+     * false when it could not, so Settings asks for the address instead.
+     */
+    signInReturn: z.strictObject({ id: z.string().min(1).max(64), caught: z.boolean() }).optional(),
   }),
 ]);
 export type ThisMac = z.infer<typeof thisMacSchema>;

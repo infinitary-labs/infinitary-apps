@@ -12,7 +12,7 @@ Where a choice is a way in or a thing to pick rather than a decision, it is a ro
 A plain field, such as the task search, a crewmate message or a computer's link, is the app's field: the panel fill, a hairline and the control radius.
 A card's reply row is shaped like the message capsule: one shape with the send arrow inside at its right edge, dimmed until there is text, on the field's fill and hairline.
 That shape is the Mac's input, a pill at one line and a rounded rectangle with the same 22-point radius when it grows.
-The app follows the device's appearance; its read-only Reply sheet uses the conversation treatment in `../cards/ResponseCard.prompt.md`, without extending that treatment to ordinary cards or their threads.
+The app follows the device's appearance unless this device's own Theme in Settings says Dark or Light; its read-only Reply sheet uses the conversation treatment in `../cards/ResponseCard.prompt.md`, without extending that treatment to ordinary cards or their threads.
 One soft tap of haptic feedback confirms that the computer accepted something: a message, a card's answer or reply, a task's start, continue, interrupt or steer, and the computer coming back after it was out of reach.
 Nothing else taps, not a page turn, an arrival or the ordinary reconnection when the app opens.
 
@@ -47,7 +47,8 @@ In reach the bar says nothing more.
 Out of reach is said once, by one line under the bar on every tab with its dot, state and last-heard time; no strip above the content or line on a card repeats it, and only the current in-memory view remains.
 The message capsule and a card's reply row dim, and one line under the message box says only “Changes are off until <computer> is back.”, as the Mac says it.
 The computer button opens a native sheet with the computer's name, its reach and its address.
-The Settings button, the Lucide gear, opens this phone's own sheet: this device and its current capability, the fact that appearance follows the device, and the app's version.
+The Settings button, the Lucide gear, opens this phone's own sheet: this device and its current capability, its own Theme, and the app's version.
+Theme is Apple's segmented control worded Device, Dark and Light, like the computer's Dark and Light pills, under one secondary line saying it is set on this iPhone only and the computer keeps its own; it starts on Device and never changes the computer's Theme.
 Command-1, Command-2 and Command-3 switch tabs, Command-Comma opens Settings and Command-I the computer.
 The sheet shows a joining time only if the saved connection supplies one; it never invents one for an older record.
 Leave sits at the foot under a hairline: its sentence first, then Leave <computer> fitted at the trailing edge in the Mac's red outline, with an alert that keeps Keep it beside Leave and explains that a new link is needed to return.

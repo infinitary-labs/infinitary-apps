@@ -96,6 +96,12 @@ import XCTest
         _ = try appearancePicture(name + "-restored", dark: false)
     }
 
+    /// The whole screen draws `dark` or light without a change of the simulator's own appearance, as when the app's
+    /// own Theme overrides it; the drawn frame is kept as `name`.
+    func drawn(_ name: String, dark: Bool) throws {
+        picture(name, screenshot: try appearancePicture(name, dark: dark))
+    }
+
     func computerDetails() {
         let details = app.buttons["computer-details"]
         XCTAssertTrue(details.waitForPresence(timeout: 10))

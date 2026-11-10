@@ -2,11 +2,13 @@ import InfinitaryKit
 import SwiftUI
 
 /// INF-1062, the captain's pick: Settings at the bar's left is this phone's own sheet, with what this device can do,
-/// that appearance follows it and the app's version. Leave and Forget stay with the computer in its sheet.
+/// its own Theme and the app's version. Leave and Forget stay with the computer in its sheet.
 struct PhoneSettingsSheet: View {
     let session: ReadOnlySession
     @Environment(\.dismiss) private var dismiss
     @Environment(PhoneSecrets.self) private var secrets: PhoneSecrets?
+    @Environment(PhoneAppearance.self) private var appearance: PhoneAppearance?
+    @FocusState private var themeFocused: Bool
 
     private var device: String { UIDevice.current.userInterfaceIdiom == .pad ? "This iPad" : "This phone" }
     /// The same device inside a sentence: lowercasing the heading would read "this ipad".
@@ -35,10 +37,7 @@ struct PhoneSettingsSheet: View {
                         Text("Conversation stays on your computer.").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
                     }
                     if let secrets, secrets.standing != .unavailable { approvals(secrets) }
-                    VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                        Text("Appearance").font(PhoneFont.headline)
-                        Text("Follows this device’s setting.").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-                    }
+                    if let appearance { theme(appearance) }
                     VStack(alignment: .leading, spacing: PhoneTheme.space2) {
                         Text("Infinitary").font(PhoneFont.headline)
                         Text("Version \(Self.version)").font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
@@ -53,6 +52,27 @@ struct PhoneSettingsSheet: View {
         }
         .font(PhoneFont.body).foregroundStyle(PhoneTheme.text).tint(PhoneTheme.accent)
         .presentationDetents([.medium, .large]).presentationDragIndicator(.visible).phoneSheetSurface()
+    }
+
+    /// The captain's Approve and build: this device's own Theme, in Apple's segmented control like the computer's Dark
+    /// and Light pills, worded Device, Dark and Light. The computer's Theme is never read or changed.
+    private func theme(_ appearance: PhoneAppearance) -> some View {
+        @Bindable var appearance = appearance
+        return VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+            Text("Theme").font(PhoneFont.headline)
+            Text("Set on this \(label) only. \(session.mac.name) keeps its own.")
+                .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("phone-theme-scope")
+            Picker("Theme", selection: $appearance.look) {
+                ForEach(PhoneLook.allCases, id: \.self) { look in Text(look.words).tag(look) }
+            }
+            .pickerStyle(.segmented).labelsHidden().accessibilityIdentifier("phone-theme")
+            // A segmented control takes no keys of its own, and an unseen shortcut under a sheet never hears an unmodified
+            // arrow. So the control holds focus while Settings is open and its arrows move the choice, with no command.
+            .focusable().focused($themeFocused)
+            .onKeyPress(.leftArrow) { appearance.step(by: -1); return .handled }
+            .onKeyPress(.rightArrow) { appearance.step(by: 1); return .handled }
+            .onAppear { themeFocused = true }
+        }
     }
 
     /// INF-1109's phone approvals (docs/secrets.md, "Remote decisions"): only while the computer offers Secrets.

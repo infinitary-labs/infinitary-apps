@@ -3,6 +3,7 @@ import SwiftUI
 
 @main struct InfinitaryApp: App {
     @State private var model = PhoneModel()
+    @State private var appearance = PhoneAppearance()
     @Environment(\.scenePhase) private var phase
 
     init() {
@@ -18,6 +19,9 @@ import SwiftUI
     var body: some Scene {
         WindowGroup {
             PhoneView(model: model)
+                // This device's own Theme (PhoneAppearance), set on the window so every sheet and the keyboard follow it.
+                .background(PhoneWindowLook(look: appearance.look))
+                .environment(appearance)
                 .font(PhoneFont.body)
                 .tint(PhoneTheme.accent)
                 .foregroundStyle(PhoneTheme.text)

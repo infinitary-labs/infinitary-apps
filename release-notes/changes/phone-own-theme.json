@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-own-theme",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Choose a theme for Infinitary on your iPhone and iPad",
+      "body": "Settings on your iPhone and iPad now has a Theme of its own: Device follows the phone's own setting, as before, or choose Dark or Light. The choice stays on that device and never changes the theme on your computer, and your computer's theme never changes it.",
+      "picture": {
+        "dark": "phone-own-theme-dark.webp",
+        "light": "phone-own-theme-light.webp",
+        "alt": "Theme in the phone's Settings, set on this iPhone only, with Device, Dark and Light"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "docs-line-pr-check",
+      "reason": "Run the documentation sentence-per-line check in every pull request check."
+    }
+  ]
+}

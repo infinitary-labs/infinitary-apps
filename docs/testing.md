@@ -525,7 +525,8 @@ Every push to `main` starts `main.yml` (INF-2146, the captain's approved plan, d
 Beside the full check it calls `linux-startup.yml`, the Linux automatic startup fixtures (INF-2441); a push the swept batch covered runs neither, since the batch ran both.
 A push whose every changed file is in the phone app or the docs starts no run (INF-2492, the captain's decision "Skip pushes that change only the phone app or the docs"): its `paths-ignore` lists `ios/`, `docs/` except the generated `docs/contract.json`, `primitives/` and `release-notes/changes/`, since a change file rides with every change.
 Phone check helpers in `scripts/` and `tests/helpers/` are not the phone app, so a push that touches them runs.
-A docs break that a unit test reads, such as `tests/reflow-docs.test.ts` or `tests/served-boundary.test.ts`, surfaces at the next push that runs, and a skipped push leaves main's green mark on the older version.
+The sentence-per-line check runs in `pnpm check` on every pull request.
+Other docs breaks that only a unit test reads, such as `tests/served-boundary.test.ts`, surface at the next push that runs, and a skipped push leaves main's green mark on the older version.
 The full check is `verify.yml`'s checks part (`part: checks`, `all_journeys: false`): the Linux checks, and the three Mac lanes with only the journeys tagged `MAC_ONLY_TAG` beside the unit, client, replay and package stages.
 It runs no old journey set (INF-2480, the captain: "old set at the release check only, from the first piece on"): every alpha runs every journey on Linux and the Mac itself, or reuses the swept batch's (`docs/alpha.md`, "Full alpha checks, inherited stable checks").
 It replaces the nightly full check, which requested it and the phone check on `main` once a night.

@@ -1,7 +1,11 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  before,
   diffHunks,
+  GENERATED_CARD_WORDS,
+  GENERATED_CONTRACT,
+  generatedReach,
   ipadParts,
   iphoneOnlyParts,
   type PartTable,
@@ -11,6 +15,7 @@ import {
   phoneDecision,
   phoneRepeatPlan,
   placeParts,
+  requestBase,
   requestDevicePlan,
   requestedParts,
   swiftFunctions,
@@ -736,4 +741,181 @@ it("repeats only the edited app-hosted test within the weak-link suite", () => {
   expect(renamedReach.find(({ part }) => part === "weak-link")!.repeatTests).toEqual([
     `InfinitaryTests/PhoneWeakLinkTests/${renamed}`,
   ]);
+});
+
+// INF-3379 (the captain's "File the checked cuts" and "start the checked ones now in a single change"): the reach
+// reader places a header, import, new file or overloaded helper on its own parts, a request reads the change from
+// its branch's merge point with main, and the generated contract and card words reach only the parts whose files
+// read the changed entries. The requests are the two on the captain's Mac CI panel, read by git: INF-1109's phone
+// requests at f42c082a6 with base 9629ca0d1, 51 main commits behind their merge point ddbb01430, and INF-3137's at
+// 46696b19b. The generated changes are main's commits that changed a generated file and no other every-part file,
+// with every Swift file outside the UI tests that names a type the generated files declare; parts are today's.
+type Recorded = {
+  base: string;
+  head: string;
+  paths: string[];
+  testDiff?: string;
+  testFiles?: Record<string, string>;
+  generated?: Record<string, { diff: string; after: string }>;
+  sources?: Record<string, string>;
+};
+function recorded(file: string) {
+  const { texts, cases } = JSON.parse(
+    readFileSync(`tests/fixtures/phone-changes/inf-3379-${file}.json`, "utf8"),
+  ) as { texts: Record<string, string>; cases: Record<string, Recorded> };
+  const text = (files: Record<string, string> = {}) =>
+    new Map(Object.entries(files).map(([path, id]) => [path, texts[id]!]));
+  return { texts, cases, text };
+}
+function requested(name: string) {
+  const { cases, text } = recorded("requests");
+  const each = cases[name]!;
+  const files = text(each.testFiles);
+  const reasons = phoneDecision(each.paths).reasons;
+  const reach = partReach(
+    reasons,
+    each.testDiff,
+    [...files.keys()].filter((path) => path.startsWith(UI_TESTS)),
+    (path) => files.get(path),
+  );
+  const parts = requestedParts(reasons, reach);
+  return {
+    reach,
+    parts,
+    repeats: phoneRepeatPlan(
+      parts.map(({ part }) => part),
+      parts,
+    ).repeatParts,
+  };
+}
+const EVERY_PART = PHONE_PARTS.map(({ name }) => name);
+
+describe("INF-3379's recorded phone requests", () => {
+  it("places INF-1109's new part files, their imports and extension lines on their own parts", () => {
+    const { reach, parts, repeats } = requested("inf-1109-requested-base");
+    // Before, the import, `extension PhoneJourney {` and closing lines of the two new files charged every part.
+    expect(reach.some(({ why }) => /outside any/.test(why))).toBe(false);
+    expect(repeats).not.toEqual(EVERY_PART);
+    const own = (part: string) => reach.find((each) => each.part === part)!;
+    expect(own("cards-place")).toMatchObject({
+      distance: 0,
+      repeat: true,
+      repeatTests: ["InfinitaryUITests/PhoneJourney/testThreadKeepsItsPlace"],
+    });
+    expect(own("keyboard-ways-out")).toMatchObject({
+      distance: 0,
+      repeat: true,
+      repeatTests: ["InfinitaryUITests/PhoneJourney/testKeyboardWaysOut"],
+    });
+    // Ordinary coverage stays as broad as the shared files make it.
+    expect(parts.map(({ part }) => part)).toEqual(EVERY_PART);
+  });
+
+  it("reads INF-1109's request from its merge point with main, not its older base", () => {
+    const { cases } = recorded("requests");
+    const stale = cases["inf-1109-requested-base"]!;
+    const point = cases["inf-1109-merge-point"]!.base;
+    // git's own answers for these commits: the base is an ancestor of the merge point.
+    const answers: Record<string, string> = {
+      [`merge-base origin/main ${stale.head}`]: point,
+      [`merge-base ${stale.base} ${stale.head}`]: stale.base,
+      [`merge-base --is-ancestor ${stale.base} ${point}`]: "",
+    };
+    const git = (args: string[]) => {
+      const answer = answers[args.join(" ")];
+      if (answer === undefined) throw new Error(`git ${args.join(" ")} failed`);
+      return `${answer}\n`;
+    };
+    expect(requestBase(stale.base, stale.head, git)).toEqual({ base: point, ignored: stale.base });
+    // A base at the merge point stands, as does any base when git cannot read main.
+    answers[`merge-base ${point} ${stale.head}`] = point;
+    expect(requestBase(point, stale.head, git)).toEqual({ base: point });
+    expect(
+      requestBase("origin/main", stale.head, () => {
+        throw new Error("no main");
+      }),
+    ).toEqual({ base: "origin/main" });
+    // From the merge point, main's own phone files no longer count as the branch's edits.
+    const fromPoint = requested("inf-1109-merge-point");
+    expect(fromPoint.repeats).toEqual(["cards-media", "talk-compose", "rest"]);
+    expect(requested("inf-1109-requested-base").repeats).toEqual(
+      expect.arrayContaining(fromPoint.repeats),
+    );
+  });
+
+  it("places INF-3137's edit to the overloaded verifyPhoneReadingColumn on its callers", () => {
+    const { texts, cases } = recorded("requests");
+    const journey = `${UI_TESTS}PhoneComposerJourney.swift`;
+    // The branch removed one of main's two overloads, so the file it started from declared the name twice.
+    const each = cases["inf-3137"]!;
+    const started = before(
+      texts[each.testFiles![journey]!],
+      diffHunks(each.testDiff!).get(journey)!,
+    );
+    const declared = swiftFunctions(started)!.filter(
+      ({ name }) => name === "verifyPhoneReadingColumn",
+    );
+    expect(declared).toHaveLength(2);
+    const { reach, repeats } = requested("inf-3137");
+    expect(reach.some(({ why }) => /ambiguous/.test(why))).toBe(false);
+    expect(
+      reach.filter(({ why }) => why.includes("verifyPhoneReadingColumn")).map(({ part }) => part),
+    ).toEqual(["talk-compose"]);
+    expect(repeats).toEqual(["cards-merge", "cards-form", "keyboard-scrolling", "talk-compose"]);
+  });
+});
+
+describe("the generated contract and card words", () => {
+  function generated(name: string) {
+    const { cases, text, texts } = recorded("generated");
+    const each = cases[name]!;
+    const sources = text(each.sources);
+    const reaches = new Map(
+      Object.entries(each.generated!).map(([path, { diff, after }]) => [
+        path,
+        generatedReach(diff, texts[after], sources, path),
+      ]),
+    );
+    const paths = [...reaches.keys()];
+    const reach = partReach(paths, "", [], () => undefined, PHONE_PARTS, reaches);
+    return { reaches, parts: requestedParts(paths, reach).map(({ part }) => part) };
+  }
+
+  it("reaches only the card parts for a new card words entry read by the card parts file", () => {
+    // ee8f49c1d added PhoneCardWords.contributor, read only by PhoneCardParts.swift.
+    const { reaches, parts } = generated("ee8f49c1d");
+    expect(reaches.get(GENERATED_CARD_WORDS)).toEqual(
+      phoneFileOwners(`ios/Infinitary/InfinitaryApp/PhoneCardParts.swift`),
+    );
+    expect(parts).toEqual(phoneFileOwners(`ios/Infinitary/InfinitaryApp/PhoneCardParts.swift`));
+  });
+
+  it("reaches the readers of a contract's new words and new type, and the package tests' part", () => {
+    // e29423b30 added two PhoneTaskRowWords entries and the PhoneRowMoveWords type.
+    const { reaches, parts } = generated("e29423b30");
+    const readers = [
+      "ios/Infinitary/InfinitaryApp/PhoneTasks.swift",
+      "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneRowMoves.swift",
+      "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/PhoneTaskListTests.swift",
+    ];
+    const owners = [...new Set(readers.flatMap(phoneFileOwners))];
+    expect([...reaches.get(GENERATED_CONTRACT)!].sort()).toEqual([...owners].sort());
+    expect(parts).not.toEqual(EVERY_PART);
+  });
+
+  it("reaches nothing for a change only to the generated header comment", () => {
+    const { reaches, parts } = generated("fbb541793");
+    expect(reaches.get(GENERATED_CONTRACT)).toEqual([]);
+    expect(parts).toEqual(["join-read"]);
+  });
+
+  it("keeps every part when the change cannot be read", () => {
+    const { cases, texts } = recorded("generated");
+    const each = cases.e29423b30!;
+    const after = texts[each.generated![GENERATED_CONTRACT]!.after]!;
+    expect(generatedReach(undefined, after, new Map(), GENERATED_CONTRACT)).toBeUndefined();
+    const reaches = new Map([[GENERATED_CONTRACT, undefined]]);
+    const reach = partReach([GENERATED_CONTRACT], "", [], () => undefined, PHONE_PARTS, reaches);
+    expect(requestedParts([GENERATED_CONTRACT], reach).map(({ part }) => part)).toEqual(EVERY_PART);
+  });
 });

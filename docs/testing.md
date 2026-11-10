@@ -656,14 +656,21 @@ An affected request runs every part the change reaches, by the chooser's distanc
 The chooser (`scripts/affected-phone.ts`) gives each part a distance: 0 when the change edits UI test code the part runs, 1 when it edits a file in the part's owner table (`PART_OWNERS`), and 2 for any other phone input.
 `scripts/phone-part-owners.ts` explicitly assigns production files to their consuming parts, including shared files with multiple owners.
 `pnpm check` refuses a new production phone file with no owner; UI and app-hosted test files use their declaration consumers below.
-It reads a UI test change by its declarations: each changed line counts for the functions, supported top-level structs and enums, or literal constants around it, added lines in the new version and removed ones in the old.
+Every part owns the generated contract and card words (`PhoneContract.generated.swift`, `PhoneCardWords.generated.swift`), but a change to either reaches only the owners of the Swift files that read a changed entry (`generatedReach`, INF-3379): a changed static member is read by a file naming both its type and its name, and a changed case, nested type or type by a file naming the type or one of its cases.
+A member of the generated file that reads a changed member changes with it, the UI tests never read either file, and a change to the header comment alone reaches nothing.
+An unreadable diff, a shape the reader does not know, a line outside every generated type or a reader nobody owns keeps every part.
+It reads a UI test change by its declarations: each changed line counts for the functions, computed properties, supported top-level structs and enums, or literal constants around it, added lines in the new version and removed ones in the old.
 Each part reaches its test and follows identifier references through bodies and signatures, including function values, helper types and constants; a helper type owns its methods.
 The reader keeps string contents for references, including interpolation, so a matching word in a literal can conservatively select extra consumers.
 A setup, teardown or XCTest observation callback reaches every part, as does a changed declaration referenced by code outside the supported declarations.
 The rest part also starts from every test no other part names, and a change to the app-hosted tests puts it at 0.
 A part that names an app-hosted class as its `suite` (`weak-link`, INF-2989) runs no UI test code: a change to that class's own file puts that part at 0 instead of the rest part, and a change to an app-hosted file that is not a test class, such as a shared helper, puts both at 0.
-A blank or comment-only line counts for nothing; an edited line outside a supported declaration, a duplicate declaration name, conditional compilation or a test file it cannot read or parse counts for every part.
-Unsupported declarations, including aliases, computed properties, attributed types and executable global initializers, keep full coverage rather than using a file exemption.
+A blank or comment-only line counts for nothing.
+An edited line outside every supported declaration counts for the declarations it can change (INF-3379): an import for its own file's, a plain extension's opening or closing line for what that extension declares, a type's header for its members, its extensions and every declaration naming it, and any other line, such as a stored property, for its enclosing block's declarations and every declaration naming one of its words.
+Each of those declarations then counts as an edited one, so a new part file's imports and extension lines repeat only that part, and a shared helper's get ordinary coverage.
+Overloads of one function name share every caller of that name, so an edited overload counts for its callers, not every part.
+A line none of this places, such as an empty extension, keeps every part once; a declaration name shared by anything but functions, conditional compilation or a test file it cannot read or parse keeps every part with its repeats.
+Unsupported declarations, including aliases, attributed types and executable global initializers, keep full coverage rather than using a file exemption.
 An affected request keeps every part at 0 or 1, and every part when an unowned production file or an unreadable comparison leaves its reach unknown; a part at 2 is checked by the next phone release.
 A change confined to scripts, helpers or the workflow runs the short `join-read` part as a smoke check.
 The six-minute placement of a pull request's gate, `placeParts` in the chooser with the `--times` reading of a full gate's `part-times.json`, has no workflow caller since INF-2539; `tests/phone-chooser.test.ts` still holds it.
@@ -690,6 +697,7 @@ A default run on request runs every part of the device gate whatever changed, as
 Branch requests also read the chooser for repeat accounting; the phone release's call never repeats.
 A release check of every part on `main` sends `{"ref":"main","return_run_details":true}`.
 The optional `base` input defaults to `origin/main`.
+The chooser reads the change from the branch's merge point with `origin/main` when the given base is older than it, since an older base would count main's own changes since then as the branch's edits (INF-3379, `requestBase`); a base at or past the merge point, such as a stacked branch's, stands, and the summary and `phone-placement` artifact name the base read and any ignored one.
 This selection reuses `PART_OWNERS` and the Swift declaration reach reader, without a timing budget.
 Shared production inputs select every declared consumer; unreadable comparisons or test changes retain conservative full coverage.
 An affected request with no reached parts skips both devices' gates, and one whose every kept part runs on the iPhone alone skips the iPad's (the chooser's `ipad_parts`); the Linux job's summary and `phone-placement` artifact record the selection before either device job starts.

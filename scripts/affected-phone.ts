@@ -64,6 +64,118 @@ export function phoneDecision(
   return { run: reasons.length > 0, reasons };
 }
 
+// INF-3379 (the captain's "Let the generated contract and card words files reach only the parts that read the
+// changed entries"): every part owns these two generated files, but a change to one reaches only the files that
+// read what it changed, and so only those files' owners.
+export const GENERATED_CARD_WORDS = "ios/Infinitary/InfinitaryApp/PhoneCardWords.generated.swift";
+export const GENERATED_ENTRIES = [GENERATED_CONTRACT, GENERATED_CARD_WORDS] as const;
+
+type GeneratedMember = { type: string; names: string[]; isCase: boolean; start: number; end: number };
+type GeneratedType = { name: string; start: number; end: number; members: GeneratedMember[] };
+const MEMBER = /^\s*(?:(?:public|private|fileprivate|internal|static|nonisolated|@\w+)\s+)*(let|var|func|case|init|subscript|struct|enum|class|typealias)\b\s*(.*)$/;
+
+/** The generated file's top-level types and their members, each by its 1-based lines; undefined for any shape this
+ * reader does not know, such as a nested type or a line outside every type. */
+export function generatedMembers(source: string): GeneratedType[] | undefined {
+  const lines = blankSwift(source).split("\n");
+  const types: GeneratedType[] = [];
+  let depth = 0;
+  let type: GeneratedType | undefined;
+  for (const [at, line] of lines.entries()) {
+    const number = at + 1;
+    if (depth === 0 && line.trim()) {
+      const header = /^(?:public\s+|internal\s+)?(?:enum|struct)\s+([A-Za-z_]\w*)\b[^{]*\{\s*$/.exec(line);
+      if (!header) return undefined;
+      type = { name: header[1]!, start: number, end: number, members: [] };
+      types.push(type);
+    } else if (depth === 1 && line.trim() && line.trim() !== "}") {
+      const member = MEMBER.exec(line);
+      if (!member) return undefined;
+      const isCase = member[1] === "case";
+      const names = isCase
+        ? member[2]!.split(",").map((each) => /^`?([A-Za-z_]\w*)`?/.exec(each.trim())?.[1]).filter((name): name is string => Boolean(name))
+        : [/^`?([A-Za-z_]\w*)`?/.exec(member[2]!)?.[1] ?? member[1]!];
+      type!.members.push({ type: type!.name, names, isCase, start: number, end: number });
+    } else if (depth >= 1 && type?.members.length && line.trim()) type.members.at(-1)!.end = number;
+    for (const char of line) depth += "{[(".includes(char) ? 1 : "}])".includes(char) ? -1 : 0;
+    if (depth < 0) return undefined;
+    if (depth === 0 && type && line.includes("}")) { type.end = number; type = undefined; }
+  }
+  return depth === 0 ? types : undefined;
+}
+
+/**
+ * The parts a change to a generated file reaches: the owners of each Swift file that reads a changed entry, where a
+ * changed static member is read by a file naming both its type and its name, and a changed case or type by a file
+ * naming the type or one of its cases. `diff` is the file's zero-context diff and `after` the file as the change
+ * leaves it; `sources` maps every other Swift file to its text. Undefined when the change cannot be placed, so every
+ * part keeps the file: an unreadable diff, an unknown shape, a line outside every type, or a reader nobody owns.
+ */
+export function generatedReach(
+  diff: string | undefined, after: string | undefined, sources: ReadonlyMap<string, string>,
+  generated: string,
+): string[] | undefined {
+  const hunks = diff === undefined ? undefined : diffHunks(diff).get(generated);
+  if (!hunks || after === undefined) return undefined;
+  const sides = [
+    { text: after, lines: hunks.flatMap((hunk) => Array.from({ length: hunk.added }, (_, at) => hunk.newStart + at)) },
+    { text: before(after, hunks), lines: hunks.flatMap((hunk) => hunk.removed.map((_, at) => hunk.oldStart + at)) },
+  ];
+  const members = new Map<string, Set<string>>();
+  const types = new Map<string, Set<string>>();
+  for (const side of sides) {
+    const read = generatedMembers(side.text);
+    if (!read) return undefined;
+    const code = blankSwift(side.text).split("\n");
+    const raw = blankSwift(side.text, true).split("\n");
+    const changed: GeneratedMember[] = [];
+    const wholeType = (type: GeneratedType) => {
+      const cases = types.get(type.name) ?? new Set<string>();
+      for (const member of type.members) if (member.isCase) for (const name of member.names) cases.add(name);
+      types.set(type.name, cases);
+    };
+    for (const line of side.lines) {
+      if (!code[line - 1]?.trim()) continue;
+      const type = read.find((each) => each.start <= line && each.end >= line);
+      if (!type) return undefined;
+      const member = type.members.find((each) => each.start <= line && each.end >= line);
+      if (!member || member.isCase) wholeType(type);
+      else changed.push(member);
+    }
+    // A member that reads a changed member of the generated file changes with it.
+    for (let grew = true; grew;) {
+      grew = false;
+      for (const type of read) for (const member of type.members) {
+        if (member.isCase || changed.includes(member)) continue;
+        const text = raw.slice(member.start - 1, member.end).join("\n");
+        if (changed.some((each) => (each.type === type.name || new RegExp(`\\b${each.type}\\b`).test(text)) &&
+          each.names.some((name) => new RegExp(`\\b${name}\\b`).test(text)))) { changed.push(member); grew = true; }
+      }
+    }
+    for (const member of changed) {
+      const names = members.get(member.type) ?? new Set<string>();
+      for (const name of member.names) names.add(name);
+      members.set(member.type, names);
+    }
+  }
+  const reached = new Set<string>();
+  for (const [path, text] of sources) {
+    if (path === generated) continue;
+    const code = blankSwift(text, true);
+    const word = (name: string) => new RegExp(`\\b${name}\\b`).test(code);
+    const reads = [...members].some(([type, names]) => word(type) && [...names].some(word)) ||
+      [...types].some(([type, cases]) => word(type) || [...cases].some((name) => new RegExp(`\\.${name}\\b`).test(code)));
+    if (!reads) continue;
+    // The UI tests drive the app from outside and cannot read its types; an app-hosted test runs where partReach
+    // runs its file.
+    if (path.startsWith(UI_TESTS)) continue;
+    const owners = path.startsWith(APP_TESTS) ? appTestParts(path) : phoneFileOwners(path);
+    if (!owners.length) return undefined;
+    for (const part of owners) reached.add(part);
+  }
+  return [...reached];
+}
+
 // INF-827 (the captain's approved INF-828 plan): which of the phone journey's parts a change
 // reaches, and how close. 0: it edits test code the part runs; 1: a file the part owns;
 // 2: any other phone input, which reaches every part.
@@ -122,14 +234,17 @@ export function blankSwift(source: string, keepStrings = false, onInvalid?: () =
   return out;
 }
 
-export type SwiftFunction = { name: string; start: number; end: number; body: string };
+export type SwiftFunction = { name: string; start: number; end: number; body: string; kind?: "type" | "constant" };
 
 /** Each function with a body, by its 1-based first and last lines; undefined when the braces do not balance. */
 export function swiftFunctions(source: string): SwiftFunction[] | undefined {
   const code = blankSwift(source);
   const lineAt = (index: number) => code.slice(0, index).split("\n").length;
   const functions: SwiftFunction[] = [];
-  for (const declared of code.matchAll(/\bfunc\s+([A-Za-z_]\w*)/g)) {
+  // INF-3379: a computed property (`var name: Type {`, no initializer) has a body like a function's, so an edit
+  // inside one is placed on the parts that read its name rather than read as outside any declaration.
+  const declarations = /\bfunc\s+([A-Za-z_]\w*)|(?<!\b(?:for|case|if|guard|while)\s+)(?<![\w.])var\s+([A-Za-z_]\w*)\s*:[^={}\n]+(?=\{)/g;
+  for (const declared of code.matchAll(declarations)) {
     let index = declared.index + declared[0].length;
     let parens = 0;
     while (index < code.length && !(parens === 0 && (code[index] === "{" || code[index] === "}"))) {
@@ -146,7 +261,7 @@ export function swiftFunctions(source: string): SwiftFunction[] | undefined {
       index++;
     } while (depth > 0 && index < code.length);
     if (depth !== 0) return undefined;
-    functions.push({ name: declared[1]!, start: lineAt(declared.index), end: lineAt(index - 1), body: blankSwift(source.slice(declared.index, index), true) });
+    functions.push({ name: (declared[1] ?? declared[2])!, start: lineAt(declared.index), end: lineAt(index - 1), body: blankSwift(source.slice(declared.index, index), true) });
   }
   return functions;
 }
@@ -189,7 +304,7 @@ function swiftDeclarations(source: string): SwiftFunction[] | undefined {
         // need more than this reader can prove. Keep their existing full-selection fallback.
         if (!/^[ \t]*[@#]/m.test(lines.slice(at, end + 1).join("\n")) &&
           !(constant && /\\#*\(/.test(body))) {
-          const declaration = { name: match[1]!, start: at + 1, end: end + 1, body };
+          const declaration: SwiftFunction = { name: match[1]!, start: at + 1, end: end + 1, body, kind: type ? "type" : "constant" };
           declarations.push(declaration);
           if (type) types.push(declaration);
         }
@@ -205,6 +320,37 @@ function swiftDeclarations(source: string): SwiftFunction[] | undefined {
   return depth === 0 ? declarations.filter((each) =>
     !types.some((type) => type !== each && type.start <= each.start && type.end >= each.end)) : undefined;
 }
+
+export type SwiftBlock = { kind: string; name: string; plain: boolean; start: number; end: number };
+
+/** INF-3379: each type or extension body, by its 1-based opening and closing lines; `plain` marks an extension that
+ * adds no conformance or condition, so its own lines change nothing but what it declares. */
+export function swiftBlocks(source: string): SwiftBlock[] {
+  const blocks: SwiftBlock[] = [];
+  const open: { block?: SwiftBlock; depth: number }[] = [];
+  let depth = 0;
+  for (const [at, line] of blankSwift(source).split("\n").entries()) {
+    const header = /\b(class|struct|enum|actor|protocol|extension)\s+([A-Za-z_][\w.]*)([^{]*)\{/.exec(line);
+    const opens = header && !/^(?:func|var|let)$/.test(header[2]!) ? header.index + header[0].length - 1 : -1;
+    for (const [index, char] of [...line].entries()) {
+      if (char === "{") {
+        depth++;
+        const block = index === opens ? { kind: header![1]!, name: header![2]!, plain: header![1] === "extension" && !header![3]!.trim(), start: at + 1, end: at + 1 } : undefined;
+        if (block) { blocks.push(block); open.push({ block, depth }); }
+      } else if (char === "}") {
+        if (open.at(-1)?.depth === depth) open.pop()!.block!.end = at + 1;
+        depth--;
+      }
+    }
+  }
+  return blocks;
+}
+
+const SWIFT_KEYWORDS = new Set(("let var func class struct enum extension protocol actor import private fileprivate public " +
+  "internal open final static override lazy weak unowned mutating nonmutating init deinit self Self super true false nil " +
+  "return if else guard in for while repeat switch case default break continue where as is try throws rethrows async " +
+  "await some any inout typealias associatedtype get set willSet didSet nonisolated isolated convenience required " +
+  "dynamic optional indirect MainActor").split(" "));
 
 export type Hunk = { oldStart: number; removed: string[]; newStart: number; added: number };
 
@@ -290,11 +436,21 @@ export function partFunctions(functions: SwiftFunction[], parts: PartTable = PHO
   return reached;
 }
 
+/** The parts an app-hosted test file runs in: the part whose class it declares, any other test class in the rest
+ * part, and anything else beside them, such as a shared helper, in every part that runs app-hosted tests. */
+export function appTestParts(path: string, parts: PartTable = PHONE_PARTS): string[] {
+  const suites = parts.filter((part) => suiteFile(part)?.startsWith(APP_TESTS));
+  const own = suites.filter((part) => suiteFile(part) === path).map((part) => part.name);
+  const rest = parts.at(-1)!.name;
+  return own.length ? own : /Tests\.swift$/.test(path) ? [rest] : [rest, ...suites.map((part) => part.name)];
+}
+
 /**
  * How close the change is to each part. `testDiff` is the zero-context diff of the UI tests,
  * `testFiles` every UI test file the change leaves and `read` reads one as the change leaves it.
  * Added lines are read in the new version and removed ones in the old, each with its own references;
- * a file it cannot read or parse counts every part edited.
+ * a file it cannot read or parse counts every part edited. `generated` maps a changed generated file to the parts
+ * its changed entries reach (generatedReach), or to undefined when every part keeps it.
  */
 export function partReach(
   reasons: readonly string[],
@@ -302,6 +458,7 @@ export function partReach(
   testFiles: readonly string[],
   read: (path: string) => string | undefined,
   parts: PartTable = PHONE_PARTS,
+  generated: ReadonlyMap<string, readonly string[] | undefined> = new Map(),
 ): PartReach[] {
   const every = names(parts);
   const edited = new Map<string, Set<string>>(every.map((part) => [part, new Set()]));
@@ -314,6 +471,8 @@ export function partReach(
     else { const tests = repeatTests.get(part) ?? new Set<string>(); tests.add(test); repeatTests.set(part, tests); }
   };
   const everyPart = (why: string) => { for (const part of every) { edited.get(part)!.add(why); repeat(part); } };
+  // A line nothing can place still selects every part, once, as a shared helper does.
+  const everyPartOnce = (why: string) => { for (const part of every) edited.get(part)!.add(why); };
   const tests = reasons.filter((path) => path.startsWith(UI_TESTS));
   const changed = testDiff === undefined ? undefined : diffHunks(testDiff);
   if (tests.length && (!changed || tests.some((path) => !changed.has(path))))
@@ -333,12 +492,16 @@ export function partReach(
       if (!after.has(path)) after.set(path, "");
     }
     const parse = (files: Map<string, string>) => {
-      const parsed = new Map([...files].map(([path, text]) => [path, swiftDeclarations(text)] as const));
+      const parsed = new Map([...files].map(([path, text]) => [path, swiftDeclarations(text)?.map((each) => ({ ...each, path }))] as const));
       if (![...parsed.values()].every(Boolean)) return undefined;
       const declarations = [...parsed.values()].flatMap((each) => each!);
       const reached = partFunctions(declarations, parts);
-      const counts = new Map<string, number>();
-      for (const each of declarations) counts.set(each.name, (counts.get(each.name) ?? 0) + 1);
+      // INF-3379: overloads of one function name share its callers, since partFunctions joins every declaration
+      // of a name; any other name declared twice stays ambiguous.
+      const kinds = new Map<string, Set<string>>();
+      for (const each of declarations) kinds.set(each.name, (kinds.get(each.name) ?? new Set()).add(each.kind ?? "function"));
+      const ambiguous = new Set([...kinds].filter(([name, kind]) =>
+        declarations.filter((each) => each.name === name).length > 1 && (kind.size > 1 || !kind.has("function"))).map(([name]) => name));
       // A reference outside any known declaration may run at global setup, not just in a test.
       const global = new Set<string>();
       for (const [path, text] of files) for (const [at, line] of blankSwift(text, true).split("\n").entries()) {
@@ -353,7 +516,65 @@ export function partReach(
           for (const token of each.body.matchAll(/\b[A-Za-z_]\w*\b/g))
             if (!globalReach.has(token[0])) { globalReach.add(token[0]); frontier.push(token[0]); }
       }
-      return { parsed, reached, counts, globalReach };
+      const blocks = new Map([...files].map(([path, text]) => [path, swiftBlocks(text)] as const));
+      return { files, parsed, declarations, reached, ambiguous, globalReach, blocks };
+    };
+    type Side = NonNullable<ReturnType<typeof parse>>;
+    type Declaration = Side["declarations"][number];
+    const place = (side: Side, each: Declaration) => {
+      if (side.ambiguous.has(each.name) || side.globalReach.has(each.name))
+        everyPart(`${each.name}: ambiguous name or global setup reference`);
+      for (const part of every)
+        if (side.reached.get(part)!.has(each.name)) {
+          edited.get(part)!.add(each.name);
+          // Shared helpers get ordinary coverage; a helper exclusive to one test belongs to that test.
+          if (/^test[A-Z_]/.test(each.name)) {
+            // Old names still select coverage, but cannot be run after a test is renamed or removed.
+            const current = after.get(each.path) ?? "";
+            if (!swiftFunctions(current)?.some((fn) => fn.name === each.name)) continue;
+            const table = parts.find((entry) => "test" in entry && entry.test === each.name);
+            const classes = [...blankSwift(current).matchAll(/\bclass\s+(\w+)\s*:\s*XCTestCase\b/g)];
+            repeat(part, table ? `${PHONE_JOURNEY}/${each.name}` : classes.length === 1 ? `InfinitaryUITests/${classes[0]![1]}/${each.name}` : undefined);
+          } else if (every.filter((name) => side.reached.get(name)!.has(each.name)).length === 1) {
+            const table = parts.find((entry) => entry.name === part);
+            repeat(part, table && "test" in table ? partIdentifier(table) : undefined);
+          }
+        }
+    };
+    // INF-3379: a line outside every declaration the reader knows - an import, a type or extension's opening or
+    // closing line, a stored property - is placed on the declarations it can change, never on every part three
+    // times. An import changes only its own file; a plain extension's lines change only what it declares; a type's
+    // header changes its members, its extensions and every declaration naming it; any other line changes its
+    // enclosing block's declarations and every declaration naming one of its words.
+    const outsideLine = (side: Side, path: string, line: number): Declaration[] => {
+      const code = blankSwift(side.files.get(path)!).split("\n");
+      const own = side.parsed.get(path)!;
+      // An attribute on its own line belongs to the declaration after it.
+      let at = line;
+      while (at < code.length && /^\s*@\w+(?:\([^)]*\))?\s*$/.test(code[at - 1]!)) at++;
+      const declared = own.filter((each) => each.start <= at && each.end >= at);
+      if (declared.length) return declared;
+      const text = code[at - 1] ?? "";
+      if (/^\s*(?:@\w+\s+)*import\s/.test(text)) return own;
+      const blocks = side.blocks.get(path)!;
+      const inside = (block: SwiftBlock, file = path) => side.parsed.get(file)!
+        .filter((each) => each.start >= block.start && each.end <= block.end);
+      const named = (word: string) => {
+        const pattern = new RegExp(`\\b${word}\\b`);
+        return [
+          ...side.declarations.filter((each) => pattern.test(each.body)),
+          ...[...side.blocks].flatMap(([file, each]) => each
+            .filter((block) => block.kind === "extension" && block.name.split(".")[0] === word)
+            .flatMap((block) => inside(block, file))),
+        ];
+      };
+      const header = blocks.find((block) => block.start === at);
+      if (header) return header.plain ? inside(header) : [...inside(header), ...named(header.name.split(".")[0]!)];
+      const enclosing = blocks.filter((block) => block.start < at && block.end >= at).at(-1);
+      if (enclosing && enclosing.end === at && /^[\s})\];,]*$/.test(text)) return inside(enclosing);
+      const words = [...new Set([...text.matchAll(/\b[A-Za-z_]\w*\b/g)].map((each) => each[0]))]
+        .filter((word) => !SWIFT_KEYWORDS.has(word));
+      return [...new Set([...(enclosing ? inside(enclosing) : own), ...words.flatMap(named)])];
     };
     const sides = [parse(after), parse(beforeFiles)] as const;
     if (!sides[0] || !sides[1]) everyPart("a UI test file could not be parsed");
@@ -361,45 +582,21 @@ export function partReach(
       [sides[0], changed!.get(path)!.flatMap((hunk) => Array.from({ length: hunk.added }, (_, at) => hunk.newStart + at))],
       [sides[1], changed!.get(path)!.flatMap((hunk) => hunk.removed.map((_, at) => hunk.oldStart + at))],
     ] as const) {
-      const code = blankSwift((side === sides[0] ? after : beforeFiles).get(path)!).split("\n");
+      const code = blankSwift(side.files.get(path)!).split("\n");
       const functions = side.parsed.get(path)!;
       for (const line of lines) {
         // A blank or comment-only line counts for nothing.
         if (!code[line - 1]?.trim()) continue;
         const around = functions.filter((each) => each.start <= line && each.end >= line);
-        if (!around.length) everyPart(`${path} line ${line}${side === sides[1] ? " (removed)" : ""}, outside any supported declaration`);
-        for (const each of around) {
-          if (side.counts.get(each.name)! > 1 || side.globalReach.has(each.name))
-            everyPart(`${each.name}: ambiguous name or global setup reference`);
-          for (const part of every)
-            if (side.reached.get(part)!.has(each.name)) {
-              edited.get(part)!.add(each.name);
-              // Shared helpers get ordinary coverage; a helper exclusive to one test belongs to that test.
-              if (/^test[A-Z_]/.test(each.name)) {
-                // Old names still select coverage, but cannot be run after a test is renamed or removed.
-                const current = after.get(path) ?? "";
-                if (!swiftFunctions(current)?.some((fn) => fn.name === each.name)) continue;
-                const table = parts.find((entry) => "test" in entry && entry.test === each.name);
-                const text = current;
-                const classes = [...blankSwift(text).matchAll(/\bclass\s+(\w+)\s*:\s*XCTestCase\b/g)];
-                repeat(part, table ? `${PHONE_JOURNEY}/${each.name}` : classes.length === 1 ? `InfinitaryUITests/${classes[0]![1]}/${each.name}` : undefined);
-              } else if (every.filter((name) => side.reached.get(name)!.has(each.name)).length === 1) {
-                const table = parts.find((entry) => entry.name === part);
-                repeat(part, table && "test" in table ? partIdentifier(table) : undefined);
-              }
-            }
-        }
+        const placed = around.length ? around : outsideLine(side, path, line);
+        if (!placed.length) everyPartOnce(`${path} line ${line}${side === sides[1] ? " (removed)" : ""}, outside any declaration it could place`);
+        for (const each of placed) place(side, each);
       }
     }
   }
   const appTests = reasons.filter((path) => path.startsWith(APP_TESTS));
-  // An app-hosted test file runs in the part whose class it declares, any other test class in the rest part,
-  // and anything else beside them, such as a shared helper, in every part that runs app-hosted tests.
-  const suites = parts.filter((part) => suiteFile(part)?.startsWith(APP_TESTS));
   for (const path of appTests) {
-    const own = suites.filter((part) => suiteFile(part) === path).map((part) => part.name);
-    const runs = own.length ? own : /Tests\.swift$/.test(path) ? [every.at(-1)!] : [every.at(-1)!, ...suites.map((part) => part.name)];
-    for (const part of runs) {
+    for (const part of appTestParts(path, parts)) {
       edited.get(part)!.add(`the app-hosted tests (${path})`);
       const hunks = changed?.get(path);
       const text = read(path);
@@ -424,7 +621,8 @@ export function partReach(
     const own = [...edited.get(part)!];
     if (own.length) return { part, distance: 0, repeat: repeats.has(part),
       ...(repeatTests.has(part) && !broadRepeats.has(part) ? { repeatTests: [...repeatTests.get(part)!].sort() } : {}), why: `edits test code it runs: ${own.join(", ")}` };
-    const owned = reasons.filter((path) => matches(owners(part), path));
+    // A generated file's change reaches the owners of what reads its changed entries, when they could be read.
+    const owned = reasons.filter((path) => generated.get(path)?.includes(part) ?? matches(owners(part), path));
     if (owned.length) return { part, distance: 1, why: `edits a file it owns: ${owned.join(", ")}` };
     return { part, distance: 2, why: `another phone input changed: ${reasons.join(", ")}` };
   });
@@ -532,6 +730,26 @@ export function requestDevicePlan(parts: readonly string[], reach: readonly Part
   return { iphoneOnly, devices };
 }
 
+/**
+ * INF-3379 (the captain's "compute the base from the branch's merge point with main and ignore an older base"): a
+ * request's base older than the branch's merge point with main would count main's own changes since that base as
+ * the branch's edits, so the comparison starts at the merge point instead. A base at or past the merge point, such
+ * as a stacked branch's, stands, as does any base when main or the merge point cannot be read.
+ */
+export function requestBase(
+  base: string, head: string, git: (args: string[]) => string, main = "origin/main",
+): { base: string; ignored?: string } {
+  try {
+    const point = git(["merge-base", main, head]).trim();
+    const from = git(["merge-base", base, head]).trim();
+    if (!point || !from || from === point) return { base };
+    try { git(["merge-base", "--is-ancestor", from, point]); } catch { return { base }; }
+    return { base: point, ignored: base };
+  } catch {
+    return { base };
+  }
+}
+
 function main(): void {
   const { values } = parseArgs({ options: {
     base: { type: "string", default: "origin/main" },
@@ -547,14 +765,17 @@ function main(): void {
   const root = fileURLToPath(new URL("..", import.meta.url));
   const git = (args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 });
   const virtualMac = Boolean(process.env.PHONE_VIRTUAL_MAC);
+  const base = requestBase(values.base, values.head, git);
+  if (base.ignored) console.error(`Phone base ${values.base} is behind this branch's merge point with main; comparing with ${base.base} instead.`);
+  const range = `${base.base}...${values.head}`;
   let paths: string[] | undefined;
   try {
-    paths = git(["diff", "--name-only", "-z", `${values.base}...${values.head}`, "--"]).split("\0").filter(Boolean);
+    paths = git(["diff", "--name-only", "-z", range, "--"]).split("\0").filter(Boolean);
   } catch { /* An unreadable comparison must not silently omit the gate. */ }
   let generatedDiff: string | undefined;
   if (paths?.includes(GENERATED_CONTRACT)) {
     try {
-      generatedDiff = git(["diff", "-U0", `${values.base}...${values.head}`, "--", GENERATED_CONTRACT]);
+      generatedDiff = git(["diff", "-U0", range, "--", GENERATED_CONTRACT]);
     } catch { /* An unreadable file comparison selects the gate. */ }
   }
   const decision = phoneDecision(paths, generatedDiff, { virtualMac });
@@ -563,8 +784,24 @@ function main(): void {
   if (decision.run) {
     let testDiff: string | undefined;
     try {
-      testDiff = git(["diff", "-U0", "--no-renames", `${values.base}...${values.head}`, "--", UI_TESTS, APP_TESTS]);
+      testDiff = git(["diff", "-U0", "--no-renames", range, "--", UI_TESTS, APP_TESTS]);
     } catch { /* Counted as every part edited. */ }
+    const generated = new Map<string, string[] | undefined>();
+    const changedGenerated = GENERATED_ENTRIES.filter((path) => decision.reasons.includes(path));
+    if (changedGenerated.length) {
+      const sources = new Map<string, string>();
+      try {
+        for (const path of git(["ls-files", "-z", "--", "ios/"]).split("\0").filter((each) => each.endsWith(".swift"))) {
+          const text = readFile(join(root, path));
+          if (text !== undefined) sources.set(path, text);
+        }
+      } catch { /* With no sources read, each generated file keeps every part. */ }
+      for (const path of changedGenerated) {
+        let diff: string | undefined;
+        try { diff = git(["diff", "-U0", "--no-renames", range, "--", path]); } catch { /* Every part keeps it. */ }
+        generated.set(path, sources.size ? generatedReach(diff, readFile(join(root, path)), sources, path) : undefined);
+      }
+    }
     // The working tree is the change's head.
     const read = (path: string) => readFile(join(root, path));
     let testFiles: string[] = [];
@@ -572,7 +809,7 @@ function main(): void {
       testFiles = readdirSync(join(root, UI_TESTS)).filter((name) => name.endsWith(".swift")).map((name) => UI_TESTS + name);
     } catch { /* No UI tests left: an edited one counts every part. */ }
     // An unreadable comparison counts every part edited.
-    const reach = paths ? partReach(decision.reasons, testDiff, testFiles, read)
+    const reach = paths ? partReach(decision.reasons, testDiff, testFiles, read, PHONE_PARTS, generated)
       : names(PHONE_PARTS).map((part): PartReach => ({ part, distance: 0, why: "the change could not be read" }));
     placement = values.request
       ? (values.request && paths && !virtualMac ? requestedParts(decision.reasons, reach) : reach)
@@ -598,11 +835,12 @@ function main(): void {
   const run = values.coverage === undefined ? decision.run : kept.length > 0;
   console.log(`run=${run}`);
   console.log(`parts=${kept.join(" ")}`);
-  if (values.placement) writeFileSync(values.placement, `${JSON.stringify({ run, inputs: decision.reasons, parts: placement, coverage: kept, iphoneOnly, repeats }, null, 2)}\n`);
+  if (values.placement) writeFileSync(values.placement, `${JSON.stringify({ run, base: base.base, ...(base.ignored ? { ignoredBase: base.ignored } : {}), inputs: decision.reasons, parts: placement, coverage: kept, iphoneOnly, repeats }, null, 2)}\n`);
   const row = (each: Placement) =>
     `- ${each.kept ? "Runs" : "Left"}: ${each.part}, distance ${each.distance}, ${each.minutes === undefined ? "no time" : `${each.minutes.toFixed(1)} minutes`}: ${each.reason}; ${each.why}`;
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY,
     ["### Native phone gate", "",
+      ...(base.ignored ? [`The requested base ${base.ignored} is behind this branch's merge point with main, so the change is read from ${base.base}.`, ""] : []),
       ...(decision.run ? decision.reasons.map((reason) => `- ${reason}`) : ["No phone input the gate uses changed beyond the contract version number."]),
       "", `Ordinary coverage: ${kept.join(" ") || "none"}; complete live selection: ${repeats.full}.`,
       `On the iPhone only (the iPad waits for the release check): ${iphoneOnly.join(" ") || "none"}.`,

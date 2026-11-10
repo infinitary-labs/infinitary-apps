@@ -66,6 +66,7 @@ The phone signs in to that computer over SSH with SwiftNIO SSH (`SSHJoin`), runs
 The commands are the home's own text, generated into `PhoneSSHCommand` from `src/shared/phoneLink.ts`, and the home's side is `docs/devices.md`, "A phone that joins by its address".
 The first sign-in to an address shows the computer's SSH fingerprint, as `ssh-keygen -l` prints it, and asks once: **Not this one** sends nothing, and the yes is kept in `TrustedHomes.json` by address and port.
 A different key at that address later stops the join before the phone signs in or sends anything.
+Each join is one attempt, and a sign-in's answer lands only on the attempt that asked: a cancelled join that answers after another address was typed changes nothing, so its key is never asked about, or kept, for that address (`PhoneAddressJoinTests`).
 The phone signs in with its own key first: a P-256 key in the Secure Enclave where the phone has one, otherwise (a simulator) in this app's Keychain, this device only, never synchronized (`PhoneSSHKey`).
 When the computer refuses that key but takes a password, the phone asks for the account's password there once and signs in with it only to run the command that adds the phone's public key to that account's `~/.ssh/authorized_keys`; it then signs in again with the key.
 The password is never saved, shown or sent anywhere else; SwiftNIO SSH holds it as a string, so the phone cannot zero its bytes after use.

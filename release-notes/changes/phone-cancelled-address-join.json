@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "phone-cancelled-address-join",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Cancelling a join by address on an iPhone or iPad no longer trusts the wrong computer",
+      "body": "When you cancelled joining a computer by its address on your iPhone or iPad and then typed another address, the first computer's late answer could show its fingerprint for the second address. Saying yes kept that wrong fingerprint, and joining the second computer was then refused until the app's data was erased. A cancelled join's answer now changes nothing, and the next address asks about its own fingerprint.",
+      "noPicture": "The fix stops a cancelled join's late answer from reaching the next one; no view changes.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

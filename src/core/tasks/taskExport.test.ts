@@ -90,6 +90,9 @@ function populated() {
   tick();
   tasks.graph.link("c", "a", "related", "firstmate");
   tick();
+  // A pin rides the task's line (INF-3127).
+  tasks.setPinned("b", true, { actor: "captain" });
+  tick();
   seedDelivery(
     tasks,
     "a",
@@ -177,6 +180,8 @@ describe("the task export (task-system P5)", () => {
     // The reloaded record behaves as the record: keys resolve, the graph
     // holds, the next key continues the sequence rather than reusing one.
     expect(target.byKey("NIA-1")?.id).toBe("a");
+    expect(target.get("b")?.pinnedAt).toBe(source.tasks.get("b")?.pinnedAt);
+    expect(target.get("b")?.pinnedAt).not.toBeNull();
     expect(target.graph.blockers("b").map((task) => task.id)).toEqual(["a"]);
     expect(target.graph.children("b").map((task) => task.id)).toEqual(["c"]);
     expect(target.capture.asksFor("a")).toHaveLength(1);

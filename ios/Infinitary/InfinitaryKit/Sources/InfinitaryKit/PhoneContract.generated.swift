@@ -63,6 +63,7 @@ public enum PhoneRequest: String, Sendable {
     case live = "inf:tasks:crewmate:live"
     case result = "inf:tasks:crewmate:result"
     case run = "inf:task:run"
+    case pin = "inf:task:pin"
     case steer = "inf:task:steer"
     case interrupt = "inf:task:interrupt"
     case notifications = "inf:settings:notifications:get"
@@ -72,7 +73,7 @@ public enum PhoneRequest: String, Sendable {
     case secretEnroll = "inf:secrets:enroll"
     case secretDecide = "inf:secrets:decide"
     public var changes: Bool {
-        switch self { case .converse, .run, .steer, .interrupt, .secretEnroll, .secretDecide: true; default: false }
+        switch self { case .converse, .run, .pin, .steer, .interrupt, .secretEnroll, .secretDecide: true; default: false }
     }
 }
 
@@ -180,6 +181,7 @@ public enum PhoneTaskRowWords {
     public static let reachNoNewWork = "takes no new work"
     public static let reachAway = "out of reach"
     public static let earlier = "Earlier"
+    public static let pinned = "Pinned"
     public static let start = "Start"
     public static let tryAgain = "Try again"
     public static func foundOn(_ key: String) -> String { "found on \(key)" }
@@ -193,6 +195,10 @@ public enum PhoneRowMoveWords {
     public static let start = "Start"
     public static let startNow = "Start now"
     public static let startedBacklog = "Its turn stops and its work stays. It waits for your Start."
+    public static let pin = "Pin"
+    public static let unpin = "Unpin"
+    public static let pinDetail = "Keeps it at the top of Tasks · at once"
+    public static let unpinDetail = "Lists it under its state in Tasks again · at once"
 }
 
 public enum PhoneRecordWords {

@@ -8,6 +8,7 @@ import { reasoningWord } from "@shared/reasoning";
 import { DROP_BEFORE_START } from "@shared/recordDrop";
 import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repos";
 import type { WorkShape } from "@shared/routingPolicy";
+import { pinActivity, pinMissingRefusal } from "@shared/taskPin";
 import type { PlanItem } from "@shared/taskPlan";
 import {
   type EffectiveTaskPolicies,
@@ -595,6 +596,11 @@ export class TaskService {
   /** The live set and every row closed at or after `since`, oldest first. */
   listLiveOrClosedSince(since: number): TaskRecord[] {
     return this.writer.store.listLiveOrClosedSince(since);
+  }
+
+  /** Every pinned row, whatever its state or age, oldest first (INF-3127). */
+  listPinned(): TaskRecord[] {
+    return this.writer.store.listPinned();
   }
 
   /** Each closed row's search fields, oldest first, without reading the rest of it. */
@@ -1530,6 +1536,43 @@ export class TaskService {
       this.writer.patch(id, { captainOpenedAt: at, updatedAt: at });
       return true;
     });
+    return run();
+  }
+
+  /**
+   * Pin a task to the top of Tasks, or unpin it (INF-3127): a dated fact on
+   * its own record, whatever its state, with one quiet line on its timeline
+   * and no feed line. It writes nothing else: no priority, order, start
+   * policy, project or parent, and no crewmate is told. Pinning a pinned
+   * task, or unpinning one that is not, changes nothing.
+   */
+  setPinned(
+    id: string,
+    pinned: boolean,
+    input: { actor: "captain" | "firstmate"; panel?: string | undefined },
+  ): { ok: true; changed: boolean } | { ok: false; text: string } {
+    const run = this.writer.write(
+      (): { ok: true; changed: boolean } | { ok: false; text: string } => {
+        const record = this.writer.store.get(id);
+        if (!record) return { ok: false, text: pinMissingRefusal(id) };
+        if ((record.pinnedAt != null) === pinned) return { ok: true, changed: false };
+        const at = this.writer.now();
+        this.writer.patch(id, { pinnedAt: pinned ? at : null, updatedAt: at });
+        this.writer.addEvent({
+          taskId: id,
+          at,
+          actor: input.actor,
+          kind: "note",
+          text: pinActivity(input.actor, pinned),
+          data: {
+            pin: pinned ? "pinned" : "unpinned",
+            ...(input.panel ? { panel: input.panel } : {}),
+          },
+          feed: false,
+        });
+        return { ok: true, changed: true };
+      },
+    );
     return run();
   }
 

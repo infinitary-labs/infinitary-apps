@@ -11,9 +11,12 @@ import {
   dropReviewKeys,
   dropUnderwayLine,
   dropWaitingLine,
+  PIN_LABEL,
   taskStatusOf,
+  UNPIN_LABEL,
 } from "@infinitary/ui";
 import type { BoardColumn, BoardLane } from "./boardTiles";
+import { isCardOnly } from "./rows";
 
 /** What Drop task would affect, as `tasks.detail` lists it. */
 type DropEffects = NonNullable<PanelTaskDetail["dropEffects"]>;
@@ -100,6 +103,9 @@ export const QUEUE_LABEL = "Queue it";
 export const UNQUEUE_LABEL = "Back to backlog";
 export const START_LABEL = "Start";
 export const START_NOW_LABEL = "Start now";
+/** The board menu's Pin and Unpin sub-lines (INF-3127), which the phone's long press says too. */
+export const PIN_DETAIL = "Keeps it at the top of Tasks · at once";
+export const UNPIN_DETAIL = "Lists it under its state in Tasks again · at once";
 
 /** The live line as a drag begins. */
 export const DRAG_STARTED = "Drag to a column. Each one says what the drop would do.";
@@ -329,6 +335,11 @@ export function dropAskOf(
   };
 }
 
+/** What Pin or Unpin did, for the live line. */
+export function boardPinText(key: string, pinned: boolean): string {
+  return pinned ? `${key} is pinned to the top of Tasks.` : `${key} is unpinned.`;
+}
+
 /** What a confirmed move or a menu entry the host accepted did, for the live line. */
 export function boardDoneText(key: string, op: PanelTaskMove): string {
   switch (op) {
@@ -354,7 +365,7 @@ export function boardDoneText(key: string, op: PanelTaskMove): string {
 /** One entry of a tile's ⋯ menu: what it is called, what it does, and why it cannot run. */
 export type BoardMenuEntry =
   | {
-      id: "open" | "card" | "continue" | "queue" | "unqueue" | "start" | "drop";
+      id: "open" | "card" | "pin" | "continue" | "queue" | "unqueue" | "start" | "drop";
       label: string;
       /** The sub-line under the label: what it does, or why it cannot. */
       detail?: string;
@@ -370,7 +381,8 @@ export type BoardMenuEntry =
  * does: Open record; Show the card while a decision waits; Continue on
  * interrupted work; Queue it or Back to backlog and Start now on open work;
  * Back to backlog on started work, and Start now on started work in the
- * backlog (INF-2062); then Drop task, last, in danger. An entry that cannot run stays listed,
+ * backlog (INF-2062); Pin or Unpin, which keeps the task at the top of
+ * Tasks (INF-3127); then Drop task, last, in danger. An entry that cannot run stays listed,
  * dim, with its reason. Done and Dropped tiles have no menu.
  */
 export function boardMenuOf(
@@ -378,7 +390,7 @@ export function boardMenuOf(
   lane: BoardLane,
   context: BoardMoveContext,
 ): BoardMenuEntry[] {
-  if (!task.key && task.minimizedCardId) return [{ id: "card", label: "Show the card" }];
+  if (isCardOnly(task)) return [{ id: "card", label: "Show the card" }];
   if (!boardMovable(lane)) return [];
   const entries: BoardMenuEntry[] = [{ id: "open", label: "Open record" }];
   if (lane === "waiting" && (task.waitingCardId || task.minimizedCardId))
@@ -428,6 +440,12 @@ export function boardMenuOf(
       target: "working",
     });
   }
+  // After the moves, so the keys and the hand that walk a menu to a move find it where it was.
+  entries.push(
+    task.pinnedAt === undefined
+      ? { id: "pin", label: PIN_LABEL, detail: PIN_DETAIL }
+      : { id: "pin", label: UNPIN_LABEL, detail: UNPIN_DETAIL },
+  );
   const drop = boardMoveOf(task, lane, "drop", context);
   entries.push(
     { separator: true },

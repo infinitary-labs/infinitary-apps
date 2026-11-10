@@ -103,6 +103,8 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     public let foundOn: String?
     public let filingNew: Bool?
     public let backlogSince: Double?
+    /// INF-3127: when the captain pinned the task to the top of Tasks; nil while it is not pinned, and from an older Mac.
+    public let pinnedAt: Double?
     /// INF-2935, piece 2: what the Mac's task record reads beyond the facts above (src/shared/tasks.ts
     /// `taskDetailSchema`), each optional so an older Mac's record still decodes. The board row carries the first four.
     public let blocks: [String]?

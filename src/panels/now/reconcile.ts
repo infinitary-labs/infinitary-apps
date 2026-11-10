@@ -38,7 +38,12 @@ export function reconcileRows(
     const held = current.get(group);
     if (
       held?.length === rows.length &&
-      rows.every((row, index) => row.task === held[index]?.task && row.depth === held[index]?.depth)
+      rows.every(
+        (row, index) =>
+          row.task === held[index]?.task &&
+          row.depth === held[index]?.depth &&
+          row.home === held[index]?.home,
+      )
     ) {
       next.set(group, held);
     } else {

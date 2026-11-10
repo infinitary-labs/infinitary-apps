@@ -475,6 +475,8 @@ describe("ipc contract", () => {
       "inf:task:interrupt",
       "inf:task:move",
       "inf:task:move-options",
+      // INF-3127: a paired phone pins a task to the top of Tasks as the Mac does.
+      "inf:task:pin",
       "inf:task:run",
       "inf:task:steer",
       "inf:tasks:board",

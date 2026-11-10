@@ -127,3 +127,34 @@ describe("a group that opens and closes", () => {
     expect(expandChevron(group("backlog", true))).toBe(opened);
   });
 });
+
+/**
+ * A row's pin (INF-3127) is the task's: a minimized card with no task
+ * behind it lists among the tasks, but the app has no task to pin there,
+ * so its row carries no pin (review of INF-3138).
+ */
+describe("a row's pin", () => {
+  const pinned = (row: PanelTaskRow) =>
+    renderToStaticMarkup(
+      <Group
+        group="waiting"
+        rows={[{ task: row, group: "waiting", depth: 0 }]}
+        board={board()}
+        open
+        selectedTaskIds={[]}
+        litTaskId={null}
+        onToggle={() => {}}
+        onOpen={() => {}}
+        onPin={() => {}}
+      />,
+    );
+
+  it("is on a task's row", () => {
+    expect(pinned(task())).toContain('data-now-pin="t1"');
+  });
+
+  it("is not on a minimized card that has no task", () => {
+    const card = task({ id: "card:c1", key: "", minimizedCardId: "c1" });
+    expect(pinned(card)).not.toContain("data-now-pin");
+  });
+});

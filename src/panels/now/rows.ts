@@ -11,6 +11,7 @@ import {
 import {
   EARLIER_LABEL,
   foundOnWords,
+  PINNED_LABEL,
   ROW_CATCHING_UP,
   ROW_REACH_WORDS,
   ROW_START_LABEL,
@@ -30,17 +31,25 @@ export { NOW_GROUPS, type NowGroup };
 
 /**
  * `earlier` is the search's own group (FI3-579 piece 3): closed work the
- * board does not list, found only by typed words. It is not a board group.
+ * board does not list, found only by typed words. `pinned` is the panel's
+ * own group at its top (INF-3127): every task the captain pinned, whatever
+ * its state, listed there alone. Neither is a board group, so the shared
+ * rule the board and the phone read (`nowGroupOf`) keeps its five.
  */
-export type PanelGroup = NowGroup | "earlier";
+export type PanelGroup = "pinned" | NowGroup | "earlier";
+
+/** Every group the panel paints, in its order: Pinned first, Earlier last. */
+export const PANEL_GROUPS: readonly PanelGroup[] = ["pinned", ...NOW_GROUPS, "earlier"];
 
 export const PANEL_GROUP_LABELS: Record<PanelGroup, string> = {
+  pinned: PINNED_LABEL,
   ...NOW_GROUP_LABELS,
   earlier: EARLIER_LABEL,
 };
 
 /** Groups whose rows show without a click. */
 export const OPEN_BY_DEFAULT: ReadonlySet<PanelGroup> = new Set([
+  "pinned",
   "waiting",
   "working",
   "queued",
@@ -50,7 +59,13 @@ export const OPEN_BY_DEFAULT: ReadonlySet<PanelGroup> = new Set([
 /** How deep a child row indents at most. */
 export const MAX_DEPTH = 3;
 
-export type NowRow = { task: PanelTaskRow; group: PanelGroup; depth: number };
+export type NowRow = {
+  task: PanelTaskRow;
+  group: PanelGroup;
+  depth: number;
+  /** Where a pinned row would list unpinned (INF-3127): its Start and wait line follow it. */
+  home?: NowGroup | null;
+};
 
 export type NowFilter = { query: string; projectId: string | null };
 
@@ -195,15 +210,37 @@ function matches(task: PanelTaskRow, filter: NowFilter): boolean {
   return foldForSearch(task.title).includes(q) || foldForSearch(task.key).includes(q);
 }
 
+/** Whether the captain pinned this task to the top of Tasks. */
+export function isPinned(task: PanelTaskRow): boolean {
+  return task.pinnedAt !== undefined;
+}
+
+/**
+ * Whether the row stands for a task at all: a minimized card with no task
+ * behind it lists among the tasks, but there is nothing to pin, open or
+ * move - only its card to show.
+ */
+export function isCardOnly(task: PanelTaskRow): boolean {
+  return !task.key && Boolean(task.minimizedCardId);
+}
+
 /**
  * Rows per group: sorted by priority then age (landed newest first), a
- * child placed under its parent when both are in the same group.
+ * child placed under its parent when both are in the same group. A pinned
+ * task lists once, in Pinned alone, whatever its state or age, in the
+ * order it was pinned, newest last (INF-3127); its parts stay in their own
+ * groups unless pinned too.
  */
-export function rowsOf(board: PanelTaskBoard, filter: NowFilter): Map<NowGroup, NowRow[]> {
+export function rowsOf(board: PanelTaskBoard, filter: NowFilter): Map<PanelGroup, NowRow[]> {
   const taskGroups = groupsOf(board);
   const byGroup = new Map<NowGroup, PanelTaskRow[]>();
   const groupById = new Map<string, NowGroup>();
+  const pinned: PanelTaskRow[] = [];
   for (const task of board.tasks) {
+    if (isPinned(task)) {
+      if (matches(task, filter)) pinned.push(task);
+      continue;
+    }
     const group = taskGroups.get(task.id) ?? null;
     if (!group || !matches(task, filter)) continue;
     groupById.set(task.id, group);
@@ -211,7 +248,19 @@ export function rowsOf(board: PanelTaskBoard, filter: NowFilter): Map<NowGroup, 
     list.push(task);
     byGroup.set(group, list);
   }
-  const rows = new Map<NowGroup, NowRow[]>();
+  const rows = new Map<PanelGroup, NowRow[]>();
+  if (pinned.length > 0) {
+    pinned.sort((a, b) => (a.pinnedAt ?? 0) - (b.pinnedAt ?? 0));
+    rows.set(
+      "pinned",
+      pinned.map((task) => ({
+        task,
+        group: "pinned" as const,
+        depth: 0,
+        home: taskGroups.get(task.id) ?? null,
+      })),
+    );
+  }
   for (const [group, tasks] of byGroup) {
     tasks.sort((a, b) =>
       group === "landed"
@@ -275,7 +324,9 @@ export type ProjectChip = { id: string | null; key: string };
 export function projectChipsOf(board: PanelTaskBoard): ProjectChip[] {
   const groups = groupsOf(board);
   const withRows = new Set(
-    board.tasks.filter((task) => groups.get(task.id) != null).map((task) => task.projectId),
+    board.tasks
+      .filter((task) => groups.get(task.id) != null || isPinned(task))
+      .map((task) => task.projectId),
   );
   const projects = board.projects.filter((project) => withRows.has(project.id));
   if (projects.length < 2) return [];
@@ -287,7 +338,8 @@ export function newestListedWrite(board: PanelTaskBoard): number {
   const groups = groupsOf(board);
   let newest = 0;
   for (const task of board.tasks) {
-    if (groups.get(task.id) != null && task.updatedAt > newest) newest = task.updatedAt;
+    if ((groups.get(task.id) != null || isPinned(task)) && task.updatedAt > newest)
+      newest = task.updatedAt;
   }
   return newest;
 }
@@ -299,7 +351,9 @@ export function newestListedWrite(board: PanelTaskBoard): number {
  * An `operation` row alone, the trail of an app change, docks nothing.
  */
 export function onRail(board: PanelTaskBoard): boolean {
-  return board.tasks.some((task) => nowGroupOf(task) !== null || task.kind !== "operation");
+  return board.tasks.some(
+    (task) => nowGroupOf(task) !== null || task.kind !== "operation" || isPinned(task),
+  );
 }
 
 /**

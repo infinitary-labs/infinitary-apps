@@ -91,7 +91,7 @@ Show the card, on a waiting tile's menu, brings its card forward, a merge card i
   Esc lets go and writes nothing; near an edge, the body scrolls.
 - **Asking on the tile**: a move that asks once draws the tile dashed (`--line-2`) in the column it landed on, or on its own row when the view does not draw that column, its status unchanged, with the sentence under a `--line-1` hairline in `--text-sm` `--fg-2`, then Cancel (small secondary, focused) and the confirm (small primary Queue it or Start, small danger Drop task), side by side or stacked in a narrow column.
   Nothing is written before the confirm; Cancel or Esc puts the tile back, and a live change to the task cancels the move and says so.
-- **The ⋯ menu**: Open record; Show the card while a decision waits; Continue on interrupted work; Queue it or Back to backlog, and Start now, on open work, each with a sub-line ("May start at once · asks once", "Asks once · the record's Start"); a separator; Drop task last, in danger.
+- **The ⋯ menu**: Open record; Show the card while a decision waits; Continue on interrupted work; Queue it or Back to backlog, and Start now, on open work, each with a sub-line ("May start at once · asks once", "Asks once · the record's Start"); Pin or Unpin, at once, which keeps the task at the top of the Tasks panel (INF-3127), after the moves so a move keeps its place; a separator; Drop task last, in danger.
   An entry that cannot run stays listed, dim, its reason as its sub-line (RowMenu, `RowMenu.prompt.md`).
 - Focus follows an accepted move to the tile's new lane, or the nearest row when the view does not draw it, and comes back to the tile after a refusal or a cancel.
 

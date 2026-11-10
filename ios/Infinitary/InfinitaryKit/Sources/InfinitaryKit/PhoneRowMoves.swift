@@ -23,7 +23,7 @@ public enum PhoneRowMoves {
 
     /// One entry of the menu: its name, what it does or why it cannot, and the move it makes.
     public struct Entry: Equatable, Sendable {
-        public enum ID: String, Sendable { case open, card, `continue`, queue, unqueue, start, drop }
+        public enum ID: String, Sendable { case open, card, pin, `continue`, queue, unqueue, start, drop }
         public let id: ID
         public let label: String
         public let detail: String?
@@ -158,8 +158,8 @@ public enum PhoneRowMoves {
 
     /// The menu (`boardMenuOf`): Open record; Show the card while a decision waits; Continue on interrupted work; Queue it
     /// or Back to backlog and Start now on open work; Back to backlog on started work, and Start now on started work in the
-    /// backlog; then Drop task, last, in danger. An entry that cannot run stays, dim, with its reason. Done and Dropped
-    /// rows have none.
+    /// backlog; Pin or Unpin; then Drop task, last, in danger. An entry that cannot run stays, dim, with its reason. Done
+    /// and Dropped rows have none.
     public static func menu(_ task: PhoneTask, lane: Lane) -> [Item] {
         if task.key.isEmpty && task.minimizedCardId != nil {
             return [.entry(Entry(id: .card, label: cardLabel, detail: nil, disabled: false, danger: false, target: nil))]
@@ -194,6 +194,12 @@ public enum PhoneRowMoves {
             items.append(.entry(Entry(id: .start, label: PhoneRowMoveWords.startNow, detail: refusal(start) ?? "Asks once · the record's Start",
                                       disabled: refusal(start) != nil, danger: false, target: .working)))
         }
+        // INF-3127: Pin keeps the task at the top of Tasks, whatever its state; Unpin lists it under its state again. After the moves,
+        // as on the Mac, so a move stays where it was in the menu.
+        items.append(.entry(task.pinnedAt == nil
+            ? Entry(id: .pin, label: PhoneRowMoveWords.pin, detail: PhoneRowMoveWords.pinDetail, disabled: false, danger: false, target: nil)
+            : Entry(id: .pin, label: PhoneRowMoveWords.unpin, detail: PhoneRowMoveWords.unpinDetail, disabled: false, danger: false,
+                    target: nil)))
         let drop = self.move(task, from: lane, to: .drop)
         items.append(.separator)
         items.append(.entry(Entry(id: .drop, label: PhoneRecordWords.dropTask, detail: refusal(drop) ?? "Asks once",

@@ -206,9 +206,17 @@ export async function rowAtRest(page: Page, key: string): Promise<void> {
   await atRest(page, nowRow(page, key));
 }
 
-/** Rests the pointer on a Tasks row once the list under it has stopped moving. */
+/**
+ * Rests the pointer on a Tasks row once the list under it has stopped
+ * moving. It rests on the row's left part: a row's controls, its Start and
+ * its pin (INF-3127), show over its right end while the pointer is on the
+ * row, and on a narrow panel they reach past its middle.
+ */
 export async function restOnRow(page: Page, key: string): Promise<void> {
-  await restOnStill(page, nowRow(page, key));
+  await restOnStill(page, nowRow(page, key), (box) => ({
+    x: Math.round(box.width / 4),
+    y: Math.round(box.height / 2),
+  }));
 }
 
 /**
@@ -251,10 +259,18 @@ export async function expectRailsDrawn(page: Page): Promise<void> {
   ).toHaveCount(0);
 }
 
-/** Rests the pointer on `target` once it has stopped moving. */
-export async function restOnStill(page: Page, target: Locator): Promise<void> {
+/**
+ * Rests the pointer on `target` once it has stopped moving: on its middle,
+ * or where `at` places it within the target's box.
+ */
+export async function restOnStill(
+  page: Page,
+  target: Locator,
+  at?: (box: { width: number; height: number }) => { x: number; y: number },
+): Promise<void> {
   await atRest(page, target);
-  await target.hover();
+  const box = at ? await target.boundingBox() : null;
+  await target.hover(box && at ? { position: at(box) } : undefined);
 }
 
 /**

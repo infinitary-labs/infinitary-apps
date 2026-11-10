@@ -59,7 +59,8 @@ function task(overrides: Partial<PanelTaskRow> = {}): PanelTaskRow {
 }
 
 const NO_CARD: BoardMoveContext = { completionCardId: null };
-const lane = (row: PanelTaskRow) => boardLaneOf(row) as BoardLane;
+// Each row is read no earlier than its last write.
+const lane = (row: PanelTaskRow) => boardLaneOf(row, row.updatedAt) as BoardLane;
 const move = (row: PanelTaskRow, target: BoardTarget, context = NO_CARD) =>
   boardMoveOf(row, lane(row), target, context);
 
@@ -229,7 +230,14 @@ const labels = (entries: BoardMenuEntry[]) =>
 describe("a tile's ⋯ menu", () => {
   it("offers on backlog work what its drops do, with Drop task last in danger", () => {
     const entries = boardMenuOf(backlog, "backlog", NO_CARD);
-    expect(labels(entries)).toEqual(["Open record", "Queue it", "Start now", "---", "Drop task"]);
+    expect(labels(entries)).toEqual([
+      "Open record",
+      "Queue it",
+      "Start now",
+      "Pin",
+      "---",
+      "Drop task",
+    ]);
     expect(entries[1]).toMatchObject({
       detail: "May start at once · asks once",
       target: "queued",
@@ -259,6 +267,7 @@ describe("a tile's ⋯ menu", () => {
       "Open record",
       "Back to backlog",
       "Start now",
+      "Pin",
       "---",
       "Drop task",
     ]);
@@ -275,6 +284,7 @@ describe("a tile's ⋯ menu", () => {
     expect(labels(boardMenuOf(waiting, "waiting", NO_CARD))).toEqual([
       "Open record",
       "Show the card",
+      "Pin",
       "---",
       "Drop task",
     ]);
@@ -283,16 +293,35 @@ describe("a tile's ⋯ menu", () => {
       "Open record",
       "Continue",
       "Back to backlog",
+      "Pin",
       "---",
       "Drop task",
     ]);
     expect(labels(boardMenuOf(working, "working", NO_CARD))).toEqual([
       "Open record",
       "Back to backlog",
+      "Pin",
       "---",
       "Drop task",
     ]);
     expect(boardMenuOf(done, "landed", NO_CARD)).toEqual([]);
     expect(boardMenuOf(dropped, "dropped", NO_CARD)).toEqual([]);
+  });
+
+  // The captain's reach for the pin (INF-3127): Pin and Unpin on the board's tile menu, at once,
+  // after the moves, so a menu walked by keys to a move finds it where it was.
+  it("offers Pin on an unpinned tile and Unpin on a pinned one", () => {
+    const pinOf = (entries: BoardMenuEntry[]) =>
+      entries.find((entry) => "id" in entry && entry.id === "pin");
+    expect(pinOf(boardMenuOf(backlog, "backlog", NO_CARD))).toMatchObject({
+      id: "pin",
+      label: "Pin",
+      detail: "Keeps it at the top of Tasks · at once",
+    });
+    expect(pinOf(boardMenuOf({ ...working, pinnedAt: 7 }, "working", NO_CARD))).toMatchObject({
+      id: "pin",
+      label: "Unpin",
+      detail: "Lists it under its state in Tasks again · at once",
+    });
   });
 });

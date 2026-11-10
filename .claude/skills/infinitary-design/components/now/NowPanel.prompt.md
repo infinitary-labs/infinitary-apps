@@ -44,7 +44,7 @@ Nothing else in the rail: no chips, meters, models, or ages - everything richer 
 Clicking a row is a pointing gesture, never a work change: a row waiting on you refreshes its ready decision and brings it to the front of the stack (or opens the record if no eligible choice remains); any other row opens the task's record (`TaskRecord`) as a front entry in the main card stack, shown at once.
 One entry per task can remain open; each row reads selected while its record is open, even when paged away (FI3-309, replacing the gutter pane).
 Open task board in its header shows every task at once on the stage (`TaskBoard.prompt.md`).
-The panel's one button that changes a task is a backlog row's Start (below); it has no drag, no inline editing and no manual create - the record's action bar carries Drop task and the one next step (`TaskRecord`), and every other write happens by talking to the first mate.
+The panel's buttons that change a task are a backlog row's Start and every row's pin (below); it has no drag, no inline editing and no manual create - the record's action bar carries Drop task and the one next step (`TaskRecord`), and every other write happens by talking to the first mate.
 The filter (a key/title search and project chips) sits behind the search icon; its words are the panel's own state, and its project chip is the window's project focus, the same as the top bar's project pill (`components/core/ProjectFocus`).
 While the window is focused on a project the panel lists only that project's tasks, the filter closed or open, and its collapsed summary counts only them.
 Close search sits 6px right of the field: a 24px icon button with Lucide `x` at 14px in `--fg-3`, the next stop after the field, labelled "Close search" with the key Esc.
@@ -62,7 +62,7 @@ In the app this is a Tier-2 frame template (`src/renderer/src/plugins/builtin/no
 
 ## Start on a backlog row (INF-1663)
 
-The captain's direction A on INF-1662: while the pointer rests on a backlog row, or the keyboard's focus is on it or its Start, a small secondary button reading `Start` shows over the row's right end, 4px in from it.
+The captain's direction A on INF-1662: while the pointer rests on a backlog row, or the keyboard's focus is on it or its Start, a small secondary button reading `Start` shows over the row's right end, just before the row's pin (Pinned, below), which sits 4px in from that end.
 It is the row's sibling, never inside the row, so the row stays one button that opens the record and nothing moves on rest.
 It is 22px tall, `--text-sm` medium in `--fg-1`, with a `--line-2` hairline border on no surface of its own, and fades in and out over `--dur-fast`; its border brightens to `--fg-3` on hover.
 The row keeps its rest look under it, `--bg-3` while the pointer is on the Start too; the title fades out before the Start's left edge, as wide as the Start is, and the trailing project name hides.
@@ -71,6 +71,22 @@ A row whose start failed reads `Try again`, as the record's bar does.
 A row that cannot start - blocked, or one whose parts do the work - shows the Start dim (`--fg-3` on a `--line-1` border), still reachable, with the record's reason on rest (`useRestLabel`); held work on request starts, as its record's Start does.
 A press the app refuses dims the Start with the app's words until the row changes.
 Only backlog rows carry it; queued rows start by themselves, and the task board keeps its own Start, which asks once.
+
+## Pinned (INF-3127)
+
+The captain's words: "when a task is pinned, it always show in a "pinned" section in the tasks panel at the top, no matter what state it's in".
+Pinned is the panel's own first group, above waiting on you, under the same micro uppercase label, `pinned`, with no count and never folded; it is absent while nothing is pinned.
+A pinned task lists there alone, whatever its state or age, done and dropped work included, and leaves its own group; its parts stay in their own groups, at the top level, unless pinned too.
+Its rows keep the order they were pinned in, newest last, each at the top level, reading as every other row does: the mark, the key, the title, the one dim word and the trailing words.
+A pinned task that waits for a free crewmate keeps its dated wait line, and a pinned backlog task keeps its Start.
+A search narrows Pinned like any group.
+
+Every task row carries a pin button that shows on the row's rest or focus, the same 22px square hairline button as the Start, 4px in from the row's right end and after the Start where a row has both.
+It is the Lucide pin icon (`PinGlyph`), 14px at stroke 1.5 in `--fg-2`, with no text: an outline while the task is unpinned, and filled in `--fg-1` while it is pinned.
+Its accessible name and rest label say what a press does, `Pin FI3-12` or `Unpin FI3-12`, and it reports its state as pressed.
+One press pins or unpins at once (`tasks.pin`), with no question; the row moves into or out of Pinned when the board does.
+The keyboard reaches it as it reaches the Start: → from a row goes to the row's first button, ← and → move between its buttons, ← from the first goes back to the row, and Enter or Space presses it.
+The task board's tile menu offers Pin or Unpin (`TaskBoard.prompt.md`), and the task record's header carries the same pin button beside its corner (`TaskRecord`).
 
 ## Earlier work in the filter (FI3-579, piece 3)
 

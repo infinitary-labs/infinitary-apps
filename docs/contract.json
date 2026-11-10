@@ -1344,6 +1344,72 @@
         ]
       }
     },
+    "inf:task:pin": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "panel": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              }
+            },
+            "required": [
+              "panel"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "ok"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": false
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "ok",
+              "text"
+            ]
+          }
+        ]
+      }
+    },
     "inf:task:move-options": {
       "effect": "read",
       "reach": "views",
@@ -29725,6 +29791,9 @@
                 "backlogSince": {
                   "type": "number"
                 },
+                "pinnedAt": {
+                  "type": "number"
+                },
                 "createdAt": {
                   "type": "number"
                 },
@@ -31414,6 +31483,9 @@
             ]
           },
           "backlogSince": {
+            "type": "number"
+          },
+          "pinnedAt": {
             "type": "number"
           },
           "createdAt": {
@@ -36098,6 +36170,9 @@
               ]
             },
             "backlogSince": {
+              "type": "number"
+            },
+            "pinnedAt": {
               "type": "number"
             },
             "createdAt": {
@@ -62982,6 +63057,9 @@
                 "backlogSince": {
                   "type": "number"
                 },
+                "pinnedAt": {
+                  "type": "number"
+                },
                 "createdAt": {
                   "type": "number"
                 },
@@ -64671,6 +64749,9 @@
                   ]
                 },
                 "backlogSince": {
+                  "type": "number"
+                },
+                "pinnedAt": {
                   "type": "number"
                 },
                 "createdAt": {

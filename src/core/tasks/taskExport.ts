@@ -148,6 +148,7 @@ const taskLineSchema = z.object({
   testPath: z.string().nullable().optional(),
   captainOpenedAt: z.number().nullable().optional(),
   verdict: z.string().nullable().optional(),
+  pinnedAt: z.number().nullable().optional(),
 });
 
 const eventLineSchema = z.object({

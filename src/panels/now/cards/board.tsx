@@ -45,6 +45,7 @@ import {
   boardMenuOf,
   boardMovable,
   boardMoveOf,
+  boardPinText,
   DRAG_STARTED,
   dropAskOf,
   MOVE_CANCELLED,
@@ -980,6 +981,16 @@ export default function TaskBoardCard({
           void point.openRecord(task.id).catch(() => {});
         } else if (entry.id === "card") {
           open(task);
+        } else if (entry.id === "pin") {
+          const pinned = task.pinnedAt === undefined;
+          void (
+            tasks
+              ? tasks.pin(task.id, pinned).then(
+                  (result) => (result.ok ? null : result.text),
+                  (caught: unknown) => (caught instanceof Error ? caught.message : String(caught)),
+                )
+              : Promise.resolve("This board cannot pin tasks here.")
+          ).then((why) => (why ? refused(task.id, why) : say(boardPinText(task.key, pinned))));
         } else if (entry.id === "continue") {
           void run(task, "continue-task").then((why) =>
             why ? refused(task.id, why) : say(boardDoneText(task.key, "continue-task")),

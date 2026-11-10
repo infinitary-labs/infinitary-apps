@@ -15,15 +15,32 @@ import { z } from "zod";
  * checks, so it lands on the task's record as the captain's own, naming
  * the panel it came from. It counts only from his own click or key in that
  * page (`gate`); one made otherwise writes nothing and says so. Merge and
- * discard are never moves: they stay on the task's own card.
+ * discard are never moves: they stay on the task's own card. A pin
+ * (`tasks.pin`, INF-3127) rides the same grant and the same gate: a fact
+ * on the task's record, not a move, written only on his click or key.
  */
 
 /** The id a panel's or a card's frame moves a task through (`inf.action`). */
-export const PANEL_TASKS_ACTIONS = ["tasks.run"] as const;
+export const PANEL_TASKS_ACTIONS = ["tasks.run", "tasks.pin"] as const;
 
 /** Why a move made without the captain's click or key wrote nothing. */
 export const MOVE_NOT_ASKED =
   "Only your own click or key in this panel moves a task. Nothing was written.";
+
+const pinSchema = z.strictObject({
+  taskId: z.string().min(1).max(64),
+  pinned: z.boolean(),
+});
+
+/** What `inf:task:pin` needs from the window: a task's pin, from the panel the captain pressed it in. */
+export type TaskPinner = (
+  taskId: string,
+  pinned: boolean,
+  from: { panel: string } | undefined,
+) => Promise<PanelMoveResult>;
+
+const pinForReal: TaskPinner = (taskId, pinned, from) =>
+  window.infinitary.task.pin(taskId, pinned, from);
 
 const runSchema = z.strictObject({
   taskId: z.string().min(1).max(64),
@@ -53,8 +70,28 @@ export function panelTasks(
   panel: { id: string; title: string; own?: boolean },
   gate: () => Promise<boolean>,
   run: TaskRunner = runForReal,
+  pin: TaskPinner = pinForReal,
 ): PanelTasks {
   return {
+    // A pin is checked and gated as a move is (INF-3127): only the captain's
+    // own click or key in this page writes it, naming the panel.
+    pin: async (taskId, pinned) => {
+      const parsed = pinSchema.safeParse({ taskId, pinned });
+      if (!parsed.success) {
+        const issue = parsed.error.issues[0];
+        throw new Error(`tasks.pin: ${issue?.path.join(".") || "pin"}: ${issue?.message}`);
+      }
+      if (!(await gate())) return { ok: false, text: MOVE_NOT_ASKED };
+      try {
+        return await pin(
+          parsed.data.taskId,
+          parsed.data.pinned,
+          panel.own ? undefined : { panel: panel.title },
+        );
+      } catch (caught) {
+        return { ok: false, text: caught instanceof Error ? caught.message : String(caught) };
+      }
+    },
     run: async (taskId, move, review) => {
       const parsed = runSchema.safeParse({
         taskId,
@@ -80,11 +117,15 @@ export function panelTasks(
   };
 }
 
-/** The host's answer to a frame's `tasks.run`: the value carries the call's arguments. */
+/** The host's answer to a frame's `tasks.run` or `tasks.pin`: the value carries the call's arguments. */
 export function frameTasksAction(
   tasks: PanelTasks,
 ): (id: string, value: unknown) => Promise<unknown> {
   return async (id, value) => {
+    if (id === "tasks.pin") {
+      const arg = (value ?? {}) as { taskId?: unknown; pinned?: unknown };
+      return tasks.pin(arg.taskId as string, arg.pinned as boolean);
+    }
     if (id !== "tasks.run") throw new Error(`"${id}" is not a panel's move`);
     const arg = (value ?? {}) as { taskId?: unknown; move?: unknown; review?: unknown };
     return tasks.run(arg.taskId as string, arg.move as never, arg.review as never);

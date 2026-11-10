@@ -202,6 +202,8 @@ function frameTasks(bridge: FrameBridgeApi): PanelTasks {
       bridge
         .action("tasks.run", { taskId, move, ...(review === undefined ? {} : { review }) })
         .then((result) => result as PanelMoveResult),
+    pin: (taskId, pinned) =>
+      bridge.action("tasks.pin", { taskId, pinned }).then((result) => result as PanelMoveResult),
   };
 }
 

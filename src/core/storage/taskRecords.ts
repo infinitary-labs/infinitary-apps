@@ -108,6 +108,7 @@ type Row = {
   captain_opened_at?: number | null;
   verdict?: string | null;
   start_notice?: string | null;
+  pinned_at?: number | null;
 };
 
 /**
@@ -271,6 +272,7 @@ function fromRow(row: Row): TaskRecord {
     captainOpenedAt: row.captain_opened_at ?? null,
     verdict: row.verdict ?? null,
     startNotice: row.start_notice ?? null,
+    pinnedAt: row.pinned_at ?? null,
   };
 }
 
@@ -323,6 +325,7 @@ const PATCH_COLUMNS = {
   captainOpenedAt: "captain_opened_at",
   verdict: "verdict",
   startNotice: "start_notice",
+  pinnedAt: "pinned_at",
   backlogSince: "backlog_since",
 } as const;
 
@@ -578,6 +581,9 @@ export class TaskStore {
         test_path: record.testPath ?? null,
         captain_opened_at: record.captainOpenedAt ?? null,
         verdict: record.verdict ?? null,
+        // The pin rides an imported task's line (INF-3127); a record from
+        // before its column keeps the row unpinned.
+        ...(this.columns().has("pinned_at") ? { pinned_at: record.pinnedAt ?? null } : {}),
       };
       const fields = Object.keys(values);
       this.db
@@ -931,6 +937,15 @@ export class TaskStore {
       this.db,
       `SELECT * FROM ${this.readTable()} WHERE status IN ('open', 'active') OR closed_at >= ?`,
     ).all(since) as Row[];
+    return oldestFirst(this.read(rows));
+  }
+
+  /** The pinned rows (INF-3127), whatever their state or age: the board lists every one. */
+  listPinned(): TaskRecord[] {
+    const rows = prepared(
+      this.db,
+      `SELECT * FROM ${this.readTable()} WHERE pinned_at IS NOT NULL`,
+    ).all() as Row[];
     return oldestFirst(this.read(rows));
   }
 

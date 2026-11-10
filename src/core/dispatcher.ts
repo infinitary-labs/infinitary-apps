@@ -75,6 +75,7 @@ import type { ScheduleRecord } from "./storage/scheduleStore";
 import { recordStartAtLogin } from "./storage/startAtLoginRecord";
 import { ProjectKeyRefusal } from "./tasks/projectKey";
 import { recentFeed } from "./tasks/taskFeed";
+import { taskRowChannels } from "./tasks/taskRowChannels";
 import { projectPageFile } from "./workspace/projectPage";
 
 /**
@@ -269,10 +270,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
 
     "inf:task:interrupt": (taskId) => services.supervisor.steer.interruptFromCrewmateTab(taskId),
 
-    "inf:task:run": (taskId, op, review, from) => {
-      const refusal = services.supervisor.hostOps.runTaskOp(taskId, op, review ?? undefined, from);
-      return refusal ? { ok: false as const, text: refusal } : { ok: true as const };
-    },
+    ...taskRowChannels(() => services.supervisor.hostOps, services.tasks),
     "inf:task:close-done": (taskId) => services.supervisor.hostOps.closeDoneFromRecord(taskId),
 
     "inf:task:delete": async (taskId) => {

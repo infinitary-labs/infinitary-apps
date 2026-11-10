@@ -50,3 +50,6 @@ export function failedCountWords(count: number): string {
 
 /** The search's own group of older closed work. */
 export const EARLIER_LABEL = "earlier";
+
+/** The panel's own group at its top: the tasks the captain pinned, whatever their state (INF-3127). */
+export const PINNED_LABEL = "pinned";

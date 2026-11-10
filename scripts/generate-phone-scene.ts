@@ -10,7 +10,7 @@ import type { PanelTaskBoard, PanelTaskRow } from "../src/shared/personal/contra
 
 /** The parts of the Mac's Tasks panel (src/panels/now/rows.ts) this reads; that module builds with the renderer, not here. */
 type NowBoard = PanelTaskBoard;
-type NowRow = { task: PanelTaskRow; depth: number };
+type NowRow = { task: PanelTaskRow; depth: number; home?: string | null };
 type NowFilter = { query: string; projectId: string | null };
 type NowRows = {
   NOW_GROUPS: readonly string[];
@@ -277,9 +277,9 @@ try {
     }) };
   }
   /**
-   * INF-2928 piece 1: the desktop Tasks panel's own reading of one board - its groups, their order and depth, each row's
-   * word and trailing words, the wait line and the folding headers' counts - with and without a search, for the phone's
-   * list to replay.
+   * INF-2928 piece 1: the desktop Tasks panel's own reading of one board - its Pinned section (INF-3127), its groups,
+   * their order and depth, each row's word and trailing words, the wait line and the folding headers' counts - with and
+   * without a search, for the phone's list to replay.
    */
   function taskListReadings() {
     const now = Date.UTC(2026, 10, 6, 17, 0);
@@ -309,17 +309,19 @@ try {
       row(2914, "Read the reach of each place", { ...started(10), ...running, parentId: "t-2904" }),
       row(2915, "Name the computer", { ...started(5), ...running, parentId: "t-2914" }),
       row(2916, "Spell the place", { ...started(4), ...running, parentId: "t-2915" }),
-      row(2905, "Chart the harbour entrance", { priority: 1,
+      row(2905, "Chart the harbour entrance", { priority: 1, pinnedAt: now - 12 * min,
         queueWait: { line: "Waiting for a free crewmate · since Nov 6, 8:40 AM", since: now - 20 * min } }),
       row(2906, "Count the buoys", { priority: 1, startAttempt: { phase: "preparing" } }),
       row(2917, "Relight the lamp", { priority: 3, projectId: "p-har", place: { where: "on Studio", name: "Studio", reach: "connecting" } }),
       row(2907, "Mend the harbour nets", { startPolicy: "on-request", foundOn: "INF-2901", filingNew: true }),
       row(2908, "Paint the jetty", { startPolicy: "on-request", startNotice: { reason: "No crewmate could start" } }),
-      row(2909, "Clear the slipway", { startPolicy: "on-request", ...flags(false, true) }),
+      row(2909, "Clear the slipway", { startPolicy: "on-request", ...flags(false, true), pinnedAt: now - 40 * min }),
       row(2910, "Dredge the channel", { startPolicy: "on-request", priority: 0, ...flags(true, false) }),
       row(2918, "Repair the crane", { ...started(60), ...idle("inactive"), backlogSince: now - 15 * min, startPolicy: "on-request" }),
       row(2920, "Answer the pilot's note", { ...started(70), ...idle("inactive"), answerNoteId: "note-2920", answerSince: now - 95 * min }),
-      row(2911, "Survey the harbour floor", done(60)),
+      row(2911, "Survey the harbour floor", { ...done(60), pinnedAt: now - 25 * min }),
+      // INF-3127: work closed long ago that the captain pinned: the board lists it for its pin alone.
+      row(2921, "Retire the old harbour light", { ...done(9000), pinnedAt: now - 5 * min }),
       row(2912, "Log the tides", done(10)),
       row(2919, "Check the moorings", { ...done(30), parentId: "t-2912" }),
       row(2913, "Mark the old wreck", { status: "dropped", closedReason: "dropped", closedAt: now - 5 * min }),
@@ -327,7 +329,7 @@ try {
     const earlier = [
       row(2801, "Paint the harbour wall", { ...done(8000), createdAt: now - 9000 * min }),
       row(2802, "Rope the harbour bell", { status: "dropped", closedReason: "dropped", createdAt: now - 9500 * min, closedAt: now - 7000 * min }),
-      row(2911, "Survey the harbour floor", done(60)),
+      row(2911, "Survey the harbour floor", { ...done(60), pinnedAt: now - 25 * min }),
     ];
     const several = { tasks, projects: [project("p-inf", "INF", "Infinitary", "infinitary"), project("p-har", "HAR", "Harbour", "harbour")] };
     const single = { tasks, projects: [project("p-inf", "INF", "Infinitary", "infinitary"), project("p-har", "HAR", "Harbour", null)] };
@@ -337,7 +339,8 @@ try {
       const filter = { query, projectId: null };
       const groups = rowsOf(panel, filter);
       const older = earlierRowsOf(found as unknown as Board["tasks"], groups, filter);
-      const sections = [...NOW_GROUPS.map((group) => [group, groups.get(group) ?? []] as const), ["earlier" as const, older] as const]
+      const sections = [["pinned" as const, groups.get("pinned") ?? []] as const,
+        ...NOW_GROUPS.map((group) => [group, groups.get(group) ?? []] as const), ["earlier" as const, older] as const]
         .filter(([, rows]) => rows.length > 0)
         .map(([section, rows]) => {
           const fresh = section === "queued" || section === "backlog" ? newFilingCount(rows) : 0;
@@ -345,10 +348,12 @@ try {
           return { section, folds: !OPEN_BY_DEFAULT.has(section), count: rows.length,
             newWords: fresh > 0 ? newCountWords(fresh) : undefined,
             failedWords: section === "backlog" && failed > 0 ? failedCountWords(failed) : undefined,
-            rows: rows.map(({ task, depth }) => ({ key: task.key, depth, word: wordOf(task), trailing: trailingOf(panel, task),
+            rows: rows.map(({ task, depth, home }) => ({ key: task.key, depth, word: wordOf(task), trailing: trailingOf(panel, task),
               // The row's mark and the summary's reason beside it, at this reading's time.
               mark: taskStatusOf(task, now).mark, reason: taskStatusOf(task, now).reason,
-              wait: section === "queued" && task.queueWait && task.status === "open" ? task.queueWait.line : undefined })) };
+              // The group it lists under by its state, where a pinned row would list unpinned: its Start and wait line follow it.
+              home: section === "pinned" ? (home ?? undefined) : section === "earlier" ? undefined : section,
+              wait: (section === "queued" || home === "queued") && task.queueWait && task.status === "open" ? task.queueWait.line : undefined })) };
         });
       // The phone reads a board with its seq, which a panel reading has no use for.
       return { name, query, now, board: { seq: 1, ...board }, earlier: found, sections };

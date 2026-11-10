@@ -155,6 +155,21 @@ export const talkChannels = {
     request: z.tuple([z.string().min(1).max(64)]),
     response: z.object({ ok: z.boolean(), text: z.string().min(1) }),
   },
+  // Pin a task to the top of Tasks, or unpin it (INF-3127): the Tasks
+  // panel's row button, the task board's tile menu and the task record, on
+  // the captain's click or key. A fact on the task's own record, whatever
+  // its state; a pin a panel made names that panel, as a move does. A
+  // refusal comes back as text and writes nothing.
+  "inf:task:pin": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(64), z.boolean(), taskMoveFromSchema.optional()]),
+    response: z.discriminatedUnion("ok", [
+      okSchema,
+      z.object({ ok: z.literal(false), text: z.string().min(1) }),
+    ]),
+  },
   // The task record's Move to a computer (docs/helper.md, "Moving a started
   // task"): where the task could move, and the move itself - to a computer
   // that runs work by its device id or `this-mac`, or null to cancel a move

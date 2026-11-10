@@ -317,6 +317,73 @@ describe("the earlier group (FI3-579 piece 3)", () => {
   });
 });
 
+/**
+ * The captain's words (INF-3127): "when a task is pinned, it always show in a
+ * "pinned" section in the tasks panel at the top, no matter what state it's
+ * in"; and on the plan card, listed in Pinned alone, in pin order, newest last.
+ */
+describe("the Pinned group (INF-3127)", () => {
+  const working = task({ id: "w", key: "FI3-30", status: "active", pinnedAt: 30 });
+  const backlog = task({
+    id: "b",
+    key: "FI3-31",
+    status: "open",
+    activity: null,
+    startPolicy: "on-request",
+    pinnedAt: 10,
+  });
+  // Closed long ago: the board lists it for its pin alone.
+  const oldDone = task({
+    id: "d",
+    key: "FI3-32",
+    status: "done",
+    activity: null,
+    closedAt: 1,
+    title: "Retire the old page",
+    pinnedAt: 20,
+  });
+  const unpinned = task({ id: "u", key: "FI3-33", status: "active" });
+
+  it("lists every pinned task first and alone, in the order it was pinned", () => {
+    const rows = rowsOf(board({ tasks: [working, backlog, oldDone, unpinned] }), noFilter);
+    expect([...rows.keys()][0]).toBe("pinned");
+    expect(rows.get("pinned")?.map((row) => [row.task.key, row.group, row.depth])).toEqual([
+      ["FI3-31", "pinned", 0],
+      ["FI3-32", "pinned", 0],
+      ["FI3-30", "pinned", 0],
+    ]);
+    // Each keeps where it would list unpinned, which its Start and wait line follow.
+    expect(rows.get("pinned")?.map((row) => row.home)).toEqual(["backlog", "landed", "working"]);
+    expect(rows.get("working")?.map((row) => row.task.key)).toEqual(["FI3-33"]);
+    expect(rows.has("backlog")).toBe(false);
+    expect(rows.has("landed")).toBe(false);
+  });
+
+  it("keeps a pinned task's parts in their own group, at the top level", () => {
+    const parent = task({ id: "p", key: "FI3-40", status: "active", pinnedAt: 5 });
+    const part = task({ id: "c", key: "FI3-41", parentId: "p", status: "active" });
+    const rows = rowsOf(board({ tasks: [parent, part] }), noFilter);
+    expect(rows.get("pinned")?.map((row) => row.task.key)).toEqual(["FI3-40"]);
+    expect(rows.get("working")?.map((row) => [row.task.key, row.depth])).toEqual([["FI3-41", 0]]);
+  });
+
+  it("narrows by a search like any group, and lists none when nothing is pinned", () => {
+    const rows = rowsOf(board({ tasks: [working, backlog, oldDone] }), {
+      query: "retire",
+      projectId: null,
+    });
+    expect(rows.get("pinned")?.map((row) => row.task.key)).toEqual(["FI3-32"]);
+    expect(rowsOf(board({ tasks: [unpinned] }), noFilter).has("pinned")).toBe(false);
+  });
+
+  it("docks the panel and offers a project chip for a pinned task alone", () => {
+    const elsewhere = { ...oldDone, projectId: "scratch" };
+    const pinnedOnly = board({ projects: [project(), scratch], tasks: [unpinned, elsewhere] });
+    expect(onRail(board({ tasks: [{ ...oldDone, kind: "operation" }] }))).toBe(true);
+    expect(projectChipsOf(pinnedOnly).map((chip) => chip.key)).toContain("SCR");
+  });
+});
+
 describe("what the collapsed panel says it holds", () => {
   it("is on its rail once the board holds an ask's record or a row it lists", () => {
     expect(onRail(board({ tasks: [] }))).toBe(false);

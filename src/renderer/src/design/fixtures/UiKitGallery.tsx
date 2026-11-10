@@ -13,6 +13,7 @@ import {
   MicroLabel,
   PanelExpandChevron,
   PanelTaskKeyText,
+  PinGlyph,
   QuotaMeter,
   QuotaMicroMeter,
   Row,
@@ -59,6 +60,7 @@ export const STAGE_ONLY_EXPORTS: readonly string[] = [
  * question (piece 7), the overflow-title helpers a panel may use, and what
  * an automation rule says, which Settings and the Automation panel share.
  * The blocked-by and wait projections and the shared minute clock draw nothing themselves.
+ * The pin button's Pin and Unpin words, and which pinned work is past the board's week, draw nothing.
  */
 export const HELPER_EXPORTS: readonly string[] = [
   "AUTOMATION_STATE_TONES",
@@ -94,6 +96,10 @@ export const HELPER_EXPORTS: readonly string[] = [
   "useRestLabel",
   "usePanelTaskKeys",
   "litTaskIn",
+  "PIN_LABEL",
+  "UNPIN_LABEL",
+  "pinActionLabel",
+  "pinnedPastWeek",
 ];
 
 /** A gallery's pointing goes nowhere: it has no tasks to point at. */
@@ -172,6 +178,10 @@ export function UiKitGallery() {
       </Item>
       <Item name="Disclosure">
         <Disclosure label="Landed" count={7} defaultOpen={false} />
+      </Item>
+      <Item name="PinGlyph">
+        <PinGlyph pinned={false} />
+        <PinGlyph pinned />
       </Item>
       <Item name="StatusDot">
         <StatusDot tone="ok" label="Signed in" />

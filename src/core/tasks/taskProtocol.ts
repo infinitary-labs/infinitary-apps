@@ -24,6 +24,7 @@ import { foldForSearch } from "@shared/searchText";
 import type { TaskBrowserFact } from "@shared/taskBrowser";
 import { type TaskHold, taskHoldWords } from "@shared/taskHold";
 import { cardMerges, taskMovesOf } from "@shared/taskMoves";
+import { pinnedPastWeek } from "@shared/taskPin";
 import { planItemsSchema, type TaskPlan, type TaskPlanItem } from "@shared/taskPlan";
 import { effectiveTaskPolicies, type PolicyRepo, type TaskRunsOn } from "@shared/taskPolicies";
 import {
@@ -90,8 +91,9 @@ import type { TaskChange } from "./taskWriter";
  * from nothing (`taskProtocol.cache.test.ts` pins it after every shape of write).
  *
  * The board is the LIVE set (open, active, closed within BOARD_RECENT_MS,
- * and the parents of those); history stays in the database and is read one
- * task at a time (design section 9.1).
+ * and the parents of those) plus every pinned task whatever its age, which
+ * brings no old parent along (INF-3127); other history stays in the
+ * database and is read one task at a time (design section 9.1).
  *
  * Above the measured trigger (P5, design section 9.1: a snapshot over
  * 256 KB or a live set over 500 rows) the push becomes `inf:tasks:delta`:
@@ -820,7 +822,8 @@ export class TaskProtocol {
   /**
    * The board from nothing: the first read, and the read after rows
    * vanished wholesale. Only the rows the board shows are read: the live
-   * set, the last week's closed work and any minimized card's task. A long
+   * set, the last week's closed work, any minimized card's task and the
+   * pinned tasks, through their partial index (INF-3127). A long
    * record is mostly closed rows from before that, and a crew event pushes
    * the board, so reading them all stalled the main process (INF-703).
    */
@@ -834,6 +837,9 @@ export class TaskProtocol {
     for (const record of tasks.listLiveOrClosedSince(cutoff)) records.set(record.id, record);
     for (const record of tasks.getMany([...minimized].filter((id) => !records.has(id))))
       records.set(record.id, record);
+    // A pinned task lists whatever its state or age (INF-3127).
+    for (const record of tasks.listPinned())
+      if (!records.has(record.id)) records.set(record.id, record);
     const shown = this.shownOf(records, cutoff, minimized);
     const ids = [...shown];
     const links = new Map<string, TaskLink>();
@@ -896,7 +902,10 @@ export class TaskProtocol {
     // never read: closed history written since the last read costs the
     // update nothing (the scale check, INF-2061).
     const reaches = (record: TaskRecord) =>
-      !TaskService.isClosed(record) || (record.closedAt ?? 0) >= cutoff || minimized.has(record.id);
+      !TaskService.isClosed(record) ||
+      (record.closedAt ?? 0) >= cutoff ||
+      minimized.has(record.id) ||
+      record.pinnedAt != null;
     const touched = [...this.touched]
       .filter(([id, written]) => records.has(id) || (written !== undefined && reaches(written)))
       .map(([id]) => id);
@@ -1016,7 +1025,8 @@ export class TaskProtocol {
   /**
    * The rows the board shows, from the records in hand: the live set, the
    * week's closed work and any minimized card's task, and the parents of
-   * each of those, however old, so a child is never orphaned on the board.
+   * each of those, however old, so a child is never orphaned on the board;
+   * and every pinned task, whose parents come only by those rules.
    * A parent not in hand is read; the walk is bounded by the hierarchy cap.
    */
   private shownOf(
@@ -1025,18 +1035,24 @@ export class TaskProtocol {
     minimized: ReadonlySet<string>,
   ): Set<string> {
     const shown = new Set<string>();
+    // The rows whose parents come with them: pinned work closed before the
+    // week lists in Pinned alone and pulls no old closed parent along.
+    const reached = new Set<string>();
+    const at = cutoff + BOARD_RECENT_MS;
     for (const record of records.values()) {
       if (
         !TaskService.isClosed(record) ||
         (record.closedAt ?? 0) >= cutoff ||
         minimized.has(record.id)
-      )
+      ) {
         shown.add(record.id);
+        reached.add(record.id);
+      } else if (pinnedPastWeek(record, at)) shown.add(record.id);
     }
-    for (const id of [...shown]) {
+    for (const id of [...reached]) {
       let parentId = records.get(id)?.parentId;
       let depth = 0;
-      while (parentId && !shown.has(parentId) && depth < 64) {
+      while (parentId && !reached.has(parentId) && depth < 64) {
         let parent = records.get(parentId);
         if (!parent) {
           parent = this.options.tasks.get(parentId);
@@ -1044,6 +1060,7 @@ export class TaskProtocol {
           records.set(parent.id, parent);
         }
         shown.add(parent.id);
+        reached.add(parent.id);
         parentId = parent.parentId;
         depth += 1;
       }
@@ -1431,6 +1448,7 @@ export class TaskProtocol {
       ...(record.status === "active" && record.backlogSince != null
         ? { backlogSince: record.backlogSince }
         : {}),
+      ...(record.pinnedAt != null ? { pinnedAt: record.pinnedAt } : {}),
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
       startedAt: record.startedAt,

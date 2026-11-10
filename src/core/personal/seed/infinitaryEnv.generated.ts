@@ -258,6 +258,11 @@ declare module "@infinitary/contracts" {
      * Start with its work kept. Absent otherwise, and on an older home.
      */
     backlogSince?: number;
+    /**
+     * When the captain pinned it to the top of Tasks: the Tasks panel lists it
+     * in Pinned whatever its state. Absent while it is not pinned, and on an older home.
+     */
+    pinnedAt?: number;
     /** Its parts: how many, and how many are closed. */
     children: { total: number; closed: number };
     /** Reachable shown ready decision, null on hidden/working/closed tasks. */
@@ -1197,6 +1202,12 @@ declare module "@infinitary/contracts" {
    */
   export type PanelTasks = {
     run: (taskId: string, move: PanelTaskMove, review?: PanelDropReview) => Promise<PanelMoveResult>;
+    /**
+     * Pin a task to the top of Tasks, or unpin it (\`pinned\` false): a fact on
+     * its own record, written on the captain's own click or key in this page,
+     * like a move. A refusal comes back as the app's words.
+     */
+    pin: (taskId: string, pinned: boolean) => Promise<PanelMoveResult>;
   };
 
   // --- the panel on its rail --------------------------------------------------------

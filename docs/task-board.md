@@ -45,6 +45,9 @@ Each ordinary task appears once, under its own shared group (`nowGroupOf`, `src/
 - Backlog, Queued, Working and Done · 7d; Backlog also counts crew filings the captain has not opened (`· N new`).
 - Dropped · 7d: work dropped in the board's seven days, read-only.
 
+Pinned work closed before the seven days is on the board only for the Tasks panel's Pinned (`pinnedPastWeek`, `src/shared/taskPin.ts`): it is in no lane, list or count here, and it brings no old closed parent with it.
+Find still reaches it: done work of this kind lists under Earlier matches like any older done work (`boardEarlierOf`).
+
 Answered questions, decisions and operations stay off the board, as they stay off the panel.
 Unlike the panel, which keeps a working parent's live tree together in Working (its finished parts stay under Done · 7d), the board shows each task under its own state: a child nests under its parent only when both are in the same lane, and otherwise stands alone with "part of KEY" as its word.
 A program occupies one tile in its own lane, with its total parts and finished count; its direct children do not occupy separate tiles unless Find has words.
@@ -148,7 +151,7 @@ Nothing is written before the confirm; Cancel or Esc puts the tile back.
 A live change to the task while it asks cancels the move, and the live line says so; the host checks the row again at write time all the same.
 Focus then goes at once to the task where the view draws it now, or else to the row now nearest where it stood, never later to its tile in a view drawn next.
 
-The ⋯ menu, on a tile's hover or focus, offers what a drag does: Open record (`point.openRecord`); Show the card while a decision waits; Continue on interrupted work; Back to backlog on started work; Queue it or Back to backlog and Start now on open work and on started work in the backlog, each with a sub-line saying what it does; then Drop task, last, in danger (`boardMenuOf`).
+The ⋯ menu, on a tile's hover or focus, offers what a drag does: Open record (`point.openRecord`); Show the card while a decision waits; Continue on interrupted work; Back to backlog on started work; Queue it or Back to backlog and Start now on open work and on started work in the backlog, each with a sub-line saying what it does; Pin or Unpin, at once, which keeps the task at the top of the Tasks panel whatever its state (`tasks.pin`, INF-3127), after the moves so a move keeps its place in the menu; then Drop task, last, in danger (`boardMenuOf`).
 An entry that cannot run stays listed, dim, with its reason under it, and each one does exactly what the matching drop does, its confirmation included.
 
 The live line under the foot (`role="status"`) says what each move did or why it was refused.

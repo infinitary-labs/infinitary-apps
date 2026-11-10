@@ -48,6 +48,8 @@ export {
 // question in the task record's own sentences.
 export { feedRelativeAge } from "@shared/relativeAge";
 export { foldForSearch } from "@shared/searchText";
+// A task's pin (INF-3127): Pin and Unpin in the record's own words.
+export { PIN_LABEL, pinActionLabel, pinnedPastWeek, UNPIN_LABEL } from "@shared/taskPin";
 export {
   type TaskStatus,
   type TaskStatusReading,
@@ -73,6 +75,7 @@ export { IconButton, type IconButtonProps, type IconButtonTone } from "./core/Ic
 export { Input, type InputProps } from "./core/Input";
 export { KeyCap, type KeyCapProps } from "./core/KeyCap";
 export { textIsHidden, useOverflowTitle } from "./core/overflowTitle";
+export { PinGlyph } from "./core/PinGlyph";
 export { RowMenu, type RowMenuItem, type RowMenuProps } from "./core/RowMenu";
 export { useRestLabel } from "./core/restLabel";
 export { StatusDot, type StatusDotProps, type StatusDotTone } from "./core/StatusDot";

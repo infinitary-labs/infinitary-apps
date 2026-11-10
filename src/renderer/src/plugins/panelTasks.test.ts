@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { frameTasksAction, MOVE_NOT_ASKED, panelTasks, type TaskRunner } from "./panelTasks";
+import {
+  frameTasksAction,
+  MOVE_NOT_ASKED,
+  panelTasks,
+  type TaskPinner,
+  type TaskRunner,
+} from "./panelTasks";
 
 /**
  * Moving the captain's tasks from a panel (docs/ui-plugins.md, "A panel's
@@ -65,5 +71,25 @@ describe("tasks.run", () => {
       ok: true,
     });
     await expect(act("tasks.other", {})).rejects.toThrow("is not a panel's move");
+  });
+});
+
+// The captain's reach for the pin (INF-3127): a panel pins a task as it moves one, only from his click or key.
+describe("tasks.pin", () => {
+  it("pins through the task's own path, naming the panel, only from the captain's click or key", async () => {
+    const run = vi.fn<TaskRunner>(async () => ({ ok: true }));
+    const pin = vi.fn<TaskPinner>(async () => ({ ok: true }));
+    const unasked = panelTasks(desk, async () => false, run, pin);
+    await expect(unasked.pin("t1", true)).resolves.toEqual({ ok: false, text: MOVE_NOT_ASKED });
+    expect(pin).not.toHaveBeenCalled();
+    const act = frameTasksAction(panelTasks(desk, async () => true, run, pin));
+    await expect(act("tasks.pin", { taskId: "t1", pinned: true })).resolves.toEqual({ ok: true });
+    expect(pin).toHaveBeenCalledWith("t1", true, { panel: "Task desk" });
+    await act("tasks.pin", { taskId: "t1", pinned: false });
+    expect(pin).toHaveBeenLastCalledWith("t1", false, { panel: "Task desk" });
+    await expect(act("tasks.pin", { taskId: "t1", pinned: "yes" })).rejects.toThrow("tasks.pin");
+    const own = panelTasks({ id: "now", title: "Tasks", own: true }, async () => true, run, pin);
+    await own.pin("t1", true);
+    expect(pin).toHaveBeenLastCalledWith("t1", true, undefined);
   });
 });

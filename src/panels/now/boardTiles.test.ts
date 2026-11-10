@@ -1,4 +1,5 @@
 import type { PanelProject, PanelTaskBoard, PanelTaskRow } from "@infinitary/contracts";
+import { BOARD_RECENT_MS } from "@shared/tasks";
 import { describe, expect, it } from "vitest";
 import {
   type BoardLane,
@@ -71,6 +72,8 @@ function board(tasks: PanelTaskRow[], projects: PanelProject[] = [project()]): P
 }
 
 const noFilter = { query: "", projectId: null };
+const DAY = 24 * 60 * 60 * 1000;
+const WEEK = BOARD_RECENT_MS;
 const keys = (tiles: Map<BoardLane, BoardTile[]>, lane: BoardLane) =>
   (tiles.get(lane) ?? []).map((tile) => tile.task.key);
 
@@ -96,10 +99,39 @@ describe("the task board's lanes", () => {
     expect(keys(tiles, "working")).toEqual(["FI3-3", "FI3-4", "FI3-5"]);
     expect(keys(tiles, "landed")).toEqual(["FI3-7"]);
     expect(keys(tiles, "dropped")).toEqual(["FI3-8"]);
-    expect(boardLaneOf(tasks[8] as PanelTaskRow)).toBeNull();
-    expect(boardLaneOf(tasks[9] as PanelTaskRow)).toBeNull();
+    expect(boardLaneOf(tasks[8] as PanelTaskRow, 1)).toBeNull();
+    expect(boardLaneOf(tasks[9] as PanelTaskRow, 1)).toBeNull();
     // The count is Waiting on you and the four lanes of work; Dropped is aside.
     expect(boardCountOf(tiles)).toBe(7);
+  });
+
+  // INF-3127, the approved plan's rule that a pinned task lists in Pinned
+  // and nowhere else: pinned work closed before the week is on the board
+  // only for Tasks' Pinned, so no 7d list or the chips count it.
+  it("keeps pinned work closed before the week out of Done · 7d and Dropped · 7d", () => {
+    const at = 4 * WEEK;
+    const tasks = [
+      task({
+        id: "old",
+        key: "FI3-1",
+        status: "done",
+        closedAt: at - WEEK - DAY,
+        pinnedAt: at - DAY,
+      }),
+      task({
+        id: "gone",
+        key: "FI3-2",
+        status: "dropped",
+        closedAt: at - WEEK - DAY,
+        pinnedAt: at - DAY,
+      }),
+      task({ id: "new", key: "FI3-3", status: "done", closedAt: at - DAY, pinnedAt: at - DAY }),
+    ];
+    const read = { ...board(tasks), at };
+    const tiles = boardTilesOf(read, noFilter);
+    expect(keys(tiles, "landed")).toEqual(["FI3-3"]);
+    expect(keys(tiles, "dropped")).toEqual([]);
+    expect(boardLaneOf(tasks[0] as PanelTaskRow, at)).toBeNull();
   });
 
   it("folds only program parts across lanes, while Find reaches a part (INF-1137 friction 8)", () => {
@@ -358,6 +390,24 @@ describe("Find's earlier matches", () => {
     const earlier = boardEarlierOf(found, listed, filter);
     expect(earlier.tiles.map((tile) => tile.task.key)).toEqual(["FI3-3", "FI3-2"]);
     expect(earlier.capped).toBe(false);
+  });
+
+  // INF-3127: pinned work closed before the week rides the board for Tasks'
+  // Pinned but sits in no lane, so Find still reaches it as older done work.
+  it("reaches pinned work past the week, which the board lists in no lane", () => {
+    const at = 4 * WEEK;
+    const old = task({
+      id: "pinned-old",
+      key: "FI3-7",
+      title: "Search pinned",
+      status: "done",
+      closedAt: at - WEEK - DAY,
+      pinnedAt: at - DAY,
+    });
+    const read = { ...board([old]), at };
+    expect(boardEarlierOf([old], read, filter).tiles.map((tile) => tile.task.key)).toEqual([
+      "FI3-7",
+    ]);
   });
 
   it("narrows by the project chip and the words, and reads nothing without words", () => {

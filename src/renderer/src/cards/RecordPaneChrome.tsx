@@ -21,7 +21,7 @@ import type { ComputerMoveView, DropEffects, MoveDestination, MoveOptions } from
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useCommandKeys } from "../app/keyHints";
-import { Badge, Button } from "../design";
+import { Badge, Button, IconButton, PinGlyph, pinActionLabel } from "../design";
 import { CardCorner } from "../design/cards/CardSize";
 import { useCutWords } from "../design/core/overflowTitle";
 import { TaskStatusMark } from "../design/core/TaskStatusMark";
@@ -57,11 +57,17 @@ export function RecordPaneChrome({
   title,
   tabs,
   middle,
+  pin,
 }: {
   pillTone: RecordPillTone;
   reading: TaskStatusReading | null;
   taskKey: string | null;
   title: string;
+  /**
+   * The record's Pin or Unpin (INF-3127): a pin icon beside the card's
+   * corner, filled while the task is pinned to the top of Tasks.
+   */
+  pin?: { pinned: boolean; onToggle: () => void } | undefined;
   /** The card's tab strip, under the title, when the task has more than Info. */
   tabs?: React.ReactNode;
   /** Title, tabs and body give way together while the top row stays pinned. */
@@ -134,7 +140,23 @@ export function RecordPaneChrome({
             {taskKey}
           </span>
         )}
-        <CardCorner style={{ marginLeft: "auto" }} />
+        {/* One wrapper whether or not the pin shows, so the corner's Hide is
+            never remounted when the record's facts load and a press holds. */}
+        <span style={{ display: "inline-flex", alignItems: "center", marginLeft: "auto" }}>
+          {pin && taskKey ? (
+            <IconButton
+              label={pinActionLabel(pin.pinned, taskKey)}
+              size={28}
+              data-record-pin={pin.pinned ? "pinned" : "unpinned"}
+              aria-pressed={pin.pinned ? "true" : "false"}
+              onClick={pin.onToggle}
+              style={{ color: pin.pinned ? "var(--fg-1)" : "var(--fg-3)" }}
+            >
+              <PinGlyph pinned={pin.pinned} />
+            </IconButton>
+          ) : null}
+          <CardCorner />
+        </span>
       </div>
       {middle !== undefined ? (
         <div

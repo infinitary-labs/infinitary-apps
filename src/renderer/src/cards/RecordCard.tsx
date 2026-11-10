@@ -313,6 +313,17 @@ export function RecordCard({
           pillTone={shown ? recordPillToneOf(shown) : "neutral"}
           taskKey={meta || null}
           title={facts?.title ?? ""}
+          pin={
+            shown?.key
+              ? {
+                  pinned: shown.pinnedAt !== undefined,
+                  onToggle: () =>
+                    void window.infinitary.task
+                      .pin(taskId, shown.pinnedAt === undefined)
+                      .catch(() => {}),
+                }
+              : undefined
+          }
           tabs={
             shown && (
               <TaskTabStrip

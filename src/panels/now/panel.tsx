@@ -5,6 +5,8 @@ import {
   IconButton,
   listEdges,
   PanelExpandChevron,
+  PinGlyph,
+  pinActionLabel,
   TaskStatusMark,
   taskStatusLabel,
   taskStatusOf,
@@ -16,6 +18,7 @@ import {
   type FocusEvent,
   memo,
   type KeyboardEvent as ReactKeyboardEvent,
+  type ReactNode,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -30,13 +33,16 @@ import {
   earlierRowsOf,
   failedStartCount,
   hasSingleRegisteredRepoProject,
-  NOW_GROUPS,
+  isCardOnly,
+  isPinned,
+  type NowGroup,
   type NowRow,
   newestListedWrite,
   newFilingCount,
   OPEN_BY_DEFAULT,
   onRail,
   PANEL_GROUP_LABELS,
+  PANEL_GROUPS,
   type PanelGroup,
   projectChipsOf,
   projectNameOf,
@@ -82,6 +88,14 @@ import { failedCountWords, newCountWords } from "./words";
  * row moves to Queued as starting; a row the record could not start offers
  * Try again; one that cannot start shows it dim, with the record's reason on
  * rest. → from the row reaches it, Enter presses it and ← goes back.
+ *
+ * Every row of a panel that moves tasks offers a pin the same way (INF-3127,
+ * the captain's words: "each task row in the tasks panel should have a hover
+ * button to pin/unpin, the button should use a pin icon no text"): after a
+ * backlog row's Start, a pin that is filled while the task is pinned. One
+ * press pins or unpins it (`tasks.pin`), and the row moves at once into
+ * Pinned, the panel's own group at its top, or back to its state's group,
+ * with focus following it. → from the row, or from its Start, reaches it.
  *
  * The rows of the tasks whose records are open on the stack are tinted
  * (`view.openTaskIds`), including a record paged away from.
@@ -208,6 +222,14 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
         text: caught instanceof Error ? caught.message : String(caught),
       }));
       setPress({ ...at, refusal: result.ok ? null : result.text });
+    },
+    [tasks],
+  );
+  // A row's pin: one press pins or unpins its task, and the row moves.
+  const pinTask = useCallback(
+    (task: PanelTaskRow) => {
+      if (!tasks) return;
+      void tasks.pin(task.id, !isPinned(task)).catch(() => {});
     },
     [tasks],
   );
@@ -419,14 +441,12 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
   // the captain left collapsed.
   const shownGroups = useMemo(
     () =>
-      [...NOW_GROUPS, "earlier" as const]
-        .filter((group) => (rows.get(group) ?? []).length > 0)
-        .map((group) => ({
-          group,
-          open: typed !== "" || OPEN_BY_DEFAULT.has(group) || expanded.has(group),
-          collapsible: !OPEN_BY_DEFAULT.has(group),
-          taskIds: (rows.get(group) ?? []).map((row) => row.task.id),
-        })),
+      PANEL_GROUPS.filter((group) => (rows.get(group) ?? []).length > 0).map((group) => ({
+        group,
+        open: typed !== "" || OPEN_BY_DEFAULT.has(group) || expanded.has(group),
+        collapsible: !OPEN_BY_DEFAULT.has(group),
+        taskIds: (rows.get(group) ?? []).map((row) => row.task.id),
+      })),
     [rows, typed, expanded],
   );
   const navItems = useMemo(() => nowNavItems(shownGroups), [shownGroups]);
@@ -487,16 +507,25 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
     if (event.defaultPrevented) return;
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     const target = event.target as HTMLElement;
-    // → from a backlog row reaches its Start.
-    const start = target.matches("[data-now-row]")
-      ? target.parentElement?.querySelector<HTMLElement>("[data-now-start]")
-      : null;
-    if (event.key === "ArrowRight" && start) {
-      event.preventDefault();
-      focusWithRing(start);
-      return;
+    // → from a row reaches its first control (a backlog row's Start, then
+    // its pin); → and ← move between them, and ← from the first goes back.
+    const item = target.closest<HTMLElement>("[data-now-item]");
+    const controls = item ? [...item.querySelectorAll<HTMLElement>("[data-now-control]")] : [];
+    if (controls.length > 0 && (event.key === "ArrowRight" || event.key === "ArrowLeft")) {
+      const at = target.matches("[data-now-row]") ? -1 : controls.indexOf(target);
+      const to = at + (event.key === "ArrowRight" ? 1 : -1);
+      const next = to < 0 ? item?.querySelector<HTMLElement>("[data-now-row]") : controls[to];
+      if (next && (at >= 0 || to >= 0)) {
+        event.preventDefault();
+        focusWithRing(next);
+        return;
+      }
+      if (at >= 0) {
+        event.preventDefault();
+        return;
+      }
     }
-    // From a Start, the other keys move as from its row.
+    // From a control, the other keys move as from its row.
     const from = (
       target.closest("[data-now-nav]") ??
       target.closest("[data-now-item]")?.querySelector("[data-now-nav]")
@@ -676,6 +705,7 @@ export default function TasksPanel({ reads, point, view, asks, rail, tasks }: Pa
                 press={tasks ? press : undefined}
                 onStart={startTask}
                 onFocusStart={focusStart}
+                onPin={tasks ? pinTask : undefined}
               />
             ))}
         </div>
@@ -713,6 +743,7 @@ export function Group({
   press,
   onStart,
   onFocusStart,
+  onPin,
 }: {
   group: PanelGroup;
   rows: NowRow[];
@@ -744,8 +775,10 @@ export function Group({
   press?: StartPress | null;
   /** A row's Start was pressed, and it can start. */
   onStart?: (task: PanelTaskRow) => void;
-  /** Focus reached a row's Start. */
+  /** Focus reached a row's Start or its pin. */
   onFocusStart?: (start: HTMLElement, row: HTMLElement, task: PanelTaskRow) => void;
+  /** Set where the panel pins tasks: every row offers its pin, and a press pins or unpins it. */
+  onPin?: ((task: PanelTaskRow) => void) | undefined;
 }) {
   const collapsible = !OPEN_BY_DEFAULT.has(group);
   const reveal = useInPlaceReveal(open);
@@ -756,14 +789,18 @@ export function Group({
   const body = useMemo(() => {
     if (!open) return null;
     const names = { projects };
-    return rows.map(({ task, depth }) => {
-      const start = group === "backlog" && press !== undefined ? rowStartOf(task) : null;
+    return rows.map(({ task, depth, home }) => {
+      const start =
+        (group === "backlog" || home === "backlog") && press !== undefined
+          ? rowStartOf(task)
+          : null;
       const pressed =
         press?.taskId === task.id && press.updatedAt === task.updatedAt ? press : null;
       return (
         <Row
           key={task.id}
           group={group}
+          home={home ?? null}
           task={task}
           depth={depth}
           projectName={projectNameOf(names, task)}
@@ -782,6 +819,7 @@ export function Group({
           startBusy={pressed !== null && pressed.refusal === null}
           onStart={onStart}
           onFocusStart={onFocusStart}
+          onPin={onPin}
         />
       );
     });
@@ -803,6 +841,7 @@ export function Group({
     press,
     onStart,
     onFocusStart,
+    onPin,
   ]);
   return (
     <div data-now-group={group}>
@@ -861,6 +900,7 @@ export function Group({
  */
 const Row = memo(function Row({
   group,
+  home,
   task,
   depth,
   projectName,
@@ -879,9 +919,12 @@ const Row = memo(function Row({
   startBusy = false,
   onStart,
   onFocusStart,
+  onPin,
 }: {
   /** The actual rendered section, including open rows nested in Working. */
   group: PanelGroup;
+  /** Where a pinned row would list unpinned: a pinned queued task keeps its wait line. */
+  home: NowGroup | null;
   task: PanelTaskRow;
   depth: number;
   /** The project's display name, for the row's label; shown after the title unless one project is meant. */
@@ -904,6 +947,8 @@ const Row = memo(function Row({
   startBusy?: boolean;
   onStart?: (task: PanelTaskRow) => void;
   onFocusStart?: (start: HTMLElement, row: HTMLElement, task: PanelTaskRow) => void;
+  /** The row's pin, on a panel that pins tasks. */
+  onPin?: ((task: PanelTaskRow) => void) | undefined;
 }) {
   paintedRows += 1;
   const word = wordOf(task);
@@ -952,7 +997,7 @@ const Row = memo(function Row({
           </span>
         )}
       </span>
-      {group === "queued" && task.queueWait && task.status === "open" && (
+      {(group === "queued" || home === "queued") && task.queueWait && task.status === "open" && (
         <span data-now-queue-wait="">{task.queueWait.line}</span>
       )}
       {trailing.place ? (
@@ -978,30 +1023,113 @@ const Row = memo(function Row({
       )}
     </button>
   );
-  if (startLabel === undefined) return row;
+  const pin = isCardOnly(task) ? undefined : onPin;
+  if (startLabel === undefined && !pin) return row;
+  const focusControl = (control: HTMLElement, row: HTMLElement, at: PanelTaskRow) => {
+    onStop?.(rowNavKey(at.id));
+    onFocusStart?.(control, row, at);
+  };
   return (
     <div data-now-item="">
       {row}
-      <RowStart
-        task={task}
-        label={startLabel}
-        reason={startReason}
-        busy={startBusy}
-        onStart={onStart}
-        onFocusStart={(start, row, at) => {
-          onStop?.(rowNavKey(at.id));
-          onFocusStart?.(start, row, at);
-        }}
-        onBlurRow={onBlurRow}
-      />
+      <RowControls>
+        {startLabel !== undefined && (
+          <RowStart
+            task={task}
+            label={startLabel}
+            reason={startReason}
+            busy={startBusy}
+            onStart={onStart}
+            onFocusStart={focusControl}
+            onBlurRow={onBlurRow}
+          />
+        )}
+        {pin && <RowPin task={task} onPin={pin} onFocusPin={focusControl} onBlurRow={onBlurRow} />}
+      </RowControls>
     </div>
   );
 });
 
+/** The row this control belongs to. */
+function rowOfControl(control: HTMLElement): HTMLElement | null {
+  return control.closest("[data-now-item]")?.querySelector<HTMLElement>("[data-now-row]") ?? null;
+}
+
+/**
+ * A row's controls, drawn over its right end while the pointer or the
+ * keyboard rests on the row: a backlog row's Start, then the pin. The row's
+ * title fades out under them, as wide as they are (`--now-start-w`).
+ */
+function RowControls({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLSpanElement | null>(null);
+  useLayoutEffect(() => {
+    const box = ref.current;
+    if (!box) return;
+    const set = () => box.parentElement?.style.setProperty("--now-start-w", `${box.offsetWidth}px`);
+    set();
+    const observer = new ResizeObserver(set);
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, []);
+  return (
+    <span data-now-controls="" ref={ref}>
+      {children}
+    </span>
+  );
+}
+
+/**
+ * A row's pin (INF-3127): a pin icon and no text, filled while the task is
+ * pinned, its rest label saying what a press does - Pin INF-402, or Unpin
+ * INF-402. It is no stop of its own: → from the row (or its Start) reaches
+ * it, Enter or Space presses it, ← goes back.
+ */
+function RowPin({
+  task,
+  onPin,
+  onFocusPin,
+  onBlurRow,
+}: {
+  task: PanelTaskRow;
+  onPin: (task: PanelTaskRow) => void;
+  onFocusPin?: (pin: HTMLElement, row: HTMLElement, task: PanelTaskRow) => void;
+  onBlurRow?: (row: HTMLElement) => void;
+}) {
+  const pinned = isPinned(task);
+  const label = pinActionLabel(pinned, task.key);
+  const rest = useRestLabel(label);
+  return (
+    <button
+      type="button"
+      data-now-pin={task.id}
+      data-now-control=""
+      data-now-pinned={pinned ? "" : undefined}
+      tabIndex={-1}
+      aria-label={label}
+      aria-pressed={pinned ? "true" : "false"}
+      {...rest}
+      onClick={() => onPin(task)}
+      onKeyDown={rest.onKeyDown}
+      onFocus={(event) => {
+        rest.onFocus(event);
+        const row = rowOfControl(event.currentTarget);
+        if (row) onFocusPin?.(event.currentTarget, row, task);
+      }}
+      onBlur={(event) => {
+        rest.onBlur(event);
+        const row = rowOfControl(event.currentTarget);
+        if (row) onBlurRow?.(row);
+      }}
+    >
+      <PinGlyph pinned={pinned} />
+    </button>
+  );
+}
+
 /**
  * A backlog row's Start (INF-1663): beside the row, drawn over its right end
- * while the pointer or the keyboard rests on the row. It is no stop of its
- * own: → from the row reaches it, Enter presses it, ← goes back. A Start
+ * while the pointer or the keyboard rests on the row, before its pin. It is
+ * no stop of its own: → from the row reaches it, Enter presses it, ← goes back. A Start
  * that cannot start stays reachable, dim, with its reason on rest.
  */
 function RowStart({
@@ -1022,48 +1150,29 @@ function RowStart({
   onBlurRow?: (row: HTMLElement) => void;
 }) {
   const rest = useRestLabel(reason ?? undefined, { fact: true });
-  const ref = useRef<HTMLButtonElement | null>(null);
-  const rowOf = (start: HTMLElement) =>
-    start.parentElement?.querySelector<HTMLElement>("[data-now-row]") ?? null;
-  // The row's title fades out under the Start, as wide as the Start is.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: its words set its width
-  useLayoutEffect(() => {
-    const start = ref.current;
-    start?.parentElement?.style.setProperty("--now-start-w", `${start.offsetWidth}px`);
-  }, [label]);
   const off = reason !== null || busy;
   return (
     <button
       type="button"
       data-now-start={task.id}
+      data-now-control=""
       tabIndex={-1}
       aria-label={`${label} ${task.key}`}
       aria-disabled={off ? "true" : undefined}
       aria-description={reason ?? undefined}
       {...rest}
-      ref={(node) => {
-        ref.current = node;
-        rest.ref(node);
-      }}
       onClick={() => {
         if (!off) onStart?.(task);
       }}
-      onKeyDown={(event) => {
-        rest.onKeyDown(event);
-        if (event.key !== "ArrowLeft") return;
-        const row = rowOf(event.currentTarget);
-        if (!row) return;
-        event.preventDefault();
-        focusWithRing(row);
-      }}
+      onKeyDown={rest.onKeyDown}
       onFocus={(event) => {
         rest.onFocus(event);
-        const row = rowOf(event.currentTarget);
+        const row = rowOfControl(event.currentTarget);
         if (row) onFocusStart?.(event.currentTarget, row, task);
       }}
       onBlur={(event) => {
         rest.onBlur(event);
-        const row = rowOf(event.currentTarget);
+        const row = rowOfControl(event.currentTarget);
         if (row) onBlurRow?.(row);
       }}
     >

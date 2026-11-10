@@ -667,6 +667,11 @@ export type TaskRecord = {
    * Null while it is not there; only `task_execution` holds it.
    */
   backlogSince?: number | null;
+  /**
+   * When the captain pinned this task to the top of Tasks (INF-3127). Null
+   * while it is not pinned, and on rows written before the column.
+   */
+  pinnedAt?: number | null;
 };
 
 /** What a search of closed work reads of each row (`TaskStore.listClosedSearchFields`). */

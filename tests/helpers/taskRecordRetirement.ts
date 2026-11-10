@@ -2,13 +2,19 @@ import {
   CARD_CONTRIBUTIONS_VERSION,
   CREW_RESPONSE_VERSION,
   openInMemoryDatabase,
+  TASK_PIN_VERSION,
   TASK_RECORD_RETIREMENT_VERSION,
   TOOL_REPETITION_VERSION,
 } from "../../src/core/storage/db";
 import { SHAPE_RECORD_TABLES } from "../../src/core/storage/taskOwnedShapeStore";
 import { RETIRED_TASK_COLUMNS } from "../../src/core/storage/taskRecordProjection";
 
-/** Fixture-only: reconstruct the exact predecessor schema, never a supported app downgrade. */
+/**
+ * Fixture-only: reconstruct the exact predecessor schema, never a supported
+ * app downgrade. The rebuilt task table has no column a later migration
+ * added, so each such migration is marked not run and runs again on the
+ * upgrade, as it would for a profile that release saved.
+ */
 export function taskRecordRetirementReverseSql(): string {
   const old = openInMemoryDatabase(TASK_RECORD_RETIREMENT_VERSION - 1);
   try {
@@ -65,6 +71,7 @@ export function taskRecordRetirementReverseSql(): string {
       ${indexes.join(";\n")};
       ${[...SHAPE_RECORD_TABLES, "task_specifications", "task_record_history"].map((table) => `DROP TABLE ${table};`).join("\n")}
       DELETE FROM schema_migrations WHERE version = ${TASK_RECORD_RETIREMENT_VERSION};
+      DELETE FROM schema_migrations WHERE version = ${TASK_PIN_VERSION};
       PRAGMA foreign_keys = ON;\n`;
   } finally {
     old.close();

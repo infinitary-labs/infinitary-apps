@@ -1,5 +1,11 @@
 import type { PanelTaskBoard, PanelTaskRow } from "@infinitary/contracts";
-import { foldForSearch, NOW_GROUP_LABELS, type NowGroup, nowGroupOf } from "@infinitary/ui";
+import {
+  foldForSearch,
+  NOW_GROUP_LABELS,
+  type NowGroup,
+  nowGroupOf,
+  pinnedPastWeek,
+} from "@infinitary/ui";
 
 /**
  * What the task board lists and where (docs/task-board.md; the design
@@ -83,8 +89,13 @@ export type BoardTile = {
 
 export type BoardFilter = { query: string; projectId: string | null };
 
-/** Where a task's tile is, or null when the board leaves it out. */
-export function boardLaneOf(task: PanelTaskRow): BoardLane | null {
+/**
+ * Where a task's tile is, or null when the board leaves it out: pinned work
+ * closed before the week lists in Tasks' Pinned alone, never in Done · 7d
+ * or Dropped · 7d (INF-3127). `at` is when the board was read.
+ */
+export function boardLaneOf(task: PanelTaskRow, at: number): BoardLane | null {
+  if (pinnedPastWeek(task, at)) return null;
   if (task.status === "dropped") return task.kind === "work" ? "dropped" : null;
   return nowGroupOf(task);
 }
@@ -123,7 +134,7 @@ export function boardTilesOf(
   const lists = new Map<BoardLane, PanelTaskRow[]>();
   for (const lane of ["waiting", ...BOARD_COLUMNS, "dropped"] as const) lists.set(lane, []);
   for (const task of board.tasks) {
-    const lane = boardLaneOf(task);
+    const lane = boardLaneOf(task, board.at);
     // INF-1137 friction 8: only programs fold their parts. Find still
     // reaches an individual part; ordinary parent/child tasks stay as-is.
     if (!filter.query.trim() && task.parentId && byId.get(task.parentId)?.program) continue;
@@ -231,7 +242,7 @@ export type BoardEarlier = { tiles: BoardTile[]; capped: boolean };
 /**
  * The earlier matches for Find's words: done work the search found beyond
  * the board's seven days - never dropped work, an answered question or a
- * decision, never a task the board already lists, each once - narrowed by the project chip and the words,
+ * decision, never a task the board already lists in a lane, each once - narrowed by the project chip and the words,
  * newest closed first. An answer as long as the search's limit may have
  * been cut before this narrowing, so it is `capped`: partial results,
  * never a total. Nothing without words.
@@ -242,7 +253,11 @@ export function boardEarlierOf(
   filter: BoardFilter,
 ): BoardEarlier {
   if (!filter.query.trim()) return { tiles: [], capped: false };
-  const seen = new Set(board.tasks.map((task) => task.id));
+  // A task the board lists in a lane; pinned work past the week is in none,
+  // so Find reaches it here as any older done work.
+  const seen = new Set(
+    board.tasks.filter((task) => boardLaneOf(task, board.at) !== null).map((task) => task.id),
+  );
   const tiles: BoardTile[] = [];
   for (const task of found) {
     if (task.kind !== "work" || task.status !== "done") continue;
@@ -275,7 +290,9 @@ export type BoardChip = { id: string | null; label: string };
  */
 export function boardChipsOf(board: PanelTaskBoard): BoardChip[] {
   const withTiles = new Set(
-    board.tasks.filter((task) => boardLaneOf(task) !== null).map((task) => task.projectId),
+    board.tasks
+      .filter((task) => boardLaneOf(task, board.at) !== null)
+      .map((task) => task.projectId),
   );
   const projects = board.projects.filter((project) => withTiles.has(project.id));
   if (projects.length < 2) return [];

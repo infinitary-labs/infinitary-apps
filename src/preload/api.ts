@@ -177,6 +177,10 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
             ? invoke("inf:task:run", taskId, op, review)
             : invoke("inf:task:run", taskId, op),
       closeDone: (taskId) => invoke("inf:task:close-done", taskId),
+      pin: (taskId, pinned, from) =>
+        from
+          ? invoke("inf:task:pin", taskId, pinned, from)
+          : invoke("inf:task:pin", taskId, pinned),
       moveOptions: (taskId) => invoke("inf:task:move-options", taskId),
       move: (taskId, to) => invoke("inf:task:move", taskId, to),
       steer: (taskId, text) => invoke("inf:task:steer", taskId, text),

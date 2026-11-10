@@ -443,6 +443,11 @@ export const taskViewSchema = z.object({
    * It waits there for Start with its work kept. Absent otherwise, and on an older home.
    */
   backlogSince: z.number().optional(),
+  /**
+   * When the captain pinned it to the top of Tasks (INF-3127): it lists in
+   * Pinned whatever its state. Absent while it is not pinned, and on an older home.
+   */
+  pinnedAt: z.number().optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
   startedAt: z.number().nullable(),
@@ -521,8 +526,9 @@ export type ProjectView = z.infer<typeof projectViewSchema>;
 
 /**
  * The live board: open and active rows, rows closed within
- * `BOARD_RECENT_MS`, and the parents of every row shown. History never
- * rides the push (design section 9.1); it is read one task at a time.
+ * `BOARD_RECENT_MS`, and the parents of every row shown, plus every pinned
+ * row whatever its age (INF-3127), which brings no old parent along. Other
+ * history never rides the push (design section 9.1); it is read one task at a time.
  */
 export const taskBoardSchema = z.object({
   /** Monotonic per mutation; a later push with a lower seq is stale. */

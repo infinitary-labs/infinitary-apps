@@ -417,6 +417,7 @@ The Tasks tab is the Mac's Tasks panel in a phone's hands (INF-2928, the captain
 Its five groups come from `src/shared/nowPanel.ts`, generated as a finite native lookup with seven inputs, so the phone does not own another grouping rule.
 The phone keeps a working parent and its live parts together, hides dropped rows and closed ordinary operations from the groups, and keeps them searchable.
 Only the groups with tasks show.
+Pinned comes first, never folds, and holds every task the captain pinned, whatever its state or age, in the order it was pinned, newest last, as on the Mac (INF-3127); a pinned task lists there alone.
 Waiting on you, Working and Queued always show their rows, under a micro uppercase label with no count; Backlog and Done fold, start folded and show their count, and Backlog adds "· N could not start" and "· N new".
 Rows follow the Mac's order: priority, then oldest first, with Done newest closed first and a part indented under its parent in the same group, up to three levels.
 Each row shows the Mac's status mark (`PhoneTaskMark`), the key, the title and the Mac's one dim word: starting, could not start, checks, waiting, blocked, held or found on another task.
@@ -433,9 +434,9 @@ Find a task (Shift-Command-F, the Mac's key) opens it with the caret in the fiel
 VoiceOver cannot pull past the top of a list, so the search is always shown while it runs.
 A long press on a row stands in for resting the pointer on the Mac's row (INF-2928 piece 3, the captain's pick): it shows the task's crew summary with the row's moves under it.
 The summary keeps the width the Mac gives it there (`CREW_HOVER.maxWidthPx`), never wider than the list, and shrinks whole when an iPad gives it less room beside the menu.
-The moves are the Mac's task board menu for that row (`boardMenuOf`, `src/panels/now/boardMoves.ts`): Open record, Show the card while a decision waits, Continue on interrupted work, Queue it or Back to backlog and Start now on open work, Back to backlog on started work, then Drop task last.
+The moves are the Mac's task board menu for that row (`boardMenuOf`, `src/panels/now/boardMoves.ts`): Open record, Show the card while a decision waits, Continue on interrupted work, Queue it or Back to backlog and Start now on open work, Back to backlog on started work, Pin or Unpin, then Drop task last.
 Each move names what it does, or stays dim with the Mac's reason it cannot run, and the computer checks it again when it runs.
-As on the Mac's board, Back to backlog runs at once, Queue it runs at once or asks once when the task could start at once, and Start now and Drop task ask once.
+As on the Mac's board, Pin, Unpin and Back to backlog run at once, Queue it runs at once or asks once when the task could start at once, and Start now and Drop task ask once.
 A never-started task's Drop task asks in the record's words, from the effects its record lists when it is pressed; Start now and Continue show the task starting at the tap, as the record's Start does.
 A row the Mac's board has no menu for, Done and Dropped among them, offers Open record alone, so its summary is still a long press away.
 A refused move says why in the change notice, or on the list's own line on an iPhone on its side.
@@ -869,6 +870,7 @@ Native hero pictures use the same crop in both themes from the simulator's full-
 
 `talk-compose` chooses a project-owned picture from the disposable photo library, types a message, and checks the real Mac’s captain actor, image bytes and last turn.
 `talk-tasks` pulls the task search down, closes it, opens it again by Find a task's key, then searches and starts an on-request task, checks that the real Mac ran it, and interrupts its turn.
+Before that it pins the harbour task from its long press, checks that it lists under Pinned above every group and takes the `tasks-pinned` picture, then unpins it back under its state (INF-3127).
 The fixture then gives that real task’s saved workspace and session the Interrupted state used by recovery; the phone continues it and sends a steer that the held mock-provider turn actually reads.
 The fixture uses Pi with the mock provider’s Anthropic message format, matching its held-turn script; no Claude client or provider account is involved.
 It also checks that the foreground notice sits under the top bar and over the iPad's landscape stage, waits on an iPhone on its side while the strip stays in the bar, and opens its own card on Home, retained offline drafts, an unconfirmed response with no automatic repeat, and a future-major home that allows reading but refuses changes.

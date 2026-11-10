@@ -218,6 +218,16 @@ export type FirstmateApi = {
     ) => Promise<{ ok: true } | { ok: false; text: string }>;
     /** The record's Close as done: close started work as done on the captain's word. */
     closeDone: (taskId: string) => Promise<{ ok: boolean; text: string }>;
+    /**
+     * Pin a task to the top of Tasks, or unpin it with `pinned` false
+     * (INF-3127): the Tasks panel, the task board and the task record.
+     */
+    pin: (
+      taskId: string,
+      pinned: boolean,
+      /** The panel whose page the captain pinned it from, by its title. */
+      from?: TaskMoveFrom,
+    ) => Promise<{ ok: true } | { ok: false; text: string }>;
     /** Where a started task could move: Move to a computer's choices. */
     moveOptions: (taskId: string) => Promise<MoveOptions>;
     /** Move a started task to a computer, or cancel its waiting move with null. */

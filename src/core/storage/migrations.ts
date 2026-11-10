@@ -1308,7 +1308,22 @@ export const MIGRATIONS: readonly Migration[] = [
   // since is untouched. Reversible: each restored card's actions before it
   // are kept in `card_close_control_restore`.
   restoreCloseControls,
+  addTaskPin,
 ];
+
+/**
+ * INF-3127 piece 1: when the captain pinned a task to the top of Tasks.
+ * Null on every existing row, which is not pinned. `TaskService` is the
+ * only writer; no published view reads it. The partial index lets the
+ * board read the few pinned rows without walking a long record. Dropping
+ * the index and the column reverses it.
+ */
+export function addTaskPin(db: AppDatabase): void {
+  addColumn(db, "tasks", "pinned_at", "INTEGER");
+  db.exec(
+    "CREATE INDEX IF NOT EXISTS tasks_pinned ON tasks(pinned_at) WHERE pinned_at IS NOT NULL",
+  );
+}
 
 export function addPluginKind(db: AppDatabase): void {
   addColumn(db, "plugins", "kind", "TEXT NOT NULL DEFAULT 'panel'");

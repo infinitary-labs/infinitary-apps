@@ -11,7 +11,7 @@ import {
 } from "./cardMigrations";
 import { addCrewResponses } from "./inboxMigrations";
 import { migrateChanges } from "./migrateChanges";
-import { addHousekeepingIndexes, addPluginKind, MIGRATIONS } from "./migrations";
+import { addHousekeepingIndexes, addPluginKind, addTaskPin, MIGRATIONS } from "./migrations";
 import { createQueryIndexes } from "./queryIndexes";
 import {
   assertPersistedFormatsSupported,
@@ -90,6 +90,9 @@ export const TASK_POLICIES_VERSION = MIGRATIONS.indexOf(migrateTaskPolicies) + 1
 export const TASK_DELIVERY_RECORDS_VERSION = MIGRATIONS.indexOf(migrateTaskDeliveryRecords) + 1;
 
 export const TASK_RECORD_RETIREMENT_VERSION = MIGRATIONS.indexOf(migrateTaskRecordRetirement) + 1;
+
+/** The migration that added when a task was pinned (INF-3127 piece 1). */
+export const TASK_PIN_VERSION = MIGRATIONS.indexOf(addTaskPin) + 1;
 
 /** The migration that published the views; every later one re-creates them. */
 const VIEWS_VERSION = MIGRATIONS.indexOf(migratePublishedViews) + 1;

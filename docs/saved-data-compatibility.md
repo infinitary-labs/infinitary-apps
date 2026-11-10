@@ -371,6 +371,13 @@ Keep cards maximized and whether cards are maximized now live in a settings row 
 An older build reads `appearance` strictly, so neither goes in it, and it still reads theme, size and wash; it ignores the new row and opens cards at Default card size.
 A look written without them keeps the saved row.
 
+## A task's pin
+
+Migration 122 adds the `pinned_at` column to `tasks`, empty on every row, and a partial index over the pinned rows, so the board reads the few pinned tasks without walking the record (INF-3127).
+No row changes: every task starts unpinned, and nothing else reads the column.
+An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
+An export this build writes carries the pin on the task's line, which an older importer drops, so a pinned task imports there unpinned.
+
 ## The rails' saved arrangement
 
 Since INF-2344 the rails keep one arrangement of every panel's slot and order, and the last More pick, in a settings row of their own, `panel-arrangement`, beside the `layout` row (`SettingsStore.getLayout` and `setLayout`, `docs/ui-plugins.md` "Preferences by talking").

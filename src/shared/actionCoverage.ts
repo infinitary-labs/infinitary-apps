@@ -69,6 +69,8 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:devices:custom:recheck": "Sign-in check on a computer that runs work",
   "inf:settings:local-orchestrator:set": "Development-only model control",
   "inf:tasks:opened": "View stamp",
+  "inf:task:pin":
+    "The captain's own pin in Tasks, on the task board or on the record; what the Tasks panel lists first, never an app setting",
   "inf:browser:stop": "The captain's click in a task's browser view; nothing is set",
   "inf:browser:reopen": "The captain's click in a task's browser view; nothing is set",
   "inf:browser:take": "The captain's click in a task's browser view; nothing is set",

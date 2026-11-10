@@ -100,7 +100,7 @@ async function queueStatuses(api, env, sha) {
 
 const queueAt = async (api, env, sha) => readQueueState(await queueStatuses(api, env, sha));
 
-/** Every open merge request with its version, the branch it targets, whether it is a declared fix, and its queue state. */
+/** Every open merge request with its version, the branch it targets, whether it carries the fix label, and its queue state. */
 export async function readOpenQueue(api, env) {
   const requests = await api.list(`${project(env)}/merge_requests?state=opened&per_page=100`);
   const open = requests.filter((request) => request.sha);
@@ -112,6 +112,30 @@ export async function readOpenQueue(api, env) {
       fix: (request.labels ?? []).some((label) => (label?.name ?? label) === FIX_LABEL),
       queue: await queueAt(api, env, request.sha),
     })),
+  );
+}
+
+/**
+ * When each change carrying the fix label was last labelled so, from its
+ * label events, read only while a change is paused, since only a pause asks
+ * whether a fix came after it began. A labelled change no event dates keeps
+ * no time, and ends no pause.
+ */
+async function readFixTimes(api, env, entries) {
+  if (!entries.some((entry) => entry.queue?.kind === "paused")) return entries;
+  return Promise.all(
+    entries.map(async (entry) => {
+      if (!entry.fix) return entry;
+      const events = await api.list(
+        `${project(env)}/merge_requests/${entry.number}/resource_label_events?per_page=100`,
+      );
+      const times = events
+        .filter((event) => event.action === "add" && event.label?.name === FIX_LABEL)
+        .map((event) => event.created_at)
+        .filter((at) => Number.isFinite(Date.parse(at ?? "")))
+        .sort((a, b) => Date.parse(a) - Date.parse(b));
+      return times.length ? { ...entry, fixLabelledAt: times.at(-1) } : entry;
+    }),
   );
 }
 
@@ -334,9 +358,10 @@ export function noBatchPipeline(reason) {
 }
 
 /**
- * The form job: read every open change and decide the next batch. When an
- * approved fix ends a pause, the paused changes wait again and the pause's
- * issue closes before the batch composes. Then the batch composes
+ * The form job: read every open change and decide the next batch. When a
+ * fix labelled after the pause began is approved, it ends the pause: the
+ * paused changes wait again and the pause's issue closes before the batch
+ * composes. Then the batch composes
  * (`compose`, the compose step's output for a `<number>:<version>` list): a
  * change that conflicts with the default branch alone goes back to be
  * brought up to date, one that conflicts only with an earlier change here
@@ -347,7 +372,11 @@ export function noBatchPipeline(reason) {
  * is false when no batch formed.
  */
 export async function form({ api, env, log, compose }) {
-  const entries = await admitted(api, env, await readOpenQueue(api, env), log);
+  const entries = await readFixTimes(
+    api,
+    env,
+    await admitted(api, env, await readOpenQueue(api, env), log),
+  );
   const plan = formBatch(entries, await readRuns(api, env, entries), env.defaultBranch);
   log(named(plan.reason));
   if (plan.resumes.length) {
@@ -358,11 +387,10 @@ export async function form({ api, env, log, compose }) {
         description: WAITING,
         url: env.pipelineUrl,
       });
-    const fixes = entries.filter((entry) => entry.fix && entry.queue?.kind === "waiting");
     await closePause(
       api,
       env,
-      `${fixes.map((entry) => `#${entry.number}`).join(", ")} was approved as the fix, so the pause ended and [batch run ${env.pipelineId}](${env.pipelineUrl}) takes every paused and waiting change.`,
+      `${plan.fixes.map((number) => `#${number}`).join(", ")} was approved as the fix, so the pause ended and [batch run ${env.pipelineId}](${env.pipelineUrl}) takes every paused and waiting change.`,
     );
   }
   if (!plan.members.length)

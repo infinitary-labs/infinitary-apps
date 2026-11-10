@@ -11,8 +11,8 @@
 # writes the result: green passes every change, and each approver's
 # Infinitary merges its own. Red pauses every change behind one issue, reruns
 # nothing and blames no change. A merge request labelled
-# infinitary-queue-fix ends the pause once it is approved; a resume or a
-# send-back by hand from Infinitary ends it too.
+# infinitary-queue-fix after the pause began ends it once it is approved; a
+# resume or a send-back by hand from Infinitary ends it too.
 #
 # The form and verdict jobs write with the project access token Infinitary
 # keeps as INFINITARY_QUEUE_TOKEN: masked, protected, and scoped to the

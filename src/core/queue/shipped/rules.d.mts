@@ -18,10 +18,20 @@ export type QueueState = QueueKind & {
   since: string;
   /** The nearest earlier batch (or completed attempt) recorded no verdict. */
   previousNoVerdict?: number;
+  /** A paused change's: when its pause began, the first paused status of that run in the newest stretch. */
+  pausedAt?: string;
 };
 export type Member = { number: number; head: string };
-/** An open change: its version, the branch it targets, whether it is a declared fix, and its queue state. */
-export type QueueEntry = Member & { base: string; fix?: boolean; queue: QueueState | null };
+/**
+ * An open change: its version, the branch it targets, whether it carries the
+ * fix label and when that label was last put on, and its queue state.
+ */
+export type QueueEntry = Member & {
+  base: string;
+  fix?: boolean;
+  fixLabelledAt?: string;
+  queue: QueueState | null;
+};
 export type CurrentMember = { head: string; queue: QueueState | null; swept?: QueueState | null };
 export type QueueRun = { id: number; status: string; conclusion: string | null };
 export type StatusWrite = Member & { state: string; description: string; url: string };
@@ -61,7 +71,14 @@ export function formBatch(
   entries: readonly QueueEntry[],
   runs: ReadonlyMap<number, QueueRun>,
   main: string,
-): { action: "none" | "wait" | "sweep"; reason: string; members: Member[]; resumes: Member[] };
+): {
+  action: "none" | "wait" | "sweep";
+  reason: string;
+  members: Member[];
+  resumes: Member[];
+  /** The changes labelled the fix after the pause began, which end it. */
+  fixes: number[];
+};
 export function resume(
   entries: readonly QueueEntry[],
   options: { url: string; except?: number; endedRun?: number },

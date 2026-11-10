@@ -89,6 +89,11 @@ class Project {
     number,
     { system: boolean; body: string; author: { id: number }; created_at: string }[]
   >();
+  /** Each merge request's label events, oldest first, as GitLab lists them. */
+  labelEvents = new Map<
+    number,
+    { action: "add" | "remove"; label: { name: string }; created_at: string }[]
+  >();
   private clock = Date.parse("2026-11-06T17:00:00Z");
   private ids = 9_000;
 
@@ -98,11 +103,25 @@ class Project {
       state: "opened",
       sha: sha(iid),
       target_branch: options.base ?? "main",
-      labels: options.labels ?? [],
+      labels: [] as string[],
     };
     this.requests.set(iid, request);
     this.pushed(iid, request.sha);
+    for (const label of options.labels ?? []) this.label(iid, label);
     return request;
+  }
+
+  /** Someone putting a label on the merge request, or taking it off: GitLab records a label event. */
+  label(iid: number, name: string, action: "add" | "remove" = "add"): void {
+    const request = this.requests.get(iid);
+    if (!request || request.labels.includes(name) === (action === "add")) return;
+    this.clock += 60_000;
+    request.labels =
+      action === "add" ? [...request.labels, name] : request.labels.filter((on) => on !== name);
+    this.labelEvents.set(iid, [
+      ...(this.labelEvents.get(iid) ?? []),
+      { action, label: { name }, created_at: new Date(this.clock).toISOString() },
+    ]);
   }
 
   /** A new version of the merge request: GitLab adds a diff version, and keeps its approvals. */
@@ -195,6 +214,8 @@ class Project {
         return this.versions.get(Number(found[1])) ?? [];
       if (method === "GET" && hit(/^\/merge_requests\/(\d+)\/notes$/))
         return this.notes.get(Number(found[1])) ?? [];
+      if (method === "GET" && hit(/^\/merge_requests\/(\d+)\/resource_label_events$/))
+        return this.labelEvents.get(Number(found[1])) ?? [];
       if (method === "GET" && hit(/^\/members\/all\/(\d+)$/)) {
         const level = this.members.get(Number(found[1]));
         if (level === undefined) throw Object.assign(new Error("Not found"), { status: 404 });
@@ -589,6 +610,44 @@ describe("the shipped queue on GitLab", () => {
       expect(project.queueOf(number)).toMatchObject({ kind: "in-batch", run: 509 });
     expect(project.issues[0]?.state).toBe("closed");
     expect(project.issues[0]?.notes.join(" ")).toMatch(/!84 was approved as the fix/);
+  });
+
+  // The follow-up the review of the merge line filed: "The shipped queue
+  // ends a pause only for a fix change approved for that pause, so a
+  // fix-labelled change that stays waiting cannot end a later, unrelated
+  // pause or re-batch red changes with no repair." GitLab dates a label
+  // from the merge request's label events.
+  it("holds a pause that a fix label put on before it began does not answer, and ends it once the label is put on again", async () => {
+    const project = new Project();
+    project.open(81);
+    // An earlier pause's fix, which keeps its label.
+    project.open(85, { labels: [FIX_LABEL] });
+    project.approve(81);
+    project.approve(85);
+    const first = await formRun(project, 520, { 85: "conflict-batch" });
+    expect(first.members.map((member) => member.number)).toEqual([81]);
+    expect(first.said[0]).toBe("2 approved changes are waiting.");
+    project.checks.set(520, { id: 620, status: "failed", web_url: `${server}/p/620` });
+    await decideRun(project, 520, first.members);
+    project.pipelines.set(520, { id: 520, status: "failed" });
+
+    const held = await formRun(project, 521);
+    expect(held.members).toEqual([]);
+    expect(held.said.join(" ")).toMatch(
+      /!85 carries a fix label not put on after this pause began, so the pause holds\./,
+    );
+    expect(project.queueOf(81)).toMatchObject({ kind: "paused", run: 520 });
+    expect(project.issues[0]?.state).toBe("opened");
+
+    // Its repair declares it this pause's fix by putting the label on again.
+    project.label(85, FIX_LABEL, "remove");
+    project.label(85, FIX_LABEL);
+    const fixed = await formRun(project, 522);
+    expect(fixed.members.map((member) => member.number)).toEqual([81, 85]);
+    expect(project.issues[0]?.state).toBe("closed");
+    expect(project.issues[0]?.notes).toEqual([
+      expect.stringMatching(/^!85 was approved as the fix, so the pause ended/),
+    ]);
   });
 
   it("resumes by hand with a reason, or sends one change back and resumes the rest", async () => {

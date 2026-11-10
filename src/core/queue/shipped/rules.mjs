@@ -21,16 +21,20 @@
  * and decide themselves what runs again. A green confirm passes the batch.
  * A red one, or a failure no log named a test file for, fixes forward: it
  * pauses every change in it and blames none, and no batch forms until a
- * declared fix is approved, or a by-hand resume or send-back turns the
- * paused changes back to waiting. A checks result outside success/failure
- * with no passing confirmation starts a fresh batch once; if a member's
- * preceding batch also lacked a verdict, it pauses instead. The status
- * history records that outcome before its ordinary waiting/paused status.
+ * fix declared for that pause is approved, or a by-hand resume or
+ * send-back turns the paused changes back to waiting. A checks result
+ * outside success/failure with no passing confirmation starts a fresh
+ * batch once; if a member's preceding batch also lacked a verdict, it
+ * pauses instead. The status history records that outcome before its
+ * ordinary waiting/paused status.
  */
 
 export const QUEUE = "infinitary/queue";
 export const WAITING = "Waiting for the batch check";
-/** The label a repair crewmate puts on its change to declare it the pause's fix. */
+/**
+ * The label a repair crewmate puts on its change to declare it the pause's
+ * fix. It declares a fix only for a pause that began before it was put on.
+ */
 export const FIX_LABEL = "infinitary-queue-fix";
 /** The label on the one open issue that holds a pause. */
 export const PAUSE_LABEL = "infinitary-queue-paused";
@@ -55,7 +59,9 @@ export const noVerdict = (run) => `No verdict from batch run ${run}`;
 /**
  * A change's queue state from the queue statuses on its version, newest
  * first. `since` is when the newest unbroken stretch of pending statuses
- * began: the approval mark, which orders the batch.
+ * began: the approval mark, which orders the batch. A paused change also
+ * says when its pause began (`pausedAt`): the first paused status of that
+ * run in the newest unbroken stretch of them.
  */
 export function readQueueState(statuses) {
   const [latest] = statuses;
@@ -77,7 +83,19 @@ export function readQueueState(statuses) {
     statuses,
     kind.kind === "in-batch" ? kind.run : undefined,
   );
-  return { ...base, ...kind, ...(previousNoVerdict === undefined ? {} : { previousNoVerdict }) };
+  let pausedAt;
+  if (kind.kind === "paused")
+    for (const status of statuses) {
+      const each = queueKind(status.state, status.description);
+      if (each.kind !== "paused" || each.run !== kind.run) break;
+      pausedAt = status.createdAt;
+    }
+  return {
+    ...base,
+    ...kind,
+    ...(previousNoVerdict === undefined ? {} : { previousNoVerdict }),
+    ...(pausedAt === undefined ? {} : { pausedAt }),
+  };
 }
 
 /**
@@ -134,13 +152,16 @@ const byApproval = (a, b) => a.queue.since.localeCompare(b.queue.since) || a.num
  * What the queue does now, from every open change's queue state and the
  * readings of the runs those states name. A batch forms only after the last
  * green batch has fully merged and while no run owns a change. While a
- * batch is paused, nothing forms until a waiting change carries the fix
- * label: then every paused change waits again (`resumes`) and the batch
- * takes them, every waiting change and the fix. Only changes that target
- * `main` take part: a stacked change waits until it targets it. The host
- * part composes the batch onto `main` as it stands after this read, never
- * an earlier version: a green change still open here holds the batch, and
- * one that merged before the read is in its base.
+ * batch is paused, nothing forms until a waiting change was labelled the
+ * fix after the pause began (`fixLabelledAt`, when the label was last put
+ * on): then every paused change waits again (`resumes`) and the batch takes
+ * them, every waiting change and the fix (`fixes`). A label put on before
+ * the pause began, such as one left from an earlier pause, declares no fix
+ * for it, so that change waits like any other and the pause holds. Only
+ * changes that target `main` take part: a stacked change waits until it
+ * targets it. The host part composes the batch onto `main` as it stands
+ * after this read, never an earlier version: a green change still open here
+ * holds the batch, and one that merged before the read is in its base.
  */
 export function formBatch(entries, runs, main) {
   const queued = entries.filter((entry) => entry.queue && entry.base === main);
@@ -151,6 +172,7 @@ export function formBatch(entries, runs, main) {
       reason: `A green batch is still merging: ${merging.map((entry) => `#${entry.number}`).join(", ")}.`,
       members: [],
       resumes: [],
+      fixes: [],
     };
   const owned = queued.filter(
     (entry) => entry.queue.kind === "in-batch" && ownsChanges(runs.get(entry.queue.run)),
@@ -161,34 +183,53 @@ export function formBatch(entries, runs, main) {
       reason: `Batch run ${owned[0].queue.run} is running.`,
       members: [],
       resumes: [],
+      fixes: [],
     };
   const paused = queued.filter((entry) => entry.queue.kind === "paused");
   const waiting = queued.filter(
     (entry) => entry.queue.kind === "waiting" || entry.queue.kind === "in-batch",
   );
-  const fix = waiting.find((entry) => entry.fix);
-  if (paused.length && !fix)
+  const labelled = waiting.filter((entry) => entry.fix);
+  // A fix comes after every pause it ends, so after the latest of their
+  // starts; a start or a label time no status or event gave ends nothing.
+  const began = Math.max(...paused.map((entry) => Date.parse(entry.queue.pausedAt ?? "")));
+  const fixes = labelled.filter((entry) => Date.parse(entry.fixLabelledAt ?? "") > began);
+  if (paused.length && !fixes.length) {
+    const earlier = labelled.length
+      ? ` ${numbered(labelled)} ${labelled.length > 1 ? "carry" : "carries"} a fix label not put on after this pause began, so the pause holds.`
+      : "";
     return {
       action: "wait",
-      reason: `Batch run ${paused[0].queue.run} failed, so the queue is paused until its fix is approved, or a resume or a send-back by hand.`,
+      reason: `Batch run ${paused[0].queue.run} failed, so the queue is paused until its fix is approved, or a resume or a send-back by hand.${earlier}`,
       members: [],
       resumes: [],
+      fixes: [],
     };
+  }
   const members = [...paused, ...waiting]
     .sort(byApproval)
     .map((entry) => ({ number: entry.number, head: entry.head }));
   const resumes = paused.map((entry) => ({ number: entry.number, head: entry.head }));
   if (!members.length)
-    return { action: "none", reason: "No approved change is waiting.", members, resumes };
+    return {
+      action: "none",
+      reason: "No approved change is waiting.",
+      members,
+      resumes,
+      fixes: [],
+    };
   return {
     action: "sweep",
-    reason: fix
-      ? `#${fix.number} is the approved fix, so the pause ends and ${members.length} changes go in one batch.`
+    reason: paused.length
+      ? `${numbered(fixes)} ${fixes.length > 1 ? "are the approved fixes" : "is the approved fix"}, so the pause ends and ${members.length} changes go in one batch.`
       : `${members.length} approved changes are waiting.`,
     members,
     resumes,
+    fixes: paused.length ? fixes.map((entry) => entry.number) : [],
   };
 }
+
+const numbered = (entries) => entries.map((entry) => `#${entry.number}`).join(", ");
 
 /**
  * The writes that end a pause by hand: every paused change but `except`
@@ -563,7 +604,7 @@ export function pauseIssue(pause, runUrl) {
       `Paused changes, which go in the next batch:\n${changes}`,
       "Whoever takes this issue repairs it. A change labelled `" +
         FIX_LABEL +
-        "` ends the pause once it is approved. A resume or a send-back by hand ends it too.",
+        "` after this pause began ends it once the change is approved. A label put on before then, such as one left from an earlier pause, does not: to make that change this pause's fix, take the label off and put it on again. A resume or a send-back by hand ends it too.",
       `<!-- infinitary-queue ${marker} -->`,
     ].join("\n\n"),
   };

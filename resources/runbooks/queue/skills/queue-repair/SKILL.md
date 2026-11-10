@@ -28,6 +28,7 @@ On GitLab the queue runs nothing again before it pauses, so read the logs for a 
 
 - **Fix forward.** Open a pull request (on GitLab, a merge request) with the fix and label it `infinitary-queue-fix` before its merge card.
   Once its approver approves it, the queue ends the pause and the next batch takes every paused change, every waiting change and the fix.
+  The label counts only when it was put on after the pause began: on a pull request that already carries it from an earlier pause, take it off and put it on again.
   Say in the issue which pull request is the fix.
 - **Send one change back.** When one change alone breaks the batch, start the queue's workflow by hand with `action` `send-back`, its number and a reason.
   That change fails with the reason on the version the batch ran, its own crew repairs it, and the rest resume.

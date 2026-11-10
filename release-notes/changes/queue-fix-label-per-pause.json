@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "queue-fix-label-per-pause",
+      "kind": "fix",
+      "area": "projects",
+      "title": "A paused batch waits for its own fix",
+      "body": "A change marked as the fix for an earlier pause no longer ends a later one, so the queue stops running the same failing changes again with no repair. A fix now ends a pause only when it was marked after that pause began. Your first mate offers a project's queue the update.",
+      "noPicture": "This changes when a project's queue ends a pause, not any screen in the app.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

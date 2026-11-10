@@ -68,6 +68,8 @@ class Project {
   files = new Map<number, string[]>();
   dispatches: unknown[] = [];
   cancelled: number[] = [];
+  /** Each pull request's label events, oldest first, as GitHub lists its issue events. */
+  events = new Map<number, { event: string; label: { name: string }; created_at: string }[]>();
   /** Issues turned off in the project's settings: GitHub refuses a new issue. */
   issuesOff = false;
   private clock = Date.parse("2026-11-06T17:00:00Z");
@@ -79,10 +81,35 @@ class Project {
       state: "open",
       head: { sha: sha(number) },
       base: { ref: options.base ?? "main" },
-      labels: (options.labels ?? []).map((label) => ({ name: label })),
+      labels: [] as { name: string }[],
     };
     this.pulls.set(number, pull);
+    for (const label of options.labels ?? []) this.label(number, label);
     return pull;
+  }
+
+  /** Someone putting a label on the pull request: GitHub records a labeled event when it was not on. */
+  label(number: number, name: string): void {
+    const pull = this.pulls.get(number);
+    if (!pull || pull.labels.some((label) => label.name === name)) return;
+    this.clock += 60_000;
+    pull.labels.push({ name });
+    this.events.set(number, [
+      ...(this.events.get(number) ?? []),
+      { event: "labeled", label: { name }, created_at: new Date(this.clock).toISOString() },
+    ]);
+  }
+
+  /** Someone taking a label off the pull request. */
+  unlabel(number: number, name: string): void {
+    const pull = this.pulls.get(number);
+    if (!pull?.labels.some((label) => label.name === name)) return;
+    this.clock += 60_000;
+    pull.labels = pull.labels.filter((label) => label.name !== name);
+    this.events.set(number, [
+      ...(this.events.get(number) ?? []),
+      { event: "unlabeled", label: { name }, created_at: new Date(this.clock).toISOString() },
+    ]);
   }
 
   /** An approver's Infinitary marking the version waiting, as its merge click does. */
@@ -168,6 +195,8 @@ class Project {
           },
         },
         issues: {
+          listEvents: ({ issue_number }: { issue_number: number }) =>
+            data(this.events.get(issue_number) ?? []),
           listForRepo: ({ labels }: { labels: string }) =>
             this.issuesOff
               ? Promise.reject(new Error("Issues has been disabled in this repository"))
@@ -743,6 +772,60 @@ describe("the shipped queue on GitHub", () => {
       expect(project.queueOf(number)).toMatchObject({ kind: "in-batch", run: 508 });
     expect(project.issues[0]?.state).toBe("closed");
     expect(project.issues[0]?.comments.join(" ")).toMatch(/#84 was approved as the fix/);
+  });
+
+  // The follow-up the review of the merge line filed: "The shipped queue
+  // ends a pause only for a fix change approved for that pause, so a
+  // fix-labelled change that stays waiting cannot end a later, unrelated
+  // pause or re-batch red changes with no repair." It replays this
+  // project's own queue: a pull request kept its fix label from one pause,
+  // waited outside the next batch and was approved again, and the next
+  // pause ended with no repair, so the same red changes ran again.
+  it("holds a pause that a fix label put on before it began does not answer, and ends it once the label is put on again", async () => {
+    const project = new Project();
+    project.open(81);
+    project.open(82);
+    // An earlier pause's fix, which keeps its label.
+    project.open(85, { labels: [FIX_LABEL] });
+    for (const number of [81, 82, 85]) project.approve(number);
+
+    // With no pause, the label ends nothing, and the form says no pause ends.
+    const first = await formRun(project, 520, { 85: "conflict-batch" });
+    expect(first.members.map((member) => member.number)).toEqual([81, 82]);
+    expect(first.run.notices[0]).toBe("3 approved changes are waiting.");
+    expect(project.queueOf(85)).toMatchObject({ kind: "waiting" });
+    await decide({
+      ...runOf(project, 520).args,
+      result: "failure",
+      members: first.members,
+      tree: TREE,
+    });
+    project.runs.set(520, { id: 520, status: "completed", conclusion: "failure" });
+
+    // The labelled change still waiting beside the new pause ends nothing.
+    const held = await formRun(project, 521);
+    expect(held.members).toEqual([]);
+    expect(held.run.notices.join(" ")).toMatch(
+      /#85 carries a fix label not put on after this pause began, so the pause holds\./,
+    );
+    expect(project.queueOf(81)).toMatchObject({ kind: "paused", run: 520 });
+
+    // Nor does its new version, approved while the pause holds.
+    project.push(85, "8".repeat(40));
+    project.approve(85);
+    expect((await formRun(project, 522)).members).toEqual([]);
+    expect(project.queueOf(82)).toMatchObject({ kind: "paused", run: 520 });
+    expect(project.issues[0]?.state).toBe("open");
+
+    // Its repair declares it this pause's fix by putting the label on again.
+    project.unlabel(85, FIX_LABEL);
+    project.label(85, FIX_LABEL);
+    const fixed = await formRun(project, 523);
+    expect(fixed.members.map((member) => member.number)).toEqual([81, 82, 85]);
+    expect(project.issues[0]?.state).toBe("closed");
+    expect(project.issues[0]?.comments).toEqual([
+      expect.stringMatching(/^#85 was approved as the fix, so the pause ended/),
+    ]);
   });
 
   it("resumes by hand with a reason, or sends one change back and resumes the rest", async () => {

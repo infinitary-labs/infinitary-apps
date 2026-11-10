@@ -731,7 +731,9 @@ When no failed job is reported, the pause names the missing passing verdict rath
 An empty or incomplete job reading is not passing evidence.
 Reading a verdict whose changes are already paused in that run starts nothing; a GitHub workflow rerun that marks them again reuses that run's open pause issue, preserving its claim and diagnosis.
 A red confirm, or a failed job whose log named no test file, blames no change: every change in the batch pauses behind one issue labelled `infinitary-queue-paused`, which names the failed checks, the failed test files and the changes whose diffs touch each one.
-An approved change labelled `infinitary-queue-fix` ends the pause, and the next batch takes the paused changes, the waiting ones and the fix; a resume or a send-back by hand, each with a reason, also ends it.
+An approved change labelled `infinitary-queue-fix` after the pause began ends the pause, and the next batch takes the paused changes, the waiting ones and the fix; a resume or a send-back by hand, each with a reason, also ends it.
+The pause began with the first paused status of its run on a paused change (`pausedAt`), and the label's time is when it was last put on, which the form job reads from the change's events only while a change is paused (`fixLabelledAt`).
+A label put on before the pause began, such as one a fix kept from an earlier pause, declares no fix for it: the change waits like any other, the pause holds, and the form job's log names it; putting the label on again declares it.
 A send-back fails the change only on the version the queue holds it at, its current version while that reads paused or in a batch run (`sendBack`).
 When that send-back succeeds in a still-running batch with a failed check, the queue cancels the run, puts its remaining current members back to waiting and starts the next batch immediately, without a confirm.
 A send-back with no failed check leaves the run alone; failure alone also leaves it alone.

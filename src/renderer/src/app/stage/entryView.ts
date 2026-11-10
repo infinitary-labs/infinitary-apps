@@ -1,4 +1,10 @@
-import { type CardMessage, cardTakesReplies } from "@shared/cards";
+import {
+  type Card,
+  type CardMessage,
+  cardTakesReplies,
+  splitSettleFacts,
+  takesTaskFacts,
+} from "@shared/cards";
 import type { DefaultCardSize } from "@shared/preferences";
 import {
   cardPlacement,
@@ -134,4 +140,25 @@ export function unpreparable(entry: StackEntry, windowShown: boolean): Unprepare
   if (!windowShown) return "window-hidden";
   if (isHeldEntry(entry)) return "held-view";
   return null;
+}
+
+/**
+ * A card's body cut from the host's fact strip, and the strip, when the card
+ * takes its task's facts (`takesTaskFacts`): the stage draws the strip in a
+ * frame of its own beside the buttons, in view however long the body is, and
+ * the body frame draws the rest (`splitSettleFacts`).
+ */
+export function factStripOf(card: Pick<Card, "body" | "actions" | "reviewTaskId" | "risk">) {
+  return takesTaskFacts(card) ? splitSettleFacts(card.body) : undefined;
+}
+
+/**
+ * The document a card's body frame draws: its body less the fact strip. The
+ * host rewrites the strip as its facts come in - the lines a change adds, a
+ * check's age - while that frame has nothing new to draw, so the stage's draw
+ * key names this, never the whole body; else the card would wait for a
+ * drawing that never comes and its update would never count as seen (INF-3429).
+ */
+export function drawnBody(card: Pick<Card, "body" | "actions" | "reviewTaskId" | "risk">): string {
+  return factStripOf(card)?.body ?? card.body;
 }

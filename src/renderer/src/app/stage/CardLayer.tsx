@@ -69,6 +69,7 @@ import { TOP_BAR_HEIGHT } from "../TopBar";
 import { CardEdges, FocusEdge, FoldedRailTabs } from "./CardEdges";
 import { EntrySurface } from "./EntrySurface";
 import {
+  drawnBody,
   type EntryView,
   entryView,
   STAGE_LIFT_EASE,
@@ -417,9 +418,10 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   const markBorn = useCallback((slot: string) => markStage("born", { slot }), []);
   // A beside thread leaves the same body document drawn at the same column width.
   // Only an in-place thread changes its home; body, theme and width still require their own drawing.
+  // The body is the one its frame draws, less the host's fact strip (`drawnBody`).
   // The card width comes last, so `drawnDocument` reads the rest.
   const drawKey = (entry: StackEntry, at: EntryView) =>
-    `${theme}:${at.past?.state === "ready" ? at.past.card.body : entry.body}:${at.home === "in-place" ? "in-place" : "body"}:${at.card}`;
+    `${theme}:${at.past?.state === "ready" ? at.past.card.body : drawnBody(entry)}:${at.home === "in-place" ? "in-place" : "body"}:${at.card}`;
   const drawingOf = (slot: string, key: string): PreparedDrawing => {
     if (failedSlots.current.has(slot)) return "failed";
     const at = [drawn.current.get(slot), held.current.get(slot)];

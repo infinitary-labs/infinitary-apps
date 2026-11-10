@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "settle-facts-seen",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A merge card you are reading counts as seen",
+      "body": "When a merge card's facts filled in a moment after it appeared, such as the lines its change adds, the card could stay unread while you read it, so the stack and your other devices still counted it as new. It now counts as seen as soon as it is on screen in front of you.",
+      "noPicture": "The card looks the same; what changed is whether it counts as seen.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

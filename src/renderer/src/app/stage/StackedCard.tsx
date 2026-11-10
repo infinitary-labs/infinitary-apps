@@ -9,8 +9,6 @@ import {
   cardTakesReplies,
   firstmateOwnCard,
   isPreviewBody,
-  splitSettleFacts,
-  takesTaskFacts,
 } from "@shared/cards";
 import { CARD_CHOICE_COMMANDS } from "@shared/keyboard";
 import type { FrameAnswers } from "@shared/plugins/bridge";
@@ -40,6 +38,7 @@ import type { CardMount } from "../cardActions";
 import { mainMessageRefusal } from "../composer";
 import { useCommandKeys } from "../keyHints";
 import { useShellStore } from "../store";
+import { factStripOf } from "./entryView";
 
 /**
  * The footer's queue group (inline decisions, contract 4.22): how many of
@@ -191,12 +190,10 @@ export function StackedCard({
     }
   }, [bodyPending, showThread, bodyEntrance.onDrawn, onDrawn]);
   // A settle card's fact strip stands beside its buttons, in view however
-  // long the body is, and the body shows the rest (`splitSettleFacts`); so
-  // does the strip on the note of a task that merges on its own.
-  const split = useMemo(
-    () => (takesTaskFacts(card) ? splitSettleFacts(card.body) : undefined),
-    [card],
-  );
+  // long the body is, and the body shows the rest (`factStripOf`); so
+  // does the strip on the note of a task that merges on its own. The stage's
+  // draw key names the same body (`drawnBody`).
+  const split = useMemo(() => factStripOf(card), [card]);
   const body = split?.body ?? card.body;
   // A merge card's risk chart is chrome at its top right (docs/card-authoring.md
   // "The risk chart"); the body keeps clear of the box it holds.

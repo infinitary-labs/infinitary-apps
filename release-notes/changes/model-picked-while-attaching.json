@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "model-picked-while-attaching",
+      "kind": "fix",
+      "title": "A model picked while the first mate starts is the one it answers on",
+      "body": "When you picked another model for your first mate while it was still starting, Settings showed your pick but the first mate kept answering on the earlier model. It now answers on the model you picked.",
+      "area": "firstmate",
+      "noPicture": "Settings already showed the picked model; what changes is which model answers, which a picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

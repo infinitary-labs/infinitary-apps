@@ -268,6 +268,41 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
     expect(t.agent.boundAccount()).toBe("acct_grok");
   });
 
+  // INF-3307's audit, row 15: a model picked while the seat is still
+  // attaching was saved and shown, but the first mate kept answering on the
+  // model the attach had already resolved.
+  it("runs on a model picked while the first mate is still attaching", async () => {
+    const entered = deferred<void>();
+    const attach = deferred<void>();
+    const t = setupWithFlagship({
+      accounts: [{ id: "acct_codex", providerId: "openai-codex", label: "Codex", enabled: true }],
+      availableModels: [
+        { provider: "openai-codex", id: "gpt-5.5" },
+        { provider: "openai-codex", id: "gpt-5.4" },
+      ],
+      attachReady: () => {
+        entered.resolve();
+        return attach.promise;
+      },
+    });
+    t.setHeadroom("acct_codex", 40);
+    const first = t.agent.converse("first");
+    // The attach has resolved the setting's model and is opening its session.
+    await entered.promise;
+    expect(t.agent.modelRef()).toEqual({ provider: "openai-codex", id: "gpt-5.5" });
+
+    await t.agent.applyModelSetting({ provider: "openai-codex", id: "gpt-5.4" });
+    attach.resolve();
+    await first;
+    await tick();
+
+    expect(t.specs.at(-1)?.model).toEqual({ provider: "openai-codex", id: "gpt-5.4" });
+    const session = t.sessions.at(-1) as FakeSession;
+    expect(session.prompts.join("\n")).toContain("first");
+    session.resolveNextPrompt();
+    await tick();
+  });
+
   it("applies a model picker change with its matching account before allowance checks", async () => {
     const t = setupWithFlagship({
       accounts: [

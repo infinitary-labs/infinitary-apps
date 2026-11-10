@@ -83,6 +83,8 @@ export function setupWithFlagship(options: {
   db?: ReturnType<typeof openInMemoryDatabase>;
   /** The captain's recheck of the allowance, as the composition root runs it. */
   recheckAllowance?: () => Promise<undefined>;
+  /** Each Pi seat attach waits for this, as a real one waits on its runtime. */
+  attachReady?: () => Promise<void>;
 }) {
   const paths = appPathsFor(scratchDir("infinitary-agent-"));
   const db: HarnessDatabase = options.db ?? openInMemoryDatabase();
@@ -230,6 +232,7 @@ export function setupWithFlagship(options: {
     coalesceMs: 0,
     seats: {
       pi: seatFactory("pi", async (spec) => {
+        await options.attachReady?.();
         specs.push(spec);
         const session = fakeSession();
         sessions.push(session);

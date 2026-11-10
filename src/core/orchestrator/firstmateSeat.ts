@@ -520,7 +520,14 @@ export class FirstmateSeat {
         "model chosen",
       );
     }
-    if (!this.session || this.localSeat) return;
+    if (this.localSeat) return;
+    // An attach in flight already resolved the earlier model: admission,
+    // which every turn passes right after the attach, re-opens on this one.
+    if (this.creating) {
+      this.modelChanged = true;
+      return;
+    }
+    if (!this.session) return;
     if (this.host.running() || this.session.isStreaming()) {
       this.modelChanged = true;
       return;

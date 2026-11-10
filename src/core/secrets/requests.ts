@@ -43,8 +43,12 @@ export type PreparedUse = {
    * Journal and consume once before launching; never returns values, logs or arbitrary results.
    * A fact that changed after consumption, or a journal that could not be written, stops the
    * launch and says so; `unknown` or a thrown error means the effect may have happened.
+   * `launched` is called once the last authorization check passed and the effect began,
+   * after which a change to the saved decisions no longer stops it.
    */
-  execute: () => Promise<
+  execute: (
+    launched?: () => void,
+  ) => Promise<
     | { exitCode: number }
     | { completed: true }
     | { state: "invalidated" | "unavailable" | "unknown" }
@@ -280,15 +284,17 @@ export class SecretRequests {
     return this.view(kept);
   }
 
-  /** Called by trusted app chrome/native authentication only, never through AXI. */
   /**
+   * Called by trusted app chrome/native authentication only, never through AXI.
    * `until: "started"` answers once the proof passed and the use began, for a
-   * caller on another device that hears the end through Secrets' own change.
+   * caller on another device that hears the end through Secrets' own change;
+   * `until: "launched"` answers once the effect itself began (or the use ended
+   * first), so a decision saved then cannot stop it.
    */
   approve(
     request: string,
     proof: unknown,
-    until: "ended" | "started" = "ended",
+    until: "ended" | "started" | "launched" = "ended",
   ): Promise<UseReceipt | undefined> {
     return this.paused
       ? Promise.resolve(this.status(request))
@@ -298,7 +304,7 @@ export class SecretRequests {
   private async approveNow(
     request: string,
     proof: unknown,
-    until: "ended" | "started",
+    until: "ended" | "started" | "launched",
   ): Promise<UseReceipt | undefined> {
     const kept = this.requests.get(request);
     if (!kept?.prepared || this.view(kept).state !== "waiting")
@@ -316,17 +322,22 @@ export class SecretRequests {
     }
     if (authenticated && this.view(kept).state === "waiting") {
       // start never rejects: every failure becomes the use's own state.
-      const started = this.start(kept);
+      let launched = () => {};
+      const began = new Promise<void>((resolve) => {
+        launched = resolve;
+      });
+      const started = this.start(kept, launched);
       if (until === "ended") await started;
+      if (until === "launched") await Promise.race([began, started]);
     }
     return this.view(kept);
   }
 
-  private start(kept: Kept): Promise<void> {
-    return this.paused ? Promise.resolve() : this.track(this.startNow(kept));
+  private start(kept: Kept, launched?: () => void): Promise<void> {
+    return this.paused ? Promise.resolve() : this.track(this.startNow(kept, launched));
   }
 
-  private async startNow(kept: Kept): Promise<void> {
+  private async startNow(kept: Kept, launched?: () => void): Promise<void> {
     // Reserve synchronously before the first await: racing approvals cannot launch twice.
     if (this.view(kept).state !== "waiting" || !kept.prepared) return;
     kept.receipt.state = "executing";
@@ -336,7 +347,7 @@ export class SecretRequests {
       if (this.now() >= kept.expires || !current) {
         kept.receipt.state = "invalidated";
       } else {
-        const result = await kept.prepared.execute();
+        const result = await kept.prepared.execute(launched);
         if ("state" in result) kept.receipt.state = result.state;
         else if ("completed" in result)
           kept.receipt = { request: kept.receipt.request, state: "completed" };

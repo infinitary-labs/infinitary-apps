@@ -295,14 +295,16 @@ import Testing
     }
 
     /// INF-1109, the captain: "right now it's not even clear what secrets are being requested". Two secrets the
-    /// captain gave the same name stay apart, by environment and reference, wherever the phone names a use,
-    /// including the confirmation the system shows before the key signs, and a reading that leaves out a secret's
-    /// reference shows no use at all.
-    @Test func aWaitingUseNamesEachSecretByItsReference() async throws {
+    /// captain gave the same name stay apart by environment wherever the phone names a use, including the
+    /// confirmation the system shows before the key signs, and a reading that leaves out a secret's reference
+    /// shows no use at all. INF-1690's accepted plan names a secret without its reference or version, and the
+    /// task that asked, unless two secrets of one use share a name and environment.
+    @Test func aWaitingUseNamesEachSecretByItsPlace() async throws {
         let home = Home()
         let use: [String: Any] = [
             "request": "use-7f3a", "card": "card-secrets-use-7f3a", "digest": "5b0c1d", "expires": 1792900300000,
             "nonce": NSNull(), "reason": "Publish the staging build", "recipient": "Staging deploy check",
+            "task": "Publish the staging build",
             "secrets": [
                 ["ref": "github-token-2", "label": "GitHub token", "version": 3, "environment": "Production"],
                 ["ref": "github-token", "label": "GitHub token", "version": 1, "environment": "Staging"],
@@ -314,9 +316,32 @@ import Testing
         let secrets = Self.secrets(home, ApprovalStorageTests.Keychain())
         await secrets.read()
         let read = try #require(secrets.use(card: "card-secrets-use-7f3a"))
-        #expect(read.secrets.map(\.named) == ["GitHub token (Production, github-token-2, version 3)",
-                                              "GitHub token (Staging, github-token, version 1)", "Notes key (notes, version 2)"])
-        #expect(read.giving == "Give GitHub token (Production, github-token-2, version 3), GitHub token (Staging, github-token, version 1), Notes key (notes, version 2) to Staging deploy check once")
+        #expect(read.secrets.map(read.named) == ["GitHub token (Production)", "GitHub token (Staging)", "Notes key"])
+        #expect(read.giving == "Give GitHub token (Production), GitHub token (Staging), Notes key to Publish the staging build once")
+
+        var twins = use
+        twins["task"] = NSNull()
+        twins["secrets"] = [
+            ["ref": "github-token-2", "label": "GitHub token", "version": 3, "environment": "Production"],
+            ["ref": "github-token", "label": "GitHub token", "version": 1, "environment": "Production"],
+        ]
+        home.waiting = [twins]
+        await secrets.read()
+        let alike = try #require(secrets.use(card: "card-secrets-use-7f3a"))
+        #expect(alike.secrets.map(alike.named) == ["GitHub token (Production, github-token-2)", "GitHub token (Production, github-token)"])
+        #expect(alike.giving == "Give GitHub token (Production, github-token-2), GitHub token (Production, github-token) to Staging deploy check once")
+
+        // INF-3507's review: the phone names a secret as the computer's card does, so its foot and its own
+        // confirmation agree with the title; a lone saved secret is named without its place.
+        var computerNamed = use
+        computerNamed["secrets"] = [
+            ["ref": "calendar", "label": "Planning calendar", "version": 1, "environment": "Personal", "name": "Planning calendar"],
+        ]
+        home.waiting = [computerNamed]
+        await secrets.read()
+        let lone = try #require(secrets.use(card: "card-secrets-use-7f3a"))
+        #expect(lone.secrets.map(lone.named) == ["Planning calendar"])
+        #expect(lone.giving == "Give Planning calendar to Publish the staging build once")
 
         var unnamed = use
         unnamed["secrets"] = [["label": "GitHub token", "version": 3, "environment": "Production"]]

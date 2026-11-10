@@ -88,7 +88,7 @@ export const SECRET_APPROVAL_WORDS: Record<
 > = {
   local: "Confirmed here",
   remote: "Confirmed on an enrolled device",
-  rule: "Saved rule",
+  rule: "Saved decision",
   "short-read": "Bounded read",
 };
 export const secretReadPermissionSchema = z.strictObject({
@@ -241,6 +241,8 @@ export const secretApprovalsSchema = z.strictObject({
       nonce: z.string().nullable(),
       reason: z.string(),
       recipient: z.string(),
+      /** The title of the task that asked, as the approval card names it; null when no task asked. */
+      task: z.string().nullable().optional(),
       /**
        * Each secret as the use prepared it: its name, with the environment label
        * and reference that tell two of one name apart. An empty environment
@@ -252,6 +254,12 @@ export const secretApprovalsSchema = z.strictObject({
           label: z.string(),
           version: z.number(),
           environment: z.string(),
+          /**
+           * The name the computer's card gives it, among every saved secret
+           * (`secretNames.secretName`), so the phone names it the same way.
+           * An older computer sends none.
+           */
+          name: z.string().optional(),
         }),
       ),
       /** The checked facts the approval card lists, in its order. */
@@ -291,14 +299,6 @@ export type SecretEnrollInput = z.infer<typeof secretEnrollInputSchema>;
 export type SecretDecisionInput = z.infer<typeof secretDecisionInputSchema>;
 export type SecretDecision = z.infer<typeof secretDecisionSchema>;
 
-/** Host-owned fact labels kept in the open; file digests and complete delivery details fold below. */
-export const SECRET_OVERVIEW_FACTS: readonly string[] = [
-  "Arguments",
-  "Working folder",
-  "Destination",
-  "Operation",
-];
-
 /** Captain's bounded-read choice, shared by enforcement and its visible permission label. */
 export const SHORT_READ_SECONDS = 600;
 export const SHORT_READ_USES = 20;
@@ -332,13 +332,13 @@ export const SECRETS_WORDS = {
   placeHint: "For example, staging or production",
   save: "Save secret",
   historyRegion: "Secrets history",
-  approvalTitle: "Allow secret access?",
   add: "Add secret",
   replace: "Replace",
   forget: "Forget",
   once: "Allow once",
-  short: `Allow up to ${SHORT_READ_SECONDS / 60} minutes`,
-  deny: "Deny",
+  always: "Always allow this",
+  short: `Allow for ${SHORT_READ_SECONDS / 60} minutes`,
+  deny: "Don't allow",
   waiting: "Review request",
   waitingFor: (names: string) =>
     `${names} ${names.includes(", ") ? "are" : "is"} waiting for your answer.`,
@@ -370,15 +370,14 @@ export const SECRETS_WORDS = {
   storageUse: (size: string) => `${size} kept on this computer`,
 } as const;
 
-/** A saved decision in one plain sentence, naming the secret it covers (`secretName`). */
+/** A saved decision as one sentence; the run is the one its approval card named, when it named one. */
 export function decisionWords(rule: z.infer<typeof secretRuleSchema>, name: string): string {
+  const run = rule.note ?? "one exact run";
   if (rule.effect === "never")
-    return rule.operation
-      ? `Never give ${name} to one exact run.`
-      : `Never give ${name} to anyone.`;
-  if (rule.effect === "allow") return `Always give ${name} to one exact run.`;
+    return rule.operation ? `Never give ${name} to ${run}.` : `Never give ${name} to anyone.`;
+  if (rule.effect === "allow") return `Always give ${name} to ${run}.`;
   return rule.operation
-    ? `Ask before giving ${name} to one exact run.`
+    ? `Ask before giving ${name} to ${run}.`
     : `Ask before giving ${name} to anyone.`;
 }
 
@@ -441,4 +440,67 @@ export const SECRET_DEVICE_WORDS = {
   showCard: "Show the card",
   stopping: "Confirm on the card to stop its approvals.",
   cancelled: "The switch was turned off before this phone was confirmed.",
+} as const;
+
+/** The secrets a title names: "the X secret", "the X and Y secrets", or a count, from names `secretNames.secretName` gave. */
+export function secretsNamed(names: readonly string[]): string {
+  if (names.length > 2) return `${names.length} secrets`;
+  return secretsListed(names);
+}
+
+/** Every secret by name, for a sentence that must say exactly which: "the X, Y and Z secrets". */
+export function secretsListed(names: readonly string[]): string {
+  if (names.length === 1) return `the ${names[0]} secret`;
+  const last = names.at(-1);
+  return `the ${names.slice(0, -1).join(", ")} and ${last} secrets`;
+}
+
+/**
+ * The approval card's own words (INF-1690's plan, piece 2): its title names the
+ * secrets and who asks, its body says who asks, what runs and why, and its
+ * answers include the two decisions a person can save.
+ */
+export const SECRET_APPROVAL_CARD_WORDS = {
+  /** Who asks: the task's crewmate, or Infinitary itself when no task asked. */
+  title: (secrets: string, task: string | null) => `Give ${secrets} to ${task ?? "Infinitary"}?`,
+  asked: (task: string | null) =>
+    task ? `Asked by the crewmate on ${task}.` : "Asked by Infinitary itself, not by a task.",
+  runs: "It will run",
+  in: "in",
+  sends: "It will send one request to",
+  reason: "Its reason:",
+  scope:
+    "Only these secrets, only this run. What receives them can keep them. Allowing never approves a separate action, such as deploying or sending something.",
+  read: `On your computer, ${SECRETS_WORDS.short} repeats only this exact read, up to ${SHORT_READ_USES} times. You can stop it in Settings → Secrets.`,
+  always:
+    "On your computer, Always allow this saves this exact run: the same program, files, arguments and folder. Anything different asks again.",
+  checked: "Everything that was checked",
+  confirm: "Each allow asks you to confirm first.",
+  /** The system's own confirmation, which names what one Allow covers. */
+  confirmOnce: "Allow the exact Secrets use shown in Infinitary once.",
+  confirmAlways:
+    "Allow the exact Secrets use shown in Infinitary now and every time it is asked again.",
+  confirmRead: `Allow this exact read for ${SHORT_READ_SECONDS / 60} minutes or ${SHORT_READ_USES} uses, whichever ends first.`,
+  allowed: "Allowed. This exact run is now a saved decision.",
+  notKept:
+    "This run was allowed, but the saved decision was not kept because your decisions changed while it ran. Nothing else changed.",
+  stopTitle: (secrets: string) => `Stop asking for ${secrets}?`,
+  stopBody: (secrets: string, task: string | null) =>
+    `${task ?? "Infinitary"} did not get ${secrets}. Stop asking means ${task ? "no task gets" : "neither Infinitary nor any task gets"} ${secrets} again, for any run, until you remove that saved decision in Settings → Secrets.`,
+  stop: "Stop asking",
+  keepAsking: "Keep asking",
+  stopped: "Saved. Infinitary no longer asks for this secret.",
+} as const;
+
+export const SAVED_DECISION_WORDS = {
+  removeTitle: "Remove this saved decision?",
+  removeBody: "After this, the crew asks you again before using it.",
+  removeConfirm: "Remove decision",
+  keep: "Keep it",
+  onlyRemove:
+    "Nothing changed. A decision is saved only on a request's card; here you can remove one.",
+  confirm: "Your computer asks you to confirm.",
+  saved: "Saved decision removed. The crew asks you again before using it.",
+  unchanged:
+    "Your saved decisions did not change. Confirmation failed or they changed while you were deciding.",
 } as const;

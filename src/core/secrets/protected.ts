@@ -76,6 +76,8 @@ export type PreparedSecret = Pick<VaultEntry, "ref" | "label" | "version" | "env
 /** What a trusted approval screen shows: checked facts, and the requester's words beside them. */
 export type UseDescription = {
   request: string;
+  /** The operation key a saved Allow names (`recipient.ts`), so a card can save this exact run. */
+  operation: string;
   facts: RecipientFacts;
   secrets: PreparedSecret[];
   reason: string;
@@ -84,6 +86,8 @@ export type UseDescription = {
 
 export type BrokerUseDescription = {
   request: string;
+  /** The operation key a saved Allow names, as for a program. */
+  operation: string;
   facts: BrokerFacts;
   secrets: PreparedSecret[];
   reason: string;
@@ -285,6 +289,7 @@ export class ProtectedSecrets implements SecretsBackend {
     }
     this.described.set(request, {
       request,
+      operation: recipient.operation,
       facts: recipient.facts,
       secrets: entries.map(preparedSecret),
       reason: input.reason,
@@ -317,7 +322,7 @@ export class ProtectedSecrets implements SecretsBackend {
       digest,
       rule: evaluation.effect,
       current,
-      execute: async () => {
+      execute: async (began) => {
         try {
           await ready.journal.append({ kind: "consumed", request });
         } catch {
@@ -347,7 +352,7 @@ export class ProtectedSecrets implements SecretsBackend {
             return { state: "invalidated" };
           }
           const launched = await recipient
-            .launch(values, base, authorized)
+            .launch(values, base, authorized, began)
             .catch(() => "failed" as const);
           if (launched === "changed") {
             await end("invalidated");
@@ -450,6 +455,7 @@ export class ProtectedSecrets implements SecretsBackend {
         : {}),
       description: {
         request,
+        operation,
         facts,
         secrets: entries.map(preparedSecret),
         reason: input.reason,
@@ -503,7 +509,7 @@ export class ProtectedSecrets implements SecretsBackend {
       digest,
       rule: permission ? "allow" : evaluation.effect,
       current,
-      execute: async () => {
+      execute: async (began) => {
         if (kept.permission && !this.readAccess.consume(kept.permission, key)) {
           await end("invalidated");
           return { state: "invalidated" };
@@ -535,6 +541,7 @@ export class ProtectedSecrets implements SecretsBackend {
             await end("invalidated");
             return { state: "invalidated" };
           }
+          began?.();
           const result = await prepared.run(values);
           // A response object belongs only to the registered consumer. It never enters the journal.
           this.brokerResults.set(request, result);
@@ -702,6 +709,27 @@ export class ProtectedSecrets implements SecretsBackend {
     reason: string,
   ): Promise<LocalProof | undefined> {
     return this.ready?.local.confirm(`use:${request}`, digest, expires, reason);
+  }
+
+  /**
+   * One confirmation for "Always allow this": a proof for this exact use and a
+   * proof for the exact next authority that saves it, each spent once by its
+   * own owner (`approve`, then `saveAuthority`).
+   */
+  async confirmUseAndAuthority(
+    use: { request: string; digest: string; expires: number },
+    authority: { digest: string; expires: number },
+    reason: string,
+  ): Promise<{ use: LocalProof; authority: LocalProof } | undefined> {
+    const proofs = await this.ready?.local.confirmEach(
+      [
+        { subject: `use:${use.request}`, digest: use.digest, expires: use.expires },
+        { subject: "authority", digest: authority.digest, expires: authority.expires },
+      ],
+      reason,
+    );
+    const [usable, saving] = proofs ?? [];
+    return usable && saving ? { use: usable, authority: saving } : undefined;
   }
 
   /** The nonce an enrolled device signs with its decision on this use. */

@@ -24,7 +24,7 @@ export type Rule = {
   effect: RuleEffect;
   secret: string;
   operation?: string;
-  /** The captain's own note, shown in rehearsal; never parsed. */
+  /** The run in words, as its approval card named it (`runWords`); the page shows it, and it is never parsed. */
   note?: string;
 };
 

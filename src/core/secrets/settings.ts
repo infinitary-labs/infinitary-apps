@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { type Card, FIRSTMATE_CARD_META } from "@shared/cards";
+import { secretName as nameOf } from "@shared/secretNames";
 import {
+  decisionWords,
+  SAVED_DECISION_WORDS,
+  SECRET_APPROVAL_CARD_WORDS,
   SECRET_DEVICE_WORDS,
   SECRETS_RECOVERY_WORDS,
   SECRETS_WORDS,
@@ -13,13 +17,20 @@ import {
   type SecretRehearsal,
   type SecretRehearsalInput,
   type SecretsView,
+  secretsListed,
+  secretsNamed,
 } from "@shared/secrets";
 import { askingView } from "../askedFromAView";
 import type { HostSecretsRecovery } from "../host";
 import { escapeCardText } from "../orchestrator/cardText";
-import { secretApprovalBody } from "./approvalCard";
+import {
+  runWords,
+  type SecretAsk,
+  type SecretIdentities,
+  secretApprovalBody,
+} from "./approvalCard";
 import { approvalCode, approvalKey, type RemoteDecision } from "./approvals";
-import type { ApprovalDevice } from "./authority";
+import type { ApprovalDevice, Rule } from "./authority";
 import { type BrokeredUse, type SecretBroker, validBrokeredUse } from "./brokers";
 import type { HistoryItem } from "./journal";
 import type { ProtectedSecrets, ProtectedSecretsOptions } from "./protected";
@@ -46,7 +57,7 @@ export type SecretsSettingsOptions = {
   changed: () => void;
   /** A waiting requester hears the terminal receipt through the existing task inbox, never values. */
   settled?: (task: string, receipt: EndedUseReceipt) => void;
-  /** A task's title, so the Secrets page can say which task last used a secret. */
+  /** A task's title, so the approval card says which task asks and the page which task last used a secret. */
   taskTitle?: (task: string) => string | undefined;
   now?: ProtectedSecretsOptions["now"];
 };
@@ -354,7 +365,7 @@ export class SecretsSettings {
         this.message = null;
         break;
       case "review-use":
-        this.offerUse(owner, action.request);
+        await this.offerUse(owner, action.request);
         break;
       case "cancel-use":
         await owner.requests.cancel(action.request);
@@ -363,12 +374,13 @@ export class SecretsSettings {
         owner.protected.endReadAccess(action.id);
         break;
       case "forget": {
-        const entry = (await owner.protected.metadata()).find((one) => one.ref === action.ref);
+        const entries = await owner.protected.metadata();
+        const entry = entries.find((one) => one.ref === action.ref);
         if (entry)
           this.offer(
             `forget-${entry.ref}`,
-            "Forget this secret?",
-            `<p>Forget ${escapeCardText(entry.label)} from this computer?</p><p>This does not revoke the key at its provider or remove copies a recipient kept.</p>`,
+            `Forget the ${nameOf(identitiesOf(entries), entry.ref)} secret?`,
+            "<p>Infinitary removes it from this computer, and no task can use it after this.</p><p>This does not turn it off where it was made, and it cannot take back a copy a program already received.</p>",
             [
               {
                 label: "Forget secret",
@@ -427,7 +439,7 @@ export class SecretsSettings {
         this.offer(
           "delete-history",
           "Delete Secrets history?",
-          "<p>Delete the metadata history on this computer?</p><p>Pending and running uses keep their records until they end. Export anything you want to keep first.</p><p>This includes older retained history files, but leaves recovery archives and exported copies unchanged.</p>",
+          "<p>Infinitary forgets which tasks asked for your secrets, and when. It never kept the secrets themselves there.</p><p>Uses still waiting or running keep their record until they end. Export the history first if you want a copy; backups and copies you exported stay as they are.</p>",
           [
             {
               label: "Delete history",
@@ -448,42 +460,8 @@ export class SecretsSettings {
       case "save-rules": {
         const authority = owner.protected.authority();
         if (!authority) break;
-        const proposal = owner.protected.proposeAuthority({
-          rules: structuredClone(action.rules),
-          devices: authority.devices,
-        });
-        if (!proposal) break;
-        const rows = action.rules
-          .map(
-            (rule) =>
-              `<li>${escapeCardText(rule.effect)}: ${escapeCardText(rule.secret)}${rule.operation ? ` — ${escapeCardText(rule.operation)}` : " — every use"}${rule.note ? ` (${escapeCardText(rule.note)})` : ""}</li>`,
-          )
-          .join("");
-        this.offer(
-          "rules",
-          "Save these Secrets rules?",
-          `<p>These rules replace your current Secrets rules.</p><ul>${rows || "<li>No saved rules. Every use asks.</li>"}</ul><p>Never wins over Ask, then Allow. Allow names one exact operation; it cannot allow every program.</p><p>The system will ask you to confirm. Rules do not grant permission for an external action.</p>`,
-          [
-            {
-              label: "Confirm and save",
-              run: async () => {
-                const proof = await owner.protected.confirmAuthority(
-                  proposal.digest,
-                  this.now() + SECRET_REQUEST_LIFETIME_MS,
-                  "Confirm the exact Secrets rule changes shown in Infinitary.",
-                );
-                const result = proof
-                  ? await owner.protected.saveAuthority(proposal.authority, proof)
-                  : "refused";
-                this.message =
-                  result === "stored"
-                    ? "Secrets rules saved."
-                    : "Rules did not change. Confirmation failed or the rules changed while you were deciding.";
-              },
-            },
-            { label: "Keep current rules", run: async () => {} },
-          ],
-        );
+        const entries = await owner.protected.metadata();
+        this.offerDecisions(owner, authority.rules, structuredClone(action.rules), entries);
         break;
       }
     }
@@ -566,11 +544,13 @@ export class SecretsSettings {
     const owner = await this.ready().catch(() => undefined);
     const authority = owner?.protected.authority();
     const enrolled = authority?.devices.find((one) => one.device === device);
+    const saved = owner ? await savedIdentities(owner) : [];
     const waiting = owner
       ? owner.requests.receipts().flatMap((receipt) => {
           const pending = owner.requests.pending(receipt.request);
           if (!pending) return [];
           const use = this.receiptView(owner, receipt);
+          const identities = withUse(saved, use.secrets);
           const challenge = enrolled
             ? owner.protected.challenge(receipt.request, pending.digest, pending.expires)
             : undefined;
@@ -585,11 +565,13 @@ export class SecretsSettings {
               nonce: challenge?.nonce ?? null,
               reason: use.reason,
               recipient: use.recipient,
+              task: this.ask(owner, receipt.request).task,
               secrets: use.secrets.map(({ ref, label, version, environment }) => ({
                 ref,
                 label,
                 version,
                 environment,
+                name: nameOf(identities, ref),
               })),
               facts: use.facts,
             },
@@ -647,7 +629,7 @@ export class SecretsSettings {
         <p>Check that this code matches the one Infinitary shows on ${label}:</p>
         <p><code class="inf-mono" style="font-size:14px">${approvalCode(input.key)}</code></p>
         <p>If the codes differ, choose Not now.</p>
-        <p>Each Allow from ${label} needs its Face ID, Touch ID or passcode, for that one use. It never receives a secret, and your rules still apply.</p>
+        <p>Each Allow from ${label} needs its Face ID, Touch ID or passcode, for that one use. It never receives a secret, and your saved decisions still apply.</p>
         ${current && current.publicKey !== input.key ? `<p>This replaces the approvals ${escapeCardText(current.label)} could give before.</p>` : ""}
         <p>The system will ask you to confirm.</p>`,
         [
@@ -711,10 +693,28 @@ export class SecretsSettings {
   ): Promise<boolean> {
     const authority = owner.protected.authority();
     if (!authority) return false;
-    const proposal = owner.protected.proposeAuthority({
-      rules: authority.rules,
-      devices: change(structuredClone(authority.devices)),
-    });
+    return this.saveAuthority(
+      owner,
+      authority.rules,
+      change(structuredClone(authority.devices)),
+      reason,
+    );
+  }
+
+  /**
+   * The next saved decisions and approval devices, under fresh local
+   * confirmation. A card shown against an older revision saves nothing.
+   */
+  private async saveAuthority(
+    owner: Owner,
+    rules: Rule[],
+    devices: ApprovalDevice[],
+    reason: string,
+    revision?: number,
+  ): Promise<boolean> {
+    const current = owner.protected.authority();
+    if (!current || (revision !== undefined && current.revision !== revision)) return false;
+    const proposal = owner.protected.proposeAuthority({ rules, devices });
     if (!proposal) return false;
     const proof = await owner.protected.confirmAuthority(
       proposal.digest,
@@ -736,54 +736,258 @@ export class SecretsSettings {
     return (await this.ready())?.protected.exportHistory();
   }
 
-  private offerUse(owner: Owner, request: string, notice?: string): void {
+  /** Who asks and what runs, for the card: from the use's checked facts, never the requester's words. */
+  private ask(owner: Owner, request: string): SecretAsk & { operation: string } {
+    const task = this.taskOf.get(request)?.values().next().value;
+    const title = task ? (this.options.taskTitle?.(task) ?? null) : null;
+    const script = owner.protected.describe(request);
+    if (script)
+      return {
+        task: title,
+        operation: script.operation,
+        run: {
+          kind: "program",
+          program: script.facts.executable.path,
+          argv: script.facts.argv,
+          cwd: script.facts.cwd,
+        },
+      };
+    const broker = owner.protected.describeBrokered(request);
+    return {
+      task: title,
+      operation: broker?.operation ?? "",
+      run: {
+        kind: "service",
+        label: broker?.facts.label ?? "",
+        destination: broker?.facts.destination ?? "",
+        operation: broker?.facts.operation ?? "",
+      },
+    };
+  }
+
+  /**
+   * The approval card (INF-1690's plan, piece 2). Its title names the secrets and
+   * who asks; its answers are Allow once, Always allow this (Allow for 10
+   * minutes for an eligible read) and Don't allow, and the two decisions a
+   * person can save are born here: Always allow this saves today's exact-run
+   * Allow, and Don't allow offers to stop asking, today's Never.
+   */
+  private async offerUse(owner: Owner, request: string, notice?: string): Promise<void> {
+    const saved = await savedIdentities(owner);
     const pending = owner.requests.pending(request);
     if (!pending) return;
     const use = this.receiptView(owner, { request, state: "waiting" });
-    const confirm = async (short: boolean) => {
+    const ask = this.ask(owner, request);
+    const words = SECRET_APPROVAL_CARD_WORDS;
+    const identities = withUse(saved, use.secrets);
+    const names = use.secrets.map((secret) => nameOf(identities, secret.ref));
+    const named = secretsNamed(names);
+    const waiting = async (): Promise<boolean> => {
       if (!owner.requests.pending(request)) {
         this.message = "This request is no longer waiting. Check its current result in Secrets.";
-        return;
+        return false;
       }
       if ((await owner.protected.status()) !== "available") {
         this.message =
           "This use is still waiting. Unlock the system’s secret store, then review it again.";
-        this.offerUse(owner, request, this.message);
-        return;
+        await this.offerUse(owner, request, this.message);
+        return false;
       }
-      const reason = short
-        ? `Allow this exact read for ${SHORT_READ_SECONDS / 60} minutes or ${SHORT_READ_USES} uses, whichever ends first.`
-        : "Allow the exact Secrets use shown in Infinitary once.";
-      const proof = short
-        ? await owner.protected.confirmShortRead(request, pending.digest, pending.expires, reason)
-        : await owner.protected.confirmUse(request, pending.digest, pending.expires, reason);
-      if (proof) await owner.requests.approve(request, proof);
+      return true;
+    };
+    const stillWaiting = async () => {
       if (owner.requests.status(request)?.state === "waiting") {
         this.message = "No confirmation was accepted. This request is still waiting.";
-        this.offerUse(owner, request, this.message);
+        await this.offerUse(owner, request, this.message);
       }
+    };
+    const confirm = async (short: boolean) => {
+      if (!(await waiting())) return;
+      const proof = short
+        ? await owner.protected.confirmShortRead(
+            request,
+            pending.digest,
+            pending.expires,
+            words.confirmRead,
+          )
+        : await owner.protected.confirmUse(
+            request,
+            pending.digest,
+            pending.expires,
+            words.confirmOnce,
+          );
+      if (proof) await owner.requests.approve(request, proof);
+      await stillWaiting();
+    };
+    const always = async () => {
+      if (!(await waiting())) return;
+      const authority = owner.protected.authority();
+      if (!authority || !ask.operation) return;
+      const refs = use.secrets.map((secret) => secret.ref);
+      const covers = (rule: Rule) =>
+        refs.includes(rule.secret) &&
+        (rule.operation === undefined || rule.operation === ask.operation);
+      // An Ask that covers this run would outrank the new Allow; the person just answered it.
+      const rules: Rule[] = [
+        ...authority.rules.filter((rule) => !(rule.effect === "ask" && covers(rule))),
+        ...refs.map((secret) => ({
+          id: randomUUID(),
+          effect: "allow" as const,
+          secret,
+          operation: ask.operation,
+          note: runWords(ask.run),
+        })),
+      ];
+      const proposal = owner.protected.proposeAuthority({ rules, devices: authority.devices });
+      if (!proposal) return;
+      const proofs = await owner.protected.confirmUseAndAuthority(
+        { request, digest: pending.digest, expires: pending.expires },
+        { digest: proposal.digest, expires: this.now() + SECRET_REQUEST_LIFETIME_MS },
+        words.confirmAlways,
+      );
+      if (!proofs) {
+        await stillWaiting();
+        return;
+      }
+      // The run first: a saved change to decisions ends any use still waiting on the
+      // older ones. Save once the run has begun, while the confirmation is fresh,
+      // never after a long run has ended.
+      await owner.requests.approve(request, proofs.use, "launched");
+      if (owner.requests.status(request)?.state === "waiting") {
+        await stillWaiting();
+        return;
+      }
+      const saved = await owner.protected.saveAuthority(proposal.authority, proofs.authority);
+      this.message = saved === "stored" ? words.allowed : words.notKept;
+    };
+    const deny = async () => {
+      await owner.requests.deny(request);
+      if (owner.requests.status(request)?.state !== "denied") return;
+      this.offerStopAsking(owner, use.secrets, names, ask.task, this.taskOf.get(request));
     };
     this.useCards.add(request);
     this.offer(
       `use-${request}`,
-      SECRETS_WORDS.approvalTitle,
-      secretApprovalBody(use, !!owner.protected.describe(request), notice),
+      words.title(named, ask.task),
+      secretApprovalBody(use, ask, identities, notice),
       [
         { label: SECRETS_WORDS.once, run: () => confirm(false) },
-        ...(use.shortReadEligible
-          ? [{ label: SECRETS_WORDS.short, run: () => confirm(true) }]
-          : []),
-        {
-          label: SECRETS_WORDS.deny,
-          run: async () => {
-            await owner.requests.deny(request);
-          },
-        },
+        use.shortReadEligible
+          ? { label: SECRETS_WORDS.short, run: () => confirm(true) }
+          : { label: SECRETS_WORDS.always, run: always },
+        { label: SECRETS_WORDS.deny, run: deny },
       ],
       this.taskOf.get(request)?.values().next().value,
     );
     // A phone reads which card is this use's once the card is up.
     this.options.changed();
+  }
+
+  /** After Don't allow: one offer to stop asking for these secrets, today's Never rule for each. */
+  private offerStopAsking(
+    owner: Owner,
+    secrets: SecretsView["uses"][number]["secrets"],
+    names: readonly string[],
+    task: string | null,
+    tasks: Set<string> | undefined,
+  ): void {
+    const words = SECRET_APPROVAL_CARD_WORDS;
+    const authority = owner.protected.authority();
+    const refs = secrets.map((secret) => secret.ref);
+    // Already never given: nothing to offer.
+    if (
+      !authority ||
+      refs.every((ref) =>
+        authority.rules.some(
+          (rule) => rule.secret === ref && rule.effect === "never" && !rule.operation,
+        ),
+      )
+    )
+      return;
+    // This card saves a lasting refusal, so it names every secret it covers.
+    const named = secretsListed(names);
+    this.offer(
+      `never-${refs.join("-")}`,
+      words.stopTitle(named),
+      `<p>${escapeCardText(words.stopBody(named, task))}</p><p>${escapeCardText(SAVED_DECISION_WORDS.confirm)}</p>`,
+      [
+        {
+          label: words.stop,
+          run: async () => {
+            const current = owner.protected.authority();
+            if (!current) return;
+            const never = refs.filter(
+              (ref) =>
+                !current.rules.some(
+                  (rule) => rule.secret === ref && rule.effect === "never" && !rule.operation,
+                ),
+            );
+            const saved = await this.saveAuthority(
+              owner,
+              [
+                ...current.rules,
+                ...never.map((secret) => ({ id: randomUUID(), effect: "never" as const, secret })),
+              ],
+              current.devices,
+              words.stopTitle(named),
+            );
+            this.message = saved ? words.stopped : SAVED_DECISION_WORDS.unchanged;
+          },
+        },
+        { label: words.keepAsking, run: async () => {} },
+      ],
+      tasks?.values().next().value,
+    );
+  }
+
+  /**
+   * Settings removes one saved decision, in its plain sentence, saved only after the
+   * system confirms the person. A decision is made only on a request's approval card
+   * (INF-1690: "Only from the approval card"), so any other change is refused here.
+   */
+  private offerDecisions(
+    owner: Owner,
+    current: readonly Rule[],
+    next: Rule[],
+    entries: readonly { ref: string; label: string; environment?: string }[],
+  ): void {
+    const words = SAVED_DECISION_WORDS;
+    const named = identitiesOf(entries);
+    const same = (a: Rule, b: Rule) =>
+      a.id === b.id &&
+      a.effect === b.effect &&
+      a.secret === b.secret &&
+      a.operation === b.operation &&
+      a.note === b.note;
+    const removed = current.filter((rule) => !next.some((one) => same(one, rule)));
+    const kept = next.every((rule) => current.some((one) => same(one, rule)));
+    const authority = owner.protected.authority();
+    const [rule] = removed;
+    if (!kept || removed.length !== 1 || !rule || !authority) {
+      this.message = words.onlyRemove;
+      return;
+    }
+    this.offer(
+      "rules",
+      words.removeTitle,
+      `<ul><li>${escapeCardText(decisionWords(rule, nameOf(named, rule.secret)))}</li></ul><p>${escapeCardText(words.removeBody)}</p><p>${escapeCardText(words.confirm)}</p>`,
+      [
+        {
+          label: words.removeConfirm,
+          run: async () => {
+            const saved = await this.saveAuthority(
+              owner,
+              next,
+              authority.devices,
+              "Confirm the exact change to your saved Secrets decisions shown in Infinitary.",
+              authority.revision,
+            );
+            this.message = saved ? words.saved : words.unchanged;
+          },
+        },
+        { label: words.keep, run: async () => {} },
+      ],
+    );
   }
 
   private offer(
@@ -852,7 +1056,7 @@ export class SecretsSettings {
           id: taskIntent(context.task, copied.id),
         });
         this.track(owner, receipt, context.task);
-        if (receipt.state === "waiting") this.offerUse(owner, receipt.request);
+        if (receipt.state === "waiting") await this.offerUse(owner, receipt.request);
         return receipt;
       },
       status: async (request: string) => (await this.ready())?.requests.status(request),
@@ -880,7 +1084,7 @@ export class SecretsSettings {
     if (!owner) return { request: copied.id, state: "unavailable" };
     const receipt = await owner.requests.broker(copied);
     if (task) this.track(owner, receipt, task);
-    if (receipt.state === "waiting") this.offerUse(owner, receipt.request);
+    if (receipt.state === "waiting") await this.offerUse(owner, receipt.request);
     return receipt;
   }
   async takeBrokerResult(request: string): Promise<unknown> {
@@ -959,4 +1163,34 @@ export function newReference(label: string, taken: readonly string[]): string {
   const used = new Set(taken);
   if (!used.has(base)) return base;
   for (let n = 2; ; n += 1) if (!used.has(`${base}-${n}`)) return `${base}-${n}`;
+}
+
+/** Secrets as a sentence tells them apart: name, place (empty when none) and reference. */
+function identitiesOf(
+  entries: readonly { ref: string; label: string; environment?: string }[],
+): SecretIdentities {
+  return entries.map(({ ref, label, environment }) => ({
+    ref,
+    label,
+    environment: environment ?? "",
+  }));
+}
+
+/** Every saved secret, to name a use's secrets among as Settings does; an unreadable list names none. */
+async function savedIdentities(owner: Owner): Promise<SecretIdentities> {
+  return identitiesOf(await owner.protected.metadata().catch(() => []));
+}
+
+/**
+ * The use's own secrets as it prepared them, never a later replacement's name
+ * or place, among every other saved secret.
+ */
+function withUse(
+  saved: SecretIdentities,
+  secrets: readonly { ref: string; label: string; environment?: string }[],
+): SecretIdentities {
+  return [
+    ...identitiesOf(secrets),
+    ...saved.filter((one) => !secrets.some((secret) => secret.ref === one.ref)),
+  ];
 }

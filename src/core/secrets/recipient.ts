@@ -60,11 +60,15 @@ export type PreparedRecipient = {
   operation: string;
   /** Recheck every bound digest and the working folder. */
   check(): Promise<boolean>;
-  /** Recheck, then synchronously verify authorization at spawn. Output stays private. */
+  /**
+   * Recheck, then synchronously verify authorization at spawn, then call
+   * `launched` once the program started. Output stays private.
+   */
   launch(
     values: Record<string, Buffer>,
     base: NodeJS.ProcessEnv,
     authorized: () => boolean,
+    launched?: () => void,
   ): Promise<LaunchResult>;
   /** Remove copies and private output. Removal is not secure erasure. */
   dispose(): Promise<void>;
@@ -192,7 +196,7 @@ export async function prepareRecipient(
     facts,
     operation: sha256(canonical(facts)),
     check,
-    launch: async (values, base, authorized) => {
+    launch: async (values, base, authorized, launched) => {
       const env: NodeJS.ProcessEnv = {};
       for (const name of RECIPIENT_VARIABLES) if (base[name] !== undefined) env[name] = base[name];
       for (const [name, value] of Object.entries(values)) {
@@ -214,6 +218,7 @@ export async function prepareRecipient(
               stdio: ["ignore", stdout.fd, stderr.fd],
             });
             child.once("error", fail);
+            child.once("spawn", () => launched?.());
             child.once("exit", (code, signal) =>
               settle(code !== null ? { exitCode: code } : { signal: signal ?? "unknown" }),
             );

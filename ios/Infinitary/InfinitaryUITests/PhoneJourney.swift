@@ -521,24 +521,28 @@ import XCTest
         XCTAssertTrue(allow.waitForPresence(timeout: 20), app.debugDescription)
         XCTAssertEqual(allow.label, "Allow once")
         XCTAssertTrue(app.staticTexts["approval-note"].label.hasPrefix("Each Allow here asks for Face ID"), app.staticTexts["approval-note"].label)
-        // The computer's own approval body names the same secret, its prepared environment and saved version.
+        // The computer's own approval body (INF-1690's plan) says who asks and why, in the open.
         func body(_ words: String) -> XCUIElement {
             app.webViews.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", words)).firstMatch
         }
-        for words in ["Planning calendar", "Personal", "Saved version 1"] {
+        for words in ["Asked by the crewmate on", "Read my next planning meeting"] {
             XCTAssertTrue(body(words).waitForPresence(timeout: 20), app.debugDescription)
         }
         // INF-1109: the shared body says confirmation comes before sharing without naming a device, and that
         // temporary access is only the computer's; no Allow here offers it.
-        XCTAssertTrue(body("after you confirm").exists, app.debugDescription)
+        XCTAssertTrue(body("asks you to confirm first").exists, app.debugDescription)
         XCTAssertFalse(body("Your computer asks you to confirm").exists, app.debugDescription)
-        let temporary = body("Temporary access is available only on your computer")
+        let temporary = body("On your computer, Allow for 10 minutes")
         XCTAssertTrue(temporary.exists, app.debugDescription)
-        // INF-1109: the foot names the requested secret by name, environment, reference and version, beside
-        // choices that stay in the card's frame rather than scrolling away with its body.
-        let named = app.staticTexts["approval-secret-calendar"]
-        XCTAssertTrue(named.waitForPresence(timeout: 10), app.debugDescription)
-        XCTAssertEqual(named.label, "Planning calendar (Personal, calendar, version 1)")
+        // INF-1109 and INF-1690: the card names the requested secret as the computer's Settings names it - this
+        // lone saved secret by its name alone, with no place, reference or version - and the task that asked; the
+        // title names this one secret, so the foot does not repeat it, and the choices stay in the card's frame
+        // rather than scrolling away with its body.
+        let cardTitle = app.staticTexts["card-title"]
+        XCTAssertTrue(cardTitle.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(cardTitle.label, title)
+        XCTAssertTrue(title.contains("the Planning calendar secret to "), title)
+        XCTAssertFalse(app.staticTexts["approval-secret-calendar"].exists, app.debugDescription)
         XCTAssertTrue(app.descendants(matching: .any)["card-frame"].exists, "The choices stay pinned: \(app.debugDescription)")
         // The choices take a press once the computer's body is revealed at its drawn height, as every card's do.
         waitUntilEnabled(allow)

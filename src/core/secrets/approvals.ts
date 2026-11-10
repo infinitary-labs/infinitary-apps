@@ -48,17 +48,33 @@ export class LocalApprovals {
     expires: number,
     reason: string,
   ): Promise<LocalProof | undefined> {
-    if (!this.authentication || this.now() >= expires) return undefined;
+    return (await this.confirmEach([{ subject, digest, expires }], reason))?.[0];
+  }
+
+  /**
+   * One confirmation for changes the person approved together on one card, such
+   * as running a use now and saving it as a decision: each proof still binds its
+   * own subject and digest and is spent once, and none is made unless every
+   * one is still live once the system confirmed the person.
+   */
+  async confirmEach(
+    subjects: readonly { subject: string; digest: string; expires: number }[],
+    reason: string,
+  ): Promise<LocalProof[] | undefined> {
+    const live = () => subjects.every(({ expires }) => this.now() < expires);
+    if (!this.authentication || subjects.length === 0 || !live()) return undefined;
     let confirmed = false;
     try {
       confirmed = (await this.authentication.confirm(reason)) === true;
     } catch {
       // A failed or cancelled confirmation reveals nothing and approves nothing.
     }
-    if (!confirmed || this.now() >= expires) return undefined;
-    const proof: LocalProof = Object.freeze({ kind: "local" });
-    this.held.set(proof, { subject, digest, expires, used: false });
-    return proof;
+    if (!confirmed || !live()) return undefined;
+    return subjects.map(({ subject, digest, expires }) => {
+      const proof: LocalProof = Object.freeze({ kind: "local" });
+      this.held.set(proof, { subject, digest, expires, used: false });
+      return proof;
+    });
   }
 
   consume(proof: unknown, subject: string, digest: string): boolean {

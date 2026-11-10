@@ -2,12 +2,18 @@ import { generateKeyPairSync, type KeyObject, sign } from "node:crypto";
 import { readdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Card } from "@shared/cards";
+import { secretName } from "@shared/secretNames";
 import {
+  decisionWords,
+  SAVED_DECISION_WORDS,
+  SECRET_APPROVAL_CARD_WORDS,
   SECRET_DEVICE_WORDS,
   SECRETS_RECOVERY_WORDS,
   SECRETS_WORDS,
   type SecretEntryInput,
   secretApprovalsSchema,
+  secretsListed,
+  secretsNamed,
   secretsViewSchema,
 } from "@shared/secrets";
 import { describe, expect, it, vi } from "vitest";
@@ -15,12 +21,13 @@ import { disposableCustody } from "../../../tests/helpers/disposableCustody";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { asAView } from "../askedFromAView";
 import type { HostSecretsRecovery } from "../host";
+import { escapeCardText } from "../orchestrator/cardText";
 import { approvalCode, decisionMessage } from "./approvals";
 import { httpSecretBroker } from "./httpBroker";
 import { ProtectedSecrets } from "./protected";
 import { SHORT_READ_USES } from "./readAccess";
 import type { RecoveryFiles } from "./recoveryArchive";
-import type { EndedUseReceipt } from "./requests";
+import { type EndedUseReceipt, SECRET_REQUEST_LIFETIME_MS } from "./requests";
 import { SecretsSettings } from "./settings";
 
 // Intent: INF-1109's trusted Settings controls and INF-30's selections: secure
@@ -39,12 +46,15 @@ const INPUT = {
   expectedRevision: null,
   environment: "Personal",
 } satisfies SecretEntryInput;
+type Raised = Omit<Card, "author" | "priority" | "status" | "createdAt">;
 /** The tasks the fixture's home knows by title; any other task id is one it no longer knows. */
 const TASK_TITLES: Record<string, string> = {
   "task-a": "Check the planning calendar",
   "task-b": "Plan the week",
+  "planning-task": "Plan next week's meetings",
+  "deploy-task": "Deploy the site",
 };
-type Raised = Omit<Card, "author" | "priority" | "status" | "createdAt">;
+const CALENDAR = secretsNamed([INPUT.label]);
 
 function fixture() {
   const custody = disposableCustody();
@@ -110,8 +120,8 @@ function fixture() {
       settled: (task, receipt) => {
         ended.push({ task, receipt });
       },
-      taskTitle: (task) => TASK_TITLES[task],
       changed: () => {},
+      taskTitle: (task) => TASK_TITLES[task],
       now: () => now,
     });
     if (register) controller.registerBroker(broker);
@@ -419,7 +429,9 @@ describe("trusted Secrets settings", () => {
     });
     const listed = await otherProject.inject(use(INPUT.ref));
     expect(listed.state).toBe("waiting");
-    expect(f.cards.at(-1)?.title).toBe(SECRETS_WORDS.approvalTitle);
+    expect(f.cards.at(-1)?.title).toBe(
+      SECRET_APPROVAL_CARD_WORDS.title(CALENDAR, TASK_TITLES["task-b"] ?? null),
+    );
     expect(f.confirms()).toBe(0);
     expect((await otherProject.inject(use("internal-root"))).state).toBe("unavailable");
     await otherProject.cancel(listed.request);
@@ -460,8 +472,9 @@ describe("trusted Secrets settings", () => {
     const use = (await f.settings.view()).uses.find((one) => one.request === receipt.request);
     expect(use?.secrets).toEqual(requested);
     const approvals = secretApprovalsSchema.parse(await f.settings.approvals("a-phone"));
+    // The phone also reads the name the card gives each, so both name them alike.
     expect(approvals.waiting.find((one) => one.request === receipt.request)?.secrets).toEqual(
-      requested,
+      requested.map((one) => ({ ...one, name: secretName(requested, one.ref) })),
     );
     expect(JSON.stringify([use, approvals])).not.toContain(TOKEN);
 
@@ -484,7 +497,7 @@ describe("trusted Secrets settings", () => {
     expect(
       (await f.settings.approvals("a-phone")).waiting.find((one) => one.request === receipt.request)
         ?.secrets,
-    ).toEqual(requested);
+    ).toEqual(requested.map((one) => ({ ...one, name: secretName(requested, one.ref) })));
   });
 
   it("adds a secret with no reference under a stable one made from its name", async () => {
@@ -759,7 +772,9 @@ describe("trusted Secrets settings", () => {
     expect(view.offeredCard).toBeNull();
   });
 
-  it("edits no rule from its form: the exact shown rules need a fresh host confirmation", async () => {
+  // Intent: INF-1690's accepted plan, "Only from the approval card": Settings
+  // can remove a saved decision but never add or change one, whatever it sends.
+  it("adds no decision from Settings: only a removal is offered, and nothing else is saved", async () => {
     const f = fixture();
     await f.settings.put(INPUT);
     const rules = [
@@ -770,17 +785,225 @@ describe("trusted Secrets settings", () => {
         note: "Keep this account private",
       },
     ];
-    await f.settings.action({ kind: "save-rules", rules });
-    expect((await f.settings.view()).rules).toEqual([]);
-    f.confirmation(false);
-    await f.click("Confirm and save");
-    expect((await f.settings.view()).rules).toEqual([]);
-    f.confirmation(true);
-    await f.settings.action({ kind: "save-rules", rules });
-    await f.click("Confirm and save");
-    expect((await f.settings.view()).rules).toEqual(rules);
-    expect((await f.request("forbidden-read")).state).toBe("denied");
+    const cards = f.cards.length;
+    const view = await f.settings.action({ kind: "save-rules", rules });
+    expect(view.message).toBe(SAVED_DECISION_WORDS.onlyRemove);
+    expect(f.cards).toHaveLength(cards);
+    expect(view.rules).toEqual([]);
+    expect(f.confirms()).toBe(0);
+    expect((await f.request("forbidden-read")).state).toBe("waiting");
     expect(f.sent).toEqual([]);
+  });
+
+  // Intent: INF-1690's accepted plan, the captain's answer on how a saved
+  // decision is made: "Only from the approval card: Always allow this run, or
+  // Don't allow and stop asking for this key. The page lists saved decisions
+  // with Remove and has no editor."
+  async function deployRun(f: ReturnType<typeof fixture>) {
+    await f.settings.put({
+      ...INPUT,
+      ref: "website-staging",
+      label: "Website deployment",
+      environment: "Staging",
+    });
+    const cwd = await realpath(f.dir);
+    const script = join(cwd, "deploy.sh");
+    await writeFile(script, 'test -n "$DEPLOY_TOKEN"\n');
+    const command = f.settings.commandFor({ task: "deploy-task" });
+    const run = (id: string, args: string[] = []) =>
+      command.inject({
+        id,
+        reason: "Deploy the website to staging and check it",
+        cwd,
+        argv: ["/bin/sh", script, ...args],
+        env: { DEPLOY_TOKEN: "website-staging" },
+      });
+    return { run, cwd };
+  }
+  const STAGING = secretsNamed(["Website deployment"]);
+
+  it("Always allow this runs the shown use now and saves it, under one confirmation", async () => {
+    const f = fixture();
+    const { run, cwd } = await deployRun(f);
+    const first = await run("deploy-1", ["--staging"]);
+    expect(first.state).toBe("waiting");
+    const card = f.cards.at(-1);
+    expect(card?.title).toBe(SECRET_APPROVAL_CARD_WORDS.title(STAGING, "Deploy the site"));
+    expect(card?.actions.map((action) => action.label)).toEqual([
+      SECRETS_WORDS.once,
+      SECRETS_WORDS.always,
+      SECRETS_WORDS.deny,
+    ]);
+    expect(card?.body).toContain(SECRET_APPROVAL_CARD_WORDS.asked("Deploy the site"));
+    // The checked program's own path (the captain's review answer), not the request's word.
+    const run1 = `${await realpath("/bin/sh")} deploy.sh --staging`;
+    expect(card?.body).toContain(run1);
+    expect(card?.body).toContain(cwd);
+
+    const before = f.confirms();
+    await f.click(SECRETS_WORDS.always);
+    expect(f.confirms()).toBe(before + 1);
+    await vi.waitFor(async () =>
+      expect(
+        (await f.settings.view()).uses.find((one) => one.request === first.request)?.state,
+      ).toBe("completed"),
+    );
+    const view = await f.settings.view();
+    expect(view.message).toBe(SECRET_APPROVAL_CARD_WORDS.allowed);
+    expect(view.rules).toMatchObject([{ effect: "allow", secret: "website-staging", note: run1 }]);
+
+    // The same run never asks again; a different one still does.
+    const cards = f.cards.length;
+    const again = await run("deploy-2", ["--staging"]);
+    await vi.waitFor(async () =>
+      expect(
+        (await f.settings.view()).uses.find((one) => one.request === again.request)?.state,
+      ).toBe("completed"),
+    );
+    expect(f.cards).toHaveLength(cards);
+    expect(f.confirms()).toBe(before + 1);
+    expect((await run("deploy-3", ["--production"])).state).toBe("waiting");
+
+    // The page removes it with Remove; the card says what it removes, in the page's sentence,
+    // naming the run the approval card showed.
+    const shown = await f.settings.view();
+    const saved = shown.rules[0];
+    if (!saved) throw new Error("Always allow this saved no decision");
+    await f.settings.action({ kind: "save-rules", rules: [] });
+    const removing = f.cards.at(-1);
+    expect(removing?.title).toBe(SAVED_DECISION_WORDS.removeTitle);
+    expect(removing?.body).toContain(decisionWords(saved, secretName(shown.entries, saved.secret)));
+    expect(removing?.body).toContain(`to ${run1}.`);
+    await f.click(SAVED_DECISION_WORDS.removeConfirm);
+    expect((await f.settings.view()).rules).toEqual([]);
+    expect((await run("deploy-4", ["--staging"])).state).toBe("waiting");
+  });
+
+  // Review of INF-1690 piece 2: the decision was saved only after the run ended,
+  // by when its confirmation could have expired. A run that outlasts it keeps the decision.
+  it("Always allow this saves the decision once the run starts, however long the run takes", async () => {
+    const f = fixture();
+    const { cwd } = await deployRun(f);
+    const release = join(cwd, "release");
+    const script = join(cwd, "long.sh");
+    await writeFile(script, `while [ ! -e "${release}" ]; do sleep 0.05; done\n`);
+    // The script loops until the release exists, so write it whatever happened.
+    try {
+      const long = await f.settings.commandFor({ task: "deploy-task" }).inject({
+        id: "deploy-long",
+        reason: "Deploy the website to staging and wait for it",
+        cwd,
+        argv: ["/bin/sh", script],
+        env: { DEPLOY_TOKEN: "website-staging" },
+      });
+      await f.click(SECRETS_WORDS.always);
+      const running = await f.settings.view();
+      expect(running.uses.find((one) => one.request === long.request)?.state).toBe("executing");
+      expect(running.message).toBe(SECRET_APPROVAL_CARD_WORDS.allowed);
+      expect(running.rules).toMatchObject([
+        {
+          effect: "allow",
+          secret: "website-staging",
+          note: `${await realpath("/bin/sh")} long.sh`,
+        },
+      ]);
+      f.advance(SECRET_REQUEST_LIFETIME_MS * 2);
+      await writeFile(release, "");
+      await vi.waitFor(async () =>
+        expect(
+          (await f.settings.view()).uses.find((one) => one.request === long.request)?.state,
+        ).toBe("completed"),
+      );
+      expect((await f.settings.view()).rules).toHaveLength(1);
+    } finally {
+      await writeFile(release, "");
+    }
+  });
+
+  it("Always allow this saves nothing and runs nothing when confirmation fails", async () => {
+    const f = fixture();
+    const { run } = await deployRun(f);
+    const first = await run("deploy-1", ["--staging"]);
+    f.confirmation(false);
+    await f.click(SECRETS_WORDS.always);
+    const view = await f.settings.view();
+    expect(view.uses.find((one) => one.request === first.request)?.state).toBe("waiting");
+    expect(view.rules).toEqual([]);
+    // The same card comes back, saying nothing was accepted.
+    expect(f.cards.at(-1)?.title).toBe(
+      SECRET_APPROVAL_CARD_WORDS.title(STAGING, "Deploy the site"),
+    );
+  });
+
+  it("Don't allow ends the use and offers to stop asking, which saves Never for the secret", async () => {
+    const f = fixture();
+    const { run } = await deployRun(f);
+    const first = await run("deploy-1", ["--staging"]);
+    const before = f.confirms();
+    await f.click(SECRETS_WORDS.deny);
+    expect(f.confirms()).toBe(before);
+    expect((await f.settings.view()).uses.find((one) => one.request === first.request)?.state).toBe(
+      "denied",
+    );
+    const offer = f.cards.at(-1);
+    expect(offer?.title).toBe(SECRET_APPROVAL_CARD_WORDS.stopTitle(STAGING));
+    expect(offer?.taskId).toBe("deploy-task");
+    expect((await f.settings.view()).rules).toEqual([]);
+
+    await f.click(SECRET_APPROVAL_CARD_WORDS.stop);
+    expect(f.confirms()).toBe(before + 1);
+    const view = await f.settings.view();
+    expect(view.rules).toMatchObject([{ effect: "never", secret: "website-staging" }]);
+    expect(view.rules[0]?.operation).toBeUndefined();
+    const cards = f.cards.length;
+    expect((await run("deploy-2", ["--production"])).state).toBe("denied");
+    expect(f.cards).toHaveLength(cards);
+  });
+
+  // The captain's review answer on the Stop asking card: "List every secret by
+  // name, and say Infinitary too when it was the one asking".
+  it("Stop asking names every secret it covers, and Infinitary when Infinitary asked", async () => {
+    const f = fixture();
+    const saved = [
+      { ref: "website-staging", label: "Website deployment", environment: "Staging" },
+      { ref: "website-production", label: "Website deployment", environment: "Production" },
+      { ref: "billing-read", label: "Customer billing", environment: "" },
+    ];
+    for (const one of saved) await f.settings.put({ ...INPUT, ...one });
+    const cwd = await realpath(f.dir);
+    await f.settings.commandFor({ task: "" }).inject({
+      id: "compare-1",
+      reason: "Compare the deployment credentials and billing access",
+      cwd,
+      argv: ["/usr/bin/true"],
+      env: {
+        STAGING: "website-staging",
+        PRODUCTION: "website-production",
+        BILLING: "billing-read",
+      },
+    });
+    const requested = (await f.settings.view()).uses[0]?.secrets ?? [];
+    await f.click(SECRETS_WORDS.deny);
+    const offer = f.cards.at(-1);
+    const names = secretsListed(requested.map((one) => secretName(saved, one.ref)));
+    for (const name of ["Website deployment (Production)", "Website deployment (Staging)"])
+      expect(names).toContain(name);
+    expect(names).toContain("Customer billing");
+    expect(offer?.title).toBe(SECRET_APPROVAL_CARD_WORDS.stopTitle(names));
+    expect(offer?.body).toContain(escapeCardText(SECRET_APPROVAL_CARD_WORDS.stopBody(names, null)));
+    expect(offer?.body).toContain("neither Infinitary nor any task gets");
+  });
+
+  it("Keep asking on the stop card saves nothing, and the next run asks again", async () => {
+    const f = fixture();
+    const { run } = await deployRun(f);
+    await run("deploy-1", ["--staging"]);
+    await f.click(SECRETS_WORDS.deny);
+    const before = f.confirms();
+    await f.click(SECRET_APPROVAL_CARD_WORDS.keepAsking);
+    expect(f.confirms()).toBe(before);
+    expect((await f.settings.view()).rules).toEqual([]);
+    expect((await run("deploy-2", ["--staging"])).state).toBe("waiting");
   });
 
   it("keeps lock state honest and does not save a replacement into locked custody", async () => {
@@ -1017,14 +1240,26 @@ describe("a phone's Secrets approvals", () => {
     if (!use?.nonce || !approvals.home) throw new Error("No challenge for the enrolled phone.");
     // The phone's screen shows what the approval card shows.
     const card = f.cards.find((one) => one.id === use.card);
-    expect(card?.title).toBe(SECRETS_WORDS.approvalTitle);
+    expect(card?.title).toBe(
+      SECRET_APPROVAL_CARD_WORDS.title(CALENDAR, TASK_TITLES["planning-task"] ?? null),
+    );
     const shown = (await f.settings.view()).uses.find((one) => one.request === waiting.request);
     expect(use).toMatchObject({
       request: waiting.request,
       reason: shown?.reason,
       recipient: shown?.recipient,
+      task: TASK_TITLES["planning-task"],
       facts: shown?.facts,
-      secrets: [{ ref: INPUT.ref, label: INPUT.label, version: 1, environment: "Personal" }],
+      // The phone names each secret as the card does (INF-3507's review): this lone one by its name alone.
+      secrets: [
+        {
+          ref: INPUT.ref,
+          label: INPUT.label,
+          version: 1,
+          environment: "Personal",
+          name: INPUT.label,
+        },
+      ],
     });
 
     const decided = await f.settings.decideRemotely({

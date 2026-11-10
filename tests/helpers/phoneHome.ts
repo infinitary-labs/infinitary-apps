@@ -913,7 +913,11 @@ export async function startPhoneHome(
           result = {
             request: receipt.request,
             state: receipt.state,
-            title: SECRETS_WORDS.approvalTitle,
+            // The approval card names the secret and the task that asked; read it from the card itself.
+            title:
+              (await core.dispatch("inf:cards:list", [])).find(
+                (card) => card.id === `card-secrets-use-${receipt.request}`,
+              )?.title ?? null,
           };
           break;
         }

@@ -9,18 +9,17 @@ public struct PhoneApprovals: Decodable, Sendable, Equatable {
         /// The approval key the home holds for this phone, SPKI DER, base64.
         public let key: String
     }
-    /// One requested secret as the use prepared it: the captain's own name for it, the environment label and
-    /// reference that tell two secrets with the same name apart, and the version this use reads. Never its value.
+    /// One requested secret as the use prepared it: the captain's own name for it, the environment label that
+    /// tells two secrets with the same name apart, and the reference and version this use reads. Never its value.
     public struct Secret: Decodable, Sendable, Equatable {
         public let ref: String
         public let label: String
         public let version: Int
         /// The captain's own label for where it belongs, such as Staging; empty when they gave none.
         public let environment: String
-        /// What tells it apart, after its name: the environment when there is one, the reference and version.
-        public var detail: [String] { (environment.isEmpty ? [] : [environment]) + [ref, "version \(version)"] }
-        /// How the phone names it wherever it asks: the name first, then what tells it apart.
-        public var named: String { "\(label) (\(detail.joined(separator: ", ")))" }
+        /// The name the computer's own card gives it among every saved secret: its place only when another saved
+        /// secret shares its name, its reference only when both repeat. Nil from an older computer.
+        public let name: String?
     }
     public struct Fact: Decodable, Sendable, Equatable { public let name: String; public let value: String }
     /// One waiting use, described as the home's approval card describes it.
@@ -32,12 +31,28 @@ public struct PhoneApprovals: Decodable, Sendable, Equatable {
         public let nonce: String?
         public let reason: String
         public let recipient: String
+        /// The title of the task that asked; nil when no task asked, or from a computer that does not say.
+        public let task: String?
         public let secrets: [Secret]
         public let facts: [Fact]
         public var id: String { request }
-        /// The sentence the system's confirmation shows, naming exactly what this Allow gives.
+        /// What tells one requested secret apart, after its name: its environment when there is one, and its
+        /// reference only when another secret of this use shares its name and environment. INF-1690's plan names
+        /// a secret by its name and place, never by a reference or version it does not need.
+        public func detail(_ secret: Secret) -> [String] {
+            let twin = secrets.contains { $0.ref != secret.ref && $0.label == secret.label && $0.environment == secret.environment }
+            return (secret.environment.isEmpty ? [] : [secret.environment]) + (twin ? [secret.ref] : [])
+        }
+        /// How the phone names a requested secret wherever it asks: as the computer's card names it, so the title,
+        /// the foot and the confirmation agree; from an older computer, the name first, then what tells it apart.
+        public func named(_ secret: Secret) -> String {
+            if let name = secret.name { return name }
+            let detail = detail(secret)
+            return detail.isEmpty ? secret.label : "\(secret.label) (\(detail.joined(separator: ", ")))"
+        }
+        /// The sentence the system's confirmation shows, naming exactly what this Allow gives and to whom.
         public var giving: String {
-            "Give \(secrets.map(\.named).joined(separator: ", ")) to \(recipient) once"
+            "Give \(secrets.map(named).joined(separator: ", ")) to \(task ?? recipient) once"
         }
     }
     public let availability: String

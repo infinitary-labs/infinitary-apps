@@ -112,7 +112,8 @@ Locked or unreadable custody discards nothing.
 Restart recovery never retries the discarded proposal, needs no backup and permits a new freshly authenticated save.
 Rules apply to every required secret together: Never precedes Ask, then Allow, and no match asks.
 An Allow rule always names one operation key; there is no wildcard Allow.
-Rehearsal evaluates a use against the rules and returns its checked facts without journaling, approving or running anything.
+Rehearsal evaluates a use against the rules and returns its checked facts without journaling, approving or running anything; Settings no longer offers it, and its channel waits for the crew's pre-check.
+A person calls a rule a saved decision, and makes one only on a use's approval card (see "Saved decisions").
 
 ## Trusted controller
 
@@ -129,18 +130,34 @@ Opening a row offers Replace, Forget and that secret's saved decisions; a tempor
 Secure entry asks for a name, the masked value and an optional place, never a reference: the controller makes one from the name when saving.
 The form locates the returned entry through the controller's `saved` receipt; replacements keep their existing reference and exact-record checks.
 Four quiet rows below the list open in place: Saved decisions, Approve from your phone, What happened (history) and Keep a copy (recovery).
-Saved decisions are the existing Never, Ask and Allow rules in plain sentences, each with Remove, which proposes the rules without it on the host's rules card; the page has no rule editor and no rehearsal form, so the rehearsal request has no Settings caller.
-The exact-use card leads with each requested secret's name and safe identity, then the checked recipient and operation, with the requester's explanation kept separate.
+Saved decisions are the existing Never, Ask and Allow rules, each as one plain sentence with Remove, which proposes the rules without it on the host's Remove card; the page has no rule editor and no rehearsal form, so the rehearsal request has no Settings caller.
+A decision is saved only from an approval card: Always allow this run saves an Allow for that exact run, and Don't allow offers a second card that saves a Never for that secret.
+The exact-use card's title names the secrets and the task that asked; its body says who asks, what runs and why, with every checked fact, reference and version under one disclosure.
+The card names each secret among every saved one exactly as Settings does (`secretNames.secretName`): its place when another secret shares its name, and its reference only when name and place both repeat.
+A program run starts with the checked program's own path, never the requester's word for it, so a look-alike script shows where it is.
 What happened offers export, explicit deletion and storage use.
 Adding a secret needs no reference: the controller makes a stable one from its name, never one an existing entry, a saved rule or the history names, and answers with it.
 A replacement names its reference; one without a reference is refused.
 The command-search entry focuses the Secrets heading in every availability state, and the forms and their actions use the ordinary keyboard controls.
 Enabled controls carry no disabled-reason label; unavailable actions keep their current explanation.
 Secure entry passes a value directly to the protected owner and returns metadata, never the value, its prefix or an encoded substitute.
-It raises app-authored cards for exact uses, rule changes, forgetting and history deletion.
+It raises app-authored cards for exact uses, stopping asking, removing a saved decision, forgetting and history deletion.
 Their private offers are spent once through host chrome; a saved card from a previous process is inert, and an agent-written card cannot mint one.
 An Allow click still requires fresh system authentication; a failed or unavailable confirmation leaves the request waiting and reopens its card.
-Rule forms only propose changes, and native confirmation covers the exact proposed revision.
+Remove only proposes a change, and native confirmation covers the exact proposed revision.
+
+### Saved decisions
+
+The approval card's answers are Allow once, Always allow this (Allow for 10 minutes for an eligible read instead) and Don't allow.
+Always allow this asks the system once for two proofs (`LocalApprovals.confirmEach`): one for the shown use and one for the next authority revision with an Allow rule naming that use's operation key for each of its secrets.
+The use starts first, because any saved revision ends a use still waiting on the older one; the rule is saved as soon as the program has started (`approve` with `until: "launched"`), while the confirmation is fresh, so a run of any length keeps its decision.
+Because Never outranks Ask and Ask outranks Allow, every Ask rule on one of those secrets that covers the run is dropped: one naming the same operation, and one with no operation, which covered every run of that secret.
+If the decisions changed in between, the run stands and the rule is not saved, and Settings says so.
+The rule's note holds the run in words (`runWords`), and the page and its cards say a decision in one sentence (`decisionWords`), such as "Always give Website deployment to /bin/sh deploy.sh --staging."
+Don't allow denies the use without a confirmation, then raises a separate card offering Stop asking, which saves a Never rule with no operation for each secret, under fresh confirmation.
+That card lists every secret it covers by name (`secretsListed`), never a count, and when Infinitary itself asked it says neither Infinitary nor any task gets them again.
+Removing a decision from Settings raises a card naming it in the same sentence and saves the remaining rules under fresh confirmation; a card shown against an older revision saves nothing.
+Settings can only remove: a `save-rules` request that adds or changes a rule, or removes more than one, raises no card and saves nothing.
 The command facade exposes the agent-visible entries' metadata, injection, status and cancellation, not this controller or a broker result reader.
 It namespaces command intent IDs by task to prevent accidental collisions; the namespace is not an authenticated identity or an access grant.
 A requester that received a waiting or executing receipt hears the terminal metadata through its task's existing durable inbox, once, after cleanup and journaling settle.
@@ -252,13 +269,17 @@ A failed read, a device that cannot keep a key, a changed record or a failed wri
 The damaged record's device name cannot be read back, so the new key takes a new one, which the computer enrolls only after the ordinary code comparison and its own confirmation.
 An enrollment the computer holds under the earlier name stays until the captain stops it in Settings → Devices or Settings → Secrets; nothing it allowed carries over.
 Each Allow evaluates a fresh `LAContext` with no reuse, naming exactly what it gives, before the key signs; a failed confirmation sends nothing.
-A use's approval card on the phone shows Allow once and Deny in place of the computer's own choices; a phone that is not enrolled shows only Deny and says where to set up.
-Only an executing or completed Allow, or a denied Deny, marks the phone's choice accepted; waiting, refusal and uncertain outcomes retain their explanation instead.
+A use's approval card on the phone shows Allow once and Don't allow in place of the computer's own choices; a phone that is not enrolled shows only Don't allow and says where to set up.
+A saved decision is made only on the computer: the phone offers neither Always allow this nor Stop asking.
+Only an executing or completed Allow, or a denied Don't allow, marks the phone's choice accepted; waiting, refusal and uncertain outcomes retain their explanation instead.
 A later successful key read clears an earlier locked-store problem without replacing the key.
-Above them it names each requested secret first, one line each: its name, then its environment label, reference and version; the system's confirmation names the same and the recipient.
-The line stays short so the choices stay pinned in the card's frame on an iPhone.
-The shared approval body shows the same prepared environment beside each name, describes confirmation without assigning it to a particular device, and labels temporary read access as available only on the computer.
-Like every card's choices, Allow once and Deny take a press only once the card's body is revealed at its drawn height (`docs/ios.md`, INF-1574).
+The computer's card title names one or two secrets as "the X secret" or "the X and Y secrets" and the task that asked.
+The phone names each secret by the `name` the computer sends with it, the one its card uses (`secret-approval-task.md`), so the title, the foot and the confirmation agree; from an older computer it names a secret from its label and environment.
+When the title holds that exact phrase, the foot above the choices names no secret again, so the choices stay pinned in the card's frame on an iPhone beside a title that runs to three lines.
+Otherwise, with three or more secrets or an older computer's title, the foot names each requested secret, one line each: its name, then its environment label, and its reference only when another secret of the use shares its name and environment.
+The system's confirmation names the same secrets and the task (`task`, `secret-approval-task.md`), or the recipient when no task is named.
+The shared approval body names each secret the same way, describes confirmation without assigning it to a particular device, and labels temporary read access as available only on the computer.
+Like every card's choices, Allow once and Don't allow take a press only once the card's body is revealed at its drawn height (`docs/ios.md`, INF-1574).
 The simulator has no Secure Enclave, so there the key is a software key behind the simulator's own Face ID.
 The phone check's `testSecretsApprovals` enrolls the simulator, allows one brokered read with its Face ID and denies another, against the real controller with disposable custody.
 Before it allows, it reads the shared body's prepared environment and computer-only temporary scope, scrolling to that scope while the choices stay pinned.

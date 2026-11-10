@@ -1,11 +1,12 @@
 import { DomUtils, parseDocument } from "htmlparser2";
 import { describe, expect, it } from "vitest";
-import { SECRETS_WORDS, type SecretsView } from "../../shared/secrets";
-import { secretApprovalBody } from "./approvalCard";
-import { SHORT_READ_SECONDS, SHORT_READ_USES } from "./readAccess";
+import { SECRET_APPROVAL_CARD_WORDS, SECRETS_WORDS, type SecretsView } from "../../shared/secrets";
+import { runWords, type SecretAsk, secretApprovalBody } from "./approvalCard";
 
-// Intent: the captain's INF-1109 UX revision requires identifiable requested
-// secrets, not generic boxes, while checked facts and approval scope stay clear.
+// Intent: INF-1690's accepted plan (the captain's direction B), piece 2: the
+// approval card "names the key and the task, says who asks, what runs and
+// why", with everything checked one click deeper. INF-1109's revision still
+// holds: two secrets of one name stay apart, and checked facts stay reachable.
 const request: SecretsView["uses"][number] = {
   request: "website-credential-check",
   state: "waiting",
@@ -21,55 +22,89 @@ const request: SecretsView["uses"][number] = {
     },
   ],
   facts: [
-    { name: "Arguments", value: '["/bin/sh","check-website.sh"]' },
+    { name: "Program", value: "/bin/sh" },
+    { name: "Arguments", value: '["/bin/sh","/workspace/website/check-website.sh","--both"]' },
     { name: "Working folder", value: "/workspace/website" },
-    { name: "Delivery", value: "STAGING_TOKEN, PRODUCTION_TOKEN" },
+    { name: "Variable mapping", value: '{"STAGING_TOKEN":"website-staging"}' },
   ],
   shortReadEligible: false,
   expires: 300_000,
 };
+const ask: SecretAsk = {
+  task: "Deploy the site",
+  run: {
+    kind: "program",
+    program: "/workspace/website/sh",
+    argv: ["./sh", "/workspace/website/check-website.sh", "--both"],
+    cwd: "/workspace/website",
+  },
+};
 
 function region(body: string, label: string) {
-  const document = parseDocument(body);
   const found = DomUtils.findOne(
     (node) => node.attribs["aria-label"] === label,
-    document.children,
+    parseDocument(body).children,
     true,
   );
   if (!found) throw new Error(`Missing approval region: ${label}`);
   return found;
 }
+function outsideDetails(body: string): string {
+  const document = parseDocument(body);
+  for (const details of DomUtils.getElementsByTagName("details", document, true))
+    DomUtils.removeElement(details);
+  for (const style of DomUtils.getElementsByTagName("style", document, true))
+    DomUtils.removeElement(style);
+  return DomUtils.textContent(document);
+}
 
-describe("the named-secret approval presentation", () => {
-  it("gives each requested secret a visible row and distinguishes duplicate names", () => {
-    const secrets = region(secretApprovalBody(request, true), "Secrets requested");
-    const rows = DomUtils.getElementsByTagName("li", secrets, true);
-    expect(rows).toHaveLength(request.secrets.length);
-    for (const [index, row] of rows.entries()) {
-      const secret = request.secrets[index];
-      if (!secret) throw new Error("Unexpected requested-secret row.");
-      expect(DomUtils.textContent(DomUtils.getElementsByTagName("strong", row, true))).toBe(
-        secret.label,
-      );
-      expect(DomUtils.textContent(row)).toContain(secret.ref);
-      expect(DomUtils.textContent(row)).toContain(secret.environment);
-      expect(DomUtils.textContent(row)).toContain(`Saved version ${secret.version}`);
-    }
-    expect(DomUtils.getElementsByTagName("details", secrets, true)).toEqual([]);
+describe("the approval card that asks the person's question", () => {
+  it("says who asks, what runs and why in the open", () => {
+    const body = secretApprovalBody(request, ask, request.secrets);
+    const words = DomUtils.textContent(region(body, "The request"));
+    expect(words).toContain(SECRET_APPROVAL_CARD_WORDS.asked("Deploy the site"));
+    // The captain's review answer: "The program's checked location, so a
+    // look-alike script is visible", never the requester's own word for it.
+    expect(words).toContain("/workspace/website/sh check-website.sh --both");
+    expect(words).toContain("/workspace/website");
+    expect(words).toContain(`“${request.reason}”`);
+    expect(SECRET_APPROVAL_CARD_WORDS.title("the Website deployment secret", ask.task)).toBe(
+      "Give the Website deployment secret to Deploy the site?",
+    );
   });
 
-  it("keeps the checked recipient and operation in the open, apart from the stated reason", () => {
-    const body = secretApprovalBody(request, true);
-    const receiver = region(body, "Who receives the values");
-    const words = DomUtils.textContent(receiver);
-    expect(words).toContain(request.recipient);
-    for (const fact of request.facts.slice(0, 2)) expect(words).toContain(fact.value);
-    expect(words).toContain(`Requested reason: ${request.reason}`);
-    expect(DomUtils.getElementsByTagName("details", receiver, true)).toEqual([]);
+  it("keeps references, versions and every checked fact one click deeper", () => {
+    const body = secretApprovalBody(request, ask, request.secrets);
+    const open = outsideDetails(body);
+    for (const secret of request.secrets) expect(open).not.toContain(secret.ref);
+    expect(open).not.toContain("version");
     const details = DomUtils.getElementsByTagName("details", parseDocument(body), true);
     expect(details).toHaveLength(1);
-    for (const fact of request.facts.slice(2))
-      expect(DomUtils.textContent(details)).toContain(fact.value);
+    const deeper = DomUtils.textContent(details);
+    expect(deeper).toContain(SECRET_APPROVAL_CARD_WORDS.checked);
+    for (const secret of request.secrets) {
+      expect(deeper).toContain(`Website deployment (${secret.environment})`);
+      expect(deeper).toContain(`${secret.ref} · version ${secret.version}`);
+    }
+    for (const fact of request.facts) expect(deeper).toContain(fact.value);
+  });
+
+  it("names Infinitary when no task asked, and lists more than two secrets in the open", () => {
+    const three = {
+      ...request,
+      secrets: [
+        ...request.secrets,
+        { ref: "billing-read", label: "Customer billing", version: 1, environment: "" },
+      ],
+    };
+    const body = secretApprovalBody(three, { ...ask, task: null }, three.secrets);
+    expect(outsideDetails(body)).toContain(SECRET_APPROVAL_CARD_WORDS.asked(null));
+    const listed = region(body, "Secrets requested");
+    expect(DomUtils.getElementsByTagName("li", listed, true).map(DomUtils.textContent)).toEqual([
+      "Website deployment (Staging)",
+      "Website deployment (Production)",
+      "Customer billing",
+    ]);
   });
 
   it("renders names and explanations as text rather than executable markup", () => {
@@ -78,29 +113,45 @@ describe("the named-secret approval presentation", () => {
     const environment = "<production> & preview";
     const secret = request.secrets[0];
     if (!secret) throw new Error("No requested-secret fixture.");
+    // Two of one name, so each is named with its place.
+    const secrets = [
+      { ...secret, label: name, environment },
+      { ...secret, ref: "billing-other", label: name, environment: "Other" },
+    ];
     const body = secretApprovalBody(
-      { ...request, reason, secrets: [{ ...secret, label: name, environment }] },
-      true,
+      { ...request, reason, secrets },
+      { ...ask, task: "<b>Deploy</b>" },
+      secrets,
     );
     const document = parseDocument(body);
-    expect(DomUtils.getElementsByTagName("img", document, true)).toEqual([]);
-    expect(DomUtils.getElementsByTagName("test", document, true)).toEqual([]);
-    expect(DomUtils.getElementsByTagName("production", document, true)).toEqual([]);
+    for (const tag of ["img", "test", "production", "b"])
+      expect(DomUtils.getElementsByTagName(tag, document, true)).toEqual([]);
     expect(DomUtils.textContent(document)).toContain(name);
     expect(DomUtils.textContent(document)).toContain(environment);
     expect(DomUtils.textContent(document)).toContain(reason);
   });
 
-  it("explains only an eligible read's existing temporary permission", () => {
-    const read = { ...request, recipient: "Website status service", shortReadEligible: true };
-    const text = DomUtils.textContent(parseDocument(secretApprovalBody(read, false)));
-    expect(text).toContain(`${SHORT_READ_SECONDS / 60} minutes or ${SHORT_READ_USES} uses`);
-    expect(text).toContain("End access in Secrets stops future reads.");
-    // The same body reaches the enrolled phone, whose footer offers only one use.
-    expect(text).toContain("Temporary access is available only on your computer.");
-    expect(text).toContain("Allow once shares these values for this use only, after you confirm.");
-    expect(DomUtils.textContent(parseDocument(secretApprovalBody(request, true)))).not.toContain(
-      SECRETS_WORDS.short,
-    );
+  it("explains the read's ten minutes only for an eligible read, and names no device", () => {
+    const service: SecretAsk = {
+      task: "Plan next week's meetings",
+      run: {
+        kind: "service",
+        label: "Planning calendar",
+        destination: "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+        operation: "Read planning meetings",
+      },
+    };
+    const read = { ...request, recipient: "Planning calendar", shortReadEligible: true };
+    const text = outsideDetails(secretApprovalBody(read, service, read.secrets));
+    expect(text).toContain(SECRET_APPROVAL_CARD_WORDS.read);
+    expect(text).toContain(service.run.kind === "service" ? service.run.destination : "");
+    expect(text).not.toContain(SECRET_APPROVAL_CARD_WORDS.always);
+    const program = outsideDetails(secretApprovalBody(request, ask, request.secrets));
+    expect(program).toContain(SECRET_APPROVAL_CARD_WORDS.always);
+    expect(program).not.toContain(SECRETS_WORDS.short);
+    // The same body reaches an enrolled phone, so it names no device.
+    expect(program).toContain(SECRET_APPROVAL_CARD_WORDS.confirm);
+    expect(program).not.toMatch(/Your (computer|Mac) asks/);
+    expect(runWords(service.run)).toBe("Planning calendar: Read planning meetings");
   });
 });

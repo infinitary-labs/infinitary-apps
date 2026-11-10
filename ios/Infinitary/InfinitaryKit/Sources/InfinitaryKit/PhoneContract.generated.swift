@@ -283,7 +283,7 @@ public enum PhoneDecision {
     public static let format = "infinitary-secrets-decision/1"
     public static let allow = "decision:allow"
     public static let allowWords = "Allow once"
-    public static let denyWords = "Deny"
+    public static let denyWords = "Don't allow"
     /// The exact bytes the home's verifier checks, one binding per line in its order.
     public static func message(home: String, device: String, generation: Int, request: String, digest: String, nonce: String, expires: Int64) -> String {
         [format, "home:\(home)", "device:\(device)", "generation:\(generation)", "request:\(request)", "digest:\(digest)", "nonce:\(nonce)", "expires:\(expires)", allow].joined(separator: "\n")

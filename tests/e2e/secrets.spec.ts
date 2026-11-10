@@ -8,17 +8,22 @@ import { claimLink } from "@core/devices/dial";
 import { expect, test } from "@playwright/test";
 import { decode } from "@toon-format/toon";
 import { hostEnv } from "../../src/core/hostEnv";
+import { runWords } from "../../src/core/secrets/approvalCard";
 import { approvalCode } from "../../src/core/secrets/approvals";
 import { SECRETS_COMMAND, type UseReceipt } from "../../src/core/secrets/requests";
 import { newReference } from "../../src/core/secrets/settings";
 import { secretName } from "../../src/shared/secretNames";
 import {
   decisionWords,
+  SAVED_DECISION_WORDS,
+  SECRET_APPROVAL_CARD_WORDS,
   SECRET_DEVICE_WORDS,
   SECRET_STATE_WORDS,
   SECRETS_RECOVERY_WORDS,
   SECRETS_WORDS,
   secretRefSchema,
+  secretsListed,
+  secretsNamed,
 } from "../../src/shared/secrets";
 import { connectClient } from "../helpers/connectionClient";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -56,6 +61,26 @@ const REFERENCE = "staging-deploy";
 /** The reference the controller makes from LABEL when Settings adds it; the page asks for none. */
 const ENTERED = newReference(LABEL, []);
 const TOKEN = "invented-staging-proof-token";
+const REASON = "Check the staging deployment";
+/**
+ * The approval card's title, from its owners: the requested secrets named among
+ * every saved one as Settings names them, and the task that asked.
+ */
+const approvalTitle = (
+  saved: readonly { ref: string; label: string; environment?: string }[],
+  task: string | null = null,
+) =>
+  SECRET_APPROVAL_CARD_WORDS.title(
+    secretsNamed(
+      saved.map((one) =>
+        secretName(
+          saved.map((entry) => ({ ...entry, environment: entry.environment ?? "" })),
+          one.ref,
+        ),
+      ),
+    ),
+    task,
+  );
 
 // Intent: INF-1109's Settings secure entry and trusted exact-use approval, and
 // the captain's keyboard ruling. Real renderer, IPC, AXI, sealed files and
@@ -122,7 +147,7 @@ test("secure entry and an exact command meet at the app's trusted approval", asy
       "--env",
       JSON.stringify({ SERVICE_TOKEN: ENTERED }),
       "--reason",
-      "Check the staging deployment",
+      REASON,
       "--id",
       "staging-proof",
       "--",
@@ -135,17 +160,18 @@ test("secure entry and an exact command meet at the app's trusted approval", asy
       section.getByRole("button", { name: SECRETS_WORDS.waiting, exact: true }),
       "Enter",
     );
-    const card = shownCard(page, SECRETS_WORDS.approvalTitle);
+    const title = approvalTitle([{ ref: ENTERED, label: LABEL }], USING_TASK.title);
+    const card = shownCard(page, title);
     await expect(card).toBeVisible();
-    const body = cardBody(page, SECRETS_WORDS.approvalTitle);
-    await expect(body.locator("body")).toContainText(LABEL);
+    const body = cardBody(page, title);
+    await expect(body.locator("body")).toContainText(REASON);
     await expect(body.locator("body")).not.toContainText(TOKEN);
 
     await app.evaluate(() => {
       (globalThis as SecretsJourneyGlobal).secretsJourney.confirmation = false;
     });
     await pressKey(card.getByRole("button", { name: SECRETS_WORDS.once, exact: true }), "Enter");
-    await expect(cardBody(page, SECRETS_WORDS.approvalTitle).getByRole("status")).toBeVisible();
+    await expect(cardBody(page, title).getByRole("status")).toBeVisible();
     expect((await run(["status", requested.request])).state).toBe("waiting");
     await app.evaluate(() => {
       (globalThis as SecretsJourneyGlobal).secretsJourney.confirmation = true;
@@ -272,10 +298,13 @@ test("ending bounded access makes the next exact read ask again", async () => {
       section.getByRole("button", { name: SECRETS_WORDS.waiting, exact: true }),
       "Enter",
     );
-    const card = shownCard(page, SECRETS_WORDS.approvalTitle);
+    const title = approvalTitle([
+      { ref: "planning-calendar", label: "Planning calendar", environment: "Personal" },
+    ]);
+    const card = shownCard(page, title);
     // This is a lone card, not a stack with a warmed successor. Read its
     // drawn frame, then enter chrome through its own keyboard command.
-    await expect(cardBody(page, SECRETS_WORDS.approvalTitle).locator("body")).toBeVisible();
+    await expect(cardBody(page, title).locator("body")).toBeVisible();
     await runFromSearch(app, page, "focus.card-actions");
     await pressKey(card.getByRole("button", { name: SECRETS_WORDS.short, exact: true }), "Enter");
     await completed(first.request);
@@ -295,6 +324,288 @@ test("ending bounded access makes the next exact read ask again", async () => {
       await app.evaluate(() => (globalThis as SecretsJourneyGlobal).secretsJourney.confirmations),
     ).toBe(1);
   } finally {
+    await launched.close();
+  }
+});
+
+// Intent: INF-1690's accepted plan, the captain's answer: saved decisions are
+// made "Only from the approval card: Always allow this run, or Don't allow and
+// stop asking for this key. The page lists saved decisions with Remove and has
+// no editor." Data: a disposable credential and a real shell recipient in a
+// scratch folder. Completion: Always allow this runs the shown use and the same
+// run then needs no card, while different arguments ask again; a failed
+// confirmation on Always allow runs and saves nothing; Keep asking saves nothing;
+// the window cannot add a decision; Keep it leaves a decision and Remove makes the
+// run ask again; Don't allow then Stop asking refuses the next run without a card.
+// Every card is answered by keys. Native custody and confirmation stand in; no
+// account, native store or network.
+test("saved decisions are made on the approval card and removed from Settings", async () => {
+  const cwd = realpathSync(scratchDir("secrets-decisions-recipient-"));
+  const marker = join(cwd, "executions");
+  const script = join(cwd, "deploy.sh");
+  writeFileSync(script, '#!/bin/sh\nprintf "ran\\n" >> "$PWD/executions"\n');
+  const entry = { ref: "website-staging", label: "Website deployment", environment: "Staging" };
+  /** The held run below loops until this file exists; the finally writes it on any failure. */
+  const release = join(cwd, "release");
+  const launched = await launchSecrets();
+  const { app, page } = launched;
+  const section = settingsSection(page, "secrets");
+  const argv = ["/bin/sh", script, "--staging"];
+  const run = (id: string, args: readonly string[] = argv) =>
+    app.evaluate(
+      async (_electron, use) =>
+        (globalThis as SecretsJourneyGlobal).secretsJourney.core.services.secrets
+          .commandFor({ task: "" })
+          .inject(use),
+      {
+        id,
+        reason: "Deploy the website to staging and check it",
+        env: { DEPLOY_TOKEN: entry.ref },
+        argv: [...args],
+        cwd,
+      },
+    );
+  const confirming = (ok: boolean) =>
+    app.evaluate((_electron, ok) => {
+      (globalThis as SecretsJourneyGlobal).secretsJourney.confirmation = ok;
+    }, ok);
+  const state = (request: string) =>
+    app.evaluate(async (_electron, request) => {
+      const f = (globalThis as SecretsJourneyGlobal).secretsJourney;
+      const view = await f.core.services.secrets.view();
+      return {
+        state: view.uses.find((use) => use.request === request)?.state,
+        confirmations: f.confirmations,
+      };
+    }, request);
+  const saved = () =>
+    app.evaluate(
+      async () =>
+        (await (globalThis as SecretsJourneyGlobal).secretsJourney.core.services.secrets.view())
+          .rules.length,
+    );
+  const title = approvalTitle([entry]);
+  const answer = async (card: string, label: string) => {
+    await expect(cardBody(page, card).locator("body")).toBeVisible();
+    await runFromSearch(app, page, "focus.card-actions");
+    await pressKey(
+      shownCard(page, card).getByRole("button", { name: label, exact: true }),
+      "Enter",
+    );
+  };
+  const decisions = () =>
+    section.getByRole("region", { name: SECRETS_WORDS.decisionsRegion, exact: true });
+  try {
+    await app.evaluate(async (_electron, entry) => {
+      await (globalThis as SecretsJourneyGlobal).secretsJourney.core.services.secrets.put({
+        ...entry,
+        value: "invented-deploy-proof-token",
+        expectedVersion: 0,
+        expectedRevision: null,
+      });
+    }, entry);
+
+    // Always allow this: the shown run goes now, under one confirmation, and is saved.
+    const first = await run("deploy-1");
+    expect(first.state).toBe("waiting");
+    await expect(shownCard(page, title)).toBeVisible();
+    await answer(title, SECRETS_WORDS.always);
+    await expect.poll(() => state(first.request)).toEqual({ state: "completed", confirmations: 1 });
+    // The use runs before its decision is saved; the next run waits for the save.
+    await expect.poll(saved).toBe(1);
+    const again = await run("deploy-2");
+    await expect.poll(() => state(again.request)).toEqual({ state: "completed", confirmations: 1 });
+    expect(readFileSync(marker, "utf8")).toBe("ran\nran\n");
+
+    // Different arguments are a different run: it asks again.
+    const other = await run("deploy-other", ["/bin/sh", script, "--production"]);
+    expect(other.state).toBe("waiting");
+    await expect(shownCard(page, title)).toBeVisible();
+    // Always allow this with a failed confirmation runs nothing and saves nothing;
+    // the same card comes back.
+    await confirming(false);
+    await answer(title, SECRETS_WORDS.always);
+    await expect.poll(() => state(other.request)).toEqual({ state: "waiting", confirmations: 2 });
+    // The card comes back drawn anew with its notice; answer it only once that
+    // card is the one shown, or the keys reach the card being replaced.
+    await expect(cardBody(page, title).getByRole("status")).toBeVisible();
+    await confirming(true);
+    expect(await saved()).toBe(1);
+    // Don't allow, then Keep asking: nothing is saved, so the next such run asks.
+    await answer(title, SECRETS_WORDS.deny);
+    const stopTitle = SECRET_APPROVAL_CARD_WORDS.stopTitle(
+      secretsListed([secretName([entry], entry.ref)]),
+    );
+    await expect.poll(() => state(other.request)).toEqual({ state: "denied", confirmations: 2 });
+    await answer(stopTitle, SECRET_APPROVAL_CARD_WORDS.keepAsking);
+    await expect(shownCard(page, stopTitle)).toHaveCount(0);
+    expect(await saved()).toBe(1);
+    const otherAgain = await run("deploy-other-2", ["/bin/sh", script, "--production"]);
+    expect(otherAgain.state).toBe("waiting");
+    await answer(title, SECRETS_WORDS.deny);
+    await answer(stopTitle, SECRET_APPROVAL_CARD_WORDS.keepAsking);
+    await expect(shownCard(page, stopTitle)).toHaveCount(0);
+    expect(readFileSync(marker, "utf8")).toBe("ran\nran\n");
+
+    // The window cannot add a decision: a save that adds one changes nothing.
+    const added = await page.evaluate(async () => {
+      const view = await window.infinitary.secrets.view();
+      return window.infinitary.secrets.action({
+        kind: "save-rules",
+        rules: [...view.rules, { id: "added", effect: "never", secret: "website-staging" }],
+      });
+    });
+    expect(added.message).toBe(SAVED_DECISION_WORDS.onlyRemove);
+    expect(added.rules).toHaveLength(1);
+    expect(await saved()).toBe(1);
+
+    // The page lists it as one sentence; Remove asks on a card, and the run asks again.
+    const sentence = decisionWords(
+      {
+        id: "shown",
+        effect: "allow",
+        secret: entry.ref,
+        note: runWords({ kind: "program", program: realpathSync("/bin/sh"), argv, cwd }),
+      },
+      secretName([entry], entry.ref),
+    );
+    await runFromSearch(app, page, "settings.secrets");
+    await secretsArea(page, "decisions");
+    await expect(decisions()).toContainText(sentence);
+    await regionShot(decisions(), test.info().outputPath("saved-decision-allow.png"));
+    const remove = decisions().getByRole("button", {
+      name: SECRETS_WORDS.remove,
+      exact: true,
+    });
+    // Keep it leaves the decision saved, and the same run still needs no card.
+    await focusOn(remove);
+    await pressKey(remove, "Enter");
+    await answer(SAVED_DECISION_WORDS.removeTitle, SAVED_DECISION_WORDS.keep);
+    await expect(shownCard(page, SAVED_DECISION_WORDS.removeTitle)).toHaveCount(0);
+    expect(await saved()).toBe(1);
+    const kept = await run("deploy-kept");
+    await expect.poll(() => state(kept.request)).toEqual({ state: "completed", confirmations: 2 });
+    expect(readFileSync(marker, "utf8")).toBe("ran\nran\nran\n");
+    await runFromSearch(app, page, "settings.secrets");
+    await secretsArea(page, "decisions");
+    await focusOn(remove);
+    await pressKey(remove, "Enter");
+    await expect(cardBody(page, SAVED_DECISION_WORDS.removeTitle).locator("body")).toContainText(
+      sentence,
+    );
+    await answer(SAVED_DECISION_WORDS.removeTitle, SAVED_DECISION_WORDS.removeConfirm);
+    await expect.poll(() => state(again.request)).toMatchObject({ confirmations: 3 });
+    // The confirmation comes before the save, so wait for the decision itself to go.
+    await expect.poll(saved).toBe(0);
+    const asks = await run("deploy-3");
+    expect(asks.state).toBe("waiting");
+
+    // Don't allow sends nothing, then offers to stop asking; Stop asking saves Never.
+    await answer(title, SECRETS_WORDS.deny);
+    await expect(shownCard(page, stopTitle)).toBeVisible();
+    await expect.poll(() => state(asks.request)).toEqual({ state: "denied", confirmations: 3 });
+    await answer(stopTitle, SECRET_APPROVAL_CARD_WORDS.stop);
+    await expect.poll(() => state(asks.request)).toMatchObject({ confirmations: 4 });
+    await expect.poll(saved).toBe(1);
+    expect((await run("deploy-4")).state).toBe("denied");
+    expect(readFileSync(marker, "utf8")).toBe("ran\nran\nran\n");
+    await runFromSearch(app, page, "settings.secrets");
+    await secretsArea(page, "decisions");
+    await expect(decisions()).toContainText(
+      decisionWords(
+        { id: "shown", effect: "never", secret: entry.ref },
+        secretName([entry], entry.ref),
+      ),
+    );
+    // There is no editor: the only control a saved decision has is Remove.
+    await expect(decisions().getByRole("combobox")).toHaveCount(0);
+    await expect(decisions().getByRole("textbox")).toHaveCount(0);
+
+    // A request's card shows beside the first mate, not over Settings, so go back.
+    const back = page.getByRole("button", { name: "Back", exact: true });
+    await focusOn(back);
+    await pressKey(back, "Enter");
+    await expect(section).toBeHidden();
+
+    // Always allow this saves the decision once the run starts, while it still runs.
+    const preview = { ref: "website-preview", label: "Website preview", environment: "Preview" };
+    const previewRevision = await app.evaluate(async (_electron, preview) => {
+      const view = await (
+        globalThis as SecretsJourneyGlobal
+      ).secretsJourney.core.services.secrets.put({
+        ...preview,
+        value: "invented-preview-proof-token",
+        expectedVersion: 0,
+        expectedRevision: null,
+      });
+      return view.entries.find((one) => one.ref === preview.ref)?.revision ?? null;
+    }, preview);
+    const held = join(cwd, "held.sh");
+    writeFileSync(held, '#!/bin/sh\nwhile [ ! -e "$PWD/release" ]; do sleep 0.05; done\n');
+    const previewRun = (id: string, args: readonly string[]) =>
+      app.evaluate(
+        async (_electron, use) =>
+          (globalThis as SecretsJourneyGlobal).secretsJourney.core.services.secrets
+            .commandFor({ task: "" })
+            .inject(use),
+        {
+          id,
+          reason: "Publish the website preview",
+          env: { PREVIEW_TOKEN: preview.ref },
+          argv: [...args],
+          cwd,
+        },
+      );
+    const previewTitle = SECRET_APPROVAL_CARD_WORDS.title(
+      secretsNamed([secretName([entry, preview], preview.ref)]),
+      null,
+    );
+    const long = await previewRun("preview-held", ["/bin/sh", held]);
+    expect(long.state).toBe("waiting");
+    await answer(previewTitle, SECRETS_WORDS.always);
+    await expect.poll(saved).toBe(2);
+    expect(await state(long.request)).toEqual({ state: "executing", confirmations: 5 });
+    writeFileSync(release, "");
+    await expect.poll(() => state(long.request)).toEqual({ state: "completed", confirmations: 5 });
+    expect(await saved()).toBe(2);
+
+    // A replacement saved while a use waits does not rename it: the card offered
+    // again from Settings still names the secret the use prepared.
+    const renamed = await previewRun("preview-renamed", ["/bin/sh", held, "--again"]);
+    expect(renamed.state).toBe("waiting");
+    await expect(shownCard(page, previewTitle)).toBeVisible();
+    await app.evaluate(
+      async (_electron, { preview, revision }) => {
+        await (globalThis as SecretsJourneyGlobal).secretsJourney.core.services.secrets.put({
+          ...preview,
+          label: "Old website preview",
+          value: "invented-preview-proof-token-2",
+          expectedVersion: 1,
+          expectedRevision: revision,
+        });
+      },
+      { preview, revision: previewRevision },
+    );
+    await runFromSearch(app, page, "settings.secrets");
+    const review = section.getByRole("button", { name: SECRETS_WORDS.waiting, exact: true });
+    await focusOn(review);
+    await pressKey(review, "Enter");
+    await expect(cardBody(page, previewTitle).locator("body")).toBeVisible();
+    await expect(
+      shownCard(
+        page,
+        SECRET_APPROVAL_CARD_WORDS.title(secretsNamed(["Old website preview"]), null),
+      ),
+    ).toHaveCount(0);
+    await answer(previewTitle, SECRETS_WORDS.deny);
+    const previewStop = SECRET_APPROVAL_CARD_WORDS.stopTitle(
+      secretsListed([secretName([entry, preview], preview.ref)]),
+    );
+    await answer(previewStop, SECRET_APPROVAL_CARD_WORDS.keepAsking);
+    await expect.poll(() => state(renamed.request)).toEqual({ state: "denied", confirmations: 5 });
+  } finally {
+    // The held script loops until this file exists, so write it whatever happened.
+    writeFileSync(release, "");
     await launched.close();
   }
 });
@@ -550,9 +861,16 @@ printf '%s' "$SERVICE_TOKEN"
       },
     );
     await askFirstmate(page, PROTECTED_USE_PROMPT);
-    const approval = shownCard(page, SECRETS_WORDS.approvalTitle);
+    // INF-1690's card names the secret and the task that asked, and says who asks.
+    const title = approvalTitle(
+      [{ ref: REFERENCE, label: LABEL, environment: "Disposable" }],
+      PROTECTED_USE_TITLE,
+    );
+    const approval = shownCard(page, title);
     await expect(approval).toBeVisible();
-    await expect(cardBody(page, SECRETS_WORDS.approvalTitle).locator("body")).toContainText(LABEL);
+    await expect(cardBody(page, title).locator("body")).toContainText(
+      SECRET_APPROVAL_CARD_WORDS.asked(PROTECTED_USE_TITLE),
+    );
     await pressKey(
       approval.getByRole("button", { name: SECRETS_WORDS.once, exact: true }),
       "Enter",
@@ -672,8 +990,9 @@ test("simple entry generates a stable reference and returns keyboard focus", asy
 });
 
 // Captain's INF-1109 UX request: every actual requested identity is readable,
-// including duplicate and long names at the desktop's minimum width. The
-// genuine sealed owner prepares a real executable; Deny must send no values.
+// including duplicate and long names at the desktop's minimum width; INF-1690's
+// plan names each by name and place, and by reference only where two read alike.
+// The genuine sealed owner prepares a real executable; Don't allow sends no values.
 // Custody/confirmation stand in; there is no account, network or native store.
 for (const theme of ["dark", "light"] as const) {
   test(`named secret requests fit the narrow approval in ${theme}`, async () => {
@@ -725,19 +1044,20 @@ for (const theme of ["dark", "light"] as const) {
         section.getByRole("button", { name: SECRETS_WORDS.waiting, exact: true }),
         "Enter",
       );
-      const body = cardBody(page, SECRETS_WORDS.approvalTitle);
-      // e2e-typed-words: this region names the exact identities the captain is approving.
-      const requested = body.getByRole("region", { name: "Secrets requested", exact: true });
+      const title = approvalTitle(entries);
+      const body = cardBody(page, title);
+      // e2e-typed-words: this list names the exact identities the captain is approving.
+      const requested = body.getByRole("list", { name: "Secrets requested", exact: true });
       await expect(requested).toBeVisible();
       for (const entry of entries) {
         const row = requested.locator(`[data-secret-ref=${JSON.stringify(entry.ref)}]`);
-        await expect(row.getByText(entry.label, { exact: true })).toBeInViewport();
-        await expect(row.getByText(entry.ref, { exact: true })).toBeInViewport();
-        await expect(row.getByText(entry.environment, { exact: true })).toBeInViewport();
+        // Named as Settings names it: place when a name repeats, reference only when both do.
+        await expect(row).toHaveText(secretName(entries, entry.ref));
+        await expect(row).toBeInViewport();
       }
       expect(await overflows(requested)).toBe(0);
       expect(await overflows(body.locator("body"))).toBe(0);
-      const card = shownCard(page, SECRETS_WORDS.approvalTitle);
+      const card = shownCard(page, title);
       await regionShot(card, test.info().outputPath(`named-approval-${theme}.png`));
       await runFromSearch(app, page, "focus.card-actions");
       await pressKey(card.getByRole("button", { name: SECRETS_WORDS.deny, exact: true }), "Enter");
@@ -752,31 +1072,43 @@ for (const theme of ["dark", "light"] as const) {
           }, receipt.request),
         )
         .toMatchObject({ receipt: { state: "denied" }, confirmations: 0 });
+      // Don't allow offers to stop asking; Stop asking saves Never for each secret,
+      // after the computer's confirmation. A decision is made only on a card.
+      // The stop card lists every secret by name, in the order the use holds them.
+      const stopTitle = SECRET_APPROVAL_CARD_WORDS.stopTitle(
+        secretsListed(
+          entries
+            .map((entry) => entry.ref)
+            .sort()
+            .map((ref) => secretName(entries, ref)),
+        ),
+      );
+      const stop = shownCard(page, stopTitle);
+      await expect(stop).toBeVisible();
+      await runFromSearch(app, page, "focus.card-actions");
+      await pressKey(
+        stop.getByRole("button", { name: SECRET_APPROVAL_CARD_WORDS.stop, exact: true }),
+        "Enter",
+      );
+      await expect(stop).toHaveCount(0);
+      const savedRules = () =>
+        app.evaluate(async () =>
+          (globalThis as SecretsJourneyGlobal).secretsJourney.core.services.secrets
+            .view()
+            .then((view) => view.rules),
+        );
+      await expect.poll(async () => (await savedRules()).length).toBe(entries.length);
+      const rules = await savedRules();
+      expect(rules.every((rule) => rule.effect === "never")).toBe(true);
       // INF-1690 piece 1: saved decisions are plain sentences on the page, each
-      // naming exactly its secret, and Remove asks on the host's rules card.
-      const rules = entries.map((entry) => ({
-        id: `never-${entry.ref}`,
-        effect: "never" as const,
-        secret: entry.ref,
-      }));
-      await app.evaluate(async (_electron, rules) => {
-        const s = (globalThis as SecretsJourneyGlobal).secretsJourney.core.services.secrets;
-        await s.action({ kind: "save-rules", rules });
-      }, rules);
-      // e2e-typed-words: the host's rules card title and answer, authored in SecretsSettings.
-      const rulesTitle = "Save these Secrets rules?";
-      const confirmRules = async () => {
+      // naming exactly its secret, and Remove asks on the host's card.
+      const confirmRules = async (rulesTitle: string, confirm: string) => {
         const rulesCard = shownCard(page, rulesTitle);
         await expect(cardBody(page, rulesTitle).locator("body")).toBeVisible();
         await runFromSearch(app, page, "focus.card-actions");
-        // e2e-typed-words: the rules card's confirming answer, authored in SecretsSettings.
-        await pressKey(
-          rulesCard.getByRole("button", { name: "Confirm and save", exact: true }),
-          "Enter",
-        );
+        await pressKey(rulesCard.getByRole("button", { name: confirm, exact: true }), "Enter");
         await expect(rulesCard).toHaveCount(0);
       };
-      await confirmRules();
       await runFromSearch(app, page, "settings.secrets");
       await secretsArea(page, "decisions");
       const decisions = section.getByRole("region", {
@@ -791,23 +1123,31 @@ for (const theme of ["dark", "light"] as const) {
         expect(sentences.filter((sentence) => sentence.includes(`${ref})`))).toHaveLength(1);
       expect(await overflows(decisions)).toBe(0);
       await regionShot(decisions, test.info().outputPath(`saved-decisions-${theme}.png`));
-      const mirror = decisions.getByRole("listitem").filter({ hasText: sentences[1] as string });
+      const mirrored = rules.findIndex((rule) => rule.secret === "website-production-mirror");
+      const mirror = decisions
+        .getByRole("listitem")
+        .filter({ hasText: sentences[mirrored] as string });
       await focusOn(mirror.getByRole("button", { name: SECRETS_WORDS.remove, exact: true }));
       await pressKey(
         mirror.getByRole("button", { name: SECRETS_WORDS.remove, exact: true }),
         "Enter",
       );
-      await confirmRules();
+      await confirmRules(SAVED_DECISION_WORDS.removeTitle, SAVED_DECISION_WORDS.removeConfirm);
       // The card closes before the confirmed save is written, so read until it lands.
       await expect
         .poll(() =>
           app.evaluate(async () =>
             (globalThis as SecretsJourneyGlobal).secretsJourney.core.services.secrets
               .view()
-              .then((view) => view.rules.map((rule) => rule.secret)),
+              .then((view) => view.rules.map((rule) => rule.secret).sort()),
           ),
         )
-        .toEqual(["website-production", "website-staging", "billing-read"]);
+        .toEqual(
+          rules
+            .map((rule) => rule.secret)
+            .filter((ref) => ref !== "website-production-mirror")
+            .sort(),
+        );
     } finally {
       await launched.close();
     }

@@ -40089,6 +40089,16 @@
                 "recipient": {
                   "type": "string"
                 },
+                "task": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
                 "secrets": {
                   "type": "array",
                   "items": {
@@ -40105,6 +40115,9 @@
                         "type": "number"
                       },
                       "environment": {
+                        "type": "string"
+                      },
+                      "name": {
                         "type": "string"
                       }
                     },
@@ -40292,6 +40305,16 @@
                 "recipient": {
                   "type": "string"
                 },
+                "task": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
                 "secrets": {
                   "type": "array",
                   "items": {
@@ -40308,6 +40331,9 @@
                         "type": "number"
                       },
                       "environment": {
+                        "type": "string"
+                      },
+                      "name": {
                         "type": "string"
                       }
                     },

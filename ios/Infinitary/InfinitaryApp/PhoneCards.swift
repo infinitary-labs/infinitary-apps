@@ -1176,17 +1176,25 @@ private struct PhoneCardPane: View {
 
     /// A Secrets use the home raised this card for: an enrolled phone allows it with its own confirmation and
     /// signature, and any phone may refuse it (docs/secrets.md, "Remote decisions"). INF-1109, the captain: "right
-    /// now it's not even clear what secrets are being requested", so the foot names each secret first, by its
-    /// name, then the environment, reference and version that tell two secrets with the same name apart. Each
-    /// takes one line, wrapping only when it must, so the choices stay pinned in the frame on an iPhone.
+    /// now it's not even clear what secrets are being requested", so each secret is named as the computer's card
+    /// names it (`named`): its place only when another saved secret shares its name (INF-1690's plan).
+    /// A computer's own title gives one or two secrets as "the X secret" or "the X and Y secrets" before the task
+    /// that asked; when the title holds that exact phrase the foot leaves the names to it, so the choices stay
+    /// pinned in the frame on an iPhone beside a title that runs to three lines. Otherwise, as with three secrets
+    /// or an older computer's title, the foot names every secret.
     private func approvalFoot(_ use: PhoneApprovals.Use, _ secrets: PhoneSecrets) -> some View {
         let allows = secrets.standing == .enrolled && use.nonce != nil
+        let names = use.secrets.map(use.named)
+        let phrases = names.count == 1 ? ["the \(names[0]) secret to "]
+            : names.count == 2 ? ["the \(names[0]) and \(names[1]) secrets to ", "the \(names[1]) and \(names[0]) secrets to "]
+            : []
+        let titleNames = phrases.contains { card.title.contains($0) }
         return VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-            ForEach(use.secrets, id: \.ref) { secret in
+            ForEach(titleNames ? [] : use.secrets, id: \.ref) { secret in
                 let name = Text(secret.label).font(PhoneFont.headline).foregroundStyle(PhoneTheme.text)
-                let detail = Text(secret.detail.joined(separator: " · ")).font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary)
+                let detail = Text(use.detail(secret).joined(separator: " · ")).font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary)
                 Text("\(name)  \(detail)")
-                    .accessibilityLabel(secret.named).accessibilityIdentifier("approval-secret-\(secret.ref)")
+                    .accessibilityLabel(use.named(secret)).accessibilityIdentifier("approval-secret-\(secret.ref)")
             }
             Text(allows ? "Each Allow here asks for \(ApprovalKey.confirmation)."
                 : "To allow here, turn on Approves secret uses in Settings. You can also allow on \(session.mac.name).")

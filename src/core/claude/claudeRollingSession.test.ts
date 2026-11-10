@@ -1,11 +1,15 @@
+import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 import { codingSpec } from "../../../tests/helpers/codingSession";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
   scriptedClaudeFactory,
   scriptedClaudeQuery,
   scriptedRecordsFlushed,
 } from "../../../tests/helpers/scriptedClaudeQuery";
 import type { SessionEvent } from "../session/session";
+import { encodeClaudeProjectDir } from "./claudeTranscript";
 
 afterEach(scriptedRecordsFlushed);
 
@@ -96,6 +100,44 @@ it("returns early steers after an attachment failure and releases its lease", as
   expect(hasActiveSession(configDir)).toBe(false);
   session.dispose();
   await session.closed();
+});
+
+// Intent: row 7 of the implicit state machine audit - a resumed session
+// whose transcript copy cannot be read hands its hold on the account's
+// store back, or every later renewal stands down until a restart.
+it("releases its lease when a resumed session's transcript copy cannot be read", async () => {
+  const { hasActiveSession } = await import("./claudeStoreLease");
+  const configDir = scratchDir("infinitary-claude-unreadable-copy-");
+  const recordDir = scratchDir("infinitary-claude-unreadable-record-");
+  const cwd = "/worktree";
+  const recorded = "0b7e3a52-5f1c-4c7e-9d3a-2f6b8e1c4a90";
+  // The client's transcript, so the session resumes, and the app's copy of
+  // it, which this account cannot open.
+  const line = `${JSON.stringify({ type: "assistant", uuid: "a1", message: { model: "claude-opus-5-5", content: [] } })}\n`;
+  const project = join(configDir, "projects", encodeClaudeProjectDir(cwd));
+  mkdirSync(project, { recursive: true });
+  writeFileSync(join(project, `${recorded}.jsonl`), line);
+  const copy = join(recordDir, `${recorded}.jsonl`);
+  writeFileSync(copy, line);
+  chmodSync(copy, 0o000);
+  try {
+    const { factory, attachments } = scriptedClaudeQuery({ onInput: () => {} });
+    const session = await scriptedClaudeFactory({ configDir, query: factory }).open(
+      codingSpec({
+        binding: { backend: "claude", accountId: "claude" },
+        cwd,
+        recordDir,
+        resume: { backend: "claude", sessionId: recorded },
+      }),
+    );
+    await expect(session.prompt("Carry on.")).rejects.toThrow(/EACCES/);
+    expect(attachments).toEqual([]);
+    expect(hasActiveSession(configDir)).toBe(false);
+    session.dispose();
+    await session.closed();
+  } finally {
+    chmodSync(copy, 0o600);
+  }
 });
 
 it("safe-stops before sending a starting prompt and returns its early steer", async () => {

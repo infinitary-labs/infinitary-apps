@@ -579,36 +579,33 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     // refreshes its own login inside the run, and the refresh token behind
     // it is single use. A sign-in in progress is waited out first.
     const release = await acquireSessionLease(this.deps.configDir);
-    try {
-      this.stillServing(mine);
-    } catch (caught) {
-      release();
-      throw caught;
-    }
-    // A session the client has recorded resumes; one it has not (no turn
-    // yet) starts under the same id.
-    const recorded = this.record.clientTranscript(this.id) !== null;
-    // A resume that names no model would get back the model the client
-    // swapped in (it restores its transcript's last one): ask for the one
-    // it swapped out instead.
-    if (this.asked === undefined && recorded) this.asked = this.record.swappedFrom(this.id);
+    // Every exit before the connection holds the lease hands it back: a
+    // resume reads its transcript copy here, and that read can fail.
     const input = new MessageQueue();
-    const project = await this.projectResources();
-    const options = claudeSessionOptions({
-      spec: this.spec,
-      env,
-      executable: resolveClaudeExecutable(env),
-      stderr: (data) => this.note(data.trimEnd()),
-      attachment: {
-        ...(this.asked ? { model: this.asked } : {}),
-        ...(this.instructions?.text ? { served: this.instructions.text } : {}),
-        session: recorded ? { resume: this.sessionId } : { sessionId: this.sessionId },
-        ...(project ? { project } : {}),
-        toolGate: this.safeStop.toolGate,
-      },
-    });
     let query: Query;
     try {
+      this.stillServing(mine);
+      // A session the client has recorded resumes; one it has not (no turn
+      // yet) starts under the same id.
+      const recorded = this.record.clientTranscript(this.id) !== null;
+      // A resume that names no model would get back the model the client
+      // swapped in (it restores its transcript's last one): ask for the one
+      // it swapped out instead.
+      if (this.asked === undefined && recorded) this.asked = this.record.swappedFrom(this.id);
+      const project = await this.projectResources();
+      const options = claudeSessionOptions({
+        spec: this.spec,
+        env,
+        executable: resolveClaudeExecutable(env),
+        stderr: (data) => this.note(data.trimEnd()),
+        attachment: {
+          ...(this.asked ? { model: this.asked } : {}),
+          ...(this.instructions?.text ? { served: this.instructions.text } : {}),
+          session: recorded ? { resume: this.sessionId } : { sessionId: this.sessionId },
+          ...(project ? { project } : {}),
+          toolGate: this.safeStop.toolGate,
+        },
+      });
       query = (this.deps.query ?? sdkQuery)({ prompt: input, options });
     } catch (caught) {
       release();

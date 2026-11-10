@@ -612,7 +612,13 @@ export class TaskGraph {
   waitsHolding(id: string): TaskRecord[] {
     const record = this.writer.store.get(id);
     if (!record) return [];
-    return holdingWaits({ record, blockers: this.blockers(id), tasks: this.writer.store });
+    // Only live blockers can hold it, so a closed blocker is never read
+    // whole: each tasks listing reads this for every active row (INF-3412).
+    return holdingWaits({
+      record,
+      blockers: this.blockersHoldingClose(id),
+      tasks: this.writer.store,
+    });
   }
 
   /**

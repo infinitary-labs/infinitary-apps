@@ -357,49 +357,56 @@ export function queryTasks(
         });
       })();
   const projectKeys = new Map(tasks.projects.list().map((entry) => [entry.id, entry.key]));
-  const rows = matched
-    // A by-key fetch is one row and reads the whole answer; a list is the
-    // compact index and never carries bodies in bulk.
-    .map((record) => {
-      const resolved = one ? resolution(record.id) : undefined;
-      const row = toRow(tasks, record, projectKeys, repoName, one ? cardBody : undefined);
-      return {
-        ...row,
-        ...(one
-          ? {
-              ...(input.field === "timeline" && reach.timeline
-                ? { timeline: reach.timeline.sources(record.id) }
-                : {}),
-              ...(reach.pendingResponses
-                ? { response_requests: reach.pendingResponses(record.id) }
-                : {}),
-              sessions: tasks.archive.sessions(record.id, reach.sessionFolderOf?.(record)),
-              ...(record.shape?.escalate_from
-                ? {
-                    earlier_attempt:
-                      tasks.resolve(record.shape.escalate_from)?.key ?? record.shape.escalate_from,
-                  }
-                : {}),
-            }
-          : {}),
-        ...(resolved ? { resolution: queryResolution(resolved, row.card) } : {}),
-        ...(one && record.delivery?.liveValidation
-          ? {
-              live_validation: {
-                ...record.delivery.liveValidation,
-                runs: record.delivery.liveValidation.runs.map((run) => ({
-                  ...run,
-                  evidence: run.evidence.map(({ text: _text, ...item }) => item),
-                })),
-              },
-            }
-          : {}),
-        ...(one && record.delivery?.validationAssignment
-          ? { validation_assignment: record.delivery.validationAssignment }
-          : {}),
-        ...(one ? (reach.placeOf?.(record) ?? {}) : {}),
-      };
-    });
+  // One projection composes each task once for the whole page: a row and
+  // the parents, blockers and follow-ups its neighbours share (INF-3412).
+  const rows = tasks.readProjection(
+    () =>
+      matched
+        // A by-key fetch is one row and reads the whole answer; a list is the
+        // compact index and never carries bodies in bulk.
+        .map((record) => {
+          const resolved = one ? resolution(record.id) : undefined;
+          const row = toRow(tasks, record, projectKeys, repoName, one ? cardBody : undefined);
+          return {
+            ...row,
+            ...(one
+              ? {
+                  ...(input.field === "timeline" && reach.timeline
+                    ? { timeline: reach.timeline.sources(record.id) }
+                    : {}),
+                  ...(reach.pendingResponses
+                    ? { response_requests: reach.pendingResponses(record.id) }
+                    : {}),
+                  sessions: tasks.archive.sessions(record.id, reach.sessionFolderOf?.(record)),
+                  ...(record.shape?.escalate_from
+                    ? {
+                        earlier_attempt:
+                          tasks.resolve(record.shape.escalate_from)?.key ??
+                          record.shape.escalate_from,
+                      }
+                    : {}),
+                }
+              : {}),
+            ...(resolved ? { resolution: queryResolution(resolved, row.card) } : {}),
+            ...(one && record.delivery?.liveValidation
+              ? {
+                  live_validation: {
+                    ...record.delivery.liveValidation,
+                    runs: record.delivery.liveValidation.runs.map((run) => ({
+                      ...run,
+                      evidence: run.evidence.map(({ text: _text, ...item }) => item),
+                    })),
+                  },
+                }
+              : {}),
+            ...(one && record.delivery?.validationAssignment
+              ? { validation_assignment: record.delivery.validationAssignment }
+              : {}),
+            ...(one ? (reach.placeOf?.(record) ?? {}) : {}),
+          };
+        }),
+    matched,
+  );
   return {
     rows,
     total: selected?.total ?? matched.length,

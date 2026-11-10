@@ -80,7 +80,7 @@ export type OriginReader = {
   basis(id: string): string | undefined;
   /** The tasks it follows up: those it was discovered from. */
   followsUp(id: string): string[];
-  /** Its `ask` and `note` events, oldest first. */
+  /** Its `ask` events and the `note` events that save an origin, oldest first. */
   events(id: string): TaskEvent[];
   ask(id: string): AskRecord | undefined;
   /** How many tasks this message attached to. */

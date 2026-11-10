@@ -92,16 +92,20 @@ export class TaskLinkStore {
     return rows.map(fromRow);
   }
 
-  /** Edges leaving a task (what it blocks, for type blocks). */
+  /**
+   * Edges leaving a task (what it blocks, for type blocks). Compiled once, as
+   * `listTo` is: a tasks listing reads it several times for every row (INF-3412).
+   */
   listFrom(fromId: string, type?: TaskLinkType): TaskLink[] {
     const rows = (
       type
-        ? this.db
-            .prepare("SELECT * FROM task_links WHERE from_id = ? AND type = ? ORDER BY created_at")
-            .all(fromId, type)
-        : this.db
-            .prepare("SELECT * FROM task_links WHERE from_id = ? ORDER BY created_at")
-            .all(fromId)
+        ? prepared(
+            this.db,
+            "SELECT * FROM task_links WHERE from_id = ? AND type = ? ORDER BY created_at",
+          ).all(fromId, type)
+        : prepared(this.db, "SELECT * FROM task_links WHERE from_id = ? ORDER BY created_at").all(
+            fromId,
+          )
     ) as Row[];
     return rows.map(fromRow);
   }

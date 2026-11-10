@@ -629,10 +629,13 @@ export class IdleLadder {
    * situation. Nothing here closes, lands or discards anything.
    */
   reconcileIdle(now: number): void {
-    this.checkCutOffs();
-    for (const record of this.host.tasks.listActive()) {
-      this.reconcileIdleTask(record.id, now);
-    }
+    // One projection per pass: each witness re-reads its task, and each
+    // read composed the whole record again, its saved delivery facts
+    // parsed anew each time (INF-3412). A write inside clears it.
+    this.host.tasks.readProjection(() => {
+      this.checkCutOffs();
+      for (const record of this.host.tasks.listActive()) this.reconcileIdleTask(record.id, now);
+    });
   }
 
   reconcileIdleTask(taskId: string, now: number): void {

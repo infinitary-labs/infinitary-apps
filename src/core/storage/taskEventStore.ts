@@ -439,6 +439,23 @@ export class TaskEventStore {
   }
 
   /**
+   * A task's `ask` events and the `note` events that save an origin, oldest
+   * first: all a card's origin walk reads (`originAbout`, INF-2326). The walk
+   * runs for every open card on each first mate turn, and a task's other
+   * events (its checks, progress and reports, most of its history) are never
+   * decoded for it (INF-3412).
+   */
+  listOriginEvents(taskId: string): TaskEvent[] {
+    const rows = prepared(
+      this.db,
+      `SELECT * FROM task_events WHERE task_id = ? AND (kind = 'ask' OR (kind = 'note'
+         AND CASE WHEN json_valid(data_json) THEN json_type(data_json, '$.origin') END = 'object'))
+       ORDER BY at, id`,
+    ).all(taskId) as Row[];
+    return rows.map(fromRow);
+  }
+
+  /**
    * Events of one kind newer than `since`, newest first, capped - the
    * contribution channel's backlog read (roadmap 1.4: the R2 `decided`
    * records not yet sent). `countByKindSince` is the whole backlog's size.

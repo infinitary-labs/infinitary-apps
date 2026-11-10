@@ -26,6 +26,8 @@ import {
   wakesThroughInbox,
 } from "../../../tests/helpers/idleLadderHarness";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { tableRowsRead } from "../../../tests/helpers/tableRowsRead";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { initOverflowDir } from "../overflow";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import { TaskProtocol } from "../tasks/taskProtocol";
@@ -520,6 +522,18 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(h.ops.length).toBe(repeated);
       expect(h.cards()).toEqual([]);
     });
+  });
+
+  // INF-3412 (measured by INF-3411): every tick's pass read each idle
+  // task's whole record again for every witness, its saved delivery facts
+  // parsed anew each time, so the pass paused the window as those facts grew.
+  it("reads an idle task's saved delivery facts once a pass", async () => {
+    const { supervisor, tasks, taskId, idleSince } = await stopped();
+    seedDelivery(tasks, taskId, { mode: "direct-pr", ci: "green", headSha: "a".repeat(40) });
+    const { rows } = tableRowsRead("task_delivery_evidence", () =>
+      supervisor.watch.reconcileIdle(idleSince + minutes(5)),
+    );
+    expect(rows.map((row) => row.task_id)).toEqual([taskId]);
   });
 
   it("climbs nudge, wake, repeat and the host's card at 10, 20, 50 and 80 idle minutes, then holds", async () => {

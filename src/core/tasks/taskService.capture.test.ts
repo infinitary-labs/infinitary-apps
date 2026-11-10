@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { tableRowsRead } from "../../../tests/helpers/tableRowsRead";
 import { openInMemoryDatabase } from "../storage/db";
+import { TaskEventStore } from "../storage/taskEventStore";
 import { seedProject } from "../workspace/seedProject";
 import { seedTask } from "./seedTask";
 import { TaskService } from "./taskService";
@@ -132,6 +134,74 @@ describe("TaskService capture", () => {
     const chore = seedTask(tasks, { id: "chore", title: "Rotate the logs", status: "queued" });
     expect(tasks.capture.originAbout(chore.id)).toBeUndefined();
     expect(tasks.capture.originAbout("missing")).toBeUndefined();
+  });
+
+  // INF-3412 (measured by INF-3411): each first mate turn walks the origin of
+  // every open card, and the walk decoded every event of every task on the
+  // way - checks, progress and reports that can never be an origin - so
+  // a turn paused the window longer as that work's history grew.
+  it("walks a card's origin without reading the history that can never be one", () => {
+    const { db, tasks, tick } = setup();
+    const events = new TaskEventStore(db);
+    const fix = seedTask(tasks, { id: "fix", title: "Fix the footer", status: "running" });
+    tasks.capture.openAsk({ id: "ask-fix", text: "the footer overlaps the composer" });
+    tick();
+    tasks.capture.attachAsk("ask-fix", fix.id, "tool:spawn_crewmate");
+    const part = seedTask(tasks, {
+      id: "part",
+      title: "Measure the footer",
+      status: "running",
+      parentId: fix.id,
+    });
+    // The history a running task gathers: CI readings, progress and the crewmate's notes.
+    const work = (taskId: string, rounds: number) => {
+      for (let round = 0; round < rounds; round += 1) {
+        tick();
+        events.insert({
+          taskId,
+          at: tick(),
+          actor: "host",
+          kind: "ci",
+          text: `typecheck-lint-build: success on round ${round}`,
+          data: {
+            checks: [{ name: "typecheck-lint-build", state: "success", run: 1000 + round }],
+            headSha: `${round}`.padStart(40, "0"),
+          },
+        });
+        events.insert({
+          taskId,
+          at: tick(),
+          actor: "crewmate",
+          kind: "progress",
+          text: `Measured the footer, round ${round}`,
+          data: { plan: [{ label: "Measure", short: "measure", state: "current" }] },
+        });
+        events.insert({
+          taskId,
+          at: tick(),
+          actor: "crewmate",
+          kind: "note",
+          text: `Round ${round} of the footer`,
+          data: { news: false },
+        });
+      }
+    };
+    work(fix.id, 20);
+    work(part.id, 20);
+    const read = () => {
+      const { answer, rows } = tableRowsRead("task_events", () =>
+        tasks.capture.originAbout(part.id),
+      );
+      return { answer, rows: rows.length };
+    };
+    const before = read();
+    expect(before.answer).toMatchObject({
+      kind: "asked",
+      text: "the footer overlaps the composer",
+    });
+    work(fix.id, 60);
+    work(part.id, 60);
+    expect(read()).toEqual(before);
   });
 
   it("keeps a message's picture copies on its ask, and a task's pictures are those of every message attached to it", () => {

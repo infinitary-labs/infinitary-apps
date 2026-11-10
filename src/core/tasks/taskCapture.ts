@@ -10,7 +10,7 @@ import {
 } from "../orchestrator/answerDelivery";
 import type { MessageFile } from "../overflow";
 import type { AskAttachedVia, AskImage, AskRecord, AskTurnState } from "../storage/askStore";
-import type { TaskEventActor } from "../storage/taskEventStore";
+import type { TaskEvent, TaskEventActor } from "../storage/taskEventStore";
 import type { TaskCoverageFields, TaskRecord } from "../storage/taskRecords";
 import {
   ORIGIN_NOTE_KEY,
@@ -136,6 +136,8 @@ export class TaskCapture {
    * words. The walk is `originAbout` in `taskOrigin.ts`.
    */
   originAbout(id: string): TaskOriginLine | undefined {
+    // The walk asks each task's events up to three times; it reads them once.
+    const events = new Map<string, TaskEvent[]>();
     return originAbout(
       {
         get: (taskId) => this.writer.store.get(taskId),
@@ -146,10 +148,14 @@ export class TaskCapture {
         },
         followsUp: (taskId) =>
           this.writer.links.listFrom(taskId, "discovered-from").map((link) => link.toId),
-        events: (taskId) =>
-          this.writer.events
-            .listFor(taskId)
-            .filter((event) => event.kind === "ask" || event.kind === "note"),
+        events: (taskId) => {
+          let read = events.get(taskId);
+          if (!read) {
+            read = this.writer.events.listOriginEvents(taskId);
+            events.set(taskId, read);
+          }
+          return read;
+        },
         ask: (askId) => this.writer.asks.get(askId),
         askReach: (askId) => this.writer.events.taskIdsWithRef("ask", askId).length,
       },

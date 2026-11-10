@@ -2,10 +2,12 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { pngImage } from "../../../tests/helpers/images";
+import { tableRowsRead } from "../../../tests/helpers/tableRowsRead";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { attachmentPath, keepImages } from "../attachments";
 import { CardStore } from "../storage/cardStore";
 import { openInMemoryDatabase } from "../storage/db";
+import { seedTask } from "./seedTask";
 import { queryTasks, taskResolutionBody } from "./taskQuery";
 import { TaskService } from "./taskService";
 
@@ -346,5 +348,45 @@ describe("the tasks query's work built on a task (INF-976)", () => {
     // The list stays the compact index.
     expect(query({}).rows.find((entry) => entry.task_id === "answer")?.built_on_by).toBeUndefined();
     expect(query({ key: "other" }).rows[0]?.built_on_by).toBeUndefined();
+  });
+});
+
+describe("the tasks query's page", () => {
+  // INF-3412 (measured by INF-3411): an agent's tasks listing builds its
+  // rows on the window's thread, and each row read its parent, blockers and
+  // follow-ups whole, saved delivery facts and all - a closed blocker too,
+  // though it can never hold the row - so rows sharing them read the same
+  // task again and again, and one page of twelve listings paused the window.
+  it("reads each task's saved delivery facts once a page, and never a closed blocker's", () => {
+    const { tasks, query } = setup();
+    const delivered = (id: string) =>
+      seedDelivery(tasks, id, { mode: "direct-pr", ci: "green", headSha: "a".repeat(40) });
+    seedTask(tasks, { id: "plan", title: "Steady the meter", status: "running" });
+    seedTask(tasks, { id: "merged", title: "Calibrate the gauge", status: "running" });
+    seedTask(tasks, { id: "pending", title: "Order the sensor", status: "queued" });
+    const parts = ["needle", "dial", "spring", "glass", "case", "strap"];
+    for (const id of parts)
+      seedTask(tasks, {
+        id,
+        title: `Fit the ${id}`,
+        status: "running",
+        parentId: "plan",
+        blockedBy: ["merged", "pending"],
+      });
+    for (const id of ["plan", "merged", "pending", ...parts]) delivered(id);
+    tasks.close("merged", { status: "done", reason: "merged", actor: "host" });
+
+    const { answer, rows } = tableRowsRead("task_delivery_evidence", () =>
+      query({ status: "live" }),
+    );
+    // The page still names what holds each part: the live blocker alone.
+    const part = answer.rows.find((row) => row.task_id === "needle");
+    expect(part).toMatchObject({
+      parent: tasks.get("plan")?.key,
+      blocked_by: [tasks.get("pending")?.key],
+    });
+    const read = rows.map((row) => row.task_id);
+    expect(read).not.toContain("merged");
+    expect(read).toHaveLength(new Set(read).size);
   });
 });

@@ -264,9 +264,12 @@ export function startPlacedHome(options: {
         quotaModels: latestModels,
       })
     : undefined;
+  // This Mac's quota as routing reads it: the catalog above, and no allowance
+  // reading kept, as `QuotaService.latest` answers before its first refresh.
+  // Routing may read either whatever it scores, so both are answered.
   const router = routing
     ? new Router({
-        quota: { latestModels } as unknown as QuotaService,
+        quota: { latestModels, latest: () => undefined } as unknown as QuotaService,
         settings,
         decisions,
         availableModels: () => routing.available,

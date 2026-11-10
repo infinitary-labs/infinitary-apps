@@ -48,6 +48,9 @@ import SwiftUI
     var onLink: ((URL) -> Void)?
     var onDraft: ((String) -> Void)?
     var onTask: ((String) -> Void)?
+    /// INF-3460: the row keeps this body loaded while its card sits beside the shown one, and moves its one view between the
+    /// edge it loads behind and the card that shows it, so a view leaving the screen never closes it; the row closes it.
+    var kept = false
 
     init(card: PhoneCard, session: ReadOnlySession, fill: PhoneJSON, part: Part = .body, keys: [String] = [],
          heightLag: TimeInterval = 0) {
@@ -67,7 +70,9 @@ import SwiftUI
         #endif
     }
 
+    /// The body's one view: made and loaded the first time, then the same view, already drawn, wherever it shows next.
     func makeView(theme: String) -> WKWebView {
+        if let view { updateTheme(theme); return view }
         self.theme = theme
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
@@ -101,7 +106,8 @@ import SwiftUI
         applyReach()
         // Agent HTML is assigned to an opaque iframe's srcdoc, never interpolated into this parent.
         // Its own hash policy narrows this parent's inline permission. Neither realm can use the network.
-        view.onWindow = { [weak self] in self?.loadOnWindow() }
+        // INF-3460: a kept body that drew while it moved between places is revealed once it reaches the window again.
+        view.onWindow = { [weak self] in self?.loadOnWindow(); self?.revealIfShown() }
         page = """
         <!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
         <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' app-frame://runtime; style-src 'unsafe-inline'; frame-src about:; img-src data: app-frame:; font-src app-frame:; base-uri 'none'; form-action 'none'">
@@ -261,6 +267,7 @@ import SwiftUI
                 DispatchQueue.main.asyncAfter(deadline: .now() + heightLag) { [weak self] in self?.height = drawnHeight }
             } else { height = drawnHeight }
             if !drawn { drawn = true; onDrawn?() }
+            if part == .body { PhoneCardRowProbe.shared?.reported(card.id) }
             revealIfShown()
             replyHandler(true, nil)
         case "ready": watch.bodyReady(); replyHandler(true, nil)
@@ -432,16 +439,34 @@ final class CardBodyView: WKWebView {
     func claims(_ point: CGPoint) -> Bool { claimed.contains { $0.contains(point) } }
 }
 
+/// INF-3460: the place a body's view shows. A kept body moves its one view from the edge it loaded behind into the card
+/// that shows it, so the view sits in a slot of its own, which a slot going away lets go only while it still holds it.
+final class CardWebSlot: UIView {
+    let host: CardWebHost
+    init(host: CardWebHost, view: WKWebView) {
+        self.host = host
+        super.init(frame: .zero)
+        view.frame = bounds; view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        addSubview(view)
+    }
+    @available(*, unavailable) required init?(coder: NSCoder) { nil }
+    /// A body that drew before its view reached this place at its drawn height has no layout of its own left to reveal it.
+    override func layoutSubviews() { super.layoutSubviews(); host.revealIfShown() }
+}
+
 struct CardWebView: UIViewRepresentable {
     let host: CardWebHost
     @Environment(\.colorScheme) private var scheme
-    func makeUIView(context: Context) -> WKWebView { host.makeView(theme: scheme == .dark ? "dark" : "light") }
-    func updateUIView(_ view: WKWebView, context: Context) {
+    func makeUIView(context: Context) -> CardWebSlot {
+        CardWebSlot(host: host, view: host.makeView(theme: scheme == .dark ? "dark" : "light"))
+    }
+    func updateUIView(_ slot: CardWebSlot, context: Context) {
         host.updateTheme(scheme == .dark ? "dark" : "light")
         host.revealIfShown()
     }
-    static func dismantleUIView(_ view: WKWebView, coordinator: ()) {
-        (view.navigationDelegate as? CardWebHost)?.close()
+    static func dismantleUIView(_ slot: CardWebSlot, coordinator: ()) {
+        for view in slot.subviews { view.removeFromSuperview() }
+        if !slot.host.kept { slot.host.close() }
     }
 }
 

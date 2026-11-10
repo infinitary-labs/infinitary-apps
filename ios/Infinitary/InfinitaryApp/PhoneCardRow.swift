@@ -23,18 +23,17 @@ enum PhoneCardRowMotion {
     /// The lean at the slide-on point, in degrees, which keeps growing a little past it.
     static let lean = 3.0
     static let leanReach: CGFloat = 1.4
+    /// INF-3460, the captain's "dragged 3°, incoming 2°": the share of the row's lean every card but the one the finger
+    /// took takes, so the dragged card leans as before and the one coming in leans two thirds as far.
+    static let besideLean = 2.0 / 3.0
+    /// INF-3460, the captain's pick: a released row settles over the page time (`--dur-page`).
+    static let settle = PhoneTheme.pageSeconds
     /// With no card that way the row moves this share of the finger's travel, then glides back.
     static let endGives: CGFloat = 0.3
     /// Under Reduce Motion the row stays still and the card dims this much at the slide-on point.
     static let dim = 0.45
     /// The chevron toward a side with no card shows this share as bright.
     static let hintAtEnd = 0.35
-
-    /// The app's glide (--ease-out) over a share of a card's page time (--dur-page), never overshooting.
-    static func glide(_ share: CGFloat) -> Animation {
-        let (a, b, c, d) = PhoneTheme.glide
-        return .timingCurve(a, b, c, d, duration: PhoneTheme.pageSeconds * Double(share))
-    }
 
     /// The one fade Reduce Motion keeps (--dur-fade).
     static var fade: Animation {
@@ -58,22 +57,90 @@ enum PhoneCardRowMotion {
     var width: CGFloat = 0
     /// The shown card's height, which the plain edges beside it take while the row is still.
     var height: CGFloat = 0
+    /// The card the finger took hold of, which leans by the whole angle until the row rests; every other card leans by
+    /// its share (`besideLean`).
+    var grabbed: String?
 
     func settle() { offset = 0; lean = 0; dim = 0; hint = 0; fade = 1 }
+}
+
+/// INF-3460: the row's release, a spring with no bounce that starts at the finger's speed and settles over
+/// `PhoneCardRowMotion.settle`. The row's lean returns upright on the same spring from rest. The start is held to the
+/// spring's own rate, the fastest that never passes the target, so a hard flick carries on quickly but never overshoots.
+struct PhoneCardRowGlide {
+    let from: CGFloat
+    let to: CGFloat
+    let lean: Double
+    /// The spring's rate, a turn per settle time, as SwiftUI's `Spring(duration:bounce: 0)` takes it.
+    let rate: Double
+    /// The share of the way the row moves each second as the glide starts.
+    let start: Double
+
+    init(from: CGFloat, to: CGFloat, speed: CGFloat, lean: Double, seconds: Double = PhoneCardRowMotion.settle) {
+        self.from = from; self.to = to; self.lean = lean
+        rate = 2 * Double.pi / seconds
+        let change = Double(to - from)
+        start = abs(change) > 0.5 ? min(rate, max(0, Double(speed) / change)) : 0
+    }
+
+    /// The share of the way from `from` to `to` after `time` seconds: a critically damped spring, which reaches 1 only
+    /// as time runs on, so with a start no faster than the rate it never passes it.
+    func share(at time: Double) -> Double {
+        1 - (1 + (rate - start) * time) * exp(-rate * time)
+    }
+
+    func place(at time: Double) -> CGFloat { from + (to - from) * CGFloat(share(at: time)) }
+
+    func leaning(at time: Double) -> Double { lean * (1 + rate * time) * exp(-rate * time) }
+
+    /// Within a third of a point and a fiftieth of a degree, which no frame can show.
+    func done(at time: Double) -> Bool {
+        abs(Double(to - from) * (1 - share(at: time))) < 0.3 && abs(leaning(at: time)) < 0.02
+    }
+}
+
+/// INF-3460: moves the row through its release frame by frame, as the finger moves it during the drag, rather than
+/// handing it to an animation, which stood still for its first frames after the lift. Its clock counts drawn frames:
+/// each one moves the glide on by one frame's time, so a late frame slows the glide for that frame and never makes it jump.
+@MainActor final class PhoneCardRowDriver: NSObject {
+    private var link: CADisplayLink?
+    private var step: ((Double) -> Bool)?
+    private var elapsed: Double = 0
+
+    var running: Bool { link != nil }
+
+    /// Calls `step` once each drawn frame with the glide's time, the first frame's included, until it answers false.
+    func run(_ step: @escaping (Double) -> Bool) {
+        stop()
+        self.step = step
+        elapsed = 0
+        let link = CADisplayLink(target: self, selector: #selector(tick(_:)))
+        link.add(to: .main, forMode: .common)
+        self.link = link
+    }
+
+    func stop() { link?.invalidate(); link = nil; step = nil }
+
+    @objc private func tick(_ link: CADisplayLink) {
+        elapsed += link.targetTimestamp - link.timestamp
+        if step?(elapsed) == false { stop() }
+    }
 }
 
 struct PhoneCardRowSlot: Identifiable {
     let card: PhoneCard
     /// The card's place in the row: 0 is shown, -1 before it, 1 after it.
     let slot: Int
-    /// A card beside the shown one is built only while the row moves; while it is still, its edge is a plain surface.
+    /// A card beside the shown one is built only while the row moves; while it is still, its edge is a plain surface with
+    /// its body loading behind it (INF-3460).
     var built = true
     /// A revision builds the card's pane again to draw its new body (INF-2565), so its offer is part of who it is.
     var id: String { "\(built ? "" : "edge:")\(card.id):\(card.offerID ?? card.body):\(card.isPast)" }
 }
 
 /// The edge of a card beside the shown one while the row is still: only its surface, which is all its 8 points show.
-/// Accessibility searches see through a hidden view, so a card is built beside the shown one only while the row moves.
+/// Accessibility searches see through a hidden view, so a card is built beside the shown one only while the row moves;
+/// its body loads behind this surface as one closed element with no name (INF-3460, `PhoneCardRowLoading`).
 struct PhoneCardRowEdge: View {
     let row: PhoneCardRow
 
@@ -101,12 +168,14 @@ struct PhoneCardRowPlace: ViewModifier {
     }
 }
 
-/// Every card leans by the row's angle about its own foot.
+/// Every card leans about its own foot: the one the finger took by the row's angle, every other by its share of it.
 struct PhoneCardRowLean: ViewModifier {
     let row: PhoneCardRow
+    let card: String
 
     func body(content: Content) -> some View {
-        content.rotationEffect(.degrees(row.lean), anchor: .bottom)
+        let share = row.grabbed == nil || row.grabbed == card ? 1 : PhoneCardRowMotion.besideLean
+        content.rotationEffect(.degrees(row.lean * share), anchor: .bottom)
     }
 }
 

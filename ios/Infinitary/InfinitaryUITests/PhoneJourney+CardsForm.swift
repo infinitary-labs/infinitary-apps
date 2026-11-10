@@ -5,6 +5,7 @@ extension PhoneJourney {
     /// INF-2125 direction C, the second cards test: the form's boundary, its stalls and retries, paging, a pick and a choice.
     func testCardForm() async throws {
         app.launchEnvironment["INFINITARY_TEST_RETRIED_CARD_LAG"] = "3"
+        app.launchEnvironment["INFINITARY_TEST_CARD_ROW_PROBE"] = "1"
         try await launchJoined()
         try await verifyCardForm()
     }
@@ -34,6 +35,35 @@ extension PhoneJourney {
         }
         XCTAssertEqual(waitForPhonePredicate(settled, object: nil, timeout: 10), .completed,
                        "The row never settled on \(title) from \(place): pager \(pager.label)\n\(app.debugDescription)")
+    }
+
+    /// INF-3460, the captain's "after swipe, the new card's body content seems to still do a slight layout shift": the row's
+    /// probe reads whether the bodies beside the shown card have drawn, whether the card a move brought had drawn its body
+    /// before that move began, and how many times the shown body has reported its height since the row came to rest.
+    private var rowProbe: XCUIElement { app.descendants(matching: .any).matching(identifier: "card-row-probe").firstMatch }
+
+    /// The bodies beside the shown card have drawn behind their edges, so the next swipe brings a card that is ready.
+    private func waitForBodiesBeside() {
+        let drawn = NSPredicate { [rowProbe] _, _ in rowProbe.exists && rowProbe.label.hasPrefix("beside drawn") }
+        XCTAssertEqual(waitForPhonePredicate(drawn, object: nil, timeout: 30), .completed,
+                       "The bodies beside the shown card never drew: \(rowProbe.label)")
+    }
+
+    /// The card the swipe brought had drawn its body before the swipe began and has not changed its height since the row
+    /// rested, and a search of the still row finds one of each of the shown card's controls.
+    private func verifyArrivedReady(_ title: String) {
+        let label = rowProbe.label
+        XCTAssertTrue(label.contains("arrived drawn"), "\(title) arrived before its body drew: \(label)")
+        XCTAssertTrue(label.hasSuffix(", 0 reports after rest"), "\(title)'s body changed after the row rested: \(label)")
+        verifyOneShownCard()
+    }
+
+    /// A search of the still row finds one of each of the shown card's controls: the bodies the row keeps loaded beside
+    /// it, the one that showed before included, are each one closed element with no name.
+    private func verifyOneShownCard() {
+        XCTAssertEqual(app.staticTexts.matching(identifier: "card-title").count, 1)
+        XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "card-body").count, 1, app.debugDescription)
+        XCTAssertEqual(app.buttons.matching(identifier: "put-aside-card").count, 1)
     }
 
     private func verifyCardForm() async throws {
@@ -92,13 +122,18 @@ extension PhoneJourney {
         let refused = try await home("card-state", method: "GET")
         XCTAssertNil(refused["choice"] as? [String: Any])
         showCard(chart); showCard(choice)
+        // INF-3460: a card shown from the count's menu leaves the one that showed before beside it, its body set aside.
+        waitForShownBodyRevealed()
+        verifyOneShownCard()
         // INF-3110: a sideways swipe anywhere on the card changes cards, the head's and the body's alike; swiping left
         // brings the next card and right the one before.
         let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
         let first = pager.label
+        waitForBodiesBeside()
         app.staticTexts["card-title"].swipeLeft()
         settleOn(chart, leaving: first, pager: pager)
         waitForShownBodyRevealed()
+        verifyArrivedReady(chart)
         // The swipe starts inside the body, near its top, which shows under the head whatever the body's length.
         // INF-3400: it travels to the body's far side, a share of the card's own width, so it slides on by distance on an
         // iPad's full-width card as on an iPhone's, never only by a flick a busy runner may measure as slow.
@@ -106,13 +141,15 @@ extension PhoneJourney {
         let inBody = body.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0)).withOffset(CGVector(dx: 0, dy: 24))
         let farSide = body.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0)).withOffset(CGVector(dx: 0, dy: 24))
         let second = pager.label
+        waitForBodiesBeside()
         inBody.press(forDuration: 0.05, thenDragTo: farSide, withVelocity: .fast, thenHoldForDuration: 0)
         settleOn(choice, leaving: second, pager: pager)
         waitForShownBodyRevealed()
+        verifyArrivedReady(choice)
         picture("card-row")
         let place = pager.label
         // A drag that starts on the body's own slider moves the slider and never the card.
-        // The swipe back builds the card it brings anew, and its body's controls reach accessibility after its first words.
+        // The swipe back brings the body the row kept loaded, and its controls reach accessibility once it shows.
         let depth = app.webViews.sliders["Chart depth"]
         XCTAssertTrue(depth.waitForPresence(timeout: 10), app.debugDescription)
         reveal(depth)
@@ -157,7 +194,8 @@ extension PhoneJourney {
         tapOnPhone(app.buttons["previous-card"])
         XCTAssertTrue(cardHeading(choice).waitForPresence(timeout: 10))
         _ = try await home("capture-stop")
-        // Paging remounts the document; the named answers and staged value still leave together.
+        // Paging brings the document back, kept loaded beside the shown card (INF-3460); the named answers and staged
+        // value still leave together.
         // INF-1086 / INF-1574: the remounted card's footer stays disabled until its body is revealed at its drawn height.
         let settings = app.buttons["card-action-settings"]
         waitUntilEnabled(settings)

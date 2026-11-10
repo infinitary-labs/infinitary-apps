@@ -26,6 +26,13 @@ struct PhoneCards: View {
     @State private var built: Set<String> = []
     /// Counts the row's moves, so a move that another one cut short does not end the newer one.
     @State private var moves = 0
+    /// INF-3460: the card the row is built around while a page turn glides on to the card the count already names. The
+    /// lift only starts the glide; the row is built again around the new card once the glide ends, or a finger touches it.
+    @State private var base: String?
+    /// INF-3460: moves the row frame by frame through a release, a chevron's slide or a page key's.
+    @State private var driver = PhoneCardRowDriver()
+    /// INF-3460: the bodies of the shown card and the cards beside it, kept loaded while the row is still.
+    @State private var bodies = PhoneCardBodies()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private var card: PhoneCard? { past ?? session.stack.first(where: { $0.id == selected }) ?? session.stack.first }
 
@@ -55,6 +62,11 @@ struct PhoneCards: View {
         .onChange(of: session.stack.map(\.id), initial: true) { _, ids in
             // A card closed on another computer mid-swipe: the swipe lets go and the stack's own rule picks the card.
             if swipedFrom != nil && !ids.contains(swipedFrom!) { swipedFrom = nil; withAnimation(PhoneCardRowMotion.fade) { row.settle() } completion: { [moves] in stopped(moves) } }
+            // A card a glide moves from or to closed on another computer: the glide stops where the stack's rule picks.
+            if let from = base, !ids.contains(from) || !ids.contains(selected ?? from) {
+                driver.stop(); base = nil; moves += 1
+                withAnimation(PhoneCardRowMotion.fade) { row.settle() } completion: { [moves] in stopped(moves) }
+            }
             if let marked = session.stack.first(where: { !previousIDs.contains($0.id) && $0.value["holdsPlace"].flag }) {
                 selected = marked.id; past = nil
             } else if selected == nil || !ids.contains(selected!) {
@@ -64,10 +76,20 @@ struct PhoneCards: View {
             }
             showRestored(ids)
             previousIDs = ids
+            if !moving && swipedFrom == nil { bodies.keep(only: ids.isEmpty ? [] : rowCards.map(\.card)); bodies.setAside(except: card) }
             sides = sides.filter { ids.contains($0.key) || $0.key == past?.id }
             if let past, ids.contains(past.id) { self.past = nil }
         }
         .onChange(of: messageContext.restoring) { _, _ in showRestored(session.stack.map(\.id)) }
+        // INF-3460: a card shown from the count's menu, or by the stack's own rule, leaves the row still: the card that
+        // showed before sits beside it again, its body set aside with the rest.
+        .onChange(of: selected) { _, _ in
+            if !moving && swipedFrom == nil && !session.stack.isEmpty { bodies.keep(only: rowCards.map(\.card)); bodies.setAside(except: card) }
+        }
+        // INF-3460: a revision draws a new body, so the row lets the old one go once it is still.
+        .onChange(of: session.stack.map(PhoneCardBodies.key)) { _, _ in
+            if !moving && swipedFrom == nil && !session.stack.isEmpty { bodies.keep(only: rowCards.map(\.card)) }
+        }
         // INF-2095: the pager's menu takes its cards and label here, and only when either changes.
         .onChange(of: session.stack.map { PhoneCardPager.Item(id: $0.id, title: $0.title) }, initial: true) { _, items in
             pagerMenu.pick = { id in selected = id; past = nil }
@@ -82,10 +104,11 @@ struct PhoneCards: View {
         }
     }
     /// INF-3110, the captain's row: the shown card with the cards beside it in the stack, whose edges show at its sides.
-    /// They are plain edges while the row is still and real cards while it moves. A past card stands alone.
+    /// They are plain edges while the row is still, their bodies loading behind them (INF-3460), and real cards while it
+    /// moves. A past card stands alone.
     private var rowCards: [PhoneCardRowSlot] {
         if let past { return [PhoneCardRowSlot(card: past, slot: 0)] }
-        let at = index
+        let at = rowIndex
         return (max(0, at - 1)...min(session.stack.count - 1, at + 1)).map {
             let card = session.stack[$0]
             return PhoneCardRowSlot(card: card, slot: $0 - at, built: $0 == at || built.contains(card.id))
@@ -103,9 +126,11 @@ struct PhoneCards: View {
                 let card = place.card
                 let shown = place.slot == 0
                 if !place.built {
-                    PhoneCardRowEdge(row: row).modifier(PhoneCardRowPlace(row: row, slot: place.slot))
+                    PhoneCardRowEdge(row: row)
+                        .background(alignment: .top) { loading(card) }
+                        .modifier(PhoneCardRowPlace(row: row, slot: place.slot))
                 } else {
-                PhoneCardPane(card: card, session: session,
+                PhoneCardPane(card: card, session: session, bodies: card.isPast ? nil : bodies,
                     fill: card.isPast ? card.value["answers"] : drafts[card.id] ?? .array([]),
                     reply: Binding(get: { replies[card.id] ?? "" }, set: { replies[card.id] = $0 }),
                     onReading: { drafts[card.id] = $0["answers"] },
@@ -126,8 +151,62 @@ struct PhoneCards: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { row.width = $0 }
         // The neighbours' edges show in the room between the card and the screen's edge, never past it.
         .clipShape(PhoneCardRowClip(room: PhoneTheme.space4))
-        .gesture(PhoneCardSwipe(allowed: { swipeAllowed }, began: { swipedFrom = card?.id; moves += 1; buildBeside(); row.settle() },
-                                moved: { swiped($0) }, ended: { released($0, $1) }))
+        .overlay(alignment: .topLeading) {
+            if let probe = PhoneCardRowProbe.shared {
+                PhoneCardRowProbeReading(probe: probe, beside: bodies.drawn(rowCards.filter { $0.slot != 0 }.map(\.card)))
+            }
+        }
+        // A finger that touches the row while it glides takes it where the count already points.
+        .gesture(PhoneCardSwipe(allowed: { swipeAllowed }, began: {
+            rebase(); began(); swipedFrom = card?.id; buildBeside(); row.settle(); row.grabbed = card?.id
+            PhoneCardRowProbe.shared?.began(drawn: drawnBodies)
+        }, moved: { swiped($0) }, ended: { released($0, $1) }))
+    }
+
+    /// INF-3460: the body of a card beside the shown one, loading behind its edge with its fact strip.
+    @ViewBuilder private func loading(_ card: PhoneCard) -> some View {
+        if !card.isPast {
+            let page = bodies.body(card) { PhoneCardPane.bodyHost(card, session, drafts[card.id] ?? .array([])) }
+            PhoneCardRowLoading(page: page, strip: page.facts.flatMap { bodies.strip(card, facts: $0, session: session) }, row: row)
+        }
+    }
+
+    /// The row's card while a glide carries it on, else the shown card's.
+    private var rowIndex: Int {
+        base.flatMap { id in session.stack.firstIndex { $0.id == id } } ?? index
+    }
+
+    /// A new move takes the row from here.
+    private func began() { driver.stop(); moves += 1 }
+
+    /// The row's cards whose bodies have drawn, for the row's probe.
+    private var drawnBodies: Set<String> {
+        let cards = rowCards.map(\.card)
+        return Set(zip(cards, bodies.drawn(cards)).filter(\.1).map(\.0.id))
+    }
+
+    /// INF-3460: the row is built again around the card the count names, every card staying where it stands on the screen.
+    private func rebase() {
+        guard let from = base else { return }
+        let steps = index - (session.stack.firstIndex { $0.id == from } ?? index)
+        var still = Transaction()
+        still.disablesAnimations = true
+        withTransaction(still) { base = nil; row.offset += CGFloat(steps) * (row.width + PhoneCardRowMotion.gap) }
+    }
+
+    /// INF-3460: the row glides to `aim` on the release spring from where it stands, at the finger's speed, frame by frame.
+    private func glide(to aim: CGFloat, speed: CGFloat?) {
+        let move = moves
+        let glide = PhoneCardRowGlide(from: row.offset, to: aim, speed: speed ?? 0, lean: row.lean)
+        driver.run { time in
+            guard move == moves else { return false }
+            let done = glide.done(at: time)
+            var still = Transaction()
+            still.disablesAnimations = true
+            withTransaction(still) { row.offset = done ? aim : glide.place(at: time); row.lean = done ? 0 : glide.leaning(at: time) }
+            if done { stopped(move) }
+            return !done
+        }
     }
 
     /// Typing a reply keeps the card where it is until the keyboard closes (the captain's pick); a past card stays put.
@@ -165,45 +244,55 @@ struct PhoneCards: View {
         let far = abs(moved) >= row.width * PhoneCardRowMotion.slideOn
         let flick = speed.map { abs($0) >= PhoneCardRowMotion.flick && ($0 < 0) == (moved < 0) && moved != 0 } ?? false
         if swipedFrom == card?.id, speed != nil, room, row.width > 0, far || flick {
-            turn(toward, from: reduceMotion ? 0 : moved)
+            turn(toward, speed: speed)
         } else if reduceMotion {
             withAnimation(PhoneCardRowMotion.fade) { row.dim = 0; row.hint = 0 } completion: { [moves] in stopped(moves) }
         } else {
-            let share = min(1, max(0.4, abs(moved) / max(row.width, 1) + 0.4))
-            withAnimation(PhoneCardRowMotion.glide(share)) { row.offset = 0; row.lean = 0 } completion: { [moves] in stopped(moves) }
+            glide(to: 0, speed: speed)
         }
     }
 
-    /// The row came to rest: the shown card is read, and the cards beside it are plain edges again unless a finger moves it.
+    /// The row came to rest: it is built again around the shown card, which is read, and the cards beside it are plain
+    /// edges again, their bodies kept loaded behind them, unless a finger moves it.
     private func stopped(_ move: Int) {
         guard move == moves else { return }
+        driver.stop()
+        rebase()
         moving = false
-        if swipedFrom == nil { built = [] }
+        row.grabbed = nil
+        if swipedFrom == nil {
+            built = []
+            bodies.keep(only: rowCards.map(\.card))
+            bodies.setAside(except: card)
+            if let card { PhoneCardRowProbe.shared?.rested(on: card.id) }
+        }
     }
-    /// Changes the card the count names now, and moves the row there from where it stands: the rest of a swipe's slide,
-    /// a chevron's whole slide, or under Reduce Motion a fade into the new row.
-    private func turn(_ delta: Int, from moved: CGFloat) {
+    /// Changes the card the count names now, and moves the row there from where it stands: the rest of a swipe's slide at
+    /// the finger's speed, a chevron's whole slide, or under Reduce Motion a fade into the new row.
+    private func turn(_ delta: Int, speed: CGFloat? = nil) {
         let next = index + delta
         guard past == nil, session.stack.indices.contains(next) else { return }
         var still = Transaction()
         still.disablesAnimations = true
+        // A turn while the row still glides takes it on from where it stands.
+        rebase()
+        began()
+        if swipedFrom == nil { PhoneCardRowProbe.shared?.began(drawn: drawnBodies) }
         moving = true
-        moves += 1
         buildBeside()
         if reduceMotion {
             withTransaction(still) { selected = session.stack[next].id; row.settle(); row.fade = 0 }
             afterDrawn { withAnimation(PhoneCardRowMotion.fade) { row.fade = 1 } completion: { [moves] in stopped(moves) } }
             return
         }
-        // The card that was shown keeps its place on the screen as the count moves past it, then the row glides on.
-        withTransaction(still) { selected = session.stack[next].id; row.offset = moved + CGFloat(delta) * (row.width + PhoneCardRowMotion.gap) }
-        let share = min(1, max(0.4, 1 - abs(moved) / max(row.width, 1)))
-        afterDrawn { withAnimation(PhoneCardRowMotion.glide(share)) { row.offset = 0; row.lean = 0 } completion: { [moves] in stopped(moves) } }
+        // INF-3460: the count moves on now and the row keeps every card where it is, so the glide starts in the very next
+        // frame; the row is built again around the new card once it rests.
+        withTransaction(still) { base = card?.id; selected = session.stack[next].id }
+        glide(to: -CGFloat(delta) * (row.width + PhoneCardRowMotion.gap), speed: speed)
     }
 
-    /// Runs the row's glide once the new count and the row's place are drawn. Set in the same moment as the move that
-    /// placed it, the glide never ran on an iPad and the new card stayed where the finger let it go. A move that started
-    /// since then owns the row.
+    /// Under Reduce Motion, runs the fade once the new row is drawn, so it never fades a row still being built. A move that
+    /// started since then owns the row.
     private func afterDrawn(_ glide: @escaping @MainActor () -> Void) {
         let move = moves
         DispatchQueue.main.async { if move == moves { glide() } }
@@ -249,7 +338,7 @@ struct PhoneCards: View {
         selected = id; past = nil; messageContext.restoring = nil
     }
     /// The chevrons and Shift-Command-[ and ] slide the row one card, as a swipe does (the captain's pick).
-    private func page(_ delta: Int) { turn(delta, from: 0) }
+    private func page(_ delta: Int) { turn(delta) }
 }
 
 /// INF-2095: what the pager's menu shows, which only a change to the stack's cards or to the pager's own label alters.
@@ -346,6 +435,8 @@ struct PhoneCardSide: Equatable {
 private struct PhoneCardPane: View {
     let card: PhoneCard
     let session: ReadOnlySession
+    /// INF-3460: the row's kept bodies; none for a past card, which stands alone.
+    let bodies: PhoneCardBodies?
     @Binding var reply: String
     let onReading: (PhoneJSON) -> Void
     let onSeen: () -> Void
@@ -420,7 +511,7 @@ private struct PhoneCardPane: View {
 
     enum CardSide { case face, back }
 
-    init(card: PhoneCard, session: ReadOnlySession, fill: PhoneJSON, reply: Binding<String>,
+    init(card: PhoneCard, session: ReadOnlySession, bodies: PhoneCardBodies?, fill: PhoneJSON, reply: Binding<String>,
          onReading: @escaping (PhoneJSON) -> Void, onSeen: @escaping () -> Void, onHide: @escaping () -> Void, onSent: @escaping () -> Void, shown: Bool, visible: Bool, replyLeaves: Bool,
          row: PhoneCardRow, onTask: @escaping (String) -> Void, onDraft: @escaping (String) -> Void,
          side: Binding<PhoneCardSide>) {
@@ -428,13 +519,15 @@ private struct PhoneCardPane: View {
         self.onReading = onReading; self.onSeen = onSeen; self.onHide = onHide; self.onSent = onSent
         self.shown = shown; self.visible = visible; self.replyLeaves = replyLeaves
         self.row = row; self.onTask = onTask; self.onDraft = onDraft
-        _host = State(initialValue: Self.bodyHost(card, session, fill))
+        self.bodies = bodies
+        // INF-3460: a card the row kept loaded beside the shown one arrives with its body already drawn.
+        _host = State(initialValue: bodies?.body(card) { Self.bodyHost(card, session, fill) } ?? Self.bodyHost(card, session, fill))
         _side = side
         // A pane built again while its back shows starts on the back, with no turn.
         let showsBack = side.wrappedValue.turned && !Self.messages(card, session).isEmpty
         _flipped = State(initialValue: showsBack); _backMounted = State(initialValue: showsBack)
     }
-    private static func bodyHost(_ card: PhoneCard, _ session: ReadOnlySession, _ fill: PhoneJSON,
+    static func bodyHost(_ card: PhoneCard, _ session: ReadOnlySession, _ fill: PhoneJSON,
                                  heightLag: TimeInterval = 0) -> CardWebHost {
         // The body links the keys of the tasks the phone holds, besides the card's own, as the Mac's does.
         // A first mate card is its own (INF-2714), so every key in its words links.
@@ -535,8 +628,8 @@ private struct PhoneCardPane: View {
             if messageContext.keyboardUp && value.translation.height > 30
                 && value.translation.height > abs(value.translation.width) { dismissPhoneKeyboard() }
         })
-        // INF-3110: every card in the row leans by the same angle about its own foot, so the gaps between them hold.
-        .modifier(PhoneCardRowLean(row: row))
+        // INF-3110: every card in the row leans about its own foot; INF-3460: the one the finger took leans furthest.
+        .modifier(PhoneCardRowLean(row: row, card: card.id))
         .coordinateSpace(.named(Self.paneSpace))
         .offset(y: -lift)
         // INF-2568: the pane is the room the stage offers, never the card's own height, so a card taller than the room the
@@ -553,7 +646,9 @@ private struct PhoneCardPane: View {
         }
         .onChange(of: shown) { _, shown in connectHost(); if !shown { replyFocus = nil } }
         .onDisappear { if shown && (replyFocus != nil || host.typing) { messageContext.replyFocused = false } }
-        .onAppear { connectHost(); readThread(); if let facts = host.facts { showFacts(facts) } }
+        // INF-3460: a body the row kept loaded beside the shown card has drawn already, so a card opened from the count's
+        // menu shows drawn and its first drawing never comes to mark it read.
+        .onAppear { connectHost(); readThread(); if let facts = host.facts { showFacts(facts) }; markSeen() }
         .onChange(of: host.facts) { _, facts in if let facts { showFacts(facts) } }
         .onChange(of: session.contact) { _, contact in if contact == "in-reach" { readThread(); markSeen() } }
         .onChange(of: phase) { _, phase in if phase == .active { markSeen() } }
@@ -870,6 +965,7 @@ private struct PhoneCardPane: View {
                 Button("Retry") {
                     let fill = host.reading["answers"]; host.close(); problem = nil
                     host = Self.bodyHost(card, session, fill, heightLag: CardWebHost.retriedHeightLag)
+                    bodies?.replace(card, with: host)
                     connectHost(); retry += 1
                 }.buttonStyle(PhoneChoiceStyle(.secondary)).disabled(host.changing).accessibilityIdentifier("retry-card")
             } else {
@@ -1215,10 +1311,10 @@ private struct PhoneCardPane: View {
     }
     /// The fact strip the body split off, drawn by a host of its own that holds only it and takes no answers.
     private func showFacts(_ facts: String) {
-        guard factsHost == nil, case .object(var value) = card.value else { return }
-        value["body"] = .string(facts); value["actions"] = .array([]); value["changes"] = .null
-        guard let strip = try? PhoneCard(.object(value)) else { return }
-        let factsHost = CardWebHost(card: strip, session: session, fill: .array([]), part: .facts)
+        guard factsHost == nil else { return }
+        // INF-3460: a strip the row kept loaded beside the shown card arrives drawn with its body.
+        guard let factsHost = bodies?.strip(card, facts: facts, session: session)
+            ?? card.factsStrip(facts).map({ CardWebHost(card: $0, session: session, fill: .array([]), part: .facts) }) else { return }
         factsHost.onLink = { url in openURL(url) }
         factsHost.aside = !shown
         self.factsHost = factsHost

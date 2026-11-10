@@ -29,6 +29,7 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/Notices/swift-crypto-LICENSE.txt",
     "ios/Infinitary/InfinitaryApp/Notices/swift-crypto-NOTICE.txt",
     "ios/Infinitary/InfinitaryApp/PhoneAppearance.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneCardBodies.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCardRow.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCardWords.generated.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCards.swift",

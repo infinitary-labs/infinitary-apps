@@ -31,7 +31,14 @@ extension PhoneJourney {
             XCTAssertEqual(composer.frame.minY, before.minY, accuracy: 1, "Scrolling a card does not move the message box")
             XCTAssertEqual(composer.frame.width, before.width, accuracy: 1, "Scrolling a card does not narrow the message box")
             verifyPhoneComposerBounds(app: app)
-            try await appearances("card-scrolled", showing: app.buttons["put-aside-card"])
+            // INF-3460: the card arrives with its body drawn, so the swipe scrolls its head, and the minus with it, off the
+            // top; the message box is what this picture is about and stays on the screen.
+            try await appearances("card-scrolled", showing: composer)
+            // The steps below start from the card's top, as it stood before this swipe.
+            let scroller = app.scrollViews["card-scroll"]
+            scroller.swipeDown()
+            XCTAssertTrue(app.buttons["put-aside-card"].waitForPresence(timeout: 10))
+            _ = waitForRedraw(app.buttons["put-aside-card"], from: nil)
         }
         let pictureElement = app.webViews.images["Blue harbour survey"].firstMatch
         XCTAssertTrue(pictureElement.waitForPresence(timeout: 10))

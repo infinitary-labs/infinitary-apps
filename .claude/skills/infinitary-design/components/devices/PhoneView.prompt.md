@@ -73,7 +73,8 @@ The count opens a menu of the current titles; the next chevron carries a dot whi
 With no card to page the pager hides; a card put aside waits in Tasks, and its row there brings it back.
 Home carries a dot in the strip while a card is not yet read, and VoiceOver hears the count.
 The peek stays within the shorter of the foreground card and its scrolling viewport, never filling the empty space beneath a short card or reaching the pager.
-A sideways swipe anywhere on the card moves the row with the finger, every card leaning up to 3 degrees about its own foot; past 35% of the width or a quick flick it slides to the next card (swiping left brings the one after), and anything less glides back on the glide ease with no overshoot.
+A sideways swipe anywhere on the card moves the row with the finger, the dragged card leaning up to 3 degrees about its own foot and the others two thirds as far; past 35% of the width or a quick flick it slides to the next card (swiping left brings the one after), and anything less glides back.
+On release the row carries on from the finger's speed on a spring with no bounce that settles over `--dur-page` and never overshoots, and the card it brings arrives with its body already drawn.
 A swipe that starts on the body's own slider, canvas, dragged drawing or sideways scroller stays the body's, a mostly vertical drag scrolls, two fingers never swipe, and while the keyboard is up only the chevrons change cards.
 The chevrons slide the row one card as a swipe does; under reduced motion the row stays still, the card dims toward a chevron at the side it heads to, and the next card fades in over `--dur-fade`.
 The card stage fits the shell's available column, up to 560 logical points, and owns neither navigation nor the computer-details sheet; on an iPad the card's head can maximize it to the stage's whole width.

@@ -161,7 +161,9 @@ describe("programs (INF-799 piece 2)", () => {
     const finder = await h.part(0);
     expect(finder).toMatchObject({
       parentId: h.program.id,
-      title: "Find where the meter renders a result.",
+      // Captain's program naming fix: the label is the title, not the instructions.
+      title: "find",
+      intent: { goal: "Find where the meter renders a result." },
     });
     expect(finder.shape).toMatchObject({ internal_step: true, result_schema: FILES });
     // The part carries the captain's words and is told how a part ships.
@@ -179,6 +181,12 @@ describe("programs (INF-799 piece 2)", () => {
     // Both capping parts run at once, each waiting on the finder's result.
     const meter = await h.part(1);
     const gauge = await h.part(2);
+    // Unlabelled calls keep the runner's default names, not their prompts.
+    expect([meter.title, gauge.title]).toEqual(["part 2", "part 3"]);
+    expect(h.events).toContainEqual({
+      type: "firstmate_note",
+      text: `The program "${h.program.title}" (${h.program.key}) filed part ${finder.key}: "${finder.title}".`,
+    });
     expect(h.tasks.graph.blockers(meter.id).map((row) => row.id)).toEqual([finder.id]);
     await h.report(2, "Capped src/gauge.ts at 4 KiB.");
     await h.report(1, "Capped src/meter.ts at 4 KiB.");
@@ -390,7 +398,7 @@ describe("programs (INF-799 piece 2)", () => {
     expect(h.tasks.get(h.program.id)?.status).toBe("open");
     // Still running: the captain starts the held part, and its answer ends the script.
     expect(await h.supervisor.starts.startQueuedNow(part.key)).toContain(
-      `${part.key} "Cap the meter." is starting.`,
+      `${part.key} "${part.title}" is starting.`,
     );
     await vi.waitFor(() => expect(h.tasks.get(part.id)?.status).toBe("active"), PROGRAM_WAIT);
     // The failed open took the first crewmate spec; the started crewmate's is the last.

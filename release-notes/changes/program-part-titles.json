@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "program-part-titles",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Program parts keep their own names",
+      "body": "New parts of a program use their labels as task names instead of the opening line of their instructions. Their full instructions stay in the goal.",
+      "picture": {
+        "dark": "program-part-titles-dark.webp",
+        "light": "program-part-titles-light.webp",
+        "alt": "A completed program part named find, with its full instructions shown separately under Goal."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

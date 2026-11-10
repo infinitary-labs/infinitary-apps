@@ -35,7 +35,8 @@ A program task stays open, on the graph like any task, and starts at once when i
 The script's host functions use Infinitary's own names; a Claude workflow script is not promised to run unchanged.
 
 - `task(prompt, {label, schema, from, after, intelligence})` files one part and resolves to its answer: its checked result when `schema` declared a result shape, its report text when not, or `null` when the part was dropped.
-  `label` names the part (default `part N`); `from` names an earlier part whose last commit its working copy starts at, and `null` or no `from` starts at the default branch, so a chain's first call may pass its empty `previous`; `after` names earlier parts whose results it builds on, each a `blocks` link.
+  `label` names the part (default `part N`) and supplies its task title, shortened to the existing title length; the full prompt stays its goal.
+  `from` names an earlier part whose last commit its working copy starts at, and `null` or no `from` starts at the default branch, so a chain's first call may pass its empty `previous`; `after` names earlier parts whose results it builds on, each a `blocks` link.
   `from` and `after` may name a call that is still waiting for a free slot or the bound; the link is made when that call's part is filed, and a call naming one that was refused is refused too.
   `intelligence` optionally requests `low`, `medium`, `high` or `premium` for this part (INF-974); an invalid value refuses the call before filing anything.
   Omission preserves kind-based routing, and the choice is part of the replay digest; calls from older scripts without it retain their digest.

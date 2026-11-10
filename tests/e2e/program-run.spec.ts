@@ -88,7 +88,10 @@ test("a crewmate's program files its parts as child tasks, hands each result on,
     // finder first and both parts after it on its result.
     await expect.poll(() => tasks.get(programId)?.status, { timeout: 90_000 }).toBe("done");
     const parts = tasks.graph.children(programId);
-    const finder = parts.find((part) => part.title === FIND_PROMPT);
+    const finder = parts.find((part) => part.shape?.program_part?.label === "find");
+    // Captain's program naming fix: the label names the saved task; instructions stay its goal.
+    expect(finder?.title).toBe(finder?.shape?.program_part?.label);
+    expect(finder?.intent?.goal).toBe(FIND_PROMPT);
     expect(finder?.shape).toMatchObject({ internal_step: true, program_part: { call: 0 } });
     // INF-974: the running app persists the script's choice and routes with it.
     expect(finder?.shape?.program_part?.intelligence).toBe(FIND_INTELLIGENCE);
@@ -97,7 +100,9 @@ test("a crewmate's program files its parts as child tasks, hands each result on,
       bucket: FIND_INTELLIGENCE,
     });
     expect(tasks.latestResult(finder?.id ?? "")?.value).toEqual({ files: FILES });
-    const caps = FILES.map((file) => parts.find((part) => part.title === `${CAP_PROMPT} ${file}.`));
+    const caps = FILES.map((file) =>
+      parts.find((part) => part.intent?.goal === `${CAP_PROMPT} ${file}.`),
+    );
     for (const part of caps) {
       expect(part?.status).toBe("done");
       expect(part?.shape?.program_part?.intelligence).toBe(CAP_INTELLIGENCE);
@@ -122,6 +127,8 @@ test("a crewmate's program files its parts as child tasks, hands each result on,
         status: tasks.get(programId)?.status,
         result: tasks.latestResult(programId)?.value,
         parts: parts.map((part) => ({
+          title: part.title,
+          goal: part.intent?.goal,
           label: part.shape?.program_part?.label,
           intelligence: part.shape?.program_part?.intelligence,
           status: part.status,

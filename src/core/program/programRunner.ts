@@ -715,7 +715,7 @@ export class CrewPrograms {
       },
       intent,
     );
-    const title = (part.prompt.trim().split("\n")[0] ?? part.label).slice(0, 64);
+    const title = part.label.slice(0, 64);
     const record = this.options.tasks.create({
       id: randomUUID().slice(0, 8),
       kind: "work",

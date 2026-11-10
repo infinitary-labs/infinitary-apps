@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "closed-task-browser-stays-stopped",
+      "kind": "fix",
+      "title": "A closed task's browser stays stopped",
+      "body": "A task's browser that was stopped before the task finished or was dropped can no longer be opened again after the task closes, the same as a browser still open at the close.",
+      "area": "tasks",
+      "noPicture": "The change only shows as Open again missing from a stopped browser after its task closes, a rare state that one picture cannot tell apart from any closed task's browser.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

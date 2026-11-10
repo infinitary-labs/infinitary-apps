@@ -1,4 +1,5 @@
 import type { FmEvent } from "@shared/events";
+import { canOpenAgain } from "@shared/taskBrowser";
 import { AxiChannel } from "../axi/channel";
 import type { DevicePairing } from "../devices/pairing";
 import type { HostCapabilities } from "../host";
@@ -90,7 +91,7 @@ export async function openTaskChannel(options: {
   /** The inbox, whose person key the channel admits for the inbox command alone. */
   inbox: Pick<Inbox, "serve">;
   /** The task browsers, which go with their tasks. */
-  browsers: HomeBrowsers | undefined;
+  browsers: Pick<HomeBrowsers, "fact" | "closeTask"> | undefined;
 }): Promise<AxiChannel | undefined> {
   const { host, tasks, browsers } = options;
   const taskCommands = host.axiProcess
@@ -123,12 +124,16 @@ export async function openTaskChannel(options: {
         taskCommands?.revoke(taskId);
       }
       for (const taskId of change.taskIds) {
-        if (!browsers?.isOpen(taskId) && !taskCommands?.granted(taskId)) continue;
+        // A browser stopped before the close still has a page Open again would
+        // start, so its close is heard too; only one the close already ended is not.
+        const fact = browsers?.fact(taskId);
+        const browserLive = fact !== undefined && (fact.state === "open" || canOpenAgain(fact));
+        if (!browserLive && !taskCommands?.granted(taskId)) continue;
         const status = tasks.get(taskId)?.status;
         if (status !== "done" && status !== "dropped") continue;
         // A closed task's key answers nothing more, whatever its browser did.
         taskCommands?.revoke(taskId);
-        if (browsers?.isOpen(taskId)) browsers.closeTask(taskId);
+        if (browserLive) browsers?.closeTask(taskId);
       }
     });
   }

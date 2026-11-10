@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-card-form-swipe-back",
+      "reason": "Test-only repair of the phone card form journey: its swipe back travels a share of the card's width and waits for the row to settle, with no app behavior change."
+    }
+  ]
+}

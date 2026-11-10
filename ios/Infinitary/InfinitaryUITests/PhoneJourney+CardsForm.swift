@@ -25,6 +25,17 @@ extension PhoneJourney {
         return found ?? (.null, .zero)
     }
 
+    /// INF-3400: a swipe has turned the row once the pager has moved and the only card title left is the one it brought;
+    /// while the row moves, the card beside the shown one is built and its title matches too.
+    private func settleOn(_ title: String, leaving place: String, pager: XCUIElement) {
+        let titles = app.staticTexts.matching(identifier: "card-title")
+        let settled = NSPredicate { _, _ in
+            pager.label != place && titles.count == 1 && titles.firstMatch.label == title
+        }
+        XCTAssertEqual(waitForPhonePredicate(settled, object: nil, timeout: 10), .completed,
+                       "The row never settled on \(title) from \(place): pager \(pager.label)\n\(app.debugDescription)")
+    }
+
     private func verifyCardForm() async throws {
         let fixture = try await home("cards-fixture")
         let choice = try XCTUnwrap(fixture["choice"] as? String)
@@ -83,17 +94,22 @@ extension PhoneJourney {
         showCard(chart); showCard(choice)
         // INF-3110: a sideways swipe anywhere on the card changes cards, the head's and the body's alike; swiping left
         // brings the next card and right the one before.
+        let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
+        let first = pager.label
         app.staticTexts["card-title"].swipeLeft()
-        XCTAssertTrue(cardHeading(chart).waitForPresence(timeout: 10))
+        settleOn(chart, leaving: first, pager: pager)
         waitForShownBodyRevealed()
         // The swipe starts inside the body, near its top, which shows under the head whatever the body's length.
-        let inBody = app.webViews.matching(identifier: "card-body").firstMatch
-            .coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0)).withOffset(CGVector(dx: 0, dy: 24))
-        inBody.press(forDuration: 0.05, thenDragTo: inBody.withOffset(CGVector(dx: 220, dy: 0)), withVelocity: .fast, thenHoldForDuration: 0)
-        XCTAssertTrue(cardHeading(choice).waitForPresence(timeout: 10))
+        // INF-3400: it travels to the body's far side, a share of the card's own width, so it slides on by distance on an
+        // iPad's full-width card as on an iPhone's, never only by a flick a busy runner may measure as slow.
+        let body = app.webViews.matching(identifier: "card-body").firstMatch
+        let inBody = body.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0)).withOffset(CGVector(dx: 0, dy: 24))
+        let farSide = body.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0)).withOffset(CGVector(dx: 0, dy: 24))
+        let second = pager.label
+        inBody.press(forDuration: 0.05, thenDragTo: farSide, withVelocity: .fast, thenHoldForDuration: 0)
+        settleOn(choice, leaving: second, pager: pager)
         waitForShownBodyRevealed()
         picture("card-row")
-        let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
         let place = pager.label
         // A drag that starts on the body's own slider moves the slider and never the card.
         // The swipe back builds the card it brings anew, and its body's controls reach accessibility after its first words.
@@ -118,7 +134,6 @@ extension PhoneJourney {
         // snapshot the moment the text appears; before the fix it appeared while the body was its 48-point placeholder.
         // INF-1651: iOS 27.0 first reports the text's frame relative to the web view, so where the text sits is read
         // once it settles.
-        let body = app.webViews.matching(identifier: "card-body").firstMatch
         let shown = firstShown("North Basin", in: body)
         let north = app.webViews.staticTexts["North Basin"].firstMatch
         let settled = NSPredicate { _, _ in body.frame.contains(north.frame) }

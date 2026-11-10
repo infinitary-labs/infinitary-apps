@@ -20,6 +20,16 @@ import type { KindWords, WakeKeyedTask, WakeTask } from "./wakes";
 /** The facts of a report, a review and a requested response. */
 export type ReportFacts =
   | {
+      /** Host-owned delivery between a review and its builder, through the durable task lane. */
+      kind: "review-handoff";
+      from: string;
+      head: string;
+      stage: "fix" | "proof" | "ship" | "reread";
+      excerpt: string;
+      findings?: string[];
+      history?: ReviewHistoryEntry[];
+    }
+  | {
       kind: "requested-response";
       requestId: string;
       responseId: string;
@@ -121,34 +131,7 @@ export type ReportFacts =
       crewmate: string;
       excerpt: string;
     }
-  | ReviewVerdictFacts
-  | {
-      /** A review passed: its task closed and the builder's hold released. */
-      kind: "review-passed";
-      /** The builder, which the next move is on. */
-      task: WakeTask;
-      /** The closed review task's key. */
-      reviewKey: string;
-      crewmate: string;
-      /** The head it passed at; absent when none was recorded. */
-      head?: string;
-      risk?: string;
-      riskNote?: string;
-      excerpt: string;
-      /** The builder's live proof at that head, when it planned scenarios (INF-2672). */
-      proof?: WakeProof;
-    };
-
-/** A Careful builder's live proof at a passed head, as typed facts (INF-2672). */
-export type WakeProof = {
-  accepted: boolean;
-  /** Why it is or is not accepted, as the acceptance rule says. */
-  reason: string;
-  /** The latest proof run, absent when none has run. */
-  run?: { head: string; revision: number; verdict: string };
-  /** Whether this review judged that run. */
-  read: boolean;
-};
+  | ReviewVerdictFacts;
 
 export const REQUESTED_RESPONSE_OPENING = "[fm-op] Requested crewmate response: ";
 export const RESPONSE_MISSING_OPENING = "[fm-op] Missing crewmate response: ";
@@ -206,29 +189,17 @@ export type ReviewVerdictFacts = {
  * since a review happens at any care and no brief carries the rules.
  */
 export const REVIEWER_IDLE_NEXT =
-  "Steer a reviewer only to re-review at a new head, evidence revision or validation state its builder reports (including a captain-granted gap exception or a new effect request) - an idle reviewer needs no stand-by and no status.";
+  "The host returns changed heads, evidence revisions and validation state directly to the reviewer. Do not repeat that handoff; an idle reviewer needs no stand-by and no status.";
 
 /** What a findings or blocked verdict asks of the Firstmate next. */
 export function reviewFindingsNext(): string {
-  const relay = `Steer the builder with every auto-fix finding verbatim, prefixed with - ${REVIEW_FIX_RULES}.`;
+  const relay = "The host owns auto-fix handoffs to the builder. Do not relay findings again.";
   return `${relay} Info findings never block and need no steer. Decide an ask-user finding yourself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, with the step you would take as its default. Pass review_task_id naming this review. Start the title with Review of the builder's key; name the change in the first line. For each finding, show its number, severity, file and reviewed version above the reviewer's verbatim words. ${REVIEWER_IDLE_NEXT}`;
 }
 
 /** What a builder's report asks of its open review, which last returned findings or blocked. */
 export const REVIEW_NEW_HEAD_NEXT =
-  "When this report brings a new head, evidence revision or validation state (including a captain-granted gap exception or a new effect request), steer that reviewer to re-review those exact facts. The app writes what was decided so far, the captain's answers included, into every reviewer turn, so never retype declined findings into the steer. Never steer the reviewer otherwise - an idle reviewer needs no stand-by and no status.";
-
-/** What a passed review asks of the Firstmate next. */
-export const REVIEW_PASSED_NEXT =
-  "Steer the builder to push, open the PR and drive CI green; its PR report is then handled like any other.";
-
-/**
- * What a code pass asks next while the builder's live proof is not accepted
- * at that head (INF-2672): proof runs once after the code passes, and one
- * proof read judges it before the push.
- */
-export const REVIEW_PROOF_NEXT =
-  "The code passed; live proof runs once now, after it. When no proof run is recorded at or since this head, steer the builder to run its live proof once and report the run, without pushing. When the builder reports that run, start the proof read with spawn_crewmate review_of naming the builder and the user's words: that reviewer reads only the proof and anything changed since this pass. When this review already read the run and found it failed or short, steer the builder to repair: a repair gets a review of its own difference and reruns only the proof it reaches. When the only proof missing runs on a pushed branch, steer the builder to push, open the PR and finish that proof beside the checks before its merge card.";
+  "The host owns routine re-review handoffs. Read this report for its decision or blocker, not to repeat a handoff. Never retype declined findings: the review history carries the captain's latest decisions.";
 
 /** A builder's open review whose last verdict asks for a re-review at a new head. */
 export type WakeOpenReview = {
@@ -257,14 +228,6 @@ export const FINISHED_REPORT_WORDS = "It declared its work finished";
  */
 export function renderReviewVerdict(facts: ReviewVerdictFacts, next = true): string {
   return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}" - the review of task ${facts.builder.id} "${facts.builder.title}" - with verdict ${facts.verdict}: ${facts.excerpt}${facts.findings?.length ? `\nFindings:\n${facts.findings.map((line) => `- ${line}`).join("\n")}` : ""}${facts.history?.length ? `\n${renderReviewHistory(facts.history)}\n` : ""}${cardsText(facts.cards)}${next ? ` ${reviewFindingsNext()}` : ""}`;
-}
-
-/** A passed review's live-proof facts, worded (INF-2672). */
-function proofText(proof: WakeProof): string {
-  const run = proof.run
-    ? ` Latest proof run: revision ${proof.run.revision} at ${proof.run.head.slice(0, 7)}, verdict ${proof.run.verdict}, ${proof.read ? "read by this review" : "not read by this review"}.`
-    : " No proof run is recorded yet.";
-  return ` Live proof at this head: ${proof.accepted ? "accepted" : "not accepted"} - ${proof.reason}${run}`;
 }
 
 /** A builder report's pass at an earlier version, which does not cover the one on offer. */
@@ -421,8 +384,20 @@ function withdrawnText(withdrawn: WakeWithdrawn[] | undefined): string {
   return ` It withdrew its own ${one ? "decision" : "decisions"} ${named} this turn; the captain chose none of ${one ? "its" : "their"} actions.`;
 }
 
+export const REVIEW_HANDOFF_NEXT = {
+  fix: `${REVIEW_FIX_RULES}. Repair only the auto-fix findings in this handoff. The captain's latest decisions in the history govern. Commit and report the fix without pushing; the host returns a changed head, evidence revision or validation state directly to your reviewer. Do not ask the first mate to relay it. Escalate only a decision or a handoff you cannot complete.`,
+  proof:
+    "The code passed. Run live proof once after this code review, then report without pushing. The host returns the proof to this reviewer. If this reviewer already read it and found it short, repair the reported gap and rerun only affected proof. If the only missing proof requires a pushed branch, push and finish it beside the checks before the merge card. Resource consent and every captain decision still apply.",
+  ship: "The review passed. Follow your brief's delivery for the reviewed version, then show its completion card. A local-only change needs no push or pull request. Do not bring it up to date merely because the default branch moved. Passing review grants no merge consent.",
+  reread:
+    "Read the builder's changed head, evidence revision or validation state assigned to this turn. A code pass already recorded at this head makes this a proof read only. Read only the difference after an earlier code pass. The review history carries the captain's latest decisions. Report your typed review; the host delivers it directly to the builder. Escalate only a decision or a handoff you cannot complete.",
+} as const;
+
 /** A report, a review and a requested response, worded. */
 export const REPORT_WORDS: KindWords<ReportFacts> = {
+  "review-handoff": (facts) => {
+    return `Host handoff from ${facts.from} at ${facts.head}: ${facts.excerpt}${facts.findings?.length ? `\nAuto-fix findings:\n${facts.findings.map((line) => `- ${line}`).join("\n")}` : ""}${facts.history?.length ? `\n${renderReviewHistory(facts.history)}\n` : ""}\n${REVIEW_HANDOFF_NEXT[facts.stage]}`;
+  },
   "requested-response": (facts) =>
     `${REQUESTED_RESPONSE_OPENING}${facts.responseId} to request ${facts.requestId} for task ${facts.taskId}, submitted by task ${facts.contributorTask} (${facts.status}). Request: ${facts.question}\nResponse: ${facts.excerpt}\nThis is a saved response, independent of later reports and continuing work. Handling acknowledges delivery, not correctness. Answer the captain on the original card when this request concerns their question.`,
   "response-missing": (facts) =>
@@ -434,10 +409,4 @@ export const REPORT_WORDS: KindWords<ReportFacts> = {
   "review-unstated": (facts) =>
     `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}" - the review of task ${facts.builder.id} "${facts.builder.title}" - with no typed review record, so no verdict was recorded: ${facts.excerpt} ${REVIEWER_IDLE_NEXT}`,
   "review-verdict": (facts) => renderReviewVerdict(facts),
-  "review-passed": (facts) => {
-    const risk = facts.risk
-      ? `risk ${facts.risk}${facts.riskNote ? `: ${facts.riskNote}` : ""}`
-      : "risk unstated";
-    return `[fm-op] the review of task ${facts.task.id} "${facts.task.title}" passed at ${facts.head ? facts.head.slice(0, 7) : "an unrecorded head"} (${risk}); review task ${facts.reviewKey} is closed. ${facts.crewmate}'s report: ${facts.excerpt}${facts.proof ? proofText(facts.proof) : ""} ${facts.proof && !facts.proof.accepted ? REVIEW_PROOF_NEXT : REVIEW_PASSED_NEXT}`;
-  },
 };

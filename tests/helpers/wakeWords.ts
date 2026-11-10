@@ -48,7 +48,6 @@ export type FirstmateWakeKind =
   | "review-orphan"
   | "review-unstated"
   | "review-verdict"
-  | "review-passed"
   | "task-failed"
   | "settled"
   | "answer-closed"

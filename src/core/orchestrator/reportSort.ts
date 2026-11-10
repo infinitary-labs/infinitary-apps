@@ -253,12 +253,11 @@ export type Witnesses = {
    */
   waitsOnUnderway?: boolean;
   /**
-   * A review the host raised on the task is still live - a delivery child
-   * (`TaskService.isDeliveryChild`, INF-1876). The idle ladder alone reads
-   * it: its builder waits on that verdict or close, which reach it through
-   * the Firstmate, so nothing nudges it while the reviewer reads. The
-   * report's sort reads a findings verdict as `reviewReread` instead, and a
-   * report while the reviewer still reads sorts as any other.
+   * A delivery child (`TaskService.isDeliveryChild`, INF-1876) still has
+   * work to run. The idle ladder alone reads it: an idle retained reader
+   * does not count as moving work for the builder. The host delivers
+   * routine verdicts and new facts directly; reports without a handoff
+   * still take the ordinary sort.
    */
   reviewOpen?: boolean;
   /**
@@ -287,10 +286,10 @@ export type ReportSortFacts = Witnesses & {
    */
   waitedOn?: boolean;
   /**
-   * The task's open review last returned findings or blocked and waits for
-   * the next head, evidence revision or validation state its builder
-   * reports (`CrewSupervisor.reviewToReread`, INF-1876): only the Firstmate
-   * steers the reviewer.
+   * The task's open review last returned findings or blocked, and the
+   * report made no handoff (`CrewSupervisor.reviewToReread`, INF-1876).
+   * The first mate reads it for a blocker or decision; routine re-review
+   * delivery belongs to the host.
    */
   reviewReread?: boolean;
   /**
@@ -362,7 +361,7 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
       verdict: "captain",
       wake: true,
       reason:
-        "its open review returned findings and waits for what this report brings; the first mate steers the reviewer.",
+        "its open review returned findings, but this report made no handoff; the first mate reads it for a blocker or decision.",
     };
   }
   if (facts.answerReady || facts.decisionCardOpen || facts.finishedCardUp) {

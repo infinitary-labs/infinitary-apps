@@ -1,11 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { renderRigorSection } from "../../src/core/orchestrator/intentBrief";
-import {
-  openReviewText,
-  REVIEW_PASSED_NEXT,
-  reviewFindingsNext,
-} from "../../src/core/orchestrator/reportWakes";
+import { REVIEW_HANDOFF_NEXT, reviewFindingsNext } from "../../src/core/orchestrator/reportWakes";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskRecords";
@@ -17,7 +13,6 @@ import {
   REVIEW_FINDING_LABEL,
 } from "../../src/shared/cards";
 import { reportSummary } from "../../src/shared/feed";
-import { validationStateRevision } from "../../src/shared/liveValidation";
 import type { TaskView } from "../../src/shared/tasks";
 import { CARE_WORDS, CHECK_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -43,7 +38,7 @@ import {
   MOCK_REVIEW_KEEP_LABEL,
   MOCK_REVIEW_KEEP_STEER,
   MOCK_REVIEW_PASS_RISK,
-  MOCK_REVIEW_REFIX_STEER,
+  MOCK_REVIEW_REFINDING,
   MOCK_REVIEWED_BUILDER_REPORT,
   MOCK_REVIEWED_CARD_TITLE,
   MOCK_REVIEWED_CHANGE,
@@ -53,7 +48,6 @@ import {
   MOCK_REVIEWED_READ_WORDS,
   MOCK_REVIEWED_REFIX_REPORT,
   MOCK_REVIEWED_RETRY_REPORT,
-  REREVIEW_PROMPT_MARKER,
   REVIEW_BRIEF_MARKER,
   reviewedTier,
 } from "./scenarios/reviewedTier";
@@ -72,7 +66,7 @@ import { setThemeViaSettings } from "./theme";
  * a recorded head that has fallen behind); the Firstmate checks CI and spawns the reviewer
  * with `review_of`; the host briefs the reviewer read-only and holds
  * nothing on the builder for it (INF-1876); the reviewer's findings reach
- * the Firstmate directly (never supervision) and become one steer and one
+ * the builder directly from the host, while ask-user findings become one
  * decision card; repeated re-reviews return findings without a host round
  * allowance; a later re-review passes, which closes the review task and is
  * one feed line; the completion card shows the review, says its merge leaves
@@ -307,16 +301,13 @@ test("a reviewed task's review passes before its completion card, which merges w
   }
   await setThemeViaSettings(page, "dark");
 
-  // INF-203 F2: the wake now carries validation state as well as code and evidence.
-  // Read those facts from their owner and derive the complete wording, rather than pinning a fragment.
-  const firstReviewState = readSavedData(userDataDir, (db) => {
-    const stored = new TaskStore(db);
-    return {
-      assignment: stored.get(review.id)?.delivery?.validationAssignment,
-      current: validationStateRevision(stored.get(builder.id)?.delivery?.liveValidation),
-    };
-  });
-  expect(firstReviewState.assignment).toBeDefined();
+  // The same typed assignment that replaces the relay is still bound to
+  // the real initial commit and the proof revision the builder recorded.
+  const initialAssignment = readSavedData(
+    userDataDir,
+    (db) => new TaskStore(db).get(review.id)?.delivery?.validationAssignment,
+  );
+  expect(initialAssignment).toMatchObject({ head: HEAD_SHA, revision: initialProofRevision });
 
   // 5. No hold: the review holds nothing on the builder (INF-1876), so the
   //    task waits on nothing while the review is open, and nothing was
@@ -340,8 +331,6 @@ test("a reviewed task's review passes before its completion card, which merges w
       ).toBeVisible({ timeout: 30000 });
     const head = pushFix(builderBranch, subject);
     await builderReads(builder.id, head);
-    await input.fill(REREVIEW_PROMPT_MARKER);
-    await input.press("Enter");
     await expect.poll(detail, { timeout: 30000 }).toMatchObject({
       delivery: expect.objectContaining({ reviewSha: head, reviewVerdict: "findings" }),
     });
@@ -353,9 +342,6 @@ test("a reviewed task's review passes before its completion card, which merges w
   //    the hold, and is one feed line - the builder's own.
   const FINAL_SHA = pushFix(builderBranch, "fix: finish the meter review");
   await builderReads(builder.id, FINAL_SHA);
-  await input.click();
-  await input.fill(REREVIEW_PROMPT_MARKER);
-  await input.press("Enter");
   // The pass is the builder's review line carrying the risk it recorded;
   // the findings rounds' lines carry none.
   await expect(
@@ -470,13 +456,12 @@ test("a reviewed task's review passes before its completion card, which merges w
       body.includes(REVIEWED_TIER_PROMPT_MARKER),
   );
   expect(builderBodies.some((body) => body.includes(MOCK_REVIEW_AUTOFIX_FINDING))).toBe(true);
-  expect(builderBodies.some((body) => body.includes(MOCK_REVIEW_REFIX_STEER))).toBe(true);
+  expect(builderBodies.some((body) => body.includes(MOCK_REVIEW_REFINDING))).toBe(true);
   expect(builderBodies.some((body) => body.includes(MOCK_REVIEW_KEEP_STEER))).toBe(true);
   expect(builderBodies.some((body) => body.includes(MOCK_CAP_RETRY_STEER))).toBe(false);
 
-  // Each later step of the review reached the Firstmate on the wake it
-  // arises on (FI3-566 cut C), and the builder's brief holds the fix rules
-  // the relayed findings are fixed by. Their words are wakes.test.ts's.
+  // Session audit finding E: decisions reach the first mate; the passed
+  // review reaches the builder directly without a relay.
   expect(
     builderBodies.some((body) =>
       providerMessages(body).some(
@@ -493,27 +478,10 @@ test("a reviewed task's review passes before its completion card, which merges w
         wake.endsWith(reviewFindingsNext()),
     ),
   ).toBe(true);
+  expect(builderBodies.some((body) => body.includes(REVIEW_HANDOFF_NEXT.ship))).toBe(true);
   expect(
     wakes.some(
-      (wake) =>
-        wake.includes(`reported on task ${builder.id}`) &&
-        wake.endsWith(
-          openReviewText({
-            key: review.key,
-            verdict: "findings",
-            head: HEAD_SHA,
-            evidenceRevision: initialProofRevision,
-            currentEvidenceRevision: initialProofRevision,
-            stateRevision: firstReviewState.assignment?.stateRevision,
-            currentStateRevision: firstReviewState.current,
-          }),
-        ),
+      (wake) => wake.includes(`the review of task ${builder.id}`) && wake.includes("passed at"),
     ),
-  ).toBe(true);
-  expect(
-    wakes.some(
-      (wake) =>
-        wake.includes(`the review of task ${builder.id}`) && wake.endsWith(REVIEW_PASSED_NEXT),
-    ),
-  ).toBe(true);
+  ).toBe(false);
 });

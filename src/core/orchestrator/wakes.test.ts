@@ -20,8 +20,8 @@ import { REVIEW_FIX_RULES, renderRigorSection } from "./intentBrief";
 import { jobBoundWake } from "./jobWakes";
 import { providerBackWake, providerCutOffWake, stillDownWake } from "./outageWakes";
 import {
+  REVIEW_HANDOFF_NEXT,
   REVIEW_NEW_HEAD_NEXT,
-  REVIEW_PASSED_NEXT,
   REVIEWER_IDLE_NEXT,
   reviewFindingsNext,
   STALL_RECOVERY_GUIDANCE,
@@ -497,14 +497,12 @@ describe("renderWake", () => {
         },
       }),
     ).toContain(
-      "with verdict findings: Two findings.\nFindings:\n- F1 error src/x.ts:12 racy - auto-fix\n- F2 warning src/y.ts:40 copy - ask-user Steer the builder with every auto-fix finding verbatim",
+      "with verdict findings: Two findings.\nFindings:\n- F1 error src/x.ts:12 racy - auto-fix\n- F2 warning src/y.ts:40 copy - ask-user The host owns auto-fix handoffs to the builder.",
     );
     expect(renderRigorSection("reviewed")).not.toContain(REVIEW_FIX_RULES);
     expect(verdict({ verdict: "blocked" }).endsWith(reviewFindingsNext())).toBe(true);
     // No brief carries the rules any more: every findings steer does.
-    expect(reviewFindingsNext()).toContain(
-      `Steer the builder with every auto-fix finding verbatim, prefixed with - ${REVIEW_FIX_RULES}.`,
-    );
+    expect(reviewFindingsNext()).toContain("The host owns auto-fix handoffs to the builder.");
     // A builder's report names its open review and the re-review a new head asks for.
     const report = (open?: { key: string; verdict: "findings" | "blocked"; head?: string }) =>
       renderWake({
@@ -521,7 +519,7 @@ describe("renderWake", () => {
     expect(report({ key: "FI3-9", verdict: "findings", head: "0123456789ab" })).toContain(
       `Its open review FI3-9 last returned findings at 0123456. ${REVIEW_NEW_HEAD_NEXT}`,
     );
-    expect(REVIEW_NEW_HEAD_NEXT).toContain("steer that reviewer to re-review those exact facts.");
+    expect(REVIEW_NEW_HEAD_NEXT).toContain("not to repeat a handoff.");
     expect(report({ key: "FI3-9", verdict: "blocked" })).toContain(
       "Its open review FI3-9 last returned blocked at an unrecorded head.",
     );
@@ -540,24 +538,20 @@ describe("renderWake", () => {
       }),
     ).toContain(`so no verdict was recorded: Standing by. ${REVIEWER_IDLE_NEXT}`);
     expect(REVIEWER_IDLE_NEXT).toContain("an idle reviewer needs no stand-by and no status.");
-    // A pass sends the builder to push, open its PR and drive CI green.
+    // Finding E and F7: the pass goes to the builder, with its own delivery.
     expect(
       renderWake({
         facts: {
-          kind: "review-passed",
-          task,
-          reviewKey: "FI3-9",
-          crewmate: "crewmate 2",
+          kind: "review-handoff",
+          from: "FI3-9",
           head: "0123456789ab",
-          risk: "low",
+          stage: "ship",
           excerpt: "verdict: pass",
         },
       }),
-    ).toContain(
-      `passed at 0123456 (risk low); review task FI3-9 is closed. crewmate 2's report: verdict: pass ${REVIEW_PASSED_NEXT}`,
-    );
-    expect(REVIEW_PASSED_NEXT).toContain(
-      "Steer the builder to push, open the PR and drive CI green;",
+    ).toBe(`Host handoff from FI3-9 at 0123456789ab: verdict: pass\n${REVIEW_HANDOFF_NEXT.ship}`);
+    expect(REVIEW_HANDOFF_NEXT.ship).toContain(
+      "A local-only change needs no push or pull request.",
     );
   });
 

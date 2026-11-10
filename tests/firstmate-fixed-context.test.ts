@@ -142,6 +142,15 @@ const verdictFacts = (): WakeFacts => ({
 /** The wakes a ledger rule lives on, as the host serves them (FI3-566 cut C, INF-490). */
 const WAKES = {
   findings: verdictFacts(),
+  // Session audit finding E: the fixer preamble now reaches the builder directly.
+  "builder findings": {
+    kind: "review-handoff",
+    from: REVIEW.id,
+    head: "0123456789abcdef0123456789abcdef01234567",
+    stage: "fix",
+    excerpt: "The read races its flush.",
+    findings: ["F1 error await the flush - auto-fix"],
+  },
   "builder report": {
     kind: "report",
     task: BUILDER,
@@ -159,10 +168,10 @@ const WAKES = {
     excerpt: "Standing by.",
   },
   pass: {
-    kind: "review-passed",
-    task: BUILDER,
-    reviewKey: "FI3-9",
-    crewmate: "crewmate 2",
+    kind: "review-handoff",
+    from: "FI3-9",
+    head: "0123456789abcdef0123456789abcdef01234567",
+    stage: "ship",
     excerpt: "verdict: pass",
   },
   // INF-490: the wakes that carry what the core no longer repeats.
@@ -215,8 +224,8 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   },
   {
     rule: "every auto-fix finding reaches the builder verbatim, with the fixer preamble",
-    home: { wake: "findings" },
-    says: "Steer the builder with every auto-fix finding verbatim, prefixed with - double-check each finding is legitimate before changing code, identify all sibling sites of the broken invariant, repair the whole defect class with one small correction rather than new machinery, retrace normal callers, never resolve a finding by reverting the author's intentional change, never implement a finding the captain declined or undo a fix the captain chose merely to satisfy an earlier goal, and verify each is resolved.",
+    home: { wake: "builder findings" },
+    says: "double-check each finding is legitimate before changing code, identify all sibling sites of the broken invariant, repair the whole defect class with one small correction rather than new machinery, retrace normal callers, never resolve a finding by reverting the author's intentional change, never implement a finding the captain declined or undo a fix the captain chose merely to satisfy an earlier goal, and verify each is resolved.",
   },
   {
     rule: "info findings never block",
@@ -240,14 +249,14 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     says: "an idle reviewer needs no stand-by and no status",
   },
   {
-    rule: "a reviewer is steered only for a re-review at a new head",
+    rule: "the host owns routine re-review handoffs",
     home: { wake: "builder report" },
-    says: "Never steer the reviewer otherwise - an idle reviewer needs no stand-by and no status.",
+    says: "The host owns routine re-review handoffs.",
   },
   {
-    rule: "after a pass the builder pushes, opens its PR and drives CI green",
+    rule: "after a pass the builder follows its brief's delivery",
     home: { wake: "pass" },
-    says: "Steer the builder to push, open the PR and drive CI green; its PR report is then handled like any other.",
+    says: "Follow your brief's delivery for the reviewed version, then show its completion card.",
   },
   // FI3-566 removes repeats from the captain-approved sequences seed.
   {

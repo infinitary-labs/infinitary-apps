@@ -30,15 +30,9 @@ import type { TaskRecord } from "../storage/taskRecords";
 import { taskFeedLine } from "../tasks/taskFeed";
 import { readChangeReading } from "../workspace/workspaceService";
 import type { CrewmateSpec } from "./crewSession";
+import { IDLE_NUDGE_TEXT } from "./idleWakes";
 import { REVIEW_FIX_RULES, renderRigorSection } from "./intentBrief";
-import {
-  earlierPassText,
-  REVIEW_NEW_HEAD_NEXT,
-  REVIEW_PASSED_NEXT,
-  REVIEW_PROOF_NEXT,
-  REVIEWER_IDLE_NEXT,
-  reviewFindingsNext,
-} from "./reportWakes";
+import { earlierPassText, REVIEWER_IDLE_NEXT, reviewFindingsNext } from "./reportWakes";
 import { renderReviewHistory } from "./reviewHistory";
 import { renderWake } from "./wakes";
 
@@ -49,6 +43,10 @@ vi.mock("../utilityQos", async (importOriginal) =>
 );
 
 fakeCrewTimersEachTest();
+
+// Session audit finding E: the host delivers routine review work; only decisions wake the first mate.
+const received = (crew: ReturnType<typeof fakeCrewmate>) =>
+  [...crew.promptCalls, ...vi.mocked(crew.steer).mock.calls.map(([text]) => text)].join("\n");
 
 describe("the reviewed tier (delivery rigor phase 2)", () => {
   const BUILDER_REPORT =
@@ -686,19 +684,10 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       );
       expect(tasks.graph.blockerRefusal(builderId)).toBeUndefined();
 
-      // The builder's fix report names its open review, the verdict and
-      // head it last read, and the re-review a new head asks for; the typed
-      // review is a live-validation record, so the evidence and state
-      // revisions it read ride the report too (INF-1875). It is sorted like
-      // any report (INF-1876): the Firstmate's finding card on the builder
-      // is a decision on the captain's screen, and the open review's
-      // verdict still wakes the Firstmate above it, who alone steers the
-      // reviewer to the new head.
-      await supervisor.steer.steerCrewmate(
-        builderId,
-        "F1 error src/meter.test.ts:12 the flush is awaited after the read - auto-fix",
-      );
-      await tick();
+      // F2: a report with no changed facts takes the ordinary sort, even
+      // with a decision card already up. The host already delivered F1;
+      // neither the report nor the fixture repeats that delivery.
+      expect(received(builder)).toContain("F1 error src/meter.test.ts:12");
       (specs[0] as CrewmateSpec).onCard?.({
         title: "Keep the Later copy?",
         body: "<p>F2 warning src/meter.ts:40: the copy says Later.</p><p>Keep it or change it.</p>",
@@ -713,17 +702,13 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         .find((entry) => entry.title === "Keep the Later copy?");
       expect(findingCard).toBeDefined();
       const beforeFix = ops.length;
-      await reportTurn(builder, builderId, "Moved the await before the read; committed 89abcde.");
-      expect(sorts.at(-1)).toEqual({
-        taskId: builderId,
-        verdict: "captain",
-        rule: "review-reread",
-      });
-      expect(ops.slice(beforeFix)).toEqual([
-        `[fm-op] crewmate 1 reported on task ${builderId} "Fix the meter test": Moved the await before the read; committed 89abcde. Its card on the captain's screen: ${findingCard?.id} (decision) "Keep the Later copy?". Its open review ${review?.key} last returned findings at 0123456. It read evidence revision 0; the builder now has revision 0. Its assigned validation state is 0; the builder now has state 0. ${REVIEW_NEW_HEAD_NEXT}`,
-      ]);
+      const dispute = "The committed version is unchanged; F1 needs an interpretation.";
+      await reportTurn(builder, builderId, dispute);
+      expect(ops.slice(beforeFix)).toEqual([expect.stringContaining(dispute)]);
+      // An unchanged report cannot commission another review turn.
+      expect(reviewer.promptCalls).toHaveLength(1);
       // The click returns to the builder as a message, and that turn ends
-      // quietly: the builder is idle again while the reviewer re-reads.
+      // quietly: the builder is idle again after the decision.
       supervisor.cardActions.act(findingCard?.id ?? "", "keep");
       await tick();
       expect(builder.promptCalls.at(-1)).toBe(
@@ -733,8 +718,8 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       builder.finishPrompt();
       await tick();
 
-      // A re-review at the new head: the reviewer is steered like any idle
-      // crewmate, and its pass closes the review.
+      // The captain's decision can require a review at the same version;
+      // this is not a routine new-head relay. Its pass closes the reader.
       await supervisor.steer.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
       await tick();
       expect(reviewer.promptCalls.at(-1)).toContain("re-review at head");
@@ -777,12 +762,8 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(closeEvent).toMatchObject({ feed: false, text: "review passed - Fix the meter test" });
       // The wake refs the builder - the next move is on it, and the review's
       // own lane was purged with its close.
-      const passWake = ops.find((line) => line.includes("passed at 0123456"));
-      expect(passWake).toContain(
-        `the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk low: one test file changed.)`,
-      );
-      expect(passWake).toContain(`review task ${tasks.get(reviewId)?.key} is closed`);
-      expect(passWake?.endsWith(` ${REVIEW_PASSED_NEXT}`)).toBe(true);
+      expect(ops.filter((line) => line.includes("passed at 0123456"))).toEqual([]);
+      expect(received(builder)).toContain("The review passed. Follow your brief's delivery");
       // The crew list names the version the pass read (INF-3141).
       expect(supervisor.facts.crewStatus(builderId)[0]?.review).toBe("review passed at 0123456");
       expect(tasks.graph.blockersHoldingClose(builderId)).toEqual([]);
@@ -799,6 +780,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         ci: "green",
         ciAt: Date.now(),
       });
+      await reportTurn(builder, builderId, "Opened the pull request; the checks passed.");
       const cardId = (await premature()) as string;
       await tick();
       const card = cards().find((entry) => entry.id === cardId);
@@ -1026,11 +1008,11 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         findings: [NOTE],
       });
       const reviewKey = tasks.get(reviewId)?.key;
+      expect(received(builder)).toContain("F1 error src/meter.test.ts:12 racy - auto-fix");
+      expect(received(builder)).toContain("The review passed. Follow your brief's delivery");
       expect(ops.slice(before)).toEqual([
         `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with no typed review record, so no verdict was recorded: Standing by for the new head, nothing to say yet. ${REVIEWER_IDLE_NEXT}`,
-        `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict findings: The test is racy.\nFindings:\n- F1 error src/meter.test.ts:12 racy - auto-fix Its card on the captain's screen: card-${reviewId}-1 (note) "A finding to look at". ${reviewFindingsNext()}`,
         `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict blocked: no access to the branch\n${renderReviewHistory([{ kind: "round", at: 0, review: reviewKey ?? "", verdict: "findings", head: HEAD, findings: ["F1 error src/meter.test.ts:12 racy - auto-fix"] }])}\n Its card on the captain's screen: card-${reviewId}-1 (note) "A finding to look at". ${reviewFindingsNext()}`,
-        `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk unstated); review task ${reviewKey} is closed. crewmate 2's report: A note only. Live proof at this head: accepted - The reviewer accepts the empty branch's no-surface reason, not a live pass. Latest proof run: revision 1 at 0123456, verdict no-surface, read by this review. ${REVIEW_PASSED_NEXT}`,
       ]);
       const { taskId: r2 } = await supervisor.intake.commission({
         title: "Review",
@@ -1055,9 +1037,8 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         code: "clear",
         risk: { level: "low", why: "small." },
       });
-      expect(ops.slice(b2)).toEqual([
-        `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk low: small.); review task ${tasks.get(r2)?.key} is closed. crewmate 3's report: No findings. Live proof at this head: accepted - The reviewer accepts the empty branch's no-surface reason, not a live pass. Latest proof run: revision 1 at 0123456, verdict no-surface, read by this review. ${REVIEW_PASSED_NEXT}`,
-      ]);
+      expect(ops.slice(b2)).toEqual([]);
+      expect(received(builder)).toContain("The review passed. Follow your brief's delivery");
     } finally {
       repo.dispose();
     }
@@ -1065,75 +1046,248 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
 
   // INF-2672, the captain's direction A: "review the code first, prove once,
   // and the reviewer reads that proof once".
-  it("a code pass before any proof asks for one proof run, and the proof read at that version reads only the proof", async () => {
-    const repo = gitRepo();
-    try {
-      const builder = fakeCrewmate();
-      const reviewer = fakeCrewmate();
-      const reviewer2 = fakeCrewmate();
-      const env = setup(builder, {
-        routedModel: { provider: "openai-codex", id: "gpt-5.5" },
-        crewmates: [reviewer, reviewer2],
-      });
-      const { supervisor, tasks, repos, ops, workspace, specs } = env;
-      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
-      repos.configure(view.id, { delivery: "direct-pr" });
-      const { taskId: builderId } = await supervisor.intake.commission({
-        title: "Fix the meter test",
-        intent: intentOf("fix it"),
-        repoId: view.id,
-        shape: { rigor_ask: "reviewed" },
-      });
-      await tick();
-      await reportTurn(builder, builderId, BUILDER_REPORT);
-      vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
-      // The scenarios are planned before the first edit; nothing has run.
-      const planned = noSurfaceProof(HEAD);
-      seedDelivery(tasks, builderId, {
-        liveValidation: { ...planned, runs: [], reviews: [] },
-      });
-      const { taskId: reviewId } = await supervisor.intake.commission({
-        title: "Review",
-        intent: intentOf("fix it"),
-        shape: { review_of: builderId },
-      });
-      await tick();
-      expect(tasks.get(reviewId)?.delivery?.validationAssignment?.revision).toBe(0);
-      const before = ops.length;
-      await reviewTurn({ tasks, specs }, reviewer, 1, reviewId, "The code is clean.", {
-        code: "clear",
-        coverageReason: "The scenario set covers the captain's words.",
-        verdict: "inconclusive",
-        reason: "Proof runs after the code passes.",
-      });
-      expect(ops.slice(before)).toEqual([
-        `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk unstated); review task ${tasks.get(reviewId)?.key} is closed. crewmate 2's report: The code is clean. Live proof at this head: not accepted - This version needs live validation of the current scenarios. No proof run is recorded yet. ${REVIEW_PROOF_NEXT}`,
-      ]);
-      // The builder proves once at the passed version; the proof read follows.
-      seedDelivery(tasks, builderId, {
-        liveValidation: { ...planned, reviews: [] },
-      });
-      const { taskId: proofRead } = await supervisor.intake.commission({
-        title: "Review",
-        intent: intentOf("fix it"),
-        shape: { review_of: builderId },
-      });
-      await tick();
-      expect(tasks.get(proofRead)?.delivery?.passedHead).toBe(HEAD);
-      expect(tasks.get(proofRead)?.prompt).toContain(
-        `An earlier review already passed the code at this exact version, ${HEAD}. Do not review the code again: this turn is the proof read.`,
-      );
-      const b2 = ops.length;
-      await reviewTurn({ tasks, specs }, reviewer2, 2, proofRead, "The proof holds.", {
-        code: "clear",
-      });
-      expect(ops.slice(b2)).toEqual([
-        `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk unstated); review task ${tasks.get(proofRead)?.key} is closed. crewmate 3's report: The proof holds. Live proof at this head: accepted - The reviewer accepts the empty branch's no-surface reason, not a live pass. Latest proof run: revision 1 at 0123456, verdict no-surface, read by this review. ${REVIEW_PASSED_NEXT}`,
-      ]);
-    } finally {
-      repo.dispose();
-    }
-  });
+  it.each(["local-only", "direct-pr"] as const)(
+    "a code pass preserves proof order and nudges a stopped proof builder (%s, F2/F3/F7)",
+    async (delivery) => {
+      const repo = gitRepo();
+      const head = execFileSync("git", ["-C", repo.dir, "rev-parse", "HEAD"], {
+        encoding: "utf8",
+      }).trim();
+      let now = Date.now();
+      try {
+        const builder = fakeCrewmate();
+        const reviewer = fakeCrewmate();
+        const reviewer2 = fakeCrewmate();
+        const env = setup(builder, {
+          now: () => now,
+          routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+          crewmates: [reviewer, reviewer2],
+        });
+        const { supervisor, tasks, repos, ops, workspace, specs } = env;
+        const { repo: view } = await repos.setup({
+          kind: "adopt",
+          path: repo.dir,
+          name: repo.name,
+        });
+        repos.configure(view.id, { delivery });
+        const { taskId: builderId } = await supervisor.intake.commission({
+          title: "Fix the meter test",
+          intent: intentOf("fix it"),
+          repoId: view.id,
+          shape: { rigor_ask: "reviewed" },
+        });
+        await tick();
+        await reportTurn(builder, builderId, BUILDER_REPORT);
+        vi.mocked(workspace.branchHead).mockResolvedValue(head);
+        // The scenarios are planned before the first edit; nothing has run.
+        const planned = noSurfaceProof(head);
+        seedDelivery(tasks, builderId, {
+          liveValidation: { ...planned, runs: [], reviews: [] },
+        });
+        const { taskId: reviewId } = await supervisor.intake.commission({
+          title: "Review",
+          intent: intentOf("fix it"),
+          shape: { review_of: builderId },
+        });
+        await tick();
+        expect(tasks.get(reviewId)?.delivery?.validationAssignment?.revision).toBe(0);
+        const before = ops.length;
+        await reviewTurn({ tasks, specs }, reviewer, 1, reviewId, "The code is clean.", {
+          code: "clear",
+          coverageReason: "The scenario set covers the captain's words.",
+          verdict: "inconclusive",
+          reason: "Proof runs after the code passes.",
+        });
+        expect(ops.slice(before)).toEqual([]);
+        expect(tasks.get(reviewId)?.status).toBe("active");
+        expect(received(builder)).toContain("Run live proof once after this code review");
+        // F2/F3: an unchanged prose blocker takes the normal sort, and a retained
+        // idle reader cannot hide a stopped builder from the one-clock ladder.
+        const blocker = "The proof is blocked: the disposable launcher cannot start yet.";
+        await reportTurn(builder, builderId, blocker);
+        expect(ops.slice(before)).toEqual([expect.stringContaining(blocker)]);
+        expect(env.sorts.at(-1)?.rule).toBe("stopped");
+        expect(tasks.get(reviewId)?.activity).toBe("idle");
+        const idleSince = tasks.get(builderId)?.idleSince;
+        if (idleSince == null) throw new Error("The proof builder stopped at the host's clock.");
+        now = idleSince + 10 * 60_000;
+        supervisor.watch.reconcileIdle(now);
+        await tick();
+        expect(received(builder)).toContain(IDLE_NUDGE_TEXT);
+        expect(env.sorts).toContainEqual({
+          taskId: builderId,
+          verdict: "routine",
+          rule: "idle-nudge",
+        });
+
+        // The builder proves once at the passed version; the proof read follows.
+        seedDelivery(tasks, builderId, {
+          liveValidation: { ...planned, reviews: [] },
+        });
+        await reportTurn(
+          builder,
+          builderId,
+          "The planned no-surface proof is recorded at the reviewed commit.",
+        );
+        await tick();
+        const proofRead = reviewId;
+        expect(tasks.get(proofRead)?.delivery?.passedHead).toBe(head);
+        expect(received(reviewer)).toContain(
+          `An earlier review already passed the code at this exact version, ${head}. Do not review the code again: this turn is the proof read.`,
+        );
+        const b2 = ops.length;
+        await reviewTurn({ tasks, specs }, reviewer, 1, proofRead, "The proof holds.", {
+          code: "clear",
+        });
+        expect(ops.slice(b2)).toEqual([]);
+        expect(received(builder)).toContain("The review passed. Follow your brief's delivery");
+      } finally {
+        repo.dispose();
+      }
+    },
+  );
+
+  // Session audit finding E: exercise both directions through the real
+  // supervisor and durable inbox, with committed files as the head readings.
+  it.each([false, true])(
+    "returns a repair once and sorts unchanged disputes (declared result: %s, F2/F4)",
+    async (withResult) => {
+      const repo = gitRepo();
+      try {
+        const git = (...args: string[]) =>
+          execFileSync("git", ["-C", repo.dir, ...args], { encoding: "utf8" }).trim();
+        const builder = fakeCrewmate();
+        const reviewer = fakeCrewmate();
+        const { supervisor, tasks, repos, ops, workspace, specs, sorts } = setup(builder, {
+          routedModel: { provider: "openai-codex", id: "gpt-5.5" },
+          crewmates: [reviewer],
+        });
+        const { repo: view } = await repos.setup({
+          kind: "adopt",
+          path: repo.dir,
+          name: repo.name,
+        });
+        repos.configure(view.id, { delivery: "direct-pr" });
+        const { taskId } = await supervisor.intake.commission({
+          title: "Keep merge approval while the batch runs",
+          intent: intentOf("Keep the saved merge until its batch passes"),
+          repoId: view.id,
+        });
+        await tick();
+        await reportTurn(builder, taskId, "The merge approval now waits for the batch check.");
+        const initial = git("rev-parse", "HEAD");
+        vi.mocked(workspace.branchHead).mockResolvedValue(initial);
+        const { taskId: reviewId } = await supervisor.intake.commission({
+          title: "Review",
+          intent: intentOf("Keep the saved merge until its batch passes"),
+          shape: { review_of: taskId },
+        });
+        await tick();
+        const before = ops.length;
+        await reviewTurn(
+          { tasks, specs },
+          reviewer,
+          1,
+          reviewId,
+          "The batch wait still wakes the first mate.",
+          {
+            code: "findings",
+            findings: [
+              {
+                id: "F1",
+                severity: "error",
+                action: "auto-fix",
+                text: "A healthy batch-only wait still sends a first mate wake.",
+              },
+            ],
+          },
+        );
+        expect(received(builder)).toContain(
+          "A healthy batch-only wait still sends a first mate wake.",
+        );
+        writeFileSync(
+          join(repo.dir, "merge-wait.txt"),
+          "The approved version waits for the batch check.\n",
+        );
+        git("add", "merge-wait.txt");
+        git(
+          "-c",
+          "user.name=Test",
+          "-c",
+          "user.email=test@localhost",
+          "commit",
+          "-m",
+          "fix: keep the batch wait quiet",
+        );
+        const repaired = git("rev-parse", "HEAD");
+        vi.mocked(workspace.branchHead).mockResolvedValue(repaired);
+        if (withResult)
+          await specs[0]?.onReport?.("Committed the quiet wait for the saved merge.", undefined, {
+            result: { repaired: true },
+          });
+        await reportTurn(builder, taskId, "Committed the quiet wait for the saved merge.");
+        await tick();
+        expect(tasks.get(reviewId)?.delivery?.headSha).toBe(repaired);
+        expect(received(reviewer)).toContain("Committed the quiet wait for the saved merge.");
+        const returns = () =>
+          received(reviewer)
+            .split("\n")
+            .filter((line) => line.startsWith("Host handoff from"));
+        expect(returns()).toHaveLength(1);
+        // F4: extra declared work may wake the first mate, but never asks it to
+        // repeat the re-review the host just delivered.
+        if (withResult) {
+          expect(sorts.at(-1)?.rule).not.toBe("review-reread");
+          expect(ops.slice(before)).toHaveLength(1);
+          expect(ops.at(-1)).toContain("not to repeat a handoff");
+        } else expect(ops.slice(before)).toEqual([]);
+        await reviewTurn({ tasks, specs }, reviewer, 1, reviewId, "F1 still needs a repair.", {
+          code: "findings",
+          findings: [RACY],
+        });
+        const beforeDispute = ops.length;
+        const dispute = "I dispute F1: the committed repair is unchanged and needs a decision.";
+        await reportTurn(builder, taskId, dispute);
+        await tick();
+        expect(returns()).toHaveLength(1);
+        expect(ops.slice(beforeDispute)).toEqual([expect.stringContaining(dispute)]);
+        expect(sorts.at(-1)?.rule).toBe("review-reread");
+        console.info(
+          "Direct review handoff:",
+          JSON.stringify({
+            findings: received(builder)
+              .split("\n")
+              .filter((line) => line.includes("batch-only")),
+            repairAssigned: tasks.get(reviewId)?.delivery?.headSha === repaired,
+            returns: returns().length,
+            disputedReportWakes: ops.length - beforeDispute,
+          }),
+        );
+        // A typed request for a decision is not swallowed by routine routing.
+        // The reader already stopped after its findings: start a real turn
+        // to answer the dispute, rather than report from an idle session.
+        const previousTurns = reviewer.promptCalls.length;
+        await supervisor.steer.steerCrewmate(
+          reviewId,
+          "Read the builder's dispute and report the decision needed.",
+        );
+        await vi.waitFor(() => expect(reviewer.promptCalls).toHaveLength(previousTurns + 1));
+        const beforeDecision = ops.length;
+        await specs[1]?.onReport?.("The review needs a decision before publishing.", undefined, {
+          validation: typedReview(tasks, reviewId, { code: "clear" }),
+          needsFirstmate: "Choose whether the new requirement belongs in this change",
+        });
+        await reportTurn(reviewer, reviewId, "The review needs a decision before publishing.");
+        expect(ops.slice(beforeDecision)).toEqual([
+          expect.stringContaining("Choose whether the new requirement belongs in this change"),
+        ]);
+        expect(tasks.get(reviewId)?.status).toBe("active");
+        expect(received(builder)).not.toContain("The review passed. Follow your brief's delivery");
+      } finally {
+        repo.dispose();
+      }
+    },
+  );
 
   it("places the reviewer away from the builder's provider (R9): the router is asked to avoid it", async () => {
     const repo = gitRepo();
@@ -1504,9 +1658,9 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         findings: [RACY],
         risk: { level: "medium", why: "one line moves." },
       });
-      const wake = ops.find((line) => line.includes("with verdict findings"));
-      expect(wake?.endsWith(` ${reviewFindingsNext()}`)).toBe(true);
-      expect(reviewFindingsNext()).toContain(`prefixed with - ${REVIEW_FIX_RULES}.`);
+      expect(ops.filter((line) => line.includes("with verdict findings"))).toEqual([]);
+      expect(received(builder)).toContain(REVIEW_FIX_RULES);
+      expect(received(builder)).toContain("F1 error src/meter.test.ts:12 racy - auto-fix");
     } finally {
       repo.dispose();
     }

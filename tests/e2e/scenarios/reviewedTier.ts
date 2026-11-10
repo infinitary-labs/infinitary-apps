@@ -1,12 +1,13 @@
 import { REVIEW_BRIEF_OPENING } from "../../../src/core/orchestrator/intentBrief";
-import { REVIEW_PASSED_NEXT } from "../../../src/core/orchestrator/reportWakes";
+import { REVIEW_HANDOFF_NEXT } from "../../../src/core/orchestrator/reportWakes";
+import { DECIDED_SO_FAR } from "../../../src/core/orchestrator/reviewHistory";
 import { PERSONAL_WORKSPACE_NAME } from "../../../src/core/paths";
 import { checkSnapshotSummary } from "../../../src/shared/checkSnapshot";
 import type { KeptValidationInput } from "../../../src/shared/liveValidation";
 import { type ReviewFinding, renderFinding } from "../../../src/shared/rigor";
 import { CHECK_WORDS } from "../../../src/shared/vocabulary";
 import { noSurfaceProof } from "../../helpers/liveValidation";
-import type { ScriptedCall, ScriptedCardAction } from "../../helpers/scriptedCalls";
+import type { ScriptedCardAction } from "../../helpers/scriptedCalls";
 import { shellJobsRunning } from "../browserScript";
 import { MOCK_STANDARD_CARD_BODY, MOCK_STANDARD_REPORT } from "../crewCards";
 import {
@@ -19,7 +20,6 @@ import {
   calledTool,
   checkFactsSnapshot,
   contextRepos,
-  findCrewTaskId,
   providerMessages,
   sinceLastUser,
 } from "../providerRequest";
@@ -89,10 +89,6 @@ export const MOCK_REVIEW_KEEP_STEER = "The captain keeps the Later copy: F2 need
 export const MOCK_REVIEWED_KEEP_REPORT =
   "Noted the captain's answer on F2: the Later copy stays, so nothing changes.";
 export const MOCK_REVIEWED_CARD_TITLE = "The meter test is steady, reviewed";
-/** "ask the reviewer to look again": the captain's word for the re-review. */
-export const REREVIEW_PROMPT_MARKER = "ask the reviewer to look again";
-// e2e-typed-words: the mock Firstmate's own steer, which its reviewer answers; it only shares a phrase with the product's hint
-export const MOCK_REREVIEW_STEER = "re-review at the new head";
 /**
  * The review cap (delivery rigor phase 3). The mock reviewer answers its
  * brief and its first two re-reviews with findings - the third findings is
@@ -112,7 +108,6 @@ const REFINDING: ReviewFinding = {
 };
 export const MOCK_REVIEW_REFINDING = renderFinding(REFINDING);
 export const MOCK_REVIEW_REFINDINGS_REPORT = "The flush is still awaited after the read.";
-export const MOCK_REVIEW_REFIX_STEER = "F1 still stands: move the await before the read.";
 export const MOCK_REVIEWED_REFIX_REPORT =
   "Fixed F1 again: the await is before the read now; pushed a new head.";
 export const MOCK_REVIEW_CAP_CARD_TITLE = "Three findings rounds on the meter fix";
@@ -121,7 +116,6 @@ export const MOCK_CAP_RETRY_STEER =
   "The captain says retry: fix F1 for good and push, then the reviewer reads it again.";
 export const MOCK_REVIEWED_RETRY_REPORT =
   "Retried after the cap: F1 is fixed for good; pushed a new head.";
-export const MOCK_REVIEW_PASSED_STEER = "The review passed: emit your completion card now.";
 /**
  * The builder's own reading after the journey pushes its fix (INF-1153, as
  * INF-1148 did for agents-reach): the captain asks, the first mate relays
@@ -218,47 +212,6 @@ function firstmateMove({
   }
   // The captain's answer on the cap card is no branch here: the
   // spec scripts it (`scriptFirstmateTurn`) from the card it reads.
-  // The captain's word for the re-review, once the fix has landed. A
-  // captain turn carries the wakes pending before its [user] line, so
-  // one that also brought a re-finding steers the builder with it
-  // first, the way the contract's Firstmate would do both.
-  if (latestUserTail.includes(REREVIEW_PROMPT_MARKER)) {
-    const reviewId =
-      findCrewTaskId(latestUserTail, "Review: ") ?? findCrewTaskId(body, "Review: ") ?? "missing";
-    const refinding = latestUserTail.includes(MOCK_REVIEW_REFINDING)
-      ? latestUserTail.match(/the review of task ([\w-]+)/)?.[1]
-      : undefined;
-    // The head the round is counted at is the builder's own reading
-    // (its check_change after the push), already on the record.
-    return {
-      calls: [
-        ...(refinding
-          ? [
-              {
-                name: "steer_crewmate",
-                args: { task_id: refinding, message: MOCK_REVIEW_REFIX_STEER },
-              } satisfies ScriptedCall,
-            ]
-          : []),
-        { name: "steer_crewmate", args: { task_id: reviewId, message: MOCK_REREVIEW_STEER } },
-      ],
-    };
-  }
-  // A re-review's findings: the same auto-fix, steered again, no card.
-  if (
-    latestUserTail.includes("with verdict findings") &&
-    latestUserTail.includes(MOCK_REVIEW_REFINDING)
-  ) {
-    const builderId = latestUserTail.match(/the review of task ([\w-]+)/)?.[1] ?? "missing";
-    return {
-      calls: [
-        {
-          name: "steer_crewmate",
-          args: { task_id: builderId, message: MOCK_REVIEW_REFIX_STEER },
-        },
-      ],
-    };
-  }
   // The reviewer's findings: the auto-fix is a steer to the builder,
   // the ask-user finding one decision card on the builder's task.
   if (
@@ -268,10 +221,6 @@ function firstmateMove({
     const builderId = latestUserTail.match(/the review of task ([\w-]+)/)?.[1] ?? "missing";
     return {
       calls: [
-        {
-          name: "steer_crewmate",
-          args: { task_id: builderId, message: MOCK_REVIEW_AUTOFIX_FINDING },
-        },
         {
           name: "emit_card",
           args: {
@@ -290,21 +239,6 @@ function firstmateMove({
       ],
     };
   }
-  // The pass: autonomy is off, so the builder emits its card.
-  if (
-    latestUserTail.includes("the review of task") &&
-    latestUserTail.includes(REVIEW_PASSED_NEXT)
-  ) {
-    const builderId = latestUserTail.match(/the review of task ([\w-]+)/)?.[1] ?? "missing";
-    return {
-      calls: [
-        {
-          name: "steer_crewmate",
-          args: { task_id: builderId, message: MOCK_REVIEW_PASSED_STEER },
-        },
-      ],
-    };
-  }
   return undefined;
 }
 
@@ -314,13 +248,24 @@ function crewmateMove({
   hasToolResults,
 }: ScenarioRequest): ScenarioAnswer | undefined {
   // The reviewer (delivery rigor phase 2, capped in phase 3): findings
-  // on its brief and on the first two re-review steers, a pass on the
+  // on its brief and on the first two changed heads, a pass on the
   // third - the whole history rides the body, so the count is read off
   // it. Its final text is its report. Its brief also carries the
   // reviewed marker, so it is read before the builder.
   if (body.includes(REVIEW_BRIEF_MARKER)) {
-    const rereviews = body.split(MOCK_REREVIEW_STEER).length - 1;
-    if (!latestUserTail.includes(MOCK_REREVIEW_STEER))
+    // The journey promises findings on the first two changed heads. A proof
+    // revision at the same head is another assignment, not another code fix.
+    const assignedHeads = new Set(
+      providerMessages(body)
+        .filter((message) => message.role === "user")
+        .flatMap((message) =>
+          [
+            ...message.text.matchAll(/with kind review, head ([a-f0-9]{40}) and revision (\d+)/g),
+          ].map((assignment) => assignment[1]),
+        ),
+    );
+    const rereviews = assignedHeads.size - 1;
+    if (!latestUserTail.includes(REVIEW_HANDOFF_NEXT.reread))
       return reviewAnswer(body, hasToolResults, MOCK_REVIEW_FINDINGS_REPORT, {
         code: "findings",
         findings: [AUTOFIX_FINDING, ASK_FINDING],
@@ -359,7 +304,7 @@ function crewmateMove({
       ],
     };
   }
-  if (latestUserTail.includes(MOCK_REVIEW_PASSED_STEER)) {
+  if (latestUserTail.includes(REVIEW_HANDOFF_NEXT.ship)) {
     if (hasToolResults) return { text: "done" };
     return {
       calls: [
@@ -375,9 +320,12 @@ function crewmateMove({
       ],
     };
   }
-  if (latestUserTail.includes(MOCK_REVIEW_AUTOFIX_FINDING))
+  // The direct handoff carries earlier findings as history too; only the
+  // current round, before that history, determines this scripted repair.
+  const currentFindings = latestUserTail.split(DECIDED_SO_FAR)[0] ?? "";
+  if (currentFindings.includes(MOCK_REVIEW_AUTOFIX_FINDING))
     return { text: MOCK_REVIEWED_FIX_REPORT };
-  if (latestUserTail.includes(MOCK_REVIEW_REFIX_STEER)) return { text: MOCK_REVIEWED_REFIX_REPORT };
+  if (currentFindings.includes(MOCK_REVIEW_REFINDING)) return { text: MOCK_REVIEWED_REFIX_REPORT };
   if (latestUserTail.includes(MOCK_CAP_RETRY_STEER)) return { text: MOCK_REVIEWED_RETRY_REPORT };
   if (latestUserTail.includes(MOCK_REVIEW_KEEP_STEER)) return { text: MOCK_REVIEWED_KEEP_REPORT };
   // INF-125: this lifecycle fixture changes only commit history, not a running product.
@@ -420,10 +368,6 @@ function crewmateMove({
   // Then its own check reading, as a real builder takes one before
   // it reports: the app records it, and the Firstmate reads it.
   if (!calledTool(body, "check_change")) return { calls: [{ name: "check_change", args: {} }] };
-  const reading = providerMessages(body)
-    .filter((message) => message.role === "tool")
-    .map((message) => message.text)
-    .findLast((text) => text.includes("facts: "));
 
   if (
     !providerMessages(body).some(

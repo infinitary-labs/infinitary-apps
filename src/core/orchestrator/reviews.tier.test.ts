@@ -365,9 +365,8 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     try {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate();
-      const reReviewer = fakeCrewmate();
       const { supervisor, tasks, repos, workspace, specs, ops, events, cards } = setup(builder, {
-        crewmates: [reviewer, reReviewer],
+        crewmates: [reviewer],
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
       repos.configure(view.id, { delivery: "direct-pr" });
@@ -528,11 +527,14 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await specs[1]!.onReport!("verdict: pass\nrisk: low", undefined, { validation: judgment });
       await reportTurn(reviewer, reviewId, "verdict: pass\nrisk: low");
       expect(tasks.get(taskId)?.delivery?.reviewVerdict).toBe("pass");
-      expect(tasks.get(reviewId)?.status).toBe("done");
+      // Session audit finding E keeps this independent reader for the
+      // captain's gap answer and proof read, rather than commissioning a relay.
+      expect(tasks.get(reviewId)?.status).toBe("active");
       const passed = tasks.timeline(taskId).findLast((event) => event.kind === "review");
       expect(passed?.text).toContain("review passed at");
       expect(passed?.data).not.toHaveProperty("validationReason");
       expect(ops.some((text) => text.includes("with verdict blocked"))).toBe(false);
+      const priorState = tasks.get(reviewId)?.delivery?.validationAssignment?.stateRevision;
       supervisor.cardActions.act(cardId, "accept", "chrome");
       const validation = tasks.get(taskId)?.delivery?.liveValidation;
       expect(validation?.permissions[0]?.state).toBe("approved");
@@ -544,14 +546,9 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         taskId,
         "The captain granted the recorded exception; re-review this validation state.",
       );
-      // A re-review of the granted exception is a new review at the same
-      // head and evidence revision, assigned the current validation state.
-      const priorState = tasks.get(reviewId)?.delivery?.validationAssignment?.stateRevision;
-      const { taskId: reReviewId } = await supervisor.intake.commission({
-        title: "Review",
-        intent: intentOf("Re-review the captain-granted gap exception."),
-        shape: { review_of: taskId },
-      });
+      // The host returns the granted exception to the same reader at the
+      // same head and proof revision, but the new validation state.
+      const reReviewId = reviewId;
       await tick();
       expect(tasks.get(reReviewId)?.delivery?.validationAssignment).toMatchObject({
         head,
@@ -560,8 +557,8 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(tasks.get(reReviewId)?.delivery?.validationAssignment?.stateRevision).not.toBe(
         priorState,
       );
-      await specs[2]!.onReport!("verdict: pass\nrisk: low", undefined, { validation: judgment });
-      await reportTurn(reReviewer, reReviewId, "verdict: pass\nrisk: low");
+      await specs[1]!.onReport!("verdict: pass\nrisk: low", undefined, { validation: judgment });
+      await reportTurn(reviewer, reReviewId, "verdict: pass\nrisk: low");
       expect(tasks.get(reReviewId)?.status).toBe("done");
       expect(tasks.get(taskId)?.delivery?.reviewVerdict).toBe("pass");
       expect(tasks.get(taskId)?.delivery?.liveValidation?.runs).toHaveLength(1);

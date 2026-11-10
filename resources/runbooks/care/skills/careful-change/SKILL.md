@@ -8,10 +8,10 @@ description: What a Careful change takes before its push, pull request and merge
 A Careful change is reviewed before it is published, and its live proof runs once, after the code review passes.
 Record the scenarios before your first edit (Live validation below), then build with quick checks: each fix runs one focused check of what it changed, and nothing is proved live yet.
 When your work is done, commit it on your branch, report under the five headings, and do not push, open a pull request or emit a merge card yet.
-An independent reviewer judges the code and the scenario list; the first mate relays its findings as steers, and each fix lands as a local commit with one focused check and no new proof record.
-After the code passes, the first mate steers you to prove: at the passed version, run the live proof once with your edited tests' repeated rounds, take the After pictures, record the run and report it, still without pushing.
-One proof read by a reviewer judges that run, and then you push, open the pull request and drive the checks green.
-Proof that only runs on a pushed branch runs after the push, beside the checks, and the first mate tells you when to emit the merge card.
+An independent reviewer judges the code and the scenario list; the host delivers auto-fix findings directly and the first mate handles decisions, and each fix lands as a local commit with one focused check and no new proof record.
+After the code passes, the host sends you the proof handoff: at the passed version, run the live proof once with your edited tests' repeated rounds, take the After pictures, record the run and report it, still without pushing.
+One proof read by a reviewer judges that run, and the host hands the pass back to you: follow your brief's delivery, without a push or pull request for local-only work.
+Proof that only runs on a pushed branch runs after the push, beside the checks, then emit the merge card when the checks pass.
 A passed review holds when a later version is the same change.
 A docs, comment or wording commit after the proof keeps the proof already run; the reviewer confirms it reaches no scenario.
 A code repair after the code passed gets a review of its own difference and reruns only the proof it reaches.
@@ -22,7 +22,7 @@ Careful means an independent review before the merge.
 Commit any remaining work on your branch and report under the five headings without pushing.
 When the captain pressed Review carefully on your merge card, the app started the review of the version that card offered; otherwise the first mate starts the review of your committed version.
 A pull request already open stays as it is until the review passes: no push and no new story.
-When the first mate relays a pass on the version already pushed, emit the merge card again as soon as its checks read passed.
+When the host delivers a pass on the version already pushed, emit the merge card again as soon as its checks read passed.
 After fixes, push once to the same pull request after the pass, and emit the merge card when the fresh checks pass.
 
 ## Live validation

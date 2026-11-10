@@ -139,7 +139,10 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
   });
   db.close();
 
-  let launched = await launchApp({ userDataDir, env: github.env });
+  // The missing-workflow warning legitimately reaches the first mate. Give
+  // that agent the isolated model on every start, so the warning is handled
+  // without an unrelated provider sign-in card masking the quiet queue wait.
+  let launched = await launchApp({ userDataDir, env: github.env, withMockProvider: true });
   try {
     // The project sends its pull requests through its queue.
     const { page } = launched;
@@ -208,10 +211,19 @@ test("a queue-pr merge click marks its version, waits for the queue, then merges
     await expect(shownEntry(launched.page)).toHaveCount(0);
     await windowShot(launched.page, test.info().outputPath("queue-waiting.png"));
 
+    // The saved, version-bound approval also waits quietly after a restart.
+    await launched.close();
+    launched = await launchApp({ userDataDir, env: github.env, withMockProvider: true });
+    await expect.poll(saved).toMatchObject({
+      delivery: { mergeAuthorization: { status: "standing", approvedHead: headSha } },
+    });
+    expect(await launched.page.evaluate(() => window.infinitary.cards.list())).toEqual([]);
+    expect(github.merges()).toEqual([]);
+
     // The project's queue passes that version; the kept click merges it.
     github.setStatus(headSha, { context: QUEUE_STATUS, state: "success" });
     await launched.close();
-    launched = await launchApp({ userDataDir, env: github.env });
+    launched = await launchApp({ userDataDir, env: github.env, withMockProvider: true });
     await expect
       .poll(() => github.merges(), { timeout: 30_000 })
       .toEqual([expect.objectContaining({ number: 82, sha: headSha, method: "squash" })]);

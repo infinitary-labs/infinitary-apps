@@ -970,19 +970,48 @@ export class CrewTurns {
    * did that, and 103 of its last 120 wakes went to a task whose card was
    * already on the captain's screen.
    *
-   * The reviewed lane is untouched: a reviewed-tier task's events and a
-   * review task's go straight to the Firstmate, which owns the routing of
-   * findings by instruction (delivery rigor phase 2). Those were never
-   * sorted, so they record nothing here either.
+   * Routine review returns use the existing review's durable lane before
+   * the sort. A report declaring a decision, recovery or other work still
+   * goes through the ordinary sorter, and a failed handoff asks for recovery.
    */
-  private sortReport(
+  private async sortReport(
     task: TaskRuntime,
     report: string,
     turn: TurnActs,
     declared: ReportDeclaration | undefined,
-  ): void {
+  ): Promise<void> {
+    const builder = this.core.options.tasks.get(task.id);
+    // Keep ordinary reports synchronous: their sort must precede draining
+    // pending guidance at this idle boundary.
+    let handed = false;
+    if (builder && this.core.openReviewOf(builder.id)) {
+      try {
+        handed = await this.core.reviews.returnToReview(builder, report);
+        if (
+          handed &&
+          !declared?.needsFirstmate &&
+          !declared?.finished &&
+          !declared?.wait &&
+          !declared?.workWait &&
+          !declared?.recoveryWays &&
+          !declared?.waitsOn?.length &&
+          !declared?.files?.length &&
+          !declared?.result &&
+          !declared?.firstRelease &&
+          turn.filed.length === 0 &&
+          turn.withdrawn.length === 0
+        )
+          return;
+      } catch (caught) {
+        const problem = caught instanceof Error ? caught.message : String(caught);
+        declared = {
+          ...declared,
+          needsFirstmate: `The host could not return the fix to its reviewer: ${problem}`,
+        };
+      }
+    }
     this.core.options.tasks.readProjection(() =>
-      this.sortReportInProjection(task, report, turn, declared),
+      this.sortReportInProjection(task, report, turn, declared, handed),
     );
   }
 
@@ -991,6 +1020,7 @@ export class CrewTurns {
     report: string,
     { filed, withdrawn }: TurnActs,
     declared: ReportDeclaration | undefined,
+    handed: boolean,
   ): void {
     const finished = declared?.finished === true;
     const needsFirstmate = declared?.needsFirstmate;
@@ -1093,7 +1123,7 @@ export class CrewTurns {
       needsFirstmate: needsFirstmate !== undefined,
       recovery: stall !== undefined || recoveryWays !== undefined,
       waitedOn: waiting.length > 0,
-      reviewReread: review !== undefined,
+      reviewReread: review !== undefined && !handed,
       programPart,
       // A session that is gone cannot prove anything either; the record
       // keeps that the host could not tell, and the report still wakes.

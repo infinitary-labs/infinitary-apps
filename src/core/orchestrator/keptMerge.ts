@@ -91,10 +91,11 @@ export class KeptMerge {
       );
       if (!result.ok) {
         const kept = approved ? this.approvals.afterAttempt(taskId, approved, result) : undefined;
+        const queueWarning = kept ? this.approvals.queueWarning(taskId, kept.wait) : undefined;
         const outcome = kept
           ? {
               ...result,
-              text: `${result.text}\n\n${keptNote(kept.wait, kept.head, placeOf(this.host.repos, record), currentCheckStatus(this.host.tasks.get(taskId)?.delivery), this.approvals.queueWarning(taskId, kept.wait))}`,
+              text: `${result.text}\n\n${keptNote(kept.wait, kept.head, placeOf(this.host.repos, record), currentCheckStatus(this.host.tasks.get(taskId)?.delivery), queueWarning)}`,
             }
           : result;
         if (kept?.changed && unattended)
@@ -109,7 +110,8 @@ export class KeptMerge {
             ),
           );
         }
-        if (!unattended && review) this.host.mergeContinued?.(taskId, review, outcome);
+        if (!unattended && review && (kept?.wait !== "queue" || queueWarning !== undefined))
+          this.host.mergeContinued?.(taskId, review, outcome);
         return outcome;
       }
       const then = declared ?? approved?.after ?? "continue";
@@ -268,7 +270,8 @@ export class KeptMerge {
         ? { data: { problem: result.problem ?? result.plain } }
         : {}),
     });
-    if (!wakesFirstmate(wait)) return;
+    const queueWarning = this.approvals.queueWarning(taskId, wait);
+    if (!wakesFirstmate(wait) && (wait !== "queue" || queueWarning === undefined)) return;
     const record = this.host.tasks.get(taskId);
     const place = placeOf(this.host.repos, record);
     this.settle.settleLine(taskId, keptFeedLine(wait, place, currentCheckStatus(record?.delivery)));
@@ -278,7 +281,7 @@ export class KeptMerge {
       "merge-pr (kept)",
       {
         ...result,
-        text: `${result.text}\n\n${keptNote(wait, head, place, currentCheckStatus(record?.delivery), this.approvals.queueWarning(taskId, wait))}`,
+        text: `${result.text}\n\n${keptNote(wait, head, place, currentCheckStatus(record?.delivery), queueWarning)}`,
       },
       [],
       standingAuthorization(record?.delivery)?.issuer !== "autonomy",

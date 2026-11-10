@@ -7,7 +7,8 @@ import { standingOverride } from "@shared/holds";
 import {
   acceptedValidation,
   type KeptValidationInput,
-  latestValidationRun,
+  validationRevision,
+  validationStateRevision,
 } from "@shared/liveValidation";
 import { REVIEW_VERDICT_OF_CODE, renderFinding } from "@shared/rigor";
 import { RISK_DIMENSIONS, RISK_WORDS } from "@shared/risk";
@@ -33,7 +34,7 @@ import {
   parseRepairAssessment,
   standingAuthorization,
 } from "./mergeAuthorization";
-import type { ReviewVerdictFacts, WakeProof } from "./reportWakes";
+import type { ReviewVerdictFacts } from "./reportWakes";
 import { earlierHistory, reviewHistory } from "./reviewHistory";
 import type { SettleOwners } from "./settleOwners";
 import type { TypedWake } from "./wakes";
@@ -507,28 +508,52 @@ export class Reviews {
       ...(riskNote ? { reviewRiskNote: riskNote } : {}),
       reviewedAt: at,
     };
+    const needsFirstmate = this.options.tasks.lastReportEntries(task.id).at(-1)
+      ?.declared.needsFirstmate;
+    if (needsFirstmate) {
+      this.options.tasks.delivery.recordChangeEvidence(builder.id, facts, {
+        kind: "review",
+        text: `review ${verdict} at ${shortSha}, ${riskText}`,
+        feed: false,
+        data: { reviewTaskId: task.id },
+      });
+      this.host.notifyOp(
+        {
+          facts: {
+            kind: "report",
+            task: builderTask,
+            crewmate: task.crewmate,
+            excerpt,
+            filed: [],
+            cards: this.host.cards.shownCards(task.id),
+            needsFirstmate,
+          },
+        },
+        "crewmate-report",
+        builder.id,
+      );
+      return;
+    }
     if (verdict === "pass") {
       // INF-2672: whether the builder's live proof is accepted here decides
       // the next step the wake names - prove once, read it, or push.
       const validation = this.options.tasks.get(builder.id)?.delivery?.liveValidation;
-      const run = latestValidationRun(validation);
-      const acceptance = acceptedValidation(validation, sha);
-      const proof: WakeProof | undefined = validation?.scenarioRevision
-        ? {
-            accepted: acceptance.ready,
-            reason: acceptance.reason,
-            ...(run
-              ? { run: { head: run.head, revision: run.revision, verdict: run.verdict } }
-              : {}),
-            read: run !== undefined && typed.revision === run.revision,
-          }
-        : undefined;
       this.options.tasks.delivery.recordChangeEvidence(builder.id, facts, {
         kind: "review",
         text: `review passed at ${shortSha}, ${riskText}`,
         feed: true,
         data: { reviewTaskId: task.id },
       });
+      // Keep this independent reader for the proof read after the code pass.
+      // The assignment records the pass so that turn reads only proof or the repair's difference.
+      if (validation?.scenarioRevision && !acceptedValidation(validation, sha).ready) {
+        this.options.tasks.delivery.recordChangeEvidence(task.id, { passedHead: sha });
+        await this.deliverToBuilder(builder, {
+          facts: { kind: "review-handoff", from: task.key, head: sha, stage: "proof", excerpt },
+          once: `review-proof:${task.id}:${sha}:${typed.revision}`,
+        });
+        return;
+      }
       try {
         await this.host.settling.closing.closeTask(task.id, {
           status: "done",
@@ -549,23 +574,10 @@ export class Reviews {
           });
         }
       }
-      this.host.notifyOp(
-        {
-          facts: {
-            kind: "review-passed",
-            task: builderTask,
-            reviewKey: task.key,
-            crewmate: task.crewmate,
-            head: sha,
-            ...(risk ? { risk } : {}),
-            ...(riskNote ? { riskNote } : {}),
-            excerpt,
-            ...(proof ? { proof } : {}),
-          },
-        },
-        "crewmate-report",
-        builder.id,
-      );
+      await this.deliverToBuilder(builder, {
+        facts: { kind: "review-handoff", from: task.key, head: sha, stage: "ship", excerpt },
+        once: `review-pass:${task.id}:${sha}:${typed.revision}`,
+      });
       return;
     }
     // The verdict is recorded without a host-owned review allowance.
@@ -589,6 +601,86 @@ export class Reviews {
       cards: this.host.cards.shownCards(task.id),
       ...(history.length > 0 ? { history } : {}),
     };
-    this.host.notifyOp({ facts: verdictFacts }, "crewmate-report", task.id);
+    const fixes = (typed.findings ?? [])
+      .filter((finding) => finding.action === "auto-fix" && finding.severity !== "info")
+      .map(renderFinding);
+    if (fixes.length > 0)
+      await this.deliverToBuilder(builder, {
+        facts: {
+          kind: "review-handoff",
+          from: task.key,
+          head: sha,
+          stage: "fix",
+          excerpt,
+          findings: fixes,
+          history,
+        },
+        once: `review-fix:${task.id}:${sha}:${typed.revision}`,
+      });
+    // The first mate makes decisions, not routine deliveries. The complete
+    // verdict and its summary remain on the builder's record for its next read.
+    if (
+      verdict === "blocked" ||
+      typed.findings?.some(
+        (finding) =>
+          finding.action === "ask-user" ||
+          (finding.action === "no-op" && finding.severity !== "info"),
+      )
+    )
+      this.host.notifyOp({ facts: verdictFacts }, "crewmate-report", task.id);
+  }
+
+  /** A failed delivery is a decision for the first mate, never a lost verdict. */
+  private async deliverToBuilder(builder: TaskRecord, wake: TypedWake): Promise<void> {
+    try {
+      await this.host.steer(builder.id, wake);
+    } catch (caught) {
+      const problem = caught instanceof Error ? caught.message : String(caught);
+      this.host.notifyOp(
+        {
+          facts: {
+            kind: "report",
+            task: { id: builder.id, title: builder.title },
+            crewmate: "The host",
+            excerpt: `Review handoff failed: ${problem}`,
+            filed: [],
+            cards: this.host.cards.shownCards(builder.id),
+            needsFirstmate: "Recover the review handoff; the verdict remains on the task's record",
+          },
+        },
+        "crewmate-report",
+        builder.id,
+      );
+    }
+  }
+
+  /** Return a builder's new facts to its existing reader, once per assignment. */
+  async returnToReview(builder: TaskRecord, excerpt: string): Promise<boolean> {
+    const review = this.options.tasks.graph
+      .openChildren(builder.id)
+      .find((child) => child.shape?.kind === "review" && !isRepairAssessment(child.shape));
+    if (!review || !builder.delivery?.reviewedAt) return false;
+    const facts = await this.reviewFacts(builder);
+    const assigned = review.delivery?.validationAssignment;
+    const validation = builder.delivery?.liveValidation;
+    const revision = validationRevision(validation);
+    const state = validationStateRevision(validation);
+    if (
+      facts.headSha === review.delivery?.headSha &&
+      revision === (assigned?.revision ?? 0) &&
+      state === (assigned?.stateRevision ?? 0)
+    )
+      return false;
+    await this.host.steer(review.id, {
+      facts: {
+        kind: "review-handoff",
+        from: builder.key || builder.id,
+        head: facts.headSha,
+        stage: "reread",
+        excerpt,
+      },
+      once: `review-return:${review.id}:${facts.headSha}:${revision}:${state}`,
+    });
+    return true;
   }
 }

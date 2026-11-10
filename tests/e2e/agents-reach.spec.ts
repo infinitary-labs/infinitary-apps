@@ -69,7 +69,6 @@ import {
 import {
   MOCK_REVIEW_ASK_CARD_TITLE,
   MOCK_REVIEWED_CHANGE,
-  REREVIEW_PROMPT_MARKER,
   reviewedTier,
 } from "./scenarios/reviewedTier";
 import { settingsSection } from "./settings";
@@ -300,7 +299,7 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
     ] as const) {
       reviewed = pushFix(branch, subject);
       await builderReads(builder.id, reviewed, "green");
-      await send(REREVIEW_PROMPT_MARKER);
+      // The builder's reading reports the changed proof; the host returns it to the reviewer.
       await expect
         .poll(() => detail(builder.id), { timeout: 30_000 })
         .toMatchObject({

@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "direct-review-handoffs",
+      "kind": "improvement",
+      "area": "firstmate",
+      "title": "Reviews reach their builder directly",
+      "body": "Review findings and fixes now travel directly between crewmates. Your first mate handles decisions instead of repeating those messages.",
+      "provenance": {
+        "origin": "change"
+      },
+      "noPicture": "This changes background review delivery without adding a visible control or view."
+    }
+  ]
+}

@@ -259,23 +259,27 @@ describe("the wait a stopped merge leaves the approval on", () => {
 
   // INF-2913: the batch check's warning (INF-2897) moved off the retired
   // note into what the Firstmate is told at the click.
-  it("tells the Firstmate, not the captain, when nothing answers the project's queue", async () => {
-    const world = approved();
-    world.repos.recordQueue("project", { workflows: [] });
-    world.merge = async () => ({ ok: false, text: "In the merge queue.", stop: "queue" });
-    await world.settle.reportCardSettle(TASK, "merge-pr");
-    expect(approvalOf(world)?.waiting?.on).toBe("queue");
-    expect([...world.cards.values()]).toEqual([]);
-    const warning = queueWakeWords({ workflows: [], answeredBefore: false });
-    expect(warning).toBeDefined();
-    expect(world.wakes).toEqual([
-      expect.objectContaining({
-        kind: "settled",
-        unseen: true,
-        outcome: expect.stringContaining(warning ?? ""),
-      }),
-    ]);
-  });
+  it.each([false, true])(
+    "tells the Firstmate, not the captain, when nothing answers the project's queue (host run: %s)",
+    async (hostRun) => {
+      const world = approved();
+      world.repos.recordQueue("project", { workflows: [] });
+      world.merge = async () => ({ ok: false, text: "In the merge queue.", stop: "queue" });
+      if (hostRun) await world.kept.runMergeAuthorization(TASK);
+      else await world.settle.reportCardSettle(TASK, "merge-pr");
+      expect(approvalOf(world)?.waiting?.on).toBe("queue");
+      expect([...world.cards.values()]).toEqual([]);
+      const warning = queueWakeWords({ workflows: [], answeredBefore: false });
+      expect(warning).toBeDefined();
+      expect(world.wakes).toEqual([
+        expect.objectContaining({
+          kind: "settled",
+          unseen: true,
+          outcome: expect.stringContaining(warning ?? ""),
+        }),
+      ]);
+    },
+  );
 
   it.each<[MergeStop, string]>([
     ["closed", "its pull request was closed without merging"],

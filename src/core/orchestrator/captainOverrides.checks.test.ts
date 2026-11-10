@@ -39,6 +39,7 @@ import {
   completionBody,
   fakeCrewmate,
   fakeCrewTimersEachTest,
+  reportTurn,
   SETTLE_MERGE,
   setup,
   tick,
@@ -55,6 +56,7 @@ import { seedTask } from "../tasks/seedTask";
 import { CHECK_FAILS_ON_MAIN_WORDS, CHECK_VERDICT_WORDS } from "./checkVerdicts";
 import { COMPLETION_REVISED_WHILE_RUNNING } from "./crewmateCards";
 import { FAILED_BATCH_NOTE } from "./mergeAuthorization";
+import { mergePendingCardId } from "./settleWords";
 import { renderWake } from "./wakes";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
@@ -336,6 +338,98 @@ describe("CrewSupervisor", () => {
         expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ headSha: "fixed0004", ci: "red" });
         expect(anywayOf(h)).toBeUndefined();
       });
+
+      // INF-2913 and finding E: a healthy queue keeps its approval quietly,
+      // without an FYI card or a routine first mate relay, in either scope.
+      it.each(
+        [false, true].flatMap((referenced) =>
+          [false, true].map((unanswered) => ({ referenced, unanswered })),
+        ),
+      )(
+        "keeps approval, wakes only for a queue warning, and merges after the batch (referenced: $referenced, unanswered: $unanswered)",
+        async ({ referenced, unanswered }) => {
+          const h = await approved({ queue: true, referenced });
+          const repoId = h.tasks.get(h.taskId)?.repoId;
+          if (!repoId) throw new Error("The queue fixture has its project.");
+          if (!unanswered) h.repos.recordQueue(repoId, { answeredAt: Date.now() });
+          const before = h.ops.length;
+          const beforePrompts = h.crewmate.promptCalls.length;
+          h.supervisor.cardActions.act(h.card.id, "merge");
+          await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("queue"));
+          // Marking the queue happens before the settlement's continuation.
+          // Read its outcome only after that owner releases its lock.
+          await vi.waitFor(() =>
+            expect(h.supervisor.settling.locks.settlingTasks.has(h.taskId)).toBe(false),
+          );
+          expect(h.cards()).toEqual([]);
+          // F5: the existing unanswered-queue warning still reaches an agent in either scope.
+          const warning = h.supervisor.settling.approvals.queueWarning(h.taskId, "queue");
+          const continued = () => h.crewmate.promptCalls.slice(beforePrompts).join("\n");
+          if (unanswered) {
+            expect(warning).toBeDefined();
+            if (referenced) {
+              // Scoped settlement returns to its builder, not the first mate.
+              // allFor excludes in-flight rows; read the actual delivered prompt.
+              await vi.waitFor(() => expect(continued()).toContain(warning ?? ""));
+              expect(h.ops.slice(before)).toEqual([]);
+              await reportTurn(h.crewmate, h.taskId, "The unanswered queue needs recovery.");
+            } else {
+              expect(continued()).toBe("");
+              expect(h.ops.slice(before)).toEqual([expect.stringContaining(warning ?? "")]);
+            }
+          } else {
+            expect(warning).toBeUndefined();
+            expect(continued()).toBe("");
+            expect(h.ops.slice(before)).toEqual([]);
+          }
+          expect(h.forge.merges).toEqual([]);
+          expect(h.authorization()).toMatchObject({ status: "standing", approvedHead: APPROVED });
+          h.forge.queue = { name: QUEUE_STATUS, state: "success", detail: "Batch check passed" };
+          await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
+          expect(h.forge.merges).toEqual([APPROVED]);
+          expect(h.authorization()?.status).toBe("consumed");
+          expect(h.supervisor.cards.get(mergePendingCardId(h.taskId))).toBeUndefined();
+          // The renderer receives card snapshots on the scheduled broadcast.
+          await tick();
+          expect(h.cards()).toEqual([]);
+        },
+      );
+
+      // R1: a failed batch note on a checks wait is not an unanswered queue warning.
+      it.each([false, true])(
+        "keeps a host-run checks wait quiet after an approved queue version is sent back (referenced: %s)",
+        async (referenced) => {
+          const h = await approved({ queue: true, referenced });
+          const repoId = h.tasks.get(h.taskId)?.repoId;
+          if (!repoId) throw new Error("The queue fixture has its project.");
+          h.repos.recordQueue(repoId, { answeredAt: Date.now() });
+          h.supervisor.cardActions.act(h.card.id, "merge");
+          await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("queue"));
+          await vi.waitFor(() =>
+            expect(h.supervisor.settling.locks.settlingTasks.has(h.taskId)).toBe(false),
+          );
+          h.forge.queue = {
+            name: QUEUE_STATUS,
+            state: "failure",
+            detail: "Sent back: adds the key but not to the pinned list",
+            link: "https://github.com/o/r/actions/runs/4254",
+          };
+          await h.declare({});
+          expect(h.supervisor.settling.approvals.queueWarning(h.taskId, "checks")).toBe(
+            FAILED_BATCH_NOTE,
+          );
+          const before = h.ops.length;
+          await h.supervisor.settling.kept.runMergeAuthorization(h.taskId);
+          expect(h.authorization()).toMatchObject({
+            status: "standing",
+            approvedHead: APPROVED,
+            waiting: { on: "checks" },
+          });
+          expect(h.forge.merges).toEqual([]);
+          expect(h.cards()).toEqual([]);
+          expect(h.ops.slice(before)).toEqual([]);
+        },
+      );
 
       // INF-3208, the captain's INF-3183 plan, piece 2: after the project's
       // queue sends a change back, its merge card says the queue's own words

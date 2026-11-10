@@ -23,7 +23,7 @@ In order; the order IS the rule.
 | 0a | The report declared `needs_firstmate`: a captain decision only the first mate can carry out (FI3-710) | the first mate's | wake, with what it must do | `rule:needs-firstmate` |
 | 0s | The task has started and went back to the backlog (INF-2062, `docs/task-board.md` "A started task in the backlog"), and the report declares neither finished work nor follow-ups it filed | nobody's: it waits for a Start | no wake | `rule:in-backlog` |
 | 0b | Started work waits on this task through a `blocks` link from it, whoever recorded it (INF-735, INF-3167) | the first mate's, which passes on what that work waits for | wake, naming that work | `rule:waited-on` |
-| 0c | The task's open review last returned findings or blocked (INF-1876): a typed verdict on the task, whose re-review waits for the head, evidence revision or validation state this report may bring | the first mate's, which alone steers the reviewer | wake, naming the review and what it read | `rule:review-reread` |
+| 0c | The task's open review last returned findings or blocked, and this report made no host handoff | the first mate reads it for a blocker or decision, not to repeat a handoff | wake, naming the review and what it read | `rule:review-reread` |
 | 1 | An open **decision** card for the task, a wait on the captain its crewmate declared in its report while a card of the task is on the captain's screen (FI3-435), or work its crewmate declared finished while a card of its own is still on the captain's screen (INF-731) | the captain's | no wake | `rule:captain-card` |
 | 1a | The report declared its work finished: the captain has read its outcome and nothing is left (FI3-435) | the first mate's, which closes the task | wake | `rule:finished` |
 | 2 | The report filed follow-ups this turn | the first mate's | wake | `rule:filed-followups` |
@@ -146,7 +146,8 @@ So there are four in-process witnesses to "will this crewmate move again with no
 **One witness set, one gatherer** (the primitives review's F10, captain- approved 2026-09-26).
 The sort and the idle ladder read the same typed facts, gathered once by `IdleLadder.witnesses`: cards by task (any open card with actions on it, or the card its `captain` gate names - never an id pattern), guidance as anything its lane will still deliver including a row waiting out the honest retry's backoff (`InboxStore.hasDeliverable`), a job only inside its bound (`JOB_BOUND_MS`), the captured settle, and the gate.
 A `captain` gate is the captain's turn while the card it names is up and the first mate's while none is - never the crewmate's - and a wait its crewmate declared is the captain's while any card of the task is up, the first mate's while none is; an `at-time` gate is a wait (moving).
-A review the host raised on the task that is still live is a witness the ladder alone reads (`reviewOpen`, INF-1876): its builder waits on the verdict or close, which reach it through the first mate, so the ladder neither nudges nor wakes while the reviewer reads, and the report's sort reads a findings verdict as row 0c instead.
+A delivery child that still has work to run is a witness the ladder alone reads (`reviewOpen`, INF-1876): an idle retained reviewer does not count as moving work for the builder.
+The host delivers routine handoffs directly, and an unchanged report still takes the ordinary sort so a dispute or blocker reaches an owner.
 The next witness is added once.
 
 **Whether those four are COMPLETE is a property of the backend**, and it is declared, not guessed: `ControlProfile.backgroundWork` (`src/core/session/session.ts`).
@@ -157,8 +158,10 @@ Such a backend's own count of its background work stands in for the job list whe
 What is left at row 6 is a crewmate that stopped as far as the host can see, and that report wakes the first mate as row 5's does (INF-11): a blocker only the captain can clear, reported with no card up, reaches the first mate at once on every backend, since the host never reads the words that say so.
 Not knowing is kept on the record, as the rule's name, and never makes a report quiet.
 
-A review task's events go straight to the first mate, which owns the routing of findings by instruction (delivery rigor phase 2): they are never sorted, so they record nothing here either.
-Its builder's report is sorted like any other's, at every care (INF-1876): the host holds no lane by a care's name, and the one fact a review adds is row 0c, the open review's findings or blocked verdict, which wakes the first mate above a card on the captain's screen because only the first mate can steer the reviewer to the head the report brings.
+A review task's events go through the review owner, which delivers routine findings and pass handoffs directly and wakes the first mate for decisions, blocked verdicts and failed handoffs: they are never sorted, so they record nothing here either.
+The host returns a builder's changed head, evidence revision or validation state to the same reviewer before the ordinary sort.
+A delivered handoff with no other declared work needs no first mate wake; otherwise the report is sorted like any other, at every care (INF-1876).
+Row 0c reads the open review's findings or blocked verdict only when the report made no handoff, so the first mate reads the report for a blocker or decision without steering a duplicate review.
 An independent repair assessment's report is not sorted at all: it is the host's own verdict on a kept merge (FI3-663, `docs/delivery-rigor.md`), and the host reads it and closes the assessment.
 
 ## Self-resolving work waits

@@ -1,3 +1,4 @@
+import { REVIEW_HANDOFF_NEXT } from "../../../src/core/orchestrator/reportWakes";
 import { REVIEW_CAREFULLY_WORDS } from "../../../src/shared/vocabulary";
 import { noSurfaceProof } from "../../helpers/liveValidation";
 import type { ScriptedCall } from "../../helpers/scriptedCalls";
@@ -8,12 +9,7 @@ import {
 } from "../crewCards";
 import { REVIEW_CAREFULLY_MARKER, type Scenario } from "../mockProvider";
 import { calledTool, providerMessages, sinceLastUser } from "../providerRequest";
-import {
-  liveReviewAnswer,
-  MOCK_REVIEW_PASSED_STEER,
-  MOCK_REVIEWED_CHANGE,
-  REVIEW_BRIEF_MARKER,
-} from "./reviewedTier";
+import { liveReviewAnswer, MOCK_REVIEWED_CHANGE, REVIEW_BRIEF_MARKER } from "./reviewedTier";
 
 /**
  * Review carefully (INF-562, review-carefully e2e). Briefed with
@@ -23,8 +19,8 @@ import {
  * pushing. The app starts the review of the version the card offered
  * (INF-1875); the mock reviewer passes a brief that names the card the
  * captain read; told the review passed, the crewmate emits its completion
- * card again. A journey names it before `reviewedTier`, whose first mate
- * relays the pass.
+ * card again. A journey names it before `reviewedTier`; the host delivers the pass
+ * directly to the builder.
  */
 
 export const MOCK_CAREFUL_CARD_TITLE = "The meter reads on time, ready to merge";
@@ -59,7 +55,7 @@ export const reviewCarefully: Scenario =
       },
       { name: "report", args: { text: MOCK_STANDARD_REPORT } },
     ];
-    if (latestUserTail.includes(MOCK_REVIEW_PASSED_STEER)) {
+    if (latestUserTail.includes(REVIEW_HANDOFF_NEXT.ship)) {
       return hasToolResults ? { text: "done" } : { calls: card(MOCK_CAREFUL_REVIEWED_CARD_TITLE) };
     }
     if (

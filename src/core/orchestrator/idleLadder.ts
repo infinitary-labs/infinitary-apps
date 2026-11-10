@@ -329,14 +329,19 @@ export class IdleLadder {
   }
 
   /**
-   * A review the host raised on the task is still live (INF-1876): its
-   * builder waits on the verdict or close, which reach it through the
-   * Firstmate. The ladder alone reads it; the sort reads the verdict.
+   * A delivery child still has a turn to run. An idle reviewer has handed
+   * work back to its builder, including proof after a code pass: keeping
+   * that reader open is not evidence that the builder is moving.
    */
   private reviewOpen(record: TaskRecord): boolean {
     return this.host.tasks.graph
       .openChildren(record.id)
-      .some((child) => TaskService.isDeliveryChild(child) && !TaskService.isClosed(child));
+      .some(
+        (child) =>
+          TaskService.isDeliveryChild(child) &&
+          !TaskService.isClosed(child) &&
+          child.activity !== "idle",
+      );
   }
 
   /**

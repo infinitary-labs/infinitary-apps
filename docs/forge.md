@@ -683,7 +683,7 @@ The third is whether a waiting version still holds only the app's own mark: the 
 Settings → Projects shows a warning under "Where changes go" while the project is batched, its queue has never answered, and no workflow that is on mentions the status (`queueSettingsWarning`, `src/shared/repos.ts`); it clears once one does or the queue answers.
 What the first mate is told beside the click's queue wait (`keptNote`) names what the workflow read found while the project's queue has never answered (`queueWakeWords`, INF-2913).
 On a project whose queue answered before, a version nothing has written for the check watch's two hours is said in the watch's two-hour wake to the crewmate; the app adds no timer of its own.
-Evidence: `githubForge.test.ts` ("reads the workflows that mention the queue status ..."), `changeMerge.test.ts` ("says what the workflow read found ..."), `settleService.keptMerge.test.ts` ("tells the Firstmate, not the captain, ...") and the Settings section of `tests/e2e/queue-merge.spec.ts`.
+Evidence: `githubForge.test.ts` ("reads the workflows that mention the queue status ..."), `changeMerge.test.ts` ("says what the workflow read found ..."), `settleService.keptMerge.test.ts` ("tells the Firstmate, not the captain, when nothing answers the project's queue") and the Settings section of `tests/e2e/queue-merge.spec.ts`.
 
 ### Choosing batched pull requests before a queue exists
 

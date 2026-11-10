@@ -7,6 +7,7 @@ import {
   renderRigorSection,
 } from "../orchestrator/intentBrief";
 import { reviewFindingsNext } from "../orchestrator/reportWakes";
+import { renderWake } from "../orchestrator/wakes";
 import { SEQUENCES_SEED } from "../personal/sequencesSkill";
 import {
   CARD_AUTHORING,
@@ -869,7 +870,19 @@ describe("FIRSTMATE_PROMPT_CORE (contract v3.3, delivery rigor phase 2: the revi
     // the rules); each wake says what its verdict or report asks next
     // (wakes.test.ts words them). After the pass, who merges is the
     // PR-report rule's, said once (v4.59).
-    expect(reviewFindingsNext()).toContain(`prefixed with - ${REVIEW_FIX_RULES}.`);
+    // Session audit finding E moves the instruction to the builder's served handoff.
+    expect(
+      renderWake({
+        facts: {
+          kind: "review-handoff",
+          from: "review",
+          head: "0123456789abcdef0123456789abcdef01234567",
+          stage: "fix",
+          excerpt: "The flush races the read.",
+          findings: ["F1 error await the flush - auto-fix"],
+        },
+      }),
+    ).toContain(`${REVIEW_FIX_RULES}.`);
     expect(renderRigorSection("reviewed")).not.toContain(REVIEW_FIX_RULES);
     expect(core).toContain(
       "Green: the crewmate's merge card decides, never you; the app merges from it with autonomy on.",

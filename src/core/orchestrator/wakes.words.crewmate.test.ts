@@ -14,6 +14,50 @@ import {
 import { queueWakeWords } from "./projectQueue";
 
 const CASES: WordsCases<CrewmateWakeKind> = {
+  "review-handoff": [
+    {
+      name: "a passed review goes directly to its builder (session audit finding E)",
+      wake: {
+        facts: {
+          kind: "review-handoff",
+          from: "Review: repair the saved merge",
+          head: "0123456789abcdef0123456789abcdef01234567",
+          stage: "ship",
+          excerpt: "The approval remains bound to the offered change.",
+        },
+      },
+      words:
+        "Host handoff from Review: repair the saved merge at 0123456789abcdef0123456789abcdef01234567: The approval remains bound to the offered change.\nThe review passed. Follow your brief's delivery for the reviewed version, then show its completion card. A local-only change needs no push or pull request. Do not bring it up to date merely because the default branch moved. Passing review grants no merge consent.",
+    },
+    {
+      name: "a code pass keeps its reader for proof (F8, replaces the retired first-mate pass)",
+      wake: {
+        facts: {
+          kind: "review-handoff",
+          from: "INF-2762",
+          head: "4be7c1d90a2f",
+          stage: "proof",
+          excerpt: "Every pinned word matches; the planned proof has not run.",
+        },
+      },
+      words:
+        "Host handoff from INF-2762 at 4be7c1d90a2f: Every pinned word matches; the planned proof has not run.\nThe code passed. Run live proof once after this code review, then report without pushing. The host returns the proof to this reviewer. If this reviewer already read it and found it short, repair the reported gap and rerun only affected proof. If the only missing proof requires a pushed branch, push and finish it beside the checks before the merge card. Resource consent and every captain decision still apply.",
+    },
+    {
+      name: "a new assignment goes to the same reader (F8, replaces the retired first-mate pass)",
+      wake: {
+        facts: {
+          kind: "review-handoff",
+          from: "INF-2761",
+          head: "4be7c1d90a2f",
+          stage: "reread",
+          excerpt: "The committed repair is ready.",
+        },
+      },
+      words:
+        "Host handoff from INF-2761 at 4be7c1d90a2f: The committed repair is ready.\nRead the builder's changed head, evidence revision or validation state assigned to this turn. A code pass already recorded at this head makes this a proof read only. Read only the difference after an earlier code pass. The review history carries the captain's latest decisions. Report your typed review; the host delivers it directly to the builder. Escalate only a decision or a handoff you cannot complete.",
+    },
+  ],
   "responses-cancelled": [
     {
       name: "over prose guidance",

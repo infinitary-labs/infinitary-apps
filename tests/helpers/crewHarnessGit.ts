@@ -18,6 +18,7 @@ import {
   type ForgePull,
   type ForgeReadiness,
 } from "@core/forge";
+import { QUEUE_STATUS, QUEUE_WAITING_WORDS } from "@core/forge/forge";
 import { type ChangeDelivery, createChangeDelivery } from "@core/orchestrator/changeDelivery";
 import type { LineageFacts } from "@core/orchestrator/mergeAuthorization";
 import type { Card } from "@shared/cards";
@@ -132,6 +133,10 @@ export class KeptForge implements Forge {
   duringChecks: () => void = () => {};
   /** The project's queue status on the pull request's version, once a test gives one. */
   queue?: ForgeCheck;
+  async markQueued() {
+    this.queue = { name: QUEUE_STATUS, state: "pending", detail: QUEUE_WAITING_WORDS };
+    return {};
+  }
   async checks() {
     this.duringChecks();
     const items: ForgeCheck[] = this.states.map((state) => ({ name: "linux-checks", state }));

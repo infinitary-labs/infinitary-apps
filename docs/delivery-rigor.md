@@ -73,7 +73,7 @@ The brief's `tests-required` constraint asks for tests of the task's stated inte
 |---|---|---|---|
 | **Quick** | `quick` | green checks; the five headings are welcome, nothing more is required (`resources/runbooks/care/quick.json`) | only when asked for: the captain's words (`rigor_ask`) or a repository configured `quick` |
 | **Default** | `standard` | the pre-PR procedure, evidence-first validation, the evidence contract and the test-quality rule (`resources/runbooks/care/default.json`) | every project, explicitly set as its standing value |
-| **Careful** | `reviewed` | Default, then the careful-change skill: an independent review of the committed code, then live proof run once and read by a reviewer, before the push, the pull request and the merge card, with the first mate saying when to push and when to emit the card (`resources/runbooks/care/careful.json` and its `skills/careful-change`) | only when asked for: the captain's words (`rigor_ask`) or a repository configured `reviewed` |
+| **Careful** | `reviewed` | Default, then the careful-change skill: an independent review of the committed code, then live proof run once and read by a reviewer, before the push, the pull request and the merge card, with routine findings, proof and pass handoffs delivered by the host (`resources/runbooks/care/careful.json` and its `skills/careful-change`) | only when asked for: the captain's words (`rigor_ask`) or a repository configured `reviewed` |
 
 The middle care is **Default** (stored `standard`), not "checked" (captain's call): it is what a careful engineer does by default, not an extra step layered on.
 The host knows the three names as a typed fact on the record: it selects guidance by them (`Runbooks.crewSections`), shows them on the fact strip, in `crew_status` and in the brief's one care line (`renderRigorSection`), and holds nothing by them - no review hold, no live-proof hold, no refusal of an early card (INF-1876).
@@ -275,11 +275,12 @@ PR-8 stands (board decision): a project that runs no checks (a PR that reports z
 
 A review is an independent read of a change at a version, commissioned on request at any care (INF-1875).
 Careful's guidance (`resources/runbooks/care/careful.json` and its careful-change skill) orders it BEFORE the pull request (the no-mistakes ordering, captain-approved 2026-09-19), so fix rounds are local commits rather than push + CI cycles; the host holds neither the push nor the merge on it (INF-1876): a review task is its builder's child and carries no `blocks` edge onto it.
-The host owns the derivation, the reviewer's brief and the typed record; the first mate owns the routing of findings, by instruction (contract v3.5).
-Since FI3-566 (cut C) those instructions sit where each step arises: the first mate's core says when to commission a review and to carry the captain's latest decision into every fix and review steer, each review wake names the step it asks for, and the findings wake carries how to fix a finding (`REVIEW_FIX_RULES` in `reviewFindingsNext`, `reportWakes.ts`).
+The host owns the derivation, the reviewer's brief, the typed record and direct delivery of routine review handoffs through the durable task lanes.
+The first mate reads the recorded summary when it next acts and is woken for decisions, blocked reviews and failed handoffs, not routine relays.
+Since FI3-566 (cut C) those instructions sit where each step arises: the first mate's core says when to commission a review and to carry the captain's latest decision into every fix and review steer, each review wake names the step it asks for, and the builder's direct findings handoff carries how to fix a finding (`REVIEW_FIX_RULES` in `REVIEW_HANDOFF_NEXT`, `reportWakes.ts`).
 
 1. **A Careful builder finishes locally and emits no card.**
-   The Careful section has it commit its work on its branch, report under the five headings with `needs_firstmate` asking for the review, and neither push, open a PR nor emit a merge card until the first mate says so; the host refuses none of those by the care's name, so an early card is the first mate's to question, not the host's to refuse (`resources/runbooks/care/guide.md`).
+   The Careful section has it commit its work on its branch, report under the five headings with `needs_firstmate` asking for the review, and neither push, open a PR nor emit a merge card until the host delivers the reviewed handoff; the host refuses none of those by the care's name, so an early card is the first mate's to question, not the host's to refuse (`resources/runbooks/care/guide.md`).
    Its report reaches the first mate through the whose-turn sort like any builder's; only a review task's own events skip the sort (`routeCrewEvent`).
 2. **A review is started** - by the first mate's `spawn_crewmate` with `review_of` naming the builder and the user's original words (no new tool, the count stays 24), or by the app itself when the captain presses Review carefully on a merge card ("Raising care from a merge card").
    A review is an operation on a change at a version (INF-1875): any crewmate work with commits on its branch can be reviewed on request, at any care, before or after its pull request; the care names are metadata the record carries, and what each asks for is runbook guidance.
@@ -327,19 +328,23 @@ Since FI3-566 (cut C) those instructions sit where each step arises: the first m
    The checks still run on every version and must pass before a merge.
    A pass recorded before the reading was stored carries the same way when its reviewed commit is still on this Mac and the task is not placed.
 5. **Findings and blocked leave the reviewer idle and steerable.**
-   The findings wake names the first mate's next steps (`reviewFindingsNext`), and so does a blocked one; the findings wake carries the review judgment.
-   The first mate steers the builder with every auto-fix finding verbatim, prefixed with the ported fixer preamble every findings wake carries (`REVIEW_FIX_RULES`): double-check legitimacy, identify sibling sites of a broken invariant, repair the defect class with one small correction rather than new machinery, retrace normal callers, and verify resolution without reverting intentional changes.
+   The host sends auto-fix findings verbatim to the builder through its durable lane, with the fixer preamble (`REVIEW_FIX_RULES`): double-check legitimacy, identify sibling sites of a broken invariant, repair the defect class with one small correction rather than new machinery, retrace normal callers, and verify resolution without reverting intentional changes.
    No brief carries the preamble, so a builder whose care rose after its brief was written reads it the same way (INF-1876).
    The captain's latest decision governs subsequent fixes and reviews: a declined finding is not implemented and a chosen fix is not undone merely because earlier wording differed.
    Genuinely new problems remain reviewable.
    Info findings never block and need no steer.
-   It decides an ask-user finding itself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, listing them verbatim with the step it would take as the default.
+   The first mate decides an ask-user finding itself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, listing them verbatim with the step it would take as the default.
    The builder's next report names its open review, that review's last verdict and the head it read (`review` on the `report` wake).
-   When that report brings a new head, evidence revision or validation state, the first mate steers the reviewer to re-review those assigned facts without retyping the captain's declined findings, which the review history carries - and it never steers the reviewer otherwise: an idle reviewer needs no stand-by and no status, which the findings wake and a reviewer's verdict-less report also say.
-6. **A pass closes the review task** (done / finished, the host's actor), which releases the builder's close.
+   When that report brings a new committed head, evidence revision or validation state, the host returns it directly to the same reviewer, once per assignment.
+   An unchanged report starts no review turn and takes the ordinary report sort, so a dispute or prose blocker still reaches an owner; the review history carries the captain's declined findings without anyone retyping them.
+   An idle reader retained for proof does not count as moving work for the builder, so a stopped builder still receives the ordinary missing-witness nudge.
+   A failed handoff wakes the first mate rather than losing the report.
+6. **A pass goes directly to the builder.**
+   A pass with no accepted proof yet keeps the reviewer idle for the proof read; it records the code pass so the next turn reads only proof or the repair's difference.
+   Once the proof is accepted, or no scenarios were declared, the host closes the review task (done / finished) and sends the builder its delivery handoff.
    The one feed line is the builder's own event - `review passed at <sha>, risk <level>: <note> - <builder title>` - and the review's close is silent.
-   The wake to the first mate refs the builder, whose move is next, and names it: a steer to push, open the PR and drive CI green; then the builder's merge card, which the app merges from with autonomy on and the captain decides otherwise.
-   When the builder planned live-validation scenarios, the wake also names whether its proof is accepted at the passed head, its latest run and whether this review read it (`WakeProof`); while the proof is not accepted, its step is `REVIEW_PROOF_NEXT` instead: the builder proves once and reports the run without pushing, the first mate starts the proof read with `review_of`, a repair gets a review of its own difference, and proof that only runs on a pushed branch finishes beside the checks.
+   The direct handoff tells the builder to follow its brief's delivery and show its completion card; local-only work needs no push or PR, and merge consent is unchanged.
+   When the builder planned live-validation scenarios, the host reads whether its proof is accepted at the passed head (`acceptedValidation`); while the proof is not accepted, its direct handoff asks for proof instead: the builder proves once and reports the run without pushing, the host returns the new proof to the same reviewer, a repair gets a review of its own difference, and proof that only runs on a pushed branch finishes beside the checks.
    The merge card carries the review beside CI in the host's facts strip (a Review cell: `passed
    <sha> · risk <level>` with the note on the cell's title; `open` while
    one is live).
@@ -360,7 +365,7 @@ It adds no size limit.
 Where the review stands is on every surface the fleet already has: `crew_status` and the context block's crew lines carry `rigor` and the review state (`review open (<key>)`, `review: findings`, `review passed at <sha>`, and `reviews <key>` on the reviewer's own row), the task detail carries `rigor` and the review facts in `delivery`, and Details shows current Care separately from Delivery, with the verdict and its risk beside CI.
 Nothing new reaches a user surface: no card kind, no setting, no control.
 
-`tests/e2e/rigor-reviewed.spec.ts` is the binding test: through the real app on real Pi sessions with a local GitHub stand-in the app reads through its own sign-in (`tests/e2e/githubStub.ts`), a direct-pr task derived Careful reports green with no card, the first mate checks CI and spawns `review_of`, the findings become one steer and one decision card, the task waits on nothing while the review is open, the re-review's pass is one feed line that releases the builder's close, and the merge card renders the review beside CI and merges.
+`tests/e2e/rigor-reviewed.spec.ts` is the binding test: through the real app on real Pi sessions with a local GitHub stand-in the app reads through its own sign-in (`tests/e2e/githubStub.ts`), a direct-pr task derived Careful reports green with no card, the first mate checks CI and spawns `review_of`, the host delivers auto-fix findings and the first mate asks one decision card, the task waits on nothing while the review is open, the re-review's pass is one feed line that releases the builder's close, and the merge card renders the review beside CI and merges.
 `reviews.test.ts` covers the verdicts, the review record across care edits, the sort and the facts each review wake carries; `wakes.test.ts` the next steps each review wake words; `tests/firstmate-fixed-context.test.ts` that every step the core gave up is still served where it arises; `rigor.test.ts` the derivation order, the typed finding and the blocking rule; `intentBrief.test.ts` the care line and the review brief.
 
 ## The record and its holds (phase 3)
@@ -480,7 +485,10 @@ The captain's merge click on a merge card is an approval of that change, and a r
 - **No card after the click (INF-2913).**
   A captain's merge click on any project, on any merge card, takes the card away and the host puts up no card of its own while the merge waits, goes through or stops; the captain's words: "only show a card if the merge went wrong and needs the user's decision".
   Activity's one folding line says what became of the click (`settleLine`, `keptFeedLine`), and the host's sign-in card stays the one card for a refused sign-in.
-  A merge that did not go through wakes the first mate with the outcome, marked `unseen` (`UNSEEN_STOP_WORDS`): it puts up a card only when the next step is the captain's, and a crewmate whose work changed asks again on a new merge card.
+  A Merge click held only for a healthy batch check keeps its approval without a host card or routine first mate wake.
+  An unanswered-queue warning still reaches an agent; a passing batch must cover the approved version before the host merges it.
+  When a stopped merge wakes the first mate, it carries the outcome, marked `unseen` (`UNSEEN_STOP_WORDS`).
+  The first mate puts up a card only when the next step is the captain's, and a crewmate whose work changed asks again on a new merge card.
   A note an earlier version put up after a click (`mergePendingCardId`) still leaves when its task closes (`TaskClosing.closeAndPurge`).
 - **Restart safety.**
   Right before the merge request goes out the guard's `beforeDispatch` re-reads the approval (same id, generation and head, the crewmate idle, no new card) and persists an `attempt` token.

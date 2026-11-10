@@ -1199,6 +1199,9 @@ export class SettleService {
       );
     // Contention settled nothing: the attempt that owns the task says what became of it.
     else if (!merged && !result.contention) this.settleLine(taskId, settleFeedLine(mode, result));
+    // A healthy queue wait needs no decision, card or first mate turn.
+    // An unanswered queue's warning still needs an agent to recover it.
+    if (kept === "queue" && this.approvals.queueWarning(taskId, kept) === undefined) return;
     // A merge that went through is the feed line above and nothing more,
     // unless it freed work only a start begins (friction 7 of the
     // captain's Oct 22 audit: 45 of 62 merge wakes were idle turns).

@@ -126,6 +126,7 @@ It proves the facts and wording served, not a model's subsequent judgment, and u
 The freeze journey (`tests/e2e/main-thread-freeze.spec.ts`, INF-2061's plan, built as INF-2068) runs the actual app with the recorder on, on a record the captain's size: 160,094 task events, 3,400 tasks and 33 open messages in 13 chains, each a reading of the captain's own record (`tests/e2e/captainSizedRecord.ts`).
 It drives the work that repeats: first mate turns, which read the open messages before and after each, the task board, typing, and five minute passes with the answer-delivery sweep.
 It also starts a crewmate and waits for its first report, which comes after its first turn opened: every start-path stall the captain's record held ran in that stretch (INF-2297).
+It then starts nine crewmates from one first mate turn while the window takes typing, and finds their nine tasks with one board read per try, so the journey's own reads stay out of the stalls it grades.
 It fails, naming the call path, on any recorded stall of 250 ms or more of the main thread's own processor time (`cpuMs`).
 It grades processor time, never wall time, so a busy test computer that stretches a stall does not fail it.
 Every run prints and annotates its busiest stall, so a change that brings the app nearer the line shows before it crosses it.

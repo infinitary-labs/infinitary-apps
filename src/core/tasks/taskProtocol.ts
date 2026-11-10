@@ -230,7 +230,25 @@ export type TaskProtocolOptions = {
   coalesceMs?: number;
   /** The live-set size above which pushes are deltas; the design's trigger by default. */
   deltaTrigger?: { rows: number; bytes: number };
+  /**
+   * Runs a part of a board pushed from nothing on the main thread's next
+   * turn (`setImmediate` by default) and answers how to call it off.
+   */
+  nextTurn?: (run: () => void) => () => void;
 };
+
+/** The main thread's next turn, through `setImmediate`. */
+function onNextTurn(run: () => void): () => void {
+  const handle = setImmediate(run);
+  return () => clearImmediate(handle);
+}
+
+/** The tasks whose cards are minimized: the board shows them however old. */
+function minimizedOf(cards: readonly Card[]): Set<string> {
+  const minimized = new Set<string>();
+  for (const card of cards) if (card.minimized && card.taskId) minimized.add(card.taskId);
+  return minimized;
+}
 
 /**
  * A live work row with the moves it allows now, by the task record's own
@@ -277,11 +295,18 @@ export class TaskProtocol {
   private rebuildAll = true;
   /** A host fact moved with no row written: the next read reads every row's live facts again. */
   private recheckFacts = false;
+  /**
+   * A board from nothing on its way to a push, a part per turn (`warm`):
+   * its parts and the records the parts so far hold.
+   */
+  private warming: Warming | undefined;
+  private readonly nextTurn: (run: () => void) => () => void;
 
   constructor(private readonly options: TaskProtocolOptions) {
     this.now = options.now ?? (() => Date.now());
     this.coalesceMs = options.coalesceMs ?? BOARD_PUSH_COALESCE_MS;
     this.deltaTrigger = options.deltaTrigger ?? BOARD_DELTA_TRIGGER;
+    this.nextTurn = options.nextTurn ?? onNextTurn;
     for (const record of options.tasks.list()) this.statuses.set(record.id, record.status);
     this.detach = options.tasks.onChange((change) => this.onChange(change));
   }
@@ -373,6 +398,8 @@ export class TaskProtocol {
   dispose(): void {
     this.disposed = true;
     this.detach();
+    this.warming?.cancel();
+    this.warming = undefined;
     if (this.pushTimer) {
       clearTimeout(this.pushTimer);
       this.pushTimer = undefined;
@@ -401,12 +428,15 @@ export class TaskProtocol {
     const now = this.now();
     const cutoff = now - BOARD_RECENT_MS;
     const cards = this.options.cards.snapshot();
-    const minimized = new Set<string>();
-    for (const card of cards) if (card.minimized && card.taskId) minimized.add(card.taskId);
-    const cache =
-      this.cache && !this.rebuildAll
-        ? this.refresh(this.cache, cutoff, minimized, cards)
-        : this.rebuild(cutoff, minimized, cards);
+    const minimized = minimizedOf(cards);
+    const base = this.warming
+      ? this.warmed(this.warming)
+      : this.rebuildAll
+        ? undefined
+        : this.cache;
+    const cache = base
+      ? this.refresh(base, cutoff, minimized, cards)
+      : this.rebuild(cutoff, minimized, cards);
     this.cache = cache;
     this.rebuildAll = false;
     this.recheckFacts = false;
@@ -772,7 +802,11 @@ export class TaskProtocol {
     if (change.reset || change.removed.length > 0) this.rebase = true;
     for (const id of change.taskIds) this.touched.set(id, recordOf(id));
     for (const id of change.removed) this.touched.set(id, undefined);
-    if (change.reset) this.rebuildAll = true;
+    if (change.reset) {
+      this.rebuildAll = true;
+      this.warming?.cancel();
+      this.warming = undefined;
+    }
     if (change.presentation) this.recheckFacts = true;
     this.schedulePush();
   }
@@ -805,6 +839,12 @@ export class TaskProtocol {
   }
 
   private push(): void {
+    // A board from nothing pushes when its last part is in.
+    if (this.warming) return;
+    if (!this.cache || this.rebuildAll) {
+      this.warm();
+      return;
+    }
     this.options.beforePush?.();
     const board = this.board();
     const base = this.lastPushed;
@@ -832,6 +872,24 @@ export class TaskProtocol {
     minimized: ReadonlySet<string>,
     cards: readonly Card[],
   ): BoardCache {
+    const parts = this.rebuildParts(cutoff, minimized, cards);
+    for (;;) {
+      const part = parts.next();
+      if (part.done) return part.value;
+    }
+  }
+
+  /**
+   * `rebuild` in its parts: the records the board shows, what joins them
+   * (their edges, counts, replacements and graph), and the rows' views in
+   * order. Each pause answers the records in hand, so a part run on a later
+   * turn reads them as the parts before it did.
+   */
+  private *rebuildParts(
+    cutoff: number,
+    minimized: ReadonlySet<string>,
+    cards: readonly Card[],
+  ): Generator<ReadonlyMap<string, TaskRecord>, BoardCache, void> {
     const { tasks } = this.options;
     const records = new Map<string, TaskRecord>();
     for (const record of tasks.listLiveOrClosedSince(cutoff)) records.set(record.id, record);
@@ -840,6 +898,7 @@ export class TaskProtocol {
     // A pinned task lists whatever its state or age (INF-3127).
     for (const record of tasks.listPinned())
       if (!records.has(record.id)) records.set(record.id, record);
+    yield records;
     const shown = this.shownOf(records, cutoff, minimized);
     const ids = [...shown];
     const links = new Map<string, TaskLink>();
@@ -858,6 +917,7 @@ export class TaskProtocol {
       cards,
     );
     const tiers = this.tiersOf(rows);
+    yield records;
     const views = new Map<string, CachedView>();
     for (const record of rows) views.set(record.id, this.cachedView(record, graph, tiers));
     return {
@@ -871,6 +931,77 @@ export class TaskProtocol {
       tasks: sortBoardTasks([...views.values()].map((cached) => cached.view)),
       ...this.linkViewsOf(links, shown),
     };
+  }
+
+  /**
+   * Build the board from nothing a part per turn, then push it (INF-3453).
+   * A push from nothing - the first, or the one after rows vanished
+   * wholesale - reads every row the board shows, and on a long record's
+   * week that one stretch held the main thread past the freeze line; the
+   * main thread takes its other work between the parts. What is written
+   * meanwhile is touched as ever, so the pushed board brings those rows up
+   * to date as any later read does, and a read that cannot wait finishes
+   * the parts at once (`warmed`).
+   */
+  private warm(): void {
+    const cards = this.options.cards.snapshot();
+    const parts = this.rebuildParts(this.now() - BOARD_RECENT_MS, minimizedOf(cards), cards);
+    const warming: Warming = { parts, held: new Map(), cancel: () => {} };
+    this.warming = warming;
+    this.rebuildAll = false;
+    this.recheckFacts = false;
+    this.touched.clear();
+    const step = () => {
+      if (this.warming !== warming) return;
+      let part: IteratorResult<ReadonlyMap<string, TaskRecord>, BoardCache>;
+      try {
+        part = this.options.tasks.readProjection(() => {
+          const outer = this.readingFacts;
+          this.readingFacts = new Map();
+          try {
+            return parts.next();
+          } finally {
+            this.readingFacts = outer;
+          }
+        }, [...warming.held.values()]);
+      } catch (error) {
+        this.warming = undefined;
+        this.rebuildAll = true;
+        throw error;
+      }
+      if (!part.done) {
+        warming.held = part.value;
+        warming.cancel = this.nextTurn(step);
+        return;
+      }
+      this.warming = undefined;
+      this.cache = part.value;
+      if (this.pushTimer) {
+        clearTimeout(this.pushTimer);
+        this.pushTimer = undefined;
+      }
+      if (this.pushHolds > 0) {
+        this.pushQueued = true;
+        return;
+      }
+      this.pushQueued = false;
+      this.push();
+    };
+    warming.cancel = this.nextTurn(step);
+  }
+
+  /** The parts of a board from nothing still to run, run now; its push follows. */
+  private warmed(warming: Warming): BoardCache {
+    warming.cancel();
+    this.warming = undefined;
+    this.rebuildAll = true;
+    this.schedulePush();
+    return this.options.tasks.readProjection(() => {
+      for (;;) {
+        const part = warming.parts.next();
+        if (part.done) return part.value;
+      }
+    }, [...warming.held.values()]);
   }
 
   /**
@@ -1540,6 +1671,15 @@ type LiveFacts = {
 
 /** A shown row's view, with the live facts and card facts it was built from. */
 type CachedView = { view: TaskView; facts: string; cards: string };
+
+/** A board from nothing on its way to a push (`TaskProtocol.warm`). */
+type Warming = {
+  parts: Generator<ReadonlyMap<string, TaskRecord>, BoardCache, void>;
+  /** The records the parts so far read. */
+  held: ReadonlyMap<string, TaskRecord>;
+  /** Calls off the turn the next part waits for. */
+  cancel: () => void;
+};
 
 /**
  * What the last board was built from, kept between reads so one change

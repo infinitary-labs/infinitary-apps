@@ -9,6 +9,28 @@ export function hasStartQueueWait(
   return record.status === "open" && record.kind === "work" && record.activity !== "starting";
 }
 
+/**
+ * The clock words of a wait's start, in this computer's language and time
+ * zone. `toLocaleString` with options builds a new formatter on every call,
+ * about half a millisecond each, and a board build reads one for every
+ * unstarted row (INF-3453), so the formatter is kept for the zone and
+ * language it was built in and built again once either moves.
+ */
+const SINCE_FORMAT = {
+  month: "short",
+  day: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+} as const;
+let sinceFormat: { place: string; format: Intl.DateTimeFormat } | undefined;
+function sinceWords(since: number): string {
+  const { locale, timeZone } = Intl.DateTimeFormat().resolvedOptions();
+  const place = `${locale} ${timeZone}`;
+  if (sinceFormat?.place !== place)
+    sinceFormat = { place, format: new Intl.DateTimeFormat(undefined, SINCE_FORMAT) };
+  return sinceFormat.format.format(since);
+}
+
 /** A start wait reads typed sources only. No scheduler decision or cached readiness. */
 export function queueWaitOf(
   record: TaskRecord,
@@ -18,7 +40,7 @@ export function queueWaitOf(
 ): TaskView["queueWait"] {
   if (!hasStartQueueWait(record)) return undefined;
   const dated = (reason: string, since?: number): NonNullable<TaskView["queueWait"]> => ({
-    line: `${reason} · ${since === undefined ? "start of wait not recorded" : `since ${new Date(since).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`}`,
+    line: `${reason} · ${since === undefined ? "start of wait not recorded" : `since ${sinceWords(since)}`}`,
     ...(since === undefined ? {} : { since }),
   });
   // A dropped prerequisite still holds START; name it rather than inventing readiness.

@@ -531,6 +531,87 @@ describe("the delta carrier (task-system P5)", () => {
   });
 });
 
+// INF-3453: the first board push read and viewed every row the board shows
+// in one stretch of the main thread, and on a long record's week that one
+// stretch was past the freeze line. It is built a part per turn instead.
+describe("a board pushed from nothing", () => {
+  /** A fixture whose board parts wait for the test to run each turn. */
+  const turnByTurn = () => {
+    const turns: (() => void)[] = [];
+    const f = taskProtocolFixture({
+      nextTurn: (run) => {
+        turns.push(run);
+        return () => {
+          const at = turns.indexOf(run);
+          if (at >= 0) turns.splice(at, 1);
+        };
+      },
+    });
+    const next = () => {
+      const run = turns.shift();
+      if (!run) throw new Error("No part of the board waits for a turn.");
+      run();
+    };
+    return { ...f, turns, next };
+  };
+
+  it("takes a turn for each part, and pushes the rows written between them", async () => {
+    const f = turnByTurn();
+    f.tasks.create({ id: "notes", title: "Draft the notes", prompt: "Draft them", repoId: "r1" });
+    await f.settle();
+    expect(f.turns).toHaveLength(1);
+    f.next();
+    // Written after the parts read the rows the board shows.
+    f.tasks.create({ id: "changes", title: "List the changes", prompt: "List them", repoId: "r1" });
+    let parts = 1;
+    while (f.turns.length > 0) {
+      expect(f.boards()).toEqual([]);
+      f.next();
+      parts += 1;
+    }
+    expect(parts).toBeGreaterThan(2);
+    await f.settle();
+    expect(f.boards()).toEqual([f.fresh()]);
+    expect(
+      f
+        .boards()[0]
+        ?.tasks.map((task) => task.id)
+        .sort(),
+    ).toEqual(["changes", "notes"]);
+    f.protocol.dispose();
+    f.db.close();
+  });
+
+  it("answers a read between the parts with the whole board at once, and still pushes it", async () => {
+    const f = turnByTurn();
+    f.tasks.create({ id: "notes", title: "Draft the notes", prompt: "Draft them", repoId: "r1" });
+    await f.settle();
+    f.next();
+    expect(f.protocol.board()).toEqual(f.fresh());
+    expect(f.turns).toEqual([]);
+    await f.settle();
+    expect(f.boards()).toEqual([f.fresh()]);
+    f.protocol.dispose();
+    f.db.close();
+  });
+
+  it("starts again when the rows vanish wholesale between the parts", async () => {
+    const f = turnByTurn();
+    f.tasks.create({ id: "notes", title: "Draft the notes", prompt: "Draft them", repoId: "r1" });
+    f.tasks.close("notes", { status: "dropped", reason: "cancelled", actor: "host" });
+    await f.settle();
+    f.next();
+    f.tasks.archive.purge();
+    expect(f.turns).toEqual([]);
+    await f.settle();
+    while (f.turns.length > 0) f.next();
+    expect(f.boards()).toEqual([f.fresh()]);
+    expect(f.boards()[0]?.tasks).toEqual([]);
+    f.protocol.dispose();
+    f.db.close();
+  });
+});
+
 describe("provenance events on the wire (R2)", () => {
   it("keeps a decision record off the detail read and the task_event stream, but not steers", async () => {
     const { tasks, protocol, events, settle, tick, clock } = taskProtocolFixture();

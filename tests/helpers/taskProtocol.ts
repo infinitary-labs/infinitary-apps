@@ -24,6 +24,21 @@ import { freshDatabase as openInMemoryDatabase } from "./database";
 
 export const DAY = 24 * 60 * 60 * 1000;
 
+/**
+ * Runs a part of a board pushed from nothing once the code that asked for
+ * it returns, before any timer: a push the fixture's `settle` waits for is
+ * whole when it ends, however many parts its board took.
+ */
+function afterThisTurn(run: () => void): () => void {
+  let called = false;
+  queueMicrotask(() => {
+    if (!called) run();
+  });
+  return () => {
+    called = true;
+  };
+}
+
 /** What one fixture holds: the record, the protocol over it, and what it pushed and heard. */
 export type TaskProtocolFixture = {
   db: AppDatabase;
@@ -54,6 +69,8 @@ export function taskProtocolFixture(
     actions?: (
       record: import("../../src/core/storage/taskRecords").TaskRecord,
     ) => readonly import("@shared/tasks").TaskActionLine[];
+    /** When each part of a board pushed from nothing runs; `afterThisTurn` by default. */
+    nextTurn?: (run: () => void) => () => void;
   } = {},
 ): TaskProtocolFixture {
   const db = openInMemoryDatabase();
@@ -99,6 +116,7 @@ export function taskProtocolFixture(
       }),
     now: () => now,
     coalesceMs: 0,
+    nextTurn: options.nextTurn ?? afterThisTurn,
     ...(options.deltaTrigger ? { deltaTrigger: options.deltaTrigger } : {}),
     ...(options.modelLabel ? { modelLabel: options.modelLabel } : {}),
     ...(options.actions ? { actions: options.actions } : {}),

@@ -9,7 +9,7 @@ import { waitForFirstmateIdle } from "./crew";
 import { launchApp, SHORT_TICK } from "./launch";
 import { REACT_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
-import { reportLine, startedLine, taskKey } from "./rails";
+import { reportLine, startedLine, taskKey, taskKeys } from "./rails";
 import { readSavedData } from "./savedData";
 import {
   FREEZE_BURST_TITLES,
@@ -172,15 +172,18 @@ test("the main thread never spends 250 ms of its own processor time at once on a
     );
     await say(page, FREEZE_BURST_WORDS);
     const draft = "How are the session audits coming along";
+    // One board read per try finds all nine tasks (INF-3453): nine reads at
+    // once, each a copy of the whole record's board, were the burst's own
+    // largest stalls on hosted Linux, the journey measuring itself.
     const [burstKeys] = await Promise.all([
-      Promise.all(
-        FREEZE_BURST_TITLES.map(async (title) => {
-          const key = await taskKey(page, title);
-          await expect(startedLine(page, key).first()).toBeVisible({ timeout: 30_000 });
-          await expect(reportLine(page, key).first()).toBeVisible({ timeout: 30_000 });
-          return key;
-        }),
-      ),
+      (async () =>
+        Promise.all(
+          (await taskKeys(page, FREEZE_BURST_TITLES)).map(async (key) => {
+            await expect(startedLine(page, key).first()).toBeVisible({ timeout: 30_000 });
+            await expect(reportLine(page, key).first()).toBeVisible({ timeout: 30_000 });
+            return key;
+          }),
+        ))(),
       (async () => {
         const duringBurst = promptInput(page);
         await duringBurst.click();

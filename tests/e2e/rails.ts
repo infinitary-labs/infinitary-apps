@@ -686,6 +686,33 @@ export async function taskKey(page: Page, title: string): Promise<string> {
 }
 
 /**
+ * Several tasks' keys by their titles, in the titles' order, once the board
+ * holds every one; each title names one task, as `taskKey`'s does. Each try
+ * reads the board once for all of them, so a spec waiting on many tasks at
+ * once asks the app for one board per try, not one per title: on a large
+ * record each board read is a copy the main thread makes (INF-3453).
+ */
+export async function taskKeys(page: Page, titles: readonly string[]): Promise<string[]> {
+  let keys: (string | null)[] = [];
+  await expect
+    .poll(
+      async () => {
+        keys = await page.evaluate(
+          async (wanted) => {
+            const { tasks } = await window.infinitary.tasks.board();
+            return wanted.map((title) => tasks.find((task) => task.title === title)?.key ?? null);
+          },
+          [...titles],
+        );
+        return keys.every((key) => key !== null);
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(true);
+  return keys as string[];
+}
+
+/**
  * A task's feed lines authored from the given timeline events, oldest
  * first, found by what happened and whose it is (`data-feed-event`,
  * `data-feed-key`), never by the line's words: those are `taskFeedLine`'s,

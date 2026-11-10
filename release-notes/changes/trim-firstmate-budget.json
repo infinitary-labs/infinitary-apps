@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "trim-firstmate-budget",
+      "reason": "Shorten existing first mate instructions without changing their guidance or the interface."
+    }
+  ]
+}

@@ -391,7 +391,7 @@ const CASES: WordsCases<FirstmateWakeKind> = {
         },
       },
       words:
-        '[fm-op] a batch of approved changes paused in project "meter" (repo_id p-7a21): batch run 4410 failed its checks, so #12, #14 wait behind the issue https://github.com/acme/meter/issues/88 until a change labelled infinitary-queue-fix is approved or someone resumes the queue or sends one change back with a reason. Start one task in that project now, with no card first, whose brief names the queue-repair skill and the issue: it claims the issue first and stops if someone else\'s claim is earlier, then fixes forward, sends one change back, or resumes after a flake. If a task is already repairing this pause, start nothing. Put up no card about the pause: Settings shows it with its Resume, and each paused task says who repairs it.',
+        '[fm-op] a batch of approved changes paused in project "meter" (repo_id p-7a21): batch run 4410 failed its checks, so #12, #14 wait behind the issue https://github.com/acme/meter/issues/88 until a change labelled infinitary-queue-fix is approved or someone resumes the queue or sends one change back with a reason. Start one task in that project now, with no card first, whose brief names the queue-repair skill and the issue: it claims the issue first and stops if someone else\'s claim is earlier, then fixes forward (including the root cause of flakiness) or sends one change back. A flake is not a reason to resume the unchanged batch. If a task is already repairing this pause, start nothing. Put up no card about the pause: Settings shows it with its Resume, and each paused task says who repairs it.',
     },
     {
       name: "a teammate claimed it",

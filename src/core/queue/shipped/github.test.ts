@@ -772,6 +772,18 @@ describe("the shipped queue on GitHub", () => {
       expect(project.queueOf(number)).toMatchObject({ kind: "in-batch", run: 508 });
     expect(project.issues[0]?.state).toBe("closed");
     expect(project.issues[0]?.comments.join(" ")).toMatch(/#84 was approved as the fix/);
+
+    // Intent: the captain requires flakiness to be fixed forward, not ignored.
+    // A repair's approval only starts proof: it does not pass the paused changes.
+    await decide({
+      ...runOf(project, 508).args,
+      result: "success",
+      confirm: "skipped",
+      members: fixed.members,
+      tree: TREE,
+    });
+    for (const number of [81, 82, 83, 84])
+      expect(project.queueOf(number)).toMatchObject({ kind: "passed", run: 508, tree: TREE });
   });
 
   // The follow-up the review of the merge line filed: "The shipped queue

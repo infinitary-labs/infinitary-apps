@@ -419,7 +419,7 @@ function renderQueuePaused(facts: Extract<WakeFacts, { kind: "queue-paused" }>):
   const head = `${QUEUE_PAUSED_OPENING} "${facts.project.name}" (repo_id ${facts.project.id}): batch run ${facts.run} failed its checks, so ${changes || "its changes"} wait behind the issue ${facts.url} until a change labelled ${FIX_LABEL} is approved or someone resumes the queue or sends one change back with a reason.`;
   const next = facts.claimedBy
     ? ` ${facts.claimedBy} took that issue and repairs it, so start nothing.`
-    : ` Start one task in that project now, with no card first, whose brief names the queue-repair skill and the issue: it claims the issue first and stops if someone else's claim is earlier, then fixes forward, sends one change back, or resumes after a flake. If a task is already repairing this pause, start nothing.`;
+    : ` Start one task in that project now, with no card first, whose brief names the queue-repair skill and the issue: it claims the issue first and stops if someone else's claim is earlier, then fixes forward (including the root cause of flakiness) or sends one change back. A flake is not a reason to resume the unchanged batch. If a task is already repairing this pause, start nothing.`;
   return `${head}${next} Put up no card about the pause: Settings shows it with its Resume, and each paused task says who repairs it.`;
 }
 

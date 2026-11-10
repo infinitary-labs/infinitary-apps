@@ -382,6 +382,26 @@ describe("runbooks over existing prompt and skill doors", () => {
       "queue-setup",
     ]);
   });
+  // Intent: the captain requires the paused-batch repair crewmate to fix flakiness forward.
+  // Exercise the real bundle-to-work-computer skill door, not a source-file presence check.
+  it("stages the fix-forward flake procedure for a repair and withdraws it when its runbook is off", async () => {
+    const { books } = fixture();
+    const staged = await stageRunbookSkills(
+      books.crew({ ...code, kind: "fix", delivery: "queue-pr" }).skills,
+      join(scratchDir("inf-queue-repair-"), "skills"),
+    );
+    const repair = staged.find((skill) => skill.name === "queue-repair");
+    expect(repair).toBeDefined();
+    const procedure = readFileSync(join(repair?.dir ?? "", "SKILL.md"), "utf8");
+    expect(procedure).toContain("A failure judged a flake is still yours to repair");
+    expect(procedure).toContain("Reproduce it in the failing ordering");
+    expect(procedure).toContain("Never resume the unchanged batch");
+    expect(procedure).toContain("When you cannot establish or fix the cause, keep the pause");
+    books.set("queue", false);
+    expect(
+      books.crew({ ...code, kind: "fix", delivery: "queue-pr" }).skills.map((skill) => skill.name),
+    ).not.toContain("queue-repair");
+  });
   it("puts only the matched section in the actual crew preset on both backends", () => {
     const { books } = fixture();
     const root = scratchDir("inf-runbook-prompt-");

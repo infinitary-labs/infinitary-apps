@@ -1,6 +1,6 @@
 ---
 name: queue-repair
-description: Repair a paused batch of the shipped queue - claim the pause's issue, read what failed, then fix forward, send one change back, or resume after a flake. Read before repairing a paused batch.
+description: Repair a paused batch of the shipped queue - claim the pause's issue, read what failed, then fix forward, including flakiness, or send one change back. Read before repairing a paused batch.
 ---
 
 # Repairing a paused batch
@@ -34,7 +34,12 @@ On GitLab the queue runs nothing again before it pauses, so read the logs for a 
   That change fails with the reason on the version the batch ran, its own crew repairs it, and the rest resume.
   A change pushed again since the batch ran gets nothing written, and the issue says so: its new version goes in a later batch once it is marked waiting.
   When a failure still lands on a version that needs no change, that change's crewmate answers it with check_change, and the change goes back to waiting with no new version and no new click.
-- **Resume after a flake.** When the failure does not come from any change in the batch, file the flaky test's owner first, then start the queue's workflow by hand with `action` `resume` and a reason that names that owner.
+- **Fix flakiness forward too.** A failure judged a flake is still yours to repair, even when no change in the batch caused it.
+  Reproduce it in the failing ordering, diagnose its root cause at its owner (the app, the test or the runner), and open the fix through **Fix forward** above.
+  Never resume the unchanged batch merely because the failure is intermittent, a later run passed, or you filed another task to own it.
+  Do not add retries or sleeps, or weaken, skip or delete a test to make the batch pass.
+  When you cannot establish or fix the cause, keep the pause, report the failing check, evidence and missing capability, and ask the first mate to coordinate what you cannot run.
+  If another task already owns the repair, coordinate with that owner through the first mate rather than duplicate it or resume without its fix.
 
 Starting the workflow by hand is `POST /repos/{owner}/{repo}/actions/workflows/infinitary-queue.yml/dispatches` with `ref` the default branch and `inputs` `{ "action": ..., "number": ..., "reason": ... }`.
 On GitLab no pipeline takes an answer, so make the answer's writes yourself through GitLab's API, in this order, the same writes Settings makes:

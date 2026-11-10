@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "queue-flake-fix-forward",
+      "kind": "fix",
+      "area": "projects",
+      "title": "Repair crewmates fix flaky batch failures forward",
+      "body": "When a batch of approved changes pauses, its repair crewmate now fixes the cause of a flaky failure instead of resuming the unchanged batch after filing another owner. If the cause cannot be established or repaired, the crewmate keeps the pause and reports what is missing.",
+      "noPicture": "This changes the repair instructions, not the appearance of any screen.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

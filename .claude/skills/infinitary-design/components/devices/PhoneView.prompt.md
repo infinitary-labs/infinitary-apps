@@ -80,6 +80,7 @@ A card is the Mac's raised surface: a solid fill, a thin edge, a light line insi
 The head, footer buttons and reply field are native controls outside the body’s web view.
 The head reads as the Mac's: the kind chip (Attention in red), the task's key in mono, which opens its record, where the task runs, the model chip and the risk, then the title and the revised line; it names no sender.
 The shared minus is the card's only leave control: it puts decisions, attention and pending notes aside, or reads an ordinary note using the host's declared meaning.
+It sits at the trailing end of the head on the card's face and on its thread alike.
 It asks no close question, selects no choice or refusal, and never ends work; picks, typed words and pending replies remain available.
 A marked saved answer waits for explicit Done, on its note or record.
 A merge card's risk is a row of seven dots in the levels' colors, and a tap opens a sheet with each dimension's name, level words and the crewmate's why.

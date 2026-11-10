@@ -680,9 +680,9 @@ private struct PhoneCardPane: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { surfaceHeight = $0; if shown { row.height = $0 } }
     }
 
-    /// INF-1919, the card's back: Card turns it over again, then the thread's count, the card's title in one muted
-    /// line, the messages as the face drew them before, and the same field and choices at its foot. It stands as tall
-    /// as the face at least, and grows with its thread up to the stage's height.
+    /// INF-1919, the card's back: Card turns it over again, then the thread's count and the face's own minus, the
+    /// card's title in one muted line, the messages as the face drew them before, and the same field and choices at its
+    /// foot. It stands as tall as the face at least, and grows with its thread up to the stage's height.
     private var back: some View {
         let shape = RoundedRectangle(cornerRadius: PhoneTheme.cardRadius, style: .continuous)
         let ideal = backHeadHeight + threadHeight + backFootHeight
@@ -711,6 +711,8 @@ private struct PhoneCardPane: View {
                     Spacer(minLength: PhoneTheme.space2)
                     Text(PhoneCardWords.threadCount(messages.count).uppercased()).font(PhoneFont.micro)
                         .foregroundStyle(PhoneTheme.muted).accessibilityIdentifier("thread-count")
+                    // The captain's ask: a card showing its thread still offers its minus.
+                    putAsideButton(.back)
                 }
                 Text(card.title).font(PhoneFont.caption).foregroundStyle(PhoneTheme.muted).lineLimit(1)
                     .padding(.bottom, PhoneTheme.space2).accessibilityIdentifier("thread-title")
@@ -816,17 +818,24 @@ private struct PhoneCardPane: View {
                 if let asked = card.asked { PhoneAskedLine(asked: asked, open: $askedOpen) }
             }
             Spacer(minLength: PhoneTheme.space2)
-            Button(action: putAside) {
-                Label(card.isPast ? PhoneCardWords.panelLeave : (card.value["corner"]["label"].text ?? PhoneCardWords.putAside), systemImage: "minus")
-                    .labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
-            }
-                .keyboardShortcut(shown ? KeyboardShortcut("m", modifiers: [.command, .shift]) : nil)
-                .accessibilityHint(rest(card.isPast ? PhoneCardWords.panelLeaveRest : (card.value["corner"]["restWords"].text ?? PhoneCardWords.putAsideRest)))
-                .accessibilityIdentifier("put-aside-card").disabled(host.changing || (!card.isPast && !session.canChange))
+            putAsideButton(.face)
         }
         .contentShape(Rectangle())
         // INF-3106 direction B: a tap on the card's head puts the keyboard away; the head's own buttons keep their taps.
         .onTapGesture { if messageContext.keyboardUp { dismissPhoneKeyboard() } }
+    }
+
+    /// The card's one minus, at the trailing end of its face's head and of its thread's head; Shift-Command-M presses
+    /// the one on the side that shows.
+    private func putAsideButton(_ side: CardSide) -> some View {
+        Button(action: putAside) {
+            Label(card.isPast ? PhoneCardWords.panelLeave : (card.value["corner"]["label"].text ?? PhoneCardWords.putAside), systemImage: "minus")
+                .labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
+        }
+            .keyboardShortcut(shown && showsBack == (side == .back) ? KeyboardShortcut("m", modifiers: [.command, .shift]) : nil)
+            .accessibilityHint(rest(card.isPast ? PhoneCardWords.panelLeaveRest : (card.value["corner"]["restWords"].text ?? PhoneCardWords.putAsideRest)))
+            .accessibilityIdentifier(side == .face ? "put-aside-card" : "thread-put-aside")
+            .disabled(host.changing || (!card.isPast && !session.canChange))
     }
 
     /// The words after a control's name in the Mac's rest line ("Close · stays on INF-1's record"), as its VoiceOver hint.

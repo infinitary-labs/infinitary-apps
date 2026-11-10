@@ -14,10 +14,8 @@ const { execute } = vi.hoisted(() => ({ execute: vi.fn() }));
 
 // Git is the external boundary. Its process stays open until the test releases
 // it, representing add's observed interval with an unfinished commondir.
-vi.mock("node:child_process", () => ({
-  execFile: Object.assign(() => {}, {
-    [Symbol.for("nodejs.util.promisify.custom")]: (...args: unknown[]) => execute(...args),
-  }),
+vi.mock("./gitProcess", () => ({
+  runGitProcess: (...args: unknown[]) => execute(...args),
 }));
 // Resolve real aliases without leaving filesystem callbacks pending when the
 // test observes admission order at the next event-loop turn.
@@ -47,8 +45,8 @@ function runner(repos: Map<string, string>, command: (args: string[]) => Promise
   execute.mockImplementation(async (_file: string, args: string[]) => {
     const [, cwd, ...gitArgs] = args;
     if (!cwd) throw new Error("Git needs an explicit working directory");
-    if (gitArgs[0] === "rev-parse") return { stdout: `${repos.get(cwd)}\n` };
-    return { stdout: await command(gitArgs) };
+    if (gitArgs[0] === "rev-parse") return `${repos.get(cwd)}\n`;
+    return await command(gitArgs);
   });
 }
 

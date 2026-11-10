@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "stopped-git-helpers",
+      "kind": "fix",
+      "area": "projects",
+      "title": "A git check that runs out of time no longer leaves programs running",
+      "body": "When the app stopped a git command because your project's host did not answer in time, two of git's helper programs kept running, each holding a connection to the host until the host closed it. Every retry added two more. The app now stops them together with git.",
+      "noPicture": "The change is in how the app stops git's programs; no view or control changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

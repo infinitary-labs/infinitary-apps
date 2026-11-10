@@ -1,10 +1,7 @@
-import { execFile } from "node:child_process";
 import { realpath } from "node:fs/promises";
-import { promisify } from "node:util";
 import { bundledGit, gitHelperResetParameters, hostEnv } from "../hostEnv";
 import { atUtilityQos } from "../utilityQos";
-
-const execFileAsync = promisify(execFile);
+import { runGitProcess } from "./gitProcess";
 
 /**
  * The identity the app commits under when a repo has none of its own (a
@@ -29,7 +26,10 @@ export async function git(
     env?: Record<string, string>;
     timeoutMs?: number;
     trim?: boolean;
-    /** Ends git when it aborts, as the timeout does. */
+    /**
+     * Ends git when it aborts, as the timeout does: git and every program
+     * it started, its remote helpers included (`gitProcess.ts`).
+     */
     signal?: AbortSignal;
   } = {},
 ): Promise<string> {
@@ -72,9 +72,9 @@ async function runGit(
   const app = bundledGit();
   // Checkouts and removals can touch tens of thousands of files: below the UI.
   const command = atUtilityQos(app?.binary ?? "git", ["-C", repoDir, ...args]);
-  const { stdout } = await execFileAsync(command.file, command.args, {
+  const stdout = await runGitProcess(command.file, command.args, {
     maxBuffer: 16 * 1024 * 1024,
-    ...(options.timeoutMs ? { timeout: options.timeoutMs } : {}),
+    ...(options.timeoutMs ? { timeoutMs: options.timeoutMs } : {}),
     ...(options.signal ? { signal: options.signal } : {}),
     env: {
       ...hostEnv(),

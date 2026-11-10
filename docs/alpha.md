@@ -42,11 +42,12 @@ The host enables native replacement only for an installed release Mac, not a dev
   A missing channel feed offers nothing.
   The native library's channel setter enables downgrades, so the adapter explicitly disables them afterward.
 - **Consent before replacement.**
-  Checking never downloads; Update and restart downloads, checks the checksum, saves the crew's work ("Saving work before an update" below), stages through native signature verification, awaits core shutdown, and restarts.
+  Checking never downloads; Update and restart (Install on Linux, and Try again after an install that can pass) first reads the release source, so it installs the newest version on the channel, falling back to the version already offered when that read fails; a staged update reads nothing.
+  It then downloads, checks the checksum, saves the crew's work ("Saving work before an update" below), stages through native signature verification, awaits core shutdown, and restarts.
   Automatic downloads and automatic installation on quit are disabled.
   The notice shows progress and bounded errors, with a link to the release page for recovery.
   The app refuses updates from a mounted or translocated copy, an unwritable installation, or an unsupported system.
-  Such a problem cannot pass on a retry, so the core withdraws Update and restart for the rest of that run (`blocked` in `src/core/update/macUpdates.ts`) and Open the releases page becomes the next step; a failure that can pass, such as a stopped download, offers Try again beside View release.
+  Such a problem cannot pass on a retry, so the core withdraws Update and restart for the rest of that run (`blocked` in `src/core/update/macUpdates.ts`) and Open the releases page becomes the next step; a failure that can pass, such as a stopped download, offers Try again beside Check for updates.
 - **Switching invalidates pending work.**
   A channel change saves first, invalidates prior checks and offers, and cancels an unfinished download.
   Native staging locks the channel until restart.
@@ -56,9 +57,14 @@ The host enables native replacement only for an installed release Mac, not a dev
   The Version row and the top-right update notice draw one update part (`src/renderer/src/app/UpdateStepView.tsx`) from one ladder (`updateStep`, `src/renderer/src/app/updateStep.ts`): for every state a line that says where the update stands and, beside it, a button that takes the next step, with at most one more control.
   Up to date, a copy ahead of its channel, or no release yet: the line says so and when the release source last answered (`checkedAt`; "Up to date on Stable.
   Checked just now."), with Check for updates.
-  Check for updates reads the release source now on every copy whose installation the app knows, past the 4-hour saved answer, and joins a check already reading (`checkNow`, `inf:update:check`); command search's Check for updates and the app menu's Check for Updates… open Settings → General with focus on the row's next step and press Check for updates.
-  A failed check says so beside Try again and Open the releases page; it never says the copy is up to date, while the quiet hourly check stays silent on failure.
-  A version available offers Update and restart (Install on Linux) beside View release, or, where a package manager installs it (Homebrew, Arch, NixOS), shows its command with Copy command.
+  Check for updates reads the release source now on every copy whose installation the app knows, past the 4-hour saved answer, and joins a check already reading (`checkNow`, `inf:update:check`); command search's Check for updates and the app menu's Check for Updates… open Settings → General with focus on the row's Check for updates, or its next step where it offers none, and press Check for updates.
+  A failed check with nothing found says so beside Try again and Open the releases page; it never says the copy is up to date.
+  A version available offers Update and restart (Install on Linux) or, where a package manager installs it (Homebrew, Arch, NixOS), shows its command with Copy command, each beside Check for updates, since a newer version may be out; the line says when it last checked ("Version 0.6.5 is available.
+  Checked 3h ago."), and the version in it opens that version's release page.
+  While that check reads, the line and the next step hold still and only the button says Checking….
+  A failed check keeps a version already found ("Updates could not be checked.
+  Version 0.6.5 is still available."), and the quiet read keeps it without a word, on every system.
+  Once an update downloads, saves work, updates or waits to restart, the row offers no check, and a check from the menu or command search changes nothing.
   While an update downloads the line shows its progress; while it saves the crew's work it says Saving work and whose running work it waits for, with Update later, then Updating, and after the restart Resuming work until every turn the update stopped has started again.
   A staged update whose restart did not finish offers Restart; a copy of unknown installation explains itself beside Open the releases page.
   The Update channel row shows only its own problem, a failed channel change.

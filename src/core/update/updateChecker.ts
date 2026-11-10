@@ -373,8 +373,23 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
 
   const saving = options.saving ?? createUpdateSaving(undefined);
 
+  /**
+   * What Install installs: the release source read now, so it installs the
+   * newest version, or the version already offered when that read fails.
+   */
+  async function readBeforeInstall(): Promise<UpdateStatus> {
+    const channel = options.channel();
+    const tap = linux ? TAP : tapNow();
+    if (simulated(channel, tap) || !fetchImpl) return getStatus();
+    try {
+      return await read(channel, tap);
+    } catch {
+      return lastGood.get(keyOf(channel, tap)) ?? statusFor(channel, tap, null);
+    }
+  }
+
   async function install(): Promise<UpdateInstallResult> {
-    const status = await getStatus();
+    const status = await readBeforeInstall();
     const offer = lastOffer.get(keyOf(status.channel, TAP));
     if (!linux?.package || !status.install || !offer?.download || !options.installLinux) {
       return { ok: false, problem: "There is no update this app can install itself." };

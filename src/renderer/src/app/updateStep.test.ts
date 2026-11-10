@@ -13,6 +13,9 @@ import { type UpdateStepPresses, updateStep } from "./updateStep";
 // INF-2073, the captain's direction A: the update line says what Check for updates found.
 // INF-2670, the captain's direction A: every state names its next step beside the button
 // that takes it, in the Version row and the update notice alike.
+// INF-3405, the captain's direction B: "we still need to provide the "check for update" button
+// because it could be that there's an even newer version" - Check for updates sits beside the
+// next step while a version is offered, and the version in the line opens its release page.
 const NOW = 1_800_000_000_000;
 const STATUS: UpdateStatus = {
   currentVersion: "0.1.30",
@@ -74,8 +77,35 @@ describe("the update ladder", () => {
       UPDATE_WORDS.releasesPage,
       UPDATE_WORDS.retry,
     ]);
+  });
+
+  it("keeps an offered version after a failed check, saying the check failed", () => {
     const failed = step({ ...OFFERED, phase: "error", problem: UPDATE_PROBLEMS.checkFailed });
-    expect([failed?.primary.action, failed?.secondary?.action]).toEqual(["check", "release"]);
+    expect(failed).toMatchObject({
+      state: "available",
+      line: `${UPDATE_PROBLEMS.checkFailed} ${UPDATE_NOTICES.stillAvailable("0.1.31")} ${UPDATE_STEP_WORDS.restarts}`,
+      problem: true,
+      version: "0.1.31",
+      primary: { action: "install", label: UPDATE_WORDS.restart },
+      secondary: { action: "check", label: UPDATE_WORDS.check },
+    });
+  });
+
+  it("holds the offer still while a check reads, with only its button saying so", () => {
+    const offered = step(OFFERED);
+    for (const reading of [
+      step(OFFERED, { checking: true }),
+      step({ ...OFFERED, phase: "checking" }),
+    ])
+      expect(reading).toEqual({
+        ...offered,
+        secondary: { action: "check", label: UPDATE_WORDS.checkingButton, disabled: false },
+      });
+    // Update and restart reads first; while it does, Check for updates waits.
+    expect(step({ ...OFFERED, phase: "checking" }, { busy: true })).toMatchObject({
+      primary: { action: "install", pending: UPDATE_WORDS.installing },
+      secondary: { action: "check", disabled: true },
+    });
   });
 
   it("offers a copy of unknown installation the releases page, with its explanation", () => {
@@ -94,17 +124,31 @@ describe("the update ladder", () => {
     expect(step(null)).toBeNull();
   });
 
-  it("offers Update and restart beside View release, or Install where Linux asks for a password", () => {
+  it("offers Update and restart beside Check for updates, or Install where Linux asks for a password", () => {
     expect(reads(OFFERED)).toEqual([
-      `${UPDATE_NOTICES.available("0.1.31")} ${UPDATE_STEP_WORDS.restarts}`,
-      UPDATE_WORDS.release,
+      `${UPDATE_NOTICES.available("0.1.31")} Checked just now. ${UPDATE_STEP_WORDS.restarts}`,
+      UPDATE_WORDS.check,
       UPDATE_WORDS.restart,
     ]);
-    expect(reads({ ...OFFERED, install: { asksPassword: true } })).toEqual([
+    expect(step(OFFERED, { now: NOW + 3 * 60 * 60_000 })?.line).toBe(
+      `${UPDATE_NOTICES.available("0.1.31")} Checked 3h ago. ${UPDATE_STEP_WORDS.restarts}`,
+    );
+    expect(step(OFFERED)?.version).toBe("0.1.31");
+    expect(reads({ ...OFFERED, install: { asksPassword: true }, checkedAt: undefined })).toEqual([
       `${UPDATE_NOTICES.available("0.1.31")} ${UPDATE_STEP_WORDS.asksPassword}`,
-      UPDATE_WORDS.release,
+      UPDATE_WORDS.check,
       "Install",
     ]);
+  });
+
+  it("offers Check for updates alone where nothing installs here, beside the version's link", () => {
+    expect(step({ ...OFFERED, install: undefined })).toMatchObject({
+      state: "available",
+      line: `${UPDATE_NOTICES.available("0.1.31")} Checked just now.`,
+      version: "0.1.31",
+      primary: { action: "check", label: UPDATE_WORDS.check },
+    });
+    expect(step({ ...OFFERED, install: undefined })?.secondary).toBeUndefined();
   });
 
   it("shows a package manager's command with Copy command", () => {
@@ -112,22 +156,24 @@ describe("the update ladder", () => {
     const homebrew = step({ ...OFFERED, install: undefined, upgradeCommand: command });
     expect(homebrew).toMatchObject({
       state: "command",
-      line: `${UPDATE_NOTICES.available("0.1.31")} ${UPDATE_STEP_WORDS.command}`,
+      line: `${UPDATE_NOTICES.available("0.1.31")} Checked just now. ${UPDATE_STEP_WORDS.command}`,
       command,
+      version: "0.1.31",
       primary: { action: "copy", label: UPDATE_WORDS.copy },
-      secondary: { action: "release", label: UPDATE_WORDS.release },
+      secondary: { action: "check", label: UPDATE_WORDS.check },
     });
   });
 
   it("says nothing of checking while an update downloads, and shows how far it is", () => {
-    expect(
-      step({ ...OFFERED, phase: "downloading", percent: 42 }, { checking: true }),
-    ).toMatchObject({
+    const downloading = step({ ...OFFERED, phase: "downloading", percent: 42 }, { checking: true });
+    expect(downloading).toMatchObject({
       state: "downloading",
       line: UPDATE_STEP_WORDS.downloading("0.1.31"),
       percent: 42,
       primary: { pending: UPDATE_WORDS.downloading },
     });
+    // A started update offers no check: it installs the version it is downloading.
+    expect(downloading?.secondary).toBeUndefined();
   });
 
   // INF-2245: the crew's work around this computer's update, saved then resumed.
@@ -159,8 +205,8 @@ describe("the update ladder", () => {
 
   it("says the update waits after Update later, and offers it again", () => {
     expect(reads(OFFERED, { later: UPDATE_LATER })).toEqual([
-      UPDATE_LATER,
-      UPDATE_WORDS.release,
+      `${UPDATE_NOTICES.available("0.1.31")} Checked just now. ${UPDATE_LATER}`,
+      UPDATE_WORDS.check,
       UPDATE_WORDS.restart,
     ]);
   });
@@ -181,8 +227,8 @@ describe("the update ladder", () => {
   it("offers Try again after a failure that can pass, and only the releases page after one it cannot", () => {
     const stopped = "The update could not be installed, so nothing changed.";
     expect(reads({ ...OFFERED, phase: "error" }, { problem: stopped })).toEqual([
-      stopped,
-      UPDATE_WORDS.release,
+      `${stopped} ${UPDATE_NOTICES.stillAvailable("0.1.31")}`,
+      UPDATE_WORDS.check,
       UPDATE_WORDS.retry,
     ]);
     // The core withdraws installing for a problem it cannot fix on this copy.

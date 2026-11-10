@@ -27,6 +27,7 @@ export function UpdateRowLine() {
 export function UpdateRowControl() {
   const { step } = useUpdateStep();
   if (!step) return null;
-  // The next step is what command search's Check for updates focuses.
+  // Check for updates, or the next step where it is not offered, is what command
+  // search's Check for updates focuses.
   return <UpdateStepButtons step={step} hook />;
 }

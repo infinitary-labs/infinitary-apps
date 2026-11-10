@@ -598,3 +598,69 @@ describe("saving the crew's work before an in-app Linux update", () => {
     expect(f.work.release).toHaveBeenCalledTimes(1);
   });
 });
+
+// INF-3405, the captain's words: "it could be that there's an even newer version". Install
+// reads the builds file first, so it installs the newest version, and installs the version
+// already offered when that read fails.
+describe("Install on Linux reads first", () => {
+  const BUILDS = "https://builds.example.invalid/infinitary-builds.json";
+  function builds(version: string) {
+    const release = target(version);
+    return {
+      schemaVersion: 1,
+      channels: {
+        stable: {
+          version,
+          releaseUrl: release.releaseUrl,
+          sourceCommit: release.sourceCommit,
+          systems: {
+            linux: {
+              x64: {
+                deb: {
+                  url: buildDownloadUrl(version, `infinitary-${version}-linux-amd64.deb`),
+                  sha256: "b".repeat(64),
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+  }
+
+  function linux() {
+    const feed: { version: string; offline: boolean } = { version: "0.6.3", offline: false };
+    const installed: string[] = [];
+    const updates = createUpdateChecker({
+      currentVersion: "0.6.2",
+      channel: () => "stable",
+      linux: { chip: "x64", package: "deb" },
+      buildsUrl: BUILDS,
+      fetchImpl: (async () => {
+        if (feed.offline) throw new Error("offline");
+        return Response.json(builds(feed.version));
+      }) as typeof fetch,
+      openExternal: () => {},
+      installLinux: async (plan) => {
+        installed.push(plan.version);
+      },
+    });
+    return { updates, feed, installed };
+  }
+
+  it("installs a version published since the last read", async () => {
+    const f = linux();
+    expect((await f.updates.getStatus()).latestVersion).toBe("0.6.3");
+    f.feed.version = "0.6.4";
+    expect(await f.updates.install()).toEqual({ ok: true });
+    expect(f.installed).toEqual(["0.6.4"]);
+  });
+
+  it("installs the version already offered when the read fails", async () => {
+    const f = linux();
+    await f.updates.getStatus();
+    f.feed.offline = true;
+    expect(await f.updates.install()).toEqual({ ok: true });
+    expect(f.installed).toEqual(["0.6.3"]);
+  });
+});

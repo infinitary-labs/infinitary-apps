@@ -165,7 +165,8 @@ test("a direct stable installation offers keyboard update consent", async () => 
       await setThemeViaSettings(launched.page, theme);
       await runFromSearch(launched.app, launched.page, "updates.show");
       const panel = launched.page.locator("[data-update-channel]");
-      await expect(panel.getByRole("button", { name: UPDATE_WORDS.release })).toBeFocused();
+      // INF-3405, the captain's direction B: Check for updates comes first, then the next step.
+      await expect(panel.getByRole("button", { name: UPDATE_WORDS.check })).toBeFocused();
       await launched.page.keyboard.press("Tab");
       await expect(panel.getByRole("button", { name: UPDATE_WORDS.restart })).toBeFocused();
       expect(await launched.app.evaluate(() => globalThis.__macUpdateFixture.downloads)).toBe(0);
@@ -281,7 +282,7 @@ test("an update saves running work first, and Update later installs nothing, by 
     await page.keyboard.press("Tab");
     await untilFocused(panel.getByRole("button", { name: UPDATE_WORDS.later }));
     await page.keyboard.press("Enter");
-    await expect(panel.locator("[data-update-line]")).toHaveText(UPDATE_LATER);
+    await expect(panel.locator("[data-update-line]")).toContainText(UPDATE_LATER);
     await expect(panel.getByRole("button", { name: UPDATE_WORDS.restart })).toBeEnabled();
     expect(await fixture("installations")).toBe(0);
     await regionShot(panel, test.info().outputPath("update-later-dark.png"));
@@ -292,7 +293,7 @@ test("an update saves running work first, and Update later installs nothing, by 
     await runFromSearch(app, page, "updates.later");
     await expect.poll(() => fixture("saves")).toBe(2);
     await runFromSearch(app, page, "updates.show");
-    await expect(panel.locator("[data-update-line]")).toHaveText(UPDATE_LATER);
+    await expect(panel.locator("[data-update-line]")).toContainText(UPDATE_LATER);
     expect(await fixture("installations")).toBe(0);
 
     // Saved, it updates: the panel and the Version row say so.
@@ -407,6 +408,9 @@ test("unknown installation ownership explains the refusal without offering repla
 // reading the feed past the 4-hour saved answer. The feed and native effects are stood in.
 // INF-2670, the captain's direction A: the row's button is always the next step, the up-to-date
 // line says when it checked, and a failed check offers Try again and the releases page.
+// INF-3405, the captain's words: "we still need to provide the "check for update" button because
+// it could be that there's an even newer version". Direction B: Check for updates stays beside
+// Update and restart, the version opens its release page, and a failed check keeps the update.
 // Completion: the line's words and the update notice, with nothing downloaded.
 test("Check for updates finds a release published within the same four hours, by keys", async () => {
   const launched = await launchApp({ withMockProvider: true });
@@ -447,26 +451,52 @@ test("Check for updates finds a release published within the same four hours, by
     await expect(line).toHaveText(new RegExp(UPDATE_NOTICES.available("0.1.31")));
     expect(await app.evaluate(() => globalThis.__macUpdateFixture.checks)).toBe(checks + 1);
     await expect(page.getByRole("button", { name: "Update available: 0.1.31" })).toBeVisible();
-    // The row's next step is now Update and restart, as in the update notice; installing
-    // still waits for its own click.
+    // The row's next step is now Update and restart, as in the update notice, with Check for
+    // updates still beside it; installing still waits for its own click.
     await expect(version.getByRole("button", { name: UPDATE_WORDS.restart })).toBeVisible();
-    await expect(version.getByRole("button", { name: UPDATE_WORDS.check })).toHaveCount(0);
+    await expect(button).toBeFocused();
     await regionShot(version.locator(".."), test.info().outputPath("check-found-dark.png"));
     await pressKey(page.getByRole("button", { name: "Update available: 0.1.31" }), "Enter");
     const panel = page.locator("[data-update-channel]");
     await expect(panel.locator("[data-update-line]")).toHaveText(await line.innerText());
     await expect(panel.getByRole("button", { name: UPDATE_WORDS.restart })).toBeVisible();
+    await expect(panel.getByRole("button", { name: UPDATE_WORDS.check })).toBeVisible();
     expect(await app.evaluate(() => globalThis.__macUpdateFixture.downloads)).toBe(0);
     await page.keyboard.press("Escape");
 
-    // A check that cannot read the feed says so, never that the copy is up to date.
+    // An even newer release: the row's Check for updates finds it, and nothing downloads.
+    // The notice opened from the main window, so Settings opens again by its command.
+    await app.evaluate(() => {
+      globalThis.__macUpdateFixture.targets.stable = "0.1.32";
+    });
+    await runFromSearch(app, page, "settings.open");
+    await expect(button).toBeVisible();
+    await pressKey(button, "Enter");
+    await expect(line).toHaveText(
+      `${UPDATE_NOTICES.available("0.1.32")} ${UPDATE_STEP_WORDS.checked("now")} ${UPDATE_STEP_WORDS.restarts}`,
+    );
+    await expect(button).toBeFocused();
+    await expect(page.getByRole("button", { name: "Update available: 0.1.32" })).toBeVisible();
+    expect(await app.evaluate(() => globalThis.__macUpdateFixture.downloads)).toBe(0);
+
+    // The version in the line opens the release page, as View release did.
+    await pressKey(version.getByRole("button", { name: "0.1.32", exact: true }), "Enter");
+    await expect
+      .poll(() => app.evaluate(() => globalThis.__macUpdateFixture.opened.length))
+      .toBe(1);
+
+    // A check that cannot read the feed says so and keeps the update it found; it never says
+    // the copy is up to date.
     await app.evaluate(() => {
       globalThis.__macUpdateFixture.failCheck = true;
     });
     await runFromSearch(app, page, "updates.check");
-    await expect(line).toHaveText(UPDATE_PROBLEMS.checkFailed);
-    await expect(version.getByRole("button", { name: UPDATE_WORDS.releasesPage })).toBeVisible();
-    await untilFocused(version.getByRole("button", { name: UPDATE_WORDS.retry }));
+    await expect(line).toHaveText(
+      `${UPDATE_PROBLEMS.checkFailed} ${UPDATE_NOTICES.stillAvailable("0.1.32")} ${UPDATE_STEP_WORDS.restarts}`,
+    );
+    await expect(version.getByRole("button", { name: UPDATE_WORDS.restart })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Update available: 0.1.32" })).toBeVisible();
+    await untilFocused(button);
     await regionShot(version.locator(".."), test.info().outputPath("check-failed-dark.png"));
   } finally {
     await launched.close();

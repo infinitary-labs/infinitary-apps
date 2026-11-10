@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "check-beside-update",
+      "kind": "improvement",
+      "title": "Check for updates stays beside Update and restart",
+      "body": "When an update is available, the Version row in Settings and the update notice still offer Check for updates, in case an even newer version is out, and the line says when Infinitary last checked. The version in the line opens its release page. Update and restart now looks for a newer version first, so it installs the newest one. A check that fails no longer hides an update Infinitary already found.",
+      "area": "updates",
+      "picture": {
+        "dark": "check-beside-update-dark.webp",
+        "light": "check-beside-update-light.webp",
+        "alt": "The update notice saying version 0.1.31 is available and when Infinitary checked, the version underlined as a link, with Check for updates beside Update and restart"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

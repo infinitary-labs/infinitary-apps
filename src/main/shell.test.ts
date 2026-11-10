@@ -550,7 +550,7 @@ describe("the app as a view of another Mac", () => {
       upgradeCommand: upgradeCommandFor("alpha"),
       checkedAt: expect.any(Number),
     });
-    // View release opens that version's page here, though changes there are refused.
+    // The offered version's link opens that version's page here, though changes there are refused.
     expect(await air.shell.dispatch("inf:update:open-release", [])).toEqual({ ok: true });
     expect(air.ownApp.opened).toEqual([OFFERED.releaseUrl]);
     await expect(air.shell.dispatch("inf:cards:close", ["card-1"])).rejects.toThrow(

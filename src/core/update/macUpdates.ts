@@ -59,6 +59,8 @@ export function createMacUpdateChecker(options: {
   let generation = 0;
   let checkedAt: number | undefined;
   let checking: Promise<UpdateStatus> | undefined;
+  /** A person pressed Check for updates for the read running now. */
+  let loud = false;
   let download: AbortController | undefined;
   let phase: NonNullable<UpdateStatus["phase"]> = "idle";
   let percent: number | undefined;
@@ -109,12 +111,25 @@ export function createMacUpdateChecker(options: {
     saved = true;
   }
 
-  async function getStatus(): Promise<UpdateStatus> {
-    if (phase === "downloading" || phase === "installing" || phase === "ready") return status();
-    if (checking) return checking;
-    if (checkedAt !== undefined && now() - checkedAt < 4 * 60 * 60 * 1000) return status();
+  /**
+   * Reads the feed once the saved answer is four hours old, or now when
+   * `force` says so; a read already running is joined, and a consented
+   * update is left alone. A failed read keeps what the last one found
+   * (docs/alpha.md "Update channels"): a pressed check says it failed beside
+   * it, and the quiet read says nothing.
+   */
+  function read(force: boolean, pressed: boolean): Promise<UpdateStatus> {
+    if (phase === "downloading" || phase === "installing" || phase === "ready")
+      return Promise.resolve(status());
+    if (checking) {
+      loud ||= pressed;
+      return checking;
+    }
+    if (!force && checkedAt !== undefined && now() - checkedAt < 4 * 60 * 60 * 1000)
+      return Promise.resolve(status());
     const reading = generation;
     const wanted = channel;
+    loud = pressed;
     checking = Promise.resolve().then(async () => {
       phase = "checking";
       try {
@@ -134,9 +149,11 @@ export function createMacUpdateChecker(options: {
         checkedAt = now();
       } catch {
         if (reading === generation) {
-          offer = null;
-          phase = "error";
-          problem = UPDATE_PROBLEMS.checkFailed;
+          // Nothing read yet has nothing to keep quiet about: the copy is not up to date.
+          if (loud || checkedAt === undefined) {
+            phase = "error";
+            problem = UPDATE_PROBLEMS.checkFailed;
+          } else phase = problem ? "error" : "idle";
         }
       } finally {
         if (reading === generation) checking = undefined;
@@ -146,13 +163,10 @@ export function createMacUpdateChecker(options: {
     return checking;
   }
 
-  // A pressed check reads the feed now, past the saved answer; it joins one
-  // already reading and leaves a consented update alone.
-  async function checkNow(): Promise<UpdateStatus> {
-    if (phase === "downloading" || phase === "installing" || phase === "ready") return status();
-    if (!checking) checkedAt = undefined;
-    return getStatus();
-  }
+  const getStatus = (): Promise<UpdateStatus> => read(false, false);
+
+  // A pressed check reads the feed now, past the saved answer.
+  const checkNow = (): Promise<UpdateStatus> => read(true, true);
 
   async function setChannel(next: UpdateChannel): Promise<UpdateStatus> {
     if (phase === "installing" || phase === "ready")
@@ -181,7 +195,9 @@ export function createMacUpdateChecker(options: {
     if (blocked) return { ok: false, problem: blocked };
     if (isInstalling()) return { ok: false, problem: "The update is already installing." };
     const consent = generation;
-    const current = await getStatus();
+    // Update and restart installs the newest version: it reads the feed first, and a
+    // failed read installs the version already offered. A staged update reads nothing.
+    const current = await read(true, false);
     if (consent !== generation)
       return { ok: false, problem: "The channel changed, so the previous update was cancelled." };
     if (isInstalling()) return { ok: false, problem: "The update is already installing." };

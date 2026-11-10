@@ -80,7 +80,7 @@ A Mac (`mac`, `docs/devices.md`) both controls that Mac's first mate from its wi
   The window's project focus rides that layout, so a Mac that controls another keeps its own focus, and its turns carry it to the first mate there as a hint (`docs/project-focus.md`).
 - The window's keys are this Mac's own too, and never a core channel: the main process's installed map reads and writes them through `ViewLook`, starting from the catalog's keys, and the other Mac never hears of them (`docs/keyboard.md`, "Changing keys").
 - `inf:update:status`, `inf:update:check` and `inf:update:open-release` are this Mac's own: the app installed here, read by the same update checker the Mac where the first mate lives makes for itself (`createInstalledUpdateChecker`, `src/core/update/updateChecker.ts`; `docs/alpha.md`, "Update channels").
-  The top bar shows the same update notice, with this Mac's version, channel and upgrade command, and View release opens that version's release page here.
+  The top bar shows the same update notice, with this Mac's version, channel and upgrade command, and the version in its line opens that version's release page here.
   The other Mac is never asked: its own notice is about its own app.
 - Anything else is refused here, without being sent: "answered only on the computer where your first mate lives".
 - Of a first mate a command started, with nobody at that computer, every `home` channel but those that stay there is asked of it too (`docs/run.md`, "Control from another computer").

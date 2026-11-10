@@ -32,7 +32,12 @@ test("the update indicator opens with the cask upgrade command", async () => {
     "stable",
   );
   await expect.element(page.getByText(upgradeCommand, { exact: true })).toBeVisible();
-  await expect.element(page.getByRole("button", { name: "View release" })).toBeVisible();
+  // INF-3405, the captain's direction B: the offered version links to its release page, and
+  // Check for updates sits beside Copy command.
+  await expect
+    .element(page.getByRole("button", { name: latestVersion as string, exact: true }))
+    .toBeVisible();
+  await expect.element(page.getByRole("button", { name: "Check for updates" })).toBeVisible();
   await expect.element(page.getByRole("button", { name: "Copy command" })).toBeVisible();
   await userEvent.keyboard("{Escape}");
   await expect.poll(offered).toBeNull();

@@ -157,7 +157,8 @@ async function expectOffer(
       clip: { x: left, y: 0, width: pageWidth - left, height: box.y + box.height + 16 },
     });
   }
-  await panel.getByRole("button", { name: "View release" }).click();
+  // INF-3405, the captain's direction B: the offered version is the link to its release page.
+  await panel.getByRole("button", { name: offer.version, exact: true }).click();
   await expect
     .poll(() => app.evaluate(() => (globalThis as { __fmOpened?: string[] }).__fmOpened ?? []))
     .toEqual([target(offer.version).releaseUrl]);
@@ -237,6 +238,7 @@ test("a Mac controlling a newer Firstmate on another Mac is offered its own upda
 // (Homebrew, Linux and runs from source), past the 4-hour saved answer.
 // INF-2670, the captain's answers: the up-to-date line says when it checked, and the command
 // shows in the Version row with Copy command, as in the notice.
+// INF-3405, the captain's direction B: Check for updates stays beside Copy command.
 test("Check for updates reads the targets file again within four hours, and says when it cannot", async () => {
   tap = await startTap();
   tap.reply.targets = published({ stable: target("0.1.30") });
@@ -266,15 +268,20 @@ test("Check for updates reads the targets file again within four hours, and says
   await expect(page.getByRole("button", { name: "Update available: 0.1.31" })).toBeVisible();
   await expect(version.getByText(upgradeCommandFor("stable"), { exact: true })).toBeVisible();
   await expect(version.getByRole("button", { name: UPDATE_WORDS.copy })).toBeVisible();
+  await expect(button).toBeVisible();
   await pressKey(page.getByRole("button", { name: "Update available: 0.1.31" }), "Enter");
   await expect(
     page.locator("[data-update-channel]").getByText(upgradeCommandFor("stable"), { exact: true }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
-  // A refused read says so beside Try again; it never says the copy is up to date.
+  // INF-3405, the captain's direction B: a refused read says so and keeps the version it found,
+  // beside Check for updates and Copy command; it never says the copy is up to date.
   tap.reply.targets = { status: 500 };
   await runFromSearch(app, page, "updates.check");
-  await expect(line).toHaveText(UPDATE_PROBLEMS.checkFailed);
-  await expect(version.getByRole("button", { name: UPDATE_WORDS.retry })).toBeVisible();
+  await expect(line).toHaveText(
+    `${UPDATE_PROBLEMS.checkFailed} ${UPDATE_NOTICES.stillAvailable("0.1.31")} ${UPDATE_STEP_WORDS.command}`,
+  );
+  await expect(button).toBeFocused();
+  await expect(version.getByRole("button", { name: UPDATE_WORDS.copy })).toBeVisible();
   await expect(page.getByRole("button", { name: "Update available: 0.1.31" })).toBeVisible();
 });

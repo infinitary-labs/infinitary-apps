@@ -11,7 +11,10 @@ import {
 /**
  * The update ladder (docs/alpha.md "Update channels"): for every state of
  * this copy's update, the line that says where it stands and the button
- * that takes the next step, with at most one more control beside it. The
+ * that takes the next step, with at most one more control beside it. While
+ * it offers a version not yet being installed, that control is Check for
+ * updates, since a newer version may be out, and the version in the line
+ * opens its release page (INF-3405, the captain's direction B). The
  * Version row in Settings → General and the top-right update notice both
  * draw it (UpdateStepView.tsx), so the words and the button sit together and
  * agree wherever a person looks. It reads only the typed status the core
@@ -57,6 +60,8 @@ export type UpdateStep = {
   percent?: number;
   /** The command that installs the offered version by hand, selectable. */
   command?: string;
+  /** The offered version, as the line names it: it opens the version's release page. */
+  version?: string;
 };
 
 /** What this window pressed, beside the status the core sends. */
@@ -73,7 +78,6 @@ export type UpdateStepPresses = {
 };
 
 const releasesPage: UpdateStepButton = { action: "release", label: UPDATE_WORDS.releasesPage };
-const viewRelease: UpdateStepButton = { action: "release", label: UPDATE_WORDS.release };
 
 /** The step for this status, or null before the first status arrives. */
 export function updateStep(
@@ -128,7 +132,14 @@ export function updateStep(
         ...(pressed.busy ? { pending: UPDATE_WORDS.installing } : {}),
       },
     };
-  if (pressed.checking || status.phase === "checking")
+  const reading = pressed.checking || status.phase === "checking";
+  const checked =
+    status.checkedAt === undefined
+      ? null
+      : UPDATE_STEP_WORDS.checked(feedRelativeAge(status.checkedAt, pressed.now));
+  const offered = status.updateAvailable ? status.latestVersion : null;
+  if (offered) return offeredStep(status, pressed, offered, { reading, checked, problem });
+  if (reading)
     return {
       state: "checking",
       line: UPDATE_WORDS.checking,
@@ -144,60 +155,6 @@ export function updateStep(
       primary: { action: "check", label: UPDATE_WORDS.retry, disabled: pressed.busy },
       secondary: releasesPage,
     };
-  if (status.updateAvailable && status.latestVersion) {
-    const available = UPDATE_NOTICES.available(status.latestVersion);
-    if (problem !== null)
-      // The app installs it here and the failure can pass on a retry; with no
-      // way to install it here, the releases page is the way on.
-      return install
-        ? {
-            state: "retry",
-            line: problem,
-            problem: true,
-            ...(status.upgradeCommand ? { command: status.upgradeCommand } : {}),
-            primary: {
-              action: "install",
-              label: UPDATE_WORDS.retry,
-              ...(pressed.busy ? { pending: UPDATE_WORDS.installing } : {}),
-            },
-            secondary: viewRelease,
-          }
-        : { state: "blocked", line: problem, problem: true, primary: releasesPage };
-    if (install)
-      return {
-        state: "available",
-        line:
-          pressed.later ??
-          `${available} ${
-            install.restarts
-              ? UPDATE_STEP_WORDS.restarts
-              : install.asksPassword
-                ? UPDATE_STEP_WORDS.asksPassword
-                : UPDATE_STEP_WORDS.replaces
-          }`,
-        problem: false,
-        primary: {
-          action: "install",
-          label: installLabel,
-          ...(pressed.busy ? { pending: UPDATE_WORDS.installing } : {}),
-        },
-        secondary: viewRelease,
-      };
-    if (status.upgradeCommand)
-      return {
-        state: "command",
-        line: `${available} ${UPDATE_STEP_WORDS.command}`,
-        problem: false,
-        command: status.upgradeCommand,
-        primary: { action: "copy", label: UPDATE_WORDS.copy },
-        secondary: viewRelease,
-      };
-    return { state: "available", line: available, problem: false, primary: viewRelease };
-  }
-  const checked =
-    status.checkedAt === undefined
-      ? null
-      : UPDATE_STEP_WORDS.checked(feedRelativeAge(status.checkedAt, pressed.now));
   const found = status.notice ?? null;
   return {
     state: "current",
@@ -205,4 +162,80 @@ export function updateStep(
     problem: status.problem !== undefined,
     primary: { action: "check", label: UPDATE_WORDS.check, disabled: pressed.busy },
   };
+}
+
+/**
+ * A version is offered and not yet being installed: the next step that
+ * takes it, with Check for updates beside it, and the version in the line
+ * opening its release page. A failed check keeps the offer and says so in
+ * the line; while a check reads, the row holds still and only its button
+ * says Checking….
+ */
+function offeredStep(
+  status: UpdateStatus,
+  pressed: UpdateStepPresses,
+  version: string,
+  read: { reading: boolean; checked: string | null; problem: string | null },
+): UpdateStep {
+  const install = status.install;
+  const installLabel = install?.restarts ? UPDATE_WORDS.restart : "Install";
+  const checkFailed = status.problem === UPDATE_PROBLEMS.checkFailed;
+  // A failed check is the line's to say; only an install's problem changes the next step.
+  const problem = pressed.problem ?? (checkFailed ? null : read.problem);
+  const check: UpdateStepButton = {
+    action: "check",
+    label: read.reading ? UPDATE_WORDS.checkingButton : UPDATE_WORDS.check,
+    disabled: pressed.busy,
+  };
+  const found = checkFailed
+    ? `${UPDATE_PROBLEMS.checkFailed} ${UPDATE_NOTICES.stillAvailable(version)}`
+    : [UPDATE_NOTICES.available(version), read.checked].filter(Boolean).join(" ");
+  const offer = { version, ...(status.upgradeCommand ? { command: status.upgradeCommand } : {}) };
+  if (problem !== null)
+    // The app installs it here and the failure can pass on a retry; with no
+    // way to install it here, the releases page is the way on.
+    return install
+      ? {
+          state: "retry",
+          line: `${problem} ${UPDATE_NOTICES.stillAvailable(version)}`,
+          problem: true,
+          ...offer,
+          primary: {
+            action: "install",
+            label: UPDATE_WORDS.retry,
+            ...(pressed.busy ? { pending: UPDATE_WORDS.installing } : {}),
+          },
+          secondary: check,
+        }
+      : { state: "blocked", line: problem, problem: true, primary: releasesPage };
+  if (install)
+    return {
+      state: "available",
+      line: `${found} ${
+        pressed.later ??
+        (install.restarts
+          ? UPDATE_STEP_WORDS.restarts
+          : install.asksPassword
+            ? UPDATE_STEP_WORDS.asksPassword
+            : UPDATE_STEP_WORDS.replaces)
+      }`,
+      problem: checkFailed,
+      version,
+      primary: {
+        action: "install",
+        label: installLabel,
+        ...(pressed.busy ? { pending: UPDATE_WORDS.installing } : {}),
+      },
+      secondary: check,
+    };
+  if (status.upgradeCommand)
+    return {
+      state: "command",
+      line: `${found} ${UPDATE_STEP_WORDS.command}`,
+      problem: checkFailed,
+      ...offer,
+      primary: { action: "copy", label: UPDATE_WORDS.copy },
+      secondary: check,
+    };
+  return { state: "available", line: found, problem: checkFailed, version, primary: check };
 }

@@ -48,6 +48,8 @@ export const UPDATE_NOTICES = {
   latest: (channel: keyof typeof UPDATE_CHANNEL_NAMES) =>
     `Up to date on ${UPDATE_CHANNEL_NAMES[channel]}.`,
   available: (version: string) => `Version ${version} is available.`,
+  /** After a failed check or install: the version the last read found still installs. */
+  stillAvailable: (version: string) => `Version ${version} is still available.`,
 } as const;
 
 /**

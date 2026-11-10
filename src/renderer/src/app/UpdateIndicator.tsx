@@ -48,7 +48,10 @@ export function UpdateIndicator() {
 
   useEffect(() => {
     if (open && drawn) {
-      const first = panelRef.current?.querySelector<HTMLButtonElement>("button:not([disabled])");
+      // The step's first button; the version's link in the line comes after them by Shift+Tab.
+      const first = panelRef.current?.querySelector<HTMLButtonElement>(
+        "[data-update-buttons] button:not([disabled])",
+      );
       if (first) focusWithRing(first);
     }
   }, [open, drawn]);
@@ -169,7 +172,7 @@ export function UpdatePanel({
       }}
     >
       <MicroLabel>{CHANNEL_LABEL[status.channel]}</MicroLabel>
-      {step && <UpdateStepText step={step} strong />}
+      {step && <UpdateStepText step={step} strong {...(onAction ? { onAction } : {})} />}
       <div data-update-installed style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
         You have {status.currentVersion}
       </div>

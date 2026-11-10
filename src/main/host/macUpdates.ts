@@ -64,9 +64,12 @@ export function createMacUpdateDriver(prepareRestart: () => Promise<void>): MacU
         try {
           checked = await current.checkForUpdates();
         } catch (error) {
-          checked = null;
-          if ((error as { code?: string }).code === "ERR_UPDATER_CHANNEL_FILE_NOT_FOUND")
+          if ((error as { code?: string }).code === "ERR_UPDATER_CHANNEL_FILE_NOT_FOUND") {
+            checked = null;
             return null;
+          }
+          // A failed read keeps the offer it last found, which the library keeps too, so
+          // Update and restart can still download that version (docs/alpha.md "Update channels").
           throw error;
         }
         return checked

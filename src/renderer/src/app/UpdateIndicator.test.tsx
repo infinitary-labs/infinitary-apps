@@ -32,8 +32,11 @@ function render(status: UpdateStatus): string {
   return renderToStaticMarkup(<UpdatePanel status={status} />).replace(/<!-- -->/g, "");
 }
 
+/** A hook's text, its version link's tags removed. */
 function hookText(markup: string, hook: string): string | undefined {
-  return new RegExp(`<div ${hook}="[^"]*"[^>]*>([^<]*)</div>`).exec(markup)?.[1];
+  return new RegExp(`<div ${hook}="[^"]*"[^>]*>(.*?)</div>`)
+    .exec(markup)?.[1]
+    ?.replace(/<[^>]*>/g, "");
 }
 
 describe("UpdatePanel", () => {
@@ -51,6 +54,11 @@ describe("UpdatePanel", () => {
     expect(markup).toContain(ALPHA_OFFER.upgradeCommand.replaceAll("&", "&amp;"));
     expect(markup).toContain('data-update-action="copy"');
     expect(markup).toContain(UPDATE_WORDS.copy);
+    // INF-3405, the captain's direction B: Check for updates beside the next step, and the
+    // offered version is the link to its release page.
+    expect(markup).toContain('data-update-action="check"');
+    expect(markup).not.toContain('data-update-action="release"');
+    expect(markup).toMatch(/<button [^>]*data-update-release=""[^>]*>0\.1\.27-alpha\.15<\/button>/);
   });
 
   it("keeps the two versions apart when only the alpha suffix differs", () => {
@@ -105,7 +113,9 @@ describe("UpdatePanel around the crew's work", () => {
 
   it("says the update waits after Update later, and offers Install again", () => {
     const markup = renderInstall(INSTALLABLE, { later: UPDATE_LATER });
-    expect(hookText(markup, "data-update-line")).toBe(UPDATE_LATER);
+    expect(hookText(markup, "data-update-line")).toBe(
+      `${UPDATE_NOTICES.available("0.1.27-alpha.15")} ${UPDATE_LATER}`,
+    );
     expect(markup).toContain('data-update-action="install"');
     expect(markup).not.toContain('data-update-action="later"');
   });

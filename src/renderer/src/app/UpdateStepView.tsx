@@ -65,8 +65,60 @@ function Command({ command }: { command: string }) {
   );
 }
 
+/**
+ * The line, with the version it offers as a link that opens that version's
+ * release page (INF-3405, the captain's direction B: View release became
+ * this link, so Check for updates fits beside the next step).
+ */
+function StepLine({
+  line,
+  version,
+  onAction,
+}: {
+  line: string;
+  version: string | undefined;
+  onAction: (action: UpdateStepAction) => void;
+}) {
+  const at = version ? line.indexOf(version) : -1;
+  if (!version || at < 0) return <>{line}</>;
+  return (
+    <>
+      {line.slice(0, at)}
+      <button
+        type="button"
+        data-update-release=""
+        title={UPDATE_WORDS.release}
+        style={{
+          font: "inherit",
+          padding: 0,
+          border: "none",
+          background: "none",
+          cursor: "pointer",
+          color: "var(--accent)",
+          textDecoration: "underline",
+          textDecorationThickness: 1,
+          textUnderlineOffset: 2,
+          borderRadius: "var(--radius-s)",
+        }}
+        onClick={() => onAction("release")}
+      >
+        {version}
+      </button>
+      {line.slice(at + version.length)}
+    </>
+  );
+}
+
 /** The line, and the waiting tasks, the download's progress or the command it names. */
-export function UpdateStepText({ step, strong = false }: { step: UpdateStep; strong?: boolean }) {
+export function UpdateStepText({
+  step,
+  strong = false,
+  onAction = (action) => void runUpdateStep(action),
+}: {
+  step: UpdateStep;
+  strong?: boolean;
+  onAction?: (action: UpdateStepAction) => void;
+}) {
   return (
     <div
       data-update-step={step.state}
@@ -81,7 +133,7 @@ export function UpdateStepText({ step, strong = false }: { step: UpdateStep; str
             color: step.problem ? "var(--warn)" : strong ? "var(--fg-1)" : "var(--fg-2)",
           }}
         >
-          {step.line}
+          <StepLine line={step.line} version={step.version} onAction={onAction} />
           {step.percent !== undefined && (
             <>
               {" "}
@@ -159,7 +211,8 @@ function StepButton({
 
 /**
  * The step's buttons: the secondary first, then the next step. `hook` marks
- * the next step as the one command search's Check for updates focuses.
+ * Check for updates, where the step offers it, or else the next step, as
+ * the one command search's Check for updates focuses.
  */
 export function UpdateStepButtons({
   step,
@@ -170,6 +223,7 @@ export function UpdateStepButtons({
   onAction?: (action: UpdateStepAction) => void;
   hook?: boolean;
 }) {
+  const checkSecond = step.secondary?.action === "check";
   return (
     <div
       data-update-buttons=""
@@ -181,21 +235,26 @@ export function UpdateStepButtons({
         flexShrink: 0,
       }}
     >
+      {/* Keyed by action, so Check for updates stays the same button, keeping focus,
+          when a check finds a version and it moves beside the next step. */}
       {step.secondary && (
         <StepButton
+          key={step.secondary.action}
           button={step.secondary}
           variant="ghost"
           command={step.command}
           onAction={onAction}
+          hook={hook && checkSecond}
         />
       )}
       <StepButton
+        key={step.primary.action}
         button={step.primary}
         // Checking is the quiet step; every other next step is the primary.
         variant={step.primary.action === "check" ? "secondary" : "primary"}
         command={step.command}
         onAction={onAction}
-        hook={hook}
+        hook={hook && !checkSecond}
       />
     </div>
   );

@@ -462,6 +462,7 @@ describe("a pressed check on a direct Mac copy", () => {
     expect(f.driver.download).not.toHaveBeenCalled();
   });
 
+  // INF-3405: a failed check keeps the update it already found, beside Check for updates.
   it("joins a reading check, reports a failure, and leaves a consented update alone", async () => {
     const f = fixture();
     const reading = deferred<MacUpdateOffer | null>();
@@ -476,7 +477,9 @@ describe("a pressed check on a direct Mac copy", () => {
     expect(await f.checker.checkNow()).toMatchObject({
       phase: "error",
       problem: UPDATE_PROBLEMS.checkFailed,
-      updateAvailable: false,
+      latestVersion: "0.5.0-alpha.10",
+      updateAvailable: true,
+      install: { restarts: true },
     });
 
     f.driver.check.mockImplementation(async () => offer("0.5.0-alpha.10"));
@@ -490,6 +493,73 @@ describe("a pressed check on a direct Mac copy", () => {
     expect(f.driver.check).toHaveBeenCalledTimes(calls);
     downloading.resolve();
     await installing;
+  });
+});
+
+// INF-3405, the captain's words: "we still need to provide the "check for update" button because
+// it could be that there's an even newer version". The quiet read keeps a found update without a
+// word, and Update and restart reads first so it installs the newest version.
+describe("an offered update on a direct Mac copy", () => {
+  const FOUR_HOURS = 4 * 60 * 60 * 1000;
+  function clocked() {
+    let at = 1_800_000_000_000;
+    const driver = {
+      installation: { kind: "direct" as const },
+      check: vi.fn<MacUpdateDriver["check"]>(async () => offer("0.5.0-alpha.10")),
+      download: vi.fn<MacUpdateDriver["download"]>(async () => {}),
+      install: vi.fn<MacUpdateDriver["install"]>(async () => {}),
+    };
+    const checker = createMacUpdateChecker({
+      currentVersion: "0.5.0-alpha.9",
+      dataRoot: scratchDir("inf-mac-updates-"),
+      driver,
+      releasesUrl: releaseSource.releasesUrl,
+      openExternal: vi.fn(),
+      now: () => at,
+    });
+    const pass = (ms: number) => {
+      at += ms;
+    };
+    return { checker, driver, pass };
+  }
+
+  it("keeps the update without a word when the quiet read fails", async () => {
+    const f = clocked();
+    const found = await f.checker.getStatus();
+    expect(found).toMatchObject({ latestVersion: "0.5.0-alpha.10", updateAvailable: true });
+    f.pass(FOUR_HOURS);
+    f.driver.check.mockRejectedValueOnce(new Error("offline"));
+    expect(await f.checker.getStatus()).toEqual(found);
+    expect(f.driver.check).toHaveBeenCalledTimes(2);
+  });
+
+  it("says a first quiet read failed, with nothing found to keep", async () => {
+    const f = clocked();
+    f.driver.check.mockRejectedValueOnce(new Error("offline"));
+    expect(await f.checker.getStatus()).toMatchObject({
+      phase: "error",
+      problem: UPDATE_PROBLEMS.checkFailed,
+      updateAvailable: false,
+    });
+  });
+
+  it("installs the newest version, read when Update and restart is pressed", async () => {
+    const f = clocked();
+    await f.checker.getStatus();
+    f.pass(FOUR_HOURS - 1);
+    f.driver.check.mockImplementation(async () => offer("0.5.0-alpha.11"));
+    expect(await f.checker.install()).toEqual({ ok: true });
+    expect(f.driver.download).toHaveBeenCalledTimes(1);
+    expect(f.driver.download.mock.calls[0]?.[0]).toEqual(offer("0.5.0-alpha.11"));
+  });
+
+  it("installs the version already offered when the read before it fails", async () => {
+    const f = clocked();
+    await f.checker.getStatus();
+    f.driver.check.mockRejectedValueOnce(new Error("offline"));
+    expect(await f.checker.install()).toEqual({ ok: true });
+    expect(f.driver.check).toHaveBeenCalledTimes(2);
+    expect(f.driver.download.mock.calls[0]?.[0]).toEqual(offer("0.5.0-alpha.10"));
   });
 });
 

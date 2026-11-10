@@ -49,7 +49,9 @@ describe("recovery after a work computer quits mid-turn", () => {
         await expect.poll(() => api.requests.length).toBe(requests + 2);
         const ledger = new PlacedLedger(crewmatePlacedDir(at.home().paths, taskId));
         const endedBefore = ledger.place().ended;
-        expect(ledger.place().kept).toBeGreaterThan(endedBefore);
+        // The work computer asks the model again without waiting for the home
+        // to take in that message's end, so the home keeps its place after.
+        await expect.poll(() => ledger.place().kept).toBeGreaterThan(endedBefore);
         expect(ledger.lines().some((line) => line.report?.text === reported)).toBe(true);
         await at.home().drop();
         await at.stopComputer();

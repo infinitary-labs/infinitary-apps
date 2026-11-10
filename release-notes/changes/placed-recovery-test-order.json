@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "placed-recovery-test-order",
+      "reason": "A test of a work computer's mid-turn recovery now waits for the home to keep its place instead of reading it the moment the model is asked again; nothing a person sees changes."
+    }
+  ]
+}

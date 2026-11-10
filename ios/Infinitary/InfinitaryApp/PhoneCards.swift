@@ -46,7 +46,7 @@ struct PhoneCards: View {
         // INF-3110, the captain's "widen the card only": the card takes the stage's whole width less its gutters on any width,
         // so a card beside it shows the same 8-point edge on an iPad as on an iPhone; the message box keeps the column.
         .padding(.horizontal, PhoneTheme.space4).frame(maxWidth: .infinity)
-        .background(PhoneTheme.background)
+        // INF-3462: no fill of its own, so the crew scene Home draws under the stage shows past the stage's edges.
         // INF-589 item 12: a soft tap once the computer accepts an answer or a reply; never on a page turn.
         .sensoryFeedback(.phone, trigger: sent)
         .onChange(of: card.map { $0.isPast ? PhoneMessageContext.Card.past($0.id) : .current($0.id) }, initial: true) { _, shown in

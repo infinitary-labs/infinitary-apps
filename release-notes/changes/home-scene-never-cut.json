@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "home-scene-never-cut",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "The first mate and crew are never cut off on iPhone and iPad",
+      "body": "On the Home screen of the iPhone and iPad app, the first mate and the crew around it are no longer cut flat when the keyboard opens, a phone turns on its side or an iPad shows its keyboard in landscape. They are drawn whole under the top bar, your messages and the keyboard. Where they pass behind the message box, its glass blurs them, and your last message keeps its own solid bubble. While a card is up they stay hidden, as before.",
+      "picture": {
+        "dark": "home-scene-never-cut-dark.png",
+        "light": "home-scene-never-cut-light.png",
+        "alt": "The top of Home on an iPhone with the keyboard up: the first mate is drawn whole below the top bar, with its crew spread around it and two crewmates just under the tab strip."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

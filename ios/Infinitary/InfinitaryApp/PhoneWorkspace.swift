@@ -196,13 +196,14 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     /// drawn, pressable or read. The reach line sits under the bar on every tab.
     private func tab(_ tab: PhoneTab, @ViewBuilder content: () -> some View) -> some View {
         content()
-            .safeAreaInset(edge: .top, spacing: 0) { reachLine }
+            .safeAreaInset(edge: .top, spacing: 0) { reachLine(tab) }
             .toolbar(.hidden, for: .tabBar)
             .tag(tab)
     }
 
     /// INF-1062: Home is the stage and, under it in the same column, the last turn and the message box; on a landscape
     /// iPad the sidebar stands beside both. One place in the tree for either layout keeps one draft (INF-209).
+    /// INF-3462: the crew scene is Home's bottom layer, drawn across the window, with all of this over it.
     private var home: some View {
         HStack(spacing: 0) {
             if wide {
@@ -225,7 +226,7 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
                         .opacity(composerAside ? 0 : 1).allowsHitTesting(!composerAside).accessibilityHidden(composerAside)
                 }
             }
-        }.background(PhoneTheme.background)
+        }.phoneSceneBackdrop().background(PhoneTheme.background)
     }
 
     private var composerAside: Bool {
@@ -234,12 +235,13 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
 
     /// INF-1062, the captain's pick: the computer's name left the bar, so one line under it on every tab says the reach
     /// with its time while the computer is not in reach, and nothing while it is. INF-589 item 11: said once.
-    @ViewBuilder private var reachLine: some View {
+    /// INF-3462: on Home the line stands bare over the crew scene, so no band of its own cuts the scene straight.
+    @ViewBuilder private func reachLine(_ tab: PhoneTab) -> some View {
         if session.reach != "in-reach" {
             PhoneReach(session: session, oneLine: true)
                 .padding(.horizontal, PhoneTheme.space4).padding(.bottom, PhoneTheme.space2)
                 .frame(maxWidth: .infinity)
-                .background(PhoneTheme.background)
+                .background(tab == .home ? .clear : PhoneTheme.background)
                 .accessibilityElement(children: .contain).accessibilityIdentifier("reach-line")
         }
     }

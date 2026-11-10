@@ -3,7 +3,7 @@ import type { ServerResponse } from "node:http";
 import { join } from "node:path";
 import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
 import { Type } from "typebox";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, describe, expect, it, vi } from "vitest";
 import { writeMockClaudeClient } from "../../../tests/e2e/mockClaudeClient";
 import {
   beginAnthropicStream,
@@ -52,22 +52,27 @@ const TOOL = "wait_for_home";
 const WAIT_MS = 3_000;
 const ANSWERED = "The home answered.";
 
-let api: StubApi;
-
-beforeAll(async () => {
-  api = await startStubApi();
-});
+/**
+ * Each case talks to a stub API of its own, kept open until the file ends.
+ * A stopped client can outlive its session's close: the SDK ends the
+ * client's input, waits at most 2 s for it to exit and only then stops it,
+ * and on its way out the client still sends its tool's empty result. On a
+ * stub shared by every case, that late request landed in the next case,
+ * which read it as its own tool's answer (INF-3499). A case's own stub
+ * hears only its own client, however late a client before it runs.
+ */
+const stubs: StubApi[] = [];
 
 afterAll(async () => {
   resetStoreLeasesForTest();
-  await api.close();
+  await Promise.all(stubs.map((stub) => stub.close()));
 });
 
 /**
  * The model calls the waiting tool once, then answers with what it got -
  * once `beforeAnswer`, when given, has settled.
  */
-function callTheToolOnce(beforeAnswer?: Promise<void>): void {
+function callTheToolOnce(api: StubApi, beforeAnswer?: Promise<void>): void {
   api.answer((request: StubRequest, res: ServerResponse) => {
     if (!request.raw.includes('"tool_result"')) {
       beginAnthropicStream(res, 50, request.n);
@@ -93,6 +98,8 @@ async function waitInATool(
   stopTurn = false,
   beforeAnswer?: Promise<void>,
 ): Promise<string> {
+  const api = await startStubApi();
+  stubs.push(api);
   const home = scratchDir("infinitary-claude-tool-wait-");
   const stub = writeMockClaudeClient(home, {
     turns: { baseUrl: api.url, credential: "subscription", maxRetries: 0 },
@@ -134,8 +141,7 @@ async function waitInATool(
     ],
     shape: { turns: "one" },
   };
-  const first = api.requests.length;
-  callTheToolOnce(beforeAnswer);
+  callTheToolOnce(api, beforeAnswer);
   const session = await factory.open(spec);
   try {
     const turn = session.prompt("Wait for the home.");
@@ -148,13 +154,14 @@ async function waitInATool(
     session.dispose();
     await session.closed();
   }
-  const answered = api.requests.slice(first).find((request) => request.raw.includes("tool_result"));
+  const answered = api.requests.find((request) => request.raw.includes("tool_result"));
   if (!answered && stopTurn) return "";
   if (!answered) throw new Error("The model never got the tool's result.");
   return answered.raw;
 }
 
 describe("how long the Claude client lets an app tool wait", () => {
+  // Intent: docs/helper.md, "Holding a conversation": the variable a computer that runs work sets must govern the app's own tools.
   it("cuts a tool that outlasts a short MCP_TOOL_TIMEOUT: the variable governs the app's own tools", async () => {
     const result = await waitInATool({ MCP_TOOL_TIMEOUT: "1000" });
     expect(result).not.toContain(ANSWERED);
@@ -223,6 +230,7 @@ describe("how long the Claude client lets an app tool wait", () => {
     },
   );
 
+  // Intent: the same F3 scope on the real client: the home stopping a turn is not Claude giving up.
   it("does not withdraw a request when the home interrupts the real Claude client (INF-312 scope)", async () => {
     let received: AbortSignal | undefined;
     await waitInATool(
@@ -236,6 +244,7 @@ describe("how long the Claude client lets an app tool wait", () => {
     expect(received?.aborted).toBe(false);
   });
 
+  // Intent: docs/helper.md, "Holding a conversation": a conversation there waits in an app tool past the client's 28-hour default.
   it("waits for the tool under the wait a computer that runs work sets", async () => {
     expect(Number(PLACED_CLAUDE_ENV.MCP_TOOL_TIMEOUT)).toBeGreaterThan(1e8);
     const result = await waitInATool(PLACED_CLAUDE_ENV);

@@ -630,7 +630,18 @@ export class CrewOrbit {
     tier?: Slot,
     wait: CrewWait = null,
   ): void {
-    if (this.crew.has(id)) return;
+    const had = this.crew.get(id);
+    if (had && had.phase !== "leaving") {
+      // Already on the ring: a close still waiting on its spark is called off.
+      if (had.leaveAfter) {
+        delete had.leaveAfter;
+        this.bump();
+      }
+      return;
+    }
+    // Its task is active again while it leaves: the departing body goes and
+    // it arrives anew, so an active task is never left off the ring.
+    if (had) this.crew.delete(id);
     const spawnAt = settled ? now : Math.max(now, this.lastSpawnAt + this.tuning.staggerMs);
     if (!settled) this.lastSpawnAt = spawnAt;
     const count = this.roster().length + 1;

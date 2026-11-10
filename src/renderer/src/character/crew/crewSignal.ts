@@ -1,5 +1,6 @@
 import { type CenterNode, centerCues, crewedWaits } from "@shared/dependencyVisual";
 import type { FmEvent } from "@shared/events";
+import type { Slot } from "@shared/modelSlots";
 import { nowGroupOf } from "@shared/nowPanel";
 import { FIRSTMATE_SESSION_ID } from "@shared/observe";
 import type { TaskBoard, TaskLinkView, TaskView } from "@shared/tasks";
@@ -140,6 +141,27 @@ function leaveModeOf(status: TaskView["status"]): LeaveMode {
   return status === "done" ? "home" : "away";
 }
 
+/**
+ * A crewmate whose task is active work takes the look its record says,
+ * whether it is new, already on the ring (a board read again after a
+ * reconnect), or on its way out (it arrives anew). `tier` undefined says
+ * nothing new about its slot; null says it never routed.
+ */
+function place(
+  model: CrewOrbit,
+  id: string,
+  status: CrewStatus,
+  wait: CrewWait,
+  tier: Slot | null | undefined,
+  now: number,
+  settled: boolean,
+): void {
+  model.spawn(id, status, now, settled, tier ?? undefined, wait);
+  model.setStatus(id, status);
+  model.setWait(id, wait);
+  if (tier !== undefined) model.setTier(id, tier ?? undefined);
+}
+
 /** Apply one fleet event to the orbit. Every command is idempotent. */
 export function applyCrewEvent(model: CrewOrbit, event: FmEvent, now: number): void {
   switch (event.type) {
@@ -162,13 +184,7 @@ export function applyCrewEvent(model: CrewOrbit, event: FmEvent, now: number): v
           : crewStatusOf(event.activity);
         // The served slot rides the change (absent says nothing new, null
         // says it never routed): the crewmate's solid follows it.
-        const tier = event.tier ?? undefined;
-        const wait = crewWaitOf(event.workPosture);
-        if (model.has(event.taskId)) {
-          model.setStatus(event.taskId, status);
-          model.setWait(event.taskId, wait);
-          if (event.tier !== undefined) model.setTier(event.taskId, tier);
-        } else model.spawn(event.taskId, status, now, false, tier, wait);
+        place(model, event.taskId, status, crewWaitOf(event.workPosture), event.tier, now, false);
       } else {
         seenActive(model).delete(event.taskId);
         model.leave(event.taskId, leaveModeOf(event.status), now);
@@ -223,17 +239,18 @@ export function seedCrew(
     if (task.kind !== "work" || task.status !== "active") continue;
     if (model instanceof ComputerOrbits && task.executionDeviceId !== undefined)
       model.setPlacement(task.id, task.executionDeviceId);
-    model.spawn(
+    place(
+      model,
       task.id,
       task.workPosture
         ? task.workPosture.state === "active"
           ? "working"
           : "idle"
         : crewStatusOf(task.activity),
+      crewWaitOf(task.workPosture),
+      task.tier,
       now,
       true,
-      task.tier ?? undefined,
-      crewWaitOf(task.workPosture),
     );
   }
   for (const task of tasks) {

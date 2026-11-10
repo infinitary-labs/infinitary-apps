@@ -444,6 +444,84 @@ describe("crew orbit wiring", () => {
     expect(m.takeCues()).toEqual([]);
   });
 
+  // INF-3307's audit, row 14: a view reconnecting reads the board again
+  // (store.ts resync); a crewmate already on the ring takes the board's look,
+  // never keeps the one it had before the gap.
+  it("takes each crewmate's current look from the board read after a reconnect", () => {
+    const m = new ComputerOrbits(0, () => 0.5);
+    seedCrew(
+      m,
+      [
+        view({ id: "a", activity: "running", tier: "premium" }),
+        view({ id: "b", activity: "idle" }),
+      ],
+      0,
+    );
+    run(m, 0, 500);
+    // While the window was away, a's turn ended, b ran a check, and a was re-routed.
+    const again = {
+      seq: 9,
+      tasks: [
+        view({
+          id: "a",
+          activity: "idle",
+          workPosture: { state: "idle", reason: "captain" },
+          tier: "medium",
+        }),
+        view({ id: "b", activity: "idle", workPosture: { state: "active", reason: "checks" } }),
+      ],
+    };
+    seedCrew(m, again.tasks, 1000);
+    reconcileCrew(m, again, 1000);
+    const frame = run(m, 1000, 3000);
+    expect(frame.crew.map((c) => [c.id, c.status, c.tier]).sort()).toEqual([
+      ["a", "idle", "medium"],
+      ["b", "working", undefined],
+    ]);
+    expect(frame.crew.find((c) => c.id === "b")?.wait ?? 0).toBeGreaterThan(0.99);
+  });
+
+  // INF-3307's audit, row 14: a crewmate sent away (a board that no longer
+  // listed it, or its close) whose task is active again comes back, rather
+  // than finishing its departure and leaving an active task off the ring.
+  it("keeps a crewmate whose task is active again while it leaves", () => {
+    const m = new CrewOrbit(0);
+    applyCrewEvent(m, changed({ taskId: "a", seq: 5 }), 0);
+    run(m, 0, 2000);
+    reconcileCrew(m, { seq: 6, tasks: [] }, 2000);
+    expect(m.phaseOf("a")).toBe("leaving");
+    applyCrewEvent(m, changed({ taskId: "a", seq: 7, activity: "running" }), 2100);
+    const live = run(m, 2100, 2100 + DEFAULT_ORBIT.awayMs + 2000);
+    expect(live.crew.map((c) => [c.id, c.phase, c.status])).toEqual([["a", "orbiting", "working"]]);
+  });
+
+  it("keeps a crewmate the board read after a reconnect lists while it leaves", () => {
+    const m = new CrewOrbit(0);
+    seedCrew(m, [view({ id: "a" })], 0);
+    reconcileCrew(m, { seq: 6, tasks: [] }, 100);
+    expect(m.phaseOf("a")).toBe("leaving");
+    const again = { seq: 8, tasks: [view({ id: "a", activity: "idle" })] };
+    seedCrew(m, again.tasks, 200);
+    reconcileCrew(m, again, 200);
+    const live = run(m, 200, 200 + DEFAULT_ORBIT.awayMs + 2000);
+    expect(live.crew.map((c) => [c.id, c.phase, c.status])).toEqual([["a", "orbiting", "idle"]]);
+  });
+
+  it("keeps a crewmate whose close waited on its spark when its task is active again", () => {
+    const m = new CrewOrbit(0);
+    applyCrewEvent(m, changed({}), 0);
+    run(m, 0, 2000);
+    applyCrewEvent(m, reached("t1"), 2000);
+    applyCrewEvent(
+      m,
+      changed({ status: "done", from: "active", closedReason: "merged", activity: null, seq: 2 }),
+      2000,
+    );
+    applyCrewEvent(m, changed({ from: "done", activity: "running", seq: 3 }), 2050);
+    const live = run(m, 2050, 2000 + DEFAULT_ORBIT.packetMs + DEFAULT_ORBIT.homeMs + 2000);
+    expect(live.crew.map((c) => [c.id, c.phase])).toEqual([["t1", "orbiting"]]);
+  });
+
   // INF-1375's accepted A: no angular reservation for a glyph drawn elsewhere.
   describe("visible main-orbit occupants", () => {
     const fixture = (count = 8) => {

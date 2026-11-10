@@ -453,10 +453,11 @@ export class ComputerOrbits extends CrewOrbit {
     tier?: Slot,
     wait: CrewWait = null,
   ): void {
-    const existed = this.has(id);
+    // One leaving counts as new: it arrives anew (CrewOrbit.spawn).
+    const existed = this.present().includes(id);
     const computer = this.computerOf(id);
     this.owners.set(id, computer);
-    this.tiers.set(id, tier);
+    if (!existed) this.tiers.set(id, tier);
     if (computer === HOME_COMPUTER) {
       super.spawn(id, status, now, settled, tier, wait);
       return;

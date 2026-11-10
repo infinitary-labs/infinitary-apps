@@ -38,18 +38,26 @@ async function frozenWriter(file: string): Promise<void> {
 /** How a run is frozen once its test is waiting: one long stop, or long stops with slivers of running between. */
 type Freeze = { stopMs: number; runMs: number } | undefined;
 
-type Outcome = { status: string; error: string; waitedMs: number };
+/** The test's result, its file's - where a failed hook is reported - and how long the frozen work took. */
+type Outcome = {
+  status: string;
+  error: string;
+  fileStatus: string;
+  fileError: string;
+  waitedMs: number;
+};
 
 /**
- * A vitest run of its own over `tests/fixtures/frozen-work`, graded or not,
- * as its own process group, which this test freezes the way a starved Mac
- * freezes a unit run: vitest, its worker and the writer the worker started.
+ * A vitest run of its own over `tests/fixtures/frozen-work`, under `config`
+ * there, graded or not, as its own process group, which this test freezes
+ * the way a starved Mac freezes a unit run: vitest, its worker and the
+ * writer the worker started.
  */
 async function frozenRun(
   title: string,
   budget: number,
   freeze: Freeze,
-  graded = false,
+  { graded = false, config = "vitest.config.ts" } = {},
 ): Promise<Outcome> {
   const signals = scratchDir("infinitary-frozen-work-");
   const report = join(signals, "report.json");
@@ -69,7 +77,7 @@ async function frozenRun(
       join(repoRoot, "node_modules", "vitest", "vitest.mjs"),
       "run",
       "--config",
-      join(__dirname, "fixtures", "frozen-work", "vitest.config.ts"),
+      join(__dirname, "fixtures", "frozen-work", config),
       "-t",
       title,
       "--reporter=json",
@@ -126,19 +134,24 @@ async function frozenRun(
   });
   type Report = {
     testResults: {
+      status: string;
+      message: string;
       assertionResults: { title: string; status: string; failureMessages: string[] }[];
     }[];
   };
-  const result = existsSync(report)
-    ? (JSON.parse(readFileSync(report, "utf8")) as Report).testResults
-        .flatMap((file) => file.assertionResults)
-        .find((test) => test.title === title)
+  const file = existsSync(report)
+    ? (JSON.parse(readFileSync(report, "utf8")) as Report).testResults.find((tested) =>
+        tested.assertionResults.some((test) => test.title === title),
+      )
     : undefined;
-  if (!result || !waitingAt || !doneAt)
+  const result = file?.assertionResults.find((test) => test.title === title);
+  if (!file || !result || !waitingAt || !doneAt)
     throw new Error(`The run did not finish its test:\n${output}`);
   return {
     status: result.status,
     error: result.failureMessages.join("\n"),
+    fileStatus: file.status,
+    fileError: file.message,
     waitedMs: doneAt - waitingAt,
   };
 }
@@ -189,7 +202,7 @@ describe("a test's time limit and its waits, on the load clock", () => {
         "a frozen writer's file",
         5_000,
         { stopMs: 7_000, runMs: Number.POSITIVE_INFINITY },
-        true,
+        { graded: true },
       ),
       // A file that never comes fails at about its budget when nothing freezes the run.
       frozenRun("a missing file", 2_000, undefined),
@@ -220,4 +233,28 @@ describe("a test's time limit and its waits, on the load clock", () => {
     expect(starvedMissing.waitedMs).toBeLessThan(waitCap(window) + 3 * 3_000);
     // Four runs side by side, each with a deliberate freeze; the longest waits out its 30 s cap.
   }, 90_000);
+});
+
+describe("a setup file's hook, on the load clock", () => {
+  // statementCheck.ts and scratchDirCleanup.ts register their hooks before
+  // waitWindow.ts starts the clock, in every project of vitest.config.ts; on a
+  // loaded runner the cleanup's hook timed out at the wall clock's 10 s once
+  // every test of its file had passed.
+  it("counts only the time the run gets, though it was registered before the clock started", async () => {
+    // A hook doing a second of work, frozen 7 s past its 5 s limit.
+    const frozenHook = await frozenRun(
+      "a file whose setup file's hook is frozen",
+      5_000,
+      {
+        stopMs: 7_000,
+        runMs: Number.POSITIVE_INFINITY,
+      },
+      { config: "setupHook.config.ts" },
+    );
+
+    expect(frozenHook.waitedMs).toBeGreaterThan(7_000);
+    expect(frozenHook.status).toBe("passed");
+    expect(frozenHook.fileError).toBe("");
+    expect(frozenHook.fileStatus).toBe("passed");
+  }, 60_000);
 });

@@ -1,18 +1,18 @@
 diff --git a/dist/chunk-artifact.js b/dist/chunk-artifact.js
-index 0877a7d249825cd2ff81eef4ff30c23eb60e6294..18ee8c90b87124e607542f42b068a82df9043152 100644
+index 0877a7d249825cd2ff81eef4ff30c23eb60e6294..0e3c1fd255f446b38147ca300e3dd15bc80b9118 100644
 --- a/dist/chunk-artifact.js
 +++ b/dist/chunk-artifact.js	
-@@ -2263,19 +2263,26 @@ function withTimeout(fn, timeout, isHook = false, stackTraceError, onTimeout) {
- 		return fn;
- 	}
+@@ -2265,17 +2265,26 @@ function withTimeout(fn, timeout, isHook = false, stackTraceError, onTimeout) {
  	const { setTimeout, clearTimeout } = getSafeTimers();
-+	// Infinitary (INF-1083): on an ordinary run, tests/helpers/budgets.ts starts a
-+	// load clock in each worker, and a test's or hook's time limit counts only the
-+	// time the worker got to run, ending by its wall cap. A graded run
-+	// (INFINITARY_PERF_BUDGETS=1) starts none and keeps the wall clock.
-+	const clock = globalThis[Symbol.for("infinitary.unitLoadClock")];
  	// this function name is used to filter error in test/cli/test/fails.test.ts
  	return (function runWithTimeout(...args) {
++		// Infinitary (INF-1083): on an ordinary run, tests/helpers/budgets.ts starts a
++		// load clock in each worker, and a test's or hook's time limit counts only the
++		// time the worker got to run, ending by its wall cap. A graded run
++		// (INFINITARY_PERF_BUDGETS=1) starts none and keeps the wall clock. Read as the
++		// limit starts, not when the hook registers: a setup file listed before the one
++		// that starts the clock registers its hooks before the clock exists.
++		const clock = globalThis[Symbol.for("infinitary.unitLoadClock")];
  		const startTime = now$2();
 +		const loadStart = clock?.now();
  		const runner = getRunner();
@@ -31,7 +31,7 @@ index 0877a7d249825cd2ff81eef4ff30c23eb60e6294..18ee8c90b87124e607542f42b068a82d
  			function rejectTimeoutError() {
  				const error = makeTimeoutError(isHook, timeout, stackTraceError);
  				onTimeout?.(args, error);
-@@ -2284,11 +2291,11 @@ function withTimeout(fn, timeout, isHook = false, stackTraceError, onTimeout) {
+@@ -2284,11 +2293,11 @@ function withTimeout(fn, timeout, isHook = false, stackTraceError, onTimeout) {
  			function resolve(result) {
  				runner._currentTaskStartTime = undefined;
  				runner._currentTaskTimeout = undefined;
@@ -45,7 +45,7 @@ index 0877a7d249825cd2ff81eef4ff30c23eb60e6294..18ee8c90b87124e607542f42b068a82d
  					rejectTimeoutError();
  					return;
  				}
-@@ -2297,7 +2304,7 @@ function withTimeout(fn, timeout, isHook = false, stackTraceError, onTimeout) {
+@@ -2297,7 +2306,7 @@ function withTimeout(fn, timeout, isHook = false, stackTraceError, onTimeout) {
  			function reject(error) {
  				runner._currentTaskStartTime = undefined;
  				runner._currentTaskTimeout = undefined;

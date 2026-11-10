@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   '@electron/universal@2.0.3': e6c257cc3ea861b496e1101eea127c87ee7602fd26701d2cfdc7ef4369ccacef
-  '@vitest/runner@4.1.10': 4e7c29cacee26875b44f6172d7899e6f82eae7071352c9719f7d38878f18318b
+  '@vitest/runner@4.1.10': 210871d69ed5c2dac1d261bdad08f2574f6c3a31e93cace3f4760858bb0093a6
   electron-vite@5.0.0: 60e136d369686e9fbedf28afd014aeee35f6fbf0f78f7d0c277bfb63d93ecb7c
   playwright-core@1.62.1: 2252106b9b117dc5e5a0d17434aa02ed27eb357655144aede37ddac09e1e19cc
   playwright@1.62.1: 0c1d9b9003c4afd7fba09f387af00a854c0e250433b1a8a306b010fb785b780f
@@ -5654,7 +5654,7 @@ snapshots:
     dependencies:
       tinyrainbow: 3.1.1
 
-  '@vitest/runner@4.1.10(patch_hash=4e7c29cacee26875b44f6172d7899e6f82eae7071352c9719f7d38878f18318b)':
+  '@vitest/runner@4.1.10(patch_hash=210871d69ed5c2dac1d261bdad08f2574f6c3a31e93cace3f4760858bb0093a6)':
     dependencies:
       '@vitest/utils': 4.1.10
       pathe: 2.0.3
@@ -8405,7 +8405,7 @@ snapshots:
       '@vitest/expect': 4.1.10
       '@vitest/mocker': 4.1.10(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0))
       '@vitest/pretty-format': 4.1.10
-      '@vitest/runner': 4.1.10(patch_hash=4e7c29cacee26875b44f6172d7899e6f82eae7071352c9719f7d38878f18318b)
+      '@vitest/runner': 4.1.10(patch_hash=210871d69ed5c2dac1d261bdad08f2574f6c3a31e93cace3f4760858bb0093a6)
       '@vitest/snapshot': 4.1.10
       '@vitest/spy': 4.1.10
       '@vitest/utils': 4.1.10

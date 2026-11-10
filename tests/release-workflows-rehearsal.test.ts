@@ -301,19 +301,17 @@ describe("the signed channel workflow", () => {
       "release-dry-run-stable-1.2.3-alpha.13",
     );
     expect(cancels({ channel: "alpha", dry_run: true })).toBe(true);
-    // Verify inside a release belongs to that run; on demand, a newer verify
-    // of the same ref and profile replaces an older one.
+    // Verify inside a release belongs to that run; a request's own group is
+    // tests/workflow-request-groups.test.ts's (INF-3380).
     const verifyGroup = (workflow: string, inputs: Record<string, unknown>) =>
       workflowString(verify.concurrency.group, {
-        github: { workflow, ref: "refs/heads/main", run_id: "77" },
+        github: { workflow, ref: "refs/heads/main", run_id: "77", run_attempt: "1" },
         inputs,
       });
     const verifyCancels = (workflow: string) =>
       workflowValue(verify.concurrency["cancel-in-progress"], { github: { workflow } });
-    expect(verifyGroup("release", { ref: "c".repeat(40), profile: "alpha" })).toBe("verify-77");
+    expect(verifyGroup("release", { ref: "c".repeat(40), profile: "alpha" })).toBe("verify-77-1");
     expect(verifyCancels("release")).toBe(false);
-    expect(verifyGroup("verify", { profile: "alpha" })).toBe("verify-refs/heads/main-alpha");
-    expect(verifyCancels("verify")).toBe(true);
   });
 
   // INF-2259 preserves manual defaults and adds optional exact-main recovery.

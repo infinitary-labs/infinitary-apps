@@ -86,9 +86,16 @@ on:
 permissions:
   contents: read
 
-# INF-487: no run-level group. A run that counts as running while its native
-# job waits for a phone guest would hold every later run behind it for hours;
-# each run and attempt waits only for a free guest.
+# INF-3380 (the captain's direction A, "the workflow files cancel the older run themselves"):
+# a first-attempt request on a task branch shares a group with the branch's requests of the
+# same selection, so the next one cancels the older run, waiting or running. Another selection,
+# such as INF-3205's one-device replacement proof, runs beside it. Main, a rerun and every call
+# (github.workflow is then the caller's name; the phone release's two device calls among them)
+# keep a group of their own run, attempt and device. Cancelling, never queueing, keeps INF-487's
+# fix: no run waits behind another run in the group, only for a free phone guest.
+concurrency:
+  group: ${{ github.workflow == 'phone' && github.ref != 'refs/heads/main' && github.run_attempt == '1' && format('phone-request-{0}-device={1}-affected={2}-base={3}-parts={4}-waits={5}-starve={6}-perf={7}-recording={8}-observer={9}-evidence={10}', github.ref, inputs.device, inputs.affected, inputs.base, inputs.parts, inputs.waits, inputs.starve, inputs.perf, inputs.recording, inputs.guest_observer, inputs.evidence_run) || format('phone-run-{0}-{1}-{2}', github.run_id, github.run_attempt, inputs.device) }}
+  cancel-in-progress: ${{ github.workflow == 'phone' }}
 
 jobs:
   # INF-2576 (the captain's choice "A, write the rules and add the phone workflow guard"): a

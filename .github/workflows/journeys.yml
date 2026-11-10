@@ -50,8 +50,13 @@ permissions:
   contents: read
   actions: read
 
-# No run-level group (INF-941): a request is its own run, so another task's
-# request on the same branch, main included, never cancels it.
+# INF-3380 (the captain's direction A): a first-attempt request on a task branch shares a group
+# with the branch's requests of the same selection, so the next one cancels the older run; a
+# request naming other journeys runs beside it. Main and a rerun keep a group of their own run,
+# so another task's request on main never cancels one (INF-941).
+concurrency:
+  group: ${{ github.ref != 'refs/heads/main' && github.run_attempt == '1' && format('journeys-request-{0}-files={1}-platforms={2}-base={3}-mac_all={4}-starve={5}-perf={6}-mac_runner={7}', github.ref, inputs.files, inputs.platforms, inputs.base, inputs.mac_all, inputs.starve, inputs.perf, inputs.mac_runner) || format('journeys-run-{0}-{1}', github.run_id, github.run_attempt) }}
+  cancel-in-progress: true
 
 jobs:
   choose-journeys:

@@ -677,7 +677,7 @@ The six-minute placement of a pull request's gate, `placeParts` in the chooser w
 The job summary names each kept part with its distance and reason, and the `phone-placement` artifact keeps the same as JSON.
 `tests/phone-chooser.test.ts` replays real changes merged to `main` through the chooser.
 Unlike the desktop journey workflow, a device gate that already started finishes and deletes the simulator it started for each device.
-Each native phone job uses a group unique to its run and attempt, with `queue: max` and `cancel-in-progress: false`.
+Each native phone job uses a group unique to its run and attempt, with `queue: max` and `cancel-in-progress: false`; the run's own group, which lets a newer same-selection request on a task branch cancel it, is in "What a task branch requests".
 The two vBoxx virtual places run phone checks independently; the mini serves no phone queue (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
 Desktop journey jobs from different pull requests remain parallel.
 Desktop journeys and native phone gates run directly, without a command lease, so real and virtual Macs can check concurrently.
@@ -805,7 +805,10 @@ Before a request, read the runs already on that version, running ones included, 
 A later version keeps a run's proof when the files that differ from the proved version reach none of that run's selection: the journey chooser selects none of the proved journeys, the phone chooser keeps no part, or none of those files makes the Linux packages.
 That holds across a repair and across bringing the branch up to date; otherwise request the check again, once, at the new final version.
 The phone pictures a release note or a card needs come from that one run's `phone-pictures` artifact, never from a run of their own.
-Cancel a run no longer needed by its id (`POST /repos/{owner}/{repo}/actions/runs/{id}/cancel`).
+A newer request of `phone.yml`, `journeys.yml` or `verify.yml` on the same task branch with the same selection cancels the older run, waiting or running, through the workflow's own group (INF-3380, the captain's direction A, "the workflow files cancel the older run themselves").
+The selection is every input but `task`, `reason` and `verify.yml`'s exact `ref`, so a request of another selection, such as a one-device replacement proof, runs beside the older run.
+A request on `main`, a rerun and every call from another workflow keep a group of their own run, attempt and, for the phone release's calls, device, so nothing else cancels them.
+Cancel any other run no longer needed by its id (`POST /repos/{owner}/{repo}/actions/runs/{id}/cancel`).
 `phone.yml`'s `request` job refuses a branch request for every part, one with no `affected` or `parts`, without `task` and `reason`, on a light Linux machine before the run waits for a phone guest; `main`, a narrower request and the phone release's call pass.
 `tests/release-workflows-journey-suites.test.ts` runs that guard's shell.
 
@@ -964,7 +967,7 @@ The chooser places every named file on Linux and their tagged tests on the Mac m
 Its `mac_all` input runs every named journey on the Mac mini as well, every test of it, for a check of the Mac itself such as a `starve` experiment.
 It is a computer's route for journeys in CI mode ("Where the heavy checks run"), such as a journey a change is still being written against.
 Its optional `mac_runner` input selects an isolated Mac runner for that request, as `verify.yml` does, without changing shared runner variables.
-Each request is its own concurrency group, so another request on the same branch, `main` included, never cancels it, whatever journeys either names (INF-941); only a newer push to a pull request replaces that pull request's older run.
+A newer request on the same task branch naming the same journeys with the same inputs cancels the older run; a request naming other journeys runs beside it, and a request on `main` or a rerun is its own group, so another task's request on `main` never cancels it (INF-941, INF-3380; "What a task branch requests").
 A request its requester no longer needs is cancelled by its run's id (`POST /repos/{owner}/{repo}/actions/runs/{id}/cancel`).
 
 The `starve` input runs the Mac journeys through the load controller, `scripts/starve-check.py`, after the build.

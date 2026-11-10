@@ -309,9 +309,8 @@ describe("the native gate on an affected request", () => {
     expect(eligible(phoneDecision(undefined).run)).toBe("true");
   });
   it("gives every phone run and attempt its own group, without cancelling work (INF-2202)", () => {
-    const journeys = yaml.load(readFileSync(".github/workflows/journeys.yml", "utf8"));
-    expect(journeys.concurrency).toBeUndefined();
-    expect(journeys.jobs["affected-journeys"].concurrency).toBeUndefined();
+    // Each run's request group, which a newer same-selection request cancels, is
+    // tests/workflow-request-groups.test.ts's (INF-3380); the device jobs keep their own.
     const runs = [
       { ref: "refs/pull/79/merge", run_id: "18800000001", run_attempt: "1" },
       { ref: "refs/pull/136/merge", run_id: "18800000002", run_attempt: "1" },

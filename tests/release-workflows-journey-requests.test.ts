@@ -221,15 +221,14 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   /**
    * INF-941: on 2026-10-22 another task's request for journeys on main
    * (run 39867018455) cancelled INF-933's request (run 39865801314) in the
-   * shared group journeys-refs/heads/main, before keyboard-routing ran. Only
-   * a request starts the workflow now (INF-2139), so no run shares a group.
+   * shared group journeys-refs/heads/main, before keyboard-routing ran. The
+   * run's own group is tests/workflow-request-groups.test.ts's (INF-3380),
+   * which keeps main's requests apart; no job adds a group of its own.
    */
-  it("gives no two journey requests a group to cancel each other in", () => {
+  it("gives no journey job a group to cancel another request's in", () => {
     const journeys = loadYamlFile(".github/workflows/journeys.yml") as {
-      concurrency?: unknown;
       jobs: Record<string, { concurrency?: unknown }>;
     };
-    expect(journeys.concurrency).toBeUndefined();
     for (const [id, job] of Object.entries(journeys.jobs))
       expect(job.concurrency, id).toBeUndefined();
   });

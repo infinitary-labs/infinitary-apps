@@ -896,7 +896,8 @@ A third artifact, `phone-pictures`, holds only the pictures the journeys took, e
 A failed part adds to its command logs what the app, its card pages and Photos logged on its simulator, and names its failing lines in the job log.
 It also keeps, in a log of its own, what the simulator's system logged from the part's first test: SpringBoard, backboardd, the accessibility server, the keyboard and the test runner, which answer XCUITest's check for interrupting elements.
 Its package install also uses a scratch HOME and an empty local-signing directory, so the install-time signature check never reads this Mac's signing material.
-`phone.yml` has no run-level concurrency group: each run and attempt waits only for a free phone guest, and a device gate that started finishes and deletes the simulator it started for each device.
+`phone.yml`'s run-level group never makes a run wait behind another: a newer request on the same task branch with the same selection cancels the older run, and `main`, a rerun and each of the phone release's calls keep a group of their own (INF-3380; `docs/testing.md`, "What a task branch requests").
+Each run and attempt waits only for a free phone guest, and a device gate that started finishes and deletes the simulator it started for each device.
 Every native phone job takes a per-run, per-attempt concurrency group, with `queue: max` and cancellation disabled.
 Phone checks run side by side, one per free vBoxx virtual place ("A phone check the placement service puts in a virtual Mac").
 Desktop jobs from different pull requests have no common job-level concurrency group, so they can run side by side.

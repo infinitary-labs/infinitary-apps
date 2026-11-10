@@ -156,10 +156,13 @@ on:
         type: boolean
         default: false
 
-# On demand, a newer verify of the same ref and profile replaces an older
-# one. Called by a release, verify belongs to that run alone and nothing
-# outside it cancels it - a rehearsal of the same commit must never cancel a
-# live release. (In a called workflow, github.workflow is the caller's name.)
+# On demand on a task branch, a newer first-attempt request of the same
+# selection replaces an older one, whatever exact version its ref names
+# (INF-3380, the captain's direction A). A request on main, a rerun and a
+# call keep a group of their own run: called by a release, verify belongs to
+# that run alone and nothing outside it cancels it - a rehearsal of the same
+# commit must never cancel a live release. (In a called workflow,
+# github.workflow is the caller's name.)
 # The Mac installer lane reads its caller's run through this token
 # (mac-installer.yml, actions: read); nothing here writes.
 permissions:
@@ -167,7 +170,7 @@ permissions:
   actions: read
 
 concurrency:
-  group: verify-${{ github.workflow == 'verify' && format('{0}-{1}', inputs.ref || github.ref, inputs.profile || 'stable') || github.run_id }}
+  group: ${{ github.workflow == 'verify' && github.ref != 'refs/heads/main' && github.run_attempt == '1' && format('verify-request-{0}-profile={1}-full_system={2}-mac_only={3}-installer_only={4}-installer_reuse={5}-installer_chip={6}-perf={7}-all_journeys={8}-mac_runner={9}', github.ref, inputs.profile || 'stable', inputs.full_system, inputs.mac_only, inputs.installer_only, inputs.installer_reuse, inputs.installer_chip, inputs.perf, inputs.all_journeys, inputs.mac_runner) || format('verify-{0}-{1}', github.run_id, github.run_attempt) }}
   cancel-in-progress: ${{ github.workflow == 'verify' }}
 
 jobs:

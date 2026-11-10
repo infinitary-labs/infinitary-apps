@@ -85,7 +85,7 @@ export class TaskDrop {
     if (!record) return { ok: false, text: dropMissingRefusal(taskId) };
     if (record.kind === "decision")
       return { ok: false, text: decisionDropRefusal(record.key || taskId) };
-    const pending = this.locks.settlingTasks.get(taskId);
+    const pending = this.locks.holder(taskId);
     if (pending)
       return {
         ok: false,
@@ -123,7 +123,7 @@ export class TaskDrop {
     const closed = record.status === "done" || record.status === "dropped";
     if (!closed && neverStarted(record) && this.host.runtimeState(taskId) === undefined)
       return this.dropNeverStarted(record, input);
-    this.locks.settlingTasks.set(taskId, "a drop");
+    const lease = this.locks.claim(taskId, "a drop");
     try {
       if (input.actor === "firstmate" && !input.confirm) {
         // On a computer that runs work, that computer reads its own working
@@ -167,7 +167,7 @@ export class TaskDrop {
         ...(pull.repair ? { followup: pull.repair } : {}),
       };
     } finally {
-      this.locks.settlingTasks.delete(taskId);
+      lease.release();
     }
   }
 

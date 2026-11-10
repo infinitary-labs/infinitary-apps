@@ -844,7 +844,7 @@ export class TaskIntake {
       await runtime.session?.abort().catch(() => {});
       this.host.releaseSession(runtime);
       this.host.forgetRuntime(taskId);
-      this.host.settling.locks.releaseSettleBoundary(taskId);
+      this.host.settling.locks.turnEnded(taskId);
     }
     this.host.recordInterrupt(
       taskId,

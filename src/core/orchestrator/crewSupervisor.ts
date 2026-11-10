@@ -1095,16 +1095,18 @@ export class CrewSupervisor {
       ...wake,
       once: `task-policies:${policies.revision}`,
     });
-    // A change that cancels unsent merges ends the task's other kept
+    // A change that cancels unsent merges ends a merge waiting for the
+    // turn's end, whose intent the edit cleared, and the task's other kept
     // approvals too, and its crewmate hears which (INF-2746).
-    const ended = record.delivery?.mergeAuthorization;
     if (
-      (edits.delivery !== undefined ||
-        (edits.autonomy !== undefined && !policies.autonomy.value)) &&
-      ended &&
-      ended.status !== "standing"
-    )
-      this.settling.approvals.dropQueued(taskId, ended, "the task's policy changed");
+      edits.delivery !== undefined ||
+      (edits.autonomy !== undefined && !policies.autonomy.value)
+    ) {
+      this.settling.locks.cancelWait(taskId, "how it merges changed");
+      const ended = record.delivery?.mergeAuthorization;
+      if (ended && ended.status !== "standing")
+        this.settling.approvals.dropQueued(taskId, ended, "the task's policy changed");
+    }
     // A native running turn hears the change now. Other sessions keep it on
     // their durable lane until work next continues, including after a quit.
     const runtime = this.tasks.get(taskId);

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "merge-wait-cancel",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task's merge no longer stays stuck after you change how it merges",
+      "body": "When you clicked Merge while a crewmate was still working, and then turned off the task's automatic merging before the crewmate finished, the waiting merge never ended. Every later merge, drop or close of that task was refused as already in progress until the app restarted. Now the change ends the waiting merge right away and says why, and the task can be merged, dropped or closed again.",
+      "noPicture": "This changes when a waiting merge ends, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

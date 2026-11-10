@@ -95,7 +95,8 @@ describe("a crewmate preparing its first turn (audit row 1)", () => {
     const h = await preparing();
     let released = false;
     const boundary = h.supervisor.settling.locks
-      .waitForSettleBoundary(h.taskId, {
+      .claim(h.taskId, "land")
+      .waitForTurnEnd({
         mode: "land",
         actor: "captain",
         requestedAt: Date.now(),

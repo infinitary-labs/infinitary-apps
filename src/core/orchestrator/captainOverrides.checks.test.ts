@@ -359,7 +359,7 @@ describe("CrewSupervisor", () => {
           // Marking the queue happens before the settlement's continuation.
           // Read its outcome only after that owner releases its lock.
           await vi.waitFor(() =>
-            expect(h.supervisor.settling.locks.settlingTasks.has(h.taskId)).toBe(false),
+            expect(h.supervisor.settling.locks.holder(h.taskId)).toBeUndefined(),
           );
           expect(h.cards()).toEqual([]);
           // F5: the existing unanswered-queue warning still reaches an agent in either scope.
@@ -406,7 +406,7 @@ describe("CrewSupervisor", () => {
           h.supervisor.cardActions.act(h.card.id, "merge");
           await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("queue"));
           await vi.waitFor(() =>
-            expect(h.supervisor.settling.locks.settlingTasks.has(h.taskId)).toBe(false),
+            expect(h.supervisor.settling.locks.holder(h.taskId)).toBeUndefined(),
           );
           h.forge.queue = {
             name: QUEUE_STATUS,

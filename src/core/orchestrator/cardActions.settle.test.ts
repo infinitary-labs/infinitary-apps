@@ -91,6 +91,68 @@ describe("CrewSupervisor", () => {
     );
   });
 
+  /** A merge click parked mid-turn, waiting for the turn's end. */
+  async function mergeWaitingForTurn() {
+    const crewmate = fakeCrewmate();
+    const mergePullRequest = vi.fn(async () => ({ ok: true, text: "Change #42 is in on GitHub." }));
+    const h = setup(crewmate, { mergePullRequest });
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Ship while reporting",
+      intent: intentOf("finish the PR"),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    vi.spyOn(h.supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
+    vi.spyOn(h.supervisor.facts, "taskAutonomy").mockReturnValue(false);
+    const click = h.supervisor.settling.settle.reportCardSettle(taskId, "merge-pr");
+    await tick();
+    expect(h.tasks.get(taskId)?.pendingSettle).toMatchObject({ mode: "merge-pr" });
+    return { ...h, crewmate, mergePullRequest, taskId, click };
+  }
+
+  it("refuses another settle of a task while its merge click waits for the turn's end", async () => {
+    const h = await mergeWaitingForTurn();
+    const second = await h.supervisor.settling.settle.settleTaskGuarded(
+      h.taskId,
+      "merge-pr",
+      undefined,
+      "captain",
+    );
+    expect(second).toMatchObject({ ok: false, contention: true });
+    const done = await h.supervisor.settling.done.close(h.taskId, {
+      why: "finished",
+      evidence: "the PR merged",
+    });
+    expect(done.text).toContain("another settle of it is already in progress");
+    h.crewmate.finishPrompt();
+    await expect(h.click).resolves.toMatchObject({ ok: true });
+    expect(h.mergePullRequest).toHaveBeenCalledTimes(1);
+  });
+
+  // INF-3307's audit, row 3: turning autonomy off cleared the parked intent,
+  // the turn's end then skipped the wake, and the settle claim stuck until a
+  // restart, refusing every later merge, drop or done close of the task.
+  it("ends a merge click waiting for the turn's end when a policy change cancels it, and frees the task for the next settle", async () => {
+    const h = await mergeWaitingForTurn();
+    const record = h.tasks.get(h.taskId);
+    const before = record ? h.tasks.policiesOf(record) : null;
+    h.tasks.updateFields(h.taskId, { policies: { autonomy: false } }, "firstmate");
+    h.supervisor.policiesChanged(h.taskId, { autonomy: false }, before);
+    await expect(h.click).resolves.toMatchObject({ ok: false });
+    expect(h.tasks.get(h.taskId)?.pendingSettle).toBeNull();
+    // The captain's Activity line says why in plain words, never the task or a mode token.
+    expect(settleLines(h.tasks, h.taskId).at(-1)).toBe(
+      cannotMergeText("how it merges changed while its crewmate was working"),
+    );
+    h.crewmate.finishPrompt();
+    await tick();
+    expect(h.mergePullRequest).not.toHaveBeenCalled();
+    await expect(
+      h.supervisor.settling.settle.settleTaskGuarded(h.taskId, "merge-pr", undefined, "captain"),
+    ).resolves.toMatchObject({ ok: true });
+    expect(h.mergePullRequest).toHaveBeenCalledTimes(1);
+  });
+
   it("recovers a committed policy edit after a quit without resuming waiting work, and later serves it with the next turn", async () => {
     const original = fakeCrewmate();
     const { db, paths, workspace, tasks, supervisor } = setup(original);

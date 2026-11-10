@@ -1081,12 +1081,12 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
   // ends, not at the next minute's look.
   it("runs the captain's merge click once the settle that held the task ends", async () => {
     const h = await approved();
-    h.supervisor.settling.locks.settlingTasks.set(h.taskId, "merge-pr");
+    const held = h.supervisor.settling.locks.claim(h.taskId, "merge-pr");
     h.supervisor.cardActions.act(h.card.id, "merge");
     await vi.waitFor(() => expect(h.authorization()?.retryAt).toBeDefined());
     await tick();
     expect(h.forge.merges).toEqual([]);
-    h.supervisor.settling.locks.settlingTasks.delete(h.taskId);
+    held.release();
     await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
     await vi.waitFor(() =>
       expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" }),
@@ -1162,7 +1162,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
   it("merges both pull requests when a second merge card goes up under autonomy while the first one's approval stands", async () => {
     const h = await twoPullRequests();
     // The first card's approval stands while another settle holds the task.
-    h.supervisor.settling.locks.settlingTasks.set(h.taskId, "merge-pr");
+    const held = h.supervisor.settling.locks.claim(h.taskId, "merge-pr");
     await editPolicies(h, { autonomy: true });
     expect(h.authorization()).toMatchObject({
       status: "standing",
@@ -1174,7 +1174,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
     expect(h.authorization()).toMatchObject({ status: "standing", target: { prNumber: 7 } });
     expect(h.authorization()?.queued?.map((item) => item.target.prNumber)).toEqual([8]);
     expect(h.forge.merges).toEqual([]);
-    h.supervisor.settling.locks.settlingTasks.delete(h.taskId);
+    held.release();
     await h.bothMerge();
     expect(h.forge.merges).toEqual([APPROVED, REPAIRED]);
     expect(h.tasks.get(h.taskId)?.status).not.toBe("done");
@@ -1328,7 +1328,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
   // merges will not run, so it puts their merge cards up again.
   it("tells the crewmate which merges will not run when the captain withdraws the approval in front", async () => {
     const h = await twoPullRequests();
-    h.supervisor.settling.locks.settlingTasks.set(h.taskId, "merge-pr");
+    const held = h.supervisor.settling.locks.claim(h.taskId, "merge-pr");
     await editPolicies(h, { autonomy: true });
     await h.emitNext();
     expect(h.authorization()?.queued?.map((item) => item.target.prNumber)).toEqual([8]);
@@ -1340,7 +1340,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
         "your merge card's merge of #8 did not happen",
       ),
     );
-    h.supervisor.settling.locks.settlingTasks.delete(h.taskId);
+    held.release();
     await tick();
     expect(h.forge.merges).toEqual([]);
     await h.supervisor.disposeAll();
@@ -1353,7 +1353,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
     const h = await twoPullRequests();
     const repoId = h.tasks.get(h.taskId)?.repoId;
     if (!repoId) throw new Error("Missing project");
-    h.supervisor.settling.locks.settlingTasks.set(h.taskId, "merge-pr");
+    const held = h.supervisor.settling.locks.claim(h.taskId, "merge-pr");
     await h.supervisor.steer.steerCrewmate(h.taskId, "put both merge cards up again");
     h.repos.configure(repoId, { autonomy: true });
     // The app takes the first card under the project's autonomy; the second
@@ -1378,7 +1378,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
       ]),
     );
     h.repos.configure(repoId, { autonomy: false });
-    h.supervisor.settling.locks.settlingTasks.delete(h.taskId);
+    held.release();
     await vi.waitFor(() => expect(h.forge.merges).toEqual([REPAIRED]));
     expect(h.crewmate.promptCalls.join("\n")).not.toContain("merge of #8 did not happen");
     await tick();

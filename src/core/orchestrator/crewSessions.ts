@@ -940,7 +940,7 @@ export class CrewSessions {
     }
     this.releaseSession(task);
     this.core.tasks.delete(task.id);
-    this.core.settling.locks.releaseSettleBoundary(task.id);
+    this.core.settling.locks.turnEnded(task.id);
     this.core.options.personal?.endLiveTask(task.id);
     // A record another close already ended keeps its own reason; the turn's
     // end must not relabel it. Either way nothing queued about the task

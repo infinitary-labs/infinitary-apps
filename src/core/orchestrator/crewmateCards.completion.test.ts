@@ -1368,7 +1368,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     const { supervisor, tasks, taskId, note, db, paths, workspace } = await heldStoryNote();
     const held = note() as Card;
     // The settle that read the merge recorded it, then the app quit before it ended.
-    supervisor.settling.locks.settlingTasks.set(taskId, "merge-pr");
+    supervisor.settling.locks.claim(taskId, "merge-pr");
     tasks.delivery.recordChangeEvidence(taskId, { ci: "merged", ciAt: Date.now() });
     expect(note()?.awaiting).toBe("close-out");
     supervisor.disposeAll();
@@ -1439,8 +1439,8 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     expect(later.createdAt).toBeGreaterThan(first.createdAt);
     expect(later.awaiting).toBe("close-out");
     expect(mergeLineOf(later)).toContain(MERGES_NEXT_WORDS);
-    supervisor.settling.locks.settlingTasks.set(taskId, "merge-pr");
-    supervisor.settling.locks.settlingTasks.delete(taskId);
+    const held = supervisor.settling.locks.claim(taskId, "merge-pr");
+    held.release();
     expect(supervisor.cards.get(later.id)?.awaiting).toBe("close-out");
   });
 
@@ -1643,9 +1643,9 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       at: Date.now(),
       receipt: { head, at: Date.now() + 1, by: "captain" as const },
     };
-    supervisor.settling.locks.settlingTasks.set(taskId, "merge-pr");
+    const held = supervisor.settling.locks.claim(taskId, "merge-pr");
     tasks.delivery.recordPermissionRecords(taskId, { mergeReviews: [review] });
-    supervisor.settling.locks.settlingTasks.delete(taskId);
+    held.release();
     const shown = note() as Card;
     expect(onStage(shown)).toBe(true);
     expect(mergeLineOf(shown)).toContain(mergedWords("", false).trim());

@@ -360,7 +360,7 @@ export class TaskClosing {
     const stopping = this.host.stopRuntime(taskId);
     if (stopping && !options.recordBeforeStop) {
       await stopping;
-      this.locks.releaseSettleBoundary(taskId);
+      this.locks.turnEnded(taskId);
     }
     const record = this.host.tasks.get(taskId);
     // The lane and every queued wake retire with the task, in the close's
@@ -432,7 +432,7 @@ export class TaskClosing {
     // later after it was accepted on a task that still appeared open.
     if (stopping && options.recordBeforeStop) {
       await stopping;
-      this.locks.releaseSettleBoundary(taskId);
+      this.locks.turnEnded(taskId);
     }
     // The durable handoff becomes visible only after its close transaction;
     // poking here cannot race the lane purge that precedes its insertion.

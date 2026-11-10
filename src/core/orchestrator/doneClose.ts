@@ -116,7 +116,7 @@ export class DoneClose {
     });
     // The real limits.
     if (record.kind !== "work") return refuse("it is not crew work.");
-    const pending = this.locks.settlingTasks.get(record.id);
+    const pending = this.locks.holder(record.id);
     if (pending || record.pendingSettle)
       return refuse("another settle of it is already in progress. Wait for its outcome.");
     if (TaskService.isClosed(record)) return refuse(`it is already ${describeStatus(record)}.`);
@@ -156,7 +156,7 @@ export class DoneClose {
     const held = words ? undefined : this.heldOnRecord(record, input.why, carrier);
     if (held) return held.refusal ? held : refuse(held.text);
 
-    this.locks.settlingTasks.set(record.id, "a close as done");
+    const lease = this.locks.claim(record.id, "a close as done");
     try {
       const read = await this.readFacts(record, named, carrier, why, evidence);
       if (!words) {
@@ -187,7 +187,7 @@ export class DoneClose {
       if (caught instanceof TaskGraphRefusal) return refuse(caught.message);
       throw caught;
     } finally {
-      this.locks.settlingTasks.delete(record.id);
+      lease.release();
     }
   }
 

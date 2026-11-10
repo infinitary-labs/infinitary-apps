@@ -20,7 +20,7 @@ import { afterMergeWords } from "./deliveryWakes";
 import type { KeptApproval } from "./keptApproval";
 import { candidateHead, keptFeedLine, keptNote, standingAuthorization } from "./mergeAuthorization";
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
-import type { SettleLocks } from "./settleLocks";
+import type { SettleLease, SettleLocks } from "./settleLocks";
 import {
   closeGateRefusal,
   type MergeActor,
@@ -117,6 +117,7 @@ export class SettleService {
 
   /** Last synchronous check, after every asynchronous read and before each send. */
   private mergeBoundary(
+    lease: SettleLease,
     taskId: string,
     mode: "merge-pr" | "land",
     actor: MergeActor,
@@ -207,7 +208,7 @@ export class SettleService {
               : undefined;
         if (reason) return `${reason}. ${softHoldWords("decisions", "firstmate")}`;
       }
-      this.locks.sentMerges.add(taskId);
+      lease.sent();
       return undefined;
     };
   }
@@ -248,6 +249,7 @@ export class SettleService {
       return {
         ok: false,
         text: `Cannot merge: task ${taskId} is already ${describeStatus(record)}.`,
+        plain: `it is already ${describeStatus(record)}`,
       };
     }
     // The close gate (children, blockers) is settleTaskOnce's single check,
@@ -334,12 +336,14 @@ export class SettleService {
       return {
         ok: false,
         text: `Cannot merge: task ${taskId} is already ${describeStatus(record)}.`,
+        plain: `it is already ${describeStatus(record)}`,
       };
     }
     if (!opensPullRequest(this.host.taskDelivery(taskId))) {
       return {
         ok: false,
         text: `Cannot merge: task ${taskId} does not deliver as a pull request; close it with settle_task land.`,
+        plain: "it does not deliver as a pull request",
       };
     }
     // The close gate is settleTaskOnce's single check (WI-12).
@@ -441,10 +445,10 @@ export class SettleService {
       !record ||
       TaskService.isClosed(record) ||
       !opensPullRequest(this.host.taskDelivery(taskId)) ||
-      this.locks.settlingTasks.has(taskId)
+      this.locks.holder(taskId)
     )
       return false;
-    this.locks.settlingTasks.set(taskId, "merge-pr");
+    const lease = this.locks.claim(taskId, "merge-pr");
     try {
       const pull = await this.mergedOutside(record);
       const current = this.host.tasks.get(taskId);
@@ -502,7 +506,7 @@ export class SettleService {
       await this.closeMergedOutside(taskId, "host", pull);
       return true;
     } finally {
-      this.locks.settlingTasks.delete(taskId);
+      lease.release();
     }
   }
 
@@ -902,7 +906,7 @@ export class SettleService {
     guard?: MergeGuard,
     after?: "close" | "continue",
   ): Promise<SettleOutcome> {
-    const pending = this.locks.settlingTasks.get(taskId);
+    const pending = this.locks.holder(taskId);
     if (pending) {
       return {
         ok: false,
@@ -922,6 +926,7 @@ export class SettleService {
         text: `Task ${taskId} "${record.title}" builds in place on the personal workspace: its changes are already there and committed, so there is nothing to merge, land, or discard. Close it with settle_task done, why finished and evidence once its report is verified${
           this.host.runtimeState(taskId) ? ", or interrupt it with mode cancel to stop it" : ""
         }. ${fixedHoldWords("nothing-to-merge")}`,
+        plain: `it builds in place on your personal workspace, so there is nothing to ${mode === "discard" ? "discard" : "merge"}`,
       };
     }
     // A discard is the one drop, by its rules (INF-3169's piece 4).
@@ -944,18 +949,20 @@ export class SettleService {
         return {
           ok: false,
           text: `Nothing to merge: this task delivers an operation, not code. Verify the effect and close it done, why finished with evidence. ${fixedHoldWords("nothing-to-merge")}`,
+          plain: "it delivers an operation, not code, so there is nothing to merge",
         };
       if (this.host.deliverableOf(record) === "answer") {
         return {
           ok: false,
           text: `Nothing to ${mode === "merge-pr" ? "merge" : "land"}: task ${taskId} "${record.title}" delivers an answer, not a change - it commits nothing and opens no pull request, and its card is the deliverable. It closes when the captain resolves that card, or with settle_task done, why answered once its answer is handed on. ${fixedHoldWords("nothing-to-merge")}`,
+          plain: "it delivers an answer, not a change, so there is nothing to merge",
         };
       }
     }
     // One owner across cards, the shell, and conversational tools. Claim
     // before the first await, and retain it through worktree cleanup.
-    this.locks.settlingTasks.set(taskId, mode);
-    const boundary = this.mergeBoundary(taskId, mode, actor, proceedWithOpen);
+    const lease = this.locks.claim(taskId, mode);
+    const boundary = this.mergeBoundary(lease, taskId, mode, actor, proceedWithOpen);
     try {
       if (mode === "merge-pr" || mode === "land") {
         const existing = this.host.tasks.get(taskId)?.pendingSettle;
@@ -965,8 +972,7 @@ export class SettleService {
           destination && !hostedPresentation(destination)
             ? readyPresentation(presentation)
             : undefined;
-        await this.locks.waitForSettleBoundary(
-          taskId,
+        const waited = await lease.waitForTurnEnd(
           existing ?? {
             mode,
             actor,
@@ -976,6 +982,12 @@ export class SettleService {
             ...(story ? { story } : {}),
           },
         );
+        if (!waited.ended)
+          return {
+            ok: false,
+            text: `Cannot ${mode} task ${taskId}: ${waited.cancelled} while it waited for its crewmate's turn to end.`,
+            plain: `${waited.cancelled} while its crewmate was working`,
+          };
       }
       return await this.settleTaskOnce(
         taskId,
@@ -992,8 +1004,7 @@ export class SettleService {
         const record = this.host.tasks.get(taskId);
         if (record?.pendingSettle) this.host.tasks.delivery.setPendingSettle(taskId, null);
       }
-      this.locks.settlingTasks.delete(taskId);
-      this.locks.sentMerges.delete(taskId);
+      lease.release();
     }
   }
 
@@ -1096,7 +1107,7 @@ export class SettleService {
   ): Promise<SettleOutcome> {
     const record = this.host.tasks.get(taskId);
     const title = record?.title ?? taskId;
-    if (!this.locks.settlingTasks.has(taskId) && record) {
+    if (!this.locks.holder(taskId) && record) {
       const waitsForTurn = (mode === "merge-pr" || mode === "land") && this.locks.working(taskId);
       const number = record.delivery?.prNumber;
       const change =

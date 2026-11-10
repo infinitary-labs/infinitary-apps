@@ -55,7 +55,7 @@ export class KeptMerge {
       if (!unattended) this.host.mergeContinued?.(taskId, review, result);
       return result;
     };
-    if (this.locks.settlingTasks.has(taskId)) {
+    if (this.locks.holder(taskId)) {
       return refuse({
         ok: false,
         text: "Cannot merge: another settle is already in progress.",
@@ -82,7 +82,7 @@ export class KeptMerge {
       approved?.review ?? record.delivery?.mergeReviews?.find((item) => item.id === reviewId);
     if (unattended && !approved)
       return { ok: false, stop: "withdrawn", text: "The kept merge approval no longer stands." };
-    this.locks.settlingTasks.set(taskId, "merge-pr");
+    const lease = this.locks.claim(taskId, "merge-pr");
     try {
       const result = await this.host.mergeReview(
         taskId,
@@ -118,7 +118,7 @@ export class KeptMerge {
       const actor = approved?.issuer === "autonomy" ? "app" : "captain";
       return await this.settle.finishReviewMerge(taskId, review, result, then, actor);
     } finally {
-      this.locks.settlingTasks.delete(taskId);
+      lease.release();
     }
   }
 
@@ -139,7 +139,7 @@ export class KeptMerge {
     const ran = new Set<string>();
     for (;;) {
       // Another settle holds the task: the run comes back once it ends.
-      if (this.locks.settlingTasks.has(taskId)) {
+      if (this.locks.holder(taskId)) {
         this.locks.retryWhenFree(taskId);
         return;
       }
@@ -364,8 +364,8 @@ export class KeptMerge {
 
   /** A merge the reconcile found already done: spend the approval and close the task once. */
   private async finishMerged(taskId: string, title: string, pull: ForgePull): Promise<void> {
-    if (this.locks.settlingTasks.has(taskId)) return;
-    this.locks.settlingTasks.set(taskId, "merge-pr");
+    if (this.locks.holder(taskId)) return;
+    const lease = this.locks.claim(taskId, "merge-pr");
     try {
       const authorization = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
       // A kept approval of a reviewed pull request merged it (INF-2490):
@@ -422,8 +422,7 @@ export class KeptMerge {
         undefined,
       );
     } finally {
-      this.locks.settlingTasks.delete(taskId);
-      this.locks.sentMerges.delete(taskId);
+      lease.release();
     }
   }
 

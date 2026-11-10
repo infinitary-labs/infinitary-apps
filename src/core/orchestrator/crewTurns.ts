@@ -909,10 +909,11 @@ export class CrewTurns {
 
   /** Every idle boundary hands off its deferred work through this one exit. */
   private afterTurn(task: TaskRuntime, move?: MoveAsk, recoverContext = false): void {
-    // A captured settle owns this idle boundary. Do not start another queued
-    // guidance turn before its normal close/CI gates run.
-    if (this.core.options.tasks.get(task.id)?.pendingSettle) {
-      this.core.settling.locks.releaseSettleBoundary(task.id);
+    // A captured settle owns this idle boundary: the one waiting goes on now,
+    // and no other queued guidance turn starts before its close/CI gates run.
+    const settleWaited = this.core.settling.locks.turnEnded(task.id);
+    if (settleWaited || this.core.options.tasks.get(task.id)?.pendingSettle) {
+      // The settle's own outcome speaks for this boundary.
     } else if (recoverContext) {
       void this.recoverContext(task);
     } else if (move) {

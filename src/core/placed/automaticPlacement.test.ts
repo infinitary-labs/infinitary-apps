@@ -272,6 +272,32 @@ describe("AutomaticPlacement's room set aside for starting tasks", () => {
       w.dispose();
     }
   });
+
+  // INF-3366 (row 8 of INF-3307's audit): a task closed once its working
+  // copy had begun kept its room for good, across restarts, since only a
+  // sample of it running or its working copy's cleanup there freed it, and
+  // a closed task never runs and may have no working copy to clean up.
+  it("frees the room of tasks closed after their working copies began", async () => {
+    const w = world();
+    try {
+      const footer = w.task("footer", "Fix the ledger footer");
+      const totals = w.task("totals", "Fix the ledger totals");
+      await w.start(footer);
+      await w.start(totals);
+      w.tasks.placement.beginPlacementPreparation(footer.id);
+      w.tasks.placement.beginPlacementPreparation(totals.id);
+      w.tasks.close(footer.id, { status: "dropped", reason: "cancelled", actor: "captain" });
+      w.tasks.close(totals.id, { status: "dropped", reason: "cancelled", actor: "captain" });
+
+      await vi.advanceTimersByTimeAsync(150_000);
+      const header = w.task("header", "Fix the ledger header");
+      expect(await w.start(header)).toMatchObject({ computerId: null });
+      const recovered = new TaskService({ db: w.db, strict: true });
+      expect(recovered.placement.pendingPlacements().map((task) => task.id)).toEqual([header.id]);
+    } finally {
+      w.dispose();
+    }
+  });
 });
 
 /**

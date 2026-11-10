@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "closed-task-frees-room",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task you close no longer holds room on the computer it was starting on",
+      "body": "When you dropped or closed a task while its working copy was still being made on another computer, that computer kept counting the task's processor and memory, even after a restart. New tasks set to run on any computer could then wait for room that was never used. Closing a task now frees its room right away.",
+      "noPicture": "Nothing new appears: a waiting task now starts instead of waiting for room a closed task held.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -907,7 +907,7 @@ A missing preparation reply keeps the reservation and computer across retries an
 The helper journals `preparation-unknown` before starting preparation; it returns `preparation-failed` only when its first attempt has demonstrably ended.
 A failed replay after restart keeps the same order uncertain rather than treating a second failure as proof that the first attempt ended.
 A proven failed attempt may reserve a new order on the same computer, never choose another computer.
-The task owner releases pending demand only after proven failed or completed preparation, cleanup, or a sample begun after running was witnessed again.
+Otherwise the task owner releases pending demand only after proven failed or completed preparation, cleanup, or a sample begun after running was witnessed again.
 `AutomaticPlacement` takes that witness just before the shared feed asks for every reading (`ComputerResourceFeed.onSample`), as well as while it compares computers.
 A witness at the same moment a sample begins counts for that sample, and a sample's start is the receiver's own record of when it asked for that reading (`ComputerResourceFeed.sampledAt`), never rebuilt from the reading's age and a second clock read.
 So the first start after a quiet spell frees the room of tasks already running and measured, rather than counting it beside their measured use.

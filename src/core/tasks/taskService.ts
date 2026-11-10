@@ -1701,7 +1701,10 @@ export class TaskService {
           cancelledReason: input.text ?? input.reason,
         };
       }
-      if (record.placement && !record.placement.preparationStarted)
+      // A closed task never runs, so the room its start set aside ends with
+      // it, whatever its preparation reached: nothing else may ever free it
+      // (INF-3366).
+      if (record.placement)
         this.placement.releasePlacement(id, record.placement.snapshot.orderId, "ended");
       this.writer.patch(id, {
         status: input.status,

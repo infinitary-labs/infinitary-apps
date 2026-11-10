@@ -427,6 +427,28 @@ describe("the app as a view of another Mac", () => {
     expect(air.relaunch).toHaveBeenCalledTimes(1);
   });
 
+  // INF-3307's audit, row 10: two joins answered together each switched the
+  // window to a view, and the first view stayed open beside the second.
+  it("joins once when two links are pasted together, and leaves no second view open", async () => {
+    const pro = await otherMac();
+    const studio = await otherMac();
+    const air = shell();
+    await air.shell.start();
+    const [first, second] = await Promise.all([
+      air.shell.join(await pro.link()),
+      air.shell.join(await studio.link()),
+    ]);
+    expect([first, second]).toEqual([{ ok: true }, { ok: false, refused: "other" }]);
+    // The second link is never used, so the other computer keeps no device for it.
+    expect(studio.pairing.list()).toEqual([]);
+    await air.until(() => air.restartWindows.mock.calls.length === 1);
+    await air.until(() => air.view().contact === "in-reach");
+    // One view, with its one connection open to the Mac it joined.
+    expect(air.sockets.filter((socket) => socket.readyState === socket.OPEN)).toHaveLength(1);
+    expect(pro.pairing.list().map((device) => device.name)).toEqual(["MacBook Air"]);
+    expect(air.own.dispose).toHaveBeenCalledTimes(1);
+  });
+
   it("returns to its own first launch, saying so, when the other Mac removes it", async () => {
     const pro = await otherMac();
     const dir = join(scratchDir("infinitary-shell-"), "joined");

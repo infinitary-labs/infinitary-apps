@@ -12,6 +12,7 @@ import type { PersonalExtensions } from "@core/personal/personalExtensions";
 import type { UpdateChecker } from "@core/update/updateChecker";
 import { COMPUTER, HERE } from "@shared/deviceNames";
 import {
+  type DeviceGrant,
   type JoinOutcome,
   linkDialingFirst,
   linkNamesPrivateToo,
@@ -208,23 +209,14 @@ export class Shell {
     }
     // A link for another user on that Mac is not for Firstmate here.
     if (kind !== "mac" && kind !== "view") return { ok: false, refused: "kind" };
-    let grant: Awaited<ReturnType<typeof claimLink>>;
-    try {
-      const user = userInfo();
-      grant = await claimLink(text, {
-        kind,
-        name: await this.options.deviceName(),
-        // A link for a Mac: it joins with its window, and the work that may
-        // run here runs as this user. An older Mac's link for a view hears neither.
-        ...(kind === "mac"
-          ? {
-              window: true as const,
-              user: { name: user.username, uid: process.getuid?.() ?? user.uid },
-            }
-          : {}),
-      });
-    } catch (error) {
-      return { ok: false, refused: joinRefusal(error) };
+    // The claim begins the switch, so a second join asked meanwhile is
+    // refused, never run beside this one into a second view.
+    const claimed = this.claim(text, kind);
+    this.switching = claimed.then(() => undefined);
+    const grant = await claimed;
+    if ("refused" in grant) {
+      this.switching = null;
+      return { ok: false, refused: grant.refused };
     }
     const joinedAt = this.now();
     this.options.joined.join(grant, joinedAt);
@@ -246,14 +238,37 @@ export class Shell {
         .catch((error: unknown) =>
           console.warn(`[shell] could not set up ${HERE.this}'s work: ${(error as Error).message}`),
         );
-    // Answer the window first; the switch starts it over.
-    setImmediate(() => {
-      void this.switchTo(async () => {
-        await this.stopHome();
-        this.becomeView();
-      });
+    void this.switchTo(async () => {
+      // Answer the window first; the switch starts it over.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      await this.stopHome();
+      this.becomeView();
     });
     return { ok: true };
+  }
+
+  /** Uses a pasted link once, or says why it did not join. */
+  private async claim(
+    text: string,
+    kind: "mac" | "view",
+  ): Promise<DeviceGrant | Exclude<JoinOutcome, { ok: true }>> {
+    try {
+      const user = userInfo();
+      return await claimLink(text, {
+        kind,
+        name: await this.options.deviceName(),
+        // A link for a Mac: it joins with its window, and the work that may
+        // run here runs as this user. An older Mac's link for a view hears neither.
+        ...(kind === "mac"
+          ? {
+              window: true as const,
+              user: { name: user.username, uid: process.getuid?.() ?? user.uid },
+            }
+          : {}),
+      });
+    } catch (error) {
+      return { ok: false, refused: joinRefusal(error) };
+    }
   }
 
   /**

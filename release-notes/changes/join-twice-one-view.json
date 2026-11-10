@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "join-twice-one-view",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Joining another Mac twice in a row keeps one connection",
+      "body": "When a second link was joined while the first was still connecting, both took effect and the first connection stayed open behind the window. The second join is now turned down and the first one finishes on its own.",
+      "noPicture": "The window shows the same view as before; only the hidden extra connection is gone.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

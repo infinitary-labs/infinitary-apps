@@ -1,7 +1,14 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import type { AddressInfo } from "node:net";
 import { describe, expect, it } from "vitest";
-import { parsePointer, publishSnapshot, ReleaseStorage } from "../scripts/release-storage.mjs";
+import {
+  parsePointer,
+  publicDigest,
+  publishSnapshot,
+  ReleaseStorage,
+} from "../scripts/release-storage.mjs";
 import { releaseStorageFixture } from "./helpers/releaseStorage";
 
 // INF-1613/INF-1620: immutable public downloads precede one conditional feed switch.
@@ -134,5 +141,99 @@ describe("R2 release object interface", () => {
       expect(() => parsePointer(Buffer.from(JSON.stringify(pointer)))).toThrow(
         "Invalid current feed snapshot",
       );
+  });
+});
+
+/**
+ * A loopback download site serving the real bytes, with byte ranges as the download site does.
+ * Its first answer stops half way and resets the connection once the reader holds bytes, so the
+ * reset lands part way through the file on every run.
+ */
+async function resettingSite(continued: (response: ServerResponse, start: number) => void) {
+  let firstBytesRead = () => {};
+  const read = new Promise<void>((resolve) => {
+    firstBytesRead = resolve;
+  });
+  const ranges: (string | undefined)[] = [];
+  const server = createServer(async (request: IncomingMessage, response: ServerResponse) => {
+    ranges.push(request.headers.range);
+    if (ranges.length === 1) {
+      response.writeHead(200, { "content-length": bytes.length });
+      response.write(bytes.subarray(0, bytes.length / 2));
+      await read;
+      response.socket?.resetAndDestroy();
+      return;
+    }
+    continued(response, Number(/^bytes=(\d+)-$/.exec(request.headers.range ?? "")?.[1]));
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address() as AddressInfo;
+  // The real fetch, read one chunk at a time so the site knows the reader holds bytes.
+  const request: typeof fetch = async (input, init) => {
+    const response = await fetch(input, init);
+    const reader = response.body?.getReader();
+    if (!reader) return response;
+    const body = new ReadableStream<Uint8Array>(
+      {
+        async pull(controller) {
+          const { done, value } = await reader.read();
+          if (done) return controller.close();
+          controller.enqueue(value);
+          firstBytesRead();
+        },
+      },
+      { highWaterMark: 0 },
+    );
+    return new Response(body, { status: response.status, headers: response.headers });
+  };
+  return {
+    url: new URL(`http://127.0.0.1:${port}/releases/v0.6.1/icon.png`),
+    ranges,
+    request,
+    close: () => {
+      server.closeAllConnections();
+      return new Promise((resolve) => server.close(resolve));
+    },
+  };
+}
+
+describe("unsigned public read-back", () => {
+  // Alpha run 42729835126 failed after its uploads landed: the download site reset the
+  // connection while the release read its own Linux package back to check the bytes.
+  it("continues a download the network resets part way from the byte it reached", async () => {
+    const site = await resettingSite((response, start) => {
+      response.writeHead(206, {
+        "content-length": bytes.length - start,
+        "content-range": `bytes ${start}-${bytes.length - 1}/${bytes.length}`,
+      });
+      response.end(bytes.subarray(start));
+    });
+    try {
+      const read = await publicDigest(site.url, site.request);
+      expect(read.sha256).toBe(sha256);
+      expect(read.bytes).toBe(bytes.length);
+      expect(read.resumedAt).toHaveLength(1);
+      expect(site.ranges).toEqual([undefined, `bytes=${read.resumedAt[0]}-`]);
+    } finally {
+      await site.close();
+    }
+  });
+
+  // A site that drops every continued connection before any byte must end the read, not hold the release forever.
+  it("ends the read when a continued connection brings no more bytes", async () => {
+    const site = await resettingSite((response, start) => {
+      response.writeHead(206, {
+        "content-length": bytes.length - start,
+        "content-range": `bytes ${start}-${bytes.length - 1}/${bytes.length}`,
+      });
+      response.flushHeaders();
+      response.socket?.resetAndDestroy();
+    });
+    try {
+      await expect(publicDigest(site.url, site.request)).rejects.toThrow();
+      expect(site.ranges).toHaveLength(2);
+    } finally {
+      await site.close();
+    }
   });
 });

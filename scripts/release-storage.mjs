@@ -105,6 +105,38 @@ export class ReleaseStorage {
   }
 }
 
+/**
+ * Hash an object as anyone downloads it: an unsigned public HTTPS read, with no credential.
+ * A connection the network drops part way continues from the byte it reached with a range
+ * request, so one reset never fails a release; an attempt that reads nothing more ends the read.
+ */
+export async function publicDigest(url, request = fetch) {
+  const digest = createHash("sha256");
+  const resumedAt = [];
+  let received = 0;
+  for (;;) {
+    const before = received;
+    try {
+      const response = await request(url, {
+        redirect: "error",
+        cache: "no-store",
+        ...(received ? { headers: { range: `bytes=${received}-` } } : {}),
+      });
+      if (received && (response.status !== 206 || !response.headers.get("content-range")?.startsWith(`bytes ${received}-`)))
+        throw new Error(`Public download did not continue at byte ${received} (${response.status}): ${url.pathname}`);
+      if (!response.ok || !response.body) throw new Error(`Public download unavailable (${response.status}): ${url.pathname}`);
+      for await (const bytes of response.body) {
+        digest.update(bytes);
+        received += bytes.length;
+      }
+      return { sha256: digest.digest("hex"), bytes: received, resumedAt };
+    } catch (error) {
+      if (received === before) throw error;
+      resumedAt.push(received);
+    }
+  }
+}
+
 /** Upload a complete immutable snapshot, check it publicly, then switch one pointer. */
 export async function publishSnapshot(storage, files, previous, verify) {
   const names = Object.keys(files).sort();

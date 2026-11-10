@@ -1,7 +1,8 @@
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { parsePointer, publishSnapshot, ReleaseStorage } from "./release-storage.mjs";
+import { parsePointer, publicDigest, publishSnapshot, ReleaseStorage } from "./release-storage.mjs";
 
 const mode = process.argv[2];
 if (mode !== "live" && mode !== "rehearsal") throw new Error("Expected live or rehearsal");
@@ -46,8 +47,8 @@ if (storage) {
   }
   collect(directory);
   const result = await publishSnapshot(storage, files, previous, async (key: string, expected: Buffer) => {
-    const response = await fetch(new URL(key, configuration.downloadBase), { redirect: "error", cache: "no-store" });
-    if (!response.ok || !Buffer.from(await response.arrayBuffer()).equals(expected))
+    const read = await publicDigest(new URL(key, configuration.downloadBase));
+    if (read.sha256 !== createHash("sha256").update(expected).digest("hex"))
       throw new Error(`Unsigned snapshot verification failed: ${key}`);
   });
   console.log(JSON.stringify(result));

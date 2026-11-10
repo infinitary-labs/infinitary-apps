@@ -318,6 +318,7 @@ Upload credentials are passed only through the recipient's environment and signe
 `scripts/publish-downloads.ts` uploads the finalized private-record bytes to `releases/v<version>/<asset>` and adds a SHA-256 sidecar for every asset.
 The S3-compatible uploader signs each payload's SHA-256 and uses `If-None-Match: *`; an existing object is accepted only after its digest agrees, never overwritten.
 The release verifies every asset and sidecar through unsigned HTTPS before the signed ZIP and disk-image gates and before advancing any direct channel.
+A read the network drops part way continues from the byte it reached with a range request (`publicDigest` in `scripts/release-storage.mjs`, which the snapshot check below shares); an attempt that reads nothing more ends the read, and the digest still has to agree.
 Every historical version remains downloadable.
 Release objects and snapshot objects carry `Cache-Control: public, max-age=31536000, immutable`; the download service caches Linux file types as well as ZIPs and disk images.
 

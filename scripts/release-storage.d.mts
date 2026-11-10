@@ -11,3 +11,4 @@ export class ReleaseStorage {
 }
 export function publishSnapshot(storage: ReleaseStorage, files: Record<string, string>, previous: StoredObject | null, verify: (key: string, expected: Buffer) => Promise<void>): Promise<{ snapshot: string; files: string[] }>;
 export function parsePointer(bytes: Buffer): { schemaVersion: 1; prefix: string; files: string[] };
+export function publicDigest(url: URL, request?: typeof fetch): Promise<{ sha256: string; bytes: number; resumedAt: number[] }>;

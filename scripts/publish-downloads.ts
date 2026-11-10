@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { basename, join } from "node:path";
-import { ReleaseStorage } from "./release-storage.mjs";
+import { publicDigest, ReleaseStorage } from "./release-storage.mjs";
 
 // INF-1620: finalized private-record bytes become immutable downloads before any feed moves.
 const configuration = JSON.parse(readFileSync("packaging/release-source.json", "utf8"));
@@ -26,12 +26,11 @@ for (const file of files) {
   const sidecar = Buffer.from(`${digest}  ${basename(file)}\n`);
   await storage.immutable(`${key}.sha256`, sidecar, { contentType: "text/plain", cacheControl: "public, max-age=31536000, immutable" });
   // These are intentionally unsigned reads, with no upload headers and no authentication.
+  const resumed: number[] = [];
   for (const [object, expected] of [[key, digest], [`${key}.sha256`, createHash("sha256").update(sidecar).digest("hex")]] as const) {
-    const response = await fetch(new URL(object, configuration.downloadBase), { redirect: "error", cache: "no-store" });
-    if (!response.ok || !response.body) throw new Error(`Public download unavailable (${response.status}): ${object}`);
-    const hash = createHash("sha256");
-    for await (const bytes of response.body) hash.update(bytes);
-    if (hash.digest("hex") !== expected) throw new Error(`Public download bytes disagree: ${object}`);
+    const read = await publicDigest(new URL(object, configuration.downloadBase));
+    if (read.sha256 !== expected) throw new Error(`Public download bytes disagree: ${object}`);
+    resumed.push(...read.resumedAt);
   }
-  console.log(`Verified unsigned download: ${key}`);
+  console.log(`Verified unsigned download: ${key}${resumed.length ? ` (the connection dropped and the read continued at byte ${resumed.join(", ")})` : ""}`);
 }

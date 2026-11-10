@@ -9,6 +9,7 @@ import {
   type ComputerSignIns,
   computerSignInsSchema,
   type DeviceSignInEvent,
+  type DeviceSignInFlow,
   type DeviceSignIns as DeviceSignInsView,
   type SignInOrderChannel,
   type SignInOrderResponse,
@@ -39,12 +40,8 @@ import type { WorkDevices } from "../placed/workDevices";
  * comes back as a step, and that computer finishes the sign-in itself.
  */
 
-type Running = {
-  readonly deviceId: string;
-  /** The provider, or the host for a sign-in where projects live. */
-  readonly providerId: string;
-  readonly accountId?: string;
-  /** The person's word for the host, for a sign-in where projects live ("GitHub"). */
+type Running = DeviceSignInFlow & {
+  /** The person's word for a project host ("GitHub"). */
   readonly name?: string;
 };
 
@@ -111,6 +108,9 @@ export class DeviceSignIns {
         reach: this.options.reachOf?.(device.id) ?? (inReach ? "in-reach" : "out-of-reach"),
         customApi: speaksCustomApi(this.options.work.version(device.id)?.contract ?? ""),
         signIns: this.narrowed(said?.signIns ?? null),
+        flows: [...this.running.values()]
+          .filter((flow) => flow.deviceId === device.id)
+          .map(({ name: _name, ...flow }) => flow),
         ...(said?.asOf !== undefined ? { asOf: said.asOf } : {}),
         ...(said?.unanswered ? { unanswered: true } : {}),
       };
@@ -169,16 +169,27 @@ export class DeviceSignIns {
   ): Promise<{ signInId: string }> {
     const device = this.computer(deviceId);
     const words = signInPlace({ ...device, onThisMac: device.onThisMac === true });
-    if (!this.options.work.inReach(deviceId))
-      throw new Error(`${words.who} is out of reach, so no sign-in started.`);
     const signInId = randomBytes(16).toString("base64url");
-    this.running.set(signInId, { deviceId, providerId, ...(accountId ? { accountId } : {}) });
+    this.begin({
+      signInId,
+      deviceId,
+      providerId,
+      target: "account",
+      phase: "running",
+      ...(accountId ? { accountId } : {}),
+    });
     try {
+      if (!this.options.work.inReach(deviceId))
+        throw new Error(`${words.who} is out of reach, so no sign-in started.`);
       await this.options.work.ask(deviceId, "inf:sign-ins:start", [
         { signInId, providerId, type, ...(accountId ? { accountId } : {}) },
       ]);
     } catch (error) {
-      this.running.delete(signInId);
+      this.end(signInId, {
+        kind: "ended",
+        outcome: "failed",
+        error: reachable(error, words.who).message,
+      });
       throw reachable(error, words.who);
     }
     return { signInId };
@@ -195,18 +206,29 @@ export class DeviceSignIns {
     const offered = this.said
       .get(deviceId)
       ?.signIns?.forges?.hosts.find((entry) => entry.host === host);
-    if (!offered)
-      throw new Error(
-        `${words.who} does not offer a sign-in there. It may need ${HERE.this}'s version of Infinitary.`,
-      );
-    if (!this.options.work.inReach(deviceId))
-      throw new Error(`${words.who} is out of reach, so no sign-in started.`);
     const signInId = randomBytes(16).toString("base64url");
-    this.running.set(signInId, { deviceId, providerId: host, name: offered.name });
+    this.begin({
+      signInId,
+      deviceId,
+      providerId: host,
+      target: "forge",
+      phase: "running",
+      ...(offered ? { name: offered.name } : {}),
+    });
     try {
+      if (!offered)
+        throw new Error(
+          `${words.who} does not offer a sign-in there. It may need ${HERE.this}'s version of Infinitary.`,
+        );
+      if (!this.options.work.inReach(deviceId))
+        throw new Error(`${words.who} is out of reach, so no sign-in started.`);
       await this.options.work.ask(deviceId, "inf:sign-ins:forge", [{ signInId, host }]);
     } catch (error) {
-      this.running.delete(signInId);
+      this.end(signInId, {
+        kind: "ended",
+        outcome: "failed",
+        error: reachable(error, words.who).message,
+      });
       throw reachable(error, words.who);
     }
     return { signInId };
@@ -283,12 +305,23 @@ export class DeviceSignIns {
    */
   async answer(signInId: string, promptId: string, value: string | null): Promise<{ ok: true }> {
     const running = this.running.get(signInId);
-    if (!running) throw new Error("That sign-in is no longer running.");
+    if (running?.phase !== "running") throw new Error("That sign-in is no longer running.");
+    if (running.prompt?.promptId !== promptId)
+      throw new Error("That sign-in is no longer waiting for an answer.");
+    const { prompt: _prompt, ...answered } = running;
+    this.running.set(signInId, answered);
+    this.push();
     try {
       await this.options.work.ask(running.deviceId, "inf:sign-ins:answer", [
         { signInId, promptId, value },
       ]);
     } catch (error) {
+      // A refused send can be answered again, but never restore a prompt over
+      // a newer step or an end that arrived while the order was on its way.
+      if (this.running.get(signInId) === answered) {
+        this.running.set(signInId, running);
+        this.push();
+      }
       throw reachable(error, this.who(running.deviceId));
     }
     return { ok: true };
@@ -298,11 +331,16 @@ export class DeviceSignIns {
   async cancel(signInId: string): Promise<{ ok: true }> {
     const running = this.running.get(signInId);
     if (!running) return { ok: true };
+    if (running.phase === "ended") {
+      this.running.delete(signInId);
+      this.push();
+      return { ok: true };
+    }
+    this.end(signInId, { kind: "ended", outcome: "cancelled" });
     try {
       await this.options.work.ask(running.deviceId, "inf:sign-ins:cancel", [{ signInId }]);
     } catch {
-      // Out of reach: it stopped there when contact went.
-      this.end(signInId, { kind: "ended", outcome: "cancelled" });
+      // The computer stops old work when contact is lost or welcomed again.
     }
     return { ok: true };
   }
@@ -342,7 +380,19 @@ export class DeviceSignIns {
     if (!running || running.deviceId !== deviceId)
       throw new Error("No sign-in of this home runs on that computer.");
     if (request.step.kind === "ended") this.end(request.signInId, request.step);
-    else this.tell(request.signInId, running, request.step);
+    else if (running.phase === "running") {
+      const step = request.step;
+      const next =
+        step.kind === "prompt"
+          ? { ...running, prompt: step.prompt }
+          : {
+              ...running,
+              notice: step.notice,
+              ...(step.notice.url ? { link: step.notice.url } : {}),
+            };
+      this.running.set(request.signInId, next);
+      this.tell(request.signInId, next, step);
+    }
     return { ok: true };
   }
 
@@ -358,6 +408,9 @@ export class DeviceSignIns {
 
   dispose(): void {
     this.unsubscribe();
+    for (const [id, running] of this.running)
+      if (running.phase === "running") this.end(id, { kind: "ended", outcome: "cancelled" });
+    this.running.clear();
   }
 
   /** What a computer said, its Codex and Grok lists narrowed behind this Mac's rail. */
@@ -370,19 +423,26 @@ export class DeviceSignIns {
   }
 
   private contact(contact: WorkDeviceContact): void {
-    if (contact.contact === "gone") {
-      // Nobody can answer a sign-in there now; it stopped there too.
-      for (const [signInId, running] of this.running)
-        if (running.deviceId === contact.deviceId)
-          this.end(signInId, {
-            kind: "ended",
-            outcome: "failed",
-            error: `${this.who(contact.deviceId)} went out of reach, so the sign-in stopped.`,
-          });
-    } else if (this.said.has(contact.deviceId)) {
-      // Back in reach: what it says now replaces what it said before.
-      void this.ask(contact.deviceId);
+    // Quick redial can keep the computer in reach without running its dropped
+    // cleanup. End the old view here and cancel its work through the new link.
+    for (const [signInId, running] of [...this.running]) {
+      if (running.deviceId !== contact.deviceId) continue;
+      if (running.phase === "running")
+        this.end(signInId, {
+          kind: "ended",
+          outcome: "failed",
+          error:
+            contact.contact === "gone"
+              ? `${this.who(contact.deviceId)} went out of reach, so the sign-in stopped.`
+              : `${this.who(contact.deviceId)} reconnected, so the earlier sign-in stopped. Try signing in again.`,
+        });
+      if (contact.contact === "in-reach")
+        void this.options.work
+          .ask(contact.deviceId, "inf:sign-ins:cancel", [{ signInId }])
+          .catch(() => {});
     }
+    if (contact.contact === "in-reach" && this.said.has(contact.deviceId))
+      void this.ask(contact.deviceId);
     this.push();
   }
 
@@ -419,10 +479,20 @@ export class DeviceSignIns {
     return pending;
   }
 
+  private begin(flow: Running): void {
+    for (const [id, previous] of this.running)
+      if (previous.deviceId === flow.deviceId && previous.target === flow.target)
+        void this.cancel(id);
+    this.running.set(flow.signInId, flow);
+    this.push();
+  }
+
   private end(signInId: string, step: Extract<SignInStep, { kind: "ended" }>): void {
     const running = this.running.get(signInId);
-    if (!running) return;
-    this.running.delete(signInId);
+    if (!running || running.phase === "ended") return;
+    const { prompt: _prompt, ...identity } = running;
+    if (step.outcome === "signed-in" || step.outcome === "cancelled") this.running.delete(signInId);
+    else this.running.set(signInId, { ...identity, phase: "ended", ended: step });
     this.tell(signInId, running, step);
     if (step.outcome === "signed-in")
       this.options.broadcastEvent({

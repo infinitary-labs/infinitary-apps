@@ -143,6 +143,8 @@ export type ProviderChipsProps = {
   accounts: readonly AccountView[];
   /** The provider whose sign-in is in flight, if any. */
   busyProviderId: string | null;
+  /** Stops provider sign-in starts only; custom connection management stays available. */
+  signInOff?: string;
   onConnect: (provider: ProviderView) => void;
   /**
    * `foot`: the Intelligence tab's row, where accounts are listed above and
@@ -169,6 +171,7 @@ export function ProviderChips({
   providers,
   accounts,
   busyProviderId,
+  signInOff,
   onConnect,
   variant,
   place = "here",
@@ -236,7 +239,7 @@ export function ProviderChips({
         key={provider.id}
         providerId={provider.id}
         name={name}
-        reason={reason}
+        reason={signInOff ?? reason}
         busy={busy}
         onConnect={() => onConnect(provider)}
       >

@@ -2,14 +2,15 @@ import { awayWord } from "@shared/devices";
 import { kindByName } from "@shared/forge";
 import { FORGE_CLI_WORDS } from "@shared/forges";
 import type { ComputerForges, DeviceSignIns } from "@shared/signIns";
-import { signInPlace } from "@shared/signIns";
-import { useCallback, useEffect, useState } from "react";
+import { REMOTE_SIGN_IN_UPDATE_NOTE, signInPlace } from "@shared/signIns";
+import { useCallback, useEffect } from "react";
 import { useShellStore } from "../app/store";
 import { Badge, Button, RowMenu, StatusDot, type StatusDotTone } from "../design";
 import { useOverflowTitle } from "../design/core/overflowTitle";
-import { DeviceSignInAside, type Flow } from "./DeviceSignIns";
+import { DeviceSignInAside, type Flow, SignInNeedsUpdate } from "./DeviceSignIns";
 import { DEVICE_FORGE_ROLE } from "./deviceForgeWords";
 import { GitHubCliLine } from "./GitHubCliLine";
+import { useDeviceSignIns } from "./useDeviceSignIns";
 
 /**
  * Settings -> Projects, "Where your projects live", for each computer that
@@ -100,83 +101,19 @@ export function deviceForgeRowView(row: DeviceForgeRow): {
  * so this Mac's row names its own part.
  */
 export function DeviceForgeRows({ onAny }: { onAny?: (any: boolean) => void } = {}) {
-  const [shown, setShown] = useState(false);
-  const [devices, setDevices] = useState<DeviceSignIns[]>([]);
-  const [flows, setFlows] = useState<Record<string, Flow>>({});
-
-  useEffect(() => {
-    let live = true;
-    void window.infinitary.devices
-      .shown()
-      .then(({ shown: offered }) => {
-        if (!live || !offered) return;
-        setShown(true);
-        void window.infinitary.devices.signIns().then((next) => live && setDevices(next));
-      })
-      .catch(() => {});
-    const offDevices = window.infinitary.devices.onSignIns((next) => setDevices(next));
-    const offStep = window.infinitary.devices.onSignIn((event) => {
-      setFlows((current) => {
-        const key = `${event.deviceId}:${event.providerId}`;
-        const flow = current[key];
-        // Only a sign-in this section started: Intelligence draws the others.
-        if (!flow || (flow.signInId !== null && flow.signInId !== event.signInId)) return current;
-        const next: Flow = { ...flow, signInId: event.signInId };
-        const { step } = event;
-        if (step.kind === "notice") {
-          next.notice = step.notice;
-          if (step.notice.url) next.link = step.notice.url;
-        } else if (step.kind === "ended") {
-          // Signed in, or said no on the host's page: the row says it.
-          if (step.outcome === "signed-in" || step.outcome === "cancelled") {
-            const rest = { ...current };
-            delete rest[key];
-            return rest;
-          }
-          next.ended = step;
-        }
-        return { ...current, [key]: next };
-      });
-    });
-    return () => {
-      live = false;
-      offDevices();
-      offStep();
-    };
-  }, []);
-
-  const rows = shown ? deviceForgeRows(devices) : [];
+  const devices = useDeviceSignIns();
+  const rows = deviceForgeRows(devices);
   useEffect(() => {
     onAny?.(rows.length > 0);
   }, [rows.length, onAny]);
 
-  const signIn = useCallback((row: DeviceForgeRow) => {
-    const key = `${row.deviceId}:${row.host}`;
-    setFlows((current) => ({
-      ...current,
-      [key]: { signInId: null, deviceId: row.deviceId, providerId: row.host },
-    }));
-    void window.infinitary.devices
-      .forgeSignIn(row.deviceId, row.host)
-      .then(({ signInId }) =>
-        setFlows((current) =>
-          current[key]?.signInId === null
-            ? { ...current, [key]: { ...current[key], signInId } }
-            : current,
-        ),
-      )
-      .catch((caught: unknown) =>
-        setFlows((current) => ({
-          ...current,
-          [key]: {
-            signInId: null,
-            deviceId: row.deviceId,
-            providerId: row.host,
-            refused: caught instanceof Error ? caught.message : String(caught),
-          },
-        })),
-      );
-  }, []);
+  const signIn = useCallback(
+    (row: DeviceForgeRow) => {
+      if (!devices.find((device) => device.deviceId === row.deviceId)?.flows) return;
+      void window.infinitary.devices.forgeSignIn(row.deviceId, row.host).catch(() => {});
+    },
+    [devices],
+  );
 
   // The host's card for a computer that needs its own sign-in lands here
   // with that sign-in to start, so the code is on screen when the section
@@ -187,47 +124,45 @@ export function DeviceForgeRows({ onAny }: { onAny?: (any: boolean) => void } = 
     const row = rows.find(
       (entry) => entry.deviceId === pending.deviceId && entry.host === pending.host,
     );
-    if (!row) return;
+    if (!row || !devices.find((device) => device.deviceId === row.deviceId)?.flows) return;
     useShellStore.getState().clearPendingDeviceForgeSignIn();
     if (!row.signIn && row.inReach) signIn(row);
-  }, [pending, rows, signIn]);
+  }, [pending, rows, devices, signIn]);
 
-  const stop = (key: string, flow: Flow) => {
-    if (flow.signInId && !flow.ended && !flow.refused)
-      void window.infinitary.devices.cancelSignIn(flow.signInId).catch(() => {});
-    setFlows((current) => {
-      const rest = { ...current };
-      delete rest[key];
-      return rest;
-    });
+  const stop = (flow: Flow) => {
+    void window.infinitary.devices.cancelSignIn(flow.signInId).catch(() => {});
   };
 
   return (
     <>
       {rows.map((row) => {
         const key = `${row.deviceId}:${row.host}`;
-        const flow = flows[key];
-        const starting = Boolean(flow && !flow.notice && !flow.ended && !flow.refused);
+        const flows = devices.find((device) => device.deviceId === row.deviceId)?.flows;
+        const flow = flows?.find(
+          (entry) => entry.target === "forge" && entry.providerId === row.host,
+        );
+        const starting = Boolean(flow && !flow.notice && !flow.ended);
         return (
           <div key={key}>
             <DeviceForgeRowLine
               row={row}
               starting={starting}
               open={Boolean(flow)}
+              signInOff={!flows ? REMOTE_SIGN_IN_UPDATE_NOTE : undefined}
               onSignIn={() => signIn(row)}
               onSignOut={() =>
                 void window.infinitary.devices.forgeSignOut(row.deviceId, row.host).catch(() => {})
               }
             />
+            {!flows && <SignInNeedsUpdate />}
             {flow && (
               <DeviceSignInAside
                 flow={flow}
                 providerName={row.hostName}
                 place={row.place}
-                typed=""
-                onTyped={() => {}}
+                key={flow.signInId}
                 onAnswer={() => {}}
-                onStop={() => stop(key, flow)}
+                onStop={() => stop(flow)}
               />
             )}
             {flow && row.githubCli && row.inReach && (
@@ -239,7 +174,7 @@ export function DeviceForgeRows({ onAny }: { onAny?: (any: boolean) => void } = 
                   address={row.host}
                   where={row.place.where}
                   ask={() => window.infinitary.devices.forgeSignInWithCli(row.deviceId, row.host)}
-                  onDone={() => stop(key, flow)}
+                  onDone={() => stop(flow)}
                 />
               </div>
             )}
@@ -256,6 +191,7 @@ function DeviceForgeRowLine({
   open,
   onSignIn,
   onSignOut,
+  signInOff,
 }: {
   row: DeviceForgeRow;
   /** Asked there, and no code back yet. */
@@ -264,6 +200,7 @@ function DeviceForgeRowLine({
   open: boolean;
   onSignIn: () => void;
   onSignOut: () => void;
+  signInOff?: string;
 }) {
   const view = deviceForgeRowView(row);
   const notSignedIn = view.label.startsWith("not signed in to ");
@@ -304,6 +241,8 @@ function DeviceForgeRowLine({
             pending={starting}
             pendingLabel="Starting..."
             disabled={!row.inReach || open}
+            off={Boolean(signInOff)}
+            note={signInOff}
             onClick={onSignIn}
           >
             {view.reauth ? "Sign in again" : "Sign in"}

@@ -4,7 +4,12 @@ import {
   KEYCHAIN_VALUE_FAILURE_THERE,
   type QuotaProviderView,
 } from "@shared/quota";
-import { type DeviceSignIns, returnsToLoopback, signInPlace } from "@shared/signIns";
+import {
+  type DeviceSignIns,
+  deviceSignInFlowSchema,
+  returnsToLoopback,
+  signInPlace,
+} from "@shared/signIns";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { DeviceSignInAside, type Flow, OutOfReachNote } from "./DeviceSignIns";
@@ -21,15 +26,20 @@ const MINI = signInPlace({ name: "Mac mini", onThisMac: false });
 const BUILDER = signInPlace({ name: "This computer", user: "builder", onThisMac: true });
 const noop = () => {};
 
-function render(flow: Partial<Flow>, place = MINI, providerName = "Codex", typed = "") {
+function render(flow: Partial<Flow>, place = MINI, providerName = "Codex") {
   return renderToStaticMarkup(
     <DeviceSignInAside
-      flow={{ signInId: "s1", deviceId: "mini", providerId: "openai-codex", ...flow }}
+      flow={deviceSignInFlowSchema.parse({
+        signInId: "s1",
+        deviceId: "mini",
+        providerId: "openai-codex",
+        target: "account",
+        phase: flow.ended ? "ended" : "running",
+        ...flow,
+      })}
       providerName={providerName}
       place={place}
       onThisMac={place === BUILDER}
-      typed={typed}
-      onTyped={noop}
       onAnswer={noop}
       onStop={noop}
     />,
@@ -177,9 +187,15 @@ describe("a sign-in on a computer that runs work", () => {
         },
       }),
     ).toContain("Mac mini went out of reach, so the sign-in stopped.");
-    expect(render({ refused: "Mac mini is out of reach, so no sign-in started." })).toContain(
-      "Mac mini is out of reach, so no sign-in started.",
-    );
+    expect(
+      render({
+        ended: {
+          kind: "ended",
+          outcome: "failed",
+          error: "Mac mini is out of reach, so no sign-in started.",
+        },
+      }),
+    ).toContain("Mac mini is out of reach, so no sign-in started.");
     expect(render({})).toContain("Mac mini is signing in to Codex.");
   });
 });

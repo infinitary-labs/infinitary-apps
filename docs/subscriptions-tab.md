@@ -102,7 +102,10 @@ A computer older than `FORGE_SIGN_INS_SINCE` still ends a Claude sign-in with no
 A Claude row shows the allowance that computer read with its own login, or, when macOS there would have to ask first, why it is not read there, with no Retry: that computer never asks on a screen nobody may be at (`docs/helper.md`, "Claude's allowance, never asking").
 A row's menu holds Disconnect, which signs that computer out, and the feed says so; Sign in again runs on that computer too.
 For Claude, Disconnect signs that computer's own Claude login out only when Infinitary made it there from the pasted code, leaves a login that was there before, and the feed line says which (`docs/helper.md`, "Its own sign-ins").
-The first mate's card for a sign-in on a computer opens this tab with that sign-in started (`pendingDeviceSignIn`).
+The first mate's card for a sign-in on a computer opens this tab with that sign-in started (`pendingDeviceSignIn`) when the home publishes current `flows`.
+A newer window connected to a home without that view keeps each computer's accounts, allowance, Disconnect and saved Custom API connections.
+Only provider sign-in starts, including Sign in again and a pending card's start, are disabled, with an update message beside the controls.
+Custom API connection management stays available under its own existing capability checks; Projects likewise keeps each computer's host rows and Sign out while disabling only sign-in starts.
 `settings/DeviceSignIns.test.tsx` owns the aside's words and the Claude row's, and `tests/e2e/device-sign-ins.spec.ts` the journey.
 
 ## Custom API connections

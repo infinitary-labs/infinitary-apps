@@ -1,12 +1,13 @@
 import type { AccountView } from "@shared/accounts";
 import { isCustomApiProvider } from "@shared/customApi";
 import { awayWord } from "@shared/devices";
-import type { AuthNotice, AuthPromptView, ProviderView } from "@shared/providers";
+import type { ProviderView } from "@shared/providers";
 import type { QuotaProviderView } from "@shared/quota";
 import {
+  type DeviceSignInFlow,
   type DeviceSignIns,
+  REMOTE_SIGN_IN_UPDATE_NOTE,
   returnsToLoopback,
-  type SignInStep,
   signInPlace,
 } from "@shared/signIns";
 import type React from "react";
@@ -29,6 +30,7 @@ import type { RowMenuItem } from "../design";
 import { Button, Input } from "../design";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
 import { LABEL_GAP, ROW_GAP, SECTION_GAP } from "./settingRows";
+import { useDeviceSignIns } from "./useDeviceSignIns";
 
 /**
  * Settings -> Intelligence, grouped by device (design skill
@@ -57,29 +59,14 @@ const MONO_NOTE_STYLE = {
   color: "var(--fg-3)",
 } as const;
 
-/** One sign-in running on a computer, as this window draws it. */
-export type Flow = {
-  /** Null until the computer has said it started. */
-  signInId: string | null;
-  deviceId: string;
-  providerId: string;
-  accountId?: string;
-  notice?: AuthNotice;
-  prompt?: AuthPromptView;
-  /** The link to open, kept once the flow has named one. */
-  link?: string;
-  ended?: Extract<SignInStep, { kind: "ended" }>;
-  /** Why it could not start. */
-  refused?: string;
-  /** What is typed in its box, kept only while its box shows it. */
-  typed?: string;
-};
+export type Flow = DeviceSignInFlow;
 
 export type DeviceAccountRowProps = {
   account: AccountView;
   providerName: string;
   quotaRow?: QuotaProviderView;
   signingIn: boolean;
+  signInOff?: string;
   onSignIn: () => void;
   menu: RowMenuItem[];
 };
@@ -111,105 +98,21 @@ export function DeviceSignInGroups({
   onGroups?: (any: boolean) => void;
 }) {
   const home = useFirstMatePlace();
-  const [shown, setShown] = useState(false);
-  const [devices, setDevices] = useState<DeviceSignIns[]>([]);
-  const [flows, setFlows] = useState<Record<string, Flow>>({});
+  const groups = useDeviceSignIns();
   const [choice, setChoice] = useState<{ deviceId: string; provider: ProviderView } | null>(null);
   const [customFor, setCustomFor] = useState<string | null>(null);
 
-  useEffect(() => {
-    let live = true;
-    void window.infinitary.devices
-      .shown()
-      .then(({ shown: offered }) => {
-        if (!live || !offered) return;
-        setShown(true);
-        void window.infinitary.devices.signIns().then((next) => live && setDevices(next));
-      })
-      .catch(() => {});
-    const offDevices = window.infinitary.devices.onSignIns((next) => setDevices(next));
-    const offStep = window.infinitary.devices.onSignIn((event) => {
-      setFlows((current) => {
-        const flow =
-          Object.values(current).find((entry) => entry.signInId === event.signInId) ??
-          // A step can come before the start's own answer.
-          (current[event.deviceId]?.signInId === null &&
-          current[event.deviceId]?.providerId === event.providerId
-            ? current[event.deviceId]
-            : undefined);
-        if (!flow) return current;
-        const next: Flow = { ...flow, signInId: event.signInId };
-        const { step } = event;
-        if (step.kind === "notice") {
-          next.notice = step.notice;
-          if (step.notice.url) next.link = step.notice.url;
-        } else if (step.kind === "prompt") {
-          // Its own new question empties its box; another computer's never does.
-          next.prompt = step.prompt;
-          delete next.typed;
-        } else {
-          next.ended = step;
-          delete next.prompt;
-          delete next.typed;
-        }
-        // Signed in or stopped: the group's new row, or nothing, says it.
-        if (
-          step.kind === "ended" &&
-          (step.outcome === "signed-in" || step.outcome === "cancelled")
-        ) {
-          const rest = { ...current };
-          delete rest[flow.deviceId];
-          return rest;
-        }
-        return { ...current, [flow.deviceId]: next };
-      });
-    });
-    return () => {
-      live = false;
-      offDevices();
-      offStep();
-    };
-  }, []);
-
-  const groups = shown ? devices : [];
   useEffect(() => {
     onGroups?.(groups.length > 0);
   }, [groups.length, onGroups]);
 
   const start = useCallback(
     (deviceId: string, providerId: string, type: "oauth" | "api_key", accountId?: string) => {
+      if (!groups.find((device) => device.deviceId === deviceId)?.flows) return;
       setChoice(null);
-      setFlows((current) => {
-        const running = current[deviceId]?.signInId;
-        // One sign-in at a time on a computer: a new one stops the last.
-        if (running) void window.infinitary.devices.cancelSignIn(running).catch(() => {});
-        return {
-          ...current,
-          [deviceId]: { signInId: null, deviceId, providerId, ...(accountId ? { accountId } : {}) },
-        };
-      });
-      void window.infinitary.devices
-        .signIn(deviceId, providerId, type, accountId)
-        .then(({ signInId }) =>
-          setFlows((current) =>
-            current[deviceId]?.providerId === providerId && current[deviceId]?.signInId === null
-              ? { ...current, [deviceId]: { ...current[deviceId], signInId } }
-              : current,
-          ),
-        )
-        .catch((caught: unknown) =>
-          setFlows((current) => ({
-            ...current,
-            [deviceId]: {
-              signInId: null,
-              deviceId,
-              providerId,
-              refused: caught instanceof Error ? caught.message : String(caught),
-            },
-          })),
-        );
+      void window.infinitary.devices.signIn(deviceId, providerId, type, accountId).catch(() => {});
     },
-    [],
+    [groups],
   );
 
   const connect = useCallback(
@@ -230,7 +133,7 @@ export function DeviceSignInGroups({
     if (!pending) return;
     const device = groups.find((entry) => entry.deviceId === pending.deviceId);
     const provider = device?.signIns?.providers.find((entry) => entry.id === pending.providerId);
-    if (!device || !provider) return;
+    if (!device?.flows || !provider) return;
     useShellStore.getState().clearPendingDeviceSignIn();
     connect(device.deviceId, provider);
   }, [pending, groups, connect]);
@@ -238,28 +141,10 @@ export function DeviceSignInGroups({
   const answer = (flow: Flow, value: string | null) => {
     const { signInId, prompt } = flow;
     if (!signInId || !prompt) return;
-    setFlows((current) => {
-      const now = current[flow.deviceId];
-      if (!now) return current;
-      const next = { ...now };
-      delete next.prompt;
-      delete next.typed;
-      return { ...current, [flow.deviceId]: next };
-    });
     void window.infinitary.devices.answerSignIn(signInId, prompt.promptId, value).catch(() => {});
   };
-  const typeFor = (deviceId: string, value: string) =>
-    setFlows((current) => {
-      const now = current[deviceId];
-      return now ? { ...current, [deviceId]: { ...now, typed: value } } : current;
-    });
   const stop = (flow: Flow) => {
-    if (flow.signInId) void window.infinitary.devices.cancelSignIn(flow.signInId).catch(() => {});
-    setFlows((current) => {
-      const rest = { ...current };
-      delete rest[flow.deviceId];
-      return rest;
-    });
+    void window.infinitary.devices.cancelSignIn(flow.signInId).catch(() => {});
   };
 
   if (groups.length === 0) return null;
@@ -267,7 +152,7 @@ export function DeviceSignInGroups({
     <>
       {groups.map((device) => {
         const place = signInPlace(device);
-        const flow = flows[device.deviceId];
+        const flow = device.flows?.find((entry) => entry.target === "account");
         const accounts = (device.signIns?.accounts ?? []).filter(
           (account) => !isCustomApiProvider(account.providerId),
         );
@@ -294,8 +179,7 @@ export function DeviceSignInGroups({
               providerName={providerName(flow.providerId)}
               place={place}
               onThisMac={device.onThisMac}
-              typed={flow.typed ?? ""}
-              onTyped={(value) => typeFor(flow.deviceId, value)}
+              key={`${flow.signInId}:${flow.prompt?.promptId ?? ""}`}
               onAnswer={(value) => answer(flow, value)}
               onStop={() => stop(flow)}
             />
@@ -329,6 +213,7 @@ export function DeviceSignInGroups({
                       providerName: providerName(account.providerId),
                       ...(row ? { quotaRow: row } : {}),
                       signingIn: flow?.accountId === account.id && !flow.ended,
+                      ...(!device.flows ? { signInOff: REMOTE_SIGN_IN_UPDATE_NOTE } : {}),
                       onSignIn: () =>
                         start(
                           device.deviceId,
@@ -387,7 +272,8 @@ export function DeviceSignInGroups({
                   <ProviderChips
                     providers={device.reach === "in-reach" ? providers : []}
                     accounts={accounts}
-                    busyProviderId={flow && !flow.ended && !flow.refused ? flow.providerId : null}
+                    busyProviderId={flow && !flow.ended ? flow.providerId : null}
+                    signInOff={!device.flows ? REMOTE_SIGN_IN_UPDATE_NOTE : undefined}
                     onConnect={(provider) => connect(device.deviceId, provider)}
                     variant="foot"
                     place="there"
@@ -401,7 +287,8 @@ export function DeviceSignInGroups({
                   />
                 </div>
               )}
-              {choice?.deviceId === device.deviceId && (
+              {!device.flows && <SignInNeedsUpdate />}
+              {device.flows && choice?.deviceId === device.deviceId && (
                 <AuthMethodChoice
                   provider={choice.provider}
                   onPick={(type) => start(device.deviceId, choice.provider.id, type)}
@@ -429,6 +316,13 @@ export function DeviceSignInGroups({
   );
 }
 
+/** A newer view does not fall back to reconstructing steps from an older home. */
+export function SignInNeedsUpdate() {
+  return (
+    <p style={{ ...LINE_STYLE, paddingInline: "var(--space-4)" }}>{REMOTE_SIGN_IN_UPDATE_NOTE}</p>
+  );
+}
+
 /**
  * One sign-in on a computer, in the shapes `ConnectChips` already uses: a
  * code to read, a code or the address the browser ends on to paste back, or
@@ -440,8 +334,6 @@ export function DeviceSignInAside({
   providerName,
   place,
   onThisMac = false,
-  typed,
-  onTyped,
   onAnswer,
   onStop,
 }: {
@@ -453,32 +345,24 @@ export function DeviceSignInAside({
    * Mac reaches (`returnsToLoopback`); another Mac's never does.
    */
   onThisMac?: boolean;
-  typed: string;
-  onTyped: (value: string) => void;
   onAnswer: (value: string | null) => void;
   onStop: () => void;
 }) {
   const home = useFirstMatePlace();
+  // Callers key this aside by the sign-in and prompt. Leaving the box,
+  // ending the flow or answering it destroys its draft, never publishing it.
+  const [typed, setTyped] = useState("");
   const { prompt, notice, ended, link } = flow;
   const openLink = link
     ? () => void window.infinitary.app.openExternal(link).catch(() => {})
     : undefined;
   const stopButton = (
     <Button variant="ghost" size="sm" onClick={onStop}>
-      {ended || flow.refused ? "Done" : "Cancel"}
+      {ended ? "Done" : "Cancel"}
     </Button>
   );
   let body: React.ReactNode;
-  if (flow.refused) {
-    body = (
-      <>
-        <div style={{ ...LINE_STYLE, color: "var(--danger)" }} role="alert">
-          {flow.refused}
-        </div>
-        <div style={{ display: "flex", gap: 8 }}>{stopButton}</div>
-      </>
-    );
-  } else if (ended?.outcome === "signs-in-there") {
+  if (ended?.outcome === "signs-in-there") {
     body = (
       <>
         <div style={LINE_STYLE}>
@@ -545,7 +429,7 @@ export function DeviceSignInAside({
               type="password"
               value={typed}
               placeholder={asked === "key" ? "paste your key" : `paste the ${asked}`}
-              onChange={(event) => onTyped(event.target.value)}
+              onChange={(event) => setTyped(event.target.value)}
               autoFocus
               aria-label={`The ${asked} for ${place.who}`}
             />

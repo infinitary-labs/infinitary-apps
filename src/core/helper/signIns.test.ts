@@ -7,6 +7,7 @@ import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { KEYCHAIN_VALUE_FAILURE_THERE, servedProviderOf } from "@shared/quota";
 import { type DeviceSignInEvent, returnsToLoopback, type SignInStep } from "@shared/signIns";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { WebSocket } from "ws";
 import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { NO_BROWSER } from "../claude/claudeCli";
@@ -19,6 +20,7 @@ import { CLAUDE_MODELS } from "../claude/claudeModels";
 import { acquireSessionLease } from "../claude/claudeStoreLease";
 import { type HomeConnection, startConnection } from "../connection/connection";
 import { DeviceSignIns } from "../devices/deviceSignIns";
+import { dialHome } from "../devices/dial";
 import { DevicePairing } from "../devices/pairing";
 import type { CoreDispatch } from "../dispatcher";
 import { CoreEventBus } from "../events";
@@ -38,7 +40,7 @@ import { startComputerAccounts } from "./accounts";
 import { bindHere, noSignInHere } from "./conversations";
 import { startComputerForges } from "./forges";
 import { joinHome } from "./join";
-import { type HelperRun, startHelper } from "./run";
+import { type HelperRun, type StartHelperOptions, startHelper } from "./run";
 import { type HeldSignIns, startSignIns } from "./signIns";
 
 /**
@@ -135,7 +137,8 @@ function standInProviders() {
  * answered here: one pending answer, then the computer's own sign-in. The
  * test may make GitHub refuse it, as GitHub does once it no longer accepts one.
  */
-function standInGitHub() {
+function standInGitHub(options: { hold?: boolean } = {}) {
+  let hold = options.hold === true;
   const asked: { url: string; auth?: string }[] = [];
   let pending = 1;
   let refuse = false;
@@ -157,7 +160,7 @@ function standInGitHub() {
         interval: 1,
       });
     if (url === "https://github.com/login/oauth/access_token")
-      return pending-- > 0
+      return hold || pending-- > 0
         ? json(200, { error: "authorization_pending" })
         : json(200, { access_token: GITHUB_SIGN_IN, token_type: "bearer", scope: "repo,workflow" });
     if (url === "https://api.github.com/user")
@@ -166,6 +169,10 @@ function standInGitHub() {
   });
   return {
     asked,
+    approve: () => {
+      hold = false;
+      pending = 0;
+    },
     refuse: () => {
       refuse = true;
     },
@@ -313,6 +320,10 @@ async function joined(
     codexModels?: readonly string[];
     /** GitHub CLI installed there; none by default, so no test finds the real one. */
     githubCli?: GitHubCli;
+    /** Observe real sockets to exercise HomeLink's quick-redial grace. */
+    dial?: StartHelperOptions["dial"];
+    /** Computer-originated steps, before the real connection sends them home. */
+    onStep?: (signInId: string, step: SignInStep) => void;
   } = {},
 ) {
   const homeDir = scratchDir("infinitary-signins-home-");
@@ -404,12 +415,20 @@ async function joined(
     dataDir,
     say: () => {},
     retryMs: [20],
+    ...(options.dial ? { dial: options.dial } : {}),
     log: (line) => logs.push(line),
     ...(options.gitAskpass ? { gitAskpass: options.gitAskpass } : {}),
     ...(options.keychain ? { keychain: options.keychain } : {}),
     signIns: (start) => {
       held = startSignIns({
         ...start,
+        tell: (channel, args) => {
+          if (channel === "inf:work:sign-in") {
+            const [request] = parseInvokeRequest(channel, args);
+            options.onStep?.(request.signInId, request.step);
+          }
+          return start.tell(channel, args);
+        },
         forges: (forgeOptions) =>
           startComputerForges({
             ...forgeOptions,
@@ -535,6 +554,7 @@ async function joined(
       if (!held) throw new Error("The computer's sign-ins never loaded.");
       return held;
     },
+    state: started.run.state,
     stop: () => started.run.stop(),
   };
 }
@@ -1057,6 +1077,102 @@ describe("a computer that runs work signs in to its own subscriptions from its h
     );
     expect(world.group()?.signIns?.accounts).toEqual([]);
   });
+
+  it("replaces an account flow from overlapping callers on the computer, not just in Settings", async () => {
+    const computerSteps: { signInId: string; step: SignInStep }[] = [];
+    const world = await joined({
+      onStep: (signInId, step) => computerSteps.push({ signInId, step }),
+    });
+    const pending = world.signIns.start(world.deviceId, "openrouter", "api_key");
+    const replacement = world.signIns.start(world.deviceId, "openrouter", "api_key");
+    const [first, second] = await Promise.all([pending, replacement]);
+    await expect
+      .poll(() =>
+        computerSteps
+          .filter((event) => event.signInId === first.signInId && event.step.kind === "ended")
+          .map((event) => event.step),
+      )
+      .toEqual([{ kind: "ended", outcome: "cancelled" }]);
+    expect(world.group()?.flows?.map((flow) => flow.signInId)).toEqual([second.signInId]);
+    await world.signIns.answer(
+      second.signInId,
+      (await world.prompt(second.signInId)).promptId,
+      KEY,
+    );
+    expect(await world.ended(second.signInId)).toMatchObject({ outcome: "signed-in" });
+    expect((await (await world.held()).accounts.vault.views()).length).toBe(1);
+  });
+
+  // Reconnect must release the computer's work, not only the home's view.
+  it.each(["account", "forge"] as const)(
+    "cancels the computer's %s flow through a real quick redial and permits a fresh sign-in",
+    async (target) => {
+      const github = target === "forge" ? standInGitHub({ hold: true }) : undefined;
+      const sockets: WebSocket[] = [];
+      const contactsAtDial: (string | undefined)[] = [];
+      const computerSteps: { signInId: string; step: SignInStep }[] = [];
+      let state: (() => ReturnType<HelperRun["state"]>) | undefined;
+      const world = await joined({
+        dial: async (grant) => {
+          contactsAtDial.push(state?.().contact);
+          const socket = await dialHome(grant);
+          sockets.push(socket);
+          return socket;
+        },
+        onStep: (signInId, step) => computerSteps.push({ signInId, step }),
+      });
+      state = world.state;
+      world.signIns.read();
+      await expect.poll(() => world.group()?.signIns?.forges?.hosts.length).toBe(1);
+      const start = () =>
+        target === "account"
+          ? world.signIns.start(world.deviceId, "openrouter", "api_key")
+          : world.signIns.startForge(world.deviceId, "github.com");
+      const first = await start();
+      const prompt = target === "account" ? await world.prompt(first.signInId) : undefined;
+      if (target === "forge")
+        await expect
+          .poll(() => world.steps(first.signInId).some((step) => step.kind === "notice"))
+          .toBe(true);
+      const socket = sockets.at(-1);
+      if (!socket) throw new Error("The computer has no connected socket");
+      socket.terminate();
+      await expect
+        .poll(() =>
+          computerSteps
+            .filter((event) => event.signInId === first.signInId && event.step.kind === "ended")
+            .map((event) => event.step),
+        )
+        .toEqual([{ kind: "ended", outcome: "cancelled" }]);
+      expect(contactsAtDial).toEqual([undefined, "in-reach"]);
+      expect(world.state().contact).toBe("in-reach");
+      expect(world.group()?.flows?.[0]).toMatchObject({
+        signInId: first.signInId,
+        phase: "ended",
+        ended: { outcome: "failed" },
+      });
+      const held = await world.held();
+      await held.accounts.vault.swept();
+      expect(await held.accounts.vault.views()).toEqual([]);
+      expect(held.forges.view().signIns).toEqual([]);
+      if (prompt)
+        await expect(
+          held.host.answer("inf:sign-ins:answer", [
+            { signInId: first.signInId, promptId: prompt.promptId, value: KEY },
+          ]),
+        ).rejects.toThrow("no longer waiting");
+      const second = await start();
+      if (target === "account")
+        await world.signIns.answer(
+          second.signInId,
+          (await world.prompt(second.signInId)).promptId,
+          KEY,
+        );
+      else github?.approve();
+      expect(await world.ended(second.signInId)).toMatchObject({ outcome: "signed-in" });
+      expect(world.events.filter((event) => event.type === "device_signed_in")).toHaveLength(1);
+    },
+  );
 
   it("signs in to GitHub with a code read at home, which the computer finishes and its git uses", async () => {
     const github = standInGitHub();

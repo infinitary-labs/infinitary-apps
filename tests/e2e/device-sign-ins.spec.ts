@@ -391,6 +391,17 @@ test("a computer signs in to its own subscriptions from Settings here, and nothi
   const aside = group.locator('[data-device-sign-in-provider="openrouter"]');
   const send = aside.getByRole("button", { name: `Send to ${PLACE.who}`, exact: true });
   await expect(send).toBeDisabled();
+  // The captain's accepted row 6: the home owns the prompt, not this mounted tab.
+  const [before] = await page.evaluate(() => window.infinitary.devices.signIns());
+  const signInId = before?.flows?.find((flow) => flow.target === "account")?.signInId;
+  expect(signInId).toBeTruthy();
+  await page.getByRole("tab", { name: "Appearance", exact: true }).click();
+  await expect(group).toHaveCount(0);
+  await page.getByRole("tab", { name: "Intelligence", exact: true }).click();
+  await expect(aside.getByLabel(`The key for ${PLACE.who}`)).toBeVisible();
+  await expect(aside.getByRole("button", { name: "Cancel", exact: true })).toBeVisible();
+  const [after] = await page.evaluate(() => window.infinitary.devices.signIns());
+  expect(after?.flows?.find((flow) => flow.target === "account")?.signInId).toBe(signInId);
   await aside.getByLabel(`The key for ${PLACE.who}`).fill(KEY);
   await send.click();
   await expect(group.locator("[data-account-row]")).toHaveCount(1);
@@ -588,6 +599,12 @@ test("a computer signs in to GitHub for its own clones and pushes from Settings 
   await row.getByRole("button", { name: "Sign in", exact: true }).click();
   const aside = page.locator('[data-device-sign-in-provider="github.com"]');
   await expect(aside.locator("[data-device-sign-in-code]")).toHaveText(STUB_USER_CODE);
+  // The same row 6 guardrail for the other caller: a code stays available on return.
+  await page.getByRole("tab", { name: "Appearance", exact: true }).click();
+  await expect(aside).toHaveCount(0);
+  await page.getByRole("tab", { name: "Projects", exact: true }).click();
+  await expect(aside.locator("[data-device-sign-in-code]")).toHaveText(STUB_USER_CODE);
+  await expect(aside.getByRole("button", { name: "Cancel", exact: true })).toBeVisible();
   github.device.approve(COMPUTER_GITHUB);
   await expect(row).toHaveAttribute("data-forge-state", "ok");
   await expect(row).toContainText(DEVICE_FORGE_ROLE);

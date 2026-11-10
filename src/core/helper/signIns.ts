@@ -112,8 +112,9 @@ export class SignInHost {
     };
   }
 
-  /** The home is in reach again: it hears this computer's sign-ins whole. */
+  /** A welcome can follow a quick redial without dropped ever running. */
   reached(): void {
+    this.dropped();
     void this.report();
   }
 

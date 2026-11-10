@@ -370,6 +370,37 @@ export const signInWorkRequests = {
   { effect: "read" | "change"; request: z.ZodType; response: z.ZodType }
 >;
 
+/** A view never starts a sign-in whose older home cannot publish its current state. */
+export const REMOTE_SIGN_IN_UPDATE_NOTE =
+  "Update Infinitary where your first mate lives to sign in here.";
+
+/** A remote sign-in's complete public state, owned by the home, never a typed answer. */
+export const deviceSignInFlowSchema = z
+  .object({
+    signInId: signInIdSchema,
+    deviceId: z.string(),
+    providerId: z.string(),
+    accountId: z.string().optional(),
+    target: z.enum(["account", "forge"]),
+    notice: authNoticeSchema.optional(),
+    link: z.string().optional(),
+  })
+  .and(
+    z.discriminatedUnion("phase", [
+      z.object({
+        phase: z.literal("running"),
+        prompt: authPromptSchema.optional(),
+        ended: z.never().optional(),
+      }),
+      z.object({
+        phase: z.literal("ended"),
+        prompt: z.never().optional(),
+        ended: signInStepSchema.options[2],
+      }),
+    ]),
+  );
+export type DeviceSignInFlow = z.infer<typeof deviceSignInFlowSchema>;
+
 /** Each computer that runs work, with what it last said of its sign-ins, as the home's window draws it. */
 export const deviceSignInsSchema = z.object({
   deviceId: z.string(),
@@ -390,6 +421,8 @@ export const deviceSignInsSchema = z.object({
    * means it does not, so the chip stays disabled.
    */
   customApi: z.boolean().optional(),
+  /** Active sign-ins and failures awaiting Done; absent on an older home. */
+  flows: z.array(deviceSignInFlowSchema).optional(),
 });
 export type DeviceSignIns = z.infer<typeof deviceSignInsSchema>;
 

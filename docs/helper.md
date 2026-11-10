@@ -1120,6 +1120,15 @@ Nothing of the home's sign-ins is sent here, and nothing of these goes to the ho
   Nothing here holds a refusal, so the next read tries again and a permission given here later shows the allowance.
   A run whose data a test isolated with `INFINITARY_HELPER_DATA_DIR` reads no saved passwords, so no test reads the Claude login of the person running it.
 - **The home's side** is `DeviceSignIns` (`src/core/devices/deviceSignIns.ts`): it reaches the computer through the connection's own `ask` (`WorkDevices`, `src/core/placed/workDevices.ts`, which the shell attaches once it starts the connection), keeps in memory only what each computer said of itself, and pushes `inf:devices:sign-ins` and each step as `inf:devices:sign-in` to the window.
+  Its computer view includes `flows`: each sign-in's complete current prompt, notice and link, or its terminal failure, with no typed answer.
+  `DeviceSignIns.end` owns success, refusal, cancellation and lost-contact exits; a replacement connection ends old-link flows and sends their cancellation through the current link, even when it arrives before the old link's gone notification.
+  On each welcome, `SignInHost.reached` stops the computer's old flows too: quick redial can preserve in-reach contact without ever calling its dropped cleanup.
+  Starting another flow for the same computer and target ends and cancels its predecessor in core, so overlapping callers cannot leave a second flow hidden behind the first.
+  Settings reads this view after a step notification and on mounting, so switching tabs restores the code, prompt and Cancel rather than trying to reconstruct missed steps.
+  The prompt box alone holds a typed draft and destroys it when the box leaves; the core never holds it.
+  A newer view of an older home without `flows` keeps its account rows, allowance, Disconnect, custom connections and Projects rows with signed-in state and Sign out.
+  Only provider and forge sign-in starts are disabled, with the update message beside them; both pending-card entry points also wait for the home to publish `flows`.
+  Custom API connection management remains available under its existing capability checks.
   Settings -> Intelligence draws it (`docs/subscriptions-tab.md`, "A computer's own sign-ins"), Settings -> Projects draws its GitHub row (`docs/forge.md`, "A computer's own sign-in"), and the feed says "Mac mini is signed in to Codex."
   (`device_signed_in`).
 - **A task's model.**

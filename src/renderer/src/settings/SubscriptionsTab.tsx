@@ -510,6 +510,7 @@ export function AccountRow({
   hasModels,
   renaming,
   signingIn,
+  signInOff,
   refreshing,
   onStartRename,
   onRename,
@@ -530,6 +531,7 @@ export function AccountRow({
   hasModels: boolean;
   renaming: boolean;
   signingIn: boolean;
+  signInOff?: string;
   refreshing: boolean;
   onStartRename: () => void;
   onRename: (label: string) => void;
@@ -719,6 +721,8 @@ export function AccountRow({
               variant="secondary"
               size="sm"
               onClick={onSignIn}
+              off={Boolean(signInOff)}
+              note={signInOff}
               pending={signingIn}
               pendingLabel="Connecting..."
             >
@@ -1321,6 +1325,7 @@ export function SubscriptionsTab() {
             hasModels={false}
             renaming={false}
             signingIn={row.signingIn}
+            signInOff={row.signInOff}
             refreshing={false}
             onStartRename={() => {}}
             onRename={() => {}}

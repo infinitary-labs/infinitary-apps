@@ -6383,6 +6383,203 @@
             },
             "customApi": {
               "type": "boolean"
+            },
+            "flows": {
+              "type": "array",
+              "items": {
+                "allOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "signInId": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                      },
+                      "deviceId": {
+                        "type": "string"
+                      },
+                      "providerId": {
+                        "type": "string"
+                      },
+                      "accountId": {
+                        "type": "string"
+                      },
+                      "target": {
+                        "type": "string",
+                        "enum": [
+                          "account",
+                          "forge"
+                        ]
+                      },
+                      "notice": {
+                        "type": "object",
+                        "properties": {
+                          "providerId": {
+                            "type": "string"
+                          },
+                          "accountId": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "info",
+                              "auth_url",
+                              "device_code",
+                              "progress"
+                            ]
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "userCode": {
+                            "type": "string"
+                          },
+                          "expiresAt": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "providerId",
+                          "kind",
+                          "message"
+                        ]
+                      },
+                      "link": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "signInId",
+                      "deviceId",
+                      "providerId",
+                      "target"
+                    ]
+                  },
+                  {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "phase": {
+                            "type": "string",
+                            "const": "running"
+                          },
+                          "prompt": {
+                            "type": "object",
+                            "properties": {
+                              "promptId": {
+                                "type": "string"
+                              },
+                              "providerId": {
+                                "type": "string"
+                              },
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "text",
+                                  "secret",
+                                  "select",
+                                  "manual_code"
+                                ]
+                              },
+                              "message": {
+                                "type": "string"
+                              },
+                              "placeholder": {
+                                "type": "string"
+                              },
+                              "options": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "label": {
+                                      "type": "string"
+                                    },
+                                    "description": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "label"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "promptId",
+                              "providerId",
+                              "kind",
+                              "message"
+                            ]
+                          },
+                          "ended": {
+                            "not": {}
+                          }
+                        },
+                        "required": [
+                          "phase"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "phase": {
+                            "type": "string",
+                            "const": "ended"
+                          },
+                          "prompt": {
+                            "not": {}
+                          },
+                          "ended": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "ended"
+                              },
+                              "outcome": {
+                                "type": "string",
+                                "enum": [
+                                  "signed-in",
+                                  "failed",
+                                  "cancelled",
+                                  "signs-in-there"
+                                ]
+                              },
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "error": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "outcome"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "phase",
+                          "ended"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
             }
           },
           "required": [
@@ -66145,6 +66342,203 @@
             },
             "customApi": {
               "type": "boolean"
+            },
+            "flows": {
+              "type": "array",
+              "items": {
+                "allOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "signInId": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                      },
+                      "deviceId": {
+                        "type": "string"
+                      },
+                      "providerId": {
+                        "type": "string"
+                      },
+                      "accountId": {
+                        "type": "string"
+                      },
+                      "target": {
+                        "type": "string",
+                        "enum": [
+                          "account",
+                          "forge"
+                        ]
+                      },
+                      "notice": {
+                        "type": "object",
+                        "properties": {
+                          "providerId": {
+                            "type": "string"
+                          },
+                          "accountId": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "info",
+                              "auth_url",
+                              "device_code",
+                              "progress"
+                            ]
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "url": {
+                            "type": "string"
+                          },
+                          "userCode": {
+                            "type": "string"
+                          },
+                          "expiresAt": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "providerId",
+                          "kind",
+                          "message"
+                        ]
+                      },
+                      "link": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "signInId",
+                      "deviceId",
+                      "providerId",
+                      "target"
+                    ]
+                  },
+                  {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "phase": {
+                            "type": "string",
+                            "const": "running"
+                          },
+                          "prompt": {
+                            "type": "object",
+                            "properties": {
+                              "promptId": {
+                                "type": "string"
+                              },
+                              "providerId": {
+                                "type": "string"
+                              },
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "text",
+                                  "secret",
+                                  "select",
+                                  "manual_code"
+                                ]
+                              },
+                              "message": {
+                                "type": "string"
+                              },
+                              "placeholder": {
+                                "type": "string"
+                              },
+                              "options": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "label": {
+                                      "type": "string"
+                                    },
+                                    "description": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "label"
+                                  ]
+                                }
+                              }
+                            },
+                            "required": [
+                              "promptId",
+                              "providerId",
+                              "kind",
+                              "message"
+                            ]
+                          },
+                          "ended": {
+                            "not": {}
+                          }
+                        },
+                        "required": [
+                          "phase"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "phase": {
+                            "type": "string",
+                            "const": "ended"
+                          },
+                          "prompt": {
+                            "not": {}
+                          },
+                          "ended": {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "const": "ended"
+                              },
+                              "outcome": {
+                                "type": "string",
+                                "enum": [
+                                  "signed-in",
+                                  "failed",
+                                  "cancelled",
+                                  "signs-in-there"
+                                ]
+                              },
+                              "accountId": {
+                                "type": "string"
+                              },
+                              "error": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "outcome"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "phase",
+                          "ended"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
             }
           },
           "required": [

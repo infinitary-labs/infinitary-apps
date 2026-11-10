@@ -33,7 +33,8 @@ export const TAB_STRIP_HEIGHT = 32;
  * crewmate's session and Browser the browser view, which replace each other
  * on the stage as one entry per task. Another page than the browser's current one is the
  * controller's to pick, as navigation is: it does nothing while the captain
- * only watches.
+ * only watches, and is marked off with the reason while changes on the first
+ * mate's computer are off (docs/view.md).
  */
 export function TaskTabStrip({
   taskId,
@@ -41,14 +42,17 @@ export function TaskTabStrip({
   browser,
   facts,
   captain,
+  pagesOff = null,
 }: {
   taskId: string;
   shown: ShownTab;
   browser: TaskBrowserFact | undefined;
   /** What decides the task's other tabs (`taskTabFactsOf`). */
   facts: TaskTabFacts;
-  /** The captain holds the browser: he may pick another page. */
+  /** The captain holds the browser: they may pick another page. */
   captain: boolean;
+  /** Why the captain cannot pick another page right now: changes there are off. */
+  pagesOff?: string | null;
 }) {
   const role = useStageRole();
   const { crewmate, cards, activity } = facts;
@@ -58,7 +62,8 @@ export function TaskTabStrip({
   );
   const selected = shownTabIndex(tabs, shown, browser);
   const current = browser?.state === "open" ? (browser.page ?? 1) : 1;
-  const enabled = (tab: TaskTab) => tab.kind !== "browser" || tab.page === current || captain;
+  const enabled = (tab: TaskTab) =>
+    tab.kind !== "browser" || tab.page === current || (captain && pagesOff === null);
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
   const list = useRef<HTMLDivElement>(null);
@@ -151,7 +156,10 @@ export function TaskTabStrip({
     >
       {tabs.map((tab, index) => {
         const isSelected = index === selected;
-        const disabled = !enabled(tab);
+        // Another page the captain could pick but for changes being off:
+        // marked off with the reason, still reached by the arrows.
+        const off = captain && pagesOff !== null && !enabled(tab) ? pagesOff : null;
+        const disabled = !enabled(tab) && off === null;
         return (
           <StripTab
             key={tab.kind === "browser" ? `browser-${tab.page}` : tab.kind}
@@ -163,6 +171,7 @@ export function TaskTabStrip({
             }
             isSelected={isSelected}
             disabled={disabled}
+            off={off}
             onGo={(byKey) => go(index, byKey)}
           />
         );
@@ -190,18 +199,20 @@ function StripTab({
   command,
   isSelected,
   disabled,
+  off,
   onGo,
 }: {
   tab: TaskTab;
   command: TabCommand | null;
   isSelected: boolean;
   disabled: boolean;
+  /** Why it cannot be picked right now: shown on rest, and its description. */
+  off: string | null;
   onGo: (byKey: boolean) => void;
 }) {
   const { keys, "aria-keyshortcuts": ariaKeys } = useCommandKeys(command);
-  const rest = useRestLabel(tab.kind === "cards" ? `${tab.label} ${tab.count}` : tab.label, {
-    keys,
-  });
+  const named = tab.kind === "cards" ? `${tab.label} ${tab.count}` : tab.label;
+  const rest = useRestLabel(off ? `${named} · ${off}` : named, { keys });
   return (
     <button
       {...rest}
@@ -211,6 +222,8 @@ function StripTab({
       aria-keyshortcuts={ariaKeys}
       tabIndex={isSelected ? 0 : -1}
       disabled={disabled}
+      aria-disabled={off ? true : undefined}
+      aria-description={off ?? undefined}
       data-task-tab={tab.kind}
       data-browser-page-tab={tab.kind === "browser" ? tab.page : undefined}
       // A click with no pointer (Enter, Space) is a key's.
@@ -230,7 +243,8 @@ function StripTab({
         fontSize: "var(--text-sm)",
         fontWeight: 400,
         color: isSelected ? "var(--fg-1)" : "var(--fg-3)",
-        cursor: disabled || isSelected ? "default" : "pointer",
+        cursor: disabled || off || isSelected ? "default" : "pointer",
+        opacity: off ? 0.4 : undefined,
       }}
     >
       {tab.label}

@@ -414,6 +414,24 @@
           "properties": {
             "t": {
               "type": "string",
+              "const": "live"
+            },
+            "channel": {
+              "type": "string"
+            },
+            "payload": {}
+          },
+          "required": [
+            "t",
+            "channel",
+            "payload"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "t": {
+              "type": "string",
               "const": "parts"
             },
             "bytes": {
@@ -13583,7 +13601,7 @@
     },
     "inf:cards:open-page": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -36261,9 +36279,371 @@
         ]
       }
     },
+    "inf:browser:watch": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "watching": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "watching"
+        ]
+      }
+    },
+    "inf:browser:unwatch": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      }
+    },
+    "inf:browser:size": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "width": {
+                    "type": "integer",
+                    "minimum": 320,
+                    "maximum": 3840
+                  },
+                  "height": {
+                    "type": "integer",
+                    "minimum": 240,
+                    "maximum": 2400
+                  }
+                },
+                "required": [
+                  "width",
+                  "height"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        ],
+        "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      }
+    },
+    "inf:browser:input": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "pointer"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "move",
+                      "down",
+                      "up"
+                    ]
+                  },
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 3840
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 2400
+                  },
+                  "button": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "left",
+                      "middle",
+                      "right"
+                    ]
+                  },
+                  "clickCount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 3
+                  },
+                  "modifiers": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 15
+                  }
+                },
+                "required": [
+                  "kind",
+                  "type",
+                  "x",
+                  "y",
+                  "button",
+                  "clickCount",
+                  "modifiers"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "wheel"
+                  },
+                  "x": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 3840
+                  },
+                  "y": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 2400
+                  },
+                  "deltaX": {
+                    "type": "number",
+                    "minimum": -10000,
+                    "maximum": 10000
+                  },
+                  "deltaY": {
+                    "type": "number",
+                    "minimum": -10000,
+                    "maximum": 10000
+                  },
+                  "modifiers": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 15
+                  }
+                },
+                "required": [
+                  "kind",
+                  "x",
+                  "y",
+                  "deltaX",
+                  "deltaY",
+                  "modifiers"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "key"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "down",
+                      "up"
+                    ]
+                  },
+                  "key": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "code": {
+                    "type": "string",
+                    "maxLength": 32
+                  },
+                  "keyCode": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                  },
+                  "text": {
+                    "type": "string",
+                    "maxLength": 4
+                  },
+                  "modifiers": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 15
+                  },
+                  "command": {
+                    "type": "string",
+                    "enum": [
+                      "selectAll",
+                      "undo",
+                      "redo",
+                      "cut",
+                      "copy",
+                      "paste"
+                    ]
+                  },
+                  "clipboard": {
+                    "type": "string",
+                    "maxLength": 8388608
+                  }
+                },
+                "required": [
+                  "kind",
+                  "type",
+                  "key",
+                  "code",
+                  "keyCode",
+                  "modifiers"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "go"
+                  },
+                  "go": {
+                    "type": "string",
+                    "enum": [
+                      "back",
+                      "forward",
+                      "reload"
+                    ]
+                  }
+                },
+                "required": [
+                  "kind",
+                  "go"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "page"
+                  },
+                  "page": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2
+                  }
+                },
+                "required": [
+                  "kind",
+                  "page"
+                ]
+              }
+            ]
+          }
+        ],
+        "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": true
+              },
+              "warning": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ok"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": false
+              },
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ok",
+              "text"
+            ]
+          }
+        ]
+      }
+    },
     "inf:browser:stop": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -36314,7 +36694,7 @@
     },
     "inf:browser:reopen": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -36365,7 +36745,7 @@
     },
     "inf:browser:take": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -36435,7 +36815,7 @@
     },
     "inf:browser:return": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -69035,6 +69415,38 @@
           "deviceId",
           "providerId",
           "step"
+        ]
+      }
+    },
+    "inf:browser:frame": {
+      "payload": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "data": {
+            "type": "string",
+            "maxLength": 8000000
+          },
+          "width": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "height": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "taskId",
+          "data",
+          "width",
+          "height"
         ]
       }
     },

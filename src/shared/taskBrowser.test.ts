@@ -5,6 +5,7 @@ import {
   rememberSignInLabel,
   SIGN_IN_CAPTION,
   savedSignInLabel,
+  savedSignInStatus,
   signInCaption,
   type TaskBrowserFact,
 } from "./taskBrowser";
@@ -36,5 +37,18 @@ describe("the browser view's foot line", () => {
       "Remember my aurora.example sign-in on this computer",
     );
     expect(savedSignInLabel("aurora.example")).toBe("Use my saved aurora.example sign-in");
+  });
+
+  // The captain's answer on INF-1358's review: "Name the first mate's
+  // computer, as other words on a second computer already do."
+  it("names the first mate's computer where a sign-in is kept, on a computer that controls it", () => {
+    const place = { this: "Mac mini" };
+    expect(rememberSignInLabel("aurora.example", place)).toBe(
+      "Remember my aurora.example sign-in on Mac mini",
+    );
+    expect(signInCaption({ ...OPEN, saved: ["aurora.example"] }, false, place)).toBe(
+      "signed in on aurora.example · saved on Mac mini",
+    );
+    expect(savedSignInStatus(place)).toBe("Sign-in saved on Mac mini · updates on return");
   });
 });

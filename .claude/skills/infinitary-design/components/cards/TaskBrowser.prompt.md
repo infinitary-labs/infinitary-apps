@@ -152,7 +152,7 @@ While it uses a saved sign-in it names it instead: `signed in on aurora.example 
 | Outcome unknown: the site never confirmed | as Paused for your help, from the crewmate's decision that says so | the page where the site lists it, for the captain to check; the crewmate never pays again |
 | Stopped | no browser row: the card's top names the task, with Hide in its corner | one centred sentence of why, a second line, Open again and its caption; no foot line |
 | Unavailable | as Stopped | why it cannot open now, Open again still offered |
-| Shown on another computer: this computer controls the first mate on MacBook Pro | as Stopped | `This task's browser shows only on MacBook Pro.` over `Watch it and take control of it there.`; no Open again (`../devices/RemoteControl.prompt.md`) |
+| Waits for an update on another computer: this computer controls a first mate on MacBook Pro too old to send its pictures | as Stopped | `Update Infinitary on MacBook Pro to show this task's browser here.` over `Until then, only a window on MacBook Pro can show it.`; no Open again (`../devices/RemoteControl.prompt.md`) |
 
 The stopped sentence says what stopped it, in `--fg-1` at `--text-base` weight 500, ending in a full stop: `You stopped this browser`, `The crewmate closed this browser`, `This browser stopped after 30 minutes unused`, `This browser's page stopped working`, or `This browser was stopped when the task closed`.
 The second line is `--text-sm` `--fg-2`: `Nothing it signed in to was kept`, or on a closed task `Its pictures are in the task's record`.

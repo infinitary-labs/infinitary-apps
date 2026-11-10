@@ -1,4 +1,3 @@
-import { HERE } from "@shared/deviceNames";
 import type { KeySystem } from "@shared/platform";
 import {
   attachmentStanding,
@@ -11,10 +10,10 @@ import {
   RETURN_CONTROL_LABEL,
   RETURN_CONTROL_NOTICE,
   rememberSignInLabel,
-  SAVED_SIGN_IN_STATUS,
   type SavedSignIn,
   STALE_ATTACHMENT_WORDS,
   STOP_VIEW_WORDS,
+  savedSignInStatus,
   signInCaption,
   TAKE_CONTROL_LABEL,
   TASK_BROWSER_PAGE,
@@ -39,7 +38,16 @@ import { CARD_MAX_HEIGHT, cardFloor } from "../design/cards/ResponseCard";
 import { thisDesktop } from "../design/core/desktop";
 import { useOverflowTitle } from "../design/core/overflowTitle";
 import { useRestLabel } from "../design/core/restLabel";
-import { browserShownThereWords, isView, waitsForUpdate } from "../devices/viewWords";
+import { useConnectionNoticeCovers } from "../devices/RemoteControl";
+import {
+  browserShownThereWords,
+  browserWaitsForUpdate,
+  changesOff,
+  changesOffWords,
+  firstMatePlace,
+  isView,
+  waitsForUpdate,
+} from "../devices/viewWords";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 import { RecordPaneChrome } from "./RecordPaneChrome";
 import { recordPillToneOf } from "./recordFooter";
@@ -595,10 +603,20 @@ export function TaskBrowserView({
   const modelName = useModelNames();
   const [topRef, topHeight] = useTopHeight();
   const controlKeys = useCommandKeys("browser.control");
-  // On a Mac controlling another, the page shows only there (docs/view.md).
+  // Any window shows the page, wherever the first mate lives, unless the
+  // first mate there is too old to send it (docs/view.md).
   const thisMac = useShellStore((s) => s.thisMac);
-  const there = isView(thisMac) ? browserShownThereWords(thisMac) : null;
+  const there = browserWaitsForUpdate(thisMac) ? browserShownThereWords(thisMac) : null;
   const waits = waitsForUpdate(thisMac);
+  // The words name the computer the first mate lives on, as every other
+  // sentence on a computer that controls it does (docs/view.md).
+  const place = firstMatePlace(thisMac);
+  // Every control here changes the browser on the first mate's computer:
+  // while changes are off they are marked off with the reason, as every
+  // other card button there is.
+  const offWords = changesOff(thisMac) && isView(thisMac) ? changesOffWords(thisMac) : null;
+  const noticeCovers = useConnectionNoticeCovers(offWords);
+  const offNote = noticeCovers ? undefined : (offWords ?? undefined);
 
   useEffect(() => {
     setDetail(null);
@@ -623,7 +641,7 @@ export function TaskBrowserView({
   const driver: TaskBrowserDriver = detail ? browserDriverOf(detail, fact) : "nobody";
   const who = VIEW_DRIVER_WORDS[driver];
   const captain = fact?.state === "open" && driver === "captain";
-  const input = useCaptainInput(taskId, captain);
+  const input = useCaptainInput(taskId, captain && offWords === null);
   // A refusal belongs to the state it answered.
   const factState = fact?.state;
   useEffect(() => {
@@ -724,6 +742,7 @@ export function TaskBrowserView({
             browser={fact}
             facts={detail ? taskTabFactsOf(detail) : NO_TAB_FACTS}
             captain={captain}
+            pagesOff={offWords}
           />
         }
       />
@@ -741,7 +760,7 @@ export function TaskBrowserView({
         const result = await window.infinitary.browser.reopen(taskId);
         if (!result.ok) setRefusal(result.text);
       } catch {
-        setRefusal(`${HERE.This} could not open a browser for this task right now.`);
+        setRefusal(`${place.This} could not open a browser for this task right now.`);
       } finally {
         setOpening(false);
       }
@@ -774,7 +793,7 @@ export function TaskBrowserView({
           <div style={{ color: "var(--fg-1)", fontSize: "var(--text-base)", fontWeight: 500 }}>
             {refusal ??
               words?.lead ??
-              (detail || unreadable ? `This task has no browser on ${HERE.this}.` : "")}
+              (detail || unreadable ? `This task has no browser on ${place.this}.` : "")}
           </div>
           {words && !refusal && (
             <div style={{ color: "var(--fg-2)", fontSize: "var(--text-sm)" }}>{words.detail}</div>
@@ -786,6 +805,9 @@ export function TaskBrowserView({
                   variant="secondary"
                   size="sm"
                   pending={opening}
+                  off={offWords !== null}
+                  note={offNote}
+                  aria-description={offWords ?? undefined}
                   onClick={() => void openAgain()}
                 >
                   {OPEN_AGAIN_LABEL}
@@ -829,7 +851,7 @@ export function TaskBrowserView({
       if (!result.ok) setRefusal(result.text);
       else if (result.warning) setSaveWarning(result.warning);
     } catch {
-      setRefusal(`${HERE.This} could not hand the browser over right now.`);
+      setRefusal(`${place.This} could not hand the browser over right now.`);
     } finally {
       setMoving(null);
     }
@@ -837,7 +859,12 @@ export function TaskBrowserView({
   const copyAddress = () => void navigator.clipboard.writeText(fact.url).catch(() => undefined);
   const navigation = (label: string, go: "back" | "forward" | "reload", glyph: React.ReactNode) =>
     // Navigation belongs to whoever has control; watching is not control.
-    captain ? (
+    captain && offWords !== null ? (
+      // Its label says why, as a watcher's says who drives.
+      <IconButton label={`${label} · ${offWords}`} off style={{ flexShrink: 0 }}>
+        {glyph}
+      </IconButton>
+    ) : captain ? (
       <IconButton
         label={label}
         onClick={() => {
@@ -868,6 +895,9 @@ export function TaskBrowserView({
           variant="primary"
           size="sm"
           pending={moving === "return"}
+          off={offWords !== null}
+          note={offNote}
+          aria-description={offWords ?? undefined}
           onClick={() => void handOver("return")}
           style={{ flexShrink: 0 }}
         >
@@ -878,6 +908,9 @@ export function TaskBrowserView({
           variant="primary"
           size="sm"
           pending={moving === "return"}
+          off={offWords !== null}
+          note={offNote}
+          aria-description={offWords ?? undefined}
           onClick={() => void handOver("return")}
           {...controlKeys}
           style={{ flexShrink: 0 }}
@@ -890,6 +923,9 @@ export function TaskBrowserView({
         variant={driver === "waiting" ? "primary" : "secondary"}
         size="sm"
         pending={moving === "take"}
+        off={offWords !== null}
+        note={offNote}
+        aria-description={offWords ?? undefined}
         onClick={() => void handOver("take")}
         {...controlKeys}
         style={{ flexShrink: 0 }}
@@ -969,7 +1005,12 @@ export function TaskBrowserView({
           word="More"
           items={[
             { id: "fit", label: fit ? "Actual size" : "Fit", onSelect: () => setFit(!fit) },
-            { id: "stop", label: "Stop browser", onSelect: () => void stop() },
+            {
+              id: "stop",
+              label: "Stop browser",
+              onSelect: () => void stop(),
+              ...(offWords ? { disabled: true, detail: offWords } : {}),
+            },
             { id: "copy", label: "Copy page address", onSelect: copyAddress },
             {
               id: "report",
@@ -1011,7 +1052,7 @@ export function TaskBrowserView({
                 color: "var(--fg-2)",
               }}
             >
-              <span>{SAVED_SIGN_IN_STATUS}</span>
+              <span>{savedSignInStatus(place)}</span>
               <Button
                 variant="ghost"
                 size="sm"
@@ -1049,7 +1090,7 @@ export function TaskBrowserView({
                 onChange={(event) => setRememberFor(event.target.checked ? currentKey : null)}
                 style={{ margin: 0, flex: "none", accentColor: "var(--accent)" }}
               />
-              {rememberSignInLabel(fact.site)}
+              {rememberSignInLabel(fact.site, place)}
             </label>
           )}
         </div>
@@ -1058,9 +1099,11 @@ export function TaskBrowserView({
       <div
         ref={input.ref}
         data-browser-page=""
-        data-browser-input={captain ? "captain" : undefined}
-        // Under his control the page takes the keyboard and pointer as they come.
-        role={captain ? "application" : undefined}
+        data-browser-input={captain && offWords === null ? "captain" : undefined}
+        data-browser-off={captain && offWords !== null ? "" : undefined}
+        // Under the captain's control the page takes the keyboard and pointer
+        // as they come, unless changes are off.
+        role={captain && offWords === null ? "application" : undefined}
         {...input.handlers}
         style={{
           display: "flex",
@@ -1082,7 +1125,7 @@ export function TaskBrowserView({
           data-browser-fit={fit ? "fit" : "actual"}
           aria-label={
             captain
-              ? `The page at ${fact.site}, under your control`
+              ? `The page at ${fact.site}, under your control${offWords ? ` · ${offWords}` : ""}`
               : `The page at ${fact.site}, as the crewmate's browser shows it`
           }
           role="img"
@@ -1129,16 +1172,17 @@ export function TaskBrowserView({
           Task record
         </button>
         <span data-browser-sign-ins="" style={{ color: "var(--fg-3)", whiteSpace: "nowrap" }}>
-          · {signInCaption(fact, captain)}
+          · {signInCaption(fact, captain, place)}
         </span>
       </div>
-      {(refusal || saveWarning) && (
+      {(refusal || saveWarning || (captain && offNote)) && (
         <div
           role="status"
           data-browser-passing=""
           style={{ padding: "var(--space-2) var(--space-3)", color: "var(--fg-2)" }}
         >
-          {refusal ?? saveWarning}
+          {/* The page takes no input while changes are off: the line says why. */}
+          {refusal ?? saveWarning ?? offNote}
         </div>
       )}
     </section>

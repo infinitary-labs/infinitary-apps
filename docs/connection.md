@@ -44,7 +44,7 @@ The pairing seam is `any()`, `subscribe(listener)`, `identity()` (the home's TLS
 Pairing decides how a device proves itself; the connection never reads a secret from an address.
 A change to what is paired reaches the connection before the change returns: every connected device whose `holds` no longer answers true is closed in that same call (`unpaired`), and a frame from a device no longer held is dropped and the device closed.
 
-A device has a `kind`, set at the home (`docs/devices.md`, "The shape"), and each of its connections is a `view` or its `work`, as its hello says within what its kind may be: a `view` is Infinitary open on another Mac showing this one, and is sent every push; a `work` connection is a computer's work (`docs/helper.md`), sent no push, which asks only the work requests and is asked the home's orders (below).
+A device has a `kind`, set at the home (`docs/devices.md`, "The shape"), and each of its connections is a `view` or its `work`, as its hello says within what its kind may be: a `view` is Infinitary open on another Mac showing this one, and is sent every push, with pictures of the task browsers it watches as unnumbered `live` frames ("Live pushes" below); a `work` connection is a computer's work (`docs/helper.md`), sent no push, which asks only the work requests and is asked the home's orders (below).
 A `mac` may hold one of each at once; a `view` device is only ever a view, and a `work` device only ever its work.
 
 ## The handshake and the numbering
@@ -75,7 +75,7 @@ Either way the device's cursor is then the welcome's `epoch` with the newest `se
 A `view` connection is also `full` from the home's view floor (`VIEW_FLOOR`) up to the home's major, and on an older home when the `viewFloor` its hello said reaches that home's major, provided its hello says a floor or it is a phone (`system: ios`); a `work` connection is `read` on any other major (`contractAccess`, `docs/contract.md`).
 Both sides ignore a frame's fields they do not know, so a later minor can add one.
 
-Every core push is numbered once, at the connection, by one journal per listening run (`EventJournal`, `src/core/connection/journal.ts`): `seq` counts from 1 in a fresh random `epoch`, and every welcomed device is sent the same frame under the same number.
+Every core push but a `live` picture is numbered once, at the connection, by one journal per listening run (`EventJournal`, `src/core/connection/journal.ts`): `seq` counts from 1 in a fresh random `epoch`, and every welcomed device is sent the same frame under the same number.
 The journal keeps the newest 4,096 pushes or 16 MiB of frames, whichever is smaller, and always the newest push.
 A cursor is replayed when its epoch is this journal's and its `seq` is no newer than the journal's and no older than the push before the oldest one kept; anything else is a reload.
 A home restart, or a pause in listening, starts a new epoch, so every returning device reloads.
@@ -106,9 +106,17 @@ Asked of anything else, or of a device whose connection goes before it answers, 
 A computer that runs work asks its work requests again after a drop under the same call id, which its home answers from what it kept; a view never asks again.
 
 Every core channel of the contract (`src/shared/ipc.ts`, with its groups of channels in `src/shared/channels/`) declares its `reach`, and the type of the contract refuses one that does not.
-A view of any first mate, with its window or started by a command, asks everything but what stays with that first mate's computer (`reach: "home"`): its computers and phones and the addresses they find it at, a task's browser and a page from a task's project, Secrets but the three a remote decision needs, and what is only ever that computer's own (look, dictation, voice model, panels and their data, Knowledge, Observe, SQL, release notes, Dock and update).
+A view of any first mate, with its window or started by a command, asks everything but what stays with that first mate's computer (`reach: "home"`): its computers and phones and the addresses they find it at, Secrets but the three a remote decision needs, and what is only ever that computer's own (look, dictation, voice model, panels and their data, Knowledge, Observe, SQL, release notes, Dock and update).
 A page the first mate would open in a browser for a view's request goes to its views as the push `inf:app:open-page`, and a first mate started by a command, with nobody at its computer, sends every such page that way.
 `src/shared/ipc.test.ts` pins the list, so widening it is deliberate.
+
+## Live pushes
+
+A picture of a task's browser goes only to the view that watches it, as a `live` frame (`{"t":"live","channel":"inf:browser:frame","payload":...}`), never through the journal: it has no `seq`, a replay never sends it again, and a welcome after a drop sends none (`browser-from-any-view`, `docs/task-browser.md` "The view").
+A view's request to watch, size or stop watching a task's browser reaches the core with that connection as its viewer (`BrowserViewer`, `src/core/browser/browserViews.ts`), and the core sends that viewer's pictures down that connection alone.
+The connection ends every watch it holds when it closes, so a view watches again after each welcome (`ViewBackend`, `docs/view.md`, "A task's browser on a view").
+Per task, one picture is written at a time through the outbox; a newer one that comes meanwhile replaces any still waiting, so a slow link shows the page as it is now rather than a queue of old pictures, and `behind` still cuts a device that stops reading.
+A view whose hello does not list the change is sent no `live` frame, since it never watches; a home that does not list it answers no watch, and its views say to update it.
 
 ## Closing
 

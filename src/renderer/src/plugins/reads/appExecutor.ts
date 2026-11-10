@@ -49,6 +49,10 @@ const PUSHES: Record<Exclude<CorePushChannel, "inf:event">, ReadApi["onPush"]> =
   // The first mate sends it to each computer that controls it, whose main
   // process opens the page (docs/view.md): no window hears it.
   "inf:app:open-page": () => () => {},
+  // A task's browser pictures go to the one view that watches it
+  // (docs/task-browser.md, "The view"): no read names it; the browser view
+  // subscribes directly.
+  "inf:browser:frame": (_channel, listener) => window.infinitary.browser.onFrame(listener),
   "inf:auth:prompt": (_channel, listener) => window.infinitary.auth.onPrompt(listener),
   "inf:auth:notice": (_channel, listener) => window.infinitary.auth.onNotice(listener),
   // Personal extensions (talk-to-personalize Step 2): no read names these

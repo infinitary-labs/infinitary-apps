@@ -52,7 +52,7 @@ Do not add a second store of website sign-ins: saved sign-ins have one owner, re
 - If the price or terms change after a review, the crewmate asks again on a new review.
 - Saved site sign-ins: one per site, saved only when the captain ticks Remember on Return control, used by a task only after the captain's click on that task's own request (`TaskBrowsers.grantSavedSignIn`), or on a crewmate's explicit visit to a site the captain separately allowed for future tasks in Settings.
 - The crewmate never learns which sites are saved; only the host adds `Use my saved <site> sign-in` to a request card (`TaskBrowsers.savedSignInFor`).
-- The first mate never changes saved-site permission or removes a saved sign-in; those, and the view's control channels, are this computer's window alone.
+- The first mate never changes saved-site permission or removes a saved sign-in; those, and the view's control requests, are the captain's own, from any window that controls the first mate.
 
 ## Compositions
 
@@ -62,7 +62,7 @@ Do not add a second store of website sign-ins: saved sign-ins have one owner, re
 - With [Projects and working copies](projects-and-working-copies.md): a page from the project is served from the project folder on a loopback address of its own (`serveProjectFolder`, [`../src/core/browser/projectServer.ts`](../src/core/browser/projectServer.ts)).
 - From another computer: a task on a computer that runs work has its browser there, owned by that computer's own `TaskBrowsers` with every rule above and reached through its task channel (`ComputerBrowsers`, [`../src/core/helper/browsers.ts`](../src/core/helper/browsers.ts)).
 - The captain reads and drives it from the home (`PlacedBrowsers`, `HomeBrowsers`, [`../src/core/placed/placedBrowsers.ts`](../src/core/placed/placedBrowsers.ts)); a saved sign-in stays the home's and is only lent in memory, and nothing there writes a sign-in to a file.
-- From a paired view the page is not shown, and a request card says to act on the computer that runs it ([`../docs/view.md`](../docs/view.md), "A task's browser on a view").
+- A paired view watches the page as pictures the first mate's computer sends over the connection to it alone, and takes control there as the first mate's own window does; a view of a first mate too old to send them says to update it ([`../docs/view.md`](../docs/view.md), "A task's browser on a view").
 
 ## Failure and recovery
 

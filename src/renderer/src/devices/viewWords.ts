@@ -91,30 +91,41 @@ export function googleOnFirstMateWords(mac: ViewMac): string {
   return `Sign in to Google on ${mac.name} for now. Google's page returns to that computer, so it cannot finish from another one.`;
 }
 
-/** What a request card's button that hands the captain a task's browser says. */
+/**
+ * What a request card's button that hands the captain a task's browser says
+ * when the first mate there is too old to show it here.
+ */
 export function browserNotHereWords(mac: ViewMac): string {
-  return `This task's browser on ${mac.name} cannot be shown here yet.`;
+  return `Update Infinitary on ${mac.name} to show this task's browser here.`;
+}
+
+/** Whether the first mate there is too old to show its task's browsers here. */
+export function browserWaitsForUpdate(thisMac: ThisMac | null): thisMac is ViewMac {
+  return isView(thisMac) && thisMac.browserNeedsUpdateThere === true;
 }
 
 /**
  * What a card's button says when this app never sends it: one that opens
- * Devices, one that hands the captain a task's browser, or one that opens
- * Settings a first mate on an older version cannot answer. Nothing is sent,
- * and the card stays on both computers. Null for every other button.
+ * Devices, or one that hands the captain a task's browser or opens Settings
+ * that a first mate on an older version cannot answer. Nothing is sent, and
+ * the card stays on both computers. Null for every other button.
  */
 export function doneThereWords(mac: ViewMac, action: Pick<CardAction, "effect">): string | null {
   if (action.effect?.kind === "open" && action.effect.target === "devices")
     return devicesNotHereWords(mac);
-  if (takesTaskBrowser(action)) return browserNotHereWords(mac);
+  if (takesTaskBrowser(action) && mac.browserNeedsUpdateThere) return browserNotHereWords(mac);
   if (opensSettings(action) && mac.needsUpdateThere) return updateThereWords(mac);
   return null;
 }
 
-/** What a task's browser view shows in place of its page, which shows only on the other computer. */
+/**
+ * What a task's browser view shows in place of its page while the first mate
+ * there is too old to show it here.
+ */
 export function browserShownThereWords(mac: ViewMac): { lead: string; detail: string } {
   return {
     lead: browserNotHereWords(mac),
-    detail: `Only a window on ${mac.name} can show it for now.`,
+    detail: `Until then, only a window on ${mac.name} can show it.`,
   };
 }
 

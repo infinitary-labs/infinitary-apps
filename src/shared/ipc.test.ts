@@ -250,13 +250,6 @@ describe("ipc contract", () => {
       "inf:app:choose-folder",
       "inf:app:open-external",
       "inf:app:open-runbook-folder",
-      // Pictures of this Mac's task page for this Mac's window, the room its
-      // maximized view gives the page, and the captain's own input to it
-      // while he has control (docs/task-browser.md).
-      "inf:browser:input",
-      "inf:browser:size",
-      "inf:browser:unwatch",
-      "inf:browser:watch",
       "inf:devices:join",
       "inf:devices:join-at",
       "inf:devices:join-held",
@@ -300,7 +293,6 @@ describe("ipc contract", () => {
       "inf:keyboard:recorded",
       "inf:window:state",
       "inf:window:fence",
-      "inf:browser:frame",
     ]);
   });
 
@@ -348,18 +340,27 @@ describe("ipc contract", () => {
       "inf:automation:preview",
       "inf:automation:save",
       "inf:automation:state",
+      "inf:browser:input",
       "inf:browser:private-sites",
       "inf:browser:private-sites:add",
       "inf:browser:private-sites:remove",
+      "inf:browser:reopen",
+      "inf:browser:return",
       "inf:browser:sign-ins",
       "inf:browser:sign-ins:automatic",
       "inf:browser:sign-ins:remove",
+      "inf:browser:size",
+      "inf:browser:stop",
+      "inf:browser:take",
+      "inf:browser:unwatch",
+      "inf:browser:watch",
       "inf:cards:act",
       "inf:cards:close",
       "inf:cards:list",
       "inf:cards:media",
       "inf:cards:minimize",
       "inf:cards:note-done",
+      "inf:cards:open-page",
       "inf:cards:past",
       "inf:cards:picture",
       "inf:cards:reply",
@@ -553,7 +554,8 @@ describe("ipc contract", () => {
   });
 
   // INF-1352's plan, the captain's answer one_rule=every-view: a view asks everything but
-  // what stays with the first mate's own computer: its devices, Secrets, task browser and own hardware.
+  // what stays with the first mate's own computer: its devices, Secrets and own hardware.
+  // Its piece 3 moves a task's browser to every view: watched, sized and driven from any window.
   it("keeps on the first mate's computer only what is that computer's own", () => {
     const stays = CORE_INVOKE_CHANNELS.filter(
       (channel) => invokeContract[channel].reach === "home",
@@ -561,8 +563,16 @@ describe("ipc contract", () => {
     const views = new Set<string>(VIEW_INVOKE_CHANNELS);
     expect(stays.length).toBeGreaterThan(0);
     for (const channel of stays) expect(views.has(channel), channel).toBe(false);
-    for (const prefix of ["inf:devices:list", "inf:secrets:view", "inf:browser:take"])
+    for (const prefix of ["inf:devices:list", "inf:secrets:view"])
       expect(stays.filter((channel) => channel === prefix)).toEqual([prefix]);
+    for (const channel of [
+      "inf:browser:watch",
+      "inf:browser:size",
+      "inf:browser:input",
+      "inf:browser:take",
+      "inf:browser:return",
+    ])
+      expect(views.has(channel), channel).toBe(true);
     // Each signed-in Settings read a view of any first mate opens.
     for (const channel of ["inf:accounts:list", "inf:settings:routing:get", "inf:repos:list"])
       expect(views.has(channel), channel).toBe(true);

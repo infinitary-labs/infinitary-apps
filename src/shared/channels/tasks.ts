@@ -16,10 +16,12 @@ import {
   savedSignInsViewSchema,
   taskBrowserCommandResultSchema,
   taskBrowserHandleSchema,
+  taskBrowserInputSchema,
   taskBrowserReturnSchema,
+  taskBrowserSizeSchema,
 } from "../taskBrowser";
 import { taskBoardSchema, taskDetailSchema, taskViewSchema } from "../tasks";
-import type { ChannelDeclaration } from "./common";
+import { type ChannelDeclaration, okSchema } from "./common";
 
 /** The feed, the crew's counts, the task board and records, and a task's browser. */
 export const taskChannels = {
@@ -106,37 +108,76 @@ export const taskChannels = {
     request: z.tuple([z.string().min(1).max(64)]),
     response: z.object({ opened: z.boolean() }),
   },
+  // The captain's view watches a task's browser (docs/task-browser.md, "The
+  // view"): pictures of its page go to whoever asked - a window, or a
+  // computer that controls the first mate over the connection - on
+  // `inf:browser:frame`, until it unwatches, its window reloads or closes, or
+  // its connection goes. False when there is no browser to watch.
+  "inf:browser:watch": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(64)]),
+    response: z.object({ watching: z.boolean() }),
+  },
+  "inf:browser:unwatch": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(64)]),
+    response: okSchema,
+  },
+  // The room the asker's maximized view gives the task's page, or none once
+  // it is restored (docs/task-browser.md, "The view"): the page lays out at
+  // it while that asker watches. Asked of a watch the asker holds.
+  "inf:browser:size": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(64), taskBrowserSizeSchema.nullable()]),
+    response: okSchema,
+  },
+  // The captain's own input to a task's page while he has control
+  // (docs/task-browser.md, "Taking control"): the pointer and keys of the
+  // window he sits at, on whichever computer; the core refuses it unless he
+  // holds the browser, and nothing records it.
+  "inf:browser:input": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.string().min(1).max(64), taskBrowserInputSchema]),
+    response: taskBrowserCommandResultSchema,
+  },
   // A task's own browser, from the captain's view of it (docs/task-browser.md,
-  // "The view"): Stop browser, and Open again on a stopped one. The browser
-  // is this Mac's, so no paired device asks; refused in words when it cannot.
+  // "The view"): Stop browser, and Open again on a stopped one, from any
+  // view; refused in words when it cannot.
   "inf:browser:stop": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64)]),
     response: taskBrowserCommandResultSchema,
   },
   "inf:browser:reopen": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64)]),
     response: taskBrowserCommandResultSchema,
   },
   // The captain's Take control and Return control (docs/task-browser.md,
-  // "Taking control"), naming the browser his view shows; this Mac's window
-  // alone may ask, as with Stop browser.
+  // "Taking control"), naming the browser his view shows, from any view.
   "inf:browser:take": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(64), taskBrowserHandleSchema]),
     response: taskBrowserCommandResultSchema,
   },
   "inf:browser:return": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([
       z.string().min(1).max(64),
       taskBrowserHandleSchema,

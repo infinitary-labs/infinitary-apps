@@ -1,10 +1,9 @@
 import { importChosenFile, inspectPath } from "@core/attachments";
-import type { BrowserFrameSink } from "@core/browser/taskBrowsers";
+import type { BrowserViewer } from "@core/browser/browserViews";
 import type { HostCapabilities } from "@core/index";
 import { isAllowedOpenExternalUrl } from "@core/openExternal";
 import { writePrivateFile } from "@core/secrets/custody";
 import { CHOSEN_FILES_MAX } from "@shared/attachments";
-import { HERE } from "@shared/deviceNames";
 import { CORE_INVOKE_CHANNELS, type PushChannel, type PushPayload } from "@shared/ipc";
 import type { RecognizerClient, RecognizerPlace } from "@shared/voiceRecognizer";
 import {
@@ -68,8 +67,34 @@ export function registerIpc(options: IpcOptions): void {
   // The protocol proper: one adapter over the dispatcher, no per-channel
   // knowledge. A channel added to the core surface is served here the day
   // it is declared.
+  // Each window is its own viewer of a task's browser (docs/task-browser.md,
+  // "The view"): pictures of a page it watches go to it alone, and stop when
+  // it loads another document or goes.
+  const viewers = new WeakMap<WebContents, BrowserViewer>();
+  const viewerOf = (sender: WebContents): BrowserViewer => {
+    const known = viewers.get(sender);
+    if (known) return known;
+    let listeners: (() => void)[] = [];
+    const gone = () => {
+      const heard = listeners;
+      listeners = [];
+      for (const listener of heard) listener();
+    };
+    sender.once("destroyed", gone);
+    sender.on("did-navigate", gone);
+    const viewer: BrowserViewer = {
+      show: (frame) => {
+        if (!sender.isDestroyed()) sender.send("inf:browser:frame", frame);
+      },
+      onGone: (listener) => listeners.push(listener),
+    };
+    viewers.set(sender, viewer);
+    return viewer;
+  };
   for (const channel of CORE_INVOKE_CHANNELS) {
-    forwardInvoke(channel, rendererSource, (name, args) => shell.dispatch(name, args as unknown[]));
+    forwardInvoke(channel, rendererSource, (name, args, sender) =>
+      shell.dispatch(name, args as unknown[], viewerOf(sender)),
+    );
   }
 
   // What this app is on its Mac, joining another with a pasted link, and
@@ -224,60 +249,6 @@ export function registerIpc(options: IpcOptions): void {
   });
 
   handleInvoke("inf:frames:alive", rendererSource, () => ({ ok: true as const }));
-
-  // The captain's view of a task's browser (docs/task-browser.md, "The
-  // view"): pictures of its page go to the window that watches it, and stop
-  // when that window unwatches, loads another document or goes. The core
-  // keeps a watched browser from its idle stop, and lays its page out at the
-  // room the window's maximized view asks for until that watch ends.
-  type Watch = { sink: BrowserFrameSink; unwatch: () => void };
-  const watches = new Map<WebContents, Map<string, Watch>>();
-  const forget = (sender: WebContents): void => {
-    for (const watch of watches.get(sender)?.values() ?? []) watch.unwatch();
-    watches.delete(sender);
-  };
-  const hooked = new WeakSet<WebContents>();
-  handleInvoke("inf:browser:watch", rendererSource, (event, taskId) => {
-    const browsers = shell.core()?.services.browsers;
-    if (!browsers) return { watching: false };
-    const sender = event.sender;
-    if (!hooked.has(sender)) {
-      hooked.add(sender);
-      sender.once("destroyed", () => forget(sender));
-      sender.on("did-navigate", () => forget(sender));
-    }
-    let mine = watches.get(sender);
-    if (!mine) {
-      mine = new Map();
-      watches.set(sender, mine);
-    }
-    if (!mine.has(taskId)) {
-      const sink: BrowserFrameSink = (frame) => {
-        if (!sender.isDestroyed()) sender.send("inf:browser:frame", { taskId, ...frame });
-      };
-      mine.set(taskId, { sink, unwatch: browsers.watch(taskId, sink) });
-    }
-    return { watching: true };
-  });
-  handleInvoke("inf:browser:unwatch", rendererSource, (event, taskId) => {
-    const mine = watches.get(event.sender);
-    mine?.get(taskId)?.unwatch();
-    mine?.delete(taskId);
-    return { ok: true as const };
-  });
-  handleInvoke("inf:browser:size", rendererSource, (event, taskId, size) => {
-    const watch = watches.get(event.sender)?.get(taskId);
-    if (watch) shell.core()?.services.browsers?.sizeView(taskId, watch.sink, size);
-    return { ok: true as const };
-  });
-  // The captain's own input while he has control (docs/task-browser.md,
-  // "Taking control"): handed to the core, which refuses it unless he holds
-  // the browser; nothing here or there records it.
-  handleInvoke("inf:browser:input", rendererSource, async (_event, taskId, input) => {
-    const browsers = shell.core()?.services.browsers;
-    if (!browsers) return { ok: false as const, text: `${HERE.This} keeps no task browsers.` };
-    return browsers.captainInput(taskId, input);
-  });
 
   // Whether macOS lets this app use the microphone, for the line under the
   // input (docs/composer.md, "Voice"); reading it never asks. Voice stays

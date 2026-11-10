@@ -333,8 +333,10 @@ export const pushContract = {
   "inf:window:state": { payload: windowStateSchema, surface: "host" },
   // The fence the window asked for, behind every push it was sent before it.
   "inf:window:fence": { payload: windowFenceSchema, surface: "host" },
-  // One picture of a watched task's page, to the window that watches it.
-  "inf:browser:frame": { payload: taskBrowserFrameSchema, surface: "host" },
+  // One picture of a watched task's page, to whoever watches it alone: a
+  // window here, or a connection as a `live` frame, never numbered or kept
+  // (docs/task-browser.md, "The view"; docs/connection.md, "Live pushes").
+  "inf:browser:frame": { payload: taskBrowserFrameSchema, surface: "core" },
   // A page the first mate would open in a browser for a view's request,
   // such as a sign-in's, or any page when a command started it and nobody
   // sits at its computer: each computer that controls it opens the page

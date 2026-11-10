@@ -1,4 +1,5 @@
 import { userInfo } from "node:os";
+import type { BrowserViewer } from "@core/browser/browserViews";
 import type { HomeConnection } from "@core/connection/connection";
 import { claimLink, dialHome, HomeKeyMismatchError, PairRefusedError } from "@core/devices/dial";
 import type { Joined, JoinedHome } from "@core/devices/joinedHome";
@@ -185,11 +186,13 @@ export class Shell {
   async dispatch<C extends CoreInvokeChannel>(
     channel: C,
     rawArgs: unknown[],
+    viewer?: BrowserViewer,
   ): Promise<InvokeResponse<C>> {
     const mode = this.mode;
     if (!mode) throw new Error("Infinitary is still starting.");
-    if (mode.kind === "home") return mode.core.dispatch(channel, rawArgs, { kind: "captain" });
-    return mode.view.dispatch(channel, rawArgs);
+    if (mode.kind === "home")
+      return mode.core.dispatch(channel, rawArgs, { kind: "captain" }, viewer);
+    return mode.view.dispatch(channel, rawArgs, viewer);
   }
 
   /**

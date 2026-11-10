@@ -756,6 +756,12 @@ export const thisMacSchema = z.discriminatedUnion("role", [
      * wait for an update there (docs/view.md, "A first mate on an older version").
      */
     needsUpdateThere: z.literal(true).optional(),
+    /**
+     * The first mate there is too old to show a task's browser here (the
+     * `browser-from-any-view` contract change), so its view says to update
+     * Infinitary there (docs/view.md, "A task's browser on a view").
+     */
+    browserNeedsUpdateThere: z.literal(true).optional(),
   }),
 ]);
 export type ThisMac = z.infer<typeof thisMacSchema>;

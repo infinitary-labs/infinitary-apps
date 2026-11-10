@@ -35,12 +35,13 @@ Where MacBook Pro is too old to answer what a view asks, a Settings section show
 Appearance, Keyboard, Automation and Devices are unchanged.
 
 **A crewmate's request to take over its browser.**
-A task's browser shows its page only on MacBook Pro, so a request card's button that hands it to the captain - `Open browser and sign in`, `Sign in myself`, `Open browser and pay` - stays enabled and in its place, and its click sends nothing.
-Its `note` says before the click, on rest, and the card's inline line says after it: "This task's browser on MacBook Pro cannot be shown here yet."
-The card stays on both computers and the browser stays paused for the captain's help on MacBook Pro.
-`Use my saved aurora.example sign-in` needs no one at the page, so it works from here: the browser on MacBook Pro signs in and goes back to its crewmate, the card is answered on both computers, and no browser view opens here.
+A task's browser shows its page here as on MacBook Pro, so a request card's button that hands it to the captain - `Open browser and sign in`, `Sign in myself`, `Open browser and pay` - works from here: the card is answered on both computers and the browser view opens here, its pictures sent from MacBook Pro, with Take control and the captain's typing going back to the page there.
+`Use my saved aurora.example sign-in` needs no one at the page, so it works from here too: the browser on MacBook Pro signs in and goes back to its crewmate, the card is answered on both computers, and the browser view opens here.
+Only while Infinitary on MacBook Pro is too old to send its pictures does the take-over button stay enabled and in its place with a click that sends nothing; its `note` says before the click, on rest, and the card's inline line says after it: "Update Infinitary on MacBook Pro to show this task's browser here."
 `Leave waiting` works from here as before.
-The card's door, `Open browser`, and the record's `Open` show the task browser's view with only its stopped shape (`../cards/TaskBrowser.prompt.md`): "This task's browser shows only on MacBook Pro." over "Watch it and take control of it there.", with no page and no Open again.
+The view's words name MacBook Pro where they would say this computer: `Remember my aurora.example sign-in on MacBook Pro`, `saved on MacBook Pro`.
+While changes are off, the view's Take control, Return control, Stop browser, Open again, Back, Forward, Reload, other pages' tabs and a card's project-page button are marked off like every other card button, their `note` the same reason, and the page takes no input, the line under it saying why.
+The card's door, `Open browser`, and the record's `Open` show the task browser's view with its live page, as on MacBook Pro; only while Infinitary there is too old do they show its stopped shape (`../cards/TaskBrowser.prompt.md`): "Update Infinitary on MacBook Pro to show this task's browser here." over "Until then, only a window on MacBook Pro can show it.", with no page and no Open again.
 
 **Leave** turns the row into one question in place: "Leave MacBook Pro?
 This computer stops controlling it and running its work." over "Its unmerged work goes to MacBook Pro first." when it runs work, and "To control it again, make a new link there.", with a ghost "Stay" (focused) beside a danger "Leave".

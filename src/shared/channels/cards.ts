@@ -183,11 +183,12 @@ export const cardChannels = {
   // path off the card's own attachment, checks the file inside the project
   // folder again and opens it in the task's own browser with the captain in
   // control, answering which browser for the view. It never answers the
-  // card. The project folder is this Mac's, so a view is refused.
+  // card. The page opens in the browser on the first mate's computer, whose
+  // project folder it is, so any view may ask and then watches it there.
   "inf:cards:open-page": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([z.string().min(1).max(128)]),
     response: z.object({
       refusal: z.string().optional(),

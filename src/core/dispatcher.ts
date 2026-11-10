@@ -51,6 +51,7 @@ import type { AppPanelGates } from "@shared/surfaces";
 import { resolveWorkComputer } from "@shared/workComputer";
 import type { RunbookView } from "../shared/runbooks";
 import { asAView } from "./askedFromAView";
+import { type BrowserViewer, BrowserViews } from "./browser/browserViews";
 import { addedPrivateSite, privateSiteChannels } from "./browser/privateSites";
 import { CONTRACT_CHANGES } from "./connection/contractChanges";
 import type { CoreServices } from "./coreServices";
@@ -157,7 +158,19 @@ export type CoreDispatch = <C extends CoreInvokeChannel>(
   channel: C,
   rawArgs: unknown,
   actor?: CoreActor,
+  /**
+   * Who asked, when pictures can go back to it: the window or the
+   * connection that asks to watch a task's browser (`BrowserViews`).
+   */
+  viewer?: BrowserViewer,
 ) => Promise<InvokeResponse<C>>;
+
+/** The requests that need to know who watches: the pictures go to it alone. */
+const VIEWER_CHANNELS = new Set<CoreInvokeChannel>([
+  "inf:browser:watch",
+  "inf:browser:unwatch",
+  "inf:browser:size",
+]);
 
 type CoreHandlers = {
   [C in Exclude<CoreInvokeChannel, WorkInvokeChannel>]: (
@@ -175,6 +188,7 @@ export type CoreDispatcherOptions = {
 
 export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispatch {
   const { services, host, emit } = options;
+  const browserViews = new BrowserViews(() => services.browsers);
 
   /** The automation rules as last read: what an unreadable list answers with (docs/automation.md). */
   let lastRules: AutomationRule[] = [];
@@ -722,6 +736,20 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:tasks:search": (query) => services.taskProtocol.search(query),
 
     "inf:tasks:opened": (taskId) => ({ opened: services.tasks.markOpened(taskId) }),
+
+    // Asked with nobody to show pictures to, such as the first mate's own
+    // tools: there is nothing to watch for (`answerViewer` answers a viewer).
+    "inf:browser:watch": () => ({ watching: false }),
+    "inf:browser:unwatch": () => ({ ok: true as const }),
+    "inf:browser:size": () => ({ ok: true as const }),
+
+    // The captain's own input while they have control (docs/task-browser.md,
+    // "Taking control"): refused unless he holds the browser; nothing here
+    // or in the browser records it.
+    "inf:browser:input": async (taskId, input) =>
+      services.browsers
+        ? services.browsers.captainInput(taskId, input)
+        : { ok: false, text: NO_TASK_BROWSERS },
 
     // The captain's own clicks in a task's browser view (docs/task-browser.md).
     "inf:browser:stop": (taskId) =>
@@ -1686,12 +1714,37 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     return null;
   };
 
+  // A view's watch of a task's browser (docs/task-browser.md, "The view"):
+  // the captain's alone, wherever they sit, and its pictures go back to the
+  // window or connection that asked.
+  const answerViewer = async (
+    channel: CoreInvokeChannel,
+    rawArgs: unknown,
+    viewer: BrowserViewer,
+  ): Promise<unknown> => {
+    if (channel === "inf:browser:watch") {
+      const [taskId] = parseInvokeRequest("inf:browser:watch", rawArgs);
+      return browserViews.watch(viewer, taskId);
+    }
+    if (channel === "inf:browser:unwatch") {
+      const [taskId] = parseInvokeRequest("inf:browser:unwatch", rawArgs);
+      browserViews.unwatch(viewer, taskId);
+      return { ok: true };
+    }
+    const [taskId, size] = parseInvokeRequest("inf:browser:size", rawArgs);
+    browserViews.size(viewer, taskId, size);
+    return { ok: true };
+  };
+
   return (<C extends CoreInvokeChannel>(
     channel: C,
     rawArgs: unknown,
     actor?: CoreActor,
+    viewer?: BrowserViewer,
   ): Promise<InvokeResponse<C>> => {
     if (isWorkInvokeChannel(channel)) return answerWork(channel, rawArgs, actor);
+    if (viewer && VIEWER_CHANNELS.has(channel) && (actor ?? { kind: "captain" }).kind === "captain")
+      return answerViewer(channel, rawArgs, viewer) as Promise<InvokeResponse<C>>;
     if (channel === "inf:settings:sharing:phone")
       return answerPhoneDiagnostic(rawArgs, actor) as Promise<InvokeResponse<C>>;
     if (actor?.kind === "device")

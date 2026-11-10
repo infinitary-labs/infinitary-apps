@@ -1,5 +1,7 @@
 import { userInfo } from "node:os";
 import { join } from "node:path";
+import { type BrowserViewer, BrowserViews } from "@core/browser/browserViews";
+import type { BrowserFrameSink } from "@core/browser/taskBrowsers";
 import { type HomeConnection, startConnection } from "@core/connection/connection";
 import { claimLink, dialHome } from "@core/devices/dial";
 import { HomeLink } from "@core/devices/homeLink";
@@ -58,8 +60,46 @@ async function otherMac(
   const asked: string[] = [];
   /** What its stage shows, and its own Notifications switch. */
   const stage = { cards: [] as Card[], notifications: true };
-  const dispatch = (async (channel) => {
+  /** Its task browsers: each page's watchers, and the room each asked for. */
+  const pages = {
+    sinks: new Map<string, Set<BrowserFrameSink>>(),
+    /** Every watch and end in order, as "+t1" and "-t1". */
+    log: [] as string[],
+    rooms: [] as { taskId: string; size: unknown }[],
+    watch(taskId: string, sink: BrowserFrameSink) {
+      const sinks = pages.sinks.get(taskId) ?? new Set();
+      sinks.add(sink);
+      pages.sinks.set(taskId, sinks);
+      pages.log.push(`+${taskId}`);
+      return () => {
+        sinks.delete(sink);
+        pages.log.push(`-${taskId}`);
+      };
+    },
+    sizeView(taskId: string, _sink: BrowserFrameSink, size: unknown) {
+      pages.rooms.push({ taskId, size });
+    },
+    /** The page changed: one picture to each watcher. */
+    paint(taskId: string, data: string) {
+      for (const sink of pages.sinks.get(taskId) ?? [])
+        sink({ data, width: 1280, height: 800 } as Parameters<BrowserFrameSink>[0]);
+    },
+    watchers: (taskId: string) => pages.sinks.get(taskId)?.size ?? 0,
+  };
+  const views = new BrowserViews(() => pages as never);
+  const dispatch = (async (channel, args, _actor, viewer) => {
     asked.push(channel);
+    if (viewer && channel === "inf:browser:watch")
+      return views.watch(viewer, (args as string[])[0] as string);
+    if (viewer && channel === "inf:browser:unwatch") {
+      views.unwatch(viewer, (args as string[])[0] as string);
+      return { ok: true };
+    }
+    if (viewer && channel === "inf:browser:size") {
+      const [taskId, size] = args as [string, null];
+      views.size(viewer, taskId, size);
+      return { ok: true };
+    }
     if (channel === "inf:cards:list") return stage.cards;
     if (channel === "inf:settings:notifications:get") return stage.notifications;
     if (channel === "inf:app:healthcheck")
@@ -100,6 +140,7 @@ async function otherMac(
   return {
     asked,
     stage,
+    pages,
     events,
     pairing,
     at,
@@ -323,6 +364,7 @@ describe("the app as a view of another Mac", () => {
       "inf:settings:appearance:set",
       [{ ...DEFAULT_SHELL_PREFERENCES.appearance, size: 110 }],
       { kind: "captain" },
+      undefined,
     ]);
 
     // This Mac's own keys, kept by its own core.
@@ -554,6 +596,82 @@ describe("the app as a view of another Mac", () => {
     await pro.shell.join(await current.link());
     await pro.until(() => pro.view().contact === "in-reach");
     expect(pro.shell.thisMac()).not.toHaveProperty("needsUpdateThere");
+  });
+
+  // INF-1352's plan, piece 3: any view watches a task's browser as pictures over the
+  // connection, and a view of an older first mate says to update it instead.
+  it("shows a task's browser from the other Mac in each window that watches it, and watches again after a drop", async () => {
+    const mini = await otherMac();
+    const air = shell();
+    await air.shell.start();
+    await air.shell.join(await mini.link());
+    await air.until(() => air.view().contact === "in-reach");
+    expect(air.shell.thisMac()).not.toHaveProperty("browserNeedsUpdateThere");
+
+    // Two windows here watch the same task: the other Mac hears one watch.
+    const window = (): BrowserViewer & { seen: string[]; close: () => void } => {
+      const gone: (() => void)[] = [];
+      const seen: string[] = [];
+      return {
+        seen,
+        show: (frame) => seen.push(`${frame.taskId}:${frame.data}`),
+        onGone: (listener) => gone.push(listener),
+        close: () => {
+          for (const listener of gone.splice(0)) listener();
+        },
+      };
+    };
+    const first = window();
+    const second = window();
+    expect(await air.shell.dispatch("inf:browser:watch", ["t1"], first)).toEqual({
+      watching: true,
+    });
+    expect(await air.shell.dispatch("inf:browser:watch", ["t1"], second)).toEqual({
+      watching: true,
+    });
+    expect(mini.asked.filter((channel) => channel === "inf:browser:watch")).toHaveLength(1);
+    expect(mini.pages.watchers("t1")).toBe(1);
+    mini.pages.paint("t1", "page-1");
+    await air.until(() => first.seen.length === 1 && second.seen.length === 1);
+    expect(first.seen).toEqual(["t1:page-1"]);
+
+    // Only a window that watches gives the page its room.
+    const room = { width: 1200, height: 760 };
+    await air.shell.dispatch("inf:browser:size", ["t2", room], first);
+    await air.shell.dispatch("inf:browser:size", ["t1", room], first);
+    await air.until(() => mini.pages.rooms.length === 1);
+    expect(mini.pages.rooms).toEqual([{ taskId: "t1", size: room }]);
+
+    // The connection drops: the other Mac forgets the watch, and the welcome asks it again.
+    air.sockets.at(-1)?.terminate();
+    await air.until(() => mini.pages.log.length === 3);
+    expect(mini.pages.log).toEqual(["+t1", "-t1", "+t1"]);
+    await air.until(() => mini.pages.rooms.length === 2);
+    expect(mini.pages.rooms[1]).toEqual({ taskId: "t1", size: room });
+    mini.pages.paint("t1", "page-2");
+    await air.until(() => second.seen.length === 2);
+
+    // A window that closes stops watching; when the last one goes, the other Mac stops sending.
+    first.close();
+    mini.pages.paint("t1", "page-3");
+    await air.until(() => second.seen.length === 3);
+    expect(first.seen).toEqual(["t1:page-1", "t1:page-2"]);
+    await air.shell.dispatch("inf:browser:unwatch", ["t1"], second);
+    await air.until(() => mini.pages.watchers("t1") === 0);
+  });
+
+  it("says to update an older first mate before it shows its task's browser here", async () => {
+    const older = await otherMac({ changes: [] });
+    const air = shell();
+    await air.shell.start();
+    await air.shell.join(await older.link());
+    await air.until(() => air.view().contact === "in-reach");
+    expect(air.shell.thisMac()).toMatchObject({ role: "view", browserNeedsUpdateThere: true });
+    const viewer: BrowserViewer = { show: () => {}, onGone: () => {} };
+    expect(await air.shell.dispatch("inf:browser:watch", ["t1"], viewer)).toEqual({
+      watching: false,
+    });
+    expect(older.asked).not.toContain("inf:browser:watch");
   });
 
   // The other computer's look and voice are its own: they never reach this window.

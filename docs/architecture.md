@@ -195,7 +195,7 @@ Non-negotiable baseline (enforced by a startup assertion in dev builds):
   A page's popup opens as a second page of the same browser, never a window of the app's, and a browser the captain has handed back keeps only what its task needs.
   The host drives it over the browser's own protocol, attached to that one page and nothing else, with a fixed list of commands; a crewmate never sends a protocol command or runs script of its own in it.
   Its windows are not the app's: `appWindows()` (`src/main/windows.ts`) leaves them out of every push, reload, focus and activation.
-  The captain watches it in the stage's browser view as pictures the host streams from the page over the same protocol, to the watching window alone; the page itself never enters the app's window.
+  The captain watches it in the stage's browser view as pictures the host streams from the page over the same protocol, to the watching viewer alone - a window on this computer, or the connection of a computer that controls the first mate (`docs/view.md`) - and the page itself never enters the app's window.
   A crewmate's card may carry a door to that view, which the host draws as chrome outside the card's sandboxed body: it only opens the view, never answers the card, and no body script can see or press it.
   The captain takes control of the page from the view and hands it back there; while the captain holds it, the captain's pointer and keys reach the page through the core, which records none of them, and the crewmate's commands refuse and hear nothing of the page.
   A crewmate asks the captain to take over only on a card whose open-browser action is chrome no body script can press; returning wakes the crewmate once through its durable lane.

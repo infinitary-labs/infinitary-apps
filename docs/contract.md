@@ -162,7 +162,7 @@ Cards, captured offers and placed requests may carry required-action declaration
 The host owns confirmation effects and observers, and old cards remain unchanged historical records.
 
 A card's live attachment has a second kind, `page`, a page from its task's project (`docs/task-browser.md`, "A page from the project").
-It is opened with the home-only `inf:cards:open-page` request, declared by a placed card's optional `browserPage`, and marked on the open browser fact by the optional `own`.
+It is opened with the `inf:cards:open-page` request, which every view asks from `browser-from-any-view` on, declared by a placed card's optional `browserPage`, and marked on the open browser fact by the optional `own`.
 
 A card may carry `reviewTaskId`, and the home refuses the card unless that names an independent review of the card's task, before Review finding is drawn.
 First mate cards about a task carry the task's title in their meta line.

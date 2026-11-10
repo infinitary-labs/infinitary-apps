@@ -420,6 +420,16 @@ export const homeFrameSchema = z.union([
     payload: z.unknown(),
   }),
   /**
+   * A push for this connection alone, such as a picture of a task's page it
+   * watches (`browser-from-any-view.md`): never numbered, journaled or
+   * replayed, so it moves no cursor. A device that does not know it ignores it.
+   */
+  z.object({
+    t: z.literal("live"),
+    channel: z.string(),
+    payload: z.unknown(),
+  }),
+  /**
    * To a device whose hello listed `frame-parts`: the next frame, longer
    * than one piece, comes as whole text messages after this one, each a
    * piece of its JSON text, whose UTF-8 bytes add up to `bytes`

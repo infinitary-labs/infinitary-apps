@@ -254,7 +254,9 @@ describe("card action receipts", () => {
     });
   });
 
-  it("on a Mac controlling another, sends no take-over of a task's browser and says where to do it, while a saved sign-in is sent and opens nothing here (docs/view.md)", async () => {
+  // INF-1352's plan, piece 3: any view shows a task's browser; only a first mate too old to
+  // send its pictures keeps the take-over there, and says to update it (docs/view.md).
+  it("on a Mac controlling an older first mate, sends no take-over of a task's browser and says to update it, while a saved sign-in is sent and opens the page here (docs/view.md)", async () => {
     const ipc = request();
     // A crewmate's request, as the host offers it once a sign-in is saved for its site.
     const asked = card({
@@ -284,6 +286,7 @@ describe("card action receipts", () => {
         readOnly: null,
         heardAt: 0,
         caughtUp: 0,
+        browserNeedsUpdateThere: true,
       },
     });
     const own = useShellStore.getState().actOnCard("asked", "own");
@@ -293,11 +296,11 @@ describe("card action receipts", () => {
       cards: [asked],
       pendingCardActions: {},
       cardActionErrors: {
-        asked: "This task's browser on MacBook Pro cannot be shown here yet.",
+        asked: "Update Infinitary on MacBook Pro to show this task's browser here.",
       },
       records: [],
     });
-    // The saved sign-in needs no one at the page: that Mac answers it.
+    // The saved sign-in needs no one at the page: that Mac answers it, and the page shows here.
     const granted = useShellStore.getState().actOnCard("asked", "saved");
     expect(ipc.act).toHaveBeenCalledWith("asked", "saved", "chrome", undefined, gesture());
     ipc.resolve({
@@ -308,7 +311,46 @@ describe("card action receipts", () => {
       },
     });
     await granted;
-    expect(useShellStore.getState()).toMatchObject({ cards: [], records: [], view: "home" });
+    expect(useShellStore.getState()).toMatchObject({
+      cards: [],
+      view: "home",
+      records: [
+        { browserTaskId: "t1", from: { cardId: "asked", session: "run-1", generation: 2 } },
+      ],
+    });
+    useShellStore.setState({ records: [] });
+  });
+
+  it("on a Mac controlling a current first mate, sends the take-over and opens the task's browser here (docs/view.md)", async () => {
+    const ipc = request();
+    useShellStore.setState({
+      thisMac: {
+        role: "view",
+        name: "MacBook Pro",
+        address: "192.168.1.20",
+        joinedAt: 0,
+        contact: "in-reach",
+        readOnly: null,
+        heardAt: 0,
+        caughtUp: 0,
+      },
+    });
+    const sent = useShellStore.getState().actOnCard("choice", "sign-in");
+    expect(ipc.act).toHaveBeenCalled();
+    ipc.resolve({
+      effect: {
+        kind: "open",
+        target: "browser",
+        browser: { taskId: "t1", session: "run-1", generation: 2, cardId: "choice" },
+      },
+    });
+    await sent;
+    expect(useShellStore.getState()).toMatchObject({
+      records: [
+        { browserTaskId: "t1", from: { cardId: "choice", session: "run-1", generation: 2 } },
+      ],
+    });
+    useShellStore.setState({ records: [] });
   });
 
   it('opens a request card\'s task browser view on the stage, never Settings (docs/task-browser.md, "Asking for help")', async () => {

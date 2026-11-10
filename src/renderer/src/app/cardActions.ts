@@ -244,9 +244,8 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         // control (docs/task-browser.md, "Asking for help").
         if (effect?.kind === "open" && effect.target === "browser") {
           const browser = effect.browser;
-          // A Mac controlling another shows no task's page: a saved sign-in
-          // sent from there opens nothing here (docs/view.md).
-          if (browser && !isView(get().thisMac)) {
+          // Any window shows the task's page, wherever the first mate lives (docs/view.md).
+          if (browser) {
             get().openBrowserView(browser.taskId, {
               cardId: browser.cardId,
               session: browser.session,

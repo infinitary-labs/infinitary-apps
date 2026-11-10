@@ -10,6 +10,8 @@ import type { TaskDetail } from "@shared/tasks";
 import { useEffect, useState } from "react";
 import { useShellStore } from "../app/store";
 import { Button, MicroLabel } from "../design";
+import { useConnectionNoticeCovers } from "../devices/RemoteControl";
+import { changesOff, changesOffWords, isView } from "../devices/viewWords";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 
 /**
@@ -166,8 +168,8 @@ export function CardAttachmentStrip({
  * A card's page from its task's project (docs/task-browser.md, "A page from
  * the project"; the design skill's ResponseCard, "A live attachment"): the
  * same strip, naming the file, with the crewmate's label as the button that
- * asks this Mac's core to open it in the task's own browser with the captain
- * in control, then brings that browser's view to the front. The click
+ * asks the first mate's core to open it in the task's own browser with the
+ * captain in control, then brings that browser's view to the front. The click
  * answers nothing and leaves the card as it was; when the core does not
  * open the page, the line says why until the next click.
  */
@@ -220,6 +222,13 @@ export function PageAttachmentStrip({
   opening: boolean;
   onOpen: () => void;
 }) {
+  // Opening the page starts a browser on the first mate's computer: while
+  // changes there are off it is marked off with the reason, as every other
+  // card button there is (docs/view.md).
+  const offWords = useShellStore((s) =>
+    changesOff(s.thisMac) && isView(s.thisMac) ? changesOffWords(s.thisMac) : null,
+  );
+  const noticeCovers = useConnectionNoticeCovers(offWords);
   return (
     <div
       data-card-attachment={attachment.kind}
@@ -260,6 +269,9 @@ export function PageAttachmentStrip({
         size="sm"
         style={{ flexShrink: 0 }}
         disabled={opening}
+        off={offWords !== null}
+        note={noticeCovers ? undefined : (offWords ?? undefined)}
+        aria-description={offWords ?? undefined}
         onClick={onOpen}
       >
         {attachment.label}

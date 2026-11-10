@@ -310,15 +310,24 @@ export const RETURN_CONTROL_LABEL = "Return control";
 export const CLOSE_PAGE_LABEL = "Close page";
 export const RETURN_CONTROL_NOTICE =
   "Returning control lets the crewmate read and use this browser, including signed-in pages.";
-export const SAVED_SIGN_IN_STATUS = "Sign-in saved on this computer · updates on return";
+/**
+ * Where the first mate lives, as the browser's words name it: this computer,
+ * or that computer by its name on a computer that controls it.
+ */
+export type FirstMatePlace = { readonly this: string };
+/** The status beside a saved sign-in, naming the computer that keeps it. */
+export function savedSignInStatus(place: FirstMatePlace = HERE): string {
+  return `Sign-in saved on ${place.this} · updates on return`;
+}
+export const SAVED_SIGN_IN_STATUS = savedSignInStatus();
 export const AUTOMATIC_SIGN_IN_LABEL = "Allow future tasks to use this sign-in automatically";
 export const AUTOMATIC_SIGN_IN_NOTICE =
   "Applies to tasks across all projects sharing this computer. Turning this off stops future automatic access; Remove also signs out browsers already using it.";
 /** What the crewmate did last, as the row reads it once control came back. */
 export const FRESH_LOOK_WORDS = "fresh look at the page";
 /** The unticked choice for a site with no saved sign-in. */
-export function rememberSignInLabel(site: string): string {
-  return `Remember my ${site} sign-in on ${HERE.this}`;
+export function rememberSignInLabel(site: string, place: FirstMatePlace = HERE): string {
+  return `Remember my ${site} sign-in on ${place.this}`;
 }
 /** A request card's default once a sign-in is saved for its site, beside `SIGN_IN_MYSELF_LABEL`. */
 export function savedSignInLabel(site: string): string {
@@ -418,10 +427,10 @@ export const OWN_CAPTION = "temporary · the crewmate never sees this page";
 /** The caption once he handed it back: what it holds of his, and for how long. */
 export const RETURNED_CAPTION = "temporary · keeps what you signed in to until it stops";
 /** The caption while it uses a saved sign-in: which site's, and where it is kept. */
-export function savedCaption(sites: readonly string[]): string {
+export function savedCaption(sites: readonly string[], place: FirstMatePlace = HERE): string {
   const named =
     sites.length > 1 ? `${sites.slice(0, -1).join(", ")} and ${sites.at(-1)}` : (sites[0] ?? "");
-  return `signed in on ${named} · saved on ${HERE.this}`;
+  return `signed in on ${named} · saved on ${place.this}`;
 }
 
 /**
@@ -432,9 +441,10 @@ export function savedCaption(sites: readonly string[]): string {
 export function signInCaption(
   fact: Extract<TaskBrowserFact, { state: "open" }>,
   captain: boolean,
+  place: FirstMatePlace = HERE,
 ): string {
   if (captain) return fact.own ? OWN_CAPTION : CAPTAIN_CAPTION;
-  if (fact.saved?.length) return savedCaption(fact.saved);
+  if (fact.saved?.length) return savedCaption(fact.saved, place);
   return fact.returned ? RETURNED_CAPTION : SIGN_IN_CAPTION;
 }
 export const OPEN_AGAIN_LABEL = "Open again";

@@ -176,7 +176,8 @@ With FileVault on, a Mac starts nothing until someone unlocks its disk at boot.
 
 ## Not yet
 
-The rest of INF-1228's plan follows in order, each on its own: from another computer, its computers and phones, through the same pairing (piece 6), and a task's browser shown and taken over there (piece 6, the captain's answer browser=build).
+The rest of INF-1228's plan follows in order, each on its own: from another computer, its computers and phones, through the same pairing (piece 6).
+A task's browser is shown and taken over from another computer as from the first mate's own (`docs/view.md`, "A task's browser on a view").
 Google's sign-in from another computer waits too: its page sends the browser back to the first mate's own loopback address.
 Claude signs in only where someone is logged in: a Mac nobody is logged in to keeps Claude's login locked in its Keychain, and the crew there uses other subscriptions (captain's pick on question 3).
 Moving an existing record to another account is planned separately (question 7).

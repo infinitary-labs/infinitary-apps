@@ -1,4 +1,5 @@
-import { EVERY_VIEW_ASKS } from "@core/connection/connection";
+import type { BrowserViewer } from "@core/browser/browserViews";
+import { BROWSER_FROM_ANY_VIEW, EVERY_VIEW_ASKS } from "@core/connection/connection";
 import { listsChange } from "@core/connection/contractChanges";
 import { HomeLink, type HomeLinkOptions, type HomeLinkState } from "@core/devices/homeLink";
 import type { Joined, JoinedHome } from "@core/devices/joinedHome";
@@ -20,6 +21,7 @@ import {
 } from "@shared/ipc";
 import { readKeepingUnknown } from "@shared/openLists";
 import { type ShellPreferences, shellPreferencesSchema } from "@shared/preferences";
+import { type TaskBrowserSize, taskBrowserFrameSchema } from "@shared/taskBrowser";
 import { ViewLook } from "./viewLook";
 
 /**
@@ -32,9 +34,13 @@ import { ViewLook } from "./viewLook";
  *   page it would open for one of them opens here.
  * - This Mac's own look is answered here (`ViewLook`), and so is its own
  *   update notice: this Mac's installed app and the release page it opens.
- * - Everything else stays on the other Mac - its computers and phones, a
- *   task's browser, its Secrets, voice, panels and Observe - and is refused
- *   here without being sent.
+ * - A task's browser is watched over that connection too, as one viewer for
+ *   every window here: the other Mac sends this connection its pictures, and
+ *   each goes to the windows that watch that task (docs/view.md, "A task's
+ *   browser on a view").
+ * - Everything else stays on the other Mac - its computers and phones, its
+ *   Secrets, voice, panels and Observe - and is refused here without being
+ *   sent.
  *
  * Only the pushes a view shows reach the window; the other Mac's own look
  * is never one of them. A change asked while that Mac is out of reach is
@@ -129,6 +135,13 @@ export class ViewBackend {
   private pictureBytes = 0;
   private seeding: Promise<void> | null = null;
   private disposed = false;
+  /**
+   * Each task's browser a window here watches, with the room each window's
+   * maximized view last asked for: the other Mac hears one watch per task,
+   * asked again whenever this connection is welcomed again.
+   */
+  private readonly watching = new Map<string, Map<BrowserViewer, TaskBrowserSize | null>>();
+  private readonly viewers = new WeakSet<BrowserViewer>();
 
   constructor(private readonly options: ViewBackendOptions) {
     this.joined = options.joined;
@@ -153,8 +166,13 @@ export class ViewBackend {
         if (VIEW_PUSHES.has(channel as PushChannel))
           options.broadcast(channel as PushChannel, payload);
       },
+      onLive: (channel, payload) => {
+        if (channel === "inf:browser:frame") this.showPicture(payload);
+      },
       onCaughtUp: (catchUp) => {
         if (!this.look.seeded()) void this.seedLook();
+        // A new connection: the other Mac forgot every watch with the last one.
+        this.watchAgain();
         // Read again whole - at the start too - what the other Mac holds is
         // old news here, as restored cards are there. A replay needs
         // nothing: the missed pushes follow, and a card that became ready
@@ -188,6 +206,7 @@ export class ViewBackend {
       ...(state.homeChanges !== null && !listsChange(state.homeChanges, EVERY_VIEW_ASKS)
         ? { needsUpdateThere: true as const }
         : {}),
+      ...(this.browserWaitsThere() ? { browserNeedsUpdateThere: true as const } : {}),
     };
   }
 
@@ -195,9 +214,17 @@ export class ViewBackend {
   async dispatch<C extends CoreInvokeChannel>(
     channel: C,
     rawArgs: unknown[],
+    viewer?: BrowserViewer,
   ): Promise<InvokeResponse<C>> {
     if (OWN_LOOK.has(channel)) return (await this.ownLook(channel, rawArgs)) as InvokeResponse<C>;
     if (OWN_APP.has(channel)) return (await this.ownApp(channel, rawArgs)) as InvokeResponse<C>;
+    if (
+      viewer &&
+      (channel === "inf:browser:watch" ||
+        channel === "inf:browser:unwatch" ||
+        channel === "inf:browser:size")
+    )
+      return (await this.view(channel, rawArgs, viewer)) as InvokeResponse<C>;
     if (!isViewInvokeChannel(channel))
       throw new Error(`${channel} is answered only on ${HOME.the}.`);
     // The window's preload reads the answer against the contract, as it reads this Mac's own.
@@ -260,7 +287,88 @@ export class ViewBackend {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.watching.clear();
     this.link.close();
+  }
+
+  /** A first mate there that is known not to show its task's browsers to a view. */
+  private browserWaitsThere(): boolean {
+    const changes = this.link.state().homeChanges;
+    return changes !== null && !listsChange(changes, BROWSER_FROM_ANY_VIEW);
+  }
+
+  /**
+   * A window's watch of a task's browser there, its end, and the room its
+   * maximized view gives the page: the other Mac hears the first watch of a
+   * task and the end of the last, and every room a window asks for.
+   */
+  private async view(
+    channel: "inf:browser:watch" | "inf:browser:unwatch" | "inf:browser:size",
+    rawArgs: unknown[],
+    viewer: BrowserViewer,
+  ): Promise<unknown> {
+    if (channel === "inf:browser:unwatch") {
+      const [taskId] = parseInvokeRequest(channel, rawArgs);
+      this.unwatch(viewer, taskId);
+      return { ok: true };
+    }
+    if (channel === "inf:browser:size") {
+      const [taskId, size] = parseInvokeRequest(channel, rawArgs);
+      const viewers = this.watching.get(taskId);
+      if (!viewers?.has(viewer)) return { ok: true };
+      viewers.set(viewer, size);
+      return this.link.invoke("inf:browser:size", [taskId, size]);
+    }
+    const [taskId] = parseInvokeRequest(channel, rawArgs);
+    if (this.browserWaitsThere()) return { watching: false };
+    if (!this.viewers.has(viewer)) {
+      this.viewers.add(viewer);
+      viewer.onGone(() => this.gone(viewer));
+    }
+    const viewers = this.watching.get(taskId) ?? new Map<BrowserViewer, TaskBrowserSize | null>();
+    const first = viewers.size === 0;
+    if (!viewers.has(viewer)) viewers.set(viewer, null);
+    this.watching.set(taskId, viewers);
+    // Kept while out of reach: the next welcome asks again.
+    if (!first) return { watching: true };
+    return this.link.invoke("inf:browser:watch", [taskId]);
+  }
+
+  private unwatch(viewer: BrowserViewer, taskId: string): void {
+    const viewers = this.watching.get(taskId);
+    if (!viewers?.delete(viewer)) return;
+    if (viewers.size > 0) return;
+    this.watching.delete(taskId);
+    this.link.invoke("inf:browser:unwatch", [taskId]).catch(() => {
+      // Out of reach: the other Mac forgot the watch with the connection.
+    });
+  }
+
+  /** A window that loaded another document or closed: its watches end. */
+  private gone(viewer: BrowserViewer): void {
+    this.viewers.delete(viewer);
+    for (const taskId of [...this.watching.keys()]) this.unwatch(viewer, taskId);
+  }
+
+  /** Every watch again, on a connection the other Mac just welcomed. */
+  private watchAgain(): void {
+    for (const [taskId, viewers] of this.watching) {
+      const room = [...viewers.values()].findLast((size) => size !== null) ?? null;
+      void this.link
+        .invoke("inf:browser:watch", [taskId])
+        .then(() => (room ? this.link.invoke("inf:browser:size", [taskId, room]) : undefined))
+        .catch(() => {
+          // Asked again at the next welcome.
+        });
+    }
+  }
+
+  /** One picture from the other Mac, for the windows here that watch its task. */
+  private showPicture(payload: unknown): void {
+    const frame = taskBrowserFrameSchema.safeParse(payload);
+    if (!frame.success) return;
+    for (const viewer of this.watching.get(frame.data.taskId)?.keys() ?? [])
+      viewer.show(frame.data);
   }
 
   private async ownLook(channel: CoreInvokeChannel, rawArgs: unknown[]): Promise<unknown> {

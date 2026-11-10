@@ -58,7 +58,9 @@ import {
   PROTOCOL_VERSION,
   VIEW_FLOOR,
 } from "@shared/ipc";
+import type { TaskBrowserFrame } from "@shared/taskBrowser";
 import { WebSocket, WebSocketServer } from "ws";
+import type { BrowserViewer } from "../browser/browserViews";
 import { copyStream, type FarBuild } from "../devices/farBuilds";
 import type { CoreActor, CoreDispatch } from "../dispatcher";
 import type { CoreEventBus } from "../events";
@@ -149,6 +151,12 @@ export type PairedDevices = {
 
 /** One rule for every view (`every-view-asks.md`). */
 export const EVERY_VIEW_ASKS = contractChange("every-view-asks");
+
+/**
+ * Any view asks every request of a task's browser, and the home sends its
+ * pictures as `live` frames (`browser-from-any-view.md`).
+ */
+export const BROWSER_FROM_ANY_VIEW = contractChange("browser-from-any-view");
 
 /**
  * What a connection in each role may ask (docs/devices.md): a view the
@@ -379,6 +387,18 @@ type Client = {
    * and nothing of it is that computer in reach, its version, or work.
    */
   nameOnly: boolean;
+  /**
+   * As a view, the one that watches a task's browser through it, made at its
+   * first request: its pictures go out as `live` frames to it alone.
+   */
+  viewer?: BrowserViewer;
+  /** Who hears it go: each watch it holds, ended when it closes. */
+  gone: (() => void)[];
+  /**
+   * Per task it watches, whether a picture is still being written to it, and
+   * the newest one that came meanwhile: only the newest goes next.
+   */
+  readonly pictures: Map<string, { next?: TaskBrowserFrame }>;
   /** What the home asked it and waits for, by request id. */
   readonly asked: Map<
     number,
@@ -721,6 +741,42 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       }
     });
 
+    // A picture of a page a view watches (docs/connection.md, "Live
+    // pushes"): to that connection alone, unnumbered and never kept. While
+    // one is still being written, only the newest that comes meanwhile
+    // follows, so a slow link shows the page as it is now, never a queue.
+    const showLive = (client: Client, frame: TaskBrowserFrame) => {
+      const writing = client.pictures.get(frame.taskId);
+      if (writing) {
+        writing.next = frame;
+        return;
+      }
+      if (client.closing || client.ws.readyState !== WebSocket.OPEN) return;
+      if (behind(client)) {
+        cut(client, CONNECTION_CLOSE.behind, "behind");
+        return;
+      }
+      const slot: { next?: TaskBrowserFrame } = {};
+      client.pictures.set(frame.taskId, slot);
+      const text = JSON.stringify({
+        t: "live",
+        channel: channelIn("inf:browser:frame", client.spelling),
+        payload: frame,
+      });
+      client.out.send(text, () => {
+        if (client.pictures.get(frame.taskId) !== slot) return;
+        client.pictures.delete(frame.taskId);
+        if (slot.next) showLive(client, slot.next);
+      });
+    };
+    const viewerOf = (client: Client): BrowserViewer => {
+      client.viewer ??= {
+        show: (frame) => showLive(client, frame),
+        onGone: (listener) => client.gone.push(listener),
+      };
+      return client.viewer;
+    };
+
     const welcome = (client: Client, hello: Extract<ClientFrame, { t: "hello" }>) => {
       // What this connection does: what it says, or what its kind does. A
       // Mac that does both runs its work unless it says it controls.
@@ -871,7 +927,12 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         // desktop adapter stamps, with the contract's reach as the limit, so
         // the words it types are his own words (the captain's pick, FI3-709).
         // A computer that runs work asks as itself, by the pairing it proved.
-        const answered = await dispatch(channel, frame.args, actor);
+        const answered = await dispatch(
+          channel,
+          frame.args,
+          actor,
+          client.role === "view" ? viewerOf(client) : undefined,
+        );
         const value =
           client.taskAllow || !channel.startsWith("inf:cards")
             ? answered
@@ -920,6 +981,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         waitedForHello: false,
         takesWork: false,
         nameOnly: false,
+        gone: [],
+        pictures: new Map(),
         asked: new Map(),
       };
       clients.add(client);
@@ -929,6 +992,16 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       });
       ws.on("close", () => {
         clients.delete(client);
+        const heard = client.gone;
+        client.gone = [];
+        client.pictures.clear();
+        for (const listener of heard) {
+          try {
+            listener();
+          } catch (error) {
+            onProblem(`a watch could not end: ${(error as Error).message}`);
+          }
+        }
         const waiting = [...client.asked.values()];
         client.asked.clear();
         for (const entry of waiting)

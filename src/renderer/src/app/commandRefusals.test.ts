@@ -86,6 +86,33 @@ describe("why a window command cannot run now", () => {
       ).toBe("Update Infinitary on Mac mini to do this from here.");
   });
 
+  // The captain's answer on INF-1358's review: "Mark them off with the
+  // reason, like every other card button there" - the key for Take or
+  // Return control included.
+  it("refuses taking or returning a task's browser while changes on the other computer are off", () => {
+    const view = {
+      role: "view",
+      name: "Mac mini",
+      address: "192.168.1.30",
+      joinedAt: 0,
+      contact: "closed",
+      readOnly: null,
+      heardAt: null,
+      caughtUp: 1,
+    } as const;
+    const shown = { ...CLEAR, browserControl: true };
+    expect(commandRefusal("browser.control", { ...HOME, thisMac: view }, shown)).toBe(
+      "Changes are off until Mac mini is back",
+    );
+    expect(
+      commandRefusal(
+        "browser.control",
+        { ...HOME, thisMac: { ...view, contact: "in-reach" } },
+        shown,
+      ),
+    ).toBeNull();
+  });
+
   // INF-1109's accepted Secrets boundary (docs/secrets.md, "Remote decisions"): its Settings stay
   // on the home, so their command is refused wherever the tab is not offered.
   it("keeps the Secrets command on the home", () => {

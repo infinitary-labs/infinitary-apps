@@ -266,7 +266,7 @@ The host reads that from the typed fact that the captain returned control, never
 - Every address the crewmate reads - the page's, where it moved, a link's, a refused popup's - is read without its query and fragment, where sites keep tokens and codes, and Open again starts from that bare address.
 - Every answer's help from such a browser says to keep only the results the task needs, such as a booking reference, a status or a total, and never passwords, codes, card numbers or whole account pages, in a card, a report or a picture.
 
-No raw trace of the page is ever recorded, signed in or not, and the view's pictures go to the watching window alone and are never kept.
+No raw trace of the page is ever recorded, signed in or not, and the view's pictures go to the watching viewer alone and are never kept.
 The captain's own view shows the whole address.
 
 ## The view
@@ -288,18 +288,19 @@ Who is driving is read off the task's work posture, the same typed fact as the r
 Back, Forward and Reload are shown and marked off while the captain watches, since navigation belongs to whoever has control and watching is not control ("Taking control" below): each stays a Tab stop whose label says who drives (`docs/keyboard.md`, "Facts shown on rest").
 
 The page reaches the view as pictures, never as itself.
-While a view watches (`inf:browser:watch`, a shell channel), the host streams the hidden page's own pictures over the browser's protocol - one when watching starts and one each time the page changes - and sends each to that window alone on `inf:browser:frame`; the view draws the newest on a canvas, fitted to its width or at the page's own size.
+While a view watches (`inf:browser:watch`, a core request every view may ask), the host streams the hidden page's own pictures over the browser's protocol - one when watching starts and one each time the page changes - and sends each to that viewer alone on `inf:browser:frame`; the view draws the newest on a canvas, fitted to its width or at the page's own size.
+The core keeps each viewer's watches (`BrowserViews`, `src/core/browser/browserViews.ts`): a window on the first mate's computer, or the connection of a computer that controls it, which gets its pictures as `live` frames (`docs/connection.md`, "Live pushes") and hands them to its own windows that watch (`docs/view.md`, "A task's browser on a view").
 The page never enters the app's window, so the app's own menus, More's included, draw over it, and nothing the captain does in the view reaches the page.
-A window that unwatches, loads another document or goes stops its pictures.
-An app controlling this Mac from another shows no page: its view says the task's browser on this Mac cannot be shown there yet (`docs/view.md`, "A task's browser on a view").
+A window that unwatches, loads another document or goes, or a connection that drops, stops its pictures.
+Every window works the same way, wherever the first mate lives; only a view of a first mate too old to send pictures says to update it there (`docs/view.md`, "A task's browser on a view").
 
 The page lays out at 1280 by 800 (`TASK_BROWSER_PAGE`) unless the captain maximizes the view (the design skill's ResponseCard, "Maximize").
-Maximized, the view gives the page its room: the place under its row and the browser's lines, above its foot line, which it asks for on `inf:browser:size`, a shell channel, and asks again when the window's size settles.
+Maximized, the view gives the page its room: the place under its row and the browser's lines, above its foot line, which it asks for on `inf:browser:size`, a core request every view may ask, and asks again when the window's size settles.
 The sharing notice and a refusal line take room from the page, which fits under them.
 The core lays every page of the task's browser out at that size (`TaskBrowsers.sizeView`): its window, its viewport, its pictures and every point the captain presses, and a browser, a second page or Open again that opens while the view stays maximized opens at it.
 A resize waits only for a click the crewmate's command is making, and a click waits for a resize, so the page never moves between a command finding a control and pressing it; a read, a wait or a load goes on at the new size.
 Restore, Hide or a window that stops watching gives the page back its own size.
-Only a window that watches the task may ask, and a size is between 320 by 240 and 3840 by 2400 (`TASK_BROWSER_PAGE_MIN`, `TASK_BROWSER_PAGE_MAX`).
+Only a viewer that watches the task may ask, and a size is between 320 by 240 and 3840 by 2400 (`TASK_BROWSER_PAGE_MIN`, `TASK_BROWSER_PAGE_MAX`).
 While any view watches a task's browser it does not stop for being unused; its half hour starts again when the last view goes.
 
 Each page the browser holds is a Browser tab on the card's strip, reading Browser and the page's title (`browserTabLabel`), the current one selected; the site stays in the view's row.
@@ -308,7 +309,7 @@ Picking a page's tab is navigation, so it is the captain's only while the captai
 More holds Fit or Actual size, Stop browser, Copy page address, and Report a problem, which starts the first mate input with "This task's browser has a problem: " for the captain to finish.
 Stop browser (`inf:browser:stop`) stops it at once, as the crewmate's own close would.
 Open again (`inf:browser:reopen`) starts a fresh browser, with nothing signed in, at the page the stopped one was on, refused in words past the cap of four or once the task has closed; the crewmate's next answer says the captain opened it again.
-Both are core channels this Mac's window alone may ask.
+Both are core requests every view may ask.
 
 ## From a card
 
@@ -333,7 +334,8 @@ It refuses a task with no project, one that runs on another computer, and a file
 Finding is `projectFile` (`src/core/workspace/projectPage.ts`): the folder is resolved once, then every part of the path is read without following it, so a link anywhere on the way is refused, and the end must be a regular file.
 
 The card's chrome draws the door as the browser's other door is drawn (`CardAttachment`, `src/renderer/src/cards/`): the micro label, the path and `opens in this task's browser`, and the label as a button.
-Its click asks `inf:cards:open-page` with the card's id alone, a core channel this Mac's window alone may ask, since the project folder is this Mac's.
+Its click asks `inf:cards:open-page` with the card's id alone, a core request every view may ask: the page opens in the task's browser on the first mate's computer, where the project folder is, and the view watches it there.
+On a computer that controls the first mate, the button is marked off with the reason while changes are off (`docs/view.md`, "A task's browser on a view").
 The core reads the path off the card's own attachment, checks the page again in the project's folder as Settings → Projects holds it now, and asks `TaskBrowsers.openPage`, which answers the browser it opened for the view to open on.
 A refusal comes back in words the strip shows in place of the path until the next click.
 The click answers nothing: it runs no effect, places no gate and leaves the card and its merge as they were, so a note carrying it never holds its task open and still opens the page after the task closed.
@@ -352,7 +354,7 @@ The project line in the sequences document has a finished casual web project's c
 ## Taking control
 
 The captain takes a task's browser over with Take control in the view's row, and hands it back with Return control; nothing else moves it - not a click on the page, a sign-in, a redirect, Hide, a card closing or a timer.
-Both are core channels this Mac's window alone may ask (`inf:browser:take`, `inf:browser:return`), and both name the browser the view shows by its `session` and `generation`, so a stale view never takes or returns a newer one.
+Both are core requests every view may ask (`inf:browser:take`, `inf:browser:return`), and both name the browser the view shows by its `session` and `generation`, so a stale view never takes or returns a newer one.
 
 `TaskBrowsers.takeControl` marks the browser `taking` at once, so every crewmate command that starts from then on refuses, including one already queued behind the command running.
 The running command finishes, or fails within its 30-second bound, and its answer goes to the crewmate as usual; then the browser is `captain`.
@@ -361,7 +363,7 @@ While it is `taking` the view's row reads `finishing the crewmate's current acti
 While the captain holds it:
 
 - the crewmate's commands refuse in words, its stop too, saying the captain will hand it back and wake it once;
-- the captain's pointer, wheel and keys on the view's picture go to the page through `inf:browser:input`, a shell channel the core answers only for the captain's own browser (`TaskBrowsers.captainInput`), as the browser protocol's own input at the page's own pixels; the editing keys of the window's own system (⌘ on a Mac, Ctrl on Linux, where Ctrl+Y redoes too) go as the page's editing commands whatever system the page runs on, paste with the words on the captain's own clipboard ("Paste" below), and Back, Forward and Reload move the captain's page;
+- the captain's pointer, wheel and keys on the view's picture go to the page through `inf:browser:input`, a core request every view may ask, which the core answers only for the captain's own browser (`TaskBrowsers.captainInput`), as the browser protocol's own input at the page's own pixels; the editing keys of the window's own system (⌘ on a Mac, Ctrl on Linux, where Ctrl+Y redoes too) go as the page's editing commands whatever system the page runs on, paste with the words on the captain's own clipboard ("Paste" below), and Back, Forward and Reload move the captain's page;
 - nothing records any of it: no timeline line, no fact, no notice, no event, and nothing the IPC layer keeps;
 - what the page says - refused requests, errors, dialogs, popups and its moves - is kept for nobody, so the crewmate never hears of the captain's time;
 - the browser never stops for being unused, and its fact carries `control: "captain"`, which the record's Browser line reads as `you have control` and the view's row as `you have control · the crewmate cannot see this page`, tinted violet.
@@ -472,7 +474,7 @@ The app's quit closes every browser at once and copies nothing back.
 **Settings.**
 Settings → General lists them under Website sign-ins, one row per site with when it was saved, its initially off future-task permission and Remove (`WebsiteSignInsSection`, `src/renderer/src/settings/`), read with `inf:browser:sign-ins`, which answers `available: false` where this build keeps no task browsers, so the section draws nothing there.
 Remove (`inf:browser:sign-ins:remove`, `TaskBrowsers.removeSavedSignIn`) deletes the site's file, signs every browser using it out of that site at once - its cookies there, its own origins' local storage, and their session storage in each of its pages go, and nothing is copied back - writes a timeline line on each such task, and tells each crewmate on its next command.
-The list, Remove and `inf:browser:sign-ins:automatic` are core channels this Mac's window alone may ask; the first mate never changes saved-site permission or removes a saved sign-in.
+The list, Remove and `inf:browser:sign-ins:automatic` are core requests the captain asks from any window that controls the first mate; the first mate never changes saved-site permission or removes a saved sign-in.
 
 **A page never gets another site's storage.**
 The host reads and writes local and session storage only through a page's own protocol, by its top document's own storage key (`HostPageStorage`, `src/main/host/taskBrowser.ts`).

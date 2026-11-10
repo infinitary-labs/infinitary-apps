@@ -1,4 +1,3 @@
-import type { CoreDispatch } from "@core/index";
 import {
   type CoreInvokeChannel,
   type InvokeChannel,
@@ -6,7 +5,7 @@ import {
   type InvokeResponse,
   parseInvokeRequest,
 } from "@shared/ipc";
-import type { IpcMainInvokeEvent } from "electron";
+import type { IpcMainInvokeEvent, WebContents } from "electron";
 import { ipcMain } from "electron";
 import { isAppRendererSource, type RendererSourceOptions } from "../security/rendererSource";
 
@@ -39,12 +38,12 @@ export function handleInvoke<C extends InvokeChannel>(
 export function forwardInvoke<C extends CoreInvokeChannel>(
   channel: C,
   options: RendererSourceOptions,
-  dispatch: CoreDispatch,
+  dispatch: (channel: C, rawArgs: unknown[], sender: WebContents) => Promise<unknown>,
 ): void {
   ipcMain.handle(channel, async (event, ...rawArgs) => {
     if (!isAppRendererSource(event.senderFrame?.url, options)) {
       throw new Error(`Rejected ${channel}: unrecognized sender frame`);
     }
-    return dispatch(channel, rawArgs);
+    return dispatch(channel, rawArgs, event.sender);
   });
 }

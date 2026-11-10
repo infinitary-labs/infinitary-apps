@@ -4,11 +4,6 @@ import { crewWordSchema, firstRunViewSchema } from "../firstRun";
 import { MAIN_COMMAND_IDS, type MainCommandId } from "../keyboard";
 import { keymapSnapshotSchema, panelCommandsSchema, savedKeymapSchema } from "../keymap";
 import {
-  taskBrowserCommandResultSchema,
-  taskBrowserInputSchema,
-  taskBrowserSizeSchema,
-} from "../taskBrowser";
-import {
   micAccessSchema,
   recognizerPlaceSchema,
   voiceClipSchema,
@@ -217,40 +212,5 @@ export const shellChannels = {
     surface: "host",
     request: z.tuple([voiceClipSchema]),
     response: z.object({ text: z.string() }),
-  },
-  // The captain's view watches a task's browser (docs/task-browser.md, "The
-  // view"): pictures of its page come to this window on `inf:browser:frame`
-  // until it unwatches, reloads or closes. Pixels of this Mac's page for
-  // this Mac's window, so the shell answers; false when there is none.
-  "inf:browser:watch": {
-    effect: "read",
-    surface: "host",
-    request: z.tuple([z.string().min(1).max(64)]),
-    response: z.object({ watching: z.boolean() }),
-  },
-  "inf:browser:unwatch": {
-    effect: "read",
-    surface: "host",
-    request: z.tuple([z.string().min(1).max(64)]),
-    response: okSchema,
-  },
-  // The room this window's maximized view gives the task's page, or none
-  // once it is restored (docs/task-browser.md, "The view"): the page lays
-  // out at it while this window watches. Asked of a watch this window holds.
-  "inf:browser:size": {
-    effect: "change",
-    surface: "host",
-    request: z.tuple([z.string().min(1).max(64), taskBrowserSizeSchema.nullable()]),
-    response: okSchema,
-  },
-  // The captain's own input to a task's page while he has control
-  // (docs/task-browser.md, "Taking control"): this window's pointer and keys
-  // to this Mac's page, so the shell answers; the core refuses it unless he
-  // holds the browser, and nothing records it.
-  "inf:browser:input": {
-    effect: "change",
-    surface: "host",
-    request: z.tuple([z.string().min(1).max(64), taskBrowserInputSchema]),
-    response: taskBrowserCommandResultSchema,
   },
 } as const satisfies Record<string, ChannelDeclaration>;

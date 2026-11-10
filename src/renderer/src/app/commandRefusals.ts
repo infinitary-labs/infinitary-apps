@@ -267,8 +267,14 @@ const REFUSALS: Readonly<
   "cards.show-cards": (s) => tabRefusal(s, "cards.show-cards"),
   "cards.show-activity": (s) => tabRefusal(s, "cards.show-activity"),
   "cards.show-crewmate": (s) => tabRefusal(s, "cards.show-crewmate"),
-  "browser.control": (_s, facts) =>
-    facts.browserControl ? null : "Show a browser with control available first",
+  // Taking or returning control is a change on the first mate's computer:
+  // off for the same reason as every other button there.
+  "browser.control": (s, facts) =>
+    !facts.browserControl
+      ? "Show a browser with control available first"
+      : changesOff(s.thisMac) && isView(s.thisMac)
+        ? changesOffWords(s.thisMac)
+        : null,
   "task.move-computer": (_s, facts) =>
     facts.taskMove ? null : "Show a started task that can move to another computer first",
   "task.close-done": (_s, facts) =>

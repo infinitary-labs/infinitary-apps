@@ -11,6 +11,7 @@ import { RemoteControlLineView } from "./RemoteControl";
 import {
   browserNotHereWords,
   browserShownThereWords,
+  browserWaitsForUpdate,
   changesOff,
   changesOffWords,
   clockTime,
@@ -134,7 +135,8 @@ describe("controlling another Mac", () => {
   });
 
   // INF-1352's plan, the captain's answer one_rule=every-view: a button that opens Settings
-  // opens it here on any view; Devices and a task's browser come later, and say so first.
+  // opens it here on any view; Devices comes later, and says so first. Its piece 3 shows a
+  // task's browser on every view, unless the first mate there is too old to send its pictures.
   it("does a card's Settings button here and says what cannot be done yet", () => {
     const open = (target: "subscriptions" | "projects" | "settings" | "devices") => ({
       effect: { kind: "open", target } as const,
@@ -145,12 +147,16 @@ describe("controlling another Mac", () => {
       "MacBook Pro's computers and phones cannot be changed from here yet.",
     );
     const browser = { effect: { kind: "open", target: "browser" } as const };
-    expect(doneThereWords(PRO, browser)).toBe(
-      "This task's browser on MacBook Pro cannot be shown here yet.",
+    expect(doneThereWords(PRO, browser)).toBeNull();
+    const older: ViewMac = { ...PRO, browserNeedsUpdateThere: true };
+    expect(doneThereWords(older, browser)).toBe(
+      "Update Infinitary on MacBook Pro to show this task's browser here.",
     );
-    expect(browserShownThereWords(PRO)).toEqual({
-      lead: "This task's browser on MacBook Pro cannot be shown here yet.",
-      detail: "Only a window on MacBook Pro can show it for now.",
+    expect(browserWaitsForUpdate(PRO)).toBe(false);
+    expect(browserWaitsForUpdate(older)).toBe(true);
+    expect(browserShownThereWords(older)).toEqual({
+      lead: "Update Infinitary on MacBook Pro to show this task's browser here.",
+      detail: "Until then, only a window on MacBook Pro can show it.",
     });
     expect(firstMatePlace(PRO)).toEqual({ this: "MacBook Pro", This: "MacBook Pro" });
     expect(firstMatePlace(null)).toEqual(HERE);

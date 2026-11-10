@@ -132,6 +132,11 @@ export type HomeLinkOptions = {
    */
   onPush: (channel: string, payload: unknown, replayed: boolean) => void;
   /**
+   * A push for this connection alone, never numbered or replayed, such as a
+   * picture of a task's page it watches (`browser-from-any-view.md`).
+   */
+  onLive?: (channel: string, payload: unknown) => void;
+  /**
    * What the home asks this device (a computer that runs work, its orders):
    * the answer, or a refusal thrown. Absent, every request is refused.
    */
@@ -489,6 +494,12 @@ export class HomeLink {
               frame.payload,
               frame.seq <= this.welcomedAt,
             );
+          } catch {
+            // One listener's failure is not the connection's.
+          }
+        } else if (frame.t === "live") {
+          try {
+            this.options.onLive?.(ownChannel(frame.channel), frame.payload);
           } catch {
             // One listener's failure is not the connection's.
           }

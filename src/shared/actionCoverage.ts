@@ -75,6 +75,10 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:browser:reopen": "The captain's click in a task's browser view; nothing is set",
   "inf:browser:take": "The captain's click in a task's browser view; nothing is set",
   "inf:browser:return": "The captain's click in a task's browser view; nothing is set",
+  "inf:browser:size":
+    "The room the captain's maximized task browser view gives its page; nothing is set",
+  "inf:browser:input":
+    "The captain's own presses and typing in a task's browser while they have control; nothing is set",
   "inf:update:install":
     "The captain's own update-and-restart consent in the update panel; a model cannot grant it",
   "inf:update:later":

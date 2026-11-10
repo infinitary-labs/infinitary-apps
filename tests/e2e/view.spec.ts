@@ -1,4 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { userInfo } from "node:os";
 import { dirname, join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
@@ -10,6 +12,7 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import {
   backWords,
+  changesOffWords,
   devicesNotHereWords,
   JOIN_CONFIRM_WORDS,
   JOIN_RUNS_WORK,
@@ -26,15 +29,37 @@ import { needsReauthCopy } from "../../src/shared/credentialHealth";
 import { COMPUTER, HOME } from "../../src/shared/deviceNames";
 import { deviceJoinedLine } from "../../src/shared/devices";
 import { feedLineFrom } from "../../src/shared/feed";
+import {
+  RETURN_CONTROL_LABEL,
+  rememberSignInLabel,
+  TAKE_CONTROL_LABEL,
+} from "../../src/shared/taskBrowser";
+import type { TaskDetail } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { type HelperRun, startHelper } from "./helperRun";
 import { type LaunchedApp, launchApp } from "./launch";
-import { startMockProvider } from "./mockProvider";
+import { SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
 import { encodePng } from "./pictureFixtures";
 import { dropFiles, promptInput } from "./prompt";
 import { providerMessages } from "./providerRequest";
-import { cardReply, expectNoCard, showCard, shownCard } from "./stack";
+import {
+  MOCK_BROWSER_BUTTON,
+  MOCK_BROWSER_CARD_REPORT,
+  MOCK_BROWSER_CARD_TITLE,
+  TASK_BROWSER_CARD_MARKER,
+  taskBrowserJourneys,
+} from "./scenarios/taskBrowserJourneys";
+import { cardReply, expectNoCard, SHOWN_ENTRY, showCard, shownCard } from "./stack";
+import {
+  browserView,
+  canvasReading,
+  clickOnPage,
+  closeSite,
+  pageSays,
+  stopTaskBrowsers,
+  typeOnPage,
+} from "./taskBrowser";
 
 /**
  * The app as a view of another Mac (docs/view.md), as two people's Macs see
@@ -169,6 +194,15 @@ const shownIds = (page: Page) =>
 const feedTexts = (page: Page) =>
   page.evaluate(async () => (await window.infinitary.feed.recent()).map((line) => line.text));
 const topLine = (page: Page) => page.locator("[data-remote-control]");
+
+/**
+ * A task's page with the Name field its crewmate fills, a Town field only the captain types
+ * into, and a button that answers with both and keeps the visitor signed in
+ * with a cookie, which a remembered sign-in saves.
+ */
+const SIGN_UP_PAGE = `<!doctype html><html><head><title>Sign up</title></head>
+<body><h1>Sign up</h1><label>Name <input id="name"></label> <label>Town <input id="town"></label> <button id="send">Send</button><p id="out"></p>
+<script>const v = (id) => document.getElementById(id).value; document.getElementById("send").addEventListener("click", () => { document.cookie = "who=" + encodeURIComponent(v("name")) + "; max-age=3600; path=/"; document.getElementById("out").textContent = "Thanks, " + v("name") + (v("town") ? " from " + v("town") : ""); });</script></body></html>`;
 /**
  * Watch for the pill that says that Mac is back. It shows once when contact
  * returns and fades a few seconds later, and the view can reconnect while the
@@ -621,5 +655,116 @@ test("a Mac joined at its first launch also runs that Mac's work, and one a comm
     await mini?.close();
     await air?.close();
     await pro.close();
+  }
+});
+
+// INF-1352's plan, piece 3, checked by: "The view journey takes over a task's browser from the
+// second app and types into it." Any view watches a task's browser as pictures over the
+// connection, takes control there, and sends its presses back.
+test("a Mac that controls another takes over a task's browser there and types into its page", async () => {
+  // Two launches, and a crewmate's run that opens its browser on a page.
+  test.setTimeout(180_000);
+  const site = createServer((_request, response) => {
+    response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    response.end(SIGN_UP_PAGE);
+  });
+  await new Promise<void>((resolve) => site.listen(0, "127.0.0.1", resolve));
+  const siteUrl = `http://127.0.0.1:${(site.address() as AddressInfo).port}/`;
+  const provider = await startMockProvider({ scenarios: [taskBrowserJourneys] });
+  const pro = await launchApp({
+    reuseMockProvider: provider,
+    env: { INFINITARY_DEVICE_NAME: "MacBook Pro" },
+  });
+  let air: LaunchedApp | undefined;
+  try {
+    const title = `${TASK_BROWSER_CARD_MARKER}${siteUrl} as Sam`;
+    await promptInput(pro.page).fill(`${SPAWN_PROMPT_MARKER} ${title}`);
+    await promptInput(pro.page).press("Enter");
+    const detail = (): Promise<TaskDetail | null> =>
+      pro.page.evaluate(async (wanted) => {
+        const row = (await window.infinitary.tasks.board()).tasks.find((t) => t.title === wanted);
+        return row ? window.infinitary.tasks.detail(row.id) : null;
+      }, title);
+    await expect
+      .poll(async () => (await detail())?.outcome ?? "", { timeout: 90_000 })
+      .toContain(MOCK_BROWSER_CARD_REPORT);
+    const task = (await detail()) as TaskDetail;
+
+    const invite = await pro.page.evaluate(() => window.infinitary.devices.invite({ kind: "mac" }));
+    air = await launchApp({ env: { INFINITARY_DEVICE_NAME: "MacBook Air" } });
+    const { page } = air;
+    // Joining starts the window over as the other Mac's, so the call is not awaited in it.
+    await page.evaluate((link) => {
+      void window.infinitary.devices.join(link);
+    }, invite.link);
+    await expect(topLine(page)).toHaveAttribute("data-remote-control", "in-reach");
+    const view = browserView(page, task.id);
+
+    await test.step("the card's door shows the page there as pictures", async () => {
+      await showCard(page, MOCK_BROWSER_CARD_TITLE);
+      await page
+        .locator(`${SHOWN_ENTRY} [data-card-attachment="browser"]`)
+        .getByRole("button", { name: MOCK_BROWSER_BUTTON })
+        .click();
+      // The crewmate's turn has ended, so nobody drives the page it left open.
+      await expect(view).toHaveAttribute("data-browser-state", "nobody");
+      await expect.poll(async () => (await canvasReading(page)).frames).toBeGreaterThan(0);
+    });
+
+    await test.step("Take control hands the page to this Mac, and what it types reaches the page there", async () => {
+      await view.getByRole("button", { name: TAKE_CONTROL_LABEL }).click();
+      await expect(view).toHaveAttribute("data-browser-state", "captain");
+      await expect
+        .poll(async () => (await detail())?.browser)
+        .toMatchObject({ control: "captain" });
+      // The crewmate filled Name; Town is the captain's alone, typed from this Mac.
+      await typeOnPage(pro.app, page, task.id, siteUrl, "town", "Leeds");
+      await expect.poll(() => pageSays(pro.app, siteUrl, "town", "value")).toBe("Leeds");
+      await clickOnPage(pro.app, page, task.id, siteUrl, "send");
+      await expect.poll(() => pageSays(pro.app, siteUrl, "out")).toBe("Thanks, Sam from Leeds");
+    });
+
+    await test.step("Return control with Remember ticked hands the page back and keeps the sign-in where the first mate lives", async () => {
+      const site = new URL(siteUrl).host;
+      // The choice names the computer that keeps the sign-in, not this one.
+      await view
+        .locator("[data-browser-sharing]")
+        .getByRole("checkbox", { name: rememberSignInLabel(site, { this: "MacBook Pro" }) })
+        .check();
+      await view.getByRole("button", { name: RETURN_CONTROL_LABEL }).click();
+      await expect
+        .poll(async () => (await detail())?.browser)
+        .toMatchObject({ saved: [site], returned: true });
+      expect((await detail())?.browser).not.toMatchObject({ control: "captain" });
+      // Saved on the first mate's computer, and nothing kept on the one that controls it.
+      expect(existsSync(join(pro.userDataDir, "web-sign-ins"))).toBe(true);
+      expect(existsSync(join((air as LaunchedApp).userDataDir, "web-sign-ins"))).toBe(false);
+    });
+
+    await test.step("while that Mac is out of reach, Take control is marked off with the reason", async () => {
+      await pro.close();
+      await expect(topLine(page)).toHaveAttribute("data-remote-control", "closed");
+      const take = view.getByRole("button", { name: TAKE_CONTROL_LABEL });
+      await expect(take).toBeDisabled();
+      await expect(take).toHaveAttribute(
+        "aria-description",
+        changesOffWords({
+          role: "view",
+          name: "MacBook Pro",
+          address: "127.0.0.1",
+          joinedAt: 0,
+          contact: "closed",
+          readOnly: null,
+          heardAt: null,
+          caughtUp: 0,
+        }),
+      );
+    });
+  } finally {
+    await stopTaskBrowsers(pro.page).catch(() => undefined);
+    await air?.close();
+    await pro.close();
+    await provider.close();
+    await closeSite(site);
   }
 });

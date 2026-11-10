@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "check-changed-every-biome-file",
+      "reason": "The quick check before a push now hands Biome every changed file and lets Biome's own configuration pick which it checks, as the full lint does, so a formatting error in a changed .mjs, .cjs, .js, .css, .html or .grit file fails before the push instead of in the pull request's check; only the project's own checks change, so nothing a person sees changes."
+    }
+  ]
+}

@@ -443,6 +443,7 @@ In CI mode these checks refuse to start outside CI and name their route on reque
 
 A crewmate runs `pnpm check:changed` (`scripts/check-changed.ts`, INF-2588 fix 1) before every push, on a CI-mode computer or not: Biome on the files its branch changed, the design adherence lint on the changed renderer files, every node script `pnpm check` runs (its project lints and generated-file `--check` scripts, read from `package.json`), the pull request's release-notes check once the branch has a commit, and the whole-project typecheck.
 They run side by side, so a lint or a missing release note fails before the push instead of in the pull request's check.
+Biome is handed every changed file and its own configuration picks which of them it checks, as in the full lint, so the quick check keeps no list of file kinds of its own.
 A checkout with no main branch to compare with, such as main's own check of a push, counts as having nothing committed since main, so its release-notes check waits.
 It is not gated by CI mode, takes seconds, and prints every error; the full lint and the typecheck stay in the pull request's `typecheck-lint-build` check as INF-2074 set it, so this narrows INF-2074's choice that the typecheck runs only in CI.
 Crewmates start each route the way they start a full verification: `github_write` to `POST /repos/{owner}/{repo}/actions/workflows/<workflow>/dispatches` with `{"ref":"<branch>"}` and the route's inputs (`docs/forge.md`, "Verification workflow requests").

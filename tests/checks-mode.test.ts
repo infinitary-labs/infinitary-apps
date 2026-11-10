@@ -1,8 +1,8 @@
-import { spawnSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { extname, join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { baseRef } from "../scripts/check-changed.ts";
+import { baseRef, biomeStep } from "../scripts/check-changed.ts";
 import { ciModeRefusal } from "../scripts/checks-mode.ts";
 import { scratchDir } from "./helpers/scratchDirs";
 
@@ -98,6 +98,33 @@ describe("where the heavy checks run", () => {
     expect(result.stdout).toMatch(/check:changed: \d+ changed file/);
     expect(result.stderr).not.toContain("typecheck-lint-build");
     expect(result.status, result.stdout + result.stderr).toBe(0);
+  });
+
+  // INF-3297: the quick check gave Biome only ts, tsx, json and md files, so a
+  // formatting slip in a changed .mjs queue source passed it and failed the
+  // pull request's full lint. The project's own files stand in for a branch's
+  // changes: one tracked file of each kind in each top folder.
+  it("hands Biome every changed file the full lint would check", () => {
+    const sample = new Map<string, string>();
+    for (const file of execFileSync("git", ["ls-files"], { encoding: "utf8" }).split("\n")) {
+      const kind = `${file.includes("/") ? file.split("/")[0] : "."} ${extname(file)}`;
+      if (file && !sample.has(kind)) sample.set(kind, file);
+    }
+    const files = [...sample.values()];
+    // Biome names the files it checked when asked to be verbose.
+    const checked = (command: string, args: string[]) => {
+      const result = spawnSync(command, [...args, "--verbose"], { encoding: "utf8" });
+      const listed = (result.stdout + result.stderr).split("Files processed:")[1] ?? "";
+      const names = (listed.split("Files fixed:")[0] ?? "").matchAll(/^\s*- (.+)$/gm);
+      return [...names].map(([, file]) => file ?? "").sort();
+    };
+    // The paths as the full lint's Biome takes them, with no word on which to check.
+    const full = checked("pnpm", ["exec", "biome", "check", "--no-errors-on-unmatched", ...files]);
+    const mjs = full.filter((file) => file.endsWith(".mjs"));
+    expect(mjs, full.join(" ")).not.toEqual([]);
+    const step = biomeStep(files);
+    expect(step).toBeDefined();
+    expect(checked(step?.command ?? "", step?.args ?? [])).toEqual(full);
   });
 
   // The bug a main check found: its push checkout holds one commit and no main

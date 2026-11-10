@@ -61,10 +61,33 @@ export function checkScripts(check: string): string[][] {
     .map(([, ...args]) => args);
 }
 
-interface Step {
+export interface Step {
   label: string;
   command: string;
   args: string[];
+}
+
+/**
+ * Biome on every changed file, so Biome's own configuration picks which of
+ * them it checks, as it does for the whole-project Biome in `pnpm check`: its
+ * `files.includes` and the languages it knows. A list of extensions here
+ * dropped the queue's .mjs sources, so a formatting slip in one passed this
+ * check and failed the pull request's (INF-3297).
+ */
+export function biomeStep(files: string[]): Step | undefined {
+  if (!files.length) return undefined;
+  return {
+    label: "biome",
+    command: "pnpm",
+    args: [
+      "exec",
+      "biome",
+      "check",
+      "--no-errors-on-unmatched",
+      "--files-ignore-unknown=true",
+      ...files,
+    ],
+  };
 }
 
 function run(step: Step): Promise<{ step: Step; ok: boolean; output: string }> {
@@ -85,17 +108,12 @@ function run(step: Step): Promise<{ step: Step; ok: boolean; output: string }> {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const base = baseRef();
   const files = changedFiles(base);
-  const lintable = files.filter((file) => /\.(tsx?|json|md)$/.test(file));
   const renderer = files.filter((file) => /^src\/renderer\/.*\.tsx?$/.test(file));
   const scripts = JSON.parse(readFileSync("package.json", "utf8")).scripts as Record<string, string>;
   console.log(`check:changed: ${files.length} changed file(s)`);
   const steps: Step[] = [];
-  if (lintable.length)
-    steps.push({
-      label: "biome",
-      command: "pnpm",
-      args: ["exec", "biome", "check", "--no-errors-on-unmatched", ...lintable],
-    });
+  const biome = biomeStep(files);
+  if (biome) steps.push(biome);
   if (renderer.length)
     steps.push({
       label: "adherence",

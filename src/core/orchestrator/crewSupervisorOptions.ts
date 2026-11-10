@@ -302,6 +302,11 @@ export type CrewSupervisorOptions = {
   ) => { jobId: string; command: string; startedAt: number } | undefined;
   /** Kills a task's background jobs when the task ends (R2). */
   killJobs?: (taskId: string) => void;
+  /** What a closed task left running here, stopped at its close (docs/leftover-programs.md). */
+  leftovers?: {
+    begin(taskId: string, after?: Promise<unknown>): Promise<void>;
+    settled(taskId: string): Promise<void>;
+  };
   /**
    * Put the change in where the project lives (the forge seam), injected
    * beside check_pr_ci; a merge under the captain's kept approval passes
@@ -463,9 +468,15 @@ export type CrewSupervisorOptions = {
         secrets?: SecretsCommand;
         load?: import("../placed/loadLine").TaskLoad;
         files?: TaskFiles;
+        stops?: import("../tasks/taskStops").TaskStopsCommand;
       },
     ) => TaskShell;
   };
+  /**
+   * Each task's registered stops (docs/leftover-programs.md): every crewmate
+   * on this Mac with a task channel gets `infinitary-stops-axi`. Absent, none does.
+   */
+  stops?: { forTask: (taskId: string) => import("../tasks/taskStops").TaskStopsCommand };
   /**
    * The files on the captain's other computers (docs/files.md): every
    * crewmate reads them through `infinitary-files-axi`, the home answering

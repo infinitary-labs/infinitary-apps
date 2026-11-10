@@ -80,6 +80,12 @@ export type PlacedCopiesOptions = {
   broadcastEvent: (event: FmEvent) => void;
   now: () => number;
   log: (line: string) => void;
+  /**
+   * Closes the task's conversation there for good, with what the home knows
+   * of it and its report noted on the task's timeline
+   * (`PlacedSessions.closeThere`); a move names its own order.
+   */
+  closeThere: (deviceId: string, taskId: string, orderId?: string) => Promise<unknown>;
 };
 
 /** The most commits the home names as ones it has when it asks for a bundle. */
@@ -462,9 +468,7 @@ export class PlacedCopies {
       const move = this.options.tasks.get(taskId)?.shape?.computer_move;
       if (move && (move.from === deviceId || move.to === deviceId)) return;
       try {
-        await this.ask(deviceId, "inf:session:close", [
-          { orderId: `close:${taskId}`, task: taskId },
-        ]);
+        await this.options.closeThere(deviceId, taskId);
         const status = await this.ask(deviceId, "inf:working-copy:status", [{ task: taskId }]);
         if (status.present && !(await this.retireLeftoverCopy(deviceId, taskId, status.origin)))
           return;
@@ -601,9 +605,7 @@ export class PlacedCopies {
     return this.serial(taskId, async () => {
       if (!this.options.devices.inReach(deviceId))
         throw new Error(`${this.options.deviceName(deviceId)} is out of reach.`);
-      await this.ask(deviceId, "inf:session:close", [
-        { orderId: `move-close:${taskId}:${this.options.now()}`, task: taskId },
-      ]);
+      await this.options.closeThere(deviceId, taskId, `move-close:${taskId}:${this.options.now()}`);
       const status = await this.ask(deviceId, "inf:working-copy:status", [{ task: taskId }]);
       if (status.present) {
         const stamp = this.options.now();

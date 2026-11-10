@@ -17,7 +17,7 @@ import { CoreEventBus } from "../../src/core/events";
 import { joinHome } from "../../src/core/helper/join";
 import { PlacedTasks } from "../../src/core/helper/placedTasks";
 import { type HelperRun, startHelper } from "../../src/core/helper/run";
-import { SessionHost } from "../../src/core/helper/sessionHost";
+import { SessionHost, type SessionHostOptions } from "../../src/core/helper/sessionHost";
 import type { WorkingCopies } from "../../src/core/helper/workingCopies";
 import type { MediaProbe, TypefaceProbe } from "../../src/core/pi/cardImages";
 import { createPiSessionFactory } from "../../src/core/pi/sessionFactory";
@@ -303,6 +303,8 @@ export async function placed(
     toolSignal?: AbortSignal;
     /** Tools of the test's own, in place of the crewmate's; the spec names them too. */
     tools?: readonly CrewmateTool[];
+    /** The close order's sweep of what a task left running (docs/leftover-programs.md). */
+    leftovers?: SessionHostOptions["leftovers"];
   } = {},
 ) {
   const home = standInHome();
@@ -355,6 +357,7 @@ export async function placed(
         host = new SessionHost({
           tasks: new PlacedTasks(dir, copies?.worktreesDir),
           ...(copies ? { copies } : {}),
+          ...(options.leftovers ? { leftovers: options.leftovers } : {}),
           ask,
           factories: {
             pi: options.toolSignal

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { COMPLETION_CARD_HEADINGS } from "@shared/cardHeadings";
 import { HERE, HOME } from "@shared/deviceNames";
 import { FILES_COMMAND } from "@shared/files";
+import { STOPS_COMMAND } from "@shared/leftoverPrograms";
 import { opensPullRequest, type RepoDelivery } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
@@ -249,6 +250,8 @@ export function buildCrewmateSystemPrompt(
   runbookText?: string,
   /** The Secrets command it was granted: requests here, or the catalog alone on another computer. */
   secrets?: "use" | "list",
+  /** Its shell has `infinitary-stops-axi` (docs/leftover-programs.md). */
+  stops?: boolean,
 ): string {
   const full = `You are a crewmate: a background worker aboard Infinitary, working for the first mate, the captain's calm desktop first officer.
 Work on exactly one task in your isolated git worktree, your working directory. Changes there are yours to commit; nothing outside it is your concern. The one exception is a task on the personal workspace: there you build in place in the workspace its brief names; the host commits your changes after each turn; your completion is a note showing what you built, then your report. An answer task ships nothing: no commit, push, pull request or merge card; the card is the deliverable and the captain's choice on it closes the task, unless its brief names a step whose report the next step builds on.
@@ -294,6 +297,7 @@ The user sees cards and their threads, never a chat of your own. Follow emit_car
     ...(browser ? [CREWMATE_BROWSER_LINE] : []),
     ...(integrations ? [CREWMATE_INTEGRATIONS_LINE] : []),
     ...(load ? [CREWMATE_LOAD_LINE] : []),
+    ...(stops ? [CREWMATE_STOPS_LINE] : []),
     ...(secrets === "use" ? [CREWMATE_SECRETS_LINE] : []),
     ...(secrets === "list" ? [CREWMATE_SECRETS_CATALOG_LINE] : []),
   ].join("\n\n");
@@ -313,6 +317,15 @@ export const CREWMATE_BROWSER_LINE = crewmateBrowserLine();
 /** The caller judges demand; the host only keeps the declared line and live facts. */
 export const CREWMATE_LOAD_LINE =
   "For a heavy run, such as a build or check that starts many processes at once, use `infinitary-load-axi run --processors <number> --memory-mib <number> -- <program> [arguments]`. Declare the whole run's processor and memory needs yourself, including work it starts outside its process tree; the app does not guess. The command waits in this computer's line and its task shows that wait. When your shell stops a command after a time limit, give a heavy run the longest limit it allows, because its wait in this computer's line counts against that limit. After verified launch and a complete later processor reading, further starts use measured processor load instead of that processor reservation. Memory growth stays reserved until the group exits; the app never kills, pauses or slows running work for load. Keep any external work inside the wrapped run's lifetime. A run that never asked remains visible, not contained. The bare command reads this task's declared runs.";
+
+/**
+ * The served words on what a task leaves running (docs/leftover-programs.md,
+ * INF-3447's approved plan): register a stop in the same command that
+ * starts anything that outlives it, keep its files in the temporary folder
+ * where the tool allows, delete what the task created and only stop what
+ * it borrowed, and never leave cleanup for after the captain's click.
+ */
+export const CREWMATE_STOPS_LINE = `Anything you start that outlives the command that started it - a virtual machine, a simulator, a container, a server or a background program - is yours to stop. In the same command that starts it, register how to stop it with \`${STOPS_COMMAND} add --label "<what it stops>" '<command that stops it>'\`; when the task closes, the app runs each stop you registered, newest first, then ends any program still holding your working copy or temporary folder. A stop deletes what this task created, such as a machine or simulator it made, and only stops what it borrowed. Keep a machine's disks, process-number files and logs in your temporary folder where the tool allows. Never leave cleanup for after the captain's click: a merge, an answer or a discard closes the task, and you get no turn after it. Before you wait on the captain, stop what a likely rework will not need, run its stop yourself and drop it with \`${STOPS_COMMAND} drop <id>\`. The bare command lists your stops.`;
 
 /** How the Firstmate's prompt names who it is; a scripted stand-in tells its requests by it. */
 export const FIRSTMATE_PERSONA = "You are the first mate aboard Infinitary";

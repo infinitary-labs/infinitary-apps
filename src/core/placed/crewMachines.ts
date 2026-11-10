@@ -176,6 +176,12 @@ export type CrewMachines = {
    * cannot tell.
    */
   takesFiles?(machine: string): boolean;
+  /**
+   * Whether the computer gives its crewmates `infinitary-stops-axi` and runs
+   * their stops at the close (docs/leftover-programs.md); false while the home
+   * cannot tell.
+   */
+  takesStops?(machine: string): boolean;
   takesChangePresentations?(machine: string): boolean;
   /** The working copy's dependencies, installed there; a failure is an outcome. */
   install(machine: string, taskId: string): Promise<DependencyInstall>;

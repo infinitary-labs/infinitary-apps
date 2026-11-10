@@ -14,6 +14,7 @@ import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { createPiSessionFactory } from "../pi/sessionFactory";
 import { heldAgainst } from "../quota/spentAllowance";
 import type { SessionBinding } from "../session/session";
+import { placedLeftovers } from "../tasks/leftoverPrograms";
 import type { ComputerAccounts } from "./accounts";
 import { ComputerBrowsers, type ComputerBrowsersOptions } from "./browsers";
 import { computerForgesDir } from "./forges";
@@ -238,6 +239,7 @@ export async function startConversations(options: {
           keysDir: join(options.dataDir, "task-channel"),
           ...(options.load ? { load: options.load } : {}),
           evidenceDir: (task) => tasks.folders(task).evidence,
+          taskFolder: (task) => tasks.folders(task).root,
           workingCopy: (task) => tasks.folders(task).work,
           // A command that reached this computer keeps its shell waiting for its answer.
           answering: (shell) => jobs.answering(shell),
@@ -303,6 +305,9 @@ export async function startConversations(options: {
         }
       : {}),
     claudeConfigDir: () => defaultClaudeConfigDir(),
+    // What a closed task left running here stops before its folders go
+    // (docs/leftover-programs.md, "On a computer that runs work").
+    leftovers: placedLeftovers(tasks),
     log,
   });
   const held = host;

@@ -1,7 +1,7 @@
 import { cpSync, existsSync, mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import type { PlacedEventRecord, PlacedSpec } from "@shared/work";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { scriptedClaudeWorld } from "../../../tests/helpers/scriptedClaudeContract";
 import {
@@ -446,6 +446,33 @@ describe("a conversation held on a computer that runs work", () => {
     await expect(at.open()).rejects.toThrow("opens no more");
     const roster = await at.order("inf:session:roster", []);
     expect(roster.tasks).toEqual([expect.objectContaining({ task: TASK, closed: true })]);
+  });
+
+  // INF-3447's piece 1 and its review: the close order runs the sweep of what
+  // the task left running there once, with the start time and the carrying
+  // task the home sent, and answers its report for the home's timeline.
+  it("sweeps what a closed task left running there once, with the home's start time, and answers the report", async () => {
+    const report = {
+      stops: [{ label: "scratch machine", outcome: "ran" as const }],
+      programs: [{ pid: 4242, name: "qemu-system-aarch64", outcome: "ended" as const }],
+      holders: "checked" as const,
+    };
+    const leftovers = vi.fn(async () => report);
+    const at = await placed({ leftovers });
+    await at.open();
+    const close = {
+      orderId: "close:1",
+      task: TASK,
+      startedAt: 1_794_000_000_000,
+      carriedTo: { task: "t-next", key: "INF-9" },
+    };
+    expect(await at.order("inf:session:close", [close])).toEqual({ ok: true, leftovers: report });
+    expect(leftovers).toHaveBeenCalledWith(TASK, close);
+    // Asked again, the close is already done there and sweeps nothing more.
+    expect(await at.order("inf:session:close", [{ ...close, orderId: "close:2" }])).toEqual({
+      ok: true,
+    });
+    expect(leftovers).toHaveBeenCalledTimes(1);
   });
 
   it("removes a closed conversation's folder for the home only once its working copy is gone, and answers the same when asked again", async () => {

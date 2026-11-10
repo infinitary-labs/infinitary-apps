@@ -137,9 +137,9 @@ export class CrewToolHooks {
     machine: string,
   ): Pick<
     CrewmateSpec,
-    "browser" | "shell" | "integrations" | "load" | "files" | "secrets" | "secretsCatalog"
+    "browser" | "shell" | "integrations" | "load" | "files" | "secrets" | "secretsCatalog" | "stops"
   > {
-    const { browsers, taskCommands, integrations, machines, load, files, secrets } =
+    const { browsers, taskCommands, integrations, machines, load, files, secrets, stops } =
       this.core.options;
     const hasLoad = load?.available(machine) === true;
     if (machine !== LOCAL_MACHINE_ID) {
@@ -149,6 +149,8 @@ export class CrewToolHooks {
       // for the captain and answers its integrations' calls and its files'.
       return {
         ...(hasLoad ? { load: true } : {}),
+        // Its stops are kept and run there, beside its shell (docs/leftover-programs.md).
+        ...(machines?.takesStops?.(machine) ? { stops: true } : {}),
         ...(browsers && machines?.keepsBrowsers?.(machine)
           ? { browser: browsers.forTask(task.id) }
           : {}),
@@ -166,9 +168,12 @@ export class CrewToolHooks {
     const reach = integrations?.forTask(task.id);
     const otherFiles = files?.forTask(task.id);
     const secretRequests = secrets?.forTask(task.id);
-    if (!browser && !reach && !hasLoad && !otherFiles && !secretRequests) return {};
+    // Every crewmate here registers how to stop what it leaves running.
+    const taskStops = stops?.forTask(task.id);
+    if (!browser && !reach && !hasLoad && !otherFiles && !secretRequests && !taskStops) return {};
     return {
       ...(hasLoad ? { load: true } : {}),
+      ...(taskStops ? { stops: true } : {}),
       ...(browser ? { browser } : {}),
       ...(reach ? { integrations: reach } : {}),
       ...(otherFiles ? { files: otherFiles } : {}),
@@ -179,6 +184,7 @@ export class CrewToolHooks {
         ...(reach ? { integrations: reach } : {}),
         ...(otherFiles ? { files: otherFiles } : {}),
         ...(secretRequests ? { secrets: secretRequests } : {}),
+        ...(taskStops ? { stops: taskStops } : {}),
       }),
     };
   }

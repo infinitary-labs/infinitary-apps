@@ -418,6 +418,7 @@ export class CrewSupervisor {
         this.starts.clientJobStart(taskId) !== undefined,
       announceReach: (taskId) => this.steer.announceReach(taskId),
       ...(options.killJobs ? { killJobs: options.killJobs } : {}),
+      ...(options.leftovers ? { leftovers: options.leftovers } : {}),
       ...(options.machines ? { placed: options.machines } : {}),
       endLiveTask: (taskId) => options.personal?.endLiveTask(taskId),
       ...(options.mergePullRequest ? { mergePullRequest: options.mergePullRequest } : {}),

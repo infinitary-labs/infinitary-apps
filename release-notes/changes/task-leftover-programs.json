@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "task-leftover-programs",
+      "kind": "feature",
+      "area": "tasks",
+      "title": "A finished task stops the machines and programs it left running",
+      "body": "When a task closes, Infinitary now stops what its crewmate started that would otherwise keep running, such as a test machine, a simulator or a background server. A crewmate records how to stop each one as it starts it, and the app also ends any program still using the task's own folders. The task's record names what was stopped and anything that would not stop. This works on this computer and on the computers that run your work.",
+      "noPicture": "This happens when a task closes, in the background, and shows only as one line in the task's record.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

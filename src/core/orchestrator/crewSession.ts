@@ -79,6 +79,8 @@ export type CrewmateSpec = CrewmateToolDelegate & {
   shell?: TaskShell;
   /** This computer supports the declared heavy-run command. */
   load?: boolean;
+  /** Its shell has `infinitary-stops-axi`, here or on the computer it runs on (docs/leftover-programs.md). */
+  stops?: boolean;
   /** A local protected owner granted the closed Secrets command; not secret authority. */
   secrets?: true;
   /**
@@ -247,6 +249,7 @@ export function crewmateSessionSpec(
         : spec.secretsCatalog !== undefined && spec.machineId !== LOCAL_MACHINE_ID
           ? "list"
           : undefined,
+      spec.stops === true && (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID),
     ) +
     (spec.machineId === LOCAL_MACHINE_ID
       ? `\n${sourceContext(spec.source, spec.source && sourceIdentity(spec.source))}`
@@ -283,6 +286,7 @@ export function crewmateSessionSpec(
     tools,
     ...(spec.shell ? { shell: spec.shell } : {}),
     ...(spec.load ? { load: true } : {}),
+    ...(spec.stops ? { stops: true } : {}),
     callbacks: spec,
     shape: {
       turns: "rolling",

@@ -9,6 +9,7 @@ import type {
 import type { FilesOp, FilesReply } from "./fileCommands";
 import type { LoadOp } from "./loadCommands";
 import type { SecretsOp, SecretsReply } from "./secretsCommands";
+import type { StopsOp, StopsReply } from "./stopCommands";
 
 /**
  * What passes between the app and the command process that runs one
@@ -114,14 +115,14 @@ export type AxiCallMessage = {
   id: number;
   /** The command as the crewmate named it (`click`), for the words of a kept answer. */
   command: string;
-  op: BrowserOp | IntegrationOp | InboxOp | SecretsOp | LoadOp | FilesOp;
+  op: BrowserOp | IntegrationOp | InboxOp | SecretsOp | LoadOp | FilesOp | StopsOp;
   input: unknown;
 };
 
 export type AxiResultMessage = {
   type: "result";
   id: number;
-  reply: BrowserReply | IntegrationReply | SecretsReply | FilesReply;
+  reply: BrowserReply | IntegrationReply | SecretsReply | FilesReply | StopsReply;
 };
 
 export type AxiDoneMessage = { type: "done"; stdout: string; exitCode: number };

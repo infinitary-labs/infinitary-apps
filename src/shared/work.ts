@@ -16,6 +16,7 @@ import { crewResponseSchema } from "./crewResponses";
 import { crewSpeedSchema, speedSelectionSchema } from "./crewSpeed";
 import { cutOffSchema, fmEventSchema } from "./events";
 import { filesAnswerSchema, filesReadInputSchema } from "./files";
+import { closeOrder } from "./leftoverPrograms";
 import { keptValidationInputSchema } from "./liveValidation";
 import {
   PLACEMENT_FACTS_ORDER,
@@ -235,6 +236,7 @@ export const placedSpecSchema = z.object({
   files: z.boolean().optional(),
   /** The home grants this computer's load command (docs/heavy-runs.md). */
   load: z.boolean().optional(),
+  stops: z.boolean().optional(), // infinitary-stops-axi there (docs/leftover-programs.md)
   /**
    * The task's crewmate lists the captain's secrets through
    * `infinitary-secrets-axi` in its shell there, each list asked of the home
@@ -1312,11 +1314,11 @@ export const workOrders = {
     request: ordered({}),
     response: doneSchema,
   },
-  /** Ends the conversation for good: the task's record closed at home. */
+  /** Ends the conversation for good; its stops run there first (`closeOrder`, docs/leftover-programs.md). */
   "inf:session:close": {
     effect: "change",
-    request: ordered({}),
-    response: doneSchema,
+    request: ordered(closeOrder.request),
+    response: closeOrder.response,
   },
   /** Removes leftovers only, after the home checks age and live dependencies. */
   "inf:session:clean-files": {

@@ -137,8 +137,10 @@ import { type UsageInput, UsageStore } from "./storage/usageStore";
 import { ClosedTaskFiles } from "./tasks/closedTaskFiles";
 import { CrewActions } from "./tasks/crewActions";
 import { CrewLiveText, CrewTranscripts } from "./tasks/crewTranscript";
+import { LeftoverPrograms } from "./tasks/leftoverPrograms";
 import { TaskProtocol } from "./tasks/taskProtocol";
 import { TaskService } from "./tasks/taskService";
+import { taskStopsCommand } from "./tasks/taskStops";
 import { TaskTempFiles } from "./tasks/taskTemp";
 import { TaskTimeline } from "./tasks/taskTimeline";
 import { WorkPresentation } from "./tasks/workPresentation";
@@ -944,6 +946,13 @@ export async function createServices(
     forgeSignIns: () => forgeSignIns.view().signIns,
     knownForgeHosts: () => forgeSignIns.knownHosts(),
   });
+  // What a closed task left running on this Mac stops at its close, before
+  // its working copy and temporary folder go (docs/leftover-programs.md).
+  const leftoverPrograms = new LeftoverPrograms({
+    crewmatesDir: paths.crewmatesDir,
+    tasks,
+    log: (line) => console.warn(`[leftovers] ${line}`),
+  });
   const supervisor: CrewSupervisor = new CrewSupervisor({
     automaticPlacement,
     // A program's script runs in a process of its own; its ask() is one typed read.
@@ -1056,6 +1065,7 @@ export async function createServices(
     readMainChecks: (repoId) => changeDelivery.checks.readDefaultBranchChecks(repoId),
     readRunWatch: (taskId, runId) => workflowEvidence.readWatched(taskId, runId),
     killJobs: (taskId) => jobs.killForOwner(taskId),
+    leftovers: leftoverPrograms,
     personal: homePersonal.live,
     ...(host.mediaProbe ? { probeMedia: host.mediaProbe } : {}),
     ...(host.typefaceProbe ? { probeTypeface: host.typefaceProbe } : {}),
@@ -1063,6 +1073,11 @@ export async function createServices(
     ...(taskCommands
       ? {
           taskCommands,
+          // Every crewmate here registers how to stop what it leaves running.
+          stops: {
+            forTask: (taskId: string) =>
+              taskStopsCommand(join(paths.crewmatesDir, taskId), ticker.now),
+          },
           load: {
             forTask: (taskId: string) => loadLine.forTask(taskId),
             available: (machine: string) =>
@@ -1364,6 +1379,7 @@ export async function createServices(
       }
       return { status: "absent", bytes: 0 };
     },
+    leftoversSettled: (taskId) => leftoverPrograms.settled(taskId),
     deleteInBackground: (dir) => workspace.deleteInBackground(dir),
     now: ticker.now,
   });

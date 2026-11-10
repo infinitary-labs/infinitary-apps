@@ -436,15 +436,19 @@ describe("a closed task's files on a computer that runs work", () => {
     const files = await home.placed.removeClosedTaskFiles(closed);
     expect(files.removedFiles.length).toBeGreaterThan(0);
     expect(existsSync(join(folders.evidence, "proof.txt"))).toBe(false);
+    // The close carries when the task started, so a program running there
+    // before it is left alone (docs/leftover-programs.md).
+    const closeOrder = { orderId: "close:t-clean", task: "t-clean", startedAt: closed.startedAt };
+    expect(closed.startedAt).toEqual(expect.any(Number));
     expect(
       asked.mock.calls.map(([, channel, request]) => [channel, (request as unknown[])[0]]),
     ).toEqual([
-      ["inf:session:close", { orderId: "close:t-clean", task: "t-clean" }],
+      ["inf:session:close", closeOrder],
       [
         "inf:session:clean-temp",
         { orderId: `clean-temp:t-clean:${closed.closedAt}`, task: "t-clean" },
       ],
-      ["inf:session:close", { orderId: "close:t-clean", task: "t-clean" }],
+      ["inf:session:close", closeOrder],
       [
         "inf:session:clean-files",
         { orderId: `clean-files:t-clean:${closed.closedAt}`, task: "t-clean" },
@@ -462,5 +466,50 @@ describe("a closed task's files on a computer that runs work", () => {
       "This task's computer is out of reach.",
     );
     expect(asked).not.toHaveBeenCalled();
+  });
+
+  // The re-review of INF-3447's piece 1: the close before a moved task's
+  // working copy there is retired is the same close order as any other -
+  // it carries when the task started and its report goes on the timeline
+  // once - so a program running there before the task started is left
+  // alone (docs/leftover-programs.md, "On a computer that runs work").
+  it("closes a moved task's conversation there with its start, and notes what the close stopped", async () => {
+    const at = await world();
+    const home = at.home();
+    model([{ text: "Started on the footer." }]);
+    await at.start("t-moved");
+    await expect.poll(() => home.tasks.get("t-moved")?.activity).toBe("idle");
+    const startedAt = home.tasks.get("t-moved")?.startedAt;
+    expect(startedAt).toEqual(expect.any(Number));
+    // That computer's sweep, as its answer carries it (the sweep itself is
+    // leftoverPrograms.integration.test.ts's).
+    const report = {
+      stops: [{ label: "scratch machine", outcome: "ran" as const }],
+      programs: [],
+      holders: "checked" as const,
+    };
+    const ask = home.devices.ask.bind(home.devices);
+    const asked = vi
+      .spyOn(home.devices, "ask")
+      .mockImplementation(async (device, channel, args) => {
+        const answer = await ask(device, channel, args);
+        return channel === "inf:session:close"
+          ? { ...(answer as object), leftovers: report }
+          : answer;
+      });
+
+    await home.placed.retireMoved(at.deviceId, "t-moved");
+    const closes = asked.mock.calls
+      .filter(([, channel]) => channel === "inf:session:close")
+      .map(([, , request]) => (request as unknown[])[0]);
+    expect(closes).toEqual([
+      { orderId: expect.stringMatching(/^move-close:t-moved:/), task: "t-moved", startedAt },
+    ]);
+    expect(
+      home.tasks
+        .timeline("t-moved")
+        .filter((event) => event.text.startsWith("Leftovers at close:"))
+        .map((event) => event.text),
+    ).toEqual(['Leftovers at close: stop "scratch machine" ran.']);
   });
 });

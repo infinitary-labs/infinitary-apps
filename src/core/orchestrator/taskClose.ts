@@ -379,51 +379,55 @@ export class TaskClosing {
               ...(sentence ? { closingSentence: sentence } : {}),
             }
           : undefined;
-      this.closeAndPurge([taskId], () => {
-        // A standing approval ends with its task: spent by a merge, revoked
-        // by any other close (FI3-304), in the close's own transaction.
-        // Approvals of its other pull requests waiting behind it end too (INF-2746).
-        const standing = standingAuthorization(record.delivery);
-        const ended = record.delivery?.mergeAuthorization;
-        if (standing) {
-          this.host.tasks.delivery.recordPermissionRecords(taskId, {
-            mergeAuthorization: {
-              ...endedAuthorization(standing, {
-                status: close.reason === "merged" ? "consumed" : "revoked",
-                reason: `the task closed ${close.reason}`,
-                endedAt: this.host.now(),
-                generation: standing.generation + 1,
-              }),
-              queued: undefined,
-            },
+      this.closeAndPurge(
+        [taskId],
+        () => {
+          // A standing approval ends with its task: spent by a merge, revoked
+          // by any other close (FI3-304), in the close's own transaction.
+          // Approvals of its other pull requests waiting behind it end too (INF-2746).
+          const standing = standingAuthorization(record.delivery);
+          const ended = record.delivery?.mergeAuthorization;
+          if (standing) {
+            this.host.tasks.delivery.recordPermissionRecords(taskId, {
+              mergeAuthorization: {
+                ...endedAuthorization(standing, {
+                  status: close.reason === "merged" ? "consumed" : "revoked",
+                  reason: `the task closed ${close.reason}`,
+                  endedAt: this.host.now(),
+                  generation: standing.generation + 1,
+                }),
+                queued: undefined,
+              },
+            });
+          } else if (ended?.queued?.length) {
+            this.host.tasks.delivery.recordPermissionRecords(taskId, {
+              mergeAuthorization: { ...ended, queued: undefined },
+            });
+          }
+          this.host.tasks.close(taskId, {
+            status: close.status,
+            reason: close.reason,
+            actor: close.actor,
+            ...(close.text ? { text: close.text } : {}),
+            ...(close.delivery ? { delivery: close.delivery } : {}),
+            ...(close.feed === false ? { feed: false } : {}),
+            // The captain's choice on an answer's card is a fact of the
+            // close, so work built on the answer can be told what was chosen;
+            // so is the first mate's sentence on a close of its own.
+            ...(data ? { data } : {}),
           });
-        } else if (ended?.queued?.length) {
-          this.host.tasks.delivery.recordPermissionRecords(taskId, {
-            mergeAuthorization: { ...ended, queued: undefined },
-          });
-        }
-        this.host.tasks.close(taskId, {
-          status: close.status,
-          reason: close.reason,
-          actor: close.actor,
-          ...(close.text ? { text: close.text } : {}),
-          ...(close.delivery ? { delivery: close.delivery } : {}),
-          ...(close.feed === false ? { feed: false } : {}),
-          // The captain's choice on an answer's card is a fact of the
-          // close, so work built on the answer can be told what was chosen;
-          // so is the first mate's sentence on a close of its own.
-          ...(data ? { data } : {}),
-        });
-        if (close.answerHandoff) {
-          answerHandoffQueued =
-            this.host.inbox.enqueueWake(
-              FIRSTMATE_RECIPIENT,
-              { facts: { kind: "answer-closed", handoff: close.answerHandoff } },
-              "agent",
-              taskId,
-            ) !== null;
-        }
-      });
+          if (close.answerHandoff) {
+            answerHandoffQueued =
+              this.host.inbox.enqueueWake(
+                FIRSTMATE_RECIPIENT,
+                { facts: { kind: "answer-closed", handoff: close.answerHandoff } },
+                "agent",
+                taskId,
+              ) !== null;
+          }
+        },
+        stopping,
+      );
     } else {
       this.host.inbox.purgeTask(taskId);
     }
@@ -448,6 +452,8 @@ export class TaskClosing {
     this.host.asksMoved?.();
     this.host.cards.scheduleBroadcast();
     this.host.broadcastCrewCounts();
+    // Its stops run and the programs holding its folders end before they go.
+    await this.host.leftovers?.settled(taskId);
     if (record?.worktreeDir && record.workspaceState !== "removed") {
       // Every close keeps a copy whose work cannot be saved (INF-3169's one
       // drop); only dropping the closed task again removes it.
@@ -571,6 +577,8 @@ export class TaskClosing {
     if (!record?.worktreeDir || record.workspaceState !== "present") return "none";
     if (record.status !== "done" && record.status !== "dropped") return "none";
     if (this.host.runtimeState(taskId) !== undefined) return "none";
+    // A close's sweep of what the task left running goes first (docs/leftover-programs.md).
+    await this.host.leftovers?.settled(taskId);
     try {
       return await this.retireWorktreeOf(record, options);
     } catch (caught) {
@@ -645,16 +653,21 @@ export class TaskClosing {
    * process is not a row - and a job that still exits later becomes a feed
    * line, never a wake (deliverJobResult).
    */
-  closeAndPurge<T>(taskIds: string[], close: () => T): T {
+  closeAndPurge<T>(taskIds: string[], close: () => T, stopping?: Promise<unknown>): T {
     for (const id of taskIds) this.host.killJobs?.(id);
     // An earlier version put a note up after a merge click (INF-1275,
     // retired by INF-2913). It carries no task, so the card retire leaves
     // it: one still up from that version ends with its task here.
     for (const id of taskIds)
       this.host.cards.hostCards.withdrawHostCard(mergePendingCardId(id), "task-closed");
-    return this.host.inbox.transaction(() => {
+    const closed = this.host.inbox.transaction(() => {
       for (const id of taskIds) this.host.inbox.purgeTask(id);
       return close();
     });
+    // What each closed task left running stops once its crewmate has: begun
+    // as the record closes, so its working copy's retirement and its
+    // temporary folder's removal wait for it (docs/leftover-programs.md).
+    for (const id of taskIds) this.host.leftovers?.begin(id, stopping);
+    return closed;
   }
 }

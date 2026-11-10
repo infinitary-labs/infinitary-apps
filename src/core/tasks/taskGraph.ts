@@ -464,6 +464,11 @@ export class TaskGraph {
     return this.writer.events.escalationRefs(id, "escalated_from");
   }
 
+  /** The attempts a stronger-model move retried this task as, by id: the other side of `escalatedFrom`. */
+  escalatedTo(id: string): string[] {
+    return this.writer.events.escalationRefs(id, "escalated_to");
+  }
+
   /** Predecessors are work to recover, never a spec or a routing discount. */
   replacedPredecessors(id: string): TaskRecord[] {
     return this.writer.links

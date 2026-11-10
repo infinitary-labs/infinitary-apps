@@ -10,6 +10,7 @@ import { COMPUTER, HERE } from "@shared/deviceNames";
 import { awayWord, type ComputerReach } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import type { InvokeRequest, InvokeResponse, WorkInvokeChannel } from "@shared/ipc";
+import { leftoversOf } from "@shared/leftoverPrograms";
 import type { ComputerSignIns, signInPlace } from "@shared/signIns";
 import {
   type PlacedEventRecord,
@@ -23,6 +24,7 @@ import {
   workOrders,
 } from "@shared/work";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
+import { contractChange, listsChange } from "../connection/contractChanges";
 import {
   dueIn,
   dueRule,
@@ -45,6 +47,7 @@ import type {
 } from "../session/session";
 import { sameNames } from "../session/workRecovery";
 import type { TaskRecord, TaskRetentionFields } from "../storage/taskRecords";
+import { noteLeftovers, openSuccessor } from "../tasks/leftoverPrograms";
 import { TaskService } from "../tasks/taskService";
 import type { DependencyInstall } from "../workspace/workspaceService";
 import type { AnsweredWait, CrewMachines, PlacedBrowserSink, PlacedHost } from "./crewMachines";
@@ -57,6 +60,9 @@ import { NO_PLACED_TASK, type PlacedWork } from "./placedWork";
 import { RecordCopy } from "./recordCopy";
 import { sendSourceFile } from "./sourceFiles";
 import type { WorkDevices } from "./workDevices";
+
+/** A computer that runs its tasks' stops at the close (`task-stops.md`, docs/leftover-programs.md). */
+const TASK_STOPS = contractChange("task-stops");
 
 /**
  * The home's side of a crewmate's conversation held on a computer that runs
@@ -262,6 +268,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       broadcastEvent: options.broadcastEvent,
       now: options.now,
       log: this.log,
+      closeThere: (deviceId, task, orderId) => this.closeThere(deviceId, task, orderId),
     });
     this.accounts = new PlacedAccounts({
       ...options,
@@ -355,6 +362,19 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
    */
   takesFiles(machine: string): boolean {
     return this.takesIntegrations(machine) && this.answersFiles(machine);
+  }
+
+  /**
+   * The stops command rides the computer's task channel too, and the close
+   * order there runs the stops and answers what it did (`task-stops.md`).
+   */
+  takesStops(machine: string): boolean {
+    return this.keepsBrowsers(machine) && this.listsStops(machine);
+  }
+
+  /** Whether the computer's close order runs the task's stops and answers its report. */
+  private listsStops(machine: string): boolean {
+    return listsChange(this.options.devices.version(machine)?.changes, TASK_STOPS);
   }
 
   /** Whether the computer answers the file orders, so its files can be read from here. */
@@ -721,6 +741,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         : {}),
       tools: spec.tools.map((tool) => tool.name),
       ...(spec.load ? { load: true } : {}),
+      ...(spec.stops && this.takesStops(deviceId) ? { stops: true } : {}),
       // Its own browser, there beside its shell (docs/task-browser.md, "On another computer").
       ...(spec.callbacks?.browser && device.roster.browsers ? { browser: true } : {}),
       // Its integrations, asked of this Mac (docs/integrations.md, "On a computer that runs work").
@@ -1338,11 +1359,55 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     );
   }
 
-  /** Closes the task's conversation there for good, under the one order id every close of it uses. */
-  private closeThere(deviceId: string, task: string): Promise<unknown> {
-    return this.options.devices.ask(deviceId, "inf:session:close", [
-      { orderId: `close:${task}`, task },
+  /**
+   * Closes the task's conversation there for good, under the one order id
+   * every close of it uses, or a move's own (`orderId`): every close order
+   * the home sends goes through here. A computer that lists `task-stops`
+   * runs the task's stops and ends the programs holding its folders there
+   * first, or hands its stops to the task on that computer that carries its
+   * work on, and its answer's report goes on the task's timeline once
+   * (docs/leftover-programs.md, "On a computer that runs work").
+   */
+  private async closeThere(
+    deviceId: string,
+    task: string,
+    orderId = `close:${task}`,
+  ): Promise<unknown> {
+    const stops = this.listsStops(deviceId);
+    const carrier = stops ? this.carrierThere(task, deviceId) : undefined;
+    const startedAt = stops ? this.options.tasks.get(task)?.startedAt : null;
+    const answer = await this.options.devices.ask(deviceId, "inf:session:close", [
+      {
+        orderId,
+        task,
+        ...(carrier ? { carriedTo: carrier } : {}),
+        ...(typeof startedAt === "number" ? { startedAt } : {}),
+      },
     ]);
+    const parsed = workOrders["inf:session:close"].response.safeParse(answer);
+    const report = parsed.success ? parsed.data.leftovers : undefined;
+    // An order asked again is answered as it was: its report is noted once.
+    const noted = `${deviceId}:${orderId}`;
+    if (report && this.options.tasks.get(task) && !this.leftoversNoted.has(noted)) {
+      this.leftoversNoted.add(noted);
+      const same = JSON.stringify(report);
+      const already = this.options.tasks
+        .timeline(task)
+        .some((event) => JSON.stringify(leftoversOf(event.data)) === same);
+      if (!already) noteLeftovers(this.options.tasks, task, report);
+    }
+    return answer;
+  }
+
+  /** Close orders whose report is already noted on their task's timeline in this run, by computer and order. */
+  private readonly leftoversNoted = new Set<string>();
+
+  /** The task carrying a closed task's work on, when it runs on that same computer. */
+  private carrierThere(task: string, deviceId: string): { task: string; key: string } | undefined {
+    const record = this.options.tasks.get(task);
+    const carrier = record ? openSuccessor(this.options.tasks, record) : undefined;
+    if (!carrier || carrier.deviceId !== deviceId) return undefined;
+    return { task: carrier.id, key: carrier.key || carrier.id };
   }
 
   /** Each roster entry's record, by task, read for its computer and close alone. */

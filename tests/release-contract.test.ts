@@ -454,6 +454,8 @@ describe("electron-builder configuration", () => {
       "infinitary-inbox-axi",
       // INF-1085's command ships even while its production grant remains unavailable.
       "infinitary-secrets-axi",
+      // INF-3447 piece 1's stops command, which registers how to stop what a task leaves running.
+      "infinitary-stops-axi",
       // Firstmate 3000's name for the command stays, for a crewmate told it before the rename.
       "fm-browser-axi",
     ]) {

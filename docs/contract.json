@@ -70948,6 +70948,9 @@
                     "load": {
                       "type": "boolean"
                     },
+                    "stops": {
+                      "type": "boolean"
+                    },
                     "secrets": {
                       "type": "boolean"
                     }
@@ -71418,6 +71421,29 @@
                 "task": {
                   "type": "string",
                   "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                },
+                "carriedTo": {
+                  "type": "object",
+                  "properties": {
+                    "task": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                    },
+                    "key": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "required": [
+                    "task",
+                    "key"
+                  ]
+                },
+                "startedAt": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
@@ -71435,6 +71461,95 @@
             "ok": {
               "type": "boolean",
               "const": true
+            },
+            "leftovers": {
+              "type": "object",
+              "properties": {
+                "stops": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                      },
+                      "outcome": {
+                        "type": "string",
+                        "enum": [
+                          "ran",
+                          "failed",
+                          "timed-out"
+                        ]
+                      },
+                      "exitCode": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "label",
+                      "outcome"
+                    ]
+                  }
+                },
+                "programs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "pid": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "name": {
+                        "type": "string",
+                        "maxLength": 64
+                      },
+                      "outcome": {
+                        "type": "string",
+                        "enum": [
+                          "ended",
+                          "killed",
+                          "gone",
+                          "survived"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "pid",
+                      "name",
+                      "outcome"
+                    ]
+                  }
+                },
+                "handedTo": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "handed": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "holders": {
+                  "type": "string",
+                  "enum": [
+                    "checked",
+                    "unsupported",
+                    "unreadable"
+                  ]
+                }
+              },
+              "required": [
+                "stops",
+                "programs",
+                "holders"
+              ]
             }
           },
           "required": [

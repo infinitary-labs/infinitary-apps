@@ -13,6 +13,7 @@ import type {
   IntegrationOp,
 } from "./protocol";
 import { type SecretsOp, secretsAxi } from "./secretsCommands";
+import { type StopsOp, stopsAxi } from "./stopCommands";
 
 /**
  * The command process's entry (docs/axi-commands.md, "The channel"): one
@@ -65,7 +66,7 @@ function parentPort(): Port {
 type Connection = {
   call: (
     command: string,
-    op: BrowserOp | IntegrationOp | InboxOp | SecretsOp | LoadOp | FilesOp,
+    op: BrowserOp | IntegrationOp | InboxOp | SecretsOp | LoadOp | FilesOp | StopsOp,
     input: unknown,
   ) => Promise<never>;
 };
@@ -81,6 +82,7 @@ const TOOLS: Record<
   "infinitary-inbox-axi": inboxAxi as never,
   "infinitary-load-axi": loadAxi as never,
   "infinitary-files-axi": filesAxi as never,
+  "infinitary-stops-axi": stopsAxi as never,
 };
 
 const port = parentPort();

@@ -23,6 +23,7 @@ import type { HostBrowserFrame, HostChildSpawner, HostTaskBrowser } from "../hos
 import type { TaskIntegrations } from "../integrations";
 import type { LoadLine } from "../placed/loadLine";
 import type { SecretsCatalog } from "../secrets/requests";
+import { taskStopsCommand } from "../tasks/taskStops";
 
 /**
  * The browsers of the tasks a computer that runs work holds
@@ -71,6 +72,8 @@ export type ComputerBrowsersOptions = {
   answering?: (shell: string) => void;
   /** Where a task's pictures go: its evidence folder here. */
   evidenceDir: (task: string) => string;
+  /** A task's own folder here, which keeps its registered stops (docs/leftover-programs.md). */
+  taskFolder?: (task: string) => string;
   /** The task's working copy here: the only folder its crewmate attaches a page's file from. */
   workingCopy?: (task: string) => string | undefined;
   /** Asked once, while the home is in reach, and never again (`HomeLink.invoke`). */
@@ -260,6 +263,7 @@ export class ComputerBrowsers {
       load?: boolean;
       files?: TaskFiles;
       secretsCatalog?: SecretsCatalog;
+      stops?: boolean;
     },
   ): { browser?: CrewmateBrowser; shell: TaskShell } {
     const browser = tools.browser ? this.browsers.forTask(task) : undefined;
@@ -269,6 +273,10 @@ export class ComputerBrowsers {
       ...(tools.integrations ? { integrations: tools.integrations } : {}),
       ...(tools.files ? { files: tools.files } : {}),
       ...(tools.secretsCatalog ? { secretsCatalog: tools.secretsCatalog } : {}),
+      // Its stops are kept in its folder here, beside its shell (docs/leftover-programs.md).
+      ...(tools.stops && this.options.taskFolder
+        ? { stops: taskStopsCommand(this.options.taskFolder(task), Date.now) }
+        : {}),
     });
     return { ...(browser ? { browser } : {}), shell };
   }

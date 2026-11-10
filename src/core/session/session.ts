@@ -218,6 +218,8 @@ export type SessionSpec = {
   shell?: TaskShell;
   /** The role has declared heavy runs on its execution computer. */
   load?: boolean;
+  /** The role's shell keeps its task's stops on its execution computer (docs/leftover-programs.md). */
+  stops?: boolean;
   /**
    * The host's callbacks the role's crewmate tools were bound to. A factory
    * whose conversation runs on another computer (src/core/placed/) binds the

@@ -192,6 +192,7 @@ export type SessionHostOptions = {
         load?: boolean;
         files?: TaskFiles;
         secretsCatalog?: SecretsCatalog;
+        stops?: boolean;
       },
     ) => { browser?: CrewmateBrowser; shell: TaskShell };
     close: (task: string) => void;
@@ -207,6 +208,15 @@ export type SessionHostOptions = {
    * (`inf:session:delete-outside`). Absent, only its record is read.
    */
   claudeConfigDir?: () => string;
+  /**
+   * The close's sweep of what the task left running here (docs/leftover-programs.md):
+   * its stops run, or go to the task that carries its work on here, and the
+   * programs holding its folders end. Absent, a close stops nothing.
+   */
+  leftovers?: (
+    task: string,
+    close: { carriedTo?: { task: string; key: string }; startedAt?: number },
+  ) => Promise<import("@shared/leftoverPrograms").LeftoversReport>;
   now?: () => number;
   log?: (line: string) => void;
 };
@@ -285,6 +295,7 @@ type Held = {
         browser: boolean;
         integrations: boolean;
         load: boolean;
+        stops: boolean;
         files: boolean;
         secrets: boolean;
       }
@@ -593,10 +604,25 @@ export class SessionHost {
         if (!this.busy(held)) await held.session.detach();
         answer = { ok: true };
         break;
-      case "inf:session:close":
+      case "inf:session:close": {
+        const [close] = request as WorkOrderRequest<"inf:session:close">;
+        const wasClosed = held.state.closed;
         await this.closeTask(held);
-        answer = { ok: true };
+        // Its stops run, and the programs holding its folders end, once its
+        // conversation and commands are gone and before its folders go
+        // (docs/leftover-programs.md, "On a computer that runs work").
+        const leftovers =
+          !wasClosed && this.options.leftovers
+            ? await this.options.leftovers(held.task, close).catch((error: unknown) => {
+                this.options.log?.(
+                  `could not stop what ${held.task} left running: ${error instanceof Error ? error.message : String(error)}`,
+                );
+                return undefined;
+              })
+            : undefined;
+        answer = { ok: true, ...(leftovers ? { leftovers } : {}) };
         break;
+      }
       case "inf:session:clean-files":
         if (held.session || held.opening || held.state.running || !held.state.closed)
           throw new Error("This task's conversation is not closed here yet.");
@@ -857,10 +883,11 @@ export class SessionHost {
       // one, and its integrations and the files on the captain's other
       // computers, asked of the home, when it says it reaches them.
       const granted =
-        spec.browser || spec.integrations || spec.load || spec.files || spec.secrets
+        spec.browser || spec.integrations || spec.load || spec.files || spec.secrets || spec.stops
           ? this.options.commands?.grant(held.task, {
               browser: spec.browser === true,
               ...(spec.load ? { load: true } : {}),
+              ...(spec.stops ? { stops: true } : {}),
               ...(spec.integrations ? { integrations: this.integrationsOf(held) } : {}),
               ...(spec.files ? { files: this.filesOf(held) } : {}),
               ...(spec.secrets ? { secretsCatalog: this.secretsOf(held) } : {}),
@@ -944,6 +971,7 @@ export class SessionHost {
         browser: spec.browser === true,
         integrations: spec.integrations === true,
         load: spec.load === true,
+        stops: spec.stops === true,
         files: spec.files === true,
         secrets: spec.secrets === true,
       };
@@ -1007,6 +1035,7 @@ export class SessionHost {
       opened.browser !== (spec.browser === true) ||
       opened.integrations !== (spec.integrations === true) ||
       opened.load !== (spec.load === true) ||
+      opened.stops !== (spec.stops === true) ||
       opened.files !== (spec.files === true) ||
       opened.secrets !== (spec.secrets === true)
     );

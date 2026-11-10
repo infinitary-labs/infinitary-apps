@@ -4,6 +4,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { FILES_COMMAND, type FilesAnswer } from "@shared/files";
+import { STOPS_COMMAND } from "@shared/leftoverPrograms";
 import { LOAD_COMMAND } from "@shared/load";
 import { RESOURCE_REFRESH_MS } from "@shared/resources";
 import { HERE } from "../../shared/deviceNames";
@@ -26,6 +27,7 @@ import {
   type SecretsCatalog,
   type SecretsCommand,
 } from "../secrets/requests";
+import type { TaskStopsAnswer, TaskStopsCommand } from "../tasks/taskStops";
 import type { FilesOpInput } from "./fileCommands";
 import { ownTaskCommand } from "./names";
 import {
@@ -40,6 +42,7 @@ import {
   type IntegrationOpInput,
 } from "./protocol";
 import type { SecretsAnswer } from "./secretsCommands";
+import type { StopsOpInput } from "./stopCommands";
 
 /**
  * The task channel (docs/axi-commands.md, "The channel"): how a crewmate's
@@ -96,6 +99,11 @@ export type TaskTools = {
   secrets?: SecretsCommand;
   load?: TaskLoad;
   /**
+   * The task's registered stops (`infinitary-stops-axi`,
+   * docs/leftover-programs.md), kept on the computer that runs the task.
+   */
+  stops?: TaskStopsCommand;
+  /**
    * The Secrets catalog alone, for a task on another computer: its command
    * lists and shows, and every use answers unavailable (docs/secrets.md).
    */
@@ -108,7 +116,12 @@ export type TaskTools = {
 };
 
 /** What one operation answers, for any tool. */
-type OpAnswer = ChannelAnswer | IntegrationChannelAnswer | SecretsAnswer | FilesAnswer;
+type OpAnswer =
+  | ChannelAnswer
+  | IntegrationChannelAnswer
+  | SecretsAnswer
+  | FilesAnswer
+  | TaskStopsAnswer;
 
 export type AxiChannelOptions = {
   /** Starts the process that runs one command: a utility process in the app, a fork in tests. */
@@ -404,6 +417,7 @@ export class AxiChannel {
         (grant.tools.secrets !== undefined || grant.tools.secretsCatalog !== undefined)) ||
       (tool === LOAD_COMMAND && grant.tools.load !== undefined) ||
       (tool === FILES_COMMAND && grant.tools.files !== undefined) ||
+      (tool === STOPS_COMMAND && grant.tools.stops !== undefined) ||
       (tool === INBOX_COMMAND && grant.tools.inbox !== undefined);
     if (!has) {
       answer(
@@ -551,7 +565,9 @@ export class AxiChannel {
               ? this.inbox(grant, message)
               : tool === FILES_COMMAND
                 ? this.files(grant, message)
-                : this.operate(grant, message);
+                : tool === STOPS_COMMAND
+                  ? this.stops(grant, message, command.cwd)
+                  : this.operate(grant, message);
     // A copy may outlast the command's process: it is kept for the next
     // command before the process is stopped, rather than lost with it.
     const settled = await within(
@@ -666,6 +682,45 @@ export class AxiChannel {
       const reason = error instanceof Error ? error.message : String(error);
       return {
         text: `The files command could not do that: ${reason.replace(/\.$/, "")}.`,
+        refused: "refused",
+      };
+    }
+  }
+
+  /**
+   * One of the stops command's operations, for this task alone: a stop is
+   * registered with the folder its shell was in, where the close runs it.
+   */
+  private async stops(
+    grant: Grant,
+    message: AxiCallMessage,
+    cwd: string,
+  ): Promise<TaskStopsAnswer> {
+    const stops = grant.tools.stops;
+    if (!stops) return { text: "This task has no stops command.", refused: "refused" };
+    try {
+      switch (message.op) {
+        case "stops.list":
+          return stops.list();
+        case "stops.add": {
+          const { label, command } = (message.input ?? {}) as StopsOpInput["stops.add"];
+          return stops.add({
+            label: String(label ?? ""),
+            command: String(command ?? ""),
+            ...(cwd ? { cwd } : {}),
+          });
+        }
+        case "stops.drop": {
+          const { id } = (message.input ?? {}) as StopsOpInput["stops.drop"];
+          return stops.drop(String(id ?? ""));
+        }
+        default:
+          return { text: "That is not a stops operation.", refused: "invalid" };
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      return {
+        text: `The stop could not be saved: ${reason.replace(/\.$/, "")}.`,
         refused: "refused",
       };
     }

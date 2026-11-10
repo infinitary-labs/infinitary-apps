@@ -193,3 +193,12 @@ When the shell itself becomes a background job, the helper ends the turn until t
 `placedOutside.test.ts` runs it from a Pi crewmate's shell on a computer that runs work, across the connection to this Mac's integrations (`docs/integrations.md`, "Tests").
 `channel.test.ts` also runs `infinitary-files-axi`: the computers, a listing and a copy reach only the task's own files, and a copy past the shell's limit answers `running` and is read with the next look; `placedOutside.test.ts` runs it across the connection in both directions (`docs/files.md`, "Tests").
 `tests/release-contract.test.ts` holds the launcher and its identical copies shipped outside the archive.
+
+## The stops command
+
+`infinitary-stops-axi` (`src/core/axi/stopCommands.ts`) registers how to stop each thing a crewmate starts that outlives the command that started it (`docs/leftover-programs.md`).
+Every task with a channel on this Mac is granted it, and a task on a computer that runs work that lists the `task-stops` change, where it keeps the stops in the task's folder there.
+The bare command lists the task's stops, `add --label "<what it stops>" '<command that stops it>'` registers one with the shell's working folder, and `drop <id>` drops one the crewmate ran itself.
+A missing label or command, or an id that is not one, exits 2 before reaching the app.
+The app runs what is left when the task closes; the command itself runs nothing.
+

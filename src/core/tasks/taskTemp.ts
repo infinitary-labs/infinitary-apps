@@ -210,6 +210,11 @@ export type TaskTempFilesOptions = {
   now: () => number;
   /** Only an acknowledged answer clears a task on another computer. */
   removePlaced?: (record: TaskRetentionFields) => Promise<TempRemoval>;
+  /**
+   * The close's sweep of what the task left running, which ends programs
+   * holding the folder before it goes (docs/leftover-programs.md); resolved when none began.
+   */
+  leftoversSettled?: (taskId: string) => Promise<void>;
 };
 
 /**
@@ -309,6 +314,7 @@ export class TaskTempFiles {
   }
 
   private async remove(record: TaskRetentionFields): Promise<TempRemoval> {
+    await this.options.leftoversSettled?.(record.id);
     // The files its reports handed on go at the close too, wherever it ran (INF-992).
     await removeHandoverFiles(
       join(this.options.paths.crewmatesDir, record.id, HANDOVER_OUT_DIR_NAME),

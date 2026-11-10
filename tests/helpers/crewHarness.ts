@@ -267,6 +267,8 @@ export type SetupExtras = {
     taskId: string,
   ) => { jobId: string; command: string; startedAt: number } | undefined;
   killJobs?: (taskId: string) => void;
+  /** The close's sweep of what a task left running (docs/leftover-programs.md). */
+  leftovers?: CrewSupervisorOptions["leftovers"];
   mergePullRequest?: CrewSupervisorOptions["mergePullRequest"];
   mergeReview?: CrewSupervisorOptions["mergeReview"];
   reviewGate?: CrewSupervisorOptions["reviewGate"];
@@ -549,6 +551,7 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.hasRunningJobs ? { hasRunningJobs: extras.hasRunningJobs } : {}),
     ...(extras.oldestRunningJob ? { oldestRunningJob: extras.oldestRunningJob } : {}),
     ...(extras.killJobs ? { killJobs: extras.killJobs } : {}),
+    ...(extras.leftovers ? { leftovers: extras.leftovers } : {}),
     ...(extras.mergePullRequest ? { mergePullRequest: extras.mergePullRequest } : {}),
     ...(extras.mergeReview ? { mergeReview: extras.mergeReview } : {}),
     ...(extras.reviewGate ? { reviewGate: extras.reviewGate } : {}),

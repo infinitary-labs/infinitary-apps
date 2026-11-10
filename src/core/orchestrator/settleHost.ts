@@ -145,6 +145,15 @@ export type SettleServiceHost = {
   killJobs?: (taskId: string) => void;
   hasRunningJobs?: (taskId: string) => boolean;
   /**
+   * What a closed task left running on this Mac (docs/leftover-programs.md):
+   * the close begins its sweep as the record closes, once its crewmate has
+   * stopped, and waits for it before the working copy goes.
+   */
+  leftovers?: {
+    begin(taskId: string, after?: Promise<unknown>): Promise<void>;
+    settled(taskId: string): Promise<void>;
+  };
+  /**
    * A task whose working copy is on a computer that runs work
    * (docs/helper.md, "Its working copies"): what it holds unmerged there,
    * null while nobody can tell, and its branch brought here before this

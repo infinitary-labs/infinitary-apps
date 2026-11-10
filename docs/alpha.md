@@ -234,7 +234,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The signing job waits only for the notes it packages and the phone check; it builds, signs and notarizes while the verify lanes and the Linux packages are still checked.
   Its token only reads: it records, uploads and publishes nothing, so a failed check leaves no tag, release or public file behind.
   The update check and the upload job wait for every check, the verify lanes and the Linux packages included; recording the zip is the upload job's first effect.
-  A stable has no lanes to wait for, so its signing starts at once as before.
+  A stable has no lanes to wait for, so its signing starts once the phone and release-notes checks pass.
   The signing job holds the real Mac while the release's Mac lanes run, so those lanes take a virtual place or wait for the real Mac (`docs/testing.md`, "The real Mac's place").
 - **Signing on the real Mac, uploads on a hosted machine, checks in a virtual Mac (INF-1716, INF-2498).**
   The signing job runs on the real Mac through the checked disk image, then hands off and frees it.
@@ -433,6 +433,7 @@ A phone build keeps changing things on a release when the release's view floor r
 
 - **Alpha.**
   The release run's phone job (`scripts/phone-order.ts`) looks for such a build on TestFlight: an `ios-release.yml` run whose availability job passed, or a later status check of its build that passed.
+  The release-notes checks start only after the phone job passes; the shared release workflow applies this order to stable releases too.
   A build Apple once confirmed stays enough, and the job does not ask Apple whether it is still on TestFlight (the captain's "A past success is enough").
   A major that kept views leaves the build already on TestFlight enough, so the alpha waits for nothing.
   After a major that broke views, the release crewmate dispatches `ios-release.yml` from main first, with the next phone version, and dispatches the alpha once its availability job has passed.

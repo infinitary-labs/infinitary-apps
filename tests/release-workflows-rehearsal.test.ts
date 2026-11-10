@@ -107,7 +107,9 @@ describe("the signed channel workflow", () => {
     const noteSteps = notes.steps ?? [];
     // Declarations only, with no secret and no install: node's type stripping.
     expect(JSON.stringify(notes)).not.toContain("secrets.");
-    expect(notes.needs).toBe("resolve");
+    // The captain asked for release notes to wait until the phone check passes.
+    expect(notes.needs).toEqual(["resolve", "phone"]);
+    expect(notes.if).not.toContain("always()");
     expect(noteSteps[0]).toMatchObject({
       uses: "actions/checkout@v4",
       with: { "fetch-depth": 0 },

@@ -407,10 +407,12 @@ jobs:
   # The two history walks, the coverage check and the catalog, run side by
   # side as the parts of one matrix job, so every dependent still reads one
   # `notes` result that holds only when both parts passed.
-  # Declarations only: the workflow cannot judge whether the prose is true.
+  # Wait for the phone check before either part starts; a failed phone check
+  # cannot use a checked catalog. Declarations only: the workflow cannot
+  # judge whether the prose is true.
   notes:
     name: ${{ format('{0} · Check release notes{1}', needs.resolve.outputs.trigger, matrix.part == 'catalog' && ' · catalog' || '') }}
-    needs: resolve
+    needs: [resolve, phone]
     if: ${{ needs.resolve.outputs.skip != 'true' }}
     strategy:
       fail-fast: false

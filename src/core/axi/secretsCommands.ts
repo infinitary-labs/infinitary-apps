@@ -21,6 +21,8 @@ export type SecretsAnswer = {
   requests?: UseReceipt[];
   receipt?: UseReceipt;
   unavailable?: true;
+  /** Why a use is unavailable to a task on another computer; host words, never a backend's. */
+  help?: string;
 };
 export type SecretsReply = ChannelReply<SecretsAnswer>;
 export type SecretsConnection = {
@@ -77,7 +79,7 @@ function mapping(raw: string): Record<string, string> {
 const COMMANDS: Record<string, AxiCommand<SecretsConnection>> = {
   list: {
     usage: "list",
-    description: "List linked secret metadata, never values.",
+    description: "List the secrets the captain added: metadata, never values.",
     run: async (args, connection) => {
       if (args.positional.length) invalid();
       return call(connection, "list", "secrets.list", {});
@@ -85,7 +87,7 @@ const COMMANDS: Record<string, AxiCommand<SecretsConnection>> = {
   },
   show: {
     usage: "show <reference>",
-    description: "Describe one linked secret's metadata, never its value.",
+    description: "Describe one secret's metadata, never its value.",
     run: async (args, connection) => {
       if (args.positional.length !== 1 || !args.positional[0]) invalid();
       return call(connection, "show", "secrets.show", { ref: args.positional[0] });

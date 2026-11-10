@@ -51,6 +51,7 @@ import type { AppDataWatch } from "./privacy/appDataWatch";
 import type { QuotaService } from "./quota/quotaService";
 import type { ModelSlots } from "./routing/modelSlots";
 import type { Runbooks } from "./runbooks/runbooks";
+import type { SecretsSettings } from "./secrets/settings";
 import type { SharingService } from "./sharing/sharingService";
 import type { SqlService } from "./sql/sqlService";
 import type { ActivityStore } from "./storage/activityStore";
@@ -165,6 +166,8 @@ export type CoreServices = {
   integrations: IntegrationsService;
   /** The inbox integration's door, key and receipts (docs/integrations.md, "The inbox"). */
   integrationInbox: Inbox;
+  /** Trusted Secrets controls; only its closed command facade reaches a crewmate. */
+  secrets: SecretsSettings;
   /** Words from outside in saved conversations: their sweep and the captain's delete. */
   savedOutsideData: SavedOutsideData;
   /**

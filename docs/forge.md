@@ -261,7 +261,7 @@ A computer that runs work (`docs/helper.md`) signs in to GitHub for its own clon
   A computer with GitHub CLI on its own search path says so with its forges (`githubCli`), and its GitHub aside in Projects then closes with the line "Use GitHub CLI", as this Mac's does ("GitHub CLI's sign-in" below), naming that computer.
   The click asks `inf:devices:forge-sign-in-cli`, which asks the computer `inf:sign-ins:forge-cli` (`DeviceSignIns.forgeWithCli`); the computer asks its own GitHub CLI and GitHub who that is (`ForgeSignIns.signInWithCli`), keeps only the way and the program's path, and answers whether it kept it, so no token crosses or reaches a log.
   Its row then reads "Mac mini · through GitHub CLI · clones and pushes its own work" (`way`), and its git's helper asks that computer's GitHub CLI at each push.
-  A computer without the `computer-github-cli` change sends no `githubCli`, so it is offered the code alone.
+  An older computer that sends no `githubCli` is offered the code alone.
 - **What crosses.**
   The computer's sign-ins whole (`inf:work:sign-ins`) carry its `forges`: each host it is signed in to, who GitHub says it is, its health and since when, and each host it offers - never the sign-in.
   The feed says "Mac mini is signed in to GitHub."
@@ -746,6 +746,7 @@ Evidence: `src/core/queue/shipped/github.test.ts` and `src/core/queue/shipped/co
 ### The shipped queue on GitLab
 
 GitLab's part runs the same rules in the project's GitLab CI, on gitlab.com and on a team's own server (`shipped/gitlab-queue.yml`, `shipped/gitlab-batch.yml`, `shipped/gitlab.mjs`).
+Its jobs enter through `shipped/gitlab-cli.mjs`; the reusable module never starts a job on import, including when the app's build inlines it.
 The project includes `.gitlab/infinitary-queue.yml` from its own CI file and lists the `infinitary-queue` stage; the queue's file is turned on when that CI file includes it (`GitLabForge.queueWorkflows`).
 Three GitLab facts shape it, and each was checked against GitLab's own code and documentation:
 - GitLab keeps one unfinished commit status per name and person, and refuses to set a waiting status waiting again, while the queue's waiting, in-batch and paused states are all waiting.

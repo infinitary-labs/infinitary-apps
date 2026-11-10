@@ -13,6 +13,7 @@ import {
   crewmateTempDir,
 } from "../paths";
 import { localTimeZoneName, timeZoneFact } from "../prompts/timeZone";
+import { CREWMATE_SECRETS_CATALOG_LINE, CREWMATE_SECRETS_LINE } from "../secrets/commandWords";
 import { answersDir, savedAnswerText } from "../session/answerFiles";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { crewmateContractStamp, crewmateRestartText, crewmateSessionSpec } from "./crewSession";
@@ -51,6 +52,44 @@ it.each(["pi", "claude"] as const)(
     );
     expect(crewmateCardBodiesDir(paths, "task-1")).not.toBe(
       crewmateCardPicturesDir(paths, "task-1"),
+    );
+  },
+);
+
+it.each(["pi", "claude"] as const)(
+  "a %s session advertises Secrets requests only with the local command grant, and the catalog alone on another computer",
+  (backend) => {
+    // INF-1109: expose references and requests, never claim an unmigrated or remote owner is protected.
+    // Its revision spec: "Treat all crewmates consistently" - a placed task lists the catalog, with no use.
+    const root = scratchDir("crew-secrets-command-");
+    const catalog = { list: async () => [] };
+    const open = (
+      secrets?: true,
+      shell?: { path: string[]; env: Record<string, string> },
+      machineId = LOCAL_MACHINE_ID,
+      secretsCatalog?: typeof catalog,
+    ) =>
+      crewmateSessionSpec(
+        appPathsFor(root),
+        { machineId, taskId: "secrets-task", cwd: root, secrets, shell, secretsCatalog },
+        backend === "pi" ? fakeBinding("test-account") : { backend, accountId: "test-account" },
+      ).instructions.base;
+    const shell = { path: [root], env: {} };
+    expect(open(true, shell)).toContain(CREWMATE_SECRETS_LINE);
+    expect(open(true, shell)).not.toContain(CREWMATE_SECRETS_CATALOG_LINE);
+    expect(open(undefined, shell)).not.toContain(CREWMATE_SECRETS_LINE);
+    expect(open(true)).not.toContain(CREWMATE_SECRETS_LINE);
+    expect(open(true, shell, "another-computer")).not.toContain(CREWMATE_SECRETS_LINE);
+    // On another computer the command lists the home's catalog and says a use is not reachable.
+    const placed = open(undefined, undefined, "another-computer", catalog);
+    expect(placed).toContain(CREWMATE_SECRETS_CATALOG_LINE);
+    expect(placed).not.toContain(CREWMATE_SECRETS_LINE);
+    expect(open(undefined, undefined, "another-computer")).not.toContain(
+      CREWMATE_SECRETS_CATALOG_LINE,
+    );
+    // A local task never reads the catalog line: its shell carries the whole command.
+    expect(open(true, shell, LOCAL_MACHINE_ID, catalog)).not.toContain(
+      CREWMATE_SECRETS_CATALOG_LINE,
     );
   },
 );

@@ -38,6 +38,6 @@ export type SavedCrewResponse = CrewResponse & {
   deliveredAt: number | null;
   /** A clean handling acknowledgement, not correctness or understanding. */
   handledAt: number | null;
-  /** The card thread line that carried it, when a reply did (`shared-cards.md`). */
+  /** The card thread line that carried it, when a reply did (`major-15.md`). */
   cardMessageId?: number;
 };

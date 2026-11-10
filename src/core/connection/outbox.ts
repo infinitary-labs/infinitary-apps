@@ -11,7 +11,7 @@ import { partsHeader } from "./frameParts";
  * answer every piece instead of only once the whole catch-up has arrived,
  * and a ping or pong either side sends waits behind about one window rather
  * than behind everything the home had to say. To a device that reads parts
- * (`frame-parts.md`), each piece of a longer frame goes as a whole message
+ * (`readsFrameParts`), each piece of a longer frame goes as a whole message
  * after a header naming the frame's length, so it hears every piece too.
  */
 export type OutboxOptions = {
@@ -39,7 +39,7 @@ export class Outbox {
   /** When the first byte after the newest mark was written. */
   private writingFrom: number | undefined;
   private readonly now: () => number;
-  /** Whether the device reads a frame longer than one piece as parts (`frame-parts.md`), from its hello. */
+  /** Whether the device reads a frame longer than one piece as parts (`readsFrameParts`), from its hello. */
   parts = false;
 
   constructor(

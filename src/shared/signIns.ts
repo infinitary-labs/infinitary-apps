@@ -80,8 +80,8 @@ export const computerForgesSchema = z.object({
   hosts: z.array(z.object({ host: forgeHostSchema, name: z.string().min(1).max(64) })),
   /**
    * GitHub CLI is installed there, so its GitHub row offers "Use GitHub CLI"
-   * (`inf:sign-ins:forge-cli`). Absent from a computer without the
-   * `computer-github-cli` change, which offers the code alone.
+   * (`inf:sign-ins:forge-cli`). An older computer that leaves it out
+   * offers the code alone; major 15 includes this capability.
    */
   githubCli: z.boolean().optional(),
 });

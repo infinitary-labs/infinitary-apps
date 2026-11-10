@@ -82,7 +82,7 @@ export const fetchAppRequestSchema = z.strictObject({
   chip: deviceChipSchema.optional(),
   /**
    * Asks for the Ubuntu package for that system and chip rather than its
-   * AppImage (`fetch-ubuntu-package.md`): the command for another computer
+   * AppImage (`major-15.md`): the command for another computer
    * asks it on Ubuntu 24.04 and 26.04 with no Infinitary installed, and
    * installs it there (docs/devices.md, "Joining by a command"). Only this
    * home's own command asks it, so no older home is ever asked it.

@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { describe, expect, it, vi } from "vitest";
+import { bundleAxiProcess } from "../../../tests/helpers/axiProcessBundle";
 import { projectFontBytes } from "../../../tests/helpers/fontFixture";
 import { pngImage } from "../../../tests/helpers/images";
 import { piStubRuntime } from "../../../tests/helpers/piStubRuntime";
@@ -24,6 +25,7 @@ import {
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { attachmentPath, keepImages } from "../attachments";
+import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { createCrewmateTranscriptResolver } from "../observe/transcriptSource";
 import { initOverflowDir, type MessageFile, withPastedFiles } from "../overflow";
 import {
@@ -33,6 +35,7 @@ import {
   crewmateSessionsDir,
 } from "../paths";
 import { crewmateComputersNote } from "../pi/piResources";
+import { Runbooks } from "../runbooks/runbooks";
 import { forkChildProcess } from "../sql/forkChildProcess";
 import { CrewTranscripts } from "../tasks/crewTranscript";
 import { handoverFileName } from "../tasks/handoverFiles";
@@ -364,25 +367,118 @@ describe("a task that runs on a computer that runs work", () => {
     );
   });
 
-  // INF-2599 (the captain: "Send a crewmate its directions once, and again
-  // only when they change"): every computer on this home's major tells it of
-  // each fold, so the home holds a crewmate's directions there as read
-  // (major 14 folded `conversation-folds` in).
-  it("reads that a computer on this major tells it of its conversations' folds", async () => {
-    const at = await world();
+  // INF-2225, INF-2214's approved shared cards: a computer from before shared
+  // cards would read a write on someone else's card as its own card shown,
+  // so the home refuses it before anything is saved.
+  it("refuses a write on someone else's card from a computer before shared cards, saving nothing", async () => {
+    const at = await world(undefined, { changes: [] });
     const home = at.home();
+    // Its hello has arrived; a list with no names is sent as none at all.
     await expect.poll(() => home.devices.version(at.deviceId)?.contract).toBe(PROTOCOL_VERSION);
-    expect(home.placed.reportsFolds(at.deviceId)).toBe(true);
+    expect(home.devices.version(at.deviceId)?.changes ?? []).not.toContain("shared-cards");
+    expect(home.placed.takesSharedCards(at.deviceId)).toBe(true);
+    model([{ text: "Looking for the remover." }]);
+    await at.start("t-old-cards", "Find the job host remover's path.");
+    await expect.poll(() => home.tasks.get("t-old-cards")?.activity).toBe("idle");
+    // The task already exists when the computer reconnects with an older contract.
+    await at.restartComputer({ protocolVersion: `${CONTRACT_CHANGES.major - 1}.0.0`, changes: [] });
+    await expect
+      .poll(() => home.devices.version(at.deviceId)?.contract)
+      .toBe(`${CONTRACT_CHANGES.major - 1}.0.0`);
+    expect(home.placed.takesSharedCards(at.deviceId)).toBe(false);
+    const id = home.supervisor.addFirstmateCard({
+      title: "Remove the job host",
+      body: "<p>Run the remover on the shell PC.</p>",
+      actions: [],
+    });
+    const answer = await home.placed.answer(at.deviceId, "inf:work:card", {
+      task: "t-old-cards",
+      callId: "old-shared-write",
+      card: {
+        id,
+        title: "Remove the job host",
+        body: "<p>Run C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd on the shell PC.</p>",
+        actions: [],
+        reply: "It is at C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd.",
+      },
+    });
+    expect(answer).toMatchObject({
+      refused: { reason: "other", why: expect.stringContaining("runs an older Infinitary") },
+    });
+    expect(home.supervisor.cards.thread(id).messages).toEqual([]);
+    const cards = home.supervisor.cards.snapshot();
+    expect(cards.find((card) => card.id === id)?.body).toBe(
+      "<p>Run the remover on the shell PC.</p>",
+    );
+    expect(cards.filter((card) => card.taskId === "t-old-cards")).toEqual([]);
   });
 
-  // INF-1555 F12: both declaration and offer semantics are required before remote work begins.
-  it("keeps a direct-pr change queued until its computer runs this contract major", async () => {
-    // The check tool's declarations and merge offers are part of every major since 13.
-    const previous = `${Number(PROTOCOL_VERSION.split(".")[0]) - 1}.0.0`;
-    const at = await world(undefined, { protocolVersion: previous });
+  // INF-2599 (the captain: "Send a crewmate its directions once, and again
+  // only when they change"): the home holds a crewmate's directions as read
+  // only where its computer tells it of each fold, and serves them on every
+  // turn to one that does not.
+  it.each([true, false])(
+    "reads whether a computer tells it of its conversations' folds (current work major: %s)",
+    async (lists) => {
+      const at = await world(undefined, {
+        protocolVersion: lists ? PROTOCOL_VERSION : `${CONTRACT_CHANGES.major - 1}.0.0`,
+        changes: [],
+        // Protected Secrets discovery also needs the real task channel, not
+        // merely a compatible version (the metadata-only remote catalog intent).
+        taskChannel: await bundleAxiProcess(),
+      });
+      const home = at.home();
+      await expect
+        .poll(() => home.devices.version(at.deviceId)?.contract)
+        .toBe(lists ? PROTOCOL_VERSION : `${CONTRACT_CHANGES.major - 1}.0.0`);
+      expect(home.placed.reportsFolds(at.deviceId)).toBe(lists);
+      // Secrets discovery is metadata only and still needs this work major.
+      expect(home.placed.takesSecrets(at.deviceId)).toBe(lists);
+      expect(home.placed.answersFiles(at.deviceId)).toBe(lists);
+    },
+  );
+
+  it("delivers bundled runbook skills on the current major without the retired name", async () => {
+    // INF-1109 required conflict integration: preserve main's runbook transport
+    // without treating a retired minor name as permission or a missing capability.
+    const runbooks = new Runbooks(join(__dirname, "../../../resources/runbooks"), {
+      getRunbookStates: () => ({}),
+      setRunbookStates: () => {},
+    });
+    const at = await world(undefined, { changes: [], runbooks });
+    model([{ text: "The bundled guidance reached this computer." }]);
+    await at.start("t-runbooks-major");
+    await expect
+      .poll(() => at.home().tasks.get("t-runbooks-major")?.outcome)
+      .toBe("The bundled guidance reached this computer.");
+    expect(at.home().devices.version(at.deviceId)?.changes ?? []).toEqual([]);
+    const request = JSON.stringify(api.requests);
+    expect(request).toContain("Runbook resources:");
+    expect(request).toContain("lessons");
+    expect(at.bound).toHaveLength(1);
+  });
+
+  // INF-1109's required main integration keeps INF-1555 F12's refusal at the
+  // work-major boundary; historical names cannot grant an older peer work.
+  it("keeps a direct-pr change queued until its computer takes the current work major", async () => {
+    const protocolVersion = `${CONTRACT_CHANGES.major - 1}.0.0`;
+    const at = await world(undefined, { protocolVersion, changes: ["check-declarations"] });
     const home = at.home();
-    await expect.poll(() => home.devices.version(at.deviceId)?.contract).toBe(previous);
+    await expect
+      .poll(() => home.devices.version(at.deviceId)?.changes)
+      .toEqual(["check-declarations"]);
     expect(home.placed.takesCheckDeclarations(at.deviceId)).toBe(false);
+    expect(home.placed.takesMoves(at.deviceId)).toBe(false);
+    // Even advertising the retired check, runbook and task-move names cannot grant work.
+    await at.restartComputer({
+      protocolVersion,
+      changes: ["check-declarations", "merge-offer-readiness", "runbooks", "task-move"],
+    });
+    await expect
+      .poll(() => home.devices.version(at.deviceId)?.changes)
+      .toEqual(["check-declarations", "merge-offer-readiness", "runbooks", "task-move"]);
+    expect(home.placed.takesCheckDeclarations(at.deviceId)).toBe(false);
+    expect(home.placed.takesMoves(at.deviceId)).toBe(false);
 
     const { repo } = await home.repos.setup({ kind: "init", name: "check-declarations" });
     home.repos.configure(repo.id, { delivery: "direct-pr" });
@@ -396,11 +492,19 @@ describe("a task that runs on a computer that runs work", () => {
     });
     const requests = api.requests.length;
     await home.supervisor.starts.dispatchQueuedTask("t-old-check-tool");
-    expect(home.tasks.get("t-old-check-tool")).toMatchObject({ status: "open", activity: null });
+    // Another major is already out of reach for work: dispatch never reaches
+    // the old within-major feature refusal or starts a model conversation.
+    expect(home.devices.version(at.deviceId)?.contract).toBe(protocolVersion);
     expect(home.placed.ready(at.deviceId, "t-old-check-tool")).toBe(false);
+    expect(home.tasks.get("t-old-check-tool")).toMatchObject({
+      status: "open",
+      activity: null,
+      gate: null,
+    });
     expect(api.requests).toHaveLength(requests);
-    await at.restartComputer({ protocolVersion: PROTOCOL_VERSION });
+    await at.restartComputer({ protocolVersion: PROTOCOL_VERSION, changes: [] });
     await expect.poll(() => home.placed.takesCheckDeclarations(at.deviceId)).toBe(true);
+    expect(home.placed.takesMoves(at.deviceId)).toBe(true);
   });
 
   it.each(["10.1.0", "11.0.0"])(

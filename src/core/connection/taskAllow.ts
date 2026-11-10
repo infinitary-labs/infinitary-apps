@@ -1,12 +1,9 @@
-import { contractChange } from "./contractChanges";
+import { speaksSince } from "@shared/contractFeatures";
 
-/**
- * A view that reads the integration approval card's Allow for the rest of
- * this task (`integration-task-allow.md`, INF-2993). A view that does not
- * list it reads a `request_write` effect's choices strictly, so the home
- * sends it every card without that button, and it shows the other three.
- */
-export const INTEGRATION_TASK_ALLOW = contractChange("integration-task-allow");
+/** Major 15 includes this button; older read-only views still need its historical name. */
+export function readsTaskAllow(version: string, changes?: readonly string[]): boolean {
+  return speaksSince(version, "15.0.0") || (changes?.includes("integration-task-allow") ?? false);
+}
 
 /** The marker only a frame carrying that button holds, so most frames are passed as they are. */
 const MARK = '"integration":"task"';

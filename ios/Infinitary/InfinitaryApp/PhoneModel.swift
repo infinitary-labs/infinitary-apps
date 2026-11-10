@@ -23,6 +23,8 @@ struct AddressJoin: Equatable {
 
 @MainActor @Observable final class PhoneModel {
     var connection: ReadOnlySession?
+    /// This phone's Secrets approvals with the joined computer.
+    var secrets: PhoneSecrets?
     var proposal: JoinLink?
     var problem: String?
     var busy = false
@@ -267,7 +269,7 @@ struct AddressJoin: Equatable {
     func forgetMac() {
         do {
             try forget()
-            connection?.stop(); connection = nil
+            connection?.stop(); connection = nil; secrets = nil
             removed = false; proposal = nil; problem = nil
         } catch {
             problem = needsUnlock(error) ? "Could not forget this computer. Unlock your phone and try again."
@@ -330,6 +332,7 @@ struct AddressJoin: Equatable {
         session.onEmote = { emote in CharacterCues.reacted(emote) }
         session.onSceneSignal = { signal in CharacterCues.signal(signal) }
         connection = session
+        secrets = PhoneSecrets(session: session)
         session.found(addresses: nearby.macs.map(\.address))
         if foreground { session.start() }
     }

@@ -19,6 +19,7 @@ export const SHIPPED_SOURCES = [
   "action.yml",
   "workflow.yml",
   "gitlab.mjs",
+  "gitlab-cli.mjs",
   "gitlab-batch.yml",
   "gitlab-queue.yml",
 ] as const;
@@ -50,6 +51,7 @@ export const GITLAB_QUEUE_SOURCES: readonly string[] = [
   "d10e6f4b32d908d677b196dd0b948514d53010e679e6ba956a07497478307f7b",
   "37698925811e4c6702c00970310cf46c3fa05390c345958384b76d1941242a8d",
   "fee43119a9c0eec50b45510af31095f5df0fee879669a26d76e5ca5a3c29b880",
+  "0b92537a429d8f3ba09177c49b292d2a468f8bfebc3f393e0ddbc3a2155366ac",
 ];
 
 /** The stamp's words after its comment mark, on each shipped file's first line (the second under a shebang). */
@@ -115,7 +117,14 @@ export const GITHUB_QUEUE_PART: QueueHostPart = {
 export const GITLAB_QUEUE_PART: QueueHostPart = {
   name: "GitLab",
   folder: "gitlab",
-  hashed: ["rules.mjs", "gitlab.mjs", "compose.sh", "gitlab-batch.yml", "gitlab-queue.yml"],
+  hashed: [
+    "rules.mjs",
+    "gitlab.mjs",
+    "gitlab-cli.mjs",
+    "compose.sh",
+    "gitlab-batch.yml",
+    "gitlab-queue.yml",
+  ],
   sources: GITLAB_QUEUE_SOURCES,
   version: GITLAB_QUEUE_SOURCES.length,
   files: [
@@ -124,6 +133,7 @@ export const GITLAB_QUEUE_PART: QueueHostPart = {
     { source: "compose.sh", path: ".gitlab/infinitary/compose.sh" },
     { source: "rules.mjs", path: ".gitlab/infinitary/rules.mjs" },
     { source: "gitlab.mjs", path: ".gitlab/infinitary/gitlab.mjs" },
+    { source: "gitlab-cli.mjs", path: ".gitlab/infinitary/gitlab-cli.mjs" },
   ],
   queueFile: ".gitlab/infinitary-queue.yml",
   checksFile: ".gitlab/infinitary-batch-checks.yml",

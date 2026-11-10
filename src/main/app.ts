@@ -8,7 +8,7 @@ import { JoinedHome } from "@core/devices/joinedHome";
 import { dueMove } from "@core/folderMove/due";
 import { startInBackground } from "@core/helper/background";
 import { configureSettingsPath, hostPath } from "@core/hostEnv";
-import { startCore } from "@core/index";
+import { type Core, startCore } from "@core/index";
 import { isAllowedOpenExternalUrl } from "@core/openExternal";
 import { dataFolderRefusal } from "@core/storage/dataFolderRefusal";
 import {
@@ -33,7 +33,12 @@ import { frameLibPins } from "./frames/frameLibFiles";
 import { FrameMountRegistry } from "./frames/frameMounts";
 import { handleFrameProtocol } from "./frames/frameProtocol";
 import { handOverProfileDir, runHandOver } from "./handOver";
-import { createElectronHost, forgetAutostart, startAtLoginFor } from "./host/electronHost";
+import {
+  createElectronHost,
+  type ElectronHostOptions,
+  forgetAutostart,
+  startAtLoginFor,
+} from "./host/electronHost";
 import { readElectronKeychainStatus } from "./host/electronKeychain";
 import { broadcast, registerIpc } from "./ipc";
 import { followWindowCommands, shellCommands } from "./keyboard";
@@ -211,7 +216,11 @@ function endRun(code: number, lines: readonly string[]): void {
  * module is a chunk of its own beneath it. A run awaits its display on Linux
  * before Chromium opens one, so the entry awaits this.
  */
-export async function startApp(mainDir: string, run: RunStart | null = null): Promise<void> {
+export async function startApp(
+  mainDir: string,
+  run: RunStart | null = null,
+  capabilities: Pick<ElectronHostOptions, "secrets"> & { started?: (core: Core) => void } = {},
+): Promise<void> {
   const windowless = run !== null;
   const options = run ? runOptions(run.args) : {};
   if (!options) {
@@ -498,6 +507,7 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
       installCsp(session.defaultSession, rendererSource);
       const host = createElectronHost({
         prepareUpdateRestart: () => shell.dispose(),
+        ...(capabilities.secrets ? { secrets: capabilities.secrets } : {}),
         isolatedUserDataDir,
         ...(userDataChoice.kind === "flavor"
           ? { autostartName: basename(userDataChoice.dir) }
@@ -598,7 +608,11 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
         },
         // Started by a command, a page the core would open goes to each
         // computer that controls it (docs/run.md, "Control from another computer").
-        startCore: () => startCore(voiceHost, { startedByCommand: windowless }),
+        startCore: async () => {
+          const core = await startCore(voiceHost, { startedByCommand: windowless });
+          capabilities.started?.(core);
+          return core;
+        },
         // The same core for paired devices (docs/connection.md). It listens
         // only while a device is paired or a link to pair one is open
         // (docs/devices.md).

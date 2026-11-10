@@ -34,7 +34,7 @@ function installed(command: string): boolean {
   }
 }
 
-const PACKAGES = ["gnome-keyring", "dbus-daemon", "libsecret-1-0"];
+const PACKAGES = ["gnome-keyring", "dbus-daemon", "libsecret-1-0", "libglib2.0-bin"];
 const onLinux = process.platform === "linux";
 const daemons = () => installed("gnome-keyring-daemon") && installed("dbus-daemon");
 // A machine GitHub makes for one job and throws away: the probe may install there.
@@ -61,7 +61,12 @@ for await (const line of createInterface({ input: process.stdin })) {
 /** A custody answer as the child sends it: a value travels as base64 text. */
 type Wire = Exclude<CustodyRead, { kind: "value" }> | { kind: "value"; bytes: string };
 
-type Session = { home: string; env: NodeJS.ProcessEnv; custody: (store: string) => SecretCustody };
+type Session = {
+  home: string;
+  env: NodeJS.ProcessEnv;
+  custody: (store: string) => SecretCustody;
+  restartKeyring: () => Promise<void>;
+};
 
 const children: ChildProcess[] = [];
 let sessionHome = "";
@@ -136,6 +141,25 @@ async function session(bus: boolean): Promise<Session> {
   return {
     home,
     env,
+    restartKeyring: async () => {
+      // Only processes whose HOME is this test's fixture can be stopped.
+      const keepers = sessionProcesses(home).filter(
+        (pid) =>
+          readFileSync(`/proc/${pid}/cmdline`, "utf8").split("\0")[0]?.split("/").at(-1) ===
+          "gnome-keyring-daemon",
+      );
+      expect(keepers.length).toBeGreaterThan(0);
+      for (const pid of keepers) process.kill(pid, "SIGTERM");
+      await expect
+        .poll(() => sessionProcesses(home).filter((pid) => keepers.includes(pid)))
+        .toEqual([]);
+      const keyring = spawn("gnome-keyring-daemon", ["--unlock", "--components=secrets"], {
+        env,
+        stdio: ["pipe", "ignore", "inherit"],
+      });
+      keyring.stdin.end(KEYRING_PASSWORD);
+      expect(await new Promise((resolve) => keyring.once("exit", resolve))).toBe(0);
+    },
     custody: (store) => {
       const child = spawn(process.execPath, [script, pathToFileURL(ADAPTER).href, store], {
         env,
@@ -233,6 +257,56 @@ describe.skipIf(!runs)("Linux Secret Service custody", () => {
     expect(keyrings.some((file) => file.endsWith("login.keyring"))).toBe(true);
     for (const file of filesUnder(home))
       expect(readFileSync(file).includes(root.toString("base64"))).toBe(false);
+  });
+
+  // Intent: INF-1109's explicit no-implicit-unlock instruction, and the live
+  // proof's stale-session defect after the private keeper restarts. A real
+  // Get Locked reading owns the state assertion, independent of our adapter.
+  it("leaves locked native items locked and reads them again after the private keeper restarts", async () => {
+    const { env, custody, restartKeyring } = await session(true);
+    const store = custody("infinitary-locked-probe");
+    const root = Buffer.alloc(32, 5);
+    expect(await store.write("root", root)).toBe("stored");
+    const dbus = (path: string, method: string, ...args: string[]) =>
+      execFileSync(
+        "gdbus",
+        [
+          "call",
+          "--session",
+          "--dest",
+          "org.freedesktop.secrets",
+          "--object-path",
+          path,
+          "--method",
+          method,
+          ...args,
+        ],
+        { env, encoding: "utf8" },
+      ).trim();
+    const alias = dbus(
+      "/org/freedesktop/secrets",
+      "org.freedesktop.Secret.Service.ReadAlias",
+      "default",
+    );
+    const collection = alias.match(/'([^']+)'/)?.[1];
+    if (!collection || collection === "/")
+      throw new Error("The fixture has no default collection.");
+    const locked = () =>
+      dbus(
+        collection,
+        "org.freedesktop.DBus.Properties.Get",
+        "org.freedesktop.Secret.Collection",
+        "Locked",
+      );
+    expect(locked()).toBe("(<false>,)");
+    dbus("/org/freedesktop/secrets", "org.freedesktop.Secret.Service.Lock", `['${collection}']`);
+    expect(locked()).toBe("(<true>,)");
+    expect(await store.read("root")).toEqual({ kind: "locked" });
+    expect(await store.write("root", Buffer.alloc(32, 9))).toBe("locked");
+    expect(locked()).toBe("(<true>,)");
+    await restartKeyring();
+    expect(locked()).toBe("(<false>,)");
+    expect(await store.read("root")).toEqual({ kind: "value", bytes: root });
   });
 
   it("refuses with no session bus, and writes nothing anywhere instead", async () => {

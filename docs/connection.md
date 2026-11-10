@@ -147,7 +147,7 @@ The window bounds the other direction too: a ping a device sends, and the home's
 At 1 KB/s that is about 8 seconds.
 A device that stops reading still answers nothing, and is cut within two heartbeats.
 
-A device whose hello lists `frame-parts` (`src/core/connection/frameParts.ts`, `src/shared/contract-changes/frame-parts.md`) gets a frame longer than one piece as parts instead of fragments.
+A device on major 15 or later, or an older device whose hello lists `frame-parts` (`src/core/connection/frameParts.ts`), gets a frame longer than one piece as parts instead of fragments.
 The outbox first sends `{"t":"parts","bytes":N}`, the frame's length in UTF-8 bytes, then each piece as a whole text message, and nothing else comes between them; a frame no longer than one piece still goes whole.
 The device joins the parts into the frame and reads it as if it had come whole (`FramePartsReader`; on the phone, `PhoneParts` in `PhoneFrame.swift`).
 A phone hears the computer only once a whole message has arrived, since its socket says nothing of a message still arriving, and gives up on a read when nothing has arrived for 40 seconds (`ReadOnlySession.answerWait`, `docs/ios.md`).
@@ -192,7 +192,7 @@ The names are open strings: a client ignores one it does not know, and a newer h
 
 - `src/core/connection/connection.test.ts`: each rule above against a stand-in core, the real event bus and the real pairing, the work requests and the home's own requests to a computer that runs work included, a view heard coming and going, and where it listens said only when that changes.
 - `src/core/connection/journal.test.ts` and `addresses.test.ts`: the numbering and the listening rule on their own.
-- `src/core/connection/outbox.test.ts`: the outbox's pieces, window and marks on their own, and the parts it sends a device that reads them; `frameParts.test.ts`: parts joined back into frames, and parts past their length refused; `connection.test.ts`, "pacing and liveness": a device receiving a long push through a slow link kept on one connection, one that stops reading still cut, and a long push sent in parts only to a device that lists `frame-parts`.
+- `src/core/connection/outbox.test.ts`: the outbox's pieces, window and marks on their own, and the parts it sends a device that reads them; `frameParts.test.ts`: parts joined back into frames, and parts past their length refused; `connection.test.ts`, "pacing and liveness": a device receiving a long push through a slow link kept on one connection, one that stops reading still cut, and a long push sent in parts to a current device or an older one that lists `frame-parts`.
 - `src/core/core.connection.test.ts`, "the connection serves the core to paired devices": the real core, two devices, a dropped one caught up exactly, and every no-argument read a view may ask parsed against its own schema after the wire.
 - `src/core/core.contract.test.ts`, "a client that knows only the published contract": `scripts/contract-client.ts`, which reads only `docs/contract.json`, answers a card and reads the feed over the connection, and the version rule's window from both sides (`docs/contract.md`).
 - `src/core/devices/homeLink.test.ts`: the device's own side as the app as a view runs it (`docs/view.md`): catching up, refusing while out of reach, Remove and Leave, a long push read whole from its parts; and a home and a device on two sides of the Infinitary rename, read on the wire.

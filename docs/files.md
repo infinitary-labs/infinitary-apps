@@ -91,7 +91,7 @@ A copied file may hold secrets: nothing reads its content into words or a log, a
 ## The contract
 
 Contract major 14 carries the file orders, published in the contract's `fileOrders` section, the two work requests, and the placed spec's optional `files`.
-A computer never asks the requests of a home that sent it no `files`.
+A home never sends the orders or `files` to a computer on another work major, and a computer never asks the requests of a home that sent it no `files`.
 A copy past the shell's limit is kept as every task command's answer is (`docs/axi-commands.md`, "A shell's limit").
 A copy cut off by a lost connection answers that the copy may already be in the hand-over folder, and to look there before copying again (`CHANGE_RECOVERY`, `src/core/session/workRecovery.ts`).
 

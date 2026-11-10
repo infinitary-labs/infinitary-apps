@@ -51,4 +51,5 @@ export const HOST_OPS = [
   "allow-cost",
   "lift-cost-limit",
   "stop-at-cost",
+  "secrets-decision",
 ] as const;

@@ -246,6 +246,18 @@ export async function answerCall(
         input.reason,
       );
     }
+    // The Secrets command there lists this Mac's catalog: each field picked, so only metadata leaves.
+    case "inf:work:secrets": {
+      const catalog = callbacks?.secretsCatalog ?? missing();
+      return {
+        secrets: (await catalog.list()).map(({ ref, label, version, environment }) => ({
+          ref,
+          label,
+          version,
+          ...(environment !== undefined ? { environment } : {}),
+        })),
+      };
+    }
     // The files command there, answered by this Mac as for a crewmate of its own (docs/files.md).
     case "inf:work:files": {
       const { input } = request as InvokeRequest<"inf:work:files">[0];

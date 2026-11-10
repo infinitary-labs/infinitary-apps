@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { workRequests } from "./work";
+import { placedSecretsSchema, workRequests } from "./work";
 
 describe("what a computer that runs work tells its home", () => {
   const events = workRequests["inf:work:events"].request;
@@ -71,4 +71,15 @@ describe("what a computer that runs work tells its home", () => {
       ]).success,
     ).toBe(false);
   });
+});
+
+// INF-3042: home answers are open; later additive metadata must not hide the catalog.
+it("reads known Secrets metadata while ignoring later answer fields", () => {
+  const secret = { ref: "planning", label: "Planning calendar", version: "2", environment: "Work" };
+  expect(
+    placedSecretsSchema.parse({ secrets: [{ ...secret, rotation: "manual" }], revision: 3 }),
+  ).toEqual({ secrets: [secret] });
+  expect(placedSecretsSchema.safeParse({ secrets: [{ ...secret, version: null }] }).success).toBe(
+    false,
+  );
 });

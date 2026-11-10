@@ -19,6 +19,8 @@ const snapshot: LoadSnapshot = {
     },
   ],
 };
+// The name an older major advertised before INF-1109 absorbed it into the work major.
+const change = "heavy-run-line";
 const cleanups: (() => void)[] = [];
 afterEach(() => {
   for (const cleanup of cleanups.splice(0)) cleanup();
@@ -31,6 +33,7 @@ function fixture() {
   let version: WorkDeviceVersion = {
     contract: PROTOCOL_VERSION,
     takesWork: true,
+    changes: [],
   };
   let contact: (event: WorkDeviceContact) => void = () => {};
   const ask = vi.fn(
@@ -63,7 +66,13 @@ function fixture() {
     },
     // A computer on the previous major takes no work, so it has no line to read.
     older: () => {
-      version = { contract: `${Number(PROTOCOL_VERSION.split(".")[0]) - 1}.0.0`, takesWork: false };
+      version = {
+        contract: `${Number(PROTOCOL_VERSION.split(".")[0]) - 1}.0.0`,
+        takesWork: false,
+      };
+    },
+    version: (next: WorkDeviceVersion) => {
+      version = next;
     },
     contact: (state: "in-reach" | "gone") => {
       reachable = state === "in-reach";
@@ -120,6 +129,19 @@ describe("a computer's declared runs at the home", () => {
     f.older();
     await f.reader.refresh("mini");
     expect(f.ask).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not grant a load command to an older-major computer even when it lists the retired name (INF-1109)", async () => {
+    const f = fixture();
+    f.version({
+      contract: `${Number(PROTOCOL_VERSION.split(".")[0]) - 1}.0.0`,
+      takesWork: false,
+      changes: [change],
+    });
+    expect(f.reader.supports("mini")).toBe(false);
+    await f.reader.refresh("mini");
+    expect(f.ask).not.toHaveBeenCalled();
+    expect(f.reader.read("mini")).toBeUndefined();
   });
 
   it("keeps last-known runs explicitly unavailable on stale readings and disconnects", async () => {

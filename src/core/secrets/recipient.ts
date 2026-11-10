@@ -60,8 +60,12 @@ export type PreparedRecipient = {
   operation: string;
   /** Recheck every bound digest and the working folder. */
   check(): Promise<boolean>;
-  /** Recheck, then start the recipient with only its approved values. Output stays private. */
-  launch(values: Record<string, Buffer>, base: NodeJS.ProcessEnv): Promise<LaunchResult>;
+  /** Recheck, then synchronously verify authorization at spawn. Output stays private. */
+  launch(
+    values: Record<string, Buffer>,
+    base: NodeJS.ProcessEnv,
+    authorized: () => boolean,
+  ): Promise<LaunchResult>;
   /** Remove copies and private output. Removal is not secure erasure. */
   dispose(): Promise<void>;
 };
@@ -188,8 +192,7 @@ export async function prepareRecipient(
     facts,
     operation: sha256(canonical(facts)),
     check,
-    launch: async (values, base) => {
-      if (!(await check())) return "changed";
+    launch: async (values, base, authorized) => {
       const env: NodeJS.ProcessEnv = {};
       for (const name of RECIPIENT_VARIABLES) if (base[name] !== undefined) env[name] = base[name];
       for (const [name, value] of Object.entries(values)) {
@@ -197,23 +200,29 @@ export async function prepareRecipient(
         env[name] = value.toString("utf8");
       }
       const stdout = await open(join(runDir, "out", "stdout"), "w", 0o600);
-      const stderr = await open(join(runDir, "out", "stderr"), "w", 0o600);
       try {
-        return await new Promise<LaunchResult>((settle, fail) => {
-          const child = spawn(command.path, command.args, {
-            argv0: command.argv0,
-            cwd,
-            env,
-            stdio: ["ignore", stdout.fd, stderr.fd],
+        const stderr = await open(join(runDir, "out", "stderr"), "w", 0o600);
+        try {
+          // Finish every awaited launch check before the owner's synchronous
+          // authorization check. No await separates that decision from spawn.
+          if (!(await check()) || !authorized()) return "changed";
+          return await new Promise<LaunchResult>((settle, fail) => {
+            const child = spawn(command.path, command.args, {
+              argv0: command.argv0,
+              cwd,
+              env,
+              stdio: ["ignore", stdout.fd, stderr.fd],
+            });
+            child.once("error", fail);
+            child.once("exit", (code, signal) =>
+              settle(code !== null ? { exitCode: code } : { signal: signal ?? "unknown" }),
+            );
           });
-          child.once("error", fail);
-          child.once("exit", (code, signal) =>
-            settle(code !== null ? { exitCode: code } : { signal: signal ?? "unknown" }),
-          );
-        });
+        } finally {
+          await stderr.close();
+        }
       } finally {
         await stdout.close();
-        await stderr.close();
       }
     },
     dispose: async () => {

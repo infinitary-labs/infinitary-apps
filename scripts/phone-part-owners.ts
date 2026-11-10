@@ -101,6 +101,9 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/PhoneSceneViewport.swift",
     "ios/Infinitary/InfinitaryApp/ScenePen.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSceneFacts.swift",
+    // Secrets setup, exact approvals and damaged-key recovery, plus ApprovalKeyTests, run in rest.
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/ApprovalKey.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSecrets.swift",
   ] },
   { parts: family("join"), files: [
     "ios/Infinitary/InfinitaryApp/CodeScanner.swift",

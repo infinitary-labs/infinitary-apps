@@ -13,6 +13,7 @@ import { captureDockedPanel } from "./panelCapture";
 import { createPanelProcessSpawner } from "./panelProcess";
 import { createProgramProcessSpawner } from "./programProcess";
 import { memoryPressureStandIn, readResourceMemory } from "./resourceMemory";
+import { createSecretRecoveryDialogs } from "./secretRecoveryDialogs";
 import { createSetAsideProcessSpawner } from "./setAsideProcess";
 import { createSqlProcessSpawner } from "./sqlProcess";
 import { createTaskBrowserHost } from "./taskBrowser";
@@ -26,6 +27,8 @@ import { createTaskBrowserHost } from "./taskBrowser";
 export type ElectronHostOptions = {
   /** Settle running work before Squirrel replaces and restarts this app. */
   prepareUpdateRestart?: () => Promise<void>;
+  /** Explicit protected capability, also the isolated launcher's injection seam; absent means off. */
+  secrets?: HostCapabilities["secrets"];
   /**
    * Set for dev/e2e runs against an isolated userData dir. Those windows
    * stay hidden and unfocused, so notifications are suppressed entirely
@@ -130,6 +133,16 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
   } = options;
   const startAtLogin = startAtLoginFor(options.autostartName ?? ownAutostartName());
   return {
+    ...(options.secrets
+      ? {
+          secrets: {
+            ...options.secrets,
+            ...(!options.secrets.recovery && !isolatedUserDataDir
+              ? { recovery: createSecretRecoveryDialogs() }
+              : {}),
+          },
+        }
+      : {}),
     app: {
       version: app.getVersion(),
       platform: hostPlatform(),

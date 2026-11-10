@@ -14,12 +14,14 @@ import {
 // nothing the person's agents can write - a program on the search path, a
 // bus address in the environment - answers in its place.
 
-/** A stand-in polkit command: records its arguments and environment, then exits with `code`. */
+/** Records the request, rejects polkit's privileged-only details, then answers with `code`. */
 function standIn(dir: string, name: string, code: number): string {
   const path = join(dir, name);
   writeFileSync(
     path,
-    `#!/bin/sh\nprintf '%s\\n' "$@" > "${path}.args"\nenv > "${path}.env"\nexit ${code}\n`,
+    // INF-1109's real non-root probe returned 127 before any prompt when the
+    // app supplied --detail. Keep that observed refusal in this command fixture.
+    `#!/bin/sh\nprintf '%s\\n' "$@" > "${path}.args"\nenv > "${path}.env"\nfor arg in "$@"; do [ "$arg" != --detail ] || exit 127; done\nexit ${code}\n`,
   );
   chmodSync(path, 0o755);
   return path;
@@ -61,9 +63,6 @@ describe.skipIf(process.platform !== "linux")("Linux fresh authentication", () =
       POLKIT_ACTION,
       "--process",
       expect.stringMatching(new RegExp(`^${process.pid},\\d+,${process.getuid?.()}$`)),
-      "--detail",
-      "reason",
-      "Use Staging deploy token for deploy.sh",
       "--allow-user-interaction",
     ]);
     const env = readFileSync(`${programs.pkcheck}.env`, "utf8");

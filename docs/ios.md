@@ -238,7 +238,8 @@ The body's change bars mark the parts the revised line counts, and the body's ta
 A link in the body opens in the device's default browser, and a draft button puts its words at the start of the message box, unsent.
 A crewmate's browser on its card is a strip naming Browser, the page's site and who is driving, read from its task's record; its button names the computer.
 A lone or marked card stays; an ordinary reply with another card declares its departure to the core.
-Settings and browser doors name the computer where they must be used and send no action.
+Settings and browser doors name the computer where they must be used and send no action, and so do a Secrets card's own choices, which need the computer's confirmation.
+A Secrets use's approval card instead shows the phone's own Allow once and Deny, which the phone signs or sends itself (`docs/secrets.md`, "Remote decisions").
 The host’s saved-sign-in choice needs no local browser page and is sent like any other choice.
 A card its author ended after the captain had seen it stays on Home as the Mac draws it (INF-3071): its chip reads Ended, its thread carries the computer's app line among the messages by when it ended, and its one button and the minus both read Close, which the computer sends as the note's button and the card's close.
 A phone from before ended cards draws the same card as a note whose one button reads Close.
@@ -300,6 +301,7 @@ No panel sits behind the message box: the last turn is its rounds of lines over 
 The capsule is 48 points tall, with the photo glyph 16 points in, the words 52 points in and send a 32-point filled circle 8 points from its end, each control in a 44-point touch area (INF-1517, following ChatGPT's input).
 Settings is this phone's own sheet, `PhoneSettingsSheet`: this device and what it can do, that appearance follows the device, and the app's version; the computer's sheet keeps the computer's name, reach, address and Leave or Forget.
 Both open at half height on the system's glass and can be pulled up, with the same headings and spacing; Leave, or Forget while out of reach, is the computer sheet's second section under its own heading.
+While the computer's Secrets are set up and open, Settings also shows Secrets approvals: Set up approvals, the code to compare with the computer's card, or that this device can allow uses.
 While the keyboard is open, Done takes Settings' place in the leading slot and the Hide keyboard command (Shift-Command-K) dismisses it without sending or clearing the draft.
 The dismissal command does not belong to the keyboard’s transient accessory view.
 Apple's iPhone keyboard has no hide key and no app may add one, so while the software keyboard is up for a card's reply or the message box, a keyboard-down button sits inside that field just before its send circle, on an iPhone and an iPad alike (INF-3106, `PhoneHideKeyboard.swift`).
@@ -745,6 +747,13 @@ The relaunch parts then run INF-1735's 20 relaunch pairs, ten each: each sets da
 `talk-tasks` keeps one such pair, for its hero pictures and the Tasks journey after it; the 20 have their own parts because they took about 11 of the talk part's 20-minute allowance on a loaded Mac mini (INF-1878).
 The cards parts drive forms, staged settings across paging, footer and body choices, the saved answer on the real home, close, threads and replies, pictures, a picture card drawn while the phone is still reaching after a reconnect, completed recording playback, seen, past cards, Mac-only doors and out-of-reach refusal without replay.
 They check both immediate script stalls and a stall during answer collection, and capture both appearances and the largest standard Dynamic Type size.
+The Secrets approval journey enrolls the simulator's software approval key from Settings, compares its code with the computer's card, confirms on the computer, allows one brokered read with the simulator's Face ID and denies another; the runner enrolls the simulator's Face ID and gives its match signal while the face stays in view.
+The journey observes the card's refusal beside the optional permission alert and the eventual card closure, so a system confirmation that never starts cannot become a wait for successful approval.
+A refusal fails the journey after checking that the same use still waits and nothing was delivered; Allow is never retried, and the simulator face is taken away before any completion assertion can abort the journey.
+Only with `INFINITARY_ISOLATED_PHONE_TEST=1` on a simulator, an authentication refusal includes the original LocalAuthentication error's domain, code and localized description, so the journey's existing failure reaches the job log without a full artifact download.
+Ordinary simulator use and physical devices keep the plain refusal; no arbitrary error metadata, approval reason or signed bytes are added.
+It then relaunches the app with `INFINITARY_DAMAGED_APPROVAL`, which only a simulator build reads beside `INFINITARY_ISOLATED_PHONE_TEST`, to cut the kept approval record short in place.
+Settings says the setup is damaged and offers Set up approvals again, and the computer enrolls the new key under a new device name only after its confirmation, beside the earlier one.
 A scripted card attempts network access, parent access, direct native messages, injected scripts and a footer effect; the test home records whether any forbidden request reaches it.
 The runner keeps the card interaction recording separately from the reconnect recording when `--demo` is selected.
 
@@ -774,16 +783,20 @@ The tap check (`scripts/phone-taps.ts`, in `pnpm check`) refuses a plain XCTest 
 A swipe, a drag or a key is sent once, as before.
 XCTest gives each synthesized tap a virtual touch screen of its own, and on a starved simulator backboardd can fail to read that screen's properties in time.
 It then attaches the screen as an accessory, or as a bad usage pair when it read no usage page, and ignores its touches, and XCTest confirms the tap after five seconds with no error.
-The same backboardd subscription also carries touch screen attachments, touching contacts that name their screen and ignored touches, and the test home answers what happened to the first touch screen attached after the tap began.
+The same backboardd subscription also carries touch screen attachments, touching contacts that name their screen, ignored touches, duplicate-service and unknown-digitizer warnings, and disappearance snapshots, and the test home answers what happened to the first touch screen attached after the tap began.
 The tap stays synchronous for its callers: the helper asks the test home off the main actor and turns the run loop until the answer arrives, so each tap also waits for its backboardd line to reach the test home.
 If the live stream has no witness for the completed tap, the home reads the owned simulator's kept log once, through the same witness reader, alongside the live subscription (INF-1917).
 That read starts inside the original outcome wait rather than after its deadline, adds no time or tap, and is cancelled when the outcome settles or the observer closes.
 The witness also answers by the runner's request cap less one minute for the way there and back (`phoneTouchDeadline`), so on a host too starved for its load-clock budget to end first, the runner still reads the unknown before its own request ends (INF-2076).
 A failed read or an accessory screen without a contact or ignored-touch line remains unknown, never permission for another tap.
+It applies the complete recovered batch before deciding: an initializer cannot hide a later warning or unfinished contact, and a failed read, expired request or stopped observer supplies no new permission.
 A built-in touch screen was delivered, and so was a screen whose own contact backboardd reports touching, since iOS 27.0 attaches every XCTest screen as an accessory and still delivers its touches, naming the screen on each contact line.
-Any other screen whose touches backboardd reports ignoring was discarded; only that proof sends one more tap, and two ignored taps fail the part.
+A duplicate-service or unknown-digitizer warning for that sender suspends this delivery verdict: duplicate registration can lose the lift, and an initial screen or touching contact alone does not prove the tap finished.
+A complete disappearance snapshot for that same sender, after its attachment, proves an unfinished tap only when its contacts still include a touching contact.
+An empty disappearance after a completed tap, a partial snapshot, another sender's cancellation and a registration warning alone never prove an unfinished tap.
+Only ignored touches or affirmative unfinished-contact proof send one more tap through the existing discarded outcome, and two discarded taps fail the part.
 A single-press check passes `repeatDiscarded: false` to the same owner; a proven discarded tap then fails at once instead of sending another (INF-1735's post-relaunch Tasks check).
-Any other screen alone, a missing line or a stopped observer is unknown and sends nothing more.
+Any other screen alone, a missing line or a stopped observer is unknown and sends nothing more; a warning without terminal proof reaches the existing failure deadline rather than a new delay.
 Once a part has recorded a failure, XCTest synthesizes no more events, so a later tap attaches no touch screen; `tapOnPhone` then sends the tap without waiting for its target or reading its outcome (`PhoneFailures`).
 A warning is not a failure: after UIKit's runtime warning about a reparented view, XCTest goes on sending events, so every later tap still waits for its target and reads its outcome.
 A touch the app received but SpringBoard's gesture arbitration swallowed leaves no such proof, so it is not tapped again, with one exception: the photo pick.
@@ -865,7 +878,14 @@ A starved simulator can outlast the phone's own handshake deadline at the home t
 The launcher truncates the actual saved Mac only inside its owned simulator's app container; the same journey captures the damaged-record explanation and joins again with a fresh confirmed link.
 Each part starts from its own fresh home and a clean app on its device's one simulator; the Xcode scheme's `PHONE_TEST_HOME` setting names that home's private control interface.
 Native package tests exercise the Mac-produced link and certificate fixture and certificate/public-key compatibility without using a Mac Keychain.
+They check the Secrets approval key's storage through a stand-in that answers with the Keychain's own statuses.
+With a stand-in home that answers as `SecretsSettings` does, they check that Set up approvals keeps a kept key the phone could not read before and replaces only a record it refuses.
+They check that a damaged record is refused by loading, Set up approvals and a new key, that a locked phone never offers to set up again, and that only Set up approvals again replaces it, leaving it on a failed read, an unsupported device, a changed record or a failed write.
 App-hosted tests repair a missing certificate in the disposable simulator's own Keychain and inject protected-data read failures to check retry and the joining explanation.
+An app-hosted test replaces the approval key in that Keychain and reads the new key under the same device name.
+Its cleanup deletes the approval record only in a simulator build, because XCTest still calls teardown after setup refuses, and a test shows that teardown asked as a device leaves the record in place.
+Another damages the kept record in that Keychain the way the phone check does, verifies the actual record was truncated, and checks that loading and a new key refuse it and only its replacement writes a new key, under a new device name.
+That test and its record reader compile only for the iOS simulator, matching the damage helper's boundary so unsigned device-target test builds never reference it.
 They refuse to run on a physical device, and the iOS identity API itself refuses creation on macOS.
 
 Unsigned simulator tests need an application identifier to use the simulator's own Keychain.

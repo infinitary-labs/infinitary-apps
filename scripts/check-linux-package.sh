@@ -33,6 +33,7 @@ PACKAGES="$(cd "${2:-}" && pwd)"
 EVIDENCE="${3:-}"
 WORKSPACE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 NAME="infinitary-check-$SYSTEM"
+SECRET_POLICY=/usr/share/polkit-1/actions/app.infinitary.secrets.approve.policy
 
 fail() {
   echo "check-linux-package: FAIL: $1" >&2
@@ -72,7 +73,7 @@ journey_in_box() {
   docker exec -u "$(id -u):$(id -g)" -w "$WORKSPACE" \
     -e HOME=/tmp/person -e DISPLAY="$DISPLAY" -e CI=1 \
     -e INFINITARY_INSTALLED_APP="$1" -e INFINITARY_INSTALLED_VERSION="$VERSION" \
-    -e INFINITARY_INSTALLED_EVIDENCE="$EVIDENCE" \
+    -e INFINITARY_INSTALLED_EVIDENCE="$EVIDENCE" -e INFINITARY_INSTALLED_SECRET_POLICY="$SECRET_POLICY" \
     "$NAME" "${JOURNEY[@]}"
 }
 
@@ -94,7 +95,8 @@ case "$SYSTEM" in
     bash -euo pipefail -c "$OLD_PATH" || fail "the package left no link at Firstmate 3000's program path"
     cat /etc/os-release > "$EVIDENCE/os-release.txt"
     INFINITARY_INSTALLED_APP=/usr/bin/infinitary INFINITARY_INSTALLED_VERSION="$VERSION" \
-      INFINITARY_INSTALLED_EVIDENCE="$EVIDENCE" CI=1 "${JOURNEY[@]}"
+      INFINITARY_INSTALLED_EVIDENCE="$EVIDENCE" INFINITARY_INSTALLED_SECRET_POLICY="$SECRET_POLICY" \
+      CI=1 "${JOURNEY[@]}"
     ;;
   ubuntu)
     start_box
@@ -162,14 +164,23 @@ case "$SYSTEM" in
     sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 >/dev/null
     mkdir -p "$RUNNER_TEMP/nix"
     cp "$PACKAGES/nix/package.nix" "$DEB" "$RUNNER_TEMP/nix/"
-    (cd "$RUNNER_TEMP/nix" && nix-build --out-link result -I "nixpkgs=$NIXPKGS" \
+    # Resolve once: the package and its native-module check need the same libc,
+    # not this Ubuntu runner's Node with libraries from a newer Nix system.
+    NIX_SOURCE="$(nix-instantiate --find-file nixpkgs -I "nixpkgs=$NIXPKGS")"
+    (cd "$RUNNER_TEMP/nix" && nix-build --out-link result -I "nixpkgs=$NIX_SOURCE" \
       -E "with import <nixpkgs> {}; callPackage ./package.nix { src = ./$(basename "$DEB"); }")
+    NATIVE_NODE="$(nix-build --no-out-link -I "nixpkgs=$NIX_SOURCE" '<nixpkgs>' -A nodejs)/bin/node"
+    printf '%s\n' "$NIX_SOURCE" "$NATIVE_NODE" > "$EVIDENCE/nix-native-runtime.txt"
     APP="$(readlink -f "$RUNNER_TEMP/nix/result")/bin/infinitary"
     echo "$APP" > "$EVIDENCE/nix-store-path.txt"
     # The wrapper's git comes from the store, whatever this runner has.
     grep -q '/nix/store/[^/]*-git-[^/]*/bin' "$APP" || fail "the Nix package does not put its git on the search path"
     INFINITARY_INSTALLED_APP="$APP" INFINITARY_INSTALLED_VERSION="$VERSION" \
-      INFINITARY_INSTALLED_EVIDENCE="$EVIDENCE" CI=1 "${JOURNEY[@]}"
+      INFINITARY_INSTALLED_EVIDENCE="$EVIDENCE" \
+      INFINITARY_INSTALLED_SECRET_POLICY="$(dirname "$(dirname "$APP")")/share/polkit-1/actions/$(basename "$SECRET_POLICY")" \
+      INFINITARY_INSTALLED_SECRET_MODULE="$(dirname "$(dirname "$APP")")/lib/infinitary/resources/app.asar.unpacked/node_modules/koffi" \
+      INFINITARY_INSTALLED_SECRET_NODE="$NATIVE_NODE" \
+      CI=1 "${JOURNEY[@]}"
     ;;
   *)
     fail "unknown system '$SYSTEM'"

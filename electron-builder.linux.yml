@@ -4,6 +4,9 @@
 # (packaging/linux/). Nothing here publishes: `publish` stays null, and
 # linux-packages.yml keeps the files on its run.
 extends: ./electron-builder.yml
+# fpm preserves input modes. Stage the system policy with explicit read-only
+# access for group/others, independent of the checkout's umask.
+beforePack: ./packaging/linux/prepare-policy.mjs
 # The install folder is /opt/<productName>. Chromium's sandbox helper lives
 # there, and Chromium splits a helper path that contains a space, so the
 # folder takes the package's name. People read "Infinitary": the
@@ -103,7 +106,9 @@ deb:
     - --conflicts=firstmate-3000
     - --provides=firstmate-3000
     - packaging/linux/package-type/deb=/opt/infinitary/resources/package-type
+    - packaging/generated/linux/app.infinitary.secrets.approve.policy=/usr/share/polkit-1/actions/app.infinitary.secrets.approve.policy
   depends:
+    - polkitd
     - git
     - xvfb
     - libgtk-3-0
@@ -127,7 +132,10 @@ rpm:
     - --provides=firstmate-3000
     - --rpm-posttrans=packaging/linux/scripts/rpm-posttrans.sh
     - packaging/linux/package-type/rpm=/opt/infinitary/resources/package-type
+    - packaging/generated/linux/app.infinitary.secrets.approve.policy=/usr/share/polkit-1/actions/app.infinitary.secrets.approve.policy
   depends:
+    - polkit
+    - libsecret
     - git
     - xorg-x11-server-Xvfb
     - gtk3

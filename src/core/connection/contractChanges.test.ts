@@ -47,6 +47,105 @@ describe("the contract's changes by name", () => {
     expect(welcome).toMatchObject({ changes: CONTRACT_CHANGES.names });
   });
 
+  // INF-1109's conflict-required update: these additions reached main before the
+  // Secrets major, so they belong to that major, not optional advertised features.
+  it("absorbs the intervening main capabilities into the Secrets major", () => {
+    for (const name of [
+      "card-continues",
+      "inbox-integration",
+      "project-folders",
+      "remote-change-lines",
+      // The required update onto main after PR #493 brought seven more.
+      "fetch-ubuntu-package",
+      "landed-time-retired",
+      "longer-join-command",
+      "native-scene-observations",
+      "project-repo-kind",
+      "report-check-back",
+      "report-merge-completion",
+      // The required update onto main after PR #549 brought one more.
+      "started-by-command-control",
+      // The required update onto main after its attachment hand-over brought three more.
+      "card-seen-snapshot",
+      "complete-integration-actions",
+      "empty-source-files",
+      // The required update onto main after PR #587 brought one more.
+      "placement-inherited",
+      // The required update onto main after its operations major 12 brought two more.
+      "task-timeline-reading",
+      "work-task-history-field",
+      // The required update onto main after its journey timing repair brought one more.
+      "background-job-named",
+      // The required update onto main after its late-picture repair brought one more.
+      "mac-update-channels",
+      // The required update for main's resource, card and first-release additions.
+      "card-answered-by",
+      "card-asked-line",
+      "first-release-reports",
+      "forge-start-problem",
+      "heavy-run-line",
+      "linux-automatic-startup",
+      "task-resource-observations",
+      "work-reply-interim",
+      // The required update for main's check facts and offer-based readiness.
+      "check-declarations",
+      "check-facts-and-crew-verdict",
+      "merge-offer-readiness",
+      // The conflict-required update brings the view contract and two additive home interfaces.
+      "forge-github-cli",
+      "last-turn-previous",
+      "view-floor",
+      // The required update after PR #806 includes completed-operation observations.
+      "tool-observations",
+      // Major 14 includes every addition since queue delivery.
+      "after-merge-steps",
+      "answer-stuck-reads",
+      "card-leave",
+      "card-origin-line",
+      "card-reply-interim",
+      "checked-out-branch",
+      "conversation-folds",
+      "files-there",
+      "note-done",
+      "open-change-branch",
+      "panel-arrangement",
+      "panel-integrations",
+      "phone-diagnostics",
+      "project-queue-facts",
+      "queue-choice-waits",
+      "shared-cards",
+      "task-pull-requests",
+      "thread-sign-off",
+      "update-checked-at",
+      // INF-3042: these additions also precede the Secrets major.
+      "crewmate-programs",
+      "firstmate-folding",
+      "frame-parts",
+      "gitlab-queue-token",
+      "integration-task-allow",
+      "shipped-queue",
+      // INF-3206: the conflict update must also absorb these additions from main.
+      "custom-api-address-exception",
+      "ended-cards",
+      "keep-cards-maximized",
+      "review-covers",
+      "stall-card-backlog",
+      "task-run-null-review",
+      // The next conflict-required update also belongs to the same pending major.
+      "check-queue-answer",
+      "computer-github-cli",
+      // The requested main update for the one-device phone route precedes this major too.
+      "card-allows",
+      "cost-limit",
+      "record-close-done",
+      "report-captain-words",
+      "task-browser-private-sites",
+    ]) {
+      expect(CONTRACT_CHANGES.names).not.toContain(name);
+      expect(() => contractChange(name)).toThrow(`No contract change is named ${name}`);
+    }
+  });
+
   it("adds a minor change's name and moves no version", () => {
     const files = contractChangeFiles();
     const added = readContractChanges([...files, "plan-label-limits.md"]);

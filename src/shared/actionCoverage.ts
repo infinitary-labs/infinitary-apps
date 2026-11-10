@@ -7,6 +7,14 @@ const WORK_REQUEST =
 
 /** Operations which are not app settings, with the reason they stay outside the table. */
 export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
+  "inf:secrets:entry":
+    "The captain's trusted secure entry; never a first mate operation or an agent-authored form",
+  "inf:secrets:action":
+    "Captain-only secret authority: exact host confirmation, withdrawal, local forgetting or history deletion",
+  "inf:secrets:enroll":
+    "A phone offers its approval key; nothing changes until the captain confirms on the home",
+  "inf:secrets:decide":
+    "A phone's signed decision on one exact use, or its refusal; never a first mate operation",
   "inf:converse": "Conversation, not an app setting",
   "inf:cards:act": "Captain card clicks",
   "inf:cards:close": "Captain card clicks",

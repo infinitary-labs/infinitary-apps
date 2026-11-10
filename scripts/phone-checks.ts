@@ -42,3 +42,9 @@ export async function runEveryCheck(
   }
   return failures;
 }
+
+/** Observe rejection now, but propagate it when the owner joins before cleanup. */
+export function joinPhoneObserver(work: Promise<void>): () => Promise<void> {
+  void work.catch(() => {});
+  return () => work;
+}

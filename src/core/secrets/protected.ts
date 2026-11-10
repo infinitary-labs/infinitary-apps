@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import {
   type FreshAuthentication,
@@ -8,9 +8,31 @@ import {
   RemoteApprovals,
 } from "./approvals";
 import { type Authority, type Evaluation, ProtectedAuthority } from "./authority";
+import {
+  type BrokeredUse,
+  type BrokerFacts,
+  brokerInputDigest,
+  type SecretBroker,
+} from "./brokers";
 import { type CustodyRefusal, canonical, RootKeys, type SecretCustody, sha256 } from "./custody";
-import { type HistoryItem, UseJournal } from "./journal";
+import { type HistoryItem, type JournalSnapshot, UseJournal } from "./journal";
+import { ReadAccess, type ReadPermission, SHORT_READ_SECONDS, SHORT_READ_USES } from "./readAccess";
 import { prepareRecipient, type RecipientFacts } from "./recipient";
+import {
+  clearRecovery,
+  openRecovery,
+  type RecoveryContents,
+  type RecoveryFiles,
+  sealRecovery,
+} from "./recoveryArchive";
+import {
+  hasSecretHomeRecords,
+  observeSecretHome,
+  openSecretHome,
+  type SecretHome,
+  secretHistoryFiles,
+} from "./recoveryHome";
+import { type StagedRecovery, stageRecovery } from "./recoveryStage";
 import {
   type Injection,
   inputDigest,
@@ -19,8 +41,9 @@ import {
   type SecretsBackend,
   type UseReceipt,
   type UseState,
+  validInjection,
 } from "./requests";
-import { SecretVault, type VaultEntry } from "./vault";
+import { type SecretMetadataInput, SecretVault, type VaultEntry } from "./vault";
 
 /** Whether this owner can serve uses, or why not. Every state but `available` refuses every use. */
 export type SecretsAvailability = "available" | CustodyRefusal | "tampered";
@@ -34,6 +57,8 @@ export type ProtectedSecretsOptions = {
   /** The host environment a recipient's few base variables come from (`hostEnv`). */
   environment: () => NodeJS.ProcessEnv;
   now?: () => number;
+  /** Trusted consumer adapters, supplied as code by composition, never from agent or saved input. */
+  brokers?: readonly SecretBroker[];
   /**
    * Create the root key when nothing was ever sealed here. Only the trusted
    * controller's first Add sets it; an ordinary start never creates custody.
@@ -41,16 +66,41 @@ export type ProtectedSecretsOptions = {
   initialize?: boolean;
 };
 
+/**
+ * One secret as the use prepared it: the record's name, reference, version and
+ * environment label, read once at preparation, so a later replacement never
+ * changes what an approval screen names. Never its value.
+ */
+export type PreparedSecret = Pick<VaultEntry, "ref" | "label" | "version" | "environment">;
+
 /** What a trusted approval screen shows: checked facts, and the requester's words beside them. */
 export type UseDescription = {
   request: string;
   facts: RecipientFacts;
-  secrets: Pick<VaultEntry, "ref" | "label" | "version">[];
+  secrets: PreparedSecret[];
   reason: string;
   evaluation: Evaluation;
 };
 
+export type BrokerUseDescription = {
+  request: string;
+  facts: BrokerFacts;
+  secrets: PreparedSecret[];
+  reason: string;
+  evaluation: Evaluation;
+  shortReadEligible: boolean;
+};
+
+type KeptBroker = {
+  description: BrokerUseDescription;
+  key: string;
+  permission?: string;
+  permissionEpoch?: number;
+  permissionExpires?: number;
+};
+
 type Ready = {
+  home: SecretHome;
   keys: RootKeys;
   vault: SecretVault;
   authority: ProtectedAuthority;
@@ -60,6 +110,17 @@ type Ready = {
 };
 
 type Ended = Exclude<UseState, "waiting" | "executing" | "completed">;
+export type RecoverySave = "saved" | "partial" | "cancelled" | "unavailable";
+export type RecoveryBackup = RecoverySave | "refused" | "unknown";
+export type RecoveryRestore =
+  | "restored"
+  | "refused"
+  | "invalid"
+  | "busy"
+  | "changed"
+  | "locked"
+  | "unavailable"
+  | "unknown";
 
 /**
  * The protected Secrets backend (docs/secrets.md): native root custody, a
@@ -72,6 +133,15 @@ type Ended = Exclude<UseState, "waiting" | "executing" | "completed">;
 export class ProtectedSecrets implements SecretsBackend {
   private readonly described = new Map<string, UseDescription>();
   private readonly now: () => number;
+  private readonly brokers: Map<string, SecretBroker>;
+  private readonly brokered = new Map<string, KeptBroker>();
+  private readonly brokerResults = new Map<string, unknown>();
+  private readonly readAccess: ReadAccess;
+  private readEpoch = 0;
+  private materialEpoch = 0;
+  private mutation: Promise<unknown> = Promise.resolve();
+  private recovering = false;
+  private retired = false;
 
   private constructor(
     private readonly options: ProtectedSecretsOptions,
@@ -79,6 +149,15 @@ export class ProtectedSecrets implements SecretsBackend {
     private readonly ready?: Ready,
   ) {
     this.now = options.now ?? Date.now;
+    this.readAccess = new ReadAccess(this.now);
+    this.brokers = new Map();
+    for (const broker of options.brokers ?? []) this.registerBroker(broker);
+  }
+
+  /** A core consumer's code capability, never accepted from a command, IPC or saved record. */
+  registerBroker(broker: SecretBroker): void {
+    if (this.brokers.has(broker.id)) throw new Error("Duplicate secret broker.");
+    this.brokers.set(broker.id, broker);
   }
 
   /**
@@ -90,32 +169,58 @@ export class ProtectedSecrets implements SecretsBackend {
     const now = options.now ?? Date.now;
     await mkdir(options.dir, { recursive: true, mode: 0o700 });
     await rm(join(options.dir, "runs"), { recursive: true, force: true });
-    const keys = await RootKeys.open(options.custody, {
+    const home = await openSecretHome(options.dir, options.custody);
+    if (typeof home === "string") return new ProtectedSecrets(options, home);
+    const keys = await RootKeys.open(home.custody, {
       initialize: options.initialize === true,
-      hasRecords: await SecretVault.hasRecords(options.dir),
+      hasRecords: await hasSecretHomeRecords(options.dir),
     });
     if (typeof keys === "string") return new ProtectedSecrets(options, keys);
-    const authority = await ProtectedAuthority.load(options.dir, keys, options.custody);
-    if (typeof authority === "string") return new ProtectedSecrets(options, authority);
+    const authority = await ProtectedAuthority.load(home.dir, keys, home.custody).catch(
+      () => "unavailable" as const,
+    );
+    if (typeof authority === "string") {
+      keys.destroy();
+      return new ProtectedSecrets(options, authority);
+    }
     return new ProtectedSecrets(options, "available", {
+      home,
       keys,
-      vault: new SecretVault(options.dir, keys, now),
+      vault: new SecretVault(home.dir, keys, now),
       authority,
-      journal: await UseJournal.open(options.dir, keys, now),
+      journal: await UseJournal.open(home.dir, keys, now),
       local: new LocalApprovals(options.authentication, now),
       remote: new RemoteApprovals(now),
     });
   }
 
   async list(): Promise<SecretReference[]> {
-    if (!this.ready) return [];
-    return (await this.ready.vault.list())
-      .filter((entry) => entry.discoverable)
-      .map((entry) => ({ ref: entry.ref, label: entry.label, version: String(entry.version) }));
+    const entries = await this.metadata();
+    return this.retired
+      ? []
+      : entries
+          .filter((entry) => entry.discoverable)
+          .map(({ ref, label, version, environment }) => ({
+            ref,
+            label,
+            version: String(version),
+            // Context for telling two of one name apart, never a filter.
+            ...(environment ? { environment } : {}),
+          }));
   }
 
   restored(): { intent: string; inputDigest: string; receipt: UseReceipt }[] {
     return this.ready?.journal.restored() ?? [];
+  }
+
+  /** Live owner facts, rechecked synchronously at delivery after all awaited validation. */
+  private authorizationCurrent(materialEpoch: number, authorityRevision: number): boolean {
+    return (
+      !this.recovering &&
+      !this.retired &&
+      materialEpoch === this.materialEpoch &&
+      this.ready?.authority.authority.revision === authorityRevision
+    );
   }
 
   async prepare(
@@ -123,7 +228,9 @@ export class ProtectedSecrets implements SecretsBackend {
     request: string,
     _expires: number,
   ): Promise<PreparedUse | undefined> {
+    if (this.recovering || this.retired) return undefined;
     const ready = this.ready;
+    const epoch = this.materialEpoch;
     if (!ready || !input.cwd || !(await this.custodyCurrent())) return undefined;
     const refs = [...new Set(Object.values(input.env))].sort();
     const entries: VaultEntry[] = [];
@@ -146,7 +253,7 @@ export class ProtectedSecrets implements SecretsBackend {
     }
     const authority = ready.authority.authority;
     const evaluation = ready.authority.evaluate(refs, recipient.operation);
-    const versions = entries.map(({ ref, version }) => ({ ref, version }));
+    const versions = entries.map(({ ref, version, revision }) => ({ ref, version, revision }));
     const digest = sha256(
       canonical({
         home: authority.home,
@@ -179,7 +286,7 @@ export class ProtectedSecrets implements SecretsBackend {
     this.described.set(request, {
       request,
       facts: recipient.facts,
-      secrets: entries.map(({ ref, label, version }) => ({ ref, label, version })),
+      secrets: entries.map(preparedSecret),
       reason: input.reason,
       evaluation,
     });
@@ -190,14 +297,20 @@ export class ProtectedSecrets implements SecretsBackend {
       recorded = true;
       await ready.journal.append({ kind: "ended", request, state }).catch(() => {});
     };
+    const authorized = () => this.authorizationCurrent(epoch, authority.revision);
     const current = async (): Promise<boolean> => {
-      if (!(await this.custodyCurrent())) return false;
-      if (ready.authority.authority.revision !== authority.revision) return false;
-      for (const { ref, version } of versions) {
+      if (!(await this.custodyCurrent()) || !authorized()) return false;
+      for (const { ref, version, revision } of versions) {
         const entry = await ready.vault.entry(ref);
-        if (!entry?.discoverable || entry.version !== version) return false;
+        if (
+          !authorized() ||
+          !entry?.discoverable ||
+          entry.version !== version ||
+          entry.revision !== revision
+        )
+          return false;
       }
-      return recipient.check();
+      return (await recipient.check()) && authorized();
     };
 
     return {
@@ -217,13 +330,25 @@ export class ProtectedSecrets implements SecretsBackend {
           for (const [name, ref] of Object.entries(input.env)) {
             const opened = await ready.vault.open(ref);
             const bound = versions.find((one) => one.ref === ref);
-            if (!opened || opened.entry.version !== bound?.version) {
+            if (
+              !opened ||
+              !bound ||
+              opened.entry.version !== bound.version ||
+              opened.entry.revision !== bound.revision
+            ) {
+              opened?.value.fill(0);
               await end("invalidated");
               return { state: "invalidated" };
             }
             values[name] = opened.value;
           }
-          const launched = await recipient.launch(values, base).catch(() => "failed" as const);
+          if (!(await current())) {
+            await end("invalidated");
+            return { state: "invalidated" };
+          }
+          const launched = await recipient
+            .launch(values, base, authorized)
+            .catch(() => "failed" as const);
           if (launched === "changed") {
             await end("invalidated");
             return { state: "invalidated" };
@@ -261,16 +386,198 @@ export class ProtectedSecrets implements SecretsBackend {
     };
   }
 
+  /**
+   * The broker uses this owner's custody, protected rules, journal and approvals.
+   * A bounded grant never covers a launch, renewal or write, nor an explicit Ask rule.
+   * Results stay private for the trusted adapter's consumer; the command gets a receipt only.
+   */
+  async prepareBrokered(
+    input: BrokeredUse,
+    request: string,
+    _expires: number,
+  ): Promise<PreparedUse | undefined> {
+    if (this.recovering || this.retired) return undefined;
+    const ready = this.ready;
+    const adapter = this.brokers.get(input.broker);
+    const epoch = this.materialEpoch;
+    if (!ready || !adapter || !(await this.custodyCurrent())) return undefined;
+    const prepared = await adapter.prepare(structuredClone(input.input));
+    if (!prepared) return undefined;
+    const facts = structuredClone(prepared.facts);
+    const refs = [...new Set(Object.values(facts.secrets))].sort();
+    const entries: VaultEntry[] = [];
+    for (const ref of refs) {
+      const entry = await ready.vault.entry(ref);
+      // A registered app service may use hidden credentials; registration is not approval.
+      if (!entry) {
+        await prepared.dispose?.();
+        return undefined;
+      }
+      entries.push(entry);
+    }
+    if (
+      facts.broker !== adapter.id ||
+      refs.length === 0 ||
+      !/^[0-9a-f]{64}$/.test(facts.inputDigest)
+    ) {
+      await prepared.dispose?.();
+      return undefined;
+    }
+    const authority = ready.authority.authority;
+    const operation = sha256(canonical({ kind: "broker", facts }));
+    const evaluation = ready.authority.evaluate(refs, operation);
+    const versions = entries.map(({ ref, version, revision }) => ({ ref, version, revision }));
+    const key = sha256(
+      canonical({
+        home: authority.home,
+        operation,
+        secrets: versions,
+        authority: authority.revision,
+      }),
+    );
+    const digest = sha256(canonical({ key, request }));
+    const shortReadEligible =
+      facts.read && evaluation.effect === "ask" && evaluation.matched.length === 0;
+    const permission = shortReadEligible ? this.readAccess.find(key) : undefined;
+    const kept: KeptBroker = {
+      key,
+      ...(permission
+        ? {
+            permission: permission.id,
+            permissionEpoch: this.readEpoch,
+            permissionExpires: permission.expires,
+          }
+        : {}),
+      description: {
+        request,
+        facts,
+        secrets: entries.map(preparedSecret),
+        reason: input.reason,
+        evaluation,
+        shortReadEligible,
+      },
+    };
+    try {
+      await ready.journal.append({
+        kind: "requested",
+        request,
+        intent: input.id,
+        inputDigest: brokerInputDigest(input),
+        digest,
+        secrets: refs,
+        program: facts.label,
+        reason: input.reason,
+        rule: evaluation.effect,
+      });
+      if (evaluation.effect === "allow" || permission)
+        await ready.journal.append({
+          kind: "approved",
+          request,
+          method: permission ? "short-read" : "rule",
+        });
+    } catch {
+      await prepared.dispose?.();
+      return undefined;
+    }
+    this.brokered.set(request, kept);
+    let ended = false;
+    const end = async (state: Ended) => {
+      if (ended) return;
+      ended = true;
+      await ready.journal.append({ kind: "ended", request, state });
+    };
+    const authorized = () =>
+      this.authorizationCurrent(epoch, authority.revision) &&
+      (kept.permission === undefined ||
+        (kept.permissionEpoch === this.readEpoch && this.now() < (kept.permissionExpires ?? 0)));
+    const current = async () => {
+      if (!(await this.custodyCurrent()) || !authorized()) return false;
+      for (const { ref, version, revision } of versions) {
+        const entry = await ready.vault.entry(ref);
+        if (!authorized() || !entry || entry.version !== version || entry.revision !== revision)
+          return false;
+      }
+      return authorized();
+    };
+    return {
+      digest,
+      rule: permission ? "allow" : evaluation.effect,
+      current,
+      execute: async () => {
+        if (kept.permission && !this.readAccess.consume(kept.permission, key)) {
+          await end("invalidated");
+          return { state: "invalidated" };
+        }
+        try {
+          await ready.journal.append({ kind: "consumed", request });
+        } catch {
+          await end("unavailable").catch(() => {});
+          return { state: "unavailable" };
+        }
+        const values: Record<string, Buffer> = Object.create(null);
+        try {
+          for (const [name, ref] of Object.entries(facts.secrets)) {
+            const opened = await ready.vault.open(ref);
+            const bound = versions.find((one) => one.ref === ref);
+            if (
+              !opened ||
+              !bound ||
+              opened.entry.version !== bound.version ||
+              opened.entry.revision !== bound.revision
+            ) {
+              opened?.value.fill(0);
+              await end("invalidated");
+              return { state: "invalidated" };
+            }
+            values[name] = opened.value;
+          }
+          if (!(await current()) || !authorized()) {
+            await end("invalidated");
+            return { state: "invalidated" };
+          }
+          const result = await prepared.run(values);
+          // A response object belongs only to the registered consumer. It never enters the journal.
+          this.brokerResults.set(request, result);
+          ended = true;
+          await ready.journal.append({ kind: "completed", request }).catch(() => {});
+          return { completed: true };
+        } catch {
+          await end("unknown").catch(() => {});
+          return { state: "unknown" };
+        } finally {
+          for (const value of Object.values(values)) value.fill(0);
+        }
+      },
+      dispose: async (state) => {
+        this.brokered.delete(request);
+        ready.remote.forget(request);
+        try {
+          await prepared.dispose?.();
+        } catch (error) {
+          this.brokerResults.delete(request);
+          await end("unknown");
+          throw error;
+        }
+        if (state !== "waiting" && state !== "executing" && state !== "completed") await end(state);
+      },
+    };
+  }
+
   async authenticate(
     request: string,
     digest: string,
-    _expires: number,
+    expires: number,
     proof: unknown,
   ): Promise<boolean> {
     const ready = this.ready;
     if (!ready) return false;
+    const epoch = this.readEpoch;
     let device: string | undefined;
-    const local = ready.local.consume(proof, `use:${request}`, digest);
+    const broker = this.brokered.get(request);
+    const shortRead =
+      broker?.description.shortReadEligible === true &&
+      ready.local.consume(proof, `short-read:${request}`, this.shortReadDigest(digest));
+    const local = shortRead || ready.local.consume(proof, `use:${request}`, digest);
     if (!local) {
       const authority = ready.authority.authority;
       device = ready.remote.consume(proof, {
@@ -291,14 +598,100 @@ export class ProtectedSecrets implements SecretsBackend {
     } catch {
       return false;
     }
+    if (shortRead && broker) {
+      if (epoch !== this.readEpoch || this.now() >= expires) return false;
+      broker.permission = this.readAccess.grant({
+        key: broker.key,
+        label: broker.description.facts.label,
+        destination: broker.description.facts.destination,
+        secrets: broker.description.secrets.map((secret) => secret.ref),
+      });
+      broker.permissionEpoch = epoch;
+      broker.permissionExpires = this.readAccess.find(broker.key)?.expires;
+    }
     return true;
   }
 
   // Trusted controller only. None of what follows is reachable from the agent facade.
 
+  describeBrokered(request: string): BrokerUseDescription | undefined {
+    const described = this.brokered.get(request)?.description;
+    return described ? structuredClone(described) : undefined;
+  }
+
+  /** The registered consumer takes its response once; never exposed through AXI or a general IPC. */
+  takeBrokerResult(request: string): unknown {
+    const result = this.brokerResults.get(request);
+    this.brokerResults.delete(request);
+    return result;
+  }
+
+  readPermissions(): ReadPermission[] {
+    return this.readAccess.list();
+  }
+  endReadAccess(id?: string): void {
+    this.readEpoch += 1;
+    this.readAccess.end(id);
+  }
+
+  async confirmShortRead(
+    request: string,
+    digest: string,
+    expires: number,
+    reason: string,
+  ): Promise<LocalProof | undefined> {
+    if (!this.brokered.get(request)?.description.shortReadEligible) return undefined;
+    return this.ready?.local.confirm(
+      `short-read:${request}`,
+      this.shortReadDigest(digest),
+      expires,
+      reason,
+    );
+  }
+
+  private shortReadDigest(digest: string): string {
+    return sha256(
+      canonical({
+        digest,
+        epoch: this.readEpoch,
+        seconds: SHORT_READ_SECONDS,
+        uses: SHORT_READ_USES,
+      }),
+    );
+  }
+
   /** The checked facts of a waiting use, for the trusted approval screen. */
   describe(request: string): UseDescription | undefined {
-    return this.described.get(request);
+    const description = this.described.get(request);
+    return description ? structuredClone(description) : undefined;
+  }
+
+  /** Metadata for the trusted Settings view, including entries hidden from agents. */
+  async metadata(): Promise<VaultEntry[]> {
+    if (this.retired) return [];
+    try {
+      const entries = (await this.ready?.vault.list()) ?? [];
+      return this.retired ? [] : entries;
+    } catch (error) {
+      // A read already in flight can meet retirement's cleared derived keys.
+      if (this.retired) return [];
+      throw error;
+    }
+  }
+
+  /** Report a lock or a replaced root without opening a new owner or changing system locking. */
+  async status(): Promise<SecretsAvailability> {
+    if (this.recovering || this.retired) return "unavailable";
+    if (!this.ready) return this.availability;
+    try {
+      const read = await this.ready.home.custody.read("root");
+      if (read.kind !== "value") return read.kind === "absent" ? "lost" : read.kind;
+      const same = sha256(read.bytes).slice(0, 16) === this.ready.keys.fingerprint;
+      read.bytes.fill(0);
+      return this.retired || this.recovering ? "unavailable" : same ? "available" : "lost";
+    } catch {
+      return "unavailable";
+    }
   }
 
   /** Ask the system to confirm the person for this exact use; the proof passes `approve` once. */
@@ -318,7 +711,7 @@ export class ProtectedSecrets implements SecretsBackend {
     expires: number,
   ): { nonce: string; home: string } | undefined {
     const ready = this.ready;
-    if (!ready || !this.described.has(request)) return undefined;
+    if (!ready || (!this.described.has(request) && !this.brokered.has(request))) return undefined;
     const challenge = ready.remote.challenge(request, digest, expires);
     return challenge ? { ...challenge, home: ready.authority.authority.home } : undefined;
   }
@@ -347,10 +740,22 @@ export class ProtectedSecrets implements SecretsBackend {
     authority: Authority,
     proof: unknown,
   ): Promise<"stored" | "refused" | "invalid" | "locked" | "unavailable"> {
-    const ready = this.ready;
-    if (!ready) return "unavailable";
-    if (!ready.local.consume(proof, "authority", sha256(canonical(authority)))) return "refused";
-    return ready.authority.save(authority);
+    return this.change(async () => {
+      const ready = this.ready;
+      if (!ready || !(await this.custodyCurrent())) return "unavailable";
+      if (!ready.local.consume(proof, "authority", sha256(canonical(authority)))) return "refused";
+      try {
+        const saved = await ready.authority.save(authority);
+        if (saved === "stored") this.endReadAccess();
+        return saved;
+      } catch (error) {
+        // The native head may have moved. No old rule or prepared use remains
+        // authority until reopening reconciles the pending record.
+        this.retired = true;
+        this.endReadAccess();
+        throw error;
+      }
+    });
   }
 
   /**
@@ -361,7 +766,12 @@ export class ProtectedSecrets implements SecretsBackend {
     input: Pick<Injection, "argv" | "env" | "cwd">,
   ): Promise<{ evaluation: Evaluation; operation: string; facts: RecipientFacts } | undefined> {
     const ready = this.ready;
-    if (!ready || !input.cwd) return undefined;
+    if (
+      !ready ||
+      !input.cwd ||
+      !validInjection({ ...input, id: "rehearsal", reason: "Check rules without running" })
+    )
+      return undefined;
     const runDir = join(this.options.dir, "runs", `rehearsal-${randomUUID()}`);
     const recipient = await prepareRecipient(
       { argv: input.argv, cwd: input.cwd, env: input.env },
@@ -386,13 +796,197 @@ export class ProtectedSecrets implements SecretsBackend {
     ref: string,
     label: string,
     value: Buffer,
-    options: { discoverable?: boolean } = {},
+    options: SecretMetadataInput & {
+      expectedVersion?: number;
+      expectedRevision?: string | null;
+    } = {},
   ): Promise<VaultEntry | undefined> {
-    return this.ready?.vault.put(ref, label, value, options);
+    return this.change(async () => {
+      if (!(await this.custodyCurrent())) return undefined;
+      const previous = await this.ready?.vault.entry(ref);
+      if (
+        (options.expectedVersion !== undefined &&
+          options.expectedVersion !== (previous?.version ?? 0)) ||
+        (options.expectedRevision !== undefined &&
+          options.expectedRevision !== (previous?.revision ?? null))
+      )
+        return undefined;
+      // Invalidate already-prepared uses even if a remove/add would reuse a version number.
+      this.materialEpoch += 1;
+      this.endReadAccess();
+      return this.ready?.vault.put(ref, label, value, options);
+    });
   }
 
-  async forgetSecret(ref: string): Promise<void> {
-    await this.ready?.vault.remove(ref);
+  async forgetSecret(
+    ref: string,
+    expectedVersion?: number,
+    expectedRevision?: string,
+  ): Promise<boolean> {
+    return this.change(async () => {
+      if (!(await this.custodyCurrent())) return false;
+      const current = await this.ready?.vault.entry(ref);
+      if (
+        (expectedVersion !== undefined && current?.version !== expectedVersion) ||
+        (expectedRevision !== undefined && current?.revision !== expectedRevision)
+      )
+        return false;
+      this.materialEpoch += 1;
+      this.endReadAccess();
+      await this.ready?.vault.remove(ref);
+      return true;
+    });
+  }
+
+  /**
+   * Trusted native recovery writer only. Its destinations are chosen before this
+   * call; no archive, key or decoded value is returned through a general API.
+   * Fresh confirmation covers one export, not later uses or a reusable grant.
+   */
+  async backupRecovery(
+    write: (files: RecoveryFiles) => Promise<RecoverySave>,
+  ): Promise<RecoveryBackup> {
+    return this.change(async () => {
+      const ready = this.ready;
+      if (!ready || !(await this.custodyCurrent())) return "unavailable";
+      let confirmed = false;
+      try {
+        confirmed =
+          (await this.options.authentication?.confirm(
+            "Save an encrypted Secrets recovery archive and its separate recovery key.",
+          )) === true;
+      } catch {
+        // Failed or cancelled native confirmation authorizes no export.
+      }
+      if (!confirmed) return "refused";
+      if (!(await this.custodyCurrent())) return "unavailable";
+      const contents: RecoveryContents = {
+        format: 1,
+        createdAt: this.now(),
+        sourceHome: ready.authority.authority.home,
+        values: [],
+        history: structuredClone(ready.journal.history()),
+      };
+      let files: RecoveryFiles | undefined;
+      try {
+        const entries = await ready.vault.recoveryEntries();
+        if (!entries) return "unavailable";
+        for (const entry of entries) {
+          const opened = await ready.vault.open(entry.ref);
+          try {
+            if (!opened || opened.entry.revision !== entry.revision) return "unavailable";
+            contents.values.push({
+              ref: entry.ref,
+              label: entry.label,
+              discoverable: entry.discoverable,
+              ...(entry.environment !== undefined ? { environment: entry.environment } : {}),
+              value: opened.value.toString("base64"),
+            });
+          } finally {
+            opened?.value.fill(0);
+          }
+        }
+        if (!(await this.custodyCurrent())) return "unavailable";
+        files = sealRecovery(contents);
+        try {
+          return await write(files);
+        } catch {
+          // A writer may have saved either file before its response failed.
+          return "unknown";
+        }
+      } catch {
+        return "unavailable";
+      } finally {
+        clearRecovery(contents);
+        files?.archive.fill(0);
+        files?.key.fill(0);
+      }
+    });
+  }
+
+  /** A private native source and a pause capability from this owner's request coordinator. */
+  restoreRecovery(
+    files: RecoveryFiles,
+    pause: () => Promise<(() => void) | undefined>,
+  ): Promise<RecoveryRestore> {
+    const archive = Buffer.from(files.archive);
+    const key = Buffer.from(files.key);
+    return this.change(async () => {
+      let contents: RecoveryContents | undefined;
+      let stage: StagedRecovery | undefined;
+      let resume: (() => void) | undefined;
+      try {
+        if (this.retired) return "unavailable";
+        if (this.brokerResults.size > 0) return "busy";
+        contents = openRecovery(archive, key);
+        if (!contents) return "invalid";
+        const expected = await observeSecretHome(this.options.custody);
+        if (typeof expected === "string") return expected === "lost" ? "unavailable" : expected;
+        let confirmed = false;
+        try {
+          confirmed =
+            (await this.options.authentication?.confirm(
+              "Restore the selected Secrets archive, replace this computer's stored values and reset all saved permissions and approval devices.",
+            )) === true;
+        } catch {
+          /* No fresh confirmation means no restore. */
+        }
+        if (!confirmed) return "refused";
+        resume = await pause();
+        if (!resume || this.brokerResults.size > 0) return "busy";
+        this.recovering = true;
+        this.materialEpoch += 1;
+        this.endReadAccess();
+        const history = await this.recoveryHistory();
+        if (typeof history === "string") return history;
+        stage = await stageRecovery(this.options.dir, contents, history, this.now());
+        const result = await stage.commit(this.options.custody, expected);
+        if (result === "committed" || result === "unknown") {
+          this.retired = true;
+          this.ready?.keys.destroy();
+          this.described.clear();
+          this.brokered.clear();
+        }
+        return result === "committed" ? "restored" : result;
+      } catch {
+        return "unavailable";
+      } finally {
+        try {
+          await stage?.dispose();
+        } catch {
+          /* An unused encrypted stage may remain; never claim erasure. */
+        }
+        this.recovering = false;
+        resume?.();
+        if (contents) clearRecovery(contents);
+        archive.fill(0);
+        key.fill(0);
+      }
+    });
+  }
+
+  /** Authority may be damaged while the root still authenticates the local journal. */
+  private async recoveryHistory(): Promise<JournalSnapshot | "locked" | "unavailable"> {
+    if (this.ready) return this.ready.journal.snapshot();
+    const home = await openSecretHome(this.options.dir, this.options.custody);
+    if (typeof home === "string") return home === "lost" ? { entries: [], recovered: [] } : home;
+    const keys = await RootKeys.open(home.custody, {
+      initialize: false,
+      hasRecords: await hasSecretHomeRecords(this.options.dir),
+    });
+    if (typeof keys === "string")
+      return keys === "lost" || keys === "uninitialized" ? { entries: [], recovered: [] } : keys;
+    try {
+      return await (await UseJournal.open(home.dir, keys, this.now)).snapshot();
+    } finally {
+      keys.destroy();
+    }
+  }
+
+  private change<T>(write: () => Promise<T>): Promise<T> {
+    const next = this.mutation.then(write);
+    this.mutation = next.catch(() => {});
+    return next;
   }
 
   history(): HistoryItem[] {
@@ -400,7 +994,9 @@ export class ProtectedSecrets implements SecretsBackend {
   }
 
   async storageUse(): Promise<number> {
-    return (await this.ready?.journal.storageUse()) ?? 0;
+    let bytes = 0;
+    for (const path of await secretHistoryFiles(this.options.dir)) bytes += (await stat(path)).size;
+    return bytes;
   }
 
   exportHistory(): string | undefined {
@@ -408,21 +1004,31 @@ export class ProtectedSecrets implements SecretsBackend {
   }
 
   async clearHistory(): Promise<"cleared" | "busy" | "unavailable"> {
-    return (await this.ready?.journal.clear()) ?? "unavailable";
+    return this.change(async () => {
+      if (this.retired || this.recovering) return "unavailable";
+      if (!this.ready) return "unavailable";
+      // All generations are removed inside the journal's writer turn, never
+      // after a new request has been allowed to create the current file again.
+      return this.ready.journal.clear(await secretHistoryFiles(this.options.dir));
+    });
   }
 
   /** Custody is read again at every consumption: a locked or replaced root stops the use. */
   private async custodyCurrent(): Promise<boolean> {
     const ready = this.ready;
-    if (!ready) return false;
+    if (!ready || this.recovering || this.retired) return false;
     try {
-      const read = await this.options.custody.read("root");
+      const read = await ready.home.custody.read("root");
       if (read.kind !== "value") return false;
       const same = sha256(read.bytes).slice(0, 16) === ready.keys.fingerprint;
       read.bytes.fill(0);
-      return same;
+      return same && !this.retired && !this.recovering;
     } catch {
       return false;
     }
   }
+}
+
+function preparedSecret({ ref, label, version, environment }: VaultEntry): PreparedSecret {
+  return { ref, label, version, ...(environment !== undefined ? { environment } : {}) };
 }

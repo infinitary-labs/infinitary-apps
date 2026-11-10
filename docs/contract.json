@@ -2,10 +2,10 @@
   "title": "Infinitary client contract",
   "generated": "Generated from src/shared/ipc.ts, src/shared/work.ts and src/shared/connection.ts by scripts/generate-contract.ts. Do not edit; run pnpm generate:contract.",
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
-  "protocolVersion": "14.0.0",
+  "protocolVersion": "15.0.0",
   "versionRule": {
     "majorsBehind": 0,
-    "viewFloor": 14,
+    "viewFloor": 15,
     "minor": "Additive: a new request, a new push, a new optional field or a new capability. Nothing a client already sends or reads changes meaning.",
     "major": "Anything a client written against an older version could not survive: a request, push or field removed or renamed, a field made required, or a meaning changed.",
     "window": "A home answers every request of a computer that runs work only on its own major or one of the majorsBehind before it. A view (hello as view) changes things from the home's viewFloor up to the home's major, and on an older home when the viewFloor its own hello says reaches that home's major. A computer viewing whose hello says no viewFloor is answered as work is; a phone (system ios) that says none is measured against the home's viewFloor. A client outside its window is answered its reads (effect read) and sent every push, and each change (effect change) is refused until the older side is updated. The welcome's access says which the client got.",
@@ -8829,7 +8829,8 @@
                               "defer-required-action",
                               "allow-cost",
                               "lift-cost-limit",
-                              "stop-at-cost"
+                              "stop-at-cost",
+                              "secrets-decision"
                             ]
                           },
                           "arg": {
@@ -10094,7 +10095,8 @@
                                 "defer-required-action",
                                 "allow-cost",
                                 "lift-cost-limit",
-                                "stop-at-cost"
+                                "stop-at-cost",
+                                "secrets-decision"
                               ]
                             },
                             "arg": {
@@ -39405,6 +39407,2129 @@
         "type": "boolean"
       }
     },
+    "inf:secrets:approvals": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "device": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9-]{1,64}$"
+              }
+            },
+            "required": [
+              "device"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "availability": {
+            "type": "string",
+            "enum": [
+              "not-enabled",
+              "available",
+              "locked",
+              "unavailable",
+              "uninitialized",
+              "lost",
+              "tampered"
+            ]
+          },
+          "home": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "device": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "generation": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "key": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "label",
+                  "generation",
+                  "key"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "offered": {
+            "type": "boolean"
+          },
+          "waiting": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "request": {
+                  "type": "string"
+                },
+                "card": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "digest": {
+                  "type": "string"
+                },
+                "expires": {
+                  "type": "number"
+                },
+                "nonce": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "recipient": {
+                  "type": "string"
+                },
+                "secrets": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "version": {
+                        "type": "number"
+                      },
+                      "environment": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "label",
+                      "version",
+                      "environment"
+                    ]
+                  }
+                },
+                "facts": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "value"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "request",
+                "card",
+                "digest",
+                "expires",
+                "nonce",
+                "reason",
+                "recipient",
+                "secrets",
+                "facts"
+              ]
+            }
+          }
+        },
+        "required": [
+          "availability",
+          "home",
+          "device",
+          "offered",
+          "waiting"
+        ]
+      }
+    },
+    "inf:secrets:enroll": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "device": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9-]{1,64}$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "key": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              }
+            },
+            "required": [
+              "device",
+              "label",
+              "key"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "availability": {
+            "type": "string",
+            "enum": [
+              "not-enabled",
+              "available",
+              "locked",
+              "unavailable",
+              "uninitialized",
+              "lost",
+              "tampered"
+            ]
+          },
+          "home": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "device": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  },
+                  "generation": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "key": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "label",
+                  "generation",
+                  "key"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "offered": {
+            "type": "boolean"
+          },
+          "waiting": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "request": {
+                  "type": "string"
+                },
+                "card": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "digest": {
+                  "type": "string"
+                },
+                "expires": {
+                  "type": "number"
+                },
+                "nonce": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "recipient": {
+                  "type": "string"
+                },
+                "secrets": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "version": {
+                        "type": "number"
+                      },
+                      "environment": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "label",
+                      "version",
+                      "environment"
+                    ]
+                  }
+                },
+                "facts": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "value"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "request",
+                "card",
+                "digest",
+                "expires",
+                "nonce",
+                "reason",
+                "recipient",
+                "secrets",
+                "facts"
+              ]
+            }
+          }
+        },
+        "required": [
+          "availability",
+          "home",
+          "device",
+          "offered",
+          "waiting"
+        ]
+      }
+    },
+    "inf:secrets:decide": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "allow"
+                  },
+                  "request": {
+                    "type": "string"
+                  },
+                  "device": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9-]{1,64}$"
+                  },
+                  "generation": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "nonce": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  },
+                  "signature": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  }
+                },
+                "required": [
+                  "kind",
+                  "request",
+                  "device",
+                  "generation",
+                  "nonce",
+                  "signature"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "deny"
+                  },
+                  "request": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "request"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "waiting",
+              "executing",
+              "completed",
+              "denied",
+              "cancelled",
+              "expired",
+              "invalidated",
+              "unavailable",
+              "unknown"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ]
+      }
+    },
+    "inf:secrets:view": {
+      "effect": "read",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "availability": {
+            "type": "string",
+            "enum": [
+              "not-enabled",
+              "available",
+              "locked",
+              "unavailable",
+              "uninitialized",
+              "lost",
+              "tampered"
+            ]
+          },
+          "home": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "offeredCard": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ref": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "revision": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "updatedAt": {
+                  "type": "number"
+                },
+                "environment": {
+                  "type": "string"
+                },
+                "lastRequest": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "ref",
+                "label",
+                "version",
+                "revision",
+                "updatedAt",
+                "environment",
+                "lastRequest"
+              ]
+            }
+          },
+          "uses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "request": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "waiting",
+                    "executing",
+                    "completed",
+                    "denied",
+                    "cancelled",
+                    "expired",
+                    "invalidated",
+                    "unavailable",
+                    "unknown"
+                  ]
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "recipient": {
+                  "type": "string"
+                },
+                "facts": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "value"
+                    ]
+                  }
+                },
+                "secrets": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "version": {
+                        "type": "number"
+                      },
+                      "environment": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "label",
+                      "version",
+                      "environment"
+                    ]
+                  }
+                },
+                "shortReadEligible": {
+                  "type": "boolean"
+                },
+                "expires": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "exitCode": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "request",
+                "state",
+                "reason",
+                "recipient",
+                "facts",
+                "secrets",
+                "shortReadEligible",
+                "expires"
+              ]
+            }
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "effect": {
+                  "type": "string",
+                  "enum": [
+                    "never",
+                    "ask",
+                    "allow"
+                  ]
+                },
+                "secret": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                },
+                "operation": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "note": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "effect",
+                "secret"
+              ]
+            }
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "request": {
+                  "type": "string"
+                },
+                "intent": {
+                  "type": "string"
+                },
+                "program": {
+                  "type": "string"
+                },
+                "secrets": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestedAt": {
+                  "type": "number"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "waiting",
+                    "executing",
+                    "completed",
+                    "denied",
+                    "cancelled",
+                    "expired",
+                    "invalidated",
+                    "unavailable",
+                    "unknown"
+                  ]
+                },
+                "exitCode": {
+                  "type": "number"
+                },
+                "approval": {
+                  "type": "string",
+                  "enum": [
+                    "local",
+                    "remote",
+                    "rule",
+                    "short-read"
+                  ]
+                },
+                "device": {
+                  "type": "string"
+                },
+                "reconciled": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "recoveredFrom": {
+                  "type": "string"
+                },
+                "recoveredAt": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "request",
+                "intent",
+                "program",
+                "secrets",
+                "reason",
+                "requestedAt",
+                "state"
+              ]
+            }
+          },
+          "historyBytes": {
+            "type": "number",
+            "minimum": 0
+          },
+          "recoveryAvailable": {
+            "type": "boolean"
+          },
+          "reads": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "destination": {
+                  "type": "string"
+                },
+                "secrets": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "expires": {
+                  "type": "number"
+                },
+                "remaining": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "id",
+                "key",
+                "label",
+                "destination",
+                "secrets",
+                "expires",
+                "remaining"
+              ]
+            }
+          },
+          "devices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "device": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "generation": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "code": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "device",
+                "label",
+                "generation",
+                "code"
+              ]
+            }
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "saved": {
+            "type": "object",
+            "properties": {
+              "ref": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+              },
+              "version": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "ref",
+              "version"
+            ]
+          }
+        },
+        "required": [
+          "availability",
+          "home",
+          "offeredCard",
+          "entries",
+          "uses",
+          "rules",
+          "history",
+          "historyBytes",
+          "recoveryAvailable",
+          "reads",
+          "devices",
+          "message"
+        ]
+      }
+    },
+    "inf:secrets:entry": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "ref": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "expectedVersion": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "expectedRevision": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "environment": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "label",
+              "value",
+              "expectedVersion",
+              "expectedRevision",
+              "environment"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "availability": {
+            "type": "string",
+            "enum": [
+              "not-enabled",
+              "available",
+              "locked",
+              "unavailable",
+              "uninitialized",
+              "lost",
+              "tampered"
+            ]
+          },
+          "home": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "offeredCard": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ref": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "revision": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "updatedAt": {
+                  "type": "number"
+                },
+                "environment": {
+                  "type": "string"
+                },
+                "lastRequest": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "ref",
+                "label",
+                "version",
+                "revision",
+                "updatedAt",
+                "environment",
+                "lastRequest"
+              ]
+            }
+          },
+          "uses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "request": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "waiting",
+                    "executing",
+                    "completed",
+                    "denied",
+                    "cancelled",
+                    "expired",
+                    "invalidated",
+                    "unavailable",
+                    "unknown"
+                  ]
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "recipient": {
+                  "type": "string"
+                },
+                "facts": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "value"
+                    ]
+                  }
+                },
+                "secrets": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "version": {
+                        "type": "number"
+                      },
+                      "environment": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "label",
+                      "version",
+                      "environment"
+                    ]
+                  }
+                },
+                "shortReadEligible": {
+                  "type": "boolean"
+                },
+                "expires": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "exitCode": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "request",
+                "state",
+                "reason",
+                "recipient",
+                "facts",
+                "secrets",
+                "shortReadEligible",
+                "expires"
+              ]
+            }
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "effect": {
+                  "type": "string",
+                  "enum": [
+                    "never",
+                    "ask",
+                    "allow"
+                  ]
+                },
+                "secret": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                },
+                "operation": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "note": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "effect",
+                "secret"
+              ]
+            }
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "request": {
+                  "type": "string"
+                },
+                "intent": {
+                  "type": "string"
+                },
+                "program": {
+                  "type": "string"
+                },
+                "secrets": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestedAt": {
+                  "type": "number"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "waiting",
+                    "executing",
+                    "completed",
+                    "denied",
+                    "cancelled",
+                    "expired",
+                    "invalidated",
+                    "unavailable",
+                    "unknown"
+                  ]
+                },
+                "exitCode": {
+                  "type": "number"
+                },
+                "approval": {
+                  "type": "string",
+                  "enum": [
+                    "local",
+                    "remote",
+                    "rule",
+                    "short-read"
+                  ]
+                },
+                "device": {
+                  "type": "string"
+                },
+                "reconciled": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "recoveredFrom": {
+                  "type": "string"
+                },
+                "recoveredAt": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "request",
+                "intent",
+                "program",
+                "secrets",
+                "reason",
+                "requestedAt",
+                "state"
+              ]
+            }
+          },
+          "historyBytes": {
+            "type": "number",
+            "minimum": 0
+          },
+          "recoveryAvailable": {
+            "type": "boolean"
+          },
+          "reads": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "destination": {
+                  "type": "string"
+                },
+                "secrets": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "expires": {
+                  "type": "number"
+                },
+                "remaining": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "id",
+                "key",
+                "label",
+                "destination",
+                "secrets",
+                "expires",
+                "remaining"
+              ]
+            }
+          },
+          "devices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "device": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "generation": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "code": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "device",
+                "label",
+                "generation",
+                "code"
+              ]
+            }
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "saved": {
+            "type": "object",
+            "properties": {
+              "ref": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+              },
+              "version": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "ref",
+              "version"
+            ]
+          }
+        },
+        "required": [
+          "availability",
+          "home",
+          "offeredCard",
+          "entries",
+          "uses",
+          "rules",
+          "history",
+          "historyBytes",
+          "recoveryAvailable",
+          "reads",
+          "devices",
+          "message"
+        ]
+      }
+    },
+    "inf:secrets:action": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "unlock"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "review-use"
+                  },
+                  "request": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "request"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "cancel-use"
+                  },
+                  "request": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "request"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "end-read"
+                  },
+                  "id": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "save-rules"
+                  },
+                  "rules": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "effect": {
+                          "type": "string",
+                          "enum": [
+                            "never",
+                            "ask",
+                            "allow"
+                          ]
+                        },
+                        "secret": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                        },
+                        "operation": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{64}$"
+                        },
+                        "note": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "effect",
+                        "secret"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "kind",
+                  "rules"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "forget"
+                  },
+                  "ref": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "ref"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "delete-history"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "backup-recovery"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "restore-recovery"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "forget-device"
+                  },
+                  "device": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "device"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "availability": {
+            "type": "string",
+            "enum": [
+              "not-enabled",
+              "available",
+              "locked",
+              "unavailable",
+              "uninitialized",
+              "lost",
+              "tampered"
+            ]
+          },
+          "home": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "offeredCard": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ref": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "revision": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "updatedAt": {
+                  "type": "number"
+                },
+                "environment": {
+                  "type": "string"
+                },
+                "lastRequest": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "ref",
+                "label",
+                "version",
+                "revision",
+                "updatedAt",
+                "environment",
+                "lastRequest"
+              ]
+            }
+          },
+          "uses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "request": {
+                  "type": "string"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "waiting",
+                    "executing",
+                    "completed",
+                    "denied",
+                    "cancelled",
+                    "expired",
+                    "invalidated",
+                    "unavailable",
+                    "unknown"
+                  ]
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "recipient": {
+                  "type": "string"
+                },
+                "facts": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "value"
+                    ]
+                  }
+                },
+                "secrets": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "ref": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "version": {
+                        "type": "number"
+                      },
+                      "environment": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ref",
+                      "label",
+                      "version",
+                      "environment"
+                    ]
+                  }
+                },
+                "shortReadEligible": {
+                  "type": "boolean"
+                },
+                "expires": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "exitCode": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "request",
+                "state",
+                "reason",
+                "recipient",
+                "facts",
+                "secrets",
+                "shortReadEligible",
+                "expires"
+              ]
+            }
+          },
+          "rules": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "effect": {
+                  "type": "string",
+                  "enum": [
+                    "never",
+                    "ask",
+                    "allow"
+                  ]
+                },
+                "secret": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                },
+                "operation": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "note": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "effect",
+                "secret"
+              ]
+            }
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "request": {
+                  "type": "string"
+                },
+                "intent": {
+                  "type": "string"
+                },
+                "program": {
+                  "type": "string"
+                },
+                "secrets": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestedAt": {
+                  "type": "number"
+                },
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "waiting",
+                    "executing",
+                    "completed",
+                    "denied",
+                    "cancelled",
+                    "expired",
+                    "invalidated",
+                    "unavailable",
+                    "unknown"
+                  ]
+                },
+                "exitCode": {
+                  "type": "number"
+                },
+                "approval": {
+                  "type": "string",
+                  "enum": [
+                    "local",
+                    "remote",
+                    "rule",
+                    "short-read"
+                  ]
+                },
+                "device": {
+                  "type": "string"
+                },
+                "reconciled": {
+                  "type": "boolean",
+                  "const": true
+                },
+                "recoveredFrom": {
+                  "type": "string"
+                },
+                "recoveredAt": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "request",
+                "intent",
+                "program",
+                "secrets",
+                "reason",
+                "requestedAt",
+                "state"
+              ]
+            }
+          },
+          "historyBytes": {
+            "type": "number",
+            "minimum": 0
+          },
+          "recoveryAvailable": {
+            "type": "boolean"
+          },
+          "reads": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "destination": {
+                  "type": "string"
+                },
+                "secrets": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "expires": {
+                  "type": "number"
+                },
+                "remaining": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "id",
+                "key",
+                "label",
+                "destination",
+                "secrets",
+                "expires",
+                "remaining"
+              ]
+            }
+          },
+          "devices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "device": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "generation": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "code": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "device",
+                "label",
+                "generation",
+                "code"
+              ]
+            }
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "saved": {
+            "type": "object",
+            "properties": {
+              "ref": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+              },
+              "version": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "ref",
+              "version"
+            ]
+          }
+        },
+        "required": [
+          "availability",
+          "home",
+          "offeredCard",
+          "entries",
+          "uses",
+          "rules",
+          "history",
+          "historyBytes",
+          "recoveryAvailable",
+          "reads",
+          "devices",
+          "message"
+        ]
+      }
+    },
+    "inf:secrets:rehearse": {
+      "effect": "read",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "argv": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "cwd": {
+                "type": "string",
+                "minLength": 1
+              },
+              "env": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                }
+              }
+            },
+            "required": [
+              "argv",
+              "cwd",
+              "env"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "effect": {
+                "type": "string",
+                "enum": [
+                  "never",
+                  "ask",
+                  "allow"
+                ]
+              },
+              "operation": {
+                "type": "string"
+              },
+              "matched": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "facts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "value"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "effect",
+              "operation",
+              "matched",
+              "facts"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    "inf:secrets:history": {
+      "effect": "read",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
     "inf:app:first-run": {
       "effect": "read",
       "reach": "views",
@@ -47140,7 +49265,8 @@
                                     "defer-required-action",
                                     "allow-cost",
                                     "lift-cost-limit",
-                                    "stop-at-cost"
+                                    "stop-at-cost",
+                                    "secrets-decision"
                                   ]
                                 },
                                 "arg": {
@@ -51842,6 +53968,74 @@
         }
       }
     },
+    "inf:work:secrets": {
+      "effect": "read",
+      "reach": "work",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              },
+              "callId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "input": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "task",
+              "callId",
+              "input"
+            ]
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "secrets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ref": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string"
+                },
+                "environment": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "ref",
+                "label",
+                "version"
+              ]
+            }
+          }
+        },
+        "required": [
+          "secrets"
+        ]
+      }
+    },
     "inf:work:picture": {
       "effect": "change",
       "reach": "work",
@@ -55939,6 +58133,12 @@
     }
   },
   "pushes": {
+    "inf:secrets:changed": {
+      "payload": {
+        "type": "object",
+        "properties": {}
+      }
+    },
     "inf:event": {
       "payload": {
         "oneOf": [
@@ -58032,7 +60232,8 @@
                               "defer-required-action",
                               "allow-cost",
                               "lift-cost-limit",
-                              "stop-at-cost"
+                              "stop-at-cost",
+                              "secrets-decision"
                             ]
                           },
                           "arg": {
@@ -68126,6 +70327,9 @@
                       "type": "boolean"
                     },
                     "load": {
+                      "type": "boolean"
+                    },
+                    "secrets": {
                       "type": "boolean"
                     }
                   },

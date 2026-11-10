@@ -66,12 +66,15 @@ export function createDarwinSecretCustody(
     async write(slot: CustodySlot, bytes: Buffer): Promise<CustodyWrite> {
       if (!api) return "unavailable";
       const encoded = Buffer.from(bytes.toString("base64"), "ascii");
+      let attempted = false;
       try {
         api.setUserInteractionAllowed(options.interactive === true);
+        attempted = true;
         const status = api.write(options.service, slot, encoded);
         if (status === SEC_SUCCESS) return "stored";
         return SEC_LOCKED.has(status) ? "locked" : "unavailable";
       } catch {
+        if (attempted) throw new Error("The native Secrets write outcome is unknown.");
         return "unavailable";
       } finally {
         encoded.fill(0);

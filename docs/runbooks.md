@@ -107,7 +107,7 @@ The host no longer compares a relayed plan line's text to decide its kind.
 The crew section enters the prompt through the crew preset and the existing prompt builder.
 Project skills win a name, then opted-in personal skills, then runbook skills.
 Plain skill files travel in the work session specification, so a work computer stages its own files instead of receiving an unusable path on the home computer.
-A work computer must confirm the named runbooks contract change before opening a task carrying these skills.
+Every work computer on the Secrets major supports these skills, and the existing work-major boundary refuses an older computer before it receives the task.
 Pi lists them through its existing resource loader, and Claude stages them through its existing explicit local-skill plugin door with settings sources off.
 Each session writes them in a staging folder of its own beside its record, so no session removes the files another open session of the task still reads (`src/core/session/stagingFolders.ts`, INF-2054).
 HTML parts stay beside their skill and can be read through the same file access.

@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { connect, createServer as createTlsServer } from "node:tls";
 import { cardMessageSchema, cardSchema, cardThreadSchema, pastCardSchema } from "@shared/cards";
 import { CONNECTION_CLOSE, PAIR_PATH } from "@shared/connection";
-import { PLACED_WORK_SINCE } from "@shared/contractFeatures";
+import { PLACED_WORK_SINCE, SHARED_CARDS_SINCE } from "@shared/contractFeatures";
 import { HOME } from "@shared/deviceNames";
 import { type DeviceGrant, type DeviceKind, parsePairingLink } from "@shared/devices";
 import { ENDED_CLOSE, ENDED_CORNER, endedLineWords } from "@shared/endedCard";
@@ -706,179 +706,226 @@ describe("the home's connection", () => {
   // INF-3071's ended cards: a major-14 desktop from before them decodes a
   // card strictly, so it gets an ended card without `ended`, as the note
   // whose one Close closes it; a desktop listing the change and the phone read it.
-  it("keeps an older desktop's card decoding when a card is ended, across lists, pushes and replay", async () => {
-    const card = cardSchema.parse({
-      id: "card-program-starts-plan",
-      taskId: "inf3020",
-      title: "Plan: how a program starts its crewmates",
-      author: "crewmate",
-      priority: 15,
-      meta: "Crewmate",
-      body: "<p>I recommend a program start each crewmate through the first mate.</p>",
-      actions: [],
-      status: "ready",
-      createdAt: 1000,
-      lifecycleId: "plan-life",
-      offerId: "plan-offer",
-      seen: true,
-      noteDone: ENDED_CLOSE,
-      corner: ENDED_CORNER,
-      ended: {
-        by: "crewmate",
-        reason: "Your words went to the first mate, who starts planning crewmates.",
-        at: 2000,
-        line: endedLineWords(
-          "crewmate",
-          "Your words went to the first mate, who starts planning crewmates.",
-        ),
-      },
-    });
-    const at = await home({
-      dispatch: (async (channel) => {
-        if (channel === "inf:cards:list") return [card];
-        throw new Error("Unexpected request");
-      }) as CoreDispatch,
-    });
-    const grant = await at.join();
-    const old = await connectClient(grant, { changes: [] });
-    const current = await connectClient(grant, { changes: ["ended-cards"] });
-    const phone = await connectClient(grant, { system: { system: "ios" }, changes: [] });
-    const legacyDecoder = cardSchema.omit({ ended: true });
-    const listed = await old.invoke("inf:cards:list", []);
-    expect(legacyDecoder.parse(listed[0])).toMatchObject({ id: card.id, noteDone: ENDED_CLOSE });
-    expect((await current.invoke("inf:cards:list", []))[0]).toEqual(card);
-    expect((await phone.invoke("inf:cards:list", []))[0]).toEqual(card);
-    at.events.emit("inf:cards", [card]);
-    const oldPush = await old.push((push) => push.channel === "inf:cards");
-    expect(legacyDecoder.parse((oldPush.payload as unknown[])[0])).toMatchObject({ id: card.id });
-    expect((await current.push((push) => push.channel === "inf:cards")).payload).toEqual([card]);
-    expect((await phone.push((push) => push.channel === "inf:cards")).payload).toEqual([card]);
-    const cursor = old.cursor();
-    await old.close();
-    at.events.emit("inf:cards", [{ ...card, seen: true }]);
-    const back = await connectClient(grant, { cursor, changes: [] });
-    expect(back.welcome.catchUp).toBe("replay");
-    const replay = await back.push((push) => push.seq > cursor.seq);
-    expect(legacyDecoder.parse((replay.payload as unknown[])[0])).toMatchObject({ id: card.id });
-    await back.close();
-    await current.close();
-    await phone.close();
-  });
+  // INF-3206: the Secrets major absorbs the name; its desktops read ended cards without it.
+  it.each([
+    { protocolVersion: PROTOCOL_VERSION, changes: [] },
+    { protocolVersion: "14.0.0", changes: ["ended-cards"] },
+  ])(
+    "keeps ended-card decoding across lists, pushes and replay ($protocolVersion)",
+    async (peer) => {
+      const card = cardSchema.parse({
+        id: "card-program-starts-plan",
+        taskId: "inf3020",
+        title: "Plan: how a program starts its crewmates",
+        author: "crewmate",
+        priority: 15,
+        meta: "Crewmate",
+        body: "<p>I recommend a program start each crewmate through the first mate.</p>",
+        actions: [],
+        status: "ready",
+        createdAt: 1000,
+        lifecycleId: "plan-life",
+        offerId: "plan-offer",
+        seen: true,
+        noteDone: ENDED_CLOSE,
+        corner: ENDED_CORNER,
+        ended: {
+          by: "crewmate",
+          reason: "Your words went to the first mate, who starts planning crewmates.",
+          at: 2000,
+          line: endedLineWords(
+            "crewmate",
+            "Your words went to the first mate, who starts planning crewmates.",
+          ),
+        },
+      });
+      const at = await home({
+        dispatch: (async (channel) => {
+          if (channel === "inf:cards:list") return [card];
+          throw new Error("Unexpected request");
+        }) as CoreDispatch,
+      });
+      const grant = await at.join();
+      const old = await connectClient(grant, { protocolVersion: "14.0.0", changes: [] });
+      const current = await connectClient(grant, peer);
+      const phone = await connectClient(grant, { system: { system: "ios" }, changes: [] });
+      const legacyDecoder = cardSchema.omit({ ended: true });
+      const listed = await old.invoke("inf:cards:list", []);
+      expect(legacyDecoder.parse(listed[0])).toMatchObject({ id: card.id, noteDone: ENDED_CLOSE });
+      expect((await current.invoke("inf:cards:list", []))[0]).toEqual(card);
+      expect((await phone.invoke("inf:cards:list", []))[0]).toEqual(card);
+      at.events.emit("inf:cards", [card]);
+      const oldPush = await old.push((push) => push.channel === "inf:cards");
+      expect(legacyDecoder.parse((oldPush.payload as unknown[])[0])).toMatchObject({ id: card.id });
+      expect((await current.push((push) => push.channel === "inf:cards")).payload).toEqual([card]);
+      expect((await phone.push((push) => push.channel === "inf:cards")).payload).toEqual([card]);
+      const cursor = old.cursor();
+      await old.close();
+      at.events.emit("inf:cards", [{ ...card, seen: true }]);
+      const back = await connectClient(grant, { cursor, protocolVersion: "14.0.0", changes: [] });
+      expect(back.welcome.catchUp).toBe("replay");
+      const replay = await back.push((push) => push.seq > cursor.seq);
+      expect(legacyDecoder.parse((replay.payload as unknown[])[0])).toMatchObject({ id: card.id });
+      await back.close();
+      await current.close();
+      await phone.close();
+    },
+  );
 
   // INF-2225, INF-2214's approved shared cards: a desktop from before shared
   // cards decodes thread lines strictly, so its copy leaves out who
   // contributed a line, what it answers and whether it is a clarification;
   // a current desktop and the phone read them.
-  it("keeps an older desktop's thread decoding while current views read who wrote each line", async () => {
-    // INF-2555: every answer or push a view reads that carries card lines,
-    // read from the published contract, so a channel added later that
-    // carries them fails here until an older desktop gets them translated.
-    const contract = publishedContract();
-    const carriesLines = (schema: unknown) => JSON.stringify(schema).includes('"answersMessage"');
-    const asked = Object.entries(contract.requests)
-      .filter(
-        ([channel, declared]) =>
-          isRunViewInvokeChannel(channel as CoreInvokeChannel) && carriesLines(declared.response),
-      )
-      .map(([channel]) => channel)
-      .sort();
-    const heard = Object.entries(contract.pushes)
-      .filter(([, declared]) => carriesLines(declared.payload))
-      .map(([channel]) => channel);
+  // Preserve both dialects across the Secrets major: an older home still
+  // answers its own clients' changes, while a current home keeps them read-only.
+  it.each([false, true])(
+    "keeps an older desktop's thread decoding while supported views read who wrote each line (historical home: %s)",
+    async (historical) => {
+      // INF-2555: every answer or push a view reads that carries card lines,
+      // read from the published contract, so a channel added later that
+      // carries them fails here until an older desktop gets them translated.
+      const contract = publishedContract();
+      const carriesLines = (schema: unknown) => JSON.stringify(schema).includes('"answersMessage"');
+      const asked = Object.entries(contract.requests)
+        .filter(
+          ([channel, declared]) =>
+            isRunViewInvokeChannel(channel as CoreInvokeChannel) && carriesLines(declared.response),
+        )
+        .map(([channel]) => channel)
+        .sort();
+      const heard = Object.entries(contract.pushes)
+        .filter(([, declared]) => carriesLines(declared.payload))
+        .map(([channel]) => channel);
 
-    const contributor = { actor: "crewmate", taskId: "dop208", label: "the crewmate on DOP-208" };
+      const contributor = { actor: "crewmate", taskId: "dop208", label: "the crewmate on DOP-208" };
+      const thread = cardThreadSchema.parse({
+        cardId: "card-fm-required-action-op1",
+        messages: [
+          {
+            id: 1,
+            cardId: "card-fm-required-action-op1",
+            who: "captain",
+            text: "Where is it?",
+            at: 1,
+          },
+          {
+            id: 2,
+            cardId: "card-fm-required-action-op1",
+            who: "crewmate",
+            text: "It is at C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd.",
+            at: 2,
+            contributor,
+            answersMessage: 1,
+          },
+        ],
+      });
+      const past = pastCardSchema.parse({
+        id: "card-fm-old",
+        author: "firstmate",
+        title: "Remove the job host",
+        meta: "First mate",
+        body: "<p>Done.</p>",
+        actions: [],
+        ending: { how: "dismissed", at: 3 },
+        answers: [],
+        messages: [{ ...thread.messages[1], id: 3, cardId: "card-fm-old", clarification: true }],
+      });
+      // What each channel answers, with the arguments a view sends it: a
+      // reply answers the card's thread, and showing a closed card its past.
+      const answers: Record<string, { args: unknown[]; value: unknown }> = {
+        "inf:cards:past": { args: [past.id], value: past },
+        "inf:cards:reply": { args: [thread.cardId, "Thanks."], value: thread },
+        "inf:cards:show": { args: [past.id], value: past },
+        "inf:cards:show-past": { args: [past.id], value: past },
+        "inf:cards:thread": { args: [thread.cardId], value: thread },
+      };
+      expect(asked).toEqual(Object.keys(answers).sort());
+      expect(heard).toEqual(["inf:cards:thread"]);
+
+      const prior = `${Number(SHARED_CARDS_SINCE.split(".")[0]) - 1}.0.0`;
+      const at = await home({
+        ...(historical ? { protocolVersion: prior, viewFloor: Number(prior.split(".")[0]) } : {}),
+        dispatch: (async (channel) => {
+          const answer = answers[channel];
+          if (!answer) throw new Error("Unexpected request");
+          return answer.value;
+        }) as CoreDispatch,
+      });
+      const grant = await at.join();
+      // A desktop on major 13 without the change reads lines strictly; one that
+      // named `shared-cards`, and every view from major 14 on, reads who wrote
+      // each line (`SHARED_CARDS_SINCE`).
+      const old = await connectClient(grant, { protocolVersion: prior });
+      const named = await connectClient(grant, {
+        protocolVersion: prior,
+        changes: ["shared-cards"],
+      });
+      const newer = await connectClient(
+        grant,
+        historical ? { protocolVersion: prior, changes: ["shared-cards"] } : {},
+      );
+      const phone = await connectClient(grant, {
+        ...(historical ? { protocolVersion: prior } : {}),
+        system: { system: "ios" },
+      });
+      // The line an older desktop parses: strict, without who wrote it.
+      const legacyLine = cardMessageSchema.omit({
+        contributor: true,
+        answersMessage: true,
+        clarification: true,
+      });
+      const linesOf = (value: unknown) => (value as { messages: unknown[] }).messages;
+      for (const [name, { args, value }] of Object.entries(answers)) {
+        const channel = name as CoreInvokeChannel;
+        expect(await newer.invoke(channel, args), channel).toEqual(value);
+        expect(await phone.invoke(channel, args), channel).toEqual(value);
+        // Below the view floor a desktop only reads (major 14): it asks no change.
+        if (!historical && contract.requests[channel]?.effect === "change") continue;
+        const oldLines = linesOf(await old.invoke(channel, args));
+        expect(
+          oldLines.map((line) => legacyLine.parse(line).text),
+          channel,
+        ).toEqual(linesOf(value).map((line) => (line as { text: string }).text));
+        expect(await named.invoke(channel, args), channel).toEqual(value);
+      }
+      for (const channel of heard) {
+        at.events.emit(channel as "inf:cards:thread", thread);
+        const pushed = await old.push((push) => push.channel === channel);
+        expect(linesOf(pushed.payload).map((line) => legacyLine.parse(line).id)).toEqual([1, 2]);
+        expect((await newer.push((push) => push.channel === channel)).payload).toEqual(thread);
+      }
+      await old.close();
+      await named.close();
+      await newer.close();
+      await phone.close();
+    },
+  );
+
+  // Protected Secrets retains shared-card fields without advertising the retired name.
+  it("sends contributor fields to a current desktop with no capability names", async () => {
     const thread = cardThreadSchema.parse({
-      cardId: "card-fm-required-action-op1",
+      cardId: "card-required-action",
       messages: [
         {
           id: 1,
-          cardId: "card-fm-required-action-op1",
-          who: "captain",
-          text: "Where is it?",
-          at: 1,
-        },
-        {
-          id: 2,
-          cardId: "card-fm-required-action-op1",
+          cardId: "card-required-action",
           who: "crewmate",
-          text: "It is at C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd.",
-          at: 2,
-          contributor,
+          text: "The remover is in the setup folder.",
+          at: 1,
+          contributor: { actor: "crewmate", taskId: "remover", label: "the crewmate" },
           answersMessage: 1,
         },
       ],
     });
-    const past = pastCardSchema.parse({
-      id: "card-fm-old",
-      author: "firstmate",
-      title: "Remove the job host",
-      meta: "First mate",
-      body: "<p>Done.</p>",
-      actions: [],
-      ending: { how: "dismissed", at: 3 },
-      answers: [],
-      messages: [{ ...thread.messages[1], id: 3, cardId: "card-fm-old", clarification: true }],
-    });
-    // What each channel answers, with the arguments a view sends it: a
-    // reply answers the card's thread, and showing a closed card its past.
-    const answers: Record<string, { args: unknown[]; value: unknown }> = {
-      "inf:cards:past": { args: [past.id], value: past },
-      "inf:cards:reply": { args: [thread.cardId, "Thanks."], value: thread },
-      "inf:cards:show": { args: [past.id], value: past },
-      "inf:cards:show-past": { args: [past.id], value: past },
-      "inf:cards:thread": { args: [thread.cardId], value: thread },
-    };
-    expect(asked).toEqual(Object.keys(answers).sort());
-    expect(heard).toEqual(["inf:cards:thread"]);
-
-    const at = await home({
-      dispatch: (async (channel) => {
-        const answer = answers[channel];
-        if (!answer) throw new Error("Unexpected request");
-        return answer.value;
-      }) as CoreDispatch,
-    });
+    const at = await home({ dispatch: (async () => thread) as CoreDispatch });
     const grant = await at.join();
-    // A desktop on major 13 without the change reads lines strictly; one that
-    // named `shared-cards`, and every view from major 14 on, reads who wrote
-    // each line (`SHARED_CARDS_SINCE`).
-    const old = await connectClient(grant, { protocolVersion: "13.0.0" });
-    const named = await connectClient(grant, {
-      protocolVersion: "13.0.0",
-      changes: ["shared-cards"],
-    });
-    const newer = await connectClient(grant);
-    const phone = await connectClient(grant, { system: { system: "ios" } });
-    // The line an older desktop parses: strict, without who wrote it.
-    const legacyLine = cardMessageSchema.omit({
-      contributor: true,
-      answersMessage: true,
-      clarification: true,
-    });
-    const linesOf = (value: unknown) => (value as { messages: unknown[] }).messages;
-    for (const [name, { args, value }] of Object.entries(answers)) {
-      const channel = name as CoreInvokeChannel;
-      expect(await newer.invoke(channel, args), channel).toEqual(value);
-      expect(await phone.invoke(channel, args), channel).toEqual(value);
-      // Below the view floor a desktop only reads (major 14): it asks no change.
-      if (contract.requests[channel]?.effect === "change") continue;
-      const oldLines = linesOf(await old.invoke(channel, args));
-      expect(
-        oldLines.map((line) => legacyLine.parse(line).text),
-        channel,
-      ).toEqual(linesOf(value).map((line) => (line as { text: string }).text));
-      expect(await named.invoke(channel, args), channel).toEqual(value);
-    }
-    for (const channel of heard) {
-      at.events.emit(channel as "inf:cards:thread", thread);
-      const pushed = await old.push((push) => push.channel === channel);
-      expect(linesOf(pushed.payload).map((line) => legacyLine.parse(line).id)).toEqual([1, 2]);
-      expect((await newer.push((push) => push.channel === channel)).payload).toEqual(thread);
-    }
-    await old.close();
-    await named.close();
-    await newer.close();
-    await phone.close();
+    const current = await connectClient(grant, { changes: [] });
+    expect(await current.invoke("inf:cards:thread", [thread.cardId])).toEqual(thread);
+    at.events.emit("inf:cards:thread", thread);
+    expect((await current.push((push) => push.channel === "inf:cards:thread")).payload).toEqual(
+      thread,
+    );
+    await current.close();
   });
 
   it("tells a device to reload when its cursor cannot be caught up", async () => {
@@ -1110,6 +1157,44 @@ describe("the home's connection", () => {
     );
     await expect(
       older.invoke("inf:work:progress", [{ task: "t1", callId: "c1", text: "Hi." }]),
+    ).rejects.toThrow("takes no work from a home");
+    // INF-1109: first-release reporting and pagination are now part of the
+    // work major, not minor-name waits. Older peers still send neither.
+    // The subsequent required main update also absorbs check declarations.
+    await expect(
+      older.invoke("inf:work:check-change", [
+        {
+          task: "t1",
+          input: {
+            declaration: {
+              headSha: "93355db9d04e964513879db74d068a7789cb4c16",
+              verdict: "flake",
+              check: "linux-checks",
+              evidence: "The failed log differs from the successful same-version rerun.",
+            },
+          },
+        },
+      ]),
+    ).rejects.toThrow("takes no work from a home");
+    await expect(
+      older.invoke("inf:work:tasks", [{ task: "t1", input: { status: "done", skip: 100 } }]),
+    ).rejects.toThrow("takes no work from a home");
+    await expect(
+      older.invoke("inf:work:report", [
+        {
+          task: "t1",
+          callId: "first-release",
+          text: "Verified the first published release.",
+          declared: {
+            firstRelease: {
+              version: "0.6.0",
+              url: "https://github.com/infinitary-labs/infinitary/releases/tag/v0.6.0",
+              evidence: "Published source contains the merge; earlier releases do not.",
+              tasks: ["INF-1607"],
+            },
+          },
+        },
+      ]),
     ).rejects.toThrow("takes no work from a home");
     expect(at.asked).toEqual([]);
     const current = await connectClient(grant);
@@ -1676,12 +1761,19 @@ describe("pacing and liveness", () => {
   // answer (`aheadMs: 0`): every piece stays one `pieceBytes` long on any link, and the push spans 96 of them.
   it("sends a long push in parts to a device that reads them, and as one message to one that does not", async () => {
     const at = await home({ heartbeatMs: 250, pieceBytes: 1024, aheadMs: 0 });
-    const reads = await connectClient(await at.join(), { changes: [FRAME_PARTS] });
-    const older = await connectClient(await at.join("view", "Older Mac"));
-    const [readsBefore, olderBefore] = [reads.joined, older.joined];
+    // INF-3042: current peers need no retired name; older views still negotiate it.
+    const reads = await connectClient(await at.join());
+    const named = await connectClient(await at.join("view", "Named older view"), {
+      protocolVersion: "14.0.0",
+      changes: [FRAME_PARTS],
+    });
+    const older = await connectClient(await at.join("view", "Older Mac"), {
+      protocolVersion: "14.0.0",
+    });
+    const [readsBefore, namedBefore, olderBefore] = [reads.joined, named.joined, older.joined];
     const card = heavyCard(96 * 1024);
     at.events.emit("inf:cards", [card]);
-    for (const device of [reads, older]) {
+    for (const device of [reads, named, older]) {
       const push = await Promise.race([
         device.push((received) => received.channel === "inf:cards"),
         device.closed.then((code) => {
@@ -1692,8 +1784,10 @@ describe("pacing and liveness", () => {
       expect(received?.body).toBe(card.body);
     }
     expect(reads.joined).toBe(readsBefore + 1);
+    expect(named.joined).toBe(namedBefore + 1);
     expect(older.joined).toBe(olderBefore);
     await reads.close();
+    await named.close();
     await older.close();
   });
 

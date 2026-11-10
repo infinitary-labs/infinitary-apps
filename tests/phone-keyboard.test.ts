@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { PassThrough } from "node:stream";
 import { gunzipSync } from "node:zlib";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import touchRecords from "./fixtures/phone-touch-lost-lift.json";
 import { startLoadClock, waitCap } from "./helpers/budgets";
 import {
   changePhoneTextSize,
@@ -376,6 +377,8 @@ const linkContact = {
   eventMessage: "[10DAC76000001] contact 2 presence: touching",
 };
 const linkTapBegan = phoneLogMilliseconds("2026-10-27 21:51:39.894000-0700");
+const lostLift = touchRecords.lostLift;
+const lostLiftBegan = phoneLogMilliseconds(lostLift.duplicateService.timestamp);
 
 // INF-1917: phone run 40994573754, iPhone cards, the pager tap at t=274.27s.
 // Its live simulator log lost these records; 12-xcrun.log kept both at millisecond precision.
@@ -655,18 +658,120 @@ describe("a tap's touch screen witness (INF-1477)", () => {
       evidence,
       children,
     });
-    const read = observer.touch(pickBegan);
-    for (const record of [listTap, pickAttached, pickIgnored])
-      stdout.write(`${JSON.stringify(record)}\n`);
-    await expect(read).resolves.toMatchObject({ outcome: "discarded", sender: "109c09400001b" });
-    const previewed = observer.preview(photoTapBegan);
-    stdout.write(`${JSON.stringify(pickerHeld)}\n`);
-    await expect(previewed).resolves.toMatchObject({
-      previewed: true,
-      proof: pickerHeld.eventMessage,
-    });
-    await observer.close();
+    try {
+      const read = observer.touch(pickBegan);
+      for (const record of [listTap, pickAttached, pickIgnored])
+        stdout.write(`${JSON.stringify(record)}\n`);
+      await expect(read).resolves.toMatchObject({ outcome: "discarded", sender: "109c09400001b" });
+      // INF-1109: the same subscription must carry affirmative unfinished-contact proof too.
+      const unfinished = observer.touch(lostLiftBegan);
+      for (const record of Object.values(lostLift)) stdout.write(`${JSON.stringify(record)}\n`);
+      await expect(unfinished).resolves.toMatchObject({
+        outcome: "discarded",
+        proof: lostLift.unfinished.eventMessage,
+      });
+      const previewed = observer.preview(photoTapBegan);
+      stdout.write(`${JSON.stringify(pickerHeld)}\n`);
+      await expect(previewed).resolves.toMatchObject({
+        previewed: true,
+        proof: pickerHeld.eventMessage,
+      });
+    } finally {
+      await observer.close();
+    }
     expect(children.size).toBe(0);
+  });
+});
+
+describe("affirmative unfinished-contact proof (INF-1109 / INF-1801)", () => {
+  it("uses the same sender's still-touching cancellation, not its initial screen, as the lost-lift outcome", async () => {
+    const touches = new PhoneTouchOutcomes();
+    for (const record of Object.values(lostLift)) touches.receive(record);
+    await expect(touches.outcome(lostLiftBegan)).resolves.toMatchObject({
+      outcome: "discarded",
+      timestamp: lostLift.firstScreen.timestamp,
+      proof: lostLift.unfinished.eventMessage,
+    });
+  });
+
+  it.each(["duplicateService", "unknownDigitizer"] as const)(
+    "waits after %s for affirmative proof, including when the empty duplicate disappears first",
+    async (warning) => {
+      vi.useFakeTimers();
+      const touches = new PhoneTouchOutcomes();
+      let outcome: unknown;
+      const read = touches.outcome(lostLiftBegan).then((value) => {
+        outcome = value;
+      });
+      touches.receive(lostLift[warning]);
+      for (const record of [
+        lostLift.firstScreen,
+        lostLift.secondScreen,
+        lostLift.emptyDisappearance,
+      ]) {
+        touches.receive(record);
+        await Promise.resolve();
+        expect(outcome).toBeUndefined();
+      }
+      touches.receive(lostLift.unfinished);
+      await read;
+      expect(outcome).toMatchObject({
+        outcome: "discarded",
+        proof: lostLift.unfinished.eventMessage,
+      });
+    },
+  );
+
+  it("never retries on warnings or an empty disappearance without unfinished-contact proof", async () => {
+    vi.useFakeTimers();
+    const touches = new PhoneTouchOutcomes();
+    for (const record of Object.values(lostLift).filter((record) => record !== lostLift.unfinished))
+      touches.receive(record);
+    const read = touches.outcome(lostLiftBegan);
+    await vi.runAllTimersAsync();
+    await expect(read).resolves.toMatchObject({ outcome: "unknown" });
+  });
+
+  it("keeps a normal completed tap delivered despite another sender's unfinished contact", async () => {
+    const touches = new PhoneTouchOutcomes();
+    for (const record of [...Object.values(touchRecords.completed), ...Object.values(lostLift)])
+      touches.receive(record);
+    await expect(
+      touches.outcome(phoneLogMilliseconds(touchRecords.completed.screen.timestamp)),
+    ).resolves.toMatchObject({
+      outcome: "delivered",
+      proof: touchRecords.completed.screen.eventMessage,
+    });
+  });
+
+  it("requires the tap's own attachment and ignores an earlier tap's proof", async () => {
+    vi.useFakeTimers();
+    const missing = new PhoneTouchOutcomes();
+    missing.receive(lostLift.unfinished);
+    const noAttachment = missing.outcome(lostLiftBegan);
+    const stale = new PhoneTouchOutcomes();
+    for (const record of Object.values(lostLift)) stale.receive(record);
+    const laterTap = stale.outcome(phoneLogMilliseconds(lostLift.unfinished.timestamp));
+    await vi.runAllTimersAsync();
+    await expect(noAttachment).resolves.toMatchObject({ outcome: "unknown" });
+    await expect(laterTap).resolves.toMatchObject({ outcome: "unknown" });
+  });
+
+  it("does not turn a partial cancellation or a stopped observer into permission for another tap", async () => {
+    vi.useFakeTimers();
+    const touches = new PhoneTouchOutcomes();
+    for (const record of Object.values(lostLift).filter((record) => record !== lostLift.unfinished))
+      touches.receive(record);
+    touches.receive({
+      ...lostLift.unfinished,
+      eventMessage: lostLift.unfinished.eventMessage.slice(0, -1),
+    });
+    const partial = touches.outcome(lostLiftBegan);
+    await vi.runAllTimersAsync();
+    await expect(partial).resolves.toMatchObject({ outcome: "unknown" });
+    touches.receive(lostLift.unfinished);
+    touches.close();
+    await expect(touches.outcome(lostLiftBegan)).resolves.toMatchObject({ outcome: "unknown" });
   });
 });
 
@@ -1637,4 +1742,178 @@ describe("the journey's display request budget", () => {
       .map((match) => Number((match[1] as string).replaceAll("_", "")));
     expect(budgets).toEqual([PHONE_DISPLAY_REQUEST_BUDGET_MS / 1000]);
   });
+});
+
+// INF-1109: the original Join run kept a screen its live streams omitted; the later Talk run
+// spent ten minutes waiting for an omitted witness and exhausted the unchanged journey allowance.
+// Replay the real BackBoard readings above through the same observer, with the initializer kept only.
+describe("a touch witness missing from the live subscription (INF-1109)", () => {
+  it("recovers the missing initializer through the owned simulator's existing kept-log reader", async () => {
+    vi.useFakeTimers({ now: listTapBegan });
+    const stream = logChild("stream");
+    const kept = logChild([earlierTap, listTap]);
+    spawn.mockReturnValueOnce(stream).mockReturnValueOnce(kept);
+    const simulator = "7D9C9633-B5F6-494B-B9F9-E8B92E0C6DA9";
+    const children = new Set<ChildProcess>();
+    const observer = await observePhoneKeyboard({
+      simulator,
+      env: {},
+      evidence: scratchDir("phone-touch-kept-"),
+      children,
+    });
+    try {
+      const read = observer.touch(listTapBegan);
+      // Drain the real stream/child completion ordering, without advancing a failure deadline.
+      await vi.advanceTimersByTimeAsync(0);
+      expect(await Promise.race([read, Promise.resolve(undefined)])).toEqual({
+        outcome: "delivered",
+        sender: "109c09400001a",
+        timestamp: listTap.timestamp,
+        proof: listTap.eventMessage,
+      });
+      expect(spawn).toHaveBeenCalledTimes(2);
+      expect(spawn).toHaveBeenLastCalledWith(
+        "xcrun",
+        expect.arrayContaining([simulator, "log", "show", "--start"]),
+        expect.anything(),
+      );
+    } finally {
+      await observer.close();
+    }
+    expect(children.size).toBe(0);
+  });
+
+  it("does not read again when the live subscription already supplied the verdict", async () => {
+    const recover = vi.fn(async () => [listTap]);
+    const touches = new PhoneTouchOutcomes(recover);
+    touches.receive(listTap);
+    await expect(touches.outcome(listTapBegan)).resolves.toMatchObject({ outcome: "delivered" });
+    expect(recover).not.toHaveBeenCalled();
+  });
+
+  it("considers a whole recovered batch before an initializer can hide its unfinished contact", async () => {
+    const recover = vi.fn(async () => [
+      lostLift.firstScreen,
+      lostLift.unknownDigitizer,
+      lostLift.secondScreen,
+      lostLift.emptyDisappearance,
+      lostLift.unfinished,
+    ]);
+    const touches = new PhoneTouchOutcomes(recover);
+    await expect(touches.outcome(lostLiftBegan)).resolves.toMatchObject({
+      outcome: "discarded",
+      proof: lostLift.unfinished.eventMessage,
+    });
+    expect(recover).toHaveBeenCalledExactlyOnceWith(
+      lostLiftBegan,
+      expect.objectContaining({ aborted: true }),
+    );
+  });
+
+  it.each([
+    { name: "an earlier tap", since: listTapBegan, records: [earlierTap] },
+    {
+      name: "another screen's contact",
+      since: linkTapBegan,
+      records: [linkAttached, pasteContact],
+    },
+    {
+      name: "a warning followed only by an empty disappearance",
+      since: lostLiftBegan,
+      records: [lostLift.firstScreen, lostLift.unknownDigitizer, lostLift.emptyDisappearance],
+    },
+    {
+      name: "an unfinished contact without its screen",
+      since: lostLiftBegan,
+      records: [lostLift.unfinished],
+    },
+    {
+      name: "an incomplete cancellation",
+      since: lostLiftBegan,
+      records: [
+        lostLift.firstScreen,
+        lostLift.unknownDigitizer,
+        { ...lostLift.unfinished, eventMessage: lostLift.unfinished.eventMessage.slice(0, -1) },
+      ],
+    },
+  ])("keeps $name inconclusive and never repeats the kept-log read", async ({ since, records }) => {
+    vi.useFakeTimers();
+    const recover = vi.fn(async () => records);
+    const touches = new PhoneTouchOutcomes(recover);
+    const read = touches.outcome(since);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(await Promise.race([read, Promise.resolve(undefined)])).toBeUndefined();
+    await vi.runAllTimersAsync();
+    await expect(read).resolves.toMatchObject({ outcome: "unknown" });
+    expect(recover).toHaveBeenCalledExactlyOnceWith(
+      since,
+      expect.objectContaining({ aborted: true }),
+    );
+  });
+
+  it("keeps observing live records after a kept-log read fails, without inventing a verdict", async () => {
+    vi.useFakeTimers();
+    // The read's transport failure is not simulator evidence; the recorded screen still is.
+    const recover = vi.fn().mockRejectedValue(new Error("log show exited with 1"));
+    const touches = new PhoneTouchOutcomes(recover);
+    const read = touches.outcome(listTapBegan);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(await Promise.race([read, Promise.resolve(undefined)])).toBeUndefined();
+    touches.receive(listTap);
+    await expect(read).resolves.toMatchObject({
+      outcome: "delivered",
+      proof: listTap.eventMessage,
+    });
+    expect(recover).toHaveBeenCalledExactlyOnceWith(
+      listTapBegan,
+      expect.objectContaining({ aborted: true }),
+    );
+  });
+
+  it("leaves a failed read unknown at the original deadline", async () => {
+    vi.useFakeTimers();
+    const recover = vi.fn().mockRejectedValue(new Error("log show exited with 1"));
+    const touches = new PhoneTouchOutcomes(recover);
+    const read = touches.outcome(listTapBegan);
+    await vi.runAllTimersAsync();
+    await expect(read).resolves.toMatchObject({ outcome: "unknown" });
+    expect(recover).toHaveBeenCalledExactlyOnceWith(
+      listTapBegan,
+      expect.objectContaining({ aborted: true }),
+    );
+  });
+
+  it.each(["close", "deadline"] as const)(
+    "does not cache a recovery that arrives after %s",
+    async (ending) => {
+      vi.useFakeTimers();
+      let returnKept: (records: object[]) => void = () => {
+        throw new Error("The kept read has not started");
+      };
+      const recover = vi.fn(
+        () =>
+          new Promise<object[]>((resolve) => {
+            returnKept = resolve;
+          }),
+      );
+      const touches = new PhoneTouchOutcomes(recover);
+      const read = touches.outcome(listTapBegan);
+      await vi.advanceTimersByTimeAsync(0);
+      if (ending === "close") touches.close();
+      else await vi.runAllTimersAsync();
+      await expect(read).resolves.toMatchObject({ outcome: "unknown" });
+      returnKept([listTap]);
+      await vi.advanceTimersByTimeAsync(0);
+      // A late batch must not seed a later request with a verdict that escaped its original boundary.
+      const later = touches.outcome(listTapBegan);
+      await vi.advanceTimersByTimeAsync(0);
+      if (ending === "deadline") {
+        expect(await Promise.race([later, Promise.resolve(undefined)])).toBeUndefined();
+        touches.close();
+        returnKept([]);
+      }
+      await expect(later).resolves.toMatchObject({ outcome: "unknown" });
+      expect(recover).toHaveBeenCalledTimes(ending === "close" ? 1 : 2);
+    },
+  );
 });

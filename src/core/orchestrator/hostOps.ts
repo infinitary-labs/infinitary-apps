@@ -89,6 +89,13 @@ export class HostOps {
     decline: (arg: string | undefined) => void;
     inspect: (repoId: string) => Promise<void>;
   } | null = null;
+  private secretsDecision: ((offer: string) => Promise<void>) | undefined;
+
+  /** Only an app-authored Secrets card can spend its private, one-use offer. */
+  setSecretsDecision(decide: (offer: string) => Promise<void>): void {
+    this.secretsDecision = decide;
+  }
+
   private projectSetup: ProjectSetupHandler | null = null;
   /** The not-set-up card's two choices (docs/forge.md, "Choosing batched pull requests before a queue exists"). */
   private queueChoice: { plan: (repoId?: string) => void; keep: (repoId?: string) => void } | null =
@@ -120,6 +127,9 @@ export class HostOps {
    */
   runHostOp(effect: HostEffect, answers?: readonly CardAnswer[]): { effect?: ShellEffect } {
     switch (effect.op) {
+      case "secrets-decision":
+        if (effect.arg) void this.secretsDecision?.(effect.arg);
+        return {};
       case "confirm-required-action": {
         const [id] = (effect.arg ?? "").split(":");
         if (id && this.core.options.tasks.get(id)?.status === "open")

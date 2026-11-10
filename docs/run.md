@@ -130,7 +130,7 @@ The connection's welcome to a view says so with `startedByCommand: true` (`docs/
 A first mate with its window sends no such field, and a view of it stays as `docs/view.md` says.
 
 - **What a view asks.**
-  The connection answers such a view every `home` request as well as every `views` one, as the captain at another computer, but those that stay on this computer (`RUN_HOME_ONLY_CHANNELS` and `isRunViewInvokeChannel`, `src/shared/ipc.ts`): its computers and phones and the addresses they find it at, a task's browser and a page from a task's project, and what is only ever this computer's own - its look, voice, panels and their extensions, Knowledge, Observe, release notes, Dock and update.
+  The connection answers such a view every `home` request as well as every `views` one, as the captain at another computer, but those that stay on this computer (`RUN_HOME_ONLY_CHANNELS` and `isRunViewInvokeChannel`, `src/shared/ipc.ts`): its computers and phones and the addresses they find it at, a task's browser and a page from a task's project, its Secrets (`docs/secrets.md`, "Remote decisions"), and what is only ever this computer's own - its look, voice, panels and their extensions, Knowledge, Observe, release notes, Dock and update.
   The view asks the same set (`ViewBackend.dispatch`) and also shows the pushes its Settings follow: a sign-in's steps, the sign-ins where projects live, integrations and Diagnostics (`RUN_VIEW_PUSHES`, `src/main/view/viewBackend.ts`).
   Its look, keys and update notice stay its own, as on any view.
 - **Settings.**

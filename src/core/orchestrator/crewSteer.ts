@@ -5,6 +5,7 @@ import type { ResponsePolicy } from "@shared/crewResponses";
 import type { CrewSendResult } from "@shared/crewTranscript";
 import { CREWMATE_TAB_VIA, type TASK_CARD_VIA } from "@shared/provenance";
 import { capWithOverflow } from "../overflow";
+import type { EndedUseReceipt } from "../secrets/requests";
 import type { ModelSession } from "../session/session";
 import type { TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
@@ -52,6 +53,21 @@ export class CrewSteer {
   /** Whether the turn running now holds a steer with the captain's words (his own, or the first mate's on his turn). */
   carriesCaptainWords(task: TaskRuntime): boolean {
     return task.turn.rows.some((id) => this.captainRows.has(id));
+  }
+
+  /** Metadata-only completion, delivered once through the task's existing durable lane. */
+  secretsUseEnded(taskId: string, receipt: EndedUseReceipt): void {
+    const once = `secrets-use-ended:${receipt.request}`;
+    if (this.core.options.inbox.woken(taskId, once)) return;
+    this.core.options.tasks.turns.endIdle(taskId);
+    void this.steerInternal(
+      taskId,
+      { facts: { kind: "secrets-use-ended", receipt }, once },
+      { actor: "supervisor", via: "supervision", decision: null, cardId: null },
+    ).catch(() => {
+      // The durable receipt remains readable; the existing ladder handles an absent conversation.
+      console.warn("[crew] Secrets result's steer not delivered.");
+    });
   }
 
   /**

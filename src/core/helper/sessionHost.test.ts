@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { PROTOCOL_VERSION } from "@shared/ipc";
 import {
   type PlacedSpec,
   placedTaskFolders,
@@ -18,6 +19,7 @@ import {
   sessionHostHooks,
   TASK,
 } from "../../../tests/helpers/sessionHostWorld";
+import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { answersDir, savedAnswerText } from "../session/answerFiles";
 import { PlacedTasks } from "./placedTasks";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
@@ -30,6 +32,33 @@ import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
 sessionHostHooks();
 
 describe("a conversation held on a computer that runs work", () => {
+  // INF-1109's required main update absorbs completed-operation observations into
+  // the work major. A real placed session must send them without a retired minor name.
+  it("sends completed-operation facts to the current work major without a minor name", async () => {
+    const at = await placed({ homeChanges: [] });
+    await at.open();
+    model([
+      { tools: [{ name: "tasks", args: { status: "open", limit: 1 } }] },
+      { text: "Listed the open tasks." },
+    ]);
+    await at.order("inf:session:prompt", [
+      { orderId: "completed-operation:1", task: TASK, text: "List the open tasks." },
+    ]);
+    await at.ended(1);
+    await expect
+      .poll(() =>
+        at.home.events
+          .filter((record) => record.event.type === "tool_observation")
+          .map((record) => record.event),
+      )
+      .toContainEqual(
+        expect.objectContaining({
+          type: "tool_observation",
+          fact: expect.objectContaining({ kind: "completed", toolName: "tasks" }),
+        }),
+      );
+  });
+
   it("INF-2214 preserves response correlation through the home", async () => {
     const at = await placed();
     await at.open();
@@ -60,48 +89,60 @@ describe("a conversation held on a computer that runs work", () => {
       },
     });
   });
-  // INF-2225, INF-2214's approved shared cards: the home on this major keeps
-  // the revision read, so the correction goes to it whole.
-  it("sends a shared-card correction to its home (INF-2225)", async () => {
-    const at = await placed();
-    at.spec.tools.push("revise_required_action");
-    await at.open();
-    model([
-      {
-        tools: [
-          {
-            name: "revise_required_action",
-            args: {
-              action: "card-fm-required-action-op1",
-              source: "DOP-208",
-              action_id: "remove-job-host",
-              expected_generation: 1,
-              patch: { instructions: ["Run C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd"] },
-              reason: "The remover path was wrong",
-              operation_id: "op-remover-path",
-              same_action: true,
+  // INF-3042: major 15 absorbs shared-card correction. Connection admission
+  // owns incompatible peers; these admitted sessions need no duplicate version callback.
+  it.each([true, false])(
+    "sends shared-card corrections after admission (explicit version: %s)",
+    async (supported) => {
+      const at = await placed({
+        ...(supported ? { homeVersion: PROTOCOL_VERSION } : {}),
+        homeChanges: [],
+      });
+      at.spec.tools.push("revise_required_action");
+      await at.open();
+      model([
+        {
+          tools: [
+            {
+              name: "revise_required_action",
+              args: {
+                action: "card-fm-required-action-op1",
+                source: "DOP-208",
+                action_id: "remove-job-host",
+                expected_generation: 1,
+                patch: { instructions: ["Run C:\\FleetCheckSetup\\shell-pc-job-host-remove.cmd"] },
+                reason: "The remover path was wrong",
+                operation_id: "op-remover-path",
+                same_action: true,
+              },
             },
-          },
-        ],
-      },
-      { text: "Corrected." },
-    ]);
-    await at.order("inf:session:prompt", [
-      { orderId: "fix:1", task: TASK, text: "Correct the remover path." },
-    ]);
-    await at.ended(1);
-    const sent = at.home.effects.filter(
-      (effect) => effect.channel === "inf:work:revise-required-action",
-    );
-    expect(sent[0]?.request).toMatchObject({
-      input: {
-        action: "card-fm-required-action-op1",
-        expectedGeneration: 1,
-        operationId: "op-remover-path",
-        sameAction: true,
-      },
-    });
-  });
+          ],
+        },
+        { text: "Corrected." },
+      ]);
+      await at.order("inf:session:prompt", [
+        { orderId: "fix:1", task: TASK, text: "Correct the remover path." },
+      ]);
+      await at.ended(1);
+      const sent = at.home.effects.filter(
+        (effect) => effect.channel === "inf:work:revise-required-action",
+      );
+      const ended = at.home.events.find(
+        (record) =>
+          record.event.type === "tool_end" && record.event.toolName === "revise_required_action",
+      )?.event;
+      expect(sent).toHaveLength(1);
+      expect(sent[0]?.request).toMatchObject({
+        input: {
+          action: "card-fm-required-action-op1",
+          expectedGeneration: 1,
+          operationId: "op-remover-path",
+          sameAction: true,
+        },
+      });
+      expect(ended).toMatchObject({ isError: false });
+    },
+  );
   // INF-2589, the captain: "any too big answer gets stored in a file and we
   // return the path to the file instead of the full answer". The file is
   // saved where the crewmate's shell runs, so it can open it.
@@ -152,88 +193,105 @@ describe("a conversation held on a computer that runs work", () => {
 
   // INF-2599 (the captain: "Send a crewmate its directions once, and again
   // only when they change"): the home sends directions again after a fold,
-  // so it must hear one.
-  it("tells its home when its Claude conversation folds (INF-2599)", async () => {
-    const claude = await scriptedClaudeWorld();
-    const at = await placed({ claude });
-    const spec: PlacedSpec = { ...at.spec, binding: { backend: "claude" }, model: claude.model };
-    claude.answer({ text: "Counted every press." });
-    await at.order("inf:session:open", [{ orderId: "open:fold", task: TASK, spec }]);
-    await at.order("inf:session:prompt", [
-      { orderId: "rows:fold", task: TASK, text: "Count every press." },
-    ]);
-    await at.ended(1);
-    claude.fold();
-    // The home hears what the conversation did in order: a model it named
-    // after the fold is heard after the fold too, with or without it.
-    claude.answer({ text: "Counted the long presses." });
-    await at.order("inf:session:prompt", [
-      { orderId: "rows:after-fold", task: TASK, text: "Count the long presses." },
-    ]);
-    await at.ended(2);
-    const folds = at.home.events.filter(({ event }) => event.type === "context_compacted");
-    expect(folds.map(({ event }) => event)).toEqual([{ type: "context_compacted" }]);
-  });
-  it("forwards first-release facts and a task list page to the home that records them (INF-1607)", async () => {
-    const at = await placed();
-    await at.open();
-    const release = {
-      version: "0.6.0",
-      url: "https://github.com/infinitary-labs/infinitary/releases/tag/v0.6.0",
-      evidence: "Published source contains the task's merge; earlier published sources do not.",
-      tasks: ["INF-1607"],
-    };
-    model([
-      { tools: [{ name: "tasks", args: { status: "done", skip: 100 } }] },
-      {
-        tools: [
-          {
-            name: "report",
-            args: {
-              text: "Verified the first published release of the merged fix.",
-              first_release: release,
+  // so it must hear one. INF-3042: every admitted work peer knows folds.
+  it.each([true, false])(
+    "reports Claude folds after admission (explicit version: %s)",
+    async (supported) => {
+      const claude = await scriptedClaudeWorld();
+      const at = await placed({
+        claude,
+        ...(supported ? { homeVersion: PROTOCOL_VERSION } : {}),
+        homeChanges: [],
+      });
+      const spec: PlacedSpec = { ...at.spec, binding: { backend: "claude" }, model: claude.model };
+      claude.answer({ text: "Counted every press." });
+      await at.order("inf:session:open", [{ orderId: "open:fold", task: TASK, spec }]);
+      await at.order("inf:session:prompt", [
+        { orderId: "rows:fold", task: TASK, text: "Count every press." },
+      ]);
+      await at.ended(1);
+      claude.fold();
+      // The home hears what the conversation did in order: a model it named
+      // after the fold is heard after the fold too, with or without it.
+      claude.answer({ text: "Counted the long presses." });
+      await at.order("inf:session:prompt", [
+        { orderId: "rows:after-fold", task: TASK, text: "Count the long presses." },
+      ]);
+      await at.ended(2);
+      const folds = at.home.events.filter(({ event }) => event.type === "context_compacted");
+      expect(folds.map(({ event }) => event)).toEqual([{ type: "context_compacted" }]);
+    },
+  );
+  // Protected Secrets includes the preceding first-release capability on the new work major.
+  it.each([{ homeChanges: ["first-release-reports"] }, { homeChanges: [] }])(
+    "forwards first-release facts and pagination with $homeChanges (INF-1607)",
+    async ({ homeChanges }) => {
+      const at = await placed({ homeChanges });
+      await at.open();
+      const release = {
+        version: "0.6.0",
+        url: "https://github.com/infinitary-labs/infinitary/releases/tag/v0.6.0",
+        evidence: "Published source contains the task's merge; earlier published sources do not.",
+        tasks: ["INF-1607"],
+      };
+      model([
+        { tools: [{ name: "tasks", args: { status: "done", skip: 100 } }] },
+        {
+          tools: [
+            {
+              name: "report",
+              args: {
+                text: "Verified the first published release of the merged fix.",
+                first_release: release,
+              },
             },
-          },
-        ],
-      },
-      { text: "Reported the release verification." },
-    ]);
-    await at.order("inf:session:prompt", [
-      { orderId: "release:1", task: TASK, text: "Record the verified release." },
-    ]);
-    await at.ended(1);
-    const queries = at.home.effects.filter((effect) => effect.channel === "inf:work:tasks");
-    expect(queries[0]?.request).toMatchObject({ input: { status: "done", skip: 100 } });
-    const reports = at.home.effects.filter((effect) => effect.channel === "inf:work:report");
-    expect(reports[0]?.request).toMatchObject({ declared: { firstRelease: release } });
-    expect(
-      at.home.events.find(
-        (record) => record.event.type === "tool_end" && record.event.toolName === "report",
-      )?.event,
-    ).toMatchObject({ isError: false });
-  });
+          ],
+        },
+        { text: "Reported the release verification." },
+      ]);
+      await at.order("inf:session:prompt", [
+        { orderId: "release:1", task: TASK, text: "Record the verified release." },
+      ]);
+      await at.ended(1);
+      const queries = at.home.effects.filter((effect) => effect.channel === "inf:work:tasks");
+      expect(queries).toHaveLength(1);
+      expect(queries[0]?.request).toMatchObject({ input: { status: "done", skip: 100 } });
+      const reports = at.home.effects.filter((effect) => effect.channel === "inf:work:report");
+      expect(reports).toHaveLength(1);
+      expect(reports[0]?.request).toMatchObject({ declared: { firstRelease: release } });
+      expect(
+        at.home.events.find(
+          (record) => record.event.type === "tool_end" && record.event.toolName === "report",
+        )?.event,
+      ).toMatchObject({ isError: false });
+    },
+  );
 
-  it("asks the home for a task list's cut (INF-1746 R9)", async () => {
-    const at = await placed();
-    await at.open();
-    model([
-      { tools: [{ name: "tasks", args: { status: "open", limit: 1 } }] },
-      { text: "Listed." },
-    ]);
-    await at.order("inf:session:prompt", [
-      { orderId: "list:1", task: TASK, text: "List the open work." },
-    ]);
-    await at.ended(1);
-    const [query] = at.home.effects.filter((effect) => effect.channel === "inf:work:tasks");
-    const input = (query?.request as { input?: Record<string, unknown> } | undefined)?.input;
-    expect(input).toMatchObject({ status: "open", limit: 1 });
-    expect(input?.snapshot).toBe(true);
-    expect(
-      at.home.events.find(
-        (record) => record.event.type === "tool_end" && record.event.toolName === "tasks",
-      )?.event,
-    ).toMatchObject({ isError: false });
-  });
+  // Protected Secrets preserves task-list snapshots after the preceding name retires.
+  it.each([true, false])(
+    "asks for a task list's cut with or without its retired name (INF-1746 R9; advertised: %s)",
+    async (advertised) => {
+      const at = await placed({ homeChanges: advertised ? ["task-list-snapshot"] : [] });
+      await at.open();
+      model([
+        { tools: [{ name: "tasks", args: { status: "open", limit: 1 } }] },
+        { text: "Listed." },
+      ]);
+      await at.order("inf:session:prompt", [
+        { orderId: "list:1", task: TASK, text: "List the open work." },
+      ]);
+      await at.ended(1);
+      const [query] = at.home.effects.filter((effect) => effect.channel === "inf:work:tasks");
+      const input = (query?.request as { input?: Record<string, unknown> } | undefined)?.input;
+      expect(input).toMatchObject({ status: "open", limit: 1 });
+      expect(input?.snapshot).toBe(true);
+      expect(
+        at.home.events.find(
+          (record) => record.event.type === "tool_end" && record.event.toolName === "tasks",
+        )?.event,
+      ).toMatchObject({ isError: false });
+    },
+  );
 
   it("runs the home's prompt there, does each callback once at the home, and tells the home every event once, in order", async () => {
     const at = await placed();
@@ -577,63 +635,106 @@ describe("a conversation held on a computer that runs work", () => {
     },
   );
 
-  // INF-1555 F12: the home on this major records the crew's check judgments.
-  it("forwards current check declarations to the home", async () => {
-    const at = await placed();
-    await at.order("inf:session:open", [
-      {
-        orderId: `open:${TASK}:1`,
-        task: TASK,
-        spec: { ...at.spec, tools: [...at.spec.tools, "check_change"] },
-      },
-    ]);
-    const input = {
-      declaration: {
-        headSha: "93355db9d04e964513879db74d068a7789cb4c16",
-        verdict: "flake",
-        check: "linux-checks",
-        evidence: "The failed log differs from the successful same-version rerun.",
-      },
-    };
-    model([{ tools: [{ name: "check_change", args: input }] }, { text: "Recorded the result." }]);
-    await at.order("inf:session:prompt", [
-      { orderId: "check-judgment", task: TASK, text: "Record the check judgment." },
-    ]);
-    await at.ended(1);
-    const effects = at.home.effects.filter((effect) => effect.channel === "inf:work:check-change");
-    expect(effects.map((effect) => effect.request.input)).toEqual([input]);
-  });
+  // INF-1109's required main integration absorbs INF-1555 F12 into the work major:
+  // INF-3042: retired names do not block an already admitted work session.
+  // The required queue-answer absorption also forwards an answered declaration unchanged;
+  // the home's queue tests own its effect, and connection tests own major admission.
+  it.each(
+    [PROTOCOL_VERSION, undefined].flatMap((homeVersion) =>
+      [
+        [],
+        ["check-declarations"],
+        ["check-declarations", "merge-offer-readiness"],
+        ["check-queue-answer"],
+      ].map((homeChanges) => ({ homeVersion, homeChanges })),
+    ),
+  )(
+    "forwards check declarations after work admission ($homeVersion, $homeChanges)",
+    async ({ homeVersion, homeChanges }) => {
+      const at = await placed({ ...(homeVersion ? { homeVersion } : {}), homeChanges });
+      await at.order("inf:session:open", [
+        {
+          orderId: `open:${TASK}:1`,
+          task: TASK,
+          spec: { ...at.spec, tools: [...at.spec.tools, "check_change"] },
+        },
+      ]);
+      const input = {
+        declaration: {
+          headSha: "93355db9d04e964513879db74d068a7789cb4c16",
+          verdict: "flake",
+          check: "linux-checks",
+          evidence: "The failed log differs from the successful same-version rerun.",
+        },
+      };
+      const answered = {
+        declaration: {
+          ...input.declaration,
+          verdict: "answered",
+          check: "infinitary/queue",
+          evidence: "The sent-back version already contains the repair.",
+        },
+      };
+      model([
+        { tools: [{ name: "check_change", args: input }] },
+        { tools: [{ name: "check_change", args: answered }] },
+        { text: "Recorded the result." },
+      ]);
+      await at.order("inf:session:prompt", [
+        { orderId: "check-judgment", task: TASK, text: "Record the check judgment." },
+      ]);
+      await at.ended(1);
+      const effects = at.home.effects.filter(
+        (effect) => effect.channel === "inf:work:check-change",
+      );
+      expect(effects.map((effect) => effect.request.input)).toEqual([input, answered]);
+    },
+  );
 
-  // INF-1932: the home lists an artifact's files and saves selected ones.
-  it("asks the home to list or select an artifact's files", async () => {
-    const at = await placed();
-    await at.order("inf:session:open", [
-      {
-        orderId: `open:${TASK}:1`,
-        task: TASK,
-        spec: { ...at.spec, tools: [...at.spec.tools, "download_artifact"] },
-      },
-    ]);
-    const whole = { runId: 41007625484, artifactId: 12960596943 };
-    const selected = { ...whole, files: ["ipad/join/48-xcodebuild.log"] };
-    model([
-      {
-        tools: [
-          { name: "download_artifact", args: whole },
-          { name: "download_artifact", args: selected },
-        ],
-      },
-      { text: "Read the log." },
-    ]);
-    await at.order("inf:session:prompt", [
-      { orderId: "artifact-parts", task: TASK, text: "Read the iPad join log." },
-    ]);
-    await at.ended(1);
-    const asked = at.home.effects
-      .filter((effect) => effect.channel === "inf:work:download-artifact")
-      .map((effect) => effect.request.input);
-    expect(asked).toEqual([whole, selected]);
-  });
+  // INF-1109's required update absorbs INF-1932 into the work major. A current home needs no
+  // retired name or duplicated version callback after connection admission (INF-3042).
+  it.each([
+    { supported: true, listed: true },
+    { supported: true, listed: false },
+    { supported: false, listed: true },
+    { supported: false, listed: false },
+  ])(
+    "asks for artifact selections after admission (explicit version: $supported, retired name: $listed)",
+    async ({ supported, listed }) => {
+      const at = await placed({
+        ...(supported ? { homeVersion: PROTOCOL_VERSION } : {}),
+        homeChanges: listed
+          ? [...CONTRACT_CHANGES.names, "artifact-parts"]
+          : CONTRACT_CHANGES.names,
+      });
+      await at.order("inf:session:open", [
+        {
+          orderId: `open:${TASK}:1`,
+          task: TASK,
+          spec: { ...at.spec, tools: [...at.spec.tools, "download_artifact"] },
+        },
+      ]);
+      const whole = { runId: 41007625484, artifactId: 12960596943 };
+      const selected = { ...whole, files: ["ipad/join/48-xcodebuild.log"] };
+      model([
+        {
+          tools: [
+            { name: "download_artifact", args: whole },
+            { name: "download_artifact", args: selected },
+          ],
+        },
+        { text: "Read the log." },
+      ]);
+      await at.order("inf:session:prompt", [
+        { orderId: "artifact-parts", task: TASK, text: "Read the iPad join log." },
+      ]);
+      await at.ended(1);
+      const asked = at.home.effects
+        .filter((effect) => effect.channel === "inf:work:download-artifact")
+        .map((effect) => effect.request.input);
+      expect(asked).toEqual([whole, selected]);
+    },
+  );
 
   // INF-2330: the home saves one exact workflow file into task evidence.
   it("sends an exact workflow file to the home", async () => {
@@ -664,15 +765,11 @@ describe("a conversation held on a computer that runs work", () => {
     expect(asked).toEqual([input]);
   });
 
-  // INF-3022's plan: a home that does not list `crewmate-programs` cannot
-  // answer a start_program call, so the computer refuses it in words and
-  // sends nothing; a home that lists it is sent the call.
-  it.each([
-    { changes: [] as string[], sent: false },
-    { changes: ["crewmate-programs"], sent: true },
-  ])(
-    "sends start_program to its home only when the home lists crewmate-programs ($changes)",
-    async ({ changes, sent }) => {
+  // INF-3042: major 15 absorbs INF-3022; every admitted home can start programs,
+  // whether or not it advertises the retired minor name.
+  it.each([{ changes: [] as string[] }, { changes: ["crewmate-programs"] }])(
+    "sends start_program after work admission ($changes)",
+    async ({ changes }) => {
       const at = await placed({ homeChanges: changes });
       await at.order("inf:session:open", [
         {
@@ -693,27 +790,17 @@ describe("a conversation held on a computer that runs work", () => {
       ]);
       await at.ended(1);
       const asked = at.home.effects.filter((effect) => effect.channel === "inf:work:start-program");
-      if (sent) {
-        expect(asked.map((effect) => effect.request.input)).toEqual([input]);
-      } else {
-        expect(asked).toEqual([]);
-        expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
-          "runs an older Infinitary that cannot start a program; nothing was started",
-        );
-      }
+      expect(asked.map((effect) => effect.request.input)).toEqual([input]);
     },
   );
 
-  // INF-3060: an older home ignores a saved-story card's copy of its story's
-  // risk or required actions, so the tool's "repeats the saved revision
-  // exactly" would be a guess; the computer sends such a copy only to a home
-  // that lists story-fact-copies, and otherwise refuses as before.
-  it.each([
-    { changes: [] as string[], sent: false },
-    { changes: ["story-fact-copies"], sent: true },
-  ])(
-    "sends a saved-story card's copy of its story facts only to a home that lists story-fact-copies ($changes)",
-    async ({ changes, sent }) => {
+  // The required Secrets major absorption includes INF-3060's story-fact-copies:
+  // every admitted home compares copies, with or without the retired name.
+  // Connection tests own other-major refusal; completion tests own exact-copy
+  // acceptance and differing-copy refusal at the home. Keep both caller cases.
+  it.each([{ changes: [] as string[] }, { changes: ["story-fact-copies"] }])(
+    "sends a saved-story card's copied facts after work admission ($changes)",
+    async ({ changes }) => {
       const at = await placed({ homeChanges: changes });
       await at.order("inf:session:open", [
         { orderId: `open:${TASK}:1`, task: TASK, spec: at.spec },
@@ -730,18 +817,11 @@ describe("a conversation held on a computer that runs work", () => {
       ]);
       await at.ended(1);
       const shown = at.home.effects.filter((effect) => effect.channel === "inf:work:card");
-      if (sent) {
-        expect(
-          shown.map(
-            (effect) => (effect.request.card as { requiredActions?: unknown }).requiredActions,
-          ),
-        ).toEqual([[]]);
-      } else {
-        expect(shown).toEqual([]);
-        expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain(
-          "those facts come from its saved revision",
-        );
-      }
+      expect(
+        shown.map(
+          (effect) => (effect.request.card as { requiredActions?: unknown }).requiredActions,
+        ),
+      ).toEqual([[]]);
     },
   );
 
@@ -794,32 +874,37 @@ describe("a conversation held on a computer that runs work", () => {
     );
   });
 
-  // INF-2184 (INF-2490): the home opens the branch the captain asked for,
-  // never the task's own.
-  it("opens a change from a named branch through its home (INF-2184)", async () => {
-    const at = await placed();
-    await at.order("inf:session:open", [
-      {
-        orderId: `open:${TASK}:1`,
-        task: TASK,
-        spec: { ...at.spec, tools: [...at.spec.tools, "open_change"] },
-      },
-    ]);
-    const input = {
-      title: "chore(main): release 0.1.8",
-      body: "The release the captain asked to open.",
-      branch: "release-please--branches--main",
-    };
-    model([{ tools: [{ name: "open_change", args: input }] }, { text: "Reported." }]);
-    await at.order("inf:session:prompt", [
-      { orderId: "open-branch", task: TASK, text: "Open the release pull request." },
-    ]);
-    await at.ended(1);
-    const asked = at.home.effects
-      .filter((effect) => effect.channel === "inf:work:open-change")
-      .map((effect) => effect.request.input);
-    expect(asked).toEqual([input]);
-  });
+  // INF-2184 / INF-3042: a named branch survives forwarding after work admission.
+  it.each([true, false])(
+    "opens the named branch after admission (explicit version: %s)",
+    async (supported) => {
+      const at = await placed({
+        ...(supported ? { homeVersion: PROTOCOL_VERSION } : {}),
+        homeChanges: [],
+      });
+      await at.order("inf:session:open", [
+        {
+          orderId: `open:${TASK}:1`,
+          task: TASK,
+          spec: { ...at.spec, tools: [...at.spec.tools, "open_change"] },
+        },
+      ]);
+      const input = {
+        title: "chore(main): release 0.1.8",
+        body: "The release the captain asked to open.",
+        branch: "release-please--branches--main",
+      };
+      model([{ tools: [{ name: "open_change", args: input }] }, { text: "Reported." }]);
+      await at.order("inf:session:prompt", [
+        { orderId: "open-branch", task: TASK, text: "Open the release pull request." },
+      ]);
+      await at.ended(1);
+      const asked = at.home.effects
+        .filter((effect) => effect.channel === "inf:work:open-change")
+        .map((effect) => effect.request.input);
+      expect(asked).toEqual([input]);
+    },
+  );
 
   it("keeps a crewmate's builds and tests below the UI as another user on the home's own Mac", async () => {
     // Captain on INF-255. This world joins by a link for another user here (`work`).

@@ -166,6 +166,8 @@ function follow(
     onInvoke?: (channel: string, args: unknown) => Promise<unknown>;
     /** The spelling of channel names it writes, as a device that moved to Infinitary writes its own. */
     speaks?: Spelling;
+    /** The contract version its hello advertises, independent of named additions. */
+    protocolVersion?: string;
     /** The contract changes its hello lists. */
     changes?: readonly string[];
   } = {},
@@ -185,6 +187,7 @@ function follow(
   const heardParts = new FramePartsReader();
   const link = new HomeLink({
     grant,
+    ...(options.protocolVersion ? { protocolVersion: options.protocolVersion } : {}),
     dial: async (dialing) => {
       const socket = await dialHome(dialing);
       sockets.push(socket);
@@ -361,7 +364,8 @@ describe("the device's side of the connection", () => {
     ).resolves.toEqual({ added: ["INF-1", "start-task", null, { panel: "Board" }] });
   });
 
-  // INF-2832: a long frame comes in parts to a computer whose hello listed `frame-parts`, as this build's does.
+  // docs/connection.md: current peers read frame parts without a named addition;
+  // a view from before major 15 that never listed the addition still receives one whole frame.
   it("reads a long push the home sends in parts as one push, and one sent whole as before", async () => {
     const at = await home();
     const grant = await at.join();
@@ -387,8 +391,8 @@ describe("the device's side of the connection", () => {
     expect(air.joined()).toBe(1);
     air.link.close();
 
-    // A computer whose hello listed no changes, as one from before them, gets it as one message.
-    const older = follow(grant, { changes: [] });
+    // Empty names alone do not make a current-major peer older.
+    const older = follow(grant, { protocolVersion: "14.0.0", changes: [] });
     older.link.start();
     await older.until(() => older.link.state().contact === "in-reach");
     at.events.emit("inf:cards", [card]);

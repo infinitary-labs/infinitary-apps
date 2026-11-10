@@ -12,7 +12,7 @@ license=('Apache-2.0')
 # git: Linux ships no git of its own; the app's crew works through the system's.
 # xorg-server-xvfb: running work for another computer, the app draws its
 # hidden windows on a display of its own.
-depends=('git' 'xorg-server-xvfb' 'gtk3' 'nss' 'alsa-lib' 'libxss' 'libxtst' 'libnotify' 'libsecret' 'xdg-utils' 'at-spi2-core' 'util-linux-libs' 'mesa')
+depends=('polkit' 'git' 'xorg-server-xvfb' 'gtk3' 'nss' 'alsa-lib' 'libxss' 'libxtst' 'libnotify' 'libsecret' 'xdg-utils' 'at-spi2-core' 'util-linux-libs' 'mesa')
 # It takes the place of Firstmate 3000's packages, which provided
 # firstmate-3000 (docs/linux-packages.md, "Arch, Omarchy and NixOS").
 provides=('infinitary' 'firstmate-3000')

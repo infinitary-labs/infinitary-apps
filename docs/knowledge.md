@@ -161,7 +161,7 @@ Knowledge is the only source for personal context, saved references and standing
   When any direction changes, the next context carries the complete set again, and one emptied says so (`docs/orchestrator-contract.md`, "What a context carries").
 - A crewmate's first turn in a conversation carries the complete current project directions, superseding earlier copies; retired directions have no active influence.
   A later turn carries the complete set again only when it changed, the conversation folded its context, its session is a new conversation, the computer holding it reopened it, or the conversation never read the turn that carried them (INF-2599, `src/core/orchestrator/crewDirections.ts`).
-  A conversation on a computer that does not report its folds, one not on the home's major, carries them on every turn.
+  A conversation on a computer that does not report its folds (outside the current work major) carries them on every turn.
   The brief holds none of its own, so a brief served again to a new conversation carries no stale copy.
 - Rendering never truncates directions to a character budget or a search page.
 - Captain-origin directions are instructions, other origins are labeled advice, and neither grants permission beyond the task.

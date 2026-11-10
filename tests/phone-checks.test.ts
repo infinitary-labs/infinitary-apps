@@ -1,7 +1,12 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { finishPhoneCheck, keepPhoneDiagnostic, runEveryCheck } from "../scripts/phone-checks";
+import {
+  finishPhoneCheck,
+  joinPhoneObserver,
+  keepPhoneDiagnostic,
+  runEveryCheck,
+} from "../scripts/phone-checks";
 import { phoneRecording } from "../scripts/phone-recording";
 import { scratchDir } from "./helpers/scratchDirs";
 
@@ -184,4 +189,25 @@ describe("the native gate's checks before its simulator tests", () => {
     ).rejects.toThrow("The native gate was interrupted");
     expect(after).toBe(false);
   });
+});
+
+// INF-3042: an observer can fail before stop joins it, without escaping cleanup.
+it("observes an early observer failure and still throws it at the required join", async () => {
+  const folder = scratchDir("phone-observer-failure-");
+  const joinObserver = joinPhoneObserver(
+    Promise.resolve().then(() => writeFileSync(folder, "observer log")),
+  );
+  // Let Node finish the rejection turn before stop, as a running phone test does.
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  let cleaned = false;
+  await expect(
+    finishPhoneCheck(Promise.resolve(), async () => {
+      try {
+        await joinObserver();
+      } finally {
+        cleaned = true;
+      }
+    }),
+  ).rejects.toMatchObject({ code: "EISDIR", path: folder });
+  expect(cleaned).toBe(true);
 });

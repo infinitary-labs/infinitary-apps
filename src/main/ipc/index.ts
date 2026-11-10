@@ -2,6 +2,7 @@ import { importChosenFile, inspectPath } from "@core/attachments";
 import type { BrowserFrameSink } from "@core/browser/taskBrowsers";
 import type { HostCapabilities } from "@core/index";
 import { isAllowedOpenExternalUrl } from "@core/openExternal";
+import { writePrivateFile } from "@core/secrets/custody";
 import { CHOSEN_FILES_MAX } from "@shared/attachments";
 import { HERE } from "@shared/deviceNames";
 import { CORE_INVOKE_CHANNELS, type PushChannel, type PushPayload } from "@shared/ipc";
@@ -148,6 +149,25 @@ export function registerIpc(options: IpcOptions): void {
     announcements.flush();
     if (!event.sender.isDestroyed()) event.sender.send("inf:window:fence", { token });
     return { ok: true as const };
+  });
+
+  // Metadata only, chosen by the captain in the trusted window. No value or recovery key enters this export.
+  handleInvoke("inf:secrets:export", rendererSource, async (event) => {
+    const history = await shell.dispatch("inf:secrets:history", []);
+    if (history === null) return { saved: false };
+    const owner = BrowserWindow.fromWebContents(event.sender);
+    const options = {
+      title: "Export Secrets history",
+      defaultPath: "secrets-history.json",
+      buttonLabel: "Export",
+      filters: [{ name: "JSON", extensions: ["json"] }],
+    };
+    const picked = owner
+      ? await dialog.showSaveDialog(owner, options)
+      : await dialog.showSaveDialog(options);
+    if (picked.canceled || !picked.filePath) return { saved: false };
+    await writePrivateFile(picked.filePath, history);
+    return { saved: true };
   });
 
   // The system's folder picker (where new projects go, Settings -> Projects):

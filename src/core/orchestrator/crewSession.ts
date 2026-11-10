@@ -79,6 +79,8 @@ export type CrewmateSpec = CrewmateToolDelegate & {
   shell?: TaskShell;
   /** This computer supports the declared heavy-run command. */
   load?: boolean;
+  /** A local protected owner granted the closed Secrets command; not secret authority. */
+  secrets?: true;
   /**
    * Delivery and care already known at dispatch. Absent keeps the full
    * prompt, which is the unknown-case fallback.
@@ -239,6 +241,12 @@ export function crewmateSessionSpec(
         (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID),
       spec.load,
       spec.runbookText,
+      // Secrets requests run only here; a task on another computer lists the catalog alone.
+      spec.secrets === true && spec.shell !== undefined && spec.machineId === LOCAL_MACHINE_ID
+        ? "use"
+        : spec.secretsCatalog !== undefined && spec.machineId !== LOCAL_MACHINE_ID
+          ? "list"
+          : undefined,
     ) +
     (spec.machineId === LOCAL_MACHINE_ID
       ? `\n${sourceContext(spec.source, spec.source && sourceIdentity(spec.source))}`

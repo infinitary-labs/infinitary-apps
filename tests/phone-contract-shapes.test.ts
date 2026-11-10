@@ -70,6 +70,21 @@ describe("the native reader's published response shapes", () => {
     busy.properties.busy = { type: "string" };
     expect(() => assertPhoneReaderShapes(changed)).toThrow("firstmate_state must require busy");
   });
+  // INF-1109: the captain, "right now it's not even clear what secrets are being requested";
+  // the phone's approval names each secret, and two sharing a label differ by environment and reference.
+  it.each([
+    ["a use's recipient", ["waiting"], "recipient"],
+    ["a secret's reference", ["waiting", "secrets"], "ref"],
+    ["a secret's label", ["waiting", "secrets"], "label"],
+    ["a secret's version", ["waiting", "secrets"], "version"],
+    ["a secret's environment", ["waiting", "secrets"], "environment"],
+  ] as const)("refuses a phone approval reading without %s", (_name, path, field) => {
+    const changed = contract();
+    let row = changed.requests["inf:secrets:approvals"].response;
+    for (const part of path) row = row.properties[part].items;
+    row.required = row.required.filter((key: string) => key !== field);
+    expect(() => assertPhoneReaderShapes(changed)).toThrow(`must require ${field}`);
+  });
   it("refuses replacing the pushed card rows with a wrapper", () => {
     const changed = contract();
     changed.pushes["inf:cards"].payload = { type: "object" };

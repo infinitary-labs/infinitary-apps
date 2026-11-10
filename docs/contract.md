@@ -15,8 +15,10 @@ This compatibility projection changes neither permissions nor access.
 
 ## Ended cards
 
-`ended-cards` adds an optional `ended` snapshot field to a card its author withdrew after the captain had seen it, which the stack keeps, with no actions and one Close, until the captain closes it.
-The connection sends `ended` only to a desktop whose hello lists `ended-cards`, on list replies, live pushes and replay alike, the same projection as the card update fields above; a phone gets it always.
+A card its author withdrew after the captain had seen it may carry an `ended` snapshot field; the stack keeps it with no actions and one Close until the captain closes it.
+Major 15 absorbs the earlier `ended-cards` addition.
+The connection sends `ended` to a desktop on `ENDED_CARDS_SINCE` (major 15) or later, or an older desktop whose hello lists `ended-cards` (`readsEndedCards`, `src/shared/contractFeatures.ts`).
+This projection covers list replies, live pushes and replay alike; a phone gets the field always.
 An older desktop draws such a card as a note whose one button closes it.
 
 ## The file
@@ -35,7 +37,7 @@ An older desktop draws such a card as a note whose one button closes it.
 | `orders` | What a home asks a computer that runs work (`src/shared/work.ts`), from the version `since` names, and the seed order and a prepare that names a seed from `seedSince`: each order's `effect`, and the JSON Schema of its `request`, which the home sends and so is published open, and of the computer's answer |
 | `signInOrders` | What a home asks a computer that runs work about its own sign-ins (`src/shared/signIns.ts`, `docs/helper.md` "Its own sign-ins"), from the version `since` names, published the same way; its sign-in where projects live (`inf:sign-ins:forge`, `inf:sign-ins:forge-out`) and Claude's pasted code from the version `forgesSince` names |
 | `browserOrders` | What a home asks a computer that runs work about its tasks' own browsers there (`src/shared/work.ts`, `docs/task-browser.md` "On another computer"), from the version `since` names, published the same way |
-| `fileOrders` | What a home asks a computer that runs work for one of its files, for the files command (`src/shared/files.ts`, `docs/files.md`), from the named change `change` names, published the same way |
+| `fileOrders` | What a home asks a computer that runs work for one of its files, for the files command (`src/shared/files.ts`, `docs/files.md`), on the current work major, published the same way |
 | `resourceOrders` | Read-only computer and task-process observations from the version `since` names, independent of conversations and sign-ins (`src/shared/resources.ts`) |
 | `updateOrders` | The one order a home asks a computer that runs work whatever its version (`src/shared/work.ts`, `docs/devices.md` "Updating over the connection"), from the version `since` names, published the same way; its name and shape never change across majors |
 
@@ -183,16 +185,20 @@ A home before `STORY_AROUND_SINCE` would strip `around` and answer as if nothing
 
 A card action's effect may be `merge`, the one way to merge a pull request or branch, with `after` (`close` or `continue`) and an optional `review`, `asksFirst` and `proceedWithOpen` (major 14, INF-2744).
 `settle` keeps only `discard`, `request_merge` is gone, and a report's declared fields no longer carry `mergeCompletesTask`.
-A computer on another major takes no work, and a view on major 13 reads only, since it reads card actions strictly; the view floor is 14.
+A computer on another major takes no work, and a view on major 13 reads only, since it reads card actions strictly; major 14 raised the view floor for the merge effect.
 The named waits before it retire: every computer taking work on this major has each earlier change, a view still gets thread lines with their contributor fields through `SHARED_CARDS_SINCE`, and the phone hands its usage events to a home from `PHONE_DIAGNOSTICS_SINCE` on.
 
 ### Tasks, projects and routing
 
 A project's delivery, a task's delivery and a task's asked delivery may be `queue-pr`, a pull request whose kept merge click waits for the project's own queue (major 13; `docs/forge.md`, "A project's queue").
-A computer on another major takes no work, and a view on major 12 reads only, since it reads a delivery strictly; that major set the view floor to 13.
+A computer on another major takes no work; the current view floor is 15 because the protected Secrets host actions extend another closed set.
+Queue delivery already requires major 13, and its older readers remain read-only.
 The named waits before it retire: every computer taking work on this major has each earlier change, and a view meets an older home's current-update sightings through `CARD_SEEN_UPDATE_SINCE`.
+Major 15 also absorbs crewmate programs, first-mate folding, frame parts, GitLab queue credentials, integration task-wide Allow and shipped queue pauses.
+Connection admission owns work compatibility; placed callbacks do not repeat the same major check for each absorbed feature.
+Older read-only views still receive frame parts and task-wide Allow only when they advertise those historical additions.
 
-Tasks may deliver `operation`, constraints may declare it, model reasons carry R12, and Usage’s closed grouping set includes operation (`major-12.md`).
+Tasks may deliver `operation`, constraints may declare it, model reasons carry R12, and Usage’s closed grouping set includes operation (major 12, included in the current work major).
 A computer on another major takes no work, so the new deliverable is never sent to a computer that cannot read it.
 The preceding named waits for integrations, report results, handed files, empty source files and outside-data deletion retire; every computer taking work on this major has them.
 
@@ -262,6 +268,9 @@ The home gives a task there a browser only when that computer's roster says `bro
 A crewmate there runs the integrations command (`docs/integrations.md`, "On a computer that runs work") over the `inf:work:integrations` read, its list and show, and the `inf:work:use-integration` change, its call, and the placed spec's `integrations`.
 The home sends `integrations` only to a computer whose roster says `browsers`, since the command rides the same task channel, and runs the current contract major.
 
+A crewmate there lists the home's Secrets catalog (`docs/secrets.md`, "Current command seam") over the metadata-only `inf:work:secrets` read and the placed spec's `secrets`; no work request asks for a use.
+The home sends `secrets` on the same terms as `integrations`, and its transport is included in the current work major.
+
 A placed card carries the optional `riskDeclaration`, `asking`, `designOnly`, `continues`, `answering` and `request_write` effects, and a placed `check_change` the optional `pull`, `absentChecks` and `skipRules` declarations of a merge review.
 `PlacedToolFieldCoverage` (`src/core/session/tools.ts`) fails the build when a crewmate-declared top-level field of a card, `check_change`, knowledge read or knowledge record has no place in its work request; host-resolved card fields (`attachment`, `risk`) and the first mate's `taskId` and `reviewTaskId` are left out.
 A placed crewmate's `inf:work:read-workflow` may leave out `jobId` for the run's short read, which saves the home's run watch (`docs/forge.md`, "The run watch").
@@ -300,7 +309,7 @@ The published reading keeps every raw count, and a panel is handed installed mem
 ### Files
 
 The `fileOrders` list a folder on a computer that runs work, set one file aside there, read it in pieces of at most 4 MB, and let it go, for the files command (`docs/files.md`).
-They come with the work requests `inf:work:files` and `inf:work:copy-file` and the placed spec's optional `files`; a computer asks the requests only of a home that sent it `files`.
+The current work major includes them, with the work requests `inf:work:files` and `inf:work:copy-file` and the placed spec's optional `files`; a home asks them only of a computer on its work major, and a computer asks the requests only of a home that sent it `files`.
 
 ## The scripted client
 
@@ -316,6 +325,8 @@ node scripts/contract-client.ts --grant grant.json [--contract docs/contract.jso
   Pairing makes it; the client only dials with it, pinned to the home's key.
 - `--speak` is the version its hello names, the file's own by default, so it can stand in an older or newer client.
 - `--floor` is the view floor its hello says, the file's own `viewFloor` by default, since the client is a view.
+- It joins a frame's parts by the UTF-8 byte length in its validated header before decoding the frame (`docs/connection.md`, "Pacing and liveness").
+  The published header schema owns the length limit; parts past the declared length are invalid and close the connection.
 - It reads a value the file's `openLists` do not list as that list's `unknown`, as a view does, and reports any other value that does not fit.
 - It reads one request per line on stdin, `{ "id", "channel", "args" }`, and writes one line per event on stdout: `welcome`, each `result` and `push`, `refused` for a request it would not send (no such channel in the file, or arguments that do not fit), `invalid` for anything from the home that does not fit the file, and `closed`.
   It exits 1 if anything was invalid.

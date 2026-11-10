@@ -35,6 +35,7 @@ import {
 import {
   type ContractAccess,
   contractAccess,
+  readsEndedCards,
   readsSeenUpdate,
   readsSharedCards,
   takesWork,
@@ -63,8 +64,8 @@ import { copyStream, type FarBuild } from "../devices/farBuilds";
 import type { CoreActor, CoreDispatch } from "../dispatcher";
 import type { CoreEventBus } from "../events";
 import { listenAddresses, listenOn } from "./addresses";
-import { CONTRACT_CHANGES, contractChange, listsChange } from "./contractChanges";
-import { FRAME_PARTS } from "./frameParts";
+import { CONTRACT_CHANGES } from "./contractChanges";
+import { readsFrameParts } from "./frameParts";
 import {
   DEFAULT_JOURNAL_LIMITS,
   EventJournal,
@@ -72,7 +73,7 @@ import {
   type JournalLimits,
 } from "./journal";
 import { Outbox } from "./outbox";
-import { frameWithoutTaskAllow, INTEGRATION_TASK_ALLOW, withoutTaskAllow } from "./taskAllow";
+import { frameWithoutTaskAllow, readsTaskAllow, withoutTaskAllow } from "./taskAllow";
 
 /**
  * A device the pairing seam vouches for (docs/devices.md): a `mac` both
@@ -371,7 +372,7 @@ type Client = {
   cardReads: CardReads;
   /** Whether it reads a thread line's contributor fields (`SHARED_CARDS_SINCE`). */
   sharedCards: boolean;
-  /** Whether it reads Allow for the rest of this task (`INTEGRATION_TASK_ALLOW`). */
+  /** Whether it reads Allow for the rest of this task (`readsTaskAllow`). */
   taskAllow: boolean;
   access: ContractAccess;
   closing: boolean;
@@ -418,9 +419,6 @@ export function pushFrameIn(entry: JournalEntry, spelling: Spelling): string {
   const was = head(entry.channel);
   return entry.frame.startsWith(was) ? head(channel) + entry.frame.slice(was.length) : entry.frame;
 }
-
-/** A view that reads an ended card's `ended` (`ended-cards.md`, INF-3071). */
-const ENDED_CARDS = contractChange("ended-cards");
 
 /** Which added card fields a view's card decoder reads. */
 type CardReads = { updates: boolean; ended: boolean };
@@ -749,13 +747,13 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       client.appVersion = hello.appVersion;
       client.cardReads = {
         updates: hello.system === "ios" || readsSeenUpdate(hello.protocolVersion, hello.changes),
-        ended: hello.system === "ios" || listsChange(hello.changes, ENDED_CARDS),
+        ended: hello.system === "ios" || readsEndedCards(hello.protocolVersion, hello.changes),
       };
       client.sharedCards =
         hello.system === "ios" || readsSharedCards(hello.protocolVersion, hello.changes);
-      client.taskAllow = listsChange(hello.changes, INTEGRATION_TASK_ALLOW);
+      client.taskAllow = readsTaskAllow(hello.protocolVersion, hello.changes);
       // From the welcome on, a long frame goes as parts to a device that reads them.
-      client.out.parts = listsChange(hello.changes, FRAME_PARTS);
+      client.out.parts = readsFrameParts(hello.protocolVersion, hello.changes);
       // A view changes things across majors its floor allows; work only on this home's own.
       // A computer viewing from before the floor (its hello says none) reads closed lists
       // strictly, so like work it changes things only on this home's major (INF-1649 review

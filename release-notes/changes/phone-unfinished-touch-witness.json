@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-unfinished-touch-witness",
+      "reason": "Test-only repair: the phone touch observer recognizes a same-sender cancellation with a still-touching contact before allowing the existing bounded second tap. Registration warnings alone, completed taps and missing proof do not permit another tap. App behavior, native assertions and waiting budgets stay unchanged."
+    }
+  ]
+}

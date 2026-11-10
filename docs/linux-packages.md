@@ -77,6 +77,23 @@ An AppImage cannot require anything, so the app asks instead (below).
 Running work for another computer, the app draws its hidden windows on a display of its own (`docs/helper.md`, "No screen needed"), so each package requires Xvfb: `xvfb` for Ubuntu, `xorg-x11-server-Xvfb` for Fedora, `xorg-server-xvfb` for Arch and Omarchy, and the Nix package puts nixpkgs' `xvfb` on its wrapper's search path.
 An AppImage cannot require it: its work draws on an X session's display while there is one, and with neither it says to install Xvfb.
 
+## Secrets confirmation
+
+The Ubuntu and Fedora packages own `app.infinitary.secrets.approve.policy` under `/usr/share/polkit-1/actions/`; the Arch recipe carries that file from the Ubuntu package, and the Nix package carries it under its own `share/polkit-1/actions/`.
+The Linux packager's `beforePack` hook (`packaging/linux/prepare-policy.mjs`) stages the policy with mode `0644` before either package reads it, so the checkout's permissions cannot grant group or other write access.
+Both packages install it as root; the installed-package check verifies that ownership and rejects group or other write access.
+Its active-session default is `auth_self`, never a retained authorization; inactive and other sessions receive `no`.
+The policy adds no password-free approval and changes no system lock behavior.
+The Ubuntu, Fedora and Arch packages require polkit, and the Fedora package also names libsecret explicitly; the Nix wrapper puts libsecret and GLib on the native module’s library search path, not only the executable’s runtime dependency list.
+On NixOS, `security.polkit.enable` and Infinitary in `environment.systemPackages` make the action available through the system profile; installing only into a user profile does not register the system action.
+An AppImage cannot install a system policy, so local Secrets confirmation stays unavailable where the action is absent.
+A desktop authentication agent is still needed to ask the person, and package contents alone do not prove a live confirmation or change the [Secrets custody boundary](secrets.md).
+The Nix installed-package journey loads `libsecret-1.so.0` through the installed package's Koffi module with the launched wrapper's library search path and resolves `void *secret_service_get_sync(int, void *, void *)` without invoking it.
+The native-module check uses Node from the same resolved nixpkgs source as the package, not the runner's Node, and verifies that both processes loaded the same Nix libc.
+The check leaves the package's executable, library settings, sandbox and disabled Node inspector as built.
+This checks native lookup, not Secret Service custody or human authentication.
+The installed-package check parses the installed policy and checks its ownership and fresh-confirmation defaults; native custody and human confirmation have separate checks.
+
 ## The sandbox
 
 Chromium's sandbox stays on in every package: no package, desktop entry or AppImage passes `--no-sandbox`.

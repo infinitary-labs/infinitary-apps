@@ -229,11 +229,20 @@ export const placedSpecSchema = z.object({
    * The task's crewmate reads files on the captain's other computers through
    * `infinitary-files-axi` in its shell there, each list and copy asked of
    * the home (`inf:work:files`, `inf:work:copy-file`; docs/files.md). The
-   * home sends it only to a computer that keeps task browsers.
+   * home sends it only to a computer on the current work major that keeps
+   * task browsers.
    */
   files: z.boolean().optional(),
   /** The home grants this computer's load command (docs/heavy-runs.md). */
   load: z.boolean().optional(),
+  /**
+   * The task's crewmate lists the captain's secrets through
+   * `infinitary-secrets-axi` in its shell there, each list asked of the home
+   * (`inf:work:secrets`; docs/secrets.md, "Current command seam"): metadata
+   * only, with no use, receipt or value. The home sends it only to a
+   * computer that keeps task browsers, whose task channel the command rides.
+   */
+  secrets: z.boolean().optional(),
 });
 export type PlacedSpec = z.infer<typeof placedSpecSchema>;
 
@@ -259,8 +268,8 @@ export const placedEventSchema = z.union([
     }),
     z.object({ type: z.literal("turn_closed"), text: z.string().optional() }),
     /**
-     * The conversation folded its context (`conversation-folds.md`): sent
-     * only to a home that lists the change.
+     * The conversation folded its context (`major-15.md`): sent
+     * only to a home on the current work major.
      */
     z.object({ type: z.literal("context_compacted") }),
     z.object({ type: z.literal("request_started") }),
@@ -366,7 +375,7 @@ export const placedCardSchema = z.object({
   width: z.enum(["wide", "full"]).optional(),
   holdsPlace: z.boolean().optional(),
   reply: z.string().optional(),
-  /** Its reply is a progress note (`card-reply-interim.md`); an older home drops it. */
+  /** Its reply is a progress note (`major-15.md`); an older home drops it. */
   interim: z.boolean().optional(),
   riskDeclaration: riskDeclarationSchema.optional(),
   requiredActions: requiredActionsSchema.optional(),
@@ -376,7 +385,7 @@ export const placedCardSchema = z.object({
   continues: z.boolean().optional(),
   /** It answers the captain's message it is about (INF-1610, `Card.answering`). */
   answering: z.boolean().optional(),
-  /** A write on someone else's card (`shared-cards.md`); an older home drops them. */
+  /** A write on someone else's card (`major-15.md`); an older home drops them. */
   expectedRevision: z.string().optional(),
   contributionReason: z.string().optional(),
   operationId: z.string().optional(),
@@ -411,7 +420,7 @@ export const placedCardAnswerSchema = z.union([
   z.object({
     shown: z.literal(true),
     cardId: z.string().optional(),
-    /** What a write on someone else's card did (`shared-cards.md`). */
+    /** What a write on someone else's card did (`major-15.md`). */
     mutation: cardMutationSchema.optional(),
   }),
   z.object({
@@ -517,6 +526,22 @@ const integrationAnswerSchema = z.object({
   data: z.record(z.string(), z.unknown()).optional(),
   text: z.string().optional(),
   refused: z.enum(["refused", "invalid"]).optional(),
+});
+
+/**
+ * The captain's secrets as a task on another computer lists them: each
+ * one's reference, name, saved version and environment label, and nothing
+ * else - no value, receipt or use crosses to that computer.
+ */
+export const placedSecretsSchema = z.object({
+  secrets: z.array(
+    z.object({
+      ref: z.string(),
+      label: z.string(),
+      version: z.string(),
+      environment: z.string().optional(),
+    }),
+  ),
 });
 
 /** One source a write cites, as the tool names it; the home keeps or refuses it. */
@@ -654,9 +679,9 @@ export const workRequests = {
           wait: z.object({ reason: z.string(), cardId: z.string().optional() }).optional(),
           finished: z.boolean().optional(),
           needsFirstmate: z.string().optional(),
-          /** Where the captain typed the words it passes on (`report-captain-words.md`); the home reads them. */
+          /** Where the captain typed the words it passes on (`major-15.md`); the home reads them. */
           captainWordsFrom: z.string().optional(),
-          /** When it looks at its running job again (`report-check-back.md`); the home keeps it. */
+          /** When it looks at its running job again (`major-15.md`); the home keeps it. */
           checkBack: z.object({ minutes: z.number(), waitingFor: z.string() }).optional(),
           /** The report's typed result (`report-result.md`); the home checks it. */
           result: z.record(z.string(), z.unknown()).optional(),
@@ -674,7 +699,7 @@ export const workRequests = {
       cardId: z.string(),
       text: z.string(),
       interim: z.boolean().optional(),
-      /** `shared-cards.md`: the captain message it answers, its operation and response. */
+      /** `major-15.md`: the captain message it answers, its operation and response. */
       answersMessage: z.number().int().optional(),
       /** The captain's message says they are done with the answer. */
       signsOff: z.boolean().optional(),
@@ -683,13 +708,13 @@ export const workRequests = {
     }),
     response: toolTextSchema,
   },
-  /** Correct a required action's words (`shared-cards.md`); an older home lacks it. */
+  /** Correct a required action's words (`major-15.md`); an older home lacks it. */
   "inf:work:revise-required-action": {
     effect: "change",
     request: asked({ input: requiredActionRevisionInputSchema }),
     response: toolTextSchema,
   },
-  /** Read one card before revising or answering it (`shared-cards.md`); an older home lacks it. */
+  /** Read one card before revising or answering it (`major-15.md`); an older home lacks it. */
   "inf:work:read-card": {
     effect: "read",
     request: asked({ cardId: z.string().min(1) }),
@@ -876,6 +901,17 @@ export const workRequests = {
     request: asked({ input: z.object({ target: z.string().min(1).max(4200) }) }),
     response: filesAnswerSchema,
   },
+  /**
+   * The Secrets command's list and show: the home reads its own catalog
+   * for the crewmate, the same one a crewmate of its own lists
+   * (docs/secrets.md, "Current command seam"). It answers metadata only;
+   * no work request asks for a use, so a value never leaves the home.
+   */
+  "inf:work:secrets": {
+    effect: "read",
+    request: asked({ input: z.strictObject({}) }),
+    response: placedSecretsSchema,
+  },
   /** One card picture's verified copy, asked before the card that names it. */
   "inf:work:picture": {
     effect: "change",
@@ -1012,7 +1048,7 @@ export const workRequests = {
   },
   /**
    * The captain's private sites list, read live as a task's browser there
-   * opens a page (docs/task-browser.md, "Private sites"; `task-browser-private-sites.md`):
+   * opens a page (docs/task-browser.md, "Private sites"; `major-15.md`):
    * the home lends it and that computer keeps no copy.
    */
   "inf:work:private-sites": {
@@ -1252,7 +1288,7 @@ export const workOrders = {
     response: doneSchema,
   },
   /**
-   * The quiet watchdog's ask (INF-2603, `answer-stuck-reads.md`): each of
+   * The quiet watchdog's ask (INF-2603, `major-15.md`): each of
    * the app's own reads the conversation began by event `through`, the
    * newest the home has taken, is answered "ask again" there, so its turn
    * goes on. Never a change, and never a call the crewmate started itself;

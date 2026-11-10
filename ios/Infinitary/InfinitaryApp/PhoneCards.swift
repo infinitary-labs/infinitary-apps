@@ -404,6 +404,7 @@ private struct PhoneCardPane: View {
     @State private var cameraOpen = false
     @Environment(\.scenePhase) private var phase
     @Environment(PhoneMessageContext.self) private var messageContext
+    @Environment(PhoneSecrets.self) private var secrets: PhoneSecrets?
     @Environment(\.openURL) private var openURL
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.verticalSizeClass) private var verticalSize
@@ -950,7 +951,9 @@ private struct PhoneCardPane: View {
                     .accessibilityIdentifier("note-done")
                 }
             }
-            if !card.actions.isEmpty {
+            if !card.isPast, let secrets, let use = secrets.use(card: card.id) {
+                approvalFoot(use, secrets)
+            } else if !card.actions.isEmpty {
                 PhoneChoiceRow {
                     if asking, let count = host.reading["of"].numeric {
                         Text(PhoneCardWords.answersLine(answered: Int(host.reading["answered"].numeric ?? 0), of: Int(count),
@@ -1019,6 +1022,49 @@ private struct PhoneCardPane: View {
         }
     }
 
+    /// A Secrets use the home raised this card for: an enrolled phone allows it with its own confirmation and
+    /// signature, and any phone may refuse it (docs/secrets.md, "Remote decisions"). INF-1109, the captain: "right
+    /// now it's not even clear what secrets are being requested", so the foot names each secret first, by its
+    /// name, then the environment, reference and version that tell two secrets with the same name apart. Each
+    /// takes one line, wrapping only when it must, so the choices stay pinned in the frame on an iPhone.
+    private func approvalFoot(_ use: PhoneApprovals.Use, _ secrets: PhoneSecrets) -> some View {
+        let allows = secrets.standing == .enrolled && use.nonce != nil
+        return VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+            ForEach(use.secrets, id: \.ref) { secret in
+                let name = Text(secret.label).font(PhoneFont.headline).foregroundStyle(PhoneTheme.text)
+                let detail = Text(secret.detail.joined(separator: " · ")).font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary)
+                Text("\(name)  \(detail)")
+                    .accessibilityLabel(secret.named).accessibilityIdentifier("approval-secret-\(secret.ref)")
+            }
+            Text(allows ? "Each Allow here asks for \(ApprovalKey.confirmation)."
+                : "To allow here, set up approvals in Settings. You can also allow on \(session.mac.name).")
+                .font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("approval-note")
+            PhoneChoiceRow {
+                if allows {
+                    Button(PhoneDecision.allowWords) { decide { try await secrets.allow(use) } }
+                        .buttonStyle(PhoneChoiceStyle(.primary)).accessibilityIdentifier("approval-allow")
+                }
+                Button(PhoneDecision.denyWords) { decide { try await secrets.deny(use) } }
+                    .buttonStyle(PhoneChoiceStyle(.secondary)).accessibilityIdentifier("approval-deny")
+            // Like every card's choices (INF-1083, INF-1574), these take a press only once the body is revealed at
+            // its drawn height: until then it is still laying out, the choices still move, and a press can land
+            // beside the one meant.
+            }.disabled(host.changing || !session.canChange || !host.revealed)
+        }
+    }
+    private func decide(_ decision: @escaping @MainActor () async throws -> PhoneSecrets.Outcome) {
+        let activeHost = host
+        perform {
+            switch try await decision() {
+            case .accepted: break
+            case .stillWaiting:
+                throw PhoneRequestError("Your computer did not accept this decision. The use is still waiting.")
+            case .refused(let reason): throw PhoneRequestError(reason)
+            }
+            activeHost.chosen = true
+            onSent()
+        }
+    }
     private var kind: some View {
         let attention = !card.isPast && card.author == "host"
         let ended = !card.isPast && card.value["ended"] != .null
@@ -1043,6 +1089,8 @@ private struct PhoneCardPane: View {
         let effect = action["effect"]
         return (effect["kind"].text == "open" && !(effect["target"].text == "browser" && effect["savedSignIn"].flag))
             || (effect["kind"].text == "host" && effect["op"].text == "restore-account")
+            // Its other Secrets choices need the person's confirmation on the computer itself.
+            || (effect["kind"].text == "host" && effect["op"].text == "secrets-decision")
     }
 
     private func choose(_ action: PhoneJSON) {

@@ -5,6 +5,8 @@ import type { VoiceDownloadProgress } from "@shared/voice";
 import type { BrowserKey } from "./browser/keys";
 import type { BrowserNode } from "./browser/outline";
 import type { MediaProbe, TypefaceProbe } from "./pi/cardImages";
+import type { FreshAuthentication } from "./secrets/approvals";
+import type { SecretCustody } from "./secrets/custody";
 import type { MacUpdateDriver } from "./update/macUpdates";
 /**
  * The host seam (daemon study D0, data/fm3000-daemon-process-study-s1
@@ -438,6 +440,17 @@ export type HostTaskBrowser = {
   chooseFiles?: (options: { multiple: boolean }) => Promise<string[]>;
 };
 
+/** Private native file choices. Contents and paths never cross renderer or task channels. */
+export type HostSecretsRecovery = {
+  chooseSave: () => Promise<
+    | ((
+        files: import("./secrets/recoveryArchive").RecoveryFiles,
+      ) => Promise<import("./secrets/protected").RecoverySave>)
+    | undefined
+  >;
+  chooseRestore: () => Promise<import("./secrets/recoveryArchive").RecoveryFiles | undefined>;
+};
+
 export type HostCapabilities = {
   readonly app: HostAppInfo;
   /** Opens an already-vetted url in the user's default browser. */
@@ -463,6 +476,14 @@ export type HostCapabilities = {
    * returns `absent`.
    */
   readonly keychain: HostKeychain;
+  /** Native Secrets capabilities, absent until the platform's protected rollout is enabled. */
+  readonly secrets?: {
+    custody: SecretCustody;
+    authentication?: FreshAuthentication;
+    /** The person's explicit Unlock gesture; ordinary reads must never prompt. */
+    unlock?: () => Promise<boolean>;
+    recovery?: HostSecretsRecovery;
+  };
   /** A screenshot of a docked panel; absent on a host with no window. */
   readonly capture?: HostPanelCapture;
   /**

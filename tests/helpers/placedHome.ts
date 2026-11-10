@@ -48,6 +48,8 @@ import { computerBoardModels } from "../../src/core/routing/computerPool";
 import { type AccountModels, ModelSlots } from "../../src/core/routing/modelSlots";
 import { Router } from "../../src/core/routing/router";
 import type { PiModelRef } from "../../src/core/routing/routingEngine";
+import type { Runbooks } from "../../src/core/runbooks/runbooks";
+import type { SecretsCommand } from "../../src/core/secrets/requests";
 import type {
   ControlProfile,
   SessionBinding,
@@ -192,6 +194,9 @@ export function startPlacedHome(options: {
   files?: { home: string; name: string };
   /** The program process the crew's programs run in; absent, no crewmate here is served start_program. */
   programProcess?: import("../../src/core/orchestrator/crewSupervisorOptions").CrewSupervisorOptions["programProcess"];
+  /** Metadata-only command reach for the home's tasks. */
+  secrets?: { forTask: (taskId: string) => SecretsCommand };
+  runbooks?: Runbooks;
   /**
    * This Mac's own subscriptions, for a home that routes as `createServices`
    * composes it: the models its own sign-ins serve, their allowance as read
@@ -493,6 +498,8 @@ export function startPlacedHome(options: {
             composed.sendTaken(rowId, taken, choice),
         }
       : {}),
+    ...(options.secrets ? { secrets: options.secrets } : {}),
+    ...(options.runbooks ? { runbooks: options.runbooks } : {}),
     bind: async () => options.binding,
     ...(router ? { router } : {}),
     workspace,

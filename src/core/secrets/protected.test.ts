@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { generateKeyPairSync, sign } from "node:crypto";
 import {
   chmodSync,
@@ -10,14 +10,28 @@ import {
   realpathSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import * as files from "node:fs/promises";
+import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
+import { promisify } from "node:util";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { disposableCustody } from "../../../tests/helpers/disposableCustody";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { hostEnv } from "../hostEnv";
 import { decisionMessage, type FreshAuthentication } from "./approvals";
+import { RootKeys, sha256 } from "./custody";
 import { ProtectedSecrets, type ProtectedSecretsOptions } from "./protected";
-import { type Injection, SecretRequests } from "./requests";
+import type { RecoveryFiles } from "./recoveryArchive";
+import { openSecretHome } from "./recoveryHome";
+import { type Injection, SECRET_REQUEST_LIFETIME_MS, SecretRequests } from "./requests";
+import { SecretVault } from "./vault";
+
+// This integration file is isolated. Keep every real filesystem operation;
+// make its exports observable so the launch test can hold one completed open.
+vi.mock("node:fs/promises", async (original) => ({
+  ...(await original<typeof import("node:fs/promises")>()),
+}));
+afterEach(() => vi.restoreAllMocks());
 
 // Intent: INF-1105 - the protected owner behind INF-30's coordinator: exact
 // recipient preparation, protected rules, durable pre-effect journaling and
@@ -34,6 +48,14 @@ env | sed 's/=.*//' | sort > "$PWD/received-names"
 echo run >> "$PWD/runs.log"
 case "$STAGING_DEPLOY_TOKEN" in ghp_invented*) exit 7 ;; *) exit 9 ;; esac
 `;
+
+function deferred() {
+  let resolve = () => {};
+  const promise = new Promise<void>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
 
 function project() {
   const dir = realpathSync(scratchDir("secrets-project-"));
@@ -119,6 +141,146 @@ function leaks(text: string) {
 }
 
 describe("protected Secrets owner", () => {
+  // Regression: an unlanded authority save must not permanently
+  // disable first setup or a legacy/recovered home. Both writer and reader
+  // are real, separate processes; custody alone is a persisted disposable fixture.
+  it.for(
+    ["first", "legacy", "recovered"].flatMap((layout) =>
+      (["lost-reply", "before-native"] as const).map((interruption) => ({ layout, interruption })),
+    ),
+  )(
+    "restarts $layout authority after $interruption without replay",
+    async ({ layout, interruption }, { signal }) => {
+      const dir = scratchDir("secrets-authority-restart-");
+      const custody = disposableCustody();
+      let committed: ReturnType<ProtectedSecrets["authority"]>;
+      if (layout === "first") {
+        const keys = await RootKeys.open(custody, { initialize: true, hasRecords: false });
+        if (typeof keys === "string") throw new Error("No fixture root.");
+        keys.destroy();
+      } else {
+        let backend = await open({ dir, custody });
+        await backend.putSecret("staging-deploy", "Staging deploy token", Buffer.from(TOKEN));
+        if (layout === "recovered") {
+          let backup: RecoveryFiles | undefined;
+          expect(
+            await backend.backupRecovery(async (files) => {
+              backup = { archive: Buffer.from(files.archive), key: Buffer.from(files.key) };
+              return "saved";
+            }),
+          ).toBe("saved");
+          if (!backup) throw new Error("No fixture recovery files.");
+          try {
+            const requests = new SecretRequests(backend);
+            expect(await backend.restoreRecovery(backup, () => requests.pauseForRecovery())).toBe(
+              "restored",
+            );
+          } finally {
+            backup.archive.fill(0);
+            backup.key.fill(0);
+          }
+          backend = await open({ dir, custody });
+        }
+        committed = backend.authority();
+      }
+      const home = await openSecretHome(dir, custody);
+      if (typeof home === "string") throw new Error("No fixture home.");
+      const file = join(dir, "disposable-custody.json");
+      writeFileSync(
+        file,
+        JSON.stringify({
+          dir,
+          interruption,
+          writes: [],
+          slots: [...custody.slots].map(([slot, value]) => [slot, value.toString("base64")]),
+        }),
+        { mode: 0o600 },
+      );
+      const script = `
+      import { openModuleRunner } from ${JSON.stringify(pathToFileURL(resolve("scripts/moduleRunner.ts")).href)};
+      const runner = await openModuleRunner();
+      try {
+        const { authorityRestart } = await runner.import(${JSON.stringify(resolve("tests/helpers/authorityRestart.ts"))});
+        console.log(JSON.stringify(await authorityRestart(process.argv[1], process.argv[2])));
+      } finally { await runner.close(); }
+    `;
+      const inProcess = async (phase: string) =>
+        (
+          await promisify(execFile)(
+            process.execPath,
+            ["--input-type=module", "-e", script, file, phase],
+            { env: hostEnv(), signal },
+          )
+        ).stdout.trim();
+      const interrupted = await inProcess("interrupt");
+      if (interruption === "lost-reply")
+        expect(JSON.parse(interrupted)).toEqual({
+          status: "unavailable",
+          pending: true,
+          writes: [],
+        });
+      expect(existsSync(join(home.dir, "authority.next.json"))).toBe(true);
+      const candidate = JSON.parse(readFileSync(file, "utf8")).candidate;
+      const reopened = JSON.parse(await inProcess("reopen"));
+      expect(reopened).toMatchObject({
+        status: "available",
+        saved: "stored",
+        confirmations: 1,
+        pending: false,
+        refusals: [
+          { status: "locked", pending: true },
+          { status: "unavailable", pending: true },
+        ],
+      });
+      if (layout === "first") {
+        expect(reopened.authority).toMatchObject({ revision: 0, rules: [], devices: [] });
+        expect(reopened.authority.home).not.toBe(candidate.home);
+        expect(reopened.metadata).toEqual([]);
+      } else {
+        expect(reopened.authority).toEqual(committed);
+        expect(reopened.valueDigest).toBe(sha256(TOKEN));
+        expect(reopened.metadata).toHaveLength(1);
+      }
+      expect(reopened.writes).toEqual(
+        layout === "first"
+          ? ["authority-head", "authority-head"]
+          : [layout === "recovered" ? "root" : "authority-head"],
+      );
+      expect(existsSync(join(home.dir, "authority.next.json"))).toBe(false);
+    },
+  );
+
+  // INF-3042: a lost authority reply retires the live owner, including a use
+  // prepared before the write. Native custody stands in; the recipient is real.
+  it("retires prepared uses after an uncertain authority save", async () => {
+    const cwd = project();
+    const { dir, custody, backend, requests } = await owner();
+    const receipt = await requests.inject(deploy(cwd));
+    const useProof = await approveLocally(backend, requests, receipt.request);
+    const proposal = backend.proposeAuthority({ rules: [], devices: [] });
+    if (!proposal) throw new Error("No fixture authority.");
+    const proof = await backend.confirmAuthority(
+      proposal.digest,
+      Date.now() + 300_000,
+      "Save rules",
+    );
+    const write = custody.write;
+    const attempted = vi.spyOn(custody, "write").mockImplementation(async (slot, bytes) => {
+      await write(slot, bytes);
+      throw new Error("Fixture lost the native write response.");
+    });
+    await expect(backend.saveAuthority(proposal.authority, proof)).rejects.toThrow(
+      "lost the native",
+    );
+    expect(await backend.status()).toBe("unavailable");
+    expect(await backend.list()).toEqual([]);
+    expect((await requests.approve(receipt.request, useProof))?.state).toBe("invalidated");
+    expect(existsSync(join(cwd, "runs.log"))).toBe(false);
+    expect((await requests.inject(deploy(cwd, "after-uncertainty"))).state).toBe("unavailable");
+    expect(existsSync(join(dir, "authority.next.json"))).toBe(true);
+    expect(attempted).toHaveBeenCalledTimes(1);
+  });
+
   it("runs one approved exact use with only its mapped value, from a private copy of the script, and keeps output private", async () => {
     const cwd = project();
     const { dir, backend, requests } = await owner();
@@ -236,6 +398,92 @@ describe("protected Secrets owner", () => {
     expect((await requests.approve(receipt.request, proof))?.state).toBe("invalidated");
     expect(existsSync(join(cwd, "runs.log"))).toBe(false);
     expect(backend.history()).toMatchObject([{ state: "invalidated" }]);
+  });
+
+  // INF-1254's review of INF-1109: a policy or credential change during the
+  // final metadata read or launch I/O must still stop the real process.
+  it.each([
+    ["replace", "metadata"],
+    ["never", "metadata"],
+    ["replace", "launch-output"],
+    ["never", "launch-output"],
+    ["copy", "launch-output"],
+  ] as const)("does not launch after %s during the last %s await", async (change, boundary) => {
+    const { dir, backend, requests, cwd, receipt, proof } = await toolOwner();
+    const entered = deferred();
+    const resume = deferred();
+    let valueOpened = false;
+    let held = false;
+    const hold = async () => {
+      held = true;
+      entered.resolve();
+      await resume.promise;
+    };
+    const originalOpen = SecretVault.prototype.open;
+    const opened = vi.spyOn(SecretVault.prototype, "open").mockImplementation(async function (
+      this: SecretVault,
+      ref: string,
+    ) {
+      const result = await originalOpen.call(this, ref);
+      valueOpened = true;
+      return result;
+    });
+    const originalEntry = SecretVault.prototype.entry;
+    const entry = vi.spyOn(SecretVault.prototype, "entry").mockImplementation(async function (
+      this: SecretVault,
+      ref: string,
+    ) {
+      const result = await originalEntry.call(this, ref);
+      if (boundary === "metadata" && valueOpened && !held) await hold();
+      return result;
+    });
+    const originalFileOpen = files.open;
+    const output = vi.spyOn(files, "open").mockImplementation(async (...args) => {
+      const result = await originalFileOpen(...args);
+      if (
+        boundary === "launch-output" &&
+        String(args[0]) === join(dir, "runs", receipt.request, "out", "stderr") &&
+        !held
+      )
+        await hold();
+      return result;
+    });
+    const approval = requests.approve(receipt.request, proof);
+    try {
+      await entered.promise;
+      if (change === "replace")
+        await backend.putSecret(
+          "staging-deploy",
+          "Staging deploy token",
+          Buffer.from(`${TOKEN}-new`),
+        );
+      else if (change === "copy") {
+        const copy = join(dir, "runs", receipt.request, "inputs", "program", "deploy-tool");
+        chmodSync(copy, 0o700);
+        writeFileSync(copy, '#!/bin/sh\necho changed >> "$PWD/runs.log"\n');
+      } else {
+        const proposal = backend.proposeAuthority({
+          rules: [{ id: "stop", secret: "staging-deploy", effect: "never" }],
+          devices: [],
+        });
+        if (!proposal) throw new Error("No policy proposal.");
+        const confirmation = await backend.confirmAuthority(
+          proposal.digest,
+          Date.now() + SECRET_REQUEST_LIFETIME_MS,
+          "Stop deployment access",
+        );
+        expect(await backend.saveAuthority(proposal.authority, confirmation)).toBe("stored");
+      }
+    } finally {
+      resume.resolve();
+      await approval;
+      opened.mockRestore();
+      entry.mockRestore();
+      output.mockRestore();
+    }
+    expect(requests.status(receipt.request)?.state).toBe("invalidated");
+    expect(existsSync(join(cwd, "runs.log"))).toBe(false);
+    expect(readdirSync(join(dir, "runs"))).toEqual([]);
   });
 
   it("runs a saved reviewed script without asking, asks again once it changes, and saves rules only with fresh authentication", async () => {

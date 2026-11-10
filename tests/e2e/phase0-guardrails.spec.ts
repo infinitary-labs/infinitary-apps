@@ -158,6 +158,7 @@ test("keeps node globals out of the page and exposes a tamper-proof bridge", asy
     "releaseNotes",
     "repos",
     "retention",
+    "secrets",
     "settings",
     "task",
     "tasks",

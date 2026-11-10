@@ -1,7 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
+import { type BrokeredUse, brokerInputDigest, validBrokeredUse } from "./brokers";
 
 /** Metadata only. Values never cross this contract. Task labels are not authority (INF-1093). */
-export type SecretReference = { ref: string; label: string; version: string };
+/** One listed secret: metadata only, with the captain's environment label when it has one. */
+export type SecretReference = { ref: string; label: string; version: string; environment?: string };
 export type Injection = {
   id: string;
   reason: string;
@@ -21,6 +23,9 @@ export type UseState =
   | "unavailable"
   | "unknown";
 export type UseReceipt = { request: string; state: UseState; exitCode?: number };
+export type EndedUseReceipt = UseReceipt & {
+  state: Exclude<UseState, "waiting" | "executing">;
+};
 
 /**
  * A protected backend snapshots code, dependencies, configuration and inputs and
@@ -40,16 +45,24 @@ export type PreparedUse = {
    * launch and says so; `unknown` or a thrown error means the effect may have happened.
    */
   execute: () => Promise<
-    { exitCode: number } | { state: "invalidated" | "unavailable" | "unknown" }
+    | { exitCode: number }
+    | { completed: true }
+    | { state: "invalidated" | "unavailable" | "unknown" }
   >;
   /** Dispose snapshots and private output, recording how the use ended; failure makes the outcome unknown. */
   dispose: (ended: UseState) => Promise<void>;
 };
 export interface SecretsBackend {
-  /** Only explicitly linked metadata, never system credentials or values. */
+  /** The captain's own entries' metadata, never system credentials or values. */
   list(): Promise<SecretReference[]>;
   /** Unsupported or unavailable protection refuses before policy; no plaintext fallback. */
   prepare(input: Injection, request: string, expires: number): Promise<PreparedUse | undefined>;
+  /** A registered trusted adapter, not an arbitrary value getter. */
+  prepareBrokered?(
+    input: BrokeredUse,
+    request: string,
+    expires: number,
+  ): Promise<PreparedUse | undefined>;
   /** Trusted controller checks fresh authentication, nonce, expiry and exact digest. Not an agent operation. */
   authenticate(request: string, digest: string, expires: number, proof: unknown): Promise<boolean>;
   /**
@@ -59,11 +72,16 @@ export interface SecretsBackend {
   restored?(): { intent: string; inputDigest: string; receipt: UseReceipt }[];
 }
 
+/** The existing exact-use confirmation lifetime, also used for a Settings rule proposal. */
+export const SECRET_REQUEST_LIFETIME_MS = 300_000;
+
 type Kept = {
   inputDigest: string;
   prepared?: PreparedUse;
   receipt: UseReceipt;
   expires: number;
+  disposing?: boolean;
+  notified?: UseReceipt;
 };
 
 /**
@@ -75,6 +93,42 @@ type Kept = {
 export class SecretRequests {
   private readonly intents = new Map<string, Promise<Kept>>();
   private readonly requests = new Map<string, Kept>();
+  private paused = false;
+  private readonly active = new Set<Promise<unknown>>();
+
+  private track<T>(work: Promise<T>): Promise<T> {
+    this.active.add(work);
+    void work.then(
+      () => this.active.delete(work),
+      () => this.active.delete(work),
+    );
+    return work;
+  }
+
+  /** Trusted recovery only: stop new work, drain metadata writes, and end unused approvals. */
+  async pauseForRecovery(): Promise<(() => void) | undefined> {
+    if (
+      this.paused ||
+      [...this.requests.values()].some((kept) => kept.receipt.state === "executing")
+    )
+      return undefined;
+    this.paused = true;
+    try {
+      while (this.active.size > 0) await Promise.allSettled([...this.active]);
+      for (const kept of this.requests.values()) {
+        if (kept.receipt.state !== "waiting") continue;
+        kept.receipt.state = "invalidated";
+        await this.dispose(kept);
+        this.notify(kept);
+      }
+      return () => {
+        this.paused = false;
+      };
+    } catch (error) {
+      this.paused = false;
+      throw error;
+    }
+  }
 
   constructor(
     private readonly backend: SecretsBackend,
@@ -82,7 +136,12 @@ export class SecretRequests {
     private readonly changed: (receipt: UseReceipt) => void = () => {},
   ) {
     for (const { intent, inputDigest, receipt } of backend.restored?.() ?? []) {
-      const kept: Kept = { inputDigest, receipt: { ...receipt }, expires: 0 };
+      const kept: Kept = {
+        inputDigest,
+        receipt: { ...receipt },
+        notified: { ...receipt },
+        expires: 0,
+      };
       this.requests.set(receipt.request, kept);
       this.intents.set(intent, Promise.resolve(kept));
     }
@@ -100,11 +159,33 @@ export class SecretRequests {
     // Copy before awaiting: the requesting program cannot mutate approved input.
     const copied: Injection = JSON.parse(JSON.stringify(input));
     if (!validInjection(copied)) throw new Error("Invalid injection request.");
-    const digest = inputDigest(copied);
-    let work = this.intents.get(copied.id);
+    return this.submit(copied.id, inputDigest(copied), (request, expires) =>
+      this.backend.prepare(copied, request, expires),
+    );
+  }
+
+  /** Trusted consumers submit brokered operations; AXI still exposes no raw result reader. */
+  async broker(input: BrokeredUse): Promise<UseReceipt> {
+    if (!validBrokeredUse(input)) throw new Error("Invalid brokered request.");
+    const copied = structuredClone(input);
+    return this.submit(
+      copied.id,
+      brokerInputDigest(copied),
+      (request, expires) =>
+        this.backend.prepareBrokered?.(copied, request, expires) ?? Promise.resolve(undefined),
+    );
+  }
+
+  private async submit(
+    intent: string,
+    digest: string,
+    prepare: (request: string, expires: number) => Promise<PreparedUse | undefined>,
+  ): Promise<UseReceipt> {
+    if (this.paused) return { request: randomUUID(), state: "unavailable" };
+    let work = this.intents.get(intent);
     if (!work) {
-      work = this.prepare(copied, digest);
-      this.intents.set(copied.id, work);
+      work = this.track(this.prepare(prepare, digest));
+      this.intents.set(intent, work);
     }
     const kept = await work;
     if (kept.inputDigest !== digest)
@@ -112,20 +193,24 @@ export class SecretRequests {
     return this.view(kept);
   }
 
-  private async prepare(input: Injection, inputDigest: string): Promise<Kept> {
+  private async prepare(
+    prepare: (request: string, expires: number) => Promise<PreparedUse | undefined>,
+    inputDigest: string,
+  ): Promise<Kept> {
     const kept: Kept = {
       inputDigest,
-      expires: this.now() + 300_000,
+      expires: this.now() + SECRET_REQUEST_LIFETIME_MS,
       receipt: { request: randomUUID(), state: "unavailable" },
     };
     this.requests.set(kept.receipt.request, kept);
     try {
-      kept.prepared = await this.backend.prepare(input, kept.receipt.request, kept.expires);
+      kept.prepared = await prepare(kept.receipt.request, kept.expires);
       if (kept.prepared) {
         kept.receipt.state = kept.prepared.rule === "never" ? "denied" : "waiting";
         if (kept.prepared.rule === "allow") void this.start(kept);
         else if (kept.prepared.rule === "never") await this.dispose(kept);
       }
+      this.notify(kept);
     } catch {
       // Backend errors may contain values; never serialize their text.
       kept.receipt.state = "unavailable";
@@ -145,15 +230,29 @@ export class SecretRequests {
     return kept ? this.view(kept) : undefined;
   }
 
+  /** A terminal observation only after disposal/journaling, for callers attaching after submission. */
+  settled(request: string): EndedUseReceipt | undefined {
+    const receipt = this.requests.get(request)?.notified;
+    return receipt && receipt.state !== "waiting" && receipt.state !== "executing"
+      ? { ...receipt, state: receipt.state }
+      : undefined;
+  }
+
   private view(kept: Kept): UseReceipt {
-    if (kept.receipt.state === "waiting" && this.now() >= kept.expires) {
+    if (!this.paused && kept.receipt.state === "waiting" && this.now() >= kept.expires) {
       kept.receipt.state = "expired";
-      void this.dispose(kept);
+      void this.dispose(kept).then(() => this.notify(kept));
     }
     return { ...kept.receipt };
   }
 
-  async cancel(request: string): Promise<UseReceipt | undefined> {
+  cancel(request: string): Promise<UseReceipt | undefined> {
+    return this.paused
+      ? Promise.resolve(this.status(request))
+      : this.track(this.cancelNow(request));
+  }
+
+  private async cancelNow(request: string): Promise<UseReceipt | undefined> {
     const kept = this.requests.get(request);
     if (!kept) return undefined;
     if (this.view(kept).state === "waiting") {
@@ -166,7 +265,11 @@ export class SecretRequests {
   }
 
   /** A trusted human refusal ends the intent; repeating its command does not ask again. */
-  async deny(request: string): Promise<UseReceipt | undefined> {
+  deny(request: string): Promise<UseReceipt | undefined> {
+    return this.paused ? Promise.resolve(this.status(request)) : this.track(this.denyNow(request));
+  }
+
+  private async denyNow(request: string): Promise<UseReceipt | undefined> {
     const kept = this.requests.get(request);
     if (!kept) return undefined;
     if (this.view(kept).state === "waiting") {
@@ -178,7 +281,25 @@ export class SecretRequests {
   }
 
   /** Called by trusted app chrome/native authentication only, never through AXI. */
-  async approve(request: string, proof: unknown): Promise<UseReceipt | undefined> {
+  /**
+   * `until: "started"` answers once the proof passed and the use began, for a
+   * caller on another device that hears the end through Secrets' own change.
+   */
+  approve(
+    request: string,
+    proof: unknown,
+    until: "ended" | "started" = "ended",
+  ): Promise<UseReceipt | undefined> {
+    return this.paused
+      ? Promise.resolve(this.status(request))
+      : this.track(this.approveNow(request, proof, until));
+  }
+
+  private async approveNow(
+    request: string,
+    proof: unknown,
+    until: "ended" | "started",
+  ): Promise<UseReceipt | undefined> {
     const kept = this.requests.get(request);
     if (!kept?.prepared || this.view(kept).state !== "waiting")
       return kept ? this.view(kept) : undefined;
@@ -193,11 +314,19 @@ export class SecretRequests {
     } catch {
       /* Authentication failure reveals no backend detail. */
     }
-    if (authenticated && this.view(kept).state === "waiting") await this.start(kept);
+    if (authenticated && this.view(kept).state === "waiting") {
+      // start never rejects: every failure becomes the use's own state.
+      const started = this.start(kept);
+      if (until === "ended") await started;
+    }
     return this.view(kept);
   }
 
-  private async start(kept: Kept): Promise<void> {
+  private start(kept: Kept): Promise<void> {
+    return this.paused ? Promise.resolve() : this.track(this.startNow(kept));
+  }
+
+  private async startNow(kept: Kept): Promise<void> {
     // Reserve synchronously before the first await: racing approvals cannot launch twice.
     if (this.view(kept).state !== "waiting" || !kept.prepared) return;
     kept.receipt.state = "executing";
@@ -209,6 +338,8 @@ export class SecretRequests {
       } else {
         const result = await kept.prepared.execute();
         if ("state" in result) kept.receipt.state = result.state;
+        else if ("completed" in result)
+          kept.receipt = { request: kept.receipt.request, state: "completed" };
         else if (!Number.isInteger(result.exitCode)) throw new Error("Invalid exit status.");
         else
           kept.receipt = {
@@ -225,17 +356,26 @@ export class SecretRequests {
     }
   }
 
-  private async dispose(kept: Kept): Promise<void> {
+  private dispose(kept: Kept): Promise<void> {
+    return this.track(this.disposeNow(kept));
+  }
+
+  private async disposeNow(kept: Kept): Promise<void> {
     const prepared = kept.prepared;
     kept.prepared = undefined;
+    kept.disposing = true;
     try {
       await prepared?.dispose(kept.receipt.state);
     } catch {
       kept.receipt.state = "unknown";
+    } finally {
+      kept.disposing = false;
     }
   }
 
   private notify(kept: Kept): void {
+    if (kept.disposing) return;
+    kept.notified = { ...kept.receipt };
     try {
       this.changed({ ...kept.receipt });
     } catch {
@@ -309,8 +449,14 @@ function controlVariable(name: string): boolean {
 }
 
 /** Closed command facade. Context is for organization only, never authority. */
-export type SecretsCommand = Pick<
-  SecretRequests,
-  "list" | "receipts" | "inject" | "status" | "cancel"
->;
-export const SECRETS_COMMAND = "infinitary-secrets-axi";
+export type SecretsCommand = Pick<SecretRequests, "list" | "receipts" | "inject" | "cancel"> & {
+  /** A lazy native owner may need to read its durable receipts before answering. */
+  status: (request: string) => UseReceipt | undefined | Promise<UseReceipt | undefined>;
+};
+/**
+ * Discovery alone, for a task on another computer (docs/secrets.md, "Current
+ * command seam"): the same metadata a local task lists, asked of the home.
+ * It has no use, receipt or approval, so nothing there can reach a value or custody.
+ */
+export type SecretsCatalog = Pick<SecretsCommand, "list">;
+export { SECRETS_COMMAND } from "./commandWords";

@@ -21,6 +21,7 @@ import type { TaskIntegrations } from "../integrations";
 import type { RecordInput } from "../knowledge/writes";
 import type { PanelCaptureResult, PanelPlaceResult } from "../personal/personalExtensions";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
+import type { SecretsCatalog } from "../secrets/requests";
 import type { CardRefusal, CardRefusalReason } from "../storage/taskRecords";
 import type { TaskQueryInput, TaskQueryProject, TaskQueryRow } from "../tasks/taskQuery";
 import type { ReportDeclaration } from "../tasks/taskTurns";
@@ -481,6 +482,8 @@ export type CrewmateToolDelegate = {
    * own, which asks the home each time.
    */
   files?: TaskFiles;
+  /** Metadata only, asked of the home; never a value or use. */
+  secretsCatalog?: SecretsCatalog;
   /**
    * The captain's factual knowledge (docs/knowledge.md), handed to every crewmate, in every build: on a
    * computer that runs work, each call asks the home.

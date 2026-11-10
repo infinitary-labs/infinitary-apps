@@ -125,6 +125,8 @@ export function packagedEntry(appDir = builtAppDir(), devFlavor = false, version
 export const SHORT_TICK = { INFINITARY_TICK_PERIOD_MS: "2000" };
 
 export type LaunchOptions = {
+  /** A test-only main entry injecting host capabilities; the real built renderer and isolation stay unchanged. */
+  entry?: string;
   /** Emulate an installed build through packagedEntry, never the person's Keychain. */
   packaged?: boolean;
   /** Stamp disposable package metadata as the local development package. */
@@ -454,6 +456,8 @@ export function hermeticEnv(input: {
  */
 export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedApp> {
   const startedAt = performance.now();
+  if (options.entry && options.packaged)
+    throw new Error("A custom main entry is not a packaged launch.");
   const appDir = builtAppDir();
   // Throwaway dirs survive `close()`: a relaunch test reads the same
   // userData after the first app has quit. scratchDir removes them when this
@@ -500,7 +504,8 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
     // responsible process, so a runner needs microphone access
     // (docs/testing.md, "The runner's microphone access").
     args: [
-      options.packaged ? packagedEntry(appDir, options.devFlavor, options.version) : appDir,
+      options.entry ??
+        (options.packaged ? packagedEntry(appDir, options.devFlavor, options.version) : appDir),
       // Chromium honors this before JavaScript. Playwright's electron loader
       // calls `app.whenReady()` before the main script's `setPath`, so the
       // env-only isolated dir is too late: every parallel electron otherwise

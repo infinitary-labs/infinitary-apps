@@ -100,6 +100,12 @@ export function crewmateToolDelegate(): Required<
         text: answer("integrations.call", "integration called")({ name, action, input }),
       }),
     },
+    secretsCatalog: {
+      list: async () => {
+        calls.push({ callback: "secretsCatalog.list", input: undefined });
+        return [];
+      },
+    },
     files: {
       computers: async () => ({ text: answer("files.computers", "computers named")() }),
       list: async (target) => ({ text: answer("files.list", "folder listed")(target) }),

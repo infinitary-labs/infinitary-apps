@@ -28,6 +28,7 @@ export type CustodyWrite = "stored" | "locked" | "unavailable";
  */
 export interface SecretCustody {
   read(slot: CustodySlot): Promise<CustodyRead>;
+  /** A lost write reply rejects; it is not a definite locked/unavailable refusal. */
   write(slot: CustodySlot, bytes: Buffer): Promise<CustodyWrite>;
 }
 
@@ -77,24 +78,36 @@ export class RootKeys {
       return "unavailable";
     }
     if (read.kind === "value") {
-      if (read.bytes.length !== ROOT_BYTES) return "lost";
-      return new RootKeys(Buffer.from(read.bytes));
+      try {
+        if (read.bytes.length !== ROOT_BYTES) return "lost";
+        return new RootKeys(read.bytes);
+      } finally {
+        read.bytes.fill(0);
+      }
     }
     if (read.kind !== "absent") return read.kind;
     if (options.hasRecords) return "lost";
     if (!options.initialize) return "uninitialized";
     const root = randomBytes(ROOT_BYTES);
     let written: CustodyWrite;
+    const copy = Buffer.from(root);
     try {
-      written = await custody.write("root", Buffer.from(root));
+      written = await custody.write("root", copy);
     } catch {
       written = "unavailable";
+    } finally {
+      copy.fill(0);
     }
     if (written !== "stored") {
       root.fill(0);
       return written;
     }
     return new RootKeys(root);
+  }
+
+  destroy(): void {
+    for (const key of this.keys.values()) key.fill(0);
+    this.keys.clear();
   }
 
   key(purpose: Purpose): Buffer {

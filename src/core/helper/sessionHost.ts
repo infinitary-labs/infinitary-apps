@@ -28,6 +28,7 @@ import {
   type PlacedState,
   placedCardAnswerSchema,
   placedEventsAnswerSchema,
+  placedSecretsSchema,
   requestRepeatsSafely,
   type WorkOrderChannel,
   type WorkOrderRequest,
@@ -36,7 +37,6 @@ import {
   workRequests,
 } from "@shared/work";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
-import { contractChange, listsChange } from "../connection/contractChanges";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { filesAskedOfHome, type TaskFiles } from "../files/taskFiles";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
@@ -55,9 +55,9 @@ import {
   crewmateResumeToken,
 } from "../orchestrator/crewSession";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
-import { SAVED_STORY_REFUSAL } from "../pi/cardTool";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { verifyKeptValidationEvidenceSync } from "../pi/validationEvidence";
+import type { SecretsCatalog } from "../secrets/requests";
 import { type SelfSourceReader, sourceContext } from "../selfSource/resolve";
 import { serveAnswerFiles } from "../session/answerFiles";
 import { followCompletions } from "../session/followCompletions";
@@ -89,15 +89,6 @@ import type { MovedFolders } from "../workspace/workMove";
 import type { PlacedJob, PlacedTaskState, PlacedTasks } from "./placedTasks";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
 import type { WorkingCopies } from "./workingCopies";
-
-/** A crewmate here starts programs only through a home that answers them (`crewmate-programs.md`). */
-const CREWMATE_PROGRAMS = contractChange("crewmate-programs");
-
-/** A crewmate's answer to the project's queue goes only to a home that reads it (`check-queue-answer.md`). */
-const CHECK_QUEUE_ANSWER = contractChange("check-queue-answer");
-
-/** A saved-story card's copy of its story's facts goes only to a home that holds it against the story (`story-fact-copies.md`). */
-const STORY_FACT_COPIES = contractChange("story-fact-copies");
 
 /**
  * A crewmate's conversation held on a computer that runs work, for its home
@@ -186,8 +177,10 @@ export type SessionHostOptions = {
    * browser is given it, through `infinitary-browser-axi` in its shell, and
    * one the home says reaches its integrations is given
    * `infinitary-integrations-axi`, each call asked of the home
-   * (docs/integrations.md, "On a computer that runs work"); both go when
-   * the conversation closes for good. Absent, this computer keeps no
+   * (docs/integrations.md, "On a computer that runs work"), and one the
+   * home says lists its secrets is given `infinitary-secrets-axi` with the
+   * catalog alone, each list asked of the home (docs/secrets.md); all go
+   * when the conversation closes for good. Absent, this computer keeps no
    * browsers, and its roster says so.
    */
   commands?: {
@@ -198,6 +191,7 @@ export type SessionHostOptions = {
         integrations?: TaskIntegrations;
         load?: boolean;
         files?: TaskFiles;
+        secretsCatalog?: SecretsCatalog;
       },
     ) => { browser?: CrewmateBrowser; shell: TaskShell };
     close: (task: string) => void;
@@ -292,6 +286,7 @@ type Held = {
         integrations: boolean;
         load: boolean;
         files: boolean;
+        secrets: boolean;
       }
     | undefined;
   /** What the home opened the open conversation with, so a pass that rewrites its files opens it again. */
@@ -862,12 +857,13 @@ export class SessionHost {
       // one, and its integrations and the files on the captain's other
       // computers, asked of the home, when it says it reaches them.
       const granted =
-        spec.browser || spec.integrations || spec.load || spec.files
+        spec.browser || spec.integrations || spec.load || spec.files || spec.secrets
           ? this.options.commands?.grant(held.task, {
               browser: spec.browser === true,
               ...(spec.load ? { load: true } : {}),
               ...(spec.integrations ? { integrations: this.integrationsOf(held) } : {}),
               ...(spec.files ? { files: this.filesOf(held) } : {}),
+              ...(spec.secrets ? { secretsCatalog: this.secretsOf(held) } : {}),
             })
           : undefined;
       // An answer too long to read whole is saved here, beside its shell.
@@ -949,6 +945,7 @@ export class SessionHost {
         integrations: spec.integrations === true,
         load: spec.load === true,
         files: spec.files === true,
+        secrets: spec.secrets === true,
       };
       held.spec = spec;
       held.backend = binding.backend;
@@ -957,7 +954,8 @@ export class SessionHost {
       held.unsubscribe = await followCompletions(
         session,
         (event) => {
-          // A fold is all the home hears of it: its crewmate's directions go again.
+          // Work was admitted on this home's major, which includes folds:
+          // its crewmate's directions go again.
           if (event.type === "context_compacted") {
             this.record(held, { type: "context_compacted" });
             return;
@@ -977,7 +975,7 @@ export class SessionHost {
           this.record(held, event);
         },
         this.now,
-        // Its home runs this major, which keeps tool observations.
+        // The work major includes owner-only completed-operation observations.
         true,
         join(folders.root, "completions.sqlite"),
       );
@@ -1009,7 +1007,8 @@ export class SessionHost {
       opened.browser !== (spec.browser === true) ||
       opened.integrations !== (spec.integrations === true) ||
       opened.load !== (spec.load === true) ||
-      opened.files !== (spec.files === true)
+      opened.files !== (spec.files === true) ||
+      opened.secrets !== (spec.secrets === true)
     );
   }
 
@@ -1325,14 +1324,8 @@ export class SessionHost {
               const typeface = parseCardTypefaceFileName(name);
               return typeface?.taskId === held.task ? [typeface] : [];
             });
-            // An older home would drop a copy of the story's facts unread, so
-            // the tool's answer that it repeated the story would be a guess.
-            if (
-              card.presentationRevision !== undefined &&
-              (card.riskDeclaration !== undefined || card.requiredActions !== undefined) &&
-              !listsChange(this.options.homeChanges?.(), STORY_FACT_COPIES)
-            )
-              throw new Error(SAVED_STORY_REFUSAL);
+            // Work admission requires this major, whose home compares copied
+            // story facts with the saved revision before answering the tool.
             const home = this.options.homeVersion?.() ?? null;
             if (typefaces.length > 0 && home !== null && !keepsCardTypefaces(home)) {
               throw new Error(
@@ -1378,14 +1371,7 @@ export class SessionHost {
       },
       onCloseCard: (input, signal) => ask("inf:work:close-card", input, signal),
       onFollowup: (input, signal) => ask("inf:work:followup", { input }, signal),
-      onStartProgram: (input, signal) => {
-        // An older home has no such order: nothing is sent.
-        if (!listsChange(this.options.homeChanges?.(), CREWMATE_PROGRAMS))
-          throw new Error(
-            `${HOME.the} runs an older Infinitary that cannot start a program; nothing was started. Say the need in your report.`,
-          );
-        return ask("inf:work:start-program", { input }, signal);
-      },
+      onStartProgram: (input, signal) => ask("inf:work:start-program", { input }, signal),
       onProgress: (note, plan, signal) =>
         ask("inf:work:progress", { text: note, ...(plan !== undefined ? { plan } : {}) }, signal),
       onReport: (report, summary, declared, toolSignal) =>
@@ -1466,6 +1452,8 @@ export class SessionHost {
           },
           toolSignal,
         ),
+      // The connection admits work only on this home's major. Every callback
+      // below is part of that contract, not a second per-feature permission.
       onReply: (input, signal) => ask("inf:work:reply", input, signal),
       onReviseRequiredAction: (input, signal) =>
         ask("inf:work:revise-required-action", { input }, signal),
@@ -1524,23 +1512,13 @@ export class SessionHost {
         return ask("inf:work:open-change", { input }, signal);
       },
       onCheckChange: (input, signal) => {
-        // An older home has no answered verdict and would refuse the whole order.
-        if (
-          input?.declaration?.verdict === "answered" &&
-          !listsChange(this.options.homeChanges?.(), CHECK_QUEUE_ANSWER)
-        )
-          throw new Error(
-            `${HOME.the} runs an older Infinitary that cannot read an answer to the queue; nothing was sent. Say the answer in your report.`,
-          );
         const repair = input?.conflictRepair;
         const wire = repair
           ? { ...input, conflictRepair: { ...repair, impact: wireRepairImpact(repair.impact) } }
           : input;
         return ask("inf:work:check-change", { input: wire ?? {} }, signal);
       },
-      onDownloadArtifact: (input, signal) => {
-        return ask("inf:work:download-artifact", { input }, signal);
-      },
+      onDownloadArtifact: (input, signal) => ask("inf:work:download-artifact", { input }, signal),
       // The home's knowledge, read and written there as for a crewmate of its own.
       knowledge: {
         read: (input, signal) => ask("inf:work:knowledge", { input }, signal),
@@ -1616,6 +1594,23 @@ export class SessionHost {
             signal,
           ),
         ),
+    };
+  }
+
+  /**
+   * The secrets a task's command lists here (docs/secrets.md, "Current
+   * command seam"): each list is asked of the home, which answers the same
+   * catalog its own crewmates list, as metadata only. There is no use,
+   * receipt or approval here, so no value or custody reaches this computer.
+   */
+  private secretsOf(held: Held): SecretsCatalog {
+    return {
+      list: async () =>
+        placedSecretsSchema.parse(
+          await this.withDeadline("inf:work:secrets", (deadline) =>
+            this.call(held, "inf:work:secrets", { callId: randomUUID(), input: {} }, deadline),
+          ),
+        ).secrets,
     };
   }
 

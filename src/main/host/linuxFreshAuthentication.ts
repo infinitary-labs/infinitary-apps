@@ -48,7 +48,7 @@ export function createLinuxFreshAuthentication(
       if (!found) return false;
       return (await exitCode(found.pkaction, ["--action-id", POLKIT_ACTION])) === 0;
     },
-    confirm: async (reason) => {
+    confirm: async () => {
       const found = await polkit();
       const subject = await thisProcess();
       if (!found || !subject) return false;
@@ -57,10 +57,8 @@ export function createLinuxFreshAuthentication(
         POLKIT_ACTION,
         "--process",
         subject,
-        // The policy's message names the use with $(reason).
-        "--detail",
-        "reason",
-        reason,
+        // Ordinary app processes cannot supply polkit details. The trusted app
+        // card names the exact use; the installed policy supplies the native message.
         "--allow-user-interaction",
       ]);
       return code === 0;

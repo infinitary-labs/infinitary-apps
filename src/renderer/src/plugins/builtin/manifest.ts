@@ -120,9 +120,10 @@ export const builtinManifest: PluginManifest = parsePluginManifest({
       // What the first mate and the crew reach outside the projects, signed
       // in as the person (docs/integrations.md); GitHub's sign-in lives here.
       { id: "integrations", label: "Integrations", order: 24, width: "wide" },
+      { id: "secrets", label: "Secrets", order: 25, width: "wide" },
       // Your devices (docs/devices.md): what was added, each with Remove,
       // the link that adds a Mac, and the address a link sends it to.
-      { id: "devices", label: "Devices", order: 25, width: "wide" },
+      { id: "devices", label: "Devices", order: 26, width: "wide" },
       // Development and alpha builds (docs/dev-observe.md); the binding's gate decides.
       { id: "observe", label: "Observe", order: 30, width: "wide" },
     ],

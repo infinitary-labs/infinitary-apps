@@ -575,6 +575,15 @@ export const KEYBOARD_COMMANDS = {
     keys: [],
     searchWords: ["github", "connection", "connect", "sign in"],
   },
+  "settings.secrets": {
+    label: "Open Secrets",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["secret", "key", "approval", "recovery"],
+  },
   // Every running automation paused at once, as Settings → Automation's
   // Pause all does; it opens Automation so the change is seen. No default key.
   "automation.pause-all": {

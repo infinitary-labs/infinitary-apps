@@ -273,6 +273,9 @@ describe("ipc contract", () => {
       "inf:keyboard:record",
       "inf:keyboard:run",
       "inf:keyboard:save",
+      // The save sheet for Secrets history, metadata only, on the window the
+      // captain chose it in (docs/secrets.md).
+      "inf:secrets:export",
       "inf:voice:mic-access",
       "inf:voice:open-mic-settings",
       // This Mac's voice helper and the recordings the window hands it
@@ -352,6 +355,10 @@ describe("ipc contract", () => {
       "inf:projects:list",
       "inf:quota:snapshot",
       "inf:repos:list",
+      // A phone's Secrets approvals (INF-1109, docs/secrets.md "Remote decisions").
+      "inf:secrets:approvals",
+      "inf:secrets:decide",
+      "inf:secrets:enroll",
       "inf:settings:appearance:get",
       "inf:settings:layout:get",
       "inf:settings:notifications:get",
@@ -421,6 +428,7 @@ describe("ipc contract", () => {
       "inf:work:reply",
       "inf:work:report",
       "inf:work:revise-required-action",
+      "inf:work:secrets",
       "inf:work:sign-in",
       "inf:work:sign-ins",
       "inf:work:speed",
@@ -442,6 +450,18 @@ describe("ipc contract", () => {
       expect(invokeContract[channel].reach, channel).toBe("home");
     for (const channel of VIEW_INVOKE_CHANNELS) expect(isRunViewInvokeChannel(channel)).toBe(true);
     for (const channel of WORK_INVOKE_CHANNELS) expect(isRunViewInvokeChannel(channel)).toBe(false);
+  });
+
+  // INF-1109's accepted Secrets boundary (docs/secrets.md, "Remote decisions"): bringing it up to
+  // date with INF-1228's control from another computer grants no new authority, so a view of a
+  // first mate started by a command asks only the Secrets requests every paired view asks.
+  it("keeps Secrets on the computer of a first mate started by a command", () => {
+    const secrets = CORE_INVOKE_CHANNELS.filter((channel) => channel.startsWith("inf:secrets:"));
+    const home = secrets.filter((channel) => invokeContract[channel].reach === "home");
+    expect(home.length).toBeGreaterThan(0);
+    for (const channel of home) expect(isRunViewInvokeChannel(channel), channel).toBe(false);
+    for (const channel of secrets.filter((one) => invokeContract[one].reach === "views"))
+      expect(isRunViewInvokeChannel(channel), channel).toBe(true);
   });
 });
 

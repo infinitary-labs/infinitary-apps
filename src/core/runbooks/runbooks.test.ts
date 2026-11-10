@@ -17,6 +17,9 @@ import { type RunbookFacts, runbookMatches } from "../../shared/runbooks";
 import { crewmateSessionSpec } from "../orchestrator/crewSession";
 import { appPathsFor } from "../paths";
 import { createCrewmateResourceLoader } from "../pi/piResourceLoader";
+import { CREWMATE_LOAD_LINE } from "../pi/piResources";
+import { CREWMATE_SECRETS_CATALOG_LINE, CREWMATE_SECRETS_LINE } from "../secrets/commandWords";
+import { LOCAL_MACHINE_ID } from "../session/session";
 import { openInMemoryDatabase } from "../storage/db";
 import { SettingsStore } from "../storage/settingsStore";
 import { requireConventional } from "../workspace/conventional";
@@ -404,6 +407,38 @@ describe("runbooks over existing prompt and skill doors", () => {
       expect(prompt("implement")).not.toContain("Name every commit subject");
       books.set("testing", true);
       books.set("naming", true);
+    }
+  });
+  it("keeps bundled guidance, load admission and Secrets mode independent on both backends", () => {
+    // INF-1109's required update composes main's runbooks with approved local
+    // use and remote catalog-only discovery at the positional prompt seam.
+    const { books } = fixture();
+    const cwd = scratchDir("inf-runbook-secrets-");
+    for (const backend of ["pi", "claude"] as const) {
+      const binding = backend === "pi" ? fakeBinding("test") : { backend, accountId: "test" };
+      for (const mode of ["use", "list", "none"] as const) {
+        const selected = books.crew({ ...code, backend });
+        const session = crewmateSessionSpec(
+          appPathsFor(cwd),
+          {
+            taskId: "runbook-secrets",
+            cwd,
+            load: true,
+            machineId: mode === "list" ? "another-computer" : LOCAL_MACHINE_ID,
+            runbookText: selected.text,
+            ...(mode === "use" ? { secrets: true, shell: { path: [cwd], env: {} } } : {}),
+            ...(mode === "list" ? { secretsCatalog: { list: async () => [] } } : {}),
+          },
+          binding,
+        );
+        expect(session.instructions.base).toContain(selected.text);
+        expect(session.instructions.base).toContain(CREWMATE_LOAD_LINE);
+        expect(session.instructions.base.includes(CREWMATE_SECRETS_LINE)).toBe(mode === "use");
+        expect(session.instructions.base.includes(CREWMATE_SECRETS_CATALOG_LINE)).toBe(
+          mode === "list",
+        );
+        expect(session.load).toBe(true);
+      }
     }
   });
   it("keeps project then personal skills ahead of runbook skills in the Pi resource door", async () => {

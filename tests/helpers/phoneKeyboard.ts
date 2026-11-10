@@ -141,14 +141,20 @@ export function phoneLogMilliseconds(timestamp: string): number {
  * ignoring its touches. Anything else, an accessory screen or a bad usage pair alone included, is not
  * proof and reads as unknown. iOS 27.0 reads every XCTest screen as an accessory and still delivers its
  * touches, naming the screen on each contact line, as the Mac mini's iPad join part showed on Xcode 27.1.
+ * INF-1109 / INF-1801: duplicate registration can instead lose a tap's lift. Its initial screen is then
+ * insufficient: only that sender's disappearance with a still-touching contact proves the tap unfinished.
+ * Registration warnings suspend a delivery verdict, but never by themselves permit another tap.
  */
 export class PhoneTouchOutcomes {
   private screens: TouchScreen[] = [];
   private ignored = new Map<string, string>();
   private touching = new Map<string, string>();
+  private uncertain = new Map<string, number>();
+  private unfinished = new Map<string, { at: number; proof: string }>();
   private listeners = new Set<() => void>();
   private failure: Error | undefined;
-  private recover: ((since: number, signal: AbortSignal) => Promise<object[]>) | undefined;
+  private receivingKept = false;
+  private readonly recover?: (since: number, signal: AbortSignal) => Promise<object[]>;
 
   constructor(recover?: (since: number, signal: AbortSignal) => Promise<object[]>) {
     this.recover = recover;
@@ -185,9 +191,31 @@ export class PhoneTouchOutcomes {
       } else if (touched?.[1]) {
         const sender = touchSender(touched[1]);
         if (!this.touching.has(sender)) this.touching.set(sender, message);
-      } else return;
+      } else {
+        const at = phoneLogMilliseconds(record.timestamp ?? "");
+        if (Number.isNaN(at)) return;
+        const uncertain =
+          /^we already have a service for senderID:([\dA-Fa-f]+)$/.exec(message) ??
+          /^\*\*\* unknown digitizer <BKIOHIDService: .*?\bsenderID: 0x([\dA-Fa-f]+);/.exec(
+            message,
+          );
+        // The whole state must be present. Empty disappearance is normal after a completed tap;
+        // neither it nor a partial snapshot is permission to send the operation again.
+        const vanished =
+          /^cancel -- digitizer did disappear:<BKDirectTouchState: 0x[\dA-Fa-f]+;[^>]*?\bsenderID: 0x([\dA-Fa-f]+); contacts: contacts: \[(.*?)\]; destinations: \[.*\]; latentSystemGestureDestinations: \([^)]*\)>$/s.exec(
+            message,
+          );
+        if (uncertain?.[1]) {
+          this.uncertain.set(touchSender(uncertain[1]), at);
+        } else if (
+          vanished?.[1] &&
+          /\bpathIndex: \d+; touchIdentifier: \d+; touching;/.test(vanished[2] ?? "")
+        ) {
+          this.unfinished.set(touchSender(vanished[1]), { at, proof: message });
+        } else return;
+      }
     }
-    for (const notify of this.listeners) notify();
+    if (!this.receivingKept) for (const notify of this.listeners) notify();
   }
 
   /**
@@ -196,12 +224,12 @@ export class PhoneTouchOutcomes {
    */
   outcome(since: number, until = phoneTouchDeadline()): Promise<PhoneTouchOutcome> {
     return new Promise((resolve) => {
-      let settled = false;
+      let finished = false;
       let recoveryFailure = "";
       const recovery = new AbortController();
       const finish = (result: PhoneTouchOutcome) => {
-        if (settled) return;
-        settled = true;
+        if (finished) return;
+        finished = true;
         deadline.cancel();
         clearTimeout(wall);
         this.listeners.delete(check);
@@ -209,6 +237,7 @@ export class PhoneTouchOutcomes {
         resolve(result);
       };
       const check = () => {
+        if (finished) return;
         if (this.failure) {
           finish({ outcome: "unknown", reason: this.failure.message });
           return;
@@ -219,6 +248,15 @@ export class PhoneTouchOutcomes {
           .sort((a, b) => a.at - b.at)[0];
         if (!screen) return;
         const { sender, timestamp } = screen;
+        const unfinished = this.unfinished.get(sender);
+        if (unfinished && unfinished.at >= screen.at) {
+          finish({ outcome: "discarded", sender, timestamp, proof: unfinished.proof });
+          return;
+        }
+        // A duplicate registration can attach two states before losing the lift. Wait for proof,
+        // not an arbitrary settling delay; without it the existing deadline returns unknown.
+        const uncertain = this.uncertain.get(sender);
+        if (uncertain !== undefined && uncertain >= since) return;
         if (screen.builtInTouchScreen) {
           finish({ outcome: "delivered", sender, timestamp, proof: screen.line });
           return;
@@ -241,18 +279,30 @@ export class PhoneTouchOutcomes {
       const wall = setTimeout(unknown, Math.max(0, until - Date.now()));
       this.listeners.add(check);
       check();
-      // INF-1917: the completed pager tap's contact was in log show but absent from log stream.
-      // Read the kept log once if the stream has not answered, inside the existing wait, not after
-      // its deadline (which can share the caller's wall cap). Never send another tap to find out.
-      void Promise.resolve().then(async () => {
-        if (settled || !this.recover) return;
-        try {
-          const records = await this.recover(since, recovery.signal);
-          if (!settled) for (const record of records) this.receive(record);
-        } catch (error) {
-          recoveryFailure = `; the simulator's kept log could not be read: ${(error as Error).message}`;
-        }
-      });
+      // INF-1109 / INF-1917: a live subscription can omit a screen its simulator kept. Read once
+      // inside the original outcome wait, alongside the live listener; a known verdict needs no read.
+      const recover = this.recover;
+      if (recover)
+        void Promise.resolve()
+          .then(async () => {
+            if (finished || this.failure) return;
+            const records = await recover(since, recovery.signal);
+            if (finished || this.failure) return;
+            // A recovered initializer alone must not publish delivery before a later warning or
+            // unfinished contact in the same batch. All waiting requests see the complete batch.
+            this.receivingKept = true;
+            try {
+              for (const record of records) this.receive(record);
+            } finally {
+              this.receivingKept = false;
+            }
+            for (const notify of this.listeners) notify();
+          })
+          .catch((error) => {
+            // An unreadable kept log proves nothing. The live observer and original deadline remain.
+            if (finished || this.failure) return;
+            recoveryFailure = `; the simulator's kept log could not be read: ${(error as Error).message}`;
+          });
     });
   }
 
@@ -685,13 +735,17 @@ const PICKER_PREVIEW_CATEGORY = "UICMILifecycle";
 const UNREADABLE_SHARED_MESSAGE = "<compose failure [shared UUID]>";
 
 /** Registration subset of INF-355's observe.sh, limited to the runner's own simulator,
- * INF-1477's touch screen attachments, touching contacts that name their screen and ignored touches
- * from the same backboardd, the photo picker's press-and-hold, and INF-1785's display changes. */
+ * INF-1477's touch screen attachments, touching contacts that name their screen and ignored touches,
+ * INF-1109's registration warnings and unfinished-contact snapshots from the same backboardd,
+ * the photo picker's press-and-hold, and INF-1785's display changes. */
 const PHONE_KEYBOARD_LOG_PREDICATE =
   '(process == "backboardd" AND (composedMessage BEGINSWITH "new key command registrations for pid:"' +
   ' OR composedMessage BEGINSWITH "init: <BKDirectTouchState"' +
   ' OR (composedMessage BEGINSWITH "[" AND composedMessage ENDSWITH "presence: touching")' +
-  ' OR composedMessage BEGINSWITH "ignoring digitizer event"))' +
+  ' OR composedMessage BEGINSWITH "ignoring digitizer event"' +
+  ' OR composedMessage BEGINSWITH "we already have a service for senderID:"' +
+  ' OR composedMessage BEGINSWITH "*** unknown digitizer"' +
+  ' OR composedMessage BEGINSWITH "cancel -- digitizer did disappear:"))' +
   ` OR (process == "PhotosPicker" AND (composedMessage BEGINSWITH "${PICKER_PREVIEW_LINE}"` +
   ` OR (subsystem == "${PICKER_PREVIEW_SUBSYSTEM}" AND category == "${PICKER_PREVIEW_CATEGORY}")))` +
   ' OR (process == "SpringBoard" AND composedMessage BEGINSWITH "Arbiter changing style from")' +
@@ -764,7 +818,7 @@ function keptPhoneLog(
       }
     });
     show.stderr.resume();
-    // A wall cap, not a load budget: the display control's answer must still reach the journey in time.
+    // A wall cap, not a load budget: the control's answer must still reach the journey in time.
     const cap = setTimeout(() => {
       show.kill("SIGTERM");
       reject(new Error(`it took over ${PHONE_DISPLAY_RECOVERY_CAP_MS / 1000} seconds`));

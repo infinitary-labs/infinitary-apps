@@ -22,6 +22,7 @@ import type { TaskFiles } from "../files/taskFiles";
 import type { HostBrowserFrame, HostChildSpawner, HostTaskBrowser } from "../host";
 import type { TaskIntegrations } from "../integrations";
 import type { LoadLine } from "../placed/loadLine";
+import type { SecretsCatalog } from "../secrets/requests";
 
 /**
  * The browsers of the tasks a computer that runs work holds
@@ -34,7 +35,9 @@ import type { LoadLine } from "../placed/loadLine";
  * computer's own task channel (`infinitary-browser-axi`, docs/axi-commands.md).
  * The same channel carries `infinitary-integrations-axi` to the home's
  * integrations, which the home answers (docs/integrations.md, "On a
- * computer that runs work"); none of them is here.
+ * computer that runs work"); none of them is here. It carries
+ * `infinitary-secrets-axi` to the home's Secrets catalog too, which lists
+ * metadata only: no use, value or custody is here (docs/secrets.md).
  *
  * The captain's side is the home's: it asks the orders in
  * `browserOrders` (src/shared/work.ts) - his view's pictures and room, his
@@ -212,8 +215,8 @@ export class ComputerBrowsers {
           once: returned.once,
         }),
       signIns: this.lent,
-      // The home's private sites list, lent as each page opens; a home
-      // without it, or out of reach, leaves the last read (none at first).
+      // The home's private sites list, included by every admitted work peer
+      // and lent as each page opens; out of reach keeps the last read (none at first).
       privateSites: async (task) =>
         workRequests["inf:work:private-sites"].response.parse(
           await options.tell("inf:work:private-sites", [{ task }]),
@@ -244,9 +247,10 @@ export class ComputerBrowsers {
 
   /**
    * A task's crewmate is given its commands: its browser, when the home says
-   * it has one, and the integrations it reaches through the home, with what
-   * its shell carries to reach them. A task granted again keeps its key, so
-   * a shell already given it still answers, and takes the tools granted now.
+   * it has one, the integrations it reaches through the home, and the
+   * home's Secrets catalog, with what its shell carries to reach them. A
+   * task granted again keeps its key, so a shell already given it still
+   * answers, and takes the tools granted now.
    */
   grant(
     task: string,
@@ -255,6 +259,7 @@ export class ComputerBrowsers {
       integrations?: TaskIntegrations;
       load?: boolean;
       files?: TaskFiles;
+      secretsCatalog?: SecretsCatalog;
     },
   ): { browser?: CrewmateBrowser; shell: TaskShell } {
     const browser = tools.browser ? this.browsers.forTask(task) : undefined;
@@ -263,6 +268,7 @@ export class ComputerBrowsers {
       ...(browser ? { browser } : {}),
       ...(tools.integrations ? { integrations: tools.integrations } : {}),
       ...(tools.files ? { files: tools.files } : {}),
+      ...(tools.secretsCatalog ? { secretsCatalog: tools.secretsCatalog } : {}),
     });
     return { ...(browser ? { browser } : {}), shell };
   }

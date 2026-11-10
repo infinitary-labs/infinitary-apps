@@ -189,12 +189,14 @@ export async function placedContractWorld(
     protocolVersion: options.protocolVersion,
     say: () => {},
     retryMs: [20],
-    conversations: async ({ dataDir: dir, ask, homeChanges }) => {
+    conversations: async ({ dataDir: dir, ask, homeChanges, homeVersion }) => {
       const host = new SessionHost({
         tasks: new PlacedTasks(dir),
         ask,
         // What the home's welcome listed, as the work mode hands it on.
         ...(homeChanges ? { homeChanges } : {}),
+        // The real welcome owns work compatibility; a missing version grants no new events.
+        ...(homeVersion ? { homeVersion } : {}),
         factories: { [inner.factory.backend]: inner.factory },
         bind: async () => inner.binding,
         tools: [lookUpThere],

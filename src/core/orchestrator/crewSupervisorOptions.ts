@@ -37,6 +37,7 @@ import type { CrewMachines } from "../placed/crewMachines";
 import type { KindClassifier } from "../routing/kindClassifier";
 import type { Router } from "../routing/router";
 import type { Runbooks } from "../runbooks/runbooks";
+import type { SecretsCommand } from "../secrets/requests";
 import type { SessionBinding, SessionFactories, SessionSpec, TaskShell } from "../session/session";
 import type { DeclaredCardInput } from "../session/tools";
 import type { CardStore } from "../storage/cardStore";
@@ -456,6 +457,7 @@ export type CrewSupervisorOptions = {
       tools: {
         browser?: CrewmateBrowser;
         integrations?: TaskIntegrations;
+        secrets?: SecretsCommand;
         load?: import("../placed/loadLine").TaskLoad;
         files?: TaskFiles;
       },
@@ -472,6 +474,8 @@ export type CrewSupervisorOptions = {
    * through `infinitary-integrations-axi` on its task channel. Absent, it has none.
    */
   integrations?: { forTask: (taskId: string) => TaskIntegrations };
+  /** Metadata and exact requests, never values or authority. */
+  secrets?: { forTask: (taskId: string) => SecretsCommand };
   /**
    * Each task's own browser (docs/task-browser.md), on this Mac or on the
    * computer its task runs on ("On another computer"): absent, its crewmate

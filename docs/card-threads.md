@@ -146,7 +146,7 @@ The card leaves the stack as read, the message takes it as its answer, and the a
 The crewmate judges the words; the rule's one home is the thread steer's preamble (`THREAD_STEER_PREAMBLE`), which reaches a Claude crewmate with the captain's line, and the tool's top-level `signs_off` parameter says only what the mark does.
 No code, test or instruction keeps a list of phrases.
 The host refuses the mark with its reason and writes nothing on a card with a merge, a write or a browser hand-off for the captain, on one still `asking` or `continues`, on an interim line, and anywhere but the crewmate's own answering card of an active answer task.
-The mark crosses from a computer that runs work in `inf:work:reply`'s `signsOff`.
+The mark crosses from a computer that runs work in `inf:work:reply`'s `signsOff`, only to a home on the current work major.
 
 ## The waiting line
 
@@ -506,7 +506,7 @@ The receipt is read from the typed result the host saved (`CardMutation`, `cardM
 
 Desktop and phone show the same words under such a line, from one owner (`contributorWords` in `threadWords.ts`, generated into `PhoneCardWords.contributor`): "Revised by …" under a revision's line, "Written by …" under a reply, and ", after the card closed" on a clarification.
 
-A computer takes work only on its home's major, so both sides keep the new fields; a view on an older major gets the thread lines without who wrote them unless it reads them (`SHARED_CARDS_SINCE`, `src/shared/contractFeatures.ts`).
-A computer that runs work refuses these writes and reads to a home without the change.
-A home refuses a write on someone else's card from a work computer without it before writing anything.
-A desktop view without the change gets thread lines without the contributor, the answered message and the clarification flag, in every answer and push that carries them (`THREAD_CHANNELS` in `src/core/connection/connection.ts`); a phone ignores fields it does not know.
+An older computer is refused rather than trusted to drop the new fields (`takesWork`, `src/shared/contract-changes/major-15.md`).
+A computer that runs work refuses these writes and reads to a home on another work major.
+A home refuses a write on someone else's card from a work computer on another major before writing anything.
+A desktop view below major 14 that does not name `shared-cards` gets thread lines without the contributor, the answered message and the clarification flag, in every answer and push that carries them (`THREAD_CHANNELS` in `src/core/connection/connection.ts`); a phone ignores fields it does not know.

@@ -4,6 +4,8 @@
  * `tests/helpers/wakeWords.ts` says why). The first mate's wakes are in
  * `wakes.words.firstmate.test.ts`.
  */
+
+import { secretsReceipt } from "../../../tests/helpers/secretsReceipt";
 import {
   type CrewmateWakeKind,
   WAKE_PICTURE as PICTURE,
@@ -12,6 +14,9 @@ import {
   type WordsCases,
 } from "../../../tests/helpers/wakeWords";
 import { queueWakeWords } from "./projectQueue";
+
+const completedSecret = await secretsReceipt("completed");
+const unknownSecret = await secretsReceipt("unknown");
 
 const CASES: WordsCases<CrewmateWakeKind> = {
   "review-handoff": [
@@ -56,6 +61,19 @@ const CASES: WordsCases<CrewmateWakeKind> = {
       },
       words:
         "Host handoff from INF-2761 at 4be7c1d90a2f: The committed repair is ready.\nRead the builder's changed head, evidence revision or validation state assigned to this turn. A code pass already recorded at this head makes this a proof read only. Read only the difference after an earlier code pass. The review history carries the captain's latest decisions. Report your typed review; the host delivers it directly to the builder. Escalate only a decision or a handoff you cannot complete.",
+    },
+  ],
+  // INF-1109: completion is metadata, never new permission; an unknown effect must not repeat.
+  "secrets-use-ended": [
+    {
+      name: "a completed protected recipient",
+      wake: { facts: { kind: "secrets-use-ended", receipt: completedSecret } },
+      words: `[fm-op] Secrets request ${completedSecret.request}: completed. The recipient exited with status ${completedSecret.exitCode}. This is a receipt, not permission for another use or an external action.`,
+    },
+    {
+      name: "an unknown protected effect",
+      wake: { facts: { kind: "secrets-use-ended", receipt: unknownSecret } },
+      words: `[fm-op] Secrets request ${unknownSecret.request}: unknown. This is a receipt, not permission for another use or an external action. Do not repeat this request; reconcile what happened before depending on it.`,
     },
   ],
   "responses-cancelled": [

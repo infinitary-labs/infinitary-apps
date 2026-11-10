@@ -20,6 +20,7 @@ import Database from "better-sqlite3";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StubRequest } from "../../../tests/helpers/anthropicDialect";
 import { bundleAxiProcess } from "../../../tests/helpers/axiProcessBundle";
+import { disposableCustody } from "../../../tests/helpers/disposableCustody";
 import { startGoogleStandIn } from "../../../tests/helpers/googleStandIn";
 import { allowIntegrationReads } from "../../../tests/helpers/integrationApprovals";
 import {
@@ -38,6 +39,9 @@ import { CREWMATE_INTEGRATIONS_LINE, INTEGRATIONS_COMMAND } from "../integration
 import { READ_HOUR_MS } from "../integrations/outsideReads";
 import { crewmatePlacedDir, crewmateSessionsDir, crewmateTempDir } from "../paths";
 import { backgroundJobReceipt } from "../pi/bashWords";
+import { CREWMATE_SECRETS_CATALOG_LINE, CREWMATE_SECRETS_LINE } from "../secrets/commandWords";
+import { ProtectedSecrets } from "../secrets/protected";
+import { SecretsSettings } from "../secrets/settings";
 import { seedTask } from "../tasks/seedTask";
 
 /**
@@ -76,6 +80,23 @@ placedWorldHooks({
   },
 });
 
+function onlyFixtureTools(): void {
+  // INF-1038: this computer has only its fixture's tools, not the runner's
+  // task commands. hostEnv also appends installer directories, so replacing
+  // process.env.PATH alone does not isolate it. Keep git for working copies;
+  // withTaskShell still adds the real command path when the task is granted it.
+  const bin = scratchDir("infinitary-placed-host-bin-");
+  symlinkSync("/usr/bin/git", join(bin, "git"));
+  const inheritedHostEnv = hostEnvironment.hostEnv;
+  const environment = vi.spyOn(hostEnvironment, "hostEnv").mockImplementation((extra) => ({
+    ...inheritedHostEnv(extra),
+    PATH: bin,
+  }));
+  stops.push(() => {
+    environment.mockRestore();
+  });
+}
+
 // INF-795: "A crewmate on a computer that runs work gets
 // infinitary-integrations-axi, whose list, show and call are forwarded to the
 // home ... so no sign-in leaves the home." The command runs in the
@@ -88,22 +109,7 @@ describe("the integrations command on a computer that runs work", () => {
     entry = await bundleAxiProcess();
   }, 60_000);
 
-  beforeEach(() => {
-    // INF-1038: this computer has only its fixture's tools, not the runner's
-    // task commands. hostEnv also appends installer directories, so replacing
-    // process.env.PATH alone does not isolate it. Keep git for working copies;
-    // withTaskShell still adds the real command path when the task is granted it.
-    const bin = scratchDir("infinitary-placed-host-bin-");
-    symlinkSync("/usr/bin/git", join(bin, "git"));
-    const inheritedHostEnv = hostEnvironment.hostEnv;
-    const environment = vi.spyOn(hostEnvironment, "hostEnv").mockImplementation((extra) => ({
-      ...inheritedHostEnv(extra),
-      PATH: bin,
-    }));
-    stops.push(() => {
-      environment.mockRestore();
-    });
-  });
+  beforeEach(onlyFixtureTools);
 
   it("lists, shows and calls this Mac's integrations from the crewmate's shell there, with the sign-in and the ask kept here", async () => {
     const github = await standInGitHub();
@@ -255,6 +261,7 @@ describe("the integrations command on a computer that runs work", () => {
     await expect.poll(() => home.tasks.get("t-older")?.outcome).toBe("No integrations here.");
     expect(systemOf(api.requests[requests])).toContain(CREWMATE_INTEGRATIONS_LINE);
     expect(shellAnswer(api.requests[requests + 1]).exit).toBe(0);
+    expect(shellAnswer(api.requests[requests + 1]).output).toContain("GitHub");
     expect(JSON.stringify(api.requests)).not.toContain("runner-installed command reached");
   });
 });
@@ -418,6 +425,145 @@ describe("the files command between this Mac and a computer that runs work", () 
   });
 });
 
+// INF-1109's revision spec: "Treat all crewmates consistently ... If metadata
+// needs to travel to a work computer, use existing authenticated home/work
+// routes and send metadata only. Do not move values, grant remote execution
+// or construct production custody as a shortcut." The command runs in the
+// crewmate's shell there through the real launcher, command process and task
+// channel, and its list crosses the real connection to this Mac's Secrets,
+// whose custody is a disposable stand-in: no Keychain is touched.
+describe("the Secrets command on a computer that runs work", () => {
+  let entry: string;
+  beforeAll(async () => {
+    entry = await bundleAxiProcess();
+  }, 60_000);
+
+  beforeEach(onlyFixtureTools);
+
+  it("lists and shows this Mac's secrets from the crewmate's shell there, while a use, its value and custody stay here", async () => {
+    const value = "invented-staging-database-password";
+    const custody = disposableCustody();
+    const dir = scratchDir("infinitary-placed-secrets-");
+    const raised: string[] = [];
+    let confirms = 0;
+    const settings = new SecretsSettings({
+      open: (initialize) =>
+        ProtectedSecrets.open({
+          dir,
+          custody,
+          initialize,
+          environment: () => ({}),
+          now,
+          authentication: {
+            available: async () => true,
+            confirm: async () => {
+              confirms++;
+              return true;
+            },
+          },
+        }),
+      raise: (card) => {
+        raised.push(card.title);
+      },
+      withdraw: () => {},
+      settled: () => {},
+      changed: () => {},
+      now,
+    });
+    await settings.put({
+      ref: "staging-db",
+      label: "Staging database password",
+      value,
+      expectedVersion: 0,
+      expectedRevision: null,
+      environment: "Staging",
+    });
+    // Every use this Mac's Secrets is asked for, whichever task asks.
+    const uses: string[] = [];
+    const at = await world(undefined, {
+      jobs: true,
+      taskChannel: entry,
+      secrets: {
+        forTask: (task) => {
+          const command = settings.commandFor({ task });
+          return {
+            ...command,
+            inject: (input) => {
+              uses.push(`inject for ${task}`);
+              return command.inject(input);
+            },
+            status: (request) => {
+              uses.push(`status for ${task}`);
+              return command.status(request);
+            },
+            cancel: (request) => {
+              uses.push(`cancel for ${task}`);
+              return command.cancel(request);
+            },
+          };
+        },
+      },
+    });
+    model([
+      { tools: [shellCommand("infinitary-secrets-axi list")] },
+      { tools: [shellCommand("infinitary-secrets-axi show staging-db")] },
+      {
+        tools: [
+          shellCommand(
+            `infinitary-secrets-axi inject --env '{"DATABASE_PASSWORD":"staging-db"}' --reason 'Run the staging migration' --id migrate-staging -- /bin/sh ./scripts/migrate.sh`,
+          ),
+        ],
+      },
+      { text: "The staging migration needs a use on the home." },
+    ]);
+    const requests = api.requests.length;
+    await at.start("t-secrets");
+    const home = at.home();
+    await expect
+      .poll(() => home.tasks.get("t-secrets")?.outcome)
+      .toBe("The staging migration needs a use on the home.");
+    // Its instructions there name the catalog alone, never requests.
+    const system = systemOf(api.requests[requests]);
+    expect(system).toContain(CREWMATE_SECRETS_CATALOG_LINE);
+    expect(system).not.toContain(CREWMATE_SECRETS_LINE);
+
+    // List and show answer the catalog a crewmate here lists: reference, name, environment and version.
+    const listed = shellAnswer(api.requests[requests + 1]);
+    expect(listed.exit).toBe(0);
+    for (const words of ["staging-db", "Staging database password", "Staging"])
+      expect(listed.output).toContain(words);
+    const shown = shellAnswer(api.requests[requests + 2]);
+    expect(shown.exit).toBe(0);
+    expect(shown.output).toContain("Staging database password");
+
+    // A use asked there is unavailable: it never reached this Mac's Secrets,
+    // raised no approval, asked for no confirmation and left no receipt or history.
+    const injected = shellAnswer(api.requests[requests + 3]);
+    expect(injected.output).toContain("unavailable: true");
+    expect(injected.output).toContain("runs on another computer");
+    expect(uses).toEqual([]);
+    expect(raised).toEqual([]);
+    expect(confirms).toBe(0);
+    expect(settings.commandFor({ task: "t-secrets" }).receipts()).toEqual([]);
+    expect((await settings.view()).history).toEqual([]);
+
+    // Only the metadata read crossed the connection, once for each list and show.
+    const calls = readFileSync(
+      join(crewmatePlacedDir(home.paths, "t-secrets"), "calls.jsonl"),
+      "utf8",
+    )
+      .trim()
+      .split("\n")
+      .map((line) => (JSON.parse(line) as { channel: string }).channel);
+    expect(calls).toEqual(["inf:work:secrets", "inf:work:secrets"]);
+
+    // Nothing on that computer holds the value or any custody bytes.
+    expect(filesHolding(at.dataDir, value)).toEqual([]);
+    expect(custody.slots.size).toBeGreaterThan(0);
+    for (const bytes of custody.slots.values()) expect(filesHolding(at.dataDir, bytes)).toEqual([]);
+  });
+});
+
 describe("Gmail and Calendar content on a computer that runs work", () => {
   // INF-1094: "Gmail and Calendar content a crewmate read on another
   // computer that runs work is replaced with the same note after 30 days
@@ -560,7 +706,8 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
   });
 
   it("replaces what it read there and in this Mac's copy on the captain's delete, counts it, and its next turn reads the note", async () => {
-    const { at, home, outsideData, there, here, calls } = await readThere();
+    // The current work major includes deletion without the retired minor name.
+    const { at, home, outsideData, there, here, calls } = await readThere([]);
 
     expect(await outsideData.deleteNow()).toEqual({ conversations: 1, waiting: 0 });
     // Replaced on the computer, in this Mac's copy of its record and in the
@@ -801,7 +948,7 @@ function refusalOf(reply: IntegrationReply): string {
 }
 
 /** Every file under `root` whose bytes hold `text`. */
-function filesHolding(root: string, text: string): string[] {
+function filesHolding(root: string, text: string | Buffer): string[] {
   const found: string[] = [];
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {

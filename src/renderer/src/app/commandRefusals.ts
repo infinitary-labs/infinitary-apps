@@ -313,6 +313,8 @@ const REFUSALS: Readonly<
   "settings.automation": usageRefusalFor("Automation", false),
   // Integrations sign in as the person on the home, like Projects.
   "settings.integrations": usageRefusalFor("Integrations"),
+  // Secrets stay the home's own, even of a first mate started by a command (docs/secrets.md).
+  "settings.secrets": usageRefusalFor("Secrets", false),
   "automation.pause-all": usageRefusalFor("Automation", false),
   "usage.unit": usageRefusal,
   // The allowance is read where the first mate lives, from any Mac.

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readFile, rename, rm, stat } from "node:fs/promises";
+import { mkdir, readFile, realpath, rename, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import {
   type CustodyRead,
@@ -56,6 +56,10 @@ export type Evaluation = { effect: RuleEffect; matched: string[] };
 type Head = { revision: number; digest: string };
 type Stored = { authority: Authority; mac: string };
 
+// Only this process can still finish its native writes. Reopening an owner
+// is not restarting that writer; keep its candidate until the head confirms it.
+const pendingWrites = new Set<string>();
+
 /**
  * The authority record (docs/secrets.md, "Protected rules"). Its check is
  * keyed by custody and its head - revision and digest - lives in custody too,
@@ -66,6 +70,8 @@ type Stored = { authority: Authority; mac: string };
  * matches the head.
  */
 export class ProtectedAuthority {
+  /** A lost reply or failed rename needs reopening, never another save over the pending record. */
+  private uncertain = false;
   private constructor(
     private readonly dir: string,
     private readonly keys: RootKeys,
@@ -90,10 +96,15 @@ export class ProtectedAuthority {
     const stored = await readStored(file);
     if (head.kind === "absent") {
       // A first open: no head was ever stored. A record without a head was not
-      // written here; a lone next record is a first open interrupted before
-      // its head, which held no rules or devices.
+      // written here. A pending record may still acquire its native head
+      // after a lost response; absence now is not a definite write refusal.
       if (stored !== undefined || (await exists(file))) return "tampered";
-      await rm(next, { force: true });
+      if (await exists(next)) {
+        if (pendingWrites.has(await realpath(dir))) return "unavailable";
+        // A prior process stopped before committing the first authority.
+        // Do not replay that candidate; initialize a new, empty authority.
+        await rm(next);
+      }
       const fresh: Authority = { home: randomUUID(), revision: 0, rules: [], devices: [] };
       const authority = new ProtectedAuthority(dir, keys, custody, fresh);
       return (await authority.write(fresh)) === "stored" ? authority : "unavailable";
@@ -110,11 +121,19 @@ export class ProtectedAuthority {
       candidate.authority.revision === expected.revision &&
       sha256(canonical(candidate.authority)) === expected.digest &&
       validAuthority(candidate.authority);
-    if (matches(stored))
-      return new ProtectedAuthority(dir, keys, custody, (stored as Stored).authority);
     const pending = await readStored(next);
+    if (matches(stored)) {
+      if (await exists(next)) {
+        if (pendingWrites.has(await realpath(dir))) return "unavailable";
+        // The prior writer has stopped and the readable head still commits
+        // this record. Drop its unconfirmed successor, never retry its save.
+        await rm(next);
+      }
+      return new ProtectedAuthority(dir, keys, custody, (stored as Stored).authority);
+    }
     if (matches(pending)) {
       await rename(next, file);
+      pendingWrites.delete(await realpath(dir));
       return new ProtectedAuthority(dir, keys, custody, (pending as Stored).authority);
     }
     return "tampered";
@@ -151,25 +170,36 @@ export class ProtectedAuthority {
   }
 
   private async write(authority: Authority): Promise<"stored" | "locked" | "unavailable"> {
+    if (this.uncertain) throw new Error("Reopen Secrets to reconcile the pending authority write.");
     const text = canonical(authority);
     const stored: Stored = { authority, mac: this.keys.mac("authority", text) };
     const next = join(this.dir, "authority.next.json");
-    await writePrivateFile(next, JSON.stringify(stored));
-    let moved: "stored" | "locked" | "unavailable";
+    await mkdir(this.dir, { recursive: true, mode: 0o700 });
+    const home = await realpath(this.dir);
+    if (pendingWrites.has(home))
+      throw new Error("Reopen Secrets to reconcile the pending authority write.");
+    pendingWrites.add(home);
+    let attempted = false;
     try {
-      moved = await this.custody.write(
+      await writePrivateFile(next, JSON.stringify(stored));
+      attempted = true;
+      const moved = await this.custody.write(
         "authority-head",
         Buffer.from(JSON.stringify({ revision: authority.revision, digest: sha256(text) })),
       );
-    } catch {
-      moved = "unavailable";
+      if (moved !== "stored") {
+        await rm(next, { force: true });
+        pendingWrites.delete(home);
+        return moved;
+      }
+      await rename(next, join(this.dir, "authority.json"));
+      pendingWrites.delete(home);
+      return "stored";
+    } catch (error) {
+      this.uncertain = attempted;
+      if (!attempted) pendingWrites.delete(home);
+      throw error;
     }
-    if (moved !== "stored") {
-      await rm(next, { force: true });
-      return moved;
-    }
-    await rename(next, join(this.dir, "authority.json"));
-    return "stored";
   }
 }
 

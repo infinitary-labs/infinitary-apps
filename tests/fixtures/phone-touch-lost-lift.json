@@ -1,0 +1,60 @@
+{
+  "source": {
+    "intent": "INF-1109 / INF-1801: only affirmative unfinished-contact proof permits another tap",
+    "run": 40817658834,
+    "log": "iphone/join/simulator-live.log",
+    "clock": "Original virtual Mac UTC; compact millisecond timestamps expressed in the observer record format."
+  },
+  "lostLift": {
+    "duplicateService": {
+      "processImagePath": "/usr/libexec/backboardd",
+      "timestamp": "2026-10-29 04:53:31.541000+0000",
+      "eventMessage": "we already have a service for senderID:1033F4E000010",
+      "sourceLine": 343178
+    },
+    "firstScreen": {
+      "processImagePath": "/usr/libexec/backboardd",
+      "timestamp": "2026-10-29 04:53:31.545000+0000",
+      "eventMessage": "init: <BKDirectTouchState: 0x10aa81340; touchScreen; builtin; senderID: 0x1033F4E000010; contacts: contacts: []; destinations: []; latentSystemGestureDestinations: ()>",
+      "sourceLine": 343184
+    },
+    "unknownDigitizer": {
+      "processImagePath": "/usr/libexec/backboardd",
+      "timestamp": "2026-10-29 04:53:31.545000+0000",
+      "eventMessage": "*** unknown digitizer <BKIOHIDService: 0x10ab1e100; serviceStatus: <unknown>; IOHIDService: IOHIDService name: id:0x1033f4e000010 primaryUsagePage:0xd primaryUsage:0x4 transport:Recap locationID:recap-bus-0 reportInterval:0 batchInterval:0 events:1 mask:0x800 sensorcontrols:7; senderID: 0x1033F4E000010; displayUUID: 0x0; eventSource: builtin; primaryUsagePage: 0xD; primaryUsage: 0x4; authenticated: YES; builtIn: YES> -- initializing now",
+      "sourceLine": 343185
+    },
+    "secondScreen": {
+      "processImagePath": "/usr/libexec/backboardd",
+      "timestamp": "2026-10-29 04:53:31.546000+0000",
+      "eventMessage": "init: <BKDirectTouchState: 0x10aa82140; touchScreen; builtin; senderID: 0x1033F4E000010; contacts: contacts: []; destinations: []; latentSystemGestureDestinations: ()>",
+      "sourceLine": 343190
+    },
+    "emptyDisappearance": {
+      "processImagePath": "/usr/libexec/backboardd",
+      "timestamp": "2026-10-29 04:53:31.708000+0000",
+      "eventMessage": "cancel -- digitizer did disappear:<BKDirectTouchState: 0x10aa81340; touchScreen; builtin; senderID: 0x1033F4E000010; contacts: contacts: []; destinations: []; latentSystemGestureDestinations: ()>",
+      "sourceLine": 343272
+    },
+    "unfinished": {
+      "processImagePath": "/usr/libexec/backboardd",
+      "timestamp": "2026-10-29 04:53:31.709000+0000",
+      "eventMessage": "cancel -- digitizer did disappear:<BKDirectTouchState: 0x10aa82140; touchScreen; builtin; senderID: 0x1033F4E000010; contacts: contacts: [pathIndex: 2; touchIdentifier: 13; touching; locked; destinations: ((touchStream|filterDetachedTouches); contextID: 0xBAEA67EE; clientPort: 0x9513, (hitTest); contextID: 0xC518DDE5; clientPort: 0x27C57; inheritedSceneHostSettings: <identifier: sceneID:com.getinfinitary.infinitary-default; touchBehavior: foreground>)]; destinations: [<BKTouchDestination: 0x10aa12250; (hitTest); contextID: 0xC518DDE5; clientPort: 0x27C57; inheritedSceneHostSettings: <identifier: sceneID:com.getinfinitary.infinitary-default; touchBehavior: foreground>; externalReferences: 1>, <BKTouchDestination: 0x10aa126d0; (hitTest); contextID: 0x5926F3C0; clientPort: 0x9513; externalReferences: 1>, <BKTouchDestination: 0x10aa13f90; (hitTest); contextID: 0xFBD47CAD; clientPort: 0x9513; externalReferences: 1>]; latentSystemGestureDestinations: ()>",
+      "sourceLine": 343303
+    }
+  },
+  "completed": {
+    "screen": {
+      "processImagePath": "/usr/libexec/backboardd",
+      "timestamp": "2026-10-29 04:51:36.209000+0000",
+      "eventMessage": "init: <BKDirectTouchState: 0x10a969b20; touchScreen; builtin; senderID: 0x1033F60000000; contacts: contacts: []; destinations: []; latentSystemGestureDestinations: ()>",
+      "sourceLine": 35803
+    },
+    "disappearance": {
+      "processImagePath": "/usr/libexec/backboardd",
+      "timestamp": "2026-10-29 04:51:36.387000+0000",
+      "eventMessage": "cancel -- digitizer did disappear:<BKDirectTouchState: 0x10a969b20; touchScreen; builtin; senderID: 0x1033F60000000; contacts: contacts: []; destinations: []; latentSystemGestureDestinations: ()>",
+      "sourceLine": 35953
+    }
+  }
+}

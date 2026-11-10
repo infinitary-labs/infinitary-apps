@@ -135,10 +135,16 @@ export class CrewToolHooks {
   private taskCommandHooks(
     task: TaskRuntime,
     machine: string,
-  ): Pick<CrewmateSpec, "browser" | "shell" | "integrations" | "load" | "files"> {
-    const { browsers, taskCommands, integrations, machines, load, files } = this.core.options;
+  ): Pick<
+    CrewmateSpec,
+    "browser" | "shell" | "integrations" | "load" | "files" | "secrets" | "secretsCatalog"
+  > {
+    const { browsers, taskCommands, integrations, machines, load, files, secrets } =
+      this.core.options;
     const hasLoad = load?.available(machine) === true;
     if (machine !== LOCAL_MACHINE_ID) {
+      const command =
+        secrets && machines?.takesSecrets?.(machine) ? secrets.forTask(task.id) : undefined;
       // Its shell there is granted the commands; this Mac reads its browser
       // for the captain and answers its integrations' calls and its files'.
       return {
@@ -150,6 +156,7 @@ export class CrewToolHooks {
           ? { integrations: integrations.forTask(task.id) }
           : {}),
         ...(files && machines?.takesFiles?.(machine) ? { files: files.forTask(task.id) } : {}),
+        ...(command ? { secretsCatalog: { list: () => command.list() } } : {}),
       };
     }
     if (!taskCommands) return {};
@@ -158,17 +165,20 @@ export class CrewToolHooks {
     // and the files on the captain's other computers (docs/files.md).
     const reach = integrations?.forTask(task.id);
     const otherFiles = files?.forTask(task.id);
-    if (!browser && !reach && !hasLoad && !otherFiles) return {};
+    const secretRequests = secrets?.forTask(task.id);
+    if (!browser && !reach && !hasLoad && !otherFiles && !secretRequests) return {};
     return {
       ...(hasLoad ? { load: true } : {}),
       ...(browser ? { browser } : {}),
       ...(reach ? { integrations: reach } : {}),
       ...(otherFiles ? { files: otherFiles } : {}),
+      ...(secretRequests ? { secrets: true as const } : {}),
       shell: taskCommands.grant(task.id, {
         ...(hasLoad && load ? { load: load.forTask(task.id) } : {}),
         ...(browser ? { browser } : {}),
         ...(reach ? { integrations: reach } : {}),
         ...(otherFiles ? { files: otherFiles } : {}),
+        ...(secretRequests ? { secrets: secretRequests } : {}),
       }),
     };
   }

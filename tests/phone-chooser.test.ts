@@ -631,6 +631,19 @@ describe("app-hosted test changes", () => {
 
 // Approved cuts 1–4: real source files and recorded changes drive selection, not invented call graphs.
 describe("the approved phone-check cuts", () => {
+  // Secrets staging: its native approval and key-recovery checks belong to rest.
+  // Regression: the new owner registry treated these real production files as unknown.
+  it.for([
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/ApprovalKey.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSecrets.swift",
+  ])("selects the existing Secrets checks without inventing edited tests for %s", (path) => {
+    const reach = partReach([path], "", [], () => undefined);
+    const parts = requestedParts([path], reach).map(({ part }) => part);
+    expect(unownedPhoneFiles([path])).toEqual([]);
+    expect(parts).toEqual(["rest"]);
+    expect(phoneRepeatPlan(parts, reach).repeatParts).toEqual([]);
+  });
+
   it("keeps the owners of shared production files and refuses missing ownership", () => {
     const shared = "ios/Infinitary/InfinitaryApp/PhoneStyle.swift";
     const file = readFileSync(shared, "utf8");

@@ -1,4 +1,4 @@
-import { createPublicKey, randomBytes, verify } from "node:crypto";
+import { createHash, createPublicKey, type KeyObject, randomBytes, verify } from "node:crypto";
 import type { ApprovalDevice } from "./authority";
 
 /**
@@ -97,19 +97,86 @@ export type DecisionFields = {
   expires: number;
 };
 
+/** The first line of every decision a device signs; a new layout is a new number. */
+export const DECISION_FORMAT = "infinitary-secrets-decision/1";
+/**
+ * The bindings a decision names, in the order they are signed. The phone builds
+ * the same bytes from this list (scripts/generate-phone-contract.ts), so the
+ * order has one owner.
+ */
+export const DECISION_BINDINGS = [
+  "home",
+  "device",
+  "generation",
+  "request",
+  "digest",
+  "nonce",
+  "expires",
+] as const satisfies readonly (keyof DecisionFields)[];
+/** The last line: a signed decision only ever allows. A refusal needs no key. */
+export const DECISION_ALLOW = "decision:allow";
+
 /** The exact bytes a device signs: every binding on its own line, so none can be confused for another. */
 export function decisionMessage(fields: DecisionFields): string {
   return [
-    "infinitary-secrets-decision/1",
-    `home:${fields.home}`,
-    `device:${fields.device}`,
-    `generation:${fields.generation}`,
-    `request:${fields.request}`,
-    `digest:${fields.digest}`,
-    `nonce:${fields.nonce}`,
-    `expires:${fields.expires}`,
-    "decision:allow",
+    DECISION_FORMAT,
+    ...DECISION_BINDINGS.map((binding) => `${binding}:${fields[binding]}`),
+    DECISION_ALLOW,
   ].join("\n");
+}
+
+/** Whether a P-256 SPKI (DER, base64) is a key an approval device may enroll. */
+export function approvalKey(publicKey: string): KeyObject | undefined {
+  try {
+    const key = createPublicKey({
+      key: Buffer.from(publicKey, "base64"),
+      format: "der",
+      type: "spki",
+    });
+    return key.asymmetricKeyType === "ec" && key.asymmetricKeyDetails?.namedCurve === "prime256v1"
+      ? key
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The check every remote decision passes: an ECDSA P-256 signature, DER,
+ * over SHA-256 of `decisionMessage`. `RemoteApprovals.consume` calls it with
+ * the challenge it kept; it is exported so the phone's signer is checked
+ * against this same code (InfinitaryKit's Fixtures/secrets.json).
+ */
+export function verifyDecision(
+  publicKey: string,
+  fields: DecisionFields,
+  signature: string,
+): boolean {
+  const key = approvalKey(publicKey);
+  if (!key) return false;
+  try {
+    return verify(
+      "sha256",
+      Buffer.from(decisionMessage(fields)),
+      { key, dsaEncoding: "der" },
+      Buffer.from(signature, "base64"),
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * What the captain compares on both screens before a device is enrolled:
+ * eight digits from SHA-256 of the offered key's SPKI, computed by each side
+ * from the key it holds. A different device offering its own key shows a
+ * different code. The phone computes it the same way (checked by
+ * InfinitaryKit's Fixtures/secrets.json).
+ */
+export function approvalCode(publicKey: string): string {
+  const digest = createHash("sha256").update(Buffer.from(publicKey, "base64")).digest();
+  const digits = String(digest.readUInt32BE(0) % 100_000_000).padStart(8, "0");
+  return `${digits.slice(0, 4)} ${digits.slice(4)}`;
 }
 
 type Challenge = { nonce: string; digest: string; expires: number; used: boolean };
@@ -152,33 +219,20 @@ export class RemoteApprovals {
       return undefined;
     const device = fields.devices.find((one) => one.device === decision.device);
     if (!device || device.generation !== decision.generation) return undefined;
-    const message = decisionMessage({
-      home: fields.home,
-      device: device.device,
-      generation: device.generation,
-      request: fields.request,
-      digest: fields.digest,
-      nonce: kept.nonce,
-      expires: kept.expires,
-    });
-    try {
-      const key = createPublicKey({
-        key: Buffer.from(device.publicKey, "base64"),
-        format: "der",
-        type: "spki",
-      });
-      if (key.asymmetricKeyType !== "ec" || key.asymmetricKeyDetails?.namedCurve !== "prime256v1")
-        return undefined;
-      const passed = verify(
-        "sha256",
-        Buffer.from(message),
-        { key, dsaEncoding: "der" },
-        Buffer.from(decision.signature, "base64"),
-      );
-      if (!passed || kept.used) return undefined;
-    } catch {
-      return undefined;
-    }
+    const passed = verifyDecision(
+      device.publicKey,
+      {
+        home: fields.home,
+        device: device.device,
+        generation: device.generation,
+        request: fields.request,
+        digest: fields.digest,
+        nonce: kept.nonce,
+        expires: kept.expires,
+      },
+      decision.signature,
+    );
+    if (!passed || kept.used) return undefined;
     kept.used = true;
     return device.device;
   }

@@ -41,6 +41,7 @@ for (const file of PROBE_FILES) {
 const isolatedUnit = [
   "src/core/selfSource/resolveAsync.test.ts",
   "tests/classifier-clock.test.ts",
+  "src/core/secrets/journalDeletion.test.ts",
   "src/core/axi/cli.test.ts",
   "src/core/axi/browserCommands.test.ts",
   "src/core/accounts/claudeAccounts.test.ts",

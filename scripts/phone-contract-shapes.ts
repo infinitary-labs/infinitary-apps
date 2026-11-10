@@ -76,4 +76,11 @@ export function assertPhoneReaderShapes(contract: ReaderContract): void {
   for (const variant of line?.anyOf ?? line?.oneOf ?? [line]) requireFields("crew line", variant, { id: "string", kind: "string" });
   requireFields("live crewmate", contract.requests["inf:tasks:crewmate:live"]?.response, { text: "string" });
   requireFields("crew result", contract.requests["inf:tasks:crewmate:result"]?.response, { text: "string", cut: "integer" });
+  // INF-1109: the phone's approval names each requested secret by its label, environment, reference and version.
+  const approvals = contract.requests["inf:secrets:approvals"]?.response;
+  requireFields("inf:secrets:approvals", approvals, { availability: "string", offered: "boolean", waiting: "array" });
+  const use = { request: "string", digest: "string", expires: "number", reason: "string", recipient: "string", secrets: "array", facts: "array" };
+  requireRows("waiting uses", approvals?.properties?.waiting, use);
+  requireRows("requested secrets", approvals?.properties?.waiting?.items?.properties?.secrets, { ref: "string", label: "string", version: "number", environment: "string" });
+  requireRows("use facts", approvals?.properties?.waiting?.items?.properties?.facts, { name: "string", value: "string" });
 }

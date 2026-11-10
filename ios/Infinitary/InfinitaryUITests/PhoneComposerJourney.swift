@@ -123,7 +123,7 @@ import XCTest
 }
 
 /// The native scroll view extends behind translucent navigation chrome; that covered area is not readable.
-@MainActor private func phoneCardReadingBounds(_ card: XCUIElement, app: XCUIApplication) -> CGRect {
+@MainActor func phoneCardReadingBounds(_ card: XCUIElement, app: XCUIApplication) -> CGRect {
     let frame = phoneAccessibilityBounds(card.frame.intersection(app.frame))
     let top = max(frame.minY, phoneAccessibilityBounds(app.navigationBars.firstMatch.frame).maxY)
     return CGRect(x: frame.minX, y: top, width: frame.width, height: max(0, frame.maxY - top))
@@ -131,7 +131,7 @@ import XCTest
 
 /// A short viewport needs a measured drag, not an inertial whole-view swipe that skips a paragraph.
 /// Keep the same complete-containment assertion, and scroll toward the actual element in either direction.
-@MainActor private func revealPhoneCardReading(_ element: XCUIElement, in card: XCUIElement, app: XCUIApplication) {
+@MainActor func revealPhoneCardReading(_ element: XCUIElement, in card: XCUIElement, app: XCUIApplication) {
     let scroller = app.scrollViews["card-scroll"]
     for _ in 0..<8 {
         let frame = phoneAccessibilityBounds(element.frame)
@@ -333,7 +333,7 @@ struct PhonePhotoObservation {
 
 /// AX containers use Float coordinates while their children can expose Double coordinates.
 /// Compare at the container's precision, rather than mistaking floating-point noise for a clipped pixel.
-@MainActor private func phoneAccessibilityBounds(_ frame: CGRect) -> CGRect {
+@MainActor func phoneAccessibilityBounds(_ frame: CGRect) -> CGRect {
     let x = CGFloat(Float(frame.minX)), y = CGFloat(Float(frame.minY))
     return CGRect(x: x, y: y, width: CGFloat(Float(frame.maxX)) - x, height: CGFloat(Float(frame.maxY)) - y)
 }

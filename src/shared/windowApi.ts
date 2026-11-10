@@ -116,6 +116,13 @@ import type {
 import type { ComputerResourcesView } from "./resources";
 import type { RunbookView } from "./runbooks";
 import type { KeptOutsideData, OutsideDataDeleted } from "./savedOutsideData";
+import type {
+  SecretAction,
+  SecretEntryInput,
+  SecretRehearsal,
+  SecretRehearsalInput,
+  SecretsView,
+} from "./secrets";
 import type { SharingAskAnswer, SharingChannel, SharingPreview, SharingView } from "./sharing";
 import type { DeviceSignInEvent, DeviceSignIns } from "./signIns";
 import type {
@@ -133,6 +140,15 @@ import type { MicAccess, RecognizerPlace, VoiceDownloadProgress, VoiceStatus } f
 
 /** The one frozen API surface the preload exposes as `window.infinitary`. */
 export type FirstmateApi = {
+  secrets: {
+    view: () => Promise<SecretsView>;
+    entry: (input: SecretEntryInput) => Promise<SecretsView>;
+    action: (input: SecretAction) => Promise<SecretsView>;
+    rehearse: (input: SecretRehearsalInput) => Promise<SecretRehearsal>;
+    exportHistory: () => Promise<{ saved: boolean }>;
+    onChange: (listener: () => void) => () => void;
+  };
+
   /**
    * Files the captain gives the composer (docs/composer.md, "Files"). Only a
    * real File object the captain dropped, or the system picker's own

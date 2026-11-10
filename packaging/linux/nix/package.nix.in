@@ -97,6 +97,7 @@ stdenv.mkDerivation {
 
   # Loaded by name while the app runs, so autoPatchelf cannot see them.
   runtimeDependencies = [
+    (lib.getLib libsecret)
     (lib.getLib systemd)
     libGL
     vulkan-loader
@@ -131,6 +132,10 @@ stdenv.mkDerivation {
       } \
       --prefix LD_LIBRARY_PATH : ${
         lib.makeLibraryPath [
+          # koffi's native module dlopens libsecret; the executable's runpath
+          # alone does not reach that module's lookup.
+          libsecret
+          glib
           libGL
           vulkan-loader
         ]

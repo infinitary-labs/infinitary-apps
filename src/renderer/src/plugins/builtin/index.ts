@@ -22,6 +22,7 @@ import { KeyboardTab } from "../../settings/KeyboardTab";
 import { PanelsTab } from "../../settings/PanelsTab";
 import { ProjectsTab } from "../../settings/ProjectsTab";
 import { RunbooksTab } from "../../settings/RunbooksTab";
+import { SecretsTab } from "../../settings/SecretsTab";
 import { SubscriptionsTab } from "../../settings/SubscriptionsTab";
 import { UsageTab } from "../../settings/UsageTab";
 import { type PanelSource, type PluginBindings, sidePanelBinding } from "../contributions";
@@ -131,6 +132,7 @@ export const builtinBindings: PluginBindings = {
     // On a Mac that controls another, the same rules, which run there (docs/automation.md).
     automation: { Component: AutomationTab, onAView: true },
     integrations: { Component: IntegrationsTab, onAViewOfACommand: true },
+    secrets: { Component: SecretsTab },
     devices: {
       Component: DevicesTab,
       // On a Mac that controls another it holds Leave; otherwise the core's word.

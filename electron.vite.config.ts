@@ -61,8 +61,12 @@ export default defineConfig({
     build: {
       outDir: "out/main",
       rollupOptions: {
+        preserveEntrySignatures: "exports-only",
         input: {
           index: resolve(__dirname, "src/main/index.ts"),
+          // The normal entry and isolated host-capability fixtures share this
+          // exact built owner, never a second hand-maintained main bundle.
+          app: resolve(__dirname, "src/main/app.ts"),
           // Its own entry: it runs in a utility process, never in main
           // (src/main/host/keychainProcessMain.ts).
           keychainProcessMain: resolve(__dirname, "src/main/host/keychainProcessMain.ts"),

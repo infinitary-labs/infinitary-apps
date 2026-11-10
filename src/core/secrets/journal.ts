@@ -1,11 +1,14 @@
+import { randomUUID } from "node:crypto";
 import { open, readdir, readFile, rename, rm, stat } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
+import { secretHistorySchema } from "@shared/secrets";
+import { z } from "zod";
 import type { RuleEffect } from "./authority";
-import { canonical, type RootKeys } from "./custody";
+import { canonical, type RootKeys, writePrivateFile } from "./custody";
 import type { UseReceipt, UseState } from "./requests";
 
 /** How a use was approved: fresh authentication here, a signed decision elsewhere, or a saved rule. */
-export type ApprovalMethod = "local" | "remote" | "rule";
+export type ApprovalMethod = "local" | "remote" | "rule" | "short-read";
 
 /** States a use can end in without launching, and the two a launch can end in. */
 export type EndState = Exclude<UseState, "waiting" | "executing" | "completed">;
@@ -30,7 +33,7 @@ export type JournalEntry =
   | { kind: "approved"; request: string; method: ApprovalMethod; device?: string }
   /** Written and synced before the recipient starts; the effect may follow. */
   | { kind: "consumed"; request: string }
-  | { kind: "completed"; request: string; exitCode: number }
+  | { kind: "completed"; request: string; exitCode?: number }
   /** `reconciled` marks a state the owner settled at its next open, not one it watched happen. */
   | { kind: "ended"; request: string; state: EndState; reconciled?: true };
 
@@ -49,6 +52,22 @@ export type HistoryItem = {
   approval?: ApprovalMethod;
   device?: string;
   reconciled?: true;
+  recoveredFrom?: string;
+  recoveredAt?: number;
+};
+
+const recoveredSchema = z.array(
+  z.strictObject({
+    id: z.uuid(),
+    home: z.string(),
+    at: z.number(),
+    uses: z.array(secretHistorySchema),
+  }),
+);
+export type RecoveredHistory = z.infer<typeof recoveredSchema>[number];
+export type JournalSnapshot = {
+  entries: Pick<Line, "at" | "entry">[];
+  recovered: RecoveredHistory[];
 };
 
 /**
@@ -65,7 +84,10 @@ export type HistoryItem = {
 export class UseJournal {
   private lines: Line[] = [];
   private lastMac = "";
+  private recovered: RecoveredHistory[] = [];
   private writing: Promise<unknown> = Promise.resolve();
+  /** A partial deletion may have removed the chain on disk; never append to that uncertain state. */
+  private writable = true;
   /** True when a line failed its check: the lines after it were not read. */
   broken = false;
 
@@ -82,14 +104,48 @@ export class UseJournal {
   ): Promise<UseJournal> {
     const journal = new UseJournal(join(dir, "history.jsonl"), keys, now);
     await journal.load();
+    await journal.loadRecovered();
     await journal.reconcile();
     return journal;
   }
 
+  /** A verified snapshot taken after the coordinator has paused and drained its uses. */
+  async snapshot(): Promise<JournalSnapshot> {
+    await this.writing;
+    return structuredClone({
+      entries: this.lines.map(({ at, entry }) => ({ at, entry })),
+      recovered: this.recovered,
+    });
+  }
+
+  /** Re-key local history without replaying it; archive history remains a separate read-only collection. */
+  static async restore(
+    dir: string,
+    keys: RootKeys,
+    snapshot: JournalSnapshot,
+    recovered: RecoveredHistory,
+  ): Promise<void> {
+    const journal = new UseJournal(join(dir, "history.jsonl"), keys, Date.now);
+    for (const { at, entry } of snapshot.entries) await journal.appendAt(entry, at);
+    const collections = recoveredSchema.parse([...snapshot.recovered, recovered]);
+    await writePrivateFile(
+      join(dir, "history.recovered.json"),
+      JSON.stringify({
+        collections,
+        mac: keys.mac("journal", `recovered-history:${canonical(collections)}`),
+      }),
+    );
+  }
+
   /** Append and sync. Rejects when the line could not be made durable. */
   append(entry: JournalEntry): Promise<void> {
+    return this.appendAt(entry, this.now());
+  }
+
+  private appendAt(entry: JournalEntry, at: number): Promise<void> {
     const work = this.writing.then(async () => {
-      const line = { seq: this.lines.length, at: this.now(), entry };
+      if (!this.writable) throw new Error("Secrets history is unavailable.");
+      const line = { seq: this.lines.length, at, entry };
       const mac = this.keys.mac("journal", this.lastMac + canonical(line));
       const full: Line = { ...line, mac };
       const handle = await open(this.path, "a", 0o600);
@@ -107,6 +163,20 @@ export class UseJournal {
   }
 
   history(): HistoryItem[] {
+    return [
+      ...this.liveHistory(),
+      ...this.recovered.flatMap((collection) =>
+        collection.uses.map((item) => ({
+          ...item,
+          request: `recovered:${collection.id}:${item.request}`,
+          recoveredFrom: item.recoveredFrom ?? collection.home,
+          recoveredAt: item.recoveredAt ?? collection.at,
+        })),
+      ),
+    ];
+  }
+
+  private liveHistory(): HistoryItem[] {
     const items = new Map<string, HistoryItem>();
     for (const { at, entry } of this.lines) {
       if (entry.kind === "requested") {
@@ -129,7 +199,7 @@ export class UseJournal {
       } else if (entry.kind === "consumed") item.state = "executing";
       else if (entry.kind === "completed") {
         item.state = "completed";
-        item.exitCode = entry.exitCode;
+        if (entry.exitCode !== undefined) item.exitCode = entry.exitCode;
       } else {
         item.state = entry.state;
         if (entry.reconciled) item.reconciled = true;
@@ -143,7 +213,7 @@ export class UseJournal {
     const digests = new Map<string, string>();
     for (const { entry } of this.lines)
       if (entry.kind === "requested") digests.set(entry.request, entry.inputDigest);
-    return this.history().map((item) => ({
+    return this.liveHistory().map((item) => ({
       intent: item.intent,
       inputDigest: digests.get(item.request) ?? "",
       receipt: {
@@ -157,7 +227,11 @@ export class UseJournal {
   /** Bytes this history takes on disk, set-aside unreadable copies included, for the storage-use display. */
   async storageUse(): Promise<number> {
     let bytes = 0;
-    for (const path of [this.path, ...(await this.setAside())]) {
+    for (const path of [
+      this.path,
+      join(dirname(this.path), "history.recovered.json"),
+      ...(await this.setAside()),
+    ]) {
       try {
         bytes += (await stat(path)).size;
       } catch {
@@ -173,17 +247,61 @@ export class UseJournal {
   }
 
   /**
-   * The captain's deletion. Refused while a launched use has no recorded end,
-   * so deleting history can never hide an outcome that is still unknown.
+   * The captain's deletion shares the append writer. Pending and running uses
+   * keep their request metadata, so a later outcome still has its durable identity.
+   * The protected owner supplies retained history paths from earlier generations.
    */
-  async clear(): Promise<"cleared" | "busy"> {
-    await this.writing;
-    if (this.history().some((item) => item.state === "executing")) return "busy";
-    for (const path of [this.path, ...(await this.setAside())]) await rm(path, { force: true });
-    this.lines = [];
-    this.lastMac = "";
-    this.broken = false;
-    return "cleared";
+  clear(retained: readonly string[] = []): Promise<"cleared" | "busy"> {
+    const paths = [...retained];
+    const work = this.writing.then(async (): Promise<"cleared" | "busy"> => {
+      if (this.liveHistory().some((item) => item.state === "waiting" || item.state === "executing"))
+        return "busy";
+      try {
+        for (const path of new Set([
+          this.path,
+          join(dirname(this.path), "history.recovered.json"),
+          ...(await this.setAside()),
+          ...paths,
+        ]))
+          await rm(path, { force: true });
+        this.recovered = [];
+        this.lines = [];
+        this.lastMac = "";
+        this.broken = false;
+        this.writable = true;
+        return "cleared";
+      } catch (error) {
+        this.writable = false;
+        throw error;
+      }
+    });
+    this.writing = work.catch(() => {});
+    return work;
+  }
+
+  private async loadRecovered(): Promise<void> {
+    const path = join(dirname(this.path), "history.recovered.json");
+    let text: string;
+    try {
+      text = await readFile(path, "utf8");
+    } catch {
+      return;
+    }
+    try {
+      const stored = JSON.parse(text);
+      const parsed = recoveredSchema.safeParse(stored.collections);
+      if (
+        parsed.success &&
+        this.keys.verify("journal", `recovered-history:${canonical(parsed.data)}`, stored.mac)
+      ) {
+        this.recovered = parsed.data;
+        return;
+      }
+    } catch {
+      /* Keep unreadable history rather than trusting it or deleting it. */
+    }
+    this.broken = true;
+    await rename(path, join(dirname(path), `history.unreadable-recovered-${randomUUID()}.jsonl`));
   }
 
   private async load(): Promise<void> {
@@ -240,7 +358,7 @@ export class UseJournal {
   }
 
   private async reconcile(): Promise<void> {
-    for (const item of this.history()) {
+    for (const item of this.liveHistory()) {
       if (item.state === "executing")
         await this.append({
           kind: "ended",

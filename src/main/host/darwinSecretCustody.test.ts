@@ -61,6 +61,23 @@ describe("macOS Keychain custody", () => {
     expect(await custody.write("root", Buffer.alloc(32))).toBe(kind);
   });
 
+  // INF-1109 recovery must retain a staged generation after a lost native write reply.
+  it("does not turn a lost native write reply into a definite refusal", async () => {
+    const { api } = keychain();
+    const write = api.write;
+    let submitted: Buffer | undefined;
+    api.write = (service, account, bytes) => {
+      submitted = bytes;
+      write(service, account, bytes);
+      throw new Error("Fixture lost the reply after the native write.");
+    };
+    const custody = createDarwinSecretCustody(api, { service: SERVICE });
+    const root = Buffer.alloc(32, 7);
+    await expect(custody.write("root", root)).rejects.toThrow("write outcome is unknown");
+    expect(await custody.read("root")).toEqual({ kind: "value", bytes: root });
+    expect(submitted?.every((byte) => byte === 0)).toBe(true);
+  });
+
   it("is unavailable without a Keychain, or when the binding throws", async () => {
     const none = createDarwinSecretCustody(undefined, { service: SERVICE });
     expect(await none.read("root")).toEqual({ kind: "unavailable" });

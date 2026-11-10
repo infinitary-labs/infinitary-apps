@@ -82,7 +82,7 @@ The crewmate's later call that one covers runs at once, after the Off, input and
 The task's timeline keeps one line naming the allowance, and `write-answered` tells the crewmate what it covers.
 A close drops the task's allowances; turning the action off, changing its rule, replacing the connection or changing the action ends them too.
 The first mate's and a panel's asks belong to no task and keep three buttons.
-A view that does not list the `integration-task-allow` contract change reads the choices strictly, so the home leaves this button out of the cards it sends that view.
+A view older than major 15 that does not list the historical `integration-task-allow` change reads the choices strictly, so the home leaves this button out of the cards it sends that view.
 A crewmate's ask that arrives while an unanswered approval card of its task waits for the same connection joins that card instead of raising its own (INF-2993 piece 2): the ask names the card (`IntegrationAsk.card`), and the card is revised in place to list every waiting ask on it, oldest first, marking the rows that joined in that revision.
 Each row leads with the ask's action and its exact input, then the crewmate's reason, and carries an Allow box, ticked as the card comes (`allowFieldOf`, one question per row so a row that joins comes ticked): the captain asked that a selection read positive.
 A ticked row has a bar on its left; an unticked one loses it and is struck through, and a tally under the rows counts the ticked ones (`.inf-asks` in the frame stylesheet).

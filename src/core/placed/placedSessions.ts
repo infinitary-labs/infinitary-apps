@@ -230,6 +230,7 @@ type Placed = {
 };
 
 const rosterSchema = workOrders["inf:session:roster"].response;
+
 const openAnswerSchema = workOrders["inf:session:open"].response;
 
 export class PlacedSessions implements PlacedWork, CrewMachines {
@@ -359,6 +360,14 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   /** Whether the computer answers the file orders, so its files can be read from here. */
   answersFiles(machine: string): boolean {
     return this.options.devices.takesCurrentWork(machine);
+  }
+
+  /**
+   * The Secrets command rides the same task channel, and its list rides the
+   * metadata-only work request included in this major; no request there asks for a use.
+   */
+  takesSecrets(machine: string): boolean {
+    return this.keepsBrowsers(machine) && this.options.devices.takesCurrentWork(machine);
   }
 
   prepare(
@@ -720,6 +729,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         : {}),
       // Its files on the captain's other computers, asked of this Mac (docs/files.md).
       ...(spec.callbacks?.files && this.takesFiles(deviceId) ? { files: true } : {}),
+      ...(spec.callbacks?.secretsCatalog && this.takesSecrets(deviceId) ? { secrets: true } : {}),
       ...(resume ? { resume } : {}),
       ...(spec.bounds?.request?.retries !== undefined
         ? { retries: spec.bounds.request.retries }
@@ -1062,6 +1072,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   async answerReads(taskId: string): Promise<AnsweredWait[]> {
     const deviceId = this.options.tasks.get(taskId)?.deviceId;
     if (!deviceId || !this.options.devices.inReach(deviceId)) return [];
+    if (!this.options.devices.takesCurrentWork(deviceId)) return [];
     const through = this.load(taskId, deviceId).through;
     const answer = workOrders["inf:session:answer-reads"].response.parse(
       await this.options.devices.ask(deviceId, "inf:session:answer-reads", [

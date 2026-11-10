@@ -500,7 +500,7 @@ export const projectViewSchema = z.object({
       autonomy: z.boolean(),
       /**
        * The repository's kind: `personal` for the app's own workspace
-       * (`project-repo-kind.md`). An older home sends none, read as `project`.
+       * (`major-15.md`). An older home sends none, read as `project`.
        */
       kind: repoKindSchema.optional(),
     })

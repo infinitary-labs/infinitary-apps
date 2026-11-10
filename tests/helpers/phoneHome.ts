@@ -11,6 +11,7 @@ import { absentKeychain } from "@core/host";
 import { startCore } from "@core/index";
 import { appPathsFor } from "@core/paths";
 import { resolveFirstmateCardId } from "@core/pi/cardTool";
+import { httpSecretBroker } from "@core/secrets/httpBroker";
 import { seedTask } from "@core/tasks/seedTask";
 import { AFTER_MERGE_LEAD } from "@shared/afterMerge";
 import { CARD_LEAVE } from "@shared/cardLeave";
@@ -21,6 +22,7 @@ import type { FmEvent } from "@shared/events";
 import { PROTOCOL_VERSION, VIEW_FLOOR } from "@shared/ipc";
 import { pastEndingWords } from "@shared/pastCard";
 import { RISK_WORDS } from "@shared/risk";
+import { SECRET_DEVICE_WORDS, SECRETS_WORDS } from "@shared/secrets";
 import { CONTRACT_CHANGES } from "../../src/core/connection/contractChanges";
 import { REQUIRED_ACTIONS_LEAD } from "../../src/renderer/src/cards/requiredActionsWords";
 import { contributorWords, THREAD_WHO_LABELS } from "../../src/renderer/src/cards/threadWords";
@@ -40,6 +42,7 @@ import {
 import { encodePng } from "../e2e/pictureFixtures";
 import { budgetTimer, type DeadlineTimer, keepControlConnection } from "./budgets";
 import { claimedPort } from "./claimedPort";
+import { disposableCustody } from "./disposableCustody";
 import { standInDnsSd } from "./dnsSdStandIn";
 import type {
   PhoneChord,
@@ -89,6 +92,7 @@ export async function startPhoneHome(
     keyboardReady?(chord: PhoneChord): Promise<PhoneKeyWitness>;
     touchOutcome?(since: number): Promise<PhoneTouchOutcome>;
     pickerPreview?(since: number): Promise<PhonePickerPreview>;
+    biometry?(step: "enroll" | "face-in-view" | "face-away"): Promise<void>;
   },
 ) {
   const port = await claimedPort();
@@ -102,6 +106,12 @@ export async function startPhoneHome(
   const models = JSON.parse(mockModelsJson(provider.port));
   models.providers[MOCK_PROVIDER_ID].api = "anthropic-messages";
   writeFileSync(paths.modelsPath, JSON.stringify(models));
+  let secretConfirms = 0;
+  // The invented token the stand-in calendar receives; no request leaves this process.
+  const SECRET_TOKEN = "ya29.invented-phone-calendar-token";
+  const secretSends: string[] = [];
+  let secretRequests = 0;
+  let secretsReady = false;
   const core = await startCore({
     app: {
       version: "0.1.0",
@@ -118,6 +128,18 @@ export async function startPhoneHome(
     presence: { getStartAtLogin: () => false, setStartAtLogin: () => {}, setShowInDock: () => {} },
     voice: { modelReady: async () => false, ensureModel: async () => {} },
     keychain: absentKeychain,
+    // INF-1109's phone approvals: the real Secrets controller over disposable custody. This computer's own
+    // confirmation is a stand-in that counts each ask; the phone's Face ID is the simulator's own.
+    secrets: {
+      custody: disposableCustody(),
+      authentication: {
+        available: async () => true,
+        confirm: async () => {
+          secretConfirms += 1;
+          return true;
+        },
+      },
+    },
   });
   const scene = phoneSceneFixture(core, userData, () => connection.settled());
   const readings = {
@@ -136,11 +158,14 @@ export async function startPhoneHome(
   };
   const observations: unknown[] = [];
   let firstmateBusy = false;
+  // The first mate's turns that have ended, so a journey can wait for the turn an action wakes.
+  let firstmateTurnsEnded = 0;
   const stopConversationReading = core.events.subscribe((channel, payload) => {
     if (channel !== "inf:event") return;
     const event = payload as FmEvent;
     if (event.type === "firstmate_state") {
       firstmateBusy = event.busy;
+      if (!event.busy) firstmateTurnsEnded += 1;
       observations.push({ check: "conversation-state", busy: event.busy });
     }
   });
@@ -207,6 +232,7 @@ export async function startPhoneHome(
     | undefined;
   // INF-2553: the next change on this channel is refused with these words, so the phone takes its prediction back.
   let refuseNext: { channel: string; words: string } | undefined;
+  let turnsBeforeRelease = 0;
   // INF-1059: the phone's next board read is held, so a card from its first cards read is drawn while it is still reaching.
   let boardHold:
     | {
@@ -752,6 +778,137 @@ export async function startPhoneHome(
         }
         case "GET routing-state":
           result = { pairCalls, devices: core.services.devices.list(), readings: { ...readings } };
+          break;
+        // INF-1109's phone approvals (docs/secrets.md, "Remote decisions"): Secrets set up here with one entry,
+        // and a stand-in calendar that records the header it receives instead of reaching Google.
+        case "POST secrets-ready": {
+          if (!secretsReady) {
+            core.services.secrets.registerBroker(
+              httpSecretBroker({
+                id: "calendar",
+                label: "Google Calendar",
+                resolve: () => ({
+                  url: "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+                  method: "GET",
+                  credentials: {
+                    token: {
+                      ref: "calendar",
+                      delivery: { kind: "header", name: "authorization", prefix: "Bearer " },
+                    },
+                  },
+                  operation: "Read planning calendar",
+                  read: true,
+                  result: "Calendar events to the integration owner",
+                }),
+                send: async (_url, init) => {
+                  secretSends.push(new Headers(init.headers).get("authorization") ?? "");
+                  return new Response(JSON.stringify({ items: [{ summary: "Planning" }] }), {
+                    headers: { "content-type": "application/json" },
+                  });
+                },
+              }),
+            );
+            await core.services.secrets.put({
+              ref: "calendar",
+              label: "Planning calendar",
+              value: SECRET_TOKEN,
+              expectedVersion: 0,
+              expectedRevision: null,
+              environment: "Personal",
+            });
+            secretsReady = true;
+          }
+          const view = await core.services.secrets.view();
+          result = {
+            availability: view.availability,
+            entries: view.entries.length,
+            confirm: SECRET_DEVICE_WORDS.confirm,
+          };
+          break;
+        }
+        // The captain's click on this computer's own enrollment card, after comparing its code with the phone's.
+        case "POST secrets-confirm": {
+          const cards = await core.dispatch("inf:cards:list", []);
+          const card = cards.find((one) => one.id.startsWith("card-secrets-enroll-"));
+          const confirm = card?.actions.find(
+            (action) => action.label === SECRET_DEVICE_WORDS.confirm,
+          );
+          if (!card || !confirm) throw new Error("No enrollment card is waiting on this computer");
+          const before = secretConfirms;
+          // The click returns before its decision ends; Secrets says it changed once the device is saved or refused.
+          let stop = () => {};
+          const decided = new Promise<void>((resolve) => {
+            stop = core.events.subscribe((channel) => {
+              if (channel === "inf:secrets:changed") resolve();
+            });
+          });
+          try {
+            await core.dispatch("inf:cards:act", [card.id, confirm.id, "chrome"]);
+            await within(decided, "The enrollment decision did not end on this computer");
+          } finally {
+            stop();
+          }
+          const view = await core.services.secrets.view();
+          result = {
+            title: card.title,
+            code: card.body.match(/\d{4} \d{4}/)?.[0] ?? null,
+            devices: view.devices,
+            confirmed: secretConfirms - before,
+          };
+          break;
+        }
+        case "POST secrets-request": {
+          secretRequests += 1;
+          const receipt = await core.services.secrets.broker(
+            {
+              id: `phone-read-${secretRequests}`,
+              reason: "Read my next planning meeting",
+              broker: "calendar",
+              input: { calendar: "primary" },
+            },
+            task.id,
+          );
+          result = {
+            request: receipt.request,
+            state: receipt.state,
+            title: SECRETS_WORDS.approvalTitle,
+          };
+          break;
+        }
+        case "GET secrets-state": {
+          const view = await core.services.secrets.view();
+          result = {
+            uses: view.uses.map(({ request, state }) => ({ request, state })),
+            history: view.history.map(({ request, state, approval, device }) => ({
+              request,
+              state,
+              approval: approval ?? null,
+              device: device ?? null,
+            })),
+            devices: view.devices,
+            cards: (await core.dispatch("inf:cards:list", []))
+              .filter((card) => card.id.startsWith("card-secrets-"))
+              .map(({ id, title }) => ({ id, title })),
+            // The stand-in calendar received the entry exactly when this is the bearer of the invented token.
+            sent: secretSends.map((header) => header === `Bearer ${SECRET_TOKEN}`),
+            confirmed: secretConfirms,
+          };
+          observations.push({ check: "secrets", result });
+          break;
+        }
+        case "POST biometry-enroll":
+        case "POST face-in-view":
+        case "POST face-away":
+          if (!controls?.biometry)
+            throw new Error("Only the owned simulator can change its Face ID");
+          await controls.biometry(
+            command === "biometry-enroll"
+              ? "enroll"
+              : command === "face-in-view"
+                ? "face-in-view"
+                : "face-away",
+          );
+          result = { ok: true };
           break;
         case "GET state":
           result = {
@@ -1519,17 +1676,19 @@ export async function startPhoneHome(
           break;
         }
         case "POST release-card-action":
+          turnsBeforeRelease = firstmateTurnsEnded;
           cardHold?.released.resolve();
           cardHold = undefined;
           result = { ok: true };
           break;
-        // INF-1525: the body's choice on the first mate's own card wakes the first mate (a card-choice op), whose real
-        // turn shows "Working…" where the footer's reply button stands. Settle once that turn has reached the model
-        // and ended, so a later look at the footer reads the first mate at rest.
+        // Main's card identity witness and INF-1643's completed-turn ordering share one waiter.
+        // The script choice has reached the model and its turn ended before the footer is read.
         case "POST card-choice-turn-ended":
+        case "POST script-choice-heard": {
           await until(
             () =>
               !firstmateBusy &&
+              firstmateTurnsEnded > turnsBeforeRelease &&
               provider
                 .requestBodies()
                 .some(
@@ -1539,8 +1698,10 @@ export async function startPhoneHome(
                     body.includes(cardIDs.conversation),
                 ),
           );
-          result = { busy: firstmateBusy };
+          result = { busy: firstmateBusy, turns: firstmateTurnsEnded - turnsBeforeRelease };
+          observations.push({ check: "script-choice-heard", result });
           break;
+        }
         // INF-499 #1/#6: exercise the published saved-sign-in choice and a failed body's last reading.
         // This disposable home has no saved website data; the test proves forwarding and the stored choice, not a sign-in.
         case "POST review-cards":

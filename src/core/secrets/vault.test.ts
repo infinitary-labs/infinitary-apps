@@ -34,6 +34,37 @@ describe("root custody", () => {
     );
   });
 
+  it("clears temporary native root buffers without changing custody or the sealed values", async () => {
+    // INF-1109 recovery: native roots remain private even while copying a home.
+    const custody = disposableCustody();
+    const read = custody.read;
+    const write = custody.write;
+    const temporary: Buffer[] = [];
+    custody.read = async (slot) => {
+      const result = await read(slot);
+      if (result.kind === "value") temporary.push(result.bytes);
+      return result;
+    };
+    custody.write = async (slot, bytes) => {
+      temporary.push(bytes);
+      return write(slot, bytes);
+    };
+    const { keys } = await openKeys(custody);
+    const dir = scratchDir("secrets-root-lifetime-");
+    await new SecretVault(dir, keys).put("calendar", "Calendar", Buffer.from(TOKEN));
+    const retiredKeys = (["values", "entries", "authority", "journal"] as const).map((purpose) =>
+      keys.key(purpose),
+    );
+    keys.destroy();
+    for (const key of retiredKeys) expect(key.every((byte) => byte === 0)).toBe(true);
+    expect(() => keys.key("values")).toThrow();
+    const { keys: reopened } = await openKeys(custody);
+    expect((await new SecretVault(dir, reopened).open("calendar"))?.value.toString()).toBe(TOKEN);
+    expect(temporary.length).toBeGreaterThan(0);
+    for (const bytes of temporary) expect(bytes).toEqual(Buffer.alloc(bytes.length));
+    expect(custody.slots.get("root")).not.toEqual(Buffer.alloc(32));
+  });
+
   it("never creates a new root beside sealed records, which would orphan them", async () => {
     const custody = disposableCustody();
     expect(await RootKeys.open(custody, { initialize: true, hasRecords: true })).toBe("lost");
@@ -56,6 +87,7 @@ describe("sealed vault", () => {
       ref: "staging-deploy",
       label: "Staging deploy",
       version: 2,
+      revision: expect.any(String),
       discoverable: true,
       updatedAt: 1_000,
     });

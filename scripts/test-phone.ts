@@ -18,7 +18,7 @@ import { ciModeRefusal } from "./checks-mode.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import { takeHeavyRunPlace } from "./heavy-run-place.ts";
 import { startPhoneActivity } from "./phone-activity.ts";
-import { finishPhoneCheck, keepPhoneDiagnostic, runEveryCheck } from "./phone-checks.ts";
+import { finishPhoneCheck, joinPhoneObserver, keepPhoneDiagnostic, runEveryCheck } from "./phone-checks.ts";
 import { keepPhoneFailureLogs, runPhoneLog } from "./phone-failure-logs.ts";
 import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-leftovers.ts";
 import { phoneRecording } from "./phone-recording.ts";
@@ -260,7 +260,34 @@ const recording = {
     recorder.kill("SIGINT"); await recorded; recorder = undefined;
     writeFileSync(join(evidence, `${recordings.at(-1)!.name}-recording.log`), recordingLog);
   },
+  // INF-1109's phone approvals: the owned simulator's Face ID, through its own enrollment and match signals.
+  // A face stays in view while the system's prompt looks for it, so the match signal repeats until the
+  // journey looks away; one signal sent before the prompt opens would be a face the prompt never saw.
+  biometry: async (step: "enroll" | "face-in-view" | "face-away") => {
+    if (!simulator) throw new Error("No owned simulator exists");
+    const owned = simulator;
+    if (step === "enroll") {
+      await run("xcrun", ["simctl", "spawn", owned, "notifyutil", "-s", "com.apple.BiometricKit.enrollmentChanged", "1"]);
+      await run("xcrun", ["simctl", "spawn", owned, "notifyutil", "-p", "com.apple.BiometricKit.enrollmentChanged"]);
+    } else if (step === "face-in-view") {
+      if (faceInView) return;
+      let looking = true;
+      let signals = 0;
+      const joinSeen = joinPhoneObserver((async () => {
+        while (looking && !interrupted) {
+          await run("xcrun", ["simctl", "spawn", owned, "notifyutil", "-p", "com.apple.BiometricKit_Sim.pearl.match"]);
+          signals += 1;
+          await new Promise((resolveLook) => setTimeout(resolveLook, 300));
+        }
+      })());
+      faceInView = { stop: async () => { looking = false; await joinSeen(); writeFileSync(join(evidence, "face-in-view.log"), `${signals} match signals\n`); } };
+    } else {
+      await faceInView?.stop();
+      faceInView = undefined;
+    }
+  },
 };
+let faceInView: { stop(): Promise<void> } | undefined;
 let fixture: Awaited<ReturnType<typeof import("../tests/helpers/phoneHome").startPhoneHome>> | undefined;
 const project = ["-project", "ios/Infinitary/Infinitary.xcodeproj", "-scheme", "Infinitary",
   "-xcconfig", "ios/Infinitary/SimulatorTests.xcconfig"];
@@ -596,15 +623,21 @@ try {
 } finally {
   cleaningUp = true;
   try {
-    await keepPhoneDiagnostic("Home observations", () => {
-      if (fixture) writeFileSync(join(evidence, "home-observations.json"), JSON.stringify(fixture.observations(), null, 2));
-    });
-    await keepPhoneDiagnostic("Recording", () => recording.stop());
-    await keepPhoneDiagnostic("Keyboard observer", () => keyboard?.close());
-    await keepPhoneDiagnostic("Simulator log", () => simulatorLog?.close());
-    await keepPhoneDiagnostic("Keyboard timeout stack", () => timeoutStack?.close());
-    await keepPhoneDiagnostic("WebKit stacks", () => webStacks?.close());
-    await keepPhoneDiagnostic("Guest observer", () => guestObserver?.close());
+    try {
+      await keepPhoneDiagnostic("Home observations", () => {
+        if (fixture) writeFileSync(join(evidence, "home-observations.json"), JSON.stringify(fixture.observations(), null, 2));
+      });
+    } finally {
+      try { await faceInView?.stop(); }
+      finally {
+        await keepPhoneDiagnostic("Recording", () => recording.stop());
+        await keepPhoneDiagnostic("Keyboard observer", () => keyboard?.close());
+        await keepPhoneDiagnostic("Simulator log", () => simulatorLog?.close());
+        await keepPhoneDiagnostic("Keyboard timeout stack", () => timeoutStack?.close());
+        await keepPhoneDiagnostic("WebKit stacks", () => webStacks?.close());
+        await keepPhoneDiagnostic("Guest observer", () => guestObserver?.close());
+      }
+    }
   } finally {
     try { await fixture?.close(); }
     finally {

@@ -39,7 +39,7 @@ infinitary-queue-form:
   variables:
     GIT_DEPTH: "0"
   script:
-    - node .gitlab/infinitary/gitlab.mjs form
+    - node .gitlab/infinitary/gitlab-cli.mjs form
   artifacts:
     paths: [infinitary-batch.yml]
     reports:
@@ -75,4 +75,4 @@ infinitary-queue-verdict:
     - if: $CI_PIPELINE_SOURCE == "api" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       when: always
   script:
-    - node .gitlab/infinitary/gitlab.mjs decide
+    - node .gitlab/infinitary/gitlab-cli.mjs decide

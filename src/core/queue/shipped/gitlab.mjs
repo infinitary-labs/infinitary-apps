@@ -28,7 +28,6 @@
  */
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
-import { pathToFileURL } from "node:url";
 import {
   answerWords,
   conflictsWithMain,
@@ -699,10 +698,3 @@ export async function run(command, vars = process.env) {
   }
   throw new Error(`Unknown queue job: ${command}.`);
 }
-
-// A queue job runs this file with its command: `node gitlab.mjs form`.
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
-  run(process.argv[2]).catch((error) => {
-    console.error(error.message);
-    process.exit(1);
-  });

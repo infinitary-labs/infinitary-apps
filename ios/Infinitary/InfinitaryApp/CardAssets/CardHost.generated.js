@@ -4867,7 +4867,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "defer-required-action",
     "allow-cost",
     "lift-cost-limit",
-    "stop-at-cost"
+    "stop-at-cost",
+    "secrets-decision"
   ];
   const requiredActionSchema = object({
     id: string().min(1).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
@@ -5512,7 +5513,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   const cardMessageSchema = strictObject({
     revision: cardRevisionSchema.optional(),
     revisionShown: revisionShownSchema.optional(),
-    /** Who wrote a line on a card that is not theirs (`shared-cards.md`). */
+    /** Who wrote a line on a card that is not theirs (`major-15.md`). */
     contributor: cardContributorSchema.optional(),
     /** The captain's message this line answers and ends, by its row id. */
     answersMessage: number().int().positive().optional(),
@@ -8645,6 +8646,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       risk: "navigate",
       keys: [],
       searchWords: ["github", "connection", "connect", "sign in"]
+    },
+    "settings.secrets": {
+      label: "Open Secrets",
+      scope: "window",
+      runs: "shell",
+      repeat: false,
+      risk: "navigate",
+      keys: [],
+      searchWords: ["secret", "key", "approval", "recovery"]
     },
     // Every running automation paused at once, as Settings → Automation's
     // Pause all does; it opens Automation so the change is seen. No default key.

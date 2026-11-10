@@ -307,6 +307,7 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   "settings.usage": openUsage,
   "settings.automation": openAutomation,
   "settings.integrations": openIntegrations,
+  "settings.secrets": () => openSettingsAt("secrets", "[data-secrets-heading]"),
   "automation.pause-all": () => {
     openAutomation();
     window.infinitary.automation.pauseAll().catch((error: unknown) => {

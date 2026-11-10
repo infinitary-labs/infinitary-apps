@@ -167,8 +167,11 @@ A request id or source is one word of letters, digits and `._:@/+-`, at most 128
 ## The Secrets foundation command
 
 `infinitary-secrets-axi` uses the same launcher and isolated command process, with no browser dependency.
-The optional grant is exercised only with disposable adapters today; production tasks do not receive it.
-Bare invocation and `list` show linked metadata, `inject` submits an exact operation using references, and `status`/`cancel` read or withdraw unused requests.
+The optional grant is exercised only with disposable adapters today; the normal app entry supplies no protected owner and production tasks do not receive it.
+A local task granted the facade receives `CREWMATE_SECRETS_LINE` from `src/core/secrets/commandWords.ts`, naming discovery, exact requests, withheld values and the separate approval boundary.
+A shell without that grant receives no such instruction.
+A task on another computer is granted the catalog alone on that computer's own task channel and receives `CREWMATE_SECRETS_CATALOG_LINE`: `list` and `show` ask the home, and every use answers `unavailable` ([`secrets.md`](secrets.md), "Current command seam").
+Bare invocation and `list` show the metadata of every secret the captain added, `inject` submits an exact operation using references, and `status`/`cancel` read or withdraw unused requests.
 There is no value-returning getter, approval operation, raw output mode or global environment export.
 The channel's task label is organizational context, not authenticated secret authority.
 The channel adds the calling shell's working folder to an `inject` request as its working directory, a fact the owner binds, never authority.

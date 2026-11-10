@@ -67,6 +67,7 @@ import { customCapabilityProfiles } from "./pi/customApiModels";
 import { listSurfaces, type SurfaceView } from "./pi/personalizeTool";
 import type { AuthInteractionBridge } from "./pi/piAuth";
 import { releaseNotesView } from "./releaseNotes/shown";
+import { secretsHandlers } from "./secrets/handlers";
 import { plainSettingsChannels } from "./settingsChannels";
 import type { PhoneDiagnosticEvent } from "./sharing/sharingService";
 import type { ScheduleRecord } from "./storage/scheduleStore";
@@ -816,11 +817,6 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return services.settings.getDictation();
     },
     ...plainSettingsChannels(services),
-    "inf:settings:personal-resources:get": () => services.settings.getPersonalResourcesEnabled(),
-    "inf:settings:personal-resources:set": (enabled) => {
-      services.settings.setPersonalResourcesEnabled(enabled);
-      return services.settings.getPersonalResourcesEnabled();
-    },
     "inf:settings:notifications:get": () => services.settings.getNotificationsEnabled(),
 
     "inf:settings:notifications:set": (enabled) => {
@@ -1084,6 +1080,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return services.forges.view();
     },
 
+    ...secretsHandlers(services),
     // Integrations (docs/integrations.md): Settings and app_change alike.
     "inf:integrations:list": () => services.integrations.view(),
     "inf:integrations:add": (server) => services.integrations.add("mcp", server),

@@ -1,6 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { readdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
+import { secretRefSchema } from "@shared/secrets";
 import { canonical, type RootKeys, sha256, writePrivateFile } from "./custody";
 
 /** Metadata only. A label is the captain's own words; `version` rises on every replacement. */
@@ -8,17 +9,45 @@ export type VaultEntry = {
   ref: string;
   label: string;
   version: number;
+  /** Opaque identity of this exact sealed record, including a recreated entry at the same version. */
+  revision: string;
   /** Whether agents may discover and request it. New entries start hidden. */
   discoverable: boolean;
   updatedAt: number;
+  /** The captain's own label for where it belongs, such as staging; never authority. */
+  environment?: string;
 };
 
-type Stored = { entry: VaultEntry; mac: string; sealed: string };
+export type SecretMetadataInput = {
+  discoverable?: boolean;
+  environment?: string;
+};
 
-const REF = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+/**
+ * A record as sealed. An older record may also carry organizational discovery
+ * links: they stay in its authenticated bytes and are never read as metadata.
+ */
+type Stored = { entry: Omit<VaultEntry, "revision">; mac: string; sealed: string };
+
+/**
+ * Derived, not persisted: old sealed records retain their authenticated encoding,
+ * and only the fields this version understands leave the record.
+ */
+function metadata(stored: Stored): VaultEntry {
+  const { ref, label, version, discoverable, updatedAt, environment } = stored.entry;
+  return {
+    ref,
+    label,
+    version,
+    revision: sha256(canonical(stored)),
+    discoverable,
+    updatedAt,
+    ...(environment !== undefined ? { environment } : {}),
+  };
+}
 
 export function validRef(ref: unknown): ref is string {
-  return typeof ref === "string" && REF.test(ref);
+  return secretRefSchema.safeParse(ref).success;
 }
 
 /**
@@ -36,7 +65,12 @@ export class SecretVault {
   ) {}
 
   static async hasRecords(dir: string): Promise<boolean> {
-    return (await recordFiles(join(dir, "values"))).length > 0;
+    try {
+      return (await readdir(join(dir, "values"))).some((name) => name.endsWith(".json"));
+    } catch (error) {
+      // An unreadable folder is not proof that it is safe to initialize custody.
+      return (error as NodeJS.ErrnoException).code !== "ENOENT";
+    }
   }
 
   /** Every intact record's metadata. A record that fails its check is left out, never repaired. */
@@ -44,14 +78,32 @@ export class SecretVault {
     const entries: VaultEntry[] = [];
     for (const file of await recordFiles(join(this.dir, "values"))) {
       const stored = await this.read(join(this.dir, "values", file));
-      if (stored) entries.push(stored.entry);
+      if (stored) entries.push(metadata(stored));
+    }
+    return entries.sort((a, b) => a.ref.localeCompare(b.ref));
+  }
+
+  /** Recovery cannot silently omit a damaged or unreadable value file. */
+  async recoveryEntries(): Promise<VaultEntry[] | undefined> {
+    let files: string[];
+    try {
+      files = await readdir(join(this.dir, "values"));
+    } catch (error) {
+      return (error as NodeJS.ErrnoException).code === "ENOENT" ? [] : undefined;
+    }
+    const entries: VaultEntry[] = [];
+    for (const file of files.filter((name) => name.endsWith(".json"))) {
+      const stored = await this.read(join(this.dir, "values", file));
+      if (!stored) return undefined;
+      entries.push(metadata(stored));
     }
     return entries.sort((a, b) => a.ref.localeCompare(b.ref));
   }
 
   async entry(ref: string): Promise<VaultEntry | undefined> {
     if (!validRef(ref)) return undefined;
-    return (await this.read(this.path(ref)))?.entry;
+    const stored = await this.read(this.path(ref));
+    return stored ? metadata(stored) : undefined;
   }
 
   /** Add or replace a value: trusted secure entry only, never an agent operation. */
@@ -59,18 +111,23 @@ export class SecretVault {
     ref: string,
     label: string,
     value: Buffer,
-    options: { discoverable?: boolean } = {},
+    options: SecretMetadataInput = {},
   ): Promise<VaultEntry> {
     if (!validRef(ref)) throw new Error("Invalid secret reference.");
     if (typeof label !== "string" || label.trim().length === 0) throw new Error("Invalid label.");
     if (value.length === 0) throw new Error("A secret needs a value.");
     const previous = (await this.read(this.path(ref)))?.entry;
-    const entry: VaultEntry = {
+    const entry: Stored["entry"] = {
       ref,
       label: label.trim(),
       version: (previous?.version ?? 0) + 1,
       discoverable: options.discoverable ?? previous?.discoverable ?? false,
       updatedAt: this.now(),
+      ...(options.environment !== undefined
+        ? { environment: options.environment }
+        : previous?.environment === undefined
+          ? {}
+          : { environment: previous.environment }),
     };
     const text = canonical(entry);
     const iv = randomBytes(12);
@@ -80,7 +137,7 @@ export class SecretVault {
     const sealed = Buffer.concat([iv, cipher.getAuthTag(), body]).toString("base64");
     const stored: Stored = { entry, mac: this.keys.mac("entries", text), sealed };
     await writePrivateFile(this.path(ref), JSON.stringify(stored));
-    return entry;
+    return metadata(stored);
   }
 
   /** The owner's delivery read. The caller zeroes the buffer when the recipient has it. */
@@ -99,7 +156,7 @@ export class SecretVault {
       decipher.setAAD(Buffer.from(canonical(stored.entry)));
       decipher.setAuthTag(raw.subarray(12, 28));
       const value = Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]);
-      return { entry: stored.entry, value };
+      return { entry: metadata(stored), value };
     } catch {
       return undefined;
     }

@@ -217,6 +217,20 @@ export function readsSharedCards(
   );
 }
 
+/** Major 15 includes ended-card decoding without the older `ended-cards` name. */
+export const ENDED_CARDS_SINCE = "15.0.0";
+
+/** Whether a view reads an ended card's app line, by major or its older named addition. */
+export function readsEndedCards(
+  version: string | undefined,
+  changes: readonly string[] | undefined,
+): boolean {
+  return (
+    (version !== undefined && speaksSince(version, ENDED_CARDS_SINCE)) ||
+    (changes?.includes("ended-cards") ?? false)
+  );
+}
+
 /** Whether a home answers current-update sightings (`CARD_SEEN_UPDATE_SINCE`, or its older name). */
 export function readsSeenUpdate(
   homeVersion: string | undefined,

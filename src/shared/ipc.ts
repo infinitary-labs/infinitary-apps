@@ -7,6 +7,7 @@ import { deviceChannels } from "./channels/devices";
 import { knowledgeChannels } from "./channels/knowledge";
 import { modelChannels } from "./channels/models";
 import { panelChannels } from "./channels/panels";
+import { secretsChannels } from "./channels/secrets";
 import { settingsChannels } from "./channels/settings";
 import { shellChannels, windowFenceSchema, windowStateSchema } from "./channels/shell";
 import { signInChannels } from "./channels/signIns";
@@ -93,7 +94,7 @@ import { voiceDownloadProgressSchema } from "./voice";
  * client can refuse or degrade on a mismatch instead of failing one call at
  * a time.
  */
-export const PROTOCOL_VERSION = "14.0.0";
+export const PROTOCOL_VERSION = "15.0.0";
 
 /**
  * The version rule's window for a computer that runs work (docs/contract.md):
@@ -117,7 +118,7 @@ export const PROTOCOL_MAJORS_BEHIND = 0;
  * A view says its own floor in its hello (`viewFloor`), so a newer view
  * keeps changing things on an older home its floor reaches.
  */
-export const VIEW_FLOOR = 14;
+export const VIEW_FLOOR = 15;
 
 /**
  * What this home serves beyond its channel set, by name, so a client hides
@@ -158,6 +159,7 @@ export const invokeContract = {
   ...knowledgeChannels,
   ...taskChannels,
   ...settingsChannels,
+  ...secretsChannels,
   ...shellChannels,
   ...activityChannels,
   ...panelChannels,
@@ -205,9 +207,10 @@ export const VIEW_INVOKE_CHANNELS = CORE_INVOKE_CHANNELS.filter(isViewInvokeChan
  * was started by a command (docs/run.md, "Control from another computer").
  * Nobody sits at that computer, so a view asks every other one its window
  * would. These stay there: its computers and phones and the address they
- * find it at, a task's browser and a page from a task's project, and what
- * is only ever that computer's own - its look, voice, panels and their
- * extensions, Knowledge, Observe, release notes, Dock and update.
+ * find it at, a task's browser and a page from a task's project, its
+ * Secrets, and what is only ever that computer's own - its look, voice,
+ * panels and their extensions, Knowledge, Observe, release notes, Dock and
+ * update.
  */
 export const RUN_HOME_ONLY_CHANNELS: ReadonlySet<CoreInvokeChannel> = new Set<CoreInvokeChannel>([
   "inf:devices:list",
@@ -223,6 +226,13 @@ export const RUN_HOME_ONLY_CHANNELS: ReadonlySet<CoreInvokeChannel> = new Set<Co
   "inf:devices:stop",
   "inf:devices:addresses",
   "inf:devices:address:set",
+  // Secrets are managed and confirmed only on the home (docs/secrets.md, "Remote decisions");
+  // a view decides a waiting use only through the `views` requests every paired view has.
+  "inf:secrets:view",
+  "inf:secrets:entry",
+  "inf:secrets:action",
+  "inf:secrets:rehearse",
+  "inf:secrets:history",
   "inf:cards:open-page",
   "inf:browser:stop",
   "inf:browser:reopen",
@@ -341,6 +351,7 @@ export const openPageSchema = z.object({ url: z.string().min(1).max(4096) }).str
 
 /** Push channels (main to renderer). Payloads are validated in the preload. */
 export const pushContract = {
+  "inf:secrets:changed": { payload: z.object({}), surface: "core" },
   "inf:event": { payload: fmEventSchema, surface: "core" },
   // Desktop transport only: the core and paired computers keep individual events.
   "inf:events": { payload: z.array(fmEventSchema), surface: "host" },

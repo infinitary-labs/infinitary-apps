@@ -1,0 +1,41 @@
+{
+  "description": "A disposable Secrets home and its recovery pair, written by INF-1109's reviewed version before discovery links were removed: SecretsSettings.put sealed staging-deploy with two project/computer links and planning-calendar with none, and backupRecovery exported both with their links. Custody holds the home's invented root; every value is invented. Read by src/core/secrets/legacyLinks.test.ts.",
+  "earlierView": [
+    {
+      "ref": "planning-calendar",
+      "label": "Planning calendar",
+      "version": 1,
+      "revision": "bccba502e6c0435a225cab1a11acdfb6de553c5d5d749ac177a99e4273734bbc",
+      "links": []
+    },
+    {
+      "ref": "staging-deploy",
+      "label": "Staging deploy token",
+      "version": 1,
+      "revision": "c5f70227a670627617fa2342e87259d808d91346fdf3bdf97a18544faafdc3d5",
+      "links": [
+        {
+          "project": "website",
+          "device": "local"
+        },
+        {
+          "project": "infinitary",
+          "device": "mac-mini"
+        }
+      ]
+    }
+  ],
+  "custody": {
+    "root": "JOYOz7jjrqEEwSur+UjLS1ZAtpLwHKe3zpn35dbfJak=",
+    "authority-head": "eyJyZXZpc2lvbiI6MCwiZGlnZXN0IjoiYTdlMWYzMDYxODYzZTlmYzE2MDAwOGEyZWUyZDFhNTZhYzRmOGEzODg3MzI1NDA4YWM0OTQyNTM5MDk4MmU3MSJ9"
+  },
+  "home": {
+    "authority.json": "eyJhdXRob3JpdHkiOnsiaG9tZSI6ImMyNDc1ZjFlLTJlMDYtNDU1Mi04MzIxLTEwNDAwNzJiOTNlNSIsInJldmlzaW9uIjowLCJydWxlcyI6W10sImRldmljZXMiOltdfSwibWFjIjoiNjhmZjIxZjJkZjEwMzNmZWUyZjE3Njg2OTNkNDIyYjk4YzRhNzMyZDY0YThlYTg4ODU5NjljNzNiMGY1YTE2MSJ9",
+    "values/2658793013c1ca8cb238fd1d7e83d48c.json": "eyJlbnRyeSI6eyJyZWYiOiJzdGFnaW5nLWRlcGxveSIsImxhYmVsIjoiU3RhZ2luZyBkZXBsb3kgdG9rZW4iLCJ2ZXJzaW9uIjoxLCJkaXNjb3ZlcmFibGUiOnRydWUsInVwZGF0ZWRBdCI6MTc5MjgwMDAwMDAwMCwiZW52aXJvbm1lbnQiOiJTdGFnaW5nIiwibGlua3MiOlt7InByb2plY3QiOiJ3ZWJzaXRlIiwiZGV2aWNlIjoibG9jYWwifSx7InByb2plY3QiOiJpbmZpbml0YXJ5IiwiZGV2aWNlIjoibWFjLW1pbmkifV19LCJtYWMiOiJmZTM2OGEzMDA3NzcxMjAzM2UwMTliNTVmMGY4NTA1Mjg3MjEyZGY2NjUyNzYyZGRkNDZkMmRlYTA2MTJmMzU2Iiwic2VhbGVkIjoiako2aHpCd3lHMUVBc1lVRTJqeno2R1N4WmFUR0VqRFhJYmhrVEdObXNhZkwxYTFwdTZlaU42bnFoaEtWWHhKWFlRcHNwMUx2S0lMVCJ9",
+    "values/47d27253f819c16009afd7ab694dd7f7.json": "eyJlbnRyeSI6eyJyZWYiOiJwbGFubmluZy1jYWxlbmRhciIsImxhYmVsIjoiUGxhbm5pbmcgY2FsZW5kYXIiLCJ2ZXJzaW9uIjoxLCJkaXNjb3ZlcmFibGUiOnRydWUsInVwZGF0ZWRBdCI6MTc5MjgwMDAwMDAwMCwiZW52aXJvbm1lbnQiOiJQZXJzb25hbCIsImxpbmtzIjpbXX0sIm1hYyI6ImU3N2ZiMTgxNGI3NjcwNGE3ZWQ2NzQ5YmE1NmYxZWNlMDQ3YWQzMmJjOTZjZGI4ZTIyMDAxMjZmZDFkNTcyOGQiLCJzZWFsZWQiOiJIMG1IVUU3MmQ3MWJQUStXNE1FYU5BQUVHSUVBSmh5bXRMbzU5cktFcW1XU3R3bS9Gc2hXRlJzQ21GNEJ3Q0ZkQnZOZDJYTjhVUWt1OWtiaCJ9"
+  },
+  "recovery": {
+    "archive": "aW5maW5pdGFyeS1zZWNyZXRzLXJlY292ZXJ5LzEKbAh8QVMzA/M3eZooJ1v+ynABXlxE0cn6VWfVmUyB79b9wgna8CuJKTeNofPK9sIDCQkF/mvD3aAKOT8X9n0AS8z8n1pN7xFJYiOQQHtbHA3xDWyX5ajp76NHSGw2Ww+0oXhIqTr64468K9HPF1fc6G7xdP/2+f6ySPbJP2nzoXK7I7CyJRr772IlM+DpyxX0g45G6yq6FOnyAa802VzA8yYX8kshZzc385fZoZvaYJDEeVujodbsQPtV6GiTG7UpsqvghctvcFGGZNv0LaMIoCakdkpu6O5WzwcK/ZqlSb7GUvWtmwAT0zfF/XwWuaQkwXHvhe9LtMQId50TygrbAxXl27KkmjuXl4S3XBTpTGrhNM7iNGLk3wZodS4P/EU2cYG46P3Mu90gE1XuSiEyu+Q9oKDBozRAtCvWim1aKlJh5Y0oafW1bvEdHFcBs6JtLVUkrbUjq+l2EKHfMQ/cs7HW4JmpDO4pCQD3THm2vJEoKa6vfGehNtCiWQknVlKZdhCASVtn9zSVgrMn9cJVmLvf5Wwx/lePHAZYb3sqYbglOkINOfs2rZ0UkWgzt7U7o37HfSS8BVhSMTlmFfTi3S3XH91ZDgTrmdhAvhZ/0bCiexomquz00hFrslXeER+F82EmG4/JeurZJmo7wu/6jURH3dkNfwGhul23DWTxo5qin8V0rx2SiWKkxe8HEe5zmTRlGd3uDKw4fXiqNBfFPS4F3OFZV/aZh/I=",
+    "key": "WLW446GEdsNs+72XDTRK+1WsquBOxAeXSLUzznd7yOU="
+  }
+}

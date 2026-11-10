@@ -19,7 +19,13 @@ import {
   type TaskIntegrations,
 } from "../integrations";
 import { type LoadClaim, type LoadReceipt, loadWaitWords, type TaskLoad } from "../placed/loadLine";
-import { type Injection, SECRETS_COMMAND, type SecretsCommand } from "../secrets/requests";
+import { SECRETS_ELSEWHERE_HELP } from "../secrets/commandWords";
+import {
+  type Injection,
+  SECRETS_COMMAND,
+  type SecretsCatalog,
+  type SecretsCommand,
+} from "../secrets/requests";
 import type { FilesOpInput } from "./fileCommands";
 import { ownTaskCommand } from "./names";
 import {
@@ -89,6 +95,11 @@ export type TaskTools = {
   files?: TaskFiles;
   secrets?: SecretsCommand;
   load?: TaskLoad;
+  /**
+   * The Secrets catalog alone, for a task on another computer: its command
+   * lists and shows, and every use answers unavailable (docs/secrets.md).
+   */
+  secretsCatalog?: SecretsCatalog;
   /**
    * The inbox's door (docs/integrations.md, "The inbox"): only the person
    * key `admit` takes holds it, never a task's.
@@ -389,7 +400,8 @@ export class AxiChannel {
     const has =
       (tool === BROWSER_COMMAND && grant.tools.browser !== undefined) ||
       (tool === INTEGRATIONS_COMMAND && grant.tools.integrations !== undefined) ||
-      (tool === SECRETS_COMMAND && grant.tools.secrets !== undefined) ||
+      (tool === SECRETS_COMMAND &&
+        (grant.tools.secrets !== undefined || grant.tools.secretsCatalog !== undefined)) ||
       (tool === LOAD_COMMAND && grant.tools.load !== undefined) ||
       (tool === FILES_COMMAND && grant.tools.files !== undefined) ||
       (tool === INBOX_COMMAND && grant.tools.inbox !== undefined);
@@ -695,16 +707,21 @@ export class AxiChannel {
   /** Operation authority is checked by Secrets, never by this same-user bearer channel. */
   private async secret(grant: Grant, message: AxiCallMessage, cwd: string): Promise<SecretsAnswer> {
     const secrets = grant.tools.secrets;
-    if (!secrets) return { unavailable: true };
+    // A task on another computer lists the same catalog and has no use at all.
+    const catalog = secrets ?? grant.tools.secretsCatalog;
+    if (!catalog) return { unavailable: true };
     try {
       switch (message.op) {
         case "secrets.list":
-          return { secrets: await secrets.list(), requests: secrets.receipts() };
+          return { secrets: await catalog.list(), requests: secrets?.receipts() ?? [] };
         case "secrets.show": {
           const ref = (message.input as { ref: string }).ref;
-          const secret = (await secrets.list()).find((secret) => secret.ref === ref);
+          const secret = (await catalog.list()).find((secret) => secret.ref === ref);
           return secret ? { secret } : { unavailable: true };
         }
+      }
+      if (!secrets) return { unavailable: true, help: SECRETS_ELSEWHERE_HELP };
+      switch (message.op) {
         case "secrets.inject":
           // The shell's working folder, as its launcher reported it: where relative
           // arguments resolve, shown on the approval, never authority.
@@ -715,7 +732,7 @@ export class AxiChannel {
             }),
           };
         case "secrets.status": {
-          const receipt = secrets.status((message.input as { request: string }).request);
+          const receipt = await secrets.status((message.input as { request: string }).request);
           return receipt ? { receipt } : { unavailable: true };
         }
         case "secrets.cancel": {

@@ -169,6 +169,8 @@ export function startHome(
     | "knowledge"
     | "files"
     | "programProcess"
+    | "secrets"
+    | "runbooks"
   > & {
     /** A task that moves home runs its conversation here on real Pi. */
     runsHere?: boolean;
@@ -200,6 +202,8 @@ export function startHome(
     ...(extra.knowledge ? { knowledge: true } : {}),
     ...(extra.files ? { files: extra.files } : {}),
     ...(extra.programProcess ? { programProcess: extra.programProcess } : {}),
+    ...(extra.secrets ? { secrets: extra.secrets } : {}),
+    ...(extra.runbooks ? { runbooks: extra.runbooks } : {}),
     ...(extra.runsHere
       ? { here: createPiSessionFactory({ agentDir: join(userData, "pi-agent") }) }
       : {}),
@@ -287,7 +291,7 @@ export async function world(
      * Its crewmates' long commands are background jobs there, kept as the
      * work mode keeps them (`startConversations`); otherwise Pi's own bash.
      * `counted`: it tells the home how many run but names none, as a
-     * computer built before `background-job-named` does.
+     * computer built before it named the job (included in the current work major) does.
      */
     jobs?: boolean | "counted";
     /** The contract the computer's hello names; this build's own unless a test stands in an older one. */
@@ -297,6 +301,8 @@ export async function world(
     tools?: readonly CrewmateTool[];
     /** The home's github.com sign-in, whose integrations its crew there reaches through its task channel. */
     github?: Parameters<typeof startPlacedHome>[0]["github"];
+    secrets?: Parameters<typeof startPlacedHome>[0]["secrets"];
+    runbooks?: Parameters<typeof startPlacedHome>[0]["runbooks"];
     /** Google's stand-in, which the home's integrations reach. */
     google?: Parameters<typeof startPlacedHome>[0]["google"];
     /** The home's knowledge, whose standing directions its crew is told. */
@@ -377,7 +383,7 @@ export async function world(
         : {}),
       // Removed, it removes what Firstmate set up here; no agent was set up.
       cleanUp: () => cleanUp({ dataDir, background: null }),
-      conversations: async ({ dataDir: dir, ask, tell, homeChanges }) => {
+      conversations: async ({ dataDir: dir, ask, tell, homeChanges, homeVersion }) => {
         const copies = new WorkingCopies(dir, { pool: false });
         if (options.refuseClone) {
           // GitHub refuses the clone for want of this computer's own sign-in,
@@ -425,6 +431,9 @@ export async function world(
           copies,
           ask,
           ...(homeChanges ? { homeChanges } : {}),
+          // Work compatibility reads the real welcome, as startConversations does;
+          // omitting it incorrectly refuses supported artifact and branch operations.
+          ...(homeVersion ? { homeVersion } : {}),
           factories: {
             pi: createPiSessionFactory({
               agentDir: join(dir, "pi-agent"),

@@ -262,7 +262,7 @@ export function publishedContract() {
     },
     // What a home asks a computer that runs work about that computer's own
     // files, for a crewmate on another computer (`src/shared/files.ts`,
-    // docs/files.md), published the same way.
+    // docs/files.md), on the current work major, published the same way.
     fileOrders: {
       requests: Object.fromEntries(
         FILE_ORDER_CHANNELS.map((channel) => {

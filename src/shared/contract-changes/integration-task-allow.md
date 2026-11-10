@@ -1,2 +1,0 @@
-Adds `task` to the choices of a `request_write` effect's `integration`: the host's integration approval card on a crewmate's ask offers Allow for the rest of this task, which lets that task's crewmate make the same kind of call to the same place without asking until the task closes.
-A view that does not list this change reads that choice list strictly, so the home leaves the button out of the cards it sends that view, which shows the card with its other three buttons.

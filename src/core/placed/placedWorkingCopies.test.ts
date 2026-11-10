@@ -234,7 +234,8 @@ describe("a task that runs on a computer that runs work", () => {
     const project = await gitProject();
     // Files copied byte for byte from a real phone-logs artifact.
     const artifact = readFileSync("tests/fixtures/forge/phone-logs-sample.zip");
-    const at = await world(() => project.forge(artifact));
+    // Protected Secrets keeps selected artifact transport after its minor name retires.
+    const at = await world(() => project.forge(artifact), { changes: [] });
     const home = at.home();
     const { repo } = await adoptHere(home.repos, project.home);
     home.repos.configure(repo.id, { delivery: "direct-pr" });

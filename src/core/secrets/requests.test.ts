@@ -40,6 +40,71 @@ function fixture() {
 }
 
 describe("Secrets operation authority (disposable adapters only)", () => {
+  it("pauses an unfinished preparation before an automatic rule can launch it", async () => {
+    // INF-1109 recovery must drain the coordinator before snapshotting its history.
+    const f = fixture();
+    let finish!: () => void;
+    let begin!: () => void;
+    const began = new Promise<void>((resolve) => {
+      begin = resolve;
+    });
+    const preparation = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    f.prepared.rule = "allow";
+    f.backend.prepare = async () => {
+      begin();
+      await preparation;
+      return f.prepared;
+    };
+    const submission = f.owner.inject(input);
+    await began;
+    const pausing = f.owner.pauseForRecovery();
+    expect((await f.owner.inject({ ...input, id: "during-pause" })).state).toBe("unavailable");
+    finish();
+    const receipt = await submission;
+    const resume = await pausing;
+    expect(resume).toBeTypeOf("function");
+    expect(f.owner.status(receipt.request)?.state).toBe("invalidated");
+    expect(f.execute).not.toHaveBeenCalled();
+    expect(f.dispose).toHaveBeenCalledWith("invalidated");
+    resume?.();
+    f.prepared.rule = "ask";
+    expect((await f.owner.inject({ ...input, id: "after-pause" })).state).toBe("waiting");
+  });
+
+  it("drains an already-started authentication without starting its effect during recovery", async () => {
+    const f = fixture();
+    let finish!: (allowed: boolean) => void;
+    let begin!: () => void;
+    const began = new Promise<void>((resolve) => {
+      begin = resolve;
+    });
+    const confirmation = new Promise<boolean>((resolve) => {
+      finish = resolve;
+    });
+    f.backend.authenticate = async () => {
+      begin();
+      return confirmation;
+    };
+    const receipt = await f.owner.inject(input);
+    const approving = f.owner.approve(receipt.request, "disposable-authentication");
+    await began;
+    let acquired = false;
+    const pausing = f.owner.pauseForRecovery().then((resume) => {
+      acquired = true;
+      return resume;
+    });
+    expect(acquired).toBe(false);
+    finish(true);
+    await approving;
+    const resume = await pausing;
+    expect(acquired).toBe(true);
+    expect(f.execute).not.toHaveBeenCalled();
+    expect(f.owner.status(receipt.request)?.state).toBe("invalidated");
+    resume?.();
+  });
+
   it("waits without running, authenticates the checked digest, consumes once and returns exit status only", async () => {
     const f = fixture();
     const request = await f.owner.inject(input);
@@ -138,6 +203,32 @@ describe("Secrets operation authority (disposable adapters only)", () => {
     expect(f.owner.status(request.request)?.state).toBe("unknown");
     expect(f.execute).not.toHaveBeenCalled();
   });
+  it("publishes the terminal wake only after cleanup can no longer change its outcome", async () => {
+    // INF-1109: the task's completion wake must not claim success before private cleanup settles.
+    const f = fixture();
+    let began!: () => void;
+    const disposing = new Promise<void>((resolve) => {
+      began = resolve;
+    });
+    let fail!: () => void;
+    const cleanup = new Promise<void>((_resolve, reject) => {
+      fail = () => reject(new Error("disposable cleanup failure"));
+    });
+    f.dispose.mockImplementation(async () => {
+      began();
+      await cleanup;
+    });
+    const requested = await f.owner.inject(input);
+    const approval = f.owner.approve(requested.request, "disposable-authentication");
+    await disposing;
+    expect(f.owner.settled(requested.request)).toBeUndefined();
+    expect(f.changed.mock.calls.at(-1)?.[0].state).toBe("executing");
+    fail();
+    await approval;
+    expect(f.owner.settled(requested.request)?.state).toBe("unknown");
+    expect(f.changed.mock.calls.at(-1)?.[0]).toEqual(f.owner.settled(requested.request));
+  });
+
   it("refuses approval when revalidation itself crosses the request expiry", async () => {
     const f = fixture();
     f.prepared.current = async () => {

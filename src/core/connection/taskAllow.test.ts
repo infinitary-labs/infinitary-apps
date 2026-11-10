@@ -1,7 +1,7 @@
 import type { IntegrationAsk } from "@shared/writeAsk";
 import { describe, expect, it } from "vitest";
 import { integrationApprovalCard } from "../orchestrator/integrationApprovalCard";
-import { frameWithoutTaskAllow } from "./taskAllow";
+import { frameWithoutTaskAllow, readsTaskAllow } from "./taskAllow";
 
 // INF-2993: a view that does not list `integration-task-allow` reads a
 // request_write's choices strictly, so the home leaves Allow for the rest of
@@ -47,4 +47,11 @@ describe("a card frame for a view without Allow for the rest of this task (INF-2
     });
     expect(frameWithoutTaskAllow(other)).toBe(other);
   });
+});
+
+// INF-3042: the major absorbs the named addition; older views still negotiate it.
+it("recognizes task-wide Allow by major or the older advertised name", () => {
+  expect(readsTaskAllow("15.0.0", [])).toBe(true);
+  expect(readsTaskAllow("14.0.0", ["integration-task-allow"])).toBe(true);
+  expect(readsTaskAllow("14.0.0", [])).toBe(false);
 });

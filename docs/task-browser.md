@@ -93,7 +93,7 @@ The list is one for every computer: a computer that runs work asks the home for 
 A browser here reads the same file before each open.
 Each add or Remove reaches open browsers at once (`PrivateSites.onChange`): the home gives its own browsers the new list and sends it to each computer with an open task browser (`inf:task-browser:private-sites`), and every browser's guard ends the connections it holds to a name no longer listed (`ConnectionGuardHandle.recheck`), so a removed site stops loading at once, on every page.
 A computer out of reach at the change takes the list when the home hears from it again (`PlacedBrowsers.reached`), and the guard checks the list again once a dial ends, so a Remove that lands mid-dial ends that connection too.
-A computer that runs work on an older version refuses that order, and the home only logs it, so a Remove reaches that computer's browsers at their next open.
+Every computer admitted to work on the current contract includes this order; an older computer must update before it can run work.
 
 A listed name is still resolved and checked by the guard.
 Its public answers and its private-network answers are dialed; this computer's loopback, an unspecified address, link-local, multicast and cloud metadata addresses never are, however they are written, IPv4-mapped and NAT64 forms included (`neverReachable`, `src/core/browser/addresses.ts`, the same list the custom API's exception reads, `docs/custom-api.md`).

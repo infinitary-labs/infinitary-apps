@@ -50,7 +50,7 @@ import { FreezeRecorder, freezeWake, infinitaryProject } from "./freeze/freezeRe
 import { FreezeTally } from "./freeze/freezeTally";
 import { isFreezeRecorderEnabled } from "./freeze/watchdog";
 import type { HostCapabilities } from "./host";
-import { captureLoginPath } from "./hostEnv";
+import { captureLoginPath, hostEnv } from "./hostEnv";
 import { FIRSTMATE_READER, INBOX_EVENT, INBOX_ID, SavedOutsideData } from "./integrations";
 import { startHomeIntegrations } from "./integrations/homeIntegrations";
 import { type JobExit, JobManager, jobExitWake } from "./jobs/jobManager";
@@ -109,6 +109,8 @@ import { PlacedWorkScores } from "./routing/placedWork";
 import { quotaGateCleared, quotaGateRefValid } from "./routing/quotaGate";
 import { servedSlots } from "./routing/router";
 import { Runbooks } from "./runbooks/runbooks";
+import { ProtectedSecrets } from "./secrets/protected";
+import { SecretsSettings } from "./secrets/settings";
 import {
   readSelfSource,
   readSelfSourceAsync,
@@ -1067,6 +1069,13 @@ export async function createServices(
       : {}),
     integrations,
     files,
+    ...(host.secrets
+      ? {
+          secrets: {
+            forTask: (taskId: string) => secrets.commandFor({ task: taskId }),
+          },
+        }
+      : {}),
     quotaGateRefValid,
     quotaGateCleared: (ref) =>
       quotaGateCleared(ref, { availableModels, slotsOf: (model) => slots.slotsOf(model), quota }),
@@ -1091,6 +1100,28 @@ export async function createServices(
   computerMoveOf = (record) => supervisor.moves.computerMoveFacts(record);
   closingResolutionOf = (taskId) => supervisor.cards.newestResolutionForTask(taskId);
   cardStack = supervisor;
+  const secretHost = host.secrets;
+  const secrets = new SecretsSettings({
+    ...(secretHost
+      ? {
+          open: (initialize) =>
+            ProtectedSecrets.open({
+              dir: join(paths.userData, "secrets"),
+              custody: secretHost.custody,
+              ...(secretHost.authentication ? { authentication: secretHost.authentication } : {}),
+              environment: hostEnv,
+              initialize,
+            }),
+          ...(secretHost.unlock ? { unlock: secretHost.unlock } : {}),
+          ...(secretHost.recovery ? { recovery: secretHost.recovery } : {}),
+        }
+      : {}),
+    raise: (card) => supervisor.cards.hostCards.raiseHostCard(card),
+    withdraw: (id, reason) => supervisor.cards.hostCards.withdrawHostCard(id, reason),
+    settled: (taskId, receipt) => supervisor.steer.secretsUseEnded(taskId, receipt),
+    changed: () => emit("inf:secrets:changed", {}),
+  });
+  supervisor.hostOps.setSecretsDecision((offer) => secrets.decide(offer));
   readWorkPosture = (record) => supervisor.postures.workPosture(record);
   readWorkWaitFacts = (record) => supervisor.postures.workWaitFacts(record);
   const workPresentation = new WorkPresentation({
@@ -1871,6 +1902,7 @@ export async function createServices(
     forges: forgeSignIns,
     integrations,
     integrationInbox,
+    secrets,
     savedOutsideData,
     devices,
     computers,

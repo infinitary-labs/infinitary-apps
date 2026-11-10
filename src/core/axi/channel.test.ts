@@ -13,6 +13,7 @@ import type { TaskFiles } from "../files/taskFiles";
 import { hostEnv } from "../hostEnv";
 import type { IntegrationAnswer, TaskIntegrations } from "../integrations";
 import { JobManager } from "../jobs/jobManager";
+import { SECRETS_ELSEWHERE_HELP } from "../secrets/commandWords";
 import { type Injection, SECRETS_COMMAND, SecretRequests } from "../secrets/requests";
 import { forkChildProcess } from "../sql/forkChildProcess";
 import { BROWSER_COMMANDS } from "./browserCommands";
@@ -809,5 +810,51 @@ describe("the Secrets command's disposable operation proof", () => {
 
     const unavailable = channel.grant("ordinary-unmigrated-task", {});
     expect((await shell(unavailable, [], {}, SECRETS_COMMAND)).stdout).toContain("NO_TOOL");
+  });
+
+  it("gives a task on another computer the catalog alone: list and show answer, every use is unavailable", async () => {
+    // INF-1109's revision spec: "Treat all crewmates consistently ... send metadata only. Do not
+    // move values, grant remote execution or construct production custody as a shortcut."
+    const channel = await openChannel();
+    const staging = {
+      ref: "staging-db",
+      label: "Staging database password",
+      version: "2",
+      environment: "Staging",
+    };
+    let lists = 0;
+    const grant = channel.grant("placed-secrets", {
+      secretsCatalog: {
+        list: async () => {
+          lists++;
+          return [staging];
+        },
+      },
+    });
+    const run = (args: string[]) => shell(grant, args, {}, SECRETS_COMMAND);
+    expect(decode((await run(["list"])).stdout)).toEqual({ secrets: [staging], requests: [] });
+    expect(decode((await run(["show", "staging-db"])).stdout)).toEqual({ secret: staging });
+    expect(lists).toBe(2);
+    const inject = await run([
+      "inject",
+      "--env",
+      '{"DATABASE_PASSWORD":"staging-db"}',
+      "--reason",
+      "Run the staging migration",
+      "--id",
+      "migrate-staging",
+      "--",
+      "/bin/sh",
+      "./scripts/migrate.sh",
+    ]);
+    expect(decode(inject.stdout)).toEqual({ unavailable: true, help: SECRETS_ELSEWHERE_HELP });
+    for (const op of ["status", "cancel"]) {
+      expect(decode((await run([op, "migrate-staging"])).stdout)).toEqual({
+        unavailable: true,
+        help: SECRETS_ELSEWHERE_HELP,
+      });
+    }
+    // A use never even read the catalog: nothing past the list is reachable from there.
+    expect(lists).toBe(2);
   });
 });

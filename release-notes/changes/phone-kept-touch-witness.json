@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-kept-touch-witness",
+      "reason": "Test-only repair: the phone touch observer reads retained simulator evidence when its live subscription has no verdict, applying the complete batch before deciding. App behavior, tap counts, native assertions, relaunch coverage and deadlines remain unchanged."
+    }
+  ]
+}

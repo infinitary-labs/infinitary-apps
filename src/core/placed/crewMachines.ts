@@ -77,7 +77,7 @@ export type CrewMachines = {
   /**
    * Asks the task's computer, while in reach, to answer "ask again" each of
    * the app's own reads its conversation began by the newest event the home
-   * has taken (INF-2603, `answer-stuck-reads.md`): asked after a quiet
+   * has taken (INF-2603, `major-15.md`): asked after a quiet
    * stretch, each such read has waited at least that long. Answers the
    * reads it answered, each with how long it waited; none from a computer
    * without the change, or out of reach.
@@ -92,7 +92,7 @@ export type CrewMachines = {
   takesResponses?(machine: string): boolean;
   /**
    * Whether the computer's crewmates read a shared-card write's typed result
-   * (`SHARED_CARDS`, docs/card-threads.md "Shared cards"); false while the
+   * (the current work major, docs/card-threads.md "Shared cards"); false while the
    * home cannot tell.
    */
   takesSharedCards?(machine: string): boolean;
@@ -100,7 +100,7 @@ export type CrewMachines = {
   takesCheckDeclarations?(machine: string): boolean;
   /**
    * Whether the computer tells the home each time a conversation it holds
-   * folds its context (`CONVERSATION_FOLDS`), so a crewmate there is sent
+   * folds its context (the current work major), so a crewmate there is sent
    * its directions only again after a fold or a change; false while the
    * home cannot tell.
    */
@@ -168,6 +168,8 @@ export type CrewMachines = {
    * computer that runs work"); false while the home cannot tell.
    */
   takesIntegrations?(machine: string): boolean;
+  /** Metadata-only Secrets catalog through the authenticated task channel. */
+  takesSecrets?(machine: string): boolean;
   /**
    * Whether the computer gives its crewmates `infinitary-files-axi`, each
    * list and copy asked of the home (docs/files.md); false while the home

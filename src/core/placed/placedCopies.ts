@@ -357,6 +357,8 @@ export class PlacedCopies {
         // Another branch the crewmate checked out there comes to the task's
         // own ref for it (INF-2490); the task's branch to its own name.
         const other = branch !== undefined && branch !== record.branch;
+        if (other && !this.sendsCheckedOut(deviceId))
+          throw new Error("That computer needs an update to send another branch.");
         const ref = other ? checkedOutRefFor(taskId) : `refs/heads/${record.branch}`;
         const sha = await this.take(
           deviceId,
@@ -384,9 +386,14 @@ export class PlacedCopies {
    */
   async checkoutThere(taskId: string): Promise<{ branch: string | null; head: string } | null> {
     const deviceId = this.options.tasks.get(taskId)?.deviceId;
-    if (!deviceId || !this.options.devices.inReach(deviceId)) return null;
+    if (!deviceId || !this.options.devices.inReach(deviceId) || !this.sendsCheckedOut(deviceId))
+      return null;
     const status = await this.ask(deviceId, "inf:working-copy:status", [{ task: taskId }]);
     return status.present ? (status.checkedOut ?? null) : null;
+  }
+
+  private sendsCheckedOut(deviceId: string): boolean {
+    return this.options.devices.takesCurrentWork(deviceId);
   }
 
   /**

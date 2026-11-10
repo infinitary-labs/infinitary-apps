@@ -9,11 +9,13 @@
 
 import type { FiledAfterMergeStep, FirstmateAfterMergeStep } from "@shared/afterMerge";
 import { formatDurationShort } from "@shared/quotaSignals";
+import type { EndedUseReceipt } from "../secrets/requests";
 import type { SettleRefusal } from "../tasks/taskGraph";
 import type { KindWords, TypedWake, WakeFacts, WakeTask } from "./wakes";
 
 /** The facts of a change's delivery wakes. */
 export type DeliveryFacts =
+  | { kind: "secrets-use-ended"; receipt: EndedUseReceipt }
   | {
       /** A settle the captain chose on a card, run by the host, and its outcome. */
       kind: "settled";
@@ -469,6 +471,8 @@ function writeAnsweredWords(facts: Omit<WriteAnswered, "kind" | "also">): string
 
 /** A change's delivery wakes, worded. */
 export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
+  "secrets-use-ended": (facts) =>
+    `[fm-op] ${SECRETS_USE_ENDED_LEAD} ${facts.receipt.request}: ${facts.receipt.state}.${facts.receipt.exitCode === undefined ? "" : ` The recipient exited with status ${facts.receipt.exitCode}.`} This is a receipt, not permission for another use or an external action.${facts.receipt.state === "unknown" ? " Do not repeat this request; reconcile what happened before depending on it." : ""}`,
   settled: (facts) =>
     `[fm-op] the captain chose ${facts.chose} for task ${facts.task.id} "${facts.task.title}"; the host settled it and the outcome was: ${facts.outcome}${facts.unseen ? ` ${UNSEEN_STOP_WORDS}` : ""}${facts.afterMerge?.length || facts.firstmateSteps?.length ? ` ${afterMergeWords(facts.afterMerge ?? [], facts.firstmateSteps)}` : ""}${facts.refusal ? `\n\`\`\`json\n${JSON.stringify(facts.refusal, null, 2)}\n\`\`\`` : ""}`,
   "external-merge": (facts) =>
@@ -497,3 +501,6 @@ export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
     `${facts.replaced.key} "${facts.replaced.title}", which you heard was dropped, goes on in ${facts.dependency.key} "${facts.dependency.title}", so your task waits on ${facts.dependency.key} now and its close steers you. If you carried on without that work, check what your task still needs from it.`,
   "repair-assessed": (facts) => renderRepairAssessed(facts),
 };
+
+/** Protected-use completion, metadata only; its receipt grants no further authority. */
+export const SECRETS_USE_ENDED_LEAD = "Secrets request";

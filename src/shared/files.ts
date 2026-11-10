@@ -49,8 +49,8 @@ export const fileSnapshotSchema = z.object({
 export type FileSnapshot = z.infer<typeof fileSnapshotSchema>;
 
 /**
- * The orders a home asks a computer that runs work for one of its files:
- * list a folder, set a file aside, read it piece by
+ * The orders a home asks a computer that runs work for one of its files,
+ * on the current work major: list a folder, set a file aside, read it piece by
  * piece, and let it go. Each answers live; a computer quitting lets go of
  * everything it set aside.
  */

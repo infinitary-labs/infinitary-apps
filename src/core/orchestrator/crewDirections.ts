@@ -15,8 +15,8 @@ import type { SessionEvent } from "../session/session";
  * carried it (`input_read` naming that input, or a model request beginning
  * after it was handed over), never when it is built or handed over, so a
  * turn that never reached its model sends the set again. A conversation
- * whose folds the host cannot hear - one held on a computer without
- * `conversation-folds` - is served the set on every turn, as before.
+ * whose folds the host cannot hear - one held on a computer outside
+ * the current work major - is served the set on every turn, as before.
  */
 export type HeldDirections = {
   /** The conversation the copy went to: its session's id, which a renewal changes. */

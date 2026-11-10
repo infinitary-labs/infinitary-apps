@@ -83,6 +83,26 @@ describe("why a window command cannot run now", () => {
     );
   });
 
+  // INF-1109's accepted Secrets boundary (docs/secrets.md, "Remote decisions"): its Settings stay
+  // on the home, so their command is refused wherever the tab is not offered.
+  it("keeps the Secrets command on the home of a first mate started by a command", () => {
+    const view = {
+      role: "view",
+      name: "Mac mini",
+      address: "192.168.1.30",
+      joinedAt: 0,
+      contact: "in-reach",
+      readOnly: null,
+      heardAt: null,
+      caughtUp: 1,
+    } as const;
+    expect(commandRefusal("settings.secrets", HOME, CLEAR)).toBeNull();
+    for (const thisMac of [view, { ...view, startedByCommand: true }] as const)
+      expect(commandRefusal("settings.secrets", { ...HOME, thisMac }, CLEAR)).toBe(
+        "Secrets is on Mac mini",
+      );
+  });
+
   it("refuses Try again where Devices is not offered, as on a Mac that controls another", () => {
     expect(commandRefusal("devices.try-again", HOME, CLEAR)).toBeNull();
     expect(commandRefusal("devices.try-again", { ...HOME, devicesShown: false }, CLEAR)).toBe(

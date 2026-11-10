@@ -197,10 +197,39 @@ export async function main(argv: string[]): Promise<number> {
     ws.send(JSON.stringify(frame));
   };
 
+  // docs/connection.md: a validated parts header names the UTF-8 byte length
+  // of the next logical frame. Join its bytes before decoding or validating
+  // it; the app's internal joiner is not part of this client's published surface.
+  let remaining = 0;
+  let parts: Buffer[] = [];
   ws.on("message", (raw) => {
-    const frame = JSON.parse(String(raw)) as Record<string, unknown>;
+    // ws delivers text messages as Buffers with its default binaryType.
+    const message = raw as Buffer;
+    let text: string;
+    if (remaining > 0) {
+      remaining -= message.length;
+      if (remaining < 0) {
+        remaining = 0;
+        parts = [];
+        notFitting("frame parts", "The parts exceed the length their header named.");
+        ws.close();
+        return;
+      }
+      parts.push(message);
+      if (remaining > 0) return;
+      text = Buffer.concat(parts).toString("utf8");
+      parts = [];
+    } else {
+      text = message.toString("utf8");
+    }
+    const frame = JSON.parse(text) as Record<string, unknown>;
     const problem = fits(contract.connection.homeFrame, frame);
     if (problem) return notFitting("frame", problem);
+    if (frame.t === "parts") {
+      // The published header schema owns the positive length and frame limit.
+      remaining = frame.bytes as number;
+      return;
+    }
     if (frame.t === "welcome") return say(frame);
     if (frame.t === "push") {
       const channel = String(frame.channel);

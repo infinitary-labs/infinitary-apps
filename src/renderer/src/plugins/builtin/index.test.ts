@@ -65,7 +65,7 @@ describe("the built-in plugin", () => {
     expect(recordTemplate('x"><b>').html).toContain('data-task-id="x&quot;&gt;&lt;b&gt;"');
   });
 
-  it("offers General, Appearance, Panels, Keyboard, Projects, Intelligence, Usage, Devices, then the gated Observe tab", () => {
+  it("offers General, Appearance, Panels, Keyboard, Projects, Intelligence, Usage, Secrets, Devices, then the gated Observe tab", () => {
     const host = appLikeHost();
     const remove = registerBuiltinPlugin(host);
     const sections = orderSettingsSections(host.settingsSections.list());
@@ -80,6 +80,7 @@ describe("the built-in plugin", () => {
       ["usage", "Usage", "wide"],
       ["automation", "Automation", "wide"],
       ["integrations", "Integrations", "wide"],
+      ["secrets", "Secrets", "wide"],
       ["devices", "Devices", "wide"],
       ["observe", "Observe", "wide"],
     ]);

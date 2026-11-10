@@ -23,6 +23,7 @@ import { FLEET_WORK } from "../prompts/fleetWork";
 import { PUBLIC_WRITING } from "../prompts/publicWriting";
 import { RIGOR_SAFETY } from "../prompts/validationResources";
 import { deliveryGuide, namingGuide, testingGuide } from "../runbooks/fallback.generated";
+import { CREWMATE_SECRETS_CATALOG_LINE, CREWMATE_SECRETS_LINE } from "../secrets/commandWords";
 import { CLAUDE_SEAT_TOOL_PREFIX } from "../storage/sessionReader";
 
 export { RIGOR_SAFETY } from "../prompts/validationResources";
@@ -246,6 +247,8 @@ export function buildCrewmateSystemPrompt(
   integrations?: boolean,
   load?: boolean,
   runbookText?: string,
+  /** The Secrets command it was granted: requests here, or the catalog alone on another computer. */
+  secrets?: "use" | "list",
 ): string {
   const full = `You are a crewmate: a background worker aboard Infinitary, working for the first mate, the captain's calm desktop first officer.
 Work on exactly one task in your isolated git worktree, your working directory. Changes there are yours to commit; nothing outside it is your concern. The one exception is a task on the personal workspace: there you build in place in the workspace its brief names; the host commits your changes after each turn; your completion is a note showing what you built, then your report. An answer task ships nothing: no commit, push, pull request or merge card; the card is the deliverable and the captain's choice on it closes the task, unless its brief names a step whose report the next step builds on.
@@ -291,6 +294,8 @@ The user sees cards and their threads, never a chat of your own. Follow emit_car
     ...(browser ? [CREWMATE_BROWSER_LINE] : []),
     ...(integrations ? [CREWMATE_INTEGRATIONS_LINE] : []),
     ...(load ? [CREWMATE_LOAD_LINE] : []),
+    ...(secrets === "use" ? [CREWMATE_SECRETS_LINE] : []),
+    ...(secrets === "list" ? [CREWMATE_SECRETS_CATALOG_LINE] : []),
   ].join("\n\n");
 }
 

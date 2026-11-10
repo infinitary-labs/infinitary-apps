@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "batch-gate",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "See when a crewmate is waiting for the batch",
+      "body": "Two cyan arcs now distinguish a pull request in the batch from one still waiting for its own checks. The arcs turn slowly during a batch run and stay still while it waits or pauses. The Tasks panel says batch, with the same mark on your phone.",
+      "picture": {
+        "dark": "batch-gate-dark.webp",
+        "light": "batch-gate-light.webp",
+        "alt": "The Tasks panel shows batch rows with a dot between two arcs, beside a checks row with a dashed ring."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

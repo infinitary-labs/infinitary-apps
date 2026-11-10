@@ -65,7 +65,7 @@ function startMarks(task: PanelTaskRow): StartMarks {
 
 /**
  * The one dim word a row may carry. A crew filing reads "found on X"; work
- * waiting on its checks reads "checks".
+ * waiting on its checks reads "checks", or "batch" for a pending batch status.
  */
 export function wordOf(task: PanelTaskRow): string {
   const marks = startMarks(task);
@@ -81,6 +81,7 @@ export function wordOf(task: PanelTaskRow): string {
   // so does a started crewmate idle on the tasks it waits on (INF-38): the
   // row's margin arrow points at them and its summary names each one.
   const reading = task.status === "active" ? taskStatusOf(task) : null;
+  if (reading?.wait === "batch") return ROW_WORDS.batch;
   if (reading?.wait === "checks") return ROW_WORDS.checks;
   if (reading?.waitsOn) return ROW_WORDS.waiting;
   if (task.status !== "open") return "";

@@ -1,3 +1,4 @@
+import { BATCH_GATE } from "@shared/batchGate";
 // The crew orbit: where every live crewmate sits around the Firstmate, how
 // it got there, and how it leaves. One DOM-free, time-injected model in the
 // style of the character's machine (../machine.ts): the shell feeds it the
@@ -88,8 +89,9 @@ export type CrewStatus = "working" | "idle";
  * The background wait its working is, when it is one: the host's checks
  * watch, or local work it left running (posture reason `job`). Either rests
  * banked inside the wait ring; only the wires' color tells them apart.
+ * A batch replaces the dashes with paired arcs, turning only during a run.
  */
-export type CrewWait = "checks" | "job" | null;
+export type CrewWait = "checks" | "job" | "batch" | "batch-running" | null;
 export type CrewPhase = "spawning" | "orbiting" | "leaving";
 export type LeaveMode = "home" | "away";
 export type PacketDirection = "report" | "steer";
@@ -218,6 +220,9 @@ export type CrewmateFrame = {
    * settled (reduced-motion) frame, which draws the ring whole and still.
    */
   waitArc?: number;
+  /** The batch gate replaces the dashed ring; only an active batch turns. */
+  batch?: true;
+  batchTurn?: number;
   /**
    * 0..1 eased blend of waiting on the captain (INF-1543, the captain's
    * direction A): the Tasks row's Waiting on you ring, round the solid,
@@ -1331,7 +1336,17 @@ export class CrewOrbit {
           ? {
               wait: c.waitBlend,
               ...(c.jobBlend > 0.001 ? { job: c.jobBlend } : {}),
-              ...(settled ? {} : { waitArc: (now / 1000) * WAIT_ARC_RATE + c.seed }),
+              ...(c.wait === "batch" || c.wait === "batch-running"
+                ? {
+                    batch: true as const,
+                    batchTurn:
+                      !settled && c.wait === "batch-running"
+                        ? (now / 1000) * BATCH_GATE.turnRadPerS + c.seed
+                        : 0,
+                  }
+                : settled
+                  ? {}
+                  : { waitArc: (now / 1000) * WAIT_ARC_RATE + c.seed }),
             }
           : {}),
         ...(c.captainBlend > 0.001

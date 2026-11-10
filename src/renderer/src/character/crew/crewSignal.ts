@@ -43,6 +43,8 @@ export function crewStatusOf(activity: TaskView["activity"]): CrewStatus {
  */
 export function crewWaitOf(posture: TaskView["workPosture"]): CrewWait {
   if (posture?.state !== "active") return null;
+  if (posture.reason === "checks" && posture.batch)
+    return posture.batch === "in-batch" ? "batch-running" : "batch";
   return posture.reason === "checks" || posture.reason === "job" ? posture.reason : null;
 }
 

@@ -480,3 +480,19 @@ describe("a backlog row's Start (INF-1663)", () => {
     expect(rowStartOf(task({ kind: "decision", status: "open" }))).toBeNull();
   });
 });
+
+// Approved batch gate: the existing Working group keeps the row and the dim word is batch, never Queued.
+it("names each pending batch state without moving it to the Queued group", () => {
+  for (const batch of ["waiting", "in-batch", "paused"] as const) {
+    const member = {
+      ...task(),
+      workPosture: { state: "active" as const, reason: "checks" as const, batch },
+    };
+    expect(wordOf(member)).toBe("batch");
+    expect(
+      rowsOf(board({ tasks: [member] }), { query: "", projectId: null })
+        .get("working")
+        ?.map((row) => row.task.id),
+    ).toEqual([member.id]);
+  }
+});

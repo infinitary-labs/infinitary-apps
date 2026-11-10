@@ -1,4 +1,6 @@
+import { QUEUE_STATUS } from "@shared/repos";
 import type { AccountHold, WorkPosture } from "@shared/workPosture";
+import { queueKind } from "../queue/shipped/rules.mjs";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskRuntime } from "./crewRuntime";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
@@ -34,6 +36,8 @@ export function deriveWorkPosture(record: TaskRecord, gather: () => PostureFacts
       reason: "access",
       ...(facts.accountHeld && facts.hold ? { hold: facts.hold } : {}),
     };
+  const batch = pendingBatch(record);
+  if (batch) return { state: "active", reason: "checks", batch };
   if (facts.checksWatched) return { state: "active", reason: "checks" };
   if (facts.deliverable || facts.threadAwaitingAuthor)
     return { state: "active", reason: "guidance" };
@@ -47,6 +51,24 @@ export function deriveWorkPosture(record: TaskRecord, gather: () => PostureFacts
   if (!facts.observable && facts.clientJobs === undefined)
     return { state: "unknown", reason: "unobserved" };
   return { state: "idle", reason: "inactive" };
+}
+
+/** Read the existing queue grammar, never a report or a new queue watcher. */
+function pendingBatch(record: TaskRecord): WorkPosture["batch"] {
+  const delivery = record.delivery;
+  const head = delivery?.headSha;
+  if (!head) return undefined;
+  const snapshot = delivery.checks?.headSha === head ? delivery.checks : undefined;
+  const status = snapshot?.items.find((item) => item.name === QUEUE_STATUS);
+  // The merge write is evidence until a later reading answers it. Any current
+  // queue status, whoever wrote it, outranks that initial mark.
+  const marked = delivery.queueMark?.head === head && !delivery.queueMark.answered;
+  if (status ? status.state !== "pending" : !marked) return undefined;
+  const words = delivery.queueStatus?.head === head ? delivery.queueStatus.words : undefined;
+  const state = queueKind("pending", words);
+  return state.kind === "waiting" || state.kind === "in-batch" || state.kind === "paused"
+    ? state.kind
+    : undefined;
 }
 
 /** What a posture reads of the supervisor beyond its options. */

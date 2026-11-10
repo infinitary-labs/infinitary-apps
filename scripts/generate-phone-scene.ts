@@ -4,6 +4,7 @@ import type { ForgeCheckState } from "../src/shared/checkSnapshot.ts";
 import type { TaskFactsInput } from "../src/shared/taskFacts.ts";
 import type { TaskPlanItem } from "../src/shared/taskPlan.ts";
 import type { TaskDetail, TaskView } from "../src/shared/tasks.ts";
+import { BATCH_GATE } from "../src/shared/batchGate.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import type { PanelTaskBoard, PanelTaskRow } from "../src/shared/personal/contracts.ts";
 
@@ -98,6 +99,7 @@ try {
       saturn: SATURN, galaxy: GALAXY, algol: ALGOL, flicker: FLICKER_TUNING, cinch: CINCH, warp: warpData(),
       captain: { ...CAPTAIN_LIGHT, breathMs: CAPTAIN_BREATH_MS },
       wait: { ...WAIT_LIGHT, arcRate: WAIT_ARC_RATE },
+      batch: BATCH_GATE,
     },
     "ios/Infinitary/InfinitaryTests/PhoneSceneTraces.generated.json": REPLY_EMOTES.flatMap((emote) =>
       [0, 0.05, 0.15, 0.25, 0.4, 0.55, 0.7, 0.85, 1].map((progress) => ({ emote, progress, frame: replyFrame(emote, progress) }))),
@@ -201,6 +203,9 @@ try {
       ["backlog on a computer out of reach", { status: "open", activity: null, workPosture: undefined, startPolicy: "on-request",
         executionDeviceId: "dev-mini", place: { name: "Mac mini", where: "on Mac mini", reach: "out-of-reach" } }],
       ["backlog by itself", { status: "open", activity: null, workPosture: undefined, startPolicy: "on-request" }],
+      ["waiting for a batch", { ...read, workPosture: { state: "active", reason: "checks", batch: "waiting" } }],
+      ["running in a batch", { ...read, workPosture: { state: "active", reason: "checks", batch: "in-batch" } }],
+      ["paused in a batch", { ...read, workPosture: { state: "active", reason: "checks", batch: "paused" } }],
       ["waiting for its checks", { ...read, workPosture: { state: "active", reason: "checks" }, delivery: { ...pr, ci: "red", ciStartedAt: now - 50 * min, ciFinishedAt: now - 38 * min,
         checks: checks(["failure", "success", "success"]) } }],
       ["background work", { workPosture: { state: "active", reason: "job" } }],
@@ -297,6 +302,7 @@ try {
       row(2901, "Answer the harbour master's question", { ...started(50), ...idle("captain"), priority: 1, waitingCardId: "card-2901" }),
       row(2902, "Move the phone's list to the desktop's order", { ...started(40), ...running,
         place: { where: "on Mac mini", name: "Mac mini", reach: "out-of-reach" } }),
+      row(2930, "Publish the lighthouse map", { ...started(30), activity: "idle", projectId: "p-har", workPosture: { state: "active", reason: "checks", batch: "waiting" } }),
       row(2903, "Wait for the lighthouse checks", { ...started(30), activity: "idle", priority: 0, projectId: "p-har",
         workPosture: { state: "active", reason: "checks" } }),
       row(2904, "Port the row's word", { ...started(20), ...idle("dependency"), parentId: "t-2902", blockedBy: ["INF-2905"] }),

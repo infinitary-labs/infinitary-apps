@@ -2207,6 +2207,17 @@ export async function startPhoneHome(
           result = await scene.create();
           observations.push({ check: "native-scene-facts", result });
           break;
+        case "POST scene-batch-waiting":
+        case "POST scene-batch-in-batch":
+        case "POST scene-batch-paused":
+          result = await scene.create(
+            command === "scene-batch-in-batch"
+              ? "in-batch"
+              : command === "scene-batch-paused"
+                ? "paused"
+                : "waiting",
+          );
+          break;
         case "POST scene-stage-finished":
           result = await scene.finishParts();
           break;

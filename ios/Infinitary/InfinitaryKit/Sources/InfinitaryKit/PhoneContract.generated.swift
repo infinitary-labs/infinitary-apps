@@ -169,6 +169,7 @@ public enum PhoneTaskRowWords {
     public static let starting = "starting"
     public static let couldNotStart = "could not start"
     public static let checks = "checks"
+    public static let batch = "batch"
     public static let waiting = "waiting"
     public static let blocked = "blocked"
     public static let held = "held"

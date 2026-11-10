@@ -54,6 +54,7 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     public struct WorkPosture: Decodable, Sendable {
         public let state: String
         public let reason: String
+        public let batch: String?
         /// The account's typed cut-off while `access` stands on it; the record reads only its class.
         public let hold: Hold?
         public struct Hold: Decodable, Sendable { public let `class`: String? }

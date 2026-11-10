@@ -235,3 +235,9 @@ Remaining check-backs and holds replace the existing header reason; no generic W
 Suppress a generic reason only when its typed source has another owner in that view; keep failure, interruption and access guidance.
 Unknown end times remain unknown, and a past event says was due rather than resumed.
 The Tasks list and board list rows retain their existing status, words, density and behavior.
+
+## Batch gate
+
+A task whose offered version has a pending batch status keeps Working, with one dim word `batch` after its title and a dot between two accent arcs in place of the checks dashes.
+Its shared status is “Working · Waiting for the batch check”; the mark stays still whether the batch waits, runs or is paused.
+Queued still means unstarted work that starts by itself, never a pull request in a batch.

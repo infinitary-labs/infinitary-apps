@@ -117,3 +117,90 @@ describe("host-derived work posture", () => {
     }
   });
 });
+
+// Approved batch-gate design: a current pending queue status is not an ordinary checks wait.
+// Read the real delivery writer and shipped status grammar at the cheapest posture layer.
+describe("pending batch presentation", () => {
+  const head = "ddbb0143092fc2824c32444daf72dccdd8259e62";
+  it.each([
+    ["Waiting for the batch check", "waiting"],
+    ["In batch run 12", "in-batch"],
+    ["Paused after batch run 12; waiting for a fix", "paused"],
+  ] as const)("keeps %s distinct, whoever wrote the status", (words, batch) => {
+    const fixture = record();
+    try {
+      fixture.tasks.delivery.recordChangeEvidence("t", {
+        headSha: head,
+        checks: {
+          headSha: head,
+          items: [{ name: "infinitary/queue", state: "pending" }],
+          absenceDeclared: false,
+        },
+        queueStatus: { head, words },
+      });
+      const task = fixture.tasks.get("t");
+      if (!task?.delivery) throw new Error("Missing offered change");
+      expect(deriveWorkPosture(task, () => ({ ...base, checksWatched: true }))).toEqual({
+        state: "active",
+        reason: "checks",
+        batch,
+      });
+      expect(deriveWorkPosture(task, () => ({ ...base, turnRunning: true }))).toEqual({
+        state: "active",
+        reason: "turn",
+      });
+      expect(deriveWorkPosture(task, () => ({ ...base, accountHeld: true }))).toEqual({
+        state: "paused",
+        reason: "access",
+      });
+      // The old status must not light a newly offered version.
+      expect(
+        deriveWorkPosture(
+          { ...task, delivery: { ...task.delivery, headSha: `${head.slice(0, -1)}3` } },
+          () => ({ ...base, checksWatched: true }),
+        ),
+      ).toEqual({ state: "active", reason: "checks" });
+    } finally {
+      fixture.db.close();
+    }
+  });
+
+  it("shows the initial merge mark, but a passed or failed reading ends the gate", () => {
+    const fixture = record();
+    try {
+      const marked = {
+        ...fixture.record,
+        delivery: { mode: "queue-pr" as const, headSha: head, queueMark: { head, at: 1 } },
+      };
+      expect(deriveWorkPosture(marked, () => base)).toEqual({
+        state: "active",
+        reason: "checks",
+        batch: "waiting",
+      });
+      for (const state of ["success", "failure"] as const) {
+        expect(
+          deriveWorkPosture(
+            {
+              ...marked,
+              delivery: {
+                ...marked.delivery,
+                checks: {
+                  headSha: head,
+                  items: [{ name: "infinitary/queue", state }],
+                  absenceDeclared: false,
+                },
+              },
+            },
+            () => ({ ...base, checksWatched: true }),
+          ),
+        ).toEqual({ state: "active", reason: "checks" });
+      }
+      expect(deriveWorkPosture({ ...marked, status: "done" }, () => base)).toEqual({
+        state: "idle",
+        reason: "inactive",
+      });
+    } finally {
+      fixture.db.close();
+    }
+  });
+});

@@ -1,3 +1,4 @@
+import { BATCH_GATE } from "@shared/batchGate";
 // The crewmate glyph in orbit: the design skill's Crewmate - a 3D wireframe
 // tetrahedron, the simplest solid, deliberately one dimension below the 4D
 // Firstmate - plus what orbit life adds: it unfolds from a point when it
@@ -293,6 +294,20 @@ function drawWaitRing(
 ): void {
   const k = (f.wait ?? 0) * f.alpha * f.unfold;
   if (k <= 0.01) return;
+  if (f.batch) {
+    const half = (BATCH_GATE.arcDeg * Math.PI) / 360;
+    const turn = f.batchTurn ?? 0;
+    ctx.globalAlpha = 1;
+    ctx.lineCap = "round";
+    ctx.lineWidth = BATCH_GATE.line;
+    ctx.strokeStyle = rgba(colors.accent, BATCH_GATE.alpha * k * colors.boost);
+    for (const center of [0, Math.PI]) {
+      ctx.beginPath();
+      ctx.arc(px, py, f.size * BATCH_GATE.ring, center - half + turn, center + half + turn);
+      ctx.stroke();
+    }
+    return;
+  }
   const r = f.size * WAIT_LIGHT.ring;
   const dash = (TAU * r) / WAIT_LIGHT.dashes;
   ctx.lineCap = "butt";

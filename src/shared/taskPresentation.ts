@@ -27,8 +27,9 @@ export type TaskStatusReading = {
    * job): the same word and reason, drawn as the stage draws it (INF-676,
    * INF-1777) - a dot in a dashed accent ring, never Waiting on you's full
    * one; the dot is the accent for checks and ember for local work.
+   * A pending batch replaces the dashes with two still accent arcs.
    */
-  wait?: "checks" | "job";
+  wait?: "checks" | "job" | "batch";
   /**
    * When the one wait it stands idle on was recorded (INF-38), when known:
    * the tile's second line and the summary's Blocked by name it. Absent for
@@ -213,6 +214,8 @@ export function taskStatusOf(task: TaskStatusInput, now = Date.now()): TaskStatu
   ) {
     if (away) return awayReading("working", null);
     const wait = task.workPosture?.state === "active" ? task.workPosture.reason : undefined;
+    if (wait === "checks" && task.workPosture?.batch)
+      return { ...reading("working", reason), wait: "batch" };
     return wait === "checks" || wait === "job"
       ? { ...reading("working", reason), wait }
       : reading("working", reason);

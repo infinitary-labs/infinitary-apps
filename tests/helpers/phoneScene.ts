@@ -60,7 +60,7 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
         computers: await core.dispatch("inf:computers:presence", []),
       };
     },
-    async create() {
+    async create(batch?: "waiting" | "in-batch" | "paused") {
       cleanup();
       const prefix = `phone-scene-${++generation}`;
       const invitation = await core.dispatch("inf:devices:invite", [{ kind: "mac" }]);
@@ -184,6 +184,24 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
             nextAt: Date.now() + 24 * 60 * 60_000,
           },
         });
+        // Approved batch gate: the same real checked-out version, now carrying a pending batch status.
+        if (batch)
+          seedDelivery(tasks, checks, {
+            checks: {
+              headSha: head,
+              items: [{ name: "infinitary/queue", state: "pending" }],
+              absenceDeclared: false,
+            },
+            queueStatus: {
+              head,
+              words:
+                batch === "in-batch"
+                  ? "In batch run 12"
+                  : batch === "paused"
+                    ? "Paused after batch run 12; waiting for a fix"
+                    : "Waiting for the batch check",
+            },
+          });
         const remote = add("remote", "Read the offshore chart", { deviceId: computer });
         const remotePart = add("remote-part", "Verify the offshore tide", {
           deviceId: computer,

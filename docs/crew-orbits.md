@@ -539,3 +539,12 @@ The near crew canvas publishes the warp it draws as `data-crew-warp`, compare-be
 
 `crew/warp.test.ts` covers each warp's ride: the home crew move, the riders end on their own seats, a remote cluster keeps its pace, and a cut warp lets go; on the phone, `PhoneWarpTests` holds the same promises for its scene.
 
+
+## Batch gate
+
+A pending batch status on the offered version adds `workPosture.batch` to the checks posture, preserving older views' checks fallback.
+The stage replaces the dashed ring with two accent arcs at 0.8 of the glyph, each 110 degrees, 1.2 px wide and 0.6 alpha.
+Waiting and paused batches hold still; only an active batch turns the gate at 0.5 rad/s, and reduced motion holds it still.
+The crewmate stays banked at idle strength and pace with no tick or halo, in its existing seat.
+The Tasks row shows a dot between the paired arcs and the dim word `batch`, keeps the Working group, and its shared status reads “Working · Waiting for the batch check”.
+The phone reads the same optional posture and generated gate tuning for its native scene and Tasks marks.

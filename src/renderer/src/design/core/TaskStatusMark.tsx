@@ -1,3 +1,4 @@
+import { BATCH_GATE } from "@shared/batchGate";
 import { type TaskStatusReading, taskStatusLabel } from "@shared/taskPresentation";
 
 /**
@@ -21,7 +22,7 @@ export function TaskStatusMark({
   // Its computer is out of reach: the same shape, in warn (docs/helper.md).
   const color = reading.outOfReach
     ? "var(--warn)"
-    : wait === "checks"
+    : wait === "checks" || wait === "batch"
       ? "var(--accent)"
       : mark === "working"
         ? "var(--warn)"
@@ -72,6 +73,25 @@ export function TaskStatusMark({
             <>
               <circle cx="8" cy="8" r="5" fill="none" stroke="var(--line-2)" strokeWidth="1.5" />
               <path d="M8 3a5 5 0 1 1-5 5" fill="none" stroke="var(--accent)" strokeWidth="1.5" />
+            </>
+          ) : wait === "batch" ? (
+            <>
+              {[0, Math.PI].map((center) => {
+                const half = (BATCH_GATE.arcDeg * Math.PI) / 360;
+                const point = (angle: number) =>
+                  `${8 + 6 * Math.cos(angle)} ${8 + 6 * Math.sin(angle)}`;
+                return (
+                  <path
+                    key={center}
+                    d={`M${point(center - half)} A6 6 0 0 1 ${point(center + half)}`}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={BATCH_GATE.line}
+                    strokeLinecap="round"
+                  />
+                );
+              })}
+              <circle cx="8" cy="8" r="3" fill="currentColor" />
             </>
           ) : wait ? (
             <>

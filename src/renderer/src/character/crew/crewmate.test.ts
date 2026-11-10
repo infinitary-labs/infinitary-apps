@@ -1,3 +1,4 @@
+import { BATCH_GATE } from "@shared/batchGate";
 import { describe, expect, it } from "vitest";
 import {
   type CrewColors,
@@ -117,6 +118,7 @@ describe("a crewmate waiting on the captain", () => {
 
 /** A 2D context that records what each stroke and fill would paint, and nothing else. */
 function recordingContext() {
+  const arcs: { x: number; y: number; r: number; start: number; end: number }[] = [];
   const strokes: { style: string; alpha: number; dash: number[] }[] = [];
   const dashes: number[][] = [];
   let dash: number[] = [];
@@ -135,7 +137,10 @@ function recordingContext() {
     beginPath: () => {},
     moveTo: (x: number, y: number) => log.push(`M${x},${y}`),
     lineTo: (x: number, y: number) => log.push(`L${x},${y}`),
-    arc: (x: number, y: number, r: number) => log.push(`A${x},${y},${r}`),
+    arc: (x: number, y: number, r: number, start: number, end: number) => {
+      log.push(`A${x},${y},${r}`);
+      arcs.push({ x, y, r, start, end });
+    },
     fill: () => {
       fills.push({ style: String(ctx.fillStyle), alpha: ctx.globalAlpha });
       log.push(`F${String(ctx.fillStyle)}@${ctx.globalAlpha}`);
@@ -150,7 +155,7 @@ function recordingContext() {
       log.push(`S${String(ctx.strokeStyle)}@${ctx.globalAlpha}/${ctx.lineWidth}`);
     },
   };
-  return { ctx: ctx as unknown as CanvasRenderingContext2D, strokes, fills, log, dashes };
+  return { ctx: ctx as unknown as CanvasRenderingContext2D, strokes, fills, log, dashes, arcs };
 }
 
 const settled: CrewmateFrame = {
@@ -323,4 +328,33 @@ describe("a crewmate's solid follows the slot it is served on", () => {
       expect(sum(lit.strokes)).toBeGreaterThan(sum(rest.strokes) * 1.5);
     }
   });
+});
+
+// Approved batch gate: two banked accent arcs replace the checks dashes, without a tick or halo.
+it("draws the approved paired gate arcs at the frame's turn, never the checks ring", () => {
+  for (const turn of [0, 1]) {
+    const rec = recordingContext();
+    drawCrewmate(
+      rec.ctx,
+      { ...settled, wait: 1, batch: true, batchTurn: turn },
+      0,
+      0,
+      colors,
+      5000,
+    );
+    const arcs = rec.arcs.filter((arc) => arc.r === settled.size * BATCH_GATE.ring);
+    expect(arcs).toHaveLength(2);
+    const half = (BATCH_GATE.arcDeg * Math.PI) / 360;
+    for (const [i, arc] of arcs.entries()) {
+      expect(arc.start).toBeCloseTo(i * Math.PI - half + turn, 5);
+      expect(arc.end).toBeCloseTo(i * Math.PI + half + turn, 5);
+    }
+    expect(rec.dashes).toEqual([]);
+    expect(
+      rec.strokes
+        .slice(0, 2)
+        .every((stroke) => channels(stroke.style).join() === colors.accent.join()),
+    ).toBe(true);
+    expect(rec.strokes.some((stroke) => whiteHot(stroke.style))).toBe(false);
+  }
 });

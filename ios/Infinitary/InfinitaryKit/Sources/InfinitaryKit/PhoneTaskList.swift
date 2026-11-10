@@ -157,6 +157,7 @@ public struct PhoneTaskList: Sendable {
         if task.startNotice != nil { return PhoneTaskRowWords.couldNotStart }
         if task.status == "active" {
             let reading = PhoneTaskFacts.status(task)
+            if reading.wait == "batch" { return PhoneTaskRowWords.batch }
             if reading.wait == "checks" { return PhoneTaskRowWords.checks }
             if reading.waitsOn != nil { return PhoneTaskRowWords.waiting }
         }

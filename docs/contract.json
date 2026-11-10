@@ -28164,6 +28164,14 @@
                         "class",
                         "provider"
                       ]
+                    },
+                    "batch": {
+                      "type": "string",
+                      "enum": [
+                        "waiting",
+                        "in-batch",
+                        "paused"
+                      ]
                     }
                   },
                   "required": [
@@ -29846,6 +29854,14 @@
                 "required": [
                   "class",
                   "provider"
+                ]
+              },
+              "batch": {
+                "type": "string",
+                "enum": [
+                  "waiting",
+                  "in-batch",
+                  "paused"
                 ]
               }
             },
@@ -34522,6 +34538,14 @@
                   "required": [
                     "class",
                     "provider"
+                  ]
+                },
+                "batch": {
+                  "type": "string",
+                  "enum": [
+                    "waiting",
+                    "in-batch",
+                    "paused"
                   ]
                 }
               },
@@ -53500,6 +53524,14 @@
                                         "class",
                                         "provider"
                                       ]
+                                    },
+                                    "batch": {
+                                      "type": "string",
+                                      "enum": [
+                                        "waiting",
+                                        "in-batch",
+                                        "paused"
+                                      ]
                                     }
                                   },
                                   "required": [
@@ -57125,6 +57157,14 @@
                       "class",
                       "provider"
                     ]
+                  },
+                  "batch": {
+                    "type": "string",
+                    "enum": [
+                      "waiting",
+                      "in-batch",
+                      "paused"
+                    ]
                   }
                 },
                 "required": [
@@ -59182,6 +59222,14 @@
                         "class",
                         "provider"
                       ]
+                    },
+                    "batch": {
+                      "type": "string",
+                      "enum": [
+                        "waiting",
+                        "in-batch",
+                        "paused"
+                      ]
                     }
                   },
                   "required": [
@@ -60864,6 +60912,14 @@
                       "required": [
                         "class",
                         "provider"
+                      ]
+                    },
+                    "batch": {
+                      "type": "string",
+                      "enum": [
+                        "waiting",
+                        "in-batch",
+                        "paused"
                       ]
                     }
                   },

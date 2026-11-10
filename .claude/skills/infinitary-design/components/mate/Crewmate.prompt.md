@@ -132,3 +132,10 @@ Pointing at the ring opens its summary with the program's parts under its head: 
 When the parent closes done the tree folds into its ring, which falls home into the first mate as the one result home; a dropped parent fades where it stands.
 A parent with a crewmate of its own keeps today's look, and only branches the graph recorded are drawn.
 Reduced motion paints one settled frame.
+
+## Batch gate
+
+A pending batch status on the current offered version replaces the checks dashes with the batch gate: two round-capped `--wire-accent` arcs, each 110 degrees, at 0.8 of the glyph, 1.2 px wide and 0.6 alpha.
+The crewmate keeps its seat, banked strength and idle pace, with no tick or halo.
+Waiting and paused batches hold the gate still, open above and below; an active batch turns it at 0.5 rad/s, and reduced motion holds the gate still.
+The phone draws the same gate from the desktop tuning.

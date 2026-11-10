@@ -39,10 +39,13 @@ export const workPostureSchema = z.object({
   ]),
   /** Present on `access` while a typed cut-off stands on the task's account. */
   hold: accountHoldSchema.optional(),
+  /** Pending batch status on the offered version; older views keep their checks look. */
+  batch: z.enum(["waiting", "in-batch", "paused"]).optional(),
 });
 export type WorkPosture = z.infer<typeof workPostureSchema>;
 
 export function workPostureLabel(posture: WorkPosture): string {
+  if (posture.reason === "checks" && posture.batch) return "Waiting for the batch check";
   const reasons: Record<WorkPosture["reason"], string> = {
     turn: "Working",
     job: "Background work continues",

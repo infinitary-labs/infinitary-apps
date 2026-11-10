@@ -124,3 +124,25 @@ describe("the shared task mark", () => {
     expect(dropped).toContain('d="M3 3 13 13 M13 3 3 13"');
   });
 });
+
+// Approved batch gate: row, summary and record keep Working, name the batch and use paired arcs.
+it("shows a pending batch as accent paired arcs instead of checks dashes", () => {
+  const reading = taskStatusOf({
+    ...base,
+    status: "active",
+    activity: "idle",
+    workPosture: { state: "active", reason: "checks", batch: "in-batch" },
+  });
+  expect(reading).toEqual({
+    mark: "working",
+    word: "Working",
+    reason: "Waiting for the batch check",
+    wait: "batch",
+  });
+  const rendered = renderToStaticMarkup(<TaskStatusMark reading={reading} />);
+  expect(rendered).toContain('data-task-wait="batch"');
+  expect(rendered).toContain('aria-label="Working · Waiting for the batch check"');
+  expect(rendered).toContain("color:var(--accent)");
+  expect(rendered.match(/<path/g)).toHaveLength(2);
+  expect(rendered).not.toContain("stroke-dasharray");
+});

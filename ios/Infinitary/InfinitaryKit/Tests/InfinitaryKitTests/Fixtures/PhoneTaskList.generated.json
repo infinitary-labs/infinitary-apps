@@ -95,6 +95,48 @@
             }
           },
           {
+            "id": "t-2930",
+            "key": "INF-2930",
+            "projectId": "p-har",
+            "parentId": null,
+            "kind": "work",
+            "title": "Publish the lighthouse map",
+            "goal": "Publish the lighthouse map",
+            "priority": 2,
+            "status": "active",
+            "activity": "idle",
+            "closedReason": null,
+            "startPolicy": "when-ready",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": "crewmate",
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793980200000,
+            "updatedAt": 1793984340000,
+            "startedAt": 1793982600000,
+            "closedAt": null,
+            "workPosture": {
+              "state": "active",
+              "reason": "checks",
+              "batch": "waiting"
+            }
+          },
+          {
             "id": "t-2903",
             "key": "INF-2903",
             "projectId": "p-har",
@@ -890,7 +932,7 @@
         {
           "section": "working",
           "folds": false,
-          "count": 6,
+          "count": 7,
           "rows": [
             {
               "key": "INF-2903",
@@ -975,6 +1017,20 @@
               },
               "mark": "working",
               "reason": ""
+            },
+            {
+              "key": "INF-2930",
+              "depth": 0,
+              "word": "batch",
+              "trailing": {
+                "name": "Harbour",
+                "place": "",
+                "outOfReach": false,
+                "connecting": false,
+                "reach": "out of reach"
+              },
+              "mark": "working",
+              "reason": "Waiting for the batch check"
             }
           ]
         },
@@ -1250,6 +1306,48 @@
               "where": "on Mac mini",
               "name": "Mac mini",
               "reach": "out-of-reach"
+            }
+          },
+          {
+            "id": "t-2930",
+            "key": "INF-2930",
+            "projectId": "p-har",
+            "parentId": null,
+            "kind": "work",
+            "title": "Publish the lighthouse map",
+            "goal": "Publish the lighthouse map",
+            "priority": 2,
+            "status": "active",
+            "activity": "idle",
+            "closedReason": null,
+            "startPolicy": "when-ready",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": "crewmate",
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793980200000,
+            "updatedAt": 1793984340000,
+            "startedAt": 1793982600000,
+            "closedAt": null,
+            "workPosture": {
+              "state": "active",
+              "reason": "checks",
+              "batch": "waiting"
             }
           },
           {
@@ -2044,7 +2142,7 @@
         {
           "section": "working",
           "folds": false,
-          "count": 6,
+          "count": 7,
           "rows": [
             {
               "key": "INF-2903",
@@ -2129,6 +2227,20 @@
               },
               "mark": "working",
               "reason": ""
+            },
+            {
+              "key": "INF-2930",
+              "depth": 0,
+              "word": "batch",
+              "trailing": {
+                "name": "",
+                "place": "",
+                "outOfReach": false,
+                "connecting": false,
+                "reach": "out of reach"
+              },
+              "mark": "working",
+              "reason": "Waiting for the batch check"
             }
           ]
         },
@@ -2404,6 +2516,48 @@
               "where": "on Mac mini",
               "name": "Mac mini",
               "reach": "out-of-reach"
+            }
+          },
+          {
+            "id": "t-2930",
+            "key": "INF-2930",
+            "projectId": "p-har",
+            "parentId": null,
+            "kind": "work",
+            "title": "Publish the lighthouse map",
+            "goal": "Publish the lighthouse map",
+            "priority": 2,
+            "status": "active",
+            "activity": "idle",
+            "closedReason": null,
+            "startPolicy": "when-ready",
+            "flags": {
+              "blocked": false,
+              "held": false,
+              "needsYou": false,
+              "ready": false
+            },
+            "blockedBy": [],
+            "blocks": [],
+            "children": {
+              "total": 0,
+              "closed": 0
+            },
+            "assignee": "crewmate",
+            "model": null,
+            "tier": null,
+            "repo": null,
+            "delivery": null,
+            "outcomeSummary": null,
+            "waitingCardId": null,
+            "createdAt": 1793980200000,
+            "updatedAt": 1793984340000,
+            "startedAt": 1793982600000,
+            "closedAt": null,
+            "workPosture": {
+              "state": "active",
+              "reason": "checks",
+              "batch": "waiting"
             }
           },
           {

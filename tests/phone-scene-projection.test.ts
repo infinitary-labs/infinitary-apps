@@ -54,3 +54,26 @@ test("a disposable home publishes the scene facts without device-management data
     vi.unstubAllEnvs();
   }
 });
+
+// Approved batch gate: the native painter receives current batch facts through the existing public board.
+// Disposable TLS home, real delivery/task owners, no provider or external forge. The board is the completion signal.
+test("the phone scene receives each pending batch posture and the shared status words", async () => {
+  vi.stubEnv("PI_OFFLINE", "1");
+  for (const name of ["INFINITARY_CONNECTION_LOOPBACK_PORT", "INFINITARY_DNS_SD"])
+    vi.stubEnv(name, process.env[name]);
+  const home = await startPhoneHome(scratchDir("infinitary-phone-batch-"));
+  try {
+    for (const batch of ["waiting", "in-batch", "paused"]) {
+      const response = await fetch(`${home.url}/scene-batch-${batch}`, { method: "POST" });
+      const scene = await response.json();
+      expect(response.ok, JSON.stringify(scene)).toBe(true);
+      expect(
+        scene.board.tasks.find((task: { id: string }) => task.id === scene.checks)?.workPosture,
+      ).toEqual({ state: "active", reason: "checks", batch });
+      expect(scene.summaries[scene.checks].status).toBe("Working · Waiting for the batch check");
+    }
+  } finally {
+    await home.close();
+    vi.unstubAllEnvs();
+  }
+});

@@ -13,6 +13,7 @@ export const ROW_WORDS = {
   starting: "starting",
   couldNotStart: "could not start",
   checks: "checks",
+  batch: "batch",
   waiting: "waiting",
   blocked: "blocked",
   held: "held",

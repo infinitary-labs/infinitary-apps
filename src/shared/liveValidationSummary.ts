@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   acceptedValidation,
+  demonstrated,
   gapPermission,
   LIVE_VALIDATION_WORDS,
   type LiveValidation,
@@ -8,15 +9,31 @@ import {
   validationEvidenceSchema,
 } from "./liveValidation";
 
+/** Result words shared by the record, public table and their keyboard journeys. */
+export const LIVE_VALIDATION_RESULT_WORDS = {
+  anotherVersion: "Another version",
+  exception: "Accepted without live proof",
+  passedLive: "Passed live",
+  supporting: "Supporting evidence",
+  failed: "Failed",
+  notRun: "Not run",
+} as const;
+
 export const liveValidationSummarySchema = z.object({
   label: z.string(),
+  line: z.string().optional(),
   reason: z.string(),
   head: z.string().optional(),
   revision: z.number(),
+  /** Optional for readers of records served by an older home. */
+  live: z.number().int().nonnegative().optional(),
+  total: z.number().int().nonnegative().optional(),
+  verdict: z.string().optional(),
   rows: z.array(
     z.object({
       id: z.string(),
       action: z.string(),
+      supplementary: z.boolean().optional(),
       result: z.string(),
       reason: z.string(),
       evidence: z.array(validationEvidenceSchema),
@@ -27,23 +44,20 @@ export type LiveValidationSummary = z.infer<typeof liveValidationSummarySchema>;
 export function liveValidationSummary(
   state: LiveValidation | undefined,
   head: string | undefined,
-  published: boolean,
+  _published: boolean,
 ): LiveValidationSummary | undefined {
   if (!state) return undefined;
   const run = latestValidationRun(state);
   const acceptance = acceptedValidation(state, head);
-  const early =
-    published &&
-    state.permissions.some(
-      (item) =>
-        item.request.kind === "effect" &&
-        item.request.prerequisitePublication &&
-        item.request.head === head &&
-        ["started", "succeeded", "unknown"].includes(item.state),
-    );
-  return {
-    label: acceptance.label ?? (early ? LIVE_VALIDATION_WORDS.awaiting : ""),
+  const summary: LiveValidationSummary = {
+    label: acceptance.label ?? LIVE_VALIDATION_WORDS.awaiting,
     reason: acceptance.reason,
+    live:
+      run?.scenarioRevision === state.scenarioRevision
+        ? run.observations.filter(demonstrated).length
+        : 0,
+    total: state.scenarios.length,
+    ...(acceptance.ready && run ? { verdict: run.verdict } : {}),
     ...(run ? { head: run.head } : {}),
     revision: run?.revision ?? 0,
     rows: state.scenarios.map((scenario) => {
@@ -55,18 +69,19 @@ export function liveValidationSummary(
       return {
         id: scenario.id,
         action: scenario.action,
+        supplementary: scenario.importance === "supplementary",
         result:
           observation && run?.head !== head && !acceptance.ready
-            ? "Another version"
+            ? LIVE_VALIDATION_RESULT_WORDS.anotherVersion
             : exception
-              ? "Your exception"
+              ? LIVE_VALIDATION_RESULT_WORDS.exception
               : observation?.result === "pass"
                 ? observation.live && !observation.unproven.length
-                  ? "Passed live"
-                  : "Supporting evidence"
+                  ? LIVE_VALIDATION_RESULT_WORDS.passedLive
+                  : LIVE_VALIDATION_RESULT_WORDS.supporting
                 : observation?.result === "fail"
-                  ? "Failed"
-                  : "Not exercised",
+                  ? LIVE_VALIDATION_RESULT_WORDS.failed
+                  : LIVE_VALIDATION_RESULT_WORDS.notRun,
         reason: [
           observation?.actual,
           observation?.reason,
@@ -79,4 +94,17 @@ export function liveValidationSummary(
       };
     }),
   };
+  if (acceptance.label === LIVE_VALIDATION_WORDS.noSurface) summary.rows = [];
+  summary.line = liveValidationLine(summary);
+  return summary;
+}
+
+/** Shared line for the record, saved story and public description. */
+export function liveValidationLine(summary: LiveValidationSummary): string {
+  if (
+    summary.label === LIVE_VALIDATION_WORDS.noSurface ||
+    summary.label === LIVE_VALIDATION_WORDS.awaiting
+  )
+    return `${summary.label}. ${summary.reason}`;
+  return `${summary.label}. ${summary.live ?? 0} of ${summary.total ?? summary.rows.length} scenarios driven live in the product.`;
 }

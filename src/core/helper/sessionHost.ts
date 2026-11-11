@@ -37,6 +37,7 @@ import {
   workRequests,
 } from "@shared/work";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
+import { contractChange, listsChange } from "../connection/contractChanges";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { filesAskedOfHome, type TaskFiles } from "../files/taskFiles";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
@@ -1516,6 +1517,13 @@ export class SessionHost {
           "inf:work:prepare-change",
           async (signal) => {
             try {
+              if (
+                story.validationRows &&
+                !listsChange(this.options.homeChanges?.(), contractChange("live-validation-table"))
+              )
+                throw new Error(
+                  `Live validation rows need a newer Infinitary on ${HOME.the}; update it before preparing this story. Nothing was sent.`,
+                );
               await sendPictures(story.pictures, signal);
               return await text("inf:work:prepare-change", { input: story }, signal);
             } finally {

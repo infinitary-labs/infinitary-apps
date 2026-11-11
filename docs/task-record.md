@@ -753,8 +753,8 @@ A task-less first mate question keeps that button beside explicit Decline, which
 
 A change's `delivery.liveValidation` retains scenario revisions, version-bound observations and digested selected proof, independent reviewer judgments, and separate captain permissions.
 `TaskService.delivery.recordLiveValidation` and `decideLiveValidation` are the only writers; no prose parser grants proof or consent.
-The merge merge card presents the live-validation result, evidence and limitations beside the merge decision; the captain need not open the task record to understand what was demonstrated.
-The task-detail read keeps the Live validation summary and keyboard-openable evidence rows as supporting history under the Info tab's More row in the existing record frame.
+The merge card presents the live-validation result, evidence and limitations beside the merge decision; the captain need not open the task record to understand what was demonstrated.
+The task-detail read keeps the shared Live validation verdict and counts with an open Scenario, Result and Evidence table and keyboard-openable retained files as supporting history under the Info tab's More row in the existing record frame.
 More starts closed, so validation does not displace the record's overview and ordinary rows.
 Delivery and timeline rows contain evidence metadata and compact references, never transcript bytes or a repeated copy of the complete validation state.
 The detail reader loads only bounded retained text for presentation, never media bytes or repeated proof hashes.

@@ -11,6 +11,7 @@ import {
   presentationMarkdownText as md,
   presentationRegionMarkers,
 } from "./presentationText";
+import { validationCard, validationMarkdown } from "./presentationValidation";
 import { githubAttachmentUrl } from "./providers/github/attachments";
 import { gitlabAttachmentUrl } from "./providers/gitlab/attachments";
 
@@ -111,6 +112,7 @@ export function tieredPresentationMarkdown(
     views,
     story.noPicture ? md(story.noPicture) : "",
     `## ${TIERED_STORY_HEADINGS[3]}`,
+    validationMarkdown(story.liveValidation),
     story.checked?.map((item) => `- [x] ${md(item.check)}: ${md(item.result)}`).join("\n"),
     fold("How it was checked", story.verification.map(md).join("\n\n")),
     "### Risk",
@@ -199,6 +201,7 @@ export function tieredPresentationCardBody(story: ChangePresentation): string {
     views,
     story.noPicture ? `<p data-inf-no-picture>${html(story.noPicture)}</p>` : "",
     `<h3>${TIERED_STORY_HEADINGS[3]}</h3>`,
+    validationCard(story.liveValidation),
     `<ul style="list-style:none;padding-left:0">${story.checked?.map((item) => `<li><span aria-hidden="true" style="color:var(--ok)">✓</span> ${html(item.check)}: ${html(item.result)}</li>`).join("") ?? ""}</ul>`,
     fold("How it was checked", story.verification),
     fold("Not done", story.unfinished),

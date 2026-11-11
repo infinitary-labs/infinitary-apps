@@ -1026,6 +1026,13 @@ New stories use version 2: the same conventional title on the card and pull requ
 Aim for 150 open words on the card and 250 on the pull request.
 The zod schema carries the captain’s selected item counts and refuses past them; the author owns sentence length and word targets, with no invented per-sentence character refusal.
 The `story` parameter's own description (`PREPARE_CHANGE_STORY_DESCRIPTION`, `src/core/pi/forgeTools.ts`) says the item counts, that `base`, `head` and every `captureHead` are full commit ids, that a later revision keeps the first base, which version Before and After media name, when `layout` adjacent applies, and who reads the story and what `publishable` declares, because no served schema carries those relationships or counts: the served `story` leaves its lengths and item counts to the parse (`zodParameter`, `docs/orchestrator-contract.md`).
+When a live validation record exists, the author supplies `validationRows`: one public scenario and evidence account per scenario id, exactly once.
+Preparation fills the recorded order, results and live counts from `liveValidationSummary`, never from those public words, and refuses missing, repeated or unknown scenario ids.
+The open Live validation table starts Checked on both the merge card and the Markdown description, with Scenario, Result and Evidence columns; live is part of Result.
+Checked facts cover only checks and review outside those scenarios.
+A merge card's Evidence cell opens the existing retained pictures and transcripts, but the public description contains only the author's evidence sentence and uploads none of those files.
+Awaiting live validation and No running surface show their line without a table; no-surface includes the reviewer's reason.
+A story prepared before acceptance must be prepared again before its merge card can show, while older-format stories and changes with no record keep their existing presentation.
 `verification` keeps commands, file names and counts behind How it was checked on both surfaces; nonempty unfinished work folds under Not done.
 The card keeps its risk radar; the pull request gives one line naming dimensions above low and folds the seven-row assessment.
 Empty required-action and unfinished sections, a frozen checks status and story/version stamps are absent.
@@ -1052,6 +1059,7 @@ A merge the override passes squashes under the description's own words around th
 
 A passed independent review with live proof it accepted counts as no-mistakes (INF-1793, the captain: "it's my intended design to have infinitary's careful rigor be counted as no-mistakes in those PR enforcements"), whatever the care's name (INF-1876).
 A github.com story whose records cover its version ends its own region with no-mistakes' signature line and v1 pipeline attestation (`src/core/forge/pipelineAttestation.ts`), the markers byte for byte as no-mistakes writes them, so its `require-no-mistakes` check passes the pull request.
+For a story prepared with accepted live validation, the stamp also carries `live_validation {verdict, live, total}`: live counts only passed live observations without unproven claims, and total includes supplementary scenarios.
 The attestation names the story's version, which is the pull request's commit, and marks review, test and document completed, with a `producer` field the check ignores, then one line naming Infinitary's independent review and the live validation it accepted.
 The host writes it only when the records cover that version, read when the region is written (`attestsAt`, `src/core/orchestrator/changeContext.ts`): a review that passed there gives review and document, since the reviewer's brief also judges the documents, and live validation a review there accepted gives test, including an earlier run that review confirmed its version's difference does not reach (INF-2672); Careful's guidance is what asks for both, and the host holds nothing on them.
 A captain's override completes neither step, and a story with no such records, GitLab and older descriptions carry neither line.

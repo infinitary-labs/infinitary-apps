@@ -12,6 +12,8 @@ import {
   readyPresentation,
   type StoryAround,
 } from "@shared/changePresentation";
+import type { ValidationEvidence } from "@shared/liveValidation";
+import { liveValidationSummary } from "@shared/liveValidationSummary";
 import {
   hostedPresentation,
   type LocalPresentationDestination,
@@ -20,6 +22,7 @@ import {
   presentationFormat,
   samePresentationDestination,
 } from "@shared/presentationDestination";
+import { presentationValidation } from "@shared/presentationValidation";
 import type { NamingRule } from "../../shared/runbooks";
 import {
   AttachmentUploadError,
@@ -104,6 +107,7 @@ export class ChangePresentations {
   constructor(
     private readonly options: {
       namingRule?: () => NamingRule | null;
+      validationEvidence?: (taskId: string, evidence: ValidationEvidence[]) => ValidationEvidence[];
       tasks: PresentationLedger;
       mediaDir: (taskId: string) => string;
       /** Read actual committed code, including after asynchronous uploads. */
@@ -153,6 +157,15 @@ export class ChangePresentations {
             taskId,
             destination,
             revision,
+            ...(staged.version === 2
+              ? {
+                  liveValidation: presentationValidation(
+                    this.options.tasks.get(taskId)?.delivery?.liveValidation,
+                    staged.head,
+                    staged.validationRows,
+                  ),
+                }
+              : {}),
           });
           const steps =
             story.afterMerge &&
@@ -334,6 +347,7 @@ export class ChangePresentations {
     // INF-497: changing only the words around the published story keeps its region byte for byte.
     const kept = around && ledger.published?.revision === revision ? ledger.published : undefined;
     await this.validateCurrent(story, forge, branch, remoteOnly);
+    if (story.liveValidation?.verdict) this.currentValidation(taskId, story);
     // A person's rename stops the story before any file is sent, not only before the write.
     this.renameFor(story, ledger, existing, forge, title);
     const previousRegion =
@@ -345,7 +359,7 @@ export class ChangePresentations {
       destination.host === "github.com" &&
       rendered.endsWith(regionEnd) &&
       opening?.attests?.(story.head)
-        ? `${rendered.slice(0, -regionEnd.length)}${pipelineAttestationSection(story.head)}\n\n${regionEnd}`
+        ? `${rendered.slice(0, -regionEnd.length)}${pipelineAttestationSection(story.head, story.liveValidation)}\n\n${regionEnd}`
         : rendered;
     const bodyFor = (region: string, current: ForgeChange | null): string => {
       if (around && !current)
@@ -360,7 +374,7 @@ export class ChangePresentations {
         ? replaceAroundPresentation(replaced, around, taskId, forge.kind === "gitlab")
         : replaced;
       // The check reads the first attestation it finds; words around the region carry none live.
-      const outside = region.includes(pipelineAttestationSection(story.head))
+      const outside = region.includes(pipelineAttestationSection(story.head, story.liveValidation))
         ? presentationAround(changed, taskId)
         : undefined;
       const body = outside
@@ -588,6 +602,9 @@ export class ChangePresentations {
         throw new Error(
           `${pushFirst(committed, head)} Then show the merge card again with presentation ${revision}.`,
         );
+      const currentValidation = story.liveValidation
+        ? this.currentValidation(taskId, story)
+        : undefined;
       await this.checkRetained(story);
       // A displayed card owns independent copies. Story pruning never sees
       // these minted names, even after the card closes or the app restarts.
@@ -613,6 +630,23 @@ export class ChangePresentations {
         };
         const cardStory: ChangePresentation = {
           ...story,
+          ...(story.liveValidation
+            ? {
+                liveValidation: {
+                  ...story.liveValidation,
+                  rows: story.liveValidation.rows.map((row) => ({
+                    ...row,
+                    evidence:
+                      this.options.validationEvidence?.(
+                        taskId,
+                        currentValidation?.rows.find((item) => item.id === row.id)?.evidence ?? [],
+                      ) ??
+                      currentValidation?.rows.find((item) => item.id === row.id)?.evidence ??
+                      [],
+                  })),
+                },
+              }
+            : {}),
           assets: copies,
           views: story.views.map((view) => {
             const media = (entries: typeof view.before) =>
@@ -644,6 +678,23 @@ export class ChangePresentations {
         throw error;
       }
     });
+  }
+
+  private currentValidation(taskId: string, story: ChangePresentation) {
+    const current = liveValidationSummary(
+      this.options.tasks.get(taskId)?.delivery?.liveValidation,
+      story.head,
+      false,
+    );
+    if (
+      !current?.verdict ||
+      current.revision !== story.liveValidation?.revision ||
+      current.label !== story.liveValidation.label
+    )
+      throw new Error(
+        "Prepare the story again after live validation is accepted for this version.",
+      );
+    return current;
   }
 
   /** Local completion validates the committed code and retained files without reaching a forge. */

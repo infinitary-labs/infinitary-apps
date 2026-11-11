@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { afterMergeStepsSchema } from "./afterMerge";
 import { cardPictureSchema, riskDeclarationSchema } from "./cards";
+import { liveValidationSummarySchema } from "./liveValidationSummary";
 import {
   type HostedPresentationDestination,
   hostedPresentation,
@@ -44,6 +45,12 @@ export const presentationCheckSchema = z.strictObject({
   check: words,
   result: words,
 });
+export const presentationValidationRowSchema = z.strictObject({
+  id: z.string(),
+  scenario: words,
+  evidence: words,
+});
+const validationRows = z.array(presentationValidationRowSchema);
 const checked = z.array(presentationCheckSchema).min(1).max(6);
 
 /**
@@ -64,6 +71,8 @@ export const changePresentationDraftSchema = z
     views: z.array(presentationViewSchema).max(30),
     noPicture: words.optional(),
     checked,
+    /** Public words only; the host fills results from the validation record. */
+    validationRows: validationRows.optional(),
     verification: z.array(words).max(20),
     risk: riskDeclarationSchema,
     requiredActions: requiredActionsSchema,
@@ -123,6 +132,8 @@ const savedPresentationShape = z.strictObject({
   ),
   noPicture: words.optional(),
   checked: checked.optional(),
+  validationRows: validationRows.optional(),
+  liveValidation: liveValidationSummarySchema.optional(),
   verification: z.array(words).max(20),
   risk: riskDeclarationSchema,
   requiredActions: requiredActionsSchema,

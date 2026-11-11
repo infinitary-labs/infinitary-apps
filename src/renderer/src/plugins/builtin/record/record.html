@@ -27,6 +27,11 @@
   a { color: var(--accent); text-decoration: none; overflow-wrap: anywhere; }
   a:hover { text-decoration: underline; text-underline-offset: 2px; }
   a[href]:focus-visible { outline: 1px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-s); }
+  [data-validation-rows] table { width: 100%; table-layout: fixed; }
+  [data-validation-rows] th, [data-validation-rows] td { vertical-align: top; overflow-wrap: anywhere; }
+  [data-validation-rows] th:nth-child(1) { width: 32%; }
+  [data-validation-rows] th:nth-child(2) { width: 20%; }
+  [data-validation-rows] .words { margin: 0; }
   [data-validation-rows] pre { white-space: pre-wrap; overflow-wrap: anywhere; font: var(--text-sm) var(--font-mono); }
   [data-validation-rows] figure { margin: var(--space-2) 0; }
   [data-validation-rows] figcaption { color: var(--fg-3); font-size: var(--text-sm); }

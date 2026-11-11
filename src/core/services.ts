@@ -770,6 +770,8 @@ export async function createServices(
       placed.copies.writeEvidenceFile(taskId, deviceId, name, file),
   });
   const presentations: ChangePresentations = new ChangePresentations({
+    validationEvidence: (taskId, evidence) =>
+      readKeptValidationEvidence(evidence, crewmateCardPicturesDir(paths, taskId), taskId),
     namingRule: () => runbooks.naming(),
     tasks,
     mediaDir: (taskId) => crewmateCardPicturesDir(paths, taskId),

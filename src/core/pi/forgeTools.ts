@@ -112,7 +112,7 @@ export const AFTER_MERGE_STORY_RULE =
   "Optional afterMerge: work started once this merges, not repeated in prose; task: an unstarted task's key; doer firstmate for a change in the app itself (Automation, settings, directions): it files no task.";
 
 export const PREPARE_CHANGE_STORY_DESCRIPTION = [
-  "why holds 1 or 2 short sentences, whatChanged 1 to 5 short bullets, before and after one sentence each, checked 1 to 6 observed {check, result} facts.",
+  "why holds 1 or 2 short sentences, whatChanged 1 to 5 short bullets, before and after one sentence each, checked 1 to 6 observed {check, result} facts outside recorded scenarios. With a live validation record, give validationRows [{id, scenario, evidence}], exactly one public row per scenario; the app supplies results and counts. Kept files open on the merge card only, never upload to the pull request.",
   "base, head and every captureHead are full 40-character commit ids from git rev-parse, never short; a later revision keeps the first base and each kept view's Before media.",
   "Before media name base, After media head; media taken on another version name it with applicability, kept as data, not displayed; kind new has no Before.",
   "layout adjacent needs exactly two media in each shown state.",

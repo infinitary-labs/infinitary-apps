@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
+import { LIVE_VALIDATION_RESULT_WORDS } from "../../src/shared/liveValidationSummary";
 import type { TaskView } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
@@ -98,6 +99,7 @@ test("a version's gaps share one checklist card, and the keys accept exactly the
   await expectNoCard(page, GAP_CHECKLIST_TITLE);
 
   // The record accepts exactly those two gaps; the other two stay held.
+  // The accepted validation-table plan renames the results, not this consent behavior.
   const taskId = (await page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
     (item: TaskView) => item.title.includes(GAP_CHECKLIST_MARKER),
   )?.id;
@@ -111,7 +113,9 @@ test("a version's gaps share one checklist card, and the keys accept exactly the
     .toEqual(
       GAP_CHECKS.map(([id]) => [
         id,
-        ticked.some(([picked]) => picked === id) ? "Your exception" : "Not exercised",
+        ticked.some(([picked]) => picked === id)
+          ? LIVE_VALIDATION_RESULT_WORDS.exception
+          : LIVE_VALIDATION_RESULT_WORDS.notRun,
       ]),
     );
 });

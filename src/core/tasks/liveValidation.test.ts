@@ -6,7 +6,12 @@ import {
   type ValidationScenario,
 } from "@shared/liveValidation";
 import { liveValidationSummary } from "@shared/liveValidationSummary";
+import { presentationValidation } from "@shared/presentationValidation";
 import { describe, expect, it } from "vitest";
+import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
+import { pipelineAttestationSection } from "../forge/pipelineAttestation";
+import { presentationMarkdownText } from "../forge/presentationText";
+import { validationCard, validationMarkdown } from "../forge/presentationValidation";
 import { decideValidation, recordValidation, validationCodeClearance } from "./liveValidation";
 
 // INF-125's accepted plan: proof is exact-version, while a captain's exception covers the unchanged gap.
@@ -854,5 +859,120 @@ describe("INF-1824: one approval per check and one card for a version's gaps", (
       ask(state, gapRequest(state, twoComputers.id, "gap-two-computers-r4", later), later),
     ).toThrow("stays accepted");
     expect(state.permissions.filter((item) => item.request.kind === "gap")).toHaveLength(1);
+  });
+});
+
+// Accepted live-validation view plan: public words never supply result, count or file identity.
+describe("public validation table", () => {
+  const publicRows = [
+    {
+      id: scenario.id,
+      scenario: "Close a card by keyboard",
+      evidence: "The card closed and focus returned to the message box.",
+    },
+  ];
+  it("uses recorded results and counts with public words in both renderings", () => {
+    const state = review(run(plan()));
+    const summary = presentationValidation(state, head, publicRows)!;
+    expect(summary).toMatchObject({
+      live: 1,
+      total: 1,
+      verdict: "go",
+      rows: [
+        {
+          id: scenario.id,
+          action: publicRows[0]?.scenario,
+          result: "Passed live",
+          reason: publicRows[0]?.evidence,
+          evidence: [],
+        },
+      ],
+    });
+    const markdown = validationMarkdown(summary);
+    const recorded = liveValidationSummary(state, head, false)?.rows[0];
+    if (!recorded) throw new Error("The recorded scenario is missing.");
+    const card = validationCard({
+      ...summary,
+      rows: summary.rows.map((row) => ({
+        ...row,
+        evidence: recorded.evidence,
+      })),
+    });
+    expect(markdown).toContain("| Scenario | Result | Evidence |");
+    expect(markdown).toContain("1 of 1 scenarios driven live in the product");
+    expect(markdown).toContain(presentationMarkdownText(publicRows[0]!.evidence));
+    expect(markdown).not.toContain("builder-proof.mp4");
+    expect(card).toContain("Passed live");
+    expect(card).toContain("The keyboard action and focus recovery");
+    expect(pipelineAttestationSection(head, summary)).toContain(
+      '"live_validation":{"verdict":"go","live":1,"total":1}',
+    );
+  });
+  it.each([
+    { rows: [] },
+    { rows: [publicRows[0]!, publicRows[0]!] },
+    { rows: [{ ...publicRows[0]!, id: "unknown" }] },
+  ])("refuses missing, repeated or unknown public scenario ids", ({ rows }) => {
+    expect(() => presentationValidation(review(run(plan())), head, rows)).toThrow(
+      "one public validation row",
+    );
+  });
+  it("keeps awaiting proof out of the table and stamp", () => {
+    const summary = presentationValidation(run(plan()), head, publicRows)!;
+    expect(summary.label).toBe("Awaiting live validation");
+    expect(summary.rows).toEqual([]);
+    expect(validationMarkdown(summary)).not.toContain("| Scenario |");
+    expect(pipelineAttestationSection(head, summary)).not.toContain('"live_validation"');
+  });
+  it("does not turn an accepted gap into a pass", () => {
+    const gap = askGap(run(plan(), head, true));
+    const granted = approve(gap, "no-device");
+    const summary = presentationValidation(review(granted), head, publicRows)!;
+    expect(summary).toMatchObject({
+      live: 0,
+      total: 1,
+      rows: [{ result: "Accepted without live proof" }],
+    });
+    expect(summary.rows[0]?.reason).toMatch(/^Accepted without live proof/);
+    expect(validationMarkdown(summary)).not.toContain("✅");
+  });
+  it("keeps no-surface and no-record changes distinct", () => {
+    const state = noSurfaceProof(head);
+    const summary = presentationValidation(state, head, [])!;
+    expect(summary.label).toBe("No running surface");
+    expect(validationMarkdown(summary)).toContain(
+      presentationMarkdownText(state.reviews[0]!.reason),
+    );
+    expect(validationCard(summary)).not.toContain("<table");
+    expect(presentationValidation(undefined, head, undefined)).toBeUndefined();
+    expect(validationMarkdown(undefined)).toBe("");
+  });
+  it("counts supplementary scenarios without treating their supporting proof as live", () => {
+    const state = review(run(plan()));
+    const supplementary = { ...scenario, id: "device-input", importance: "supplementary" as const };
+    state.scenarios.push(supplementary);
+    state.runs[0]!.observations.push({
+      scenario: supplementary.id,
+      result: "untested",
+      live: false,
+      actual: "No device connected.",
+      evidence: [],
+      standIns: [],
+      unproven: ["Device input"],
+      attempted: ["Used the isolated window."],
+      reason: "The device is unavailable.",
+    });
+    const rows = [
+      ...publicRows,
+      {
+        id: supplementary.id,
+        scenario: "Try device input",
+        evidence: "No device connected; only the window ran.",
+      },
+    ];
+    const summary = presentationValidation(state, head, rows)!;
+    expect(summary).toMatchObject({ live: 1, total: 2 });
+    expect(summary.rows[1]).toMatchObject({ supplementary: true, result: "Not run" });
+    expect(validationMarkdown(summary)).toContain("(supplementary)");
   });
 });

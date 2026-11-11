@@ -1,3 +1,5 @@
+import type { LiveValidationSummary } from "@shared/liveValidationSummary";
+
 /**
  * no-mistakes' signature line and v1 pipeline attestation on a Careful task's
  * github.com pull request (INF-1793, the captain's plan: "it's my intended design
@@ -14,11 +16,23 @@ const ATTESTATION_CLOSING = " -->";
 const ESCAPED_PREFIX = "<!-- no-mistakes-pipeline-attestation\\:v1 ";
 
 /** The three steps the check requires, each completed from the review and live-proof records at `head`, whatever the care's name (INF-1876). */
-export function pipelineAttestationSection(head: string): string {
+export function pipelineAttestationSection(
+  head: string,
+  validation?: LiveValidationSummary,
+): string {
   const attestation = {
     head_sha: head,
     steps: ["review", "test", "document"].map((step) => ({ step, status: "completed" })),
     producer: "infinitary",
+    ...(validation?.verdict
+      ? {
+          live_validation: {
+            verdict: validation.verdict,
+            live: validation.live ?? 0,
+            total: validation.total ?? 0,
+          },
+        }
+      : {}),
   };
   return [
     "## Pipeline",

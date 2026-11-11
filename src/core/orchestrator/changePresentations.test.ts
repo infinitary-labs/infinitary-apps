@@ -18,7 +18,9 @@ import {
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEMO_POSTER, DEMO_RECORDING, GIF_DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
+import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import {
   AttachmentUploadError,
   type Forge,
@@ -1818,4 +1820,28 @@ describe("stories without native attachment publication", () => {
     expect(at.open).not.toHaveBeenCalled();
     expect(at.tasks.delivery.changePresentation(TASK)?.published).toBeUndefined();
   });
+});
+
+// Accepted live-validation view plan: saved stories bind proof before publication and completion.
+it("fills no-surface stories from the record and refuses a stale proof snapshot", async () => {
+  const at = await arrange();
+  const proof = noSurfaceProof(HEAD);
+  seedDelivery(at.tasks, TASK, { liveValidation: proof });
+  const revision = await at.prepare();
+  const saved = at.tasks.delivery.changePresentation(TASK)!.revisions.at(-1)!;
+  expect(saved.liveValidation).toMatchObject({
+    label: "No running surface",
+    live: 0,
+    total: 0,
+    verdict: "no-surface",
+  });
+  await at.publish(revision);
+  const completion = await at.service.completion(TASK, revision, HEAD);
+  expect(completion.body).toContain("No running surface");
+  proof.runs[0]!.revision += 1;
+  seedDelivery(at.tasks, TASK, { liveValidation: proof });
+  await expect(at.service.completion(TASK, revision, HEAD)).rejects.toThrow(
+    "Prepare the story again",
+  );
+  await expect(at.publish(revision)).rejects.toThrow("Prepare the story again");
 });

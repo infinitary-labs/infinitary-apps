@@ -1002,10 +1002,29 @@
     const serialized = JSON.stringify(validation);
     if (serialized === paintedProof) return;
     paintedProof = serialized;
-    must(document.querySelector("[data-validation-label]")).textContent = validation.label;
-    must(document.querySelector("[data-validation-reason]")).textContent = validation.reason;
+    must(document.querySelector("[data-validation-label]")).textContent =
+      validation.line ?? validation.label;
+    const verdictReason = must(document.querySelector("[data-validation-reason]"));
+    verdictReason.textContent = validation.reason;
+    verdictReason.toggleAttribute(
+      "hidden",
+      Boolean(validation.line && (!validation.verdict || validation.verdict === "no-surface")),
+    );
     const rows = must(document.querySelector("[data-validation-rows]"));
-    rows.replaceChildren(
+    const table = document.createElement("table");
+    const header = document.createElement("thead");
+    const heading = document.createElement("tr");
+    for (const word of ["Scenario", "Result", "Evidence"]) {
+      const cell = document.createElement("th");
+      cell.scope = "col";
+      cell.textContent = word;
+      heading.append(cell);
+    }
+    header.append(heading);
+    const tbody = document.createElement("tbody");
+    table.append(header, tbody);
+    rows.replaceChildren(...(validation.rows.length ? [table] : []));
+    tbody.replaceChildren(
       ...validation.rows.map((row) => {
         const detail = document.createElement("details");
         detail.className = "row";
@@ -1016,12 +1035,19 @@
           else openProof.delete(row.id);
         });
         const summary = document.createElement("summary");
-        const action = document.createElement("span");
-        action.textContent = row.action;
-        const result = document.createElement("span");
+        summary.textContent = "Open kept evidence";
+        const tr = document.createElement("tr");
+        const action = document.createElement("td");
+        action.textContent = row.action + (row.supplementary ? " (supplementary)" : "");
+        const result = document.createElement("td");
         result.className = "count";
         result.textContent = row.result;
-        summary.append(action, result);
+        const evidence = document.createElement("td");
+        const account = document.createElement("p");
+        account.className = "words";
+        account.textContent = row.reason;
+        evidence.append(account);
+        tr.append(action, result, evidence);
         const body = document.createElement("div");
         body.className = "row-body";
         body.setAttribute("data-validation-observation", row.id);
@@ -1057,7 +1083,8 @@
           body.append(figure);
         }
         detail.append(summary, body);
-        return detail;
+        if (row.evidence.length) evidence.append(detail);
+        return tr;
       }),
     );
   }

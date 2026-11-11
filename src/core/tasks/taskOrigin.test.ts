@@ -217,6 +217,64 @@ describe("where a card's work came from", () => {
     });
   });
 
+  it("names the task a change the first mate marked its own came from, never quoting its message", () => {
+    // INF-3653 replays INF-3650's merge card, which read "You asked · Nov 9,
+    // 10:39 AM · through 1 task" with INF-3323's lavish-axi message, though
+    // the first mate started INF-3650 itself after INF-3323's report. The
+    // captain's rule A: "work the first mate marked its own reads "From" its task".
+    const { tasks, said } = setup();
+    const lavish =
+      "i want a fable crewmate to look into my OSS project lavish-axi, and specifically it allows user the select elements on the page and annotate it with comments that get sent back to the agent";
+    seedTask(tasks, {
+      id: "f55e327c",
+      title: "Annotate card parts on the iOS app",
+      status: "idle",
+    });
+    said("d769166a", lavish, "f55e327c", "tool:create_task", true);
+    seedTask(tasks, {
+      id: "52bdee35",
+      title: "Fix merge cards refused over a missing kept picture",
+      status: "idle",
+      shape: { kind: "implement", internal_step: true },
+    });
+    tasks.capture.saveOrigin("52bdee35", { kind: "report", taskId: "f55e327c" });
+    const reporter = tasks.get("f55e327c");
+    expect(tasks.capture.originAbout("52bdee35")).toEqual({
+      kind: "from",
+      at: reporter?.createdAt,
+      key: reporter?.key,
+      title: "Annotate card parts on the iOS app",
+    });
+    // A part of that change reads "From" the change, not the message beyond it.
+    seedTask(tasks, {
+      id: "part",
+      title: "Keep the proof",
+      status: "idle",
+      parentId: "52bdee35",
+    });
+    expect(tasks.capture.originAbout("part")).toMatchObject({
+      kind: "from",
+      key: tasks.get("52bdee35")?.key,
+    });
+    // An answer step of a sequence carries the same mark and still reads the
+    // captain's message it answers; so does the same work not marked its own.
+    seedTask(tasks, {
+      id: "step",
+      title: "Read the annotation code",
+      status: "idle",
+      shape: { kind: "research", internal_step: true, deliverable: "answer" },
+    });
+    tasks.capture.saveOrigin("step", { kind: "report", taskId: "f55e327c" });
+    seedTask(tasks, { id: "asked-fix", title: "Fix the annotation picker", status: "idle" });
+    tasks.capture.saveOrigin("asked-fix", { kind: "report", taskId: "f55e327c" });
+    for (const id of ["step", "asked-fix"])
+      expect(tasks.capture.originAbout(id)).toMatchObject({
+        kind: "asked",
+        text: lavish,
+        through: 1,
+      });
+  });
+
   it("falls back to a message aimed at this work alone, then to the nearest task it came from", () => {
     // INF-2112's card had no line: its work came from a task nobody asked for in words.
     const { tasks, said } = setup();

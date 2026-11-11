@@ -142,6 +142,20 @@ function ownSaying(reader: OriginReader, id: string): AskRecord | undefined {
   return undefined;
 }
 
+/**
+ * Whether the first mate marked this change its own (`shape.internal_step`
+ * on a change, INF-1467): the captain did not ask for it, the fact that
+ * writes "the captain did not ask for it" into its brief. The walk reads no
+ * task beyond it, so its cards never quote a message of the captain's from
+ * the work it followed (INF-3653, the captain's rule A). An answer step of
+ * a sequence carries the same mark and still reads the message it answers.
+ */
+function startedByFirstMate(record: TaskRecord | undefined): boolean {
+  return (
+    record?.shape?.internal_step === true && (record.shape.deliverable ?? "change") === "change"
+  );
+}
+
 /** The tasks a task's work came from, in the order the walk tries them. */
 function sources(reader: OriginReader, id: string): string[] {
   const record = reader.get(id);
@@ -165,31 +179,38 @@ function sources(reader: OriginReader, id: string): string[] {
  * origin wins; with none anywhere, the nearest message aimed at one task
  * alone; with nothing of the captain's, the nearest task it came from.
  * Work handed over is tried before the task's own origin, so a replacement's
- * own message about the move never takes the first message's place.
+ * own message about the move never takes the first message's place. The
+ * walk goes no further than a change the first mate marked its own, which
+ * then reads "From" the task it came from.
  */
 export function originAbout(reader: OriginReader, id: string): TaskOriginLine | undefined {
   if (!reader.get(id)) return undefined;
-  const order: { id: string; through: number }[] = [];
+  // `beyond` marks a task reached past a change the first mate marked its
+  // own: the walk names it as where the work came from, never quotes it.
+  const order: { id: string; through: number; beyond: boolean }[] = [];
   const seen = new Set<string>([id]);
   // Handed-over work sits at the same distance, ahead of the task itself.
-  const place = (next: string, through: number): void => {
+  const place = (next: string, through: number, beyond: boolean): void => {
     for (const from of reader.handedOver(next)) {
       if (seen.has(from) || !reader.get(from)) continue;
       seen.add(from);
-      place(from, through + 1);
+      place(from, through + 1, beyond);
     }
-    order.push({ id: next, through });
+    order.push({ id: next, through, beyond });
   };
-  place(id, 0);
+  place(id, 0, false);
   for (let index = 0; index < order.length; index += 1) {
-    const at = order[index] as { id: string; through: number };
+    const at = order[index] as { id: string; through: number; beyond: boolean };
+    if (at.beyond) continue;
+    const beyond = startedByFirstMate(reader.get(at.id));
     for (const next of sources(reader, at.id)) {
       if (seen.has(next) || !reader.get(next)) continue;
       seen.add(next);
-      place(next, at.through + 1);
+      place(next, at.through + 1, beyond);
     }
   }
-  for (const { id: taskId, through } of order) {
+  const quotable = order.filter((entry) => !entry.beyond);
+  for (const { id: taskId, through } of quotable) {
     const found = ownOrigin(reader, taskId);
     if (!found) continue;
     if (found.kind === "asked")
@@ -210,7 +231,7 @@ export function originAbout(reader: OriginReader, id: string): TaskOriginLine | 
         through,
       };
   }
-  for (const { id: taskId, through } of order) {
+  for (const { id: taskId, through } of quotable) {
     const ask = ownSaying(reader, taskId);
     if (ask) return { kind: "said", at: ask.at, text: askReceipt(ask), through };
   }

@@ -14,8 +14,8 @@ export const DECISION_USES_WORDS = {
   locked: "Always on: Infinitary needs it to work.",
   /** Under a use the answering model's approval predates. */
   needsApproval: (model: string) => `Turning it on asks your OK for ${model} once.`,
-  /** The consent dialog's title for that one-time OK. */
-  allowTitle: (use: string, model: string) => `Allow ${use.toLowerCase()} with ${model}`,
+  /** The consent dialog's title for that one-time OK, quoting the use's name as Settings shows it. */
+  allowTitle: (use: string, model: string) => `Allow “${use}” with ${model}`,
   allow: "Allow",
   turnOn: "Turn on",
 } as const;

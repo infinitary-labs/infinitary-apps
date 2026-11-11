@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "propose-standing-direction",
+      "reason": "Renames the unreleased reply checks use to Propose standing direction and rewrites its Settings line; the not yet published correction-retention and decision-model-uses notes now describe it by its new name, with a retaken hero picture pair."
+    }
+  ]
+}

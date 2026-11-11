@@ -480,7 +480,7 @@ export function DecisionsGroup({
   );
 }
 
-/** One use: its name, what it reads, and its switch at the row's right edge. */
+/** One use: its name, how it helps and what it reads, and its switch at the row's right edge. */
 function DecisionUseRow({
   use,
   approvalFor,

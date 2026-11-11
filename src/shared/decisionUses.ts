@@ -43,7 +43,7 @@ export type DecisionUse = {
   id: DecisionUseId;
   /** The row's name in Settings. */
   name: string;
-  /** What the use sends a decision model, and why, in one sentence. */
+  /** Under the name in Settings: how the use helps the person, and what it sends a decision model. */
   reads: string;
   kind: DecisionUseKind;
   /** The approval screen (`consentedVersion`) a Jev or OpenRouter approval needs for this use. */
@@ -64,9 +64,10 @@ export const DECISION_USES: readonly DecisionUse[] = [
   },
   {
     id: "reply-checks",
-    name: "Reply checks",
+    // The id stays `reply-checks`, as saved switches hold it.
+    name: "Propose standing direction",
     reads:
-      "Your new replies, nearby conversation and card text, to find instructions worth keeping.",
+      "When you tell your first mate how you like things done, it offers to keep that as a standing direction for the project, so you don't have to say it again. It reads your new replies, the conversation around them and the card you answered.",
     kind: "default-on",
     approval: DECISION_APPROVAL_VERSION,
   },

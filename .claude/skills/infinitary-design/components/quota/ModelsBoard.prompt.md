@@ -67,7 +67,7 @@ No count of unlisted models, no "show all" switch, and no newcomer badge on an u
 Decisions is its own setting under the lanes, not a fifth level (`docs/decision-models.md`).
 Its group has the answerer row on top: a status dot, the model answering in mono, its last answer, and its menu (auto, a specific model, Jev, an OpenRouter model, and a stored key's replace and remove).
 Under it, after a `--line-1` hairline, the Uses list: the uppercase tracked micro label "Uses", then one row per way Infinitary asks a decision model, drawn from `src/shared/decisionUses.ts` alone.
-A row is the use's name at `--text-sm` / `--fg-1`, what it reads under it at `--text-xs` / `--fg-3`, and its `Switch` at the row's right edge, named by the use.
+A row is the use's name at `--text-sm` / `--fg-1`, how it helps the person and what it reads under it at `--text-xs` / `--fg-3`, and its `Switch` at the row's right edge, named by the use.
 A use Infinitary needs to work (task classification) shows on and off, its note "Always on: Infinitary needs it to work."
 A use the answering model's approval predates shows off with one `--text-xs` / `--fg-3` line, "Turning it on asks your OK for Jev once."; turning it on opens the `ConsentDialog` with that model's approval, and Not now leaves it off.
 Turning Jev on, or picking an OpenRouter decision model not yet approved, opens the same dialog: Jev's key field sits inside it.

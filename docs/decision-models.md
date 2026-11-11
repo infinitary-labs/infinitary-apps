@@ -170,7 +170,7 @@ They hang off the frozen `window.infinitary.models` namespace; the top-level key
 Each entry has a kind:
 
 - `always-on`: Infinitary needs it to work; its switch shows on and locked (task classification).
-- `default-on`: on until the person turns it off (reply checks).
+- `default-on`: on until the person turns it off (reply checks, which Settings names Propose standing direction).
 - `needs-ok`: off until the person agrees to its own disclosure in the consent dialog, once; no listed use is of this kind yet.
 
 The person's switches are their own settings row, `decision-uses`, holding only the uses they switched.
@@ -193,6 +193,7 @@ The scorer sits behind Observe's development gate like the other offline tools.
 ## Optional reply checks
 
 `startCorrections` connects genuine new composer, card and Crewmate-tab captain input to the same decision service, as the `reply-checks` use.
+Settings names this use Propose standing direction, and its line there says how it helps before what it reads.
 Original delivery continues without waiting for a closed question.
 `CorrectionSources` records source-time context, not a later card head or a reconstructed session transcript.
 It includes only original captain wording, nearby known exchange, the actually addressed offer and known task/project facts; captions with unknown legacy provenance remain unknown.

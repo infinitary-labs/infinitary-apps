@@ -9,7 +9,7 @@ On it one panel, centred: `--bg-2`, a `--line-2` hairline, `--radius-l`, `--shad
 It grows in like a popover, from `--scale-pop` over `--dur-quick`; reduced motion makes it a cut.
 
 **The words.**
-The title at `--text-md`, weight 500, `--fg-1`, says the act in a few words: "Turn on Jev", "Turn on Jev 1.13 through OpenRouter", "Allow reply checks with Jev".
+The title at `--text-md`, weight 500, `--fg-1`, says the act in a few words: "Turn on Jev", "Turn on Jev 1.13 through OpenRouter", "Allow “Propose standing direction” with Jev".
 Under it the rows, a definition list: each label in a column of its own at `--text-sm`, weight 500, `--fg-2`, and its sentence at `--text-sm` / `--fg-2` beside it, wrapping under the label when the panel is narrow.
 A decision model's approval has three rows, in this order: Shared (what goes to whom), Your choice (what the person can turn off or remove later), Cost (who pays, and who answers when it cannot).
 The rows say what is sent and to whom in plain words, and promise nothing the code does not keep; they never speak for the vendor.

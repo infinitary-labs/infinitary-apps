@@ -215,6 +215,7 @@ The first mate's context block lists "your surfaces" in the saved layout's order
 "Remove it" is Tier A: Step 1's `personalize` tool (`src/core/pi/personalizeTool.ts`, action `remove`) has the host delete the directory and commit the removal (`PersonalExtensions.remove`), one feed line and no card; Step 4 makes it refuse while a task is building the extension.
 
 The whole flow is `tests/e2e/personal-panels.spec.ts`'s second half, through the mock provider: the ask, the files the mock crewmate writes with Pi's own `write` tool, the draft drawn out of sight while the rail has nothing of it, the lint and the draft's capture landing in the tool results, the place that puts the panel on the rail with the running dot and the window's word on it, the report as a feed line, the commit, persistence across a relaunch, the second ask built apart while the rail keeps the panel as it was with the running dot until its place, its capture of the placed version, its second commit, the removal, and screenshots in both themes.
+Each build's place waits until the journey has read the draft (`scenarios/panelPlaceHeld.ts`), so the draft the journey promises is read before the place drops it, however slow the computer.
 
 ## Hardening (Step 5)
 

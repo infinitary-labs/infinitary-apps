@@ -30,6 +30,7 @@ import { promptInput } from "./prompt";
 import { expandDock, feedLine, reportLine, statusLine, taskKey } from "./rails";
 import { readSavedData } from "./savedData";
 import { oneNewSavePoint, savePointCount } from "./savePoints";
+import { panelPlaceHeld } from "./scenarios/panelPlaceHeld";
 import {
   PERSONAL_CHANGE_PROMPT_MARKER,
   personalPanelChange,
@@ -401,6 +402,11 @@ async function watchBuild(page: Page, id: string): Promise<void> {
   });
 }
 
+/** The states recorded so far, while the recorder goes on. */
+function seenStates(page: Page): string[] {
+  return [...(builds.get(page)?.states ?? [])];
+}
+
 async function buildStates(page: Page): Promise<string[]> {
   const build = builds.get(page);
   if (!build) return [];
@@ -478,9 +484,22 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
     await input.fill(text);
     await input.press("Enter");
   };
+  /**
+   * Lets the crewmate's held place go (`scenarios/panelPlaceHeld.ts`) once
+   * the recorder has read `drafted`, the draft drawn out of sight beside
+   * what the rail had: the draft stays until the place, so the journey reads
+   * it as an order and never samples past it.
+   */
+  const placeOnceDrafted = async (page: Page, drafted: string) => {
+    await expect.poll(() => mockProvider.heldThreadAnswers(), { timeout: 45_000 }).toBe(1);
+    await expect.poll(() => seenStates(page), { timeout: 30_000 }).toContain(drafted);
+    mockProvider.releaseThreadAnswer();
+  };
 
   test.beforeAll(async () => {
-    mockProvider = await startMockProvider({ scenarios: [personalPanelChange, personalPanels] });
+    mockProvider = await startMockProvider({
+      scenarios: [personalPanelChange, personalPanels, panelPlaceHeld],
+    });
     live = await launchApp({ reuseMockProvider: mockProvider });
     userDataDir = live.userDataDir;
     workspace = join(userDataDir, "fleet", "personal");
@@ -507,6 +526,7 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       // Mount the Activity frame before the delayed report and close so both
       // lifecycle pushes are rendered before their assertions begin.
       await expandDock(page, "activity");
+      await placeOnceDrafted(page, "rail none | draft rows=regular");
 
       // The panel is on its rail, on the app's own components.
       const key = await taskKey(page, MOCK_PANEL_TITLE);
@@ -687,6 +707,7 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       await watchBuild(page, MOCK_PANEL_ID);
       await ask(`${PERSONAL_CHANGE_PROMPT_MARKER}${MOCK_PANEL_ID}: make the rows smaller`);
       const key = await taskKey(page, `Change the ${MOCK_PANEL_ID} panel`);
+      await placeOnceDrafted(page, "rail rows=regular running | draft rows=small");
       await expect(
         reportLine(page, key).filter({ hasText: reportSummary(MOCK_PANEL_REVISED_REPORT) }),
       ).toBeVisible({ timeout: 45_000 });

@@ -17,12 +17,6 @@ import { answering, calledTool, toolCallCount } from "./providerRequest";
 export type CrewScriptRequest = ScenarioRequest & { refusingClaude: boolean };
 
 /**
- * A crew script's answer: a scenario's, or `threadHeld`, calls the stand-in
- * holds until the spec releases the thread (`releaseThreadAnswer`).
- */
-export type CrewScriptAnswer = ScenarioAnswer | { threadHeld: ScriptedCall[] };
-
-/**
  * Cards as threads, phase 1: `THREAD_PROMPT_MARKER` emits a plain decision
  * card and then answers the captain's replies the two ways the shared
  * contract prescribes - a REVISION of the card under the same id when his
@@ -197,21 +191,13 @@ const MOCK_PANEL_MANIFEST = `${JSON.stringify(
 )}\n`;
 
 /**
- * The built-in crew scripts' answer to one request, in the order the
- * stand-in always asked them: the panel crewmate, the thread crewmate, the
- * Claude crewmate on a refused login, then on a working one. Undefined
- * passes the request on to the stand-in's default close-out.
+ * The panel crewmate's answer to one request, the first crew script the
+ * stand-in asks; undefined for every request that is not a panel build's.
+ * A journey's own scenario may read it to change how one of its steps is
+ * sent (`scenarios/panelPlaceHeld.ts`).
  */
-export function crewScriptAnswer(request: CrewScriptRequest): CrewScriptAnswer | undefined {
-  const {
-    body,
-    isFirstmate,
-    wantsStream,
-    latestUserTail,
-    hasToolResults,
-    anthropicMessages,
-    refusingClaude,
-  } = request;
+export function panelCrewmateAnswer(request: ScenarioRequest): ScenarioAnswer | undefined {
+  const { body, isFirstmate, wantsStream } = request;
   // The mock live-build crewmate (Step 4): write the extension with
   // Pi's own write tool, lint it and photograph its draft, place it on
   // the rail and photograph it there (docs/personal-panels.md, "Placed
@@ -297,6 +283,27 @@ export function crewScriptAnswer(request: CrewScriptRequest): CrewScriptAnswer |
     }
     return { text: "done" };
   }
+  return undefined;
+}
+
+/**
+ * The built-in crew scripts' answer to one request, in the order the
+ * stand-in always asked them: the panel crewmate, the thread crewmate, the
+ * Claude crewmate on a refused login, then on a working one. Undefined
+ * passes the request on to the stand-in's default close-out.
+ */
+export function crewScriptAnswer(request: CrewScriptRequest): ScenarioAnswer | undefined {
+  const panel = panelCrewmateAnswer(request);
+  if (panel) return panel;
+  const {
+    body,
+    isFirstmate,
+    wantsStream,
+    latestUserTail,
+    hasToolResults,
+    anthropicMessages,
+    refusingClaude,
+  } = request;
   // Cards as threads, phase 1: the crewmate that keeps a thread. Its
   // card's id is the one emit_card handed back, read out of the
   // transcript exactly as a real model would read it.

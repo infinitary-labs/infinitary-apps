@@ -101,6 +101,7 @@ import {
   THREAD_TREE_PARENT_KEY,
   THREAD_TREE_PROMPT_MARKER,
 } from "./e2e/mockProvider";
+import { panelPlaceHeld } from "./e2e/scenarios/panelPlaceHeld";
 import type { ScriptedCall } from "./helpers/scriptedCalls";
 
 let server: MockProviderServer | undefined;
@@ -1229,6 +1230,43 @@ describe("the panel-building crewmate", () => {
       ["report"],
     ]);
   });
+
+  // personal-panels.spec.ts's batch failure: the place dropped the draft
+  // between two of the journey's looks at it, so the journey held the place
+  // until it had read the draft. Both builds' places wait for the spec, and
+  // no other step does.
+  it.each([
+    [
+      "the first build",
+      BRIEF,
+      ["write", "write", "note_progress"],
+      ["lint_panel", "capture_panel"],
+    ],
+    ["the change", `${BRIEF} Make its rows smaller.`, ["write"], ["capture_panel"]],
+  ])(
+    "holds the place of %s under panelPlaceHeld until the spec lets it go",
+    async (_, brief, ...before) => {
+      const provider = await start([panelPlaceHeld]);
+      const messages: unknown[] = [user("chat", brief)];
+      const steps: { calls: string[]; held: number }[] = [];
+      for (let step = 0; step < 4; step += 1) {
+        const read = nextRequest(provider);
+        const pending = ask("chat", { messages });
+        await read;
+        const held = provider.heldThreadAnswers();
+        provider.releaseThreadAnswer();
+        const answer = await pending;
+        steps.push({ calls: names(answer), held });
+        messages.push(...loop("chat", answer.calls as ScriptedCall[]));
+      }
+      expect(steps).toEqual([
+        ...before.map((calls) => ({ calls, held: 0 })),
+        { calls: ["place_panel"], held: 1 },
+        { calls: ["capture_panel"], held: 0 },
+      ]);
+      expect(provider.heldThreadAnswers()).toBe(0);
+    },
+  );
 
   it("reports the change in its own words", async () => {
     vi.useFakeTimers({ toFake: ["setTimeout"] });

@@ -28,7 +28,6 @@ import { WRITE_ASK_ANSWER_MARKER } from "./apiWriteCases";
 import {
   CLAUDE_CREW_PROMPT_MARKER,
   CLAUDE_ORG_REFUSAL_MESSAGE,
-  type CrewScriptAnswer,
   crewScriptAnswer,
   MOCK_CLAUDE_HELD_PROGRESS,
 } from "./crewScripts";
@@ -403,15 +402,17 @@ export type ScenarioRequest = {
 };
 /**
  * A scenario's answer: tool calls, text, or a refusal the way the service
- * sends one, or `held`, a turn the stand-in keeps open the way a crewmate
- * goes on working. `afterMs` holds the answer back that long, the way a real
- * model takes its time over a turn's last line.
+ * sends one, `held`, a turn the stand-in keeps open the way a crewmate goes
+ * on working, or `threadHeld`, calls the stand-in keeps back until the spec
+ * lets them go (`releaseThreadAnswer`). `afterMs` holds the answer back that
+ * long, the way a real model takes its time over a turn's last line.
  */
 export type ScenarioAnswer = (
   | { calls: ScriptedCall[] }
   | { text: string }
   | { refusal: { status: number; error: { type: string; message: string } } }
   | { held: true }
+  | { threadHeld: ScriptedCall[] }
 ) & { afterMs?: number };
 /**
  * A journey's own stand-in behavior, in its own file under
@@ -466,9 +467,12 @@ export type MockProviderServer = {
   heldFirstmate: () => number;
   /** Answer every held Firstmate step with another look at the crew. */
   releaseHeldFirstmate: () => void;
-  /** Thread-crewmate steps held after an acknowledgement (THREAD_ACK_REPLY). */
+  /**
+   * Crewmate steps held as `threadHeld`: the thread crewmate's after an
+   * acknowledgement (THREAD_ACK_REPLY), or a journey scenario's.
+   */
   heldThreadAnswers: () => number;
-  /** Let every held thread answer go on: the revision, then the report. */
+  /** Let every held step go on, its calls sent as they were scripted. */
   releaseThreadAnswer: () => void;
   /**
    * Script the Firstmate's answer to one input the spec knows ahead: when a
@@ -756,7 +760,7 @@ export async function startMockProvider(
 
         // One answer a scenario or a built-in crew script gives, sent on
         // this request's wire; `afterMs` holds it back that long.
-        const send = (answer: CrewScriptAnswer) => {
+        const send = (answer: ScenarioAnswer) => {
           const now = () => {
             if ("calls" in answer) streamToolCalls(answer.calls);
             else if ("text" in answer) streamText(answer.text);

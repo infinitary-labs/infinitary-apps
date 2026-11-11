@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { recordScratchFolder } from "./runScratchFolders.ts";
 
 /**
  * The one way a test makes a throwaway directory. `scratchDir` is
@@ -54,8 +55,7 @@ export function scratchDir(prefix: string): string {
     );
   }
   const dir = mkdtempSync(join(tmpdir(), prefix));
-  registry.dirs.add(dir);
-  return dir;
+  return removeLater(dir);
 }
 
 /**
@@ -71,12 +71,12 @@ export function socketScratchDir(prefix: string): string {
     );
   }
   const dir = mkdtempSync(join("/tmp", prefix));
-  registry.dirs.add(dir);
-  return dir;
+  return removeLater(dir);
 }
 
 /** Registers a directory made some other way for the same removal. */
 export function removeLater(dir: string): string {
+  recordScratchFolder(dir);
   registry.dirs.add(dir);
   return dir;
 }

@@ -514,6 +514,7 @@
         "!tests/replay-gate-catches-lint.test.ts",
         "!tests/replay-gate-catches-lock-refusal.test.ts",
         "!tests/run-temp-root.test.ts",
+        "!tests/stop-child-tree.test.ts",
         "!tests/test-workload.test.ts",
         "!tests/universal-file-types.test.ts",
         "!tests/run-evidence-playwright.test.ts",

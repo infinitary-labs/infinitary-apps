@@ -5,7 +5,9 @@ import { expect, it } from "vitest";
 import { writeMockClaudeClient } from "../../e2e/mockClaudeClient";
 import { scratchDir } from "../../helpers/scratchDirs";
 
-it("makes a scratch directory, and a stray one when asked", () => {
+import { leaveProgram } from "./program";
+
+it("makes scratch state and intentionally leaves a program only when asked by the approved cleanup regression", async () => {
   expect(scratchDir("infinitary-fixture-scratch-")).toContain(tmpdir());
   const home = scratchDir("infinitary-fixture-home-");
   const stub = writeMockClaudeClient(home, {
@@ -14,4 +16,6 @@ it("makes a scratch directory, and a stray one when asked", () => {
   expect(dirname(stub), "immutable preparation is separate from HOME state").not.toBe(home);
   if (process.env.INFINITARY_FIXTURE_LEAK)
     mkdtempSync(join(tmpdir(), process.env.INFINITARY_FIXTURE_LEAK));
+
+  await leaveProgram(home);
 });

@@ -1,6 +1,8 @@
 import { mkdirSync, mkdtempSync, readdirSync, rmdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { ProgramOutcome } from "../../src/shared/leftoverPrograms";
+import { RUN_ROOT_ENV, readScratchFolders, SCRATCH_FOLDERS_FILE } from "./runScratchFolders.ts";
 
 /**
  * One private temp root per test run (vitest and Playwright alike).
@@ -12,8 +14,9 @@ import { join } from "node:path";
  * one entry it leaves, and the next run's sweep removes it once its owner
  * process is gone. The root's name carries the owner pid for that sweep.
  *
- * At the end of a run the root must be empty: whatever is still in it was
- * created and never removed, and `closeRunTempRoot` names it.
+ * At the end of a run the root must be empty: `closeRunTempRoot` names
+ * leftover files, ends programs holding the run's folders, and reports
+ * every program even when it ended successfully.
  */
 
 /** The one shared-temp entry every run root lives under. */
@@ -32,7 +35,37 @@ export type RunTempRoot = {
   root: string;
   /** TMPDIR as it was before the run replaced it (undefined = unset). */
   previousTmpdir: string | undefined;
+  previousRunRoot: string | undefined;
+  abandoned: RunLeaks;
 };
+
+export type RunLeaks = {
+  entries: string[];
+  programs: ProgramOutcome[];
+  unreadable: string[];
+};
+
+const emptyLeaks = (): RunLeaks => ({ entries: [], programs: [], unreadable: [] });
+
+/** Reuses the task-close reader and birth-checked stop, but a finished run owns its children too. */
+async function endPrograms(root: string, excludeFolders: string[] = []): Promise<RunLeaks> {
+  // Node's build scripts also import ownerAlive. Load the core only in a
+  // runner, whose resolver knows the core's shared-module aliases.
+  const { findFolderHolders, endHolder } = await import("../../src/core/placed/folderHolders.ts");
+  const leaked = emptyLeaks();
+  const reading = await findFolderHolders([root, ...readScratchFolders(root)], {
+    protectDescendants: false,
+    excludeFolders,
+  });
+  if (reading.status === "unreadable") leaked.unreadable.push(root);
+  if (reading.status === "checked")
+    leaked.programs = await Promise.all(reading.holders.map((holder) => endHolder(holder)));
+  return leaked;
+}
+
+function canRemove(leaked: RunLeaks): boolean {
+  return leaked.unreadable.length === 0 && !leaked.programs.some((p) => p.outcome === "survived");
+}
 
 /** Whether a process with this pid is running, whoever owns it. */
 export function ownerAlive(pid: number): boolean {
@@ -45,18 +78,24 @@ export function ownerAlive(pid: number): boolean {
 }
 
 /** Removes run roots whose owning process no longer exists. */
-function sweepAbandonedRoots(runsDir: string): void {
+async function sweepAbandonedRoots(runsDir: string): Promise<RunLeaks> {
+  const leaked = emptyLeaks();
   let names: string[];
   try {
     names = readdirSync(runsDir);
   } catch {
-    return;
+    return leaked;
   }
   for (const name of names) {
     const pid = Number(/^[a-z0-9]+-(\d+)-/.exec(name)?.[1]);
     if (!Number.isInteger(pid) || pid <= 0 || ownerAlive(pid)) continue;
-    rmSync(join(runsDir, name), { recursive: true, force: true, maxRetries: 2 });
+    const root = join(runsDir, name);
+    const found = await endPrograms(root);
+    leaked.programs.push(...found.programs);
+    leaked.unreadable.push(...found.unreadable);
+    if (canRemove(found)) rmSync(root, { recursive: true, force: true, maxRetries: 2 });
   }
+  return leaked;
 }
 
 /**
@@ -64,11 +103,11 @@ function sweepAbandonedRoots(runsDir: string): void {
  * at it, so child processes started from here on inherit it. `kind` is a
  * short label (`unit`, `e2e`) that shows up in the root's name.
  */
-export function openRunTempRoot(kind: string): RunTempRoot {
+export async function openRunTempRoot(kind: string): Promise<RunTempRoot> {
   const previousTmpdir = process.env.TMPDIR;
   const runsDir = join(tmpdir(), RUNS_DIR_NAME);
   mkdirSync(runsDir, { recursive: true });
-  sweepAbandonedRoots(runsDir);
+  const abandoned = await sweepAbandonedRoots(runsDir);
   const root = mkdtempSync(join(runsDir, `${kind}-${process.pid}-`));
   // Playwright keys its transform cache off TMPDIR in each process that
   // loads it; keep it where the runner already put it, so it is reused.
@@ -76,14 +115,18 @@ export function openRunTempRoot(kind: string): RunTempRoot {
     tmpdir(),
     `playwright-transform-cache-${process.geteuid?.()}`,
   );
+  const previousRunRoot = process.env[RUN_ROOT_ENV];
+  process.env[RUN_ROOT_ENV] = root;
   process.env.TMPDIR = root;
-  return { root, previousTmpdir };
+  return { root, previousTmpdir, previousRunRoot, abandoned };
 }
 
 function remaining(root: string): string[] {
   try {
     return readdirSync(root)
-      .filter((name) => !TOOL_CACHES.some((cache) => cache.test(name)))
+      .filter(
+        (name) => name !== SCRATCH_FOLDERS_FILE && !TOOL_CACHES.some((cache) => cache.test(name)),
+      )
       .sort();
   } catch {
     return []; // Already gone: nothing is left in it.
@@ -91,33 +134,51 @@ function remaining(root: string): string[] {
 }
 
 /**
- * Removes the run's root, restores TMPDIR and returns the names of the
- * entries that were still in it (empty = nothing leaked). The shared
- * `infinitary-runs` directory goes too once no other run is using it.
+ * Ends holders before removing the run's root, restores the environment,
+ * and returns leftover entries, programs and unreadable checks. A survivor
+ * or an unreadable check keeps the root for the next sweep. The shared
+ * `infinitary-runs` directory goes once no other run is using it.
  *
  * `graceMs` is how long entries may still be disappearing: Playwright runs
  * the global teardown while its last workers are still exiting, and a
  * worker removes its scratch directories as it exits.
  */
 export async function closeRunTempRoot(
-  { root, previousTmpdir }: RunTempRoot,
+  { root, previousTmpdir, previousRunRoot, abandoned }: RunTempRoot,
   graceMs = 0,
-): Promise<string[]> {
+  ignoredEntries: readonly RegExp[] = [],
+): Promise<RunLeaks> {
   const deadline = Date.now() + graceMs;
   let leaked = remaining(root);
   while (leaked.length > 0 && Date.now() < deadline) {
     await new Promise((resolve) => setTimeout(resolve, 100));
     leaked = remaining(root);
   }
-  rmSync(root, { recursive: true, force: true, maxRetries: 2 });
-  if (previousTmpdir === undefined) delete process.env.TMPDIR;
-  else process.env.TMPDIR = previousTmpdir;
   try {
-    rmdirSync(join(tmpdir(), RUNS_DIR_NAME));
-  } catch {
-    // Another run still holds a root there, or it is already gone.
+    // Vitest's browser closes after global teardown. Its known profiles and
+    // artifacts still have a live owner; no other scratch folder is exempt.
+    const ignored = leaked.filter((name) => ignoredEntries.some((pattern) => pattern.test(name)));
+    const found = await endPrograms(
+      root,
+      ignored.map((name) => join(root, name)),
+    );
+    if (canRemove(found)) rmSync(root, { recursive: true, force: true, maxRetries: 2 });
+    return {
+      entries: leaked.filter((name) => !ignored.includes(name)),
+      programs: [...abandoned.programs, ...found.programs],
+      unreadable: [...abandoned.unreadable, ...found.unreadable],
+    };
+  } finally {
+    if (previousTmpdir === undefined) delete process.env.TMPDIR;
+    else process.env.TMPDIR = previousTmpdir;
+    if (previousRunRoot === undefined) delete process.env[RUN_ROOT_ENV];
+    else process.env[RUN_ROOT_ENV] = previousRunRoot;
+    try {
+      rmdirSync(join(tmpdir(), RUNS_DIR_NAME));
+    } catch {
+      // Another run still holds a root there, or it is already gone.
+    }
   }
-  return leaked;
 }
 
 /**
@@ -125,7 +186,8 @@ export async function closeRunTempRoot(
  * named, grouped by its prefix (the name without mkdtemp's random suffix)
  * so the creator is easy to find.
  */
-export function leakReport(kind: string, leaked: string[]): string {
+export function leakReport(kind: string, leaks: RunLeaks): string {
+  const leaked = leaks.entries;
   const groups = new Map<string, string[]>();
   for (const name of leaked) {
     const prefix = name.replace(/[A-Za-z0-9]{6}$/, "");
@@ -135,8 +197,21 @@ export function leakReport(kind: string, leaked: string[]): string {
     names.length === 1 ? `  ${names[0]}` : `  ${prefix}* x${names.length}: ${names.join(", ")}`,
   );
   return [
-    `The ${kind} run left ${leaked.length} temp ${leaked.length === 1 ? "entry" : "entries"} behind.`,
-    "Whatever creates these must remove them (afterEach/afterAll, or tests/helpers/scratchDirs.ts):",
-    ...lines,
+    ...(leaked.length
+      ? [
+          `The ${kind} run left ${leaked.length} temp ${leaked.length === 1 ? "entry" : "entries"} behind.`,
+          "Whatever creates these must remove them (afterEach/afterAll, or tests/helpers/scratchDirs.ts):",
+          ...lines,
+        ]
+      : []),
+    ...(leaks.programs.length
+      ? [
+          `The ${kind} run left ${leaks.programs.length} program(s) behind. Stop and await each child before its test finishes:`,
+          ...leaks.programs.map((p) => `  ${p.name} (pid ${p.pid}): ${p.outcome}`),
+        ]
+      : []),
+    ...leaks.unreadable.map(
+      (root) => `Could not check programs holding ${root}; kept it for the next run.`,
+    ),
   ].join("\n");
 }

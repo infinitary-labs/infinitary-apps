@@ -56,7 +56,11 @@ function under(path: string, prefixes: readonly string[]): boolean {
  * (`-F pcn`: process, command, name), kept only for names under the
  * folders. The working folder is one of the names.
  */
-export function holdersFromLsof(text: string, prefixes: readonly string[]): Map<number, string> {
+export function holdersFromLsof(
+  text: string,
+  prefixes: readonly string[],
+  excluded: readonly string[] = [],
+): Map<number, string> {
   const holders = new Map<number, string>();
   let pid = 0;
   let name = "";
@@ -67,12 +71,16 @@ export function holdersFromLsof(text: string, prefixes: readonly string[]): Map<
       pid = Number(value);
       name = "";
     } else if (field === "c") name = value;
-    else if (field === "n" && pid > 0 && under(value, prefixes)) holders.set(pid, name);
+    else if (field === "n" && pid > 0 && under(value, prefixes) && !under(value, excluded))
+      holders.set(pid, name);
   }
   return holders;
 }
 
-async function lsofHolders(prefixes: readonly string[]): Promise<Map<number, string> | null> {
+async function lsofHolders(
+  prefixes: readonly string[],
+  excluded: readonly string[],
+): Promise<Map<number, string> | null> {
   try {
     // `-b` keeps lsof off the kernel calls that can block on a stuck mount,
     // which once held a whole reading past its time limit.
@@ -82,7 +90,7 @@ async function lsofHolders(prefixes: readonly string[]): Promise<Map<number, str
       timeout: RESOURCE_READ_TIMEOUT_MS * 4,
       maxBuffer: 256 * 1024 * 1024,
     });
-    return holdersFromLsof(stdout, prefixes);
+    return holdersFromLsof(stdout, prefixes, excluded);
   } catch (caught) {
     // lsof exits 1 when some listing failed, with what it could read on
     // stdout. A reading stopped at its time limit is cut short, so it is
@@ -92,13 +100,16 @@ async function lsofHolders(prefixes: readonly string[]): Promise<Map<number, str
       failed.killed !== true &&
       typeof failed.stdout === "string" &&
       failed.stdout.length > 0
-      ? holdersFromLsof(failed.stdout, prefixes)
+      ? holdersFromLsof(failed.stdout, prefixes, excluded)
       : null;
   }
 }
 
 /** Each of this user's programs' working folder and open files, read from /proc on Linux. */
-async function procHolders(prefixes: readonly string[]): Promise<Map<number, string> | null> {
+async function procHolders(
+  prefixes: readonly string[],
+  excluded: readonly string[],
+): Promise<Map<number, string> | null> {
   let entries: string[];
   try {
     entries = await readdir("/proc");
@@ -111,13 +122,13 @@ async function procHolders(prefixes: readonly string[]): Promise<Map<number, str
     const pid = Number(entry);
     const names: string[] = [];
     const cwd = await readlink(`/proc/${entry}/cwd`).catch(() => undefined);
-    if (cwd) names.push(cwd);
+    if (cwd) names.push(cwd.replace(/ \(deleted\)$/, ""));
     const fds = await readdir(`/proc/${entry}/fd`).catch(() => [] as string[]);
     for (const fd of fds) {
       const target = await readlink(`/proc/${entry}/fd/${fd}`).catch(() => undefined);
       if (target) names.push(target.replace(/ \(deleted\)$/, ""));
     }
-    if (!names.some((name) => under(name, prefixes))) continue;
+    if (!names.some((name) => under(name, prefixes) && !under(name, excluded))) continue;
     const comm = await readFile(`/proc/${entry}/comm`, "utf8").catch(() => "");
     holders.set(pid, comm.trim());
   }
@@ -125,11 +136,16 @@ async function procHolders(prefixes: readonly string[]): Promise<Map<number, str
 }
 
 /** The app's own process, its ancestors and every program it started: never a leftover. */
-function ownFamily(rows: readonly ProcessReading[], appPid: number): Set<number> {
+function ownFamily(
+  rows: readonly ProcessReading[],
+  appPid: number,
+  protectDescendants: boolean,
+): Set<number> {
   const byPid = new Map(rows.map((row) => [row.pid, row]));
   const family = new Set<number>([appPid]);
   for (let row = byPid.get(appPid); row && !family.has(row.parent); row = byPid.get(row.parent))
     family.add(row.parent);
+  if (!protectDescendants) return family;
   for (const row of rows) {
     const seen = new Set<number>();
     for (let current: ProcessReading | undefined = row; current; ) {
@@ -146,6 +162,10 @@ function ownFamily(rows: readonly ProcessReading[], appPid: number): Set<number>
 }
 
 export type HolderOptions = {
+  /** Test runners end their descendants too, once their workers have finished. Defaults to true. */
+  protectDescendants?: boolean;
+  /** Folders still owned by the caller, such as a runner's browser awaiting its own teardown. */
+  excludeFolders?: readonly string[];
   /** The app's own process number; its family is never a leftover. */
   appPid?: number;
   /** A program another live task owns (its group, by process group): never this task's leftover. */
@@ -169,12 +189,16 @@ export async function findFolderHolders(
   if (platform !== "darwin" && platform !== "linux") return { status: "unsupported" };
   const prefixes = await prefixesOf(folders);
   if (prefixes.length === 0) return { status: "checked", holders: [] };
-  const named = platform === "darwin" ? await lsofHolders(prefixes) : await procHolders(prefixes);
+  const excluded = await prefixesOf(options.excludeFolders ?? []);
+  const named =
+    platform === "darwin"
+      ? await lsofHolders(prefixes, excluded)
+      : await procHolders(prefixes, excluded);
   if (!named) return { status: "unreadable" };
   if (named.size === 0) return { status: "checked", holders: [] };
   const rows = await readProcesses();
   if (!rows) return { status: "unreadable" };
-  const family = ownFamily(rows, options.appPid ?? process.pid);
+  const family = ownFamily(rows, options.appPid ?? process.pid, options.protectDescendants ?? true);
   const holders: FolderHolder[] = [];
   for (const row of rows) {
     const name = named.get(row.pid);

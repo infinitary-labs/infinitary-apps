@@ -35,6 +35,8 @@ export const MAC_UNIT_FILES = [
   "src/core/devices/computerUpdate.test.ts",
   // Native same-group fork/exec, macOS birth identities and receipt cancellation.
   "src/core/placed/loadLine.integration.test.ts",
+  // The run guard's real lsof readings, including unlinked scratch and /private/tmp.
+  "tests/run-temp-root.test.ts",
   // A local phone gate's place in the load line: the gate needs Xcode on a Mac.
   "tests/heavy-run-place-phone.test.ts",
   // The real shell's Mac app-folder lookup (Linux uses AppImage paths).

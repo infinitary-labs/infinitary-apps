@@ -28,13 +28,14 @@ export default async function globalSetup(config: FullConfig): Promise<() => Pro
   const evidence = runDir();
   tidyRunEvidence(workingCopy, evidence);
   console.log(`This run's evidence: ${relative(process.cwd(), join(workingCopy, evidence))}/`);
-  const run = openRunTempRoot("e2e");
+  const run = await openRunTempRoot("e2e");
   process.env[E2E_RUN_ROOT] = run.root;
   return async () => {
     try {
       delete process.env[E2E_RUN_ROOT];
       const leaked = await closeRunTempRoot(run, 15_000);
-      if (leaked.length > 0) throw new Error(leakReport("e2e", leaked));
+      const report = leakReport("e2e", leaked);
+      if (report) throw new Error(report);
     } finally {
       runPlace.close();
     }

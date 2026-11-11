@@ -1,4 +1,4 @@
-import { type ChildProcessWithoutNullStreams, execFileSync, spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import {
   appendFileSync,
   chmodSync,
@@ -48,6 +48,7 @@ import { type PlacedHome, startPlacedHome } from "../helpers/placedHome";
 import { scratchDir, socketScratchDir } from "../helpers/scratchDirs";
 import { forwardSocket, type SocketForward } from "../helpers/socketForward";
 import { SSH_SERVER_AVAILABLE, type SshServer, startSshServer } from "../helpers/sshServer";
+import { trackChildTree } from "../helpers/stopChildTree";
 import {
   CLAUDE_CREW_PROMPT_MARKER,
   CLAUDE_STEER_MARKER,
@@ -87,7 +88,7 @@ const standIn = (async (channel) => {
 
 const connections: HomeConnection[] = [];
 const pairings: DevicePairing[] = [];
-const children: ChildProcessWithoutNullStreams[] = [];
+const children: (() => Promise<void>)[] = [];
 const homes: PlacedHome[] = [];
 const providers: MockProviderServer[] = [];
 const sshServers: SshServer[] = [];
@@ -97,7 +98,9 @@ test.afterEach(async () => {
   await Promise.all(sshStops.splice(0).map((stop) => stop()));
   await Promise.all(sshServers.splice(0).map((server) => server.stop()));
   await Promise.all(forwards.splice(0).map((forward) => forward.close()));
-  for (const child of children.splice(0)) if (child.exitCode === null) child.kill("SIGKILL");
+  // The approved leftover-program guard found shell-launched work apps and
+  // their detached display keepers surviving the old direct-child kill.
+  await Promise.all(children.splice(0).map((stop) => stop()));
   await Promise.all(homes.splice(0).map((home) => home.quit()));
   await Promise.all(connections.splice(0).map((connection) => connection.close()));
   for (const pairing of pairings.splice(0)) pairing.dispose();
@@ -329,9 +332,10 @@ function work(args: string[], env: NodeJS.ProcessEnv, input = "", packaged = fal
     {
       env,
       cwd: scratchDir("infinitary-run-work-cwd-"),
+      detached: process.platform !== "win32",
     },
   );
-  children.push(child);
+  children.push(trackChildTree(child));
   let out = "";
   let error = "";
   child.stderr.on("data", (chunk) => {
@@ -354,8 +358,9 @@ function terminal(command: string, env: NodeJS.ProcessEnv, input: string) {
   const child = spawn("/bin/sh", ["-c", command], {
     env,
     cwd: scratchDir("infinitary-run-work-cwd-"),
+    detached: process.platform !== "win32",
   });
-  children.push(child);
+  children.push(trackChildTree(child));
   let out = "";
   let error = "";
   child.stdout.on("data", (chunk) => {
@@ -889,8 +894,9 @@ test("on Linux with no screen, the window says to use Run a command there and ex
   const child = spawn(electronPath as unknown as string, [builtAppDir()], {
     env: noScreen(me.env),
     cwd: scratchDir("infinitary-run-work-cwd-"),
+    detached: process.platform !== "win32",
   });
-  children.push(child);
+  children.push(trackChildTree(child));
   let error = "";
   child.stderr.on("data", (chunk) => {
     error += String(chunk);

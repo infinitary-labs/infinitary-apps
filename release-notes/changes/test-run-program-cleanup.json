@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "test-run-program-cleanup",
+      "reason": "Internal: test runners end programs holding their scratch folders and fail naming each leftover; no app-facing behavior changes."
+    }
+  ]
+}

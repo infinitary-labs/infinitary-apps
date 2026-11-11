@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "trim-card-guidance-budget",
+      "reason": "Shortens the shared card-authoring prompt text to bring the served prompts back under their token budget; no result a person notices."
+    }
+  ]
+}

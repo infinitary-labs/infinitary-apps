@@ -214,6 +214,7 @@ export async function startPhoneHome(
     news: "",
     flip: "",
     place: "",
+    notes: "",
   };
   // The captain's question on the flip card, which the first mate's revision answers by its id.
   let flipQuestion: number | undefined;
@@ -1583,6 +1584,37 @@ export async function startPhoneHome(
           result = { added: "The long check passed on the newest version.", newest };
           break;
         }
+        // INF-3296's phone piece: a first mate card whose body holds two paragraphs and a list, for notes on a whole
+        // part and on words selected in one.
+        case "POST note-card": {
+          for (const card of await core.dispatch("inf:cards:list", []))
+            await core.dispatch(
+              card.noteDone && !card.noteDone.closesTask
+                ? "inf:cards:note-done"
+                : "inf:cards:close",
+              [card.id],
+            );
+          const title = "The release window moves to Thursday";
+          const part = "The release window moves to Thursday, after the long check finishes.";
+          const words = "Four builds wait in the test line behind one long check.";
+          cardIDs.notes = core.services.supervisor.addFirstmateCard({
+            id: "phone-notes",
+            title,
+            body: `<p>${part}</p><p>${words}</p><ul><li>The notes for the release are ready.</li><li>Nothing else waits.</li></ul>`,
+            actions: [
+              { id: "wait", label: "Wait for Thursday", default: true },
+              { id: "now", label: "Release today" },
+            ],
+          });
+          core.services.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
+          core.services.supervisor.cards.flushBroadcast();
+          result = { title, part, words };
+          break;
+        }
+        // The notes card's thread as the computer keeps it, each captain line with its notes.
+        case "GET note-thread":
+          result = { messages: core.services.supervisor.cards.thread(cardIDs.notes).messages };
+          break;
         // INF-1524: a card that arrives while the merge card is read, which Home counts beside the pager.
         case "POST merge-news":
           cardIDs.news = core.services.supervisor.addFirstmateCard({

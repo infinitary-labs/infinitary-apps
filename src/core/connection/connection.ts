@@ -836,8 +836,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       client.cardReads = {
         updates: hello.system === "ios" || readsSeenUpdate(hello.protocolVersion, hello.changes),
         ended: hello.system === "ios" || readsEndedCards(hello.protocolVersion, hello.changes),
-        // Native annotation rendering follows the desktop piece; until then it reads the plain lines.
-        annotations: hello.system !== "ios" && listsChange(hello.changes, CARD_ANNOTATIONS),
+        // A view that lists the change draws typed notes, the phone included; one without it reads plain lines.
+        annotations: listsChange(hello.changes, CARD_ANNOTATIONS),
       };
       client.sharedCards =
         hello.system === "ios" || readsSharedCards(hello.protocolVersion, hello.changes);

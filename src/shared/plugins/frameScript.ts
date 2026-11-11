@@ -640,6 +640,9 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
       annotation.queued = data.queued || []; annotation.current = data.current || null;
       paintAnnotations();
       if (data.focus) { window.getSelection()?.removeAllRanges(); document.body.tabIndex = -1; document.body.focus(); }
+    } else if (data.type === "annotate-selection") {
+      // The phone's own Annotate in the selection's menu: the words selected now open the popover with its comment ready.
+      if (data.document === documentId) selectedAnnotation(true);
     } else if (data.type === "reveal") {
       if (data.document !== documentId || !Number.isSafeInteger(data.seq) || !Number.isSafeInteger(data.start)) return;
       var stamp = document.querySelector("[data-inf-revision-offer]");
@@ -1836,4 +1839,4 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-2AXVjQBrfrbmgn13rldh7ibYfB1VZz3MfEpfif7SCLE=";
+export const FRAME_BRIDGE_SHA256 = "sha256-teFqJgn7by1TXmAGO+4kEjLH+uofnOzkyycSbE7Prbg=";

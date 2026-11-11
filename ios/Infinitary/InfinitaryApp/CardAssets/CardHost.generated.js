@@ -6564,7 +6564,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     if (!el) return;
     event.preventDefault(); event.stopImmediatePropagation(); pickAnnotation(el);
   }, true);
-  function selectedAnnotation() {
+  function selectedAnnotation(focusComment) {
     if (!annotation.enabled) return;
     var selection = window.getSelection();
     if (!selection || selection.isCollapsed || !selection.rangeCount) return;
@@ -6576,7 +6576,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     prefix.selectNodeContents(last); prefix.setEnd(range.endContainer,range.endOffset);
     var span = {start:start,end:prefix.toString().length};
     if (last !== el) span.endPart = Number(last.getAttribute('data-inf-target'));
-    pickAnnotation(el, span, false);
+    pickAnnotation(el, span, focusComment === true);
   }
   document.addEventListener('pointerup', function() { selectedAnnotation(); });
   document.addEventListener('keyup', function(event) { if (event.shiftKey) selectedAnnotation(); });
@@ -7029,6 +7029,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       annotation.queued = data.queued || []; annotation.current = data.current || null;
       paintAnnotations();
       if (data.focus) { window.getSelection()?.removeAllRanges(); document.body.tabIndex = -1; document.body.focus(); }
+    } else if (data.type === "annotate-selection") {
+      // The phone's own Annotate in the selection's menu: the words selected now open the popover with its comment ready.
+      if (data.document === documentId) selectedAnnotation(true);
     } else if (data.type === "reveal") {
       if (data.document !== documentId || !Number.isSafeInteger(data.seq) || !Number.isSafeInteger(data.start)) return;
       var stamp = document.querySelector("[data-inf-revision-offer]");
@@ -8218,7 +8221,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-2AXVjQBrfrbmgn13rldh7ibYfB1VZz3MfEpfif7SCLE=";
+  const FRAME_BRIDGE_SHA256 = "sha256-teFqJgn7by1TXmAGO+4kEjLH+uofnOzkyycSbE7Prbg=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";
@@ -12754,11 +12757,67 @@ ${REVISION_HIGHLIGHT_STYLE}`;
   const REVISION_HIGHLIGHT_STYLE = `
   [data-inf-revision-highlight] { background-color: var(--accent-dim); box-shadow: var(--focus-ring-inset); }
 `;
+  function notePartIn(parts, note, originalToRendered = (start) => start) {
+    if (note.endKey && !parts.some((part) => part.key === note.endKey)) return void 0;
+    const same = parts.filter((part) => part.key === note.key);
+    return same.find((part) => part.start === originalToRendered(note.start))?.start ?? (same.length === 1 ? same[0]?.start : void 0);
+  }
+  function noteTarget(parts, note, originalToRendered) {
+    const start = notePartIn(parts, note, originalToRendered);
+    const endPart = note.endKey ? notePartIn(
+      parts,
+      {
+        ...note,
+        key: note.endKey,
+        start: note.span?.endPart ?? 0,
+        endKey: void 0
+      },
+      originalToRendered
+    ) : void 0;
+    if (start === void 0 || note.endKey && endPart === void 0) return void 0;
+    return {
+      start,
+      kind: note.kind,
+      excerpt: note.excerpt,
+      ...note.span ? { span: { ...note.span, ...endPart !== void 0 ? { endPart } : {} } } : {}
+    };
+  }
+  function pickedNote(input2) {
+    const { picked, parts, source, originalToRendered } = input2;
+    const part = parts.find((candidate) => candidate.start === picked.start);
+    if (!part) return void 0;
+    const sourceParts = cardNavigationParts(source);
+    const rendered = (start) => originalToRendered?.(start) ?? start;
+    const original = sourceParts.find(
+      (candidate) => candidate.key === part.key && rendered(candidate.start) === part.start
+    ) ?? sourceParts.find((candidate) => candidate.key === part.key);
+    const end = picked.span?.endPart === void 0 ? void 0 : parts.find((candidate) => candidate.start === picked.span?.endPart);
+    const originalEnd = end ? sourceParts.find(
+      (candidate) => candidate.key === end.key && rendered(candidate.start) === end.start
+    ) : void 0;
+    const note = {
+      ...picked,
+      start: original?.start ?? part.start,
+      key: part.key,
+      ...end && picked.span ? { endKey: end.key, span: { ...picked.span, endPart: originalEnd?.start ?? end.start } } : {},
+      comment: "",
+      line: source.slice(0, original?.start ?? part.start).split("\n").length
+    };
+    const existing = input2.queued.find(
+      (queued) => queued.key === note.key && notePartIn(parts, queued, originalToRendered) === picked.start && JSON.stringify(noteTarget(parts, queued, originalToRendered)?.span) === JSON.stringify(picked.span)
+    );
+    return existing ?? note;
+  }
+  const OFFER = "phone";
   const native = (message) => window.webkit.messageHandlers.cardHost.postMessage(message);
   let frame;
   let documentID;
   let input;
   let linked = [];
+  let notes;
+  let pointing = false;
+  let selectionAsked = false;
+  const reveals = /* @__PURE__ */ new Map();
   const pressed = () => document.hasFocus() && navigator.userActivation.isActive;
   let next = 0;
   const collections = /* @__PURE__ */ new Map();
@@ -12857,6 +12916,30 @@ ${REVISION_HIGHLIGHT_STYLE}`;
         void native({ type: "mac-only" }).catch(() => {
         });
         break;
+      case "annotate": {
+        const asked = message.target.span ? message.focus === true && selectionAsked : pointing;
+        if (message.target.span && message.focus) selectionAsked = false;
+        if (!notes || !asked) {
+          if (notes) native({ type: "annotation-idle" }).catch(() => {
+          });
+          break;
+        }
+        const note = pickedNote({ picked: message.target, parts: notes.parts, source: notes.source, queued: notes.queued, originalToRendered: notes.toRendered });
+        if (note) void native({ type: "annotate", note, box: message.box }).catch(() => {
+        });
+        break;
+      }
+      case "point-exit":
+        void native({ type: "point-exit" }).catch(() => {
+        });
+        break;
+      case "revealed": {
+        const done = reveals.get(message.seq);
+        if (!done) break;
+        reveals.delete(message.seq);
+        done(message.top === void 0 || message.height === void 0 ? "missing" : { top: message.top, height: message.height });
+        break;
+      }
     }
   });
   window.phoneCard = {
@@ -12867,7 +12950,13 @@ ${REVISION_HIGHLIGHT_STYLE}`;
       linked = value.keys?.length ? taskKeysIn(value.body).filter((key) => value.keys.includes(key)) : [];
       void native({ type: "mounted", facts: split?.facts ?? null, preview: isPreviewBody(value.body) }).catch(() => {
       });
-      const body = cardBodyMarkup(split?.body ?? value.body, marks).html;
+      const shown = split?.body ?? value.body;
+      const drawn = `${cardBodyHtml(shown)}<i hidden data-inf-revision-offer="${OFFER}"></i>`;
+      const toRendered = (start) => split && start > split.at ? start - split.facts.length : start;
+      notes = { parts: cardNavigationParts(drawn), source: cardBodyHtml(value.body), toRendered, queued: [] };
+      pointing = false;
+      selectionAsked = false;
+      const body = cardBodyMarkup(drawn, cardBodyHtml(shown) === shown ? marks : []).html;
       const parsed = new DOMParser().parseFromString(body, "text/html");
       const scripts = Array.from(parsed.querySelectorAll("script:not([src])"), (script) => script.textContent ?? "");
       const hashes = await native({ type: "hash", scripts });
@@ -12901,6 +12990,48 @@ ${REVISION_HIGHLIGHT_STYLE}`;
     },
     ping(seq) {
       send({ type: "ping", seq });
+    },
+    annotate(state) {
+      if (!notes || !documentID) return;
+      const queued = cardNotesSchema.safeParse(state.queued);
+      const current = state.current === void 0 ? void 0 : cardNoteSchema.safeParse(state.current);
+      notes.queued = queued.success ? queued.data : [];
+      pointing = state.mode === true;
+      const target = (note) => noteTarget(notes.parts, note, notes.toRendered);
+      const lit = current?.success ? target(current.data) : void 0;
+      send({
+        type: "annotation",
+        document: documentID,
+        mode: state.mode === true,
+        queued: notes.queued.flatMap((note) => {
+          const t = target(note);
+          return t ? [t] : [];
+        }),
+        ...lit ? { current: lit } : {}
+      });
+    },
+    annotateSelection() {
+      if (!documentID) return;
+      selectionAsked = true;
+      send({ type: "annotate-selection", document: documentID });
+    },
+    reveal(value) {
+      const note = cardNoteSchema.safeParse(value);
+      if (!notes || !documentID || !note.success) return Promise.resolve("unavailable");
+      const target = noteTarget(notes.parts, note.data, notes.toRendered);
+      if (!target) return Promise.resolve("missing");
+      const seq = ++next;
+      return new Promise((resolve) => {
+        const timer = setTimeout(() => {
+          reveals.delete(seq);
+          resolve("unavailable");
+        }, 3e3);
+        reveals.set(seq, (revealed) => {
+          clearTimeout(timer);
+          resolve(revealed);
+        });
+        send({ type: "reveal", document: documentID, seq, offerId: OFFER, start: target.start, ...target.span ? { span: target.span } : {} });
+      });
     }
   };
 })();

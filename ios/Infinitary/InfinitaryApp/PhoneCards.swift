@@ -10,6 +10,8 @@ struct PhoneCards: View {
     @State private var past: PhoneCard?
     @State private var drafts: [String: PhoneJSON] = [:]
     @State private var replies: [String: String] = [:]
+    /// INF-3296's phone piece: each card's notes waiting for its reply, kept with its draft while the row pages.
+    @State private var notes: [String: [PhoneJSON]] = [:]
     @State private var previousIDs: [String] = []
     @State private var sent = 0
     @State private var pagerMenu = PhoneCardPager()
@@ -135,6 +137,7 @@ struct PhoneCards: View {
                 PhoneCardPane(card: card, session: session, bodies: card.isPast ? nil : bodies,
                     fill: card.isPast ? card.value["answers"] : drafts[card.id] ?? .array([]),
                     reply: Binding(get: { replies[card.id] ?? "" }, set: { replies[card.id] = $0 }),
+                    notes: Binding(get: { notes[card.id] ?? [] }, set: { notes[card.id] = $0.isEmpty ? nil : $0 }),
                     onReading: { drafts[card.id] = $0["answers"] },
                     onSeen: { session.markSeen(card) },
                     onHide: { past = nil },
@@ -440,6 +443,8 @@ private struct PhoneCardPane: View {
     /// INF-3460: the row's kept bodies; none for a past card, which stands alone.
     let bodies: PhoneCardBodies?
     @Binding var reply: String
+    /// INF-3296's phone piece: the notes waiting for this card's reply.
+    @Binding var notes: [PhoneJSON]
     let onReading: (PhoneJSON) -> Void
     let onSeen: () -> Void
     let onHide: () -> Void
@@ -495,6 +500,14 @@ private struct PhoneCardPane: View {
     @State private var photoSelection: [PhotosPickerItem] = []
     @State private var libraryOpen = false
     @State private var cameraOpen = false
+    /// INF-3296's phone piece: Point at is on, so a tap on a part of the body picks it.
+    @State private var pointAt = false
+    /// The part or words being noted, which the popover over the body shows.
+    @State private var pick: PhoneNotePick?
+    /// A queued note whose Edit could not show its part, and why.
+    @State private var noteFailures: [String: String] = [:]
+    /// Where a note revealed from the thread sits in the body, which the card's scroller brings into view.
+    @State private var revealedNote: (top: CGFloat, height: CGFloat, seq: Int)?
     @Environment(\.scenePhase) private var phase
     @Environment(PhoneMessageContext.self) private var messageContext
     @Environment(PhoneSecrets.self) private var secrets: PhoneSecrets?
@@ -519,11 +532,11 @@ private struct PhoneCardPane: View {
 
     enum CardSide { case face, back }
 
-    init(card: PhoneCard, session: ReadOnlySession, bodies: PhoneCardBodies?, fill: PhoneJSON, reply: Binding<String>,
+    init(card: PhoneCard, session: ReadOnlySession, bodies: PhoneCardBodies?, fill: PhoneJSON, reply: Binding<String>, notes: Binding<[PhoneJSON]>,
          onReading: @escaping (PhoneJSON) -> Void, onSeen: @escaping () -> Void, onHide: @escaping () -> Void, onSent: @escaping () -> Void, shown: Bool, visible: Bool, replyLeaves: Bool,
          row: PhoneCardRow, onTask: @escaping (String) -> Void, onDraft: @escaping (String) -> Void,
          side: Binding<PhoneCardSide>) {
-        self.card = card; self.session = session; _reply = reply
+        self.card = card; self.session = session; _reply = reply; _notes = notes
         self.onReading = onReading; self.onSeen = onSeen; self.onHide = onHide; self.onSent = onSent
         self.shown = shown; self.visible = visible; self.replyLeaves = replyLeaves
         self.row = row; self.onTask = onTask; self.onDraft = onDraft
@@ -562,9 +575,13 @@ private struct PhoneCardPane: View {
     private var reachable: Bool { session.contact == "in-reach" }
     private var replyWords: String { reply.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var canSendReply: Bool { !host.changing && session.canChange && host.drawn && replyFits }
-    /// The words or photos alone, which the send checks again once its change has begun and the card counts as changing.
-    private var replyFits: Bool { reply.utf16.count <= PhoneLimits.reply && (!replyWords.isEmpty || !photos.isEmpty) }
+    /// The words, photos or notes alone, which the send checks again once its change has begun and the card counts as changing.
+    private var replyFits: Bool {
+        reply.utf16.count <= PhoneLimits.reply && (!replyWords.isEmpty || !photos.isEmpty || !notes.isEmpty)
+    }
     private var takesReply: Bool { card.takesReplies && !card.isPast }
+    /// INF-3296's phone piece: the card's reply takes notes on its body, by the home's own say.
+    private var takesNotes: Bool { takesReply && session.cardNotes && host.failure == nil }
     /// The task the card is about, which leads its head as its door to the task's record.
     /// A first mate card is its own (INF-2714) and leads with no task's key.
     private var task: PhoneTask? {
@@ -652,7 +669,7 @@ private struct PhoneCardPane: View {
         .onChange(of: shown && (replyFocus != nil || host.typing), initial: shown) { was, focused in
             if shown || was { messageContext.replyFocused = focused }
         }
-        .onChange(of: shown) { _, shown in connectHost(); if !shown { replyFocus = nil } }
+        .onChange(of: shown) { _, shown in connectHost(); if !shown { replyFocus = nil; pointAt = false; pick = nil } }
         .onDisappear { if shown && (replyFocus != nil || host.typing) { messageContext.replyFocused = false } }
         // INF-3460: a body the row kept loaded beside the shown card has drawn already, so a card opened from the count's
         // menu shows drawn and its first drawing never comes to mark it read.
@@ -697,6 +714,7 @@ private struct PhoneCardPane: View {
     /// INF-3468: the face's field with the margin under it, and the foot of the card's scrolled content.
     private static let replyRest = "card-reply-rest"
     private static let contentEnd = "card-content-end"
+    private static let noteReveal = "card-note-reveal"
     private static let contentSpace = "card-content"
     /// INF-3468, the captain's pick: a typing reply comes to rest with the card's choices showing under it where the
     /// field, the choices and the card's foot fit in the room; otherwise with the margin under it.
@@ -800,6 +818,9 @@ private struct PhoneCardPane: View {
                 }
                 .onChange(of: replyFocus) { followCaret() }
                 // INF-3468: the field comes to rest with the choices under it, or with the margin under it.
+                .onChange(of: revealedNote?.seq) {
+                    withAnimation(reduceMotion ? nil : PhoneTheme.surfaceMove) { scroller.scrollTo(Self.noteReveal, anchor: .center) }
+                }
                 .onChange(of: replyGrew) {
                     if !pinsFrame { scroller.scrollTo(restsWithChoices ? Self.contentEnd : Self.replyRest, anchor: .bottom) }
                 }
@@ -813,7 +834,10 @@ private struct PhoneCardPane: View {
         // A frame holding only its scroller is that scroller to accessibility, which then keeps the scroller's name.
         .accessibilityElement(children: .contain).accessibilityIdentifier(pinsFrame ? "card-frame" : "card-scroll")
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { surfaceHeight = $0; if shown { row.height = $0 } }
+        // INF-3296's phone piece: the body lights what Point at, the queue and the open note say.
+        .onChange(of: noteState) { host.annotates = takesNotes && shown; syncNotes() }
     }
+    private var noteState: [PhoneJSON] { [.bool(pointAt), .array(notes), pick?.note ?? .null, .bool(takesNotes)] }
 
     /// INF-1919, the card's back: Card turns it over again, then the thread's count and the face's own minus, the
     /// card's title in one muted line, the messages as the face drew them before, and the same field and choices at its
@@ -859,7 +883,8 @@ private struct PhoneCardPane: View {
             .fixedSize(horizontal: false, vertical: true)
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { backHeadHeight = $0 }
             PhoneThreadScroller(messages: messages, working: working, bounce: bounce,
-                                onHeight: { threadHeight = $0 }, onPhase: scrolled)
+                                onHeight: { threadHeight = $0 }, onPhase: scrolled,
+                                onNote: card.isPast ? nil : { note in await revealNote(note) })
                 .frame(maxHeight: threadHeight > 0 ? threadHeight : nil)
             Spacer(minLength: 0)
             backFoot.fixedSize(horizontal: false, vertical: true)
@@ -1009,6 +1034,17 @@ private struct PhoneCardPane: View {
                 }.buttonStyle(PhoneChoiceStyle(.secondary)).disabled(host.changing).accessibilityIdentifier("retry-card")
             } else {
                 CardWebView(host: host).frame(height: host.height).id(retry)
+                    // INF-3296's phone piece: where a note revealed from the thread sits, for the scroller to bring in.
+                    .overlay(alignment: .top) {
+                        if let revealedNote {
+                            Color.clear.frame(height: max(1, revealedNote.height)).id(Self.noteReveal)
+                                .padding(.top, revealedNote.top).allowsHitTesting(false).accessibilityHidden(true)
+                        }
+                    }
+                    .popover(isPresented: Binding(get: { pick != nil && shown }, set: { if !$0 { pick = nil } }),
+                             attachmentAnchor: .rect(.rect(pick?.box ?? .zero)), arrowEdge: .top) {
+                        PhoneNotePopover(pick: $pick, onQueue: queueNote)
+                    }
             }
             if let notice = host.notice { Text(notice).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("card-notice") }
             if card.value["attachment"] != .null {
@@ -1133,6 +1169,10 @@ private struct PhoneCardPane: View {
     /// photos from the library or the camera. INF-1919: the face and the back each draw it, with one draft and photos.
     private func replyField(_ side: CardSide) -> some View {
         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+            if !notes.isEmpty {
+                PhoneQueuedNotes(notes: notes, disabled: host.changing, onEdit: editNote,
+                                 onRemove: { note in notes.removeAll { PhoneCardNotes.same($0, note) } }, failures: noteFailures)
+            }
             if !photos.isEmpty {
                 ScrollView(.horizontal) {
                     HStack {
@@ -1147,6 +1187,25 @@ private struct PhoneCardPane: View {
                 }
             }
             HStack(alignment: .bottom, spacing: 0) {
+                // INF-3296's phone piece: Point at, at the field's leading edge as on the Mac; while it is on, a tap on a
+                // part of the body opens its note. Words selected in the body offer Annotate in their menu either way.
+                // It steps aside while the reply types, so the words keep the field's whole width and the card rises no
+                // further than INF-3468 lets it (its press would put the keyboard away in any case).
+                if takesNotes && replyFocus == nil {
+                    Button {
+                        pointAt.toggle()
+                        if pointAt { replyFocus = nil; dismissPhoneKeyboard() }
+                    } label: {
+                        Label(PhoneCardWords.pointAt, systemImage: "cursorarrow").labelStyle(.iconOnly)
+                            .foregroundStyle(pointAt ? PhoneTheme.accent : PhoneTheme.secondary)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .background { if pointAt { RoundedRectangle(cornerRadius: PhoneTheme.controlRadius).fill(PhoneTheme.accentDim) } }
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityAddTraits(pointAt ? .isSelected : [])
+                    .accessibilityIdentifier("point-at")
+                    .disabled(host.changing || !host.drawn)
+                }
                 Menu {
                     Button { libraryOpen = true } label: { Label("Choose photos", systemImage: "photo.on.rectangle") }
                     if UIImagePickerController.isSourceTypeAvailable(.camera) {
@@ -1283,7 +1342,7 @@ private struct PhoneCardPane: View {
 
     private func sendReply() {
         perform {
-            let text = reply, sent = photos
+            let text = reply, sent = photos, noted = notes
             guard replyFits else { return }
             let snapshot = try await host.submissionReading()
             let reading = snapshot.value
@@ -1291,17 +1350,24 @@ private struct PhoneCardPane: View {
             if !sent.isEmpty {
                 payload["images"] = .array(sent.map { photo in .object(photo.wire.mapValues(PhoneJSON.string)) })
             }
+            // INF-3296's phone piece: every queued note goes with the words as one reply.
+            if !noted.isEmpty { payload["notes"] = .array(noted) }
             // INF-2553: the words join the thread at once, marked sending, and the draft clears; a refusal puts the
             // words and photos back. INF-1919: a send from either side shows its line on the back, the first included.
             if reply == text { reply = "" }
             photos.removeAll { photo in sent.contains { $0.id == photo.id } }
+            notes.removeAll { note in noted.contains { PhoneCardNotes.same($0, note) } }
+            pointAt = false
             turned = true; replyFocus = nil
             let before = PhoneIntentLedger.captainMessages(session.threads[card.id])
-            let delivered = await self.send(.reply(card: card.id, text: text, before: before), .reply,
+            let delivered = await self.send(.reply(card: card.id, text: PhoneCardNotes.sendingText(text, noted), before: before), .reply,
                 [.string(card.id), .object(payload), card.submission(reading: reading, fresh: snapshot.fresh), .bool(replyLeaves)],
-                restore: { [reply = $reply, photos = $photos] in
+                restore: { [reply = $reply, photos = $photos, notes = $notes] in
                     if reply.wrappedValue.isEmpty { reply.wrappedValue = text }
                     photos.wrappedValue = sent + photos.wrappedValue
+                    notes.wrappedValue = noted.reduce(notes.wrappedValue) { queue, note in
+                        queue.contains { PhoneCardNotes.same($0, note) } ? queue : queue + [note]
+                    }
                 })
             if delivered { onSent() }
         }
@@ -1356,12 +1422,60 @@ private struct PhoneCardPane: View {
         }
     }
     private func connectHost() {
-        host.onReading = onReading; host.onDrawn = markSeen
+        host.onReading = onReading; host.onDrawn = { markSeen(); syncNotes() }
+        host.annotates = takesNotes && shown
+        host.onAnnotate = { note, box in
+            guard takesNotes, shown, !host.changing else { syncNotes(); return }
+            // A comment being written keeps its popover; the frame's pick goes back to it.
+            if let pick, !pick.comment.isEmpty { syncNotes(); return }
+            if showsBack { turnOver(back: false) }
+            replyFocus = nil
+            pick = PhoneNotePick(note: note, box: box, queued: notes)
+        }
+        host.onAnnotationIdle = { syncNotes() }
+        host.onPointExit = { pointAt = false }
         host.onLink = { url in openURL(url) }
         host.onDraft = onDraft
         host.onTask = onTask
         // INF-3110: a card beside the shown one keeps its body out of accessibility, which a hidden view above it cannot do.
         host.aside = !shown; factsHost?.aside = !shown
+    }
+    /// INF-3296's phone piece: tells the body how the notes stand, which it lights: Point at, every queued note and the
+    /// one being written. The body never hears a comment.
+    private func syncNotes() {
+        guard takesNotes else { if host.drawn { host.annotate(mode: false, queued: [], current: nil) }; return }
+        host.annotate(mode: pointAt && pick == nil && shown, queued: notes, current: pick?.note)
+    }
+    /// The popover's Queue: the note joins the queue, or takes its own place there again; with Command-Return the reply
+    /// goes too, with every queued note.
+    private func queueNote(send: Bool) {
+        guard let picked = pick, !host.changing else { return }
+        notes = PhoneCardNotes.queuing(picked.written, in: notes)
+        noteFailures[PhoneQueuedNotes.id(picked.note)] = nil
+        pick = nil
+        if send { sendReply() }
+    }
+    /// A queued note's Edit: the body shows its part again and its popover opens over it, with its comment.
+    private func editNote(_ note: PhoneJSON) {
+        Task {
+            let result = await revealNote(note)
+            switch result {
+            case .revealed(let top, let height):
+                noteFailures[PhoneQueuedNotes.id(note)] = nil
+                pick = PhoneNotePick(note: note, box: CGRect(x: 0, y: top, width: host.width, height: max(1, height)), queued: notes)
+            case .missing: noteFailures[PhoneQueuedNotes.id(note)] = PhoneCardWords.staleNote
+            case .unavailable: noteFailures[PhoneQueuedNotes.id(note)] = PhoneCardWords.unavailableNote
+            }
+        }
+    }
+    /// Shows a note's part, or its words, in the body: the card turns to its face and its scroller brings them into view.
+    private func revealNote(_ note: PhoneJSON) async -> CardWebHost.NoteReveal {
+        if showsBack { turnOver(back: false) }
+        let result = await host.reveal(note)
+        if case .revealed(let top, let height) = result {
+            revealedNote = (top, height, (revealedNote?.seq ?? 0) + 1)
+        }
+        return result
     }
     /// The fact strip the body split off, drawn by a host of its own that holds only it and takes no answers.
     private func showFacts(_ facts: String) {

@@ -76,6 +76,7 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/CardAssets/spacegrotesk-vietnamese.woff2",
     "ios/Infinitary/InfinitaryApp/CardMediaView.swift",
     "ios/Infinitary/InfinitaryApp/CardWebView.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneCardNotes.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCardParts.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/CardValues.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneCardDeparture.swift",

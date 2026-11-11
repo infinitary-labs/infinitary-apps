@@ -48,6 +48,13 @@ import SwiftUI
     var onLink: ((URL) -> Void)?
     var onDraft: ((String) -> Void)?
     var onTask: ((String) -> Void)?
+    /// INF-3296's phone piece: a part or selected words to note, in the body view's points, which the card's popover
+    /// opens on; the frame went back to how the card's notes stand; Point at ended in the body.
+    var onAnnotate: ((PhoneJSON, CGRect) -> Void)?
+    var onAnnotationIdle: (() -> Void)?
+    var onPointExit: (() -> Void)?
+    /// The card takes notes, so the selection's menu offers Annotate.
+    var annotates = false { didSet { (view as? CardBodyView)?.annotates = annotates } }
     /// INF-3460: the row keeps this body loaded while its card sits beside the shown one, and moves its one view between the
     /// edge it loads behind and the card that shows it, so a view leaving the screen never closes it; the row closes it.
     var kept = false
@@ -91,6 +98,8 @@ import SwiftUI
         let view = CardBodyView(frame: .zero, configuration: configuration)
         view.onLayout = { [weak self] in self?.revealIfShown() }
         view.onTyping = { [weak self] typing in self?.typing = typing }
+        view.annotates = annotates
+        view.onAnnotateSelection = { [weak self] in self?.annotateSelection() }
         view.allowsLinkPreview = false
         view.navigationDelegate = self; view.uiDelegate = self
         view.isOpaque = false; view.backgroundColor = .clear; view.scrollView.backgroundColor = .clear
@@ -152,6 +161,7 @@ import SwiftUI
         watchdog?.cancel(); watchdog = nil
         if let id = collection?.id { finishCollection(id, .failure(PhoneRequestError("This card did not answer. Your choice was not sent."))) }
         onReading = nil; onDrawn = nil; onLink = nil; onDraft = nil; onTask = nil
+        onAnnotate = nil; onAnnotationIdle = nil; onPointExit = nil
         view?.configuration.userContentController.removeScriptMessageHandler(forName: "cardHost", contentWorld: .page)
         view?.configuration.userContentController.removeScriptMessageHandler(forName: CardClaims.handler, contentWorld: CardClaims.world)
         view?.configuration.userContentController.removeScriptMessageHandler(forName: CardFocus.handler, contentWorld: CardFocus.world)
@@ -226,6 +236,34 @@ import SwiftUI
         pending.continuation.resume(with: result)
     }
 
+    /// INF-3296: how the card's notes stand, for the frame to light: Point at, the queued notes and the one being
+    /// written. The notes go whole to the card's own page, which hands the frame their targets and never a comment.
+    func annotate(mode: Bool, queued: [PhoneJSON], current: PhoneJSON?) {
+        guard drawn, failure == nil, let view else { return }
+        var state: [String: PhoneJSON] = ["mode": .bool(mode), "queued": .array(queued)]
+        if let current { state["current"] = current }
+        guard let argument = try? PhoneJSON.object(state).foundation else { return }
+        view.callAsyncJavaScript("window.phoneCard.annotate(state)", arguments: ["state": argument], in: nil, in: .page, completionHandler: nil)
+    }
+    /// The selection menu's Annotate: the frame reads the words selected now.
+    func annotateSelection() {
+        guard annotates, drawn else { return }
+        view?.evaluateJavaScript("window.phoneCard?.annotateSelection()", completionHandler: nil)
+    }
+    /// The body view's width, which a note's popover spans when it opens over a whole part.
+    var width: CGFloat { view?.bounds.width ?? 1 }
+    enum NoteReveal: Equatable { case revealed(top: CGFloat, height: CGFloat), missing, unavailable }
+    /// Lights a note's part or words in the body and says where they sit, in the body view's points.
+    func reveal(_ note: PhoneJSON) async -> NoteReveal {
+        guard drawn, failure == nil, let view, let argument = try? note.foundation else { return .unavailable }
+        let result = try? await view.callAsyncJavaScript("return await window.phoneCard.reveal(note)", arguments: ["note": argument],
+                                                         in: nil, contentWorld: .page)
+        guard let value = try? PhoneJSON.read(result as Any) else { return .unavailable }
+        if value.text == "missing" { return .missing }
+        guard let top = value["top"].numeric, let height = value["height"].numeric else { return .unavailable }
+        return .revealed(top: top, height: height)
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         let effectIDs = Set(card.actions.filter { $0["effect"] != .null }.compactMap { $0["id"].text })
         let actions = card.actions.compactMap { action -> PhoneJSON? in
@@ -294,6 +332,17 @@ import SwiftUI
             guard let key = payload["key"].text, keys.contains(key) else { replyHandler(nil, "This card cannot do that."); return }
             onTask?(key); replyHandler(true, nil)
         case "image", "demo": presentation = payload; replyHandler(true, nil)
+        case "annotate":
+            let box = payload["box"]
+            guard annotates, part == .body, payload["note"]["key"].text != nil,
+                  let top = box["top"].numeric, let bottom = box["bottom"].numeric,
+                  let left = box["left"].numeric, let right = box["right"].numeric else {
+                replyHandler(nil, "This card cannot do that."); return
+            }
+            onAnnotate?(payload["note"], CGRect(x: left, y: top, width: max(1, right - left), height: max(1, bottom - top)))
+            replyHandler(true, nil)
+        case "annotation-idle": onAnnotationIdle?(); replyHandler(true, nil)
+        case "point-exit": onPointExit?(); replyHandler(true, nil)
         case "action":
             guard !card.isPast, let id = payload["id"].text,
                   card.actions.contains(where: { $0["id"].text == id }),
@@ -339,6 +388,15 @@ import SwiftUI
 final class CardBodyView: WKWebView {
     var onLayout: (() -> Void)?
     override func layoutSubviews() { super.layoutSubviews(); onLayout?() }
+    /// INF-3296's phone piece: selected words in a card that takes notes offer Annotate beside Copy in their menu.
+    var annotates = false
+    var onAnnotateSelection: (() -> Void)?
+    override func buildMenu(with builder: UIMenuBuilder) {
+        super.buildMenu(with: builder)
+        guard annotates, let onAnnotateSelection else { return }
+        let annotate = UIAction(title: PhoneCardWords.annotate, image: UIImage(systemName: "text.bubble")) { _ in onAnnotateSelection() }
+        builder.insertSibling(UIMenu(options: .displayInline, children: [annotate]), afterMenu: .standardEdit)
+    }
     var onWindow: (() -> Void)?
     override func didMoveToWindow() {
         super.didMoveToWindow()

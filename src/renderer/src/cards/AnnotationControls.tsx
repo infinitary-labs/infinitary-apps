@@ -6,7 +6,9 @@ import {
   NOT_SENT,
   NOTE_CANCEL,
   NOTE_COMMENT_LABEL,
+  NOTE_DISCARD_HINT,
   NOTE_EDIT,
+  NOTE_PLACEHOLDER,
   NOTE_REMOVE,
   noteLabel,
   POINT_AT,
@@ -248,7 +250,7 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
         ref={field}
         rows={3}
         aria-label={NOTE_COMMENT_LABEL}
-        placeholder="Add a comment, or queue as-is"
+        placeholder={NOTE_PLACEHOLDER}
         maxLength={CARD_REPLY_MAX_CHARS}
         value={pick.note.comment}
         onChange={(event) => {
@@ -262,7 +264,7 @@ function AnnotationPopover({ cardId, collect }: { cardId: string; collect?: Coll
         {!writing
           ? "Copy the selected words, or press Tab to add a comment."
           : hint
-            ? "Cancel discards your comment. Queue keeps it."
+            ? NOTE_DISCARD_HINT
             : `Enter queues · ${sendKey} queues and sends · Esc closes when empty`}
       </p>
       <div className="inf-annotation-actions">

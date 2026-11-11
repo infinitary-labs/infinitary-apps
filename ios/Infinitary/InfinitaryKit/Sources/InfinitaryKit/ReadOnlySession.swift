@@ -92,6 +92,9 @@ public struct PhoneNotice: Equatable, Sendable {
     /// Offers the stage has drawn while the person could see it, kept for this computer's session only.
     private var seenCards = Set<String>()
     public private(set) var sharedCardSeen = false
+    /// INF-3296's phone piece: the home takes typed notes on a card's reply and keeps them on its thread, so a card
+    /// offers Point at and Annotate; a home without them sends its notes as plain Pointed at lines.
+    public private(set) var cardNotes = false
     /// The Mac's stage rule: a new card waits for its author's close-out, but a replied-under card stays.
     /// A minimized card leaves the phone's stack and count too (INF-944 item 3).
     public var stack: [PhoneCard] { cards.filter { ($0.awaiting == nil || $0.sentBackAt != nil) && !$0.minimized } }
@@ -789,7 +792,7 @@ public struct PhoneNotice: Equatable, Sendable {
         var reached = false
         var hello: [String: Any] = ["t": "hello", "protocolVersion": PhoneContract.version,
             "as": "view", "viewFloor": PhoneContract.viewFloor, "system": "ios", "spellings": ["inf"], "appVersion": "0.1.0",
-            "changes": [PhoneContract.frameParts]]
+            "changes": [PhoneContract.frameParts, PhoneContract.cardAnnotations]]
         if let epoch { hello["cursor"] = ["epoch": epoch, "seq": sequence] }
         let opened = ContinuousClock.now
         // INF-2668: the connection is cut for silence alone, never because an answer is slow. Quiet for `patience`
@@ -898,6 +901,8 @@ public struct PhoneNotice: Equatable, Sendable {
                 || (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardCurrentUpdateSeen)
             sceneObservations = homeMajor >= PhoneContract.sceneObservationsSince
                 || (frame["changes"] as? [String] ?? []).contains(PhoneContract.sceneObservations)
+            let ownMajor = PhoneContract.version.split(separator: ".").first.flatMap { Int($0) } ?? 0
+            cardNotes = homeMajor > ownMajor || (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardAnnotations)
             homeTakesUsage = homeMajor >= PhoneContract.phoneDiagnosticsSince
                 || (frame["changes"] as? [String] ?? []).contains(PhoneDiagnosticEvent.change)
             if !sceneObservations { computers = [] }

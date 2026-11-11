@@ -434,6 +434,7 @@ type FrameResponse = {
 };
 
 export type HostMessage =
+  | { fm: typeof FRAME_BRIDGE_VERSION; type: "annotate-selection"; document: string }
   | {
       fm: typeof FRAME_BRIDGE_VERSION;
       type: "annotation";

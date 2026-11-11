@@ -64,7 +64,7 @@ export const FRAME_ANNOTATION_SCRIPT = `
     if (!el) return;
     event.preventDefault(); event.stopImmediatePropagation(); pickAnnotation(el);
   }, true);
-  function selectedAnnotation() {
+  function selectedAnnotation(focusComment) {
     if (!annotation.enabled) return;
     var selection = window.getSelection();
     if (!selection || selection.isCollapsed || !selection.rangeCount) return;
@@ -76,7 +76,7 @@ export const FRAME_ANNOTATION_SCRIPT = `
     prefix.selectNodeContents(last); prefix.setEnd(range.endContainer,range.endOffset);
     var span = {start:start,end:prefix.toString().length};
     if (last !== el) span.endPart = Number(last.getAttribute('data-inf-target'));
-    pickAnnotation(el, span, false);
+    pickAnnotation(el, span, focusComment === true);
   }
   document.addEventListener('pointerup', function() { selectedAnnotation(); });
   document.addEventListener('keyup', function(event) { if (event.shiftKey) selectedAnnotation(); });

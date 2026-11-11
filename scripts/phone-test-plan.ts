@@ -58,6 +58,8 @@ export const PHONE_PARTS = [
   { name: "cards-revise", test: "testRevisionKeepsTheThreadShowing", photos: false },
   // INF-3124: a thread read from its start keeps its place as new lines arrive.
   { name: "cards-place", test: "testThreadKeepsItsPlace", photos: false },
+  // INF-3296: notes on a card's parts and selected words, queued and sent as one reply.
+  { name: "cards-notes", test: "testCardNotes", photos: false },
   // INF-2568: the message box and a card's reply with the keyboard up; each launches fresh and the merge fixture runs once a home.
   { name: "keyboard-pinned", test: "testKeyboardOverPinnedCard", photos: false },
   { name: "keyboard-scrolling", test: "testKeyboardOverScrollingCard", photos: false },

@@ -5,14 +5,20 @@ import { FRAME_SANDBOX, frameCsp } from "../../../src/shared/plugins/containment
 import { buildFrameDocument, type FrameTheme } from "../../../src/shared/plugins/frameDocument";
 import { isSafeCardHref } from "../../../src/shared/linkify";
 import { taskKeysIn } from "../../../src/shared/taskKeys";
-import { cardBodyMarkup, cardStylesheet } from "../../../src/renderer/src/cards/prototypeSrcdoc";
+import { cardBodyHtml, cardBodyMarkup, cardStylesheet } from "../../../src/renderer/src/cards/prototypeSrcdoc";
+import { type CardNote, cardNoteSchema, cardNotesSchema } from "../../../src/shared/cardNotes";
+import { noteTarget, pickedNote } from "../../../src/shared/cardNoteTargets";
+import { cardNavigationParts, type NavigationPart } from "../../../src/shared/cardParts";
 
 /** INF-64 piece 4: trusted WK parent, never the agent-authored frame. Native chrome owns effects. */
 interface NativeHost { postMessage(value: unknown): Promise<unknown> }
 declare global {
   interface Window {
     webkit: { messageHandlers: { cardHost: NativeHost } };
-    phoneCard: { mount(input: Input): Promise<void>; collect(): Promise<FrameAnswers>; theme(value: FrameTheme): void; ping(seq: number): void };
+    phoneCard: {
+      mount(input: Input): Promise<void>; collect(): Promise<FrameAnswers>; theme(value: FrameTheme): void; ping(seq: number): void;
+      annotate(state: Annotation): void; annotateSelection(): void; reveal(note: unknown): Promise<Revealed>;
+    };
   }
 }
 /**
@@ -23,11 +29,29 @@ type Input = {
   body: string; theme: FrameTheme; fill: unknown; readOnly: boolean; actions: string[]; width: "regular" | "wide" | "full";
   marks?: number[]; keys?: string[]; card?: Pick<Card, "actions" | "reviewTaskId" | "risk">;
 };
+/**
+ * INF-3296's phone piece: what the native chrome holds about the card's notes. The frame hears only targets and
+ * offsets, never a comment (docs/card-threads.md, "Pointing at a card").
+ */
+type Annotation = { mode: boolean; queued: unknown[]; current?: unknown };
+/** Where a revealed note sits in the body, or why it cannot show. */
+type Revealed = { top: number; height: number } | "missing" | "unavailable";
+/** The phone's own stamp, which the bridge's reveal asks for, as the Mac's revision navigation writes its offer. */
+const OFFER = "phone";
 const native = (message: unknown) => window.webkit.messageHandlers.cardHost.postMessage(message);
 let frame: HTMLIFrameElement | undefined;
 let documentID: string | undefined;
 let input: Input;
 let linked: string[] = [];
+/** The body's parts as the frame draws them, the card's own body and the map from its offsets to the drawn ones. */
+let notes: { parts: NavigationPart[]; source: string; toRendered: (start: number) => number; queued: CardNote[] } | undefined;
+/**
+ * The card's own page can post a pick itself, so a pick counts only when the phone asked for it: a whole part while
+ * Point at is on, selected words once right after the phone's own Annotate.
+ */
+let pointing = false;
+let selectionAsked = false;
+const reveals = new Map<number, (revealed: Revealed) => void>();
 /** The captain's own press in the body, as a picture's viewer asks: only then does a link, draft or key leave it. */
 const pressed = () => document.hasFocus() && navigator.userActivation.isActive;
 let next = 0;
@@ -110,6 +134,23 @@ window.addEventListener("message", (event: MessageEvent) => {
       break;
     case "entry":
       void native({ type: "mac-only" }).catch(() => {}); break;
+    case "annotate": {
+      // A selection the captain has not asked to annotate yet only lit itself: the phone's Annotate in its menu asks.
+      const asked = message.target.span ? message.focus === true && selectionAsked : pointing;
+      if (message.target.span && message.focus) selectionAsked = false;
+      if (!notes || !asked) { if (notes) native({ type: "annotation-idle" }).catch(() => {}); break; }
+      const note = pickedNote({ picked: message.target, parts: notes.parts, source: notes.source, queued: notes.queued, originalToRendered: notes.toRendered });
+      if (note) void native({ type: "annotate", note, box: message.box }).catch(() => {});
+      break;
+    }
+    case "point-exit": void native({ type: "point-exit" }).catch(() => {}); break;
+    case "revealed": {
+      const done = reveals.get(message.seq);
+      if (!done) break;
+      reveals.delete(message.seq);
+      done(message.top === undefined || message.height === undefined ? "missing" : { top: message.top, height: message.height });
+      break;
+    }
   }
 });
 
@@ -121,8 +162,16 @@ window.phoneCard = {
     const marks = (value.marks ?? []).map((mark) => (split && mark > split.at ? mark - split.facts.length : mark));
     linked = value.keys?.length ? taskKeysIn(value.body).filter((key) => value.keys!.includes(key)) : [];
     void native({ type: "mounted", facts: split?.facts ?? null, preview: isPreviewBody(value.body) }).catch(() => {});
+    // INF-3296: the body carries the stamp the bridge's reveal asks for, as the Mac's revision navigation writes it,
+    // after every part, so no part's offset moves. A plain-words body is drawn as the Mac draws it, its paragraphs parts.
+    const shown = split?.body ?? value.body;
+    const drawn = `${cardBodyHtml(shown)}<i hidden data-inf-revision-offer="${OFFER}"></i>`;
+    const toRendered = (start: number) => (split && start > split.at ? start - split.facts.length : start);
+    notes = { parts: cardNavigationParts(drawn), source: cardBodyHtml(value.body), toRendered, queued: [] };
+    pointing = false;
+    selectionAsked = false;
     // DOMParser is inert. Hash the script text the browser actually parses, never an event attribute.
-    const body = cardBodyMarkup(split?.body ?? value.body, marks).html;
+    const body = cardBodyMarkup(drawn, cardBodyHtml(shown) === shown ? marks : []).html;
     const parsed = new DOMParser().parseFromString(body, "text/html");
     const scripts = Array.from(parsed.querySelectorAll("script:not([src])"), (script) => script.textContent ?? "");
     const hashes = await native({ type: "hash", scripts }) as string[];
@@ -148,4 +197,32 @@ window.phoneCard = {
   },
   theme(value) { send({ type: "theme", theme: value }); },
   ping(seq) { send({ type: "ping", seq }); },
+  annotate(state) {
+    if (!notes || !documentID) return;
+    const queued = cardNotesSchema.safeParse(state.queued);
+    const current = state.current === undefined ? undefined : cardNoteSchema.safeParse(state.current);
+    notes.queued = queued.success ? queued.data : [];
+    pointing = state.mode === true;
+    const target = (note: CardNote) => noteTarget(notes!.parts, note, notes!.toRendered);
+    const lit = current?.success ? target(current.data) : undefined;
+    send({ type: "annotation", document: documentID, mode: state.mode === true,
+      queued: notes.queued.flatMap((note) => { const t = target(note); return t ? [t] : []; }), ...(lit ? { current: lit } : {}) });
+  },
+  annotateSelection() {
+    if (!documentID) return;
+    selectionAsked = true;
+    send({ type: "annotate-selection", document: documentID });
+  },
+  reveal(value) {
+    const note = cardNoteSchema.safeParse(value);
+    if (!notes || !documentID || !note.success) return Promise.resolve("unavailable");
+    const target = noteTarget(notes.parts, note.data, notes.toRendered);
+    if (!target) return Promise.resolve("missing");
+    const seq = ++next;
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => { reveals.delete(seq); resolve("unavailable"); }, 3000);
+      reveals.set(seq, (revealed) => { clearTimeout(timer); resolve(revealed); });
+      send({ type: "reveal", document: documentID, seq, offerId: OFFER, start: target.start, ...(target.span ? { span: target.span } : {}) });
+    });
+  },
 };

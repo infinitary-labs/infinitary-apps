@@ -1,5 +1,5 @@
 import type { CardNote } from "@shared/cardNotes";
-import { notePartIn, sameNoteTarget } from "@shared/cardNoteTargets";
+import { noteTarget, pickedNote, sameNoteTarget } from "@shared/cardNoteTargets";
 import { cardNavigationParts } from "@shared/cardParts";
 import type { FrameAnnotationTarget } from "@shared/plugins/bridge";
 import { useLayoutEffect, useMemo, useRef } from "react";
@@ -50,31 +50,8 @@ export function useAnnotationBridge(
   useLayoutEffect(() => {
     if (!cardId || !supported) return;
     let previousMode = false;
-    const target = (note: CardNote): FrameAnnotationTarget | undefined => {
-      const start = notePartIn(latest.current.parts, note, latest.current.originalToRendered);
-      const endPart = note.endKey
-        ? notePartIn(
-            latest.current.parts,
-            {
-              ...note,
-              key: note.endKey,
-              start: note.span?.endPart ?? 0,
-              endKey: undefined,
-              span: undefined,
-            },
-            latest.current.originalToRendered,
-          )
-        : undefined;
-      if (start === undefined || (note.endKey && endPart === undefined)) return undefined;
-      return {
-        start,
-        kind: note.kind,
-        excerpt: note.excerpt,
-        ...(note.span
-          ? { span: { ...note.span, ...(endPart !== undefined ? { endPart } : {}) } }
-          : {}),
-      };
-    };
+    const target = (note: CardNote): FrameAnnotationTarget | undefined =>
+      noteTarget(latest.current.parts, note, latest.current.originalToRendered);
     const sync = () => {
       const s = useShellStore.getState();
       const mode = s.pointAtCard === cardId;
@@ -135,61 +112,25 @@ export function useAnnotationBridge(
                   ?.focus();
               return;
             }
-            const part = latest.current.parts.find((part) => part.start === picked.start);
             const rect = frame.current?.getBoundingClientRect();
-            if (!part || !rect) return;
             const source = cardBodyHtml(
               useShellStore.getState().cards.find((card) => card.id === cardId)?.body ??
                 latest.current.body,
             );
-            const sourceParts = cardNavigationParts(source);
-            const original =
-              sourceParts.find(
-                (candidate) =>
-                  candidate.key === part.key &&
-                  (latest.current.originalToRendered?.(candidate.start) ?? candidate.start) ===
-                    part.start,
-              ) ?? sourceParts.find((candidate) => candidate.key === part.key);
-            const end =
-              picked.span?.endPart === undefined
-                ? undefined
-                : latest.current.parts.find(
-                    (candidate) => candidate.start === picked.span?.endPart,
-                  );
-            const originalEnd = end
-              ? sourceParts.find(
-                  (candidate) =>
-                    candidate.key === end.key &&
-                    (latest.current.originalToRendered?.(candidate.start) ?? candidate.start) ===
-                      end.start,
-                )
-              : undefined;
-            const note: CardNote = {
-              ...picked,
-              start: original?.start ?? part.start,
-              key: part.key,
-              ...(end && picked.span
-                ? {
-                    endKey: end.key,
-                    span: { ...picked.span, endPart: originalEnd?.start ?? end.start },
-                  }
+            const note = pickedNote({
+              picked,
+              parts: latest.current.parts,
+              source,
+              queued: useShellStore.getState().replyNotes[cardId] ?? [],
+              ...(latest.current.originalToRendered
+                ? { originalToRendered: latest.current.originalToRendered }
                 : {}),
-              comment: "",
-              line: source.slice(0, original?.start ?? part.start).split("\n").length,
-            };
-            const existing = useShellStore
-              .getState()
-              .replyNotes[cardId]?.find(
-                (n) =>
-                  n.key === note.key &&
-                  notePartIn(latest.current.parts, n, latest.current.originalToRendered) ===
-                    picked.start &&
-                  JSON.stringify(target(n)?.span) === JSON.stringify(picked.span),
-              );
+            });
+            if (!note || !rect) return;
             useShellStore.setState({
               annotationPick: {
                 cardId,
-                note: existing ?? note,
+                note,
                 focusComment,
                 box: {
                   top: rect.top + box.top,

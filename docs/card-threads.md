@@ -542,4 +542,5 @@ The record preserves its verbatim-word duplicate match before projecting an ask,
 The frame receives only targets, range offsets and selection state, never the captain's comments.
 Draft notes live with this window's reply draft; sent notes persist on the card's thread.
 
-Desktop readers without the annotation change and the phone receive readable Pointed at lines instead of the structured note field.
+A view that lists the annotation change, the phone included, receives the structured note field; one without it receives readable Pointed at lines instead.
+The phone draws the same notes natively (`docs/ios.md`, "Cards on the phone").

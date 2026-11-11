@@ -46,6 +46,8 @@ export const NOTE_CANCEL = "Cancel";
 export const NOTE_EDIT = "Edit";
 export const NOTE_REMOVE = "Remove";
 export const NOT_SENT = "Not sent";
+export const NOTE_PLACEHOLDER = "Add a comment, or queue as-is";
+export const NOTE_DISCARD_HINT = "Cancel discards your comment. Queue keeps it.";
 export function queuedNotesWords(count: number): string {
   return `${count} ${count === 1 ? "note" : "notes"} not sent`;
 }

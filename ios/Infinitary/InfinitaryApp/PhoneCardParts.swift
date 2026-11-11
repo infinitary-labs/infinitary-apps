@@ -217,6 +217,8 @@ struct PhoneBrowserStrip: View {
 struct PhoneCardThread: View {
     let messages: [PhoneJSON]
     let working: Bool
+    /// INF-3296's phone piece: a sent note's press lights it in the card's body.
+    var onNote: ((PhoneJSON) async -> CardWebHost.NoteReveal)? = nil
 
     /// The color a message's writer is named in: the captain's own, the author's accent, the app's quiet one.
     static func color(_ who: String) -> Color {
@@ -226,7 +228,7 @@ struct PhoneCardThread: View {
     var body: some View {
         VStack(alignment: .leading, spacing: PhoneTheme.space3) {
             ForEach(Array(messages.enumerated()), id: \.offset) { index, message in
-                PhoneThreadMessage(message: message).id(index)
+                PhoneThreadMessage(message: message, onNote: onNote).id(index)
             }
             if working {
                 HStack(spacing: PhoneTheme.space2) {
@@ -249,6 +251,7 @@ struct PhoneThreadScroller: View {
     let bounce: ScrollBounceBehavior
     let onHeight: (CGFloat) -> Void
     let onPhase: (ScrollPhase) -> Void
+    var onNote: ((PhoneJSON) async -> CardWebHost.NoteReveal)? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Whether the thread follows: true at its foot, false once the captain leaves it or a long reply opens at its start.
     @State private var follows = true
@@ -265,7 +268,7 @@ struct PhoneThreadScroller: View {
     var body: some View {
         ScrollViewReader { scroller in
             ScrollView {
-                PhoneCardThread(messages: messages, working: working)
+                PhoneCardThread(messages: messages, working: working, onNote: onNote)
                     .padding(.horizontal, PhoneTheme.space4).padding(.vertical, PhoneTheme.space3)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .id(Self.content)
@@ -359,6 +362,7 @@ private struct ThreadFoot: Equatable {
 
 private struct PhoneThreadMessage: View {
     let message: PhoneJSON
+    let onNote: ((PhoneJSON) async -> CardWebHost.NoteReveal)?
     @State private var settingsOpen = false
 
     private var who: String { message["who"].text ?? "host" }
@@ -379,8 +383,11 @@ private struct PhoneThreadMessage: View {
                     Text(time).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted)
                 }
             }
-            Text(message["text"].text ?? "").textSelection(.enabled)
-                .foregroundStyle(who == "host" ? PhoneTheme.secondary : PhoneTheme.text)
+            if !(message["text"].text ?? "").isEmpty || message["notes"].list.isEmpty {
+                Text(message["text"].text ?? "").textSelection(.enabled)
+                    .foregroundStyle(who == "host" ? PhoneTheme.secondary : PhoneTheme.text)
+            }
+            if !message["notes"].list.isEmpty { PhoneThreadNotes(notes: message["notes"].list, onReveal: onNote) }
             let contributor = PhoneCardWords.contributor(
                 host: who == "host",
                 label: message["contributor"]["label"].text,

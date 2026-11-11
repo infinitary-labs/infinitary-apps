@@ -249,4 +249,48 @@ describe("a conversation held on a computer that runs work", () => {
       "runs an older Infinitary that cannot show a project's fonts",
     );
   });
+
+  // INF-3715: an older home would drop the summary and show the merge card
+  // without it, so the computer sends nothing and tells its crewmate why.
+  it.each([
+    { homeChanges: ["merge-card-since-seen"], sent: true },
+    { homeChanges: [], sent: false },
+  ])(
+    "sends a merge card's since_seen only to a home that lists its change ($homeChanges)",
+    async ({ homeChanges, sent }) => {
+      const at = await placed({ homeChanges });
+      await at.open();
+      model([
+        {
+          tools: [
+            {
+              name: "emit_card",
+              args: {
+                title: "feat(queue): merge passed batches without an open app",
+                presentation: 2,
+                since_seen: "Review repairs grew this from 1,366 to 4,562 added lines.",
+                actions: [
+                  { id: "merge", default: true, effect: { kind: "merge", after: "close" } },
+                ],
+              },
+            },
+          ],
+        },
+        { text: "Done." },
+      ]);
+      await at.order("inf:session:prompt", [{ orderId: "since:1", task: TASK, text: "Show it." }]);
+      await at.ended(1);
+
+      const cards = at.home.effects.filter((effect) => effect.channel === "inf:work:card");
+      if (sent) {
+        expect(cards[0]?.request.card).toMatchObject({
+          presentationRevision: 2,
+          sinceSeen: "Review repairs grew this from 1,366 to 4,562 added lines.",
+        });
+        return;
+      }
+      expect(cards).toEqual([]);
+      expect(JSON.stringify(api.requests.at(-1)?.body?.messages)).toContain("since_seen refused: ");
+    },
+  );
 });

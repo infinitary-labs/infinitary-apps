@@ -1004,6 +1004,29 @@ The visual rules are the design skill's (`components/cards/ResponseCard.prompt.m
 
 Tests: `src/core/orchestrator/cardChanges.test.ts` (parts, matching, the rewrite threshold, pictures, facts, previews, a moving figure), `cardEvidence.test.ts` "what changed since the captain looked" (accumulation, stale looks, a crewmate's close-out, restart and a card leaving), `src/renderer/src/cards/revisedLine.test.ts`, `prototypeSrcdoc.test.ts`, and the journeys `tests/e2e/card-changes.spec.ts` (a first mate card through a small revision, a reload, two revisions while the window is away, a rewrite, a preview and a figure that moves on a press, with the bars measured beside their parts and the text unmoved) and `tests/e2e/card-body-file.spec.ts` (a crewmate's file-backed revision marks its one new paragraph).
 
+## Since the card you saw
+
+INF-3715, the captain's direction A on its plan: the crewmate writes, the app hands over the facts.
+A merge card that comes back after the captain saw an earlier one opens with a quick summary, in the crewmate's own words, of what changed since then.
+The marks above compare revisions of one card lifecycle; this compares merge cards of one change across lifecycles, versions and story revisions.
+
+- **What the app keeps.**
+  When the window reports a version seen (`CardService.seen`) and that version is a merge offer of the task's own change (`TaskDelivery.completionOffers`), the task keeps `TaskDelivery.seenMerge`: the card, the offer, when it was seen, the version and story revision it offered, and the lines the strip showed (`changeLines`, only while read at that version).
+  It is its own record because the completion offers keep only the newest few.
+- **What the crewmate is told.**
+  A merge card of the task's own change at another version or story revision than the one seen hands its crewmate the facts in the `emit_card` answer: when the captain saw the earlier card, its version, story revision and lines, and this card's (`sinceSeenNotice`, `src/core/orchestrator/sinceSeen.ts`).
+  The answer asks for the summary by showing the card again with the same id and `since_seen`.
+  A crewmate's card waits off the stage until its turn ends, so the revision reaches the captain first.
+- **What the captain sees.**
+  The host draws `since_seen` first in the body, above the story, under its own label naming when the captain saw the earlier card (`.inf-since-seen`, an `h6` label and the words as plain paragraphs).
+  The summary rides only on the card: the saved story, the pull request description and the merge's message never hold it.
+- **What it leaves alone.**
+  The `since_seen` parameter's description is the whole guidance: what the summary is for and who reads it, with no sections, length or required items.
+  The app judges nothing about the growth and refuses nothing: a merge card without a summary still goes up, and a summary on a card with no earlier merge card the captain saw is left out with a word in the answer.
+  A crewmate on a computer that runs work sends `sinceSeen` only to a home that lists `merge-card-since-seen`, and otherwise refuses the card with words, sending nothing.
+
+Tests: `src/core/orchestrator/sinceSeen.test.ts` (INF-3566's replay: seen at +1,366, shown again at +4,562), `src/core/pi/cardTool.test.ts` and `src/core/helper/sessionHostCardFiles.test.ts`.
+
 ## The You asked line
 
 Piece 1 of INF-1610 (the captain's Approve and build on the plan for robust answer delivery): every card about one of the captain's messages shows that message under its title, on the desktop and the phone.

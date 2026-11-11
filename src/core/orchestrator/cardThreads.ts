@@ -965,6 +965,7 @@ export class CardThreads {
       raw.requiredActions !== undefined && "required_actions",
       raw.riskDeclaration && "risk",
       raw.presentationRevision !== undefined && "presentation",
+      raw.sinceSeen !== undefined && "since_seen",
       raw.reviewTaskId && "review_task_id",
       raw.validationDecision && "validation_request",
       raw.allows && "allows",

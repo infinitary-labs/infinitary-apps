@@ -278,6 +278,25 @@ describe("createEmitCardTool", () => {
     );
   });
 
+  // INF-3715: the crewmate's summary of what changed since the captain's
+  // last merge card rides beside the saved story, trimmed, for the home to draw.
+  it("hands a saved-story merge card's since_seen summary to the home, trimmed (INF-3715)", async () => {
+    const onCard = vi.fn(() => "card-task-story");
+    const tool = piToolOf(bindTool(EMIT_CARD_TOOL, { onCard })) as unknown as AnyTool;
+    await tool.execute("since", {
+      title: "feat(queue): merge passed batches without an open app",
+      presentation: 3,
+      since_seen: "  Review repairs grew this from 1,366 to 4,562 added lines.  ",
+      actions: [{ id: "merge", default: true, effect: { kind: "merge", after: "close" } }],
+    });
+    expect(onCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        presentationRevision: 3,
+        sinceSeen: "Review repairs grew this from 1,366 to 4,562 added lines.",
+      }),
+    );
+  });
+
   // INF-92: a saved story is resolved at the home, never reconstructed by a second tool call.
   // INF-3060: three saved-story merge cards in a day repeated the story's
   // risk or required actions and were refused; the tool hands such a copy to

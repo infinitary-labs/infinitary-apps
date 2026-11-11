@@ -51916,6 +51916,9 @@
                     "exclusiveMinimum": 0,
                     "maximum": 9007199254740991
                   },
+                  "sinceSeen": {
+                    "type": "string"
+                  },
                   "width": {
                     "type": "string",
                     "enum": [

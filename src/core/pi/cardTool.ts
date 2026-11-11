@@ -164,6 +164,8 @@ export type EmittedCard = {
   body: string;
   /** A completion from the current saved change story; resolved by the home before any card lint. */
   presentationRevision?: number;
+  /** The crewmate's summary of what changed since the captain's last merge card (`since_seen`). */
+  sinceSeen?: string;
   actions: EmittedAction[];
   id?: string;
   /**
@@ -448,6 +450,15 @@ export const ALLOWS_PARAM =
   "Mark the yes action of a consent ask: action names an ordinary action with no effect, covers says what a yes allows, as the card asks it. The captain's own click on it is recorded and served as already allowed to later turns of this task, its reviewer, a stronger-model retry and a takeover of its work, so none asks again.";
 
 /**
+ * The summary of what changed since the captain's last merge card
+ * (INF-3715): a top-level parameter, so a Claude crewmate reads it whole.
+ * It says what the summary is for and who reads it, and leaves the words to
+ * the crewmate: no sections, length or required items.
+ */
+export const SINCE_SEEN_PARAM =
+  "When your merge card's answer says the captain saw an earlier merge card for this change, show it again with a quick summary, in your own words, of what changed since then, so they need not work it out. Only the captain reads it: the card draws it first, under the time they saw that card, and it never reaches the pull request, the story or the merge's message.";
+
+/**
  * The saved-story rule, said once (INF-416 piece J). A top-level parameter,
  * so a Claude crewmate reads it whole. The prompt, the brief and the other
  * tools do not restate it.
@@ -475,6 +486,7 @@ const crewmateCardParams = Type.Object({
       description: SAVED_STORY_RULE,
     }),
   ),
+  since_seen: Type.Optional(Type.String({ description: SINCE_SEEN_PARAM })),
   actions: Type.Optional(
     Type.Array(
       crewActionParam(
@@ -773,6 +785,7 @@ async function emitCard(
       ...(params.holds_place ? { holdsPlace: true } : {}),
       ...(params.answering ? { answering: true } : {}),
       ...(params.width ? { width: params.width } : {}),
+      ...(params.since_seen?.trim() ? { sinceSeen: params.since_seen.trim() } : {}),
       ...copies.facts,
     });
     const dropped = copies.names.length
@@ -858,6 +871,7 @@ async function emitCard(
       : {}),
     ...(params.validation_request ? { validationDecision: params.validation_request } : {}),
     ...(params.allows ? { allows: params.allows } : {}),
+    ...(!firstmate && params.since_seen?.trim() ? { sinceSeen: params.since_seen.trim() } : {}),
     ...(options.browserButton && params.browser_handoff !== undefined
       ? {
           browserHandoff: {

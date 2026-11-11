@@ -95,6 +95,20 @@ export type CompletionOffer = {
   at: number;
 };
 
+/** The merge card the captain last saw for a task's own change (`TaskDelivery.seenMerge`). */
+export type SeenMerge = {
+  cardId: string;
+  offerId: string;
+  /** When the window first had that version in front of the captain. */
+  at: number;
+  headSha: string;
+  presentationRevision?: number;
+  /** The task's current change, by number, when that card went up (`CompletionOffer.shownFor`). */
+  change?: number;
+  /** Absent when the lines were not read at that version: never zero. */
+  lines?: { added: number; deleted: number };
+};
+
 /**
  * The independent assessment of a repair its crewmate declared unknown
  * (FI3-663): the task the host commissioned to read it and, once it
@@ -348,6 +362,13 @@ export type TaskDelivery = {
    * until a reading succeeded: an unread change is never zero.
    */
   changeLines?: { base: string; head: string; added: number; deleted: number; at: number };
+  /**
+   * The merge card of the task's own change the captain last saw (INF-3715):
+   * when, the version and story it offered, and the lines its strip showed.
+   * A later merge card at another version or story hands these to its
+   * crewmate, who writes what changed since (`sinceSeen.ts`).
+   */
+  seenMerge?: SeenMerge;
   ci?: "green" | "red" | "pending" | "no-pr" | "merged";
   ciAt?: number;
   /** Current raw check facts; the merge offer itself is the crew's judgment. */

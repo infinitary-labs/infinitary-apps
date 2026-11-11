@@ -55,6 +55,7 @@ import { requiredActionCard, requiredActionProvenance } from "./requiredActionCa
 import { settleCardFacts } from "./settleCardFacts";
 import { type OpenMergeAction, openMergeActionIn } from "./settleHost";
 import { withMergeLine } from "./settleWords";
+import { seenMergeOf } from "./sinceSeen";
 
 /**
  * The card stack (the primitives review's P4 and P6, docs/card-threads.md):
@@ -614,6 +615,16 @@ export class CardService {
     const shown = card && this.onTheStage(card);
     if (!shown?.lifecycleId || shown.offerId !== offerId || !onStage(shown)) return;
     this.evidence.noteSeen(shown, shown.lifecycleId, offerId);
+    // A merge card of the task's own change keeps what it offered, which a
+    // later merge card hands its crewmate (INF-3715, `sinceSeen.ts`).
+    if (shown.author !== "crewmate" || !shown.taskId) return;
+    const seenMerge = seenMergeOf(
+      shown.id,
+      offerId,
+      this.host.tasks.get(shown.taskId)?.delivery,
+      this.host.now(),
+    );
+    if (seenMerge) this.host.tasks.delivery.recordChangeEvidence(shown.taskId, { seenMerge });
   }
 
   /**

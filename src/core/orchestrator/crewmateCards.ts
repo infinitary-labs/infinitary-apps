@@ -58,6 +58,7 @@ import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { skipRulesStrip, writeAskStrip } from "./requestStrips";
 import type { SettleOwners } from "./settleOwners";
 import { contributionStatusLine, pendingMergeLine } from "./settleWords";
+import { seenBefore, sinceSeenNotice, sinceSeenSection } from "./sinceSeen";
 import { deliverableOf, taskContributesUpstream } from "./workShape";
 
 /**
@@ -491,8 +492,10 @@ export class CrewmateCards {
       attachment: _undeclared,
       risk: _undeclaredRisk,
       riskDeclaration,
+      sinceSeen: sinceSeenGiven,
       ...declared
     } = input;
+    const sinceSeen = sinceSeenGiven?.trim() || undefined;
     const handoff = this.browser.browserHandoffOf(declared.actions ?? [], browserHandoff);
     // A browser button with a page opens that page from the project
     // (docs/task-browser.md, "A page from the project"); without one it is
@@ -550,7 +553,19 @@ export class CrewmateCards {
             input.allows.covers,
           )
         : "");
-    const card = strip ? { ...shown, body: `${shown.body}${strip}` } : shown;
+    // What changed since the captain's last merge card (INF-3715): the app
+    // hands the crewmate the facts in the answer, and draws the crewmate's
+    // own summary first, above the story, only while a merge card the
+    // captain saw at another version or story stands behind this one.
+    const ownMerge = mergesOwn(shown.actions);
+    const offered = {
+      head: presentationChecked?.head ?? record?.delivery?.headSha,
+      revision: presentationChecked?.revision,
+      change: record ? currentChange(record.delivery, record.branch).number : undefined,
+    };
+    const seen = ownMerge ? seenBefore(record?.delivery, offered) : undefined;
+    const summary = seen && sinceSeen ? sinceSeenSection(sinceSeen, seen.at) : "";
+    const card = strip || summary ? { ...shown, body: `${summary}${shown.body}${strip}` } : shown;
     // The merge card of a task that merges on its own is the app's own
     // merge (INF-2744): the app approves it as it goes up (`mergeFromCard`).
     // Its crewmate's asks-first declaration, or a hold, leaves it to the
@@ -663,7 +678,17 @@ export class CrewmateCards {
         if (appMerges && shownCard && this.mergeFromCard(task.id, id, declaredMerge))
           this.showMerging(task.id, shownCard);
       }
-      return `${id}${revisionNotice(this.host.cards.revisionChanges(id))}`;
+      const since =
+        ownMerge || sinceSeen
+          ? sinceSeenNotice({
+              seen,
+              head: offered.head,
+              revision: offered.revision,
+              lines: current.delivery?.changeLines,
+              summary: sinceSeen !== undefined,
+            })
+          : "";
+      return `${id}${revisionNotice(this.host.cards.revisionChanges(id))}${since}`;
     };
     const gate = this.pendingCiGate(task.id, card);
     const advisory =

@@ -78,6 +78,12 @@ export type EmittedCardInput = {
   body: string;
   /** Current published story revision, resolved by the home before any card lint. */
   presentationRevision?: number;
+  /**
+   * A crewmate's summary of what changed since the captain last saw a merge
+   * card for its change (`since_seen`, INF-3715): drawn first on its merge
+   * card, never published.
+   */
+  sinceSeen?: string;
   requiredActions?: RequiredAction[];
   /** The saved story's after-merge steps (INF-2796); the host's own, never a tool parameter. */
   afterMerge?: AfterMergeShown[];

@@ -375,6 +375,7 @@ export const placedCardSchema = z.object({
   id: z.string().optional(),
   pictures: z.array(cardPictureSchema).optional(),
   presentationRevision: z.number().int().positive().optional(),
+  sinceSeen: z.string().optional(), // `merge-card-since-seen.md`: never sent to an older home
   width: z.enum(["wide", "full"]).optional(),
   holdsPlace: z.boolean().optional(),
   reply: z.string().optional(),
@@ -405,8 +406,7 @@ export const placedCardSchema = z.object({
       savedFailed: z.literal(true).optional(),
     })
     .optional(),
-  /** Bind the shown ordinary action to a recorded validation request. */
-  /** INF-1824: `gaps` names further gaps of the same version, drawn as one checklist. */
+  /** Bind the shown ordinary action to a recorded validation request; INF-1824: `gaps` names further gaps of the same version, drawn as one checklist. */
   validationDecision: z
     .object({ request: z.string(), action: z.string(), gaps: z.array(z.string()).optional() })
     .optional(),

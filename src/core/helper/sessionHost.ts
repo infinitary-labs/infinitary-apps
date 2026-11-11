@@ -245,6 +245,9 @@ const FORWARDED_TOOLS = new Set<string>(Object.keys(APP_TOOL_REQUESTS));
 /** The provider's retries a crewmate's turn gets when the home names none. */
 const RETRIES = 2;
 
+/** A merge card's summary of what changed since the captain last saw one (`merge-card-since-seen.md`). */
+const MERGE_CARD_SINCE_SEEN = contractChange("merge-card-since-seen");
+
 const toolTextSchema = workRequests["inf:work:close-card"].response;
 const integrationAnswerSchema = workRequests["inf:work:use-integration"].response;
 type IntegrationWireAnswer = ReturnType<typeof integrationAnswerSchema.parse>;
@@ -1376,6 +1379,15 @@ export class SessionHost {
                 `Card font refused: ${HOME.the} runs an older Infinitary that cannot show a project's fonts; draw the preview in the app's own typefaces until it is updated.`,
               );
             }
+            // An older home would drop the summary and show the card without
+            // it, so nothing is sent (INF-3715).
+            if (
+              card.sinceSeen !== undefined &&
+              !listsChange(this.options.homeChanges?.(), MERGE_CARD_SINCE_SEEN)
+            )
+              throw new Error(
+                `since_seen refused: ${HOME.the} runs an older Infinitary that cannot show it; nothing was sent. Show the card without since_seen and say what changed in its thread until ${HOME.the} is updated.`,
+              );
             // Each picture's bytes first, so the home holds them when it shows the card.
             await sendPictures(card.pictures ?? [], signal);
             // Each project font its preview names, before the card too.

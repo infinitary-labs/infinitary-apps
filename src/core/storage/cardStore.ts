@@ -27,6 +27,7 @@ import {
   type PastEnding,
   replyWithSettings,
 } from "@shared/cards";
+import { cardWrittenText } from "@shared/cardWrittenText";
 import { type CardEnded, cardEndedSchema } from "@shared/endedCard";
 import { pastCardEndingWords } from "@shared/pastCard";
 import { type RiskAssessment, riskAssessmentSchema } from "@shared/risk";
@@ -348,8 +349,30 @@ export function updateSightingId(updateId: string): string {
   return `seen-update:${updateId}`;
 }
 
+export type CaptainCardInput = {
+  sourceId: string;
+  kind: "card-message" | "card-choice";
+  cardId: string;
+  lifecycleId: string;
+  taskId: string | null;
+  at: number;
+  text: string;
+  /** Only a verified displayed offer, never a guessed mutable head. */
+  offerId?: string;
+  /** Inclusive thread cursor frozen before this input. */
+  precedingMessageId: number;
+  contextMissing: boolean;
+};
+
 export class CardStore {
+  private readonly captainListeners = new Set<(observation: string) => void>();
   constructor(private readonly db: AppDatabase) {}
+
+  /** Factual new-input notification inside the enclosing write, not a history scan. */
+  onCaptainInteraction(listener: (observation: string) => void): () => void {
+    this.captainListeners.add(listener);
+    return () => this.captainListeners.delete(listener);
+  }
 
   upsert(card: Card): void {
     this.db
@@ -922,6 +945,8 @@ export class CardStore {
     cardId: string;
     who: CardMessageWho;
     text: string;
+    /** Original captain caption before attachment/settings decoration; unknown on older rows. */
+    captainText?: string;
     at?: number;
     revision?: CardRevisionLinks;
     notes?: CardNote[];
@@ -935,11 +960,12 @@ export class CardStore {
     responseId?: string;
   }): CardMessage {
     const at = input.at ?? Date.now();
+    const original = input.who === "captain" && input.captainText !== undefined;
     const result = this.db
       .prepare(
         `INSERT INTO card_messages
-          (card_id, who, text, at, revision_json, contributor_json, answers_message, clarification, response_id, notes_json)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          (card_id, who, text, at, revision_json, contributor_json, answers_message, clarification, response_id, notes_json${original ? ", captain_text" : ""})
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?${original ? ", ?" : ""})`,
       )
       .run(
         input.cardId,
@@ -952,6 +978,7 @@ export class CardStore {
         input.clarification ? 1 : null,
         input.responseId ?? null,
         input.notes?.length ? JSON.stringify(cardNotesSchema.parse(input.notes)) : null,
+        ...(original ? [input.captainText] : []),
       );
     return {
       id: Number(result.lastInsertRowid),
@@ -1228,7 +1255,106 @@ export class CardStore {
         input.build ?? null,
         JSON.stringify(payload),
       );
-    return result.changes > 0;
+    const inserted = result.changes > 0;
+    if (
+      inserted &&
+      input.actor === "captain" &&
+      (input.kind === "message_ref" || input.kind === "action")
+    ) {
+      for (const listener of this.captainListeners) {
+        try {
+          listener(input.id);
+        } catch {
+          // Ancillary classification must never reject the captain's original input.
+          console.warn("[cards] captain-input observer failed");
+        }
+      }
+    }
+    return inserted;
+  }
+
+  /** One indexed cursor, captured before a choice can acquire later replies. */
+  latestMessageId(cardId: string): number {
+    const row = this.db
+      .prepare("SELECT id FROM card_messages WHERE card_id = ? ORDER BY id DESC LIMIT 1")
+      .get(cardId) as { id: number } | undefined;
+    return row?.id ?? 0;
+  }
+
+  /**
+   * Seek earlier source-owner messages newest first, stopping when the caller
+   * has its bounded context. Captain text is never reconstructed from an
+   * attachment-decorated message; undefined means the original is unknown.
+   * The frozen inclusive cursor excludes the reply and every later message.
+   */
+  *originalMessagesBefore(
+    cardId: string,
+    cursor: number,
+  ): Generator<{ id: number; who: CardMessageWho; text: string | undefined }> {
+    const rows = this.db
+      .prepare(
+        `SELECT id, who, text, captain_text FROM card_messages
+         WHERE card_id = ? AND id <= ? ORDER BY id DESC`,
+      )
+      .iterate(cardId, cursor) as Iterable<{
+      id: number;
+      who: CardMessageWho;
+      text: string;
+      captain_text: string | null;
+    }>;
+    for (const row of rows) {
+      yield {
+        id: row.id,
+        who: row.who,
+        text: row.who === "captain" ? (row.captain_text ?? undefined) : row.text,
+      };
+    }
+  }
+
+  /** Read only the original captain input named by a newly recorded interaction. */
+  captainInput(observationId: string): CaptainCardInput | undefined {
+    const observation = this.observationById(observationId);
+    if (observation?.actor !== "captain" || observation.source === "frame") return undefined;
+    let caption = "";
+    let precedingMessageId: number;
+    if (observation.kind === "message_ref") {
+      const row = this.db
+        .prepare(
+          "SELECT captain_text FROM card_messages WHERE card_id = ? AND id = ? AND who = 'captain'",
+        )
+        .get(observation.cardId, observation.payload.messageId) as
+        | { captain_text: string | null }
+        | undefined;
+      // No reconstruction from old decorated text, which may contain attachment contents.
+      if (row?.captain_text == null) return undefined;
+      caption = row.captain_text;
+      precedingMessageId = observation.payload.messageId - 1;
+    } else if (observation.kind === "action") {
+      if (!observation.payload.recognized) return undefined;
+      precedingMessageId = observation.payload.precedingMessageId ?? 0;
+    } else return undefined;
+    const text = cardWrittenText(
+      caption,
+      observation.payload.answers,
+      observation.payload.questions,
+    );
+    if (!text.trim()) return undefined;
+    const verified = observation.payload.display?.fidelity === "matched";
+    return {
+      sourceId: observation.id,
+      kind: observation.kind === "message_ref" ? "card-message" : "card-choice",
+      cardId: observation.cardId,
+      lifecycleId: observation.lifecycleId,
+      taskId: observation.taskId,
+      at: observation.recordedAt,
+      text,
+      ...(verified && observation.offerId ? { offerId: observation.offerId } : {}),
+      precedingMessageId,
+      contextMissing:
+        !verified ||
+        Boolean(observation.payload.questionsGap) ||
+        (observation.kind === "action" && observation.payload.precedingMessageId === undefined),
+    };
   }
 
   /** A card's observations, every lifecycle, oldest first. */

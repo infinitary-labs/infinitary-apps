@@ -58,7 +58,7 @@ Claude classification keeps the client's model-specific output allowance rather 
 The question still asks for exactly one kind, and the adapter's 15-second deadline still covers the whole call.
 No classification is re-asked to repair an empty reply; the original request has room to finish its thinking and return the word.
 
-The question's session is a one-shot on the one session contract (`questionSessionSpec`, `src/core/decisions/questionSession.ts`).
+The question's session is a one-shot on the one session contract (`questionSessionSpec`, `src/core/session/questionSession.ts`).
 On Pi, `createPiSessionFactory` (`src/core/pi/session.ts`) opens it in the removed consult factory's shape: `SessionManager.inMemory` so there is no session file and nothing to resume, compaction off, one retry, built-ins off, **no custom tools at all**, and the model's output clamped to 64 tokens.
 The classifier cannot read or call anything, and its instruction asks for one word.
 `classifierSession.realSession.test.ts` pins that call shape the way the other three personas' contract tests pin theirs.

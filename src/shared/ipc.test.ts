@@ -378,6 +378,7 @@ describe("ipc contract", () => {
       "inf:crew:counts",
       "inf:decisions:key:remove",
       "inf:decisions:key:set",
+      "inf:decisions:use:set",
       "inf:devices:add",
       "inf:devices:address:set",
       "inf:devices:addresses",

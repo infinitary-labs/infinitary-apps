@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { decisionModelIdSchema, decisionsSettingsSchema, decisionsViewSchema } from "../decisions";
+import { decisionUseRequestSchema } from "../decisionUses";
 import { releaseNotesViewSchema, shownReleaseNoteSchema } from "../releaseTracking";
 import { keptOutsideDataSchema, outsideDataDeletedSchema } from "../savedOutsideData";
 import {
@@ -43,6 +44,14 @@ export const upkeepChannels = {
     surface: "core",
     reach: "views",
     request: z.tuple([decisionModelIdSchema]),
+    response: decisionsViewSchema,
+  },
+  /** One decision model use switched in Settings (`src/shared/decisionUses.ts`). */
+  "inf:decisions:use:set": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([decisionUseRequestSchema]),
     response: decisionsViewSchema,
   },
   "inf:update:status": {

@@ -17,6 +17,7 @@ import { HERE } from "@shared/deviceNames";
 import { type HoldOverride, overrideTakenBackWords, standingOverrideWords } from "@shared/holds";
 import { QUEUE_STATUS, type QueueWorkflow, type RepoDelivery } from "@shared/repos";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
+import type { CorrectionInput, CorrectionReview } from "../decisions/correctionTypes";
 import type { FreezeLine } from "../freeze/freezeRecorder";
 import type { FreezeLocation, VersionSummary } from "../freeze/freezeTally";
 import { capWithOverflow } from "../overflow";
@@ -28,6 +29,9 @@ import type { KindWords, WakeFacts } from "./wakes";
 
 /** The facts of the first mate's own notices. */
 export type NoticeFacts =
+  | CorrectionInput
+  | CorrectionReview
+  | { kind: "kept-project-direction"; id: string; revision: number; text: string }
   | {
       kind: "resource-pressure";
       computerId: string | null;
@@ -486,6 +490,26 @@ function renderSeatMoved(facts: Extract<WakeFacts, { kind: "seat-moved" }>): str
 
 /** The first mate's own notices, worded. */
 export const NOTICE_WORDS: KindWords<NoticeFacts> = {
+  "kept-project-direction": (facts) =>
+    `The captain kept this instruction for your project (${facts.id}, revision ${facts.revision}). Apply it where it concerns your current work; it grants no new permission.\n${facts.text}`,
+  "correction-input": (facts) =>
+    `A new captain input is queued for a closed question: ${facts.source.key}.`,
+  "correction-review": (facts) =>
+    facts.saved
+      ? `A verified project direction awaits your affected-work judgment. Use correction_case inspect and recover with inputId ${facts.inputId}, then guide only affected running task ids, or an empty list. Do not offer or save it again.`
+      : facts.retry
+        ? `The captain's chosen project instruction is still not saved after your turn on it. Use correction_case inspect and recover with inputId ${facts.inputId}. If it can be saved, use the existing app_change direction writer with the offer's stable identifier, exact wording, project and expected revision. If it cannot, use correction_case ignore with a reply telling the captain why it was not kept. The app does not ask again.`
+        : facts.selected
+          ? `The captain requested this project instruction. Use correction_case inspect and recover with inputId ${facts.inputId}. Read before retrying an uncertain write. If it is not kept, use the existing app_change direction writer with the offer's stable identifier, exact wording, project and expected revision. No second choice is needed. Do not say kept before verified readback; keep failures pending. Then declare affected work with guide.`
+          : [
+              `A decision model flagged one possible lasting correction. Source: ${facts.source.key}; input: ${facts.inputId}.`,
+              "Only this flagged case needs consideration; the flag is not permission to save or start work. The original author handles the current correction normally.",
+              "Use correction_case inspect with inputId to read the source-time text. Check its meaning, intended project, existing directions and earlier offers. A current product request alone need not become a direction.",
+              "If useful for later work, use correction_case offer with the exact proposed text and intended project. Preserve all conditions and numbers, including bounded rules; always and repetition are not required. Otherwise use correction_case ignore. Never silently edit project instruction files.",
+              "Keep the offer separate from the original task's approval and merge. Reuse an unresolved offer. A declined offer stays declined without new evidence. Projectless work needs an identified project, never an invented one.",
+              "After Keep, use the existing app_change direction writer with the offered stable identifier, exact wording and scope. Read before retrying an uncertain write; never overwrite a newer revision. Keep failures pending, and do not say kept before verified readback.",
+              "Explicit requests to keep a rule retain your existing authority and require no extra confirmation. Tell only running crewmates whose work the saved change affects; use correction_case guide with their ids after saving. Saving grants no other permission.",
+            ].join("\n"),
   "resource-pressure": (facts) =>
     `[fm-op] ${facts.label} reports ${facts.pressure} memory pressure. Nothing was killed, paused or slowed. In response to this notice, do not kill, pause or slow running work; judge these facts and steer future work instead. Current resource facts: ${JSON.stringify(facts)}. Task use is attributed only to known process trees; everything else is unclaimed, resident bytes may count shared pages more than once, and missing facts are unknown.`,
   "freeze-recorded": (facts) => renderFreezeRecorded(facts),

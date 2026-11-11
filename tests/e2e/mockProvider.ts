@@ -7,6 +7,7 @@ import {
 import type { AddressInfo } from "node:net";
 import { zstdDecompressSync } from "node:zlib";
 import type { ServedSegment } from "@shared/servedFrame";
+import { CORRECTION_QUESTION } from "../../src/core/decisions/correctionQuestion";
 import {
   ANSWER_MISSING_ENDED_OPENING,
   ANSWER_MISSING_OPENING,
@@ -370,9 +371,27 @@ function servedSummary(turn: ServedTurn | undefined): string {
   return clipped(parts.join(" | ") || "(context only)");
 }
 
+/**
+ * The reply check's opening line, read from its owner
+ * (`src/core/decisions/correctionQuestion.ts`): the app asks it about every
+ * captain message, beside the conversation, on the person's own model while
+ * no decision model answers it.
+ */
+const REPLY_CHECK_OPENING = CORRECTION_QUESTION.instructions.split("\n")[0] ?? "";
+
+/** Whether a completion request is the reply check rather than a turn of the conversation. */
+export function isReplyCheck(body: string): boolean {
+  return REPLY_CHECK_OPENING !== "" && body.includes(REPLY_CHECK_OPENING);
+}
+
 /** What a journey's scenario reads of one request. */
 export type ScenarioRequest = {
   body: string;
+  /**
+   * True on the reply check, which the stand-in asks only of a scenario that
+   * `answersReplyCheck`; every other scenario never sees one.
+   */
+  replyCheck?: boolean;
   isFirstmate: boolean;
   wantsStream: boolean;
   latestUserTail: string;
@@ -401,17 +420,36 @@ export type ScenarioAnswer = (
  * as that stand-in, and asks the answerers in the order named; an
  * answerer returns undefined to pass the request on.
  */
-export type Scenario = () => (request: ScenarioRequest) => ScenarioAnswer | undefined;
+export type Scenario = {
+  (): (request: ScenarioRequest) => ScenarioAnswer | undefined;
+  /**
+   * True for a scenario that answers the reply check itself. The stand-in
+   * asks only such scenarios that question, in the order named, and answers
+   * "ordinary" when none does, so a journey's scripted turns never take it
+   * for their own.
+   */
+  readonly answersReplyCheck?: true;
+};
 
 export type MockProviderServer = {
   port: number;
+  /** Every completion request received, the reply checks included. */
   requests: () => number;
-  /** Observe decoded requests, including history, without retaining authentication headers. */
+  /** Observe decoded requests, history and reply checks included, without retaining authentication headers. */
   recordRequests: (record: (body: string) => void) => () => void;
   /** Reject every Firstmate inference, including any unexpected setup composition. */
   failFirstmate: (fail: boolean) => void;
-  /** Raw completion request bodies, oldest first (contract tests). */
+  /**
+   * Raw completion request bodies, oldest first (contract tests): the
+   * conversation's requests, every one but the reply checks, which arrive
+   * beside it in no fixed order (`isReplyCheck`).
+   */
   requestBodies: () => string[];
+  /**
+   * Every completion request body, oldest first, the reply checks included:
+   * what the launch diagnostics record (`recordRequests`).
+   */
+  allRequestBodies: () => string[];
   /** The headers of each completion request, in the same order as requestBodies. */
   requestHeaders: () => IncomingHttpHeaders[];
   /** Requests that reached CARD_FETCH_PROBE_PATH (a scripted card must never land one). */
@@ -456,12 +494,16 @@ export async function startMockProvider(
   options: { scenarios?: readonly Scenario[] } = {},
 ): Promise<MockProviderServer> {
   const scenarios = (options.scenarios ?? []).map((start) => start());
+  const replyCheckScenarios = (options.scenarios ?? []).flatMap((start, index) => {
+    const answer = scenarios[index];
+    return start.answersReplyCheck && answer ? [answer] : [];
+  });
   let requestCount = 0;
   let failFirstmate = false;
   let cardFetchProbeHits = 0;
-  const requestBodies: string[] = [];
+  /** Every request received, oldest first; the reply checks are marked apart. */
+  const received: { body: string; headers: IncomingHttpHeaders; replyCheck: boolean }[] = [];
   const recorders = new Set<(body: string) => void>();
-  const requestHeaders: IncomingHttpHeaders[] = [];
   /** Held crewmate steps, each with the request that opened it. */
   const held = new Map<ServerResponse, { body: string; request: number }>();
   /** The thread crewmate's work after its acknowledgement, waiting on the spec. */
@@ -519,9 +561,9 @@ export async function startMockProvider(
         const rawBody = (
           req.headers["content-encoding"] === "zstd" ? zstdDecompressSync(raw) : raw
         ).toString("utf8");
-        requestBodies.push(rawBody);
+        const replyCheck = isReplyCheck(rawBody);
+        received.push({ body: rawBody, headers: req.headers, replyCheck });
         for (const record of recorders) record(rawBody);
-        requestHeaders.push(req.headers);
         // Persona detection: requests carry their session's system prompt,
         // so the persona line identifies who is asking (the Firstmate or a
         // crewmate).
@@ -727,6 +769,32 @@ export async function startMockProvider(
           if ("afterMs" in answer && answer.afterMs) setTimeout(now, answer.afterMs);
           else now();
         };
+
+        const scenarioRequest: ScenarioRequest = {
+          body,
+          replyCheck,
+          isFirstmate,
+          wantsStream,
+          latestUserTail,
+          hasToolResults,
+          anthropicMessages,
+          port: (server.address() as AddressInfo).port,
+        };
+
+        // The reply check: the app asks it about every captain message,
+        // beside the conversation, and it quotes the captain's words. Only a
+        // scenario that answers it is asked; otherwise the stand-in answers
+        // "ordinary", so no journey's scripted turn reads it as its own.
+        if (replyCheck) {
+          for (const scenario of replyCheckScenarios) {
+            const answer = scenario(scenarioRequest);
+            if (!answer) continue;
+            send(answer);
+            return;
+          }
+          streamText("ordinary");
+          return;
+        }
 
         if (isFirstmate && failFirstmate) {
           res.writeHead(400, { "Content-Type": "application/json" });
@@ -950,15 +1018,6 @@ export async function startMockProvider(
         // scenarios"): asked in the order the journey named them, after the
         // first mate's answer-missing retry and scripted turns and before
         // every shared answer below. The first to answer wins.
-        const scenarioRequest = {
-          body,
-          isFirstmate,
-          wantsStream,
-          latestUserTail,
-          hasToolResults,
-          anthropicMessages,
-          port: (server.address() as AddressInfo).port,
-        };
         for (const scenario of scenarios) {
           const answer = scenario(scenarioRequest);
           if (!answer) continue;
@@ -1199,7 +1258,7 @@ export async function startMockProvider(
     port: address.port,
     requests: () => requestCount,
     recordRequests: (record) => {
-      for (const body of requestBodies) record(body);
+      for (const { body } of received) record(body);
       recorders.add(record);
       return () => {
         recorders.delete(record);
@@ -1208,8 +1267,10 @@ export async function startMockProvider(
     failFirstmate: (fail) => {
       failFirstmate = fail;
     },
-    requestBodies: () => [...requestBodies],
-    requestHeaders: () => [...requestHeaders],
+    requestBodies: () => received.filter((entry) => !entry.replyCheck).map(({ body }) => body),
+    allRequestBodies: () => received.map(({ body }) => body),
+    requestHeaders: () =>
+      received.filter((entry) => !entry.replyCheck).map(({ headers }) => headers),
     cardFetchProbeHits: () => cardFetchProbeHits,
     heldRequests: () => held.size,
     heldThreadAnswers: () => heldThreadAnswers.length,

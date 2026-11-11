@@ -26,6 +26,12 @@ Every payload is checked against its kind's schema in `src/shared/cards.ts` (`ca
 Each row carries the card id, its lifecycle id, the task id if any, the kind, the actor (`captain`, `firstmate`, `crewmate`, `host`, `frame`), the source (`chrome`, `frame`, `close-control`, `thread`, `tool`, `host`, `restore`, `stage`), the offer it is about, the capture version (`CARD_CAPTURE_VERSION`, 1), the app build, and the payload.
 `card_capture_epochs` records when each capture version first ran and one random namespace for this installation.
 
+Original captain captions stay in the private `card_messages.captain_text` column, not in factual observation payloads.
+`CardStore.captainInput` resolves a new interaction through that owner and its immutable displayed offer and preceding-message cursor.
+`originalMessagesBefore` seeks only that card's messages at or before the frozen cursor, newest first, so a caller can stop at its context budget instead of materializing a full thread.
+It returns original captain text, never attachment-decorated text; an older message without an original caption is explicitly unknown.
+Ordinary message and timeline projections do not publish this private column.
+
 The seven kinds:
 
 | kind | written when | carries |

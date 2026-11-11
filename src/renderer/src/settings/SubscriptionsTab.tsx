@@ -1451,6 +1451,9 @@ export function SubscriptionsTab() {
               onRemoveDecisionKey={(id) => {
                 void decisionSave.save(() => window.infinitary.models.removeDecisionKey(id));
               }}
+              onSetDecisionUse={(request) => {
+                void decisionSave.save(() => window.infinitary.models.setDecisionUse(request));
+              }}
             />
           ) : null
         }

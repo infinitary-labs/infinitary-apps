@@ -28,6 +28,7 @@ import {
   type StatusDotTone,
   useRestLabel,
 } from "../design";
+import { useModalKeys } from "../design/core/modalKeys";
 import { focusWithRing } from "../design/focus";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
 import {
@@ -1853,42 +1854,7 @@ export function CustomApiDialog({
   onClose: () => void;
 }) {
   const root = useRef<HTMLDivElement>(null);
-  const close = useRef(onClose);
-  close.current = onClose;
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    const controls = () => [
-      ...(root.current?.querySelectorAll<HTMLElement>(
-        'button:not(:disabled), input:not(:disabled), select:not(:disabled), summary, [tabindex="0"]',
-      ) ?? []),
-    ];
-    controls()[0]?.focus();
-    const keys = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        // Escape closes the dialog alone, not Settings around it.
-        event.preventDefault();
-        event.stopPropagation();
-        close.current();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const items = controls();
-      const first = items[0];
-      const last = items.at(-1);
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last?.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first?.focus();
-      }
-    };
-    document.addEventListener("keydown", keys);
-    return () => {
-      document.removeEventListener("keydown", keys);
-      previous?.focus();
-    };
-  }, []);
+  useModalKeys(root, onClose);
   return createPortal(
     <div className="fm-custom-overlay">
       <div

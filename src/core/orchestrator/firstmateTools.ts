@@ -18,6 +18,7 @@ import {
   type EmittedCard,
   resolveFirstmateCardId,
 } from "../pi/cardTool";
+import { createCorrectionTool } from "../pi/correctionTool";
 import { type CrewDelegate, createCrewTools } from "../pi/crewTools";
 import { createEmoteTool } from "../pi/emoteTool";
 import { createIntegrationTools } from "../pi/integrationTools";
@@ -623,6 +624,11 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
           });
         })
       : []),
+    createCorrectionTool(async (request) =>
+      host.options.correctionCase
+        ? host.options.correctionCase(request)
+        : { status: "unavailable", message: "Correction cases are not connected." },
+    ),
     ...createAppTools({
       ...(host.options.platform ? { platform: host.options.platform } : {}),
       dispatch: (channel, args, actor) => {

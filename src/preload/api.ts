@@ -521,6 +521,8 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
         readableRequest("inf:decisions:key:set", () => invoke("inf:decisions:key:set", id, key)),
       removeDecisionKey: (id) =>
         readableRequest("inf:decisions:key:remove", () => invoke("inf:decisions:key:remove", id)),
+      setDecisionUse: (request) =>
+        readableRequest("inf:decisions:use:set", () => invoke("inf:decisions:use:set", request)),
     },
     update: {
       status: () => invoke("inf:update:status"),

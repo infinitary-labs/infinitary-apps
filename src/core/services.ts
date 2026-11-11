@@ -40,7 +40,9 @@ import { claudeCostReportingAllowed } from "./claude/claudeCostPolicy";
 import { defaultClaudeConfigDir } from "./claude/claudeQuota";
 import { createClaudeSessionFactory } from "./claude/session";
 import type { CoreServices } from "./coreServices";
+import { CORRECTION_CASES, CORRECTION_QUESTIONS } from "./decisions/correctionConsumer";
 import { startHomeDecisions } from "./decisions/homeDecisions";
+import { startCorrections } from "./decisions/startCorrections";
 import { ownComputerName } from "./devices/computerName";
 import { startHomeDevices } from "./devices/homeDevices";
 import { createEventSeam } from "./eventSeam";
@@ -101,6 +103,7 @@ import { createMediatedFetch } from "./plugins/mediatedFetch";
 import { PluginInstaller } from "./plugins/pluginInstaller";
 import { PluginRecords } from "./plugins/pluginRecords";
 import { ShellPreferencesService } from "./preferences/shellPreferences";
+import { startProgramQuestions } from "./program/programQuestions";
 import { claudeStoreDirOf, startHomeQuota } from "./quota/homeQuota";
 import { RecordReader } from "./recordReads/recordReader";
 import { DecisionKindClassifier } from "./routing/decisionKindClassifier";
@@ -389,6 +392,9 @@ export async function createServices(
     now: ticker.now,
     ...(standIns.inboxGraceMs !== undefined ? { graceMs: standIns.inboxGraceMs } : {}),
   });
+  // Declare non-task owners before any boot sweep can interpret their rows as orphan task guidance.
+  inbox.reserveServiceRecipient(CORRECTION_QUESTIONS);
+  inbox.reserveServiceRecipient(CORRECTION_CASES);
   // A lane whose turn runs on a computer that runs work stays in flight:
   // that turn went on without this process (docs/helper.md).
   inbox.resetInFlight(
@@ -877,24 +883,37 @@ export async function createServices(
   });
   // The decision-model class (S7, decisions/homeDecisions.ts): one
   // core-wide service any module may ask a typed, bounded question of.
+  const questionModels = {
+    availableModels: () => decisionServedModels(),
+    capabilityFor,
+    quotaModels: () => quota.latestModels(),
+    sessions: sessionFactories,
+    // Whoever observes a typed cut-off records it on the account.
+    noteCutOff,
+  };
+  const selectQuestionAccount = (taskId: string, piProviderId: string) =>
+    accounts.selectForSpawn(taskId, piProviderId);
   const decisions = startHomeDecisions({
     paths,
     standIns,
     settings,
     vault,
     baseRuntime: auth.modelRuntime,
-    adapted: {
-      availableModels: () => decisionServedModels(),
-      namedModels: () => decisionNamedModels(),
-      capabilityFor,
-      quotaModels: () => quota.latestModels(),
-      sessions: sessionFactories,
-      // Whoever observes a typed cut-off records it on the account.
-      noteCutOff,
-    },
-    selectAccount: (taskId, piProviderId) => accounts.selectForSpawn(taskId, piProviderId),
+    adapted: { ...questionModels, namedModels: () => decisionNamedModels() },
+    selectAccount: selectQuestionAccount,
     recordUsage,
     onNote: (text) => broadcastEvent({ type: "firstmate_note", text }),
+  });
+  // A program's ask() is answered by the person's own models, apart from
+  // the decision models (programs/programQuestions.ts).
+  const programQuestions = startProgramQuestions({
+    paths,
+    settings,
+    vault,
+    baseRuntime: auth.modelRuntime,
+    models: questionModels,
+    selectAccount: selectQuestionAccount,
+    recordUsage,
   });
   // The class's first consumer (S7a): what a spawn IS, so the captain's
   // table can route it. The seam and the call site are unchanged.
@@ -963,7 +982,7 @@ export async function createServices(
     // A program's script runs in a process of its own; its ask() is one typed read.
     ...(host.programProcess ? { programProcess: host.programProcess } : {}),
     answerJson: (caller, instruction, text, signal) =>
-      decisions.answerJson(caller, instruction, text, signal),
+      programQuestions.answerJson(caller, instruction, text, signal),
     crewSpeed: (model) => slots.speed(model),
     modelName: (model) => slots.nameOf(model),
     personalResourcesEnabled: () => settings.getPersonalResourcesEnabled(),
@@ -1471,7 +1490,20 @@ export async function createServices(
     },
   });
   const homeComputerName = await ownComputerName({ packaged: host.app.packaged, env: process.env });
+  const corrections = startCorrections({
+    db,
+    inbox,
+    cards: cardStore,
+    tasks,
+    models: decisions,
+    settings,
+    supervisor,
+    knowledge,
+    repos,
+    ticker,
+  });
   const firstmate = new FirstmateAgent({
+    correctionCase: (request) => corrections.cases.handle(request),
     computerVersions: () => {
       const running = workDevices.runningVersions();
       return [
@@ -1874,6 +1906,7 @@ export async function createServices(
     slots,
     servedModels: served,
     decisions,
+    corrections,
     stopLivenessSweep: () => clearInterval(livenessInterval),
     stopWorkPresentation: () => workPresentation.dispose(),
     supervisor,

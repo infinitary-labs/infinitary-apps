@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { type DecisionUseId, decisionUseViewSchema } from "./decisionUses";
 
 /**
  * Decision models (S7, captain-approved design `fm3000-decision-models-s7-
@@ -80,8 +81,8 @@ export const decisionFactSchema = z.union([z.string(), z.number(), z.boolean(), 
  * The state a question is evaluated against: named, bounded facts and
  * nothing the caller did not clip. TypeSafe's own guidance is an object
  * "so each part of the state has a descriptive name and its relationships
- * remain clear"; the same shape is what keeps the consent copy of
- * `docs/decision-models.md` able to enumerate what leaves the machine.
+ * remain clear"; the same shape keeps what each use sends named fact by
+ * fact in its consumer's code.
  */
 export const decisionStateSchema = z.object({
   facts: z.record(z.string().min(1), decisionFactSchema),
@@ -138,14 +139,22 @@ export type DecisionAnswer = z.infer<typeof decisionAnswerSchema>;
  * task spends under its own `purpose`, the way the Firstmate's own burn
  * lands under `firstmate`.
  */
-export type DecisionCaller = { purpose: string; taskId?: string };
+export type DecisionCaller = {
+  purpose: string;
+  taskId?: string;
+  /**
+   * Which listed use asks (`src/shared/decisionUses.ts`). The service
+   * requires it, and checks that use's switch and the answering model's
+   * approval before any model or key is read.
+   */
+  use?: DecisionUseId;
+};
 
 /**
- * The bounded fact set a native model is sent, as a contract number.
- * Widening it re-shows the consent copy and drops the egress to off until
- * it is accepted again (`consentedVersion`); narrowing it does not.
+ * One approval screen's rows, as the consent dialog shows them: what is
+ * shared and with whom, what the person can change, and what it costs.
  */
-export const DECISION_STATE_VERSION = 1;
+export type DecisionConsentText = readonly [shared: string, choice: string, cost: string];
 
 /**
  * The native decision models this app knows. NOT a `PROVIDER_CATALOG` row:
@@ -202,10 +211,10 @@ export const decisionAnswererSchema = z.discriminatedUnion("kind", [
 ]);
 export type DecisionAnswerer = z.infer<typeof decisionAnswererSchema>;
 
-/** Per native model: whether its endpoint may be reached, and under which consent. */
+/** Per Jev or OpenRouter: whether it may answer, and which approval screen the person saw. */
 export const decisionEgressSchema = z.strictObject({
   enabled: z.boolean(),
-  /** The `DECISION_STATE_VERSION` the user accepted; absent means never. */
+  /** The approval screen accepted (`DECISION_APPROVAL_VERSION`); absent means never. */
   consentedVersion: z.number().int().optional(),
 });
 export type DecisionEgress = z.infer<typeof decisionEgressSchema>;
@@ -220,7 +229,7 @@ export type DecisionEgress = z.infer<typeof decisionEgressSchema>;
 export const decisionsSettingsSchema = z.strictObject({
   version: z.literal(1),
   answerer: decisionAnswererSchema,
-  /** Keyed by `DecisionModelId`; an absent entry is off and unconsented. */
+  /** Keyed by `DecisionModelId` or `openrouter`; an absent entry is off and unapproved. */
   egress: z.record(z.string().min(1), decisionEgressSchema),
 });
 export type DecisionsSettings = z.infer<typeof decisionsSettingsSchema>;
@@ -237,24 +246,18 @@ export const DEFAULT_DECISIONS: DecisionsSettings = {
 };
 
 /**
- * The consent copy the turn-on form carries, in plain words (design section
- * 6 rule 4). It lives here, beside `DECISION_STATE_VERSION`, because the
- * two must move together: the list below IS the fact set a native model is
- * sent, so widening one without the other would be a promise the code does
- * not keep.
- *
- * Note what it does and does not claim: it states what Infinitary sends and to
- * whom, and makes no claim on the vendor's behalf about what happens next.
- * It also never calls the fallback "local" - the adapted model is one of
- * the user's own subscription models, reached over the network like any
- * other turn (the captain's Q2 note).
+ * The approval screen for a native model (`DECISION_APPROVAL_VERSION`), in
+ * plain words. A decision model is treated like the person's other models:
+ * it may be asked about anything a listed use sends, so the screen names
+ * the kinds of content rather than promising less, and approving it covers
+ * every use in the list. It states what Infinitary sends and to whom, and
+ * makes no claim on the vendor's behalf about what happens next.
  */
-export function decisionConsent(row: DecisionModelCatalogRow): string[] {
+export function decisionConsent(row: DecisionModelCatalogRow): DecisionConsentText {
   return [
-    `${row.name} will receive, for each task your first mate starts: the task's title and goal, your words for it, how it should be worked, the repository's name and delivery posture, and the title and summary of a task it builds on.`,
-    "It receives no code, no transcript and no file. Answers come back as one word.",
-    `${row.vendor} bills your key per token.`,
-    `If ${row.name} cannot answer, one of your own subscription models answers instead, as it does today.`,
+    `${row.name} (${row.vendor}) answers Infinitary's decision questions, like your other models. Questions can include task details, your replies, nearby conversation and code.`,
+    `Turn off any use in the Decisions list, or remove ${row.name}.`,
+    `${row.vendor} charges your key per token. If ${row.name} cannot answer, your own models answer instead.`,
   ];
 }
 
@@ -280,12 +283,12 @@ export const openRouterDecisionOfferingSchema = z.strictObject({
 });
 export type OpenRouterDecisionOffering = z.infer<typeof openRouterDecisionOfferingSchema>;
 
-export function openRouterDecisionConsent(model: OpenRouterDecisionOffering): string[] {
+/** The same approval screen for a model reached through the person's OpenRouter account. */
+export function openRouterDecisionConsent(model: OpenRouterDecisionOffering): DecisionConsentText {
   return [
-    `OpenRouter and ${model.vendor} will receive, for each task your first mate starts: the task's title and goal, your words for it, how it should be worked, the repository's name and delivery posture, and the title and summary of a task it builds on.`,
-    "It receives no code, no transcript and no file. Answers come back as one word.",
-    "The OpenRouter account chosen for the work pays per input token; output is free.",
-    `If ${model.name} cannot answer, one of your own subscription models answers instead.`,
+    `${model.name} (${model.vendor}) answers Infinitary's decision questions through OpenRouter, like your other models. Questions can include task details, your replies, nearby conversation and code.`,
+    "Turn off any use in the Decisions list, or choose another decision model.",
+    `Your OpenRouter account pays per input token; output is free. If ${model.name} cannot answer, your own models answer instead.`,
   ];
 }
 
@@ -297,8 +300,16 @@ export function openRouterDecisionLine(model: Pick<OpenRouterDecisionOffering, "
 /** The Decisions group's derived availability and last answer, never credentials. */
 export const decisionsViewSchema = z.strictObject({
   settings: decisionsSettingsSchema,
-  /** The fact set version the consent copy currently describes. */
+  /**
+   * The first approval screen's version, which an older view writes when it
+   * turns Jev or OpenRouter on: it never approves a newer screen by echoing
+   * a newer number.
+   */
   stateVersion: z.number().int(),
+  /** The approval screen this home shows (`DECISION_APPROVAL_VERSION`); absent on an older home. */
+  approvalVersion: z.number().int().optional(),
+  /** Every way this home uses decision models, with its switch; absent on an older home. */
+  uses: z.array(decisionUseViewSchema).optional(),
   /**
    * Whether the pinned offering is the model answering, so the row names
    * it only while it is. Absent unless a specific model is pinned.
@@ -323,7 +334,7 @@ export const decisionsViewSchema = z.strictObject({
       state: decisionRowStateSchema,
       /** Whether a key is stored at all; never the key. */
       keyStored: z.boolean(),
-      /** Whether the stored consent still covers `stateVersion`. */
+      /** Whether the person has approved it on any approval screen. */
       consented: z.boolean(),
       /** The last answer this model gave, for the row's mono line. */
       last: z

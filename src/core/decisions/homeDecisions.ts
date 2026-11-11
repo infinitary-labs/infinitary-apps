@@ -29,7 +29,10 @@ import { OpenRouterDecisionModel } from "./openRouterDecisionModel";
 export function startHomeDecisions(options: {
   paths: Pick<AppPaths, "firstmateHomeDir" | "userData">;
   standIns: Pick<StandIns, "jevUrl" | "openRouterDecisionsBaseUrl">;
-  settings: Pick<SettingsStore, "getFirstmateAccount" | "getDecisions" | "setDecisions">;
+  settings: Pick<
+    SettingsStore,
+    "getFirstmateAccount" | "getDecisions" | "setDecisions" | "getDecisionUses" | "setDecisionUses"
+  >;
   vault: Pick<AccountVault, "runtimeFor" | "list" | "connectedSync" | "piModelRuntimes" | "renew">;
   baseRuntime: ModelRuntime;
   /** The adapter's pools, its model lookup, its quota and its sessions. */

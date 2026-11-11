@@ -108,8 +108,10 @@ export type CaptainFacts =
        * (docs/task-card-tabs.md, "Typing"): the crewmate's steer.
        */
       kind: "crewmate-tab-line";
-      /** The captain's words, verbatim. */
+      /** The words rendered to the crewmate, preserving the existing delivery behavior. */
       words: string;
+      /** Original input before delivery normalization; unknown on older rows. */
+      captainText?: string;
     }
   | {
       /**

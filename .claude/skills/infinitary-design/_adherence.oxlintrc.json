@@ -68,8 +68,8 @@
         "message": "<SlotBadge> slot must be one of 'premium' | 'high' | 'medium' | 'low'."
       },
       {
-        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|disabled|pending|pendingLabel|off|note|aria-description|icon|children|onClick|aria-haspopup|aria-expanded|autoFocus|tabIndex|style|key|ref|className|style|children)$/]",
-        "message": "<Button> doesn't accept that prop. Declared props: variant, size, disabled, pending, pendingLabel, off, note, aria-description, icon, children, onClick, aria-haspopup, aria-expanded, autoFocus, tabIndex, style."
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|disabled|pending|pendingLabel|off|note|aria-description|icon|children|onClick|type|aria-haspopup|aria-expanded|autoFocus|tabIndex|style|key|ref|className|style|children)$/]",
+        "message": "<Button> doesn't accept that prop. Declared props: variant, size, disabled, pending, pendingLabel, off, note, aria-description, icon, children, onClick, type, aria-haspopup, aria-expanded, autoFocus, tabIndex, style."
       },
       {
         "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:primary|secondary|ghost|danger)$/]",
@@ -160,8 +160,8 @@
         "message": "<SubscriptionCard> status must be one of 'fresh' | 'stale' | 'auth_required' | 'rate_limited' | 'error'."
       },
       {
-        "selector": "JSXOpeningElement[name.name='Switch'] > JSXAttribute > JSXIdentifier[name!=/^(?:checked|onChange|label|disabled|aria-label|tabIndex|key|ref|className|style|children)$/]",
-        "message": "<Switch> doesn't accept that prop. Declared props: checked, onChange, label, disabled, aria-label, tabIndex."
+        "selector": "JSXOpeningElement[name.name='Switch'] > JSXAttribute > JSXIdentifier[name!=/^(?:checked|onChange|label|disabled|aria-label|tabIndex|off|note|key|ref|className|style|children)$/]",
+        "message": "<Switch> doesn't accept that prop. Declared props: checked, onChange, label, disabled, aria-label, tabIndex, off, note."
       },
       {
         "selector": "JSXOpeningElement[name.name='VoiceInput'] > JSXAttribute > JSXIdentifier[name!=/^(?:mode|keybindHint|disabled|value|onChange|level|onActivate|onAbandon|onAccept|onSubmit|onFocusChange|onKeystroke|width|style|inputRef|shellRef|maxHeight|attachments|onAttach|onPictureTooBig|onRemoveAttachment|onPaste|pastes|onPasteText|onInlinePaste|onRemovePaste|onCaretChange|onRecall|key|ref|className|style|children)$/]",

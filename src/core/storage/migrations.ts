@@ -9,6 +9,7 @@ import {
   migrateOneMergeEffect,
   restoreCloseControls,
 } from "./cardMigrations";
+import { addOriginalCaptainText } from "./correctionMigrations";
 import type { AppDatabase } from "./db";
 import {
   addCrewResponses,
@@ -1310,6 +1311,8 @@ export const MIGRATIONS: readonly Migration[] = [
   restoreCloseControls,
   addTaskPin,
   (db) => addColumn(db, "card_messages", "notes_json", "TEXT"),
+  // Original captain captions stay separate from attachment decoration; old rows remain unknown.
+  addOriginalCaptainText,
 ];
 
 /**

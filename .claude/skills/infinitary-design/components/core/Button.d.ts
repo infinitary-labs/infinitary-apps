@@ -20,6 +20,8 @@ export interface ButtonProps {
   icon?: React.ReactNode;
   children?: React.ReactNode;
   onClick?: () => void;
+  /** "submit" for a dialog's act, which Enter in the dialog's field presses (ConsentDialog). Default "button". */
+  type?: "button" | "submit";
   /** A button that opens a popover says so, as an IconButton does (RowMenu's word). */
   "aria-haspopup"?: "menu" | "dialog" | boolean;
   "aria-expanded"?: boolean;

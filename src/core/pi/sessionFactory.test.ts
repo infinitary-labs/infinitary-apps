@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { fakeBinding, fakeSession, fakeSessionFactory } from "../../../tests/helpers/fakeSession";
-import { questionSessionSpec } from "../decisions/questionSession";
+import { questionSessionSpec } from "../session/questionSession";
 
 const calls = vi.hoisted(() => ({ loads: 0, create: vi.fn(), open: vi.fn() }));
 vi.mock("./session", () => {

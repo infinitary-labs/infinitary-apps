@@ -302,6 +302,7 @@ export class CardEvidence {
       build: this.host.build,
       payload: {
         actionId,
+        precedingMessageId: this.host.cardStore.latestMessageId(shown.id),
         recognized: action !== undefined,
         label: action?.label ?? null,
         closes: input.closes,
@@ -362,6 +363,7 @@ export class CardEvidence {
     line: { interim: boolean; answers?: CardAnswer[]; submission?: unknown },
   ): void {
     if (!about.lifecycleId) return;
+    const read = readSubmission(line.submission);
     this.host.cardStore.observe({
       id: randomUUID(),
       kind: "message_ref",
@@ -378,9 +380,14 @@ export class CardEvidence {
         who: message.who,
         ...(line.interim ? { interim: true as const } : {}),
         ...(line.answers ? { answers: line.answers } : {}),
-        ...(line.submission !== undefined
-          ? { display: displayOf(readSubmission(line.submission), about) }
-          : {}),
+        ...(read.questions
+          ? { questions: read.questions }
+          : read.questionsGap
+            ? { questionsGap: read.questionsGap }
+            : line.answers?.length
+              ? { questionsGap: "absent" as const }
+              : {}),
+        ...(line.submission !== undefined ? { display: displayOf(read, about) } : {}),
       },
     });
   }

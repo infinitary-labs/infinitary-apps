@@ -70,6 +70,8 @@ export type CardContribution = {
 /** A thread line's facts beyond its words (`CardService.addMessage`). */
 export type MessageFacts = {
   notes?: CardNote[];
+  /** The original captain caption before pasted-file or settings decoration. */
+  captainText?: string;
   contributor?: CardContributor;
   answersMessage?: number;
   clarification?: true;

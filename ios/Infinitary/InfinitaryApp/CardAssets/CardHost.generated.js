@@ -5710,8 +5710,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     lifecycle: _enum(["started", "reopened", "legacy-initial-snapshot"]).optional(),
     predecessor: string().optional()
   });
-  strictObject({
+  const cardActionPayloadSchema = strictObject({
     actionId: string(),
+    /** Last thread message already present at this interaction, not a later reply. */
+    precedingMessageId: number().int().nonnegative().optional(),
     recognized: boolean(),
     label: string().nullable(),
     closes: boolean(),
@@ -5733,6 +5735,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   strictObject({
     messageId: number().int(),
     who: cardMessageWhoSchema,
+    /** Typed control provenance for written answers; words themselves stay with their owner. */
+    questions: cardQuestionsSchema.optional(),
+    questionsGap: cardActionPayloadSchema.shape.questionsGap,
     /** An interim author line does not release a new answer. */
     interim: literal(true).optional(),
     answers: cardAnswersSchema.optional(),

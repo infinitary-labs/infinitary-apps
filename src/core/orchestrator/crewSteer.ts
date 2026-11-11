@@ -369,7 +369,17 @@ export class CrewSteer {
     let message = renderWake(body);
     // A reply the captain typed under a card: the record reads the captain's words in the message.
     const words = replyWordsSpan(body);
-    const source = words ? { ...given, words } : given;
+    const captainText =
+      given.actor === "captain" &&
+      typeof body !== "string" &&
+      body.facts.kind === "crewmate-tab-line"
+        ? body.facts.captainText
+        : undefined;
+    const source: SteerSource = {
+      ...given,
+      ...(words ? { words } : {}),
+      ...(captainText !== undefined ? { captainText } : {}),
+    };
     const reviewBuilder = this.core.reviewBuilderOf(this.core.options.tasks.get(taskId));
     const hasImages = Boolean(images?.length);
     const withPictures = (guidance: WakeBody): WakeBody =>
@@ -619,6 +629,7 @@ export class CrewSteer {
         inboxId,
         ...(source.panel ? { panel: source.panel } : {}),
         ...(source.words ? { words: source.words } : {}),
+        ...(source.captainText !== undefined ? { captainText: source.captainText } : {}),
       });
     } catch (caught) {
       console.warn("[crew] steer capture failed:", caught);
@@ -647,7 +658,7 @@ export class CrewSteer {
     try {
       await this.steerCrewmate(
         taskId,
-        { facts: { kind: "crewmate-tab-line", words: text } },
+        { facts: { kind: "crewmate-tab-line", words: text, captainText: words } },
         "captain",
         {
           via: CREWMATE_TAB_VIA,

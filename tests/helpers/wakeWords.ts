@@ -80,8 +80,17 @@ export type FirstmateWakeKind =
  */
 export type SavedOnlyWakeKind = "ci-cap" | "review-cap" | "main-check-passed";
 
+/** Correction flow has its own byte-exact cases, including the internal queue packet. */
+export type CorrectionWakeKind =
+  | "correction-input"
+  | "correction-review"
+  | "kept-project-direction";
+
 /** Every other kind: a crewmate's steers, and the wrappers and choices either lane hears. */
-export type CrewmateWakeKind = Exclude<WakeKind, FirstmateWakeKind | SavedOnlyWakeKind>;
+export type CrewmateWakeKind = Exclude<
+  WakeKind,
+  FirstmateWakeKind | SavedOnlyWakeKind | CorrectionWakeKind
+>;
 
 /** One wake as a lane holds it, and the words it is served as. */
 export type WordsCase<K extends WakeKind> = {

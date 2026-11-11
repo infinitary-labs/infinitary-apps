@@ -16,6 +16,7 @@ import {
   type ServedWakeOrigin,
 } from "@shared/servedFrame";
 import { AttachmentUnavailableError, keepImages, loadImages } from "../attachments";
+import type { CorrectionCaseRequest } from "../decisions/correctionCases";
 import type { CoreDispatch } from "../dispatcher";
 import type { IntegrationsService } from "../integrations";
 import type { KnowledgeService } from "../knowledge/knowledgeService";
@@ -192,6 +193,7 @@ export type FirstmateAgentOptions = {
   broadcastEvent: (event: FmEvent) => void;
   /** Synchronous acceptance witness; applies to main input and card-thread turns alike. */
   onCaptainTurnAccepted?: () => void;
+  correctionCase?: (request: CorrectionCaseRequest) => Promise<unknown>;
   /** The Firstmate agent's packaged source tree, named for delegated source tasks. */
   selfSourceDir: string;
   selfSourceFacts?: () => import("../selfSource/resolve").SelfSourceFacts;
@@ -393,6 +395,8 @@ type TurnPayload =
       text?: string;
       /** Readable receipt when the model needs a more detailed card projection. */
       receipt?: string;
+      /** Set only at the trusted new-input boundary, before decoration. */
+      captainText?: string | undefined;
       messageFiles?: MessageFile[];
       images?: Array<{ mimeType: string; data: string; name?: string }>;
       visibleCardId?: string;
@@ -693,6 +697,7 @@ export class FirstmateAgent {
     const ask = this.asks.open({
       text: trimmed,
       ...(typeof turn !== "string" && turn.receipt !== undefined ? { receipt: turn.receipt } : {}),
+      captainText: typeof turn === "string" ? undefined : turn.captainText,
       images: images?.map((image) => ({ mimeType: image.mimeType })),
       attachments: kept,
       messageFiles: typeof turn === "string" ? [] : (turn.messageFiles ?? []),

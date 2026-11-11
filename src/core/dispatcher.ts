@@ -53,6 +53,7 @@ import type { RunbookView } from "../shared/runbooks";
 import { asAView } from "./askedFromAView";
 import { type BrowserViewer, BrowserViews } from "./browser/browserViews";
 import { addedPrivateSite, privateSiteChannels } from "./browser/privateSites";
+import { prepareComposerTurn } from "./composerTurn";
 import { CONTRACT_CHANGES } from "./connection/contractChanges";
 import type { CoreServices } from "./coreServices";
 import { RemoteLoginRefusedError } from "./devices/remoteLogin";
@@ -63,7 +64,6 @@ import { SignInRequiredError, signInRefusal } from "./forge";
 import type { HostCapabilities } from "./host";
 import { isAllowedOpenExternalUrl } from "./openExternal";
 import { CardChoiceUnavailableError } from "./orchestrator/cardActions";
-import { type MessageFile, withPastedFiles } from "./overflow";
 import { actionValue } from "./pi/appTools";
 import { customCapabilityProfiles } from "./pi/customApiModels";
 import { listSurfaces, type SurfaceView } from "./pi/personalizeTool";
@@ -260,16 +260,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
 
     "inf:converse": async (turn) => {
       // Acceptance (including thread replies) stamps first-run state inside Firstmate.
-      const messageFiles: MessageFile[] = [];
-      await services.firstmate.converse(
-        typeof turn === "string"
-          ? turn
-          : {
-              ...turn,
-              text: withPastedFiles(turn.text ?? "", turn.files, messageFiles),
-              messageFiles,
-            },
-      );
+      await services.firstmate.converse(prepareComposerTurn(turn));
       return { ok: true as const };
     },
 
@@ -678,8 +669,11 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       // (the workspace's files stay, like a repo's). Where knowledge is on
       // it clears that collection too, after every crewmate that could write
       // to it has stopped; a stable build has none and leaves its folder
-      // alone (docs/knowledge.md). The Claude client's own copies stay.
+      // alone (docs/knowledge.md). Pending reply checks and their cases go
+      // too, with the captain's words they hold (docs/decision-models.md).
+      // The Claude client's own copies stay.
       const purgedTasks = await services.supervisor.purgeAllTasks();
+      services.corrections?.cases.purge();
       await services.firstmate.reset();
       services.activity.clear();
       services.knowledge?.purge();
@@ -968,6 +962,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:decisions:key:set": (id, key) => services.decisions.setKey(id, key),
 
     "inf:decisions:key:remove": (id) => services.decisions.removeKey(id),
+
+    "inf:decisions:use:set": (request) => services.decisions.setUse(request),
 
     "inf:auth:providers": () => services.providerViews(),
 
@@ -1589,6 +1585,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       } else if (name === "direction") {
         const { op, direction } = result as InvokeResponse<"inf:knowledge:direction:set">;
         trail(name, { op, text: direction.text }, actor);
+        services.corrections?.cases.saved(direction.id);
       } else if (name === "crew-reasoning") {
         trail(name, { key: args[0], slot: args[1], level: args[2] }, actor);
       } else if (name === "crew-slots-reset") {

@@ -229,6 +229,10 @@ export const REQUEST_COPY = {
     fallback: "Could not remove the decision model key. Please try again.",
     prefix: "Could not remove the decision model key: ",
   },
+  "inf:decisions:use:set": {
+    fallback: "Could not switch the decision model use. Please try again.",
+    prefix: "Could not switch the decision model use: ",
+  },
   "inf:retention:purge": {
     fallback: "Purge did not complete. Please try again.",
     prefix: "Purge did not complete: ",

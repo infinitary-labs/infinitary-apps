@@ -34,6 +34,8 @@ export type OpenAskInput = {
   id: string;
   text: string;
   receipt?: string;
+  /** Trusted input before file decoration; absent for legacy and replayed turns. */
+  captainText?: string | undefined;
   images?: AskImage[];
   /** The message's own copies of `images` (`src/core/attachments.ts`). */
   attachments?: AttachmentRef[];
@@ -455,7 +457,7 @@ export class TaskCapture {
    * ref and closes when the card leaves the stack.
    */
   openCardTaskFor(cardId: string): TaskRecord | undefined {
-    return this.writer.store
+    const waiting = this.writer.store
       .listByStatus("open")
       .find(
         (record) =>
@@ -464,6 +466,14 @@ export class TaskCapture {
           record.gate?.kind === "captain" &&
           record.gate.ref === cardId,
       );
+    if (waiting) return waiting;
+    // A chosen card may leave its own operation awaiting a verified effect.
+    // The immutable raised-event ref retains that identity after its captain gate clears.
+    const id = this.writer.events.latestTaskForRef("card_raised", cardId);
+    const pending = id ? this.writer.store.get(id) : undefined;
+    return pending?.status === "open" && pending.kind === "operation" && !pending.gate
+      ? pending
+      : undefined;
   }
 
   /**
@@ -485,6 +495,19 @@ export class TaskCapture {
       });
     });
     run();
+  }
+
+  onCaptainInput(listener: Parameters<TaskWriter["asks"]["onCaptainInput"]>[0]): () => void {
+    return this.writer.asks.onCaptainInput(listener);
+  }
+
+  originalTurnsBefore(id: string) {
+    return this.writer.asks.originalTurnsBefore(id);
+  }
+
+  /** The private original caption, including known empty captions; no history inference. */
+  captainAskText(id: string): string | undefined {
+    return this.writer.asks.captainText(id);
   }
 
   /** A captain turn begins: the ask row exists before the agent runs. */
@@ -515,7 +538,7 @@ export class TaskCapture {
       answeredAt: null,
       crewmateAskedAt: null,
     };
-    this.writer.asks.insert(record);
+    this.writer.asks.insert(record, input.captainText);
     return record;
   }
 

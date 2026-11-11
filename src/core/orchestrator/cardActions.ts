@@ -183,7 +183,7 @@ export class CardActions {
       answers,
       undefined,
       false,
-      { notes },
+      { notes, captainText: typed },
     );
     if (toFirstmate) {
       const delivery: [messageFiles?: MessageFile[], receipt?: string] = notes?.length

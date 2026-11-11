@@ -21,11 +21,11 @@ The report path has no `decide()`: whose turn it is is a typed rule, not a model
 ## Owner and entry points
 
 `DecisionModels` ([`../src/core/decisions/decisionModel.ts`](../src/core/decisions/decisionModel.ts)) is the core-wide seam any module may ask: it owns the `decisions` settings row, the native model's construction and that row's state, never a question.
-Its calls are `decide(caller, state, questions, signal)` for closed answers and `answerJson(caller, instruction, text, signal)` for a JSON answer.
-The shapes (`DecisionQuestion`, `DecisionState`, `DecisionAnswer`, `DecisionCaller`, `DECISION_STATE_VERSION`) live in [`../src/shared/decisions.ts`](../src/shared/decisions.ts).
+Its call is `decide(caller, state, questions, signal)`, and `caller.use` names which listed use is asking.
+The shapes (`DecisionQuestion`, `DecisionState`, `DecisionAnswer`, `DecisionCaller`) live in [`../src/shared/decisions.ts`](../src/shared/decisions.ts); the uses, their kinds and the approval screen versions live in [`../src/shared/decisionUses.ts`](../src/shared/decisionUses.ts).
 Implementations of the `DecisionModel` interface:
 
-- `AdaptedDecisionModel` (session-backed): renders the question as a byte-stable instruction plus one user message and parses one word back, over the one-question session `questionSessionSpec` ([`../src/core/decisions/questionSession.ts`](../src/core/decisions/questionSession.ts)), walking the routable pool low-first, never premium.
+- `AdaptedDecisionModel` (session-backed): renders the question as a byte-stable instruction plus one user message and parses one word back, over the one-question session `questionSessionSpec` ([`../src/core/session/questionSession.ts`](../src/core/session/questionSession.ts)), walking the routable pool low-first, never premium.
 - `JevDecisionModel` (native, [`../src/core/decisions/jev/jevClient.ts`](../src/core/decisions/jev/jevClient.ts)): TypeSafe's Jev, serving the typed question as its own API.
 - `OpenRouterDecisionModel` (native through Pi, [`../src/core/decisions/openRouterDecisionModel.ts`](../src/core/decisions/openRouterDecisionModel.ts)), with Pi's side in [`../src/core/pi/decisionModels.ts`](../src/core/pi/decisionModels.ts).
 
@@ -36,21 +36,24 @@ An answer is `{value, outcome, source?, version, reason?, detail?}`: `outcome` i
 `reason` is a short machine word (`timeout`, `no-model`, `rate-limited`, `key-rejected`, `schema`); `detail` is prose for the record, such as a native model's certainty or a fallback note.
 The answer's `version` is the consumer's contract number plus a hash of the bytes actually served, so a recorded verdict says which question was asked.
 A consumer whose wording was tuned against a chat model pins its served bytes (`adapterInstruction`, `adapterText`) so its fingerprint does not move.
-The JSON boundary: only the session-backed adapter gives a JSON answer, since a native model answers from a closed option set; `answerJson` returns the model's text, and the caller parses and checks it (`askJson` in [`../src/core/program/programAsk.ts`](../src/core/program/programAsk.ts) asks once more with why, then answers `null`).
+There is no JSON answer here: a decision model answers from a closed option set, so a program's `ask()`, which wants JSON in a shape it chooses, is answered by the person's own models through `ProgramQuestions` ([`../src/core/program/programQuestions.ts`](../src/core/program/programQuestions.ts)), apart from this primitive.
 Usage lands in `usage_events` under the caller's task, or under its `purpose` when there is no task.
 
 ## Authority
 
 Jev is fenced to `src/core/decisions/`: a Biome rule (`biome.json`) lets only that folder import `decisions/jev/`, the home's decision wiring (`homeDecisions.ts`) among it, so nothing else may build a request to that endpoint or read that key.
-A native model is off by default: `DecisionModels` builds no client unless the row names it, its egress is on, the consent covers the current `DECISION_STATE_VERSION`, and the user's own key is stored.
+A native model is off by default: `DecisionModels` builds no client unless the row names it, its egress is on, an approval is recorded, and the user's own key is stored.
+Before any model or key is read, the service checks the caller's use: its switch, and whether the answering Jev or OpenRouter approval covers it; a use that is off or predates the approval asks nothing, and the person's own models do not answer in its place.
 The key is entered only in Settings and stored 0600 under `userData/decisions/<id>/` (`DecisionKeyStore`), never in the settings table, an environment variable, a log, a feed line or a card.
-Widening the facts sent (`decisionConsent`) re-shows consent and turns egress off until accepted again.
+The approval screen's three rows (`decisionConsent`, `openRouterDecisionConsent`) treat a decision model like the person's other models: they name who answers, that the listed uses can send words and code, how to turn a use off, and who pays.
+The egress entry's `consentedVersion` records which approval screen the person saw; an approval from the first screen keeps task classification working and holds every newer use until the person allows it once.
+The view's `stateVersion` and the key call keep the first screen's meaning, so an older view's approval counts as old, and a view approves only the screen bundled with its own code.
 The endpoint is listed as an egress in [architecture](../docs/architecture.md) §1.
 
 ## Compositions
 
 - The kind classifier: `DecisionKindClassifier` holds the kind question, its facts and the mapping back to a `KindVerdict`, and owns no model or transport ([kind classifier](../docs/kind-classifier.md)).
-- A program's `ask()` is one JSON question through `DecisionModels.answerJson` ([programs.md](programs.md)).
+- Settings' Uses list draws one switch per entry of `DECISION_USES`; the switches are the `decision-uses` settings row ([decision models](../docs/decision-models.md), "The uses").
 - The adapter opens its session on the session contract's question preset, bound through `SessionBinder`, the same account-to-binding step the seat and crew use ([architecture](../docs/architecture.md) §2).
 
 ## Failure and recovery

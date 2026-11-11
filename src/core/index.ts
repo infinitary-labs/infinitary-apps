@@ -99,6 +99,7 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
       services.forges.recordApp("quit");
       services.jobs.disposeAll();
       services.ticker.stop();
+      services.corrections?.stop();
       services.stopWorkPresentation();
       services.scheduler.stop();
       services.firstmate.dispose();

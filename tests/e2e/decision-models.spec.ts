@@ -15,6 +15,7 @@ import {
   openRouterDecisionConsent,
   openRouterDecisionLine,
 } from "../../src/shared/decisions";
+import { DECISION_APPROVAL_VERSION } from "../../src/shared/decisionUses";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { CLAUDE_SEAT_ACCOUNT, launchClaudeSeat, say } from "./claudeSeat";
@@ -291,18 +292,22 @@ test.describe("the surface", () => {
       await group.getByRole("button", { name: "Decision model actions" }).click();
       await page.getByRole("menuitem", { name: "Use Jev (TypeSafe)" }).click();
 
-      // The one form: what leaves the machine, then the key, then one button.
-      const form = page.getByRole("form", { name: "Turn on Jev" });
+      // The one consent dialog: what leaves the machine, then the key, then
+      // the act beside Not now.
+      const dialog = page.getByRole("dialog", { name: "Turn on Jev" });
       const native = DECISION_MODEL_CATALOG.find((model) => model.id === "jev");
       if (!native) throw new Error("Jev is missing from the decision catalog");
-      for (const paragraph of decisionConsent(native)) await expect(form).toContainText(paragraph);
-      const field = form.getByLabel("Jev key");
+      for (const paragraph of decisionConsent(native))
+        await expect(dialog).toContainText(paragraph);
+      const field = dialog.getByLabel("Jev key");
       // Write-only: a password field, empty, and nothing can read a stored key
       // back into it.
       await expect(field).toHaveAttribute("type", "password");
       await expect(field).toHaveValue("");
+      await expect(field).toBeFocused();
       await field.fill(STUB_KEY);
-      await form.getByRole("button", { name: "Turn on" }).click();
+      await dialog.getByRole("button", { name: "Turn on" }).click();
+      await expect(dialog).toHaveCount(0);
 
       await expect
         .poll(() => page.evaluate(() => window.infinitary.models.decisions()))
@@ -322,7 +327,11 @@ test.describe("the surface", () => {
             | undefined,
       );
       expect(row?.value ?? "").not.toContain(STUB_KEY);
-      expect(row?.value ?? "").toContain('"enabled":true');
+      // Approved on this version's screen, which covers every use.
+      expect(JSON.parse(row?.value ?? "{}").egress?.jev).toEqual({
+        enabled: true,
+        consentedVersion: DECISION_APPROVAL_VERSION,
+      });
     });
 
     await test.step("removing it takes the key, the switch and the pick with it", async () => {
@@ -779,18 +788,33 @@ test("OpenRouter selection uses its account, records what served it, remembers c
     await expect(picker.getByRole("button")).toHaveCount(offered?.length ?? 0);
     await expect(picker).not.toContainText("Span-01");
     await picker.getByRole("button", { name: /^Jev 1.13/ }).click();
-    const form = group.getByRole("form", { name: "Turn on Jev 1.13 through OpenRouter" });
+    const dialog = launched.page.getByRole("dialog", {
+      name: "Turn on Jev 1.13 through OpenRouter",
+    });
     for (const sentence of openRouterDecisionConsent(jev))
-      await expect(form).toContainText(sentence);
-    await expect(form.locator("input")).toHaveCount(0);
-    await group.screenshot({ path: test.info().outputPath("openrouter-consent.png") });
-    await form.getByRole("button", { name: "Turn on", exact: true }).click();
+      await expect(dialog).toContainText(sentence);
+    await expect(dialog.locator("input")).toHaveCount(0);
+    await dialog.screenshot({ path: test.info().outputPath("openrouter-consent.png") });
+    await dialog.getByRole("button", { name: "Turn on", exact: true }).click();
+    await expect(dialog).toHaveCount(0);
     await expect(group).toContainText(openRouterDecisionLine(jev));
     await group.screenshot({ path: test.info().outputPath("openrouter-on.png") });
     await launched.page.keyboard.press("Escape");
     const task = await spawn("OpenRouter decision work");
-    expect(local.seen).toHaveLength(1);
-    expect(local.seen[0]?.bearer).toBe("fake-openrouter-decisions");
+    // The captain asked that decision models be treated like the person's other
+    // models, under one approval that covers every use: the captain's message
+    // is checked on the chosen model too, so OpenRouter sees one reply check
+    // and one classification, both on the person's own account
+    // (docs/decision-models.md, "The uses").
+    const asked = () =>
+      local.seen
+        .flatMap((call) => Object.keys((call.body as { questions?: object }).questions ?? {}))
+        .sort();
+    await expect.poll(asked).toEqual(["correction", "kind"]);
+    expect(local.seen.map((call) => call.bearer)).toEqual([
+      "fake-openrouter-decisions",
+      "fake-openrouter-decisions",
+    ]);
     expect(shapeOf(task)).toMatchObject({
       kind: "chore",
       kind_source: "classifier:openrouter/typesafe/jev-1.13-20260917",
@@ -831,7 +855,7 @@ test("OpenRouter selection uses its account, records what served it, remembers c
     await launched.page.getByRole("menuitem", { name: USE_OPENROUTER_DECISION_MODEL }).click();
     await group.getByRole("button", { name: /^Kev 4B/ }).click();
     await expect(group).toContainText(openRouterDecisionLine(kev));
-    await expect(group.getByRole("form")).toHaveCount(0);
+    await expect(launched.page.getByRole("dialog")).toHaveCount(0);
     await launched.page.keyboard.press("Escape");
     local.status = 402;
     const fallback = await spawn(`Please ${CLASSIFY_CHORE_MARKER}`);

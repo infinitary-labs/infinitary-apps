@@ -42,7 +42,7 @@ The script's host functions use Infinitary's own names; a Claude workflow script
   Omission preserves kind-based routing, and the choice is part of the replay digest; calls from older scripts without it retain their digest.
   Premium needs `premium_ask` on the program, from the captain's words; the part carries that consent and keeps the existing premium availability wait.
   A label no earlier call used is refused, and the script's await throws, as does a call whose part cannot be filed.
-- `ask(prompt, schema)` is one tool-less typed read through the decision models' one-question session (`DecisionModels.answerJson`, `src/core/program/programAsk.ts`): the answer is JSON the host checks against the schema, asked once more with why when it does not parse or fit, then `null`.
+- `ask(prompt, schema)` is one tool-less typed read through the one-question session on the person's own cheapest slotted chat model (`ProgramQuestions.answerJson` in `src/core/program/programQuestions.ts`, `src/core/program/programAsk.ts`), never a decision model: the answer is JSON the host checks against the schema, asked once more with why when it does not parse or fit, then `null`.
 - `log(text)` and `phase(name)` write a line on the program's own timeline; a phase also sets its plan dots.
 - `args` is the JSON the program was filed with.
 - Parallel parts are ordinary JavaScript: `Promise.all` over `task()` calls.

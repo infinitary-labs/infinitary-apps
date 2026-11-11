@@ -70,7 +70,7 @@ A consumer whose wording was tuned against a chat model **pins its served bytes*
 The kind question does exactly that, so the fingerprint does not move when the class is introduced around it.
 
 Since W1 S10 a Claude login answers too (the owner's answer 2), so a machine with only Claude signed in classifies work instead of failing soft to `high`.
-The session is the question's one-shot on the one session contract (`questionSessionSpec` in `decisions/questionSession.ts`, opened on the binding's backend's `SessionFactory`): Pi's is the in-process session with its 64-token cap (`pi/session.ts`); Claude's (`claude/claudeOneShotSession.ts`) is ONE query to the machine's own client on its default login - the instruction as the only system prompt the app supplies (the client adds its own identity line, and a date reminder to the user message), no tools, no MCP servers and none of the person's settings or Claude notes (`tools: []`, `strictMcpConfig`, `settingSources: []`, `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`), one agent turn (`maxTurns: 1`) at low effort, no transcript (`persistSession: false`), and the client's model-specific output allowance - holding the account's shared store lease for its life.
+The session is the question's one-shot on the one session contract (`questionSessionSpec` in `session/questionSession.ts`, opened on the binding's backend's `SessionFactory`): Pi's is the in-process session with its 64-token cap (`pi/session.ts`); Claude's (`claude/claudeOneShotSession.ts`) is ONE query to the machine's own client on its default login - the instruction as the only system prompt the app supplies (the client adds its own identity line, and a date reminder to the user message), no tools, no MCP servers and none of the person's settings or Claude notes (`tools: []`, `strictMcpConfig`, `settingSources: []`, `CLAUDE_CODE_DISABLE_AUTO_MEMORY=1`), one agent turn (`maxTurns: 1`) at low effort, no transcript (`persistSession: false`), and the client's model-specific output allowance - holding the account's shared store lease for its life.
 The question asks for one word, but Claude's output includes hidden thinking that cannot universally be disabled: imposing Pi's 64-token cap can leave no text at all (INF-1451).
 The adapter's 15-second wall clock bounds the whole call, and the question stays at low effort without an answer-only output cap on Claude.
 An answer the cap cuts short is still the answer, read as Pi reads it (the one option word in the text): `maxTurns` does not stop the client's own output-limit recovery, which re-asks within milliseconds up to three times, so the classifier reads the cut-short text off the first request (its typed `max_tokens` stop rides the streamed `message_delta`) and stops the client; the one re-ask already sent is dropped unanswered.
@@ -109,15 +109,20 @@ Six rules, from design section 6.
    The endpoint is a bullet in `docs/architecture.md` §1.
 2. **Off by default, twice.**
    The default record names no native model and no egress.
-   `DecisionModels` constructs no client unless the row names it, its egress is on, the consent covers the current `DECISION_STATE_VERSION` AND a key is stored - all five checked in one place.
+   `DecisionModels` constructs no native client unless the row names it, its egress is on, an approval is recorded AND a key is stored.
+   Every call names its use (`DecisionCaller.use`), and the use's switch and the answering model's approval are checked before any model or key is read ("The uses" below).
    A fresh install makes zero requests, which `tests/e2e/decision-models.spec.ts` asserts.
 3. **The user's own key, nowhere else.**
    Entered only in Settings, stored 0600 under `userData/decisions/<id>/` (`DecisionKeyStore`), never in the `settings` table, a log, argv, a feed line or a card; never read from `TYPESAFE_API_KEY` or any ambient config - the same rule that keeps the app out of `~/.pi`.
    Infinitary does read it to place it in a header, which is the quota sensor's existing posture for API keys, and this document says so rather than pretending otherwise.
    The D-13 purge does not touch it; "Remove Jev" does.
 4. **Consent says what leaves.**
-   `decisionConsent()` in `src/shared/decisions.ts` is the copy, and it sits beside `DECISION_STATE_VERSION` because the two must move together: the list IS the fact set.
-   Widening it re-shows the consent and drops the egress to off until re-accepted (`consentedVersion`); narrowing it does not.
+   `decisionConsent()` and `openRouterDecisionConsent()` in `src/shared/decisions.ts` write the three rows of the approval screen: Shared, Your choice and Cost.
+   A decision model is treated like the person's other models: Shared says the listed uses send it what they need, which can include their words and code, and makes no promise to leave code, transcripts or files out.
+   The egress entry's `consentedVersion` records which approval screen the person saw: `DECISION_FIRST_APPROVAL_VERSION` (1) for the first screen, which described task classification's facts alone, and `DECISION_APPROVAL_VERSION` (2) for this one, which covers every listed use.
+   A use whose `approval` is newer than the recorded one stays off until the person allows it once in the consent dialog, which raises the record to the current screen; model selection, a re-pick or a native failure never raises it.
+   The service checks again before a new fallback call, so a use switched off during the first request cannot start another one.
+   The view's `stateVersion` and the key call keep the first screen's meaning, so an older view's approval is recorded as 1; a newer home adds `approvalVersion`, and a view approves the lower of that and its own screen, never a newer number it merely read from another computer.
 5. **Bounded and fail-soft, never silent.**
    A native failure is one reason line on the routing decision (`decision model jev failed: 429; answered by adapted:openai-codex/gpt-5.6-luna`, carried as `WorkShape.kind_detail`) and the ADAPTED model answers in its place, so a vendor outage costs one call on the user's own subscription.
    Only the vendor's own 401 flips the row to `key rejected`, with one feed line, once per key; a rate limit, an outage or an unreadable body are transient and the row keeps saying `ready`.
@@ -126,7 +131,9 @@ Six rules, from design section 6.
    Every native answer lands in `usage_events` (provider `typesafe`, the served model id, input tokens, cost from the published price pinned in the catalog row) under the caller's task, and its `kind_source` reads `classifier:jev/jev-1.13.0`.
    S5's metrics count it as classified with no change, because `kindSourceClass` folds by prefix.
 
-What this does NOT do: no proxy, no Infinitary-held key, no decision catalog fetch from the vendor (the alias is pinned in code and the response's own `model` field is what gets recorded), no telemetry about decisions, and no decision ever made on a captain's private note or a card body.
+What this does NOT do: no proxy, no Infinitary-held key, no decision catalog fetch from the vendor (the alias is pinned in code and the response's own `model` field is what gets recorded), and no telemetry about decisions.
+Every approval is asked in the one consent dialog (`ConsentDialog`, design skill `components/core/ConsentDialog.prompt.md`), with every row visible before the act.
+Choosing an OpenRouter model the person has not approved opens the dialog over the list; Not now or Escape returns to the list without approving anything.
 
 `INFINITARY_JEV_URL` redirects the endpoint in dev/e2e only, exactly like `INFINITARY_CLAUDE_USAGE_URL`; a packaged build ignores it.
 
@@ -138,17 +145,37 @@ One row, by state: `auto · your cheapest slotted model` by default; a named off
 The picker lists the listed models, and a pick binds from the whole signed-in pool, slot or no slot, so every model it offers can answer.
 The row names a pick only while it is the model answering: the view's `pinned` state comes from the same checks the call makes before it picks an account (`AdaptedDecisionModel.pinState`).
 A pick no signed-in account serves reads `chosen model unavailable · using your cheapest slotted model`, and the walk answers in its place; a named custom connection that cannot answer reads `chosen model unavailable · decisions go unanswered`, because it never moves to another account.
-"Use Jev (TypeSafe)" opens the one inline form: the consent copy, a write-only key field, one "Turn on".
+"Use Jev (TypeSafe)" opens the consent dialog with the three rows, a write-only key field inside it, and one "Turn on"; "Replace key" opens the same dialog.
+Its view records the current approval screen in the existing settings owner; the key call alone records the first.
+
+Below the row sits the **Uses** list: one row per entry of `DECISION_USES`, its name, one sentence of what it reads, and a switch.
+Task classification shows on and locked, with the note "Always on: Infinitary needs it to work.", and the home refuses to turn it off.
+A use the answering model's older approval predates shows off with the hint "Turning it on asks your OK for Jev once."; turning it on opens the consent dialog, and Allow approves the current screen and turns it on.
+An older home sends no `uses`, so the list is not drawn and only the row shows.
 
 The board's header line grows one token: `· decisions auto` or `· decisions Jev` (or the selected OpenRouter decision model, or the pinned model's name).
 A pick that cannot answer reads `· decisions auto` while the walk answers for it, and `· decisions unanswered` while nothing does.
 
-Four IPC channels, all `surface: "core"`, and the split between them is the point - the ROW travels on the first pair and carries no secret, the KEY has its own write-only call, and no call returns one:
+Five IPC channels, all `surface: "core"`, and the split between them is the point - the ROW travels on the first pair and carries no secret, the KEY has its own write-only call, and no call returns one:
 
 - `inf:settings:decisions` / `inf:settings:decisions:set`
 - `inf:decisions:key:set` / `inf:decisions:key:remove`
+- `inf:decisions:use:set`, one use's switch, with the approval the consent dialog just gave
 
 They hang off the frozen `window.infinitary.models` namespace; the top-level key set is unchanged.
+
+## The uses
+
+`DECISION_USES` in `src/shared/decisionUses.ts` is the one list of the ways Infinitary asks a decision model a question; the Uses list in Settings draws from it alone.
+Each entry has a kind:
+
+- `always-on`: Infinitary needs it to work; its switch shows on and locked (task classification).
+- `default-on`: on until the person turns it off (reply checks).
+- `needs-ok`: off until the person agrees to its own disclosure in the consent dialog, once; no listed use is of this kind yet.
+
+The person's switches are their own settings row, `decision-uses`, holding only the uses they switched.
+`DecisionModels.decide` refuses a use that is off, or that the answering Jev or OpenRouter approval predates, with the question's abstention and the reason `use-off`; the person's own models never answer in that model's place.
+A program's `ask()` is not a use: it asks for JSON in a shape it chooses, which a decision model cannot be relied on to give, so `ProgramQuestions` asks the person's own models apart from this list (`docs/programs.md`).
 
 ## The first consumer
 
@@ -163,6 +190,67 @@ Adding a second consumer is adding a question.
 The key is read from `TYPESAFE_API_KEY` for that offline run only and is never written anywhere; the app itself reads only the user's own stored key.
 The scorer sits behind Observe's development gate like the other offline tools.
 
+## Optional reply checks
+
+`startCorrections` connects genuine new composer, card and Crewmate-tab captain input to the same decision service, as the `reply-checks` use.
+Original delivery continues without waiting for a closed question.
+`CorrectionSources` records source-time context, not a later card head or a reconstructed session transcript.
+It includes only original captain wording, nearby known exchange, the actually addressed offer and known task/project facts; captions with unknown legacy provenance remain unknown.
+Card labels, generated settings, attachments, agent messages and historical intake do not become new captain input.
+The shared consent bounds the whole packet and card excerpt; omission is explicit and the latest words are never clipped to fit.
+
+`CorrectionConsumer` uses source-keyed inbox rows and the decision ledger, retaining a first completed result and atomically queuing a first-mate case only for `review`.
+Ordinary, unclear, failed and withdrawn checks add no retention-specific agent wake or fallback detection duty.
+Switching reply checks off stops new checks and aborts and withdraws queued ones, including unoffered cases recovered after restart, without changing an existing explicit save request; switching them on again checks only later replies.
+Neither a receipt nor a draft offer is an active direction.
+
+`CorrectionCases` exposes bounded inspection, exact project offers, verified saving recovery and agent-declared affected-work guidance through `correction_case`.
+Its ordinary first-mate card has its own operation row and never changes the original task's approval or merge controls.
+A keep choice resolves the card normally but leaves that operation pending until the existing direction writer's exact identifier, wording, scope and revision read back successfully.
+The selected-case wake carries the recovery pointer across a quit before saving; readback also handles a quit after saving and before confirmation.
+It goes out once per chosen offer; when the first mate's turn on it ends without the save landing, the sweep asks once more, as its own retry, and never again.
+A different revision that landed meanwhile is not asked about again; it waits on the first mate's new offer.
+A chosen instruction the first mate cannot save ends through `ignore` with a reply.
+The captain's Keep already took the offer card off the stack, so the reply also goes where a kept confirmation goes, the card or task they replied on, and into the feed.
+A Keep on wording no offer recorded, such as a card revised outside `offer`, can never be read back: unless a written keep request already holds the operation, the card resolves like any first-mate card and the case ends.
+A wording reply revises the same offer and retains an existing replacement's expected revision; choosing an older displayed offer binds that exact historical wording.
+An actual written keep request uses the same existing judgment-tier writer without another choice.
+An unchosen offer is withdrawn when its project disappears; a chosen save failure remains pending and never claims success.
+A reply on an open offer's own card answers that offer and is never checked again as new input.
+The Settings purge removes every pending check and case, the first mate's asks about them and a chosen offer's card evidence, whose operation no longer names its card.
+
+Only verified saved wording reaches declared affected active tasks in the same project, once per direction revision and recipient through the durable task inbox.
+The owner rechecks the saved revision before each send; the first mate, not the host, decides which active work is affected and declares an explicit empty list when none is.
+Fresh, resumed and other-computer conversations continue to receive directions through the existing standing-direction owner, never draft case data.
+Existing private directions remain private, and explicit requests to keep directions retain their existing authority even when reply checks are off or fail.
+
+## Offline correction evaluation
+
+`node scripts/evaluate-corrections.ts` evaluates the correction question through the real `DecisionModels` adapter and session factories.
+It is an offline development command, not an automatic retention feature.
+Like the corpus reader, it checks Observe's development gate before opening private inputs.
+Cases, frozen labels, model-pool metadata, scratch home and reports must live outside the project; reports contain opaque case identifiers, closed answers, model attribution, usage and durations, never conversation text or provider prose.
+A report is created exclusively, so an interrupted or unknown run is not silently repeated at the same destination.
+
+Pass `--cases <private.jsonl> --labels <private-labels.jsonl> --out <new-private-report.jsonl> --variant nearby --context-bytes <bytes>` for an offline validation with zero model calls.
+The variants are `reply` (latest reply), `nearby` (also preceding exchange), `card-only` (latest reply and addressed source-time card) and `card` (both exchange and card), retaining supplied project/task identity and declaring omitted context.
+The caller sets the byte budget for its experiment; a reply that cannot fit is not silently clipped or sent.
+Optional `--card-bytes <bytes>` retains both ends of a long addressed card within that smaller byte allowance, explicitly marking the omitted middle without shortening the captain's reply.
+Optional `--question-file <private-question.json>` tests a frozen prompt instead of the bundled question; its file stays outside the project and must retain the same `review`/`ordinary`/`unclear` choice contract and abstention.
+The report records that question's version and fingerprint without copying its instructions; each answer still carries the service's served-question fingerprint.
+Each case has a SHA-256 `id` and a `context` with `latestReply`, `preceding`, optional `precedingSource` (`same-thread` or `recent-conversation`), optional `addressedCard`, optional `project` and `task`, and `unavailableContext`.
+The source relationship is a recorded fact, not an inference that nearby composer messages share a task.
+Each label has the same `id` and an independently established `expected` value: `review`, `ordinary` or `unclear`.
+Both readers use an explicit allowlist; sampling strata, retrospective outcomes, attachments and extraction-time statuses are not model facts.
+A caller must reconstruct the card actually shown before the reply, not use its later revised body or assume a nearby card was addressed.
+
+A live run additionally needs `--live --pool <private-pool.json> --accounts-dir <app-owned-accounts> --home <isolated-home>` and authorization for its subscription allowance and supplied excerpts.
+The pool records the actual adapted/auto setting, its ordered authorized low-tier Claude/Codex offerings and nullable `flagshipProvider`; the harness does not invent low-tier membership or choose a new destination.
+The production adapter owns low-first selection and the bounded model call; the vault owns Pi account binding and the existing Claude client owns its sign-in.
+The command requires one enabled, non-withheld account per selected provider and stops on a typed subscription cut-off, without signing in or retrying.
+The answer's source identifies the selected offering; reported usage retains any served-model attribution, and absent usage is not measured zero.
+This evaluation authorization does not grant permission for the app to share new conversation facts in normal use.
+
 ## The decision ledger
 
 A decision model answers a question; the ledger records what the host decided.
@@ -171,6 +259,12 @@ Every decision about a task - which model and tier a spawn is routed to, which a
 
 One shape: the task, the time, the `rule` that decided (a routing policy row R0-R9, or the whose-turn or idle rule of a sort; none for an account pick or a retired triage verdict, whose judging model sits in `model`), the reasons for a routing or account pick, and each kind's own columns - routing's provider, model, asked and served slot; the account; a sort's wake, verdict, summary, provenance stamps and the write-once missed-escalation label.
 A sort row that recorded a typed wake carries its facts (`facts_json`; `docs/inbox.md`, "The wake envelope") beside the text it was served as.
+
+Correction-question receipts use the same ledger's `correction` kind, with the immutable source identity in `wake` and a unique partial index over that identity.
+`DecisionStore.recordCorrection` retains the first completed receipt, including abstentions and failures; `correction` seeks it without walking the history.
+Its facts contain the question identity, input fingerprint and typed model answer, never a copy of the captain's words or an active instruction.
+A taskless source uses the existing task column's empty value, not an invented task; the caller supplies its own clock reading.
+The store's existing transaction boundary lets a consumer commit that receipt, its inbox effect and its input acknowledgement together.
 
 ### Candidate facts
 
@@ -218,9 +312,9 @@ Span's three yes/no-only models and unknown choice capabilities are excluded.
 The catalog's classifier type alone does not say which question types a model accepts, so the seam keeps the established choice-capable IDs, intersected with Pi's catalog.
 Liquid D1 is not currently in that catalog.
 
-The first selection shows a note naming OpenRouter and the maker, the same bounded facts, the paying account and fail-soft fallback.
-**Turn on** persists `{ kind: "openrouter", model }` and `egress.openrouter` consent for `DECISION_STATE_VERSION` 1.
-Later model changes reuse that consent.
+The first selection opens the consent dialog naming OpenRouter and the maker, the same bounded facts, the paying account and fail-soft fallback.
+**Turn on** persists `{ kind: "openrouter", model }` and the current approval screen.
+Later model changes keep the existing approval; choosing a model never raises an older approval.
 Returning to auto preserves consent and the pick may be restored without a second note.
 Signing out hides the choice and uses the adapter; signing in restores it.
 A fresh installation has neither pick nor consent and sends no decision call.

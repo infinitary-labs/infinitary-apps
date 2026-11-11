@@ -3,6 +3,21 @@
 Every steer and wake the host delivers rides one durable, lane-per-recipient inbox.
 The whose-turn rule that decides whether a report wakes anyone is `docs/report-sort.md`.
 
+## Service-owned lanes
+
+The composition root declares a non-task consumer with `InboxStore.reserveServiceRecipient` before task recovery runs.
+`CrewWatch` never delivers or deletes a declared service lane as orphan task guidance, including when a caller sweeps one lane directly.
+The correction question and pending-case lanes declare their owners before boot recovery; their own consumer alone handles acknowledgement and withdrawal.
+The first-mate and retired supervision lanes retain their existing ownership.
+
+## Observing accepted rows
+
+`InboxStore.onEnqueue` observes a new row after its insert, synchronously before the caller continues delivery.
+A listener may schedule ancillary inbox work, never an external effect; the enclosing caller transaction includes those writes.
+Each listener has its own savepoint, so a failed listener rolls back its ancillary writes without rejecting the original message or preventing later listeners.
+The diagnostic contains no message or exception text.
+Reads, delivery attempts and redelivery do not notify these listeners; the coalesced `onChange` notification remains the invalidation signal.
+
 ## The honest retry
 
 Captain-approved 2026-09-26 (the idle crew recovery specification, Q1: backoff forever).

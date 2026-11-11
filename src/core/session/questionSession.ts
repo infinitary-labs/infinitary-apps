@@ -1,14 +1,16 @@
 import { FIRSTMATE_SESSION_ID } from "@shared/observe";
 import { CLASSIFIER_MAX_OUTPUT_TOKENS } from "../orchestrator/seat";
-import { LOCAL_MACHINE_ID, type SessionBinding, type SessionSpec } from "../session/session";
+import { LOCAL_MACHINE_ID, type SessionBinding, type SessionSpec } from "./session";
 
 /**
- * The question role: the adapted decision model's session, as options on
- * the one session contract (`src/core/session/`). One bounded question,
+ * The question role: one bounded question's session, as options on the one
+ * session contract (`src/core/session/`), opened by the question walk
+ * (`questionTurns.ts`) for the adapted decision model's one word and for a
+ * program's JSON answer. One bounded question,
  * answered once, by a session that can reach nothing - no built-ins, no
  * tools, no record - on the question's own instruction, served byte for
  * byte, so a verdict recorded months ago still says which question was
- * asked. One model turn, one retry at most; the adapter's wall clock stays
+ * asked. One model turn, one retry at most; the walk's wall clock stays
  * outside the session. Pi caps a choice's output at a word's allowance.
  * Claude's output includes hidden thinking that cannot always be disabled,
  * so its client chooses the allowance, as it does for a JSON answer.

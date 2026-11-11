@@ -4,6 +4,7 @@ import {
   type DecisionsSettings,
   decisionsSettingsSchema,
 } from "@shared/decisions";
+import { type DecisionUseSwitches, decisionUseSwitchesSchema } from "@shared/decisionUses";
 import {
   DEFAULT_DICTATION,
   type DictationKey,
@@ -222,8 +223,42 @@ export class SettingsStore {
     return parsed.success ? parsed.data : DEFAULT_DECISIONS;
   }
 
+  private readonly decisionListeners = new Set<() => void>();
+  /** Hears every change to the decisions row or the use switches. */
+  onDecisionsChanged(listener: () => void): () => void {
+    this.decisionListeners.add(listener);
+    return () => this.decisionListeners.delete(listener);
+  }
+
   setDecisions(decisions: DecisionsSettings): void {
     this.set("decisions", decisions);
+    this.decisionsChanged();
+  }
+
+  /**
+   * The person's decision model use switches (`src/shared/decisionUses.ts`),
+   * a row of their own so an older build reading the decisions row never
+   * meets a field it does not know. Absent or unreadable: every use at its
+   * kind's default.
+   */
+  getDecisionUses(): DecisionUseSwitches {
+    const parsed = decisionUseSwitchesSchema.safeParse(this.get("decision-uses"));
+    return parsed.success ? parsed.data : {};
+  }
+
+  setDecisionUses(switches: DecisionUseSwitches): void {
+    this.set("decision-uses", switches);
+    this.decisionsChanged();
+  }
+
+  private decisionsChanged(): void {
+    for (const listener of this.decisionListeners) {
+      try {
+        listener();
+      } catch {
+        console.warn("[settings] decision observer failed");
+      }
+    }
   }
 
   /**

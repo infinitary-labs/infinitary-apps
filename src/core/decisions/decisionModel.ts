@@ -1,6 +1,4 @@
 import { createHash } from "node:crypto";
-import type { CutOff } from "@shared/authFailure";
-import { isCustomApiProvider } from "@shared/customApi";
 import type {
   DecisionAnswer,
   DecisionCaller,
@@ -15,19 +13,26 @@ import type {
 } from "@shared/decisions";
 import {
   DECISION_MODEL_CATALOG,
-  DECISION_STATE_VERSION,
   decisionKeyRejectedNote,
   parseDecisionOffering,
 } from "@shared/decisions";
-import type { FmUsage } from "@shared/events";
-import { backendForProvider } from "@shared/providers";
-import type { ModelsCatalogView, Slot } from "@shared/quota";
-import type { ModelRuntime } from "../pi/types";
-import { orderCandidates } from "../routing/candidates";
-import type { ModelCapabilityLookup } from "../routing/capability";
-import { SessionBinder } from "../session/binding";
-import type { ModelSession, SessionBinding, SessionFactories } from "../session/session";
-import { questionSessionSpec } from "./questionSession";
+import {
+  DECISION_APPROVAL_VERSION,
+  DECISION_FIRST_APPROVAL_VERSION,
+  type DecisionUseId,
+  type DecisionUseRequest,
+  type DecisionUseSwitches,
+  decisionApproval,
+  decisionUse,
+  decisionUseAllowed,
+  decisionUsesView,
+} from "@shared/decisionUses";
+import {
+  QUESTION_TIMEOUT_MS,
+  QuestionTurns,
+  type QuestionTurnsOptions,
+  type QuestionUsage,
+} from "../session/questionTurns";
 
 /**
  * The decision-model class (S7a, captain-approved design
@@ -60,14 +65,10 @@ import { questionSessionSpec } from "./questionSession";
  */
 
 /** Hard wall clock per decision: a caller waits no longer than this. */
-export const DECIDE_TIMEOUT_MS = 15_000;
+export const DECIDE_TIMEOUT_MS = QUESTION_TIMEOUT_MS;
 
 /** What one call burned, for the service to attribute. */
-export type DecisionUsage = {
-  accountId?: string;
-  model?: { provider: string; id: string };
-  usage: FmUsage;
-};
+export type DecisionUsage = QuestionUsage;
 
 /** One model's answers to one state, plus what they cost. */
 export type DecisionRun = {
@@ -88,13 +89,6 @@ export interface DecisionModel {
     questions: Record<string, DecisionQuestion>,
     signal: AbortSignal,
   ): Promise<DecisionRun>;
-  /** A free JSON answer (a program's ask()); only a chat model gives one. */
-  answerJson?(
-    caller: DecisionCaller,
-    instruction: string,
-    text: string,
-    signal: AbortSignal,
-  ): Promise<{ text: string; usage?: DecisionUsage } | { failed: string; usage?: DecisionUsage }>;
 }
 
 /**
@@ -186,61 +180,14 @@ export function renderAdapterState(state: DecisionState): string {
     .join("\n");
 }
 
-export type AdaptedDecisionModelOptions = {
-  /** A neutral cwd for the stateless session (the firstmate home). */
-  homeDir: string;
-  /**
-   * The routable pool, already narrowed to the slotted pool by the caller,
-   * each model carrying its slot so the walk can rank them cheapest-first.
-   * Pi-served and Claude-served models compete in one walk (W1 S10, the
-   * owner's Q3 a); an account that serves nothing right now (a standing
-   * cut-off, no client) has no models here.
-   */
-  availableModels: () => Array<{ provider: string; id: string; slot?: Slot }>;
-  /**
-   * What a named offering may bind: every signed-in model, slot or no slot,
-   * because a model that is not in use is still available and naming it is
-   * its own placement - the same pool the picker lists from. Absent: the
-   * routable pool above.
-   */
-  namedModels?: () => Array<{ provider: string; id: string }>;
-  /** Resolves a candidate's def so it is checked before it is bound. */
-  capabilityFor?: ModelCapabilityLookup;
-  quotaModels: () => ModelsCatalogView | undefined;
-  /** AccountSelector.selectForSpawn, so the burn is attributable. */
-  selectAccount: (
-    taskId: string,
-    piProviderId: string,
-  ) => string | undefined | Promise<string | undefined>;
-  /** The flagship account answers only as a last resort. */
-  flagshipAccountId: () => string | null;
-  runtimeFor: (accountId: string) => Promise<ModelRuntime>;
-  /** Unneeded when the candidate pool is Claude-only. */
-  baseRuntime?: ModelRuntime;
+export type AdaptedDecisionModelOptions = QuestionTurnsOptions & {
   /**
    * Which offering the user pinned, or `auto` for the walk (report section
    * 5.1, the captain's Q5 A). A pin that cannot be bound falls back to the
    * walk rather than refusing to answer.
    */
   offering?: () => string;
-  /**
-   * The session factory per backend, each opening the question's one-shot
-   * session (`questionSessionSpec`). A backend with no factory answers
-   * nothing, so its models are passed over in the walk.
-   */
-  sessions: Partial<SessionFactories>;
-  /**
-   * Records a typed cut-off the call observed on the account that served it
-   * (W1 S7): whoever observes one records it, and the account then leaves
-   * the pool until a fact changes.
-   */
-  noteCutOff?: (accountId: string, cutOff: CutOff) => void;
-  /** Ensures the home dir exists before a session is created; tests skip it. */
-  prepareHome?: () => Promise<void>;
 };
-
-/** One candidate bound: the model and the binding its session is opened on. */
-type BoundCandidate = { model: { provider: string; id: string }; binding: SessionBinding };
 
 /**
  * The adapter: any chat model in the routable pool qualifies as a decision
@@ -248,29 +195,23 @@ type BoundCandidate = { model: { provider: string; id: string }; binding: Sessio
  * client (W1 S10) - because a typed question renders as a byte-stable
  * instruction plus the state as one user message, the abstention is offered
  * as a word among the others, and the answer is one word parsed by code.
+ * The walk and the session are the one-question walk's
+ * (`src/core/session/questionTurns.ts`); this class adds the question's
+ * rendering, the person's pin and the parse.
  *
  * Everything about it is shaped by one rule, inherited unchanged from S3: a
- * broken decision model must cost quota, never correctness. So it never
- * throws, never blocks its caller past the wall clock, and every way it can
+ * broken decision model must cost quota, never correctness. Every way it can
  * fail - no signed-in model, a dead account store, a provider error, a
  * timeout, an answer that is not one of the options - resolves to the
  * question's abstention.
- *
- * What it must never do: see the premium slot (the walk refuses it
- * outright), or run twice for the same row (the caller's business).
  */
 export class AdaptedDecisionModel implements DecisionModel {
   readonly id = "adapted";
   readonly native = false;
-  private readonly sessions: Partial<SessionFactories>;
-  private readonly binder: SessionBinder;
+  private readonly turns: QuestionTurns;
 
   constructor(private readonly options: AdaptedDecisionModelOptions) {
-    this.sessions = options.sessions;
-    this.binder = new SessionBinder({
-      runtimeFor: (accountId) => options.runtimeFor(accountId),
-      baseRuntime: options.baseRuntime,
-    });
+    this.turns = new QuestionTurns(options);
   }
 
   /**
@@ -296,14 +237,6 @@ export class AdaptedDecisionModel implements DecisionModel {
     return { answers, usage };
   }
 
-  /**
-   * The wall clock and the caller's signal bound the WHOLE call - creating
-   * the session as well as its one turn. A Claude-served session spawns the
-   * machine's client and waits out a sign-in in progress before it can
-   * answer, so a clock that started only once the session existed would
-   * not be the caller's bound. Whatever is still running when a bound fires
-   * is let go of, never waited for.
-   */
   private async ask(
     caller: DecisionCaller,
     state: DecisionState,
@@ -312,18 +245,20 @@ export class AdaptedDecisionModel implements DecisionModel {
   ): Promise<{ answer: DecisionAnswer; usage?: DecisionUsage }> {
     const instruction = renderAdapterInstruction(question);
     const version = questionVersion(question, instruction);
-    const turn = await this.turn(caller, instruction, renderAdapterState(state), signal);
+    const named = parseDecisionOffering(this.options.offering?.() ?? "auto");
+    const turn = await this.turns.turn({
+      attribution: caller.taskId ?? caller.purpose,
+      instruction,
+      text: renderAdapterState(state),
+      signal,
+      ...(named ? { named } : {}),
+    });
+    const usage = turn.usage ? { usage: turn.usage } : {};
     if ("failed" in turn)
-      return {
-        answer: failedAnswer(question, turn.failed, version, turn.source),
-        ...wrap(turn.usage),
-      };
+      return { answer: failedAnswer(question, turn.failed, version, turn.source), ...usage };
     const value = parseOption(turn.text, adapterOptions(question));
     if (!value) {
-      return {
-        answer: failedAnswer(question, "unparsed", version, turn.source),
-        ...wrap(turn.usage),
-      };
+      return { answer: failedAnswer(question, "unparsed", version, turn.source), ...usage };
     }
     return {
       answer: {
@@ -332,294 +267,17 @@ export class AdaptedDecisionModel implements DecisionModel {
         source: turn.source,
         version,
       },
-      ...wrap(turn.usage),
+      ...usage,
     };
   }
 
   /**
-   * One JSON answer to a program's ask() (INF-799 piece 2): the same
-   * bounded one-question session, its answer the model's own text for the
-   * caller to parse and check. Never throws; a failure says why.
-   */
-  async answerJson(
-    caller: DecisionCaller,
-    instruction: string,
-    text: string,
-    signal: AbortSignal,
-  ): Promise<{ text: string; usage?: DecisionUsage } | { failed: string; usage?: DecisionUsage }> {
-    const turn = await this.turn(caller, instruction, text, signal, true);
-    return "failed" in turn
-      ? { failed: turn.failed, ...wrap(turn.usage) }
-      : { text: turn.text, ...wrap(turn.usage) };
-  }
-
-  /**
-   * One bounded turn of the question session: its answer's text, or why
-   * there was none - `no-model`, a bound (`timeout`, `aborted`), `provider`
-   * or `error`.
-   */
-  private async turn(
-    caller: DecisionCaller,
-    instruction: string,
-    text: string,
-    signal: AbortSignal,
-    json = false,
-  ): Promise<
-    | { text: string; source: string; usage?: DecisionUsage }
-    | { failed: string; source?: string; usage?: DecisionUsage }
-  > {
-    if (signal.aborted) return { failed: stopReason(signal) };
-    const bound = await this.resolveBinding(caller.taskId ?? caller.purpose);
-    if (!bound) return { failed: "no-model" };
-    const { model, binding } = bound;
-    const factory = this.sessions[binding.backend];
-    if (!factory) return { failed: "no-model" };
-    const source = `${model.provider}/${model.id}`;
-    let burned: DecisionUsage | undefined;
-    let session: ModelSession | undefined;
-    let unsubscribe: (() => void) | undefined;
-    /** Which bound ended the call: our own wall clock, or the caller's. */
-    let ended = "";
-    let stop!: () => void;
-    const stopped = new Promise<undefined>((resolve) => {
-      stop = () => resolve(undefined);
-    });
-    const end = (reason: string) => {
-      ended ||= reason;
-      stop();
-      void session?.abort().catch(() => {});
-    };
-    const timer = setTimeout(() => end("timeout"), DECIDE_TIMEOUT_MS);
-    const onAbort = () => end(stopReason(signal));
-    signal.addEventListener("abort", onAbort, { once: true });
-    try {
-      // The caller's signal can fire while the binding resolves, and a
-      // listener added after the fact never runs.
-      if (signal.aborted) return { failed: stopReason(signal), source };
-      await this.options.prepareHome?.();
-      const creating = factory.open(
-        questionSessionSpec({
-          homeDir: this.options.homeDir,
-          binding,
-          model,
-          instruction,
-          ...(json ? { json } : {}),
-        }),
-      );
-      session = await Promise.race([creating, stopped]);
-      if (!session) {
-        // A session that arrives after the bound is let go of at once.
-        void creating.then(
-          (late) => late.dispose(),
-          () => {},
-        );
-        return { failed: ended, source };
-      }
-      // Asking before the prompt is the only way to honor a bound without
-      // spending the call: an abort() lands on a request not yet made.
-      if (ended) return { failed: ended, source };
-      let answer = "";
-      let failure = "";
-      unsubscribe = session.subscribe((event) => {
-        if (event.type === "turn_closed") {
-          const closed = event.text?.trim();
-          if (closed) answer = closed;
-          return;
-        }
-        // A provider-failed turn RESOLVES rather than throwing, so the
-        // session's `turn_failed` is the only place the failure shows. Without
-        // this the adapter would read an empty answer as an unparseable one
-        // and hide a provider outage as a parse miss.
-        if (event.type === "turn_failed") {
-          failure = "provider";
-          // A typed cut-off is a fact on the account that served the call,
-          // recorded by whoever observes it (W1 S7).
-          if (event.cutOff && binding.accountId) {
-            this.options.noteCutOff?.(binding.accountId, event.cutOff);
-          }
-        }
-        if (event.type === "turn_end" && event.usage) {
-          burned = {
-            ...(binding.accountId ? { accountId: binding.accountId } : {}),
-            model,
-            usage: event.usage,
-          };
-        }
-      });
-      const prompting = session.prompt(text);
-      // A session whose abort does not settle its turn still cannot hold the
-      // caller past the bound.
-      prompting.catch(() => {});
-      await Promise.race([prompting, stopped]);
-      if (ended) return { failed: ended, source, ...wrap(burned) };
-      if (failure) return { failed: failure, source, ...wrap(burned) };
-      return { text: answer, source, ...wrap(burned) };
-    } catch (caught) {
-      // Session creation and the prompt itself both land here; the reason is
-      // recorded rather than the message, which can carry a provider's prose.
-      return {
-        failed:
-          ended || (caught instanceof Error && caught.name === "AbortError" ? "timeout" : "error"),
-        source,
-        ...wrap(burned),
-      };
-    } finally {
-      clearTimeout(timer);
-      signal.removeEventListener("abort", onAbort);
-      unsubscribe?.();
-      session?.dispose();
-    }
-  }
-
-  /**
-   * The binding, cheapest serviceable first: the supervision session's walk
-   * reused (`orderCandidates` low-first over the routable pool), so premium
-   * is never a candidate, a candidate whose def cannot carry the turn is
-   * skipped, and a dead account store is tried past. Pi-served and
-   * Claude-served models compete in that one walk (the owner's Q3 a); a
-   * model whose backend has no session factory is passed over. The
-   * flagship account is held back while anything else can bind and spent
-   * only as the last resort - on a single-account install, one cheap
-   * decision on the flagship is pennies against the alternative.
-   *
-   * A user who NAMED an offering is honored first; naming a model is its own
-   * placement, so a premium offering, or one that is not in use, is allowed
-   * there as it is everywhere a user names one. A named offering that cannot
-   * bind falls through to the walk rather than refusing to answer, and the
-   * row says so (`pinState`).
-   */
-  private async resolveBinding(attribution: string): Promise<BoundCandidate | undefined> {
-    const pinned = parseDecisionOffering(this.options.offering?.() ?? "auto");
-    if (pinned) {
-      const bound = await this.bind(pinned, attribution);
-      if (bound) return bound;
-      if (!fallsBack(pinned)) return undefined;
-    }
-    const flagship = this.options.flagshipAccountId();
-    let lastResort: { model: { provider: string; id: string }; accountId: string } | undefined;
-    for (const model of this.candidateModels()) {
-      if (!this.answers(model)) continue;
-      const selecting = this.options.selectAccount(attribution, model.provider);
-      const accountId = selecting instanceof Promise ? await selecting : selecting;
-      if (!accountId) {
-        const unmanaged = this.unmanaged(model);
-        if (unmanaged) return unmanaged;
-        continue;
-      }
-      if (flagship && accountId === flagship) {
-        lastResort ??= { model, accountId };
-        continue;
-      }
-      try {
-        return await this.bindAccount(model, accountId);
-      } catch {
-        // A dead account store: try the next candidate.
-      }
-    }
-    if (lastResort) {
-      try {
-        return await this.bindAccount(lastResort.model, lastResort.accountId);
-      } catch {
-        // The flagship store is dead too: nothing can answer.
-      }
-    }
-    return undefined;
-  }
-
-  /**
-   * What a pinned offering comes to right now, by the checks a call makes
-   * before it picks an account: a signed-in account serves it and its
-   * backend has a session factory. A dead account store still only shows
-   * at the call, which then falls back the same way. A string that names
-   * no offering is the walk, as it is at the call.
+   * What a pinned offering comes to right now (the walk's `pinState`). A
+   * string that names no offering is the walk, as it is at the call.
    */
   pinState(offering: string): DecisionPinState {
-    const pinned = parseDecisionOffering(offering);
-    if (!pinned) return "fallback";
-    if (this.canBind(pinned)) return "ready";
-    return fallsBack(pinned) ? "fallback" : "held";
+    return this.turns.pinState(parseDecisionOffering(offering));
   }
-
-  private canBind(model: { provider: string; id: string }): boolean {
-    const pool = this.options.namedModels?.() ?? this.options.availableModels();
-    return (
-      pool.some((entry) => entry.provider === model.provider && entry.id === model.id) &&
-      this.answers(model)
-    );
-  }
-
-  /** Binds one named offering, or nothing when its account or store is gone. */
-  private async bind(
-    model: { provider: string; id: string },
-    attribution: string,
-  ): Promise<BoundCandidate | undefined> {
-    if (!this.canBind(model)) return undefined;
-    const selecting = this.options.selectAccount(attribution, model.provider);
-    const accountId = selecting instanceof Promise ? await selecting : selecting;
-    if (!accountId) return this.unmanaged(model);
-    try {
-      return await this.bindAccount(model, accountId);
-    } catch {
-      return undefined;
-    }
-  }
-
-  /** Whether the model's backend has a factory to answer on. */
-  private answers(model: { provider: string }): boolean {
-    return this.sessions[backendForProvider(model.provider)] !== undefined;
-  }
-
-  /**
-   * A model no account manages: an unmanaged (custom/models.json) provider
-   * rides the base runtime. A client-served provider has no such runtime -
-   * its login IS the account - so without one it cannot answer.
-   */
-  private unmanaged(model: { provider: string; id: string }): BoundCandidate | undefined {
-    if (backendForProvider(model.provider) !== "pi" || !this.options.baseRuntime) return undefined;
-    return { model, binding: this.binder.base() };
-  }
-
-  /** The binding on one account; a Pi account's runtime is built, and may throw. */
-  private async bindAccount(
-    model: { provider: string; id: string },
-    accountId: string,
-  ): Promise<BoundCandidate> {
-    return { model, binding: await this.binder.bindAccount(accountId, model.provider) };
-  }
-
-  private candidateModels(): { provider: string; id: string }[] {
-    return orderCandidates({
-      available: this.options.availableModels(),
-      catalog: this.options.quotaModels()?.models ?? [],
-      // The cheap tier by design: this is the one grain that must never
-      // cost more than the work it is sorting.
-      buckets: ["low", "medium", "high"],
-      ...(this.options.capabilityFor ? { capabilityFor: this.options.capabilityFor } : {}),
-    }).models;
-  }
-}
-
-/**
- * Whether the walk may answer for a named offering that cannot bind. An
- * explicitly named custom connection never silently migrates its
- * background request to another account when paused or disconnected.
- */
-function fallsBack(model: { provider: string }): boolean {
-  return !isCustomApiProvider(model.provider);
-}
-
-/**
- * Why the caller's signal ended the call: its deadline (`AbortSignal.timeout`,
- * which the spawn path passes and which runs out before the adapter's own
- * clock) is a timeout on the record; anything else is the caller aborting.
- */
-function stopReason(signal: AbortSignal): "timeout" | "aborted" {
-  const reason = signal.reason as { name?: unknown } | undefined;
-  return reason?.name === "TimeoutError" ? "timeout" : "aborted";
-}
-
-function wrap(usage: DecisionUsage | undefined): { usage?: DecisionUsage } {
-  return usage ? { usage } : {};
 }
 
 /** The key store as this service needs it: presence and one read, nothing else. */
@@ -635,6 +293,9 @@ export type DecisionModelsOptions = {
   settings: {
     getDecisions(): DecisionsSettings;
     setDecisions(decisions: DecisionsSettings): void;
+    /** The person's use switches (`src/shared/decisionUses.ts`): read fresh on every call. */
+    getDecisionUses(): DecisionUseSwitches;
+    setDecisionUses(switches: DecisionUseSwitches): void;
   };
   /** The user's own keys for native models. Absent in a build with none. */
   keys?: DecisionKeys;
@@ -696,17 +357,31 @@ export class DecisionModels {
    * says so on the record rather than quietly looking like an answer.
    */
   async decide(
-    caller: DecisionCaller,
+    caller: DecisionCaller & { use: DecisionUseId },
     state: DecisionState,
     questions: Record<string, DecisionQuestion>,
     signal: AbortSignal,
   ): Promise<Record<string, DecisionAnswer>> {
+    const off = () =>
+      Object.fromEntries(
+        Object.entries(questions).map(([id, question]) => [
+          id,
+          failedAnswer(question, "use-off", questionVersion(question, question.instructions)),
+        ]),
+      );
+    // A use that is off, or that the answering model's approval predates,
+    // asks nothing: no model is read, no key, and the person's own models
+    // do not answer in its place. This runs before any model or key is read.
+    if (!this.allowsUse(caller.use)) return off();
     const native = this.nativeModel();
     if (!native) return this.run(this.options.adapted, caller, state, questions, signal);
 
     const answers = await this.run(native, caller, state, questions, signal);
     const retry = Object.entries(questions).filter(([id]) => answers[id]?.outcome === "failed");
     if (retry.length === 0) return answers;
+    // A use turned off during the native request cannot start a new
+    // fallback call. A completed request cannot be unsent.
+    if (!this.allowsUse(caller.use)) return off();
     // One reason line for the record (report section 6 rule 5): a vendor
     // outage costs one call on the user's own subscription, and says so.
     const reasons = [...new Set(retry.map(([id]) => answers[id]?.reason ?? "unknown"))].join(", ");
@@ -730,32 +405,61 @@ export class DecisionModels {
   }
 
   /**
-   * One JSON answer for a program's ask() (INF-799 piece 2), from the
-   * adapter: a native model answers from a closed option set, so it has no
-   * JSON to give. Never throws; the burn lands under the caller's task.
+   * Whether a listed use may ask now: its switch, and the answering model's
+   * approval (`decisionUseAllowed`). An unknown use asks nothing.
    */
-  async answerJson(
-    caller: DecisionCaller,
-    instruction: string,
-    text: string,
-    signal: AbortSignal,
-  ): Promise<{ text: string } | { failed: string }> {
-    const answer = this.options.adapted.answerJson;
-    if (!answer) return { failed: "no-model" };
-    let run: Awaited<ReturnType<typeof answer>>;
-    try {
-      run = await answer.call(this.options.adapted, caller, instruction, text, signal);
-    } catch {
-      run = { failed: "error" };
+  allowsUse(id: DecisionUseId): boolean {
+    const use = decisionUse(id);
+    if (!use) return false;
+    return decisionUseAllowed(
+      this.options.settings.getDecisions(),
+      this.options.settings.getDecisionUses(),
+      use,
+    );
+  }
+
+  /**
+   * One use switched from Settings. An always-on use refuses to turn off.
+   * `approve` is the approval screen the person just agreed to in the
+   * consent dialog: it raises the answering Jev or OpenRouter approval, never
+   * past this home's own screen and never lower than it was. A `needs-ok`
+   * use turns on only once its disclosure's version is agreed, which is kept.
+   */
+  setUse(request: DecisionUseRequest): DecisionsView {
+    const use = decisionUse(request.id);
+    if (!use) throw new Error(`Infinitary has no decision model use named ${request.id}.`);
+    if (use.kind === "always-on") {
+      if (!request.on) throw new Error(`${use.name} is always on: Infinitary needs it to work.`);
+      return this.view();
     }
-    if (run.usage)
-      this.options.recordUsage?.({
-        taskId: caller.taskId ?? caller.purpose,
-        ...(run.usage.accountId ? { accountId: run.usage.accountId } : {}),
-        ...(run.usage.model ? { model: run.usage.model } : {}),
-        usage: run.usage.usage,
-      });
-    return "failed" in run ? { failed: run.failed } : { text: run.text };
+    const saved = this.options.settings.getDecisionUses();
+    // Agreed once: a later turn-on of the same disclosure asks nothing.
+    const agreed = Math.max(request.agreed ?? -1, saved[use.id]?.agreed ?? -1);
+    if (request.on && use.kind === "needs-ok" && agreed < (use.disclosure?.version ?? 0))
+      throw new Error(`${use.name} turns on only once its disclosure is agreed.`);
+    const settings = this.options.settings.getDecisions();
+    if (request.on && request.approve !== undefined) {
+      const family =
+        settings.answerer.kind === "native"
+          ? settings.answerer.id
+          : settings.answerer.kind === "openrouter"
+            ? "openrouter"
+            : undefined;
+      const approval = decisionApproval(settings);
+      if (family && approval !== null) {
+        const raised = Math.max(approval, Math.min(request.approve, DECISION_APPROVAL_VERSION));
+        if (raised > approval)
+          this.setSettings({
+            ...settings,
+            egress: { ...settings.egress, [family]: { enabled: true, consentedVersion: raised } },
+          });
+      }
+    }
+    this.options.settings.setDecisionUses({
+      ...saved,
+      [use.id]: { on: request.on, ...(use.kind === "needs-ok" && agreed >= 0 ? { agreed } : {}) },
+    });
+    return this.view();
   }
 
   /** What the Decisions group renders. Never carries a key or part of one. */
@@ -767,17 +471,20 @@ export class DecisionModels {
         : undefined;
     return {
       settings,
-      stateVersion: DECISION_STATE_VERSION,
+      stateVersion: DECISION_FIRST_APPROVAL_VERSION,
+      approvalVersion: DECISION_APPROVAL_VERSION,
+      uses: decisionUsesView(settings, this.options.settings.getDecisionUses()),
       ...(pinned ? { pinned } : {}),
       openrouter: {
         models: this.options.openrouter?.signedIn() ? this.options.openrouter.models() : [],
         state: !this.options.openrouter?.signedIn()
           ? "signed-out"
           : settings.egress.openrouter?.enabled &&
-              (settings.egress.openrouter.consentedVersion ?? -1) >= DECISION_STATE_VERSION
+              (settings.egress.openrouter.consentedVersion ?? -1) >= DECISION_FIRST_APPROVAL_VERSION
             ? "ready"
             : "off",
-        consented: (settings.egress.openrouter?.consentedVersion ?? -1) >= DECISION_STATE_VERSION,
+        consented:
+          (settings.egress.openrouter?.consentedVersion ?? -1) >= DECISION_FIRST_APPROVAL_VERSION,
         last:
           settings.answerer.kind === "openrouter"
             ? (this.last.get(`openrouter/${settings.answerer.model}`) ?? null)
@@ -786,7 +493,7 @@ export class DecisionModels {
       natives: DECISION_MODEL_CATALOG.map((row) => {
         const egress = settings.egress[row.id];
         const keyStored = this.options.keys?.has(row.id) ?? false;
-        const consented = (egress?.consentedVersion ?? -1) >= DECISION_STATE_VERSION;
+        const consented = (egress?.consentedVersion ?? -1) >= DECISION_FIRST_APPROVAL_VERSION;
         return {
           id: row.id,
           name: row.name,
@@ -820,19 +527,26 @@ export class DecisionModels {
   }
 
   /**
-   * Stores the user's own key and accepts the consent copy in one act - the
-   * turn-on form takes both, so a switch on with no key is impossible.
+   * Stores the user's own key and turns the model on. The key call counts
+   * as the first approval screen, which every view that sends it has shown:
+   * a newer view writes its own screen's approval through setSettings, and
+   * an older view never approves a newer screen by echoing a newer number.
+   * A key replaced later keeps an approval already given.
    */
   setKey(id: DecisionModelId, key: string): DecisionsView {
     this.options.keys?.set(id, key);
     this.rejected.delete(id);
     this.cachedNative = undefined;
     const settings = this.options.settings.getDecisions();
+    const seen = settings.egress[id]?.consentedVersion ?? -1;
     this.options.settings.setDecisions({
       ...settings,
       egress: {
         ...settings.egress,
-        [id]: { enabled: true, consentedVersion: DECISION_STATE_VERSION },
+        [id]: {
+          enabled: true,
+          consentedVersion: Math.max(seen, DECISION_FIRST_APPROVAL_VERSION),
+        },
       },
     });
     return this.view();
@@ -871,7 +585,7 @@ export class DecisionModels {
       const option = this.options.openrouter;
       if (
         !egress?.enabled ||
-        (egress.consentedVersion ?? -1) < DECISION_STATE_VERSION ||
+        (egress.consentedVersion ?? -1) < DECISION_FIRST_APPROVAL_VERSION ||
         !option?.signedIn()
       )
         return undefined;
@@ -883,7 +597,7 @@ export class DecisionModels {
     const id = settings.answerer.id;
     const egress = settings.egress[id];
     if (!egress?.enabled) return undefined;
-    if ((egress.consentedVersion ?? -1) < DECISION_STATE_VERSION) return undefined;
+    if ((egress.consentedVersion ?? -1) < DECISION_FIRST_APPROVAL_VERSION) return undefined;
     const key = this.options.keys?.read(id);
     if (!key) return undefined;
     const create = this.options.createNative;

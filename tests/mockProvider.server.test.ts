@@ -11,6 +11,8 @@ import { zstdCompressSync } from "node:zlib";
 import { frameServedInput } from "@shared/servedFrame";
 import { encode } from "@toon-format/toon";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { CORRECTION_QUESTION } from "../src/core/decisions/correctionQuestion";
+import { renderAdapterInstruction, renderAdapterState } from "../src/core/decisions/decisionModel";
 import {
   ANSWER_MISSING_ENDED_OPENING,
   ANSWER_MISSING_OPENING,
@@ -67,6 +69,7 @@ import {
   FM_SEAT_HOLD_MARKER,
   FM_SEAT_STEER_WORD,
   FM_SEAT_STEERED_TITLE,
+  isReplyCheck,
   LAND_PROMPT_MARKER,
   MERGE_PROMPT_MARKER,
   MOCK_ANSWER_TEXT,
@@ -869,6 +872,59 @@ describe("the kind classifier", () => {
       messages: [user("chat", work)],
     });
     expect(answer).toMatchObject({ calls: [], text: kind });
+  });
+});
+
+describe("the reply check", () => {
+  // Intent: the queue sent back a version whose reply check, asked about every
+  // captain message on the person's own model, reached the journeys' scripted
+  // turns; they answered it with tools that session lacks, and it shifted the
+  // requests they read by position. The stand-in answers it on its own.
+  const check = (dialect: Dialect, words: string): Sent => ({
+    system: renderAdapterInstruction(CORRECTION_QUESTION),
+    messages: [user(dialect, renderAdapterState({ facts: { latest_captain_reply: words } }))],
+  });
+  const replyCheckAnswer = (text: string | undefined, asked: string[], name: string): Scenario =>
+    Object.assign(
+      () => () => {
+        asked.push(name);
+        return text ? { text } : undefined;
+      },
+      { answersReplyCheck: true as const },
+    );
+
+  it.each(["chat", "responses", "anthropic"] as const)(
+    "%s: answers ordinary itself, asks no scripted turn, and keeps it out of the conversation's requests",
+    async (dialect) => {
+      const provider = await start([
+        () => () => ({ calls: [{ name: "report", args: { text: "Done." } }] }),
+      ]);
+      const answer = await ask(
+        dialect,
+        check(dialect, `Fix the flaky test and ${THREAD_PROMPT_MARKER}.`),
+      );
+      expect(answer).toMatchObject({ status: 200, calls: [], text: "ordinary" });
+      expect(provider.requestBodies()).toEqual([]);
+      expect(provider.requestHeaders()).toEqual([]);
+      expect(provider.requests()).toBe(1);
+      // The launch diagnostics still keep it, in the order it arrived.
+      expect(provider.allRequestBodies().map(isReplyCheck)).toEqual([true]);
+    },
+  );
+
+  it("asks only the scenarios that answer it, in the order named", async () => {
+    const asked: string[] = [];
+    await start([
+      replyCheckAnswer(undefined, asked, "passes"),
+      () => () => ({ text: "not a reply check answer" }),
+      replyCheckAnswer("review", asked, "answers"),
+    ]);
+    const answer = await ask(
+      "chat",
+      check("chat", "From now on, rerun the checks before you report."),
+    );
+    expect(answer).toMatchObject({ calls: [], text: "review" });
+    expect(asked).toEqual(["passes", "answers"]);
   });
 });
 

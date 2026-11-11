@@ -1,3 +1,5 @@
+import { useRestLabelWith } from "./restLabel";
+
 export type SwitchProps = {
   checked?: boolean;
   onChange?: (checked: boolean) => void;
@@ -9,6 +11,15 @@ export type SwitchProps = {
   disabled?: boolean;
   /** -1 inside a row that is the Tab stop and answers Space for it (Settings → Panels). */
   tabIndex?: number;
+  /**
+   * Marked off: it cannot be switched, for the reason `note` gives. It stays
+   * a Tab stop, `aria-disabled` rather than disabled, dimmed as a disabled one
+   * is, and a press does nothing, so the keyboard reaches the reason as the
+   * pointer does (docs/keyboard.md, "Facts shown on rest"; `Button`'s `off`).
+   */
+  off?: boolean;
+  /** Why it is off: shown on rest and the keyboard's focus, and its description. */
+  note?: string;
 };
 
 export function Switch({
@@ -19,7 +30,10 @@ export function Switch({
   "aria-label": ariaLabel,
   disabled,
   tabIndex,
+  off = false,
+  note,
 }: SwitchProps) {
+  const restLabel = useRestLabelWith<HTMLButtonElement>(note, { fact: true }, {});
   const labelNode = label && (
     <span
       data-switch-state-label={labelPosition === "before" ? "" : undefined}
@@ -35,19 +49,22 @@ export function Switch({
         alignItems: "center",
         gap: 10,
         marginLeft: labelPosition === "before" ? "auto" : undefined,
-        cursor: disabled ? "default" : "pointer",
-        opacity: disabled ? 0.4 : 1,
+        cursor: disabled || off ? "default" : "pointer",
+        opacity: disabled || off ? 0.4 : 1,
       }}
     >
       {labelPosition === "before" && labelNode}
       <button
+        {...restLabel}
         type="button"
         role="switch"
         aria-checked={checked ?? false}
         aria-label={ariaLabel ?? label}
+        aria-disabled={off || undefined}
+        aria-description={note}
         disabled={disabled}
         tabIndex={tabIndex}
-        onClick={() => !disabled && onChange?.(!checked)}
+        onClick={() => !disabled && !off && onChange?.(!checked)}
         style={{
           width: 36,
           height: 20,

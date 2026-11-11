@@ -531,6 +531,10 @@ export const BASELINE: Record<string, Record<string, string>> = {
   "src/core/accounts/credentialHealth.ts": {
     CREDENTIAL_RENEW_MAX_ATTEMPTS: "proactive renewal stops; a vendor rejection or a remedy still renews",
   },
+  "src/core/decisions/correctionSources.ts": {
+    CORRECTION_EXCERPT_BYTE_LIMIT: "an oversized exact reply is not checked; the person can still keep the instruction by asking",
+    CORRECTION_CARD_BYTE_LIMIT: "the card excerpt says content was left out; the reply itself is always sent whole",
+  },
   "src/core/forge/projects.ts": {
     MAX_LISTED: "first 8 shown, hidden matches uncounted; a fuller name narrows it",
   },

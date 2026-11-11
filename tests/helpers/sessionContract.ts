@@ -3,7 +3,6 @@ import { dirname, join } from "node:path";
 import { isAuthFailureMessage } from "@shared/authFailure";
 import { Type } from "typebox";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { questionSessionSpec } from "../../src/core/decisions/questionSession";
 import {
   crewmateResume,
   crewmateResumeToken,
@@ -23,6 +22,7 @@ import { TICK_PERIOD_MS } from "../../src/core/orchestrator/ticker";
 import { type AppPaths, appPathsFor, crewmateSessionsDir } from "../../src/core/paths";
 import { FIRSTMATE_PERSONA } from "../../src/core/pi/piResources";
 import { requestTimeoutErrorMessage, turnTimeoutErrorMessage } from "../../src/core/session/bounds";
+import { questionSessionSpec } from "../../src/core/session/questionSession";
 import {
   LOCAL_MACHINE_ID,
   type ModelSession,

@@ -163,9 +163,9 @@ export type CrewSupervisorOptions = {
    */
   programProcess?: import("../host").HostChildSpawner;
   /**
-   * One JSON answer through the decision models' one-question session
-   * (`DecisionModels.answerJson`), for a program's ask(). Absent, ask()
-   * answers null.
+   * One JSON answer from the person's own cheapest chat model
+   * (`ProgramQuestions.answerJson`), for a program's ask(); never a decision
+   * model. Absent, ask() answers null.
    */
   answerJson?: (
     caller: { purpose: string; taskId?: string },

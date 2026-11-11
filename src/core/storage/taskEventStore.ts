@@ -59,7 +59,10 @@ export type TaskEvent = {
 };
 
 export type InsertTaskEvent = Omit<TaskEvent, "id" | "data" | "ref" | "feed"> &
-  Partial<Pick<TaskEvent, "data" | "ref" | "feed">>;
+  Partial<Pick<TaskEvent, "data" | "ref" | "feed">> & {
+    /** Private original input, never included in the published timeline event. */
+    captainText?: string;
+  };
 
 /**
  * How an event's task stands to another task the event concerns, read from
@@ -155,10 +158,42 @@ export class TaskEventStore {
     return event && timelineEventIdentity(event) === identity ? event : undefined;
   }
 
+  /** Original nearby task readings in recorded order, never a manufactured reply pair. */
+  originalCaptainExchange(taskId: string): {
+    preceding: { who: "captain" | "author"; text: string }[];
+    unavailableContext: boolean;
+  } {
+    const captain = this.db
+      .prepare(`SELECT id, captain_text FROM task_events
+      WHERE task_id = ? AND kind = 'steered' AND actor = 'captain' ORDER BY id DESC LIMIT 1`)
+      .get(taskId) as { id: number; captain_text: string | null } | undefined;
+    const report = this.lastReports(taskId).at(-1);
+    const entries: { id: number; who: "captain" | "author"; text: string }[] = [];
+    if (captain?.captain_text !== undefined && captain.captain_text !== null)
+      entries.push({ id: captain.id, who: "captain", text: captain.captain_text });
+    if (report) entries.push({ id: report.id, who: "author", text: report.text });
+    return {
+      preceding: entries.sort((a, b) => a.id - b.id).map(({ who, text }) => ({ who, text })),
+      unavailableContext: captain?.captain_text == null || !report,
+    };
+  }
+
+  /** Read original captain input through its owner, not from redacted timeline text. */
+  captainText(taskId: string, eventId: number): string | undefined {
+    const row = this.db
+      .prepare(
+        "SELECT captain_text FROM task_events WHERE id = ? AND task_id = ? AND actor = 'captain'",
+      )
+      .get(eventId, taskId) as { captain_text: string | null } | undefined;
+    return row?.captain_text ?? undefined;
+  }
+
   insert(event: InsertTaskEvent): number {
+    const original = event.actor === "captain" && event.captainText !== undefined;
     const result = this.db
       .prepare(
-        "INSERT INTO task_events (task_id, at, actor, kind, text, data_json, ref, feed) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        `INSERT INTO task_events (task_id, at, actor, kind, text, data_json, ref, feed${original ? ", captain_text" : ""})
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?${original ? ", ?" : ""})`,
       )
       .run(
         event.taskId,
@@ -169,6 +204,7 @@ export class TaskEventStore {
         event.data ? JSON.stringify(event.data) : null,
         event.ref ?? null,
         (event.feed ?? true) ? 1 : 0,
+        ...(original ? [event.captainText] : []),
       );
     const id = Number(result.lastInsertRowid);
     if (this.hasIdentities())

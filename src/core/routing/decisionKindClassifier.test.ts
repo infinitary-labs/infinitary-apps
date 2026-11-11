@@ -162,6 +162,8 @@ function classifierWith(
       settings: {
         getDecisions: () => extras.settings ?? DEFAULT_DECISIONS,
         setDecisions: () => {},
+        getDecisionUses: () => ({}),
+        setDecisionUses: () => {},
       },
       adapted,
       ...(extras.recordUsage ? { recordUsage: extras.recordUsage } : {}),
@@ -311,8 +313,10 @@ describe("DecisionKindClassifier over the adapter", () => {
       kind: "retrieval",
       source: "classifier:jev/jev-1.13.0",
     });
+    // The classifier asks as the task-classification use, which the decision
+    // service checks before any model is read (docs/decision-models.md, "The uses").
     expect(decide).toHaveBeenCalledWith(
-      { purpose: "kind", taskId: INPUT.taskId },
+      { purpose: "kind", use: "kind", taskId: INPUT.taskId },
       kindState(INPUT),
       { kind: KIND_QUESTIONS.change },
       expect.any(AbortSignal),

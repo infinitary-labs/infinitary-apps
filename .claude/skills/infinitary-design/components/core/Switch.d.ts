@@ -7,4 +7,8 @@ export interface SwitchProps {
   "aria-label"?: string;
   /** -1 inside a row that is the Tab stop and answers Space for it (Settings → Panels). */
   tabIndex?: number;
+  /** Cannot be switched for the reason `note` gives: dimmed, still a Tab stop (aria-disabled), a press does nothing. */
+  off?: boolean;
+  /** Why it is off: shown on rest, pointer or keyboard, and its accessible description. */
+  note?: string;
 }

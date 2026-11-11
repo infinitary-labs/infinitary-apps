@@ -193,13 +193,33 @@ const NOT_ENDED =
 const NOT_ENDED_OR_RUNNING = "followed = 1 AND answered_at IS NULL AND delivery != 'unresolved'";
 
 export class AskStore {
+  private readonly captainListeners = new Set<(ask: AskRecord, text: string) => void>();
+  onCaptainInput(listener: (ask: AskRecord, text: string) => void): () => void {
+    this.captainListeners.add(listener);
+    return () => this.captainListeners.delete(listener);
+  }
+
+  *originalTurnsBefore(
+    id: string,
+  ): Generator<{ text: string | undefined; reply: string | undefined }> {
+    const rows = this.db
+      .prepare(`SELECT captain_text, reply FROM captain_asks
+      WHERE rowid < (SELECT rowid FROM captain_asks WHERE id = ?) ORDER BY rowid DESC`)
+      .iterate(id) as Iterable<{ captain_text: string | null; reply: string | null }>;
+    for (const row of rows) {
+      const reply = replyOf(row.reply);
+      yield { text: row.captain_text ?? undefined, reply: reply?.words ?? reply?.text };
+    }
+  }
+
   constructor(private readonly db: AppDatabase) {}
 
-  insert(ask: AskRecord): void {
+  insert(ask: AskRecord, captainText?: string): void {
+    const original = captainText !== undefined;
     this.db
       .prepare(
-        `INSERT INTO captain_asks (id, at, text, images_json, hint_task_id, task_id, attached_via, attached_at, turn_state, delivery, delivery_facts, notice_card_id, followed, continues, answer_card_id, accepted_at, answered_at, crewmate_asked_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO captain_asks (id, at, text, images_json, hint_task_id, task_id, attached_via, attached_at, turn_state, delivery, delivery_facts, notice_card_id, followed, continues, answer_card_id, accepted_at, answered_at, crewmate_asked_at${original ? ", captain_text" : ""})
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?${original ? ", ?" : ""})`,
       )
       .run(
         ask.id,
@@ -228,7 +248,25 @@ export class AskStore {
         ask.acceptedAt,
         ask.answeredAt,
         ask.crewmateAskedAt,
+        ...(original ? [captainText] : []),
       );
+    if (captainText !== undefined) {
+      for (const listener of this.captainListeners) {
+        try {
+          this.db.transaction(() => listener(ask, captainText))();
+        } catch {
+          console.warn("[asks] captain-input observer failed");
+        }
+      }
+    }
+  }
+
+  /** Private source-owner input, never reconstructed from decorated history. */
+  captainText(id: string): string | undefined {
+    const row = this.db.prepare("SELECT captain_text FROM captain_asks WHERE id = ?").get(id) as
+      | { captain_text: string | null }
+      | undefined;
+    return row?.captain_text ?? undefined;
   }
 
   get(id: string): AskRecord | undefined {

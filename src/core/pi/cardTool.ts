@@ -66,7 +66,7 @@ export const CLOSE_CARD_TOOL_DESCRIPTION = [
 ].join(" ");
 
 const STABLE_CARD_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const STABLE_CARD_ID_MAX = 64;
+export const STABLE_CARD_ID_MAX = 64;
 
 /** The crewmate's emit_card description: the contract plus the merge card. */
 export const EMIT_CARD_TOOL_DESCRIPTION = CREWMATE_EMIT_CARD_DESCRIPTION;

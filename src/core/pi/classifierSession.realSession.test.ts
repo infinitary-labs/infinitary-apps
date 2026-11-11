@@ -64,7 +64,7 @@ vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
 
 const { buildKindClassifierInstruction } = await import("./piResources");
 const { CLASSIFIER_MAX_OUTPUT_TOKENS } = await import("../orchestrator/seat");
-const { questionSessionSpec } = await import("../decisions/questionSession");
+const { questionSessionSpec } = await import("../session/questionSession");
 const { createPiSessionFactory } = await import("./session");
 
 function runtimeWith(model: Record<string, unknown> | undefined): ModelRuntime {

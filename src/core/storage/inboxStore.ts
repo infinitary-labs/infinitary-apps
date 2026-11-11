@@ -311,6 +311,30 @@ function placeholders(ids: readonly unknown[]): string {
 }
 
 export class InboxStore {
+  private readonly serviceRecipients = new Set([FIRSTMATE_RECIPIENT, SUPERVISION_RECIPIENT]);
+
+  /** A composition-root ownership fact: task recovery must not consume another service's lane. */
+  reserveServiceRecipient(recipient: string): void {
+    this.serviceRecipients.add(recipient);
+  }
+
+  isServiceRecipient(recipient: string): boolean {
+    return this.serviceRecipients.has(recipient);
+  }
+
+  private readonly enqueueListeners = new Set<(row: InboxRow) => void>();
+
+  /**
+   * Observe new accepted rows synchronously, before their original delivery.
+   * A listener may enqueue ancillary work in the caller's transaction, but
+   * must not run external effects here. Its own savepoint isolates a failed
+   * listener from the original message; replay reads do not notify it.
+   */
+  onEnqueue(listener: (row: InboxRow) => void): () => void {
+    this.enqueueListeners.add(listener);
+    return () => this.enqueueListeners.delete(listener);
+  }
+
   /** Invalidation is coalesced after the enclosing synchronous transaction. */
   private readonly changeListeners = new Set<() => void>();
   private changeQueued = false;
@@ -364,7 +388,21 @@ export class InboxStore {
         wakeIdentity(body, origin ?? null),
         origin ?? null,
       );
-    return Number(info.lastInsertRowid);
+    const id = Number(info.lastInsertRowid);
+    if (this.enqueueListeners.size > 0) {
+      const row = this.get(id);
+      if (row) {
+        for (const listener of this.enqueueListeners) {
+          try {
+            this.db.transaction(() => listener(row))();
+          } catch {
+            // Neither the input nor an error containing it belongs in a log.
+            console.warn("[inbox] enqueue observer failed");
+          }
+        }
+      }
+    }
+    return id;
   }
 
   /**

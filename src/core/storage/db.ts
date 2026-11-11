@@ -9,6 +9,7 @@ import {
   addCardContributions,
   clearInterimAnswers,
 } from "./cardMigrations";
+import { addOriginalCaptainText } from "./correctionMigrations";
 import { addCrewResponses } from "./inboxMigrations";
 import { migrateChanges } from "./migrateChanges";
 import { addHousekeepingIndexes, addPluginKind, addTaskPin, MIGRATIONS } from "./migrations";
@@ -59,6 +60,9 @@ export const INTERIM_ANSWERS_VERSION = MIGRATIONS.indexOf(clearInterimAnswers) +
 
 /** The current database format, derived from the embedded migration ledger. */
 export const DATABASE_VERSION = MIGRATIONS.length;
+
+/** Source captions introduced for new input only, never reconstructed from old text. */
+export const CAPTAIN_TEXT_VERSION = MIGRATIONS.indexOf(addOriginalCaptainText) + 1;
 
 /** The migration that made the change record (INF-1868 piece 1). */
 export const CHANGES_VERSION = MIGRATIONS.indexOf(migrateChanges) + 1;

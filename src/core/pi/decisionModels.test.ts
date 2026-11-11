@@ -2,11 +2,8 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
-import {
-  DECISION_STATE_VERSION,
-  DEFAULT_DECISIONS,
-  type DecisionsSettings,
-} from "@shared/decisions";
+import { DEFAULT_DECISIONS, type DecisionsSettings } from "@shared/decisions";
+import { DECISION_APPROVAL_VERSION } from "@shared/decisionUses";
 import { expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { type DecisionModel, DecisionModels, type DecisionUsage } from "../decisions/decisionModel";
@@ -116,6 +113,8 @@ it("uses the selected account's Pi sign-in, bounds choices, records the served m
       setDecisions: (next) => {
         settings = next;
       },
+      getDecisionUses: () => ({}),
+      setDecisionUses: () => {},
     },
     adapted: adapter,
     openrouter: {
@@ -159,7 +158,7 @@ it("uses the selected account's Pi sign-in, bounds choices, records the served m
   };
   const ask = () =>
     service.decide(
-      { purpose: "kind", taskId: "task-test" },
+      { purpose: "kind", use: "kind", taskId: "task-test" },
       { facts: { title: "Fix the clock", empty: "" }, adapterText: "must not be sent" },
       questions,
       new AbortController().signal,
@@ -176,7 +175,7 @@ it("uses the selected account's Pi sign-in, bounds choices, records the served m
     expect(seen).toHaveLength(0);
     service.setSettings({
       ...settings,
-      egress: { openrouter: { enabled: true, consentedVersion: DECISION_STATE_VERSION } },
+      egress: { openrouter: { enabled: true, consentedVersion: DECISION_APPROVAL_VERSION } },
     });
     expect((await ask()).kind).toMatchObject({
       value: "fix",
@@ -316,9 +315,11 @@ it("refuses a reply past 64 KB before Pi parses it, and the person's own model a
       getDecisions: () => ({
         version: 1,
         answerer: { kind: "openrouter", model: "typesafe/jev-1.13" },
-        egress: { openrouter: { enabled: true, consentedVersion: DECISION_STATE_VERSION } },
+        egress: { openrouter: { enabled: true, consentedVersion: DECISION_APPROVAL_VERSION } },
       }),
       setDecisions: () => {},
+      getDecisionUses: () => ({}),
+      setDecisionUses: () => {},
     },
     adapted: {
       id: "adapted",
@@ -348,7 +349,7 @@ it("refuses a reply past 64 KB before Pi parses it, and the person's own model a
   const ask = async () =>
     (
       await service.decide(
-        { purpose: "kind", taskId: "task-test" },
+        { purpose: "kind", use: "kind", taskId: "task-test" },
         { facts: { title: "Fix the clock" } },
         {
           kind: {

@@ -271,7 +271,7 @@ test("a Claude crew turn shows its card, takes a mid-turn steer, and remains rea
       .split("\n")
       .map((line) => JSON.parse(line));
     expect(requests.map((row) => JSON.stringify(row.body))).toEqual(
-      launched.mockProvider?.requestBodies().map((body) => JSON.stringify(JSON.parse(body))),
+      launched.mockProvider?.allRequestBodies().map((body) => JSON.stringify(JSON.parse(body))),
     );
     expect(requests.some((row) => JSON.stringify(row.body).includes(MOCK_CLAUDE_CARD_TITLE))).toBe(
       true,

@@ -362,6 +362,7 @@ describe("FirstmateAgent", () => {
     await tick();
   });
 
+  // Intent: the approved sole-detector design adds typed case handling, never direct file or shell reading.
   it("exposes only orchestration and typed lookup tools, with no direct reading tool", async () => {
     const { agent, specs, selfSourceDir, events } = setup();
     await agent.converse("hello");
@@ -380,6 +381,7 @@ describe("FirstmateAgent", () => {
       "app_change",
       "app_state",
       "close_card",
+      "correction_case",
       "create_task",
       "crew_status",
       "emit_card",

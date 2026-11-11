@@ -10,7 +10,7 @@ Folder opens the system picker immediately, links in place and opens the resulti
 A plain folder is initialized and the quiet status below says so.
 Duplicate additions open the existing row.
 Repo and New project buttons reveal forms below the same row, separated by a hairline; switching forms clears refusal/status.
-Forms use labeled Input and small Buttons, never a modal.
+Forms use labeled Input and small Buttons, never a modal: a modal is for consent alone (`components/core/ConsentDialog.prompt.md`).
 A ghost Close hides the form without cancelling an addition.
 
 A signed-in host lists “Your {host name} repos”, newest first, with “Find a repo” and an Add button per row (or “added” for existing projects).

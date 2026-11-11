@@ -28,6 +28,7 @@ import type {
   CustomNetworkMode,
 } from "./customApi";
 import type { DecisionModelId, DecisionsSettings, DecisionsView } from "./decisions";
+import type { DecisionUseRequest } from "./decisionUses";
 import type {
   DeviceAddresses,
   DeviceInvite,
@@ -639,6 +640,8 @@ export type FirstmateApi = {
     setDecisions: (decisions: DecisionsSettings) => Promise<DecisionsView>;
     setDecisionKey: (id: DecisionModelId, key: string) => Promise<DecisionsView>;
     removeDecisionKey: (id: DecisionModelId) => Promise<DecisionsView>;
+    /** One decision model use switched; `approve` only after the person agreed in the consent dialog. */
+    setDecisionUse: (request: DecisionUseRequest) => Promise<DecisionsView>;
   };
   update: {
     status: () => Promise<UpdateStatus>;

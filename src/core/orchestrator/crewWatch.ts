@@ -381,11 +381,10 @@ export class CrewWatch {
         ...this.core.options.inbox.recipientsWithRows(),
         ...this.core.restarts.observed(),
       ])) {
-        // The firstmate lane is the agent's own to drain; the tick pokes it
-        // separately (startWatchdog). The retired supervision lane is
-        // skipped so leftover rows are never swept as a task's - boot
-        // reassigns them to the Firstmate instead (S7c, `bootRecovery.ts`).
-        if (recipient === FIRSTMATE_RECIPIENT || recipient === SUPERVISION_RECIPIENT) continue;
+        // Service-owned lanes have their own consumers. In particular the
+        // firstmate tick drains its lane, and boot reassigns retired supervision
+        // rows; neither those nor registered service work is orphan task guidance.
+        if (this.core.options.inbox.isServiceRecipient(recipient)) continue;
         await this.sweepTaskLane(recipient, now);
       }
     } finally {
@@ -394,6 +393,7 @@ export class CrewWatch {
   }
 
   async sweepTaskLane(taskId: string, now: number): Promise<void> {
+    if (this.core.options.inbox.isServiceRecipient(taskId)) return;
     const spent = this.core.options.inbox.spent(taskId, INBOX_ATTEMPT_MAX);
     if (spent.length > 0) this.escalateTaskGuidance(taskId, spent);
     // A started task in the backlog keeps its lane until a Start (INF-2062).

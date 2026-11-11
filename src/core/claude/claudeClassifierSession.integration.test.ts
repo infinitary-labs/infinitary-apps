@@ -16,11 +16,11 @@ import {
 import { startClassifierTestClock } from "../../../tests/helpers/classifierClock";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { AdaptedDecisionModel, DecisionModels } from "../decisions/decisionModel";
-import { questionSessionSpec } from "../decisions/questionSession";
 import { CLASSIFIER_MAX_OUTPUT_TOKENS } from "../orchestrator/seat";
 import { buildKindClassifierInstruction } from "../pi/piResources";
 import { buildClassifierPrompt, DecisionKindClassifier } from "../routing/decisionKindClassifier";
 import { KIND_SOURCE, type KindVerdict } from "../routing/kindClassifier";
+import { questionSessionSpec } from "../session/questionSession";
 import type { SessionEvent } from "../session/session";
 import { hasActiveSession, resetStoreLeasesForTest } from "./claudeStoreLease";
 import { createClaudeSessionFactory } from "./session";
@@ -208,7 +208,12 @@ function classifierOn(b: Box, model = MODEL, maxOutputTokens?: number) {
   });
   return new DecisionKindClassifier(
     new DecisionModels({
-      settings: { getDecisions: () => DEFAULT_DECISIONS, setDecisions: () => {} },
+      settings: {
+        getDecisions: () => DEFAULT_DECISIONS,
+        setDecisions: () => {},
+        getDecisionUses: () => ({}),
+        setDecisionUses: () => {},
+      },
       adapted,
     }),
   );

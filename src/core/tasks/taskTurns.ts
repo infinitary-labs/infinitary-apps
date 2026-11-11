@@ -471,7 +471,7 @@ export class TaskTurns {
    */
   recordSteer(
     id: string,
-    input: { text: string; actor: TaskEventActor } & SteerEventData,
+    input: { text: string; actor: TaskEventActor; captainText?: string } & SteerEventData,
   ): number | undefined {
     const at = this.writer.now();
     const run = this.writer.write((): number | undefined => {
@@ -495,6 +495,9 @@ export class TaskTurns {
         kind: "steered",
         text,
         data,
+        ...(input.actor === "captain" && input.captainText !== undefined
+          ? { captainText: input.captainText }
+          : {}),
         ...(input.decision ? { ref: input.decision } : {}),
         feed: false,
       });

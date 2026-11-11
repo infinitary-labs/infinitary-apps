@@ -43,6 +43,7 @@ export const ASK_TITLE_MAX = 64;
 export type OpenTurnAsk = {
   text: string;
   receipt?: string;
+  captainText?: string | undefined;
   images?: AskImage[];
   /** The message's own copies of its pictures, kept when it was accepted. */
   attachments?: AttachmentRef[] | undefined;
@@ -120,6 +121,7 @@ export class AskCapture {
       id: randomUUID().slice(0, 8),
       text: input.text,
       ...(input.receipt !== undefined ? { receipt: input.receipt } : {}),
+      captainText: input.captainText,
       messageFiles: input.messageFiles ?? [],
       images: input.images ?? [],
       ...(input.attachments?.length ? { attachments: input.attachments } : {}),

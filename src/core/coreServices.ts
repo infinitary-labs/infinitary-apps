@@ -6,6 +6,7 @@ import type { ProviderView } from "@shared/providers";
 import type { UsageQuery, UsageSummary, UsageTasks, UsageTasksQuery } from "@shared/usage";
 import type { AxiChannel } from "./axi/channel";
 import type { DecisionModels } from "./decisions/decisionModel";
+import type { startCorrections } from "./decisions/startCorrections";
 import type { HomeAnnouncement } from "./devices/announce";
 import type { Computers } from "./devices/computers";
 import type { DeviceSignIns } from "./devices/deviceSignIns";
@@ -100,6 +101,7 @@ export type CoreServices = {
    * sweep, runs none.
    */
   stopWorkPresentation: () => void;
+  corrections?: ReturnType<typeof startCorrections>;
   supervisor: CrewSupervisor;
   /** The one task writer (task-system P0/P1); the record every surface reads. */
   tasks: TaskService;

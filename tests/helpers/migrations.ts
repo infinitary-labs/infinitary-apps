@@ -19,7 +19,9 @@ export const ALL_VERSIONS = Array.from({ length: DATABASE_VERSION }, (_, index) 
  * optional query indexes over its columns (INF-2061's statement check).
  */
 export const REVERSE_MIGRATION_102 =
-  "DROP INDEX IF EXISTS captain_asks_continues; DROP INDEX IF EXISTS captain_asks_unanswered; ALTER TABLE captain_asks DROP COLUMN followed; ALTER TABLE captain_asks DROP COLUMN continues; ALTER TABLE captain_asks DROP COLUMN answer_card_id; ALTER TABLE captain_asks DROP COLUMN accepted_at; ALTER TABLE captain_asks DROP COLUMN answered_at; ALTER TABLE captain_asks DROP COLUMN crewmate_asked_at;\n";
+  // The approved correction source migration is newer than both historical schemas.
+  // Undo its private ask column first, preserving the original full-shape assertions.
+  "ALTER TABLE captain_asks DROP COLUMN captain_text; DROP INDEX IF EXISTS captain_asks_continues; DROP INDEX IF EXISTS captain_asks_unanswered; ALTER TABLE captain_asks DROP COLUMN followed; ALTER TABLE captain_asks DROP COLUMN continues; ALTER TABLE captain_asks DROP COLUMN answer_card_id; ALTER TABLE captain_asks DROP COLUMN accepted_at; ALTER TABLE captain_asks DROP COLUMN answered_at; ALTER TABLE captain_asks DROP COLUMN crewmate_asked_at;\n";
 /** Migration 68's reply line, undone: the `captain_asks` column. */
 export const REVERSE_MIGRATION_68 = `${REVERSE_MIGRATION_102}ALTER TABLE captain_asks DROP COLUMN reply;\n`;
 /** INF-1288's conversation associations, removed before a pre-sessions schema comparison. */

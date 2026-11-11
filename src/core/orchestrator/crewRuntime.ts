@@ -57,6 +57,8 @@ export type SteerSource = {
   words?: SteerEventData["words"];
   /** The Firstmate steered in a turn that carries the captain's own words. */
   captainWords?: boolean;
+  /** Private original input for its task record, never part of public steer data. */
+  captainText?: string;
 };
 
 /** The host's own steer: the supervisor, through supervision, answering no message or card. */

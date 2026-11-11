@@ -403,9 +403,12 @@ async function main(): Promise<number> {
     const { AdaptedDecisionModel, DecisionModels } = await runner.import<
       typeof import("../src/core/decisions/decisionModel.ts")
     >("/src/core/decisions/decisionModel.ts");
-    const { DECISION_STATE_VERSION, DEFAULT_DECISIONS } = await runner.import<
+    const { DEFAULT_DECISIONS } = await runner.import<
       typeof import("../src/shared/decisions.ts")
     >("/src/shared/decisions.ts");
+    const { DECISION_APPROVAL_VERSION } = await runner.import<
+      typeof import("../src/shared/decisionUses.ts")
+    >("/src/shared/decisionUses.ts");
     const { resolveKind } = await runner.import<
       typeof import("../src/core/routing/kindClassifier.ts")
     >("/src/core/routing/kindClassifier.ts");
@@ -486,12 +489,17 @@ async function main(): Promise<number> {
       ? {
           version: 1,
           answerer: { kind: "native", id: "jev" },
-          egress: { jev: { enabled: true, consentedVersion: DECISION_STATE_VERSION } },
+          egress: { jev: { enabled: true, consentedVersion: DECISION_APPROVAL_VERSION } },
         }
       : DEFAULT_DECISIONS;
     const classifier = new DecisionKindClassifier(
       new DecisionModels({
-        settings: { getDecisions: () => settings, setDecisions: () => {} },
+        settings: {
+          getDecisions: () => settings,
+          setDecisions: () => {},
+          getDecisionUses: () => ({}),
+          setDecisionUses: () => {},
+        },
         adapted,
         ...(native && nativeKey
           ? {

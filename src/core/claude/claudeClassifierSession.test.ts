@@ -1,8 +1,8 @@
 import { Type } from "typebox";
 import { afterEach, describe, expect, it } from "vitest";
 import { scriptedClaudeQuery as scriptedQuery } from "../../../tests/helpers/scriptedClaudeQuery";
-import { questionSessionSpec } from "../decisions/questionSession";
 import { CLASSIFIER_MAX_OUTPUT_TOKENS } from "../orchestrator/seat";
+import { questionSessionSpec } from "../session/questionSession";
 import type { ModelSession, SessionEvent } from "../session/session";
 import type { BoundTool } from "../session/tools";
 import type { ClaudeClientCheck } from "./claudeCli";

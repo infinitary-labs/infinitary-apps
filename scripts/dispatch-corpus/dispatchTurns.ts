@@ -62,6 +62,8 @@ const OPERATE_TOOLS = [
   "flag_missed_escalation",
   "flag_duplicate",
   "record_knowledge",
+  // A flagged case can publish an offer, recover its effect and guide affected work.
+  "correction_case",
 ];
 /** Reading: it serves a class, it is never one. A turn that only read has
  * still answered the user out of what it read. `app_state` looks at the

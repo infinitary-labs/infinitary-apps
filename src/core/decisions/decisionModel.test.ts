@@ -3,6 +3,11 @@ import {
   type DecisionQuestion,
   type DecisionsSettings,
 } from "@shared/decisions";
+import {
+  DECISION_APPROVAL_VERSION,
+  DECISION_FIRST_APPROVAL_VERSION,
+  type DecisionUseSwitches,
+} from "@shared/decisionUses";
 import { describe, expect, it, vi } from "vitest";
 import {
   AdaptedDecisionModel,
@@ -142,16 +147,26 @@ function serviceWith(
   });
 }
 
-/** A settings row held in memory, written back the way the store would. */
-function settingsPort(initial: DecisionsSettings): {
+/** The settings rows held in memory, written back the way the store would. */
+function settingsPort(
+  initial: DecisionsSettings,
+  initialUses: DecisionUseSwitches = {},
+): {
   getDecisions(): DecisionsSettings;
   setDecisions(next: DecisionsSettings): void;
+  getDecisionUses(): DecisionUseSwitches;
+  setDecisionUses(next: DecisionUseSwitches): void;
 } {
   let value = initial;
+  let uses = initialUses;
   return {
     getDecisions: () => value,
     setDecisions: (next) => {
       value = next;
+    },
+    getDecisionUses: () => uses,
+    setDecisionUses: (next) => {
+      uses = next;
     },
   };
 }
@@ -172,13 +187,13 @@ const KEY_PORT = {
 const NATIVE_SETTINGS: DecisionsSettings = {
   version: 1,
   answerer: { kind: "native", id: "jev" },
-  egress: { jev: { enabled: true, consentedVersion: 1 } },
+  egress: { jev: { enabled: true, consentedVersion: DECISION_APPROVAL_VERSION } },
 };
 
 describe("DecisionModels", () => {
   it("uses the adapter by default, which is what the app already did", async () => {
     const answers = await serviceWith(answering("adapted", false, "left")).decide(
-      { purpose: "test" },
+      { purpose: "test", use: "kind" },
       { facts: {} },
       { q: QUESTION },
       new AbortController().signal,
@@ -194,7 +209,12 @@ describe("DecisionModels", () => {
       settings: settingsPort(NATIVE_SETTINGS),
       adapted,
       ...KEY_PORT,
-    }).decide({ purpose: "test" }, { facts: {} }, { q: QUESTION }, new AbortController().signal);
+    }).decide(
+      { purpose: "test", use: "kind" },
+      { facts: {} },
+      { q: QUESTION },
+      new AbortController().signal,
+    );
     expect(answers.q?.source).toBe("adapted/v1");
   });
 
@@ -203,7 +223,12 @@ describe("DecisionModels", () => {
       answering("adapted", false, "left"),
       failing("jev", true, "rate-limited"),
       NATIVE_SETTINGS,
-    ).decide({ purpose: "test" }, { facts: {} }, { q: QUESTION }, new AbortController().signal);
+    ).decide(
+      { purpose: "test", use: "kind" },
+      { facts: {} },
+      { q: QUESTION },
+      new AbortController().signal,
+    );
     expect(answers.q).toMatchObject({ value: "left", outcome: "answered", source: "adapted/v1" });
     expect(answers.q?.detail).toBe(
       "decision model jev failed: rate-limited; answered by adapted:adapted/v1",
@@ -219,7 +244,7 @@ describe("DecisionModels", () => {
       },
     };
     const answers = await serviceWith(thrower).decide(
-      { purpose: "test" },
+      { purpose: "test", use: "kind" },
       { facts: {} },
       { q: QUESTION },
       new AbortController().signal,
@@ -236,13 +261,13 @@ describe("DecisionModels", () => {
       recordUsage,
     );
     await service.decide(
-      { purpose: "kind", taskId: "task-9" },
+      { purpose: "kind", use: "kind", taskId: "task-9" },
       { facts: {} },
       { q: QUESTION },
       new AbortController().signal,
     );
     await service.decide(
-      { purpose: "fleet-sort" },
+      { purpose: "fleet-sort", use: "kind" },
       { facts: {} },
       { q: QUESTION },
       new AbortController().signal,
@@ -259,7 +284,7 @@ describe("DecisionModels", () => {
       ...KEY_PORT,
     });
     await service.decide(
-      { purpose: "test" },
+      { purpose: "test", use: "kind" },
       { facts: {} },
       { q: QUESTION },
       new AbortController().signal,
@@ -283,7 +308,7 @@ describe("DecisionModels", () => {
     });
     const ask = () =>
       service.decide(
-        { purpose: "test" },
+        { purpose: "test", use: "kind" },
         { facts: {} },
         { q: QUESTION },
         new AbortController().signal,
@@ -304,7 +329,7 @@ describe("DecisionModels", () => {
       ...KEY_PORT,
     });
     await service.decide(
-      { purpose: "test" },
+      { purpose: "test", use: "kind" },
       { facts: {} },
       { q: QUESTION },
       new AbortController().signal,
@@ -326,12 +351,12 @@ describe("DecisionModels", () => {
       });
     const egressCases: Array<DecisionsSettings["egress"]> = [
       {},
-      { jev: { enabled: false, consentedVersion: 1 } },
+      { jev: { enabled: false, consentedVersion: DECISION_APPROVAL_VERSION } },
       { jev: { enabled: true } },
     ];
     for (const egress of egressCases) {
       const answers = await off(egress).decide(
-        { purpose: "test" },
+        { purpose: "test", use: "kind" },
         { facts: {} },
         { q: QUESTION },
         new AbortController().signal,
@@ -477,5 +502,169 @@ describe("what a pinned offering comes to", () => {
     expect(
       service.setSettings({ ...NATIVE_SETTINGS, answerer: { kind: "native", id: "jev" } }),
     ).not.toHaveProperty("pinned");
+  });
+});
+
+/**
+ * Intent: the approved correction plan expands the fact set only after
+ * explicit permission, never through a native-provider fallback or old view.
+ * The in-memory model port records actual dispatches; it does not pretend
+ * to establish live classification quality. This service owns the gate.
+ */
+describe("the uses' switches", () => {
+  const replyCheck = { purpose: "Reply checks", use: "reply-checks" as const };
+  const state = {
+    facts: {
+      latest_captain_reply:
+        "For later work in this project, propose the exact wording before keeping it.",
+    },
+  };
+  const signal = () => new AbortController().signal;
+  const ask = (service: DecisionModels) =>
+    service.decide(replyCheck, state, { q: WITH_ABSTAIN }, signal());
+  /** A person who turned Jev on from the first approval screen. */
+  const OLD_JEV: DecisionsSettings = {
+    ...NATIVE_SETTINGS,
+    egress: { jev: { enabled: true, consentedVersion: DECISION_FIRST_APPROVAL_VERSION } },
+  };
+
+  it("asks no model while reply checks are off, and asks again once they are on", async () => {
+    // Intent: the captain's plan - turning reply checks off stops new checks.
+    const adapted = answering("adapted", false, "left");
+    const dispatch = vi.spyOn(adapted, "decide");
+    const service = serviceWith(adapted);
+    expect((await ask(service)).q?.source).toBe("adapted/v1");
+    service.setUse({ id: "reply-checks", on: false });
+    expect(service.allowsUse("reply-checks")).toBe(false);
+    expect((await ask(service)).q).toMatchObject({
+      value: "unsure",
+      outcome: "failed",
+      reason: "use-off",
+    });
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    service.setUse({ id: "reply-checks", on: true });
+    expect((await ask(service)).q?.source).toBe("adapted/v1");
+    expect(dispatch).toHaveBeenCalledTimes(2);
+  });
+
+  it("refuses to turn task classification off, and keeps it on an older Jev approval", async () => {
+    // Intent: the captain asked that a mandated use such as task
+    // classification cannot be switched off, and that an older approval keeps it working.
+    const service = serviceWith(
+      answering("adapted", false, "left"),
+      answering("jev", true, "right"),
+      OLD_JEV,
+    );
+    expect(() => service.setUse({ id: "kind", on: false })).toThrow(/always on/);
+    expect(service.view().uses?.find((use) => use.id === "kind")?.on).toBe(true);
+    const answers = await service.decide(
+      { purpose: "kind", use: "kind" },
+      { facts: { title: "Add a toolbar" } },
+      { q: QUESTION },
+      signal(),
+    );
+    expect(answers.q?.source).toBe("jev/v1");
+  });
+
+  it("holds reply checks under an older Jev approval, asking no model, until the person allows them once", async () => {
+    // Intent: the captain asked that people who turned Jev on under the old
+    // approval screen get reply checks off until they consent, and that the
+    // checks never fall back to their own models meanwhile.
+    const adapted = answering("adapted", false, "left");
+    const dispatch = vi.spyOn(adapted, "decide");
+    const readKey = vi.fn(() => STORED_KEY);
+    const settings = settingsPort(OLD_JEV);
+    const service = new DecisionModels({
+      settings,
+      adapted,
+      createNative: () => answering("jev", true, "right"),
+      keys: { ...KEY_PORT.keys, read: readKey },
+    });
+    expect(service.view().uses?.find((use) => use.id === "reply-checks")).toMatchObject({
+      on: false,
+      needsApproval: true,
+    });
+    expect((await ask(service)).q?.reason).toBe("use-off");
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(readKey).not.toHaveBeenCalled();
+
+    // The dialog's OK names the screen it showed; never past this home's own.
+    const view = service.setUse({
+      id: "reply-checks",
+      on: true,
+      approve: DECISION_APPROVAL_VERSION + 1,
+    });
+    expect(view.settings.egress.jev).toEqual({
+      enabled: true,
+      consentedVersion: DECISION_APPROVAL_VERSION,
+    });
+    expect(view.uses?.find((use) => use.id === "reply-checks")).toMatchObject({
+      on: true,
+      needsApproval: false,
+    });
+    expect((await ask(service)).q?.source).toBe("jev/v1");
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it("lets the person's own models answer for a Jev or OpenRouter model approved on the new screen", async () => {
+    // Intent: the new approval screen says the person's own models answer
+    // when the decision model cannot, for every use.
+    const offering = {
+      id: "typesafe/jev-1.13",
+      name: "Jev 1.13",
+      vendor: "TypeSafe",
+      inputPrice: 0.042,
+    };
+    const adapted = answering("adapted", false, "left");
+    const create = vi.fn(() => failing("openrouter", true, "no-credit"));
+    const service = new DecisionModels({
+      settings: settingsPort({
+        ...DEFAULT_DECISIONS,
+        answerer: { kind: "openrouter", model: offering.id },
+        egress: { openrouter: { enabled: true, consentedVersion: DECISION_APPROVAL_VERSION } },
+      }),
+      adapted,
+      openrouter: { models: () => [offering], signedIn: () => true, create },
+    });
+    expect((await ask(service)).q).toMatchObject({ source: "adapted/v1", outcome: "answered" });
+    expect(create).toHaveBeenCalledExactlyOnceWith(offering.id);
+  });
+
+  it("does not send a new fallback call after reply checks are turned off during the first call", async () => {
+    // Intent: the captain's plan - turning reply checks off stops new checks;
+    // a request already sent cannot be unsent.
+    const settings = settingsPort(NATIVE_SETTINGS);
+    const adapted = answering("adapted", false, "left");
+    const dispatch = vi.spyOn(adapted, "decide");
+    const native = model("jev", true, (questions) => {
+      settings.setDecisionUses({ "reply-checks": { on: false } });
+      return {
+        answers: { q: failedAnswer(questions.q as DecisionQuestion, "rate-limited", "test") },
+        usage: [],
+      };
+    });
+    const service = new DecisionModels({
+      settings,
+      adapted,
+      createNative: () => native,
+      ...KEY_PORT,
+    });
+    expect((await ask(service)).q?.reason).toBe("use-off");
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it("records a key call or an older view's write as the first approval screen", () => {
+    // Intent: the captain's version rule - an approval made from an older
+    // computer counts as old.
+    const service = serviceWith(
+      answering("adapted", false, "left"),
+      answering("jev", true, "right"),
+      { ...DEFAULT_DECISIONS, answerer: { kind: "native", id: "jev" } },
+    );
+    const view = service.setKey("jev", STORED_KEY);
+    expect(view.stateVersion).toBe(DECISION_FIRST_APPROVAL_VERSION);
+    expect(view.approvalVersion).toBe(DECISION_APPROVAL_VERSION);
+    expect(view.settings.egress.jev?.consentedVersion).toBe(DECISION_FIRST_APPROVAL_VERSION);
+    expect(view.uses?.find((use) => use.id === "reply-checks")?.needsApproval).toBe(true);
   });
 });

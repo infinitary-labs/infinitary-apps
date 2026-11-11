@@ -138,9 +138,9 @@ function deliverableWords(deliverable: Exclude<Deliverable, "operation"> | undef
  * The work, as a decision model sees it: what it is called, what done looks
  * like, the user's own words, the typed constraints, where it lands, and -
  * when one was named and verified - the task whose report is its spec.
- * Nothing else: no transcript, no repo map, no fleet state. This is also
- * the list the consent copy enumerates, so it is the one place to change
- * when it widens (`DECISION_STATE_VERSION`).
+ * Nothing else: no transcript, no repo map, no fleet state. Task
+ * classification's row in the use list (`src/shared/decisionUses.ts`) says
+ * what it reads in plain words; change both together when it widens.
  *
  * `adapterText` pins the message S3 sent, down to the labels its first
  * dogfood scoring earned: the bare word "constraints: plan-first" was read
@@ -226,7 +226,7 @@ export class DecisionKindClassifier implements KindClassifier {
 
   async classify(input: KindInput, signal: AbortSignal): Promise<KindVerdict> {
     const answers = await this.decisions.decide(
-      { purpose: "kind", taskId: input.taskId },
+      { purpose: "kind", use: "kind", taskId: input.taskId },
       kindState(input),
       { kind: kindQuestionFor(input.deliverable) },
       signal,

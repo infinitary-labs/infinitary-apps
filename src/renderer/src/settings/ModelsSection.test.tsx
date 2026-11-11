@@ -1,5 +1,10 @@
 import type { DecisionsView } from "@shared/decisions";
-import { DECISION_STATE_VERSION, DEFAULT_DECISIONS } from "@shared/decisions";
+import { DEFAULT_DECISIONS } from "@shared/decisions";
+import {
+  DECISION_APPROVAL_VERSION,
+  DECISION_FIRST_APPROVAL_VERSION,
+  decisionUsesView,
+} from "@shared/decisionUses";
 import type { ModelSlotsView } from "@shared/modelSlots";
 import type { RoutingSettings } from "@shared/quota";
 import { reasoningWord } from "@shared/reasoning";
@@ -22,7 +27,9 @@ const ROUTING: RoutingSettings = { dynamicRouting: true, pins: [] };
 /** A fresh install: the adapter's own walk, and no native model in sight. */
 const DECISIONS: DecisionsView = {
   settings: DEFAULT_DECISIONS,
-  stateVersion: DECISION_STATE_VERSION,
+  stateVersion: DECISION_FIRST_APPROVAL_VERSION,
+  approvalVersion: DECISION_APPROVAL_VERSION,
+  uses: decisionUsesView(DEFAULT_DECISIONS, {}),
   natives: [
     {
       id: "jev",
@@ -57,6 +64,7 @@ function render(
       onSetDecisions={() => {}}
       onSetDecisionKey={() => Promise.resolve(true)}
       onRemoveDecisionKey={() => {}}
+      onSetDecisionUse={() => {}}
     />,
   );
 }
@@ -325,6 +333,17 @@ describe("ModelsSection - the decision row names only the model answering", () =
     expect(row(html)).toContain("chosen model unavailable · using your cheapest slotted model");
     expect(header(html)).toContain("decisions auto");
     expect(header(html)).not.toContain("gpt-6-luna");
+  });
+
+  // The captain's version rule: a controlling computer shows the Uses list
+  // only when the home has this version too.
+  it("draws the answerer row alone for a home on an older version", () => {
+    const { approvalVersion: _approval, uses: _uses, ...older } = DECISIONS;
+    expect(render(slots, DECISIONS)).toContain('aria-label="Uses"');
+    const html = render(slots, older);
+    expect(html).toContain('data-decision-row="answerer"');
+    expect(html).not.toContain('aria-label="Uses"');
+    expect(html).not.toContain("data-decision-use=");
   });
 
   it("says nothing answers when a held pick cannot", () => {

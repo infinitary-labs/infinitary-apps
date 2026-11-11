@@ -1843,6 +1843,8 @@ export const cardAvailabilityPayloadSchema = z.strictObject({
  */
 export const cardActionPayloadSchema = z.strictObject({
   actionId: z.string(),
+  /** Last thread message already present at this interaction, not a later reply. */
+  precedingMessageId: z.number().int().nonnegative().optional(),
   recognized: z.boolean(),
   label: z.string().nullable(),
   closes: z.boolean(),
@@ -1870,6 +1872,9 @@ export const cardActionPayloadSchema = z.strictObject({
 export const cardMessageRefPayloadSchema = z.strictObject({
   messageId: z.number().int(),
   who: cardMessageWhoSchema,
+  /** Typed control provenance for written answers; words themselves stay with their owner. */
+  questions: cardQuestionsSchema.optional(),
+  questionsGap: cardActionPayloadSchema.shape.questionsGap,
   /** An interim author line does not release a new answer. */
   interim: z.literal(true).optional(),
   answers: cardAnswersSchema.optional(),

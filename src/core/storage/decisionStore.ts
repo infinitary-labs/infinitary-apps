@@ -1,5 +1,7 @@
+import { type DecisionAnswer, decisionAnswerSchema } from "@shared/decisions";
 import type { CrewDecidedBy } from "@shared/modelChoice";
 import type { SpendBand } from "@shared/quotaSignals";
+import { z } from "zod";
 import type { WakeFacts } from "../orchestrator/wakes";
 import type { ChargeFact } from "../routing/placedWork";
 import type { AppDatabase } from "./db";
@@ -14,6 +16,8 @@ import { prepared } from "./statements";
  * - `routing` - which model a spawn was routed to and at what tier, with
  *   the shape's rule (`Router`).
  * - `account` - which account of that provider serves it (`AccountSelector`).
+ * - `correction` - one typed model receipt per immutable captain-input
+ *   identity, including quiet results, without an invented task.
  * - `sort` - the whose-turn sort and the idle ladder's rungs (the
  *   crew's `CrewTurns.recordSort`), and the retired triage session's verdicts
  *   before them: the wake, its typed facts, routine or captain, and why.
@@ -27,7 +31,26 @@ import { prepared } from "./statements";
  * or new.
  */
 
-export type DecisionKind = "routing" | "account" | "sort";
+export type DecisionKind = "routing" | "account" | "sort" | "correction";
+
+const correctionFactsSchema = z.object({
+  version: z.literal(1),
+  questionId: z.string(),
+  stateSha: z.string(),
+  // Provider prose may echo input; the source owner retains the actual words.
+  answer: decisionAnswerSchema.omit({ detail: true }),
+});
+
+/** The model receipt, not an active instruction or a copy of the captain's words. */
+export type CorrectionDecisionInput = {
+  sourceKey: string;
+  taskId?: string;
+  at: number;
+  questionId: string;
+  stateSha: string;
+  answer: DecisionAnswer;
+};
+export type CorrectionDecision = CorrectionDecisionInput & { id: number };
 
 export type SupervisionVerdict = "routine" | "captain";
 
@@ -296,6 +319,61 @@ export class DecisionStore {
   /** Run a decision + its effect atomically (the store-first guarantee). */
   transaction<T>(fn: () => T): T {
     return this.db.transaction(fn)();
+  }
+
+  /**
+   * The first completed result wins for this exact source, including quiet
+   * and failed results. Enclose this, its wake and the input ack in transaction().
+   * The existing non-null task column uses the empty value for no task;
+   * a composer input must never create a task just to fit the ledger.
+   */
+  recordCorrection(input: CorrectionDecisionInput): CorrectionDecision {
+    const facts = correctionFactsSchema.parse({
+      version: 1,
+      questionId: input.questionId,
+      stateSha: input.stateSha,
+      answer: input.answer,
+    });
+    this.db
+      .prepare(
+        `INSERT INTO decisions (kind, task_id, at, rule, wake, facts_json, verdict, model)
+         VALUES ('correction', ?, ?, 'decision-model', ?, ?, ?, ?)
+         ON CONFLICT (wake) WHERE kind = 'correction' DO NOTHING`,
+      )
+      .run(
+        input.taskId ?? "",
+        input.at,
+        input.sourceKey,
+        JSON.stringify(facts),
+        input.answer.value,
+        input.answer.source ?? null,
+      );
+    const recorded = this.correction(input.sourceKey);
+    if (!recorded) throw new Error("The correction decision was not recorded.");
+    return recorded;
+  }
+
+  /** Seek one receipt by source identity; never search the words or the history. */
+  correction(sourceKey: string): CorrectionDecision | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT id, task_id, at, facts_json FROM decisions
+         WHERE kind = 'correction' AND wake = ?`,
+      )
+      .get(sourceKey) as
+      | { id: number; task_id: string; at: number; facts_json: string }
+      | undefined;
+    if (!row) return undefined;
+    const facts = correctionFactsSchema.parse(JSON.parse(row.facts_json));
+    return {
+      id: row.id,
+      sourceKey,
+      ...(row.task_id ? { taskId: row.task_id } : {}),
+      at: row.at,
+      questionId: facts.questionId,
+      stateSha: facts.stateSha,
+      answer: facts.answer,
+    };
   }
 
   /** Record a routing decision with its reasons - the "why this model" surface. */

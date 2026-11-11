@@ -1074,6 +1074,9 @@ export class CardService {
         who,
         text,
         notes: facts.notes,
+        ...(who === "captain" && facts.captainText !== undefined
+          ? { captainText: facts.captainText }
+          : {}),
         ...(revision ? { revision } : {}),
         ...(facts.contributor ? { contributor: facts.contributor } : {}),
         ...(records ? { answersMessage } : {}),
@@ -1213,6 +1216,16 @@ export class CardService {
    * which the task's event names as that occurrence (its alias on
    * the unified timeline, docs/task-record.md).
    */
+  private directionRetention:
+    | ((cardId: string, action: string, actor: string, offerId?: string) => boolean)
+    | undefined;
+
+  setDirectionRetention(
+    retains?: (cardId: string, action: string, actor: string, offerId?: string) => boolean,
+  ): void {
+    this.directionRetention = retains;
+  }
+
   private recordResolution(
     card: Card,
     action: string,
@@ -1252,6 +1265,10 @@ export class CardService {
     }
     const row = tasks.capture.openCardTaskFor(card.id);
     if (!row) return closedAnswer;
+    if (this.directionRetention?.(card.id, action, by, card.offerId)) {
+      tasks.placement.setGate(row.id, null, "the chosen direction is awaiting verified saving");
+      return closedAnswer;
+    }
     // A host card's row is the host's bookkeeping: its close is not news.
     const quiet = row.kind === "operation" ? { feed: false as const } : {};
     if (action === "dismissed") {

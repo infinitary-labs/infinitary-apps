@@ -8,9 +8,9 @@ import { type StubApi, startStubApi } from "../../../tests/helpers/anthropicDial
 import { crewmateToolDelegate } from "../../../tests/helpers/crewmateToolDelegate";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seatSpec } from "../../../tests/helpers/seatSession";
-import { questionSessionSpec } from "../decisions/questionSession";
 import { crewmateSessionSpec } from "../orchestrator/crewSession";
 import { appPathsFor } from "../paths";
+import { questionSessionSpec } from "../session/questionSession";
 import { LOCAL_MACHINE_ID, type SessionSpec } from "../session/session";
 import { resolveClaudeExecutable } from "./claudeCli";
 import { MessageQueue, userMessage } from "./claudeQueryCore";

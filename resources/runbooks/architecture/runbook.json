@@ -1,0 +1,15 @@
+{
+  "id": "architecture",
+  "name": "Advanced architecture",
+  "description": "Map a project's parts, links and state machines, and see what a change moves on that map. Experimental.",
+  "firstmate": "guide.md",
+  "crew": {
+    "file": "crew.md",
+    "when": {
+      "kind": ["implement", "fix", "chore"],
+      "place": ["project"]
+    }
+  },
+  "skills": "skills",
+  "startsOff": true
+}

@@ -52,6 +52,7 @@
     "tests/browser/**/*.tsx",
     "tests/helpers/browserProvided.ts",
     "tests/helpers/loadClock.ts",
+    "tests/helpers/architectureMap.ts",
     // The window API and the shell's installed keys, which the browser layer
     // runs in its page as the preload and main run them.
     "src/preload/api.ts",

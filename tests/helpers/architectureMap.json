@@ -1,0 +1,1382 @@
+{
+  "maps": {
+    "": {
+      "name": "Infinitary",
+      "about": "A desktop AI studio: a first mate and a crew of agents working on the person's own computer.",
+      "groups": [
+        {
+          "name": "Desktop app",
+          "why": "Runs in the app's own processes on the computer"
+        },
+        {
+          "name": "Phone",
+          "why": "Runs on an iPhone or iPad paired with a Mac"
+        }
+      ],
+      "parts": [
+        {
+          "name": "core",
+          "path": "src/core",
+          "about": "Everything the app does with no window: tasks, crew, models and saved state",
+          "group": "Desktop app"
+        },
+        {
+          "name": "main",
+          "path": "src/main",
+          "about": "The main process: windows, frames and the system",
+          "group": "Desktop app"
+        },
+        {
+          "name": "preload",
+          "path": "src/preload",
+          "about": "The window's bridge into the main process",
+          "group": "Desktop app"
+        },
+        {
+          "name": "renderer",
+          "path": "src/renderer",
+          "about": "What the window draws",
+          "group": "Desktop app"
+        },
+        {
+          "name": "shared",
+          "path": "src/shared",
+          "about": "Shapes, channels and words every side reads",
+          "group": "Desktop app"
+        },
+        {
+          "name": "ios",
+          "path": "ios",
+          "about": "The phone app that reads a paired Mac",
+          "group": "Phone"
+        },
+        {
+          "name": "runbooks",
+          "path": "resources/runbooks",
+          "about": "Bundled guidance the crew reads"
+        }
+      ],
+      "outside": [
+        {
+          "name": "model providers",
+          "about": "Codex, Grok, Claude and other subscriptions"
+        },
+        {
+          "name": "GitHub and GitLab",
+          "about": "Where projects live"
+        },
+        {
+          "name": "git",
+          "about": "Working copies on the computer"
+        }
+      ],
+      "links": [
+        {
+          "from": "renderer",
+          "to": "preload",
+          "why": "calls the app"
+        },
+        {
+          "from": "preload",
+          "to": "main",
+          "why": "sends channel messages"
+        },
+        {
+          "from": "main",
+          "to": "core",
+          "why": "starts the core and answers channels"
+        },
+        {
+          "from": "renderer",
+          "to": "shared",
+          "why": "reads shapes and words"
+        },
+        {
+          "from": "main",
+          "to": "shared",
+          "why": "reads channels"
+        },
+        {
+          "from": "core",
+          "to": "shared",
+          "why": "reads shapes and words"
+        },
+        {
+          "from": "ios",
+          "to": "core",
+          "why": "reads a paired Mac over the connection"
+        },
+        {
+          "from": "core",
+          "to": "runbooks",
+          "why": "serves runbook guidance"
+        },
+        {
+          "from": "core",
+          "to": "model providers",
+          "why": "runs first mate and crew turns"
+        },
+        {
+          "from": "core",
+          "to": "GitHub and GitLab",
+          "why": "opens pull requests and reads checks"
+        },
+        {
+          "from": "core",
+          "to": "git",
+          "why": "makes working copies"
+        }
+      ]
+    },
+    "src/core": {
+      "name": "core",
+      "about": "Everything the app does with no window.",
+      "groups": [
+        {
+          "name": "The crew",
+          "why": "Starts, runs and supervises the work"
+        },
+        {
+          "name": "Models",
+          "why": "Reaches the person's model subscriptions"
+        },
+        {
+          "name": "Saved state",
+          "why": "What survives a restart"
+        }
+      ],
+      "parts": [
+        {
+          "name": "orchestrator",
+          "path": "src/core/orchestrator",
+          "about": "The first mate, crewmates, cards and merges",
+          "group": "The crew"
+        },
+        {
+          "name": "tasks",
+          "path": "src/core/tasks",
+          "about": "The task record and its moves",
+          "group": "The crew"
+        },
+        {
+          "name": "program",
+          "path": "src/core/program",
+          "about": "Scripts that file a task's parts",
+          "group": "The crew"
+        },
+        {
+          "name": "session",
+          "path": "src/core/session",
+          "about": "One model session per role",
+          "group": "The crew"
+        },
+        {
+          "name": "pi",
+          "path": "src/core/pi",
+          "about": "The Pi runtime and the crew's tools",
+          "group": "Models"
+        },
+        {
+          "name": "claude",
+          "path": "src/core/claude",
+          "about": "The Claude client the person installed",
+          "group": "Models"
+        },
+        {
+          "name": "accounts",
+          "path": "src/core/accounts",
+          "about": "Sign-ins and quota for each account",
+          "group": "Models"
+        },
+        {
+          "name": "storage",
+          "path": "src/core/storage",
+          "about": "The database and its stores",
+          "group": "Saved state"
+        },
+        {
+          "name": "secrets",
+          "path": "src/core/secrets",
+          "about": "Secret uses the captain approves",
+          "group": "Saved state"
+        },
+        {
+          "name": "runbooks",
+          "path": "src/core/runbooks",
+          "about": "Bundled and personal guidance, and its switches",
+          "group": "Saved state"
+        }
+      ],
+      "outside": [
+        {
+          "name": "shared",
+          "path": "src/shared",
+          "about": "Shapes, channels and words"
+        },
+        {
+          "name": "model providers",
+          "about": "Codex, Grok, Claude and other subscriptions"
+        }
+      ],
+      "links": [
+        {
+          "from": "orchestrator",
+          "to": "tasks",
+          "why": "starts, moves and closes tasks"
+        },
+        {
+          "from": "orchestrator",
+          "to": "storage",
+          "why": "keeps cards, events and reports"
+        },
+        {
+          "from": "orchestrator",
+          "to": "session",
+          "why": "opens a session for each role"
+        },
+        {
+          "from": "orchestrator",
+          "to": "pi",
+          "why": "runs crewmate tools"
+        },
+        {
+          "from": "orchestrator",
+          "to": "program",
+          "why": "starts programs"
+        },
+        {
+          "from": "orchestrator",
+          "to": "runbooks",
+          "why": "serves guidance to the crew"
+        },
+        {
+          "from": "orchestrator",
+          "to": "secrets",
+          "why": "asks for secret uses"
+        },
+        {
+          "from": "tasks",
+          "to": "storage",
+          "why": "keeps task rows"
+        },
+        {
+          "from": "session",
+          "to": "pi",
+          "why": "builds Pi sessions"
+        },
+        {
+          "from": "pi",
+          "to": "accounts",
+          "why": "reads sign-ins"
+        },
+        {
+          "from": "claude",
+          "to": "accounts",
+          "why": "reads Claude's sign-in"
+        },
+        {
+          "from": "claude",
+          "to": "storage",
+          "why": "keeps call costs"
+        },
+        {
+          "from": "pi",
+          "to": "model providers",
+          "why": "sends turns"
+        },
+        {
+          "from": "claude",
+          "to": "model providers",
+          "why": "sends turns"
+        },
+        {
+          "from": "program",
+          "to": "tasks",
+          "why": "files a program's parts"
+        },
+        {
+          "from": "runbooks",
+          "to": "storage",
+          "why": "reads runbook switches"
+        },
+        {
+          "from": "tasks",
+          "to": "shared",
+          "why": "reads task shapes"
+        }
+      ],
+      "machines": [
+        {
+          "name": "a task",
+          "in": "tasks",
+          "about": "One piece of work, from filed to closed",
+          "states": ["open", "active", "done", "dropped"],
+          "moves": [
+            {
+              "from": "open",
+              "to": "active",
+              "why": "start claimed",
+              "by": "orchestrator"
+            },
+            {
+              "from": "active",
+              "to": "open",
+              "why": "start released or requeued",
+              "by": "orchestrator"
+            },
+            {
+              "from": "active",
+              "to": "done",
+              "why": "done close or merge",
+              "by": "orchestrator"
+            },
+            {
+              "from": "active",
+              "to": "dropped",
+              "why": "drop",
+              "by": "program"
+            },
+            {
+              "from": "open",
+              "to": "dropped",
+              "why": "drop",
+              "by": "orchestrator"
+            },
+            {
+              "from": "open",
+              "to": "done",
+              "why": "close",
+              "by": "orchestrator"
+            },
+            {
+              "from": "done",
+              "to": "open",
+              "why": "required action corrected",
+              "by": "pi"
+            }
+          ],
+          "opens": {
+            "active": "a crewmate's turn"
+          }
+        },
+        {
+          "name": "a crewmate's turn",
+          "in": "orchestrator",
+          "about": "One crewmate session's turn, from opening to idle",
+          "states": ["opening", "preparing", "prompt", "continuation", "idle", "stopped"],
+          "moves": [
+            {
+              "from": "opening",
+              "to": "preparing",
+              "why": "prepare first turn",
+              "by": "orchestrator"
+            },
+            {
+              "from": "opening",
+              "to": "prompt",
+              "why": "begin",
+              "by": "orchestrator"
+            },
+            {
+              "from": "preparing",
+              "to": "prompt",
+              "why": "begin",
+              "by": "orchestrator"
+            },
+            {
+              "from": "preparing",
+              "to": "stopped",
+              "why": "stop while preparing",
+              "by": "orchestrator"
+            },
+            {
+              "from": "prompt",
+              "to": "idle",
+              "why": "turn complete",
+              "by": "pi"
+            },
+            {
+              "from": "continuation",
+              "to": "idle",
+              "why": "turn complete",
+              "by": "pi"
+            },
+            {
+              "from": "idle",
+              "to": "prompt",
+              "why": "steer or wake",
+              "by": "orchestrator"
+            },
+            {
+              "from": "idle",
+              "to": "continuation",
+              "why": "autonomous turn",
+              "by": "orchestrator"
+            },
+            {
+              "from": "stopped",
+              "to": "continuation",
+              "why": "autonomous turn",
+              "by": "orchestrator"
+            },
+            {
+              "from": "idle",
+              "to": "opening",
+              "why": "cancel or settle asked",
+              "by": "orchestrator"
+            }
+          ]
+        },
+        {
+          "name": "a card on the stage",
+          "in": "orchestrator",
+          "about": "A card from held to resolved",
+          "states": ["held", "shown", "awaiting answer", "aside", "resolved", "ended"],
+          "moves": [
+            {
+              "from": "held",
+              "to": "shown",
+              "why": "turn closes out",
+              "by": "orchestrator"
+            },
+            {
+              "from": "shown",
+              "to": "awaiting answer",
+              "why": "captain replies",
+              "by": "orchestrator"
+            },
+            {
+              "from": "awaiting answer",
+              "to": "held",
+              "why": "author answers",
+              "by": "orchestrator"
+            },
+            {
+              "from": "shown",
+              "to": "aside",
+              "why": "put away",
+              "by": "orchestrator"
+            },
+            {
+              "from": "aside",
+              "to": "shown",
+              "why": "written to",
+              "by": "orchestrator"
+            },
+            {
+              "from": "shown",
+              "to": "resolved",
+              "why": "choice, read or withdrawn",
+              "by": "orchestrator"
+            },
+            {
+              "from": "shown",
+              "to": "ended",
+              "why": "withdrawn after seen",
+              "by": "orchestrator"
+            },
+            {
+              "from": "resolved",
+              "to": "shown",
+              "why": "reopened",
+              "by": "orchestrator"
+            }
+          ]
+        },
+        {
+          "name": "a secret use",
+          "in": "secrets",
+          "about": "One approved use of a secret",
+          "states": [
+            "unavailable",
+            "waiting",
+            "executing",
+            "completed",
+            "denied",
+            "cancelled",
+            "expired",
+            "invalidated",
+            "unknown"
+          ],
+          "moves": [
+            {
+              "from": "unavailable",
+              "to": "waiting",
+              "why": "prepared",
+              "by": "secrets"
+            },
+            {
+              "from": "unavailable",
+              "to": "denied",
+              "why": "rule: never",
+              "by": "secrets"
+            },
+            {
+              "from": "waiting",
+              "to": "executing",
+              "why": "approved",
+              "by": "secrets"
+            },
+            {
+              "from": "waiting",
+              "to": "expired",
+              "why": "past expiry",
+              "by": "secrets"
+            },
+            {
+              "from": "waiting",
+              "to": "cancelled",
+              "why": "cancel",
+              "by": "secrets"
+            },
+            {
+              "from": "waiting",
+              "to": "denied",
+              "why": "denied",
+              "by": "secrets"
+            },
+            {
+              "from": "executing",
+              "to": "completed",
+              "why": "done",
+              "by": "secrets"
+            },
+            {
+              "from": "executing",
+              "to": "invalidated",
+              "why": "invalidated",
+              "by": "secrets"
+            },
+            {
+              "from": "executing",
+              "to": "unknown",
+              "why": "threw",
+              "by": "secrets"
+            }
+          ]
+        },
+        {
+          "name": "a captain's ask",
+          "in": "tasks",
+          "about": "One message the first mate must answer",
+          "states": ["open", "closed", "failed"],
+          "moves": [
+            {
+              "from": "open",
+              "to": "closed",
+              "why": "turn ends",
+              "by": "orchestrator"
+            },
+            {
+              "from": "open",
+              "to": "failed",
+              "why": "turn fails",
+              "by": "orchestrator"
+            }
+          ]
+        }
+      ]
+    },
+    "src/main": {
+      "name": "main",
+      "about": "The main process.",
+      "parts": [
+        {
+          "name": "host",
+          "path": "src/main/host",
+          "about": "Starts the core and connects its channels"
+        },
+        {
+          "name": "ipc",
+          "path": "src/main/ipc",
+          "about": "The window's channels"
+        },
+        {
+          "name": "frames",
+          "path": "src/main/frames",
+          "about": "Card, panel and template frames under their own scheme"
+        },
+        {
+          "name": "security",
+          "path": "src/main/security",
+          "about": "What a window or frame may load"
+        },
+        {
+          "name": "view",
+          "path": "src/main/view",
+          "about": "The app as a view of another Mac"
+        },
+        {
+          "name": "voice",
+          "path": "src/main/voice",
+          "about": "Push to talk"
+        }
+      ],
+      "outside": [
+        {
+          "name": "core",
+          "path": "src/core",
+          "about": "Everything the app does with no window"
+        },
+        {
+          "name": "window",
+          "about": "The renderer and its preload"
+        }
+      ],
+      "links": [
+        {
+          "from": "host",
+          "to": "core",
+          "why": "starts and serves the core"
+        },
+        {
+          "from": "ipc",
+          "to": "core",
+          "why": "answers the window's channels"
+        },
+        {
+          "from": "window",
+          "to": "ipc",
+          "why": "sends channel messages"
+        },
+        {
+          "from": "host",
+          "to": "frames",
+          "why": "mounts card and panel frames"
+        },
+        {
+          "from": "frames",
+          "to": "security",
+          "why": "checks what a frame may load"
+        },
+        {
+          "from": "view",
+          "to": "host",
+          "why": "reaches another Mac's core"
+        },
+        {
+          "from": "voice",
+          "to": "ipc",
+          "why": "sends what was said"
+        }
+      ]
+    }
+  },
+  "counts": {
+    "ios": {
+      "files": 188,
+      "lines": 72339
+    },
+    "resources/runbooks": {
+      "files": 42,
+      "lines": 4024
+    },
+    "src/core": {
+      "files": 1694,
+      "lines": 513532
+    },
+    "src/core/accounts": {
+      "files": 7,
+      "lines": 1166
+    },
+    "src/core/claude": {
+      "files": 67,
+      "lines": 23273
+    },
+    "src/core/orchestrator": {
+      "files": 285,
+      "lines": 149338
+    },
+    "src/core/pi": {
+      "files": 112,
+      "lines": 37198
+    },
+    "src/core/program": {
+      "files": 9,
+      "lines": 1927
+    },
+    "src/core/runbooks": {
+      "files": 5,
+      "lines": 973
+    },
+    "src/core/secrets": {
+      "files": 33,
+      "lines": 10201
+    },
+    "src/core/session": {
+      "files": 20,
+      "lines": 2947
+    },
+    "src/core/storage": {
+      "files": 97,
+      "lines": 28202
+    },
+    "src/core/tasks": {
+      "files": 92,
+      "lines": 36243
+    },
+    "src/main": {
+      "files": 136,
+      "lines": 21144
+    },
+    "src/main/frames": {
+      "files": 10,
+      "lines": 1738
+    },
+    "src/main/host": {
+      "files": 47,
+      "lines": 8460
+    },
+    "src/main/ipc": {
+      "files": 4,
+      "lines": 397
+    },
+    "src/main/security": {
+      "files": 9,
+      "lines": 384
+    },
+    "src/main/view": {
+      "files": 2,
+      "lines": 766
+    },
+    "src/main/voice": {
+      "files": 10,
+      "lines": 815
+    },
+    "src/preload": {
+      "files": 6,
+      "lines": 1384
+    },
+    "src/renderer": {
+      "files": 559,
+      "lines": 117495
+    },
+    "src/shared": {
+      "files": 293,
+      "lines": 60317
+    }
+  },
+  "compare": [
+    {
+      "label": "The turn rebuild",
+      "files": [
+        ["docs/architecture.md", "~", 1, 0],
+        ["docs/inbox.md", "~", 11, 1],
+        ["release-notes/changes/crewmate-preparation-input.json", "+", 14, 0],
+        ["src/core/orchestrator/captainOverrides.ts", "~", 2, 2],
+        ["src/core/orchestrator/costLimits.ts", "~", 2, 2],
+        ["src/core/orchestrator/crewFacts.ts", "~", 4, 4],
+        ["src/core/orchestrator/crewRuntime.ts", "~", 3, 42],
+        ["src/core/orchestrator/crewSessions.ts", "~", 27, 28],
+        ["src/core/orchestrator/crewSteer.ts", "~", 14, 11],
+        ["src/core/orchestrator/crewSupervisor.ts", "~", 13, 10],
+        ["src/core/orchestrator/crewToolHooks.ts", "~", 4, 4],
+        ["src/core/orchestrator/crewTurn.ts", "+", 154, 0],
+        ["src/core/orchestrator/crewTurns.preparing.test.ts", "+", 142, 0],
+        ["src/core/orchestrator/crewTurns.ts", "~", 43, 40],
+        ["src/core/orchestrator/crewUpdates.ts", "~", 8, 9],
+        ["src/core/orchestrator/crewWatch.ts", "~", 11, 12],
+        ["src/core/orchestrator/hostOps.ts", "~", 2, 2],
+        ["src/core/orchestrator/idleLadder.ts", "~", 8, 7],
+        ["src/core/orchestrator/inPlaceWork.ts", "~", 4, 4],
+        ["src/core/orchestrator/intake.ts", "~", 1, 1],
+        ["src/core/orchestrator/starts.ts", "~", 2, 5],
+        ["src/core/orchestrator/taskMoves.ts", "~", 5, 10],
+        ["src/core/orchestrator/taskPlacement.ts", "~", 1, 1],
+        ["src/core/orchestrator/workPosture.ts", "~", 1, 1]
+      ],
+      "was": {
+        "src/core": {
+          "name": "core",
+          "about": "Everything the app does with no window.",
+          "groups": [
+            {
+              "name": "The crew",
+              "why": "Starts, runs and supervises the work"
+            },
+            {
+              "name": "Models",
+              "why": "Reaches the person's model subscriptions"
+            },
+            {
+              "name": "Saved state",
+              "why": "What survives a restart"
+            }
+          ],
+          "parts": [
+            {
+              "name": "orchestrator",
+              "path": "src/core/orchestrator",
+              "about": "The first mate, crewmates, cards and merges",
+              "group": "The crew"
+            },
+            {
+              "name": "tasks",
+              "path": "src/core/tasks",
+              "about": "The task record and its moves",
+              "group": "The crew"
+            },
+            {
+              "name": "program",
+              "path": "src/core/program",
+              "about": "Scripts that file a task's parts",
+              "group": "The crew"
+            },
+            {
+              "name": "session",
+              "path": "src/core/session",
+              "about": "One model session per role",
+              "group": "The crew"
+            },
+            {
+              "name": "pi",
+              "path": "src/core/pi",
+              "about": "The Pi runtime and the crew's tools",
+              "group": "Models"
+            },
+            {
+              "name": "claude",
+              "path": "src/core/claude",
+              "about": "The Claude client the person installed",
+              "group": "Models"
+            },
+            {
+              "name": "accounts",
+              "path": "src/core/accounts",
+              "about": "Sign-ins and quota for each account",
+              "group": "Models"
+            },
+            {
+              "name": "storage",
+              "path": "src/core/storage",
+              "about": "The database and its stores",
+              "group": "Saved state"
+            },
+            {
+              "name": "secrets",
+              "path": "src/core/secrets",
+              "about": "Secret uses the captain approves",
+              "group": "Saved state"
+            },
+            {
+              "name": "runbooks",
+              "path": "src/core/runbooks",
+              "about": "Bundled and personal guidance, and its switches",
+              "group": "Saved state"
+            }
+          ],
+          "outside": [
+            {
+              "name": "shared",
+              "path": "src/shared",
+              "about": "Shapes, channels and words"
+            },
+            {
+              "name": "model providers",
+              "about": "Codex, Grok, Claude and other subscriptions"
+            }
+          ],
+          "links": [
+            {
+              "from": "orchestrator",
+              "to": "tasks",
+              "why": "starts, moves and closes tasks"
+            },
+            {
+              "from": "orchestrator",
+              "to": "storage",
+              "why": "keeps cards, events and reports"
+            },
+            {
+              "from": "orchestrator",
+              "to": "session",
+              "why": "opens a session for each role"
+            },
+            {
+              "from": "orchestrator",
+              "to": "pi",
+              "why": "runs crewmate tools"
+            },
+            {
+              "from": "orchestrator",
+              "to": "program",
+              "why": "starts programs"
+            },
+            {
+              "from": "orchestrator",
+              "to": "runbooks",
+              "why": "serves guidance to the crew"
+            },
+            {
+              "from": "orchestrator",
+              "to": "secrets",
+              "why": "asks for secret uses"
+            },
+            {
+              "from": "tasks",
+              "to": "storage",
+              "why": "keeps task rows"
+            },
+            {
+              "from": "session",
+              "to": "pi",
+              "why": "builds Pi sessions"
+            },
+            {
+              "from": "pi",
+              "to": "accounts",
+              "why": "reads sign-ins"
+            },
+            {
+              "from": "claude",
+              "to": "accounts",
+              "why": "reads Claude's sign-in"
+            },
+            {
+              "from": "claude",
+              "to": "storage",
+              "why": "keeps call costs"
+            },
+            {
+              "from": "pi",
+              "to": "model providers",
+              "why": "sends turns"
+            },
+            {
+              "from": "claude",
+              "to": "model providers",
+              "why": "sends turns"
+            },
+            {
+              "from": "program",
+              "to": "tasks",
+              "why": "files a program's parts"
+            },
+            {
+              "from": "runbooks",
+              "to": "storage",
+              "why": "reads runbook switches"
+            },
+            {
+              "from": "tasks",
+              "to": "shared",
+              "why": "reads task shapes"
+            }
+          ],
+          "machines": [
+            {
+              "name": "a task",
+              "in": "tasks",
+              "about": "One piece of work, from filed to closed",
+              "states": ["open", "active", "done", "dropped"],
+              "moves": [
+                {
+                  "from": "open",
+                  "to": "active",
+                  "why": "start claimed",
+                  "by": "orchestrator"
+                },
+                {
+                  "from": "active",
+                  "to": "open",
+                  "why": "start released or requeued",
+                  "by": "orchestrator"
+                },
+                {
+                  "from": "active",
+                  "to": "done",
+                  "why": "done close or merge",
+                  "by": "orchestrator"
+                },
+                {
+                  "from": "active",
+                  "to": "dropped",
+                  "why": "drop",
+                  "by": "program"
+                },
+                {
+                  "from": "open",
+                  "to": "dropped",
+                  "why": "drop",
+                  "by": "orchestrator"
+                },
+                {
+                  "from": "open",
+                  "to": "done",
+                  "why": "close",
+                  "by": "orchestrator"
+                },
+                {
+                  "from": "done",
+                  "to": "open",
+                  "why": "required action corrected",
+                  "by": "pi"
+                }
+              ],
+              "opens": {
+                "active": "a crewmate's turn"
+              }
+            },
+            {
+              "name": "a crewmate's turn",
+              "in": "orchestrator",
+              "about": "One crewmate session's turn",
+              "states": ["starting", "streaming", "idle"],
+              "moves": [
+                {
+                  "from": "starting",
+                  "to": "streaming",
+                  "why": "first prompt",
+                  "by": "orchestrator"
+                },
+                {
+                  "from": "idle",
+                  "to": "streaming",
+                  "why": "next turn",
+                  "by": "orchestrator"
+                },
+                {
+                  "from": "streaming",
+                  "to": "idle",
+                  "why": "turn complete",
+                  "by": "pi"
+                }
+              ]
+            },
+            {
+              "name": "a card on the stage",
+              "in": "orchestrator",
+              "about": "A card from held to resolved",
+              "states": ["held", "shown", "awaiting answer", "aside", "resolved", "ended"],
+              "moves": [
+                {
+                  "from": "held",
+                  "to": "shown",
+                  "why": "turn closes out",
+                  "by": "orchestrator"
+                },
+                {
+                  "from": "shown",
+                  "to": "awaiting answer",
+                  "why": "captain replies",
+                  "by": "orchestrator"
+                },
+                {
+                  "from": "awaiting answer",
+                  "to": "held",
+                  "why": "author answers",
+                  "by": "orchestrator"
+                },
+                {
+                  "from": "shown",
+                  "to": "aside",
+                  "why": "put away",
+                  "by": "orchestrator"
+                },
+                {
+                  "from": "aside",
+                  "to": "shown",
+                  "why": "written to",
+                  "by": "orchestrator"
+                },
+                {
+                  "from": "shown",
+                  "to": "resolved",
+                  "why": "choice, read or withdrawn",
+                  "by": "orchestrator"
+                },
+                {
+                  "from": "shown",
+                  "to": "ended",
+                  "why": "withdrawn after seen",
+                  "by": "orchestrator"
+                },
+                {
+                  "from": "resolved",
+                  "to": "shown",
+                  "why": "reopened",
+                  "by": "orchestrator"
+                }
+              ]
+            },
+            {
+              "name": "a secret use",
+              "in": "secrets",
+              "about": "One approved use of a secret",
+              "states": [
+                "unavailable",
+                "waiting",
+                "executing",
+                "completed",
+                "denied",
+                "cancelled",
+                "expired",
+                "invalidated",
+                "unknown"
+              ],
+              "moves": [
+                {
+                  "from": "unavailable",
+                  "to": "waiting",
+                  "why": "prepared",
+                  "by": "secrets"
+                },
+                {
+                  "from": "unavailable",
+                  "to": "denied",
+                  "why": "rule: never",
+                  "by": "secrets"
+                },
+                {
+                  "from": "waiting",
+                  "to": "executing",
+                  "why": "approved",
+                  "by": "secrets"
+                },
+                {
+                  "from": "waiting",
+                  "to": "expired",
+                  "why": "past expiry",
+                  "by": "secrets"
+                },
+                {
+                  "from": "waiting",
+                  "to": "cancelled",
+                  "why": "cancel",
+                  "by": "secrets"
+                },
+                {
+                  "from": "waiting",
+                  "to": "denied",
+                  "why": "denied",
+                  "by": "secrets"
+                },
+                {
+                  "from": "executing",
+                  "to": "completed",
+                  "why": "done",
+                  "by": "secrets"
+                },
+                {
+                  "from": "executing",
+                  "to": "invalidated",
+                  "why": "invalidated",
+                  "by": "secrets"
+                },
+                {
+                  "from": "executing",
+                  "to": "unknown",
+                  "why": "threw",
+                  "by": "secrets"
+                }
+              ]
+            },
+            {
+              "name": "a captain's ask",
+              "in": "tasks",
+              "about": "One message the first mate must answer",
+              "states": ["open", "closed", "failed"],
+              "moves": [
+                {
+                  "from": "open",
+                  "to": "closed",
+                  "why": "turn ends",
+                  "by": "orchestrator"
+                },
+                {
+                  "from": "open",
+                  "to": "failed",
+                  "why": "turn fails",
+                  "by": "orchestrator"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "names": {
+        "a crewmate's turn": {
+          "opening": "starting",
+          "prompt": "streaming",
+          "continuation": "streaming"
+        }
+      },
+      "untraced": ["a secret use"]
+    },
+    {
+      "label": "Panels in frames",
+      "files": [
+        ["docs/live-prototype-security.md", "~", 8, 1],
+        ["docs/personal-panels.md", "~", 8, 6],
+        ["docs/ui-plugins.md", "~", 34, 33],
+        ["ios/Infinitary/InfinitaryApp/CardAssets/CardHost.generated.js", "~", 6, 6],
+        ["primitives/panels.md", "~", 4, 4],
+        ["release-notes/changes/your-panels-in-frames.json", "+", 13, 0],
+        ["scripts/frame-lib.ts", "~", 0, 1],
+        ["src/core/orchestrator/firstmateAgent.test.ts", "~", 2, 2],
+        ["src/core/paths.ts", "~", 2, 3],
+        ["src/core/personal/appPanels.test.ts", "~", 0, 1],
+        ["src/core/personal/compiler.test.ts", "~", 11, 16],
+        ["src/core/personal/compiler.ts", "~", 14, 45],
+        ["src/core/personal/personalExtensions.test.ts", "~", 34, 33],
+        ["src/core/personal/personalExtensions.ts", "~", 34, 23],
+        ["src/core/plugins/pluginInstaller.test.ts", "~", 18, 9],
+        ["src/core/plugins/pluginInstaller.ts", "~", 0, 1],
+        ["src/main/app.ts", "~", 5, 5],
+        ["src/main/frames/frameMounts.ts", "~", 21, 8],
+        ["src/main/frames/panelMounts.test.ts", "~", 50, 1],
+        ["src/main/host/panelCapture.ts", "~", 98, 20],
+        ["src/main/host/panelCaptureDocument.test.ts", "~", 32, 0],
+        ["src/main/host/panelCaptureDocument.ts", "~", 42, 1],
+        ["src/main/plugins/pluginProtocol.test.ts", "-", 0, 66],
+        ["src/main/plugins/pluginProtocol.ts", "-", 0, 123],
+        ["src/main/schemes.ts", "~", 1, 4],
+        ["src/main/shell.test.ts", "~", 3, 3],
+        ["src/main/shell.ts", "~", 4, 8],
+        ["src/renderer/src/design/fixtures/index.tsx", "~", 2, 3],
+        ["src/renderer/src/design/index.ts", "~", 4, 4],
+        ["src/renderer/src/frameRealm/entries/react.ts", "~", 1, 2],
+        ["src/renderer/src/frameRealm/panelProps.test.ts", "~", 17, 0],
+        ["src/renderer/src/frameRealm/panelProps.ts", "~", 15, 6],
+        ["src/renderer/src/frameRealm/runtime.tsx", "~", 32, 3],
+        ["src/renderer/src/main.tsx", "~", 2, 5],
+        ["src/renderer/src/personal/BackgroundStopped.tsx", "+", 55, 0],
+        ["src/renderer/src/personal/FramedPanelBody.tsx", "~", 125, 41],
+        ["src/renderer/src/personal/PanelDrafts.test.tsx", "~", 3, 6],
+        ["src/renderer/src/personal/PanelDrafts.tsx", "~", 9, 18],
+        ["src/renderer/src/personal/PersonalCardBody.tsx", "-", 0, 83],
+        ["src/renderer/src/personal/PersonalPanelBody.test.ts", "-", 0, 151],
+        ["src/renderer/src/personal/PersonalPanelBody.tsx", "-", 0, 420],
+        ["src/renderer/src/personal/framedCode.ts", "+", 31, 0],
+        ["src/renderer/src/personal/hostModules.test.ts", "-", 0, 32],
+        ["src/renderer/src/personal/hostModules.ts", "-", 0, 43],
+        ["src/renderer/src/personal/panelBoundaryWords.ts", "~", 2, 2],
+        ["src/renderer/src/personal/personalPlugins.test.ts", "~", 13, 12],
+        ["src/renderer/src/personal/personalPlugins.ts", "~", 16, 64],
+        ["src/renderer/src/plugins/frames/FrameMount.tsx", "~", 2, 0],
+        ["src/renderer/src/plugins/frames/frameController.test.ts", "~", 58, 5],
+        ["src/renderer/src/plugins/frames/frameController.ts", "~", 16, 10],
+        ["src/renderer/src/plugins/panelActions.test.ts", "+", 79, 0],
+        ["src/renderer/src/plugins/panelActions.ts", "~", 72, 14],
+        ["src/renderer/src/plugins/panelMounts.test.ts", "~", 23, 6],
+        ["src/renderer/src/plugins/panelMounts.ts", "~", 9, 7],
+        ["src/shared/contract-changes/personal-panels-in-frames.md", "+", 5, 0],
+        ["src/shared/csp.test.ts", "~", 5, 6],
+        ["src/shared/csp.ts", "~", 3, 15],
+        ["src/shared/personal/manifest.ts", "~", 6, 18],
+        ["src/shared/plugins/containment.test.ts", "~", 2, 4],
+        ["src/shared/plugins/frameDocument.ts", "~", 46, 4],
+        ["src/shared/plugins/frameLib.ts", "~", 2, 3],
+        ["tests/e2e/frames.ts", "~", 20, 1],
+        ["tests/e2e/panel-cards.spec.ts", "~", 24, 14],
+        ["tests/e2e/panel-tasks.spec.ts", "~", 21, 10],
+        ["tests/e2e/panelCards.ts", "~", 13, 1],
+        ["tests/e2e/personal-panels-hardening.spec.ts", "~", 3, 2],
+        ["tests/e2e/personal-panels.spec.ts", "~", 67, 41],
+        ["tests/e2e/token-dashboard.spec.ts", "~", 23, 16],
+        ["tests/e2e/ui-kit-panel.spec.ts", "~", 12, 8]
+      ],
+      "was": {
+        "src/main": {
+          "name": "main",
+          "about": "The main process.",
+          "parts": [
+            {
+              "name": "host",
+              "path": "src/main/host",
+              "about": "Starts the core and connects its channels"
+            },
+            {
+              "name": "ipc",
+              "path": "src/main/ipc",
+              "about": "The window's channels"
+            },
+            {
+              "name": "frames",
+              "path": "src/main/frames",
+              "about": "Card, panel and template frames under their own scheme"
+            },
+            {
+              "name": "plugins",
+              "path": "src/main/plugins",
+              "about": "Panels drawn inside the window"
+            },
+            {
+              "name": "security",
+              "path": "src/main/security",
+              "about": "What a window or frame may load"
+            },
+            {
+              "name": "view",
+              "path": "src/main/view",
+              "about": "The app as a view of another Mac"
+            },
+            {
+              "name": "voice",
+              "path": "src/main/voice",
+              "about": "Push to talk"
+            }
+          ],
+          "outside": [
+            {
+              "name": "core",
+              "path": "src/core",
+              "about": "Everything the app does with no window"
+            },
+            {
+              "name": "window",
+              "about": "The renderer and its preload"
+            }
+          ],
+          "links": [
+            {
+              "from": "host",
+              "to": "core",
+              "why": "starts and serves the core"
+            },
+            {
+              "from": "ipc",
+              "to": "core",
+              "why": "answers the window's channels"
+            },
+            {
+              "from": "window",
+              "to": "ipc",
+              "why": "sends channel messages"
+            },
+            {
+              "from": "frames",
+              "to": "security",
+              "why": "checks what a frame may load"
+            },
+            {
+              "from": "view",
+              "to": "host",
+              "why": "reaches another Mac's core"
+            },
+            {
+              "from": "voice",
+              "to": "ipc",
+              "why": "sends what was said"
+            },
+            {
+              "from": "ipc",
+              "to": "plugins",
+              "why": "loads panels"
+            },
+            {
+              "from": "plugins",
+              "to": "security",
+              "why": "checks a panel's sources"
+            },
+            {
+              "from": "host",
+              "to": "frames",
+              "why": "mounts card frames"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

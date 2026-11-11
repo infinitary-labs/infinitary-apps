@@ -49,9 +49,10 @@ describe("runbooks over existing prompt and skill doors", () => {
     );
     expect(books.list().map((book) => book.id)).toEqual(BUILTIN_RUNBOOK_ORDER);
     expect(books.list().every((book) => book.source === "builtin")).toBe(true);
+    const on = new Set(books.list().flatMap((book) => (book.enabled ? [book.id] : [])));
     const sections = books
       .builtins()
-      .filter((book) => book.firstmate)
+      .filter((book) => book.firstmate && on.has(book.id))
       .map((book) => {
         const file = join(root, book.id, book.firstmate ?? "");
         return readFileSync(file, "utf8").trim();
@@ -142,10 +143,13 @@ describe("runbooks over existing prompt and skill doors", () => {
       books.firstmate().text.endsWith(readFileSync(join(dir, manifest.firstmate), "utf8").trim()),
     ).toBe(true);
   });
-  it("starts every bundled runbook on and persists an individual switch without taking programs away", () => {
+  it("starts every bundled runbook but an experiment on and persists an individual switch without taking programs away", () => {
     const { db, books } = fixture();
     expect(books.list()).toHaveLength(BUILTIN_RUNBOOK_ORDER.length);
-    expect(books.list().every((book) => book.enabled)).toBe(true);
+    const startsOff = new Set(
+      books.builtins().flatMap((book) => (book.startsOff ? [book.id] : [])),
+    );
+    for (const book of books.list()) expect(book.enabled).toBe(!startsOff.has(book.id));
     const before = books.firstmate();
     books.set("sequences", false);
     const reopened = new Runbooks(root, new SettingsStore(db));
@@ -157,6 +161,60 @@ describe("runbooks over existing prompt and skill doors", () => {
     reopened.set("sequences", true);
     expect(reopened.firstmate()).toEqual(before);
     expect(() => reopened.set("missing", false)).toThrow("not available");
+  });
+  // Intent: the approved Advanced architecture plan ships that runbook as an experiment, off on a
+  // fresh install and after an update until its own switch turns it on, leaving every other runbook as it was.
+  it("keeps a start-off runbook and all it serves off, fresh and after an update, until its switch turns it on", async () => {
+    const { db, settings, books } = fixture();
+    expect(
+      books
+        .builtins()
+        .filter((book) => book.startsOff)
+        .map((book) => book.id),
+    ).toEqual(["architecture"]);
+    const switches = () => Object.fromEntries(books.list().map((book) => [book.id, book.enabled]));
+    const allOn = Object.fromEntries(BUILTIN_RUNBOOK_ORDER.map((id) => [id, true]));
+    expect(switches()).toEqual({ ...allOn, architecture: false });
+    const off = { text: books.firstmate().text, crew: books.crew(code) };
+    expect(off.text).not.toContain("# Advanced architecture");
+    expect(off.crew.text).not.toContain("# Advanced architecture");
+    expect(off.crew.skills.map((skill) => skill.name)).not.toContain("advanced-architecture");
+    // An update reads the switches an earlier version saved, which never named this runbook.
+    books.set("sequences", false);
+    expect(settings.getRunbookStates()).toEqual({ sequences: false });
+    const updated = new Runbooks(root, new SettingsStore(db));
+    expect(Object.fromEntries(updated.list().map((book) => [book.id, book.enabled]))).toEqual({
+      ...allOn,
+      sequences: false,
+      architecture: false,
+    });
+    const beforeOn = updated.firstmate().text;
+    updated.set("architecture", true);
+    const reopened = new Runbooks(root, new SettingsStore(db));
+    expect(reopened.list().find((book) => book.id === "architecture")?.enabled).toBe(true);
+    expect(reopened.list().find((book) => book.id === "sequences")?.enabled).toBe(false);
+    const guide = readFileSync(join(root, "architecture/guide.md"), "utf8").trim();
+    expect(reopened.firstmate().text.endsWith(guide)).toBe(true);
+    expect(reopened.crew(code).text).toContain(
+      readFileSync(join(root, "architecture/crew.md"), "utf8").trim(),
+    );
+    expect(reopened.crew({ ...code, kind: "retrieval" }).text).not.toContain(
+      "# Advanced architecture",
+    );
+    const staged = await stageRunbookSkills(
+      reopened.crew(code).skills,
+      join(scratchDir("inf-architecture-"), "skills"),
+    );
+    const skill = staged.find((each) => each.name === "advanced-architecture");
+    for (const file of ["SKILL.md", "parts/map.html", "parts/map.schema.json"])
+      expect(readFileSync(join(skill?.dir ?? "", file), "utf8")).toBe(
+        readFileSync(join(root, "architecture/skills/advanced-architecture", file), "utf8"),
+      );
+    reopened.set("architecture", false);
+    expect(reopened.firstmate().text).toBe(beforeOn);
+    expect(reopened.crew(code).skills.map((each) => each.name)).not.toContain(
+      "advanced-architecture",
+    );
   });
   it("serves the operation line, and Casual projects names where its skip rule lives rather than a place", () => {
     // Intent: INF-1865. The move into runbooks dropped the operation line docs/sequences.md

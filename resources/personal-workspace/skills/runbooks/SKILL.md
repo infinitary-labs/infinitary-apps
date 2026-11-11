@@ -53,6 +53,7 @@ Do not install a panel just because a runbook carries parts.
 
 Parse the manifest, check its declared files and folders exist inside the runbook, and read the final guidance and skill back.
 A new personal runbook is on when the app next reads it, because the captain asked for it; it appears under Yours in Settings → Runbooks.
+Only when the captain wants it to start off, as an experiment to try later, add `"startsOff": true` to the manifest; it then stays off until they ask the first mate to turn it on.
 No install or extra activation is needed for a new personal folder, and its files are not replaced by app updates.
 An invalid folder shows its reason under Yours and supplies no guidance until repaired.
 The first mate receives guidance at its next idle boundary, and new crew conversations receive their selected guidance and skills.

@@ -14,6 +14,8 @@ import { settingRow } from "./settings";
 import { pressKey, runFromSearch } from "./windowKeys";
 
 // Intent: INF-1177's accepted six runbooks, individually switchable through Settings or the first mate.
+// A runbook that ships as an experiment starts off until its switch turns it on (the approved Advanced
+// architecture plan).
 // Real bundle manifests, isolated HOME/userData, local scripted model, persisted IPC values and attributed feed lines.
 const root = join(process.cwd(), "resources/runbooks");
 const books = readdirSync(root).map((id) =>
@@ -44,7 +46,7 @@ test("runbook switches persist and the first mate uses the same named switch", a
           name: book.name,
           exact: true,
         }),
-      ).toHaveAttribute("aria-checked", "true");
+      ).toHaveAttribute("aria-checked", book.startsOff ? "false" : "true");
     const control = settingRow(at.page, `runbook-${workflows.id}`).getByRole("switch");
     await pressKey(control, "Space");
     await expect(control).toHaveAttribute("aria-checked", "false");
@@ -53,7 +55,14 @@ test("runbook switches persist and the first mate uses the same named switch", a
       feedLine(at.page, ACTIONS.runbook.done({ name: workflows.name, enabled: false })),
     ).toBeVisible();
     const off = await at.page.evaluate(() => window.infinitary.settings.getRunbooks());
-    expect(off.filter((book) => !book.enabled).map((book) => book.id)).toEqual([workflows.id]);
+    const startsOff = books.filter((book) => book.startsOff).map((book) => book.id);
+    expect(startsOff).toEqual(["architecture"]);
+    expect(
+      off
+        .filter((book) => !book.enabled)
+        .map((book) => book.id)
+        .sort(),
+    ).toEqual([workflows.id, ...startsOff].sort());
     await at.close();
     at = await launchApp({ withMockProvider: true, userDataDir, homeDir });
     const persisted = await at.page.evaluate(() => window.infinitary.settings.getRunbooks());

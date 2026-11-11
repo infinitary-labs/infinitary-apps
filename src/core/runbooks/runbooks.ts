@@ -45,6 +45,7 @@ export const BUILTIN_RUNBOOK_ORDER = [
   "lessons",
   "queue",
   "computer-cleanup",
+  "architecture",
 ] as const;
 
 /** The selected section and resource fingerprint share one prompt author. */
@@ -204,7 +205,7 @@ export class Runbooks {
         id: manifest.id,
         name: manifest.name,
         description: manifest.description,
-        enabled: states[manifest.id] !== false,
+        enabled: states[manifest.id] ?? !manifest.startsOff,
         source,
         ...(source === "personal" ? { path: dir } : {}),
       })),

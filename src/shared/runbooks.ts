@@ -39,6 +39,8 @@ export const runbookManifestSchema = z.strictObject({
   projects: z.array(z.string()).optional(),
   replaces: z.string().optional(),
   naming: namingRuleSchema.optional(),
+  /** Off until its switch is turned on, for a runbook that ships as an experiment. */
+  startsOff: z.literal(true).optional(),
 });
 export type RunbookManifest = z.infer<typeof runbookManifestSchema>;
 export const runbookViewSchema = z.strictObject({

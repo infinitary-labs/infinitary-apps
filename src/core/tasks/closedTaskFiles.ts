@@ -4,7 +4,7 @@ import { APP_KEPT_PARTS, removedWords, removeTaskLeftovers } from "./taskLeftove
 export { APP_KEPT_PARTS } from "./taskLeftovers";
 
 import type { AppPaths } from "../paths";
-import type { TaskRecord, TaskRetentionFields } from "../storage/taskRecords";
+import type { TaskRetentionFields } from "../storage/taskRecords";
 import { TaskService } from "./taskService";
 
 /**
@@ -23,16 +23,13 @@ export const CLOSED_TASK_FILES_KEPT_MS = 7 * 24 * 60 * 60 * 1000;
 type TasksReader = Pick<
   TaskService,
   | "get"
-  | "byKey"
-  | "listLive"
+  | "heldByLiveWork"
   | "listClosedRetentionFields"
   | "retentionFields"
   | "note"
   | "onChange"
   | "timeline"
-> & {
-  graph: Pick<TaskService["graph"], "linksFrom" | "linksTo" | "escalatedFrom">;
-};
+>;
 
 export type ClosedTaskFilesOptions = {
   paths: Pick<AppPaths, "crewmatesDir" | "worktreeTrashDir">;
@@ -45,48 +42,6 @@ export type ClosedTaskFilesOptions = {
     record: TaskRetentionFields,
   ) => Promise<{ removedFiles: string[]; bytes: number }>;
 };
-
-/**
- * Every task live work builds on, including through closed intermediates:
- * read outward from the live set, one task's links and basis at a time,
- * so it costs the live work's ancestry, never the whole record (INF-3032).
- * Carrying a task's work on (a `replaced-by` link) and retrying it on a
- * stronger model (its `retry-of` reference, or the older `escalated` row)
- * hold it too, since the carrier reads its evidence in place (INF-3169).
- */
-function heldByLiveWork(tasks: TasksReader): Set<string> {
-  const held = new Set<string>();
-  // Many builders name one plan: each name is looked up once a pass (INF-2255).
-  const looked = new Map<string, TaskRecord | undefined>();
-  const named = (ref: string): TaskRecord | undefined => {
-    if (!ref) return undefined;
-    if (!looked.has(ref)) looked.set(ref, tasks.get(ref) ?? tasks.byKey(ref));
-    return looked.get(ref);
-  };
-  const pending: TaskRecord[] = tasks.listLive();
-  for (let record = pending.pop(); record; record = pending.pop()) {
-    if (held.has(record.id)) continue;
-    held.add(record.id);
-    const refs = [
-      ...tasks.graph
-        .linksFrom(record.id)
-        .filter((link) => link.type === "discovered-from")
-        .map((link) => link.toId),
-      ...tasks.graph
-        .linksTo(record.id)
-        .filter((link) => link.type === "blocks" || link.type === "replaced-by")
-        .map((link) => link.fromId),
-      ...tasks.graph.escalatedFrom(record.id),
-    ];
-    if (record.shape?.basis) refs.push(record.shape.basis);
-    if (record.shape?.escalate_from) refs.push(record.shape.escalate_from);
-    for (const ref of refs) {
-      const ancestor = named(ref.trim());
-      if (ancestor && !held.has(ancestor.id)) pending.push(ancestor);
-    }
-  }
-  return held;
-}
 
 /** Whether a closed task's leftover files are due to go now. */
 function closedTaskFilesDue(record: TaskRetentionFields, held: Set<string>, now: number): boolean {
@@ -172,7 +127,13 @@ export class ClosedTaskFiles {
     const now = this.options.now();
     const since = this.lastPassAt;
     const tasks = this.options.tasks;
-    const held = heldByLiveWork(tasks);
+    // Every task live work builds on, including through closed
+    // intermediates: what it was filed from, what waits on it, its basis,
+    // and what carries its work on (a `replaced-by` link) or retries it on a
+    // stronger model (its `retry-of` reference, or the older `escalated`
+    // row), since the carrier reads its evidence in place (INF-3169). Read
+    // as ids in one statement, composing no record (INF-3032, INF-3641).
+    const held = tasks.heldByLiveWork();
     const aged = tasks.listClosedRetentionFields(
       since === Number.NEGATIVE_INFINITY ? null : since - CLOSED_TASK_FILES_KEPT_MS,
       now - CLOSED_TASK_FILES_KEPT_MS,

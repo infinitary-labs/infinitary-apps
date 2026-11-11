@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
+import type { WorkShape } from "@shared/routingPolicy";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { type AppPaths, appPathsFor } from "../paths";
@@ -75,6 +76,161 @@ const entries = (paths: AppPaths, id: string) => readdirSync(join(paths.crewmate
 
 const removalNotes = (tasks: TaskService, id: string) =>
   tasks.timeline(id).filter((event) => event.data?.removedFiles !== undefined);
+
+/**
+ * The held set as the pass read it before INF-3641: outward from the live
+ * set, one composed record and its links at a time. The one-statement read
+ * must answer exactly as this walk does.
+ */
+function walkedHeld(tasks: TaskService): Set<string> {
+  const held = new Set<string>();
+  const named = (ref: string) => (ref ? (tasks.get(ref) ?? tasks.byKey(ref)) : undefined);
+  const pending = tasks.listLive();
+  for (let record = pending.pop(); record; record = pending.pop()) {
+    if (held.has(record.id)) continue;
+    held.add(record.id);
+    const refs = [
+      ...tasks.graph
+        .linksFrom(record.id)
+        .filter((link) => link.type === "discovered-from")
+        .map((link) => link.toId),
+      ...tasks.graph
+        .linksTo(record.id)
+        .filter((link) => link.type === "blocks" || link.type === "replaced-by")
+        .map((link) => link.fromId),
+      ...tasks.graph.escalatedFrom(record.id),
+    ];
+    if (record.shape?.basis) refs.push(record.shape.basis);
+    if (record.shape?.escalate_from) refs.push(record.shape.escalate_from);
+    for (const ref of refs) {
+      const ancestor = named(ref.trim());
+      if (ancestor && !held.has(ancestor.id)) pending.push(ancestor);
+    }
+  }
+  return held;
+}
+
+describe("the tasks live work builds on", () => {
+  // INF-3641: the pass read each held task's whole record, tens of
+  // milliseconds on the main thread on the captain's record; one statement
+  // of ids must find the same tasks through every way a task holds another.
+  it("reads in one statement exactly the tasks the record-by-record walk finds", () => {
+    const { tasks, closed } = setup();
+    let seed = 7;
+    const pick = (n: number) => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return seed % n;
+    };
+    const earlier: { id: string; key: string }[] = [];
+    // Work mostly builds on recent work, so ancestries run deep.
+    const recent = () =>
+      earlier[earlier.length - 1 - pick(Math.min(earlier.length, 15))] as {
+        id: string;
+        key: string;
+      };
+    // How a reference names an earlier task: its id, its key, its key as a
+    // person typed it, or a task that no longer exists.
+    const nameOf = (task: { id: string; key: string }) =>
+      [task.id, task.key, ` ${task.key.toLowerCase()}\n`, "INF-999999"][pick(4)] as string;
+    for (let index = 0; index < 240; index += 1) {
+      const id = `closed-${index}`;
+      const basis = index > 3 && pick(2) === 0 ? recent() : undefined;
+      const retried = index > 3 && pick(6) === 0 ? recent() : undefined;
+      seedTask(tasks, {
+        id,
+        title: id,
+        status: "cancelled",
+        ...(basis || retried
+          ? {
+              shape: {
+                kind: "fix",
+                ...(basis ? { basis: nameOf(basis) } : {}),
+                ...(retried ? { escalate_from: nameOf(retried) } : {}),
+              },
+            }
+          : {}),
+      });
+      const record = tasks.get(id) as NonNullable<ReturnType<TaskService["get"]>>;
+      if (index > 3) {
+        const other = recent();
+        const type = (["discovered-from", "blocks", "replaced-by", undefined] as const)[pick(4)];
+        if (type === "discovered-from") tasks.graph.link(id, other.id, type, "host");
+        else if (type) tasks.graph.link(other.id, id, type, "host");
+        if (pick(10) === 0)
+          tasks.turns.recordEscalation({
+            from: other,
+            to: { id, key: record.key },
+            attempt: 2,
+            tier: "premium",
+          });
+      }
+      earlier.push({ id, key: record.key });
+    }
+    // A closed plan nobody live builds on stays out of the set.
+    const unheld = closed("unheld-plan");
+    for (let index = 0; index < 30; index += 1) {
+      const id = `live-${index}`;
+      const basis = pick(3) > 0 ? earlier[pick(earlier.length)] : undefined;
+      tasks.create({
+        id,
+        title: id,
+        prompt: "Build on earlier work",
+        repoId: null,
+        startPolicy: "on-request",
+        ...(basis ? { shape: { kind: "implement", basis: nameOf(basis) } } : {}),
+        ...(pick(5) === 0
+          ? { blockedBy: [(earlier[pick(earlier.length)] as { id: string }).id] }
+          : {}),
+      });
+      if (pick(4) === 0)
+        tasks.graph.link(
+          id,
+          (earlier[pick(earlier.length)] as { id: string }).id,
+          "discovered-from",
+          "host",
+        );
+    }
+    // Each way one task holds another, as the only way a live task reaches
+    // its own closed target, through a closed intermediate.
+    const live = (id: string, shape: WorkShape) =>
+      tasks.create({
+        id,
+        title: id,
+        prompt: "Build on earlier work",
+        repoId: null,
+        startPolicy: "on-request",
+        shape,
+      });
+    const middle = (name: string, shape?: WorkShape) => {
+      seedTask(tasks, { id: `via-${name}`, title: name, status: "cancelled", shape });
+      live(`live-${name}`, { kind: "implement", basis: `via-${name}` });
+      return tasks.get(`via-${name}`) as { id: string; key: string };
+    };
+    const typed = closed("only-typed-key");
+    middle("typed-key", { kind: "fix", basis: `\t${typed.key.toLowerCase()} \n` });
+    const retried = closed("only-retried");
+    live("live-retried", { kind: "fix", escalate_from: ` ${retried.key.toLowerCase()}` });
+    const escalated = closed("only-escalated");
+    const retry = middle("escalated");
+    tasks.turns.recordEscalation({ from: escalated, to: retry, attempt: 2, tier: "premium" });
+    const filed = closed("only-filed");
+    tasks.graph.link(middle("filed").id, filed.id, "discovered-from", "host");
+    const blocking = closed("only-blocking");
+    tasks.graph.link(blocking.id, middle("blocking").id, "blocks", "host");
+    const carried = closed("only-carried");
+    tasks.graph.link(carried.id, middle("carried").id, "replaced-by", "host");
+    const targets = [typed, retried, escalated, filed, blocking, carried].map((task) => task.id);
+    const walked = walkedHeld(tasks);
+    const read = tasks.heldByLiveWork();
+    for (const target of targets) expect(walked.has(target), target).toBe(true);
+    console.info(
+      JSON.stringify({ intent: "INF-3641 held set", held: read.size, walked: walked.size }),
+    );
+    expect([...read].sort()).toEqual([...walked].sort());
+    expect(read.size).toBeGreaterThan(150);
+    expect(read.has(unheld.id)).toBe(false);
+  });
+});
 
 describe("a closed task's leftover files", () => {
   // INF-2255 / INF-2213: every live basis separately resolved and composed

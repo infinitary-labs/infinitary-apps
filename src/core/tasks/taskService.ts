@@ -618,6 +618,11 @@ export class TaskService {
     return this.writer.store.retentionFields(ids);
   }
 
+  /** The ids of every task live work builds on, the live set included, read in one statement (INF-3641). */
+  heldByLiveWork(): Set<string> {
+    return this.writer.store.heldByLiveWork();
+  }
+
   /** The closed tasks on this computer whose working copy the record still counts as present. */
   closedPresentOn(deviceId: string): string[] {
     return this.writer.store.closedPresentOn(deviceId);

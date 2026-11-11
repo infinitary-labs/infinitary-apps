@@ -63,7 +63,8 @@ Open and active tasks are never touched, and neither is anything outside the fol
 
 `ClosedTaskFiles` runs one pass at start-up, once an hour on the shared ticker, each time a task closes, and when a work computer comes back into reach.
 A close can free the tasks it held, and the hourly pass lets a continuously running app cross the week without another close.
-Each pass derives upstream holds outward from the live set, reading each held task's links, basis and stronger-model retry once and each basis id or case-insensitive key once a pass.
+Each pass derives upstream holds outward from the live set in one recursive statement that returns only task ids (`TaskRecordStore.heldByLiveWork`, INF-3641): each held task's links, basis and stronger-model retry, each reference resolved by id or else by case-insensitive key, as `get` and `byKey` resolve them.
+It composes no task record, so its cost follows the number of held tasks and their links, never the size of their records.
 The first pass reads every close a week old; a later one reads only the closes that turned a week old since the last pass, the tasks that pass found held, and those it could not clear, so a close never reads the whole record (INF-3032).
 A pass moves each leftover part, in one rename apiece, into one folder under `worktree-trash/`, writes one quiet timeline note saying what went and how many bytes (`removedFiles` and `bytes` in its data), and deletes that folder in the background below the UI (`WorkspaceService.deleteInBackground`).
 A delete a quit cut short finishes in the next start's trash sweep, and a part a quit left unmoved goes in the next pass.

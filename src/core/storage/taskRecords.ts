@@ -39,7 +39,7 @@ import {
   TaskExecutionStore,
   withTurn,
 } from "./taskExecutionStore";
-import { TaskOwnedShapeStore } from "./taskOwnedShapeStore";
+import { SHAPE_RECORD_TABLES, TaskOwnedShapeStore } from "./taskOwnedShapeStore";
 import { splitPolicies, TaskPolicyStore, withPolicies } from "./taskPolicyStore";
 import {
   REFERENCE_SHAPE_FIELDS,
@@ -208,6 +208,16 @@ function withoutRetired<T extends object>(value: T | null, field: string): T | n
   const { [field]: _retired, ...kept } = value as Record<string, unknown>;
   return kept as T;
 }
+
+/**
+ * What JavaScript's `String.prototype.trim` takes from either end, as the
+ * second argument of SQLite's `trim`: a reference is trimmed this way
+ * before it names a task, in code and in a statement alike.
+ */
+const TRIMMED_SQL = `'${[
+  "\t\n\v\f\r \u00a0\u1680\u2028\u2029\u202f\u205f\u3000\ufeff",
+  ...Array.from({ length: 11 }, (_, n) => String.fromCharCode(0x2000 + n)),
+].join("")}'`;
 
 function parseJson<T>(text: string | null): T | null {
   if (!text) return null;
@@ -1009,6 +1019,51 @@ export class TaskStore {
     )
       .pluck()
       .all(deviceId) as string[];
+  }
+
+  /**
+   * The ids of every task live work builds on, the live tasks included,
+   * through closed intermediates, in one statement that composes no record
+   * (INF-3641): the live tasks, then from each held task the task it was
+   * filed from (`discovered-from`), the tasks waiting on it or carrying it
+   * on (`blocks`, `replaced-by`), its basis and the attempt it retries
+   * (`retry-of`, read only on a task with a shape, as its record reads
+   * them) and the attempts its `escalated` rows name. A reference names a
+   * task by id or, failing that, by key, as `get` then `byKey` resolve it:
+   * trimmed of what JavaScript's `trim` takes and upper-cased for the key.
+   */
+  heldByLiveWork(): Set<string> {
+    const named = (ref: string) =>
+      `(SELECT COALESCE(
+         (SELECT n.id FROM tasks n WHERE n.id = name.ref),
+         (SELECT n.id FROM tasks n WHERE n.key = upper(name.ref)))
+       FROM (SELECT NULLIF(trim(${ref}, ${TRIMMED_SQL}), '') AS ref) name)`;
+    // A record reads its references only when it has a shape: once the
+    // shape lives in its own tables, when one of them holds a row.
+    const shaped = this.specifications.exists()
+      ? `(${SHAPE_RECORD_TABLES.map((table) => `EXISTS(SELECT 1 FROM ${table} s WHERE s.task_id = held.id)`).join(" OR ")})`
+      : `(SELECT json_valid(s.shape_json) AND json_type(s.shape_json) = 'object'
+           FROM tasks s WHERE s.id = held.id)`;
+    const ids = prepared(
+      this.db,
+      `WITH RECURSIVE held(id) AS (
+         SELECT id FROM tasks WHERE status IN ('open', 'active')
+         UNION SELECT ${named("l.to_id")} FROM held JOIN task_links l
+           ON l.from_id = held.id AND l.type = 'discovered-from'
+         UNION SELECT ${named("l.from_id")} FROM held JOIN task_links l
+           ON l.to_id = held.id AND l.type IN ('blocks', 'replaced-by')
+         UNION SELECT ${named("r.ref")} FROM held JOIN task_references r
+           ON r.task_id = held.id AND r.kind IN ('basis', 'retry-of') AND ${shaped}
+         UNION SELECT ${named("e.ref")} FROM held JOIN task_events e
+           ON e.task_id = held.id AND e.kind = 'escalated' AND e.ref <> ''
+           AND CASE WHEN json_valid(e.data_json)
+             THEN json_type(e.data_json, '$.escalated_from') END = 'text'
+       )
+       SELECT id FROM held WHERE id IS NOT NULL`,
+    )
+      .pluck()
+      .all() as string[];
+    return new Set(ids);
   }
 
   private retentionRows(where: string, ...params: unknown[]): TaskRetentionFields[] {

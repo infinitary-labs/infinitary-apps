@@ -249,6 +249,60 @@ describe("CardStore", () => {
     expect(store.duplicateLabel("card-1")).toBeUndefined();
   });
 
+  // INF-3641: one task's resolution read seeks that task's own cards instead
+  // of walking every answered card, and must answer exactly as the walk did.
+  it("answers one task's resolutions as the walk of every answered card filtered to it", () => {
+    const db = openInMemoryDatabase();
+    const store = new CardStore(db);
+    const tasks = ["task-a", "task-b", "task-c", "task-d"];
+    let now = 10_000;
+    const clock = () => now;
+    const realNow = Date.now;
+    Date.now = clock;
+    try {
+      // Interleaved resolutions across tasks, some in the same millisecond,
+      // by the captain's actions, a dismissal and the app's own closes.
+      const chosen = ["go", "later", "close", "task-retired", "go", "duplicate"];
+      for (let n = 0; n < 60; n += 1) {
+        const taskId = tasks[(n * 7) % tasks.length] as string;
+        const id = `card-${String(n).padStart(2, "0")}-${taskId}`;
+        store.upsert({ ...card, id, taskId, title: `Card ${n}`, createdAt: 1000 + n });
+        if (n % 9 === 8) continue; // still open
+        if (n % 4 !== 0) now += 5;
+        store.resolve(id, chosen[n % chosen.length] as string);
+      }
+      // Two of one task's cards resolved in the same millisecond: the id orders them.
+      now += 5;
+      for (const taskId of tasks)
+        for (const suffix of ["z", "a"]) {
+          const id = `card-tie-${suffix}-${taskId}`;
+          store.upsert({ ...card, id, taskId, title: `Tie ${suffix}`, createdAt: 2000 });
+          store.resolve(id, "go");
+        }
+    } finally {
+      Date.now = realNow;
+    }
+    const keeps: ((resolution: { card: Card; action: string }) => boolean)[] = [
+      () => true,
+      ({ card: shown, action }) =>
+        action === "close" || shown.actions.some((entry) => entry.id === action),
+      ({ action }) => action === "task-retired",
+    ];
+    for (const taskId of [...tasks, "task-none"])
+      for (const keep of keeps)
+        for (const since of [0, 10_050, 10_150, 99_999])
+          for (const limit of [1, 3, 100]) {
+            const walked = store.resolvedSince(
+              since,
+              limit,
+              (resolution) => resolution.card.taskId === taskId && keep(resolution),
+            );
+            expect(store.resolvedSince(since, limit, keep, taskId)).toEqual(walked);
+          }
+    expect(store.resolvedSince(0, 100, () => true, "task-a").length).toBeGreaterThan(5);
+    db.close();
+  });
+
   /**
    * The card thread (cards-as-threads phase 1, migration 38). The store is
    * the record: append, read back in order, and die with the card.

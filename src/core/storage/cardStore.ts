@@ -575,14 +575,26 @@ export class CardStore {
     keep: (resolution: CardResolution) => boolean = () => true,
     taskId?: string,
   ): CardResolution[] {
-    const rows = this.db
-      .prepare(
-        `SELECT * FROM cards
-         WHERE resolved_at IS NOT NULL AND resolved_at >= ? AND chosen_action IS NOT NULL
-           AND (? IS NULL OR task_id = ?)
-         ORDER BY resolved_at DESC, id`,
-      )
-      .all(since, taskId ?? null, taskId ?? null) as (Row & {
+    // One task's read seeks its own cards through `cards_task_id`; folding
+    // it into the walk of every answered card read them all (INF-3641).
+    const rows = (
+      taskId === undefined
+        ? this.db
+            .prepare(
+              `SELECT * FROM cards
+               WHERE resolved_at IS NOT NULL AND resolved_at >= ? AND chosen_action IS NOT NULL
+               ORDER BY resolved_at DESC, id`,
+            )
+            .all(since)
+        : this.db
+            .prepare(
+              `SELECT * FROM cards
+               WHERE task_id = ? AND resolved_at IS NOT NULL AND resolved_at >= ?
+                 AND chosen_action IS NOT NULL
+               ORDER BY resolved_at DESC, id`,
+            )
+            .all(taskId, since)
+    ) as (Row & {
       chosen_action: string;
       resolved_at: number;
       answers_json: string | null;

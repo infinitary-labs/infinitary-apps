@@ -393,7 +393,8 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
   // DOP-251's plan: each kind is one stage of moving Linux jobs to the Mac
   // mini's Linux guests (docs/testing.md, "Each Linux job's kind").
   const queues: Record<string, string[]> = {
-    light: ["verify.yml:request", "phone.yml:request"],
+    // INF-3635: a journeys request's replacement of the older one is light work too.
+    light: ["verify.yml:request", "phone.yml:request", "journeys.yml:replace-older-request"],
     ci: [
       "ci.yml:unit-tests",
       "ci.yml:integration-tests",

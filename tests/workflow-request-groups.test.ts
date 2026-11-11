@@ -1,12 +1,22 @@
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWorkflows";
+import {
+  githubScript,
+  loadYamlFile,
+  read,
+  workflowString,
+  workflowValue,
+} from "./helpers/releaseWorkflows";
+import { scratchDir } from "./helpers/scratchDirs";
 
 /**
  * INF-3380 (the captain's direction A, "the workflow files cancel the older run
  * themselves"): a newer request of the same check, on the same task branch and with the same selection, cancels the older run
- * through the workflow's own group. Main, a rerun and every call keep a group of
- * their own run. The requests below are real runs, their inputs read from each
- * run's request job log.
+ * through the workflow's own group, or for journeys.yml its own first job (INF-3635).
+ * Main, a rerun and every call keep a group of their own run. The requests below are
+ * real runs, their inputs read from each run's request job log.
  */
 type Concurrency = { group: string; "cancel-in-progress": string | boolean };
 const concurrency = (path: string) =>
@@ -126,9 +136,32 @@ describe("phone.yml's request group", () => {
   });
 });
 
-describe("journeys.yml's request group", () => {
-  const group = groupOf(".github/workflows/journeys.yml");
-  const cancels = cancelsIn(".github/workflows/journeys.yml");
+/**
+ * INF-3635: journeys.yml's request carries no group, since a group named for
+ * its file list failed a request of twenty-one journeys at creation; its first
+ * job names the request by a hash, marks the run and cancels the older run of
+ * that mark. The requests below are real runs, and the readings are GitHub's
+ * answers to the proof's own requests (tests/fixtures/journeys-request/).
+ */
+describe("journeys.yml's request replacement", () => {
+  type Step = {
+    id?: string;
+    name?: string;
+    env?: Record<string, string>;
+    with?: Record<string, unknown>;
+  };
+  type Job = { if?: string; concurrency?: { group?: string }; steps?: Step[] };
+  const journeys = () =>
+    loadYamlFile(".github/workflows/journeys.yml") as {
+      concurrency?: { group?: string };
+      jobs: Record<string, Job>;
+    };
+  const replace = () => journeys().jobs["replace-older-request"] as Job;
+  const step = (find: (step: Step) => boolean) => {
+    const found = replace().steps?.find(find);
+    if (!found) throw new Error("journeys.yml's replace-older-request lacks a step");
+    return found;
+  };
   const request = (inputs: Record<string, unknown>) => ({
     mac_runner: "",
     platforms: "linux",
@@ -138,29 +171,157 @@ describe("journeys.yml's request group", () => {
     perf: false,
     ...inputs,
   });
-  const branch = { workflow: "journeys", ref: "refs/heads/fm/task-10a3f943" };
-
-  it("replaces a task branch's older request only when it names the same journeys", () => {
-    const older: Run = { ...branch, run_id: "1", inputs: request({ files: "now-panel" }) };
-    expect(group({ ...older, run_id: "2" })).toBe(group(older));
-    expect(cancels(older)).toBe(true);
-    expect(group({ ...older, run_id: "2", inputs: request({ files: "task-crewmate" }) })).not.toBe(
-      group(older),
-    );
-    expect(
-      group({ ...older, run_id: "2", inputs: request({ files: "now-panel", platforms: "mac" }) }),
-    ).not.toBe(group(older));
-    expect(group({ ...older, run_attempt: "2" })).not.toBe(group({ ...older, run_id: "2" }));
+  const recorded = JSON.parse(read("tests/fixtures/journeys-request/replaced-run.json")) as {
+    ref: string;
+    inputs: Record<string, unknown>;
+    marks: { id: number; name: string; workflow_run: { id: number; head_branch: string } }[];
+    runs: { id: number; status: string; run_attempt: number; head_branch: string }[];
+  };
+  // INF-3538's request at 29c321a, run 42947213424, and its first half, run 42947452880,
+  // whose chooser log records the names it was given.
+  const all = recorded.inputs;
+  const firstHalf = request({
+    files:
+      "card-demo card-thread-place tool-repetition validation-checklist first-launch operation-deliverable task-move retrieval-routing card-threads claude-crew-turn",
+    platforms: "both",
+  });
+  const branch = (ref: string, inputs: Record<string, unknown>): Run => ({
+    workflow: "journeys",
+    ref,
+    run_id: "1",
+    inputs,
   });
 
-  it("never lets one request on main cancel another (INF-941)", () => {
+  /** The mark step as the runner runs it: its env evaluated, its script with GitHub's helpers. */
+  const mark = async (run: Run) => {
+    const marking = step((candidate) => candidate.id === "mark");
+    const temp = scratchDir("journeys-request-mark-");
+    const outputs: Record<string, string> = {};
+    await githubScript(String(marking.with?.script), ["core", "context", "process", "require"])(
+      {
+        setOutput: (name: string, value: unknown) => (outputs[name] = String(value)),
+        info: () => undefined,
+      },
+      { ref: run.ref },
+      {
+        env: {
+          SELECTION: workflowString(String(marking.env?.SELECTION), reading(run)),
+          RUNNER_TEMP: temp,
+        },
+      },
+      createRequire(import.meta.url),
+    );
+    const saved = JSON.parse(readFileSync(join(temp, "journeys-request.json"), "utf8"));
+    return { name: outputs.name ?? "", saved };
+  };
+
+  it("starts a request naming twenty-one journeys, which a group named for them failed", async () => {
+    // GitHub failed run 42980703839 at creation for a 400-character group and started
+    // run 42980783026 for a 399-character one; INF-3538's request named a 461-character one.
+    const refused = 400;
+    const long = branch(recorded.ref, all);
+    const { jobs, concurrency: run } = journeys();
+    for (const group of [run, ...Object.values(jobs).map((job) => job.concurrency)])
+      if (group?.group)
+        expect(workflowString(group.group, reading(long)).length).toBeLessThan(refused);
+    // The mark the run is replaced by never grows with the selection.
+    const named = await mark(long);
+    expect(named.name).toHaveLength(
+      (await mark(branch(recorded.ref, request({ files: "now-panel" })))).name.length,
+    );
+    expect(named.name.length).toBeLessThan(refused);
+    expect(named.saved).toEqual({ ref: recorded.ref, inputs: all });
+    expect(recorded.marks.map((mark) => mark.name)).toContain(named.name);
+  });
+
+  it("marks a task branch's request the same only when it names the same selection", async () => {
+    const older = await mark(branch(recorded.ref, all));
+    expect((await mark(branch(recorded.ref, { ...all }))).name).toBe(older.name);
+    // The proof's request left mac_runner unset, which GitHub leaves out of inputs;
+    // a request sending it empty is the same request, as the old group read it.
+    expect(all).not.toHaveProperty("mac_runner");
+    expect((await mark(branch(recorded.ref, { ...all, mac_runner: "" }))).name).toBe(older.name);
+    expect((await mark(branch(recorded.ref, firstHalf))).name).not.toBe(older.name);
+    expect((await mark(branch(recorded.ref, { ...all, platforms: "linux" }))).name).not.toBe(
+      older.name,
+    );
+    expect((await mark(branch("refs/heads/fm/task-949a2d1a", all))).name).not.toBe(older.name);
+  });
+
+  /** The cancel step against GitHub's recorded answers, as the run `runId` runs it. */
+  const cancel = async (
+    runId: number,
+    runs: typeof recorded.runs,
+    answer: (run_id: number) => Promise<void> = async () => undefined,
+  ) => {
+    const cancelling = step(
+      (candidate) => candidate.name === "Cancel the older requests of this selection",
+    );
+    const cancelled: number[] = [];
+    const github = {
+      paginate: async (
+        method: (
+          parameters: Record<string, unknown>,
+        ) => Promise<{ data: { artifacts: unknown[] } }>,
+        parameters: Record<string, unknown>,
+      ) => (await method(parameters)).data.artifacts,
+      rest: {
+        actions: {
+          listArtifactsForRepo: async (parameters: Record<string, unknown>) => {
+            expect(parameters).toMatchObject({ name: recorded.marks[0]?.name });
+            return { data: { total_count: recorded.marks.length, artifacts: recorded.marks } };
+          },
+          getWorkflowRun: async ({ run_id }: { run_id: number }) => {
+            const run = runs.find((candidate) => candidate.id === run_id);
+            if (!run) throw new Error(`no recorded reading of run ${run_id}`);
+            return { data: run };
+          },
+          cancelWorkflowRun: async ({ run_id }: { run_id: number }) => {
+            cancelled.push(run_id);
+            await answer(run_id);
+          },
+        },
+      },
+    };
+    await githubScript(String(cancelling.with?.script), ["core", "github", "context", "process"])(
+      { info: () => undefined },
+      github,
+      { runId, repo: { owner: "example", repo: "project" } },
+      { env: { MARK: recorded.marks[0]?.name } },
+    );
+    return cancelled;
+  };
+
+  it("cancels the older request of a selection, waiting or running, whichever run looks last", async () => {
+    const [older, newer] = recorded.runs.toSorted((a, b) => a.id - b.id);
+    if (!older || !newer) throw new Error("the proof recorded two runs");
+    expect(await cancel(newer.id, recorded.runs)).toEqual([older.id]);
+    // The older run, looking after the newer one marked itself, stops itself.
+    expect(await cancel(older.id, recorded.runs)).toEqual([older.id]);
+    // An older run that ended, or that is being rerun, keeps its place.
+    for (const kept of [{ status: "completed" }, { run_attempt: 2 }]) {
+      const runs = recorded.runs.map((run) => (run.id === older.id ? { ...run, ...kept } : run));
+      expect(await cancel(newer.id, runs)).toEqual([]);
+    }
+    // A run that ends between the reading and the cancel answers 409.
+    const ended = Object.assign(new Error("Cannot cancel a workflow run that is completed."), {
+      status: 409,
+    });
+    expect(
+      await cancel(newer.id, recorded.runs, async () => {
+        throw ended;
+      }),
+    ).toEqual([older.id]);
+  });
+
+  it("never replaces a request on main or a rerun (INF-941)", () => {
     // On 2026-10-22 another task's request on main (39867018455) cancelled
     // INF-933's (39865801314) in the shared group journeys-refs/heads/main.
-    const main = { workflow: "journeys", ref: "refs/heads/main" };
+    const runs = (run: Run) => workflowValue(String(replace().if), reading(run));
     const inputs = request({ files: "keyboard-routing" });
-    expect(group({ ...main, run_id: "39865801314", inputs })).not.toBe(
-      group({ ...main, run_id: "39867018455", inputs }),
-    );
+    expect(runs({ ...branch("refs/heads/main", inputs), run_id: "39867018455" })).toBe(false);
+    expect(runs({ ...branch(recorded.ref, all), run_attempt: "2" })).toBe(false);
+    expect(runs(branch(recorded.ref, all))).toBe(true);
   });
 });
 

@@ -50,15 +50,77 @@ permissions:
   contents: read
   actions: read
 
-# INF-3380 (the captain's direction A): a first-attempt request on a task branch shares a group
-# with the branch's requests of the same selection, so the next one cancels the older run; a
-# request naming other journeys runs beside it. Main and a rerun keep a group of their own run,
-# so another task's request on main never cancels one (INF-941).
-concurrency:
-  group: ${{ github.ref != 'refs/heads/main' && github.run_attempt == '1' && format('journeys-request-{0}-files={1}-platforms={2}-base={3}-mac_all={4}-starve={5}-perf={6}-mac_runner={7}', github.ref, inputs.files, inputs.platforms, inputs.base, inputs.mac_all, inputs.starve, inputs.perf, inputs.mac_runner) || format('journeys-run-{0}-{1}', github.run_id, github.run_attempt) }}
-  cancel-in-progress: true
+# INF-3380 (the captain's direction A): a first-attempt request on a task branch replaces the
+# branch's older request of the same selection, waiting or running; a request naming other
+# journeys runs beside it, and main and a rerun are never replaced, so another task's request on
+# main never cancels one (INF-941). INF-3635: the run carries no concurrency group, because a
+# group named for the selection grew with the file list, and GitHub refuses a group name of 400
+# characters or more by failing the run with no job; no expression can shorten it. The
+# replace-older-request job below does the replacing with the selection's hash instead.
 
 jobs:
+  # INF-3635: name this request by a hash of its branch and every input, mark the run with an
+  # artifact of that name, then keep only the newest live first-attempt run holding it. Every run
+  # marks itself before it looks, so whichever looks last sees both and the older one stops.
+  replace-older-request:
+    name: Manual request · Replace an older request of the same journeys
+    if: github.ref != 'refs/heads/main' && github.run_attempt == '1'
+    runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').light || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    # Replacing is housekeeping: it never decides whether the named journeys passed.
+    continue-on-error: true
+    permissions:
+      actions: write
+    steps:
+      - id: mark
+        name: Name this request by its selection
+        uses: actions/github-script@v7
+        env:
+          SELECTION: ${{ toJSON(inputs) }}
+        with:
+          script: |
+            const selection = JSON.parse(process.env.SELECTION);
+            // GitHub leaves an unset input with no default out of inputs, so an empty one is the same request.
+            const set = Object.keys(selection).sort().filter(name => selection[name] !== '' && selection[name] !== null);
+            const key = JSON.stringify([context.ref, set.map(name => [name, selection[name]])]);
+            const name = `journeys-request-${require('node:crypto').createHash('sha256').update(key).digest('hex')}`;
+            require('node:fs').writeFileSync(`${process.env.RUNNER_TEMP}/journeys-request.json`, JSON.stringify({ref: context.ref, inputs: selection}, null, 2));
+            core.setOutput('name', name);
+            core.info(`${context.ref} ${JSON.stringify(selection)} is ${name}`);
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.mark.outputs.name }}
+          path: ${{ runner.temp }}/journeys-request.json
+          retention-days: 1
+      - name: Cancel the older requests of this selection
+        uses: actions/github-script@v7
+        env:
+          MARK: ${{ steps.mark.outputs.name }}
+        with:
+          script: |
+            const marks = await github.paginate(github.rest.actions.listArtifactsForRepo, {
+              ...context.repo, name: process.env.MARK, per_page: 100
+            });
+            const live = [context.runId];
+            for (const run_id of new Set(marks.map(mark => mark.workflow_run?.id).filter(Boolean))) {
+              if (run_id === context.runId) continue;
+              const { data: run } = await github.rest.actions.getWorkflowRun({ ...context.repo, run_id });
+              // A rerun keeps its place, as it did in the group of its own run.
+              if (run.status !== 'completed' && run.run_attempt === 1) live.push(run.id);
+            }
+            const newest = Math.max(...live);
+            // This run, when a newer request holds its selection, cancels itself last.
+            const replaced = live.filter(id => id !== newest && id !== context.runId);
+            if (newest !== context.runId) replaced.push(context.runId);
+            for (const run_id of replaced) {
+              core.info(`Run ${run_id} requested this selection before run ${newest}; cancelling it.`);
+              try {
+                await github.rest.actions.cancelWorkflowRun({ ...context.repo, run_id });
+              } catch (error) {
+                // It ended between the reading and the cancel.
+                if (error.status !== 409) throw error;
+              }
+            }
+            if (!replaced.length) core.info('No older request of this selection is still going.');
   choose-journeys:
     name: Manual request · Choose and place app journeys
     # The PC's gate label (docs/testing.md, DOP-157): its runners take only gate jobs.

@@ -300,13 +300,13 @@ export const INTEGRATIONS_MCP_WORDS = {
 export const INBOX_WORDS = {
   title: "Infinitary command",
   intro:
-    "Programs on this computer, and your own AI agents, can read your cards and tasks and send your first mate a note with one command. A crewmate never gets it, and a note is information, never an instruction.",
+    "Programs on this computer, and your own AI agents, can read and act on your cards and tasks and talk to your first mate as you, with one command. A crewmate never gets it, and a note is information, never an instruction.",
   off: "Turn it on to see the line to run.",
   /** Switched off after it was on: the notes and the key are kept. */
   offKept: "Off. The saved notes stay, and the command answers with an error until you turn it on.",
   toggle: "Infinitary command on",
   exampleNote:
-    'Run it bare to see what waits on you, or with card, task, watch and the rest. Add note "your words" to send your first mate a note.',
+    'Run it bare to see what waits on you, or with card, task, say, watch and the rest. Add note "your words" to send your first mate a note.',
   /** The thin skill that points the person's own AI agents at the command, by its short name once linked. */
   setup: (linked: boolean) =>
     linked

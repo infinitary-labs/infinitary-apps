@@ -1,8 +1,11 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import { ANYTHING_ELSE_ANSWER, type CardAnswer, type TaskLifecycleOp } from "@shared/cards";
 import { NOW_GROUP_LABELS, type NowGroup, nowGroupOf } from "@shared/nowPanel";
+import { dropReviewKeys } from "@shared/recordDrop";
 import { foldForSearch } from "@shared/searchText";
+import type { DropEffects } from "@shared/tasks";
 import { encode } from "@toon-format/toon";
 import { AxiError } from "axi-sdk-js";
 import { INBOX_COMMAND, INFINITARY_COMMAND } from "../integrations/commandWords";
@@ -14,9 +17,11 @@ import type { CaptainOp, CaptainOpInput, CaptainReply, InboxOp, InboxOpInput } f
  * "Infinitary from your terminal"; INF-1894 from INF-1893's agreed design,
  * the captain's picks: nouns with verbs as gh-axi, the raw verb `api`, the
  * six daily nouns with automation and knowledge, and setup as a thin skill
- * that points an agent at the command). This version reads: every verb
- * here asks the app for a read as the captain, and changes come later.
- * `note` and `receipts` are the inbox's, kept word for word.
+ * that points an agent at the command). Every verb asks the app as the
+ * captain; a change - your words to the first mate, a card's button, a
+ * task's own buttons, or `api` on a change - is recorded as yours from the
+ * command (INF-1895). `note` and `receipts` are the inbox's, kept word for
+ * word.
  *
  * It follows the captain's AXI principles: TOON on stdout, three or four
  * fields a row with `--fields` for others, long words cut with `--full`,
@@ -64,7 +69,10 @@ function answerOf(reply: CaptainReply): Record<string, unknown> {
   return answer.data ?? {};
 }
 
-/** One read as the captain, through the app's own request. */
+/**
+ * One request as the captain, through the app's own request: a read, or a
+ * change the app records as yours from this command.
+ */
 async function read<T = unknown>(
   connection: CaptainConnection,
   command: string,
@@ -179,6 +187,7 @@ type CardRow = {
   createdAt?: number;
   actions?: { id: string; label: string; default?: boolean }[];
   replies?: number;
+  offerId?: string;
 };
 
 type TaskRow = Parameters<typeof nowGroupOf>[0] & {
@@ -278,12 +287,47 @@ function one(args: AxiArguments, what: string, usage: string): string {
 }
 
 const CARD_USAGE =
-  "card [list | show <id> | thread <id>] [--limit <n>] [--fields a,b] [--full] [--json]";
+  "card [list | show <id> | thread <id> | act <id> <action> [--answer name=value]... | reply <id> <words> [--answer name=value]... | close <id>] [--limit <n>] [--fields a,b] [--full] [--json]";
+
+/** A card's answers from `--answer name=value`, each name one of its questions. */
+function answersOf(args: AxiArguments, open: CardRow): CardAnswer[] {
+  const raw = args.flags["--answer"];
+  const given = Array.isArray(raw) ? raw : [];
+  const questions = questionsOf(open.body);
+  const names = new Set([...questions.map((question) => question.name), ANYTHING_ELSE_ANSWER]);
+  const answers = new Map<string, string[]>();
+  for (const pair of given) {
+    const at = pair.indexOf("=");
+    const name = pair.slice(0, at);
+    if (at < 1) invalid(`--answer takes name=value, not ${pair}`, [`Usage: ${C} ${CARD_USAGE}`]);
+    if (!names.has(name))
+      invalid(`Card ${open.id} asks no question ${name}`, [
+        questions.length > 0
+          ? `Questions: ${questions.map((question) => question.name).join(", ")}`
+          : `Card ${open.id} asks no questions; send words with ${ANYTHING_ELSE_ANSWER}=<words>`,
+      ]);
+    answers.set(name, [...(answers.get(name) ?? []), pair.slice(at + 1)]);
+  }
+  return [...answers].map(([name, values]) =>
+    name === ANYTHING_ELSE_ANSWER
+      ? { name, values: [], changed: true, written: values.join("\n") }
+      : { name, values, changed: true },
+  );
+}
+
+/** What a card's button did that only Infinitary's window shows, in words. */
+function effectWords(effect: { target?: string } | undefined): Record<string, unknown> {
+  return effect?.target
+    ? { window: `This button opens ${effect.target} in Infinitary's window; open it there.` }
+    : {};
+}
 
 async function card(args: AxiArguments, connection: CaptainConnection): Promise<string> {
-  const verb = verbOf(args, ["list", "show", "thread"], "card");
+  const verb = verbOf(args, ["list", "show", "thread", "act", "reply", "close"], "card");
   const cards = await read<CardRow[]>(connection, "card", "inf:cards:list");
   const keys = keysOf(await boardOf(connection, "card"));
+  if (verb === "act" || verb === "reply" || verb === "close")
+    return cardChange(verb, args, connection, cards);
   if (verb === "list") {
     const rows = cards.map((one) => ({
       id: one.id,
@@ -362,10 +406,36 @@ async function card(args: AxiArguments, connection: CaptainConnection): Promise<
 }
 
 const TASK_USAGE =
-  "task [list [--lane waiting|working|queued|backlog|done] [--project <key>] | show <key> | search <words> | crewmate <key>] [--limit <n>] [--fields a,b] [--full] [--json]";
+  "task [list [--lane waiting|working|queued|backlog|done] [--project <key>] | show <key> | search <words> | crewmate <key> | steer <key> <words> | interrupt <key> | start|stop|continue|drop|queue|unqueue <key>] [--limit <n>] [--fields a,b] [--full] [--json]";
+
+/** The task record's own buttons, by the word the command gives each. */
+const TASK_BUTTONS = {
+  start: "start-task",
+  stop: "stop-task",
+  continue: "continue-task",
+  drop: "drop-task",
+  queue: "queue-task",
+  unqueue: "unqueue-task",
+} as const satisfies Record<string, TaskLifecycleOp>;
+type TaskButton = keyof typeof TASK_BUTTONS;
+/** What each button's answer says it did. */
+const TASK_DONE: Record<TaskButton, string> = {
+  start: "started",
+  stop: "stopped",
+  continue: "continued",
+  drop: "dropped",
+  queue: "queued",
+  unqueue: "unqueued",
+};
 
 async function task(args: AxiArguments, connection: CaptainConnection): Promise<string> {
-  const verb = verbOf(args, ["list", "show", "search", "crewmate"], "task");
+  const verb = verbOf(
+    args,
+    ["list", "show", "search", "crewmate", "steer", "interrupt", ...Object.keys(TASK_BUTTONS)],
+    "task",
+  );
+  if (verb === "steer" || verb === "interrupt" || Object.hasOwn(TASK_BUTTONS, verb))
+    return taskChange(verb, args, connection);
   const full = args.flags["--full"] === true;
   if (verb === "list") {
     const board = await boardOf(connection, "task");
@@ -481,6 +551,246 @@ async function task(args: AxiArguments, connection: CaptainConnection): Promise<
     [
       `${C} task crewmate ${detail.key}`,
       ...(goal.chars || outcome.chars ? [`${C} task show ${detail.key} --full`] : []),
+    ],
+  );
+}
+
+/** A card's thread as the app answers it. */
+type Thread = { messages: { who: string; text: string; at: number }[] };
+
+/** Press a card's button, reply in its thread, or close it, as you. */
+async function cardChange(
+  verb: "act" | "reply" | "close",
+  args: AxiArguments,
+  connection: CaptainConnection,
+  cards: CardRow[],
+): Promise<string> {
+  const id = args.positional[1];
+  if (!id) invalid(`card ${verb} takes a card id`, [`Usage: ${C} ${CARD_USAGE}`]);
+  const open = cards.find((shown) => shown.id === id);
+  if (verb === "close") {
+    if (args.positional.length > 2) invalid("card close takes one card id");
+    if (!open) {
+      // Closed already is nothing to do; a card the app never had is no card.
+      if (!(await read<CardRow | null>(connection, "card", "inf:cards:past", [id])))
+        throw new AxiError(`No card ${id}`, "REFUSED", [`${C} card list`]);
+      return printed(args, { card: id, closed: "already" }, []);
+    }
+    await read(connection, "card", "inf:cards:close", [id]);
+    return printed(args, { card: id, closed: "yes" }, [`${C} card list`]);
+  }
+  if (!open) throw new AxiError(`No open card ${id}`, "REFUSED", [`${C} card list`]);
+  const answers = answersOf(args, open);
+  if (verb === "act") {
+    const action = args.positional[2];
+    if (!action || args.positional.length > 3)
+      invalid("card act takes a card id and one of its buttons", [`Usage: ${C} ${CARD_USAGE}`]);
+    const button = open.actions?.find((one) => one.id === action);
+    if (!button)
+      invalid(`Card ${id} has no button ${action}`, [
+        open.actions?.length
+          ? `Buttons: ${open.actions.map((one) => one.id).join(", ")}`
+          : `Card ${id} has no buttons; reply with \`${C} card reply ${id} <words>\``,
+      ]);
+    const result = await read<{ effect?: { target?: string }; refusal?: string }>(
+      connection,
+      "card",
+      "inf:cards:act",
+      [id, action, "chrome", ...(answers.length > 0 ? [{ answers }] : [])],
+    );
+    if (result.refusal) throw new AxiError(result.refusal, "REFUSED", [`${C} card show ${id}`]);
+    return printed(
+      args,
+      {
+        card: id,
+        pressed: button.label,
+        ...(answers.length > 0 ? { answers: answers.length } : {}),
+        ...effectWords(result.effect),
+      },
+      [`${C} card list`],
+    );
+  }
+  const text = args.positional.slice(2).join(" ").trim();
+  if (!text && answers.length === 0)
+    invalid("card reply takes your words", [`Usage: ${C} ${CARD_USAGE}`]);
+  const thread = await read<Thread>(connection, "card", "inf:cards:reply", [
+    id,
+    { text, ...(answers.length > 0 ? { answers } : {}) },
+  ]);
+  return printed(args, { card: id, replied: "yes", thread: `${thread.messages.length} replies` }, [
+    `${C} card thread ${id}`,
+  ]);
+}
+
+/** Steer or interrupt a task's crewmate, or press one of its record's buttons, as you. */
+async function taskChange(
+  verb: string,
+  args: AxiArguments,
+  connection: CaptainConnection,
+): Promise<string> {
+  const key = args.positional[1];
+  if (!key) invalid(`task ${verb} takes a task key`, [`Usage: ${C} ${TASK_USAGE}`]);
+  if (verb === "steer") {
+    const text = args.positional.slice(2).join(" ").trim();
+    if (!text) invalid("task steer takes your words", [`Usage: ${C} task steer <key> <words>`]);
+    const id = await taskIdOf(connection, key);
+    const sent = await read<{ ok: boolean; text?: string }>(connection, "task", "inf:task:steer", [
+      id,
+      text,
+    ]);
+    if (!sent.ok) throw new AxiError(sent.text ?? "Refused.", "REFUSED");
+    return printed(args, { task: key, steered: "yes" }, [`${C} task crewmate ${key}`]);
+  }
+  if (args.positional.length > 2) invalid(`task ${verb} takes one task key`);
+  const id = await taskIdOf(connection, key);
+  if (verb === "interrupt") {
+    const sent = await read<{ ok: boolean; text?: string }>(
+      connection,
+      "task",
+      "inf:task:interrupt",
+      [id],
+    );
+    if (!sent.ok) throw new AxiError(sent.text ?? "Refused.", "REFUSED");
+    return printed(args, { task: key, interrupted: "yes" }, [`${C} task crewmate ${key}`]);
+  }
+  const button = verb as TaskButton;
+  const detail = await read<TaskRow & { dropEffects?: DropEffects }>(
+    connection,
+    "task",
+    "inf:tasks:detail",
+    [id],
+  );
+  // Nothing to do is an answer: a stopped task stopped again, a running one started again.
+  if (
+    (button === "stop" && detail.status !== "active") ||
+    (button === "start" && detail.status === "active")
+  )
+    return printed(args, { task: key, [TASK_DONE[button]]: "already" }, []);
+  // A drop sends what it affects, as the window's review shows it, and the answer names them.
+  const review =
+    button === "drop" && detail.dropEffects ? dropReviewKeys(detail.dropEffects) : null;
+  const done = await read<{ ok: boolean; text?: string }>(connection, "task", "inf:task:run", [
+    id,
+    TASK_BUTTONS[button],
+    review,
+  ]);
+  if (!done.ok) throw new AxiError(done.text ?? "Refused.", "REFUSED", [`${C} task show ${key}`]);
+  return printed(
+    args,
+    {
+      task: key,
+      [TASK_DONE[button]]: "yes",
+      ...(review && review.waiting.length > 0 ? { waiting_on_it: review.waiting } : {}),
+      ...(review && review.underway.length > 0 ? { underway: review.underway } : {}),
+    },
+    [`${C} task show ${key}`],
+  );
+}
+
+const SAY_USAGE =
+  "say <words> [--card <id>] [--task <key>] [--project <key>] [--file <path>]... [--wait [--for <seconds>]] [--json]";
+/** Seconds `say --wait` waits by default, and at most: inside the minute a command is given. */
+const SAY_SECONDS = 45;
+
+type LastTurn = { you: string; reply: { text: string; words?: string; problem?: boolean } | null };
+
+/** Your words to your first mate, as from the window's input. */
+async function say(
+  args: AxiArguments,
+  connection: CaptainConnection,
+  cwd: string,
+): Promise<string> {
+  const text = args.positional.join(" ").trim();
+  if (!text) invalid("say takes your words", [`Usage: ${C} ${SAY_USAGE}`]);
+  const wait = args.flags["--wait"] === true;
+  const forRaw = args.flags["--for"];
+  if (forRaw !== undefined && !wait)
+    invalid("--for goes with --wait", [`Usage: ${C} ${SAY_USAGE}`]);
+  const seconds = typeof forRaw === "string" ? Number(forRaw) : SAY_SECONDS;
+  if (!Number.isFinite(seconds) || seconds < 0 || seconds > WATCH_SECONDS_AT_MOST)
+    invalid(`--for takes seconds from 0 to ${WATCH_SECONDS_AT_MOST}`);
+  const fileRaw = args.flags["--file"];
+  const files = (Array.isArray(fileRaw) ? fileRaw : []).map((path) => {
+    try {
+      return {
+        name: basename(path).slice(0, 120),
+        text: readFileSync(isAbsolute(path) ? path : resolve(cwd, path), "utf8"),
+      };
+    } catch {
+      return invalid(`--file could not read ${path}`);
+    }
+  });
+  // The window's hints, by the names you know them by: the card, the task and the project.
+  const cardId = args.flags["--card"];
+  const cards = await read<CardRow[]>(connection, "say", "inf:cards:list");
+  if (typeof cardId === "string" && !cards.some((one) => one.id === cardId))
+    throw new AxiError(`No open card ${cardId}`, "REFUSED", [`${C} card list`]);
+  const taskKey = args.flags["--task"];
+  const taskId = typeof taskKey === "string" ? await taskIdOf(connection, taskKey) : undefined;
+  const projectKey = args.flags["--project"];
+  let projectId: string | undefined;
+  if (typeof projectKey === "string") {
+    const projects = await read<Project[]>(connection, "say", "inf:projects:list");
+    projectId = projects.find((one) => one.key.toLowerCase() === projectKey.toLowerCase())?.id;
+    if (!projectId)
+      throw new AxiError(`No project ${projectKey}`, "REFUSED", [`${C} project list`]);
+  }
+  const before = new Map(cards.map((one) => [one.id, one.offerId]));
+  const start = wait
+    ? String(answerOf(await connection.call("say", "captain.watch", { waitMs: 0 })).cursor)
+    : undefined;
+  await read(connection, "say", "inf:converse", [
+    {
+      text,
+      ...(files.length > 0 ? { files } : {}),
+      ...(typeof cardId === "string" ? { visibleCardId: cardId } : {}),
+      ...(taskId ? { taskId } : {}),
+      ...(projectId ? { focusedProjectId: projectId } : {}),
+    },
+  ]);
+  if (!wait)
+    return printed(args, { sent: "yes", to: "your first mate" }, [
+      `${C} watch --only cards`,
+      `${C} say <words> --wait`,
+    ]);
+  // Wait for the first mate's reply line beside these words, reading again on each change.
+  const deadline = Date.now() + seconds * 1000;
+  let cursor = start;
+  let last: LastTurn | null = null;
+  for (;;) {
+    last = await read<LastTurn | null>(connection, "say", "inf:conversation:last-turn");
+    const remaining = deadline - Date.now();
+    if ((last?.you.trim() === text && last.reply) || remaining <= 0) break;
+    const changed = answerOf(
+      await connection.call("say", "captain.watch", {
+        ...(cursor ? { after: cursor } : {}),
+        waitMs: remaining,
+        channels: ["inf:event", "inf:cards"],
+      }),
+    );
+    cursor = String(changed.cursor);
+  }
+  const keys = keysOf(await boardOf(connection, "say"));
+  const shown = (await read<CardRow[]>(connection, "say", "inf:cards:list"))
+    .filter((one) => one.author === "firstmate" && before.get(one.id) !== one.offerId)
+    .map((one) => ({
+      id: one.id,
+      kind: cardKind(one),
+      title: one.title,
+      from: cardFrom(one, keys),
+    }));
+  const reply = last?.you.trim() === text ? last.reply : null;
+  return printed(
+    args,
+    {
+      sent: "yes",
+      reply: reply ? (reply.words ?? reply.text) : `none yet after ${seconds} s`,
+      ...(reply?.problem ? { problem: true } : {}),
+      cards: shown.length > 0 ? shown : "0 new cards from your first mate",
+    },
+    [
+      ...shown.map((one) => `${C} card show ${one.id}`),
+      ...(reply ? [] : [`${C} watch --only cards --after ${cursor}`]),
     ],
   );
 }
@@ -836,7 +1146,7 @@ async function api(
 /** The skill `setup` writes: a pointer at the command, nothing more (the captain's pick). */
 export const SKILL_TEXT = `---
 name: ${C}
-description: Use Infinitary from the terminal - what waits on the person, their cards, tasks, crew, allowance, projects, automation and knowledge, and notes for their first mate. Use when asked about Infinitary, its tasks or its cards.
+description: Use Infinitary from the terminal as the person - what waits on them, their cards, tasks, crew, allowance, projects, automation and knowledge; their words to their first mate, a card's buttons and a task's own buttons; and notes. Use when asked about Infinitary, its tasks or its cards.
 ---
 Run \`${C}\` first: it shows what waits on the person and the next commands. \`${C} --help\` lists every command, and \`${C} <command> --help\` explains one.
 `;
@@ -954,6 +1264,7 @@ async function home(connection: CaptainConnection): Promise<Record<string, unkno
     help: [
       ...(cards.length > 0 ? [`${C} card show <id>`] : []),
       `${C} task list --lane queued`,
+      `${C} say <words>`,
       `${C} watch`,
       `${C} --help`,
     ],
@@ -965,16 +1276,30 @@ function commands(cwd: string): Record<string, AxiCommand<CaptainConnection>> {
     card: {
       usage: CARD_USAGE,
       description:
-        "Your open cards: list them, show one as plain words with its buttons and questions, or read its thread.",
-      flags: { ...LIST_FLAGS, ...SHOW_FLAGS },
+        "Your open cards: list them, show one as plain words with its buttons and questions, or read its thread; press a button with act, answering its questions with --answer name=value, reply in its thread, or close it. A change is recorded as yours from this command.",
+      flags: { ...LIST_FLAGS, ...SHOW_FLAGS, "--answer": "values" },
       run: card,
     },
     task: {
       usage: TASK_USAGE,
       description:
-        "Your tasks as the board lanes them: list, show one, search by key or title, or read its crewmate's record.",
+        "Your tasks as the board lanes them: list, show one, search by key or title, or read its crewmate's record; steer or interrupt its crewmate, or press its record's start, stop, continue, drop, queue or unqueue. A change is recorded as yours from this command.",
       flags: { ...LIST_FLAGS, ...SHOW_FLAGS, "--lane": "value", "--project": "value" },
       run: task,
+    },
+    say: {
+      usage: SAY_USAGE,
+      description: `Your words to your first mate, as from the window's input, recorded as yours from this command. It answers at once; its answer arrives on a card or beside your words, and --wait waits up to --for seconds (${SAY_SECONDS} by default) and prints them. --card, --task and --project name what you are looking at, and --file adds a text file.`,
+      flags: {
+        "--card": "value",
+        "--task": "value",
+        "--project": "value",
+        "--file": "values",
+        "--wait": "switch",
+        "--for": "value",
+        "--json": "switch",
+      },
+      run: (args, connection) => say(args, connection, cwd),
     },
     activity: {
       usage: "activity [--task <key>] [--limit <n>] [--fields a,b] [--json]",
@@ -1021,7 +1346,7 @@ function commands(cwd: string): Record<string, AxiCommand<CaptainConnection>> {
     api: {
       usage: API_USAGE,
       description:
-        "Any request of the published contract this command reaches, checked against the contract before it is sent: list them, show one's arguments, or send one. Each argument is read as JSON when it parses, else as words; --string keeps them words, and --input reads the list from a file. This version only reads.",
+        "Any request of the published contract this command reaches, checked against the contract before it is sent: list them, show one's arguments, or send one. Each argument is read as JSON when it parses, else as words; --string keeps them words, and --input reads the list from a file. A change is recorded as yours from this command.",
       flags: {
         ...LIST_FLAGS,
         "--area": "value",

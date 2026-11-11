@@ -3,14 +3,19 @@ import { AxiError, RESERVED_COMMANDS, runAxiCli } from "axi-sdk-js";
 
 export type AxiArguments = {
   positional: string[];
-  flags: Record<string, string | boolean>;
+  flags: Record<string, string | boolean | string[]>;
 };
+
+export type AxiFlagKind = "value" | "switch" | "values";
 
 export type AxiCommand<Context> = {
   usage: string;
   description: string;
-  /** Values consume the next argument; switches consume none. */
-  flags?: Record<string, "value" | "switch">;
+  /**
+   * Values consume the next argument; switches consume none; a `values`
+   * flag may repeat, and gathers each value in order.
+   */
+  flags?: Record<string, AxiFlagKind>;
   /** An object prints as TOON; a string prints as it is, for a tool that composes its own. */
   run: (args: AxiArguments, context: Context) => Promise<Record<string, unknown> | string>;
 };
@@ -32,7 +37,7 @@ function invalid(message: string, suggestions: string[]): never {
 /** Shared flag parsing for infinitary-<tool>-axi command tables. No inferred page actions. */
 export function parseAxiArguments(
   args: string[],
-  flags: Record<string, "value" | "switch"> = {},
+  flags: Record<string, AxiFlagKind> = {},
 ): AxiArguments {
   const result: AxiArguments = { positional: [], flags: Object.create(null) };
   const valid = ["--help", ...Object.keys(flags)].join(", ");
@@ -49,7 +54,7 @@ export function parseAxiArguments(
     }
     const kind = Object.hasOwn(flags, arg) ? flags[arg] : undefined;
     if (!kind) invalid(`Unknown flag: ${arg}`, [`Valid flags: ${valid}`]);
-    if (Object.hasOwn(result.flags, arg))
+    if (kind !== "values" && Object.hasOwn(result.flags, arg))
       invalid(`Repeated flag: ${arg}`, [`Valid flags: ${valid}`]);
     if (kind === "switch") result.flags[arg] = true;
     else {
@@ -57,7 +62,9 @@ export function parseAxiArguments(
       if (value === undefined || value.startsWith("--")) {
         invalid(`Flag ${arg} needs a value`, [`Valid flags: ${valid}`]);
       }
-      result.flags[arg] = value;
+      const gathered = result.flags[arg];
+      result.flags[arg] =
+        kind === "values" ? [...(Array.isArray(gathered) ? gathered : []), value] : value;
     }
   }
   return result;

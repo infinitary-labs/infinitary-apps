@@ -10,6 +10,8 @@ import type {
   TaskEventKind,
   TaskEventView,
 } from "@shared/tasks";
+import { THROUGH_THE_COMMAND } from "../askedFromTheCommand";
+import { INFINITARY_COMMAND } from "../integrations/commandWords";
 import type { TaskConcernRelation } from "../storage/taskEventStore";
 
 /**
@@ -112,7 +114,9 @@ export type ActivityContext = {
  *   crewmate was sent, and a reply its crewmate or Firstmate wrote there
  *   reads as its first sentence under the card's title;
  * - a move a panel made on the captain's click says which panel
- *   (`data.panel`, docs/ui-plugins.md "A panel's cards");
+ *   (`data.panel`, docs/ui-plugins.md "A panel's cards"), and a change the
+ *   captain made through `infinitary-axi` says so (`data.through`,
+ *   docs/axi-commands.md, "Infinitary from your terminal");
  * - another task's event that concerns this one (FI3-1189's rule 1) is a
  *   row naming that task (`from`), in its time: what happened to it, by how
  *   it stands to this one (`concernedWords`). It takes no fold, and the
@@ -173,7 +177,11 @@ export function condenseActivity(
     }
     const line = (words: string): TaskActivityLine => {
       const text =
-        typeof data.panel === "string" ? `${words} From the ${data.panel} panel.` : words;
+        typeof data.panel === "string"
+          ? `${words} From the ${data.panel} panel.`
+          : data.through === THROUGH_THE_COMMAND
+            ? `${words}${/[.!?]$/.test(words) ? "" : "."} From ${INFINITARY_COMMAND}.`
+            : words;
       // Whatever names the task's own pull request links to it.
       const span = changeSpan(text, change, changeUrl);
       return {

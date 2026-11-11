@@ -22,7 +22,7 @@ import { openDatabase } from "../storage/db";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { SKILL_TEXT } from "./captainCommands";
-import { openCommandDoor, readsOnlyWords } from "./commandDoor";
+import { openCommandDoor } from "./commandDoor";
 import { AXI_KEY_HEADER } from "./protocol";
 
 // The core chains real git here and is not about the utility-QoS clamp, so
@@ -51,7 +51,7 @@ let userDataDir: string;
 let core: Core;
 let connection: ReturnType<typeof startConnection>;
 let closeDoor: () => void;
-const stuck = ["axi-read", "axi-watch", "axi-off"] as const;
+const stuck = ["axi-read", "axi-watch", "axi-off", "axi-act", "axi-api"] as const;
 
 beforeAll(async () => {
   const entry = await bundleAxiProcess();
@@ -141,7 +141,7 @@ function answer(stdout: string): Record<string, unknown> {
 }
 
 describe("infinitary-axi", () => {
-  it("reads your cards, a task and the published contract as you, and changes nothing", async () => {
+  it("reads your cards, a task and the published contract as you", async () => {
     const cardId = "card-stall-axi-read";
     const key = core.services.tasks.get("axi-read")?.key;
     if (!key) throw new Error("the stuck task has no key");
@@ -185,7 +185,7 @@ describe("infinitary-axi", () => {
     const task = answer((await run(["task", "show", key])).stdout);
     expect(task).toMatchObject({ key, title: "Tidy axi-read" });
 
-    // The raw verb: the contract's own arguments, a read sent, and a change refused.
+    // The raw verb: the contract's own arguments, and a read sent.
     const detail = answer((await run(["api", "show", "inf:tasks:detail"])).stdout);
     expect(detail).toMatchObject({ channel: "inf:tasks:detail", effect: "read", required: 1 });
     const read = await run(["api", "inf:tasks:detail", "axi-read"]);
@@ -194,17 +194,60 @@ describe("infinitary-axi", () => {
     const malformed = await run(["api", "inf:tasks:detail"]);
     expect(malformed.exitCode).toBe(2);
     expect(malformed.stdout).toContain("inf:tasks:detail takes 1 argument, 0 given");
-    expect(invokeContract["inf:cards:act"].effect).toBe("change");
-    const change = await run(["api", "inf:cards:act", cardId, "discard", "chrome"]);
-    expect(change.exitCode).toBe(1);
-    expect(change.stdout).toContain(readsOnlyWords("inf:cards:act"));
-    expect(core.services.supervisor.cards.snapshot().map((one) => one.id)).toContain(cardId);
     // Nothing that stays the window's, such as Secrets, is listed.
     const listed = answer((await run(["api", "list"])).stdout) as {
       channels: { channel: string }[];
     };
     expect(listed.channels.length).toBeGreaterThan(0);
     expect(listed.channels.filter((row) => row.channel.includes("secret"))).toEqual([]);
+  });
+
+  it("changes as you, and records each change as yours from the command", async () => {
+    // INF-1895, piece 2 of INF-1880's plan: changes as the captain, recorded in
+    // the trail as from the command so the record tells them from a window click.
+    const cardId = "card-stall-axi-act";
+    const live = core.services.supervisor.cards.snapshot().find((one) => one.id === cardId);
+    const button = live?.actions[0];
+    if (!button) throw new Error("the stall card has no button");
+
+    // A button the card does not have is a malformed ask, and nothing is pressed.
+    const wrong = await run(["card", "act", cardId, "no-such-button"]);
+    expect(wrong.exitCode).toBe(2);
+    expect(wrong.stdout).toContain(`Buttons: ${live.actions.map((one) => one.id).join(", ")}`);
+
+    const pressed = await run(["card", "act", cardId, button.id]);
+    expect(pressed.exitCode).toBe(0);
+    expect(answer(pressed.stdout)).toMatchObject({ card: cardId, pressed: button.label });
+    expect(core.services.supervisor.cards.snapshot().map((one) => one.id)).not.toContain(cardId);
+    const resolved = core.services.tasks
+      .timeline("axi-act")
+      .filter((event) => event.kind === "card_resolved");
+    expect(resolved.at(-1)).toMatchObject({ actor: "captain", data: { through: "command" } });
+    // The task's record says where the change came from.
+    const detail = await core.dispatch("inf:tasks:detail", ["axi-act"]);
+    expect(JSON.stringify(detail)).toContain(`From ${INFINITARY_COMMAND}.`);
+
+    // Closing it again is nothing to do: an answer, exit 0.
+    const again = await run(["card", "close", cardId]);
+    expect(again.exitCode).toBe(0);
+    expect(answer(again.stdout)).toMatchObject({ card: cardId, closed: "already" });
+
+    // The raw verb sends a change of the contract as you, recorded the same way.
+    expect(invokeContract["inf:cards:act"].effect).toBe("change");
+    const viaApi = await run(["api", "inf:cards:act", "card-stall-axi-api", button.id, "chrome"]);
+    expect(viaApi.exitCode).toBe(0);
+    expect(
+      core.services.tasks
+        .timeline("axi-api")
+        .filter((event) => event.kind === "card_resolved")
+        .at(-1),
+    ).toMatchObject({ actor: "captain", data: { through: "command" } });
+
+    // Your words reach your first mate as from the window's input.
+    const said = await run(["say", "What is waiting on me?"]);
+    expect(said.exitCode).toBe(0);
+    expect(answer(said.stdout)).toMatchObject({ sent: "yes" });
+    expect(core.services.tasks.capture.lastTurn()?.you).toBe("What is waiting on me?");
   });
 
   it("watches a change after its cursor, and answers a cursor from before with reloaded", async () => {
@@ -217,6 +260,13 @@ describe("infinitary-axi", () => {
     await core.dispatch("inf:cards:act", [cardId, "discard", "chrome"], { kind: "captain" });
     const seen = await watching;
     expect(seen.exitCode).toBe(0);
+    // A click in the window is the window's, never the command's.
+    expect(
+      core.services.tasks
+        .timeline("axi-watch")
+        .filter((event) => event.kind === "card_resolved")
+        .at(-1)?.data?.through,
+    ).toBeUndefined();
     const changes = answer(seen.stdout) as { changes: { channel: string }[]; cursor: string };
     expect(changes.changes.map((change) => change.channel)).toContain("inf:cards");
     expect(changes.cursor).not.toBe(now.cursor);

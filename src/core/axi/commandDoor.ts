@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { CORE_INVOKE_CHANNELS, type CoreInvokeChannel, invokeContract } from "@shared/ipc";
 import { z } from "zod";
+import { asTheCommand } from "../askedFromTheCommand";
 import { EventJournal, type JournalEntry, type JournalLimits } from "../connection/journal";
 import type { CoreDispatch } from "../dispatcher";
 import type { CoreEventBus } from "../events";
@@ -18,10 +19,11 @@ import type { CaptainOpInput } from "./protocol";
  * The inbox's switch in Settings, Integrations, is the command's: off, it
  * refuses every verb and the notes stay. It reaches every core request a
  * view of this computer reaches - not a computer's work, not Secrets, and
- * not a task browser's pictures, which go only to a window - and in this
- * version only reads: a request that changes something is refused, so
- * nothing changes through it yet. Every argument list is checked against
- * the published contract before it is sent.
+ * not a task browser's pictures, which go only to a window - and reads and
+ * changes as the captain (INF-1895): each request runs as the command's
+ * (`asTheCommand`), so what it changes is recorded as the captain's from
+ * the command. Every argument list is checked against the published
+ * contract before it is sent.
  *
  * It keeps the pushes the core sends while the switch is on, in the
  * connection's own `EventJournal` bounded in bytes, so `watch` prints what
@@ -69,11 +71,6 @@ const SUMMARY_CHARS = 160;
 
 /** One kept push as the journal holds it: when it came, and what it carried. */
 type Kept = { at: number; payload: unknown };
-
-/** The words a refused change prints, until changes as the captain arrive. */
-export function readsOnlyWords(channel: string): string {
-  return `${channel} changes something, and this version of ${INFINITARY_COMMAND} only reads, so nothing was sent.`;
-}
 
 /** One argument of a request, in words: its type and the contract's limits. */
 function ruleOf(schema: Record<string, unknown>): { type: string; rule: string } {
@@ -220,7 +217,6 @@ export class CommandDoor {
           ? `${channel} is asked only by a computer that runs work.`
           : `${channel} is answered only in the window.`,
       );
-    if (invokeContract[channel].effect === "change") throw new Error(readsOnlyWords(channel));
     const args = Array.isArray(input.args) ? input.args : [];
     const { required, rows } = argumentsOf(channel);
     if (args.length < required || args.length > rows.length)
@@ -229,7 +225,9 @@ export class CommandDoor {
       );
     const parsed = invokeContract[channel].request.safeParse(args);
     if (!parsed.success) throw new CaptainInvalid(refusalOf(parsed.error, channel));
-    const value = await this.options.dispatch(channel, parsed.data, { kind: "captain" });
+    const value = await asTheCommand(() =>
+      this.options.dispatch(channel, parsed.data, { kind: "captain" }),
+    );
     return { value: value as unknown };
   }
 

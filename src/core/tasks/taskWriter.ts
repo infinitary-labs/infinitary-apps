@@ -1,5 +1,6 @@
 import { deliveryForRecord } from "@shared/repos";
 import type { WorkShape } from "@shared/routingPolicy";
+import { askedFromTheCommand, THROUGH_THE_COMMAND } from "../askedFromTheCommand";
 import { AskStore } from "../storage/askStore";
 import { currentChange, placeStories, storyLedgers } from "../storage/changeProjection";
 import type { AppDatabase } from "../storage/db";
@@ -346,7 +347,12 @@ export class TaskWriter {
    * names the other tasks it concerns (`concernsOf`) in the same
    * transaction; those tasks are touched so their readers read it.
    */
-  addEvent(event: InsertTaskEvent, about: readonly string[] = []): number {
+  addEvent(written: InsertTaskEvent, about: readonly string[] = []): number {
+    // The captain's own command acts as the captain; what it causes says so (INF-1895).
+    const event: InsertTaskEvent =
+      written.actor === "captain" && askedFromTheCommand()
+        ? { ...written, data: { ...written.data, through: THROUGH_THE_COMMAND } }
+        : written;
     const id = this.events.insert(event);
     this.touch(event.taskId);
     const concerns = this.concernsOf(event, about);

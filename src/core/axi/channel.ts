@@ -20,12 +20,13 @@ import {
   type TaskIntegrations,
 } from "../integrations";
 import { type LoadClaim, type LoadReceipt, loadWaitWords, type TaskLoad } from "../placed/loadLine";
-import { SECRETS_ELSEWHERE_HELP } from "../secrets/commandWords";
+import { checkWords, SECRETS_CHECK_WORDS, SECRETS_ELSEWHERE_HELP } from "../secrets/commandWords";
 import {
   type Injection,
   SECRETS_COMMAND,
   type SecretsCatalog,
   type SecretsCommand,
+  type UseCheckInput,
 } from "../secrets/requests";
 import type { TaskStopsAnswer, TaskStopsCommand } from "../tasks/taskStops";
 import type { FilesOpInput } from "./fileCommands";
@@ -777,15 +778,26 @@ export class AxiChannel {
       }
       if (!secrets) return { unavailable: true, help: SECRETS_ELSEWHERE_HELP };
       switch (message.op) {
-        case "secrets.inject":
+        case "secrets.check": {
+          // The same working folder inject binds, so the check is of the same run.
+          const check = await secrets.check({
+            ...(message.input as UseCheckInput),
+            ...(cwd ? { cwd } : {}),
+          });
+          return { check, help: checkWords(check) };
+        }
+        case "secrets.inject": {
           // The shell's working folder, as its launcher reported it: where relative
           // arguments resolve, shown on the approval, never authority.
-          return {
-            receipt: await secrets.inject({
-              ...(message.input as Injection),
-              ...(cwd ? { cwd } : {}),
-            }),
-          };
+          const receipt = await secrets.inject({
+            ...(message.input as Injection),
+            ...(cwd ? { cwd } : {}),
+          });
+          // A request that failed a check raised no card; the pre-check names which.
+          return receipt.state === "unavailable"
+            ? { receipt, help: SECRETS_CHECK_WORDS.refused }
+            : { receipt };
+        }
         case "secrets.status": {
           const receipt = await secrets.status((message.input as { request: string }).request);
           return receipt ? { receipt } : { unavailable: true };

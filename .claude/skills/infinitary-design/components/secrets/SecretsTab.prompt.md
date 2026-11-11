@@ -37,7 +37,7 @@ Nothing shows an existing value, prefix or encoded substitute.
 Four rows under the list open in place, each a disclosure with its name on the left and a short muted summary on the right: Saved decisions (how many), Approve from your phone (the phone's name, or Not set up), What happened (how many uses and the newest) and Keep a copy.
 Saved decisions are the existing Never, Ask and Allow rules, each in one plain sentence that names its secret and the run it covers, such as Always give Website deployment (Staging) to /bin/sh deploy.sh --staging. or Never give Planning calendar to anyone., with Remove.
 Remove opens a host-authored card that quotes that sentence and needs fresh system confirmation; a click alone grants nothing.
-The page has no rule editor, dropdowns or program rehearsal form: a decision is made only on a request's approval card.
+The page has no rule editor, dropdowns or program rehearsal form: a decision is made only on a request's approval card, and the crew checks a run before asking.
 Approve from your phone lists each enrolled device with the code compared when it enrolled, beside Stop approvals; with none, it says to turn on Approves secret uses beside the phone in Settings → Devices, where approvals are set up (`components/devices/DevicesTab`, "Approving secret uses").
 What happened reports metadata, storage use and export, with explicit deletion on a host-authored confirmation card and no automatic retention cutoff; each record names its secrets, state, time, reason and recipient.
 History labels imported records as recovered history, with their source and recovery time under a disclosure, never as live approvals.
@@ -52,7 +52,8 @@ The title asks in one sentence: Give the Website deployment (Staging) secret to 
 Every card names a secret as the page does: its place only when another saved secret shares its name, and its reference only when name and place both repeat.
 The body then says who asked, what will run in plain words (the checked program's own path, so a look-alike script shows where it is, then its arguments with the working folder; or the destination and operation), and the requester's reason in quotes, visually secondary to the checked facts.
 The recipient-trust caveat, separate external-action consent and lack of isolation for later-loaded files stay in the open.
-Every checked fact (each secret's environment, reference and saved version, digests and delivery facts) folds under one Everything that was checked disclosure, whose columns wrap with the available width.
+Every checked fact (each secret's environment, reference and saved version, then each check in words: the program, interpreter and files by path with how each is bound and a short fingerprint, the arguments, the folder, which variable gets which secret, that output stays private, and what is not checked) folds under one Everything that was checked disclosure, whose columns wrap with the available width.
+The person fills in nothing: the crew checked the run before asking.
 The shared approval body describes confirmation without naming a device, and clearly labels temporary access as computer-only; an enrolled phone keeps its own pinned identities and confirmation instructions.
 Its answers are Allow once, Always allow this (Allow for 10 minutes and twenty uses for an eligible read instead) and Don't allow; every allow needs fresh system confirmation.
 Always allow this runs the shown use and saves that exact run as a decision under the same confirmation.

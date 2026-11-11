@@ -1,8 +1,10 @@
+import type { UseCheck, UseCheckProblem } from "./requests";
+
 /** The one command name, shared by its launcher, help and a granted task's instructions. */
 export const SECRETS_COMMAND = "infinitary-secrets-axi";
 
 /** Served only with the closed command facade, never because a task names a project or secret. */
-export const CREWMATE_SECRETS_LINE = `Your task can request protected secret access: run \`${SECRETS_COMMAND}\` to list the secrets the captain added, and its help for exact requests, status and cancellation. Values and raw recipient output never return to you. Infinitary raises its own approval card; never ask for a value in a card or conversation. A waiting request releases your shell: end the turn, and its result resumes this task through its inbox. After an app restart, read its status before continuing; never repeat an unknown outcome. Listing or naming a reference grants no access, and approval to use a secret does not authorize an external action.`;
+export const CREWMATE_SECRETS_LINE = `Your task can request protected secret access: run \`${SECRETS_COMMAND}\` to list the secrets the captain added, and its help for exact requests, status and cancellation. Before asking, \`check\` the exact run: it says which check fails, or whether asking raises the captain's card. Values and raw recipient output never return to you. Infinitary raises its own approval card; never ask for a value in a card or conversation. A waiting request releases your shell: end the turn, and its result resumes this task through its inbox. After an app restart, read its status before continuing; never repeat an unknown outcome. Listing or naming a reference grants no access, and approval to use a secret does not authorize an external action.`;
 
 /**
  * Served instead to a task on another computer, whose command lists the
@@ -13,3 +15,39 @@ export const CREWMATE_SECRETS_CATALOG_LINE = `Your task can list the secrets the
 /** What a use asked from a task on another computer answers beside `unavailable`. */
 export const SECRETS_ELSEWHERE_HELP =
   "This task runs on another computer: it can list and show secrets, and a use is requested only by a task on the computer that keeps them. Say so in your report when the work needs one.";
+
+/**
+ * What the crew's pre-check answers beside its typed result (docs/secrets.md,
+ * "The crew's pre-check"): host words for each failed check and each saved
+ * decision a checked run meets, never a backend's text.
+ */
+export const SECRETS_CHECK_WORDS = {
+  problem: {
+    secret: `A secret this names is not one your task can use. Run \`${SECRETS_COMMAND}\` to list the secrets the captain added.`,
+    folder: "The working folder could not be checked. Run the command from a folder that exists.",
+    variable:
+      "A variable this names cannot carry a secret: the program keeps it from this computer. Choose another variable name.",
+    program:
+      "The program was not found: no file at that path from the working folder, and no program by that name on the search path. Name it by its path.",
+    interpreter:
+      "The script's #! line names no interpreter that could be checked. Name the interpreter as the program and the script as its first argument.",
+    unavailable:
+      "Secrets cannot check this run now. Nothing was asked; when the work needs it, say so in your report.",
+  } satisfies Record<UseCheckProblem, string>,
+  decision: {
+    ask: "This run passed every check. Inject it with its reason to raise the captain's approval card; nothing has been asked yet.",
+    allow:
+      "This run passed every check, and a saved decision already allows it: inject runs it without a card.",
+    never:
+      "This run passed every check, but the captain stopped asking for a secret it names: inject is refused. When the work needs it, say so in your report.",
+  } satisfies Record<Exclude<UseCheck, { problem: UseCheckProblem }>["decision"], string>,
+  /** Beside an inject that answered unavailable: no card was raised. */
+  refused: `Nothing was asked: this request did not pass its checks. Run \`${SECRETS_COMMAND} check\` with the same --env and program to see which one, then inject again with a new --id.`,
+} as const;
+
+/** The words beside a check's answer. */
+export function checkWords(check: UseCheck): string {
+  return "problem" in check
+    ? SECRETS_CHECK_WORDS.problem[check.problem]
+    : SECRETS_CHECK_WORDS.decision[check.decision];
+}

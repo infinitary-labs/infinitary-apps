@@ -40,10 +40,22 @@ No value, receipt, approval or custody reaches that computer, and its crewmate r
 The example neither approves that script nor reads a secret.
 The channel adds the calling shell's working folder as the request's working directory, which the recipient binds like any other fact and which never grants authority.
 `status <request>` reads a receipt and never executes again; `cancel <request>` withdraws unused authority.
+`check --env '<references>' -- <program> [args...]` is the crew's pre-check (see "The crew's pre-check").
 Help and version use the ordinary runtime; unknown flags and unsupported commands refuse.
 There is no `get`, `approve`, raw-output mode or session-wide environment export.
 The command has no brokered-operation, private-file or private-input-stream delivery yet.
 No command may turn a reference into an agent-readable value.
+
+## The crew's pre-check
+
+Every request is checked before its card, and the crew can run the same checks itself first, so the person fills in nothing (INF-1690's plan, piece 3).
+`check` takes the run `inject` would take, from the same shell folder, without a reason or an intent, and `ProtectedSecrets.check` makes the checks `prepare` makes: every named secret is one the crew can use, the working folder exists, no variable is one a recipient keeps from the host, the program is a file from the working folder or on the search path, and a script's `#!` line names an interpreter that resolves.
+It answers the first failed check as a typed `problem` (`secret`, `folder`, `variable`, `program`, `interpreter` or `unavailable`, `UseCheckProblem` in `requests.ts`), or the checked run: the program and interpreter by real path, each file argument, the working folder, and the saved decision the exact run meets (`never`, `ask` or `allow`).
+An unknown and a hidden secret answer alike, and an answer names no value.
+It journals, approves, keeps and runs nothing, and removes the private copies it made while checking.
+The channel adds the host's words for the answer (`SECRETS_CHECK_WORDS`, `commandWords.ts`): what failed and what to change, or whether asking raises a card, runs at once under a saved decision, or is refused under Stop asking.
+An `inject` that failed its checks still raises no card and answers `unavailable`, now with words that say so and point to `check`; its intent stays spent, so the next request takes a new `--id`.
+The older `inf:secrets:rehearse` request evaluates the same way for Settings, which no longer calls it; it goes with the contract's next major.
 
 ## Native custody
 
@@ -112,7 +124,7 @@ Locked or unreadable custody discards nothing.
 Restart recovery never retries the discarded proposal, needs no backup and permits a new freshly authenticated save.
 Rules apply to every required secret together: Never precedes Ask, then Allow, and no match asks.
 An Allow rule always names one operation key; there is no wildcard Allow.
-Rehearsal evaluates a use against the rules and returns its checked facts without journaling, approving or running anything; Settings no longer offers it, and its channel waits for the crew's pre-check.
+The crew's `check` evaluates a run against the rules without journaling, approving or running anything (see "The crew's pre-check").
 A person calls a rule a saved decision, and makes one only on a use's approval card (see "Saved decisions").
 
 ## Trusted controller
@@ -130,9 +142,11 @@ Opening a row offers Replace, Forget and that secret's saved decisions; a tempor
 Secure entry asks for a name, the masked value and an optional place, never a reference: the controller makes one from the name when saving.
 The form locates the returned entry through the controller's `saved` receipt; replacements keep their existing reference and exact-record checks.
 Four quiet rows below the list open in place: Saved decisions, Approve from your phone, What happened (history) and Keep a copy (recovery).
-Saved decisions are the existing Never, Ask and Allow rules, each as one plain sentence with Remove, which proposes the rules without it on the host's Remove card; the page has no rule editor and no rehearsal form, so the rehearsal request has no Settings caller.
+Saved decisions are the existing Never, Ask and Allow rules, each as one plain sentence with Remove, which proposes the rules without it on the host's Remove card; the page has no rule editor and no rehearsal form: the crew checks a run before asking.
 A decision is saved only from an approval card: Always allow this run saves an Allow for that exact run, and Don't allow offers a second card that saves a Never for that secret.
 The exact-use card's title names the secrets and the task that asked; its body says who asks, what runs and why, with every checked fact, reference and version under one disclosure.
+That disclosure, Everything that was checked, says each check in words, one line each (`checkedFacts` in `approvalCard.ts`, words in `SECRET_CHECKED_WORDS`): the program, its interpreter and each file argument by path, whether each runs from a private copy or where nothing the person runs can change it, and the first characters of its fingerprint; the arguments as a shell reads them; the working folder; which variable gets which secret; that output stays private; and what is not checked.
+A service's request lists where it goes, what it asks, its result, whether it only reads, and its fingerprint.
 The card names each secret among every saved one exactly as Settings does (`secretNames.secretName`): its place when another secret shares its name, and its reference only when name and place both repeat.
 A program run starts with the checked program's own path, never the requester's word for it, so a look-alike script shows where it is.
 What happened offers export, explicit deletion and storage use.

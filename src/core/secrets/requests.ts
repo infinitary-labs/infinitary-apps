@@ -23,6 +23,37 @@ export type UseState =
   | "unavailable"
   | "unknown";
 export type UseReceipt = { request: string; state: UseState; exitCode?: number };
+
+/** What the crew's pre-check reads: an injection's run, before it is asked with a reason. */
+export type UseCheckInput = Pick<Injection, "argv" | "env" | "cwd">;
+/**
+ * Which check a run failed, as a typed fact (docs/secrets.md, "The crew's
+ * pre-check"): a named secret the crew cannot use, the working folder, a
+ * variable a recipient cannot receive a secret in, the program, the
+ * interpreter its `#!` line names, or protection that cannot answer now.
+ */
+export type UseCheckProblem =
+  | "secret"
+  | "folder"
+  | "variable"
+  | "program"
+  | "interpreter"
+  | "unavailable";
+/**
+ * The pre-check's answer: the failed check, or the checked run - the program
+ * and interpreter by real path, the file arguments bound by content, the
+ * working folder - and the saved decision it meets, so the crew knows whether
+ * asking raises a card, runs at once or is refused. Never a value.
+ */
+export type UseCheck =
+  | { problem: UseCheckProblem }
+  | {
+      decision: "never" | "ask" | "allow";
+      program: string;
+      interpreter?: string;
+      files: string[];
+      folder: string;
+    };
 export type EndedUseReceipt = UseReceipt & {
   state: Exclude<UseState, "waiting" | "executing">;
 };
@@ -61,6 +92,8 @@ export interface SecretsBackend {
   list(): Promise<SecretReference[]>;
   /** Unsupported or unavailable protection refuses before policy; no plaintext fallback. */
   prepare(input: Injection, request: string, expires: number): Promise<PreparedUse | undefined>;
+  /** The same checks `prepare` makes, and nothing recorded, approved or run. */
+  check?(input: UseCheckInput): Promise<UseCheck>;
   /** A registered trusted adapter, not an arbitrary value getter. */
   prepareBrokered?(
     input: BrokeredUse,
@@ -166,6 +199,23 @@ export class SecretRequests {
     return this.submit(copied.id, inputDigest(copied), (request, expires) =>
       this.backend.prepare(copied, request, expires),
     );
+  }
+
+  /**
+   * The crew's pre-check: what asking for this exact run would meet, before a
+   * reason or an intent is spent on it. It records, approves and runs nothing.
+   */
+  async check(input: UseCheckInput): Promise<UseCheck> {
+    const copied: UseCheckInput = JSON.parse(JSON.stringify(input));
+    if (!validInjection({ ...copied, id: "check", reason: "Check before asking" }))
+      throw new Error("Invalid check request.");
+    if (this.paused || !this.backend.check) return { problem: "unavailable" };
+    try {
+      return await this.backend.check(copied);
+    } catch {
+      // Backend errors may contain values; never serialize their text.
+      return { problem: "unavailable" };
+    }
   }
 
   /** Trusted consumers submit brokered operations; AXI still exposes no raw result reader. */
@@ -460,7 +510,10 @@ function controlVariable(name: string): boolean {
 }
 
 /** Closed command facade. Context is for organization only, never authority. */
-export type SecretsCommand = Pick<SecretRequests, "list" | "receipts" | "inject" | "cancel"> & {
+export type SecretsCommand = Pick<
+  SecretRequests,
+  "list" | "receipts" | "check" | "inject" | "cancel"
+> & {
   /** A lazy native owner may need to read its durable receipts before answering. */
   status: (request: string) => UseReceipt | undefined | Promise<UseReceipt | undefined>;
 };

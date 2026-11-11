@@ -48,6 +48,14 @@ export type RecipientFacts = {
   delivery: "environment";
 };
 
+/**
+ * Which check a recipient failed, as a typed fact the crew's pre-check names
+ * (docs/secrets.md, "The crew's pre-check"): the working folder, a variable a
+ * recipient keeps from the host, the program, or the interpreter a script's
+ * `#!` line names. Never a path or a value.
+ */
+export type RecipientRefusal = { refused: "folder" | "variable" | "program" | "interpreter" };
+
 export type LaunchResult = { exitCode: number } | { signal: string } | "changed" | "undeliverable";
 
 export type PreparedRecipient = {
@@ -90,25 +98,25 @@ export async function prepareRecipient(
   input: { argv: string[]; cwd: string; env: Record<string, string> },
   runDir: string,
   searchPath: string,
-): Promise<PreparedRecipient | undefined> {
-  if (!isAbsolute(input.cwd)) return undefined;
+): Promise<PreparedRecipient | RecipientRefusal> {
+  if (!isAbsolute(input.cwd)) return { refused: "folder" };
   if (
     Object.keys(input.env).some((name) => (RECIPIENT_VARIABLES as readonly string[]).includes(name))
   )
-    return undefined;
+    return { refused: "variable" };
   let cwd: string;
   try {
     cwd = await realpath(input.cwd);
-    if (!(await stat(cwd)).isDirectory()) return undefined;
+    if (!(await stat(cwd)).isDirectory()) return { refused: "folder" };
   } catch {
-    return undefined;
+    return { refused: "folder" };
   }
   const [program, ...rest] = input.argv;
-  if (!program) return undefined;
+  if (!program) return { refused: "program" };
   const source = program.includes("/")
     ? await regularFile(resolve(cwd, program))
     : await onSearchPath(program, searchPath);
-  if (!source) return undefined;
+  if (!source) return { refused: "program" };
 
   await mkdir(join(runDir, "inputs"), { recursive: true, mode: 0o700 });
   await mkdir(join(runDir, "out"), { recursive: true, mode: 0o700 });
@@ -134,7 +142,7 @@ export async function prepareRecipient(
   const executable = await bind("program", source, 0o500);
   const programPath = runs.get("program")?.path ?? source;
   const shebang = await scriptInterpreter(programPath, searchPath);
-  if (shebang === "unbound") return undefined;
+  if (shebang === "unbound") return { refused: "interpreter" };
   const interpreter = shebang
     ? {
         ...(await bind("interpreter", shebang.path, 0o500)),

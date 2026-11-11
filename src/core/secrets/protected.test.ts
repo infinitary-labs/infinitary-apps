@@ -608,6 +608,49 @@ describe("protected Secrets owner", () => {
     ]);
   });
 
+  // Intent: INF-1690's plan, piece 3, the captain's answer "With the crew. Every
+  // request is already checked before its card": the crew's check makes the
+  // same checks a request meets, names which one failed, and records,
+  // approves and runs nothing.
+  it("pre-checks a run with the same checks a request meets, naming the one that failed", async () => {
+    const cwd = project();
+    writeFileSync(join(cwd, "scripts", "unbound.sh"), "#!/no/such/interpreter\necho hi\n");
+    const { dir, backend, requests } = await owner();
+    await backend.putSecret("prod-deploy", "Production deploy token", Buffer.from("prod-invented"));
+    const run = ({ argv, env, cwd }: Injection) => ({ argv, env, cwd });
+    const ready = await requests.check(run(deploy(cwd)));
+    expect(ready).toEqual({
+      decision: "ask",
+      program: realpathSync("/bin/sh"),
+      files: [join(cwd, "scripts", "deploy-staging.sh")],
+      folder: cwd,
+    });
+    // Each failed check is named; an unknown secret and a hidden one answer alike.
+    const failed = await Promise.all([
+      requests.check({ ...run(deploy(cwd)), env: { TOKEN: "no-such-secret" } }),
+      requests.check({ ...run(deploy(cwd)), env: { TOKEN: "prod-deploy" } }),
+      requests.check({ ...run(deploy(cwd)), env: { LANG: "staging-deploy" } }),
+      requests.check({ ...run(deploy(cwd)), argv: ["scripts/deploy-production.sh"] }),
+      requests.check({ ...run(deploy(cwd)), argv: ["scripts/unbound.sh"] }),
+      requests.check({ ...run(deploy(cwd)), cwd: join(cwd, "no-such-folder") }),
+    ]);
+    expect(failed).toEqual(
+      ["secret", "secret", "variable", "program", "interpreter", "folder"].map((problem) => ({
+        problem,
+      })),
+    );
+    // Nothing was recorded, approved, kept or run.
+    expect(backend.history()).toEqual([]);
+    expect(requests.receipts()).toEqual([]);
+    expect(readdirSync(join(dir, "runs"))).toEqual([]);
+    expect(existsSync(join(cwd, "runs.log"))).toBe(false);
+
+    // A saved decision is what the check reports, and what inject then does.
+    await allow(backend, deploy(cwd));
+    expect(await requests.check(run(deploy(cwd)))).toMatchObject({ decision: "allow" });
+    expect(backend.history()).toEqual([]);
+  });
+
   it("answers an unknown reference, a hidden one and a mapping onto a base variable alike", async () => {
     const cwd = project();
     const { backend, requests } = await owner();

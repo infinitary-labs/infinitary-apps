@@ -13,7 +13,7 @@ import type { TaskFiles } from "../files/taskFiles";
 import { hostEnv } from "../hostEnv";
 import type { IntegrationAnswer, TaskIntegrations } from "../integrations";
 import { JobManager } from "../jobs/jobManager";
-import { SECRETS_ELSEWHERE_HELP } from "../secrets/commandWords";
+import { SECRETS_CHECK_WORDS, SECRETS_ELSEWHERE_HELP } from "../secrets/commandWords";
 import { type Injection, SECRETS_COMMAND, SecretRequests } from "../secrets/requests";
 import { forkChildProcess } from "../sql/forkChildProcess";
 import { BROWSER_COMMANDS } from "./browserCommands";
@@ -810,6 +810,64 @@ describe("the Secrets command's disposable operation proof", () => {
 
     const unavailable = channel.grant("ordinary-unmigrated-task", {});
     expect((await shell(unavailable, [], {}, SECRETS_COMMAND)).stdout).toContain("NO_TOOL");
+  });
+
+  // Intent: INF-1690's plan, piece 3, the captain's answer "With the crew. Every
+  // request is already checked before its card": the crew checks the exact run
+  // from its own shell's folder, hears which check failed in the host's words,
+  // and an inject that failed its checks says so instead of a bare refusal.
+  it("pre-checks the exact run from the shell's folder and names the failed check", async () => {
+    const channel = await openChannel();
+    const checked: unknown[] = [];
+    const owner = new SecretRequests({
+      list: async () => [{ ref: "s1", label: "Disposable staging", version: "1" }],
+      authenticate: async () => false,
+      check: async (input) => {
+        checked.push(input);
+        return input.argv[0] === "./missing.sh"
+          ? { problem: "program" }
+          : { decision: "ask", program: "/bin/sh", files: [], folder: input.cwd ?? "" };
+      },
+      prepare: async () => undefined,
+    });
+    const grant = channel.grant("checked-secrets", { secrets: owner });
+    const run = (args: string[]) => shell(grant, args, {}, SECRETS_COMMAND);
+    const check = (program: string) =>
+      run(["check", "--env", '{"SERVICE_TOKEN":"s1"}', "--", program]);
+    const missing = await check("./missing.sh");
+    expect(missing.exitCode).toBe(0);
+    expect(decode(missing.stdout)).toEqual({
+      check: { problem: "program" },
+      help: SECRETS_CHECK_WORDS.problem.program,
+    });
+    expect(decode((await check("/bin/sh")).stdout)).toEqual({
+      check: { decision: "ask", program: "/bin/sh", files: [], folder: process.cwd() },
+      help: SECRETS_CHECK_WORDS.decision.ask,
+    });
+    expect(checked).toEqual([
+      { env: { SERVICE_TOKEN: "s1" }, argv: ["./missing.sh"], cwd: process.cwd() },
+      { env: { SERVICE_TOKEN: "s1" }, argv: ["/bin/sh"], cwd: process.cwd() },
+    ]);
+    // A check asks no one and keeps nothing: no request exists afterwards.
+    expect(owner.receipts()).toEqual([]);
+    expect((await run(["check", "--env", '{"NODE_OPTIONS":"s1"}', "--", "/bin/sh"])).exitCode).toBe(
+      2,
+    );
+    const refused = await run([
+      "inject",
+      "--env",
+      '{"SERVICE_TOKEN":"s1"}',
+      "--reason",
+      "Check staging",
+      "--id",
+      "staging-1",
+      "--",
+      "./missing.sh",
+    ]);
+    expect(decode(refused.stdout)).toMatchObject({
+      receipt: { state: "unavailable" },
+      help: SECRETS_CHECK_WORDS.refused,
+    });
   });
 
   it("gives a task on another computer the catalog alone: list and show answer, every use is unavailable", async () => {

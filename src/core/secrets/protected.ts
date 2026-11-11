@@ -39,6 +39,8 @@ import {
   type PreparedUse,
   type SecretReference,
   type SecretsBackend,
+  type UseCheck,
+  type UseCheckInput,
   type UseReceipt,
   type UseState,
   validInjection,
@@ -251,7 +253,7 @@ export class ProtectedSecrets implements SecretsBackend {
       runDir,
       base.PATH ?? "",
     ).catch(() => undefined);
-    if (!recipient) {
+    if (!recipient || "refused" in recipient) {
       await rm(runDir, { recursive: true, force: true });
       return undefined;
     }
@@ -787,11 +789,53 @@ export class ProtectedSecrets implements SecretsBackend {
   }
 
   /**
-   * Metadata-only rehearsal: which rules a use would meet, without journaling,
-   * approving or running anything.
+   * The crew's pre-check (docs/secrets.md, "The crew's pre-check"): the same
+   * checks `prepare` makes before any card - every named secret, the working
+   * folder, the program, its interpreter and file arguments - and the saved
+   * decision the exact run meets, without journaling, approving or running
+   * anything. A failure names which check, never a path or a value; an
+   * unknown and a hidden secret answer alike.
+   */
+  async check(input: UseCheckInput): Promise<UseCheck> {
+    if (this.recovering || this.retired) return { problem: "unavailable" };
+    const ready = this.ready;
+    if (!ready || !(await this.custodyCurrent())) return { problem: "unavailable" };
+    if (!input.cwd) return { problem: "folder" };
+    if (!validInjection({ ...input, id: "check", reason: "Check before asking" }))
+      return { problem: "variable" };
+    const refs = [...new Set(Object.values(input.env))].sort();
+    for (const ref of refs)
+      if (!(await ready.vault.entry(ref))?.discoverable) return { problem: "secret" };
+    const runDir = join(this.options.dir, "runs", `check-${randomUUID()}`);
+    try {
+      const recipient = await prepareRecipient(
+        { argv: input.argv, cwd: input.cwd, env: input.env },
+        runDir,
+        this.options.environment().PATH ?? "",
+      ).catch(() => undefined);
+      if (!recipient) return { problem: "unavailable" };
+      if ("refused" in recipient) return { problem: recipient.refused };
+      const { facts } = recipient;
+      return {
+        decision: ready.authority.evaluate(refs, recipient.operation).effect,
+        program: facts.executable.path,
+        ...(facts.interpreter ? { interpreter: facts.interpreter.path } : {}),
+        files: facts.inputs.map((file) => file.path),
+        folder: facts.cwd,
+      };
+    } finally {
+      await rm(runDir, { recursive: true, force: true });
+    }
+  }
+
+  /**
+   * Metadata-only rehearsal for the `inf:secrets:rehearse` request: which rules
+   * a use would meet and its checked facts, without journaling, approving or
+   * running anything. No surface calls it since the crew's pre-check (`check`)
+   * took its place; the request goes with the contract's next major.
    */
   async rehearse(
-    input: Pick<Injection, "argv" | "env" | "cwd">,
+    input: UseCheckInput,
   ): Promise<{ evaluation: Evaluation; operation: string; facts: RecipientFacts } | undefined> {
     const ready = this.ready;
     if (
@@ -801,13 +845,13 @@ export class ProtectedSecrets implements SecretsBackend {
     )
       return undefined;
     const runDir = join(this.options.dir, "runs", `rehearsal-${randomUUID()}`);
-    const recipient = await prepareRecipient(
-      { argv: input.argv, cwd: input.cwd, env: input.env },
-      runDir,
-      this.options.environment().PATH ?? "",
-    ).catch(() => undefined);
     try {
-      if (!recipient) return undefined;
+      const recipient = await prepareRecipient(
+        { argv: input.argv, cwd: input.cwd, env: input.env },
+        runDir,
+        this.options.environment().PATH ?? "",
+      ).catch(() => undefined);
+      if (!recipient || "refused" in recipient) return undefined;
       const refs = [...new Set(Object.values(input.env))].sort();
       return {
         evaluation: ready.authority.evaluate(refs, recipient.operation),

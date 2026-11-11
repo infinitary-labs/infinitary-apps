@@ -24,6 +24,8 @@ import { askingView } from "../askedFromAView";
 import type { HostSecretsRecovery } from "../host";
 import { escapeCardText } from "../orchestrator/cardText";
 import {
+  brokerCheckedFacts,
+  checkedFacts,
   runWords,
   type SecretAsk,
   type SecretIdentities,
@@ -35,7 +37,6 @@ import { type BrokeredUse, type SecretBroker, validBrokeredUse } from "./brokers
 import type { HistoryItem } from "./journal";
 import type { ProtectedSecrets, ProtectedSecretsOptions } from "./protected";
 import { SHORT_READ_SECONDS, SHORT_READ_USES } from "./readAccess";
-import type { RecipientFacts } from "./recipient";
 import type { RecoveryFiles } from "./recoveryArchive";
 import {
   type EndedUseReceipt,
@@ -43,6 +44,7 @@ import {
   SECRET_REQUEST_LIFETIME_MS,
   SecretRequests,
   type SecretsCommand,
+  type UseCheckInput,
   type UseReceipt,
   validInjection,
 } from "./requests";
@@ -272,15 +274,9 @@ export class SecretsSettings {
       reason: script?.reason ?? broker?.reason ?? historical?.reason ?? "",
       recipient: script?.facts.executable.path ?? broker?.facts.label ?? historical?.program ?? "",
       facts: script
-        ? commandFacts(script.facts)
+        ? checkedFacts(script.facts, script.secrets)
         : broker
-          ? [
-              { name: "Destination", value: broker.facts.destination },
-              { name: "Operation", value: broker.facts.operation },
-              { name: "Result handling", value: broker.facts.result },
-              { name: "Read only", value: broker.facts.read ? "Yes" : "No" },
-              { name: "Exact request", value: broker.facts.inputDigest },
-            ]
+          ? brokerCheckedFacts(broker.facts)
           : [],
       // The record the use prepared, never a later lookup that could describe a replacement.
       secrets: (script?.secrets ?? broker?.secrets ?? []).map(
@@ -728,7 +724,7 @@ export class SecretsSettings {
     const owner = await this.ready();
     const result = await owner?.protected.rehearse(input);
     return result
-      ? { ...result.evaluation, operation: result.operation, facts: commandFacts(result.facts) }
+      ? { ...result.evaluation, operation: result.operation, facts: checkedFacts(result.facts, []) }
       : null;
   }
 
@@ -1046,6 +1042,11 @@ export class SecretsSettings {
           this.taskOf.get(receipt.request)?.has(context.task),
         ),
       list: async () => (await this.ready())?.protected.list() ?? [],
+      // The crew's pre-check: the same checks a request meets, with no card or record.
+      check: async (input: UseCheckInput) => {
+        const owner = await this.ready();
+        return owner ? owner.requests.check(structuredClone(input)) : { problem: "unavailable" };
+      },
       inject: async (input: Injection) => {
         const copied = structuredClone(input);
         if (!validInjection(copied)) throw new Error("Invalid injection request.");
@@ -1111,34 +1112,6 @@ function intentTask(intent: string): string | undefined {
   } catch {
     return undefined;
   }
-}
-
-function commandFacts(facts: RecipientFacts): { name: string; value: string }[] {
-  return [
-    { name: "Program", value: facts.executable.path },
-    { name: "Program digest", value: facts.executable.sha256 },
-    { name: "Arguments", value: JSON.stringify(facts.argv) },
-    { name: "Working folder", value: facts.cwd },
-    { name: "Delivery", value: "Private process environment; output stays private" },
-    { name: "Variable mapping", value: JSON.stringify(facts.env) },
-    ...(facts.interpreter
-      ? [
-          {
-            name: "Interpreter",
-            value: `${facts.interpreter.path} — ${facts.interpreter.sha256}${facts.interpreter.arg ? ` (${facts.interpreter.arg})` : ""}`,
-          },
-        ]
-      : []),
-    ...facts.inputs.map((input) => ({
-      name: `Input argument ${input.index}`,
-      value: `${input.path} — ${input.sha256}`,
-    })),
-    {
-      name: "Limit",
-      value:
-        "Only the listed program, interpreter and input files are checked. Files loaded later and the recipient's behavior are not isolated.",
-    },
-  ];
 }
 
 /** The reference format holds 64 characters; a made-up one keeps room for its number. */

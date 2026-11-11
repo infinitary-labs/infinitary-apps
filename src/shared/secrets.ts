@@ -492,6 +492,40 @@ export const SECRET_APPROVAL_CARD_WORDS = {
   stopped: "Saved. Infinitary no longer asks for this secret.",
 } as const;
 
+/**
+ * The checked facts under an approval card's "Everything that was checked",
+ * one line each (docs/secrets.md, "The crew's pre-check"): what was checked
+ * on the left, what it was checked to be on the right, in words, with a
+ * fingerprint's first characters where a file was bound by its content.
+ */
+export const SECRET_CHECKED_WORDS = {
+  program: "Program",
+  interpreter: "Interpreter",
+  file: "File",
+  arguments: "Arguments",
+  folder: "Working folder",
+  secrets: "Secrets go in as",
+  gets: "gets",
+  output: "Output",
+  outputValue: "Stays private. The crew hears only whether it finished and its exit code.",
+  limit: "Not checked",
+  limitValue: "Other files the program reads while it runs, and what it does with the secrets.",
+  /** A file this user could change runs from a copy taken when it was checked. */
+  copied: "runs from a private copy taken when it was checked",
+  /** A file nothing this user runs can change runs where it is. */
+  inPlace: "nothing you run can change it",
+  /** An argument naming a file is always read from a copy. */
+  input: "read from a private copy taken when it was checked",
+  fingerprint: "fingerprint",
+  destination: "Sends to",
+  operation: "Request",
+  result: "Result",
+  read: "Reads only",
+  readYes: "Yes, it changes nothing there",
+  readNo: "No, it may change something there",
+  request: "Exact request",
+} as const;
+
 export const SAVED_DECISION_WORDS = {
   removeTitle: "Remove this saved decision?",
   removeBody: "After this, the crew asks you again before using it.",

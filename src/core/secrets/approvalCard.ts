@@ -1,6 +1,12 @@
 import { secretName } from "@shared/secretNames";
-import { SECRET_APPROVAL_CARD_WORDS, type SecretsView } from "@shared/secrets";
+import {
+  SECRET_APPROVAL_CARD_WORDS,
+  SECRET_CHECKED_WORDS,
+  type SecretsView,
+} from "@shared/secrets";
 import { escapeCardText } from "../orchestrator/cardText";
+import type { BrokerFacts } from "./brokers";
+import type { RecipientFacts } from "./recipient";
 
 type Use = SecretsView["uses"][number];
 
@@ -29,9 +35,76 @@ export function runWords(run: SecretRun): string {
   const [, ...args] = run.argv;
   const folder = `${run.cwd.replace(/\/+$/, "")}/`;
   const shown = args.map((arg) => (arg.startsWith(folder) ? arg.slice(folder.length) : arg));
-  return [run.program, ...shown]
-    .map((arg) => (/^[^\s"'\\]+$/.test(arg) ? arg : JSON.stringify(arg)))
-    .join(" ");
+  return [run.program, ...shown].map(shellWord).join(" ");
+}
+
+/** One argument as a shell would read it back: bare when it needs no quotes. */
+function shellWord(arg: string): string {
+  return /^[^\s"'\\]+$/.test(arg) ? arg : JSON.stringify(arg);
+}
+
+/** How many of a fingerprint's characters a person reads; the whole one binds the run. */
+const FINGERPRINT_SHOWN = 12;
+
+/**
+ * What was checked before the card, one line each (INF-1690's plan, piece 3):
+ * the program, its interpreter and each file argument by real path, how each
+ * is bound and its fingerprint; the arguments, the working folder, which
+ * variable gets which secret, where output goes, and what is not checked.
+ */
+export function checkedFacts(
+  facts: RecipientFacts,
+  secrets: readonly { ref: string; label: string; environment?: string }[],
+): { name: string; value: string }[] {
+  const words = SECRET_CHECKED_WORDS;
+  const print = (sha256: string) => `${words.fingerprint} ${sha256.slice(0, FINGERPRINT_SHOWN)}`;
+  const bound = (file: { path: string; sha256: string; copied: boolean }) =>
+    `${file.path} · ${file.copied ? words.copied : words.inPlace} · ${print(file.sha256)}`;
+  const named = (ref: string) => {
+    const secret = secrets.find((one) => one.ref === ref);
+    if (!secret) return ref;
+    return secret.environment ? `${secret.label} (${secret.environment})` : secret.label;
+  };
+  return [
+    { name: words.program, value: bound(facts.executable) },
+    ...(facts.interpreter
+      ? [
+          {
+            name: words.interpreter,
+            value: `${bound(facts.interpreter)}${facts.interpreter.arg ? ` · ${facts.interpreter.arg}` : ""}`,
+          },
+        ]
+      : []),
+    ...facts.inputs.map((input) => ({
+      name: words.file,
+      value: `${input.path} · ${words.input} · ${print(input.sha256)}`,
+    })),
+    { name: words.arguments, value: facts.argv.map(shellWord).join(" ") },
+    { name: words.folder, value: facts.cwd },
+    {
+      name: words.secrets,
+      value: Object.entries(facts.env)
+        .map(([variable, ref]) => `${variable} ${words.gets} ${named(ref)}`)
+        .join("; "),
+    },
+    { name: words.output, value: words.outputValue },
+    { name: words.limit, value: words.limitValue },
+  ];
+}
+
+/** What was checked for a service's request: where it goes, what it asks, and what comes back. */
+export function brokerCheckedFacts(facts: BrokerFacts): { name: string; value: string }[] {
+  const words = SECRET_CHECKED_WORDS;
+  return [
+    { name: words.destination, value: facts.destination },
+    { name: words.operation, value: facts.operation },
+    { name: words.result, value: facts.result },
+    { name: words.read, value: facts.read ? words.readYes : words.readNo },
+    {
+      name: words.request,
+      value: `${words.fingerprint} ${facts.inputDigest.slice(0, FINGERPRINT_SHOWN)}`,
+    },
+  ];
 }
 
 /**
@@ -64,7 +137,8 @@ export function secretApprovalBody(
   const many = use.secrets.length > 2;
   const facts = use.facts
     .map(
-      (fact) => `<div><dt>${text(fact.name)}</dt><dd><code>${text(fact.value)}</code></dd></div>`,
+      // Each check reads as words; a path inside one wraps anywhere.
+      (fact) => `<div><dt>${text(fact.name)}</dt><dd>${text(fact.value)}</dd></div>`,
     )
     .join("");
   return `<style>
@@ -76,7 +150,7 @@ export function secretApprovalBody(
     .secret-request dl { margin:var(--space-2) 0 0; max-width:none; }
     .secret-request dl > div { display:grid; grid-template-columns:8rem minmax(0,1fr); gap:var(--space-2); margin-top:var(--space-2); }
     .secret-request dt { color:var(--fg-3); }
-    .secret-request dd { margin:0; }
+    .secret-request dd { margin:0; overflow-wrap:anywhere; }
     .secret-request-confirm { margin-top:var(--space-3); color:var(--fg-3); }
     @media (max-width:480px) { .secret-request dl > div { grid-template-columns:minmax(0,1fr); gap:var(--space-1); } }
   </style>

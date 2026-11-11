@@ -10,13 +10,15 @@ import { decode } from "@toon-format/toon";
 import { hostEnv } from "../../src/core/hostEnv";
 import { runWords } from "../../src/core/secrets/approvalCard";
 import { approvalCode } from "../../src/core/secrets/approvals";
-import { SECRETS_COMMAND, type UseReceipt } from "../../src/core/secrets/requests";
+import { SECRETS_CHECK_WORDS } from "../../src/core/secrets/commandWords";
+import { SECRETS_COMMAND, type UseCheck, type UseReceipt } from "../../src/core/secrets/requests";
 import { newReference } from "../../src/core/secrets/settings";
 import { secretName } from "../../src/shared/secretNames";
 import {
   decisionWords,
   SAVED_DECISION_WORDS,
   SECRET_APPROVAL_CARD_WORDS,
+  SECRET_CHECKED_WORDS,
   SECRET_DEVICE_WORDS,
   SECRET_STATE_WORDS,
   SECRETS_RECOVERY_WORDS,
@@ -87,7 +89,9 @@ const approvalTitle = (
 // recipient process; only platform custody and human confirmation stand in.
 // Completion: the recipient runs once, its output never reaches AXI, and the
 // saved card contains metadata rather than the value, and the secret's row names
-// the task that used it (INF-1690 piece 1). Prerequisites: Electron,
+// the task that used it (INF-1690 piece 1). The crew's check names a failed
+// check before any card, and the card lists what was checked (piece 3).
+// Prerequisites: Electron,
 // the built renderer and /bin/sh. No shared account, native store or network.
 const USING_TASK = { id: "secrets-ui-proof-task", title: "Check the staging deployment" };
 test("secure entry and an exact command meet at the app's trusted approval", async () => {
@@ -132,7 +136,7 @@ test("secure entry and an exact command meet at the app's trusted approval", asy
     }, USING_TASK);
     const [bin] = shell.path;
     if (!bin) throw new Error("The task channel supplied no command folder.");
-    const run = async (args: string[]) => {
+    const axi = async (args: string[]) => {
       const result = await promisify(execFile)(join(bin, SECRETS_COMMAND), args, {
         cwd,
         env: { ...hostEnv(), ...shell.env, PATH: [...shell.path, hostEnv().PATH].join(delimiter) },
@@ -140,8 +144,37 @@ test("secure entry and an exact command meet at the app's trusted approval", asy
       });
       expect(result.stdout).not.toContain(TOKEN);
       expect(result.stderr).not.toContain(TOKEN);
-      return (decode(result.stdout) as { receipt: UseReceipt }).receipt;
+      return decode(result.stdout) as { receipt: UseReceipt; check: UseCheck; help?: string };
     };
+    const run = async (args: string[]) => (await axi(args)).receipt;
+    // INF-1690's plan, piece 3: the crew checks the exact run before asking.
+    // A run that fails a check is named, and asking for it raises no card.
+    const mapping = JSON.stringify({ SERVICE_TOKEN: ENTERED });
+    expect(await axi(["check", "--env", mapping, "--", "./missing.sh"])).toEqual({
+      check: { problem: "program" },
+      help: SECRETS_CHECK_WORDS.problem.program,
+    });
+    const refused = await axi([
+      "inject",
+      "--env",
+      mapping,
+      "--reason",
+      REASON,
+      "--id",
+      "missing-proof",
+      "--",
+      "./missing.sh",
+    ]);
+    expect(refused).toMatchObject({
+      receipt: { state: "unavailable" },
+      help: SECRETS_CHECK_WORDS.refused,
+    });
+    // The check names the program by its real path: on Linux /bin/sh is a link to dash.
+    const shPath = realpathSync("/bin/sh");
+    expect(await axi(["check", "--env", mapping, "--", "/bin/sh", "check.sh"])).toEqual({
+      check: { decision: "ask", program: shPath, files: [join(cwd, "check.sh")], folder: cwd },
+      help: SECRETS_CHECK_WORDS.decision.ask,
+    });
     const args = [
       "inject",
       "--env",
@@ -166,6 +199,24 @@ test("secure entry and an exact command meet at the app's trusted approval", asy
     const body = cardBody(page, title);
     await expect(body.locator("body")).toContainText(REASON);
     await expect(body.locator("body")).not.toContainText(TOKEN);
+    // The card shows what was checked, in words, and asks the person to fill in nothing.
+    const checked = body.locator("details");
+    await expect(checked.locator("summary")).toHaveText(SECRET_APPROVAL_CARD_WORDS.checked);
+    // A line is found by its exact name: the Not checked line mentions the program too.
+    const line = (name: string) =>
+      checked
+        .locator("dl > div")
+        .filter({ has: page.locator("dt").getByText(name, { exact: true }) });
+    await expect(line(SECRET_CHECKED_WORDS.program)).toContainText(
+      `${shPath} · ${SECRET_CHECKED_WORDS.inPlace}`,
+    );
+    await expect(line(SECRET_CHECKED_WORDS.file)).toContainText(
+      `${join(cwd, "check.sh")} · ${SECRET_CHECKED_WORDS.input}`,
+    );
+    await expect(line(SECRET_CHECKED_WORDS.secrets)).toContainText(
+      `SERVICE_TOKEN ${SECRET_CHECKED_WORDS.gets} ${LABEL}`,
+    );
+    await expect(body.locator("input, textarea, select")).toHaveCount(0);
 
     await app.evaluate(() => {
       (globalThis as SecretsJourneyGlobal).secretsJourney.confirmation = false;

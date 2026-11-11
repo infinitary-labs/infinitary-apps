@@ -3,6 +3,7 @@ import {
   type Injection,
   SECRETS_COMMAND,
   type SecretReference,
+  type UseCheck,
   type UseReceipt,
   validInjection,
 } from "../secrets/requests";
@@ -12,6 +13,7 @@ import type { ChannelReply } from "./protocol";
 export type SecretsOp =
   | "secrets.list"
   | "secrets.show"
+  | "secrets.check"
   | "secrets.inject"
   | "secrets.status"
   | "secrets.cancel";
@@ -20,8 +22,10 @@ export type SecretsAnswer = {
   secret?: SecretReference;
   requests?: UseReceipt[];
   receipt?: UseReceipt;
+  /** The crew's pre-check: the failed check, or the checked run and its saved decision. */
+  check?: UseCheck;
   unavailable?: true;
-  /** Why a use is unavailable to a task on another computer; host words, never a backend's. */
+  /** Why a use is unavailable, or what a check means; host words, never a backend's. */
   help?: string;
 };
 export type SecretsReply = ChannelReply<SecretsAnswer>;
@@ -91,6 +95,23 @@ const COMMANDS: Record<string, AxiCommand<SecretsConnection>> = {
     run: async (args, connection) => {
       if (args.positional.length !== 1 || !args.positional[0]) invalid();
       return call(connection, "show", "secrets.show", { ref: args.positional[0] });
+    },
+  },
+  check: {
+    usage: "check --env '<JSON references>' -- <program> [args...]",
+    description:
+      "Check one exact program operation before asking: the same checks inject makes. Asks no one, records nothing and runs nothing.",
+    flags: { "--env": "value" },
+    run: async (args, connection) => {
+      let env: unknown;
+      try {
+        env = mapping(String(args.flags["--env"]));
+      } catch {
+        invalid();
+      }
+      const input = { env, argv: args.positional } as Injection;
+      if (!validInjection({ ...input, id: "check", reason: "Check before asking" })) invalid();
+      return call(connection, "check", "secrets.check", input);
     },
   },
   inject: {

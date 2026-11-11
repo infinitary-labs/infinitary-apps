@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "placed-claude-record-check",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "The app stays responsive while Claude crewmates on another computer take many steps",
+      "body": "When Claude crewmates ran long turns on another of your computers, the app could freeze for seconds at a time, even while you typed. It now checks those crewmates' finished steps without slowing down, however many steps a turn takes.",
+      "noPicture": "This fixes a freeze while crewmates work, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

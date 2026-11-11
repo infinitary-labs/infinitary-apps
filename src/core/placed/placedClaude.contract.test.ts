@@ -1,3 +1,5 @@
+import { cpSync, type PathLike, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { Type } from "typebox";
 import { afterEach, expect, it, vi } from "vitest";
 import { PI_CONTRACT_MODEL, piContractWorld } from "../../../tests/helpers/piContractWorld";
@@ -33,7 +35,29 @@ import { CrewTranscripts } from "../tasks/crewTranscript";
  * ever a crewmate's, so the crewmate's cases are the ones it passes.
  */
 
+/**
+ * Who lists a folder or reads a file's size through node:fs, told to a case
+ * that listens (INF-3705); every other case reads straight through.
+ */
+const fsReads = vi.hoisted(() => ({
+  listen: undefined as ((kind: "list" | "stat", path: string) => void) | undefined,
+}));
+
+vi.mock("node:fs", async (load) => {
+  const actual = await load<typeof import("node:fs")>();
+  const readdirSync = ((path: PathLike, options?: unknown) => {
+    fsReads.listen?.("list", String(path));
+    return actual.readdirSync(path, options as never);
+  }) as typeof actual.readdirSync;
+  const statSync = ((path: PathLike, options?: unknown) => {
+    fsReads.listen?.("stat", String(path));
+    return actual.statSync(path, options as never);
+  }) as typeof actual.statSync;
+  return { ...actual, readdirSync, statSync };
+});
+
 afterEach(async () => {
+  fsReads.listen = undefined;
   await placedContractCleanup();
   await scriptedClaudeCleanup();
 });
@@ -539,6 +563,136 @@ it("keeps copying after a placed Claude call ends until its late result reaches 
     expect(events).not.toContain("turn_end");
   } finally {
     writeResult();
+    await session.abort();
+    await asking;
+    session.dispose();
+    await session.closed();
+    sent.mockRestore();
+  }
+});
+
+// INF-3705: Claude crewmates running long turns on another computer froze
+// the home's main thread: after every copy of the record, the check for a
+// call still missing its result listed the record's folder and read the size
+// of every file in it, staged skill copies included, once for each call the
+// turn had ended.
+it("reads a placed Claude record's own files once per check however many calls its turn ended", async () => {
+  const CALLS = 200;
+  let now = 0;
+  const scheduled = new Set<{ due: number; run: () => void }>();
+  const schedule = (ms: number, run: () => void) => {
+    expect(scheduled.size).toBe(0);
+    const timer = { due: now + ms, run };
+    scheduled.add(timer);
+    return () => {
+      scheduled.delete(timer);
+    };
+  };
+  const fireNext = () => {
+    const timer = scheduled.values().next().value;
+    if (!timer) return;
+    scheduled.delete(timer);
+    now = Math.max(now, timer.due);
+    timer.run();
+  };
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let calls = 0;
+  const inner = await scriptedClaudeWorld({
+    // The model goes on calling until CALLS calls ended, then thinks on.
+    beforeTool: () => (calls++ < CALLS ? Promise.resolve() : held),
+    // The last call's result reaches the transcript late, so the check holds the loop.
+    beforeResultRecord: () => (calls === CALLS ? held : Promise.resolve()),
+  });
+  const world = await placedContractWorld(inner, { now: () => now, schedule });
+  const { tasks, paths, devices } = world.placement;
+  // The working copy's own skills, which the session stages beside its record there.
+  cpSync(
+    join(process.cwd(), ".claude", "skills", "infinitary-design"),
+    join(world.homeDir, ".claude", "skills", "infinitary-design"),
+    { recursive: true },
+  );
+  const recordDir = crewmateSessionsDir(paths, CREWMATE_TASK);
+  const stagedDir = join(recordDir, "staged");
+  // What the check after a copy reads: whatever was read since the copy's last answer.
+  let sinceAnswer = { listings: 0, stagedReads: 0 };
+  fsReads.listen = (kind, path) => {
+    if (kind === "list" && path === recordDir) sinceAnswer.listings += 1;
+    if (kind === "stat" && path.startsWith(stagedDir)) sinceAnswer.stagedReads += 1;
+  };
+  const ask = devices.ask.bind(devices);
+  let copying = 0;
+  let copies = 0;
+  const sent = vi.spyOn(devices, "ask").mockImplementation(async (device, channel, args) => {
+    if (channel === "inf:session:copy") copying += 1;
+    try {
+      const answer = await ask(device, channel, args);
+      if (channel === "inf:session:copy") {
+        copies += 1;
+        sinceAnswer = { listings: 0, stagedReads: 0 };
+      }
+      return answer;
+    } finally {
+      if (channel === "inf:session:copy") copying -= 1;
+    }
+  });
+  const session = await world.factory.open({
+    ...crewmateSessionSpec(
+      paths,
+      {
+        taskId: CREWMATE_TASK,
+        machineId: world.machine,
+        cwd: world.homeDir,
+        model: world.model,
+      },
+      world.binding,
+    ),
+    tools: [
+      boundTool({
+        name: CONTRACT_TOOL,
+        label: "Look up",
+        description: "Look the contract answer up.",
+        parameters: Type.Object({}),
+        run: async () => ({ text: "Looked up." }),
+      }),
+    ],
+  });
+  tasks.turns.setSessionFile(CREWMATE_TASK, session.sessionId);
+  const events: string[] = [];
+  session.subscribe((event) => {
+    events.push(event.type);
+  });
+  const count = (type: string) => events.filter((each) => each === type).length;
+  /** One live copy and the check after it: done once the check armed the next copy. */
+  const copyAndCheck = async () => {
+    const before = copies;
+    fireNext();
+    await expect
+      .poll(() => copies > before && copying === 0 && scheduled.size === 1, { timeout: 5_000 })
+      .toBe(true);
+  };
+  inner.answer("loop");
+  const asking = session.prompt("Run the footer check on Mac mini, file by file.");
+  try {
+    await expect
+      .poll(() => ({ ended: count("tool_end"), requests: count("request_started") }), {
+        timeout: 5_000,
+      })
+      .toEqual({ ended: CALLS, requests: CALLS + 1 });
+    await expect.poll(() => scheduled.size).toBe(1);
+    // The first copy brings the record and its staged skills home.
+    await copyAndCheck();
+    expect(readdirSync(stagedDir, { recursive: true, encoding: "utf8" })).toContainEqual(
+      expect.stringMatching(/infinitary-design\/SKILL\.md$/),
+    );
+    expect(events).not.toContain("turn_end");
+    // Nothing more happens there, so this copy's check is all the next one reads.
+    await copyAndCheck();
+    expect({ ...sinceAnswer }).toEqual({ listings: 1, stagedReads: 0 });
+  } finally {
+    release();
     await session.abort();
     await asking;
     session.dispose();

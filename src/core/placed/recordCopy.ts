@@ -1,5 +1,6 @@
 import {
   closeSync,
+  type Dirent,
   ftruncateSync,
   mkdirSync,
   openSync,
@@ -79,21 +80,27 @@ export class RecordCopy {
   }
 
   /**
-   * This Mac's copy holds a Claude call but not yet its result. The client
-   * reports a call's end as it streams the result, and can write that
-   * result to its transcript afterwards, even after its next request has
-   * started, so a finished call can lack its result here until a later copy.
+   * This Mac's copy holds one of these Claude calls but not yet its result.
+   * The client reports a call's end as it streams the result, and can write
+   * that result to its transcript afterwards, even after its next request
+   * has started, so a finished call can lack its result here until a later
+   * copy. The copy is read once for the whole set, however many calls a
+   * turn has ended (INF-3705).
    */
-  awaitsResult(callId: string): boolean {
+  awaitsAnyResult(callIds: ReadonlySet<string>): boolean {
+    if (callIds.size === 0) return false;
     this.readCalls();
-    return this.calls.has(callId) && !this.results.has(callId);
+    for (const id of callIds) if (this.calls.has(id) && !this.results.has(id)) return true;
+    return false;
   }
 
-  /** Reads the calls and results the copy took in since the last read. */
+  /**
+   * Reads the calls and results the copy took in since the last read, from
+   * the record's own transcripts at the top of its folder, never the skills
+   * a session staged beside them.
+   */
   private readCalls(): void {
-    for (const { name, offset } of copiedFiles(this.dir)) {
-      if (!name.endsWith(".jsonl")) continue;
-      const path = join(this.dir, ...name.split("/"));
+    for (const { path, offset } of transcripts(this.dir)) {
       const read = this.callsReadTo.get(path) ?? 0;
       // A file copied whole again shorter is read again from its start.
       const from = offset < read ? 0 : read;
@@ -224,6 +231,25 @@ export class RecordCopy {
     );
     return run;
   }
+}
+
+/** The transcripts at the top of this Mac's copy, by their paths, with where each ends. */
+function transcripts(dir: string): { path: string; offset: number }[] {
+  let entries: Dirent[];
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  return entries.flatMap((entry) => {
+    if (!entry.isFile() || !entry.name.endsWith(".jsonl")) return [];
+    const path = join(dir, entry.name);
+    try {
+      return [{ path, offset: statSync(path).size }];
+    } catch {
+      return [];
+    }
+  });
 }
 
 /** Every file of this Mac's copy, by its path under the record's folder, with where it ends. */

@@ -1488,8 +1488,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
           following: () => !placed.closed && heldSession(placed) !== undefined,
           callOpen: () =>
             placed.spec?.binding.backend === "claude" &&
-            (placed.openCalls.size > 0 ||
-              [...placed.endedCalls].some((id) => placed.record.awaitsResult(id))),
+            (placed.openCalls.size > 0 || placed.record.awaitsAnyResult(placed.endedCalls)),
         },
         crewmateSessionsDir(this.options.paths, task),
       ),

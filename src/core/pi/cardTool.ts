@@ -645,8 +645,50 @@ export function riskDeclarationOf(raw: unknown): RiskDeclaration {
  * (INF-2744). The tool says it for the call's shape; the home says it for a
  * copy that differs from the story it holds (`CrewmateCards`).
  */
-export const SAVED_STORY_REFUSAL =
+const SAVED_STORY_REFUSAL =
   "A saved-story merge card gives presentation and one merge action for your task's current change, without body, risk, required_actions or browser controls; those facts come from its saved revision.";
+
+/**
+ * The saved-story refusal naming each field it refused (INF-3717 piece 1),
+ * so a crewmate drops exactly those rather than guessing.
+ */
+export function savedStoryRefusal(refused: readonly string[]): string {
+  return refused.length
+    ? `${SAVED_STORY_REFUSAL} Refused: ${refused.join(", ")}.`
+    : SAVED_STORY_REFUSAL;
+}
+
+/** Each field a saved-story merge card's call passed that the card does not take. */
+function savedStoryRefusedFields(params: EmitCardParams, note = false): string[] {
+  const actions = params.actions ?? [];
+  const merge = actions.find((action) => action.effect?.kind === "merge");
+  const effect = merge?.effect as { review?: string } | undefined;
+  return [
+    ...(note
+      ? []
+      : actions.length !== 1
+        ? [`actions (${actions.length} given; one merge action only)`]
+        : !merge
+          ? ["actions (the one action must merge)"]
+          : []),
+    ...(effect?.review ? ["review on the merge effect (it merges your current change)"] : []),
+    ...(
+      [
+        "body",
+        "body_file",
+        "browser_button",
+        "browser_handoff",
+        "browser_page",
+        "asking",
+        "design_only",
+        "continues",
+      ] as const
+    ).filter((field) => {
+      const value = params[field];
+      return field === "body" || field === "body_file" ? value !== undefined : Boolean(value);
+    }),
+  ];
+}
 
 /**
  * The copies of a saved story's risk and required actions a merge card's
@@ -671,7 +713,14 @@ function savedStoryCopies(params: EmitCardParams): {
       ],
     };
   } catch {
-    throw new Error(SAVED_STORY_REFUSAL);
+    throw new Error(
+      savedStoryRefusal([
+        ...(params.risk !== undefined ? ["risk (does not read as a risk declaration)"] : []),
+        ...(params.required_actions !== undefined
+          ? ["required_actions (do not read as required actions)"]
+          : []),
+      ]),
+    );
   }
 }
 
@@ -707,18 +756,10 @@ async function emitCard(
     // the captain's "we should not take any guesses here"). A body is
     // refused here as before: the story's body carries media names the home
     // mints as it shows the card, so no copy could match it.
-    if (
-      (!merges && !(options.contributionNotes && actions.length === 0)) ||
-      params.body !== undefined ||
-      params.body_file !== undefined ||
-      params.browser_button ||
-      params.browser_handoff ||
-      params.browser_page ||
-      params.asking ||
-      params.design_only ||
-      params.continues
-    )
-      throw new Error(SAVED_STORY_REFUSAL);
+    // A story note with no action is allowed where contribution notes are.
+    const note = options.contributionNotes === true && actions.length === 0;
+    const refused = savedStoryRefusedFields(params, note);
+    if ((!merges && !note) || refused.length) throw new Error(savedStoryRefusal(refused));
     const copies = savedStoryCopies(params);
     const id = parseStableCardId(params.id);
     const shown = await options.onCard({

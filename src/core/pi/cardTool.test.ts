@@ -309,21 +309,33 @@ describe("createEmitCardTool", () => {
       actions: params.actions,
       requiredActions: [],
     });
-    // A body is refused as before, and so is a risk that does not read.
-    for (const competing of [
-      { body: "<p>The story.</p>" },
-      { body_file: "story.html" },
-      { risk: {} },
-      { browser_button: "Try it" },
-    ])
+    // A body is refused as before, and so is a risk that does not read;
+    // each refusal names the field it refused (INF-3717 piece 1).
+    for (const [competing, named] of [
+      [{ body: "<p>The story.</p>" }, "Refused: body."],
+      [{ body_file: "story.html" }, "Refused: body_file."],
+      [{ risk: {} }, "Refused: risk (does not read as a risk declaration)."],
+      [{ browser_button: "Try it" }, "Refused: browser_button."],
+      [{ body: "<p>The story.</p>", asking: true }, "Refused: body, asking."],
+    ] as const) {
       await expect(tool.execute("t3", { ...params, ...competing })).rejects.toThrow(/without body/);
-    for (const actions of [
-      [{ id: "reply", label: "Reply", default: true }],
-      [{ id: "discard", effect: { kind: "settle", mode: "discard" } }],
-      [...params.actions, { id: "reply", label: "Reply" }],
-      [...params.actions, { ...params.actions[0], id: "merge-again" }],
-    ]) {
+      await expect(tool.execute("t3", { ...params, ...competing })).rejects.toThrow(named);
+    }
+    for (const [actions, named] of [
+      [[{ id: "reply", label: "Reply", default: true }], "actions (the one action must merge)"],
+      [
+        [{ id: "discard", effect: { kind: "settle", mode: "discard" } }],
+        "actions (the one action must merge)",
+      ],
+      [[...params.actions, { id: "reply", label: "Reply" }], "actions (2 given"],
+      [[...params.actions, { ...params.actions[0], id: "merge-again" }], "actions (2 given"],
+      [
+        [{ ...params.actions[0], effect: { kind: "merge", after: "close", review: "mr1" } }],
+        "review on the merge effect",
+      ],
+    ] as const) {
       await expect(tool.execute("t4", { ...params, actions })).rejects.toThrow(/one merge action/);
+      await expect(tool.execute("t4", { ...params, actions })).rejects.toThrow(named);
     }
     expect(onCard).toHaveBeenCalledTimes(2);
   });

@@ -34,7 +34,7 @@ import {
 import { NEVER_SENT_AGAIN, type WriteAsk } from "@shared/writeAsk";
 import { crewmateCardPicturesDir } from "../paths";
 import { lintCrewmateCard } from "../pi/cardLint";
-import { SAVED_STORY_REFUSAL } from "../pi/cardTool";
+import { savedStoryRefusal } from "../pi/cardTool";
 import { verifyKeptValidationEvidence } from "../pi/validationEvidence";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import {
@@ -244,13 +244,17 @@ export class CrewmateCards {
           // competes with it and is refused (INF-3060, the captain's "we
           // should not take any guesses here"). Inside the try, so the story
           // media copied for this card go with the refusal.
-          if (
-            (input.riskDeclaration !== undefined &&
-              !isDeepStrictEqual(input.riskDeclaration, story.riskDeclaration)) ||
-            (input.requiredActions !== undefined &&
-              !isDeepStrictEqual(input.requiredActions, story.requiredActions ?? []))
-          )
-            throw new Error(SAVED_STORY_REFUSAL);
+          const differs = [
+            ...(input.riskDeclaration !== undefined &&
+            !isDeepStrictEqual(input.riskDeclaration, story.riskDeclaration)
+              ? ["risk (differs from the saved revision's)"]
+              : []),
+            ...(input.requiredActions !== undefined &&
+            !isDeepStrictEqual(input.requiredActions, story.requiredActions ?? [])
+              ? ["required_actions (differ from the saved revision's)"]
+              : []),
+          ];
+          if (differs.length) throw new Error(savedStoryRefusal(differs));
           const ledger = this.options.tasks.get(task.id)?.delivery?.presentation;
           const head = ledger?.completion?.head ?? ledger?.published?.head;
           if (!head)

@@ -617,6 +617,8 @@ Opening the task’s own change, selecting its own pull request or naming its ow
 The task's single pull request fields then name its own pull request at its own head, keeping none of the other pull request's number, head or checks; opening it names none until the opened pull request is noted.
 Every change id a reading reports is the id of the change it read, so passing it back selects that same change; a change whose review the capped list no longer keeps is read again by its number, never swapped for the current one.
 `open_change` with `branch` opens or updates the pull request of an existing pushed branch the captain asked for, without moving its head, and that pull request becomes the current change (INF-2184).
+`prepare_change`, `open_change` with no `branch` and the saved-story merge card all act on the branch the working copy has checked out, and the task's own branch only when none is (INF-3717).
+`open_change` makes the change it opened or answered current only once it succeeds, so a refused call leaves the current change as it was; the merge card makes the change whose story it shows current, since its merge acts on the current change.
 A crewmate on a computer that runs work does the same with a branch it checked out there: the home reads its checkout for the story and brings that branch home to read it (`docs/helper.md`, "Reading its branch here").
 
 ### A change in another project
@@ -1224,6 +1226,8 @@ An uncertain opening is read first, then an explicit `recovery.retryOpening` can
 That deliberate retry also permits preparing a newer version while retaining the prior opening receipt, so a late first response or duplicate-opening refusal is reconciled rather than mistaken for a legacy PR.
 If an uncertain replacement left the exact last published region in place, the host restores that confirmed state and a deliberate later `open_change` retries its idempotent replacement.
 A closed PR stops publication without opening another; the captain may finish the task or deliberately reopen that same PR where the project lives.
+Each refusal on the way to the merge card names the one thing missing (INF-3717): an older story revision names the branch read and its newest revision, a merge card with no open pull request names the checked-out branch, a saved-story merge card names each field it refused, and live proof that is not accepted names which part fails and who supplies it - no run of the current scenarios, no review at this version, code not cleared, coverage incomplete, or a review verdict that differs from the run's.
+Only proof accepted after the story was prepared asks for the story to be prepared again.
 A task whose pull request was opened before saved stories and has since closed forgets it: its next `prepare_change` and `open_change` start a saved story like any new task, and only a pull request still open for the branch is refused as predating them.
 One that merged outside the app stops there like a merged published story: nothing more is opened for it.
 Hosted files can outlive a failed or abandoned opening, and local cleanup never deletes them.

@@ -1081,6 +1081,129 @@ describe("shared story delivery boundaries", () => {
     expect(at.tasks.delivery.changePresentation("ab12cd34", "fm/task-ab12cd34")).toEqual(own);
   });
 
+  // INF-3717 piece 1, from INF-3472's night: the task's own pull request had
+  // merged and the crewmate delivered from another branch it checked out.
+  const phone = "fm/task-212a7809-phone";
+  async function deliveringFromAnotherBranch() {
+    const at = await saved("github", async () => ({ branch: phone, head: original }));
+    // The project's origin names where its pull requests are selected.
+    const repoId = at.tasks.get("ab12cd34")?.repoId as string;
+    at.repos.configure(repoId, { origin: "https://github.com/x/y.git" });
+    const story = at.tasks.delivery.changePresentation("ab12cd34")
+      ?.revisions[0] as ChangePresentation;
+    at.bringBranchHome.mockResolvedValue("");
+    at.readHead.mockResolvedValue(original);
+    // The own pull request merged: the host holds only what was opened since.
+    at.forge.change = null;
+    Object.assign(at.forge, {
+      branchHead: async () => original,
+      changeFor: async (branch: string) => {
+        at.forge.calls.push(`changeFor ${branch}`);
+        const change = at.forge.change;
+        return change && change.branch === branch ? { ...change } : null;
+      },
+      openChange: async (input: { branch: string; title: string; body: string }) => {
+        at.forge.calls.push(`openChange ${input.branch} ${input.title}`);
+        at.forge.change = {
+          ...at.forge.opened,
+          number: 1413,
+          url: "https://github.com/x/y/pull/1413",
+          branch: input.branch,
+          title: input.title,
+          body: input.body,
+          headSha: original,
+        };
+        return at.forge.change;
+      },
+    });
+    return { at, story };
+  }
+
+  // The story call, the publish call naming no branch and the card call all
+  // act on the checked-out branch, and a refused publish call leaves the
+  // current change as it was, so the card comes up on the first try.
+  it("shows the card on the first try when the own pull request merged and the checked-out branch's is open (INF-3472's shape)", async () => {
+    const { at, story } = await deliveringFromAnotherBranch();
+    // Two story revisions for the checked-out branch; the own branch's newest stays 1.
+    expect(await at.service.publication.preparePresentation("ab12cd34", story)).toContain(
+      "Prepared presentation 1 ",
+    );
+    expect(
+      await at.service.publication.preparePresentation("ab12cd34", {
+        ...story,
+        why: ["Keep the approved explanation, said again."],
+      }),
+    ).toContain("Prepared presentation 2 ");
+    const opened = await at.service.publication.open("ab12cd34", {
+      title: "feat: share the story",
+      presentation: 2,
+    });
+    expect(opened).toContain(`#1413 https://github.com/x/y/pull/1413 for ${phone}.`);
+    expect(at.tasks.get("ab12cd34")?.delivery?.checkTarget).toMatchObject({
+      branch: phone,
+      number: 1413,
+    });
+    // An older revision is refused with the branch it read and that branch's
+    // newest, and the refusal leaves the current change where it was.
+    const stale = await at.service.publication.open("ab12cd34", {
+      title: "feat: share the story",
+      presentation: 1,
+    });
+    expect(stale).toContain(
+      `Use the newest prepared story revision: the newest for ${phone} is revision 2, not 1.`,
+    );
+    expect(at.tasks.get("ab12cd34")?.delivery?.checkTarget).toMatchObject({
+      branch: phone,
+      number: 1413,
+    });
+    // The card call reads the same change and shows its story.
+    const shown = await at.service.publication.completionPresentation("ab12cd34", 2);
+    expect(shown).toMatchObject({ revision: 2, title: story.title });
+    expect(at.tasks.get("ab12cd34")?.delivery?.presentation?.branch).toBe(phone);
+  });
+
+  it("makes the checked-out branch's change current when the card call shows its story (INF-3717)", async () => {
+    const { at, story } = await deliveringFromAnotherBranch();
+    expect(await at.service.publication.preparePresentation("ab12cd34", story)).toContain(
+      "Prepared presentation 1 ",
+    );
+    expect(
+      await at.service.publication.open("ab12cd34", {
+        title: "feat: share the story",
+        presentation: 1,
+      }),
+    ).toContain(`#1413 https://github.com/x/y/pull/1413 for ${phone}.`);
+    // A later check_change(pull) selected another pull request.
+    const release: MergeReview = {
+      id: "mrrelease57",
+      kind: "github",
+      host: "github.com",
+      owner: "x",
+      name: "y",
+      number: 57,
+      headSha: repaired,
+      base: "main",
+      branch: "release-please--branches--main",
+      method: "squash",
+      title: "chore(main): release 0.2.0",
+      at: 2,
+    };
+    seedDelivery(at.tasks, "ab12cd34", { checkTarget: release, prNumber: 57 });
+    const shown = await at.service.publication.completionPresentation("ab12cd34", 1);
+    expect(shown.revision).toBe(1);
+    expect(at.tasks.get("ab12cd34")?.delivery?.checkTarget).toMatchObject({
+      branch: phone,
+      number: 1413,
+    });
+  });
+
+  it("names the checked-out branch when the card call finds no open pull request for it (INF-3717)", async () => {
+    const { at } = await deliveringFromAnotherBranch();
+    await expect(at.service.publication.completionPresentation("ab12cd34", 1)).rejects.toThrow(
+      `no open pull request was found for ${phone}, the branch the working copy has checked out`,
+    );
+  });
+
   it("stops, opening nothing, when the recorded pre-story PR merged outside the app (INF-92 F3)", async () => {
     const at = await saved();
     const story = at.tasks.delivery.changePresentation("ab12cd34")

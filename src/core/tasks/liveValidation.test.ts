@@ -198,6 +198,42 @@ describe("Careful's accepted live-validation contract", () => {
     expect(run(newEvidence, head, false, "run-2").runs).toHaveLength(2);
   });
 
+  // INF-3717 piece 1: a refusal names the one part of acceptance missing
+  // and who supplies it, so a crewmate stops preparing the story again.
+  it("names which part of acceptance is missing and who supplies it", () => {
+    const missing = (state: LiveValidation) => acceptedValidation(state, head).missing;
+    const planned = plan();
+    expect(missing(planned)).toBe(
+      "No live validation run is recorded; the crewmate runs the current scenarios and records the run.",
+    );
+    const observed = run(planned);
+    expect(missing(observed)).toBe(
+      "No independent review of run 1 at this version is recorded; the reviewer supplies it, through the first mate.",
+    );
+    expect(acceptedValidation(observed, later).missing).toContain(
+      "The latest run is at another version",
+    );
+    const finding = {
+      id: "f1",
+      severity: "error",
+      text: "Focus is lost.",
+      action: "auto-fix",
+    } as const;
+    expect(missing(review(observed, head, { code: "findings", findings: [finding] }))).toContain(
+      "did not clear the code (code: findings); the crewmate answers its findings",
+    );
+    expect(
+      missing(review(observed, head, { coverage: "missing", omitted: ["Frame isolation."] })),
+    ).toContain("found coverage incomplete (omitted: Frame isolation.)");
+    // INF-3472's stall: the proof read said go while the run said otherwise.
+    const differs = review(observed);
+    differs.reviews = differs.reviews.map((item) => ({ ...item, verdict: "inconclusive" }));
+    expect(missing(differs)).toBe(
+      "The review's verdict (inconclusive) differs from the run's (go); the reviewer re-reads the run and records the verdict it supports, or the crewmate runs the scenarios again.",
+    );
+    expect(acceptedValidation(review(observed), head)).not.toHaveProperty("missing");
+  });
+
   // INF-1824 (the captain's answer to its question 5): an accepted gap ends
   // only when that check runs and fails, or leaves the list of checks.
   it("keeps captain permission separate and carries an accepted gap through rewording, later versions and restart", () => {

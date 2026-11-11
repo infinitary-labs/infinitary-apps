@@ -401,6 +401,19 @@ export function checkValidationRun(
   return undefined;
 }
 /**
+ * Which part of a review holds acceptance, and who supplies it (INF-3717
+ * piece 1): a refusal names the one thing missing, never the whole rule.
+ */
+function reviewGap(review: ValidationReview | undefined, run: ValidationRun): string {
+  if (!review)
+    return `No independent review of run ${run.revision} at this version is recorded; the reviewer supplies it, through the first mate.`;
+  if (review.code !== "clear")
+    return `The review at this version did not clear the code (code: ${review.code}); the crewmate answers its findings and the reviewer reviews again.`;
+  if (review.coverage !== "complete" || review.omitted.length)
+    return `The review at this version found coverage incomplete${review.omitted.length ? ` (omitted: ${review.omitted.join("; ")})` : ""}: ${review.coverageReason} The crewmate covers it and the reviewer reviews again.`;
+  return `The review's verdict (${review.verdict}) differs from the run's (${run.verdict}); the reviewer re-reads the run and records the verdict it supports, or the crewmate runs the scenarios again.`;
+}
+/**
  * Proof accepted at a version (INF-2672): the latest run of the current
  * scenarios, judged by an independent review at that version. The run may
  * sit at an earlier version: a review at this version that judged it is
@@ -410,10 +423,16 @@ export function checkValidationRun(
 export function acceptedValidation(
   state: LiveValidation | undefined,
   head: string | undefined,
-): { ready: boolean; label?: string; reason: string } {
+): { ready: boolean; label?: string; reason: string; missing?: string } {
   const run = latestValidationRun(state);
   if (!state || !run || !head || run.scenarioRevision !== state.scenarioRevision)
-    return { ready: false, reason: "This version needs live validation of the current scenarios." };
+    return {
+      ready: false,
+      reason: "This version needs live validation of the current scenarios.",
+      missing: !run
+        ? "No live validation run is recorded; the crewmate runs the current scenarios and records the run."
+        : "The latest run does not cover the current scenarios; the crewmate runs them and records the run.",
+    };
   const review = state.reviews.findLast(
     (item) => item.head === head && item.revision === run.revision,
   );
@@ -422,6 +441,8 @@ export function acceptedValidation(
       ready: false,
       reason:
         "This version needs live validation of the current scenarios, or an independent review that the earlier run still reaches it.",
+      missing:
+        "The latest run is at another version and no review at this version judged it; the crewmate runs the scenarios again, or the reviewer reviews that the earlier run still reaches this version.",
     };
   if (
     !review ||
@@ -433,6 +454,7 @@ export function acceptedValidation(
     return {
       ready: false,
       reason: "This version and evidence need an independent review of coverage and proof.",
+      missing: reviewGap(review, run),
     };
   if (
     run.completion !== "complete" ||
@@ -442,18 +464,25 @@ export function acceptedValidation(
     return {
       ready: false,
       reason: "Interrupted, unknown or failed validation cannot be accepted.",
+      missing: `The latest run is ${run.completion !== "complete" ? run.completion : run.verdict === "no-go" ? "no-go" : "a failure"}; the crewmate fixes the cause and runs the scenarios again.`,
     };
   if (run.verdict === "no-surface")
     return { ready: true, label: LIVE_VALIDATION_WORDS.noSurface, reason: review.reason };
   let exception = false;
   for (const scenario of state.scenarios) {
     const observation = run.observations.find((item) => item.scenario === scenario.id);
-    if (!observation) return { ready: false, reason: "A scenario has no observation." };
+    if (!observation)
+      return {
+        ready: false,
+        reason: "A scenario has no observation.",
+        missing: `Scenario ${scenario.id} has no observation in the latest run; the crewmate runs it.`,
+      };
     if (scenario.importance === "supplementary" || demonstrated(observation)) continue;
     if (!gapPermission(state, scenario, observation))
       return {
         ready: false,
         reason: "Required proof is missing without the captain's exception for this specific gap.",
+        missing: `Scenario ${scenario.id} has no live proof and no exception for its gap; the crewmate drives it live, or asks the captain for an exception.`,
       };
     exception = true;
   }
@@ -461,6 +490,8 @@ export function acceptedValidation(
     return {
       ready: false,
       reason: "An empty scenario set needs an accepted no-running-surface reason.",
+      missing:
+        "No scenario is planned and no run says there is no running surface; the crewmate plans scenarios or records a no-surface run for review.",
     };
   return {
     ready: true,

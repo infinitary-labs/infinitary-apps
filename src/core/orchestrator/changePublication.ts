@@ -206,11 +206,17 @@ export class ChangePublication {
     const located = this.context.locate(taskId, "open");
     if ("said" in located) throw new Error(located.said);
     if (!this.options.presentations) throw new Error("Saved change stories are unavailable.");
-    // The story is on the task's current change, whichever branch it is on (INF-2490).
-    const change = await located.forge.changeFor(
-      currentChange(located.record.delivery, located.branch).branch,
-    );
-    if (!change) throw new Error("The story's pull request is not open.");
+    // The story is on the change of the branch the working copy has checked
+    // out, as prepare_change and open_change read it (INF-3717 piece 1);
+    // with none checked out, the task's current change (INF-2490).
+    const selected = currentChange(located.record.delivery, located.branch);
+    const checkedOut = await this.presentationBranch(taskId).catch(() => undefined);
+    const branch = checkedOut ?? selected.branch;
+    const change = await located.forge.changeFor(branch);
+    if (!change)
+      throw new Error(
+        `The story's pull request is not open: no open pull request was found for ${branch}${checkedOut ? ", the branch the working copy has checked out" : ""}. Publish its story with open_change, which opens one.`,
+      );
     // INF-2509: a pull request that moved past its published story shows it
     // republished at the pushed version, with the same words.
     const shown = await this.options.presentations.atPushedVersion(
@@ -229,15 +235,25 @@ export class ChangePublication {
             return read;
           });
     await this.options.presentations.assertPublished(taskId, current, located.forge, shown);
-    return {
-      ...(await this.options.presentations.completion(
-        taskId,
-        shown,
-        current.headSha,
-        current.branch,
-      )),
-      revision: shown,
-    };
+    const completion = await this.options.presentations.completion(
+      taskId,
+      shown,
+      current.headSha,
+      current.branch,
+    );
+    // The merge card merges the task's current change: the change whose
+    // story it shows becomes current, as open_change makes it (INF-3717).
+    if (branch !== selected.branch) {
+      if (branch === located.record.branch)
+        this.options.tasks.delivery.selectOwnChange(taskId, {
+          ...(current.number !== undefined ? { number: current.number } : {}),
+          headSha: current.headSha,
+          ...(current.base ? { base: current.base } : {}),
+        });
+      else await this.selectOpened(located.record, located.forge, current, undefined);
+      this.checks.noteChange(taskId, { change: current, forge: located.forge });
+    }
+    return { ...completion, revision: shown };
   }
 
   /**
@@ -261,15 +277,16 @@ export class ChangePublication {
       if (!named.own) return this.openElsewhere(record, named.repo, input);
     }
     // INF-2184: an existing branch the crewmate names opens as it is, at
-    // its own head; the task's own branch is the default.
-    const branch = input.branch?.trim() || located.branch;
+    // its own head. Named none, it is the branch the working copy has
+    // checked out, whose change prepare_change saved the story for and the
+    // merge card shows (INF-3717 piece 1); the task's own with none.
+    const branch =
+      input.branch?.trim() ||
+      ((await this.presentationBranch(taskId).catch(() => undefined)) ?? located.branch);
     const own = branch === record.branch;
     try {
       requireConventional(input.title, "pull request title", this.options.namingRule?.());
-      if (own) {
-        this.options.tasks.delivery.selectOwnChange(taskId);
-        await this.context.branchHome(record);
-      }
+      if (own) await this.context.branchHome(record);
       // Where this Mac's git reads the branch: by its name, or another
       // branch from the computer that runs the task at the task's own ref
       // for it (INF-2490).
@@ -351,7 +368,13 @@ export class ChangePublication {
       // The story of the change on this branch: each change keeps its own (INF-2490).
       const ledger = this.options.tasks.delivery.changePresentation(taskId, branch);
       if (own && !existing && presentations && hasChangeRequests(forge.kind)) {
-        const merged = await this.mergedBeforeStories(ledger, current.delivery?.prNumber, forge);
+        // The slot names the own pull request only while no other change is
+        // selected; the selection moves only once this call succeeds.
+        const merged = await this.mergedBeforeStories(
+          ledger,
+          current.delivery?.checkTarget ? undefined : current.delivery?.prNumber,
+          forge,
+        );
         if (merged) return merged;
       }
       // The captain's override on the saved story lets this task open its
@@ -491,7 +514,10 @@ export class ChangePublication {
           { head: validationHead ?? "" },
         );
       change = await this.readiness.readyPrerequisite(record.id, forge, change);
-      if (!own) await this.selectOpened(record, forge, change, input.base);
+      // The change it opened or answered becomes current only once it is
+      // there: a refused call leaves the current change as it was (INF-3717).
+      if (own) this.options.tasks.delivery.selectOwnChange(taskId);
+      else await this.selectOpened(record, forge, change, input.base);
       this.checks.noteChange(record.id, { change, forge });
       const next = [
         contributesUpstream(current.delivery?.contribution)

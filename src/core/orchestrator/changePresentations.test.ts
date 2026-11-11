@@ -1973,12 +1973,18 @@ it("fills no-surface stories from the record and refuses a stale proof snapshot"
   await at.publish(revision);
   const completion = await at.service.completion(TASK, revision, HEAD);
   expect(completion.body).toContain("No running surface");
+  // INF-3717: unaccepted proof names what is missing; accepted later asks again.
   proof.runs[0]!.revision += 1;
   seedDelivery(at.tasks, TASK, { liveValidation: proof });
   await expect(at.service.completion(TASK, revision, HEAD)).rejects.toThrow(
-    "Prepare the story again",
+    "Live validation is not accepted for this version, so preparing the story again changes nothing yet. Missing: No independent review of run 2",
   );
-  await expect(at.publish(revision)).rejects.toThrow("Prepare the story again");
+  proof.reviews.push({ ...proof.reviews[0]!, revision: 2 });
+  seedDelivery(at.tasks, TASK, { liveValidation: proof });
+  await expect(at.service.completion(TASK, revision, HEAD)).rejects.toThrow(
+    "Live validation was accepted (run 2, No running surface) after this story was prepared from run 1",
+  );
+  await expect(at.publish(revision)).rejects.toThrow("Prepare the story again at this version");
 });
 
 // INF-3623/F4: prepare must await suspension before reporting a replacement story ready to publish.

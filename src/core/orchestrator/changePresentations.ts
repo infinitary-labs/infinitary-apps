@@ -13,7 +13,7 @@ import {
   type StoryAround,
 } from "@shared/changePresentation";
 import { servedNumber } from "@shared/i18n/format";
-import type { ValidationEvidence } from "@shared/liveValidation";
+import { acceptedValidation, type ValidationEvidence } from "@shared/liveValidation";
 import { liveValidationSummary } from "@shared/liveValidationSummary";
 import {
   hostedPresentation,
@@ -716,13 +716,23 @@ export class ChangePresentations {
       story.head,
       false,
     );
+    if (!current?.verdict) {
+      // INF-3717 piece 1: the refusal names which part of acceptance is
+      // missing and who supplies it; a new story changes none of them.
+      const acceptance = acceptedValidation(
+        this.options.tasks.get(taskId)?.delivery?.liveValidation,
+        story.head,
+      );
+      throw new Error(
+        `Live validation is not accepted for this version, so preparing the story again changes nothing yet. Missing: ${acceptance.missing ?? acceptance.reason}`,
+      );
+    }
     if (
-      !current?.verdict ||
       current.revision !== story.liveValidation?.revision ||
       current.label !== story.liveValidation.label
     )
       throw new Error(
-        "Prepare the story again after live validation is accepted for this version.",
+        `Live validation was accepted (run ${current.revision}, ${current.label}) after this story was prepared${story.liveValidation ? ` from run ${story.liveValidation.revision}, ${story.liveValidation.label}` : ""}. Prepare the story again at this version with prepare_change, publish it where the branch is pushed, then show its revision.`,
       );
     return current;
   }
@@ -1123,8 +1133,12 @@ export class ChangePresentations {
 
   private current(taskId: string, branch: string, revision: number): ChangePresentation {
     const story = this.ledger(taskId, branch).revisions.at(-1);
+    // INF-3717 piece 1: the refusal names the branch it read and that
+    // branch's newest revision, so a crewmate sees which change it met.
     if (!story || story.revision !== revision)
-      throw new Error("Use the newest prepared story revision.");
+      throw new Error(
+        `Use the newest prepared story revision: ${story ? `the newest for ${branch} is revision ${story.revision}, not ${revision}` : `${branch} has no prepared story`}.`,
+      );
     return changePresentationSchema.parse(story);
   }
   /** The story ledger of the change on `branch`; undefined names the task's current change. */

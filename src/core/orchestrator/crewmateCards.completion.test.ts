@@ -849,19 +849,34 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     // goes up and shows it without buttons, as the story note.
     // INF-3060, "we should not take any guesses here": a copy that differs
     // from the saved story is refused, and an exact repeat is left out.
-    for (const differing of [
-      { body: "<p>My own account of the change.</p>" },
-      { risk: { ...METER_RISK, blast: { level: "sometimes" } } },
-      { risk: { ...METER_RISK, blast: { level: "high", why: "Every upload path" } } },
-      {
-        required_actions: [] as unknown[],
-        risk: { ...METER_RISK, deps: { level: "high", why: "A new package" } },
-      },
-      { required_actions: [METER_ACTION] },
-    ])
-      await expect(
-        emitCard.run({ title: "Ignored", presentation: 1, actions: [MERGE_ACTION], ...differing }),
-      ).rejects.toThrow(/those facts come from its saved revision/);
+    // Each refusal names the field it refused (INF-3717 piece 1).
+    for (const [differing, named] of [
+      [{ body: "<p>My own account of the change.</p>" }, "Refused: body."],
+      [
+        { risk: { ...METER_RISK, blast: { level: "sometimes" } } },
+        "Refused: risk (does not read as a risk declaration).",
+      ],
+      [
+        { risk: { ...METER_RISK, blast: { level: "high", why: "Every upload path" } } },
+        "Refused: risk (differs from the saved revision's).",
+      ],
+      [
+        {
+          required_actions: [] as unknown[],
+          risk: { ...METER_RISK, deps: { level: "high", why: "A new package" } },
+        },
+        "Refused: risk (differs from the saved revision's).",
+      ],
+      [
+        { required_actions: [METER_ACTION] },
+        "Refused: required_actions (differ from the saved revision's).",
+      ],
+    ] as const) {
+      const call = () =>
+        emitCard.run({ title: "Ignored", presentation: 1, actions: [MERGE_ACTION], ...differing });
+      await expect(call()).rejects.toThrow(/those facts come from its saved revision/);
+      await expect(call()).rejects.toThrow(named);
+    }
     expect(cards()).toHaveLength(0);
     const note = {
       title: "Ignored",

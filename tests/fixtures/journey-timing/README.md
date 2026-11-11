@@ -13,3 +13,8 @@ The artifacts are `13004133546` and `13005006114`; their original archives remai
 The completed jobs are `124247706478` (desktop, 19:07:41–19:11:34 UTC) and `124247706691` (parallel, 19:07:33–19:12:15 UTC).
 Their API head revision is the pull-request head, while the reports identify the actual merge checkout; reader tests explicitly supply that checkout as the trusted job revision to exercise the same-revision default-branch path.
 These fixtures preserve all report fields and measured values; negative cases change provenance or remove captured readings, never invent replacement runtimes.
+
+`unfetched-overflow-parallel.json` is the unchanged report inside artifact `13811902893` (`journey-timing-Linux-overflow-0-parallel-1`, archive digest `sha256:869c35a860e43086b892125e4242c7cc2ec12b23a5635a3c939ad0ae5fdec50f`) of main's journeys run [42921411028](https://github.com/infinitary-labs/infinitary/actions/runs/42921411028), attempt 1, reformatted only; the archived file's digest is `52a53e5baa0c874b71bf1f46c5423056f0f5e34eb9e46c8879aa19404533bf4f`.
+INF-3622: the PC's runners later could not fetch that archive, and every proof request's chooser failed downloading it.
+`unfetched-main-run.json` projects GitHub's answers for the same run: its entry in the run list, its artifact list and its attempt's job list, keeping the fields the chooser and the timing reader read and dropping URLs and runner names.
+The overflow job `130197735864` (23:15:05–23:17:47 UTC) is the report's job; its timing steps cover the report's start and observation times.

@@ -1,0 +1,312 @@
+{
+  "run": {
+    "id": 42921411028,
+    "status": "completed",
+    "conclusion": "success",
+    "run_attempt": 1,
+    "head_branch": "main",
+    "head_sha": "c1b397ea35809f3dca7adfa62c0f3d6fe9c34969"
+  },
+  "artifacts": [
+    {
+      "id": 13811971636,
+      "name": "journey-placement",
+      "expired": false
+    },
+    {
+      "id": 13811962680,
+      "name": "source-desktop-Linux-overflow-0-parallel",
+      "expired": false
+    },
+    {
+      "id": 13811902893,
+      "name": "journey-timing-Linux-overflow-0-parallel-1",
+      "expired": false
+    }
+  ],
+  "jobs": [
+    {
+      "id": 130196907112,
+      "run_id": 42921411028,
+      "run_attempt": 1,
+      "head_sha": "c1b397ea35809f3dca7adfa62c0f3d6fe9c34969",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-10T23:13:08Z",
+      "completed_at": "2026-11-10T23:14:14Z",
+      "name": "Manual request · Choose and place app journeys",
+      "steps": [
+        {
+          "name": "Set up job",
+          "started_at": "2026-11-10T23:13:08Z",
+          "completed_at": "2026-11-10T23:13:13Z"
+        },
+        {
+          "name": "Set up runner",
+          "started_at": "2026-11-10T23:13:13Z",
+          "completed_at": "2026-11-10T23:13:13Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "started_at": "2026-11-10T23:13:13Z",
+          "completed_at": "2026-11-10T23:13:27Z"
+        },
+        {
+          "name": "Run pnpm/action-setup@v4",
+          "started_at": "2026-11-10T23:13:27Z",
+          "completed_at": "2026-11-10T23:13:28Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "started_at": "2026-11-10T23:13:28Z",
+          "completed_at": "2026-11-10T23:13:29Z"
+        },
+        {
+          "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+          "started_at": "2026-11-10T23:13:29Z",
+          "completed_at": "2026-11-10T23:13:29Z"
+        },
+        {
+          "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+          "started_at": "2026-11-10T23:13:29Z",
+          "completed_at": "2026-11-10T23:13:39Z"
+        },
+        {
+          "name": "Run pnpm install --frozen-lockfile",
+          "started_at": "2026-11-10T23:13:39Z",
+          "completed_at": "2026-11-10T23:13:46Z"
+        },
+        {
+          "name": "Find the newest passing full verification",
+          "started_at": "2026-11-10T23:13:46Z",
+          "completed_at": "2026-11-10T23:13:56Z"
+        },
+        {
+          "name": "Run actions/download-artifact@v4",
+          "started_at": "2026-11-10T23:13:56Z",
+          "completed_at": "2026-11-10T23:13:56Z"
+        },
+        {
+          "name": "Find comparable Linux timing observations",
+          "started_at": "2026-11-10T23:13:56Z",
+          "completed_at": "2026-11-10T23:14:01Z"
+        },
+        {
+          "name": "Run actions/download-artifact@v4",
+          "started_at": "2026-11-10T23:14:01Z",
+          "completed_at": "2026-11-10T23:14:03Z"
+        },
+        {
+          "name": "Run actions/download-artifact@v4",
+          "started_at": "2026-11-10T23:14:03Z",
+          "completed_at": "2026-11-10T23:14:04Z"
+        },
+        {
+          "name": "Choose and place the journeys",
+          "started_at": "2026-11-10T23:14:04Z",
+          "completed_at": "2026-11-10T23:14:05Z"
+        },
+        {
+          "name": "Run actions/upload-artifact@v4",
+          "started_at": "2026-11-10T23:14:05Z",
+          "completed_at": "2026-11-10T23:14:06Z"
+        },
+        {
+          "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+          "started_at": "2026-11-10T23:14:06Z",
+          "completed_at": "2026-11-10T23:14:06Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "started_at": "2026-11-10T23:14:06Z",
+          "completed_at": "2026-11-10T23:14:07Z"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v4",
+          "started_at": "2026-11-10T23:14:07Z",
+          "completed_at": "2026-11-10T23:14:07Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "started_at": "2026-11-10T23:14:07Z",
+          "completed_at": "2026-11-10T23:14:07Z"
+        },
+        {
+          "name": "Complete job",
+          "started_at": "2026-11-10T23:14:07Z",
+          "completed_at": "2026-11-10T23:14:07Z"
+        }
+      ]
+    },
+    {
+      "id": 130197735864,
+      "run_id": 42921411028,
+      "run_attempt": 1,
+      "head_sha": "c1b397ea35809f3dca7adfa62c0f3d6fe9c34969",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-11-10T23:15:05Z",
+      "completed_at": "2026-11-10T23:17:47Z",
+      "name": "Manual request · Selected journeys (Linux; part 1/1) / Manual request · Selected app journeys (Linux; parallel; part 1/1)",
+      "steps": [
+        {
+          "name": "Set up job",
+          "started_at": "2026-11-10T23:15:06Z",
+          "completed_at": "2026-11-10T23:15:11Z"
+        },
+        {
+          "name": "Set up runner",
+          "started_at": "2026-11-10T23:15:11Z",
+          "completed_at": "2026-11-10T23:15:11Z"
+        },
+        {
+          "name": "Record the timing observation start",
+          "started_at": "2026-11-10T23:15:11Z",
+          "completed_at": "2026-11-10T23:15:11Z"
+        },
+        {
+          "name": "Run actions/checkout@v4",
+          "started_at": "2026-11-10T23:15:11Z",
+          "completed_at": "2026-11-10T23:15:30Z"
+        },
+        {
+          "name": "Compose the batch",
+          "started_at": "2026-11-10T23:15:30Z",
+          "completed_at": "2026-11-10T23:15:30Z"
+        },
+        {
+          "name": "Record the manual Linux request",
+          "started_at": "2026-11-10T23:15:30Z",
+          "completed_at": "2026-11-10T23:15:30Z"
+        },
+        {
+          "name": "Run pnpm/action-setup@v4",
+          "started_at": "2026-11-10T23:15:30Z",
+          "completed_at": "2026-11-10T23:15:31Z"
+        },
+        {
+          "name": "Run actions/setup-node@v4",
+          "started_at": "2026-11-10T23:15:31Z",
+          "completed_at": "2026-11-10T23:15:31Z"
+        },
+        {
+          "name": "Run ./Application Support/firstmate/.github/actions/node-headers",
+          "started_at": "2026-11-10T23:15:31Z",
+          "completed_at": "2026-11-10T23:15:31Z"
+        },
+        {
+          "name": "Run ./Application Support/firstmate/.github/actions/electron-download",
+          "started_at": "2026-11-10T23:15:31Z",
+          "completed_at": "2026-11-10T23:16:06Z"
+        },
+        {
+          "name": "Run pnpm install --frozen-lockfile",
+          "started_at": "2026-11-10T23:16:06Z",
+          "completed_at": "2026-11-10T23:16:12Z"
+        },
+        {
+          "name": "Run ./Application Support/firstmate/.github/actions/linux-desktop",
+          "started_at": "2026-11-10T23:16:12Z",
+          "completed_at": "2026-11-10T23:16:33Z"
+        },
+        {
+          "name": "Run ./Application Support/firstmate/.github/actions/demo-encoder",
+          "started_at": "2026-11-10T23:16:33Z",
+          "completed_at": "2026-11-10T23:16:37Z"
+        },
+        {
+          "name": "Run pnpm build",
+          "started_at": "2026-11-10T23:16:37Z",
+          "completed_at": "2026-11-10T23:16:52Z"
+        },
+        {
+          "name": "Run the journeys with the sandbox on",
+          "started_at": "2026-11-10T23:16:52Z",
+          "completed_at": "2026-11-10T23:17:34Z"
+        },
+        {
+          "name": "Refuse a test that skipped on Linux without the Mac tag",
+          "started_at": "2026-11-10T23:17:34Z",
+          "completed_at": "2026-11-10T23:17:34Z"
+        },
+        {
+          "name": "Checkout the workflow's timing exporter",
+          "started_at": "2026-11-10T23:17:34Z",
+          "completed_at": "2026-11-10T23:17:35Z"
+        },
+        {
+          "name": "Export compact Linux timing",
+          "started_at": "2026-11-10T23:17:35Z",
+          "completed_at": "2026-11-10T23:17:35Z"
+        },
+        {
+          "name": "Keep compact Linux timing separately",
+          "started_at": "2026-11-10T23:17:35Z",
+          "completed_at": "2026-11-10T23:17:39Z"
+        },
+        {
+          "name": "Keep the Linux window and the journeys' results",
+          "started_at": "2026-11-10T23:17:39Z",
+          "completed_at": "2026-11-10T23:17:39Z"
+        },
+        {
+          "name": "Keep a passing run's result and demos",
+          "started_at": "2026-11-10T23:17:39Z",
+          "completed_at": "2026-11-10T23:17:41Z"
+        },
+        {
+          "name": "Keep the run-alone result",
+          "started_at": "2026-11-10T23:17:41Z",
+          "completed_at": "2026-11-10T23:17:41Z"
+        },
+        {
+          "name": "Summarize the run-alone pass",
+          "started_at": "2026-11-10T23:17:41Z",
+          "completed_at": "2026-11-10T23:17:41Z"
+        },
+        {
+          "name": "Post Checkout the workflow's timing exporter",
+          "started_at": "2026-11-10T23:17:41Z",
+          "completed_at": "2026-11-10T23:17:41Z"
+        },
+        {
+          "name": "Post Run ./Application Support/firstmate/.github/actions/electron-download",
+          "started_at": "2026-11-10T23:17:41Z",
+          "completed_at": "2026-11-10T23:17:41Z"
+        },
+        {
+          "name": "Post Run actions/setup-node@v4",
+          "started_at": "2026-11-10T23:17:41Z",
+          "completed_at": "2026-11-10T23:17:41Z"
+        },
+        {
+          "name": "Post Run pnpm/action-setup@v4",
+          "started_at": "2026-11-10T23:17:41Z",
+          "completed_at": "2026-11-10T23:17:41Z"
+        },
+        {
+          "name": "Post Run actions/checkout@v4",
+          "started_at": "2026-11-10T23:17:41Z",
+          "completed_at": "2026-11-10T23:17:41Z"
+        },
+        {
+          "name": "Complete job",
+          "started_at": "2026-11-10T23:17:41Z",
+          "completed_at": "2026-11-10T23:17:41Z"
+        }
+      ]
+    },
+    {
+      "id": 130197737157,
+      "run_id": 42921411028,
+      "run_attempt": 1,
+      "head_sha": "c1b397ea35809f3dca7adfa62c0f3d6fe9c34969",
+      "status": "completed",
+      "conclusion": "skipped",
+      "started_at": "2026-11-10T23:14:14Z",
+      "completed_at": "2026-11-10T23:14:14Z",
+      "name": "Manual request · Selected app journeys (Mac)",
+      "steps": []
+    }
+  ]
+}

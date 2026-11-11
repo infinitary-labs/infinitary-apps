@@ -1,14 +1,22 @@
+import { spawnSync } from "node:child_process";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { journeyArguments } from "../scripts/journey-runs.ts";
+import { hostEnv } from "../src/core/hostEnv";
 import { MAC_ONLY_TAG } from "./e2e/tags.ts";
 import {
+  githubScript,
   loadYamlFile,
   read,
+  root,
   type WorkflowStep as Step,
   VERIFY_E2E_RUN,
   workflowString,
   workflowValue,
 } from "./helpers/releaseWorkflows";
+import { scratchDir } from "./helpers/scratchDirs";
 
 // INF-2267: portable workflow contracts keep the integration cohort and its isolation;
 // native executable and bundle checks remain in the Mac-listed release-contract file.
@@ -424,4 +432,175 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       }
     },
   );
+
+  /**
+   * INF-3622: every proof request's chooser failed downloading main run
+   * 42921411028's Linux timing archive, which the PC's runners could no
+   * longer fetch, and no named journey ran. Those observations train only
+   * the advisory candidate (the chooser never passes --apply-linux), so the
+   * request must run what it named whether the archive arrives or not. The
+   * chooser's own steps run in order, from finding the Linux observations to
+   * choosing: the real script against the recorded run, its archive whole
+   * or not fetched, then the real choice.
+   */
+  it("chooses and places a request the same way when a Linux timing archive cannot be fetched", async () => {
+    const journeys = loadYamlFile(".github/workflows/journeys.yml") as {
+      jobs: Record<string, { steps: Step[] }>;
+    };
+    const steps = journeys.jobs["choose-journeys"]?.steps ?? [];
+    const first = steps.findIndex((step) => step.id === "linux-timing-runs");
+    const last = steps.findIndex((step) => step.id === "select");
+    expect(first).toBeGreaterThan(0);
+    expect(last).toBeGreaterThan(first);
+    const recorded = JSON.parse(read("tests/fixtures/journey-timing/unfetched-main-run.json")) as {
+      run: { id: number; conclusion: string; run_attempt: number };
+      artifacts: { id: number; name: string; expired: boolean }[];
+      jobs: unknown[];
+    };
+    const archive = read("tests/fixtures/journey-timing/unfetched-overflow-parallel.json");
+    const inputs = {
+      files: "tests/e2e/record-controls.spec.ts",
+      platforms: "linux",
+      mac_all: false,
+    };
+    // GitHub as it answered that chooser for main's journeys runs. The verify
+    // runs' archives downloaded, so their readings are left out here.
+    const listWorkflowRuns = async (parameters: Record<string, unknown>) => {
+      expect(parameters).toMatchObject({ branch: "main", exclude_pull_requests: true });
+      const runs = parameters.workflow_id === "journeys.yml" ? [recorded.run] : [];
+      return { data: { total_count: runs.length, workflow_runs: runs } };
+    };
+    const listWorkflowRunArtifacts = async ({ run_id }: Record<string, unknown>) => {
+      expect(run_id).toBe(recorded.run.id);
+      return recorded.artifacts;
+    };
+    const listJobsForWorkflowRunAttempt = async (parameters: Record<string, unknown>) => {
+      expect(parameters).toMatchObject({
+        run_id: recorded.run.id,
+        attempt_number: recorded.run.run_attempt,
+      });
+      return recorded.jobs;
+    };
+    const github = {
+      rest: {
+        actions: { listWorkflowRuns, listWorkflowRunArtifacts, listJobsForWorkflowRunAttempt },
+      },
+      paginate: Object.assign(
+        async (
+          method: (parameters: Record<string, unknown>) => Promise<unknown>,
+          parameters: Record<string, unknown>,
+        ) => method(parameters),
+        {
+          iterator: async function* (
+            method: typeof listWorkflowRuns,
+            parameters: Record<string, unknown>,
+          ) {
+            yield { data: (await method(parameters)).data.workflow_runs };
+          },
+        },
+      ),
+    };
+    const context = {
+      repo: { owner: "example", repo: "project" },
+      payload: { repository: { default_branch: "main" } },
+    };
+
+    const choose = async (download: "whole" | "not fetched") => {
+      const temp = scratchDir("journey-chooser-");
+      const done: Record<string, { outcome: string; outputs: Record<string, string> }> = {};
+      const downloads: boolean[] = [];
+      let failed = false;
+      let output: string | undefined;
+      for (const step of steps.slice(first, last + 1)) {
+        const status = { success: !failed, failure: failed, always: true, cancelled: false };
+        const runs =
+          step.if === undefined
+            ? !failed
+            : workflowValue(`success() && (${step.if})`, { steps: done }, status) === true;
+        if (!runs) continue;
+        const outputs: Record<string, string> = {};
+        let ok = true;
+        if (step.id === "linux-timing-runs") {
+          await githubScript(String(step.with?.script), [
+            "core",
+            "github",
+            "context",
+            "process",
+            "require",
+          ])(
+            { setOutput: (name: string, value: unknown) => (outputs[name] = String(value)) },
+            github,
+            context,
+            { env: { RUNNER_TEMP: temp } },
+            createRequire(import.meta.url),
+          );
+        } else if (step.uses === "actions/download-artifact@v4") {
+          expect(workflowString(String(step.with?.["run-id"]), { steps: done })).toBe(
+            String(recorded.run.id),
+          );
+          const into = workflowString(String(step.with?.path), { runner: { temp } });
+          const pattern = new RegExp(`^${String(step.with?.pattern).replaceAll("*", ".*")}$`);
+          const matched = recorded.artifacts.filter((artifact) => pattern.test(artifact.name));
+          expect(matched.map((artifact) => artifact.id)).toEqual([13811902893]);
+          // download-artifact makes the folder before it fetches, and puts
+          // each archive matched by a pattern in a folder named after it.
+          mkdirSync(into, { recursive: true });
+          ok = download === "whole";
+          for (const artifact of ok ? matched : []) {
+            mkdirSync(join(into, artifact.name));
+            writeFileSync(join(into, artifact.name, "journey-timing.json"), archive);
+          }
+          downloads.push(ok);
+        } else {
+          expect(step.id).toBe("select");
+          const env = Object.fromEntries(
+            Object.entries(step.env ?? {}).map(([name, value]) => [
+              name,
+              workflowString(value, { inputs }),
+            ]),
+          );
+          const githubOutput = join(temp, "github-output");
+          writeFileSync(githubOutput, "");
+          const result = spawnSync(
+            "bash",
+            ["--noprofile", "--norc", "-e", "-c", String(step.run)],
+            {
+              cwd: root,
+              env: { ...hostEnv(), ...env, RUNNER_TEMP: temp, GITHUB_OUTPUT: githubOutput },
+              encoding: "utf8",
+            },
+          );
+          expect(result.status, result.stderr).toBe(0);
+          output = readFileSync(githubOutput, "utf8");
+        }
+        if (step.id) done[step.id] = { outcome: ok ? "success" : "failure", outputs };
+        if (!ok && step["continue-on-error"] !== true) failed = true;
+      }
+      const placement = output
+        ? (JSON.parse(readFileSync(join(temp, "placement.json"), "utf8")) as {
+            linux: unknown[];
+            timingSource: string;
+            linuxUnmeasured: string[];
+          })
+        : undefined;
+      return { failed, downloads, output, placement };
+    };
+
+    const whole = await choose("whole");
+    const unfetched = await choose("not fetched");
+    // The failed download stays failed on the run, and the chooser goes on to choose.
+    expect([whole.failed, whole.downloads]).toEqual([false, [true]]);
+    expect([unfetched.failed, unfetched.downloads]).toEqual([false, [false]]);
+    // The whole archive is read: its journey is measured only then.
+    expect(whole.placement?.linuxUnmeasured).toEqual([]);
+    expect(unfetched.placement?.linuxUnmeasured).toEqual([inputs.files]);
+    // What runs, and where, is the same either way: the named journey on Linux.
+    expect(unfetched.output).toBe(whole.output);
+    expect(unfetched.placement?.linux).toEqual(whole.placement?.linux);
+    expect(whole.placement?.timingSource).toBe("conservative");
+    const linux = JSON.parse(whole.output?.match(/^linux=(.*)$/m)?.[1] ?? "null") as {
+      include: { files: string }[];
+    };
+    expect(linux.include.map((group) => group.files)).toEqual([inputs.files]);
+  });
 });

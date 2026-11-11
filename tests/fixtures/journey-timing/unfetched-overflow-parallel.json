@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "run": "42921411028",
+  "attempt": "1",
+  "revision": "c1b397ea35809f3dca7adfa62c0f3d6fe9c34969",
+  "platform": "Linux",
+  "architecture": "X64",
+  "lane": "parallel",
+  "suite": "affected",
+  "shard": "1",
+  "job": "source-desktop",
+  "artifactSuffix": "overflow-0",
+  "requestedFiles": ["tests/e2e/record-controls.spec.ts"],
+  "jobStartedAt": 1794352511000,
+  "testStepStartedAt": 1794352612000,
+  "observedAt": 1794352655949,
+  "testStepOutcome": "success",
+  "reportState": "present",
+  "complete": true,
+  "successful": true,
+  "configuredWorkers": 2,
+  "actualWorkers": 1,
+  "selectedFiles": ["tests/e2e/record-controls.spec.ts"],
+  "missingFiles": [],
+  "stats": { "duration": 41134.566, "expected": 10, "unexpected": 0, "flaky": 0, "skipped": 0 },
+  "timing": {
+    "jobObservedMs": 144949,
+    "setupMs": 101000,
+    "testStepObservedMs": 43949,
+    "playwrightMs": 41134.566
+  },
+  "files": [
+    {
+      "file": "tests/e2e/record-controls.spec.ts",
+      "project": "application",
+      "outcomes": { "expected": 10 },
+      "tests": 10,
+      "missing": 0,
+      "attempts": [
+        {
+          "startMs": 1794352618258,
+          "durationMs": 1119,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1794352628667,
+          "durationMs": 4179,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1794352632863,
+          "durationMs": 2056,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1794352634929,
+          "durationMs": 1098,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1794352636034,
+          "durationMs": 5084,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1794352641125,
+          "durationMs": 3706,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1794352644838,
+          "durationMs": 5056,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1794352649904,
+          "durationMs": 544,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1794352650457,
+          "durationMs": 1012,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        },
+        {
+          "startMs": 1794352651477,
+          "durationMs": 2491,
+          "status": "passed",
+          "worker": 0,
+          "retry": 0
+        }
+      ],
+      "startMs": 1794352618258,
+      "endMs": 1794352653968,
+      "elapsedMs": 35710,
+      "workMs": 26345,
+      "skipped": 0
+    }
+  ]
+}

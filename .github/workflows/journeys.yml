@@ -187,8 +187,15 @@ jobs:
               }
             }
             fs.writeFileSync(`${root}/linux-journey-jobs.json`, JSON.stringify(jobs));
+      # INF-3622: execution never reads these observations (no --apply-linux),
+      # so an archive this runner cannot fetch leaves the advisory candidate
+      # unmeasured instead of failing the chooser. Run 42921411028's archive sat
+      # on a storage host the PC's resolver stopped answering, and every proof
+      # request failed here before choosing a journey. The failed step and its
+      # error stay on the run; the selection and executed placement are unchanged.
       - uses: actions/download-artifact@v4
         if: steps.linux-timing-runs.outputs.verify != ''
+        continue-on-error: true
         with:
           pattern: journey-timing-Linux-*
           run-id: ${{ steps.linux-timing-runs.outputs.verify }}
@@ -196,6 +203,7 @@ jobs:
           path: ${{ runner.temp }}/linux-journey-times/verify
       - uses: actions/download-artifact@v4
         if: steps.linux-timing-runs.outputs.journeys != ''
+        continue-on-error: true
         with:
           pattern: journey-timing-Linux-*
           run-id: ${{ steps.linux-timing-runs.outputs.journeys }}

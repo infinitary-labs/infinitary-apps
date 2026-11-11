@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-chooser-unfetched-timing",
+      "reason": "The requested-journeys workflow's chooser goes on when a Linux timing archive it only reads for an advisory estimate cannot be downloaded; a CI-only change with nothing a person notices."
+    }
+  ]
+}

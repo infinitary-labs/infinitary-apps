@@ -855,7 +855,8 @@ A tagged test still needs native proof; a Linux-only request does not claim to p
 It is at most five jobs, one per Linux place on the PC (`LINUX_PLACES`, INF-1720's plan).
 For modest selections the existing grouping and job count stay unchanged.
 For five-job candidate estimates, the chooser additionally reads compact observations from the newest successful default-branch run of each of `journeys.yml` and `verify.yml`.
-Missing or expired reports retain the prior placement; artifact API or download failures still fail the chooser rather than hiding an access problem.
+Missing or expired reports retain the prior placement, and an artifact-list error still fails the chooser rather than hiding an access problem.
+An archive the runner cannot download is left out: its download step stays failed on the run, and the chooser goes on with that report missing, since execution never reads these observations and the selection and executed placement stay the same (INF-3622).
 The timing reader checks schema, Linux X64, run/attempt/checkout identity, successful final job conclusion, complete selection, lane ownership and compatible configured/actual workers.
 It rejects ambiguous reusable-job identities rather than guessing between overlapping jobs.
 Each selected file needs a compatible reading; partial coverage retains the entire prior placement rather than mixing Mac test-work sums with Linux elapsed intervals.

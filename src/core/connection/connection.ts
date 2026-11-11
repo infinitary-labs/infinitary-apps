@@ -50,6 +50,7 @@ import {
   deviceMayBe,
   deviceNameSchema,
 } from "@shared/devices";
+import { type FmEvent, isStreamedEvent } from "@shared/events";
 import {
   CORE_INVOKE_CHANNELS,
   type CoreInvokeChannel,
@@ -168,6 +169,13 @@ export const DEVICES_FROM_A_VIEW = contractChange("devices-from-a-view");
  * pictures as `live` frames (`browser-from-any-view.md`).
  */
 export const BROWSER_FROM_ANY_VIEW = contractChange("browser-from-any-view");
+
+/**
+ * Streamed reply pieces and tool starts and ends go to a view as `live`
+ * frames, outside the numbering, and to a phone not at all
+ * (`streamed-events-live.md`).
+ */
+export const STREAMED_EVENTS_LIVE = contractChange("streamed-events-live");
 
 /**
  * Who a client the local door admitted is (docs/connection.md, "The local
@@ -419,6 +427,12 @@ type Client = {
   sharedCards: boolean;
   /** Whether it reads Allow for the rest of this task (`readsTaskAllow`). */
   taskAllow: boolean;
+  /**
+   * How it is sent streamed reply pieces and tool starts and ends
+   * (`streamed-events-live.md`): as `live` frames, under the newest number
+   * for a view from before the change, or not at all, as a phone.
+   */
+  streamed: "live" | "numbered" | "none";
   access: ContractAccess;
   closing: boolean;
   /** What the home writes to it, paced by its answers. */
@@ -759,9 +773,34 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       }
       client.out.send(frame);
     };
+    // What is happening in a turn now (`isStreamedEvent`): outside the
+    // numbering, so a stream of reply pieces never pushes a dropped view's
+    // place out of the journal, and only to the views that read it.
+    const sendStreamed = (event: FmEvent) => {
+      for (const client of clients) {
+        if (!client.welcomed || client.role !== "view" || client.streamed === "none") continue;
+        const channel = channelIn("inf:event", client.spelling);
+        if (client.streamed === "live") {
+          send(client, JSON.stringify({ t: "live", channel, payload: event }));
+          continue;
+        }
+        // A view from before the change reads only numbered pushes: the newest
+        // number again moves its cursor nowhere, so a replay still has no hole.
+        if (journal.seq > 0)
+          send(client, JSON.stringify({ t: "push", seq: journal.seq, channel, payload: event }));
+      }
+    };
     // Never throws into the core's emit. A push that cannot be written would
     // leave every device with a hole it cannot see, so they all start over.
     const detach = events.subscribe((channel, payload) => {
+      if (channel === "inf:event" && isStreamedEvent(payload as FmEvent)) {
+        try {
+          sendStreamed(payload as FmEvent);
+        } catch (error) {
+          onProblem(`could not send ${channel}: ${(error as Error).message}`);
+        }
+        return;
+      }
       try {
         // Kept for catch-up only while something is paired: with nothing
         // paired only the local door's clients, on this computer, dial, and
@@ -850,6 +889,12 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       client.sharedCards =
         hello.system === "ios" || readsSharedCards(hello.protocolVersion, hello.changes);
       client.taskAllow = readsTaskAllow(hello.protocolVersion, hello.changes);
+      client.streamed =
+        hello.system === "ios"
+          ? "none"
+          : listsChange(hello.changes, STREAMED_EVENTS_LIVE)
+            ? "live"
+            : "numbered";
       // From the welcome on, a long frame goes as parts to a device that reads them.
       client.out.parts = readsFrameParts(hello.protocolVersion, hello.changes);
       // A view changes things across majors its floor allows; work only on this home's own.
@@ -1046,6 +1091,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         cardReads: { updates: false, ended: false, annotations: false },
         sharedCards: false,
         taskAllow: false,
+        streamed: "none",
         access: "read",
         closing: false,
         out: new Outbox(ws, pacing),

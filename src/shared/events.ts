@@ -528,6 +528,27 @@ export const fmEventSchema = z.discriminatedUnion("type", [
 ]);
 export type FmEvent = z.infer<typeof fmEventSchema>;
 
+/**
+ * A streamed piece of a reply or of its thinking, or a tool's start or end
+ * that reports no usage: what is happening in a turn now, which a view reads
+ * again whole on its next event and never needs replayed. The connection
+ * keeps these out of its numbering and sends them only to views that use
+ * them (`streamed-events-live.md`, docs/connection.md "Live pushes"). A
+ * tool's end with usage stays numbered, since the usage reads follow it.
+ */
+export function isStreamedEvent(event: Pick<FmEvent, "type"> & { usage?: unknown }): boolean {
+  switch (event.type) {
+    case "assistant_delta":
+    case "thinking_delta":
+    case "tool_start":
+      return true;
+    case "tool_end":
+      return event.usage === undefined;
+    default:
+      return false;
+  }
+}
+
 export const crewCountsSchema = z.object({
   working: z.number(),
   idle: z.number(),

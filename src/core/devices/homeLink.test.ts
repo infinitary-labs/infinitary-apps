@@ -176,6 +176,8 @@ function follow(
   const pushes: { channel: string; payload: unknown }[] = [];
   /** Each push's place: sent again by a welcome, or new. */
   const replays: boolean[] = [];
+  /** Each `live` frame, for this connection alone and never numbered. */
+  const lives: { channel: string; payload: unknown }[] = [];
   const catchUps: ("replay" | "reload")[] = [];
   const sockets: WebSocket[] = [];
   /** Every frame on the wire, as the device wrote it and as it heard it. */
@@ -208,6 +210,7 @@ function follow(
       pushes.push({ channel, payload });
       replays.push(replayed);
     },
+    onLive: (channel, payload) => lives.push({ channel, payload }),
     onCaughtUp: (catchUp) => catchUps.push(catchUp),
     onState: (state) => states.push(state),
     ...(options.onInvoke ? { onInvoke: options.onInvoke } : {}),
@@ -223,6 +226,7 @@ function follow(
     states,
     pushes,
     replays,
+    lives,
     catchUps,
     sockets,
     wire,
@@ -467,6 +471,44 @@ describe("the device's side of the connection", () => {
     expect(air.replays).toEqual([false, true, true, false]);
     // It never said the home was out of reach: the drop was mended at once.
     expect(air.states.some((state) => state.contact === "lost")).toBe(false);
+  });
+
+  // INF-3750's option D: streamed reply pieces filled the journal, so a short drop read everything again.
+  it("hears a streamed reply live, catches up past it after a drop, and an older view still hears it", async () => {
+    const at = await home();
+    const air = follow(await at.join());
+    const older = follow(await at.join(), { changes: [] });
+    for (const view of [air, older]) view.link.start();
+    await air.until(() => air.link.state().contact === "in-reach");
+    await older.until(() => older.link.state().contact === "in-reach");
+    at.events.emit("inf:models:changed", { ok: true });
+    await air.until(() => air.pushes.length === 1);
+    air.sockets.at(-1)?.terminate();
+    const piece = {
+      type: "assistant_delta",
+      taskId: "t1",
+      text: "The harbour opens at six.",
+    } as const;
+    at.events.emit("inf:event", piece);
+    at.events.emit("inf:cards", []);
+    await air.until(() => air.catchUps.length === 2);
+    await air.until(() => air.pushes.length === 2);
+    // Missed while away, never replayed: the drop still catches up push by push.
+    expect(air.catchUps).toEqual(["reload", "replay"]);
+    expect(air.pushes.map((push) => push.channel)).toEqual(["inf:models:changed", "inf:cards"]);
+    at.events.emit("inf:event", piece);
+    await air.until(() => air.lives.length === 1);
+    expect(air.lives).toEqual([{ channel: "inf:event", payload: piece }]);
+    // A view from before the change hears both as pushes under the newest number, as before.
+    await older.until(() => older.pushes.length === 4);
+    expect(older.lives).toEqual([]);
+    expect(older.pushes.map((push) => push.channel)).toEqual([
+      "inf:models:changed",
+      "inf:event",
+      "inf:cards",
+      "inf:event",
+    ]);
+    expect(older.link.state().contact).toBe("in-reach");
   });
 
   it("refuses a request in flight when the connection goes, and does not ask it again", async () => {

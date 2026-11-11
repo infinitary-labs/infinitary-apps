@@ -35,6 +35,7 @@ import type { CoreDispatch } from "../dispatcher";
 import {
   DeviceOutOfReachError,
   type PairedDevices,
+  STREAMED_EVENTS_LIVE,
   startConnection,
   type ViewDeviceContact,
   type WorkDeviceContact,
@@ -817,6 +818,74 @@ describe("the home's connection", () => {
       const stale = await connectClient(grant, { cursor });
       expect(stale.welcome.catchUp).toBe("reload");
     }
+  });
+
+  // INF-3750's option D: streamed reply pieces and tool starts and ends filled the journal, so a short gap reloaded,
+  // and the phone, which never reads them, was sent every one.
+  it("keeps streamed reply pieces and tool events out of the numbering, so a short gap still replays", async () => {
+    const at = await home({ journal: { entries: 4, bytes: 1_000_000 } });
+    const grant = await at.join();
+    const current = await connectClient(await at.join(), { changes: [STREAMED_EVENTS_LIVE] });
+    const older = await connectClient(await at.join(), { changes: [] });
+    const phone = await connectClient(await at.join(), { system: { system: "ios" } });
+    const first = await connectClient(grant);
+    changed(at.events);
+    await first.push(() => true);
+    const cursor = first.cursor();
+    await first.close();
+
+    const turn = [
+      { type: "thinking_delta", taskId: "t1", text: "Reading the tide table" },
+      { type: "assistant_delta", taskId: "t1", text: "The harbour " },
+      { type: "assistant_delta", taskId: "t1", text: "opens at six." },
+      { type: "tool_start", taskId: "t1", callId: "c1", toolName: "bash" },
+      { type: "tool_end", taskId: "t1", callId: "c1", toolName: "bash", isError: false },
+    ] as const;
+    for (let round = 0; round < 4; round++)
+      for (const event of turn) at.events.emit("inf:event", event);
+    const priced = {
+      type: "tool_end",
+      taskId: "t1",
+      callId: "c2",
+      toolName: "subagent",
+      isError: false,
+      usage: { input: 1200, output: 300 },
+    } as const;
+    at.events.emit("inf:event", priced);
+    changed(at.events);
+
+    // Twenty streamed events against a journal of four: only the two numbered pushes are kept.
+    const back = await connectClient(grant, { cursor });
+    expect(back.welcome.catchUp).toBe("replay");
+    expect(back.pushes.map((push) => [push.seq, push.channel])).toEqual([
+      [cursor.seq + 1, "inf:event"],
+      [cursor.seq + 2, "inf:models:changed"],
+    ]);
+    expect(back.pushes[0]?.payload).toEqual(priced);
+    expect(back.lives).toEqual([]);
+
+    for (const view of [current, older, phone])
+      await view.push((push) => push.seq === cursor.seq + 2);
+    const streamed = Array.from({ length: 4 }, () => turn).flat();
+    // A current view reads them live, outside the numbering.
+    expect(current.lives).toEqual(streamed.map((payload) => ({ channel: "inf:event", payload })));
+    expect(current.pushes.map((push) => push.seq)).toEqual([
+      cursor.seq,
+      cursor.seq + 1,
+      cursor.seq + 2,
+    ]);
+    // A view from before the change reads them as before, under the newest number already sent.
+    expect(older.lives).toEqual([]);
+    expect(
+      older.pushes.filter((push) => push.seq === cursor.seq).map((push) => push.payload),
+    ).toEqual([{ ok: true }, ...streamed]);
+    // The phone never reads them, so it is sent none.
+    expect(phone.lives).toEqual([]);
+    expect(phone.pushes.map((push) => push.seq)).toEqual([
+      cursor.seq,
+      cursor.seq + 1,
+      cursor.seq + 2,
+    ]);
   });
 
   it("forwards what a view may ask as the captain, and refuses the rest without asking the core", async () => {

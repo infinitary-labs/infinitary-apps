@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "streamed-events-live",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Your phone and other computers catch up after a short break more often",
+      "body": "While crewmates work, your computer no longer counts each word they write or each step they take among the recent changes it keeps for your other devices. A phone or another computer that drops for a few minutes now more often catches up on just what it missed instead of reading everything again, and your phone is no longer sent crewmate activity it never shows.",
+      "noPicture": "Nothing on screen changes; a device that comes back reads less before it is up to date.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -103,7 +103,7 @@ Either way the device's cursor is then the welcome's `epoch` with the newest `se
 A `view` connection is also `full` from the home's view floor (`VIEW_FLOOR`) up to the home's major, and on an older home when the `viewFloor` its hello said reaches that home's major, provided its hello says a floor or it is a phone (`system: ios`); a `work` connection is `read` on any other major (`contractAccess`, `docs/contract.md`).
 Both sides ignore a frame's fields they do not know, so a later minor can add one.
 
-Every core push but a `live` picture is numbered once, at the connection, by one journal per listening run (`EventJournal`, `src/core/connection/journal.ts`): `seq` counts from 1 in a fresh random `epoch`, and every welcomed device is sent the same frame under the same number.
+Every core push but a `live` one ("Live pushes" below) is numbered once, at the connection, by one journal per listening run (`EventJournal`, `src/core/connection/journal.ts`): `seq` counts from 1 in a fresh random `epoch`, and every welcomed device is sent the same frame under the same number.
 The journal keeps the newest 4,096 pushes or 16 MiB of frames, whichever is smaller, and the newest push whenever it keeps any.
 It keeps them only while something is paired or a pairing link is open: otherwise only the local door's clients dial, on the same computer, so each push is numbered and nothing is kept, and a local client that dropped reloads unless it missed nothing.
 A cursor is replayed when its epoch is this journal's and its `seq` is no newer than the journal's and no older than the push before the oldest one kept; anything else is a reload.
@@ -149,6 +149,13 @@ A view's request to watch, size or stop watching a task's browser reaches the co
 The connection ends every watch it holds when it closes, so a view watches again after each welcome (`ViewBackend`, `docs/view.md`, "A task's browser on a view").
 Per task, one picture is written at a time through the outbox; a newer one that comes meanwhile replaces any still waiting, so a slow link shows the page as it is now rather than a queue of old pictures, and `behind` still cuts a device that stops reading.
 A view whose hello does not list the change is sent no `live` frame, since it never watches; a home that does not list it answers no watch, and its views say to update it.
+
+What is happening in a turn now is live too (`streamed-events-live`): a streamed piece of a reply or its thinking (`assistant_delta`, `thinking_delta`), and a tool's start or an end that reports no usage (`tool_start`, `tool_end`), go on `inf:event` as `live` frames (`isStreamedEvent`, `src/shared/events.ts`).
+They take no place in the journal, so a stream of them never pushes a dropped device's place out of what is kept, and a short gap still replays.
+A view reads each again whole on its next event (the crewmate transcript and what it is writing now), so a replay that skips the ones it missed leaves it current at the next one.
+A tool's end that reports usage stays numbered, since the usage reads follow it.
+A phone is sent none of them, since it never reads them.
+A view whose hello does not list the change is sent each as a `push` under the newest number already sent, which moves its cursor nowhere, so it reads them as before; the next major removes that.
 
 ## Closing
 
@@ -230,6 +237,7 @@ The names are open strings: a client ignores one it does not know, and a newer h
 - `src/core/connection/connection.test.ts`: each rule above against a stand-in core, the real event bus and the real pairing, the work requests and the home's own requests to a computer that runs work included, a view heard coming and going, and where it listens said only when that changes.
 - `src/core/connection/localDoor.test.ts`, "the local door": its folder and files, its key admitting the captain with no device row and two clients at once, its refusals, no pairing on it, an earlier key refused, no pushes kept while nothing is paired, and its clients kept while devices' listeners restart.
 - `src/core/connection/journal.test.ts` and `addresses.test.ts`: the numbering and the listening rule on their own.
+- `src/core/connection/connection.test.ts`, "keeps streamed reply pieces and tool events out of the numbering": a returning device replays past a stream that outgrew the journal, a current view reads the stream live, a view from before the change under the newest number, and a phone none of it.
 - `src/core/connection/outbox.test.ts`: the outbox's pieces, window and marks on their own, and the parts it sends a device that reads them; `frameParts.test.ts`: parts joined back into frames, and parts past their length refused; `connection.test.ts`, "pacing and liveness": a device receiving a long push through a slow link kept on one connection, one that stops reading still cut, and a long push sent in parts to a current device or an older one that lists `frame-parts`.
 - `src/core/core.connection.test.ts`, "the connection serves the core to paired devices": the real core, two devices, a dropped one caught up exactly, and every no-argument read a view may ask parsed against its own schema after the wire.
 - `src/core/core.contract.test.ts`, "a client that knows only the published contract": `scripts/contract-client.ts`, which reads only `docs/contract.json`, answers a card and reads the feed over the connection, and the version rule's window from both sides (`docs/contract.md`).

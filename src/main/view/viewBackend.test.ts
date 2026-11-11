@@ -1,5 +1,5 @@
 import { CONTRACT_CHANGES } from "@core/connection/contractChanges";
-import type { HomeLinkState } from "@core/devices/homeLink";
+import type { HomeLinkOptions, HomeLinkState } from "@core/devices/homeLink";
 import { JoinedHome } from "@core/devices/joinedHome";
 import type { UpdateChecker } from "@core/update/updateChecker";
 import { customApiConnectInputSchema } from "@shared/customApi";
@@ -97,4 +97,61 @@ it("refuses command settings before forwarding to an old or unknown home, withou
     await expect(view.dispatch(channel, args(command))).resolves.toEqual({ listed: [] });
     expect(invoke).toHaveBeenCalledExactlyOnceWith(channel, args(command));
   }
+});
+
+// INF-3750's option D: the home sends streamed reply pieces and tool starts and ends as `live` frames, and the
+// window's crewmate transcript and Observe read them as events, as they did numbered.
+it("hands a streamed reply piece the home sent live to this Mac's windows as an event", () => {
+  const sent: [string, unknown][] = [];
+  let hear: HomeLinkOptions["onLive"];
+  const view = new ViewBackend({
+    joined: new JoinedHome(scratchDir("view-live-")),
+    record: {
+      version: 1,
+      grant: {
+        at: "127.0.0.1:1",
+        homeKey: "unused",
+        deviceId: "view",
+        kind: "view",
+        key: "unused",
+        cert: "unused",
+      },
+      name: null,
+      joinedAt: 1,
+    },
+    broadcast: (channel, payload) => sent.push([channel, payload]),
+    notifications: { supported: () => false, focused: () => true, show: () => {} },
+    onThisMac: () => {},
+    onRemoved: () => {},
+    // No update action is used here.
+    updates: {} as UpdateChecker,
+    link: (options) => {
+      hear = options.onLive;
+      return {
+        start: () => {},
+        state: () => ({
+          contact: "in-reach",
+          access: "full",
+          homeVersion: null,
+          homeChanges: CONTRACT_CHANGES.names,
+          name: null,
+          takesWork: null,
+          onHomeMac: null,
+          heardAt: null,
+          removed: false,
+        }),
+        invoke: (async () => null) as never,
+        leave: async () => true,
+        close: () => {},
+      };
+    },
+  });
+  views.push(view);
+  const piece = {
+    type: "assistant_delta",
+    taskId: "t1",
+    text: "The harbour opens at six.",
+  } as const;
+  hear?.("inf:event", piece);
+  expect(sent).toEqual([["inf:event", piece]]);
 });

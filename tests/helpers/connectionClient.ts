@@ -36,11 +36,15 @@ import { WebSocket } from "ws";
 
 type Welcome = Extract<HomeFrame, { t: "welcome" }>;
 export type ReceivedPush = { seq: number; channel: PushChannel; payload: unknown };
+/** A `live` frame: for this connection alone, never numbered (docs/connection.md, "Live pushes"). */
+export type ReceivedLive = { channel: string; payload: unknown };
 
 export type ConnectionClient = {
   welcome: Welcome;
   /** Every push this connection received, in order, replayed ones first. */
   pushes: ReceivedPush[];
+  /** Every `live` frame this connection received, in order. */
+  lives: ReceivedLive[];
   /** The cursor to hand back on the next hello. */
   cursor: () => ConnectionCursor;
   /** Resolves with the first push, received or still to come, that matches. */
@@ -124,6 +128,7 @@ export async function connectClient(
       ? await tamperedSocket(grant, options.tamper)
       : await dialHome(grant, options.dial);
   const pushes: ReceivedPush[] = [];
+  const lives: ReceivedLive[] = [];
   const asked: { channel: string; args: unknown }[] = [];
   const answers = new Map<number, (frame: HomeFrame) => void>();
   const watchers = new Set<() => void>();
@@ -147,6 +152,12 @@ export async function connectClient(
       const channel = frame.channel as PushChannel;
       pushContract[ownChannel(channel) as PushChannel].payload.parse(frame.payload);
       pushes.push({ seq: frame.seq, channel, payload: frame.payload });
+      for (const watcher of watchers) watcher();
+    } else if (frame.t === "live") {
+      // A push channel's payload is checked against the contract; a picture rides its own channel.
+      const own = ownChannel(frame.channel) as PushChannel;
+      if (own in pushContract) pushContract[own].payload.parse(frame.payload);
+      lives.push({ channel: frame.channel, payload: frame.payload });
       for (const watcher of watchers) watcher();
     } else if (frame.t === "invoke") {
       asked.push({ channel: frame.channel, args: frame.args });
@@ -211,6 +222,7 @@ export async function connectClient(
       return welcomeFrame();
     },
     pushes,
+    lives,
     cursor: () => ({
       epoch: welcomeFrame().epoch,
       seq: pushes.at(-1)?.seq ?? welcomeFrame().seq,

@@ -106,6 +106,7 @@ It reads the door's address, pin and key from the door's folder at each dial, as
   Whatever started the first mate, a view asks every other request (`docs/connection.md`, "Requests").
 
 Only the pushes a view shows reach the window (`VIEW_PUSHES`): the feed's events, the cards and their threads, quota, model names, the task board, a sign-in's steps, the sign-ins where projects live, integrations, Diagnostics, and the first mate's computers and phones with their addresses, nearby computers, sign-ins, presence and resources.
+Streamed reply pieces and tool starts and ends arrive as `live` frames, outside the numbering, and reach the window as events as they did numbered (docs/connection.md, "Live pushes").
 The other Mac's look, voice and panels are its own.
 
 A file given to the input or a reply goes to the other Mac only inside the message: a picture or text file as its chip, any other file not at all, because a path on this Mac means nothing there (`docs/composer.md`, "Files").

@@ -15,6 +15,7 @@ import {
   PAST_CARD_WORDS_LEAD,
   REPLY_SETTINGS_HEAD,
 } from "../../src/shared/cards";
+import { AS_BUILT_WORDS } from "../../src/shared/plugins/bridge";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody, cardBodyElement } from "./frames";
 import { launchApp } from "./launch";
@@ -640,12 +641,12 @@ test("tagged recommendations need explicit picks, waiting approval focuses the q
       body: `<p>Choose who can see the report and when to send it.</p>
         <fieldset><legend>Who can see it?</legend>
         <input id="me" type="radio" name="audience" value="me" required><label for="me">Only me</label>
-        <label><input type="radio" name="audience" value="project" data-inf-recommended> The whole project</label></fieldset>
+        <label><input type="radio" name="audience" value="project" data-inf-current data-inf-recommended> The whole project</label></fieldset>
         <fieldset><legend>What should it include?</legend>
         <label><input type="checkbox" name="include" value="summary" data-inf-recommended required> Summary</label>
         <label><input type="checkbox" name="include" value="none"> None</label></fieldset>
         <label for="frequency">How often?</label><select id="frequency" name="frequency" required>
-        <option value="">Choose</option><optgroup label="Schedules"><option value="weekly" data-inf-recommended>Weekly</option><option value="daily">Daily</option></optgroup></select>`,
+        <option value="">Choose</option><optgroup label="Schedules"><option value="weekly" data-inf-recommended>Weekly</option><option value="daily" data-inf-current>Daily</option></optgroup></select>`,
       actions: [
         { id: "defer", label: "Not now", variant: "secondary" },
         { id: "approve", label: "Approve", default: true, variant: "primary" },
@@ -667,6 +668,19 @@ test("tagged recommendations need explicit picks, waiting approval focuses the q
     await expect(frame.locator("select")).toHaveValue("");
     await expect(frame.locator("[data-inf-recommended-label]")).toHaveCount(2);
     await expect(frame.locator("[data-inf-recommendation]")).toHaveText("Recommended: Weekly");
+    // INF-3598, the captain: "clearly label which is the current
+    // implementation, using a similar pill UI as the recommended". The As
+    // built tag sits before Recommended on an option carrying both, and a
+    // select's As built line comes first under it; neither picks anything.
+    await expect(frame.locator("[data-inf-current-label]")).toHaveCount(1);
+    await expect(frame.locator("[data-inf-as-built]")).toHaveText(`${AS_BUILT_WORDS}: Daily`);
+    await expect(frame.locator("[data-inf-as-built] + [data-inf-recommendation]")).toHaveCount(1);
+    const pills = await frame.locator("[data-inf-current-label]").evaluate((label) => {
+      const before = getComputedStyle(label, "::before");
+      const after = getComputedStyle(label, "::after");
+      return { asBuilt: before.content, first: Number(before.order) < Number(after.order) };
+    });
+    expect(pills).toEqual({ asBuilt: JSON.stringify(AS_BUILT_WORDS), first: true });
     const approve = page.getByRole("button", { name: "Approve", exact: true });
     await expect(approve).toHaveAttribute("aria-disabled", "true");
     await focusOn(approve);
@@ -751,7 +765,7 @@ test("tagged recommendations need explicit picks, waiting approval focuses the q
           name: "audience",
           options: [
             { value: "me", authoredDefault: false },
-            { value: "project", authoredDefault: true },
+            { value: "project", label: "The whole project", authoredDefault: true },
           ],
         },
         {
@@ -766,7 +780,7 @@ test("tagged recommendations need explicit picks, waiting approval focuses the q
           options: [
             { value: "", authoredDefault: false },
             { value: "weekly", authoredDefault: true },
-            { value: "daily", authoredDefault: false },
+            { value: "daily", label: "Daily", authoredDefault: false },
           ],
         },
       ],

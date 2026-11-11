@@ -618,6 +618,8 @@ The form carries the two closed facts the host needs, and the bridge reads them 
 - **Choices arrive unpicked; the recommendation is a mark** (contract 4.56, FI3-517 direction A: "highlight recommended options but always still require user explicitly choosing it").
   A radio, checkbox or select question is written with nothing `checked` or `selected`, a select opens on an empty `<option value="">Choose</option>`, and the input or `<option>` the author recommends carries `data-inf-recommended`, which the app tags Recommended without picking it.
   The bridge compares the captain's pick with the marked options to say whether an answer is `changed` or `as proposed`.
+  An option marked `data-inf-current` is what the code does now: the app tags it As built, an outline pill before any Recommended tag, and a select gets an "As built:" line under it (INF-3598).
+  The mark picks nothing, never joins the answer and leaves `changed` alone; the review findings wake asks for it on every finding's question, which always includes an option for what the code does now.
   A text field's proposal is still its own `value` (a hidden field's, its first value), and a preview's controls keep their current settings, which its footer choices submit.
   A card with no mark - one written before 4.56 - falls back on `defaultChecked` and the `selected` option.
 - **`required` marks a question the captain must answer.**

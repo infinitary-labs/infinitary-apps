@@ -334,6 +334,7 @@ Since FI3-566 (cut C) those instructions sit where each step arises: the first m
    Genuinely new problems remain reviewable.
    Info findings never block and need no steer.
    The first mate decides an ask-user finding itself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, listing them verbatim with the step it would take as the default.
+   Every finding's question always includes an option for what the code does now, marked `data-inf-current`, which the app tags As built; the reviewer's ask-user finding says what that is.
    The builder's next report names its open review, that review's last verdict and the head it read (`review` on the `report` wake).
    When that report brings a new committed head, evidence revision or validation state, the host returns it directly to the same reviewer, once per assignment.
    An unchanged report starts no review turn and takes the ordinary report sort, so a dispute or prose blocker still reaches an owner; the review history carries the captain's declined findings without anyone retyping them.

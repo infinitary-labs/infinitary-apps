@@ -144,6 +144,13 @@ export const FRAME_DRAFT_MAX = 500;
  */
 export const PICTURE_STRIP_SHOWN = 6;
 
+/**
+ * The pill the app draws on a question's option marked `data-inf-current`:
+ * what the code does now, beside the author's Recommended (INF-3598). The
+ * frame script tags the option and the frame stylesheet draws these words.
+ */
+export const AS_BUILT_WORDS = "As built";
+
 // --- the envelope, frame -> host -------------------------------------------
 
 const correlationId = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);

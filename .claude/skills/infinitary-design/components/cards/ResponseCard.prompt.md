@@ -82,6 +82,7 @@ A pick never sends anything: the footer's queue group - the first thing in the a
 Only the default closing choice waits until every required question has an answer: it is muted (`--bg-2`, `--fg-3`, `--line-1`) but focusable, and click or Enter focuses the first unpicked question without sending.
 Other closing choices, and a saved card's ghost action, send what there is.
 Options marked `data-inf-recommended` get an app-drawn Recommended tag (`--accent`, `--accent-dim`, `--radius-pill`, `--font-mono`, `--text-xs`); a select gets a Recommended label below it, leaving its value untouched.
+An option marked `data-inf-current`, what the code does now on a review finding, gets an app-drawn As built tag: the same pill in outline only (`--fg-2` words, a 1px `--line-2` border, no fill), placed before Recommended when one option carries both; a select gets an "As built:" label below it.
 Every radio group, select and group of two or more checkboxes outside a preview ends with the author's own row worded "Something else" and marked `data-inf-write-in` - a select's last option - and never carries the Recommended tag (FI3-1002).
 Picking it opens a text field under it, focused: one line growing to three, `--text-sm`, indented to the row's words (full width under a select), placeholder "Say what you want instead", at most 500 characters.
 Picking another option hides the field and keeps its words, which are sent only with the row; an empty field is no answer, so a required question's default still waits and its click focuses the field.

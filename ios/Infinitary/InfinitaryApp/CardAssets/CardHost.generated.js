@@ -6327,6 +6327,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   ];
   const FRAME_DRAFT_MAX = 500;
   const PICTURE_STRIP_SHOWN = 6;
+  const AS_BUILT_WORDS = "As built";
   const correlationId = number().int().positive().max(Number.MAX_SAFE_INTEGER);
   const fmMarker = literal(FRAME_BRIDGE_VERSION);
   const FRAME_STORE_OPS = ["get", "set", "delete", "list"];
@@ -7784,21 +7785,39 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       form.filling = false;
     }
   }
+  // The app's own lines under a select, As built first, then Recommended.
+  var SELECT_TAGS = ["data-inf-as-built", "data-inf-recommendation"];
+  function isSelectTag(element) {
+    return element && SELECT_TAGS.some(function (attribute) { return element.hasAttribute(attribute); });
+  }
+  function tagSelect(select, mark, attribute, word) {
+    var options = Array.from(select.options).filter(function (option) { return option.hasAttribute(mark); });
+    var tag = null;
+    var end = select;
+    for (var next = select.nextElementSibling; isSelectTag(next); next = next.nextElementSibling) {
+      if (next.hasAttribute(attribute)) tag = next;
+      end = next;
+    }
+    if (!tag) {
+      if (!options.length) return;
+      tag = document.createElement("span");
+      tag.setAttribute(attribute, "");
+      (attribute === SELECT_TAGS[0] ? select : end).after(tag);
+    }
+    var text = options.length ? word + ": " + options.map(words).join(", ") : "";
+    if (tag.textContent !== text) tag.textContent = text;
+  }
+  // Recommended is the author's pick; As built (data-inf-current) is what the
+  // code does now. Both only tag: neither picks an option nor joins the answer.
   function tagRecommendations() {
-    document.querySelectorAll("input[data-inf-recommended]:is([type=radio], [type=checkbox])").forEach(function (control) {
-      Array.from(control.labels || []).forEach(function (label) { if (!label.hasAttribute("data-inf-recommended-label")) label.setAttribute("data-inf-recommended-label", ""); });
+    [["data-inf-current", "data-inf-current-label"], ["data-inf-recommended", "data-inf-recommended-label"]].forEach(function (pair) {
+      document.querySelectorAll("input[" + pair[0] + "]:is([type=radio], [type=checkbox])").forEach(function (control) {
+        Array.from(control.labels || []).forEach(function (label) { if (!label.hasAttribute(pair[1])) label.setAttribute(pair[1], ""); });
+      });
     });
     document.querySelectorAll("select").forEach(function (select) {
-      var options = Array.from(select.options).filter(function (option) { return option.hasAttribute("data-inf-recommended"); });
-      var tag = select.nextElementSibling;
-      if (!tag || !tag.hasAttribute("data-inf-recommendation")) {
-        if (!options.length) return;
-        tag = document.createElement("span");
-        tag.setAttribute("data-inf-recommendation", "");
-        select.after(tag);
-      }
-      var text = options.length ? "Recommended: " + options.map(words).join(", ") : "";
-      if (tag.textContent !== text) tag.textContent = text;
+      tagSelect(select, "data-inf-current", "data-inf-as-built", ${JSON.stringify(AS_BUILT_WORDS)});
+      tagSelect(select, "data-inf-recommended", "data-inf-recommendation", "Recommended");
     });
   }
   // The field under a Something else row: the app's own, with no name, so
@@ -7827,7 +7846,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       var label = row.closest("label") || (row.labels && row.labels[row.labels.length - 1]);
       if (label && (label.contains(row) || row.compareDocumentPosition(label) & Node.DOCUMENT_POSITION_FOLLOWING)) anchor = label;
     } else {
-      while (anchor.nextElementSibling && anchor.nextElementSibling.hasAttribute("data-inf-recommendation")) anchor = anchor.nextElementSibling;
+      while (isSelectTag(anchor.nextElementSibling)) anchor = anchor.nextElementSibling;
     }
     anchor.after(field);
     return field;
@@ -7880,7 +7899,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         childList: true,
         subtree: true,
         attributes: true,
-        attributeFilter: ["name", "value", "disabled", "required", "checked", "selected", "data-inf-recommended", "data-inf-write-in"]
+        attributeFilter: ["name", "value", "disabled", "required", "checked", "selected", "data-inf-recommended", "data-inf-current", "data-inf-write-in"]
       });
     }
     readForm();
@@ -8194,7 +8213,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-0eHiwjilBXWmC+NF+t6Gnd796C+X0Kwuin4iOjS5jvI=";
+  const FRAME_BRIDGE_SHA256 = "sha256-2AXVjQBrfrbmgn13rldh7ibYfB1VZz3MfEpfif7SCLE=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";
@@ -12593,6 +12612,17 @@ details[open]::details-content {
     padding: 0 var(--space-2); font-family: var(--font-mono); font-size: var(--text-xs);
   }
   [data-inf-recommendation] { margin-top: var(--space-1); }
+  /* What the code does now (data-inf-current, INF-3598): the same pill in
+     outline only, and before Recommended when one option carries both - the
+     ::before moves after the option's words by its flex order. */
+  label[data-inf-current-label]::before, [data-inf-as-built] {
+    content: "${AS_BUILT_WORDS}"; display: inline-block; color: var(--fg-2);
+    border: 1px solid var(--line-2); border-radius: var(--radius-pill);
+    padding: 0 var(--space-2); font-family: var(--font-mono); font-size: var(--text-xs);
+  }
+  label[data-inf-current-label]::before { order: 1; }
+  label[data-inf-recommended-label]::after { order: 2; }
+  [data-inf-as-built] { margin-top: var(--space-1); margin-right: var(--space-1); }
   textarea { width: 100%; min-height: 64px; resize: vertical; }
   /* A question's Something else row (FI3-1002): the field the bridge opens
      under it while it is picked - one line, growing to three - indented to

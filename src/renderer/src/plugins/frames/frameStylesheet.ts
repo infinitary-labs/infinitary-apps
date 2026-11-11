@@ -1,3 +1,4 @@
+import { AS_BUILT_WORDS } from "@shared/plugins/bridge";
 import { frameFontUrl, PANEL_ROOT_ID } from "@shared/plugins/frameDocument";
 import revealsCss from "../../design/reveals.css?raw";
 import colorsCss from "../../design/tokens/colors.css?raw";
@@ -299,6 +300,17 @@ export const FRAME_BASE_STYLE = `
     padding: 0 var(--space-2); font-family: var(--font-mono); font-size: var(--text-xs);
   }
   [data-inf-recommendation] { margin-top: var(--space-1); }
+  /* What the code does now (data-inf-current, INF-3598): the same pill in
+     outline only, and before Recommended when one option carries both - the
+     ::before moves after the option's words by its flex order. */
+  label[data-inf-current-label]::before, [data-inf-as-built] {
+    content: "${AS_BUILT_WORDS}"; display: inline-block; color: var(--fg-2);
+    border: 1px solid var(--line-2); border-radius: var(--radius-pill);
+    padding: 0 var(--space-2); font-family: var(--font-mono); font-size: var(--text-xs);
+  }
+  label[data-inf-current-label]::before { order: 1; }
+  label[data-inf-recommended-label]::after { order: 2; }
+  [data-inf-as-built] { margin-top: var(--space-1); margin-right: var(--space-1); }
   textarea { width: 100%; min-height: 64px; resize: vertical; }
   /* A question's Something else row (FI3-1002): the field the bridge opens
      under it while it is picked - one line, growing to three - indented to

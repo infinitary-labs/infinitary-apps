@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "keyboard-presets",
+      "kind": "feature",
+      "title": "Start from a keyboard preset",
+      "body": "Settings, Keyboard now opens with a Preset row: whole sets of keys, modeled on three popular editors, to start from. One of them is the default for a new profile, and moves with plain letter keys while you are not typing. Each preset keeps the keys you change in it, and Reset all keys returns to the preset you chose. If you used an earlier version, you stay on Legacy, with every key you changed, until you pick another preset.",
+      "area": "settings",
+      "picture": {
+        "dark": "keyboard-presets-dark.webp",
+        "light": "keyboard-presets-light.webp",
+        "alt": "Keyboard settings with the new Preset row above the search, its first preset chosen, and the rows showing that preset's keys, including plain keys that work when not typing"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

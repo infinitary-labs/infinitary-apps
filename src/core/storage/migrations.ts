@@ -1321,6 +1321,18 @@ export const MIGRATIONS: readonly Migration[] = [
     AND json_type(merge_authorization_json, '$.queueRemovals') = 'array';`,
   // Contribution routing stores only project identities and the captain's destination choice.
   `ALTER TABLE repos ADD COLUMN contribution_json TEXT;`,
+  // Keyboard presets (docs/keyboard.md, "Presets"): a profile that ran a
+  // version from before them keeps today's keys, Legacy. One with changed
+  // keys already has its `keyboard` row, which reads as Legacy with its
+  // changes; one without gets Legacy's row with nothing changed, in the
+  // form those versions saved, so going back to one reads it too. A new
+  // profile gets no row and starts on Vim. Deleting the row undoes it.
+  (db, fresh) => {
+    if (fresh) return;
+    db.prepare(
+      "INSERT INTO settings (key, value) VALUES ('keyboard', ?) ON CONFLICT(key) DO NOTHING",
+    ).run(JSON.stringify({ version: 1, keys: {} }));
+  },
 ];
 
 /**

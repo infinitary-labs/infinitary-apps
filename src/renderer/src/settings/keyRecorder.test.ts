@@ -117,7 +117,7 @@ describe("Keyboard settings' recorder", () => {
         { key: "p", meta: true },
         "replace",
       ),
-    ).toEqual({ version: 1, keys: { "commands.search": [{ key: "p", meta: true }] } });
+    ).toEqual({ ...DEFAULT_SAVED_KEYMAP, keys: { "commands.search": [{ key: "p", meta: true }] } });
     expect(
       savedAfterRecording(
         DEFAULT_SAVED_KEYMAP,
@@ -127,7 +127,7 @@ describe("Keyboard settings' recorder", () => {
         "add",
       ),
     ).toEqual({
-      version: 1,
+      ...DEFAULT_SAVED_KEYMAP,
       keys: {
         "commands.search": [
           { key: "k", meta: true },
@@ -144,7 +144,7 @@ describe("Keyboard settings' recorder", () => {
         "replace",
       ),
     ).toEqual({
-      version: 1,
+      ...DEFAULT_SAVED_KEYMAP,
       keys: { "commands.search": [], "cards.next": [{ key: "k", meta: true }] },
     });
     expect(

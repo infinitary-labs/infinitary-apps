@@ -1,5 +1,5 @@
 import { DEFAULT_BINDINGS } from "@shared/keyboard";
-import { resolveBindings } from "@shared/keymap";
+import { DEFAULT_SAVED_KEYMAP, resolveBindings } from "@shared/keymap";
 import type { Menu, MenuItemConstructorOptions } from "electron";
 import { describe, expect, it, vi } from "vitest";
 import { type AppMenuActions, appMenuTemplate } from "./appMenu";
@@ -91,7 +91,7 @@ describe("the Help menu", () => {
 
   it("shows a key a person gave it in Keyboard settings", () => {
     const bindings = resolveBindings({
-      version: 1,
+      ...DEFAULT_SAVED_KEYMAP,
       keys: { "whats-new.show": [{ key: "n", meta: true, alt: true }] },
     });
     const [whatsNew] = submenu(

@@ -96,7 +96,7 @@ It reads the door's address, pin and key from the door's folder at each dial, as
 - `inf:shell:preferences` and the appearance and layout reads and writes are this Mac's own (`ViewLook`, `src/main/view/viewLook.ts`), starting from the other Mac's look the first time it is in reach (the captain's pick on FI3-681).
   Its own panels are off.
   The window's project focus rides that layout, so a Mac that controls another keeps its own focus, and its turns carry it to the first mate there as a hint (`docs/project-focus.md`).
-- The window's keys are this Mac's own too, and never a core channel: the main process's installed map reads and writes them through `ViewLook`, starting from the catalog's keys, and the other Mac never hears of them (`docs/keyboard.md`, "Changing keys").
+- The window's keys are this Mac's own too, and never a core channel: the main process's installed map reads and writes them through `ViewLook`, starting on a new profile's keyboard preset, or Legacy for a look kept from before presets, and the other Mac never hears of them (`docs/keyboard.md`, "Changing keys").
 - `inf:update:status`, `inf:update:check` and `inf:update:open-release` are this Mac's own: the app installed here, read by the same update checker the Mac where the first mate lives makes for itself (`createInstalledUpdateChecker`, `src/core/update/updateChecker.ts`; `docs/alpha.md`, "Update channels").
   The top bar shows the same update notice, with this Mac's version, channel and upgrade command, and the version in its line opens that version's release page here.
   The other Mac is never asked: its own notice is about its own app.

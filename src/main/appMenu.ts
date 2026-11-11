@@ -5,6 +5,7 @@ import {
   type SizeCommandId,
 } from "@shared/keyboard";
 import { withAllCatalogKeys } from "@shared/keymap";
+import { PRESET_LABELS } from "@shared/keyPresets";
 import {
   type BrowserWindow,
   dialog,
@@ -165,18 +166,18 @@ export function installAppMenu(
 
 /**
  * Reset All Keys…: asks first, on the window when there is one, then puts
- * every key this version knows back to the catalog's, as Keyboard
+ * every key this version knows back to the chosen preset's, as Keyboard
  * settings' Reset all keys does.
  */
 export function resetAllKeysAfterAsking(
   keymap: Pick<InstalledKeymap, "current" | "save">,
   win: BrowserWindow | undefined,
 ): void {
+  const preset = PRESET_LABELS[keymap.current().saved.preset];
   const options: MessageBoxOptions = {
     type: "question",
-    message: "Reset every key to Infinitary's own?",
-    detail:
-      "Every shortcut you changed in Keyboard settings goes back to the one Infinitary came with.",
+    message: `Reset every key to the ${preset} preset's?`,
+    detail: `Every shortcut you changed in Keyboard settings goes back to the one the ${preset} preset gives it.`,
     buttons: ["Reset All Keys", "Cancel"],
     defaultId: 0,
     cancelId: 1,

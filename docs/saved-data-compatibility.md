@@ -240,6 +240,13 @@ A two-key binding may start with a plain key that carries `when: "not-typing"`, 
 A build that reads `when` but not these pairs leaves such a key out of its installed map, so the command runs from its other keys or by name.
 That build also refuses any change while the saved map still holds such a key, naming it, until the person removes or resets that command's keys there; reading alone changes nothing, and a newer build reads the pair again.
 
+## Keyboard presets
+
+Since keyboard presets (`docs/keyboard.md`, "Presets") the saved map is `version: 2`: the chosen preset, its changed keys, and each other preset's changes under `kept`.
+A `version: 1` map, in the `keyboard` settings row or a view's look, reads as Legacy with its changes, and is not rewritten on read; the next change a person makes saves it as `version: 2`.
+A profile updated from a version before presets gets an empty `version: 1` row from the last migration in `src/core/storage/migrations.ts` when it has none, so it stays on Legacy; a new profile's fresh database skips it and starts on Vim, and a view's look saved before presets reads as Legacy too.
+An older build reads a `version: 2` map as keys it could not read, as with the not-typing field above: the catalog's keys stand in, reading alone changes nothing, and a change or Reset all keys there saves over every preset's changes.
+
 ## Self-reported merge-card risk
 
 Risk assessments keep only the crewmate's seven declared levels and reasons.

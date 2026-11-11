@@ -9,6 +9,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { CONNECTION_PORT } from "@shared/connection";
+import type { PresetId } from "@shared/keyPresets";
 import { budgetTimer } from "../helpers/budgets";
 import { claimedPort } from "../helpers/claimedPort";
 import { standInDnsSd } from "../helpers/dnsSdStandIn";
@@ -22,7 +23,7 @@ import { mockModelsJson } from "./mockModels";
 import { type MockProviderServer, type Scenario, startMockProvider } from "./mockProvider";
 import { virtualMacSwitches } from "./virtualMac";
 import { writeVoiceHelperStandIn } from "./voiceHelperStandIn";
-import { untilWindowCommands } from "./windowKeys";
+import { pickKeyPreset, untilWindowCommands } from "./windowKeys";
 import { stopWithWorker } from "./workerApps";
 
 export type LaunchedApp = {
@@ -233,6 +234,14 @@ export type LaunchOptions = {
    * expects it passes false and returns once that page has loaded.
    */
   shell?: boolean;
+  /**
+   * The keyboard preset the window starts on (docs/keyboard.md, "Presets"):
+   * Legacy, today's keys, unless a journey names another, since a journey
+   * about the app's keys is written against them; `new-profile` leaves the
+   * preset a new profile starts on, Vim. Picked as Keyboard settings picks
+   * it, once the shell takes the window's keys.
+   */
+  keys?: PresetId | "new-profile";
 };
 
 /** Where the default Claude stub lives in a run's userData (its Keychain record too). */
@@ -589,6 +598,8 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
     // the shell runs does nothing until the shell follows the window's
     // commands: the launch is ready once the shell marks the keys as its own.
     if (options.shell !== false) await untilWindowCommands(page, SHELL_READY_MS);
+    const keys = options.keys ?? "legacy";
+    if (options.shell !== false && keys !== "new-profile") await pickKeyPreset(page, keys);
   } catch (error) {
     diagnostics.snapshot();
     await closeApp(app);

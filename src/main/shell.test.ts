@@ -19,7 +19,7 @@ import { HERE } from "@shared/deviceNames";
 import type { DeviceKind, ThisMac } from "@shared/devices";
 import { type FeedLine, feedLineFrom } from "@shared/feed";
 import { HOME_CAPABILITIES, PROTOCOL_MAJORS_BEHIND, PROTOCOL_VERSION } from "@shared/ipc";
-import { DEFAULT_SAVED_KEYMAP, type SavedKeymap } from "@shared/keymap";
+import { DEFAULT_SAVED_KEYMAP, presetKeymap, type SavedKeymap } from "@shared/keymap";
 import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WebSocket } from "ws";
@@ -418,7 +418,10 @@ describe("the app as a view of another Mac", () => {
     ]);
 
     // This Mac's own keys, kept by its own core.
-    const own = { version: 1 as const, keys: { "commands.search": [{ key: "p", meta: true }] } };
+    const own = {
+      ...DEFAULT_SAVED_KEYMAP,
+      keys: { "commands.search": [{ key: "p", meta: true }] },
+    };
     air.shell.keymap.save(own);
     expect(air.shell.keymap.bindings()["commands.search"]).toEqual([{ key: "p", meta: true }]);
 
@@ -457,9 +460,9 @@ describe("the app as a view of another Mac", () => {
     await air.shell.dispatch("inf:settings:appearance:set", [{ theme: "dark", size: 110 }]);
     expect(air.shell.preferences.get().appearance).toEqual({ theme: "dark", size: 110 });
     expect(pro.asked.filter((channel) => channel.startsWith("inf:settings:"))).toEqual([]);
-    // Its keys are this Mac's own here too: the catalog's to start, kept in its own look.
-    expect(air.shell.keymap.current().saved).toEqual(DEFAULT_SAVED_KEYMAP);
-    const here = { version: 1 as const, keys: { "settings.open": [] } };
+    // Its keys are this Mac's own here too: a new profile's preset to start, kept in its own look.
+    expect(air.shell.keymap.current().saved).toEqual(presetKeymap("vim"));
+    const here = { ...presetKeymap("vim"), keys: { "settings.open": [] } };
     air.shell.keymap.save(here);
     expect(air.joined.look()?.keyboard).toEqual(here);
     expect(air.own.core.services.preferences.keymap().saved).toEqual(own);

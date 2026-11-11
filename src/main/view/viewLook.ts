@@ -1,5 +1,11 @@
 import type { JoinedHome, OwnLook } from "@core/devices/joinedHome";
-import { readSavedKeymap, type SavedKeymap, type SavedKeymapRead } from "@shared/keymap";
+import {
+  presetKeymap,
+  readSavedKeymap,
+  type SavedKeymap,
+  type SavedKeymapRead,
+} from "@shared/keymap";
+import { NEW_PROFILE_PRESET } from "@shared/keyPresets";
 import {
   type Appearance,
   DEFAULT_APPEARANCE,
@@ -15,8 +21,9 @@ import type { PreferenceSource } from "../windowSize";
  * names and how the panels sit are set here, starting from the other Mac's
  * when it joins, and the other Mac keeps its own. Its panels the captain
  * added stay there, so they are off here. The keys a person changes here
- * are this Mac's too (docs/keyboard.md): they start as the catalog's, and
- * the other Mac never hears of them.
+ * are this Mac's too (docs/keyboard.md): they start on a new profile's
+ * preset, and the other Mac never hears of them. A look kept from a version
+ * before presets, which saved no keys, stays on Legacy.
  */
 export class ViewLook implements PreferenceSource {
   private look: OwnLook | null;
@@ -34,10 +41,10 @@ export class ViewLook implements PreferenceSource {
     return this.look !== null;
   }
 
-  /** Starts from the other Mac's look, once. */
+  /** Starts from the other Mac's look, once, with this Mac's keys on a new profile's preset. */
   seed(from: OwnLook): void {
     if (this.look) return;
-    this.save(from);
+    this.save({ ...from, keyboard: from.keyboard ?? presetKeymap(NEW_PROFILE_PRESET) });
   }
 
   get(): ShellPreferences {
@@ -67,7 +74,8 @@ export class ViewLook implements PreferenceSource {
 
   /** The keys a person changed on this Mac while it controls another. */
   keymap(): SavedKeymapRead {
-    return readSavedKeymap(this.look?.keyboard);
+    // A look saved before presets kept no keys: Legacy, as every key was then.
+    return readSavedKeymap(this.look?.keyboard, this.look ? "legacy" : NEW_PROFILE_PRESET);
   }
 
   /**

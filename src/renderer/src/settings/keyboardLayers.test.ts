@@ -90,7 +90,11 @@ describe("keys used when not typing", () => {
     for (const id of closeCommands) {
       const legacy = { version: 1 as const, keys: { [id]: [functionKey] } };
       const read = readSavedKeymap(legacy);
-      expect(read).toEqual({ saved: legacy, unreadable: false });
+      // Saved before presets: Legacy, with its keys intact.
+      expect(read).toEqual({
+        saved: { ...DEFAULT_SAVED_KEYMAP, keys: legacy.keys },
+        unreadable: false,
+      });
       const installed = resolveBindings(read.saved);
       expect(commandFor({ ...press, key: "F13", code: "F13" }, {}, installed)).toBe(id);
       const changed = withKeys(read.saved, "settings.open", [
@@ -133,9 +137,13 @@ describe("keys used when not typing", () => {
     ).not.toBeNull();
     expect(bindingProblem(bare, "message.recall")).not.toBeNull();
     const legacy = { version: 1 as const, keys: { "settings.open": [{ key: "p", meta: true }] } };
-    expect(readSavedKeymap(legacy)).toEqual({ saved: legacy, unreadable: false });
+    const read = readSavedKeymap(legacy);
+    expect(read).toEqual({
+      saved: { ...DEFAULT_SAVED_KEYMAP, keys: legacy.keys },
+      unreadable: false,
+    });
     expect(
-      commandFor({ ...press, key: "p", code: "KeyP", meta: true }, {}, resolveBindings(legacy)),
+      commandFor({ ...press, key: "p", code: "KeyP", meta: true }, {}, resolveBindings(read.saved)),
     ).toBe("settings.open");
   });
 });

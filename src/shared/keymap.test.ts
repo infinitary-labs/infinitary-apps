@@ -23,6 +23,8 @@ import {
   isChanged,
   keymapRefusal,
   keymapSnapshot,
+  legacyOffered,
+  presetKeymap,
   readSavedKeymap,
   resolveBindings,
   type SavedKeymap,
@@ -32,6 +34,7 @@ import {
   withCatalogKeys,
   withKeyMoved,
   withKeys,
+  withPreset,
 } from "./keymap";
 
 const press = (key: string, held: Partial<KeyPress> = {}): KeyPress => ({
@@ -46,11 +49,12 @@ const press = (key: string, held: Partial<KeyPress> = {}): KeyPress => ({
   ...held,
 });
 
-const saved = (keys: SavedKeymap["keys"]): SavedKeymap => ({ version: 1, keys });
+const saved = (keys: SavedKeymap["keys"]): SavedKeymap => ({ ...DEFAULT_SAVED_KEYMAP, keys });
 
 describe("reading what is saved", () => {
-  it("reads nothing saved as nothing changed, and an unreadable value as the catalog's keys, said so", () => {
-    expect(readSavedKeymap(undefined)).toEqual({ saved: DEFAULT_SAVED_KEYMAP, unreadable: false });
+  it("reads nothing saved as a new profile's preset, and an unreadable value as Legacy's keys, said so", () => {
+    // INF-3547's accepted plan: new profiles start on Vim.
+    expect(readSavedKeymap(undefined)).toEqual({ saved: presetKeymap("vim"), unreadable: false });
     expect(readSavedKeymap({ version: 2, keys: {} })).toEqual({
       saved: DEFAULT_SAVED_KEYMAP,
       unreadable: true,
@@ -524,7 +528,7 @@ describe("a panel's commands (docs/keyboard.md, \"A panel's commands\")", () => 
   });
 
   it("keeps a key saved for a panel that is not here now, unrun, until it comes back", () => {
-    const saved = { version: 1 as const, keys: { [open.id]: [{ key: "k", ctrl: true }] } };
+    const saved = { ...DEFAULT_SAVED_KEYMAP, keys: { [open.id]: [{ key: "k", ctrl: true }] } };
     expect(unknownCommands(saved)).toEqual([open.id]);
     expect(unknownCommands(saved, [open])).toEqual([]);
     expect(withAllCatalogKeys(saved).keys).toEqual(saved.keys);
@@ -537,5 +541,70 @@ describe("a panel's commands (docs/keyboard.md, \"A panel's commands\")", () => 
     const snapshot = keymapSnapshot({ saved: DEFAULT_SAVED_KEYMAP, unreadable: false }, 2, [open]);
     expect(snapshot.panels).toEqual([open]);
     expect(keyHint(open.id, snapshot.bindings)).toBe("⌘J");
+  });
+});
+
+// INF-3547's accepted plan, piece 4, and the captain's pick on it: "They stay
+// on Legacy with every changed key intact"; each preset keeps its own changes
+// and Reset all keys returns to the chosen preset.
+describe("presets", () => {
+  /** What a version from before presets saved after a person changed two keys. */
+  const BEFORE_PRESETS = {
+    version: 1,
+    keys: {
+      "commands.search": [{ key: "p", meta: true }],
+      "cards.maximize": [{ key: "m", meta: true, alt: true }],
+    },
+  };
+
+  it("reads keys saved before presets as Legacy, every changed key intact", () => {
+    const { saved, unreadable } = readSavedKeymap(BEFORE_PRESETS);
+    expect(unreadable).toBe(false);
+    expect(saved.preset).toBe("legacy");
+    expect(saved.keys).toEqual(BEFORE_PRESETS.keys);
+    expect(legacyOffered(saved)).toBe(true);
+    const bindings = resolveBindings(saved);
+    expect(bindings["commands.search"]).toEqual([{ key: "p", meta: true }]);
+    expect(bindings["focus.main-message"]).toEqual(DEFAULT_BINDINGS["focus.main-message"]);
+  });
+
+  it("keeps each preset's changes when another is picked, and brings them back", () => {
+    const legacy = readSavedKeymap(BEFORE_PRESETS).saved;
+    const vim = withPreset(legacy, "vim");
+    expect(vim.keys).toEqual({});
+    expect(legacyOffered(vim)).toBe(true);
+    expect(keymapRefusal(vim, legacy)).toBeNull();
+    // Vim's own keys, with nothing changed: j moves down while not typing.
+    expect(resolveBindings(vim)["move.down"]).toContainEqual({ key: "j", when: "not-typing" });
+    const vimChanged = withKeys(vim, "move.down", [{ key: "n", when: "not-typing" }]);
+    const back = withPreset(vimChanged, "legacy");
+    expect(back.keys).toEqual(BEFORE_PRESETS.keys);
+    expect(keymapRefusal(back, vimChanged)).toBeNull();
+    expect(withPreset(back, "vim").keys).toEqual({
+      "move.down": [{ key: "n", when: "not-typing" }],
+    });
+  });
+
+  it("resets all keys to the chosen preset's, leaving the others' changes kept", () => {
+    const vim = withKeys(withPreset(readSavedKeymap(BEFORE_PRESETS).saved, "vim"), "move.down", []);
+    const reset = withAllCatalogKeys(vim);
+    expect(reset.preset).toBe("vim");
+    expect(reset.keys).toEqual({});
+    expect(resolveBindings(reset)["move.down"]).toContainEqual({ key: "j", when: "not-typing" });
+    expect(withPreset(reset, "legacy").keys).toEqual(BEFORE_PRESETS.keys);
+  });
+
+  it("counts a preset's own keys as no change", () => {
+    const vim = presetKeymap("vim");
+    const own = resolveBindings(vim)["focus.main-message"];
+    expect(withKeys(vim, "focus.main-message", own).keys).toEqual({});
+    expect(
+      withKeys(vim, "focus.main-message", DEFAULT_BINDINGS["focus.main-message"]).keys,
+    ).toEqual({ "focus.main-message": DEFAULT_BINDINGS["focus.main-message"] });
+  });
+
+  it("offers Legacy only to a profile that had it", () => {
+    expect(legacyOffered(presetKeymap("vim"))).toBe(false);
+    expect(legacyOffered(withPreset(presetKeymap("vim"), "emacs"))).toBe(false);
   });
 });

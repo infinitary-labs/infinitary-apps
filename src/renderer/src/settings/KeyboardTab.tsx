@@ -15,6 +15,7 @@ import {
   isChanged,
   type KeymapSnapshot,
   keymapRefusal,
+  legacyOffered,
   type SavedKeymap,
   SCOPE_WORDS,
   sameBinding,
@@ -22,13 +23,15 @@ import {
   withAllCatalogKeys,
   withCatalogKeys,
   withKeys,
+  withPreset,
 } from "@shared/keymap";
+import { PRESET_LABELS, type PresetId, presetsOffered } from "@shared/keyPresets";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { commandMatches, commandOffered } from "../app/commandRows";
 import { useShellStore } from "../app/store";
 import { markWindowKeys } from "../app/windowKeysMark";
-import { Badge, Button, Input, KeyCap } from "../design";
+import { Badge, Button, GroupedPills, Input, KeyCap } from "../design";
 import { thisDesktop } from "../design/core/desktop";
 import { setInstalledKeymap, useInstalledKeymap } from "../design/core/installedKeys";
 import {
@@ -38,13 +41,14 @@ import {
   savedAfterRecording,
   takesSecondKey,
 } from "./keyRecorder";
-import { ROW_GAP, SectionLabel, SettingError } from "./settingRows";
+import { ROW_GAP, SectionLabel, SettingError, SettingRow } from "./settingRows";
 
 /**
  * Settings → Keyboard (docs/keyboard.md, "Changing keys"; design
  * skill `components/core/KeyboardSettings.prompt.md`): every command with
  * where it works, its keys and whether a person changed them, and on each
- * row Record, Remove and Reset; Reset all keys under the search. The keys
+ * row Record, Remove and Reset; the Preset row above the search, and Reset
+ * all keys beside it, which returns to the chosen preset's keys. The keys
  * shown are the window's installed ones, so this list, the hints, command
  * search and the app menu never disagree.
  */
@@ -214,6 +218,31 @@ export function KeyboardTab() {
   return (
     <div data-keyboard-settings="">
       <SectionLabel>Keyboard</SectionLabel>
+      <div style={{ marginBottom: ROW_GAP }}>
+        <SettingRow
+          id="keyboard-preset"
+          title="Preset"
+          description="A whole set of keys to start from. Each keeps the keys you change in it."
+          control={
+            <GroupedPills<PresetId>
+              name="Preset"
+              htmlName="keyboard-preset"
+              value={snapshot.saved.preset}
+              // Not while saving: a disabled pill drops the focus an arrow just moved.
+              disabled={recording !== null}
+              options={presetsOffered(
+                thisDesktop().keys,
+                legacyOffered(snapshot.saved),
+                snapshot.saved.preset,
+              ).map((value) => ({ value, label: PRESET_LABELS[value] }))}
+              onChange={(next) => {
+                setResetArmed(false);
+                write(withPreset(snapshot.saved, next), "all");
+              }}
+            />
+          }
+        />
+      </div>
       <div
         style={{
           display: "flex",

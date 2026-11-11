@@ -1,7 +1,8 @@
 import type { PushPayload } from "@shared/ipc";
-import { DEFAULT_SAVED_KEYMAP } from "@shared/keymap";
+import { DEFAULT_SAVED_KEYMAP, presetKeymap } from "@shared/keymap";
 import { describe, expect, it } from "vitest";
-import { openInMemoryDatabase } from "../storage/db";
+import { DATABASE_VERSION, openInMemoryDatabase } from "../storage/db";
+import { MIGRATIONS } from "../storage/migrations";
 import { SettingsStore } from "../storage/settingsStore";
 import { ShellPreferencesService } from "./shellPreferences";
 
@@ -151,15 +152,38 @@ describe("ShellPreferencesService", () => {
 
   it("keeps the keys a person changed in their own row, outside the value it pushes", () => {
     const { service, pushes } = setup();
-    expect(service.keymap()).toEqual({ saved: DEFAULT_SAVED_KEYMAP, unreadable: false });
+    // A new profile starts on Vim (INF-3547's accepted plan).
+    expect(service.keymap()).toEqual({ saved: presetKeymap("vim"), unreadable: false });
     const changed = {
-      version: 1 as const,
+      ...DEFAULT_SAVED_KEYMAP,
       keys: { "commands.search": [{ key: "p", meta: true }], "settings.open": [] },
     };
     service.setKeymap(changed);
     expect(service.keymap()).toEqual({ saved: changed, unreadable: false });
     expect(pushes).toEqual([]);
     expect(Object.keys(service.get())).toEqual(["appearance", "layout", "panels"]);
+  });
+
+  it("keeps a profile updated from before presets on Legacy, with any keys it changed", () => {
+    // INF-3547's accepted plan: "They stay on Legacy with every changed key intact".
+    const upgrade = MIGRATIONS[DATABASE_VERSION - 1];
+    if (typeof upgrade !== "function") throw new Error("The presets migration is a function");
+    const untouched = openInMemoryDatabase(DATABASE_VERSION - 1);
+    upgrade(untouched, false);
+    expect(new ShellPreferencesService(new SettingsStore(untouched), () => {}).keymap()).toEqual({
+      saved: DEFAULT_SAVED_KEYMAP,
+      unreadable: false,
+    });
+    const changed = openInMemoryDatabase(DATABASE_VERSION - 1);
+    const keys = { "commands.search": [{ key: "p", meta: true }] };
+    changed
+      .prepare("INSERT INTO settings (key, value) VALUES (?, ?)")
+      .run("keyboard", JSON.stringify({ version: 1, keys }));
+    upgrade(changed, false);
+    expect(new ShellPreferencesService(new SettingsStore(changed), () => {}).keymap()).toEqual({
+      saved: { ...DEFAULT_SAVED_KEYMAP, keys },
+      unreadable: false,
+    });
   });
 
   it("reads a keys row it cannot read as the catalog's keys, said so, and leaves it there", () => {

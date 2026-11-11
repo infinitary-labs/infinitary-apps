@@ -5,6 +5,8 @@ import {
   type Locator,
   type Page,
 } from "@playwright/test";
+import { withPreset } from "../../src/shared/keymap";
+import { PRESET_LABELS, type PresetId } from "../../src/shared/keyPresets";
 import { takeTurn } from "./inputQueue";
 import { readInMain } from "./mainProcess";
 
@@ -170,9 +172,21 @@ export async function runFromSearch(
 }
 
 /**
+ * Puts the window's keys on a preset the way the Preset row does
+ * (docs/keyboard.md, "Presets"), keeping each preset's changes, and returns
+ * once the window installed it; a window already on it is left alone.
+ */
+export async function pickKeyPreset(page: Page, preset: PresetId): Promise<void> {
+  const { saved } = await page.evaluate(() => window.infinitary.keyboard.keymap());
+  if (saved.preset === preset) return;
+  await page.evaluate((next) => window.infinitary.keyboard.save(next), withPreset(saved, preset));
+}
+
+/**
  * Settings → Keyboard (docs/keyboard.md): a command's row by its
  * id (`data-keyboard-command`), its keys, and its recorder's verdict, never
- * by their words.
+ * by their words; the Preset row's pills by the preset's name, as the row
+ * names it (`PRESET_LABELS`).
  */
 export function keyboardSettings(page: Page): {
   section: Locator;
@@ -182,6 +196,8 @@ export function keyboardSettings(page: Page): {
   record: (command: string) => Locator;
   verdict: (command: string) => Locator;
   resetAll: Locator;
+  presets: Locator;
+  preset: (preset: PresetId) => Locator;
 } {
   const section = page.locator("[data-keyboard-settings]");
   const row = (command: string) => section.locator(`[data-keyboard-command="${command}"]`);
@@ -193,6 +209,11 @@ export function keyboardSettings(page: Page): {
     record: (command) => row(command).getByRole("button", { name: /^Record a key for / }),
     verdict: (command) => row(command).locator("[data-keyboard-verdict]"),
     resetAll: section.locator("[data-keyboard-reset-all]"),
+    presets: section.locator('[data-setting="keyboard-preset"]').getByRole("radio"),
+    preset: (preset) =>
+      section
+        .locator('[data-setting="keyboard-preset"]')
+        .getByRole("radio", { name: PRESET_LABELS[preset], exact: true }),
   };
 }
 

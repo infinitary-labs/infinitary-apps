@@ -5,7 +5,7 @@ import { seedTask, type TaskSeed } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import type { Card } from "../../src/shared/cards";
 import { chordLabel } from "../../src/shared/keyboard";
-import { bindingWarning, type SavedKeymap } from "../../src/shared/keymap";
+import { bindingWarning, DEFAULT_SAVED_KEYMAP, type SavedKeymap } from "../../src/shared/keymap";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
@@ -49,7 +49,7 @@ const TITLE = "Pick the launch window";
 
 /** The keys a person who moves with their left hand might give the movement commands. */
 const OWN_KEYS: SavedKeymap = {
-  version: 1,
+  ...DEFAULT_SAVED_KEYMAP,
   keys: {
     "move.down": [{ key: "j", alt: true }],
     "move.up": [{ key: "k", alt: true }],

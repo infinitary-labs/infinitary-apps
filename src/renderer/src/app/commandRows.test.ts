@@ -6,7 +6,7 @@ import {
   keyHint,
   panelCommandId,
 } from "@shared/keyboard";
-import { resolveBindings } from "@shared/keymap";
+import { DEFAULT_SAVED_KEYMAP, resolveBindings } from "@shared/keymap";
 import { describe, expect, it } from "vitest";
 import { commandMatches, commandRows, SEARCHED_COMMANDS, stepSelection } from "./commandRows";
 
@@ -137,7 +137,7 @@ describe("command search's list", () => {
 
   it("shows the keys the window has installed, a changed one and a removed one", () => {
     const bindings = resolveBindings({
-      version: 1,
+      ...DEFAULT_SAVED_KEYMAP,
       keys: { "cards.next": [{ key: "j", meta: true }], "focus.card-reply": [] },
     });
     expect(commandRows("card", () => null, bindings).map((row) => [row.id, row.keys])).toEqual([
@@ -187,7 +187,7 @@ describe("a panel's commands in command search (docs/keyboard.md, \"A panel's co
   };
 
   it("follows the catalog's, under its panel's title, found by its words or its panel's", () => {
-    const bindings = resolveBindings({ version: 1, keys: {} }, [open, find]);
+    const bindings = resolveBindings({ ...DEFAULT_SAVED_KEYMAP, keys: {} }, [open, find]);
     const refused = (id: string) => (id === find.id ? "Reading list has nothing to show" : null);
     const rows = commandRows("", refused, bindings, { devices: false }, [open, find]);
     expect(rows.slice(-2)).toEqual([
@@ -220,7 +220,7 @@ describe("a panel's commands in command search (docs/keyboard.md, \"A panel's co
       keys: [],
       words: ["kanban", "columns"],
     };
-    const bindings = resolveBindings({ version: 1, keys: {} }, [board]);
+    const bindings = resolveBindings({ ...DEFAULT_SAVED_KEYMAP, keys: {} }, [board]);
     const ids = (query: string) =>
       commandRows(query, () => null, bindings, { devices: false }, [board]).map((row) => row.id);
     expect(ids("kanban")).toEqual([board.id]);
@@ -236,7 +236,7 @@ describe("a panel's commands in command search (docs/keyboard.md, \"A panel's co
       keys: [{ key: "b", meta: true }],
       own: true as const,
     };
-    const bindings = resolveBindings({ version: 1, keys: {} }, [open, board]);
+    const bindings = resolveBindings({ ...DEFAULT_SAVED_KEYMAP, keys: {} }, [open, board]);
     const rows = commandRows("", () => null, bindings, { devices: false }, [open, board]);
     const ids: string[] = rows.map((row) => row.id);
     // After the stage's commands, before Settings; other panels' still follow the catalog's.

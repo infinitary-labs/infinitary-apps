@@ -24,6 +24,14 @@ import {
   scopeIsActive,
   systemKeys,
 } from "./keyboard";
+import {
+  isPresetId,
+  NEW_PROFILE_PRESET,
+  PRESET_IDS,
+  type PresetId,
+  presetChanges,
+  presetKeys,
+} from "./keyPresets";
 import type { KeySystem } from "./platform";
 
 /**
@@ -49,21 +57,40 @@ const bindingSchema = chordSchema.extend({
 /** The most keys one command keeps. */
 export const MAX_KEYS_PER_COMMAND = 8;
 
+/** The commands whose keys a person changed, each with the keys that replace its own. */
+const changedKeysSchema = z.record(
+  z.string().min(1).max(64),
+  z.array(bindingSchema).max(MAX_KEYS_PER_COMMAND),
+);
+
+/** What every version before presets saved: the changes to the catalog's keys, which is Legacy. */
+const savedKeymapV1Schema = z.strictObject({ version: z.literal(1), keys: changedKeysSchema });
+
 /**
- * What is saved: only the commands whose keys a person changed, each with
- * the keys that replace the catalog's. An empty list is a command with no
+ * What is saved (docs/keyboard.md, "What is saved"): the chosen preset, and
+ * only the commands whose keys a person changed in it (`keys`), each with
+ * the keys that replace the preset's. An empty list is a command with no
  * key at all, which is not the same as a command missing here, which keeps
- * the catalog's keys. An id this version does not know is kept as it was
- * saved and runs nothing (`unknownCommands`).
+ * the preset's keys. Every other preset's changes are kept beside them
+ * (`kept`, by preset), so picking that preset again brings them back. An id
+ * this version does not know is kept as it was saved and runs nothing
+ * (`unknownCommands`); so is a preset it does not know in `kept`.
  */
 export const savedKeymapSchema = z.strictObject({
-  version: z.literal(1),
-  keys: z.record(z.string().min(1).max(64), z.array(bindingSchema).max(MAX_KEYS_PER_COMMAND)),
+  version: z.literal(2),
+  preset: z.enum(PRESET_IDS),
+  keys: changedKeysSchema,
+  kept: z.record(z.string().min(1).max(32), changedKeysSchema),
 });
 export type SavedKeymap = z.infer<typeof savedKeymapSchema>;
 
-/** Nothing changed: every command has the catalog's keys. */
-export const DEFAULT_SAVED_KEYMAP: SavedKeymap = { version: 1, keys: {} };
+/** A preset with nothing changed. */
+export function presetKeymap(preset: PresetId): SavedKeymap {
+  return { version: 2, preset, keys: {}, kept: {} };
+}
+
+/** Nothing changed on Legacy: every command has the catalog's own keys. */
+export const DEFAULT_SAVED_KEYMAP: SavedKeymap = presetKeymap("legacy");
 
 /** The saved keys as read, and whether a saved value was there but could not be read. */
 export type SavedKeymapRead = { saved: SavedKeymap; unreadable: boolean };
@@ -84,26 +111,68 @@ export const RETIRED_COMMANDS: Readonly<Record<string, PanelCommandId>> = {
   "tasks.board-move": "panel:now/board-move",
 };
 
-/** A saved keymap with every retired command's keys under the command that took it over. */
-function carriedOver(saved: SavedKeymap): SavedKeymap {
+/** Changed keys with every retired command's under the command that took it over. */
+function carriedOver(changed: SavedKeymap["keys"]): SavedKeymap["keys"] {
   const keys: SavedKeymap["keys"] = {};
-  for (const [id, bindings] of Object.entries(saved.keys)) {
+  for (const [id, bindings] of Object.entries(changed)) {
     // INF-1879: Close retired; its custom binding cannot acquire another effect.
     if (id === "cards.close") continue;
     const now = RETIRED_COMMANDS[id];
     if (now === undefined) keys[id] = bindings;
-    else if (!Object.hasOwn(saved.keys, now)) keys[now] = bindings;
+    else if (!Object.hasOwn(changed, now)) keys[now] = bindings;
   }
-  return { ...saved, keys };
+  return keys;
 }
 
-/** Reads a saved value: none is nothing changed; one that cannot be read is too, said so. */
-export function readSavedKeymap(raw: unknown): SavedKeymapRead {
-  if (raw === undefined) return { saved: DEFAULT_SAVED_KEYMAP, unreadable: false };
+/**
+ * Reads a saved value. None is `absent` with nothing changed: a profile
+ * that ran a version from before presets was given a Legacy value when it
+ * updated, so none is a new profile's. A value saved before presets is
+ * Legacy with its changes intact. One that cannot be read is Legacy with
+ * nothing changed, said so.
+ */
+export function readSavedKeymap(
+  raw: unknown,
+  absent: PresetId = NEW_PROFILE_PRESET,
+): SavedKeymapRead {
+  if (raw === undefined) return { saved: presetKeymap(absent), unreadable: false };
+  const old = savedKeymapV1Schema.safeParse(raw);
+  if (old.success)
+    return {
+      saved: { ...presetKeymap("legacy"), keys: carriedOver(old.data.keys) },
+      unreadable: false,
+    };
   const parsed = savedKeymapSchema.safeParse(raw);
   return parsed.success
-    ? { saved: carriedOver(parsed.data), unreadable: false }
+    ? { saved: { ...parsed.data, keys: carriedOver(parsed.data.keys) }, unreadable: false }
     : { saved: DEFAULT_SAVED_KEYMAP, unreadable: true };
+}
+
+/**
+ * Whether the Preset row offers Legacy: the profile is on it, or was - it
+ * ran a version from before presets and has since picked another.
+ */
+export function legacyOffered(saved: SavedKeymap): boolean {
+  return saved.preset === "legacy" || Object.hasOwn(saved.kept, "legacy");
+}
+
+/**
+ * Another preset picked: the chosen one's changes are kept for when it is
+ * picked again, and the new one's changes, kept from before, come back.
+ */
+export function withPreset(saved: SavedKeymap, preset: PresetId): SavedKeymap {
+  if (saved.preset === preset) return saved;
+  const { [preset]: back, ...others } = { ...saved.kept, [saved.preset]: saved.keys };
+  return { version: 2, preset, keys: back ?? {}, kept: others };
+}
+
+/** Whether a saved value is only a preset picked: its changes are the ones kept for that preset. */
+function onlyPicksPreset(next: SavedKeymap, current: SavedKeymap): boolean {
+  return (
+    next.preset !== current.preset &&
+    isPresetId(next.preset) &&
+    JSON.stringify(withPreset(current, next.preset)) === JSON.stringify(next)
+  );
 }
 
 /**
@@ -210,6 +279,21 @@ function entryOf(id: AnyCommandId, panels: readonly PanelCommand[], system: KeyS
   );
 }
 
+/**
+ * A command's own keys in a preset: the preset's, or for a panel's command
+ * the preset leaves alone, the key its panel suggests.
+ */
+function ownKeys(
+  preset: PresetId,
+  id: AnyCommandId,
+  panels: readonly PanelCommand[],
+  system: KeySystem,
+): readonly KeyBinding[] {
+  return isPanelCommandId(id) && !presetChanges(preset, id)
+    ? entryOf(id, panels, system).keys
+    : presetKeys(preset, id, system);
+}
+
 // --- Which keys a command may take ---------------------------------------
 
 const LETTER = /^[a-z]$/;
@@ -232,8 +316,16 @@ const OWN_JOBS: Readonly<Record<string, string>> = {
   PageDown: "Home, End and the page keys scroll, and keep that job",
 };
 
+/**
+ * A key a system keeps for itself. `field`: a text field's own key, which
+ * does nothing outside one, so a key that works only when not typing, or a
+ * second key the window takes first, may be it (docs/keyboard.md, "Which
+ * keys a command may take").
+ */
+type ReservedKey = { chord: KeyChord; job: string; field?: true };
+
 /** The Mac's own keys and the app's native ones: a recording never takes them. */
-const PLATFORM_KEYS: readonly { chord: KeyChord; job: string }[] = [
+const PLATFORM_KEYS: readonly ReservedKey[] = [
   { chord: { key: "q", meta: true }, job: "quits Infinitary" },
   { chord: { key: "w", meta: true }, job: "closes the window" },
   { chord: { key: "h", meta: true }, job: "hides Infinitary" },
@@ -257,15 +349,15 @@ const PLATFORM_KEYS: readonly { chord: KeyChord; job: string }[] = [
   { chord: { key: "4", meta: true, shift: true }, job: "takes a screenshot" },
   { chord: { key: "5", meta: true, shift: true }, job: "takes a screenshot" },
   // A text field's own Control keys on a Mac.
-  { chord: { key: "a", ctrl: true }, job: "moves to the start of the line" },
-  { chord: { key: "e", ctrl: true }, job: "moves to the end of the line" },
-  { chord: { key: "b", ctrl: true }, job: "moves back a character" },
-  { chord: { key: "f", ctrl: true }, job: "moves forward a character" },
-  { chord: { key: "n", ctrl: true }, job: "moves down a line" },
-  { chord: { key: "d", ctrl: true }, job: "deletes the next character" },
-  { chord: { key: "h", ctrl: true }, job: "deletes the character before" },
-  { chord: { key: "o", ctrl: true }, job: "opens a new line" },
-  { chord: { key: "t", ctrl: true }, job: "swaps two characters" },
+  { chord: { key: "a", ctrl: true }, job: "moves to the start of the line", field: true },
+  { chord: { key: "e", ctrl: true }, job: "moves to the end of the line", field: true },
+  { chord: { key: "b", ctrl: true }, job: "moves back a character", field: true },
+  { chord: { key: "f", ctrl: true }, job: "moves forward a character", field: true },
+  { chord: { key: "n", ctrl: true }, job: "moves down a line", field: true },
+  { chord: { key: "d", ctrl: true }, job: "deletes the next character", field: true },
+  { chord: { key: "h", ctrl: true }, job: "deletes the character before", field: true },
+  { chord: { key: "o", ctrl: true }, job: "opens a new line", field: true },
+  { chord: { key: "t", ctrl: true }, job: "swaps two characters", field: true },
 ];
 
 /**
@@ -274,7 +366,7 @@ const PLATFORM_KEYS: readonly { chord: KeyChord; job: string }[] = [
  * on each system"): a recording never takes them. Every chord that holds
  * the Super key belongs to the desktop too (`keyProblem`).
  */
-const CTRL_SYSTEM_KEYS: readonly { chord: KeyChord; job: string }[] = [
+const CTRL_SYSTEM_KEYS: readonly ReservedKey[] = [
   { chord: { key: "q", ctrl: true }, job: "quits Infinitary" },
   { chord: { key: "w", ctrl: true }, job: "closes the window" },
   { chord: { key: "F4", alt: true }, job: "closes the window" },
@@ -297,7 +389,7 @@ const CTRL_SYSTEM_KEYS: readonly { chord: KeyChord; job: string }[] = [
 ];
 
 /** The keys a system and the app's native items keep for themselves. */
-function reservedKeys(system: KeySystem): readonly { chord: KeyChord; job: string }[] {
+function reservedKeys(system: KeySystem): readonly ReservedKey[] {
   return system === "mac" ? PLATFORM_KEYS : CTRL_SYSTEM_KEYS;
 }
 
@@ -391,7 +483,9 @@ function keyProblem(
       : "That key can't be a shortcut";
   if (system !== "mac" && chord.meta) return `${chordLabel(chord, system)} belongs to your desktop`;
   if (isTextMove(chord, id, system)) return null;
-  const platform = reservedKeys(system).find((entry) => chordsOverlap(entry.chord, chord));
+  const platform = reservedKeys(system).find(
+    (entry) => chordsOverlap(entry.chord, chord) && !(entry.field && (notTyping || second)),
+  );
   return platform ? `${chordLabel(chord, system)} ${platform.job}` : null;
 }
 
@@ -605,11 +699,21 @@ export function resolveBindings(
 ): Bindings {
   const taken: Taken[] = [];
   const resolved: Partial<Record<AnyCommandId, KeyBinding[]>> = {};
-  const place = (id: AnyCommandId, keys: readonly KeyBinding[], check: boolean) => {
+  const place = (
+    id: AnyCommandId,
+    keys: readonly KeyBinding[],
+    check: boolean,
+    grandfathered: readonly KeyBinding[] = [],
+  ) => {
     const scope = entryOf(id, panels).scope;
     const kept: KeyBinding[] = [];
     for (const binding of keys) {
-      if (check && bindingProblem(binding, id, panels, system) !== null) continue;
+      if (
+        check &&
+        !grandfathered.some((old) => sameBinding(old, binding)) &&
+        bindingProblem(binding, id, panels, system) !== null
+      )
+        continue;
       if (kept.some((other) => bindingsClash(other, binding) === "same")) continue;
       if (takenBy(taken, id, scope, binding)) continue;
       kept.push(binding);
@@ -622,12 +726,20 @@ export function resolveBindings(
     const own = saved.keys[id];
     if (own) place(id, own, true);
   }
+  // The catalog's keys are Legacy's, as every earlier version had them, and
+  // are kept wherever a preset keeps them; a preset's own are checked like a
+  // person's (docs/keyboard.md, "Presets").
   for (const id of COMMAND_IDS)
-    if (!isChanged(saved, id)) place(id, catalogKeys(id, system), false);
+    if (!isChanged(saved, id))
+      place(id, presetKeys(saved.preset, id, system), true, catalogKeys(id, system));
+  for (const command of panels)
+    if (!isChanged(saved, command.id) && presetChanges(saved.preset, command.id))
+      place(command.id, presetKeys(saved.preset, command.id, system), true);
   // A suggestion is checked like a person's own key: a panel names it as text,
   // as a Mac writes it.
   for (const command of panels)
-    if (!isChanged(saved, command.id)) place(command.id, systemKeys(command.keys, system), true);
+    if (!isChanged(saved, command.id) && !presetChanges(saved.preset, command.id))
+      place(command.id, systemKeys(command.keys, system), true);
   return resolved as Bindings;
 }
 
@@ -638,7 +750,7 @@ function droppedCatalogKeys(
   system: KeySystem,
 ): { id: CommandId; binding: KeyBinding }[] {
   return COMMAND_IDS.filter((id) => !isChanged(saved, id)).flatMap((id) =>
-    catalogKeys(id, system)
+    presetKeys(saved.preset, id, system)
       .filter((binding) => !bindings[id].some((kept) => sameBinding(kept, binding)))
       .map((binding) => ({ id, binding })),
   );
@@ -658,6 +770,8 @@ export function keymapRefusal(
   panels: readonly PanelCommand[] = [],
   system: KeySystem = "mac",
 ): string | null {
+  // Picking a preset brings back what was kept for it as it was saved.
+  if (onlyPicksPreset(next, current)) return null;
   const bindings = resolveBindings(next, panels, system);
   for (const id of allCommandIds(panels)) {
     const own = next.keys[id];
@@ -726,7 +840,7 @@ export function withKeys(
   system: KeySystem = "mac",
 ): SavedKeymap {
   const { [id]: _previous, ...rest } = saved.keys;
-  return sameKeys(keys, entryOf(id, panels, system).keys)
+  return sameKeys(keys, ownKeys(saved.preset, id, panels, system))
     ? { ...saved, keys: rest }
     : { ...saved, keys: { ...rest, [id]: keys.map(plainBinding) } };
 }

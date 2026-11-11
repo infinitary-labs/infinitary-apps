@@ -213,7 +213,7 @@ describe("two-key shortcuts", () => {
   const keys = {
     bindings: () =>
       resolveBindings({
-        version: 1,
+        ...DEFAULT_SAVED_KEYMAP,
         keys: { "settings.keyboard": [{ key: "j", meta: true, second: { key: "s" } }] },
       }),
     panels: () => [],
@@ -289,7 +289,7 @@ describe("two-key shortcuts", () => {
     followWindowCommands(win, handlers, {
       bindings: () =>
         resolveBindings({
-          version: 1,
+          ...DEFAULT_SAVED_KEYMAP,
           keys: {
             "cards.next": [{ key: "k", meta: true, second: { key: "ArrowRight", meta: true } }],
           },
@@ -322,7 +322,7 @@ describe("a plain first key when not typing", () => {
     const window = windowWithKeys();
     const recording = recordingHandlers();
     const bindings = resolveBindings({
-      version: 1,
+      ...DEFAULT_SAVED_KEYMAP,
       keys: {
         "settings.open": [{ key: "g", second: { key: "s" }, when: "not-typing" }],
         "cards.next": [{ key: "g", second: { key: "ArrowDown" }, when: "not-typing" }],
@@ -442,7 +442,10 @@ describe("InstalledKeymap", () => {
     const keymap = new InstalledKeymap(kept);
     const installs: number[] = [];
     keymap.subscribe((snapshot) => installs.push(snapshot.version));
-    const next = { version: 1 as const, keys: { "commands.search": [{ key: "p", meta: true }] } };
+    const next = {
+      ...DEFAULT_SAVED_KEYMAP,
+      keys: { "commands.search": [{ key: "p", meta: true }] },
+    };
     expect(keymap.save(next).bindings["commands.search"]).toEqual([{ key: "p", meta: true }]);
     expect(kept.setKeymap).toHaveBeenCalledWith(next);
     expect(installs).toEqual([2]);
@@ -452,7 +455,10 @@ describe("InstalledKeymap", () => {
     const kept = source();
     const keymap = new InstalledKeymap(kept);
     expect(() =>
-      keymap.save({ version: 1, keys: { "commands.search": [{ key: "q", meta: true }] } }),
+      keymap.save({
+        ...DEFAULT_SAVED_KEYMAP,
+        keys: { "commands.search": [{ key: "q", meta: true }] },
+      }),
     ).toThrow("Search commands: ⌘Q quits Infinitary");
     expect(kept.setKeymap).not.toHaveBeenCalled();
     expect(keymap.current().version).toBe(1);
@@ -472,7 +478,7 @@ describe("InstalledKeymap", () => {
     expect(keysOf(snapshot.bindings, open.id)).toEqual([{ key: "j", meta: true }]);
     expect(keymap.setPanels([open]).version).toBe(2);
     // A person's change keeps the panels'.
-    keymap.save({ version: 1, keys: { "settings.open": [] } });
+    keymap.save({ ...DEFAULT_SAVED_KEYMAP, keys: { "settings.open": [] } });
     expect(keymap.panels()).toEqual([open]);
     expect(keysOf(keymap.bindings(), open.id)).toEqual([{ key: "j", meta: true }]);
   });
@@ -482,7 +488,7 @@ describe("InstalledKeymap", () => {
     const keymap = new InstalledKeymap(kept);
     kept.replace(DEFAULT_SAVED_KEYMAP);
     expect(keymap.current().version).toBe(1);
-    kept.replace({ version: 1, keys: { "settings.open": [] } });
+    kept.replace({ ...DEFAULT_SAVED_KEYMAP, keys: { "settings.open": [] } });
     expect(keymap.current().version).toBe(2);
     expect(keymap.bindings()["settings.open"]).toEqual([]);
   });
@@ -504,7 +510,7 @@ describe("not-typing offers", () => {
     const window = windowWithKeys();
     const recording = recordingHandlers();
     let bindings = resolveBindings({
-      version: 1,
+      ...DEFAULT_SAVED_KEYMAP,
       keys: { "settings.open": [{ key: press.key, when: "not-typing" }] },
     });
     followWindowCommands(window.win, recording.handlers, {
@@ -594,7 +600,7 @@ describe("not-typing offers", () => {
       const window = windowWithKeys();
       const recording = recordingHandlers();
       const bindings = resolveBindings({
-        version: 1,
+        ...DEFAULT_SAVED_KEYMAP,
         keys: {
           "settings.open": [{ key: "g", when: "not-typing", second: { key: "s" } }],
           "commands.search": [{ key: "x", when: "not-typing" }],
@@ -695,7 +701,7 @@ describe('movement commands (docs/keyboard.md, "Moving by a key of your own")', 
     const window = windowWithKeys();
     const recording = recordingHandlers();
     const bindings = resolveBindings({
-      version: 1,
+      ...DEFAULT_SAVED_KEYMAP,
       keys: {
         "move.down": [{ key: "n", alt: true }],
         "move.last": [{ key: "e", meta: true }],

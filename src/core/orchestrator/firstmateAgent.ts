@@ -1307,7 +1307,7 @@ export class FirstmateAgent {
     this.options.broadcastEvent({ type: "firstmate_state", busy: true });
     let threw = false;
     try {
-      await session.prompt(input.framed.text, images);
+      await this.asks.outsideActions(() => session.prompt(input.framed.text, images));
       if (
         localTurn &&
         !this.turn.failed &&

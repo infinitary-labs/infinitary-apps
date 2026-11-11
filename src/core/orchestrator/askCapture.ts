@@ -156,6 +156,17 @@ export class AskCapture {
     return this.actionAsk.run({ askId, ...(origin ? { origin } : {}) }, action);
   }
 
+  /**
+   * Run a turn outside every action's pin. Work an action starts - a
+   * crewmate's run, its report, the wake turn that report drains - goes on
+   * in that action's async context, so without this a later turn's tools
+   * would read the earlier action's message as theirs and leave the
+   * message they serve to the fallback.
+   */
+  outsideActions<T>(turn: () => T): T {
+    return this.actionAsk.exit(turn);
+  }
+
   /** The read automation run, click or report an action names, or undefined when it names none this turn read. */
   readOrigin(ref: string): TurnOrigin | undefined {
     return this.readOrigins().find((entry) => entry.refs.includes(ref));

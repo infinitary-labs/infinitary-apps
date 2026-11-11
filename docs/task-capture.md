@@ -24,6 +24,7 @@ An answer given while the first mate handles a crewmate's report saves that repo
    Which message work serves is the first mate's to declare: its description tells it to name the message on work that comes from a click on its card or a report on its work.
    The host checks only typed facts (`AskEnding.nameRefusal`): a message still waiting for its own step is refused as unread, and one that has ended - answered, or its notice closed - is refused with a reason saying it ended.
    Omission uses the latest read message for ordinary direct-request calls.
+   A turn itself runs outside every action's selection (`AskCapture.outsideActions`), so a turn woken by work an earlier action started attaches only the messages it reads.
    The host pins that selection for the action's whole asynchronous execution (`withAskAttribution` and `AskCapture.withAsk`), including pictures and complete text files carried in a brief, and attaches only that selected ask with `attached_via = tool:<name>`:
    - `spawn_crewmate` -> the new task; `steer_crewmate`, `interrupt_crewmate`, `settle_task`, `update_task` (including `start_now`) -> the named task.
    - `emit_card` with `task_id` -> that task: a decision a `card_raised` event whose resolution `act()`/`close()` record as `card_resolved`, and a review relay (with `review_task_id`) an `answered` event carrying the body.

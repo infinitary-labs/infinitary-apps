@@ -1,3 +1,4 @@
+import { AsyncResource } from "node:async_hooks";
 import { DECLINE_ACTION_ID } from "@shared/cardLeave";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -674,6 +675,65 @@ describe("FirstmateAgent capture", () => {
     session.emitTurnEnd("Done.");
     session.resolveNextPrompt();
     await tick();
+    expect(tasks.list().filter((record) => record.kind === "question")).toHaveLength(0);
+  });
+
+  // A merge batch failed tests/e2e/dev-observe.spec.ts once: the captain's
+  // "finish" message was steered into the turn a crewmate's report woke, and
+  // settle_task closed the task, yet the message was filed as its own
+  // question. The report arrived from work an earlier steer started, so the
+  // wake turn ran inside that steer's pin, and settle_task attached the
+  // earlier message instead of the one it served.
+  it("a turn a report wakes attaches the message steered into it, never the one an earlier action pinned", async () => {
+    const { agent, db, session, specs, supervisor, tasks } = setup({
+      seedTasks: [{ id: "t1", title: "write a short status note", status: "idle" }],
+    });
+    // Each turn's tools run in the async context its prompt starts in.
+    const turns: AsyncResource[] = [];
+    const prompt = session.prompt.bind(session);
+    session.prompt = (text, images) => {
+      turns.push(new AsyncResource("turn"));
+      return prompt(text, images);
+    };
+    // The crewmate the steer reaches goes on in the steer's context.
+    let crewmate: AsyncResource | undefined;
+    vi.spyOn(supervisor.steer, "steerCrewmate").mockImplementation(async () => {
+      crewmate = new AsyncResource("crewmate");
+      return "mid-turn";
+    });
+    await agent.converse("keep going on the status note");
+    await toolsOf(specs).get("steer_crewmate")?.execute("s0", { task_id: "t1", message: "go" });
+    session.emitTurnEnd("On it.");
+    session.resolveNextPrompt();
+    await tick();
+    crewmate?.runInAsyncScope(() =>
+      notifyProse(
+        db,
+        agent,
+        '[fm-op] crewmate 1 reported on task t1 "write a short status note": done.',
+        "crewmate-report",
+        "t1",
+      ),
+    );
+    await tick();
+    await agent.converse("finish the task write a short status note");
+    await tick();
+    const answering = turns.at(-1);
+    expect(answering).toBeDefined();
+    await answering
+      ?.runInAsyncScope(async () =>
+        toolsOf(specs)
+          .get("settle_task")
+          ?.execute("s1", { task_id: "t1", mode: "land", closing_sentence: "Merged." }),
+      )
+      .catch(() => undefined);
+    session.emitTurnEnd("Done.");
+    session.resolveNextPrompt();
+    await tick();
+    const finish = tasks.capture
+      .listAsks()
+      .find((ask) => ask.text === "finish the task write a short status note");
+    expect(finish).toMatchObject({ taskId: "t1", attachedVia: "tool:settle_task" });
     expect(tasks.list().filter((record) => record.kind === "question")).toHaveLength(0);
   });
 

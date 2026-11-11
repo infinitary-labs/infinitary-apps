@@ -272,6 +272,16 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     }
 }
 
+/// What a task's row shows (`PhoneBoard.opening`).
+public enum PhoneRowOpening: Equatable, Sendable {
+    /// This card, on Home.
+    case card(String)
+    /// The card of a required step put off, which the Mac's `show-card` move puts up again.
+    case showCard
+    /// The task's record.
+    case record
+}
+
 public struct PhoneBoard: Decodable, Sendable {
     public let seq: Int
     public internal(set) var tasks: [PhoneTask]
@@ -354,6 +364,31 @@ public struct PhoneBoard: Decodable, Sendable {
     /// The minimized cards a task's row brings back: every card of the task put aside, as the Mac's row does.
     public static func minimized(of task: PhoneTask, in cards: [PhoneCard]) -> [PhoneCard] {
         cards.filter { $0.minimized && ($0.taskID == task.id || $0.id == task.waitingCardId || $0.id == task.minimizedCardId) }
+    }
+
+    /// INF-3588: what a task's row shows once it has brought back the cards put aside named in `back`, in the Mac's
+    /// `openTask` order (src/renderer/src/plugins/point/openTask.ts): the decision the task waits on; a required step the
+    /// captain put off, shown again only by a phone that can make changes; the newest card the task owns or waits on that
+    /// is on the stack, finished being written and not ended; then the task's record. A first mate question shows its
+    /// record instead, since its card names no task and offers no way to it on the phone yet (INF-2928, INF-2941).
+    public static func opening(_ task: PhoneTask, in cards: [PhoneCard], back: Set<String> = [], canChange: Bool) -> PhoneRowOpening {
+        let stack = cards.filter { card in
+            (card.taskID == task.id || card.id == task.waitingCardId)
+                && (card.awaiting == nil || card.sentBackAt != nil) && (!card.minimized || back.contains(card.id))
+        }
+        let waiting = task.waitingCardId != nil && (task.status == "open" || task.status == "active")
+            ? stack.first { $0.awaiting == nil && !$0.actions.isEmpty } : nil
+        if waiting == nil, task.status == "open", canChange,
+           let state = task.requiredAction?.state, state == "ready" || state == "deferred" {
+            return .showCard
+        }
+        func created(_ card: PhoneCard) -> Double { card.value["createdAt"].numeric ?? 0 }
+        let newest = stack.reduce(nil as PhoneCard?) { newest, card in
+            let later = newest.map { created(card) > created($0) } ?? true
+            return later && card.value["status"].text != "streaming" && card.value["ended"] == .null ? card : newest
+        }
+        guard let shown = waiting ?? newest else { return .record }
+        return task.kind == "decision" && shown.isFirstmateOwn ? .record : .card(shown.id)
     }
 
     /// Keep a working parent and its live parts together, as the Mac's Tasks panel does (`nowGroupsOf`): the tree is live

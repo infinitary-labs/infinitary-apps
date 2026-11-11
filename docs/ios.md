@@ -466,7 +466,10 @@ After the title a row names its project only when more than one project with a r
 Only a Queued row shows the home’s dated `queueWait` line below its title, without rewording it or deciding readiness on the phone.
 The row words come from `src/panels/now/words.ts` through the generated `PhoneTaskRowWords`, and `PhoneTaskListTests` replays the desktop panel's own reading of one board, recorded by `scripts/generate-phone-scene.ts`.
 A card put aside on the Mac lists its task under Waiting on you by the Mac's `presentTask` rule, which `PhoneBoard.presenting` follows; a card with no task gets its own row titled by the card.
-A tap makes the Mac's four checks in order (`openTask`): a row whose task has cards put aside brings them back on every Mac and shows them on Home; a task whose card is ready on the stack shows that card on Home; a required step put off shows its card again through the Mac's `show-card` move; any other row opens the task's record.
+A tap follows the Mac's order (`openTask`), which `PhoneBoard.opening` holds: a row whose task has cards put aside first brings them all back on every Mac.
+Then it shows on Home the first of these: the decision the task waits on; the card of a required step put off, which the Mac's `show-card` move puts up again; the newest card the task owns or waits on that is on the stack and not ended, a note or a card replied under included.
+A row with none of these opens the task's record.
+While the phone cannot make changes, it brings nothing back and shows again no step put off, so a row shows only a card already on the stack.
 A first mate question is the one exception: its card shows no task key and the phone's cards have no Info tab, so its row opens its record, where Decline is.
 A search keeps the groups, opens every one, matches the title or the key as the Mac's does, and adds Earlier with the Mac's older closed matches, newest closed first.
 The search waits above the list until the list is pulled down from its top, as the Mac's waits behind its icon.

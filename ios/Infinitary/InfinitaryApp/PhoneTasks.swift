@@ -285,24 +285,18 @@ struct PhoneTasks: View {
         }
     }
 
-    /// INF-2928 piece 1: a tap makes the Mac's four checks in order (`openTask`). A row whose task has cards put aside
-    /// brings them back and shows them on Home, on the phone and every Mac (INF-1517); a ready card on the stack shows on
-    /// Home, except a first mate question's, whose row opens its record; a required step the captain put off shows its
-    /// card again; any other row opens the task's record.
+    /// INF-3588: a tap follows the Mac's `openTask` order. A row whose task has cards put aside brings them all back, on the
+    /// phone and every Mac (INF-1517); then it shows the decision the task waits on, a required step the captain put off
+    /// through the Mac's `show-card` move, or the task's newest card on the stack, on Home; otherwise it opens the task's
+    /// record. A first mate question opens its record (`PhoneBoard.opening`).
     private func open(_ task: PhoneTask) {
-        let aside = PhoneBoard.minimized(of: task, in: session.cards)
-        if !aside.isEmpty { restore(aside); return }
-        if let card = task.waitingCardId, let shown = session.stack.first(where: { $0.id == card }) {
-            // The captain's pick: a first mate question's card shows no task key and the phone's cards have no Info
-            // tab, so its row opens the record, where Dismiss is, until the phone matches the Mac.
-            if task.kind == "decision" && shown.isFirstmateOwn { openRecord(task); return }
-            messageContext.restoring = card; return
+        let aside = session.canChange ? PhoneBoard.minimized(of: task, in: session.cards) : []
+        bringBack(aside)
+        switch PhoneBoard.opening(task, in: session.cards, back: Set(aside.map(\.id)), canChange: session.canChange) {
+        case .card(let card): messageContext.restoring = card
+        case .showCard: showCard(task)
+        case .record: openRecord(task)
         }
-        if task.status == "open", let state = task.requiredAction?.state, state == "ready" || state == "deferred",
-           session.canChange {
-            showCard(task); return
-        }
-        openRecord(task)
     }
 
     private func openRecord(_ task: PhoneTask) { messageContext.taskID = task.id; selected = task }
@@ -328,7 +322,7 @@ struct PhoneTasks: View {
         }
     }
 
-    /// One entry, as the Mac's board runs it: Open record, Show the card by the row's own four checks, Continue at once,
+    /// One entry, as the Mac's board runs it: Open record, Show the card by the row's own order, Continue at once,
     /// and every other entry as the move to its lane or to Drop task.
     private func act(_ entry: PhoneRowMoves.Entry, task: PhoneTask, lane: PhoneRowMoves.Lane?) {
         switch entry.id {
@@ -445,7 +439,8 @@ struct PhoneTasks: View {
     }
 
     /// The record's Show the card, through the one move the Mac runs it by: once the computer shows the card again, Home
-    /// shows it as soon as the stack holds it; a refusal or a lost answer opens the record instead, as on the Mac.
+    /// shows it as soon as the stack holds it; after a refusal or a lost answer, the row goes on as the Mac's does, to the
+    /// task's newest card on the stack, then its record.
     private func showCard(_ task: PhoneTask) {
         problem = nil
         Task {
@@ -455,25 +450,32 @@ struct PhoneTasks: View {
                     messageContext.restoring = card; return
                 }
             } catch {}
-            openRecord(task)
+            if case .card(let card) = PhoneBoard.opening(task, in: session.cards, canChange: false) {
+                messageContext.restoring = card
+            } else { openRecord(task) }
         }
     }
 
-    /// INF-2553: the cards are back on Home at the tap, the first one up; one request per card, sent together, each
-    /// settling on its own.
+    /// A card put aside with no task is back on Home at the tap, and shows there.
+    private func restore(_ card: PhoneCard) {
+        guard session.canChange else { return }
+        bringBack([card])
+        messageContext.restoring = card.id
+    }
+
+    /// INF-2553: the cards are back on Home at the tap; one request per card, sent together, each settling on its own.
     /// A refusal puts that card aside again and the session says why.
-    private func restore(_ cards: [PhoneCard]) {
-        guard let first = cards.first, session.canChange else { return }
+    private func bringBack(_ cards: [PhoneCard]) {
+        guard !cards.isEmpty, session.canChange else { return }
         problem = nil
         for card in cards {
             Task { try? await session.change(.bringBack(card: card.id), .minimize, [.string(card.id), .bool(false)]) }
         }
-        messageContext.restoring = first.id
     }
 
     // A card put aside with no task: the Mac's presentation-only row, titled by the card, with no key or project.
     private func asideRow(_ card: PhoneCard, last: Bool) -> some View {
-        Button { restore([card]) } label: {
+        Button { restore(card) } label: {
             HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space3) {
                 Image(systemName: "circle.fill").font(.system(size: PhoneTheme.space2)).foregroundStyle(PhoneTheme.accent)
                     .frame(width: Self.markWidth).accessibilityHidden(true)

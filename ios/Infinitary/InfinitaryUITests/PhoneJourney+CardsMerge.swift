@@ -326,7 +326,14 @@ extension PhoneJourney {
         XCTAssertEqual(hidden["ready"] as? Bool, true)
         tab("Tasks")
         try await appearances("saved-answer-in-tasks", showing: row)
+        // INF-3588: with no card put aside, the row shows the task's newest card, the answer note, on Home, as the Mac's
+        // row does; the record waits behind its task key.
         tapOnPhone(row)
+        XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.buttons["tab-home"].isSelected, "The row shows the answer note on Home")
+        XCTAssertFalse(app.staticTexts["task-record-title"].exists, "The row shows its newest card, not its record")
+        picture("answer-row-shows-note")
+        tapOnPhone(taskKey)
         XCTAssertTrue(done.waitForPresence(timeout: 10), app.debugDescription)
         tapOnPhone(done)
         XCTAssertTrue(done.waitForAbsence(timeout: 10), app.debugDescription)

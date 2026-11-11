@@ -64,6 +64,87 @@ struct PhoneBoardTests {
         #expect(raw.presenting(cards).tasklessMinimized(cards).map(\.title) == ["Your phone is reading your Mac"])
     }
 
+    // INF-3588, the captain's report on INF-3586: a task's row should show its latest available card, and open the task
+    // only when no card is up. The row follows the Mac's `openTask` order (src/renderer/src/plugins/point/openTask.ts).
+    private func row(_ id: String, kind: String = "work", status: String, waiting: String? = nil, step: String? = nil) throws -> PhoneTask {
+        var row = task(id, key: "INF-21", title: "Explain the harbour launch window", status: status, activity: "idle")
+        row["kind"] = kind
+        if let waiting { row["waitingCardId"] = waiting }
+        if let step { row["requiredAction"] = ["state": step] }
+        return try #require(try board([row]).tasks.first)
+    }
+
+    private func shown(_ id: String, task: String, at: Double, actions: Bool = false, by author: String = "crewmate",
+                       extra: [String: PhoneJSON] = [:]) throws -> PhoneCard {
+        var value: [String: PhoneJSON] = [
+            "id": .string(id), "title": .string(id), "author": .string(author), "taskId": .string(task),
+            "body": .string("<p>The harbour launch window opens at the morning tide.</p>"), "status": .string("ready"),
+            "createdAt": .number(at),
+            "actions": .array(actions ? [.object(["id": .string("merge"), "label": .string("Merge"), "default": .bool(true)])] : []),
+        ]
+        if author == "firstmate" { value["meta"] = .string("firstmate"); value["taskId"] = nil }
+        value.merge(extra) { _, new in new }
+        return try PhoneCard(.object(value))
+    }
+
+    @Test func aRowShowsItsNewestCardOnTheStackWhenNoDecisionWaits() throws {
+        let task = try row("t-harbour", status: "active")
+        let cards = [
+            try shown("c-plan", task: "t-harbour", at: 1_793_000_001_000),
+            try shown("c-answer", task: "t-harbour", at: 1_793_000_002_000),
+            try shown("c-ended", task: "t-harbour", at: 1_793_000_003_000,
+                      extra: ["ended": .object(["at": .number(1_793_000_003_500), "line": .string("Merged")])]),
+            try shown("c-writing", task: "t-harbour", at: 1_793_000_004_000, extra: ["status": .string("streaming")]),
+            try shown("c-answering", task: "t-harbour", at: 1_793_000_005_000, extra: ["awaiting": .string("answer")]),
+            try shown("c-other", task: "t-mast", at: 1_793_000_006_000),
+        ]
+        #expect(PhoneBoard.opening(task, in: cards, canChange: true) == .card("c-answer"))
+        // A card the captain replied under stays on the stack while its author answers, and shows as the newest.
+        let replied = try shown("c-replied", task: "t-harbour", at: 1_793_000_007_000,
+                                extra: ["awaiting": .string("answer"), "sentBackAt": .number(1_793_000_007_500)])
+        #expect(PhoneBoard.opening(task, in: cards + [replied], canChange: true) == .card("c-replied"))
+        #expect(PhoneBoard.opening(task, in: Array(cards[2...]), canChange: true) == .record)
+    }
+
+    @Test func aRowShowsTheDecisionItWaitsOnBeforeANewerCard() throws {
+        let task = try row("t-harbour", status: "open", waiting: "c-merge", step: "ready")
+        let cards = [
+            try shown("c-merge", task: "t-harbour", at: 1_793_000_001_000, actions: true),
+            try shown("c-answer", task: "t-harbour", at: 1_793_000_002_000),
+        ]
+        #expect(PhoneBoard.opening(task, in: cards, canChange: true) == .card("c-merge"))
+        #expect(PhoneBoard.opening(task, in: cards, canChange: false) == .card("c-merge"))
+    }
+
+    @Test func aRowShowsTheCardsItBringsBackAndOutOfReachOpensTheRecord() throws {
+        let task = try row("t-harbour", status: "open", waiting: "c-merge")
+        let cards = [
+            try shown("c-merge", task: "t-harbour", at: 1_793_000_001_000, actions: true, extra: ["minimized": .bool(true)]),
+            try shown("c-answer", task: "t-harbour", at: 1_793_000_002_000, extra: ["minimized": .bool(true)]),
+        ]
+        let back = Set(PhoneBoard.minimized(of: task, in: cards).map(\.id))
+        #expect(back == ["c-merge", "c-answer"])
+        #expect(PhoneBoard.opening(task, in: cards, back: back, canChange: true) == .card("c-merge"))
+        // Out of reach, the phone brings nothing back, so nothing of the task is on the stack to show.
+        #expect(PhoneBoard.opening(task, in: cards, canChange: false) == .record)
+    }
+
+    @Test func aStepPutOffShowsItsCardAgainOnlyWhenThePhoneCanChange() throws {
+        let task = try row("t-harbour", status: "open", step: "deferred")
+        let cards = [try shown("c-answer", task: "t-harbour", at: 1_793_000_002_000)]
+        #expect(PhoneBoard.opening(task, in: cards, canChange: true) == .showCard)
+        #expect(PhoneBoard.opening(task, in: cards, canChange: false) == .card("c-answer"))
+        #expect(PhoneBoard.opening(try row("t-harbour", status: "open", step: "blocked"), in: [], canChange: true) == .record)
+    }
+
+    /// INF-2928 piece 1, the captain's pick, until INF-2941: a first mate question's card names no task, so its row opens
+    /// the record, where Dismiss is.
+    @Test func aFirstMateQuestionOpensItsRecord() throws {
+        let task = try row("t-question", kind: "decision", status: "open", waiting: "harbour-review-day")
+        let cards = [try shown("harbour-review-day", task: "t-question", at: 1_793_000_001_000, actions: true, by: "firstmate")]
+        #expect(PhoneBoard.opening(task, in: cards, canChange: true) == .record)
+    }
+
     // INF-1854: re-reading a whole 1,227-row board on every task change stalled the phone's scene each couple of
     // seconds. A delta folds onto the board held, as the Mac's applyTaskBoardDelta does; only a gap re-reads.
     private func delta(base: Int, seq: Int, upserts: [[String: Any]], removed: [String],

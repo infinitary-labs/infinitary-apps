@@ -1,6 +1,7 @@
 import {
   CUSTOM_API_MAX_HEADERS,
   CUSTOM_READS_PICTURES,
+  CUSTOM_TOKEN_FAILURE,
   type CustomApiAddress,
   type CustomApiConnectInput,
   type CustomApiConnectResult,
@@ -175,6 +176,11 @@ export function CustomApiForm({
   );
   const [key, setKey] = useState("");
   const [keyRemoved, setKeyRemoved] = useState(false);
+  const [auth, setAuth] = useState(original?.tokenCommand ? "command" : "key");
+  const [command, setCommand] = useState(original?.tokenCommand?.command ?? "");
+  const [refreshSeconds, setRefreshSeconds] = useState(
+    original?.tokenCommand?.refreshSeconds ?? 300,
+  );
   const [headers, setHeaders] = useState<FormHeader[]>(
     original?.headers.map((header) => ({
       ...emptyHeader(),
@@ -285,7 +291,7 @@ export function CustomApiForm({
   const approved = (what: keyof Approvals) => approvals[what] === typedKey;
   const httpRemembered = http && sameAddress;
   const keySaved = Boolean(original?.keyPresent) && sameAddress && !keyRemoved;
-  const keyed = Boolean(key) || keySaved;
+  const keyed = auth === "command" || Boolean(key) || keySaved;
   const namedHeaders = headers.filter((header) => header.name.trim());
   const sameAddressEdit = Boolean(original) && sameAddress;
   const showCertificates =
@@ -343,8 +349,9 @@ export function CustomApiForm({
       label: label.trim() || "Custom API",
       baseUrl: baseUrl.trim(),
       protocol,
-      key,
-      noKey: !key && !keySaved,
+      key: auth === "command" ? "" : key,
+      noKey: auth !== "command" && !key && !keySaved,
+      ...(auth === "command" ? { tokenCommand: { command, refreshSeconds } } : {}),
       headers: headers
         .filter((header) => header.name.trim() || header.value)
         .map(({ name, value, secret }) => ({ name: name.trim(), value, secret })),
@@ -426,9 +433,20 @@ export function CustomApiForm({
     if (view?.draftId) draftId.current = view.draftId;
   };
 
+  const validCommand = () => {
+    if (
+      auth !== "command" ||
+      (command.trim() && Number.isSafeInteger(refreshSeconds) && refreshSeconds > 0)
+    )
+      return true;
+    setErrors({ key: "Enter a token command and a positive whole number of seconds." });
+    return false;
+  };
+
   const fetchModels = () =>
     void (async () => {
       startAttempt();
+      if (!validCommand()) return;
       setNoList(false);
       const found: Errors = {};
       if (!baseUrl.trim()) {
@@ -453,6 +471,7 @@ export function CustomApiForm({
             address: read.destination,
             stage: result.failure.stage,
             keyed,
+            tokenCommand: auth === "command",
             ...answered(read),
             ...(result.view?.mode || network ? { network: result.view?.mode ?? network } : {}),
             ...(result.failure.suggestion ? { suggestion: result.failure.suggestion } : {}),
@@ -488,6 +507,7 @@ export function CustomApiForm({
   const save = () =>
     void (async () => {
       startAttempt();
+      if (!validCommand()) return;
       const found: Errors = {};
       const rows: Record<string, RowError> = {};
       let failedDraft: string | undefined;
@@ -540,6 +560,7 @@ export function CustomApiForm({
         const context: Omit<FailureContext, "stage"> = {
           address: read.destination,
           keyed,
+          tokenCommand: auth === "command",
           ...answered(read),
           listed: Boolean(result.listed),
           ...(result.view?.mode || network ? { network: result.view?.mode ?? network } : {}),
@@ -646,7 +667,7 @@ export function CustomApiForm({
       </p>
     ) : null;
   const sent = [
-    ...(keyed ? ["your key"] : []),
+    ...(keyed ? [auth === "command" ? "the token" : "your key"] : []),
     ...(namedHeaders.length
       ? [`your headers (${namedHeaders.map((header) => header.name.trim()).join(", ")})`]
       : []),
@@ -789,43 +810,89 @@ export function CustomApiForm({
           ))}
         <div className="fm-custom-two">
           <div className="fm-custom-field">
-            <div className="fm-custom-keyrow">
-              <label htmlFor={`${id}-key`}>
-                API key <span className="fm-custom-hint">· optional</span>
-              </label>
-              {keySaved && (
-                <button
-                  type="button"
-                  className="fm-custom-link"
-                  onClick={() => {
-                    edited("key");
-                    setKeyRemoved(true);
-                  }}
-                >
-                  Remove saved key
-                </button>
-              )}
-            </div>
-            <FormInput
-              id={`${id}-key`}
-              type="password"
-              autoComplete="off"
-              value={key}
-              invalid={Boolean(errors.key)}
-              placeholder={
-                keySaved
-                  ? "Saved key kept · type to replace"
-                  : "Leave empty if the server needs none"
-              }
+            <label htmlFor={`${id}-auth`}>Connect with</label>
+            <select
+              id={`${id}-auth`}
+              value={auth}
               onChange={(event) => {
                 edited("key");
-                setKey(event.target.value);
+                setAuth(event.target.value);
               }}
-            />
-            {place && (
-              <span className="fm-custom-hint">
-                It goes to {who} once. {HERE.This} keeps no copy.
-              </span>
+            >
+              <option value="key">API key (or no key)</option>
+              <option value="command">Token command</option>
+            </select>
+            {auth === "command" ? (
+              <>
+                <label htmlFor={`${id}-command`}>Token command</label>
+                <FormInput
+                  id={`${id}-command`}
+                  mono
+                  value={command}
+                  autoComplete="off"
+                  invalid={Boolean(errors.key)}
+                  onChange={(event) => {
+                    edited("key");
+                    setCommand(event.target.value);
+                  }}
+                />
+                <label htmlFor={`${id}-refresh`}>Refresh after (seconds)</label>
+                <FormInput
+                  id={`${id}-refresh`}
+                  type="number"
+                  min={1}
+                  value={String(refreshSeconds)}
+                  onChange={(event) => {
+                    edited("key");
+                    setRefreshSeconds(Number(event.target.value));
+                  }}
+                />
+                <span className="fm-custom-hint">
+                  Runs on {who} with your access. Prints only the token. Renew your organization’s
+                  sign-in outside Infinitary when needed.
+                </span>
+              </>
+            ) : (
+              <>
+                <div className="fm-custom-keyrow">
+                  <label htmlFor={`${id}-key`}>
+                    API key <span className="fm-custom-hint">· optional</span>
+                  </label>
+                  {keySaved && (
+                    <button
+                      type="button"
+                      className="fm-custom-link"
+                      onClick={() => {
+                        edited("key");
+                        setKeyRemoved(true);
+                      }}
+                    >
+                      Remove saved key
+                    </button>
+                  )}
+                </div>
+                <FormInput
+                  id={`${id}-key`}
+                  type="password"
+                  autoComplete="off"
+                  value={key}
+                  invalid={Boolean(errors.key)}
+                  placeholder={
+                    keySaved
+                      ? "Saved key kept · type to replace"
+                      : "Leave empty if the server needs none"
+                  }
+                  onChange={(event) => {
+                    edited("key");
+                    setKey(event.target.value);
+                  }}
+                />
+                {place && (
+                  <span className="fm-custom-hint">
+                    It goes to {who} once. {HERE.This} keeps no copy.
+                  </span>
+                )}
+              </>
             )}
             {fieldError("key")}
           </div>
@@ -1313,6 +1380,15 @@ export function CustomApiForm({
           )}
         </div>
       )}
+      {auth === "command" && (
+        <div className="fm-custom-command-approval" data-custom-command-approval>
+          <p className="fm-custom-hint">
+            Save or Fetch from server runs this command to get a token. Infinitary runs it again
+            after the refresh interval or one refusal.
+          </p>
+          <pre>{command}</pre>
+        </div>
+      )}
       <div className="fm-custom-foot">
         <span className="fm-custom-hint" aria-live="polite">
           {footHint}
@@ -1431,8 +1507,11 @@ export function RemoteCustomConnection({
             Unencrypted
           </span>
         )}
-        <span className="fm-custom-tag" data-tone={ready ? "ok" : "idle"}>
-          {ready ? "Ready" : "Not checked"}
+        <span
+          className="fm-custom-tag"
+          data-tone={view.tokenCommandFailed ? "danger" : ready ? "ok" : "idle"}
+        >
+          {view.tokenCommandFailed ? CUSTOM_TOKEN_FAILURE.status : ready ? "Ready" : "Not checked"}
         </span>
         <span className="fm-custom-acts">
           <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
@@ -1443,6 +1522,11 @@ export function RemoteCustomConnection({
           </Button>
         </span>
       </div>
+      {view.tokenCommandFailed && (
+        <p role="alert" className="fm-custom-field-error">
+          {CUSTOM_TOKEN_FAILURE.row}
+        </p>
+      )}
       <div className="fm-custom-lrow fm-custom-lcols" aria-hidden="true">
         <span>MODEL</span>
         <span>STATUS</span>
@@ -1583,6 +1667,11 @@ export function CustomApiAccountsSection() {
         const ready = view.enabled && checked;
         return (
           <section className="fm-custom-conn" data-custom-account={accountId} key={accountId}>
+            {view.tokenCommandFailed && (
+              <p role="alert" className="fm-custom-field-error">
+                {CUSTOM_TOKEN_FAILURE.row}
+              </p>
+            )}
             <div className="fm-custom-conn-head">
               <h3>{view.label}</h3>
               <span className="fm-custom-mono fm-custom-address">{view.baseUrl}</span>
@@ -1591,13 +1680,23 @@ export function CustomApiAccountsSection() {
                   Unencrypted
                 </span>
               )}
+              {view.tokenCommand && <span className="fm-custom-tag">Token command</span>}
               {view.addressException && (
                 <span className="fm-custom-tag" data-tone="warn">
                   {CUSTOM_EXCEPTION_WORDS.tag}
                 </span>
               )}
-              <span className="fm-custom-tag" data-tone={ready ? "ok" : "idle"}>
-                {ready ? "Ready" : checked ? "Paused" : "Paused · not checked"}
+              <span
+                className="fm-custom-tag"
+                data-tone={view.tokenCommandFailed ? "danger" : ready ? "ok" : "idle"}
+              >
+                {view.tokenCommandFailed
+                  ? CUSTOM_TOKEN_FAILURE.status
+                  : ready
+                    ? "Ready"
+                    : checked
+                      ? "Paused"
+                      : "Paused · not checked"}
               </span>
               <span className="fm-custom-acts">
                 <Button variant="ghost" size="sm" onClick={() => setEditing(view)}>

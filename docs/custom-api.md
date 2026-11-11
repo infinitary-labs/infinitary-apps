@@ -9,7 +9,7 @@ A server that needs no key gets none, wherever it is: an empty key field means n
 FI3-974 adds the person's own extra request headers (captain's choices: one row per header, a Secret switch on each, stored beside the key, and headers may stand in for the key); "Extra request headers" below.
 FI3-485 extends HTTP to public addresses (captain chose direction B), behind independent unencrypted approval and a stronger public-internet warning.
 Chat Completions, Responses and Anthropic Messages are explicit protocol choices.
-Anthropic Messages (FI3-1754) runs Pi's own Anthropic adapter through the same guarded transport: `POST {base}/messages` with `x-api-key` and `anthropic-version: 2023-06-01` (no `Authorization`), and `GET {base}/models` the same way.
+Anthropic Messages (FI3-1754) runs Pi's own Anthropic adapter through the same guarded transport: `POST {base}/messages` with `x-api-key` and `anthropic-version: 2023-06-01` (fixed keys send no `Authorization`), and `GET {base}/models` the same way; token commands send both credential headers as described below.
 The base address ends in `/v1` like the others, and Pi's adapter is given a base without it because it appends `/v1/messages` itself.
 Responses defaults to `store:false`; only connection-specific retention consent can permit omission, never `store:true` or server-saved continuation.
 
@@ -30,7 +30,7 @@ The provider-name pattern is reserved for app-owned connections.
 
 `src/core/pi/customApiPolicy.ts` owns canonical base addresses, network classes, literal bearer validation and safe errors.
 `customApiTransport.ts` owns the actual native Node HTTP/HTTPS requests, without mutating global fetch, agents, proxy settings or trust.
-A transport captures one destination and credential; there is no address/key setter and no credential getter.
+A transport captures one destination and credential source; there is no address/key setter and no credential getter.
 Constructing one sends nothing.
 `close()` is terminal, cancels DNS waits, aborts requests/streams and releases the captured key.
 This is a transport lifetime, not the account Pause policy.
@@ -84,7 +84,7 @@ This is a transport lifetime, not the account Pause policy.
   A slow/abandoned reader applies backpressure and is cut off by the same limits.
   Caller abort and terminal close apply before DNS completes and during streaming.
   Stream cancellation destroys the native request.
-  There are no automatic retries.
+  Fixed keys have no automatic retries; token commands have the one 401 renewal described below.
 - Redirects, 401 key rejection, 403 access refusal, 404 path/model and 429 rate limit are translated before their bodies or headers are read.
   A generation request's other server failure is read only far enough to tell whether it is a context overflow, at most 16 KiB, and the text is then discarded.
   Only that yes or no leaves the transport: an overflow becomes the context refusal a rolling session already compacts and retries on, and any other wording stays a server failure.
@@ -96,7 +96,7 @@ This is a transport lifetime, not the account Pause policy.
 
 ## Setup, models and selection
 
-1. The form asks for a name, the full base address, an optional masked bearer key, the protocol, optional **Extra request headers** and the models.
+1. The form asks for a name, the full base address, **Connect with** (an optional masked key or a token command), the protocol, optional **Extra request headers** and the models.
    There is no network question and no no-key checkbox.
    A live line under the address reads "Sends to (canonical address) · (network)" (`inf:accounts:custom:address`, DNS only, nothing sent to the server).
    On Edit at the same address the key field reads "Saved key kept · type to replace", beside **Remove saved key**; an empty key there keeps the saved one.
@@ -135,7 +135,7 @@ This is a transport lifetime, not the account Pause policy.
    No project files, real tools or first mate prompts are sent.
    Cancellation aborts and prevents late proof/activation.
 6. Checked save is **unselected**.
-   The Settings list shows one block per connection: name, address, an **Unencrypted** tag for HTTP, status, then Edit, Pause and Disconnect, and one line per model with its status, a **Reads pictures** tag when proved and a first mate choice; a locked control says why.
+   The Settings list shows one block per connection: name, address, an **Unencrypted** tag for HTTP, a **Token command** tag when selected, status and any token-renewal failure instructions, then Edit, Pause and Disconnect, and one line per model with its status, a **Reads pictures** tag when proved and a first mate choice; a locked control says why.
    Crew use is set only on the Models board, which shows whenever any model can be placed, a custom API's alone included.
    Paused/unchecked/unplaced custom models never enter fallback/background pools.
    Crew-only placement does not open first setup.
@@ -160,6 +160,37 @@ When input and output are reported without a total, Pi's context-token calculati
 Reported reasoning tokens remain an optional subset of output in the event and saved usage record, never another token or cost category.
 An unmatched id, missing counts or missing rates leaves the estimate unavailable; nothing reprices older records.
 Allowance remains unknown.
+
+## Token commands
+
+**Connect with → Token command** replaces the fixed key with a command the person types in the connection form.
+The command may use any syntax the system command interpreter accepts, including pipes and chained commands.
+Save and Fetch from server show the full command and approve running it on the computer that keeps the connection, with the person’s access, as well as sending its token to the displayed address.
+The command runs from that person’s home, not a project, with `hostEnv()`; it is unrestricted code, not a sandbox or protected Secrets recipient.
+No project file, model reply, discovery list or Claude settings supplies this command.
+Changing it or its interval creates a new candidate and requires the existing checked replacement flow.
+The private connection record keeps command settings, never the produced token, and the view returns those settings for Edit.
+Commands should obtain credentials rather than contain literal tokens themselves.
+
+`customApiToken.ts` owns each transport’s in-memory token, expiry and shared in-flight renewal.
+Before a request, an absent or expired token runs the command; **Refresh after (seconds)** defaults to Claude Code’s five-minute interval and accepts the lifetime the token issuer specifies.
+The command may run for ten minutes, as Claude Code’s helper does; stdout is bounded by the existing 8 KiB bearer contract plus a line ending, validated as one token, and stderr and raw child errors are discarded.
+It receives no input, so an expired corporate sign-in must be renewed outside Infinitary.
+A 401 before a successful response runs it again and retries that identical request once; a second 401 fails safely, and a 403 never triggers renewal.
+Simultaneous requests share renewal and do not renew a token another request already replaced after a refusal.
+A caller’s cancellation stops its wait, and Disconnect closes the transport, kills the command’s process group on Unix and clears tokens.
+A command’s detached children are not contained by this lifecycle.
+No failed command falls back to a saved key or another account.
+
+A command token on Anthropic Messages sends both `x-api-key` and `Authorization: Bearer`, matching Claude Code; the other protocols send bearer authorization.
+A fixed Messages key continues sending `x-api-key` only.
+The transport guards the current token and tokens used by running requests through response completion, failure or cancellation.
+It also guards the last three retired tokens for 60 seconds after retirement or their last running request ends, whichever is later.
+Expired history is removed by a timer, and fast rotation evicts older history without evicting active-request tokens.
+Only this bounded window catches a later reply echoing a retired token; it does not retain all historical credentials.
+The saved connection’s row reports a command failure with instructions to renew the organization’s sign-in or edit and save the command again.
+Commands are approved by Settings, not a protected Secrets approval, and their output never enters Pi authentication state, Settings, task records or Diagnostics.
+A home receiving a command from a view and a work computer must advertise the `custom-token-command` contract change before a token-command connection is forwarded to it.
 
 ## Checked reasoning and cache settings
 

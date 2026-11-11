@@ -1,6 +1,13 @@
 import { z } from "zod";
 import { HERE } from "./deviceNames";
 
+export const CUSTOM_TOKEN_FAILURE = {
+  message:
+    "The token command failed. Renew your organization’s sign-in, or edit the command and save again.",
+  row: "The token command failed. Renew your organization’s sign-in, or press Edit and save the command again.",
+  status: "Token command failed",
+} as const;
+
 export const customNetworkModeSchema = z.enum(["public", "private", "local"]);
 export type CustomNetworkMode = z.infer<typeof customNetworkModeSchema>;
 /**
@@ -103,6 +110,10 @@ export const customApiInputSchema = z.object({
   /** The only secret-bearing request; never returned by any view. */
   key: z.string().max(8192),
   noKey: z.boolean(),
+  /** Settings-approved shell command; only its stdout token stays in memory. */
+  tokenCommand: z
+    .object({ command: z.string().min(1), refreshSeconds: z.number().int().positive() })
+    .optional(),
   /** Absent in connections saved before FI3-974. */
   headers: z.array(customHeaderInputSchema).max(CUSTOM_API_MAX_HEADERS).default([]),
   approvedDestination: z.string().max(4096),
@@ -190,6 +201,10 @@ export const customApiViewSchema = z.object({
   mode: customNetworkModeSchema,
   protocol: customProtocolSchema,
   keyPresent: z.boolean(),
+  tokenCommand: z
+    .object({ command: z.string(), refreshSeconds: z.number().int().positive() })
+    .optional(),
+  tokenCommandFailed: z.boolean().optional(),
   noKey: z.boolean(),
   /** A secret header's value is never returned. */
   headers: z

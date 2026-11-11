@@ -23,6 +23,10 @@ export function customApiForm(page: Page) {
     /** The person's exception for that one address, offered under it. */
     exception: form.getByLabel(/^Make an exception for /),
     key: form.getByLabel(/^API key/),
+    authentication: form.getByLabel("Connect with", { exact: true }),
+    commandApproval: form.locator("[data-custom-command-approval] pre"),
+    tokenCommand: form.getByLabel("Token command", { exact: true }),
+    refreshSeconds: form.getByLabel("Refresh after (seconds)", { exact: true }),
     protocol: form.getByLabel("API protocol"),
     fetch: form.getByRole("button", { name: /^Fetch (from server|again)$/ }),
     listed: (id: string) => form.locator(`[data-custom-listed="${id}"]`),

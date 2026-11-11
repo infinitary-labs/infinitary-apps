@@ -1,6 +1,8 @@
 import { type DeviceSsh, type DeviceView, reachFrom } from "@shared/devices";
+import { PROTOCOL_VERSION } from "@shared/ipc";
 import type { ComputerSignIns } from "@shared/signIns";
 import { describe, expect, it, vi } from "vitest";
+import { contractChange } from "../connection/contractChanges";
 import { DeviceSignIns } from "./deviceSignIns";
 
 /**
@@ -32,6 +34,38 @@ function view(inReach: boolean, ssh: DeviceSsh | undefined) {
 }
 
 describe("a computer's sign-ins view", () => {
+  // Accepted token-command plan: an older work computer must not silently keep a fixed key instead.
+  it("forwards a token command only to a computer advertising that capability", async () => {
+    const changes: string[] = [];
+    const ask = vi.fn(async () => ({ listed: [] }));
+    const signIns = new DeviceSignIns({
+      devices: () => [MINI],
+      work: {
+        ask,
+        onWorkDevice: () => () => {},
+        inReach: () => true,
+        version: () => ({ contract: PROTOCOL_VERSION, takesWork: true, changes }),
+      },
+      emit: () => {},
+      broadcastEvent: () => {},
+    });
+    try {
+      const args = [
+        { tokenCommand: { command: "company-token --audience claude", refreshSeconds: 300 } },
+      ];
+      await expect(signIns.custom(MINI.id, "inf:sign-ins:custom-connect", args)).rejects.toThrow(
+        "before saving a token command",
+      );
+      expect(ask).not.toHaveBeenCalled();
+      changes.push(contractChange("custom-token-command"));
+      await expect(signIns.custom(MINI.id, "inf:sign-ins:custom-connect", args)).resolves.toEqual({
+        listed: [],
+      });
+      expect(ask).toHaveBeenCalledWith(MINI.id, "inf:sign-ins:custom-connect", args);
+    } finally {
+      signIns.dispose();
+    }
+  });
   // INF-2186: account posture narrowed the same remote model list for every task row.
   it("narrows each computer's sign-ins once per projection and drops the snapshot after a new answer", () => {
     const model = { provider: "openai-codex", id: "gpt-6.1-sol" };

@@ -45,6 +45,7 @@ import {
   normalizeCustomApiBase,
 } from "./customApiPolicy";
 import { customApiStream } from "./customApiStream";
+import { assertCustomTokenCommand } from "./customApiToken";
 import {
   type CustomApiResolver,
   type CustomApiTransport,
@@ -78,6 +79,7 @@ type Live = {
   enabled: boolean;
   closed: boolean;
   transport?: CustomApiTransport;
+  tokenCommandFailed?: boolean;
   runtime?: Promise<ModelRuntime>;
   ready?: ModelRuntime;
   waiters: Set<() => void>;
@@ -224,7 +226,8 @@ export class CustomApiAccountOwner {
     const sameAddress = (previous: CustomApiInput) =>
       previous.baseUrl === input.baseUrl && previous.mode === input.mode;
     const previous = source?.input ?? original?.stored.input;
-    if (!input.noKey && !input.key) {
+    if (input.tokenCommand && (input.key || input.noKey)) throw new CustomApiError("credential");
+    if (!input.tokenCommand && !input.noKey && !input.key) {
       if (!previous || !sameAddress(previous)) throw new CustomApiError("credential");
       input.key = previous.key;
     }
@@ -241,7 +244,9 @@ export class CustomApiAccountOwner {
       return { ...header, value: kept.value };
     });
     // A server that needs no key gets none, wherever it is.
-    if (input.noKey) {
+    if (input.tokenCommand) {
+      assertCustomTokenCommand(input.tokenCommand);
+    } else if (input.noKey) {
       if (input.key !== "") throw new CustomApiError("credential");
     } else assertLiteralBearerKey(input.key);
     assertCustomHeaders(input.headers, !input.noKey);
@@ -380,6 +385,7 @@ export class CustomApiAccountOwner {
       // existing runtime closures alive; their next request reads this owner.
       old.transport?.close();
       old.transport = undefined;
+      old.tokenCommandFailed = undefined;
       old.stored.input.key = "";
       old.stored.input.headers = [];
       old.stored = stored;
@@ -549,7 +555,13 @@ export class CustomApiAccountOwner {
           await this.admit(live, signal);
           if (!this.proofMatches(live.stored, modelId)) throw new CustomApiError("incompatible");
           const candidate = this.candidate(live.stored, modelId);
-          live.transport ??= createCustomApiTransport({ ...candidate, generation: "turn" });
+          live.transport ??= createCustomApiTransport({
+            ...candidate,
+            generation: "turn",
+            onTokenState: (failed) => {
+              live.tokenCommandFailed = failed;
+            },
+          });
           let released = false;
           return {
             transport: live.transport,
@@ -622,7 +634,11 @@ export class CustomApiAccountOwner {
       baseUrl: input.baseUrl,
       mode: input.mode,
       ...(input.addressException ? { exception: true } : {}),
-      credential: input.noKey ? { kind: "local-no-key" } : { kind: "bearer", key: input.key },
+      credential: input.tokenCommand
+        ? { kind: "command", settings: input.tokenCommand }
+        : input.noKey
+          ? { kind: "local-no-key" }
+          : { kind: "bearer", key: input.key },
       ...(input.headers.length ? { headers: input.headers } : {}),
       ...(input.certificates ? { certificates: input.certificates } : {}),
     };
@@ -670,6 +686,10 @@ export class CustomApiAccountOwner {
       mode: input.mode,
       protocol: input.protocol,
       keyPresent: !input.noKey && Boolean(input.key),
+      ...(input.tokenCommand ? { tokenCommand: input.tokenCommand } : {}),
+      ...(accountId && this.live.get(accountId)?.tokenCommandFailed
+        ? { tokenCommandFailed: true }
+        : {}),
       noKey: input.noKey,
       headers: input.headers.map((header) =>
         header.secret

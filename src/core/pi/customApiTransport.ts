@@ -22,6 +22,8 @@ import {
   normalizeCustomApiBase,
 } from "./customApiPolicy";
 
+import { CustomApiTokenError, type CustomTokenCommand, customApiToken } from "./customApiToken";
+
 const MAX_BYTES = 1024 * 1024;
 /**
  * Bytes of conversation the wire cap allows per documented token. A connection
@@ -122,7 +124,12 @@ export type CustomApiTransportOptions = {
    * A server that needs no key gets none, in any mode; a connection's own
    * headers may carry its credential instead. No availability marker on wire.
    */
-  credential: { kind: "bearer"; key: string } | { kind: "local-no-key" };
+  credential:
+    | { kind: "bearer"; key: string }
+    | { kind: "local-no-key" }
+    | { kind: "command"; settings: CustomTokenCommand };
+  /** Safe state only, never a token or child output. */
+  onTokenState?: (failed: boolean) => void;
   /** The person's extra headers, sent on every request; a secret value is guarded like the key. */
   headers?: readonly CustomApiHeader[];
   /** Public CA material approved for this private HTTPS connection only. */
@@ -169,15 +176,17 @@ export function createCustomApiTransport(
     ...normalRoots,
     ...approvedCustomApiCertificates(options.certificates, destination.mode),
   ];
+  const token =
+    options.credential.kind === "command" ? customApiToken(options.credential.settings) : undefined;
   let key: string | undefined;
   const headers = options.headers ?? [];
   if (options.credential.kind === "bearer") {
     assertLiteralBearerKey(options.credential.key);
     key = options.credential.key;
-  } else if (options.credential.kind !== "local-no-key") {
+  } else if (options.credential.kind !== "local-no-key" && !token) {
     throw new CustomApiError("credential");
   }
-  assertCustomHeaders(headers, key !== undefined);
+  assertCustomHeaders(headers, key !== undefined || token !== undefined);
   // Captured once like the key; there is no setter and close() releases them.
   let extra: Record<string, string> | undefined = Object.fromEntries(
     headers.map((header) => [header.name, header.value]),
@@ -188,12 +197,13 @@ export function createCustomApiTransport(
   let closed = false;
   const active = new Set<(reason: CustomApiError) => void>();
 
-  async function request(
+  async function requestOnce(
     operation: Operation,
     body?: string,
     signal?: AbortSignal,
     context?: number,
     pictureBytes = 0,
+    requestKey = key,
   ): Promise<Response> {
     if (closed) throw new CustomApiError("closed");
     if (!["models", "chat/completions", "responses", "messages"].includes(operation)) {
@@ -210,6 +220,7 @@ export function createCustomApiTransport(
     }
     if (signal?.aborted) throw new CustomApiError("cancelled");
     const limits = operation === "models" ? LIST_LIMITS : generation;
+    const releaseToken = requestKey === undefined ? undefined : token?.retain(requestKey);
 
     // Bounds start before DNS; cancellation/close also cuts off pending lookup.
     return new Promise<Response>((accept, reject) => {
@@ -224,6 +235,7 @@ export function createCustomApiTransport(
         clearTimeout(idle);
         signal?.removeEventListener("abort", abort);
         active.delete(fail);
+        releaseToken?.();
       };
       const fail = (error: CustomApiError) => {
         if (failed || completed) return;
@@ -284,10 +296,13 @@ export function createCustomApiTransport(
               ...(options.anthropic
                 ? {
                     "anthropic-version": ANTHROPIC_VERSION,
-                    ...(key !== undefined ? { "x-api-key": key } : {}),
+                    ...(requestKey !== undefined ? { "x-api-key": requestKey } : {}),
+                    ...(token && requestKey !== undefined
+                      ? { Authorization: `Bearer ${requestKey}` }
+                      : {}),
                   }
-                : key !== undefined
-                  ? { Authorization: `Bearer ${key}` }
+                : requestKey !== undefined
+                  ? { Authorization: `Bearer ${requestKey}` }
                   : {}),
               ...(body !== undefined
                 ? { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) }
@@ -384,14 +399,55 @@ export function createCustomApiTransport(
     });
   }
 
+  async function request(
+    operation: Operation,
+    body?: string,
+    signal?: AbortSignal,
+    context?: number,
+    pictureBytes = 0,
+  ): Promise<Response> {
+    if (!token) return requestOnce(operation, body, signal, context, pictureBytes);
+    try {
+      const first = await token.get(signal);
+      let result: Response;
+      try {
+        result = await requestOnce(operation, body, signal, context, pictureBytes, first);
+      } catch (error) {
+        if (!(error instanceof CustomApiError) || error.category !== "key-rejected") throw error;
+        const renewed = await token.get(signal, first);
+        // Retry the identical request once, only before any reply was published.
+        try {
+          result = await requestOnce(operation, body, signal, context, pictureBytes, renewed);
+        } catch (error) {
+          if (error instanceof CustomApiError && error.category === "key-rejected")
+            token.invalidate(renewed);
+          throw error;
+        }
+      }
+      options.onTokenState?.(false);
+      return result;
+    } catch (error) {
+      if (
+        error instanceof CustomApiError &&
+        ["credential", "key-rejected"].includes(error.category)
+      ) {
+        options.onTokenState?.(true);
+        throw new CustomApiTokenError();
+      }
+      throw error;
+    }
+  }
+
   return {
     request,
     assertSafeOutput: (value) => {
       if (closed) throw new CustomApiError("closed");
-      const echoes = [...(key ? [key] : []), ...secrets].flatMap((secret) => {
-        const escaped = JSON.stringify(secret).slice(1, -1);
-        return [secret, escaped, JSON.stringify(escaped).slice(1, -1)];
-      });
+      const echoes = [...(key ? [key] : []), ...(token?.secrets() ?? []), ...secrets].flatMap(
+        (secret) => {
+          const escaped = JSON.stringify(secret).slice(1, -1);
+          return [secret, escaped, JSON.stringify(escaped).slice(1, -1)];
+        },
+      );
       if (!echoes.length) return;
       const pending: unknown[] = [value];
       while (pending.length) {
@@ -406,6 +462,7 @@ export function createCustomApiTransport(
     },
     close() {
       closed = true;
+      token?.close();
       key = undefined;
       extra = undefined;
       secrets = [];

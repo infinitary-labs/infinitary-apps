@@ -299,6 +299,7 @@
         "!tests/helpers/customApiCaFixture.ts",
         "!tests/helpers/sshServer.ts",
         "!src/core/pi/customApiCertificates.integration.test.ts",
+        "!src/core/pi/customApiToken.integration.test.ts",
         "!src/core/integrations/providers/mcp/mcpIntegration.test.ts",
         "!src/core/claude/claudeAccess.integration.test.ts",
         "!src/core/claude/claudeCostReports.integration.test.ts",

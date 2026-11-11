@@ -6195,6 +6195,26 @@
                           "keyPresent": {
                             "type": "boolean"
                           },
+                          "tokenCommand": {
+                            "type": "object",
+                            "properties": {
+                              "command": {
+                                "type": "string"
+                              },
+                              "refreshSeconds": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "command",
+                              "refreshSeconds"
+                            ]
+                          },
+                          "tokenCommandFailed": {
+                            "type": "boolean"
+                          },
                           "noKey": {
                             "type": "boolean"
                           },
@@ -7250,6 +7270,24 @@
               "noKey": {
                 "type": "boolean"
               },
+              "tokenCommand": {
+                "type": "object",
+                "properties": {
+                  "command": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "refreshSeconds": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "command",
+                  "refreshSeconds"
+                ]
+              },
               "headers": {
                 "default": [],
                 "maxItems": 20,
@@ -7416,6 +7454,26 @@
                 ]
               },
               "keyPresent": {
+                "type": "boolean"
+              },
+              "tokenCommand": {
+                "type": "object",
+                "properties": {
+                  "command": {
+                    "type": "string"
+                  },
+                  "refreshSeconds": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "command",
+                  "refreshSeconds"
+                ]
+              },
+              "tokenCommandFailed": {
                 "type": "boolean"
               },
               "noKey": {
@@ -7718,6 +7776,26 @@
             ]
           },
           "keyPresent": {
+            "type": "boolean"
+          },
+          "tokenCommand": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string"
+              },
+              "refreshSeconds": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "command",
+              "refreshSeconds"
+            ]
+          },
+          "tokenCommandFailed": {
             "type": "boolean"
           },
           "noKey": {
@@ -8026,6 +8104,26 @@
           "keyPresent": {
             "type": "boolean"
           },
+          "tokenCommand": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string"
+              },
+              "refreshSeconds": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "command",
+              "refreshSeconds"
+            ]
+          },
+          "tokenCommandFailed": {
+            "type": "boolean"
+          },
           "noKey": {
             "type": "boolean"
           },
@@ -8247,6 +8345,26 @@
             ]
           },
           "keyPresent": {
+            "type": "boolean"
+          },
+          "tokenCommand": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string"
+              },
+              "refreshSeconds": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "command",
+              "refreshSeconds"
+            ]
+          },
+          "tokenCommandFailed": {
             "type": "boolean"
           },
           "noKey": {
@@ -14842,6 +14960,24 @@
               "noKey": {
                 "type": "boolean"
               },
+              "tokenCommand": {
+                "type": "object",
+                "properties": {
+                  "command": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "refreshSeconds": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "command",
+                  "refreshSeconds"
+                ]
+              },
               "headers": {
                 "default": [],
                 "maxItems": 20,
@@ -15008,6 +15144,26 @@
                 ]
               },
               "keyPresent": {
+                "type": "boolean"
+              },
+              "tokenCommand": {
+                "type": "object",
+                "properties": {
+                  "command": {
+                    "type": "string"
+                  },
+                  "refreshSeconds": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "command",
+                  "refreshSeconds"
+                ]
+              },
+              "tokenCommandFailed": {
                 "type": "boolean"
               },
               "noKey": {
@@ -15294,6 +15450,24 @@
               "noKey": {
                 "type": "boolean"
               },
+              "tokenCommand": {
+                "type": "object",
+                "properties": {
+                  "command": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "refreshSeconds": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "command",
+                  "refreshSeconds"
+                ]
+              },
               "headers": {
                 "default": [],
                 "maxItems": 20,
@@ -15458,6 +15632,26 @@
             ]
           },
           "keyPresent": {
+            "type": "boolean"
+          },
+          "tokenCommand": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string"
+              },
+              "refreshSeconds": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "command",
+              "refreshSeconds"
+            ]
+          },
+          "tokenCommandFailed": {
             "type": "boolean"
           },
           "noKey": {
@@ -15677,6 +15871,26 @@
             ]
           },
           "keyPresent": {
+            "type": "boolean"
+          },
+          "tokenCommand": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string"
+              },
+              "refreshSeconds": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "command",
+              "refreshSeconds"
+            ]
+          },
+          "tokenCommandFailed": {
             "type": "boolean"
           },
           "noKey": {
@@ -15964,6 +16178,26 @@
           "keyPresent": {
             "type": "boolean"
           },
+          "tokenCommand": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string"
+              },
+              "refreshSeconds": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "command",
+              "refreshSeconds"
+            ]
+          },
+          "tokenCommandFailed": {
+            "type": "boolean"
+          },
           "noKey": {
             "type": "boolean"
           },
@@ -16180,6 +16414,26 @@
           "keyPresent": {
             "type": "boolean"
           },
+          "tokenCommand": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string"
+              },
+              "refreshSeconds": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "command",
+              "refreshSeconds"
+            ]
+          },
+          "tokenCommandFailed": {
+            "type": "boolean"
+          },
           "noKey": {
             "type": "boolean"
           },
@@ -16390,6 +16644,26 @@
               ]
             },
             "keyPresent": {
+              "type": "boolean"
+            },
+            "tokenCommand": {
+              "type": "object",
+              "properties": {
+                "command": {
+                  "type": "string"
+                },
+                "refreshSeconds": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "command",
+                "refreshSeconds"
+              ]
+            },
+            "tokenCommandFailed": {
               "type": "boolean"
             },
             "noKey": {
@@ -59278,6 +59552,26 @@
                     "keyPresent": {
                       "type": "boolean"
                     },
+                    "tokenCommand": {
+                      "type": "object",
+                      "properties": {
+                        "command": {
+                          "type": "string"
+                        },
+                        "refreshSeconds": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "command",
+                        "refreshSeconds"
+                      ]
+                    },
+                    "tokenCommandFailed": {
+                      "type": "boolean"
+                    },
                     "noKey": {
                       "type": "boolean"
                     },
@@ -69784,6 +70078,26 @@
                           "keyPresent": {
                             "type": "boolean"
                           },
+                          "tokenCommand": {
+                            "type": "object",
+                            "properties": {
+                              "command": {
+                                "type": "string"
+                              },
+                              "refreshSeconds": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "command",
+                              "refreshSeconds"
+                            ]
+                          },
+                          "tokenCommandFailed": {
+                            "type": "boolean"
+                          },
                           "noKey": {
                             "type": "boolean"
                           },
@@ -71051,6 +71365,26 @@
                             ]
                           },
                           "keyPresent": {
+                            "type": "boolean"
+                          },
+                          "tokenCommand": {
+                            "type": "object",
+                            "properties": {
+                              "command": {
+                                "type": "string"
+                              },
+                              "refreshSeconds": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "command",
+                              "refreshSeconds"
+                            ]
+                          },
+                          "tokenCommandFailed": {
                             "type": "boolean"
                           },
                           "noKey": {
@@ -74594,6 +74928,26 @@
                   "keyPresent": {
                     "type": "boolean"
                   },
+                  "tokenCommand": {
+                    "type": "object",
+                    "properties": {
+                      "command": {
+                        "type": "string"
+                      },
+                      "refreshSeconds": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "command",
+                      "refreshSeconds"
+                    ]
+                  },
+                  "tokenCommandFailed": {
+                    "type": "boolean"
+                  },
                   "noKey": {
                     "type": "boolean"
                   },
@@ -75447,6 +75801,24 @@
                 "noKey": {
                   "type": "boolean"
                 },
+                "tokenCommand": {
+                  "type": "object",
+                  "properties": {
+                    "command": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "refreshSeconds": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "command",
+                    "refreshSeconds"
+                  ]
+                },
                 "headers": {
                   "default": [],
                   "maxItems": 20,
@@ -75614,6 +75986,26 @@
                   ]
                 },
                 "keyPresent": {
+                  "type": "boolean"
+                },
+                "tokenCommand": {
+                  "type": "object",
+                  "properties": {
+                    "command": {
+                      "type": "string"
+                    },
+                    "refreshSeconds": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "command",
+                    "refreshSeconds"
+                  ]
+                },
+                "tokenCommandFailed": {
                   "type": "boolean"
                 },
                 "noKey": {
@@ -75911,6 +76303,26 @@
             "keyPresent": {
               "type": "boolean"
             },
+            "tokenCommand": {
+              "type": "object",
+              "properties": {
+                "command": {
+                  "type": "string"
+                },
+                "refreshSeconds": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "command",
+                "refreshSeconds"
+              ]
+            },
+            "tokenCommandFailed": {
+              "type": "boolean"
+            },
             "noKey": {
               "type": "boolean"
             },
@@ -76198,6 +76610,26 @@
             "keyPresent": {
               "type": "boolean"
             },
+            "tokenCommand": {
+              "type": "object",
+              "properties": {
+                "command": {
+                  "type": "string"
+                },
+                "refreshSeconds": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "command",
+                "refreshSeconds"
+              ]
+            },
+            "tokenCommandFailed": {
+              "type": "boolean"
+            },
             "noKey": {
               "type": "boolean"
             },
@@ -76412,6 +76844,26 @@
               ]
             },
             "keyPresent": {
+              "type": "boolean"
+            },
+            "tokenCommand": {
+              "type": "object",
+              "properties": {
+                "command": {
+                  "type": "string"
+                },
+                "refreshSeconds": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "command",
+                "refreshSeconds"
+              ]
+            },
+            "tokenCommandFailed": {
               "type": "boolean"
             },
             "noKey": {

@@ -5,7 +5,7 @@ import {
   DEVICES_FROM_A_VIEW,
   EVERY_VIEW_ASKS,
 } from "@core/connection/connection";
-import { listsChange } from "@core/connection/contractChanges";
+import { contractChange, listsChange } from "@core/connection/contractChanges";
 import { HomeLink, type HomeLinkOptions, type HomeLinkState } from "@core/devices/homeLink";
 import type { Joined, JoinedHome } from "@core/devices/joinedHome";
 import type { HostNotifications } from "@core/host";
@@ -264,6 +264,20 @@ export class ViewBackend {
       return (await this.view(channel, rawArgs, viewer)) as InvokeResponse<C>;
     if (!isViewInvokeChannel(channel))
       throw new Error(`${channel} is answered only on ${HOME.the}.`);
+    // An older home strips unknown command settings, potentially preserving an old key.
+    const commandInput =
+      channel === "inf:accounts:custom:connect"
+        ? rawArgs[0]
+        : channel === "inf:devices:custom:connect"
+          ? rawArgs[1]
+          : undefined;
+    if (
+      commandInput &&
+      typeof commandInput === "object" &&
+      "tokenCommand" in commandInput &&
+      !listsChange(this.link.state().homeChanges, contractChange("custom-token-command"))
+    )
+      throw new Error(`Update Infinitary on ${HOME.the} before saving a token command.`);
     // The window's preload reads the answer against the contract, as it reads this Mac's own.
     return (await this.link.invoke(channel, rawArgs)) as InvokeResponse<C>;
   }

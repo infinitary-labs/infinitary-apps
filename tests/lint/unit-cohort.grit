@@ -24,7 +24,7 @@ or {
   not $source <: within JsExport() as $export where { $export <: r"(?s)export\s+type\s.*" } ,
   $source <: or {
     r"[\"'](?:node:)?(?:child_process|timers/promises)[\"']",
-    r"[\"'](?:\.{1,2}/|@core/)(?:[^\"']*/)?(?:git|forkChildProcess|ssh|sshConnections|relay|dnsSd)(?:\.ts)?[\"']",
+    r"[\"'](?:\.{1,2}/|@core/)(?:[^\"']*/)?(?:git|forkChildProcess|customApiToken|ssh|sshConnections|relay|dnsSd)(?:\.ts)?[\"']",
     r"[\"'][^\"']*/(?:helpers|e2e)/(?:crewHarnessGit|placedWorld|phoneScene|projectSeed|knowledgeSeed|usage|savePoints)(?:\.ts)?[\"']"
   },
   register_diagnostic(span=$source, message="A unit test runs in memory: it may not start a child process, drive real git or sleep on a real clock. Fake the dependency or inject a clock, or make the file an integration test - add it to the exclusions of biome.json's unit-cohort override and give it a budget sized to its measured work (docs/test-cohorts.md).")

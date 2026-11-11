@@ -1,4 +1,5 @@
 import {
+  CUSTOM_TOKEN_FAILURE,
   type CustomApiAnswer,
   type CustomApiFailureCategory,
   type CustomNetworkMode,
@@ -39,6 +40,7 @@ export type FailureContext = {
   listed?: boolean;
   /** Whether a key goes with the request, typed or kept from the saved connection. */
   keyed?: boolean;
+  tokenCommand?: boolean;
   /** The network the address was read as, for where a certificate can be added. */
   network?: CustomNetworkMode;
   /** An operation address's base, offered in its place. */
@@ -184,6 +186,11 @@ export function placeCustomApiFailure(
         text: "The server refused access. Check what this key is allowed to use.",
       };
     case "credential":
+      if (context.tokenCommand)
+        return {
+          at: "key",
+          text: CUSTOM_TOKEN_FAILURE.message,
+        };
       return {
         at: "key",
         text: "Enter the key as one line of plain text, with no spaces at either end.",

@@ -1,0 +1,15 @@
+{
+  "entries": [{
+    "id": "custom-token-command",
+    "kind": "feature",
+    "area": "subscriptions",
+    "title": "Connect a gateway with a token command",
+    "body": "Custom connections can run your organization's token command instead of keeping a fixed key. Choose how often to refresh it; a refused token renews once without ending the turn. Save shows the full command before running it.",
+    "picture": {
+      "dark": "custom-token-command-dark.webp",
+      "light": "custom-token-command-light.webp",
+      "alt": "A Custom connection's Token command choice, command field and refresh interval beside its protocol."
+    },
+    "provenance": { "origin": "change" }
+  }]
+}

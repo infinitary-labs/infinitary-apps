@@ -1056,7 +1056,7 @@ Nothing of the home's sign-ins is sent here, and nothing of these goes to the ho
 - **The flow runs here, and is drawn at the home.**
   The home asks the orders in `src/shared/signIns.ts`: `inf:sign-ins:list`, `start`, `answer`, `cancel` and `remove`, and for GitHub `forge` and `forge-out`, and from `CUSTOM_API_SIGN_INS_SINCE` the `custom-*` orders (`SignInHost`, `src/core/helper/signIns.ts`).
   A custom API connection is typed at the home and kept here: this computer reads the address, fetches the model list, checks each model and saves, so a localhost address is this computer.
-  The key and headers ride once inside `inf:sign-ins:custom-connect` and stay in this computer's store; the home keeps no copy in a file, a feed line, a card or a conversation.
+  The key, headers or token command ride once inside `inf:sign-ins:custom-connect` and stay in this computer's store; the command runs here and its produced tokens stay only in memory; the home keeps no copy in a file, a feed line, a card or a conversation.
   What this computer says of its sign-ins includes its custom connections, with no key, and the models each account can serve, so a provider the home's catalog lacks can still take a task here.
   Its model lists are built as the home builds its own (`createAccountStore`, `docs/model-lists.md`, "Where "served" comes from"), so a task here, started by Automatic or set to run here, routes among what this computer actually serves (above, "Automatic starts", and below, "A task's model").
   A Claude account there lists what this computer's own Claude Code answers, else Claude's shipped catalog (`claudeAvailableModels`), and a Codex or Grok account lists Pi's catalog narrowed by the account's own list.

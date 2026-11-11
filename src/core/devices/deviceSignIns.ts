@@ -18,6 +18,7 @@ import {
   signInPlace,
 } from "@shared/signIns";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
+import { contractChange, listsChange } from "../connection/contractChanges";
 import type { CoreEventSink } from "../events";
 import { narrowServedThere } from "../models/piAccountLists";
 import type { WorkDevices } from "../placed/workDevices";
@@ -275,6 +276,17 @@ export class DeviceSignIns {
     const who = this.who(deviceId);
     if (!speaksCustomApi(this.options.work.version(deviceId)?.contract ?? ""))
       throw new Error(`Update Infinitary on ${who} first.`);
+    if (
+      channel === "inf:sign-ins:custom-connect" &&
+      args[0] &&
+      typeof args[0] === "object" &&
+      "tokenCommand" in args[0] &&
+      !listsChange(
+        this.options.work.version(deviceId)?.changes,
+        contractChange("custom-token-command"),
+      )
+    )
+      throw new Error(`Update Infinitary on ${who} before saving a token command.`);
     if (!this.options.work.inReach(deviceId))
       throw new Error(`${who} is out of reach, so nothing was sent.`);
     let answer: unknown;

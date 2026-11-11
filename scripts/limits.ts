@@ -49,6 +49,12 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/claude/claudeCostReports.ts": {
     CLAUDE_COST_REPORT_BODY_MAX: physical("a local export over 1 MiB is refused; terminal usage accounting remains available"),
   },
+  "src/core/pi/customApiToken.ts": {
+    CUSTOM_TOKEN_RECENT_LIMIT: {
+      rests: "consent",
+      way: "captain chose a short bounded history; current and running-request tokens stay guarded independently",
+    },
+  },
   "src/core/axi/channel.ts": {
     CAP_MARGIN_MS: physical("the op keeps running; the shell's next command gets its kept answer"),
     REQUEST_MAX: physical("refused in words: arguments too long; the 1 MiB bound is not named"),

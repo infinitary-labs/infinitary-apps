@@ -406,3 +406,17 @@
 .fm-custom-capabilities .fm-custom-hint {
   grid-column: 1 / -1;
 }
+
+.fm-custom-command-approval pre {
+  margin: var(--space-2) 0;
+  color: var(--fg-1);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.fm-custom-tag[data-tone="danger"] {
+  color: var(--danger);
+  border-color: var(--danger);
+}

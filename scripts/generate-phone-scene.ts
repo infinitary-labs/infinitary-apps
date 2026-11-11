@@ -326,7 +326,8 @@ try {
       // INF-3127: work closed long ago that the captain pinned: the board lists it for its pin alone.
       row(2921, "Retire the old harbour light", { ...done(9000), pinnedAt: now - 5 * min }),
       // INF-3512: a pinned parent's parts list under it in Pinned, unpinned themselves: a working part with a part of
-      // its own, one never started and one done this week. A search for "harbour" finds only the working part.
+      // its own and one never started. One done this week lists in Done instead. A search for "harbour" finds only
+      // the working part.
       row(2922, "Rebuild the north pier", { ...started(45), ...idle("inactive"), pinnedAt: now - 30 * min }),
       row(2923, "Sink the harbour piles", { ...started(25), ...running, parentId: "t-2922" }),
       row(2924, "Lay the deck", { ...started(15), ...running, parentId: "t-2923" }),

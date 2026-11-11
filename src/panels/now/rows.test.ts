@@ -469,12 +469,10 @@ describe("a pinned task's parts in Pinned (INF-3512)", () => {
       ["FI3-1359", 1],
       ["FI3-1362", 2],
       ["FI3-1361", 1],
-      ["FI3-1363", 1],
     ]);
     // Only the unrelated work stays in Working; the dropped part lists nowhere, as it never did.
     expect(listed(rows, "working")).toEqual([["FI3-1400", 0]]);
     expect(rows.has("backlog")).toBe(false);
-    expect(rows.has("landed")).toBe(false);
     const listedKeys = [...rows.values()].flat().map((row) => row.task.key);
     expect(listedKeys).not.toContain("FI3-1364");
     expect(new Set(listedKeys).size).toBe(listedKeys.length);
@@ -492,7 +490,6 @@ describe("a pinned task's parts in Pinned (INF-3512)", () => {
       ["FI3-1359", "working"],
       ["FI3-1362", "working"],
       ["FI3-1361", "working"],
-      ["FI3-1363", "landed"],
     ]);
   });
 
@@ -542,11 +539,41 @@ describe("a pinned task's parts in Pinned (INF-3512)", () => {
       ["FI3-1354", 0],
       ["FI3-1359", 1],
       ["FI3-1362", 2],
-      ["FI3-1363", 1],
     ]);
     const parts = rowsOf(board({ tasks }), { query: "measure", projectId: null });
     expect(listed(parts, "pinned")).toEqual([["FI3-1362", 0]]);
     expect(parts.has("working")).toBe(false);
+  });
+
+  // The captain's words: "in the pinned section of the tasks panel, we should
+  // not show already completed children that aren't pinned themselves".
+  it("leaves a finished part in Done unless it is pinned itself, its open parts moving up in its place", () => {
+    // A part the finished one kept open when it was settled.
+    const keptOpen = task({
+      id: "g2",
+      key: "FI3-1365",
+      title: "Word the frame's name",
+      parentId: "c5",
+      status: "open",
+      activity: null,
+      startPolicy: "on-request",
+      createdAt: 18,
+    });
+    const rows = rowsOf(board({ tasks: [...tasks, keptOpen] }), noFilter);
+    expect(listed(rows, "pinned")).toEqual([
+      ["FI3-1354", 0],
+      ["FI3-1360", 1],
+      ["FI3-1357", 1],
+      ["FI3-1359", 1],
+      ["FI3-1362", 2],
+      ["FI3-1361", 1],
+      ["FI3-1365", 1],
+    ]);
+    expect(listed(rows, "landed")).toEqual([["FI3-1363", 0]]);
+    const pinnedDone = tasks.map((row) => (row === done ? { ...done, pinnedAt: 600 } : row));
+    const both = rowsOf(board({ tasks: pinnedDone }), noFilter);
+    expect(listed(both, "pinned")?.at(-1)).toEqual(["FI3-1363", 1]);
+    expect(both.has("landed")).toBe(false);
   });
 });
 

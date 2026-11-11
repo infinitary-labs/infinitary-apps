@@ -82,6 +82,7 @@ A pinned task lists there, whatever its state or age, done and dropped work incl
 Its parts, and theirs, move there with it (INF-3512, the captain's words: "when pinning a parent task, i think all child tasks should move with it into the pinned section (only at presentation layer, child tasks aren't really "pinned" in their data)"): each lists under it, indented as a part is in any group, by priority then age, and leaves its own group.
 A part that moved there is not pinned: its pin stays an outline, and pinning or unpinning the parent writes nothing to it, so unpinning the parent sends each part back to its own group.
 Only parts some group would list move; a dropped part lists nowhere, as before.
+A finished part stays in done · 7d unless it is pinned itself (the captain's words: "in the pinned section of the tasks panel, we should not show already completed children that aren't pinned themselves"), and its own open parts move up in its place.
 A part pinned itself lists once, under its pinned parent, and at the top level of Pinned once its parent is unpinned.
 The top-level rows keep the order they were pinned in, newest last, each reading as every other row does: the mark, the key, the title, the one dim word and the trailing words.
 A pinned task that waits for a free crewmate keeps its dated wait line, and a pinned backlog task keeps its Start.

@@ -284,7 +284,10 @@ export function rowsOf(board: PanelTaskBoard, filter: NowFilter): Map<PanelGroup
  * their own groups, each still reading as unpinned; only parts some group
  * would list come along. A part pinned itself lists once, under its pinned
  * parent. A search narrows Pinned like any group: a part whose parent it
- * hides moves up in its place.
+ * hides moves up in its place. A finished part stays in Done (the captain's
+ * words: "in the pinned section of the tasks panel, we should not show
+ * already completed children that aren't pinned themselves"), as a working
+ * tree's finished parts do.
  */
 function pinnedRowsOf(
   board: PanelTaskBoard,
@@ -318,11 +321,15 @@ function pinnedRowsOf(
   };
   const rows: NowRow[] = [];
   const held = new Set<string>();
+  const placed = new Set<string>();
   const place = (task: PanelTaskRow, depth: number) => {
-    if (held.has(task.id)) return;
-    held.add(task.id);
+    if (placed.has(task.id)) return;
+    placed.add(task.id);
     const home = groups.get(task.id) ?? null;
-    const shown = (isPinned(task) || home !== null) && matches(task, filter);
+    // A finished part lists in Done; its own parts move up in its place.
+    const finished = home === "landed" && !isPinned(task);
+    if (!finished) held.add(task.id);
+    const shown = !finished && (isPinned(task) || home !== null) && matches(task, filter);
     if (shown) rows.push({ task, group: "pinned", depth: Math.min(depth, MAX_DEPTH), home });
     for (const part of partsOf.get(task.id) ?? []) place(part, shown ? depth + 1 : depth);
   };

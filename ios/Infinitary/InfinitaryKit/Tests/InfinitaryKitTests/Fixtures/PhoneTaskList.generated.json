@@ -1136,7 +1136,7 @@
         {
           "section": "pinned",
           "folds": false,
-          "count": 9,
+          "count": 8,
           "rows": [
             {
               "key": "INF-2909",
@@ -1212,21 +1212,6 @@
               "mark": "working",
               "reason": "",
               "home": "working"
-            },
-            {
-              "key": "INF-2926",
-              "depth": 1,
-              "word": "",
-              "trailing": {
-                "name": "Infinitary",
-                "place": "",
-                "outOfReach": false,
-                "connecting": false,
-                "reach": "out of reach"
-              },
-              "mark": "done",
-              "reason": "",
-              "home": "landed"
             },
             {
               "key": "INF-2911",
@@ -1534,7 +1519,7 @@
         {
           "section": "landed",
           "folds": true,
-          "count": 2,
+          "count": 3,
           "rows": [
             {
               "key": "INF-2912",
@@ -1554,6 +1539,21 @@
             {
               "key": "INF-2919",
               "depth": 1,
+              "word": "",
+              "trailing": {
+                "name": "Infinitary",
+                "place": "",
+                "outOfReach": false,
+                "connecting": false,
+                "reach": "out of reach"
+              },
+              "mark": "done",
+              "reason": "",
+              "home": "landed"
+            },
+            {
+              "key": "INF-2926",
+              "depth": 0,
               "word": "",
               "trailing": {
                 "name": "Infinitary",
@@ -2702,7 +2702,7 @@
         {
           "section": "pinned",
           "folds": false,
-          "count": 9,
+          "count": 8,
           "rows": [
             {
               "key": "INF-2909",
@@ -2778,21 +2778,6 @@
               "mark": "working",
               "reason": "",
               "home": "working"
-            },
-            {
-              "key": "INF-2926",
-              "depth": 1,
-              "word": "",
-              "trailing": {
-                "name": "",
-                "place": "",
-                "outOfReach": false,
-                "connecting": false,
-                "reach": "out of reach"
-              },
-              "mark": "done",
-              "reason": "",
-              "home": "landed"
             },
             {
               "key": "INF-2911",
@@ -3100,7 +3085,7 @@
         {
           "section": "landed",
           "folds": true,
-          "count": 2,
+          "count": 3,
           "rows": [
             {
               "key": "INF-2912",
@@ -3120,6 +3105,21 @@
             {
               "key": "INF-2919",
               "depth": 1,
+              "word": "",
+              "trailing": {
+                "name": "",
+                "place": "",
+                "outOfReach": false,
+                "connecting": false,
+                "reach": "out of reach"
+              },
+              "mark": "done",
+              "reason": "",
+              "home": "landed"
+            },
+            {
+              "key": "INF-2926",
+              "depth": 0,
               "word": "",
               "trailing": {
                 "name": "",

@@ -92,8 +92,10 @@ public struct PhoneTaskList: Sendable {
         // INF-3127: a pinned task lists in Pinned at the top, whatever its state or age, in the order it was pinned,
         // newest last. INF-3512: its parts, and theirs, move there with it, under it, by priority then age, each still
         // unpinned; only parts some group would list come along, and each task lists once (the Mac's `pinnedRowsOf`).
+        // A finished part stays in Done unless pinned itself, and its own parts move up in its place.
         var pinned: [Row] = []
         var held = Set<String>()
+        var placed = Set<String>()
         var pins = tasks.indices.filter { tasks[$0].pinnedAt != nil }
         if !pins.isEmpty {
             pins.sort { a, b in
@@ -127,9 +129,11 @@ public struct PhoneTaskList: Sendable {
             }
             func place(_ index: Int, _ depth: Int) {
                 let task = tasks[index]
-                guard held.insert(task.id).inserted else { return }
+                guard placed.insert(task.id).inserted else { return }
+                let finished = groups[task.id] == .landed && task.pinnedAt == nil
+                if !finished { held.insert(task.id) }
                 // A search narrows Pinned like any group: a part whose parent it hides moves up in its place.
-                let shown = (task.pinnedAt != nil || groups[task.id] != nil) && matches(task.title, task.key)
+                let shown = !finished && (task.pinnedAt != nil || groups[task.id] != nil) && matches(task.title, task.key)
                 if shown { pinned.append(Row(task: task, depth: min(depth, Self.maxDepth))) }
                 for part in partsOf[task.id] ?? [] { place(part, shown ? depth + 1 : depth) }
             }

@@ -47,6 +47,7 @@ export const GITHUB_QUEUE_SOURCES: readonly string[] = [
   "eadc3a22b4a0eaba5d522cf3dd74b10b1267b829a3fc287be232064b99ad76ad",
   "9b5c62a6d9dfc313ee33bb96543efadad45f718958484a96ef80ea186677649d",
   "230e3abdcc3a0be73bdde7e82954d40809b4fea9da952f4b827c34e8f624df15",
+  "bcfbc09a7d34a6efdf8be408b12af7a34d57087b6f93eb6982b0fb685bf5d3ec",
 ];
 export const GITLAB_QUEUE_SOURCES: readonly string[] = [
   "b41bb2e51bccbe8ec5285463ce6ffe6aa58bbe3f0cd1a48c0d1b169dd7d91cc5",
@@ -59,6 +60,7 @@ export const GITLAB_QUEUE_SOURCES: readonly string[] = [
   "e60c818cdbd14724c933b28db90568619c1322c964065237661484215bdd862e",
   "38e66f2b2e7547127dc24d0d409d4bbc0f7a2f2ad0416a7bf62c8dbac14d3936",
   "6cdb491dc7e916b03471e11a46690598e50e05fde2bbb07688b122c2a6c789e7",
+  "9a7be6cd4078f17f17d98fd0ca3302b58903ac5c6f605fce4cb87e8c18e1e0cf",
 ];
 
 /** First shipped host-part version that merges approved changes without the app. */

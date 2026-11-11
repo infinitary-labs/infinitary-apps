@@ -723,6 +723,12 @@ The shared status reader enforces this for every read accepting a batch verdict;
 A by-hand GitLab pause answer uses the person's sign-in, never accepts a pass as merge authority, and leaves passed changes to the queue's own jobs.
 Before marking a version, the app publishes its exact approved title and squash body with the active naming check's result or explicit off state in a host comment, then links that comment from the waiting mark.
 A status nominates a head for testing, never grants merge authority; its link is for people and selects no approval data.
+Someone who may merge also queues a change without Infinitary by putting the label `infinitary-queue` on it (`QUEUE_LABEL`, `labelQueues`).
+The queue reads the label as one act at the version it went on, and takes it off: a later push leaves the queue until the label goes on again, and a version already in the queue stays as it was.
+On GitHub the label's `pull_request_target` event runs the queue file as the default branch has it, with its write key even on a fork's pull request, so its label job checks out only the default branch's `.github/infinitary` folder and reads the pull request through the API, never its code (`labelled`).
+It queues only for a labeller GitHub names with write, maintain or admin access, and only while the pull request's head is still the version the event names.
+It then writes the version's approval record, with the pull request's title and description as the merge words and the naming result `off`, marks it waiting and starts the queue, since a status its own key writes starts no workflow.
+The merge job trusts an approval record `github-actions[bot]` wrote, as it trusts that writer's passes: only a job of the project's own workflows writes as it, and the batch checks get no issue or pull request write.
 The newest trusted approval-or-revocation comment for exactly that head, ordered by comment id, is the authority.
 Trusted means write, maintain or admin on GitHub, and Maintainer (access level 40 or above) on GitLab.
 A newer revocation stops merging even if a status-only integration recreates Waiting and the batch passes again.
@@ -801,7 +807,9 @@ Three GitLab facts shape it, and each was checked against GitLab's own code and 
   So the GitLab part writes those three as finished `skipped` statuses carrying the queue's words, each a new status, and the app reads a `skipped` `infinitary/queue` as still waiting, never as a pass (`GitLabQueue.check`); a pass is `success` and a failure `failed`.
   A `skipped` status leaves the merge request's pipeline as it was, so GitLab itself does not hold a merge made there, and its free plans cannot require an outside status: only an Infinitary merge waits on the queue.
 - A status starts no pipeline, and new gitlab.com projects refuse pipeline variables, so nothing tells a pipeline it is the queue's but how it started.
-  The queue's jobs run only in a pipeline the API started on the default branch, the project's own jobs leave those pipelines out, and the app starts one after each mark (`markStartsQueue` is false) and after each app-owned merge.
+  The queue's jobs run only in a pipeline the API or a schedule started on the default branch, the project's own jobs leave the API's pipelines out, and the app starts one after each mark (`markStartsQueue` is false) and after each app-owned merge.
+  A label starts no pipeline either, so the form job reads the queue label when the queue next starts: a Maintainer's label put on after the merge request's current version was pushed queues that version, with the record and mark written by the queue's own key, a Maintainer, and the label comes off; any other label comes off and queues nothing.
+  A team that queues with the label and has no teammate's Infinitary starting the queue adds a pipeline schedule on the default branch.
   A resume or a send-back from Settings runs in the app with the captain's sign-in (`GitLabQueue.start`, the same `answer` the queue's script exports), then starts that pipeline; a repairing crewmate makes the same writes itself through GitLab's API (the queue-repair skill).
 - GitLab gives a pipeline no key that may write a commit status, so the queue's form, verdict and merge jobs write with a project access token, `INFINITARY_QUEUE_TOKEN`.
   Settings → Projects shows "Make the queue's key" under a batched project on GitLab, one click that creates the token with the captain's sign-in (Maintainer role, scope `api`, the longest life GitLab allows), keeps it as a masked, protected CI variable scoped to the `infinitary-queue` environment, and revokes the queue's older tokens (`inf:repos:queue-credential-create`, `GitLabQueue.createCredential`).
@@ -826,7 +834,7 @@ The app reads the stamp of each workflow that mentions the queue status (`GitHub
 A project whose default branch runs the shipped queue goes as batched pull requests in every teammate's Infinitary: the app applies it at start and after each merge in the project, says so in Activity, and refuses another choice of where its changes go (`QueueChoice.follow`).
 Settings shows the choice fixed and says the project set it.
 A project whose stamp is older than this Infinitary's queue, or whose own workflow answers the status, is offered the update or the shipped queue once, through the `queue-offered` wake; a project's own queue keeps working until the captain chooses to replace it.
-Only an Infinitary merge click puts a change in a batch.
+An Infinitary merge click, or the queue label from someone who may merge, puts a change in a batch.
 
 ### One queue for every host
 

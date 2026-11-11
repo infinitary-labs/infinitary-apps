@@ -1,4 +1,4 @@
-import { newestTrustedApproval, readCommitEnvelope } from "./message.mjs";
+import { labelApproval, newestTrustedApproval, readCommitEnvelope } from "./message.mjs";
 /**
  * The shipped queue's GitHub part (docs/forge.md, "The shipped queue"): it
  * runs the host-neutral rules in rules.mjs inside GitHub Actions, through
@@ -19,10 +19,12 @@ import {
   formBatch,
   headList,
   inBatch,
+  labelQueues,
   PAUSE_LABEL,
   pauseIssue,
   pauseWrites,
   QUEUE,
+  QUEUE_LABEL,
   REMOVED,
   readComposition,
   readPauseMarker,
@@ -35,6 +37,9 @@ import {
 
 /** The queue's workflow file, which its next start names. */
 export const WORKFLOW = "infinitary-queue.yml";
+
+/** Who GitHub names as the writer of anything this workflow's own key writes. */
+const QUEUE_WRITER = "github-actions[bot]";
 
 const defaultBranch = (context) => context.payload.repository?.default_branch ?? "main";
 const runUrl = (context) =>
@@ -62,7 +67,7 @@ async function queueAt(github, repo, ref) {
   const statuses = await queueStatuses(github, repo, ref);
   const state = readQueueState(statuses);
   // Status-write access must never become the queue job's code-write authority.
-  if (state?.kind === "passed" && statuses[0]?.writer !== "github-actions[bot]") {
+  if (state?.kind === "passed" && statuses[0]?.writer !== QUEUE_WRITER) {
     const rejected = {
       head: ref,
       state: "failure",
@@ -474,6 +479,58 @@ export async function answer({ github, context, core, action, number, reason }) 
   core.notice(words.log);
 }
 
+/**
+ * The label job, on a pull request labelled infinitary-queue: it runs this
+ * file from the default branch with write access, even for a fork's pull
+ * request, so it reads the pull request only through GitHub's API and
+ * never checks out or runs its code. The label comes off once read. Only a
+ * labeller with write access queues, and only the version the label went
+ * on: the queue writes that version's approval record, with the title and
+ * description as its merge words, then marks it waiting and starts the
+ * queue, since a status its own key writes starts no workflow.
+ */
+export async function labelled({ github, context, core }) {
+  const repo = context.repo;
+  const { pull_request: labelledPull, label, sender } = context.payload;
+  if (label?.name !== QUEUE_LABEL || !labelledPull) return;
+  const number = labelledPull.number;
+  try {
+    await github.rest.issues.removeLabel({ ...repo, issue_number: number, name: QUEUE_LABEL });
+  } catch (error) {
+    // Someone took it off already; the label was still put on.
+    if (error?.status !== 404) throw error;
+  }
+  const { data: pull } = await github.rest.pulls.get({ ...repo, pull_number: number });
+  if (pull.state !== "open")
+    return core.notice(`#${number} is not open, so the label queues nothing.`);
+  const entry = {
+    number,
+    head: pull.head.sha,
+    base: pull.base.ref,
+    queue: await queueAt(github, repo, pull.head.sha),
+  };
+  const decided = labelQueues({
+    entry,
+    main: defaultBranch(context),
+    trusted: await mayMerge(github, repo, sender?.login, new Map()),
+    moved: pull.head.sha !== labelledPull.head?.sha,
+  });
+  core.notice(decided.reason);
+  if (!decided.queue) return;
+  await github.rest.issues.createComment({
+    ...repo,
+    issue_number: number,
+    body: labelApproval(entry.head, pull.body ?? "", pull.title),
+  });
+  await writeStatus(github, repo, {
+    head: entry.head,
+    state: "pending",
+    description: WAITING,
+    url: runUrl(context),
+  });
+  await startForm(github, context);
+}
+
 /** Only the merge job calls this: no code from a batch runs with its write key. */
 export async function mergePassed({ github, context, core }) {
   const repo = context.repo;
@@ -597,21 +654,28 @@ async function readApproval(github, repo, number, head) {
     per_page: 100,
   });
   const roles = new Map();
-  return newestTrustedApproval(comments, head, async (comment) => {
+  return newestTrustedApproval(comments, head, (comment) => {
     const login = comment.user?.login;
-    if (!login) return false;
-    if (!roles.has(login))
-      roles.set(
-        login,
-        (
-          await github.rest.repos
-            .getCollaboratorPermissionLevel({ ...repo, username: login })
-            .catch((error) => {
-              if (error?.status === 404) return { data: { permission: "none" } };
-              throw error;
-            })
-        ).data.permission,
-      );
-    return MERGE_PERMISSIONS.includes(roles.get(login));
+    // The queue's own label records: only a job of the project's own workflows writes as it.
+    if (login === QUEUE_WRITER) return true;
+    return mayMerge(github, repo, login, roles);
   });
+}
+
+/** Whether GitHub says this person may merge into the project, read once per person. */
+async function mayMerge(github, repo, login, roles) {
+  if (!login) return false;
+  if (!roles.has(login))
+    roles.set(
+      login,
+      (
+        await github.rest.repos
+          .getCollaboratorPermissionLevel({ ...repo, username: login })
+          .catch((error) => {
+            if (error?.status === 404) return { data: { permission: "none" } };
+            throw error;
+          })
+      ).data.permission,
+    );
+  return MERGE_PERMISSIONS.includes(roles.get(login));
 }

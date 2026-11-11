@@ -3,10 +3,19 @@ import { createRequire } from "node:module";
 import { QUEUE_STATUS } from "@shared/repos";
 import { describe, expect, it } from "vitest";
 import type { ScriptArgs } from "./github.mjs";
-import { answer, decide, failures, form, mark } from "./github.mjs";
+import { answer, decide, failures, form, labelled, mark } from "./github.mjs";
 import { abandonedBatch as abandoned, completedBatch } from "./githubReadings.fixture";
+import { readCommitEnvelope } from "./message.mjs";
 import type { Member } from "./rules.mjs";
-import { FIX_LABEL, PAUSE_LABEL, QUEUE, queueKind, readPauseMarker, WAITING } from "./rules.mjs";
+import {
+  FIX_LABEL,
+  PAUSE_LABEL,
+  QUEUE,
+  QUEUE_LABEL,
+  queueKind,
+  readPauseMarker,
+  WAITING,
+} from "./rules.mjs";
 
 // INF-2952 piece 1, the captain's approved plan: a shipped fix-forward queue
 // that runs in the project's own CI, which every teammate's Infinitary reads.
@@ -42,6 +51,8 @@ type Pull = {
   head: { sha: string };
   base: { ref: string };
   labels: { name: string }[];
+  title: string;
+  body: string | null;
 };
 
 /** A project on GitHub as the queue's client reads and writes it. */
@@ -73,6 +84,13 @@ class Project {
   events = new Map<number, { event: string; label: { name: string }; created_at: string }[]>();
   /** Issues turned off in the project's settings: GitHub refuses a new issue. */
   issuesOff = false;
+  /** Each person's role in the project, as GitHub's collaborator permission reads it; anyone else has none. */
+  roles = new Map<string, string>([
+    ["maintainer", "write"],
+    ["triager", "triage"],
+  ]);
+  /** Each pull request's comments, which this workflow's own key writes as github-actions[bot]. */
+  comments = new Map<number, { body: string; user: { login: string } }[]>();
   private clock = Date.parse("2026-11-06T17:00:00Z");
   private ids = 9_000;
 
@@ -83,6 +101,8 @@ class Project {
       head: { sha: sha(number) },
       base: { ref: options.base ?? "main" },
       labels: [] as { name: string }[],
+      title: `feat(shop): change ${number}`,
+      body: `What change ${number} does.` as string | null,
     };
     this.pulls.set(number, pull);
     for (const label of options.labels ?? []) this.label(number, label);
@@ -162,6 +182,12 @@ class Project {
         repos: {
           listCommitStatusesForRef: ({ ref }: { ref: string }) =>
             data(this.statuses.get(ref) ?? []),
+          getCollaboratorPermissionLevel: ({ username }: { username: string }) => {
+            const permission = this.roles.get(username);
+            return permission
+              ? data({ permission })
+              : Promise.reject(Object.assign(new Error("Not Found"), { status: 404 }));
+          },
           createCommitStatus: (write: {
             sha: string;
             state: string;
@@ -224,8 +250,22 @@ class Project {
             return data(issue);
           },
           createComment: ({ issue_number, body }: { issue_number: number; body: string }) => {
-            this.issues.find((issue) => issue.number === issue_number)?.comments.push(body);
+            const issue = this.issues.find((candidate) => candidate.number === issue_number);
+            if (issue) issue.comments.push(body);
+            else
+              this.comments.set(issue_number, [
+                ...(this.comments.get(issue_number) ?? []),
+                { body, user: { login: "github-actions[bot]" } },
+              ]);
             return data({});
+          },
+          removeLabel: ({ issue_number, name }: { issue_number: number; name: string }) => {
+            if (!this.pulls.get(issue_number)?.labels.some((label) => label.name === name))
+              return Promise.reject(
+                Object.assign(new Error("Label does not exist"), { status: 404 }),
+              );
+            this.unlabel(issue_number, name);
+            return data([]);
           },
           update: ({ issue_number, state }: { issue_number: number; state: string }) => {
             const issue = this.issues.find((candidate) => candidate.number === issue_number);
@@ -1092,5 +1132,149 @@ describe("the shipped queue on GitHub", () => {
   // the status name; a teammate's app reads the status by that copy.
   it("names the same queue status the window and the app read", () => {
     expect(QUEUE_STATUS).toBe(QUEUE);
+  });
+});
+
+// INF-3542's plan, piece C, as the captain approved it: "The label
+// infinitary-queue, from someone with write access". A maintainer without
+// Infinitary queues a change with the label; the queue marks only a labeller
+// with write access, at the labelled version, and a later push leaves the
+// queue. GitHub runs the label's event with a write key even on a fork's
+// pull request, so the label job must never check out the change's code.
+describe("queueing a change with the queue label on GitHub", () => {
+  /** Someone putting the queue label on a pull request, and the label job's run for that event. */
+  async function labelRun(
+    project: Project,
+    runId: number,
+    number: number,
+    by: string,
+    labelledHead = project.headOf(number),
+  ) {
+    project.label(number, QUEUE_LABEL);
+    const run = runOf(project, runId);
+    run.args.context.payload = {
+      ...run.args.context.payload,
+      pull_request: { number, head: { sha: labelledHead } },
+      label: { name: QUEUE_LABEL },
+      sender: { login: by },
+    };
+    await labelled(run.args);
+    return run;
+  }
+  const labelsOf = (project: Project, number: number) =>
+    project.pulls.get(number)?.labels.map((label) => label.name);
+
+  it("queues the version a writer's label went on, with its title and description as the merge words", async () => {
+    const project = new Project();
+    project.open(71);
+    const run = await labelRun(project, 601, 71, "maintainer");
+    expect(project.queueOf(71)?.description).toBe(WAITING);
+    expect(project.queueOf(71)?.creator.login).toBe("github-actions[bot]");
+    const [record] = project.comments.get(71) ?? [];
+    expect(record?.user.login).toBe("github-actions[bot]");
+    expect(readCommitEnvelope(record?.body ?? "", sha(71), "feat(shop): change 71")).toBe(
+      "What change 71 does.",
+    );
+    // The label is one act: it comes off, so the next version needs it again.
+    expect(labelsOf(project, 71)).toEqual([]);
+    // A status this workflow's own key writes starts no workflow, so the job starts the queue.
+    expect(project.dispatches).toEqual([
+      {
+        owner,
+        repo: name,
+        workflow_id: "infinitary-queue.yml",
+        ref: "main",
+        inputs: { action: "form" },
+      },
+    ]);
+    expect(run.notices).toEqual(["#71: the label queued this version."]);
+    const batch = await formRun(project, 602);
+    expect(batch.members).toEqual([{ number: 71, head: sha(71) }]);
+  });
+
+  it("queues nothing from a label put on by someone without write access", async () => {
+    const project = new Project();
+    project.open(72);
+    project.open(73);
+    await labelRun(project, 603, 72, "triager");
+    await labelRun(project, 604, 73, "passer-by");
+    for (const number of [72, 73]) {
+      expect(project.queueOf(number)).toBeUndefined();
+      expect(project.comments.get(number)).toBeUndefined();
+      expect(labelsOf(project, number)).toEqual([]);
+    }
+    expect(project.dispatches).toEqual([]);
+  });
+
+  it("leaves a version pushed after the label went on out of the queue until the label goes on again", async () => {
+    const project = new Project();
+    project.open(74);
+    const labelledHead = project.headOf(74);
+    project.push(74, sha(740));
+    const moved = await labelRun(project, 605, 74, "maintainer", labelledHead);
+    expect(moved.notices).toEqual([
+      "#74: it was pushed after the label went on; put the label on again to queue that version.",
+    ]);
+    expect(project.queueOf(74)).toBeUndefined();
+    expect(project.statuses.get(labelledHead)).toBeUndefined();
+    expect(labelsOf(project, 74)).toEqual([]);
+
+    await labelRun(project, 606, 74, "maintainer");
+    expect(project.queueOf(74)?.description).toBe(WAITING);
+    expect(
+      readCommitEnvelope(
+        project.comments.get(74)?.[0]?.body ?? "",
+        sha(740),
+        "feat(shop): change 74",
+      ),
+    ).toBe("What change 74 does.");
+  });
+
+  it("leaves a version already in the queue as it was", async () => {
+    const project = new Project();
+    project.open(75);
+    project.approve(75);
+    await labelRun(project, 607, 75, "maintainer");
+    expect(project.statuses.get(sha(75))).toHaveLength(1);
+    expect(project.comments.get(75)).toBeUndefined();
+    expect(project.dispatches).toEqual([]);
+  });
+
+  it("runs the label's job from the default branch's own files, never the pull request's code", () => {
+    const require = createRequire(import.meta.url);
+    const yaml = createRequire(require.resolve("electron-builder/package.json"))("js-yaml") as {
+      load: (text: string) => {
+        on: Record<string, unknown>;
+        jobs: Record<string, { if?: string; steps?: Record<string, unknown>[]; needs?: unknown }>;
+      };
+    };
+    const text = readFileSync(new URL("./workflow.yml", import.meta.url), "utf8");
+    const workflow = yaml.load(text);
+    expect(workflow.on.pull_request_target).toEqual({ types: ["labeled"] });
+    const label = workflow.jobs.label;
+    expect(label?.if).toContain("github.event_name == 'pull_request_target'");
+    // Its only checkout is the default branch's queue folder, with no key left behind.
+    const checkouts = (label?.steps ?? []).filter((step) =>
+      String(step.uses).startsWith("actions/checkout"),
+    );
+    expect(checkouts).toEqual([
+      {
+        uses: "actions/checkout@v4",
+        with: {
+          ref: "${{ github.event.repository.default_branch }}",
+          "sparse-checkout": ".github/infinitary",
+          "persist-credentials": false,
+        },
+      },
+    ]);
+    // It runs no shell, and nothing in the file names the pull request's head.
+    expect((label?.steps ?? []).some((step) => "run" in step)).toBe(false);
+    expect(text).not.toMatch(/github\.event\.pull_request\.(head|merge)|refs\/pull\//);
+    // Every job that runs a batch's code waits on the form job, which never runs on this event.
+    for (const [jobName, job] of Object.entries(workflow.jobs)) {
+      if (jobName === "label") continue;
+      if (job.needs === undefined) expect(job.if).not.toContain("pull_request_target");
+    }
+    expect(workflow.jobs.form?.if).not.toContain("pull_request_target");
   });
 });

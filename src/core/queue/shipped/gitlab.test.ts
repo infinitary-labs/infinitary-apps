@@ -14,8 +14,17 @@ import {
   QUEUE_ENVIRONMENT,
   readHeads,
 } from "./gitlab.mjs";
+import { readCommitEnvelope } from "./message.mjs";
 import type { Member } from "./rules.mjs";
-import { FIX_LABEL, PAUSE_LABEL, QUEUE, queueKind, readPauseMarker, WAITING } from "./rules.mjs";
+import {
+  FIX_LABEL,
+  PAUSE_LABEL,
+  QUEUE,
+  QUEUE_LABEL,
+  queueKind,
+  readPauseMarker,
+  WAITING,
+} from "./rules.mjs";
 
 // INF-2952 piece 2, the captain's approved plan: the fix-forward queue's
 // GitLab part, which runs the same rules as GitHub's in the project's own
@@ -53,6 +62,8 @@ type Request = {
   sha: string;
   target_branch: string;
   labels: string[];
+  title: string;
+  description: string;
 };
 type Issue = {
   iid: number;
@@ -95,7 +106,12 @@ class Project {
   /** Each merge request's label events, oldest first, as GitLab lists them. */
   labelEvents = new Map<
     number,
-    { action: "add" | "remove"; label: { name: string }; created_at: string }[]
+    {
+      action: "add" | "remove";
+      label: { name: string };
+      created_at: string;
+      user: { id: number };
+    }[]
   >();
   private clock = Date.parse("2026-11-06T17:00:00Z");
   private ids = 9_000;
@@ -107,6 +123,8 @@ class Project {
       sha: sha(iid),
       target_branch: options.base ?? "main",
       labels: [] as string[],
+      title: `feat(shop): change ${iid}`,
+      description: `What change ${iid} does.`,
     };
     this.requests.set(iid, request);
     this.pushed(iid, request.sha);
@@ -115,7 +133,7 @@ class Project {
   }
 
   /** Someone putting a label on the merge request, or taking it off: GitLab records a label event. */
-  label(iid: number, name: string, action: "add" | "remove" = "add"): void {
+  label(iid: number, name: string, action: "add" | "remove" = "add", by = MAINTAINER_ID): void {
     const request = this.requests.get(iid);
     if (!request || request.labels.includes(name) === (action === "add")) return;
     this.clock += 60_000;
@@ -123,7 +141,7 @@ class Project {
       action === "add" ? [...request.labels, name] : request.labels.filter((on) => on !== name);
     this.labelEvents.set(iid, [
       ...(this.labelEvents.get(iid) ?? []),
-      { action, label: { name }, created_at: new Date(this.clock).toISOString() },
+      { action, label: { name }, created_at: new Date(this.clock).toISOString(), user: { id: by } },
     ]);
   }
 
@@ -210,6 +228,24 @@ class Project {
         return [...this.requests.values()].filter((request) => request.state === "opened");
       if (method === "GET" && hit(/^\/merge_requests\/(\d+)$/))
         return this.requests.get(Number(found[1]));
+      if (method === "PUT" && hit(/^\/merge_requests\/(\d+)$/)) {
+        if (typeof body?.remove_labels === "string")
+          this.label(Number(found[1]), body.remove_labels, "remove", actor);
+        return this.requests.get(Number(found[1]));
+      }
+      if (method === "POST" && hit(/^\/merge_requests\/(\d+)\/notes$/)) {
+        this.clock += 60_000;
+        this.notes.set(Number(found[1]), [
+          ...(this.notes.get(Number(found[1])) ?? []),
+          {
+            system: false,
+            body: String(body?.body),
+            author: { id: actor },
+            created_at: new Date(this.clock).toISOString(),
+          },
+        ]);
+        return {};
+      }
       if (method === "GET" && hit(/^\/merge_requests\/(\d+)\/approvals$/))
         return {
           approved_by: (this.approvals.get(Number(found[1])) ?? []).map((id) => ({ user: { id } })),
@@ -848,7 +884,7 @@ describe("the shipped queue on GitLab", () => {
   // jobs that name the queue's environment, and the batch runs in a child
   // pipeline whose jobs name none; the queue's jobs run only in a pipeline
   // the API started on the default branch.
-  it("hands the queue's token only to its own jobs, and runs them only in an API pipeline on the default branch", () => {
+  it("hands the queue's token only to its own jobs, and runs them only in an API or scheduled pipeline on the default branch", () => {
     const require = createRequire(import.meta.url);
     const yaml = createRequire(require.resolve("electron-builder/package.json"))("js-yaml") as {
       load: (text: string) => Record<string, Record<string, unknown>>;
@@ -869,7 +905,10 @@ describe("the shipped queue on GitLab", () => {
       name: QUEUE_ENVIRONMENT,
       action: "prepare",
     });
-    const rule = '$CI_PIPELINE_SOURCE == "api" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH';
+    // INF-3542's plan, piece C: a label starts no pipeline, so a schedule on
+    // the default branch may start the queue too.
+    const rule =
+      '($CI_PIPELINE_SOURCE == "api" || $CI_PIPELINE_SOURCE == "schedule") && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH';
     expect(queue[".infinitary-queue"]?.rules).toEqual([{ if: rule }]);
     expect(queue["infinitary-queue-verdict"]?.rules).toEqual([{ if: rule, when: "always" }]);
     expect(queue["infinitary-queue-merge"]?.rules).toEqual([{ if: rule, when: "always" }]);
@@ -923,6 +962,61 @@ describe("the shipped queue on GitLab", () => {
       const child = loadYaml(noBatchPipeline(reason));
       expect(child["infinitary-no-batch"]?.script).toEqual([`echo ${JSON.stringify(reason)}`]);
     }
+  });
+});
+
+// INF-3542's plan, piece C, as the captain approved it: "The label
+// infinitary-queue, from someone with write access", on GitHub and GitLab
+// together. On GitLab merging takes a Maintainer, so only a Maintainer's
+// label queues, and only the version it went on; a later push leaves the
+// queue. A label starts no pipeline, so the form job reads it.
+describe("queueing a merge request with the queue label on GitLab", () => {
+  const notesOf = (project: Project, iid: number) =>
+    (project.notes.get(iid) ?? []).filter((note) => !note.system);
+
+  it("queues the version a Maintainer's label went on, takes the label off and puts it in the next batch", async () => {
+    const project = new Project();
+    project.open(81);
+    project.label(81, QUEUE_LABEL, "add", MAINTAINER_ID);
+    const formed = await formRun(project, 701);
+    expect(formed.members).toEqual([{ number: 81, head: sha(81) }]);
+    expect(formed.said).toContain("!81: the label queued this version.");
+    expect(project.requests.get(81)?.labels).toEqual([]);
+    const [record] = notesOf(project, 81);
+    expect(record?.author.id).toBe(QUEUE_USER_ID);
+    expect(readCommitEnvelope(record?.body ?? "", sha(81), "feat(shop): change 81")).toBe(
+      "What change 81 does.",
+    );
+    // The queue's key, a Maintainer, opened the version's stretch, so the batch admits it.
+    expect(
+      project.statuses.get(sha(81))?.find((status) => status.description === WAITING)?.author.id,
+    ).toBe(QUEUE_USER_ID);
+  });
+
+  it("queues nothing from a Developer's label, nor from one that came before the last push", async () => {
+    const project = new Project();
+    project.open(82);
+    project.label(82, QUEUE_LABEL, "add", DEVELOPER_ID);
+    project.open(83);
+    project.label(83, QUEUE_LABEL, "add", MAINTAINER_ID);
+    project.push(83, sha(830));
+    const formed = await formRun(project, 702);
+    expect(formed.members).toEqual([]);
+    expect(formed.said).toEqual(
+      expect.arrayContaining([
+        "!82: the label is from someone who may not merge it, so it queues nothing.",
+        "!83: it was pushed after the label went on; put the label on again to queue that version.",
+      ]),
+    );
+    for (const iid of [82, 83]) {
+      expect(project.requests.get(iid)?.labels).toEqual([]);
+      expect(notesOf(project, iid)).toEqual([]);
+      expect(project.queueOf(iid)).toBeUndefined();
+    }
+
+    project.label(83, QUEUE_LABEL, "add", MAINTAINER_ID);
+    const again = await formRun(project, 703);
+    expect(again.members).toEqual([{ number: 83, head: sha(830) }]);
   });
 });
 

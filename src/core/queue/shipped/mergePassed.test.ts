@@ -4,6 +4,7 @@ import { type GitLabQueueApi, mergePassed as gitlabMerge } from "./gitlab.mjs";
 import {
   commitEnvelope,
   commitMessage,
+  labelApproval,
   NAMING_DECISION,
   readCommitEnvelope,
   revocationEnvelope,
@@ -176,6 +177,36 @@ describe("queue-owned GitHub merges", () => {
     await githubMerge(p.args);
     expect(p.merges).toMatchObject([{ commit_message: summary }]);
     expect(p.pull.body).toBe("The contributor's description.");
+  });
+
+  // INF-3542's plan, piece C: the queue label's job records the labelled
+  // version's approval with the workflow's own key, and the merge job
+  // trusts what that key wrote, as it trusts the passes it writes.
+  it("merges a version the queue label approved, with the description as its words, and trusts no one else's copy", async () => {
+    const p = github();
+    p.pull.body = "The contributor's description.";
+    const record = labelApproval(head, p.pull.body, title);
+    Object.assign(p.rest, {
+      issues: {
+        listComments: async () => [
+          { id: 801, body: record, user: { login: "visitor" } },
+          { id: 802, body: record, user: { login: "github-actions[bot]" } },
+        ],
+      },
+    });
+    await githubMerge(p.args);
+    expect(p.merges).toEqual([
+      expect.objectContaining({ commit_message: "The contributor's description." }),
+    ]);
+
+    const forged = github();
+    Object.assign(forged.rest, {
+      issues: {
+        listComments: async () => [{ id: 803, body: record, user: { login: "visitor" } }],
+      },
+    });
+    await githubMerge(forged.args);
+    expect(forged.merges).toEqual([]);
   });
 
   it("ignores a fork author's forged approval envelope without a trusted review", async () => {

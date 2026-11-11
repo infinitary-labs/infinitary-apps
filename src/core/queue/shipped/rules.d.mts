@@ -30,6 +30,8 @@ export type QueueEntry = Member & {
   base: string;
   fix?: boolean;
   fixLabelledAt?: string;
+  /** Whether it carries the queue label, which the form job reads where a label starts no run. */
+  label?: boolean;
   queue: QueueState | null;
 };
 export type CurrentMember = { head: string; queue: QueueState | null; swept?: QueueState | null };
@@ -59,6 +61,13 @@ export const QUEUE: string;
 export const WAITING: string;
 export const REMOVED: string;
 export const FIX_LABEL: string;
+export const QUEUE_LABEL: string;
+export function labelQueues(args: {
+  entry: QueueEntry;
+  main: string;
+  trusted: boolean;
+  moved: boolean;
+}): { queue: boolean; reason: string };
 export const PAUSE_LABEL: string;
 export const CHECKS_JOB: string;
 export const CONFIRM_JOB: string;

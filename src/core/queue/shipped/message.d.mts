@@ -19,6 +19,7 @@ export type ApprovalRecord = {
   body: string;
 };
 export type ApprovalComment = { id: number; body?: string | null; system?: boolean };
+export function labelApproval(head: string, body: string, title: string): string;
 export function revocationEnvelope(head: string): string;
 export function newestTrustedApproval<T extends ApprovalComment>(
   comments: readonly T[],

@@ -8,7 +8,13 @@ export type ScriptArgs = {
     repo: { owner: string; repo: string };
     runId: number;
     serverUrl: string;
-    payload: { repository?: { default_branch?: string } };
+    payload: {
+      repository?: { default_branch?: string };
+      /** A pull_request_target event's: the pull request as it was when labelled, the label and who put it on. */
+      pull_request?: { number: number; head?: { sha?: string } };
+      label?: { name?: string };
+      sender?: { login?: string };
+    };
   };
   core: {
     notice(text: string): void;
@@ -34,5 +40,6 @@ export function answer(
 ): Promise<void>;
 
 export function mergePassed(args: ScriptArgs): Promise<void>;
+export function labelled(args: ScriptArgs): Promise<void>;
 
 export const MERGE_PERMISSIONS: readonly string[];

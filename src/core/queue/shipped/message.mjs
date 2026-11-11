@@ -40,6 +40,16 @@ export function readCommitEnvelope(comment, head, title) {
   return data.body;
 }
 
+/**
+ * The approval record the queue writes, with its own key, when a queue label
+ * from someone who may merge queues a version: the change's title and
+ * description at that moment are its merge words, and no naming rule ran.
+ * Each host part trusts records its own key wrote.
+ */
+export function labelApproval(head, body, title) {
+  return `Queued at this version with the infinitary-queue label. A later push leaves the queue; put the label on again to queue that version.\n\n<!-- infinitary-merge-approval -->\n${commitEnvelope(head, body, title, { naming: NAMING_DECISION.off })}`;
+}
+
 /** Append-only withdrawal: a status cannot undo this trusted record. */
 export function revocationEnvelope(head) {
   return `<!-- infinitary-merge-revocation:${Buffer.from(JSON.stringify({ head })).toString("hex")} -->`;

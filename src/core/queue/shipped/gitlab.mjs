@@ -19,16 +19,17 @@
  *   one sent back `failed`.
  * - A new project on gitlab.com refuses pipeline variables, so nothing tells
  *   a pipeline it is the queue's but how it started: the queue's jobs run
- *   only in a pipeline the API started on the default branch. A resume or a
- *   send-back runs in Infinitary with the person's own sign-in (`answer`),
- *   and then starts such a pipeline.
+ *   only in a pipeline the API or a schedule started on the default branch.
+ *   A resume or a send-back runs in Infinitary with the person's own
+ *   sign-in (`answer`), and then starts such a pipeline. A label starts no
+ *   pipeline, so the queue label is read when the form job next runs.
  *
  * The rules name changes `#N`; GitLab names a merge request `!N`, so every
  * word this part writes names them its way (`named`).
  */
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
-import { newestTrustedApproval, readCommitEnvelope } from "./message.mjs";
+import { labelApproval, newestTrustedApproval, readCommitEnvelope } from "./message.mjs";
 import {
   answerWords,
   conflictsWithMain,
@@ -37,10 +38,12 @@ import {
   formBatch,
   headList,
   inBatch,
+  labelQueues,
   PAUSE_LABEL,
   pauseIssue,
   pauseWrites,
   QUEUE,
+  QUEUE_LABEL,
   REMOVED,
   readComposition,
   readQueueState,
@@ -133,6 +136,7 @@ export async function readOpenQueue(api, env, authenticating = true) {
       head: request.sha,
       base: request.target_branch,
       fix: (request.labels ?? []).some((label) => (label?.name ?? label) === FIX_LABEL),
+      label: (request.labels ?? []).some((label) => (label?.name ?? label) === QUEUE_LABEL),
       queue: await queueAt(api, env, request.sha, authenticating),
     })),
   );
@@ -162,6 +166,80 @@ async function readFixTimes(api, env, entries) {
   );
 }
 
+/** Each project member's role, read once per person; someone not a member has none. */
+function memberLevels(api, env) {
+  const levels = new Map();
+  return (id) => {
+    if (id === undefined || id === null) return Promise.resolve(0);
+    if (!levels.has(id))
+      levels.set(
+        id,
+        api.get(`${project(env)}/members/all/${id}`).then(
+          (member) => member?.access_level ?? 0,
+          (error) => {
+            if (error?.status === 404) return 0;
+            throw error;
+          },
+        ),
+      );
+    return levels.get(id);
+  };
+}
+
+/**
+ * The open changes carrying the queue label, read when the form job runs,
+ * since a label starts no pipeline. The label comes off once read. Only a
+ * Maintainer's label queues, and only the version it went on: the newest
+ * time the label was put on must come after that version was pushed. The
+ * queue then writes the version's approval record, with the title and
+ * description as its merge words, and marks it waiting, both with the
+ * queue's own key, a Maintainer, so the batch admits it like any mark.
+ */
+async function labelled(api, env, entries, log) {
+  const level = memberLevels(api, env);
+  const read = [];
+  for (const entry of entries) {
+    if (!entry.label) {
+      read.push(entry);
+      continue;
+    }
+    const path = `${project(env)}/merge_requests/${entry.number}`;
+    const put = (await api.list(`${path}/resource_label_events?per_page=100`))
+      .filter((event) => event.action === "add" && event.label?.name === QUEUE_LABEL)
+      .filter((event) => Number.isFinite(Date.parse(event.created_at ?? "")))
+      .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
+      .at(-1);
+    await api.send("PUT", path, { remove_labels: QUEUE_LABEL });
+    const pushed = (await api.list(`${path}/versions`))
+      .filter((version) => version.head_commit_sha === entry.head)
+      .map((version) => Date.parse(version.created_at))
+      .filter(Number.isFinite);
+    const decided = labelQueues({
+      entry,
+      main: env.defaultBranch,
+      trusted: Boolean(put) && (await level(put.user?.id)) >= MAINTAINER,
+      moved: !put || !pushed.length || Date.parse(put.created_at) < Math.max(...pushed),
+    });
+    log(named(decided.reason));
+    if (!decided.queue) {
+      read.push({ ...entry, label: false });
+      continue;
+    }
+    const request = await api.get(path);
+    await api.send("POST", `${path}/notes`, {
+      body: labelApproval(entry.head, request.description ?? "", request.title),
+    });
+    await writeStatus(api, env, {
+      head: entry.head,
+      state: "pending",
+      description: WAITING,
+      url: env.pipelineUrl,
+    });
+    read.push({ ...entry, label: false, queue: await queueAt(api, env, entry.head) });
+  }
+  return read;
+}
+
 /** GitLab's Maintainer role, the least that may let a change's code into a batch. */
 export const MAINTAINER = 40;
 
@@ -188,22 +266,7 @@ const APPROVED_NOTE = "approved this merge request";
  * it saw. A change left out keeps its status, and the form job says why.
  */
 async function admitted(api, env, entries, log) {
-  const levels = new Map();
-  const level = (id) => {
-    if (id === undefined || id === null) return Promise.resolve(0);
-    if (!levels.has(id))
-      levels.set(
-        id,
-        api.get(`${project(env)}/members/all/${id}`).then(
-          (member) => member?.access_level ?? 0,
-          (error) => {
-            if (error?.status === 404) return 0;
-            throw error;
-          },
-        ),
-      );
-    return levels.get(id);
-  };
+  const level = memberLevels(api, env);
   const opener = async (statuses) => {
     let first;
     for (const status of statuses) {
@@ -398,7 +461,7 @@ export async function form({ api, env, log, compose }) {
   const entries = await readFixTimes(
     api,
     env,
-    await admitted(api, env, await readOpenQueue(api, env), log),
+    await admitted(api, env, await labelled(api, env, await readOpenQueue(api, env), log), log),
   );
   const plan = formBatch(entries, await readRuns(api, env, entries), env.defaultBranch);
   log(named(plan.reason));

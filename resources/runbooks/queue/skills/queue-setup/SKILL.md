@@ -14,6 +14,8 @@ On GitLab a pull request is a merge request, named `!N`.
 ## What the queue does
 
 1. An approver's merge click in Infinitary marks the approved version with the status `infinitary/queue`, waiting.
+   Someone who may merge, with or without Infinitary, may instead put the label `infinitary-queue` on the change: the queue marks the version the label went on, records its title and description as the merge words, and takes the label off, so a later push leaves the queue until the label goes on again.
+   On GitHub that means write access and the queue reads the label at once; on GitLab it means the Maintainer role and, since a label starts no pipeline, the queue reads it at its next start.
 2. The queue gathers every waiting change that targets the default branch, in approval order, and composes them onto it.
 3. It runs the project's batch checks on that one composed batch.
 4. Green passes every change, and the queue's isolated merge job squashes each passed version without an open app.
@@ -109,6 +111,7 @@ So Infinitary starts each queue pipeline itself, through GitLab's API on the def
    - add the stage `infinitary-queue` to its `stages:` list, after its own;
    - leave the queue's pipelines out of every job of its own, with a rule such as `- if: $CI_PIPELINE_SOURCE == "api" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH` and `when: never` first in each job's `rules:`, or in `workflow: rules:` only where it still lets that pipeline run for the queue's jobs;
    - check that no `workflow: rules:` stops a pipeline the API starts on the default branch, or the queue never runs.
+   The queue's jobs also run in a pipeline a schedule starts on the default branch, so a team that queues with the label and has no teammate's Infinitary starting the queue may add a pipeline schedule there; the plan names it as the captain's required action, and its own jobs leave the schedule's pipelines out the same way.
 3. Write the project's own `.gitlab/infinitary-batch-checks.yml` from the plan's chosen checks.
    It runs as the queue's child pipeline, and each job checks out the batch in place of its own checkout by extending the queue's template:
 

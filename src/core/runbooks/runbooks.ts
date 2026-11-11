@@ -44,6 +44,7 @@ export const BUILTIN_RUNBOOK_ORDER = [
   "casual-projects",
   "lessons",
   "queue",
+  "computer-cleanup",
 ] as const;
 
 /** The selected section and resource fingerprint share one prompt author. */

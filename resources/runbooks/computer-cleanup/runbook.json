@@ -1,0 +1,7 @@
+{
+  "id": "computer-cleanup",
+  "name": "Computer cleanup",
+  "description": "A read-only look after permission, and a card to choose which leftovers to stop.",
+  "firstmate": "guide.md",
+  "skills": "skills"
+}

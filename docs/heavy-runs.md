@@ -87,6 +87,12 @@ The line names unresolved leftovers recorded at finished tasks' closes on that c
 The first mate receives the first pressure fact, the first critical reading, newly observed task identities, newly available process use and newly recorded unresolved close reports, not changes in byte counts alone.
 The wake keeps every measured task share separate from the recorded close outcomes.
 No pressure change kills, pauses, slows or moves a running program.
+With Computer cleanup enabled, the first mate offers a read-only cleanup look on the reporting computer before spending the captain’s plan’s allowance, and starts it only on yes.
+The runbook owns that procedure, not the pressure wake: disabling it withdraws the offer guidance and the skill for new looks, without cancelling running conversations or suppressing the pressure facts.
+It reuses an open offer or look there; after an answer, a new offer needs fresh evidence of recovery and renewed pressure.
+The no-project look follows the bundled `computer-cleanup` skill: measured ownership, one card of finished-task leftovers and unowned programs with stopping costs, and only explicit picks stopped after identity checks.
+Open tasks and CI are named, never offered; unowned programs are never recommended.
+Recorded close outcomes are leads, never proof of current liveness, ownership or memory use.
 The registered soft hold `load-line` passes only through the existing recorded captain override; the command has no bypass flag.
 
 ## A whole group's lifetime

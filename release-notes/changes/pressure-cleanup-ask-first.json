@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "pressure-cleanup-ask-first",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "An offer to look when a computer is short on memory",
+      "body": "With Computer cleanup enabled in Settings → Runbooks, the first mate now asks before starting a cleanup look using your plan’s allowance. After you agree, a crewmate offers leftovers grouped by finished task and explains what stopping each would cost. Programs no task owns are offered without a recommendation. Nothing stops until you pick it; programs belonging to open tasks stay running.",
+      "noPicture": "The offer and cleanup choices are written for each computer’s current programs, not a fixed app view.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

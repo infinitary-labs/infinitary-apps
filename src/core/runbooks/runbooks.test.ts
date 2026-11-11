@@ -380,7 +380,40 @@ describe("runbooks over existing prompt and skill doors", () => {
       "programs",
       "queue-repair",
       "queue-setup",
+      "computer-cleanup",
     ]);
+  });
+  // Intent: the accepted ask-first cleanup plan bundles its guide on the computer running the look.
+  // Real manifest and guides through the first-mate and work-computer owners; off withdraws both.
+  // The switch regression left the ask-first instruction active after removing the crew's guide.
+  it("serves both cleanup guides only while enabled and stages the no-project look's skill", async () => {
+    const { books } = fixture();
+    const look: RunbookFacts = {
+      kind: "research",
+      place: "personal",
+      backend: "pi",
+      delivery: "answer",
+      care: "standard",
+    };
+    const firstmateGuide = readFileSync(join(root, "computer-cleanup/guide.md"), "utf8").trim();
+    const enabled = books.firstmate();
+    expect(enabled.text).toContain(firstmateGuide);
+    const staged = await stageRunbookSkills(
+      books.crew(look).skills,
+      join(scratchDir("inf-cleanup-look-"), "skills"),
+    );
+    const cleanup = staged.find((skill) => skill.name === "computer-cleanup");
+    expect(cleanup).toBeDefined();
+    expect(readFileSync(join(cleanup?.dir ?? "", "SKILL.md"))).toEqual(
+      readFileSync(join(root, "computer-cleanup/skills/computer-cleanup/SKILL.md")),
+    );
+    books.set("computer-cleanup", false);
+    expect(books.firstmate().text).not.toContain(firstmateGuide);
+    expect(books.firstmate().sha).not.toBe(enabled.sha);
+    expect(books.crew(look).skills.map((skill) => skill.name)).not.toContain("computer-cleanup");
+    books.set("computer-cleanup", true);
+    expect(books.firstmate()).toEqual(enabled);
+    expect(books.crew(look).skills.map((skill) => skill.name)).toContain("computer-cleanup");
   });
   // Intent: the captain requires the paused-batch repair crewmate to fix flakiness forward.
   // Exercise the real bundle-to-work-computer skill door, not a source-file presence check.

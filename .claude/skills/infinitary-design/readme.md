@@ -98,7 +98,7 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
   Users can override model choice.
 - **Where your projects live** - an optional section at the top of Settings -> Projects (`components/projects/ForgeRow`): the app's own sign-in to the place projects live (GitHub Enterprise and GitLab), a chip row and a browser-code aside like the subscriptions', one quiet line when nothing is signed in, and a pointer line to Integrations, where GitHub's own sign-in lives.
 - **Runbooks** - Settings → Runbooks sits immediately after Intelligence, with the same visibility rules.
-  Built in lists Common workflows, Delivery judgment, Testing rules, Care levels, Commit and PR naming, Programs, Casual projects, then Lessons; Yours lists added and personal runbooks, including unreadable folders with their reason and no switch.
+  Built in lists Common workflows, Delivery judgment, Testing rules, Care levels, Commit and PR naming, Programs, Casual projects, Lessons, Batched pull requests, then Computer cleanup; Yours lists added and personal runbooks, including unreadable folders with their reason and no switch.
   Each built-in has a secondary View button beside its switch; its rest label says it opens a read-only temporary copy and to ask the first mate to customize it.
   Make your own holds Your runbooks folder with Open folder, then short examples of what to ask the first mate; elsewhere the folder row names the computer that holds it.
   It uses the shared Settings rows, section gaps, buttons, switches and focus rings, with no in-app editor or copy button.

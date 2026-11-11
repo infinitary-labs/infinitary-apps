@@ -27,6 +27,7 @@ import type { KeySystem } from "@shared/platform";
 import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
 import type { PictureSource } from "./frames/frameProtocol";
 import { InstalledKeymap, type MainCommandHandlers } from "./keyboard";
+import { LocalWindow, type LocalWindowOptions } from "./view/localWindow";
 import { ViewBackend, type ViewBackendOptions } from "./view/viewBackend";
 import { type PreferenceSource, sizeCommands } from "./windowSize";
 
@@ -48,6 +49,12 @@ type HomeMode = {
   kind: "home";
   core: Core;
   connection: HomeConnection;
+  /**
+   * The window here as a view of this first mate, over the local door
+   * (docs/view.md, "The window on the first mate's own computer"); none
+   * with no window, or while the door could not open.
+   */
+  window: LocalWindow | null;
   /** Ends this Mac's own SSH connections to the computers it reaches that way, within their bound. */
   stopSsh: () => Promise<void>;
   detach: () => void;
@@ -71,8 +78,20 @@ export type ShellOptions = {
   };
   /** Starts this Mac's own core. A process starts it at most once. */
   startCore: () => Promise<Core>;
-  /** Serves a started core to paired devices. */
+  /** Serves a started core to paired devices, and to this computer's window through the local door. */
   startConnection: (core: Core) => HomeConnection;
+  /**
+   * The local door's folder, which the window reads to reach its first mate
+   * over the connection (docs/connection.md, "The local door"). Absent, as
+   * for a first mate started by a command with no window, nothing here
+   * dials it and the core's pushes go straight to `broadcast`.
+   */
+  localDoor?: (core: Core) => string;
+  /**
+   * Opens the window's link through the local door, and how long the shell
+   * waits for its first welcome before the window asks directly; tests stand in their own.
+   */
+  localWindow?: Pick<LocalWindowOptions, "link"> & { readyMs?: number };
   /** Hands a push to every window. */
   broadcast: (channel: PushChannel, payload: unknown) => void;
   /** This Mac's Notification Center: a view posts the other Mac's cards here. */
@@ -151,6 +170,13 @@ export class Shell {
   readonly size: MainCommandHandlers = sizeCommands(this);
   private mode: HomeMode | ViewMode | null = null;
   private coreStarted = false;
+  /**
+   * The times the window on this computer had to read everything again
+   * after a gap in what its first mate told it (docs/view.md, "The window
+   * on the first mate's own computer"), which the window follows as a
+   * view's `caughtUp`.
+   */
+  private homeCaughtUp = 0;
   private switching: Promise<void> | null = null;
   /** The link Join by its address asked for, held in memory until the captain's yes or Cancel. */
   private held: { link: string; host: string | null } | null = null;
@@ -181,7 +207,11 @@ export class Shell {
 
   thisMac(): ThisMac {
     if (this.mode?.kind === "view") return this.mode.view.thisMac();
-    return { role: "home", left: this.options.joined.left() };
+    return {
+      role: "home",
+      left: this.options.joined.left(),
+      ...(this.homeCaughtUp ? { caughtUp: this.homeCaughtUp } : {}),
+    };
   }
 
   /** One core channel the window asked: this Mac's core, or the view's rules. */
@@ -193,7 +223,9 @@ export class Shell {
     const mode = this.mode;
     if (!mode) throw new Error("Infinitary is still starting.");
     if (mode.kind === "home")
-      return mode.core.dispatch(channel, rawArgs, { kind: "captain" }, viewer);
+      return mode.window
+        ? mode.window.dispatch(channel, rawArgs, viewer)
+        : mode.core.dispatch(channel, rawArgs, { kind: "captain" }, viewer);
     return mode.view.dispatch(channel, rawArgs, viewer);
   }
 
@@ -386,6 +418,7 @@ export class Shell {
     if (mode?.kind === "view") mode.view.dispose();
     if (mode?.kind === "home") {
       mode.detach();
+      mode.window?.close();
       // Devices hear the home quit through its SSH connections, which go after.
       await mode.connection.close();
       await mode.stopSsh();
@@ -396,11 +429,59 @@ export class Shell {
   private async becomeHome(): Promise<void> {
     this.coreStarted = true;
     const core = await this.options.startCore();
-    // One sink per attached client: this Mac's windows, then paired devices.
-    const detach = core.events.subscribe((channel, payload) =>
-      this.options.broadcast(channel, payload),
-    );
     const connection = this.options.startConnection(core);
+    // This computer's window is a view of its first mate like any other
+    // (docs/view.md): its requests and pushes go over the connection,
+    // through the local door, once the door is open.
+    const door = this.options.localDoor?.(core);
+    // With no window over the door, the core's pushes go straight to this
+    // computer's windows, as before.
+    let direct: (() => void) | null = null;
+    const goDirect = () => {
+      direct ??= core.events.subscribe((channel, payload) =>
+        this.options.broadcast(channel, payload),
+      );
+    };
+    let window: LocalWindow | null = null;
+    if (door) {
+      await connection.settled();
+      if (connection.localDoor()) {
+        const opened: LocalWindow = new LocalWindow({
+          door,
+          broadcast: this.options.broadcast,
+          // A gap the first mate could not replay: the window reads everything again.
+          onReload: () => this.readAgainHere(),
+          // A door that no longer takes its key: the window asks directly, and reads again.
+          onLost: () => {
+            if (this.mode?.kind !== "home" || this.mode.window !== opened) return;
+            console.warn(
+              "[shell] the local door refused the window; it asks its first mate directly",
+            );
+            opened.close();
+            this.mode.window = null;
+            goDirect();
+            this.readAgainHere();
+          },
+          ...(this.options.localWindow?.link ? { link: this.options.localWindow.link } : {}),
+        });
+        await opened.ready(this.options.localWindow?.readyMs);
+        if (opened.inReach()) window = opened;
+        else {
+          console.warn(
+            "[shell] the window could not reach its first mate through the local door; it asks directly",
+          );
+          opened.close();
+        }
+      } else
+        console.warn(
+          "[shell] the local door did not open; the window asks its first mate directly",
+        );
+    }
+    if (!window) goDirect();
+    const detach = () => {
+      direct?.();
+      direct = null;
+    };
     // The core reaches the computers that run work through it (docs/helper.md).
     const unreach = core.services.workDevices.attach(connection);
     // It listens where this Mac is now, and Devices says it, as the network
@@ -413,6 +494,7 @@ export class Shell {
       kind: "home",
       core,
       connection,
+      window,
       stopSsh,
       detach: () => {
         unfollow();
@@ -421,6 +503,12 @@ export class Shell {
       },
     };
     this.preferences.use(core.services.preferences);
+  }
+
+  /** The window here reads everything again, as a view does after a gap. */
+  private readAgainHere(): void {
+    this.homeCaughtUp += 1;
+    this.options.broadcast("inf:devices:this-mac", this.thisMac());
   }
 
   /**
@@ -519,6 +607,7 @@ export class Shell {
     if (mode?.kind !== "home") return;
     this.mode = null;
     mode.detach();
+    mode.window?.close();
     await mode.connection.close();
     await mode.stopSsh();
     await mode.core.dispose();

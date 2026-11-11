@@ -1478,6 +1478,8 @@ It grades the plan's bar, each a soft hold (`graded` in `tests/e2e/perf.ts`), so
 - each list redraw under 4 ms and the core's cost per change under 5 ms, read from a Chromium trace of a quiet stretch with only the crew writing, as the top-level tasks of the Tasks panel's main thread and of the app's main thread; a task that bundles several writes counts once.
 
 Every run prints each measure as a `[perf]` line, and writes `latency.json`, each stall in words and the trace into the run's own directory.
+It also prints, ungraded, the window's start, its memory, a core request's round trip and the first mate's answer, timed by the window's own clock from the Enter to the reply and idle state it hears (INF-1352's plan, to compare the window before and after it reaches its first mate over the local door).
+A second test, also printed and ungraded, times a crewmate's card picture from the card reaching the window to its picture drawn, and twelve changes of a page a task's browser shows from the change to its picture in the window's view, and writes `picture-latency.json`.
 The app ticks at its own period, so a minute pass may or may not fall in a stretch; judge a measure near its bar over several runs.
 
 ## The runner's automatic updates

@@ -43,7 +43,8 @@ House references this architecture deliberately stays consistent with:
 - **The app brings its own git** (git integration phase 2, `docs/forge.md` "The app's own git"): dugite-native's macOS git for both architectures ships in the bundle (`Contents/Resources/git/`, GPLv2, named in `NOTICE`), every host git runs it, and a crewmate's shell finds it first on its search path.
   It reaches nothing the git egress above does not already name; a Mac with no developer tools needs none.
 - **Listeners have explicit scopes.**
-  The device-connection listener accepts no connection until a device is paired with it or a link to pair one is open; then it listens on loopback and at most one chosen private address of this Mac, never a wildcard, speaks only TLS 1.3 pinned to the home's own key, and refuses browsers and unproven devices before any frame (`docs/connection.md`, `docs/devices.md`).
+  The device-connection listener accepts no connection from another computer until a device is paired with it or a link to pair one is open; then it listens on loopback and at most one chosen private address of this Mac, never a wildcard, speaks only TLS 1.3 pinned to the home's own key, and refuses browsers and unproven devices before any frame (`docs/connection.md`, `docs/devices.md`).
+  The local door listens on loopback alone for as long as the app runs, over TLS 1.3 with a key of its own, and admits only a client that read its key from a folder only this account can open (`docs/connection.md`, "The local door").
   A task browser's connection guard also listens: on loopback alone, only while that browser is open, answering only that browser's session, which signs in with a secret made for it, and carrying nothing but its tunnels to public addresses.
   Claude call-cost recording also permits one private loopback receiver per session factory on the computer running work, with an unguessable route per client attachment (`docs/usage.md`, "Claude calls during a turn").
   It accepts only app-scoped cost reports, persists no content or identity data, and stops when its last attachment ends; it grants no external endpoint or general listening permission.
@@ -233,8 +234,8 @@ Non-negotiable baseline (enforced by a startup assertion in dev builds):
   Isolation is deliberately **social** - the system prompt says "nothing outside the worktree is your concern" - plus the git worktree, not a filesystem jail.
   The captain kept this (2026-08-14 architecture review): do not over-rigidify crewmates.
   Trap to respect: the `tools` allowlist gates custom tools too - unlisted custom tools are silently disabled.
-- **The connection** (`docs/connection.md`): listens only while a device is paired or a link is open, on loopback plus at most one chosen private address of this Mac, never a wildcard or a public address, and only over TLS 1.3 where each side shows its own key (`docs/devices.md`).
-  An upgrade carrying an `Origin` (a browser), on another path, or not admitted by pairing is refused before any frame; a device is closed in the same call that removes it; a view may ask only `reach: "views"` channels, as the captain, a computer that runs work nothing yet, and the core parses every argument itself.
+- **The connection** (`docs/connection.md`): listens on loopback for the local door whenever the app runs, and for devices only while one is paired or a link is open, on loopback plus at most one chosen private address of this Mac, never a wildcard or a public address, and only over TLS 1.3 where each side shows its own key (`docs/devices.md`).
+  An upgrade carrying an `Origin` (a browser), on another path, or not admitted by pairing or the local door's key is refused before any frame; a device is closed in the same call that removes it; a view may ask only `reach: "views"` channels, as the captain, a computer that runs work nothing yet, and the core parses every argument itself.
 - **Electron fuses**: `runAsNode` off, `nodeOptions`/`nodeCliInspect` off, `embeddedAsarIntegrityValidation` on, `onlyLoadAppFromAsar` on.
 - **Secrets**: provider credentials in an app-scoped `0600` auth file under `userData` (pi convention; hi-bit's deliberate safeStorage retreat to avoid Keychain prompts).
   The app holds no SSH secret: adding a Mac by its address runs the person's own SSH with their own agent and settings, in batch mode, and stores no password or key (`docs/devices.md`, "Adding a computer by its address").
@@ -416,7 +417,7 @@ Every build offers it, stable, alpha and development alike (`docs/devices.md`, "
 What is in place:
 
 - **The connection** (`docs/connection.md`): the home serves the core's requests and pushes to paired devices over a WebSocket on TLS, on loopback plus one chosen private address, with pushes numbered so a device that dropped catches up exactly or reloads.
-  It listens only while something is paired or a link is open.
+  It listens for devices only while something is paired or a link is open, and on its local door, for the window and any other client on this Mac, whenever the app runs.
 - **Pairing** (`docs/devices.md`): a one-use ten-minute link pairs a device as a Mac, which can control this first mate and run work, or as another user on this Mac, which only runs work.
   Each side proves itself in TLS with its own key - the home's pinned in the link, the device's pinned on the home's list - and Remove cuts a device off before it returns.
   `DevicePairing` is the one writer over `userData/devices/` and the seam the connection reads (`PairedDevices`).
@@ -816,7 +817,8 @@ Every class reaches the seat through the one admission ladder, the same for a Pi
 ## 17. The core/host split (daemon study D0 + D1, 2026-09-01)
 
 **The app ships in one process; D2 (a shipped `fm3000d` daemon) and launchd remain unbuilt.**
-The core has two clients: the app's own window, through the Electron adapter, and paired devices, through the connection (`docs/connection.md`), the second adapter over the same seams.
+The core has one adapter for its clients, the connection (`docs/connection.md`): paired devices reach it over the network, and the app's own window on the same computer through its local door (`docs/view.md`, "The window on the first mate's own computer").
+A command's first mate has no window, and the Electron host's channels stay in the main process.
 An app that controls the first mate on another Mac starts no core: its main process answers the window from that Mac over the connection (`src/main/shell.ts`, `docs/view.md`).
 
 **`src/core/` is the application** - the first mate agent, the crew supervisor, the model sessions, the durable inbox, jobs, the scheduler, quota, the account vault, routing, workspaces, memory, the stores, telemetry.

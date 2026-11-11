@@ -739,6 +739,11 @@ export const thisMacSchema = z.discriminatedUnion("role", [
         at: z.number().int().nonnegative(),
       })
       .nullable(),
+    /**
+     * The times the window here read everything again after a gap in what
+     * its first mate told it over the local door; absent until the first.
+     */
+    caughtUp: z.number().int().positive().optional(),
   }),
   z.strictObject({
     role: z.literal("view"),

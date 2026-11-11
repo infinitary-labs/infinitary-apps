@@ -110,11 +110,19 @@ export async function connectClient(
      * thrown. Absent, it never answers.
      */
     answer?: (channel: string, args: unknown) => unknown;
+    /**
+     * Opens the socket some other way than the grant's dial: through the
+     * local door, say (`src/core/connection/localDoor.ts`), whose clients
+     * hold no grant.
+     */
+    open?: () => Promise<WebSocket>;
   } = {},
 ): Promise<ConnectionClient> {
-  const socket = options.tamper
-    ? await tamperedSocket(grant, options.tamper)
-    : await dialHome(grant, options.dial);
+  const socket = options.open
+    ? await options.open()
+    : options.tamper
+      ? await tamperedSocket(grant, options.tamper)
+      : await dialHome(grant, options.dial);
   const pushes: ReceivedPush[] = [];
   const asked: { channel: string; args: unknown }[] = [];
   const answers = new Map<number, (frame: HomeFrame) => void>();

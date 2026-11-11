@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { LOCAL_DOOR_FOLDER } from "../shared/connection";
 import { PHONE_DOOR_FOLDER } from "../shared/phoneLink";
 
 /** The personal workspace's fleet-root name; the repo registry refuses it for anything else. */
@@ -80,6 +81,13 @@ export type AppPaths = {
    * is `PHONE_DOOR_FOLDER`, where the phone's fixed command looks.
    */
   phoneDoorDir: string;
+  /**
+   * The local door (docs/connection.md, "The local door"): 0700, the
+   * connection's loopback address, the pin of the door's own TLS key and a
+   * key in three 0600 files, written each time the connection starts and removed when it
+   * closes, only by the connection. The window on this computer reads them.
+   */
+  localDoorDir: string;
   /** Pi's agentDir: app-scoped config root, never ~/.pi/agent. */
   piAgentDir: string;
   /** Per-crewmate session dirs: crewmates/<taskId>/sessions/. */
@@ -169,6 +177,7 @@ export function appPathsFor(userData: string): AppPaths {
     panelLogPath: join(userData, "logs", "panels.log"),
     taskChannelDir: join(userData, "task-channel"),
     phoneDoorDir: join(userData, PHONE_DOOR_FOLDER),
+    localDoorDir: join(userData, LOCAL_DOOR_FOLDER),
     piAgentDir: join(userData, "pi-agent"),
     crewmatesDir: join(userData, "crewmates"),
     worktreesDir: join(userData, "worktrees"),

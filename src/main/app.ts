@@ -621,13 +621,15 @@ export async function startApp(
           return core;
         },
         // The same core for paired devices (docs/connection.md). It listens
-        // only while a device is paired or a link to pair one is open
-        // (docs/devices.md).
+        // for them only while a device is paired or a link to pair one is
+        // open (docs/devices.md), and on its local door for as long as it
+        // runs, windowed or started by a command.
         startConnection: (core) =>
           startConnection({
             dispatch: core.dispatch,
             events: core.events,
             devices: core.services.devices,
+            localDoor: core.paths.localDoorDir,
             // Where devices find this computer: every address a link may carry.
             address: () => core.services.devices.listenHosts(),
             port: core.services.devices.port,
@@ -640,6 +642,9 @@ export async function startApp(
             ...(Number.isInteger(standInViewFloor) ? { viewFloor: standInViewFloor } : {}),
             ...(standInSpelling ? { speaks: standInSpelling } : {}),
           }),
+        // The window here reaches its first mate through that door, as a
+        // view of it (docs/view.md); a command's run has no window to.
+        ...(windowless ? {} : { localDoor: (core: Core) => core.paths.localDoorDir }),
         broadcast: (channel, payload) => {
           broadcast(channel, payload as never);
           if (channel === "inf:release-notes") followReleaseNotes(payload as ReleaseNotesView);

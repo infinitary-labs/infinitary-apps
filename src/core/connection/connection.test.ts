@@ -1,44 +1,39 @@
 import { once } from "node:events";
 import { writeFileSync } from "node:fs";
-import { request as httpsRequest } from "node:https";
 import { createServer as createPlainServer, connect as plainConnect, type Socket } from "node:net";
 import { join } from "node:path";
 import { connect, createServer as createTlsServer } from "node:tls";
 import { cardMessageSchema, cardSchema, cardThreadSchema, pastCardSchema } from "@shared/cards";
-import { CONNECTION_CLOSE, PAIR_PATH } from "@shared/connection";
+import { CONNECTION_CLOSE } from "@shared/connection";
 import { PLACED_WORK_SINCE, SHARED_CARDS_SINCE } from "@shared/contractFeatures";
 import { HOME } from "@shared/deviceNames";
-import { type DeviceGrant, type DeviceKind, parsePairingLink } from "@shared/devices";
+import { type DeviceGrant, parsePairingLink } from "@shared/devices";
 import { ENDED_CLOSE, ENDED_CORNER, endedLineWords } from "@shared/endedCard";
 import {
   CORE_INVOKE_CHANNELS,
   type CoreInvokeChannel,
-  HOME_CAPABILITIES,
   invokeContract,
   isViewInvokeChannel,
   PROTOCOL_VERSION,
 } from "@shared/ipc";
 import { publishedContract } from "@shared/publishedContract";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { claimedPort } from "../../../tests/helpers/claimedPort";
+import { describe, expect, it, vi } from "vitest";
 import { connectClient } from "../../../tests/helpers/connectionClient";
-import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
-  claimLink,
-  type DeviceKey,
-  dialHome,
-  HomeKeyMismatchError,
-  type PairRefusedError,
-  pinnedSocket,
-} from "../devices/dial";
+  ANOTHER_USER,
+  answersAt,
+  changed,
+  home,
+  open,
+  postPair,
+} from "../../../tests/helpers/connectionHome";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { claimLink, dialHome, HomeKeyMismatchError, type PairRefusedError } from "../devices/dial";
 import { createKeyIdentity } from "../devices/identity";
 import { DevicePairing, type DevicePairingOptions } from "../devices/pairing";
 import type { CoreDispatch } from "../dispatcher";
-import { CoreEventBus } from "../events";
 import {
-  type ConnectionOptions,
   DeviceOutOfReachError,
-  type HomeConnection,
   type PairedDevices,
   startConnection,
   type ViewDeviceContact,
@@ -55,24 +50,6 @@ import { FRAME_PARTS } from "./frameParts";
  * refused before any frame. src/core/core.connection.test.ts drives the real core.
  */
 
-function standInCore() {
-  const asked: { channel: string; args: unknown; actor: unknown }[] = [];
-  const dispatch = (async (channel, args, actor) => {
-    asked.push({ channel, args, actor });
-    if (channel === "inf:app:healthcheck")
-      return {
-        ok: true,
-        version: "9.9.9",
-        platform: "test-os",
-        protocolVersion: PROTOCOL_VERSION,
-        capabilities: [...HOME_CAPABILITIES],
-      };
-    if (channel === "inf:work:progress") return { text: "Noted." };
-    throw new Error(`Rejected ${channel}: malformed request`);
-  }) as CoreDispatch;
-  return { dispatch, asked, events: new CoreEventBus() };
-}
-
 /**
  * A version too old to hold a conversation: one minor before `PLACED_WORK_SINCE` while
  * the home is on that major, otherwise the major before the home's (which takes no new work).
@@ -82,18 +59,6 @@ function beforePlacedWork(): string {
   const [homeMajor = 1] = PROTOCOL_VERSION.split(".").map(Number);
   if (homeMajor > (major ?? 1)) return `${homeMajor - 1}.0.0`;
   return minor ? `${major}.${minor - 1}.0` : `${(major ?? 1) - 1}.99.0`;
-}
-
-/** Whether anything accepts a connection on loopback at that port. */
-function answersAt(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const socket = connect({ port, host: "127.0.0.1", rejectUnauthorized: false });
-    socket.once("secureConnect", () => {
-      socket.destroy();
-      resolve(true);
-    });
-    socket.once("error", () => resolve(false));
-  });
 }
 
 /** A clock and a timer list the test moves by hand. */
@@ -117,46 +82,6 @@ function manualClock() {
   };
 }
 
-const open: HomeConnection[] = [];
-const pairings: DevicePairing[] = [];
-afterEach(async () => {
-  await Promise.all(open.splice(0).map((connection) => connection.close()));
-  for (const pairing of pairings.splice(0)) pairing.dispose();
-});
-
-async function home(
-  options: Partial<Omit<ConnectionOptions, "devices">> & {
-    pairing?: Omit<DevicePairingOptions, "dir">;
-  } = {},
-) {
-  const { pairing: pairingOptions, ...connectionOptions } = options;
-  const core = standInCore();
-  const pairing = new DevicePairing({
-    dir: join(scratchDir("infinitary-connection-"), "devices"),
-    onProblem: () => {},
-    ...pairingOptions,
-  });
-  pairings.push(pairing);
-  const port = options.port ?? (await claimedPort());
-  const connection = startConnection({ ...core, ...connectionOptions, devices: pairing, port });
-  open.push(connection);
-  const at = `127.0.0.1:${port}`;
-  return {
-    ...core,
-    pairing,
-    connection,
-    port,
-    at,
-    link: (kind: DeviceKind = "view") => pairing.invite({ kind, at }).link,
-    /** Makes a link, waits for the listener, and joins with it as the device itself would. */
-    join: async (kind: DeviceKind = "view", name = "Test Mac"): Promise<DeviceGrant> => {
-      const { link } = pairing.invite({ kind, at });
-      await connection.settled();
-      return claimLink(link, { kind, name, ...(kind === "work" ? { user: ANOTHER_USER } : {}) });
-    },
-  };
-}
-
 // INF-1156: the existing real TLS handshake carries optional authenticated alternatives.
 it("refreshes dial alternatives in a welcome without changing the paired identity", async () => {
   const at = await home();
@@ -169,68 +94,6 @@ it("refreshes dial alternatives in a welcome without changing the paired identit
     await client.close();
   }
 });
-
-/**
- * A computer that runs work dials these homes from loopback, so it runs as a
- * user other than the one this process runs as, as another user on the
- * home's own Mac would (docs/helper.md).
- */
-const ANOTHER_USER = { name: "builder", uid: (process.getuid?.() ?? 0) + 1 };
-
-const changed = (events: CoreEventBus) => events.emit("inf:models:changed", { ok: true });
-
-/**
- * Posts to `/pair` over a pinned socket, the way a device would but with any
- * body or header, showing a fresh key of its own unless told which or none.
- */
-async function postPair(
-  at: string,
-  key: string,
-  request: {
-    method?: string;
-    contentType?: string;
-    origin?: string;
-    body?: string;
-    device?: DeviceKey | null;
-    /** Sends the body without a length, in chunks. */
-    chunked?: boolean;
-  },
-): Promise<{ status: number; body: string }> {
-  const device = request.device === undefined ? createKeyIdentity("Device") : request.device;
-  const socket = await pinnedSocket({ address: at }, key, device);
-  const [host, port] = at.split(":");
-  return new Promise((resolve, reject) => {
-    const asked = httpsRequest(
-      {
-        host,
-        port: Number(port),
-        method: request.method ?? "POST",
-        path: PAIR_PATH,
-        headers: {
-          ...(request.contentType === undefined
-            ? { "content-type": "application/json" }
-            : request.contentType
-              ? { "content-type": request.contentType }
-              : {}),
-          ...(request.origin ? { origin: request.origin } : {}),
-        },
-        createConnection: () => socket,
-      },
-      (response) => {
-        let body = "";
-        response.on("data", (chunk) => {
-          body += chunk;
-        });
-        response.on("end", () => resolve({ status: response.statusCode ?? 0, body }));
-      },
-    );
-    asked.on("error", reject);
-    if (request.chunked && request.body) {
-      asked.write(request.body);
-      asked.end();
-    } else asked.end(request.body);
-  });
-}
 
 /** A real device that stops reading before the home quits, delaying its close reply. */
 async function pausedDevice(grant: DeviceGrant, hello = true) {

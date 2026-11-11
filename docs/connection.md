@@ -1,17 +1,21 @@
 # The connection
 
-How a paired device reaches the home's core: the same requests and pushes the window uses, over one WebSocket on TLS.
+How a paired device, and the window on the home itself, reach the home's core: the same requests and pushes, over one WebSocket on TLS.
 The home is the Mac that holds the record (`docs/architecture.md` §9).
-The connection is the core's second adapter, beside the window's: it sits on the same two seams, `core.dispatch` in and `core.events` out (§17), and names no channel (`src/core/connection/connection.ts`).
+The connection is the core's adapter for its clients: it sits on the two seams, `core.dispatch` in and `core.events` out (§17), and names no channel (`src/core/connection/connection.ts`).
+The window on the home is one of them, through the local door below (`docs/view.md`, "The window on the first mate's own computer").
 The envelope around the contract's own requests and pushes is `src/shared/connection.ts`, which every client parses; both are published as JSON Schema in `docs/contract.json` with the version rule (`docs/contract.md`).
 How a device pairs, and the keys both sides prove themselves with, is `docs/devices.md`.
 
 ## When and where it listens
 
-- **Only while something is paired or a link is open.**
-  `startConnection` follows the pairing seam (`PairedDevices`, below) and listens while `any()` holds.
-  When the last pairing goes and no link is open it stops listening at once and closes every device.
-  The desktop app composes it with the real pairing (`core.services.devices`), so with nothing paired and no link the shipped app listens on no address.
+- **For devices, only while something is paired or a link is open.**
+  `startConnection` follows the pairing seam (`PairedDevices`, below) and listens for devices while `any()` holds.
+  When the last pairing goes and no link is open it stops listening for them at once and closes every device.
+  The desktop app composes it with the real pairing (`core.services.devices`), so with nothing paired and no link the shipped app listens for devices on no address.
+- **On the local door, always.**
+  Given `localDoor`, a folder, it also listens on a loopback port the system chooses, from start to quit, whatever is paired ("The local door" below).
+  A change to where devices are listened for restarts only the devices' listeners and closes only devices; the door and its clients stay.
 - **TLS 1.3 only, on every address.**
   Each listener serves the home's own key (`docs/devices.md`, "Keys") and asks the device for its own; it accepts no older protocol, resumes no session, and has no plain listener, loopback included.
   A handshake, the request headers and a whole request each have 10 seconds.
@@ -47,6 +51,30 @@ A change to what is paired reaches the connection before the change returns: eve
 A device has a `kind`, set at the home (`docs/devices.md`, "The shape"), and each of its connections is a `view` or its `work`, as its hello says within what its kind may be: a `view` is Infinitary open on another Mac showing this one, and is sent every push, with pictures of the task browsers it watches as unnumbered `live` frames ("Live pushes" below); a `work` connection is a computer's work (`docs/helper.md`), sent no push, which asks only the work requests and is asked the home's orders (below).
 A `mac` may hold one of each at once; a `view` device is only ever a view, and a `work` device only ever its work.
 
+## The local door
+
+How a client on the home itself, as the same account, reaches the connection with no pairing: the window there, and any second local client, such as a command (`src/core/connection/localDoor.ts`).
+It follows the phone door's pattern (`docs/devices.md`, "A phone that joins by its address").
+
+- **Its files.**
+  When the connection starts it empties the door's folder (`<userData>/local-door`, `paths.localDoorDir`), makes it again only its owner can open (0700), and writes three files only their owner can read (0600): `address` (`127.0.0.1:port`), `pin` (the pin of the door's own TLS key) and `key` (256 random bits, hex), the key last.
+  Each start is a new port and a new key; quit removes the folder, so a key from an earlier run opens nothing.
+  `localDoor()` answers the address while the door is open.
+- **Reading the key is the permission.**
+  Only the account the home runs as can read it, and that account could already read the home's record.
+  Another account on the same computer reaches the loopback port but not the key.
+- **Its listener.**
+  The same TLS 1.3, with a key of the door's own, made in memory each run and never written, so pairing still writes nothing, not even the home's key, until the first link (`docs/devices.md`).
+  The client pins it as every dial is, and shows no key of its own.
+  An upgrade on `CONNECTION_PATH` carrying the key in `x-infinitary-local-key` (`LOCAL_DOOR_KEY_HEADER`) is admitted; a wrong or missing key is 401, an `Origin` 403 and another path 404, before any frame.
+  It answers no pairing and no download of the app: every plain request is 426 on `CONNECTION_PATH` and 404 elsewhere.
+- **What a local client is.**
+  Every local client shares one id, `local` (`LOCAL_CLIENT`), and any number may be connected at once with the same key.
+  It is no device: it is on no list, is never heard coming or going (`onViewDevice`), never says its system or version, is never told a version is waiting, and has nothing to `leave`.
+  It is this computer's own build, so it changes things whatever contract either side says (`access: "full"`).
+  It is a view, sent every push, and asks as the captain himself (`{ kind: "captain" }`, no `view`), the actor the window always had: every core request, what stays on the home (`reach: "home"`, Secrets included) too, but a computer's work, which is refused as asked only by a computer that runs work.
+  Pages it would open open on the home (`docs/view.md`, "Pages it would open").
+
 ## The handshake and the numbering
 
 A device's first frame is `hello`, carrying the contract version it speaks (`PROTOCOL_VERSION`), the version of Infinitary it runs (`appVersion`, from `WORK_UPDATE_SINCE` on), when it was connected before its cursor, for a `mac` what this connection is (`as`: `view` from its window, `work` from its work mode), for a view the oldest home major it can still change things on (`viewFloor`, its build's `VIEW_FLOOR`; `docs/contract.md`, "The version rule"), what the device is (`system` and `chip`, from protocol 2.15; `docs/devices.md`, "The shape"), which the home keeps beside its kind (`PairedDevices.noteSystem`), the spellings of channel names it reads (`spellings`, from protocol 8.2; below, "Two spellings"), and the name of each contract change it has (`changes`, `docs/contract.md`, "Changes by name").
@@ -76,9 +104,11 @@ A `view` connection is also `full` from the home's view floor (`VIEW_FLOOR`) up 
 Both sides ignore a frame's fields they do not know, so a later minor can add one.
 
 Every core push but a `live` picture is numbered once, at the connection, by one journal per listening run (`EventJournal`, `src/core/connection/journal.ts`): `seq` counts from 1 in a fresh random `epoch`, and every welcomed device is sent the same frame under the same number.
-The journal keeps the newest 4,096 pushes or 16 MiB of frames, whichever is smaller, and always the newest push.
+The journal keeps the newest 4,096 pushes or 16 MiB of frames, whichever is smaller, and the newest push whenever it keeps any.
+It keeps them only while something is paired or a pairing link is open: otherwise only the local door's clients dial, on the same computer, so each push is numbered and nothing is kept, and a local client that dropped reloads unless it missed nothing.
 A cursor is replayed when its epoch is this journal's and its `seq` is no newer than the journal's and no older than the push before the oldest one kept; anything else is a reload.
 A home restart, or a pause in listening, starts a new epoch, so every returning device reloads.
+While the local door is open the run never pauses: a change to the addresses devices are listened on closes their connections but keeps the run and its epoch, so they come back and replay.
 Pushes made while nothing listens are not kept.
 
 ## Requests
@@ -88,7 +118,7 @@ A device asks with `invoke` (`id`, `channel`, `args`) and gets one `result` per 
 An empty argument before a given one still goes as null, so a request that can have one reads null there as absent, as `inf:task:run` does for a panel's move with no review.
 
 - A view's request for a core channel whose `reach` is `views` is forwarded.
-  It goes to `core.dispatch` as the captain - the same actor the window's adapter stamps, because a paired view is the captain at another Mac - and the core parses the arguments itself, so its own refusals (a malformed request, a refused action) come back as the reason.
+  It goes to `core.dispatch` as the captain, naming the view - the actor the window on the home asks as, because a paired view is the captain at another Mac - and the core parses the arguments itself, so its own refusals (a malformed request, a refused action) come back as the reason.
   Words a view types (`inf:converse`, `inf:cards:reply`) are therefore the captain's own words, own-words changes included (`docs/devices.md`, "The requests").
 - A computer that runs work's request for a core channel whose `reach` is `work` is forwarded as that device (`{ kind: "device", deviceId }`), by the pairing its socket proved, once its welcome said it takes work (`src/shared/work.ts`, `docs/helper.md` "Holding a conversation").
   The core answers a work request only for a device, and a device nothing else.
@@ -198,6 +228,7 @@ The names are open strings: a client ignores one it does not know, and a newer h
 ## Tests
 
 - `src/core/connection/connection.test.ts`: each rule above against a stand-in core, the real event bus and the real pairing, the work requests and the home's own requests to a computer that runs work included, a view heard coming and going, and where it listens said only when that changes.
+- `src/core/connection/localDoor.test.ts`, "the local door": its folder and files, its key admitting the captain with no device row and two clients at once, its refusals, no pairing on it, an earlier key refused, no pushes kept while nothing is paired, and its clients kept while devices' listeners restart.
 - `src/core/connection/journal.test.ts` and `addresses.test.ts`: the numbering and the listening rule on their own.
 - `src/core/connection/outbox.test.ts`: the outbox's pieces, window and marks on their own, and the parts it sends a device that reads them; `frameParts.test.ts`: parts joined back into frames, and parts past their length refused; `connection.test.ts`, "pacing and liveness": a device receiving a long push through a slow link kept on one connection, one that stops reading still cut, and a long push sent in parts to a current device or an older one that lists `frame-parts`.
 - `src/core/core.connection.test.ts`, "the connection serves the core to paired devices": the real core, two devices, a dropped one caught up exactly, and every no-argument read a view may ask parsed against its own schema after the wire.

@@ -239,6 +239,21 @@ describe("reading everything again after a gap (docs/view.md)", () => {
     expect(state().cardsSnapshotLoaded).toBe(true);
   });
 
+  // The window on the first mate's own computer missed pushes the local door
+  // could not replay, or lost the door (docs/view.md, "The window on the first
+  // mate's own computer"): it reads everything again as a view does.
+  it("reads everything again on the first mate's own computer when its window caught up again", async () => {
+    useShellStore.setState({ thisMac: { role: "home", left: null } });
+
+    state().applyThisMac({ role: "home", left: null, caughtUp: 1 });
+
+    expect(resynced).toBe(1);
+    await settle();
+    expect(state().cards.map((c) => c.id)).toEqual(["card-b"]);
+    state().applyThisMac({ role: "home", left: null, caughtUp: 1 });
+    expect(resynced).toBe(1);
+  });
+
   it("reads nothing again when the other computer has not caught up since", () => {
     state().applyThisMac({ ...view("in-reach", 2), heardAt: 2_500 });
 

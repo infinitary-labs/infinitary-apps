@@ -62,6 +62,7 @@ import type { TaskBrowserFrame } from "@shared/taskBrowser";
 import { WebSocket, WebSocketServer } from "ws";
 import type { BrowserViewer } from "../browser/browserViews";
 import { copyStream, type FarBuild } from "../devices/farBuilds";
+import { createKeyIdentity } from "../devices/identity";
 import type { CoreActor, CoreDispatch } from "../dispatcher";
 import type { CoreEventBus } from "../events";
 import { listenAddresses, listenOn } from "./addresses";
@@ -74,6 +75,11 @@ import {
   type JournalEntry,
   type JournalLimits,
 } from "./journal";
+import { type OpenLocalDoor, openLocalDoor } from "./localDoor";
+
+/** The name on the local door's own certificate. */
+const LOCAL_DOOR_NAME = "Infinitary local door";
+
 import { Outbox } from "./outbox";
 import { frameWithoutTaskAllow, readsTaskAllow, withoutTaskAllow } from "./taskAllow";
 
@@ -163,6 +169,13 @@ export const DEVICES_FROM_A_VIEW = contractChange("devices-from-a-view");
 export const BROWSER_FROM_ANY_VIEW = contractChange("browser-from-any-view");
 
 /**
+ * Who a client the local door admitted is (docs/connection.md, "The local
+ * door"): no device on the list, never told to pairing, always a view.
+ */
+export const LOCAL_CLIENT = "local";
+const LOCAL_DEVICE: PairedDevice = { id: LOCAL_CLIENT, kind: "view" };
+
+/**
  * What a connection in each role may ask (docs/devices.md): a view the
  * channels whose reach is `views`, as the captain at another Mac, naming the
  * device so a phone's own usage events go under its own ID; a computer's work
@@ -175,6 +188,10 @@ function askerOf(
   channel: CoreInvokeChannel,
   changes: readonly string[] | undefined,
 ): CoreActor | null {
+  // A client of the local door asks as the window on this computer always
+  // has: everything but the work requests, as the captain himself.
+  if (role === "view" && device === LOCAL_DEVICE)
+    return isWorkInvokeChannel(channel) ? null : { kind: "captain" };
   if (role === "view")
     return isViewInvokeChannel(channel)
       ? { kind: "captain", view: device.id, ...(changes ? { viewChanges: changes } : {}) }
@@ -279,6 +296,14 @@ export type ConnectionOptions = {
   /** Where the connection says it could not listen. */
   onProblem?: (text: string) => void;
   /**
+   * The local door's folder (docs/connection.md, "The local door"): with
+   * one, the connection listens on a loopback port of its own for as long
+   * as it runs, paired or not, and admits a client on this computer that
+   * shows the key it writes there. Absent, it listens only while something
+   * is paired.
+   */
+  localDoor?: string;
+  /**
    * This Mac's own name, which the welcome tells a device (a view says the
    * Mac it controls by it). Read at each welcome; absent, the welcome names
    * none.
@@ -307,8 +332,10 @@ export type RunningDeviceVersion = { deviceId: string; role: DeviceRole; version
 export type HomeConnection = {
   /** Live hello facts, including views and incompatible work computers; never a cached installation. */
   runningVersions(): RunningDeviceVersion[];
-  /** Where it listens now, as address:port; empty while nothing is paired. */
+  /** Where it listens now, as address:port; empty while nothing is paired. The local door is not among them. */
   listening(): string[];
+  /** Where the local door listens now, as `127.0.0.1:port`, or null while it is not open. */
+  localDoor(): string | null;
   /**
    * Asks a connected computer that runs work one order (src/shared/work.ts)
    * and resolves with its answer, or rejects with its refusal. With
@@ -365,6 +392,8 @@ export type HomeConnection = {
 type Client = {
   readonly ws: WebSocket;
   readonly device: PairedDevice;
+  /** Admitted by the local door's key, not by pairing: it outlives no pairing and is never one. */
+  readonly local: boolean;
   welcomed: boolean;
   /** What this connection does, from its hello: null until it is welcomed. */
   role: DeviceRole | null;
@@ -416,10 +445,15 @@ type Client = {
 };
 
 type Run = {
-  readonly servers: Server[];
-  /** The address it was asked to listen on beside loopback, as asked. */
-  readonly chosen: string | undefined;
-  readonly addresses: string[];
+  /** The listeners devices dial, while anything is paired. */
+  servers: Server[];
+  /** The addresses it was asked to listen on, as asked; empty while nothing is paired. */
+  chosen: string;
+  addresses: string[];
+  /** The local door's own listener and its key, for as long as the run lasts. */
+  readonly local: { readonly server: Server; readonly door: OpenLocalDoor } | null;
+  /** Listens on these addresses for devices, in place of those it listened on. */
+  readonly listen: (listed: { key: string; addresses: string[] }) => Promise<void>;
   readonly clients: Set<Client>;
   readonly detach: () => void;
   readonly heartbeat: NodeJS.Timeout;
@@ -631,24 +665,36 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     }
   };
 
+  const local = options.localDoor;
   const follow = async () => {
-    if (closed || !devices.any()) {
+    const paired = !closed && devices.any();
+    // The local door keeps a run going while nothing is paired.
+    if (closed || (!paired && !local)) {
       await stop(closed ? CONNECTION_CLOSE.closing : CONNECTION_CLOSE.unpaired);
       return;
     }
-    // A new set of addresses is a new listening run: devices come back and reload.
-    let listed: { key: string; addresses: string[] };
-    try {
-      listed = listenList();
-    } catch (refusal) {
-      onProblem(`not listening: ${(refusal as Error).message}`);
-      if (run) await stop(CONNECTION_CLOSE.closing);
-      return;
+    let listed: { key: string; addresses: string[] } = { key: "", addresses: [] };
+    if (paired) {
+      try {
+        listed = listenList();
+      } catch (refusal) {
+        onProblem(`not listening: ${(refusal as Error).message}`);
+        if (!local) {
+          if (run) await stop(CONNECTION_CLOSE.closing);
+          return;
+        }
+      }
     }
-    if (run && run.chosen !== listed.key) await stop(CONNECTION_CLOSE.closing);
+    if (run && run.chosen !== listed.key) {
+      // A new set of addresses is a new listening run: devices come back and
+      // reload. With the local door, only the devices' listeners change.
+      if (local) await run.listen(listed);
+      else await stop(CONNECTION_CLOSE.closing);
+    }
     if (!run) run = await start(listed);
     for (const client of run?.clients ?? [])
-      if (!devices.holds(client.device.id)) cut(client, CONNECTION_CLOSE.unpaired, "unpaired");
+      if (!client.local && !devices.holds(client.device.id))
+        cut(client, CONNECTION_CLOSE.unpaired, "unpaired");
   };
   const reconcile = () => {
     tail = tail
@@ -667,24 +713,28 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
   // (docs/devices.md, "Remove"); listening follows on the chain.
   const unsubscribe = devices.subscribe(() => {
     for (const client of run?.clients ?? [])
-      if (!devices.holds(client.device.id)) cut(client, CONNECTION_CLOSE.unpaired, "unpaired");
+      if (!client.local && !devices.holds(client.device.id))
+        cut(client, CONNECTION_CLOSE.unpaired, "unpaired");
     void reconcile();
   });
   void reconcile();
 
-  async function start(ready?: { key: string; addresses: string[] }): Promise<Run | null> {
-    let addresses: string[];
-    let identity: { key: string; cert: string };
-    let listed = ready;
-    try {
-      listed ??= listenList();
-      addresses = listed.addresses;
-      identity = devices.identity();
-    } catch (refusal) {
-      onProblem(`not listening: ${(refusal as Error).message}`);
-      return null;
-    }
-    const chosen = listed.key;
+  async function start(listed: { key: string; addresses: string[] }): Promise<Run | null> {
+    // The home's own key, read only once devices are listened for: pairing
+    // writes nothing, not even that key, until the first link
+    // (docs/devices.md). Without the local door it is read at once, as before.
+    let homeIdentity: { key: string; cert: string } | null = null;
+    const ownIdentity = () => {
+      homeIdentity ??= devices.identity();
+      return homeIdentity;
+    };
+    if (!local)
+      try {
+        ownIdentity();
+      } catch (refusal) {
+        onProblem(`not listening: ${(refusal as Error).message}`);
+        return null;
+      }
     let journal = new EventJournal(options.journal ?? DEFAULT_JOURNAL_LIMITS);
     const clients = new Set<Client>();
     const sockets = new WebSocketServer({
@@ -705,9 +755,13 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     // leave every device with a hole it cannot see, so they all start over.
     const detach = events.subscribe((channel, payload) => {
       try {
+        // Kept for catch-up only while something is paired: with nothing
+        // paired only the local door's clients, on this computer, dial, and
+        // one that dropped reads everything again (docs/connection.md).
         const entry = journal.record(
           (seq) => JSON.stringify({ t: "push", seq, channel, payload }),
           channel,
+          devices.any(),
         );
         for (const client of clients)
           if (client.welcomed && client.role === "view")
@@ -795,11 +849,16 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       // strictly, so like work it changes things only on this home's major (INF-1649 review
       // R4, the captain's "Keep version-11 views read-only"); a phone reads them as text.
       const floored = role === "view" && (hello.viewFloor !== undefined || hello.system === "ios");
-      client.access = contractAccess(
-        hello.protocolVersion,
-        homeVersion,
-        floored ? { clientFloor: hello.viewFloor, homeFloor: viewFloor } : undefined,
-      );
+      // A local client is this computer's own build at this computer's own
+      // home (docs/connection.md, "The local door"): it changes things,
+      // whatever version either says.
+      client.access = client.local
+        ? "full"
+        : contractAccess(
+            hello.protocolVersion,
+            homeVersion,
+            floored ? { clientFloor: hello.viewFloor, homeFloor: viewFloor } : undefined,
+          );
       const takes = role === "work" && takesWork(hello.protocolVersion, homeVersion);
       // A join hearing the name is welcomed as any connection is, and is
       // nothing more: never that computer in reach, so Devices can tell one
@@ -847,6 +906,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           ),
         );
       client.welcomed = true;
+      // A client of the local door is no device: pairing hears nothing of it.
+      if (client.local) return;
       if (hello.system || hello.chip || hello.automaticStartup)
         devices.noteSystem?.(client.device.id, {
           ...(hello.system ? { system: hello.system } : {}),
@@ -950,6 +1011,11 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     // Leave (docs/devices.md): the device asks to come off the list, and
     // pairing's change cuts it as `unpaired` before this returns.
     const leave = (client: Client) => {
+      // A client of the local door is on no list, so it has nothing to leave.
+      if (client.local) {
+        cut(client, CONNECTION_CLOSE.protocol, "nothing to leave");
+        return;
+      }
       try {
         devices.leave(client.device.id);
       } catch (error) {
@@ -958,10 +1024,11 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       cut(client, CONNECTION_CLOSE.unpaired, "unpaired");
     };
 
-    const attach = (ws: WebSocket, device: PairedDevice) => {
+    const attach = (ws: WebSocket, device: PairedDevice, viaDoor: boolean) => {
       const client: Client = {
         ws,
         device,
+        local: viaDoor,
         welcomed: false,
         role: null,
         speaks: "",
@@ -983,7 +1050,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         asked: new Map(),
       };
       clients.add(client);
-      if (!devices.holds(device.id)) cut(client, CONNECTION_CLOSE.unpaired, "unpaired");
+      if (!viaDoor && !devices.holds(device.id)) cut(client, CONNECTION_CLOSE.unpaired, "unpaired");
       ws.on("pong", () => {
         client.answeredPing = true;
       });
@@ -1012,9 +1079,12 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           tellWork({ deviceId: client.device.id, contact: "gone" });
         const stillViewing = [...clients].some(
           (other) =>
-            other.device.id === client.device.id && other.welcomed && other.role === "view",
+            other.device.id === client.device.id &&
+            !other.local &&
+            other.welcomed &&
+            other.role === "view",
         );
-        if (client.welcomed && client.role === "view" && !stillViewing)
+        if (client.welcomed && client.role === "view" && !client.local && !stillViewing)
           tellView({ deviceId: client.device.id, contact: "gone" });
         // What it said of its version holds while any connection of it does.
         if (client.welcomed && client.role === "work" && !client.nameOnly) {
@@ -1034,7 +1104,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       ws.on("error", () => {});
       ws.on("message", (raw, isBinary) => {
         if (client.closing) return;
-        if (!devices.holds(client.device.id)) {
+        if (!client.local && !devices.holds(client.device.id)) {
           cut(client, CONNECTION_CLOSE.unpaired, "unpaired");
           return;
         }
@@ -1205,12 +1275,26 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       stream.pipe(response);
       response.once("close", stop);
     };
-    const upgrade = async (request: IncomingMessage, socket: Duplex, head: Buffer) => {
+    // A device's upgrade proves it by pairing; one on the local door's own
+    // listener by the door's key alone, and nothing else is answered there.
+    const upgrade = async (
+      request: IncomingMessage,
+      socket: Duplex,
+      head: Buffer,
+      door: { open: OpenLocalDoor | null } | null,
+    ) => {
       socket.on("error", () => {});
       // A browser always sends an Origin; no web page reaches the home.
       if (request.headers.origin !== undefined) return refuse(socket, "403 Forbidden");
       if (new URL(request.url ?? "/", "http://home").pathname !== CONNECTION_PATH)
         return refuse(socket, "404 Not Found");
+      if (door) {
+        // The door's own listener admits by its key alone, never by pairing.
+        if (!door.open?.admits(request) || run?.clients !== clients)
+          return refuse(socket, "401 Unauthorized");
+        sockets.handleUpgrade(request, socket, head, (ws) => attach(ws, LOCAL_DEVICE, true));
+        return;
+      }
       let device: PairedDevice | null;
       try {
         device = await devices.admit(request);
@@ -1220,59 +1304,69 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       if (!device || run?.clients !== clients || !devices.holds(device.id))
         return refuse(socket, "401 Unauthorized");
       const admitted = device;
-      sockets.handleUpgrade(request, socket, head, (ws) => attach(ws, admitted));
+      sockets.handleUpgrade(request, socket, head, (ws) => attach(ws, admitted, false));
     };
 
-    const servers: Server[] = [];
-    const bound: string[] = [];
-    let port = options.port ?? CONNECTION_PORT;
-    try {
-      for (const address of addresses) {
-        // TLS 1.3 only, with the home's own key, on every address including
-        // loopback: a device checks the key before it sends anything, and
-        // shows its own, which pairing reads. No session is resumed, so
-        // every connection shows both keys again.
-        const server = createServer(
-          {
-            key: identity.key,
-            cert: identity.cert,
-            requestCert: true,
-            rejectUnauthorized: false,
-            secureOptions: cryptoConstants.SSL_OP_NO_TICKET,
-            minVersion: "TLSv1.3",
-            handshakeTimeout: 10_000,
-            headersTimeout: 10_000,
-            requestTimeout: 10_000,
-          },
-          (request, response) => {
-            const path = new URL(request.url ?? "/", "https://home").pathname;
-            if (path === PAIR_PATH) void pair(request, response);
-            else if (path === FETCH_APP_PATH) void fetchApp(request, response);
-            else
-              response
-                .writeHead(path === CONNECTION_PATH ? 426 : 404, { Connection: "close" })
-                .end();
-          },
-        );
-        server.on("upgrade", (request, socket, head) => void upgrade(request, socket, head));
-        await new Promise<void>((resolve, reject) => {
-          server.once("error", reject);
-          server.listen({ host: address, port }, () => {
-            server.off("error", reject);
-            resolve();
-          });
+    // TLS 1.3 only, with the key it is given - the home's own for devices,
+    // the door's own for the local door - on every address including
+    // loopback: a device checks the key before it sends anything, and
+    // shows its own, which pairing reads. No session is resumed, so every
+    // connection shows both keys again.
+    const tlsWith = (identity: { key: string; cert: string }) => ({
+      key: identity.key,
+      cert: identity.cert,
+      requestCert: true,
+      rejectUnauthorized: false,
+      secureOptions: cryptoConstants.SSL_OP_NO_TICKET,
+      minVersion: "TLSv1.3" as const,
+      handshakeTimeout: 10_000,
+      headersTimeout: 10_000,
+      requestTimeout: 10_000,
+    });
+    const bind = async (
+      host: string,
+      at: number,
+      door: { open: OpenLocalDoor | null } | null,
+      identity: { key: string; cert: string },
+    ): Promise<{ server: Server; port: number }> => {
+      const server = createServer(tlsWith(identity), (request, response) => {
+        const path = new URL(request.url ?? "/", "https://home").pathname;
+        if (!door && path === PAIR_PATH) void pair(request, response);
+        else if (!door && path === FETCH_APP_PATH) void fetchApp(request, response);
+        else
+          response.writeHead(path === CONNECTION_PATH ? 426 : 404, { Connection: "close" }).end();
+      });
+      server.on("upgrade", (request, socket, head) => void upgrade(request, socket, head, door));
+      await new Promise<void>((resolve, reject) => {
+        server.once("error", reject);
+        server.listen({ host, port: at }, () => {
+          server.off("error", reject);
+          resolve();
         });
-        servers.push(server);
-        const where = server.address();
-        if (where && typeof where === "object") port = where.port;
-        bound.push(`${address.includes(":") ? `[${address}]` : address}:${port}`);
+      });
+      const where = server.address();
+      return { server, port: where && typeof where === "object" ? where.port : at };
+    };
+
+    // The local door: a loopback port the system chooses, so two accounts
+    // on one computer each open their own, and its three files.
+    let localPart: Run["local"] = null;
+    if (local) {
+      const held: { open: OpenLocalDoor | null } = { open: null };
+      let server: Server | null = null;
+      try {
+        // A key of its own, kept only in memory and new each run: its pin
+        // is in the door's folder, and the home's key stays unwritten until
+        // the first link.
+        const doorIdentity = createKeyIdentity(LOCAL_DOOR_NAME);
+        const bound = await bind("127.0.0.1", 0, held, doorIdentity);
+        server = bound.server;
+        held.open = openLocalDoor(local, `127.0.0.1:${bound.port}`, doorIdentity.cert);
+        localPart = { server, door: held.open };
+      } catch (error) {
+        server?.close();
+        onProblem(`could not open the local door: ${(error as Error).message}`);
       }
-    } catch (error) {
-      for (const server of servers) server.close();
-      detach();
-      sockets.close();
-      onProblem(`could not listen: ${(error as Error).message}`);
-      return null;
     }
 
     const heartbeat = setInterval(() => {
@@ -1291,7 +1385,54 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     }, heartbeatMs);
     heartbeat.unref();
 
-    return { servers, chosen, addresses: bound, clients, detach, heartbeat };
+    const started: Run = {
+      servers: [],
+      chosen: "",
+      addresses: [],
+      local: localPart,
+      clients,
+      detach,
+      heartbeat,
+      listen: async (want) => {
+        const was = started.servers;
+        started.servers = [];
+        started.addresses = [];
+        started.chosen = want.key;
+        for (const server of was) server.close();
+        // A device listened for elsewhere comes back where it is listened for now.
+        if (was.length)
+          for (const client of clients)
+            if (!client.local) cut(client, CONNECTION_CLOSE.closing, "closing");
+        const servers: Server[] = [];
+        const bound: string[] = [];
+        let port = options.port ?? CONNECTION_PORT;
+        try {
+          for (const address of want.addresses) {
+            const made = await bind(address, port, null, ownIdentity());
+            servers.push(made.server);
+            port = made.port;
+            bound.push(`${address.includes(":") ? `[${address}]` : address}:${port}`);
+          }
+        } catch (error) {
+          for (const server of servers) server.close();
+          // Tried again at the next change to what is paired.
+          started.chosen = "";
+          onProblem(`could not listen: ${(error as Error).message}`);
+          return;
+        }
+        started.servers = servers;
+        started.addresses = bound;
+      },
+    };
+    await started.listen(listed);
+    // Without the local door, a run that could not listen for devices is none.
+    if (!localPart && started.servers.length === 0) {
+      clearInterval(heartbeat);
+      detach();
+      sockets.close();
+      return null;
+    }
+    return started;
   }
 
   /** More than `maxBufferedBytes` waits to reach it, here and in the socket. */
@@ -1314,6 +1455,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     // Stop accepting at once. HTTP requests do not hold quit open; upgraded
     // device sockets get their own bounded close handshake below.
     for (const server of ending.servers) server.close();
+    ending.local?.server.close();
+    ending.local?.door.close();
     const drained = [...ending.clients].map(
       ({ ws }) =>
         new Promise<void>((resolve) => {
@@ -1337,10 +1480,12 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
 
   return {
     listening: listeningNow,
+    localDoor: () => run?.local?.door.address ?? null,
     runningVersions: () => {
       const versions = new Map<string, RunningDeviceVersion>();
       for (const client of run?.clients ?? []) {
-        if (!client.welcomed || client.closing || client.nameOnly || !client.role) continue;
+        if (!client.welcomed || client.closing || client.nameOnly || !client.role || client.local)
+          continue;
         versions.set(JSON.stringify([client.device.id, client.role, client.appVersion ?? null]), {
           deviceId: client.device.id,
           role: client.role,

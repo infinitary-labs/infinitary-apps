@@ -270,6 +270,14 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       }));
     }
     if (isView(before) && isView(thisMac) && thisMac.caughtUp > before.caughtUp) get().resync();
+    // The window on the first mate's own computer missed pushes over the
+    // local door, or now asks directly (docs/view.md): it reads everything again.
+    if (
+      thisMac.role === "home" &&
+      before?.role === "home" &&
+      (thisMac.caughtUp ?? 0) > (before.caughtUp ?? 0)
+    )
+      get().resync();
     if (
       isView(thisMac) &&
       thisMac.contact === "in-reach" &&

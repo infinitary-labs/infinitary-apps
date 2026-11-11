@@ -15,7 +15,7 @@ export type JournalEntry = {
 export type JournalLimits = {
   /** The most pushes kept for catch-up. */
   entries: number;
-  /** The most frame bytes kept for catch-up; the newest push is always kept. */
+  /** The most frame bytes kept for catch-up; the newest push is kept whenever any is. */
   bytes: number;
 };
 
@@ -46,9 +46,19 @@ export class EventJournal {
     return this.head;
   }
 
-  /** Numbers one push and keeps it; `frameOf` writes the frame for that number, on `channel`. */
-  record(frameOf: (seq: number) => string, channel = ""): JournalEntry {
+  /**
+   * Numbers one push and keeps it; `frameOf` writes the frame for that number,
+   * on `channel`. With `keep` false the push is numbered and nothing is kept,
+   * the earlier pushes included: a cursor behind it reloads, and one at it
+   * still has nothing to catch up on.
+   */
+  record(frameOf: (seq: number) => string, channel = "", keep = true): JournalEntry {
     const entry = { seq: ++this.head, channel, frame: frameOf(this.head) };
+    if (!keep) {
+      this.kept.length = 0;
+      this.bytes = 0;
+      return entry;
+    }
     this.kept.push(entry);
     this.bytes += Buffer.byteLength(entry.frame);
     while (

@@ -273,6 +273,7 @@ function shell(
       close: closeConnection,
       runningVersions: () => [],
       listening: () => [],
+      localDoor: () => null,
       settled: async () => {},
       ask: async () => {
         throw new Error("Nothing is connected.");
@@ -1035,5 +1036,149 @@ describe("notifications on a view of another Mac", () => {
       "Born while away",
       "After the restart",
     ]);
+  });
+});
+
+// INF-1352's plan, local_path=real-connection (docs/view.md, "The window on the first mate's own
+// computer"): the window here asks its first mate over the local door and hears it there, and
+// asks directly when the door cannot carry it, reading everything again after any gap.
+describe("the window on the first mate's own computer", () => {
+  type StandInLink = NonNullable<NonNullable<ShellOptions["localWindow"]>["link"]>;
+  type LinkOptions = Parameters<StandInLink>[0];
+
+  function homeShell(options: { link?: StandInLink; readyMs?: number; door?: boolean } = {}) {
+    const own = ownCore();
+    const pushes: { channel: string; payload: unknown }[] = [];
+    const doorDir = join(scratchDir("infinitary-shell-door-"), "local-door");
+    const pairing = new DevicePairing({
+      dir: join(scratchDir("infinitary-shell-door-"), "devices"),
+      onProblem: () => {},
+    });
+    let connection: HomeConnection | null = null;
+    const made = new Shell({
+      joined: new JoinedHome(join(scratchDir("infinitary-shell-door-"), "joined"), () => {}),
+      startCore: async () => own.core,
+      startConnection: (core) => {
+        connection = startConnection({
+          dispatch: core.dispatch,
+          events: core.events,
+          devices: pairing,
+          localDoor: doorDir,
+          port: 0,
+          onProblem: () => {},
+        });
+        return connection;
+      },
+      localDoor: () => doorDir,
+      ...(options.link || options.readyMs !== undefined
+        ? {
+            localWindow: {
+              ...(options.link ? { link: options.link } : {}),
+              ...(options.readyMs !== undefined ? { readyMs: options.readyMs } : {}),
+            },
+          }
+        : {}),
+      broadcast: (channel, payload) => pushes.push({ channel, payload }),
+      notifications: { supported: () => false, focused: () => true, show: () => {} },
+      deviceName: async () => "MacBook Pro",
+      openPage: async () => {},
+      restartWindows: vi.fn(),
+      relaunch: vi.fn(),
+      updates: ownUpdates().updates,
+    });
+    stops.push(async () => {
+      await made.dispose();
+      pairing.dispose();
+    });
+    return { shell: made, own, pushes, connection: () => connection };
+  }
+
+  /** A link that never reaches the door, and hands the test its options to play the first mate's part. */
+  function standInLink() {
+    const heard: { options: LinkOptions | null; closed: boolean; welcomed: boolean } = {
+      options: null,
+      closed: false,
+      welcomed: false,
+    };
+    const link: StandInLink = (options) => {
+      heard.options = options;
+      return {
+        start: () => {},
+        invoke: async () => {
+          throw new Error("Out of reach.");
+        },
+        state: () => ({ contact: heard.welcomed ? "in-reach" : "reaching" }) as never,
+        close: () => {
+          heard.closed = true;
+        },
+      };
+    };
+    return { link, heard };
+  }
+
+  const pushed = (pushes: { channel: string }[], channel: string) =>
+    pushes.filter((push) => push.channel === channel).length;
+
+  it("asks its first mate over the local door, and hears each push once, from there", async () => {
+    const at = homeShell();
+    await at.shell.start();
+    const asked = await at.shell.dispatch("inf:app:healthcheck", []);
+    expect(asked).toEqual({ ownCore: "inf:app:healthcheck" });
+    // The connection asks as the captain, with that client as the viewer of a task's browser.
+    expect(at.own.dispatch.mock.calls.map((call) => call.slice(0, 3))).toEqual([
+      ["inf:app:healthcheck", [], { kind: "captain" }],
+    ]);
+    at.own.core.events.emit("inf:models:changed", { ok: true });
+    await expect.poll(() => pushed(at.pushes, "inf:models:changed")).toBe(1);
+    // Quitting the first mate's connection leaves the window's request with no door to go through.
+    await at.connection()?.close();
+    await expect(at.shell.dispatch("inf:app:healthcheck", [])).rejects.toThrow();
+  });
+
+  it("asks directly when the door never welcomes the window", async () => {
+    const { link, heard } = standInLink();
+    const at = homeShell({ link, readyMs: 20 });
+    await at.shell.start();
+    expect(heard.closed).toBe(true);
+    expect(await at.shell.dispatch("inf:app:healthcheck", [])).toEqual({
+      ownCore: "inf:app:healthcheck",
+    });
+    at.own.core.events.emit("inf:models:changed", { ok: true });
+    expect(pushed(at.pushes, "inf:models:changed")).toBe(1);
+  });
+
+  it("asks directly, and reads everything again, once the door refuses the window", async () => {
+    const { link, heard } = standInLink();
+    const at = homeShell({ link, readyMs: 1_000 });
+    const starting = at.shell.start();
+    await expect.poll(() => heard.options !== null).toBe(true);
+    heard.welcomed = true;
+    heard.options?.onCaughtUp?.("reload");
+    await starting;
+    expect(at.shell.thisMac()).toEqual({ role: "home", left: null });
+    heard.options?.onState?.({ removed: true } as never);
+    expect(heard.closed).toBe(true);
+    expect(at.shell.thisMac()).toEqual({ role: "home", left: null, caughtUp: 1 });
+    expect(pushed(at.pushes, "inf:devices:this-mac")).toBe(1);
+    expect(await at.shell.dispatch("inf:app:healthcheck", [])).toEqual({
+      ownCore: "inf:app:healthcheck",
+    });
+    at.own.core.events.emit("inf:models:changed", { ok: true });
+    expect(pushed(at.pushes, "inf:models:changed")).toBe(1);
+  });
+
+  it("reads everything again after a gap its first mate could not replay, but not at the first welcome", async () => {
+    const { link, heard } = standInLink();
+    const at = homeShell({ link, readyMs: 1_000 });
+    const starting = at.shell.start();
+    await expect.poll(() => heard.options !== null).toBe(true);
+    heard.welcomed = true;
+    heard.options?.onCaughtUp?.("reload");
+    await starting;
+    heard.options?.onCaughtUp?.("replay");
+    expect(at.shell.thisMac()).toEqual({ role: "home", left: null });
+    heard.options?.onCaughtUp?.("reload");
+    expect(at.shell.thisMac()).toEqual({ role: "home", left: null, caughtUp: 1 });
+    expect(pushed(at.pushes, "inf:devices:this-mac")).toBe(1);
   });
 });

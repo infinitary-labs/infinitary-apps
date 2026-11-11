@@ -69,6 +69,24 @@ A Mac (`mac`, `docs/devices.md`) both controls that Mac's first mate from its wi
 - **Another user on that Mac** only runs work: Infinitary opened as that user is its own.
 - `thisMac`'s `runsWork` says it, so Leave says it stops that work too (below).
 
+## The window on the first mate's own computer
+
+The window on the computer where the first mate lives is a view of it too, over the same connection: every core request it makes goes to the first mate through the connection's local door, and every push comes back the same way (`LocalWindow`, `src/main/view/localWindow.ts`; `docs/connection.md`, "The local door").
+It reads the door's address, pin and key from the door's folder at each dial, as any local client does, so it needs no pairing and is no row in Settings -> Devices.
+
+- **What stays the same.**
+  It asks as the captain himself, as before, so it keeps every request a view is refused, Secrets above all (`docs/secrets.md`): it stays the trusted surface, with no enrollment.
+  Its look, keys, panels, voice, frames and files are this computer's own and never cross; pages it would open open here.
+  The first mate still runs in the same process, Quit is unchanged, and journeys start the app as before.
+- **A task's browser.**
+  It watches a task's browser as a view on another computer does: once over the connection for every window here, its pictures arriving as `live` frames (`BrowserWatches`, `src/main/view/browserWatches.ts`; "A task's browser on a view" below).
+- **Card pictures** are read from the first mate's own copy on this computer, as before, never over the connection.
+- **A drop.**
+  On one computer a drop is only a restart of the connection, so it dials again within a second, holding reads and refusing changes meanwhile, as every view does ("Reaching the other Mac" below).
+  A welcome that could not replay what the window missed makes the window read everything again, as a view's does; with nothing paired the connection keeps no pushes to replay, so a window that missed any reads everything again (`docs/connection.md`, "The handshake and the numbering").
+- **When the door cannot open**, when it never welcomes the window, or when it refuses the window's key, and for a command's first mate, which has no window, the window asks the core directly as before, and the log says why.
+  A window that lost the door reads everything again from the core.
+
 ## What the window asks
 
 `ViewBackend.dispatch` answers each core channel the window asks:
@@ -233,6 +251,8 @@ The first-launch gate stays derived (`docs/first-launch.md`); the line only says
 
 ## Tests
 
+- `src/core/connection/localDoor.test.ts`, "the local door": the door the window dials (`docs/connection.md`, "Tests").
+  Every journey drives the window through it.
 - `src/core/devices/homeLink.test.ts`: the device's side against the real connection and pairing - welcome with the other Mac's name, a read held while reaching, a change refused while out of reach and never sent, an exact catch-up after a drop, a request in flight refused and not asked again, Remove seen live and while away, Leave heard and unheard.
 - `src/main/shell.test.ts`: the switch - joining stops this Mac's core and asks the other Mac, a view's own look, what is refused without being sent, pushes filtered, starting as a view with no core, Leave in place or by relaunch, Remove there, each join refusal, a second join refused while the first claims its link, and this Mac's own update notice and release page while the other Mac is newer, never asked of it.
   Its notifications: the other Mac's new card and finished report post here as that Mac's notifier makes them, never with this window in front or for what was there at joining, follow that Mac's switch, post after a replay and seed after a reload.

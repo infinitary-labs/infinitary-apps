@@ -227,6 +227,21 @@ export const fetchAppRefusalSchema = z.strictObject({
 export const CONNECTION_PORT = 47_623;
 
 /**
+ * The local door (docs/connection.md, "The local door"): how a client on the
+ * first mate's own computer, as its own account, reaches the connection with
+ * no pairing - the window there, and any second local client. The connection
+ * listens on a loopback port of its own while the first mate runs, and
+ * writes that address, the pin of the door's own TLS key and a key into
+ * this folder of its data (0700, each file 0600). Reading the key is the permission: only
+ * this account can. The key travels in this header on the upgrade.
+ */
+export const LOCAL_DOOR_FOLDER = "local-door";
+/** The local door's three files, in its folder. */
+export const LOCAL_DOOR_FILES = { address: "address", pin: "pin", key: "key" } as const;
+/** The header the local door's key travels in on the WebSocket upgrade. */
+export const LOCAL_DOOR_KEY_HEADER = "x-infinitary-local-key";
+
+/**
  * The largest frame either side accepts. Sized to the largest request the
  * contract admits - a turn with its images and pasted files at their caps -
  * with room to spare.

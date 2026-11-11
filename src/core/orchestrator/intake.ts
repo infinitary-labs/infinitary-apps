@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { AttachmentRef } from "@shared/attachments";
+import { formatDateTime } from "@shared/i18n/format";
 import { validationAssignment } from "@shared/liveValidation";
 import type { InterruptEventData } from "@shared/provenance";
 import { deliveryFor, type RepoDelivery, type RepoView } from "@shared/repos";
@@ -121,9 +122,7 @@ export function gateText(gate: TaskGate): string {
         ? `starts when a ${gate.ref.slice(7)} model has allowance again`
         : `starts when ${gate.ref}'s allowance resets`;
     case "at-time":
-      return gate.until !== undefined
-        ? `starts at ${new Date(gate.until).toLocaleString()}`
-        : "starts later";
+      return gate.until !== undefined ? `starts at ${formatDateTime(gate.until)}` : "starts later";
     case "captain":
       return gate.reason ?? "waiting on you";
   }

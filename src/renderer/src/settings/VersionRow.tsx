@@ -1,3 +1,4 @@
+import { formatDate } from "@shared/i18n/format";
 import type { ReleaseNotesView, ShownReleaseNote } from "@shared/releaseTracking";
 import type React from "react";
 import { useEffect, useId, useRef, useState } from "react";
@@ -24,7 +25,7 @@ const capitalized = (text: string) => `${text.charAt(0).toUpperCase()}${text.sli
 
 /** The day a note was shown, as the Mac writes a short date. */
 export function shownOn(at: number): string {
-  return new Date(at).toLocaleDateString(undefined, {
+  return formatDate(at, {
     month: "short",
     day: "numeric",
     year: "numeric",

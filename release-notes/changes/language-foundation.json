@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "language-foundation",
+      "reason": "The groundwork for showing the app in other languages: a catalog the app's words compile from, a language read from the computer, and dates and numbers written through one place. English stays exactly as it was and no other language can be chosen yet, so nothing a person sees changes."
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import type { AutomationRule, AutomationSpec, AutomationState } from "./automation";
+import { formatDate, formatDateTime, formatTime } from "./i18n/format.ts";
 
 /**
  * What an automation rule says wherever it shows (docs/automation.md):
@@ -39,7 +40,7 @@ function hereZone(): string {
 
 /** A time of day in the person's locale: "7:00 AM". */
 export function automationClockWords(hour: number, minute: number): string {
-  return new Date(2000, 0, 1, hour, minute).toLocaleTimeString([], {
+  return formatTime(new Date(2000, 0, 1, hour, minute), {
     hour: "numeric",
     minute: "2-digit",
   });
@@ -66,7 +67,7 @@ export function automationZoneWords(zone: string): string {
 /** A moment, in a rule's own zone when it keeps one other than this computer's. */
 export function automationDateWords(ms: number, timeZone?: string): string {
   const elsewhere = timeZone !== undefined && timeZone !== hereZone();
-  return new Date(ms).toLocaleString([], {
+  return formatDateTime(ms, {
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -144,12 +145,12 @@ export function automationNextShort(
   const ahead = rule.nextFire - now;
   const at = new Date(rule.nextFire);
   if (at.toDateString() === new Date(now).toDateString()) {
-    return at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    return formatTime(at, { hour: "numeric", minute: "2-digit" });
   }
   if (ahead < 6 * 24 * 60 * 60 * 1000) {
-    return at.toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" });
+    return formatDateTime(at, { weekday: "short", hour: "numeric", minute: "2-digit" });
   }
-  return at.toLocaleDateString([], { month: "short", day: "numeric" });
+  return formatDate(at, { month: "short", day: "numeric" });
 }
 
 /** "1 automation", "3 automations". */

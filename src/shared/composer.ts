@@ -1,5 +1,7 @@
 import { TURN_IMAGE_MAX_BYTES, TURN_IMAGES_MAX } from "./cards";
 import { COMPUTER } from "./deviceNames";
+import { formatNumber } from "./i18n/format.ts";
+import * as m from "./i18n/messages.generated.ts";
 import type { KeySystem } from "./platform";
 
 /**
@@ -139,27 +141,38 @@ export function fittingHint(
 
 /** "1 line", "240 lines". */
 function lines(count: number): string {
-  return count === 1 ? "1 line" : `${count.toLocaleString("en-US")} lines`;
+  return m.composerLines({ count });
 }
 
 /** The pasted-text chip's words: what it says, and its remove control's name. */
 export const PASTED_TEXT_WORDS = {
   meta: (lineTotal: number, bytes = 0) =>
-    `file · ${lines(lineTotal)} · ${Math.ceil(bytes / 1024)} KB`,
+    m.pastedFileMeta({ lines: lines(lineTotal), kilobytes: String(Math.ceil(bytes / 1024)) }),
   remove: (lineTotal: number, name?: string) =>
-    name ? `Remove ${name}` : `Remove file, ${lines(lineTotal)}`,
+    name ? m.pastedFileRemoveNamed({ name }) : m.pastedFileRemove({ lines: lines(lineTotal) }),
 };
 
-/** The file controls' words: the picker's button, a chip being prepared, and what a screen reader hears. */
+/**
+ * The file controls' words: the picker's button, a chip being prepared, and
+ * what a screen reader hears. Each is read from the catalog when it is
+ * shown (docs/i18n.md), so it follows the app's language.
+ */
 export const FILE_WORDS = {
-  add: "Add files",
-  preparing: "Preparing",
-  ready: "Ready",
-  cancel: (name: string) => `Cancel preparing ${name}`,
-  readyAnnounce: (name: string) => `${name} ready`,
-  pathsAnnounce: (count: number) =>
-    count === 1 ? "Added 1 file path as text" : `Added ${count} file paths as text`,
-  dropHere: "Drop files to add them",
+  get add() {
+    return m.fileAdd();
+  },
+  get preparing() {
+    return m.filePreparing();
+  },
+  get ready() {
+    return m.fileReady();
+  },
+  cancel: (name: string) => m.fileCancel({ name }),
+  readyAnnounce: (name: string) => m.fileReadyAnnounce({ name }),
+  pathsAnnounce: (count: number) => m.filePathsAnnounce({ count }),
+  get dropHere() {
+    return m.fileDropHere();
+  },
 };
 
 /**
@@ -176,7 +189,7 @@ export function limitBand(length: number, max: number): LimitBand {
 
 /** The mono count under a long draft: "16,240 / 20,000". */
 export function composerCount(length: number, max: number): string {
-  return `${length.toLocaleString("en-US")} / ${max.toLocaleString("en-US")}`;
+  return `${formatNumber(length)} / ${formatNumber(max)}`;
 }
 
 export const PASTE_FILE_MAX_BYTES = 5 * 1024 * 1024;

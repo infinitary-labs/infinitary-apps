@@ -1,6 +1,7 @@
 import type { AccountView } from "@shared/accounts";
 import { isCustomApiProvider } from "@shared/customApi";
 import { awayWord } from "@shared/devices";
+import { formatTime } from "@shared/i18n/format";
 import type { ProviderView } from "@shared/providers";
 import type { QuotaProviderView } from "@shared/quota";
 import {
@@ -527,5 +528,5 @@ function article(word: string): string {
 }
 
 function timeOf(ms: number): string {
-  return new Date(ms).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return formatTime(ms, { hour: "2-digit", minute: "2-digit" });
 }

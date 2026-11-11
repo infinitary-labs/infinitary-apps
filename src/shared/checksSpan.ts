@@ -1,4 +1,5 @@
 import { checkSnapshotSummary, type ForgeCheckState, isRedCheckState } from "./checkSnapshot";
+import { formatTime } from "./i18n/format.ts";
 import { feedRelativeAge } from "./relativeAge";
 import type { RunChecks, TaskDeliveryView } from "./tasks";
 
@@ -99,7 +100,7 @@ export function checksFinishedAgo(finishedAt: number, now: number): string {
 
 /** A time of day in the reader's own clock: `9:01 PM`. */
 function clock(at: number): string {
-  return new Date(at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return formatTime(at, { hour: "numeric", minute: "2-digit" });
 }
 
 /**

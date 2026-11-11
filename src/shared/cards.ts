@@ -5,6 +5,7 @@ import { cardNotesSchema, pointedAtLines } from "./cardNotes.ts";
 import { SPELLINGS } from "./codeNames.ts";
 import { cardEndedSchema } from "./endedCard.ts";
 import { HOST_OPS } from "./hostOps.ts";
+import { servedNumber } from "./i18n/format.ts";
 import { requiredActionsSchema } from "./requiredActions.ts";
 import { rigorSchema } from "./rigor.ts";
 
@@ -759,7 +760,7 @@ export const CARD_ANSWERS_MAX_BYTES = 64 * 1024;
 export const CARD_ANSWERS_TOO_LONG =
   "These answers are too long to send. Shorten them and try again.";
 /** What the core says when a footer click's answers exceed the bound. */
-export const CARD_ANSWERS_BOUND_REFUSAL = `The card's answers must be JSON no larger than ${CARD_ANSWERS_MAX_BYTES.toLocaleString("en-US")} bytes.`;
+export const CARD_ANSWERS_BOUND_REFUSAL = `The card's answers must be JSON no larger than ${servedNumber(CARD_ANSWERS_MAX_BYTES)} bytes.`;
 /**
  * The most the captain may write in a question's Something else field
  * (FI3-1002): the field's own `maxlength`, and the bound on `written`.

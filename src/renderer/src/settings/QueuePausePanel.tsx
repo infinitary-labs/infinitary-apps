@@ -1,4 +1,5 @@
 import { changeNumberLabel } from "@shared/forge";
+import { formatTime } from "@shared/i18n/format";
 import type { QueueAnswer, RepoView } from "@shared/repos";
 import { useState } from "react";
 import { Button, Input } from "../design";
@@ -33,7 +34,7 @@ export function QueuePausePanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
-  const since = new Date(pause.since).toLocaleTimeString([], {
+  const since = formatTime(pause.since, {
     hour: "numeric",
     minute: "2-digit",
   });

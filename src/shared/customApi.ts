@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { HERE } from "./deviceNames";
+import { formatNumber } from "./i18n/format.ts";
 
 export const CUSTOM_TOKEN_FAILURE = {
   message:
@@ -156,7 +157,7 @@ export const customListedModelSchema = z.object({
 export type CustomListedModel = z.infer<typeof customListedModelSchema>;
 type CustomModelLimits = Pick<z.infer<typeof customModelInputSchema>, "id" | "context" | "output">;
 
-const tokens = (count: number) => count.toLocaleString("en-US");
+const tokens = (count: number) => formatNumber(count);
 /** A model's limits in words. Zero or absent is unknown, never a measured limit. */
 export function customLimitsText(context?: number, output?: number): string {
   if (context && output) return `${tokens(context)} context · ${tokens(output)} output tokens`;

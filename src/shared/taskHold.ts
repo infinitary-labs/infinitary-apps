@@ -1,3 +1,4 @@
+import { formatDate, formatTime } from "./i18n/format.ts";
 import type { Slot } from "./modelSlots";
 
 /**
@@ -53,8 +54,8 @@ export function taskHoldWords(hold: TaskHold): TaskHoldWords {
       };
     case "time": {
       const at = new Date(hold.until);
-      const day = at.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-      const time = at.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+      const day = formatDate(at, { month: "short", day: "numeric" });
+      const time = formatTime(at, { hour: "numeric", minute: "2-digit" });
       return {
         title: "Waiting for its start time",
         text: `Your first mate set it to start on ${day} at ${time}. It starts by itself then.`,

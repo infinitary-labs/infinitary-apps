@@ -1,4 +1,5 @@
 import { forgePlace } from "@shared/forge";
+import { formatDate } from "@shared/i18n/format";
 import type { QueueCredential, RepoView } from "@shared/repos";
 import { useEffect, useState } from "react";
 import { Button } from "../design";
@@ -82,6 +83,6 @@ export function QueueKeyPanel({ repo }: { repo: Pick<RepoView, "id" | "host"> })
 function endsOn(expiresAt: string | undefined): string {
   const day = expiresAt ? new Date(`${expiresAt.slice(0, 10)}T00:00:00`) : null;
   return day && !Number.isNaN(day.getTime())
-    ? day.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+    ? formatDate(day, { year: "numeric", month: "long", day: "numeric" })
     : "it ends";
 }

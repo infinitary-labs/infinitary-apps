@@ -1,4 +1,5 @@
 import type { CardChanges } from "@shared/cards";
+import { formatDate, formatTime } from "@shared/i18n/format";
 
 /**
  * The quiet line under a revised card's title (design skill ResponseCard,
@@ -30,7 +31,7 @@ function count(n: number, noun: string): string {
 /** The time of day, with the date in front when it was not today. */
 export function clock(at: number, now: number): string {
   const date = new Date(at);
-  const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const time = formatTime(date, { hour: "numeric", minute: "2-digit" });
   if (date.toDateString() === new Date(now).toDateString()) return time;
-  return `${date.toLocaleDateString([], { month: "short", day: "numeric" })}, ${time}`;
+  return `${formatDate(date, { month: "short", day: "numeric" })}, ${time}`;
 }

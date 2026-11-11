@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime, formatTime } from "@shared/i18n/format";
 import { needsReference, secretName } from "@shared/secretNames";
 import {
   decisionWords,
@@ -751,11 +752,11 @@ function dayOf(at: number): string {
   const days = Math.round((start(today) - start(day)) / 86_400_000);
   if (days === 0) return SECRETS_WORDS.today;
   if (days === 1) return SECRETS_WORDS.yesterday;
-  return day.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return formatDate(day, { month: "short", day: "numeric" });
 }
 
 function timeOf(at: number): string {
-  return new Date(at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return formatTime(at, { hour: "numeric", minute: "2-digit" });
 }
 
 function sizeOf(bytes: number): string {
@@ -765,5 +766,5 @@ function sizeOf(bytes: number): string {
 }
 
 function dateOf(at: number | null): string {
-  return at === null ? "Not requested yet" : new Date(at).toLocaleString();
+  return at === null ? "Not requested yet" : formatDateTime(at);
 }

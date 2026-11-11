@@ -1,6 +1,7 @@
 import { type CardAction, opensSettings, takesTaskBrowser } from "@shared/cards";
 import type { ComposerNotice } from "@shared/composer";
 import type { JoinOutcome, ThisMac } from "@shared/devices";
+import { formatTime } from "@shared/i18n/format";
 import { COMPUTER, HERE } from "../../../shared/deviceNames";
 
 /**
@@ -47,7 +48,7 @@ export function changesOff(thisMac: ThisMac | null): boolean {
 
 /** "14:32": the clock the app's other lines use. */
 export function clockTime(at: number): string {
-  return new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return formatTime(at, { hour: "2-digit", minute: "2-digit" });
 }
 
 /** What to do while the other Mac has a newer Firstmate: the tooltip, and the pill after its name. */

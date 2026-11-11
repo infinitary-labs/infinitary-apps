@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { dateTimeFormat } from "./i18n/format.ts";
 import type { TaskStatusInput, TaskStatusReading } from "./taskPresentation";
 
 /** Read-only standing facts; absent on older homes, empty when nothing stands. */
@@ -19,14 +20,14 @@ export function taskWaitText(wait: TaskWait, now: number, detail = true, zone?: 
   const clock = (at: number) => {
     const date = new Date(at);
     const day = (value: number) =>
-      new Intl.DateTimeFormat(undefined, {
+      dateTimeFormat({
         timeZone: zone,
         year: "numeric",
         month: "numeric",
         day: "numeric",
       }).format(value);
     // Always include the zone: the repeated daylight-saving hour must identify an instant.
-    return new Intl.DateTimeFormat(undefined, {
+    return dateTimeFormat({
       timeZone: zone,
       ...(day(at) !== day(now) ? { month: "short" as const, day: "numeric" as const } : {}),
       hour: "numeric",

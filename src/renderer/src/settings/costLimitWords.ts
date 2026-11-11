@@ -1,4 +1,5 @@
 import { type AppCostLimitView, formatUsd } from "@shared/costLimit";
+import { formatNumber } from "@shared/i18n/format";
 
 /** Settings → Intelligence's cost limit row (`CostLimitRow.tsx`; docs/usage.md, "The cost limit"). */
 export const COST_LIMIT_WORDS = {
@@ -17,6 +18,6 @@ export function costLimitDescription(view: AppCostLimitView | null): string {
   const recent =
     tasks === 0
       ? ""
-      : ` In the last ${days} days, ${asked.toLocaleString("en-US")} of ${tasks.toLocaleString("en-US")} tasks would have asked.`;
+      : ` In the last ${days} days, ${formatNumber(asked)} of ${formatNumber(tasks)} tasks would have asked.`;
   return `A task and the work under it stop at a safe point and ask you once their estimated spend passes ${formatUsd(view.limit.usd)}, as Settings → Usage estimates it.${recent}`;
 }

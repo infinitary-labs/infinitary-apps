@@ -1,3 +1,4 @@
+import { formatDate } from "@shared/i18n/format";
 import {
   AUTOMATIC_SIGN_IN_LABEL,
   AUTOMATIC_SIGN_IN_NOTICE,
@@ -24,7 +25,7 @@ export function savedWhen(at: number, now: number): string {
   if (date.toDateString() === day.toDateString()) return "saved today";
   day.setDate(day.getDate() - 1);
   if (date.toDateString() === day.toDateString()) return "saved yesterday";
-  return `saved ${date.toLocaleDateString([], { month: "short", day: "numeric" })}`;
+  return `saved ${formatDate(date, { month: "short", day: "numeric" })}`;
 }
 
 export const WEBSITE_SIGN_INS_LEAD =

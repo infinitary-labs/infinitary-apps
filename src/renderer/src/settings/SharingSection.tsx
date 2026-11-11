@@ -3,6 +3,7 @@ import {
   DIAGNOSTIC_EVENTS,
   type DiagnosticEventSpec,
 } from "@shared/diagnostics";
+import { formatDate, formatTime } from "@shared/i18n/format";
 import {
   DIAGNOSTICS_NOTHING_WAITING,
   DIAGNOSTICS_SUMMARY,
@@ -378,7 +379,7 @@ function RecordList({
 
 function formatWhen(at: number): string {
   const date = new Date(at);
-  return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+  return `${formatDate(date)} ${formatTime(date, { hour: "2-digit", minute: "2-digit" })}`;
 }
 
 /**

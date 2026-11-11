@@ -16,6 +16,7 @@ import {
   type PastedText,
 } from "@shared/composer";
 import { ENDED_CLOSE_CARD_LABEL } from "@shared/endedCard";
+import { formatTime } from "@shared/i18n/format";
 import { hasNotTypingKeys } from "@shared/keyboard";
 import {
   type CSSProperties,
@@ -96,7 +97,7 @@ const WHO: Record<CardMessageWho, { label: string; color: string }> = {
 };
 
 function timeOf(at: number): string {
-  return new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return formatTime(at, { hour: "2-digit", minute: "2-digit" });
 }
 
 /** Chat's speech bubble (Lucide's message-square). */

@@ -1,3 +1,4 @@
+import { formatDate, formatDateTime } from "@shared/i18n/format";
 import { useMinute } from "./useMinute";
 
 export { useMinute } from "./useMinute";
@@ -43,7 +44,7 @@ export function Age({
   /** Say it as a time past, `5m ago`, after the checks' duration. */
   ago?: boolean;
 }) {
-  const exact = new Date(at).toLocaleString();
+  const exact = formatDateTime(at);
   const short = ago ? checksFinishedAgo(at, now) : feedRelativeAge(at, Math.max(now, at));
   const rest = useRestLabel(exact, { fact: true });
   return (
@@ -597,7 +598,7 @@ function whenOf(at: number, now: number): string {
   const clock = `${String(day.getHours()).padStart(2, "0")}:${String(day.getMinutes()).padStart(2, "0")}`;
   return day.toDateString() === new Date(now).toDateString()
     ? clock
-    : `${day.toLocaleDateString(undefined, { month: "short", day: "numeric" })}, ${clock}`;
+    : `${formatDate(day, { month: "short", day: "numeric" })}, ${clock}`;
 }
 
 /** How long before the choice its reading was taken. */

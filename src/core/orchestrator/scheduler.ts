@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { type AutomationEventItem, eventsWords, fillScheduleDetails } from "@shared/automation";
 import type { FmEvent } from "@shared/events";
+import { formatDateTime } from "@shared/i18n/format";
 import type { DecisionRecord } from "@shared/provenance";
 import type { InboxRow } from "../storage/inboxStore";
 import {
@@ -279,7 +280,7 @@ export function scheduleText(spec: ScheduleSpec): string {
     case "weekly":
       return `every ${weekdaysText(spec.days)} at ${clockText(spec.hour, spec.minute)} (${spec.timeZone})`;
     case "once":
-      return `once at ${new Date(spec.at).toLocaleString()}`;
+      return `once at ${formatDateTime(spec.at)}`;
     case "event":
       return `on each ${spec.event} from ${spec.integration}`;
   }

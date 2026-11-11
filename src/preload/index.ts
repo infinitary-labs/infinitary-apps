@@ -1,3 +1,4 @@
+import { languageFromArgv, textDirection } from "@shared/i18n/languages";
 import { PLATFORM_ATTRIBUTE, platformFromArgv } from "@shared/platform";
 import { WINDOW_MATERIAL_ATTRIBUTE, windowMaterialFromArgv } from "@shared/windowMaterial";
 import { contextBridge, ipcRenderer, webUtils } from "electron";
@@ -45,11 +46,16 @@ contextBridge.exposeInMainWorld("firstmate", frozen);
 // paints, and it lands before the app's first render.
 // Which desktop the window is on, the same way: its keys, window controls
 // and Settings rows follow it (src/shared/platform.ts). No mark is a Mac's.
+// The window's language and the way its text runs, the same way: the page
+// reads its language from `lang` (docs/i18n.md, "The language fact").
 const windowMaterial = windowMaterialFromArgv(process.argv);
 const platform = platformFromArgv(process.argv);
+const language = languageFromArgv(process.argv);
 const markWindowMaterial = () => {
   document.documentElement?.setAttribute(WINDOW_MATERIAL_ATTRIBUTE, windowMaterial);
   if (platform) document.documentElement?.setAttribute(PLATFORM_ATTRIBUTE, platform);
+  document.documentElement?.setAttribute("lang", language);
+  document.documentElement?.setAttribute("dir", textDirection(language));
 };
 markWindowMaterial();
 document.addEventListener("DOMContentLoaded", markWindowMaterial, { once: true });

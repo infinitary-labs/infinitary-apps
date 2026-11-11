@@ -1,3 +1,4 @@
+import { formatNumber } from "./i18n/format.ts";
 import type { RepoDelivery } from "./repos";
 import type { Rigor } from "./rigor";
 import type { RunChecks, TaskDeliveryView } from "./tasks";
@@ -166,7 +167,7 @@ export const PULL_REQUEST_WORDS = {
  * count reads as the other.
  */
 export function changeLinesWords(added: number, deleted: number): string {
-  return `+${added.toLocaleString("en-US")} added · −${deleted.toLocaleString("en-US")} deleted`;
+  return `+${formatNumber(added)} added · −${formatNumber(deleted)} deleted`;
 }
 
 /** An independent review's verdict, as a fact strip says it. */

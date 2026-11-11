@@ -1,0 +1,17 @@
+{
+  "composerLines": { "plural": "count", "one": "{count} line", "other": "{count} lines" },
+  "pastedFileMeta": "file · {lines} · {kilobytes} KB",
+  "pastedFileRemove": "Remove file, {lines}",
+  "pastedFileRemoveNamed": "Remove {name}",
+  "fileAdd": "Add files",
+  "filePreparing": "Preparing",
+  "fileReady": "Ready",
+  "fileCancel": "Cancel preparing {name}",
+  "fileReadyAnnounce": "{name} ready",
+  "filePathsAnnounce": {
+    "plural": "count",
+    "one": "Added {count} file path as text",
+    "other": "Added {count} file paths as text"
+  },
+  "fileDropHere": "Drop files to add them"
+}

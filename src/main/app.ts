@@ -19,6 +19,9 @@ import {
 import { createInstalledUpdateChecker } from "@core/update/updateChecker";
 import { APP_IDENTITIES, readSpellings } from "@shared/codeNames";
 import { settingFrom } from "@shared/envSettings";
+import { currentLanguage } from "@shared/i18n/current";
+import { languageArgument } from "@shared/i18n/languages";
+import { startLanguage } from "@shared/i18n/start";
 import { platformArgument } from "@shared/platform";
 import { FRAME_FOCUS_BLINK_FEATURE } from "@shared/plugins/containment";
 import type { ReleaseNotesView } from "@shared/releaseTracking";
@@ -143,8 +146,12 @@ function createMainWindow(
       enableBlinkFeatures: "WebShare",
       // The page learns the material and the desktop from its preload's
       // argv, before its first paint (src/shared/windowMaterial.ts,
-      // src/shared/platform.ts).
-      additionalArguments: [...additionalArguments, platformArgument(hostPlatform())],
+      // src/shared/platform.ts), and its language the same way (docs/i18n.md).
+      additionalArguments: [
+        ...additionalArguments,
+        platformArgument(hostPlatform()),
+        languageArgument(currentLanguage()),
+      ],
       ...REQUIRED_WEB_PREFERENCES,
       devTools: !isRelease,
     },
@@ -432,6 +439,9 @@ export async function startApp(
     });
 
     const starting = app.whenReady().then(async () => {
+      // The language this process speaks, from the computer's own languages,
+      // before anything is worded or any window opens (docs/i18n.md).
+      startLanguage(app.getPreferredSystemLanguages());
       // An installed Linux app with no git, or with its sandbox off (an
       // AppImage promises neither), asks before it opens (./linuxStartup.ts).
       // A run has nobody to ask: with no git it says so and exits, and with

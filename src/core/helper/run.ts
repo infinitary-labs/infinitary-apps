@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import type { MachineLoginOutcome } from "@shared/accounts";
 import type { DeviceGrant } from "@shared/devices";
 import { isFileOrderChannel } from "@shared/files";
+import { formatDateTime } from "@shared/i18n/format";
 import type { WorkInvokeChannel } from "@shared/ipc";
 import { LEFT_BEHIND_ORDER, leftBehindOrders } from "@shared/leftoverPrograms";
 import { LOAD_ORDER, loadOrders } from "@shared/load";
@@ -716,7 +717,7 @@ export function helperStatus(
       ? leftWords(dataDir, left.name, joinedHome.unfinished(), left.reason)
       : helperWords.notJoined;
   }
-  const format = options.formatTime ?? ((ms: number) => new Date(ms).toLocaleString());
+  const format = options.formatTime ?? ((ms: number) => formatDateTime(ms));
   return helperWords.status(
     homePlace(joined.grant, options.interfaces),
     joined.name,

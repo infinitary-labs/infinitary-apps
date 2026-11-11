@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { formatUsd as formatMoney } from "./i18n/format.ts";
 
 /**
  * The per-task cost limit (docs/usage.md, "The cost limit"; INF-3112's
@@ -50,10 +51,7 @@ export function limitUsd(limit: CostLimit): number | null {
  * otherwise ("$50", "$51.37").
  */
 export function formatUsd(usd: number): string {
-  const cents = Math.round(usd * 100);
-  return cents % 100 === 0
-    ? `$${(cents / 100).toLocaleString("en-US")}`
-    : `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return formatMoney(Math.round(usd * 100) / 100);
 }
 
 /**

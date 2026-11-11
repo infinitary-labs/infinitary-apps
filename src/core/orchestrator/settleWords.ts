@@ -5,6 +5,7 @@ import {
   folderRefreshWords,
 } from "@shared/folderRefresh";
 import { forgePlace } from "@shared/forge";
+import { formatTime } from "@shared/i18n/format";
 import { POLICY_MERGING_WORDS } from "@shared/taskPolicies";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { RepoRegistry } from "../workspace/repoRegistry";
@@ -209,7 +210,7 @@ export function mergedLine(input: {
   /** The merge kept the task open (INF-2533): the line says it continues. */
   continues?: boolean;
 }): string {
-  const time = new Date(input.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const time = formatTime(input.at, { hour: "numeric", minute: "2-digit" });
   const change = input.change
     ? ` · ${
         input.change.url && /^https:\/\//.test(input.change.url)

@@ -1,4 +1,5 @@
 import { answerWaitWords } from "./cardLeave.ts";
+import { formatDate, formatTime } from "./i18n/format.ts";
 import type { TaskView } from "./tasks";
 import { workPostureLabel } from "./workPosture";
 
@@ -244,9 +245,9 @@ export function dependencyWaitWords(blockedBy: readonly string[]): string {
  */
 export function waitRecordedTime(at: number, now: number): string {
   const date = new Date(at);
-  const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const time = formatTime(date, { hour: "numeric", minute: "2-digit" });
   if (date.toDateString() === new Date(now).toDateString()) return time;
-  return `${date.toLocaleDateString([], { month: "short", day: "numeric" })}, ${time}`;
+  return `${formatDate(date, { month: "short", day: "numeric" })}, ${time}`;
 }
 
 export function taskStatusLabel(reading: TaskStatusReading): string {

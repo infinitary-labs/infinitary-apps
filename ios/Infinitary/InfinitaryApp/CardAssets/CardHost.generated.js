@@ -4886,6 +4886,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "stop-at-cost",
     "secrets-decision"
   ];
+  const SERVED_LOCALE = "en-US";
+  function servedNumber(value) {
+    return value.toLocaleString(SERVED_LOCALE);
+  }
   const requiredActionSchema = object({
     id: string().min(1).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
     sharedId: string().min(1).max(64).optional(),
@@ -5205,7 +5209,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   const CARD_ANSWER_NAME_MAX = 200;
   const CARD_ANSWER_TEXT_MAX = 16384;
   const CARD_ANSWERS_MAX_BYTES = 64 * 1024;
-  `The card's answers must be JSON no larger than ${CARD_ANSWERS_MAX_BYTES.toLocaleString("en-US")} bytes.`;
+  `The card's answers must be JSON no larger than ${servedNumber(CARD_ANSWERS_MAX_BYTES)} bytes.`;
   const CARD_WRITTEN_MAX = 500;
   const CARD_REPLY_MAX_CHARS = 4e3;
   const ANYTHING_ELSE_MAX_CHARS = CARD_REPLY_MAX_CHARS;

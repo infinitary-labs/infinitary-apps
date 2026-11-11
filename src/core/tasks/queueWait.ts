@@ -1,3 +1,5 @@
+import { regionalLocale } from "@shared/i18n/current";
+import { dateTimeFormat } from "@shared/i18n/format";
 import { providerLabel } from "@shared/modelSlots";
 import type { TaskView } from "@shared/tasks";
 import type { TaskRecord } from "../storage/taskRecords";
@@ -25,9 +27,8 @@ const SINCE_FORMAT = {
 let sinceFormat: { place: string; format: Intl.DateTimeFormat } | undefined;
 function sinceWords(since: number): string {
   const { locale, timeZone } = Intl.DateTimeFormat().resolvedOptions();
-  const place = `${locale} ${timeZone}`;
-  if (sinceFormat?.place !== place)
-    sinceFormat = { place, format: new Intl.DateTimeFormat(undefined, SINCE_FORMAT) };
+  const place = `${regionalLocale() ?? locale} ${timeZone}`;
+  if (sinceFormat?.place !== place) sinceFormat = { place, format: dateTimeFormat(SINCE_FORMAT) };
   return sinceFormat.format.format(since);
 }
 

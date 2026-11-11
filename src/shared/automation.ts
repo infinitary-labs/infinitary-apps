@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SERVED_LOCALE } from "./i18n/format.ts";
 import { fencedListReminder, fencedSpans } from "./outsideData";
 
 /**
@@ -218,7 +219,7 @@ export function eventsWords(items: readonly AutomationEventItem[]): string {
 
 /** The planned moment as a prompt says it: "Sunday, October 11, 2026 at 7:00 AM PDT". */
 export function scheduledTimeWords(at: number, timeZone: string): string {
-  return new Date(at).toLocaleString("en-US", {
+  return new Date(at).toLocaleString(SERVED_LOCALE, {
     timeZone,
     weekday: "long",
     year: "numeric",

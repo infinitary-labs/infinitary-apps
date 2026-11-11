@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { servedNumber } from "@shared/i18n/format";
 import type { BoundTool, ToolOutput } from "./tools";
 
 /**
@@ -28,7 +29,7 @@ export function answersDir(tempDir: string): string {
   return join(tempDir, "answers");
 }
 
-const count = (value: number) => value.toLocaleString("en-US");
+const count = servedNumber;
 
 /**
  * What the model reads in place of an answer saved to a file. The path sits

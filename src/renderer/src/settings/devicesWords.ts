@@ -1,3 +1,4 @@
+import { formatDate, formatTime } from "@shared/i18n/format";
 import type { DeviceMake } from "../../../shared/cards";
 import { aDevice, COMPUTER, chipWords, HERE } from "../../../shared/deviceNames";
 import {
@@ -162,20 +163,20 @@ export function linkTimeLeft(expiresAt: number, now: number): string {
 /** "today 14:06", "yesterday 09:12" or "Oct 1 18:40": when a device joined. */
 export function joinedWhen(at: number, now: number): string {
   const date = new Date(at);
-  const time = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const time = formatTime(date, { hour: "2-digit", minute: "2-digit" });
   const day = new Date(now);
   if (date.toDateString() === day.toDateString()) return `today ${time}`;
   day.setDate(day.getDate() - 1);
   if (date.toDateString() === day.toDateString()) return `yesterday ${time}`;
-  return `${date.toLocaleDateString([], { month: "short", day: "numeric" })} ${time}`;
+  return `${formatDate(date, { month: "short", day: "numeric" })} ${time}`;
 }
 
 /** "14:02" today, otherwise "Oct 1 14:02": since when a device is out of reach. */
 function sinceWhen(at: number, now: number): string {
   const date = new Date(at);
-  const time = date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const time = formatTime(date, { hour: "2-digit", minute: "2-digit" });
   if (date.toDateString() === new Date(now).toDateString()) return time;
-  return `${date.toLocaleDateString([], { month: "short", day: "numeric" })} ${time}`;
+  return `${formatDate(date, { month: "short", day: "numeric" })} ${time}`;
 }
 
 /** Whether a device answers now, or since when it has not. */

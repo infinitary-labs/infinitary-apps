@@ -1,3 +1,4 @@
+import { servedNumber } from "@shared/i18n/format";
 import { ForgeError } from "./forge";
 import type { ArchiveRanges } from "./workflows";
 
@@ -115,7 +116,7 @@ export async function zipOf(
   if (chosen.length > ZIP_MAX_ENTRIES)
     throw new ForgeError(
       "refused",
-      `The selection holds ${chosen.length} files; one holds at most ${ZIP_MAX_ENTRIES.toLocaleString("en-US")}, so save them in parts.`,
+      `The selection holds ${chosen.length} files; one holds at most ${servedNumber(ZIP_MAX_ENTRIES)}, so save them in parts.`,
     );
   const ordered = [...chosen].sort((a, b) => a.start - b.start);
   const packed = packedBytes(ordered);

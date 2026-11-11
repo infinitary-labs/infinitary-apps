@@ -1,4 +1,5 @@
 import { anythingElseOf, type CardWidth, PAST_CARD_WORDS_LEAD, type PastCard } from "@shared/cards";
+import { formatDateTime } from "@shared/i18n/format";
 import { pastCardEndingWords } from "@shared/pastCard";
 import type { FramePicture } from "@shared/plugins/bridge";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -56,7 +57,7 @@ const microText: React.CSSProperties = {
 
 /** The strip's time, absolute: "2 Oct, 18:14". */
 export function pastTime(at: number): string {
-  return new Date(at).toLocaleString([], {
+  return formatDateTime(at, {
     day: "numeric",
     month: "short",
     hour: "2-digit",

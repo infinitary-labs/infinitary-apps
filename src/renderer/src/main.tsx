@@ -1,6 +1,8 @@
+import { setCurrentLanguage } from "@shared/i18n/current";
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app/App";
+import { documentLanguage } from "./app/language";
 import { hydratePreferences } from "./app/preferences";
 import { countPresses } from "./app/presses";
 import { registerDesignFixtures } from "./design/fixtures";
@@ -39,7 +41,10 @@ registerDesignFixtures(pluginHost);
 // The persisted theme and layout are read before the first paint, so the
 // window opens the way the captain left it rather than correcting itself a
 // frame later. A failed read has already fallen back to the defaults.
-void hydratePreferences().then(() => {
+// The window's language is the one its preload marked on the document,
+// read before anything is worded (docs/i18n.md, "The language fact").
+void Promise.all([hydratePreferences(), documentLanguage()]).then(([, language]) => {
+  setCurrentLanguage(language);
   createRoot(container).render(
     <React.StrictMode>
       <App />

@@ -12,6 +12,7 @@ import {
   readyPresentation,
   type StoryAround,
 } from "@shared/changePresentation";
+import { servedNumber } from "@shared/i18n/format";
 import type { ValidationEvidence } from "@shared/liveValidation";
 import { liveValidationSummary } from "@shared/liveValidationSummary";
 import {
@@ -407,7 +408,7 @@ export class ChangePresentations {
       const limit = presentationBodyLimit(presentationFormat(destination));
       if (Array.from(body).length > limit)
         throw new Error(
-          `The complete ${words.change} description exceeds ${words.place}'s ${limit.toLocaleString("en-US")}-character limit. Shorten the story or surrounding text before publishing.`,
+          `The complete ${words.change} description exceeds ${words.place}'s ${servedNumber(limit)}-character limit. Shorten the story or surrounding text before publishing.`,
         );
       return body;
     };

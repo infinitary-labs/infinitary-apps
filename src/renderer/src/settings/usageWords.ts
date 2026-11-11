@@ -1,3 +1,4 @@
+import { formatLanguageDate, formatLanguageDateTime, formatNumber } from "@shared/i18n/format";
 import {
   type UsageAmount,
   type UsageAttribution,
@@ -53,12 +54,12 @@ export function compactTokens(tokens: number): string {
   if (tokens >= 1e9) return `${(tokens / 1e9).toFixed(2)}B`;
   if (tokens >= 1e6) return `${(tokens / 1e6).toFixed(2)}M`;
   if (tokens >= 1e3) return `${(tokens / 1e3).toFixed(1)}k`;
-  return Math.round(tokens).toLocaleString("en-US");
+  return formatNumber(Math.round(tokens));
 }
 
 /** An estimate in US dollars: $17.18, $1,204, and under a cent never as $0.00. */
 export function dollars(usd: number): string {
-  if (usd >= 1000) return `$${Math.round(usd).toLocaleString("en-US")}`;
+  if (usd >= 1000) return `$${formatNumber(Math.round(usd))}`;
   if (usd > 0 && usd < 0.01) return "<$0.01";
   return `$${usd.toFixed(2)}`;
 }
@@ -87,7 +88,7 @@ export function formatDay(day: UsageDay, unit: UsageUnit): string {
 /** "Oct 5": a local date as the chart and the table name it. */
 export function shortDate(date: string): string {
   const [year, month, day] = date.split("-").map(Number);
-  return new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1).toLocaleDateString("en-US", {
+  return formatLanguageDate(new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1), {
     month: "short",
     day: "numeric",
   });
@@ -281,7 +282,7 @@ export function whereRows(
 
 /** A token count in full: 6,800,000. */
 export function exactTokens(tokens: number): string {
-  return Math.round(tokens).toLocaleString("en-US");
+  return formatNumber(Math.round(tokens));
 }
 
 /** A recent task's five figures, in this order. */
@@ -376,7 +377,7 @@ export function taskNote(task: UsageTask, unit: UsageUnit): string | null {
 
 /** "Created Oct 5, 3:12 PM": when a recent task was created, in local time. */
 export function createdWords(at: number): string {
-  const when = new Date(at).toLocaleString("en-US", {
+  const when = formatLanguageDateTime(new Date(at), {
     month: "short",
     day: "numeric",
     hour: "numeric",

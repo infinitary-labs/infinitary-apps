@@ -5,6 +5,7 @@ import type {
   MoveProgress,
   MoveRefusal,
 } from "@core/folderMove/move";
+import { formatDateTime, formatNumber } from "@shared/i18n/format";
 
 /**
  * What the one-time move's hand-over window shows (./handOver.ts), as a
@@ -70,7 +71,7 @@ const STEPS: readonly { phase: MovePhase; words: string }[] = [
 
 /** A count as a person reads it, with thousands grouped: 324,350. */
 export function countOf(count: number): string {
-  return Math.round(count).toLocaleString("en-US");
+  return formatNumber(Math.round(count));
 }
 
 /** A length of time as the window says it: 45 s, 1 min 05 s. */
@@ -191,7 +192,7 @@ function buttons(
 
 function opened(summary: FolderSummary): string {
   if (summary.lastOpened === undefined) return "Never opened";
-  const when = new Date(summary.lastOpened).toLocaleString(undefined, {
+  const when = formatDateTime(summary.lastOpened, {
     dateStyle: "medium",
     timeStyle: "short",
   });

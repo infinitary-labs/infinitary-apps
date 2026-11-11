@@ -11,11 +11,13 @@ import {
   type PanelCommand,
 } from "@shared/keyboard";
 import {
+  bindingWarning,
   isChanged,
   type KeymapSnapshot,
   keymapRefusal,
   type SavedKeymap,
   SCOPE_WORDS,
+  sameBinding,
   unknownCommands,
   withAllCatalogKeys,
   withCatalogKeys,
@@ -283,6 +285,22 @@ export function KeyboardTab() {
               );
               if (next) write(next, id);
             }}
+            onPlace={(binding, when) =>
+              write(
+                withKeys(
+                  snapshot.saved,
+                  id,
+                  keysOf(snapshot.bindings, id).map((key) => {
+                    if (!sameBinding(key, binding)) return key;
+                    const { when: _old, ...chord } = key;
+                    return when ? { ...chord, when } : chord;
+                  }),
+                  snapshot.panels,
+                  thisDesktop().keys,
+                ),
+                id,
+              )
+            }
             onRemove={() => write(withKeys(snapshot.saved, id, [], panels, thisDesktop().keys), id)}
             onReset={() => write(withCatalogKeys(snapshot.saved, id), id)}
           />
@@ -353,6 +371,7 @@ function CommandRow({
   onSave,
   onRemove,
   onReset,
+  onPlace,
 }: {
   id: AnyCommandId;
   first: boolean;
@@ -363,6 +382,7 @@ function CommandRow({
   onRecord: () => void;
   onCancel: () => void;
   onSave: (mode: "replace" | "add") => void;
+  onPlace: (binding: KeyBinding, when: "not-typing" | undefined) => void;
   onRemove: () => void;
   onReset: () => void;
 }) {
@@ -387,7 +407,18 @@ function CommandRow({
         </div>
         {error && <SettingError error={error} surface="keyboard" />}
       </div>
-      <Keys keys={keys} />
+      <Keys
+        keys={keys}
+        place={
+          commandEntry(id, snapshot.panels)?.scope === "window"
+            ? {
+                label,
+                busy: busy || recording !== null,
+                onChange: onPlace,
+              }
+            : undefined
+        }
+      />
       <div style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
         <Button
           variant="secondary"
@@ -434,7 +465,12 @@ function CommandRow({
 }
 
 /** A command's keys as key caps: a two-key shortcut's two side by side, or no key at all. */
-function Keys({ keys }: { keys: readonly KeyBinding[] }) {
+type PlaceControl = {
+  label: string;
+  busy: boolean;
+  onChange: (binding: KeyBinding, when: "not-typing" | undefined) => void;
+};
+function Keys({ keys, place }: { keys: readonly KeyBinding[]; place?: PlaceControl }) {
   if (keys.length === 0)
     return (
       <span data-keyboard-keys="" style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
@@ -452,7 +488,37 @@ function Keys({ keys }: { keys: readonly KeyBinding[] }) {
       }}
     >
       {keys.map((binding) => (
-        <BindingCaps key={bindingLabel(binding, thisDesktop().keys)} binding={binding} />
+        <span
+          key={bindingLabel(binding, thisDesktop().keys)}
+          style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)" }}
+        >
+          <BindingCaps binding={binding} />
+          {place && (binding.meta || binding.ctrl || /^F\d+$/.test(binding.key)) && (
+            <select
+              aria-label={`Where ${bindingLabel(binding, thisDesktop().keys)} for ${place.label} works`}
+              value={binding.when ?? "anywhere"}
+              disabled={place.busy}
+              onChange={(event) =>
+                place.onChange(
+                  binding,
+                  event.target.value === "not-typing" ? "not-typing" : undefined,
+                )
+              }
+              style={{
+                fontFamily: "var(--font-ui)",
+                fontSize: "var(--text-xs)",
+                color: "var(--fg-3)",
+                background: "var(--bg-1)",
+                border: "1px solid var(--line-1)",
+                borderRadius: "var(--radius-s)",
+                padding: "var(--space-1)",
+              }}
+            >
+              <option value="anywhere">Anywhere</option>
+              <option value="not-typing">When not typing</option>
+            </select>
+          )}
+        </span>
       ))}
     </span>
   );
@@ -467,6 +533,9 @@ function BindingCaps({ binding }: { binding: KeyBinding }) {
     >
       <KeyCap>{chordLabel(binding, keys)}</KeyCap>
       {binding.second && <KeyCap>{chordLabel(binding.second, keys)}</KeyCap>}
+      {binding.when === "not-typing" && (
+        <span style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)" }}>When not typing</span>
+      )}
     </span>
   );
 }
@@ -506,6 +575,7 @@ function Recorder({
             : "No other command uses it.";
   const canSave = verdict.kind === "free" || verdict.kind === "moves" || verdict.kind === "own";
   const canAdd = verdict.kind === "free" || verdict.kind === "moves";
+  const warning = keys && canSave ? bindingWarning(keys, id, panels, system) : null;
   const hint = [
     "Enter saves",
     `${system === "mac" ? "⇧Enter" : "Shift+Enter"} adds it beside the other keys`,
@@ -546,6 +616,15 @@ function Recorder({
       >
         {words}
       </div>
+      {warning && (
+        <p
+          data-keyboard-warning=""
+          aria-live="polite"
+          style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--warn)" }}
+        >
+          {warning}
+        </p>
+      )}
       <div style={{ fontSize: "var(--text-xs)", color: "var(--fg-3)" }}>{hint}</div>
       <div style={{ display: "flex", gap: "var(--space-2)" }}>
         <Button

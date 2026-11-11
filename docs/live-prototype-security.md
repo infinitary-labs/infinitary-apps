@@ -311,3 +311,19 @@ The pins protect the lib's integrity, not its correctness.
 Desktop annotation targets name only parts the current card declared for revision navigation, with bounded excerpts and text offsets.
 The host admits a pick only from the frame holding focus and draws the comment popover outside the authored document.
 Only the host's reply send delivers queued comments; the frame receives target identities and highlight state, never those comments.
+
+## Not-typing key offers
+
+The bridge's one-way `key` message offers a key, never an action or command id.
+It waits until the body's handlers finish and offers only a trusted, unused, non-composing press outside typing controls.
+The window accepts the current frame document only while that frame holds focus, without the gesture grace used for pointer actions.
+The main process must have witnessed the exact native press in that same focused frame under the same installed map, consumes it once, and resolves only that map's not-typing bindings.
+The trusted mount sets each frame's UUID name when creating the element, before its first navigation, and passes it with the offer; Electron's native focused frame must match at both the press and the offer, so a frame cannot borrow a key pressed earlier in another document.
+Blur, navigation, recording and the next native press discard an earlier witness.
+A frame cannot create an unwitnessed command, replay a consumed key or use another frame's focus.
+Answer, Done and Decline bindings remain available inside focused card content, including plain and function keys without Command or Control; Keyboard settings warns when recording these keys but does not refuse them.
+Residual: a deliberately constructed card can hide its typing control from the bridge or misrepresent whether it used a witnessed native press.
+If that press matches an installed not-typing answer, Done or Decline binding, typing inside the disguised field can run that command, including Merge when it is the card's recommended choice.
+The recording warning is advice, not a security boundary, and there is no additional confirmation when the key runs.
+This still requires the person's matching native press in that same focused frame; a card cannot manufacture a press or borrow one from another frame.
+The message adds no frame permission, network access or host action declaration; sandbox tokens and CSP sources stay unchanged, and the bridge hash is repinned with its script.

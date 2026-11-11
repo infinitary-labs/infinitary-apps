@@ -48,7 +48,21 @@ export type KeyChord = {
  * (`second`), a two-key shortcut whose first chord holds ⌘ or ⌃. Only a
  * window command takes two keys (docs/keyboard.md, "Two-key shortcuts").
  */
-export type KeyBinding = KeyChord & { second?: KeyChord };
+export type KeyBinding = KeyChord & {
+  second?: KeyChord;
+  /** Omitted keeps the existing anywhere path; offered only by a non-typing document otherwise. */
+  when?: "not-typing";
+};
+
+/** Whether the installed map needs the document's not-typing path. */
+export function hasNotTypingKeys(bindings: Bindings): boolean {
+  return Object.values(bindings).some((keys) => keys?.some((key) => key.when === "not-typing"));
+}
+
+/** The binding's place is independent of the command's scope. */
+export function bindingIsActive(binding: KeyBinding, context: KeyContext): boolean {
+  return binding.when !== "not-typing" || context.notTyping === true;
+}
 
 /**
  * Where a command works:
@@ -918,7 +932,11 @@ export function systemKeys(keys: readonly KeyBinding[], system: KeySystem): read
     const first = systemChord(binding, system);
     const second = binding.second ? systemChord(binding.second, system) : undefined;
     if (!first || second === null) continue;
-    const next: KeyBinding = second ? { ...first, second } : first;
+    const next: KeyBinding = {
+      ...first,
+      ...(second ? { second } : {}),
+      ...(binding.when ? { when: binding.when } : {}),
+    };
     if (!pressed.some((kept) => JSON.stringify(kept) === JSON.stringify(next))) pressed.push(next);
   }
   return pressed;
@@ -941,6 +959,8 @@ export const DEFAULT_BINDINGS: Bindings = catalogBindings("mac");
 
 /** What the listener that hears a key knows about where it was pressed. */
 export type KeyContext = {
+  /** The focused document offered an unused key from outside a typing control. */
+  notTyping?: boolean;
   /** The message field that has focus, when the listener is one. */
   field?: "main-message" | "reply";
 };
@@ -991,7 +1011,10 @@ export function boundCommand(
   return COMMAND_IDS.find(
     (candidate) =>
       scopeIsActive(KEYBOARD_COMMANDS[candidate].scope, context) &&
-      bindings[candidate].some((binding) => !binding.second && chordMatches(binding, press)),
+      bindings[candidate].some(
+        (binding) =>
+          !binding.second && bindingIsActive(binding, context) && chordMatches(binding, press),
+      ),
   );
 }
 
@@ -1004,10 +1027,14 @@ export function panelCommandFor(
   press: KeyPress,
   bindings: Bindings,
   panels: readonly PanelCommand[],
+  context: KeyContext = {},
 ): PanelCommandId | undefined {
   if (press.composing || press.repeat) return undefined;
   return panels.find((command) =>
-    keysOf(bindings, command.id).some((binding) => !binding.second && chordMatches(binding, press)),
+    keysOf(bindings, command.id).some(
+      (binding) =>
+        !binding.second && bindingIsActive(binding, context) && chordMatches(binding, press),
+    ),
   )?.id;
 }
 
@@ -1020,7 +1047,10 @@ export function startsTwoKeys(
 ): boolean {
   if (press.composing) return false;
   const starts = (keys: readonly KeyBinding[]) =>
-    keys.some((binding) => binding.second && chordMatches(binding, press));
+    keys.some(
+      (binding) =>
+        binding.second && bindingIsActive(binding, context) && chordMatches(binding, press),
+    );
   return (
     COMMAND_IDS.some(
       (candidate) =>
@@ -1035,12 +1065,14 @@ export function secondKeyPanelCommand(
   second: KeyPress,
   bindings: Bindings,
   panels: readonly PanelCommand[],
+  context: KeyContext = {},
 ): PanelCommandId | undefined {
   if (first.composing || second.composing) return undefined;
   return panels.find((command) =>
     keysOf(bindings, command.id).some(
       (binding) =>
         binding.second !== undefined &&
+        bindingIsActive(binding, context) &&
         chordMatches(binding, first) &&
         chordMatches(binding.second, second),
     ),
@@ -1064,6 +1096,7 @@ export function secondKeyCommand(
       bindings[candidate].some(
         (binding) =>
           binding.second !== undefined &&
+          bindingIsActive(binding, context) &&
           chordMatches(binding, first) &&
           chordMatches(binding.second, second),
       ),
@@ -1139,7 +1172,7 @@ export function menuAccelerator(
   id: CommandId,
   bindings: Bindings = DEFAULT_BINDINGS,
 ): string | undefined {
-  const first = bindings[id].find((binding) => !binding.second);
+  const first = bindings[id].find((binding) => !binding.second && binding.when !== "not-typing");
   return first ? chordAccelerator(first) : undefined;
 }
 

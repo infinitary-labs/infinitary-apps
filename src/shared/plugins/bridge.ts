@@ -9,6 +9,7 @@ import {
   cardAnswerSchema,
   cardQuestionsGapSchema,
 } from "../cards";
+import { offeredKeySchema } from "../keyboardOffer";
 import { KNOWLEDGE_ID_EXACT } from "../knowledge";
 import { TASK_KEY_EXACT } from "../taskKeys";
 import { mediatedFetchRequestSchema } from "./fetch";
@@ -365,6 +366,7 @@ export const frameMessageSchema = z.discriminatedUnion("type", [
   }),
   /** A press began in the frame's own window. */
   z.object({ fm: fmMarker, type: z.literal("pressed"), document: z.string() }),
+  z.object({ fm: fmMarker, type: z.literal("key"), document: z.string(), press: offeredKeySchema }),
   /** An Escape nothing in a card body used: the body asks to be left for its card. */
   z.object({ fm: fmMarker, type: z.literal("escape"), document: z.string() }),
   z.object({

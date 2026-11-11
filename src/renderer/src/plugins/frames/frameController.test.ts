@@ -68,6 +68,29 @@ function harness(
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("FrameController", () => {
+  it("layers plan: forwards key offers only from the current document and never as a command", () => {
+    const onKey = vi.fn();
+    const { controller, spec } = harness({ onKey });
+    const press = {
+      key: "s",
+      code: "KeyS",
+      meta: false,
+      ctrl: false,
+      alt: false,
+      shift: false,
+      composing: false,
+      repeat: false,
+    };
+    controller.receive({ fm: 2, type: "ready", document: "shown" });
+    controller.receive({ fm: 2, type: "key", document: "old", press });
+    controller.receive({ fm: 2, type: "key", document: "shown", press: { ...press, key: 7 } });
+    expect(onKey).not.toHaveBeenCalled();
+    controller.receive({ fm: 2, type: "key", document: "shown", press });
+    expect(onKey).toHaveBeenCalledExactlyOnceWith(press);
+    expect(spec.onAction).not.toHaveBeenCalled();
+    controller.dispose();
+  });
+
   it("separates initialized drawing from birth, zero/provisional sizes and stale documents", () => {
     const onResize = vi.fn();
     const onDrawn = vi.fn();

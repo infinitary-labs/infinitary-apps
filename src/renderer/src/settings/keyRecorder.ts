@@ -54,9 +54,13 @@ export function keysAfterPress(
   system: KeySystem = "mac",
 ): KeyBinding {
   const chord = chordOfPress({ ...key, composing: false, repeat: false });
+  const binding: KeyBinding =
+    !chord.meta && !chord.ctrl && !/^F([1-9]|1[0-9]|2[0-4])$/.test(chord.key)
+      ? { ...chord, when: "not-typing" }
+      : chord;
   return current && takesSecondKey(id, current, panels, system)
     ? { ...current, second: chord }
-    : chord;
+    : binding;
 }
 
 /** Whether the recorded keys could still take a second key. */

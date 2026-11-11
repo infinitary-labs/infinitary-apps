@@ -197,6 +197,31 @@ export function keyboardSettings(page: Page): {
 }
 
 /**
+ * Chooses a key's place through its native select, using real keys on each system.
+ * Mac's popup lives outside Chromium's key driver; its closed-select typeahead
+ * navigates by the option's actual label. Tab first clears the previous search.
+ * Other systems retain the selector's arrow navigation. The journey owns the value assertion.
+ */
+export async function chooseKeyPlace(
+  place: Locator,
+  value: "not-typing" | "anywhere",
+): Promise<void> {
+  // A map push can change the value before its save reply reenables this control.
+  await expect(place).toBeEnabled();
+  if (process.platform === "darwin") {
+    await pressKey(place, "Tab");
+    const initial = await place.evaluate((node, wanted) => {
+      const option = [...(node as HTMLSelectElement).options].find((item) => item.value === wanted);
+      if (!option) throw new Error(`Missing place option: ${wanted}`);
+      return option.label.trim().charAt(0).toLowerCase();
+    }, value);
+    await pressKey(place, initial);
+  } else {
+    await pressKey(place, value === "not-typing" ? "ArrowDown" : "ArrowUp");
+  }
+}
+
+/**
  * Starts recording a key for `command` in Keyboard settings, as a person does
  * with its row's Record, and returns once the main process records: every
  * window key pressed after it is the recorder's alone. It starts from a

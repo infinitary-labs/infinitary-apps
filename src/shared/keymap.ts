@@ -40,7 +40,10 @@ const chordSchema = z.strictObject({
   shift: z.boolean().optional(),
 });
 
-const bindingSchema = chordSchema.extend({ second: chordSchema.optional() });
+const bindingSchema = chordSchema.extend({
+  second: chordSchema.optional(),
+  when: z.literal("not-typing").optional(),
+});
 
 /** The most keys one command keeps. */
 export const MAX_KEYS_PER_COMMAND = 8;
@@ -315,10 +318,16 @@ export function chordsOverlap(a: KeyChord, b: KeyChord): boolean {
 }
 
 /** Whether a chord is one a keyboard can press as a shortcut at all, and if not, why. */
-function keyProblem(chord: KeyChord, system: KeySystem): string | null {
+const NOT_TYPING_NAMED_KEYS = new Set(["Backspace", "Delete", "Home", "End", "PageUp", "PageDown"]);
+
+function keyProblem(chord: KeyChord, system: KeySystem, notTyping = false): string | null {
   const own = OWN_JOBS[chord.key];
-  if (own) return own;
-  if (chord.key.length > 1 && !FUNCTION_KEY.test(chord.key))
+  if (own && !(notTyping && NOT_TYPING_NAMED_KEYS.has(chord.key))) return own;
+  if (
+    chord.key.length > 1 &&
+    !FUNCTION_KEY.test(chord.key) &&
+    !(notTyping && NOT_TYPING_NAMED_KEYS.has(chord.key))
+  )
     return chord.key === "Dead"
       ? "That key starts an accent, so it can't be a shortcut"
       : "That key can't be a shortcut";
@@ -337,10 +346,10 @@ const COMMAND_KEY_WORDS: Readonly<Record<KeySystem, string>> = { mac: "⌘ or �
 
 /**
  * Why a command cannot take these keys, in the words Keyboard settings
- * shows, or null. A key on its own, or with only ⇧ or ⌥, types a character,
- * so a shortcut's first key holds ⌘ or ⌃ or is a function key; Enter, Tab,
- * Escape, Delete, the arrows and the Mac's own keys keep their jobs; and
- * only a window command takes two keys.
+ * shows, or null. Anywhere keys hold ⌘ or ⌃ or are function keys; bare
+ * keys belong to a window command outside typing. Reserved controls and
+ * platform keys keep their jobs, and only a window command takes two keys.
+ * A risky key's non-blocking reminder belongs to `bindingWarning`.
  */
 export function bindingProblem(
   binding: KeyBinding,
@@ -348,9 +357,18 @@ export function bindingProblem(
   panels: readonly PanelCommand[] = [],
   system: KeySystem = "mac",
 ): string | null {
-  const first = keyProblem(binding, system);
+  const entry = commandEntry(id, panels, system);
+  if (binding.when === "not-typing" && entry?.scope !== "window")
+    return "Only a window command can work when not typing";
+  if (binding.when === "not-typing" && binding.key === " ")
+    return "Space scrolls and presses controls, and keeps that job";
+  const first = keyProblem(binding, system, binding.when === "not-typing");
   if (first) return first;
-  if (!holdsCommandOrControl(binding, system) && !FUNCTION_KEY.test(binding.key))
+  if (
+    binding.when !== "not-typing" &&
+    !holdsCommandOrControl(binding, system) &&
+    !FUNCTION_KEY.test(binding.key)
+  )
     return `A shortcut holds ${COMMAND_KEY_WORDS[system]}, so typing never runs it`;
   if (!binding.second) return null;
   if (entryOf(id, panels).scope !== "window")
@@ -358,6 +376,19 @@ export function bindingProblem(
   if (!holdsCommandOrControl(binding, system))
     return `A two-key shortcut starts with ${COMMAND_KEY_WORDS[system]}`;
   return keyProblem(binding.second, system);
+}
+
+/** Advice for a risky key, never a refusal or an extra confirmation. */
+export function bindingWarning(
+  binding: KeyBinding,
+  id: AnyCommandId,
+  panels: readonly PanelCommand[] = [],
+  system: KeySystem = "mac",
+): string | null {
+  return commandEntry(id, panels, system)?.risk === "close" &&
+    !holdsCommandOrControl(binding, system)
+    ? "One press of this key can answer or close a card. This can also happen while typing inside a card if Infinitary does not recognize its text field."
+    : null;
 }
 
 // --- Where two commands' keys clash ---------------------------------------
@@ -398,7 +429,7 @@ export function bindingsClash(a: KeyBinding, b: KeyBinding): ClashKind | null {
 
 /** Whether two keys are the same keys, as a list of keys holds them. */
 export function sameBinding(a: KeyBinding, b: KeyBinding): boolean {
-  return bindingsClash(a, b) === "same";
+  return a.when === b.when && bindingsClash(a, b) === "same";
 }
 
 /** Another command's key a binding clashes with, where both work. */
@@ -416,6 +447,12 @@ export function clashesWith(
     .filter((other) => other !== id && scopesOverlap(scope, entryOf(other, panels).scope))
     .flatMap((other) =>
       keysOf(bindings, other).flatMap((theirs) => {
+        const otherScope = entryOf(other, panels).scope;
+        if (
+          (binding.when === "not-typing" && otherScope !== "window") ||
+          (theirs.when === "not-typing" && scope !== "window")
+        )
+          return [];
         const kind = bindingsClash(binding, theirs);
         return kind ? [{ id: other, binding: theirs, kind }] : [];
       }),
@@ -453,6 +490,8 @@ function takenBy(
     (entry) =>
       entry.id !== id &&
       scopesOverlap(scope, entry.scope) &&
+      !(binding.when === "not-typing" && entry.scope !== "window") &&
+      !(entry.binding.when === "not-typing" && scope !== "window") &&
       bindingsClash(binding, entry.binding) !== null,
   );
 }
@@ -484,7 +523,7 @@ export function resolveBindings(
     const kept: KeyBinding[] = [];
     for (const binding of keys) {
       if (check && bindingProblem(binding, id, panels, system) !== null) continue;
-      if (kept.some((other) => sameBinding(other, binding))) continue;
+      if (kept.some((other) => bindingsClash(other, binding) === "same")) continue;
       if (takenBy(taken, id, scope, binding)) continue;
       kept.push(binding);
       taken.push({ id, scope, binding });
@@ -540,7 +579,7 @@ export function keymapRefusal(
     for (const [index, binding] of own.entries()) {
       const problem = bindingProblem(binding, id, panels, system);
       if (problem) return `${label}: ${problem}`;
-      if (own.slice(0, index).some((earlier) => sameBinding(earlier, binding)))
+      if (own.slice(0, index).some((earlier) => bindingsClash(earlier, binding) === "same"))
         return `${label} lists ${bindingLabel(binding, system)} twice`;
       if (!keysOf(bindings, id).some((kept) => sameBinding(kept, binding))) {
         const clash = clashesWith(bindings, id, binding, panels)[0];
@@ -645,7 +684,7 @@ export function withKeyMoved(
     next = withKeys(
       next,
       clash.id,
-      keysOf(bindings, clash.id).filter((kept) => !sameBinding(kept, clash.binding)),
+      keysOf(bindings, clash.id).filter((kept) => bindingsClash(kept, clash.binding) !== "same"),
       panels,
       system,
     );
@@ -653,7 +692,10 @@ export function withKeyMoved(
   const keys =
     mode === "replace"
       ? [binding]
-      : [...keysOf(bindings, id).filter((kept) => !sameBinding(kept, binding)), binding];
+      : [
+          ...keysOf(bindings, id).filter((kept) => bindingsClash(kept, binding) !== "same"),
+          binding,
+        ];
   return withKeys(next, id, keys, panels, system);
 }
 
@@ -666,5 +708,9 @@ function plainBinding(binding: KeyBinding): KeyBinding {
     ...(chord.alt ? { alt: true } : {}),
     ...(chord.shift ? { shift: true } : {}),
   });
-  return binding.second ? { ...plain(binding), second: plain(binding.second) } : plain(binding);
+  return {
+    ...plain(binding),
+    ...(binding.second ? { second: plain(binding.second) } : {}),
+    ...(binding.when ? { when: binding.when } : {}),
+  };
 }

@@ -636,6 +636,7 @@ export function CardFactsFrame(props: {
 function SrcdocCardBody(props: SrcdocProps) {
   const { body, theme, title } = props;
   const frameRef = useRef<HTMLIFrameElement>(null);
+  const [frameName] = useState(() => crypto.randomUUID());
   const [height, setHeight] = useState(MIN_BODY_HEIGHT);
   const [drawnDocument, setDrawnDocument] = useState("");
   const [reveal] = useState(props.reveal ?? false);
@@ -697,6 +698,7 @@ function SrcdocCardBody(props: SrcdocProps) {
   return (
     <iframe
       ref={frameRef}
+      name={frameName}
       title={props.frameTitle ?? `${title} body`}
       sandbox={FRAME_SANDBOX}
       allow={FRAME_ALLOW}
@@ -719,6 +721,7 @@ type MountState =
 function ScriptedCardBody(props: SrcdocProps) {
   const { body, theme, title } = props;
   const frameRef = useRef<HTMLIFrameElement>(null);
+  const [frameName] = useState(() => crypto.randomUUID());
   const [height, setHeight] = useState(MIN_BODY_HEIGHT);
   const [drawn, setDrawn] = useState(false);
   // Drawn while held: prepared, its scripts not started (`active`).
@@ -865,6 +868,7 @@ function ScriptedCardBody(props: SrcdocProps) {
   return (
     <iframe
       ref={frameRef}
+      name={frameName}
       title={`${title} body`}
       sandbox={FRAME_SANDBOX}
       allow={FRAME_ALLOW}

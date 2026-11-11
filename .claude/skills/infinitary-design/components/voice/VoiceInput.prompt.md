@@ -132,3 +132,8 @@ Text+images and images-only are valid sends.
 Enter or the send control sends the composed turn (text + pasted text + attachments).
 Draft attachments and files live only in renderer compose state.
 Sent file previews and pointers are plain text in records and threads; full file text stays in the overflow folder.
+
+When the installed keys include a key used only when not typing, the unfocused empty main message shows "press [Go to the main message key] to write a message" through its existing placeholder.
+While speech is being transcribed, "transcribing what you said" (or the narrow form "transcribing") takes precedence over that return-key hint, even while the message is unfocused.
+The focused message, the first-launch gate and a map without such keys keep their existing hints.
+There is no mode indicator.

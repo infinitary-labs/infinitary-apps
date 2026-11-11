@@ -261,6 +261,7 @@ describe("ipc contract", () => {
       "inf:frames:mount",
       "inf:frames:unmount",
       "inf:keyboard:keymap",
+      "inf:keyboard:offer",
       "inf:keyboard:panels",
       "inf:keyboard:record",
       "inf:keyboard:run",

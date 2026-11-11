@@ -5764,6 +5764,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     /** Absent on legacy offer sightings; those never acknowledge a released update. */
     updateId: string().max(64).optional()
   });
+  const offeredKeySchema = object({
+    key: string().min(1).max(32),
+    code: string().max(32),
+    meta: boolean(),
+    ctrl: boolean(),
+    alt: boolean(),
+    shift: boolean(),
+    composing: boolean(),
+    repeat: boolean()
+  });
+  const TYPING_CONTROL_SELECTOR = 'textarea, select, [role="textbox"], [data-keyboard-typing], [data-keyboard-recorder], input:not([type="checkbox" i], [type="radio" i], [type="range" i], [type="button" i], [type="submit" i], [type="reset" i], [type="image" i], [type="color" i], [type="file" i], [type="hidden" i])';
   const QUERY_MAX = 200;
   const scopeSchema = string().min(1).max(64);
   const entryIdSchema = string().regex(/^[cf]-[a-z0-9]{6}$/);
@@ -6470,6 +6481,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }),
     /** A press began in the frame's own window. */
     object({ fm: fmMarker, type: literal("pressed"), document: string() }),
+    object({ fm: fmMarker, type: literal("key"), document: string(), press: offeredKeySchema }),
     /** An Escape nothing in a card body used: the body asks to be left for its card. */
     object({ fm: fmMarker, type: literal("escape"), document: string() }),
     object({
@@ -8190,6 +8202,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     if (target && target.tagName === "INPUT" && target.type === "search" && target.value !== "") return;
     post({ type: "escape" });
   });
+  // Observe at capture, offer after every handler: a body's own used key stays its own.
+  window.addEventListener("keydown", function (event) {
+    var typing = event.composedPath().some(function (node) {
+      return node && node.nodeType === 1 && (node.isContentEditable || node.matches(${JSON.stringify(TYPING_CONTROL_SELECTOR)}));
+    });
+    setTimeout(function () {
+      if (!event.isTrusted || event.defaultPrevented || event.isComposing || event.keyCode === 229 || !document.hasFocus()) return;
+      if (typing) return;
+      post({ type: "key", press: { key: event.key, code: event.code, meta: event.metaKey, ctrl: event.ctrlKey, alt: event.altKey, shift: event.shiftKey, composing: false, repeat: event.repeat } });
+    });
+  }, true);
   document.addEventListener("scroll", leaveKey, true);
   new ResizeObserver(resize).observe(document.documentElement);
   window.addEventListener("load", resize);
@@ -8221,7 +8244,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-teFqJgn7by1TXmAGO+4kEjLH+uofnOzkyycSbE7Prbg=";
+  const FRAME_BRIDGE_SHA256 = "sha256-9SkZFDKX3DiJiUFcpAfdCnNObg8VVTGf6sGJSYEnDVU=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";
@@ -8995,7 +9018,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       const first = systemChord(binding, system);
       const second = binding.second ? systemChord(binding.second, system) : void 0;
       if (!first || second === null) continue;
-      const next2 = second ? { ...first, second } : first;
+      const next2 = {
+        ...first,
+        ...second ? { second } : {},
+        ...binding.when ? { when: binding.when } : {}
+      };
       if (!pressed2.some((kept) => JSON.stringify(kept) === JSON.stringify(next2))) pressed2.push(next2);
     }
     return pressed2;

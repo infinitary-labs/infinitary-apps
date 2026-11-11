@@ -28,3 +28,14 @@ Then the keys' hint at `--text-xs` / `--fg-3`: "Enter saves · ⇧Enter adds it 
 Last, a primary `Button` sm "Save", a secondary "Add beside the others" and a ghost "Cancel", each disabled when it would do nothing.
 While it records, every key goes to it and runs nothing else, the window's own keys and the menu's included; a click on Cancel, Escape, or the window losing focus stops it.
 A refusal from saving stays under the row's words as a `SettingError`.
+
+**Where a key works.**
+A window command's saved key that holds Command or Control, or is a function key, has a compact native select beside its caps: "Anywhere" or "When not typing".
+It uses the shared Settings type, background, hairline, radius and focus ring; Tab reaches it and the arrows choose its value.
+The selector stays outside the recorder, which intentionally consumes keys, and is disabled while that row records or saves.
+A bare recorded key automatically works only when not typing and says "When not typing" in quiet text beside its caps, including while recording.
+A plain or function key without Command or Control may answer or end a card.
+When recording one for an answer, Done or Decline command, show a separate `--text-sm` / `--warn` line: "One press of this key can answer or close a card.
+This can also happen while typing inside a card if Infinitary does not recognize its text field."
+Keep the normal saving verdict and the existing availability rules for Save and Add beside the others; this warning adds no confirmation and never refuses the key.
+Previously saved keys like these keep working and do not prevent other changes; the default answer keys stay Command+1 through Command+4.

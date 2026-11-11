@@ -1,4 +1,5 @@
 import { EMPTY_FIRST_RUN, type FirstRunView } from "@shared/firstRun";
+import { keyHint } from "@shared/keyboard";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { voiceController } from "../voice/voiceController";
 import { inputPlaceholder } from "./HomePrompt";
@@ -78,6 +79,21 @@ describe("dictation off", () => {
       "type, or press/hold right ⌃ to talk",
       "press/hold right ⌃ to talk",
       "hold right ⌃ to talk",
+    ]);
+  });
+
+  // Review regression: an unfocused not-typing layer must not hide dictation's status.
+  it("keeps transcription status above the return hint and restores the hint afterward", () => {
+    const returnToMessageKey = keyHint("focus.main-message");
+    const input = {
+      firstRun: null,
+      voiceSupported: true,
+      dictation: { enabled: true, key: "AltRight" } as const,
+      transcribing: true,
+    };
+    expect(inputPlaceholder({ ...input, returnToMessageKey })).toEqual(inputPlaceholder(input));
+    expect(inputPlaceholder({ ...input, returnToMessageKey, transcribing: false })).toEqual([
+      `press ${returnToMessageKey} to write a message`,
     ]);
   });
 

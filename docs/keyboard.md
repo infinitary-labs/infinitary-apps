@@ -1,7 +1,7 @@
 # Keyboard commands
 
 How a key becomes something the app does: one catalog of commands, one resolver, and handlers that stay with the code that owns what they change.
-The captain chose complete keyboard access with conventional controls and customizable shortcuts (FI3-800, direction B); there is no Vim keymap, no navigation mode and no printable-key prefix.
+The captain chose complete keyboard access with conventional controls and customizable shortcuts (FI3-800, direction B); there is not yet a preset picker or a Vim editing mode, and a printable key cannot start a two-key shortcut.
 
 | Piece | Where |
 | --- | --- |
@@ -466,7 +466,7 @@ The record builds its Activity lines, its Cards and Knowledge used rows, its Det
 Before it draws, the record notes that control's place: the part of the record it sits in, and its turn among that part's controls that read the same.
 Once the bridge has linked the new keys, the control in that place takes focus again, only while the record's frame still holds the window's focus (`record.frame.js`, FI3-1279).
 
-A frame's own script can say anything, so none of this lets a frame do more than move focus inside itself or out to its card.
+A frame's own script can say anything, so these focus requests move focus only inside itself or out to its card; a separate witnessed key offer is described below.
 A frame's gesture that opens something over the window or in the browser, or moves the captain's focus, counts only while that frame holds the window's focus, which the captain's own click or key gives it (`whenFrameHoldsFocus`): opening a picture, opening a task, opening a link, leaving the body.
 A frame's own script cannot take that focus itself: only the captain's click or key, or the shell's own move, puts focus in a frame (`docs/ui-plugins.md`, "Focus and the frames"), so a card's or a panel's script also leaves the main message its focus, its caret and the keys typed next.
 That holds right after the captain's own click or key in the frame too: as focus comes back to the window's own page, as the pointer leaves the frame for the page's own content, and as focus moves on to another frame, the shell spends the user activation the click or key gave the frame (`guardFrameActivation`).
@@ -516,12 +516,12 @@ No core channel carries them: the window asks the main process on host channels 
 
 `bindingProblem` refuses, in the words the recorder shows:
 
-- a first key without ⌘ or ⌃, unless it is a function key: a key alone, or with only ⇧ or ⌥, types a character;
-- Enter, Tab, Escape, Delete, the arrows, Home, End and the page keys, which keep their jobs, and a dead key or any other named key;
+- an anywhere first key without ⌘ or ⌃, unless it is a function key; a bare key works only with `when: "not-typing"`;
+- Space, Enter, Tab, Escape and the arrows for not-typing keys; anywhere keys also leave Delete, Home, End and the page keys alone; dead and unknown named keys are always refused;
 - the Mac's own keys and the app's native ones (`PLATFORM_KEYS`): quit, close the window, hide, minimize, the editing keys, Spotlight, the input source, full screen, screenshots, and a text field's own Control keys;
 - two keys for a command that is not a window command, and two keys whose first does not hold ⌘ or ⌃.
 
-On a Ctrl system a shortcut holds Ctrl instead, and the keys it keeps for itself are its own (`CTRL_SYSTEM_KEYS`): Ctrl+Q and Ctrl+W, Alt+F4, the editing keys with Ctrl+Y and Ctrl+Shift+V, the input method's Ctrl+Space, Ctrl+Shift+U and Ctrl+., a terminal's Ctrl+Alt+T, and Ctrl+Alt with a function key; every chord that holds the Super key belongs to the desktop.
+On a Ctrl system an anywhere shortcut holds Ctrl instead, and the keys it keeps for itself are its own (`CTRL_SYSTEM_KEYS`): Ctrl+Q and Ctrl+W, Alt+F4, the editing keys with Ctrl+Y and Ctrl+Shift+V, the input method's Ctrl+Space, Ctrl+Shift+U and Ctrl+., a terminal's Ctrl+Alt+T, and Ctrl+Alt with a function key; every chord that holds the Super key belongs to the desktop.
 
 Recall's ↑ and the size keys' catalog keys stay what they are; the rules judge only what a person records.
 
@@ -612,3 +612,32 @@ The counted More row at a rail’s foot is a panel region in the F6 walk.
 Tab reaches its control; Enter opens its menu, arrows choose a panel and Escape closes it.
 Choosing a panel writes its move nearest the anchored end of its group and focuses its header.
 An expand on a folded header pins it after the other panels in the fold order, without recording the automatic fold itself.
+
+## Keys used when not typing
+
+A window binding may carry `when: "not-typing"`; omission keeps the existing anywhere path, so old saved keys and every default retain their behavior.
+Keyboard settings automatically records a bare key with this place, and shows "When not typing" beside its caps.
+A saved modified key or function key has an Anywhere / When not typing selector beside it, outside the recorder so Tab and the arrows reach it normally.
+A key without Command or Control may bind a close-risk command, including card answer 1–4, Done and Decline.
+When recording a key without Command or Control for one of these commands, Keyboard settings shows the non-blocking warning "One press of this key can answer or close a card.
+This can also happen while typing inside a card if Infinitary does not recognize its text field." while keeping the normal verdict and valid save controls available.
+The warning adds no confirmation when the command runs, and previously saved function keys remain active without blocking unrelated key changes.
+Command+1 through Command+4 remain the default answer keys.
+Space, Enter, Tab, Escape and the arrows keep their existing jobs.
+Bare first chords, movement commands, presets and the next-keys hint are separate work, not part of this layer.
+
+The main process lets a not-typing key reach the focused document and remembers the native press, focused frame and installed map.
+The shell and the frame bridge offer an unused trusted key after all its handlers finish, only outside text-like inputs, textareas, selects, editable content and declared typing controls, and never during composition.
+The target path is read during dispatch, before the browser clears it.
+Every text field, the Crewmate prompt and the recorder therefore keep their letters; a controlled task browser consumes and forwards its keys before an offer, and its hidden page has no offering bridge.
+A frame's `key` message carries the key, not a command; `FrameController` accepts only the current document and `FrameMount` forwards only the frame that holds focus, with no focus grace.
+The host-only `inf:keyboard:offer` request resolves only installed not-typing bindings against the same native key, modifiers and focused frame, once.
+The trusted mount gives its frame a UUID name at element creation, before the first navigation, which the main process checks against Electron's focused frame at both the press and the offer; a shell offer must come from the native main frame.
+A different key, composition, a changed map, recording, a window blur or any navigation invalidates the witness.
+A not-typing binding has no menu accelerator, which would otherwise bypass the typing check.
+Not-typing bindings may share a message-editing key because their places do not overlap; two window commands still cannot share a key.
+
+When such a binding is installed, the last unused Escape in a main message or card reply moves focus to the shown card, or the bare stage if there is none, preserving the draft.
+The reply's key isolation (`CardThread.tsx`) lends only an unused, non-composing Escape to that chain while such keys are installed; all other reply keys remain isolated from dictation.
+All earlier Escape actions retain priority, and maps without a not-typing binding retain the old chain.
+The unfocused empty main message shows its Go to the main message key in its existing placeholder, with no mode indicator.

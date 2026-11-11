@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "keys-when-not-typing",
+      "kind": "feature",
+      "title": "Give commands keys that work only when you are not typing",
+      "body": "Record a plain letter in Keyboard settings to use it outside text fields. Your messages keep their letters. Plain keys and function keys without Command or Control can also answer or close a card, with a warning before saving. You can also choose when a modified key works. Escape leaves a message field when these keys are in use; your existing keys stay unchanged until you change them.",
+      "area": "settings",
+      "picture": {
+        "dark": "keys-when-not-typing-dark.webp",
+        "light": "keys-when-not-typing-light.webp",
+        "alt": "Keyboard settings recording S for Open Settings, marked When not typing, with Save available"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -295,6 +295,8 @@ export type FirstmateApi = {
     save: (keymap: SavedKeymap) => Promise<KeymapSnapshot>;
     /** Installs the panels' commands the window has now, with the catalog's. */
     setPanels: (panels: PanelCommand[]) => Promise<KeymapSnapshot>;
+    /** Offers an unused key from the native focused document, never a command. */
+    offer: (press: import("./keyboard").KeyPress, frame?: string) => Promise<{ ok: true }>;
     /** Records keys in Keyboard settings: the window's keys pass to it until it stops. */
     record: (recording: boolean) => Promise<{ ok: true }>;
     onRecorded: (listener: (key: RecordedKey) => void) => () => void;

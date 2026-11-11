@@ -113,6 +113,10 @@ export function useFrameController(
     const controller = new FrameController(
       {
         ...specRef.current,
+        onKey: (press) => {
+          if (document.activeElement === frameRef.current)
+            void window.infinitary.keyboard.offer(press, frameRef.current?.name).catch(() => {});
+        },
         onAction: (id, value) =>
           specRef.current.onAction(id, value, frameRef.current?.getBoundingClientRect()),
         onResize: (height) => specRef.current.onResize?.(height),
@@ -269,6 +273,7 @@ export function FrameMount({
   reveal: revealRequested,
 }: FrameMountProps) {
   const frameRef = useRef<HTMLIFrameElement>(null);
+  const [frameName] = useState(() => crypto.randomUUID());
   const [reveal] = useState(() => revealRequested ?? hasShellPainted());
   const [mount, setMount] = useState<Mount | null>(null);
   const mountRef = useRef<Mount | null>(null);
@@ -424,6 +429,7 @@ export function FrameMount({
   return (
     <iframe
       ref={frameRef}
+      name={frameName}
       title={title}
       sandbox={FRAME_SANDBOX}
       allow={FRAME_ALLOW}

@@ -216,6 +216,17 @@ The row is never rewritten on read: the next change a person makes saves the map
 An older build reads keys saved under the new ids as keys of commands it does not know: listed, running nothing, kept until Reset all keys.
 The format revision therefore stays at 1.
 
+## Keys that work only when not typing
+
+A saved keyboard binding may carry the optional `when: "not-typing"` field (`docs/keyboard.md`, "Keys used when not typing").
+The field is saved in the existing `keyboard` settings row, or in the controlling computer's own look under `keyboard` (`src/main/view/viewLook.ts`); the saved map's version stays at 1.
+A map without the field still passes the saved-field schema, with no condition added to its bindings.
+An older build's strict binding schema rejects a map containing the field as a whole, not just the binding carrying it: every custom key falls back to the catalog's keys, and Keyboard settings says the saved keys could not be read and that changing a key saves over them.
+Reading alone leaves the stored map unchanged, so returning to a build that understands the field can read it again.
+Changing any key or resetting all keys in that older build replaces the stored map and loses all the previous custom keys, including those without the new field; returning to a newer build cannot restore the overwritten map.
+Release and alpha share the same saved-data folder, so switching between them does not protect the map from this downgrade behavior.
+No database schema or persisted-format revision changes; the compatibility limit is the keyboard settings reader, not a startup refusal.
+
 ## Self-reported merge-card risk
 
 Risk assessments keep only the crewmate's seven declared levels and reasons.

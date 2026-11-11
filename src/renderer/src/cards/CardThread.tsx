@@ -16,6 +16,7 @@ import {
   type PastedText,
 } from "@shared/composer";
 import { ENDED_CLOSE_CARD_LABEL } from "@shared/endedCard";
+import { hasNotTypingKeys } from "@shared/keyboard";
 import {
   type CSSProperties,
   type MouseEvent,
@@ -36,12 +37,14 @@ import { useFileIntake } from "../attachments/useFileIntake";
 import { prefersReducedMotion } from "../character/reducedMotion";
 import { Button, focusWithRing, IconButton, type ImageAttachment, MicroLabel } from "../design";
 import { ComposerCount, ComposerCountAnnouncer, ComposerField } from "../design/core/ComposerField";
+import { isComposing } from "../design/core/composing";
 import {
   AddFilesButton,
   FilesStatus,
   PendingFileChips,
   useFileDrop,
 } from "../design/core/FileControls";
+import { installedBindings } from "../design/core/installedKeys";
 import { PastedTextChip } from "../design/voice/VoiceInput";
 import { AnnotationControls, NO_NOTES, NoteAnchor, QueuedNotes } from "./AnnotationControls";
 import { FOLLOW_SLACK_PX } from "./CrewmateView";
@@ -455,9 +458,15 @@ export function ReplyRow({
             onAttach={(items) => attachReplyImages(cardId, items)}
             onPictureTooBig={() => showReplyNotice(cardId, "picture-too-big")}
             onKeyDown={(event) => {
-              // The card's own input, not the shell's: every key stops here
-              // so neither Escape nor Enter reaches the window's
-              // hold-to-talk listeners, and right Option records nothing.
+              // Only the opted-in layer lends an unused Escape to the window's
+              // existing chain. Every other key stays isolated from hold-to-talk.
+              if (
+                event.key === "Escape" &&
+                !event.defaultPrevented &&
+                !isComposing(event) &&
+                hasNotTypingKeys(installedBindings())
+              )
+                return;
               event.stopPropagation();
             }}
             onFocus={() => setFocus(true)}

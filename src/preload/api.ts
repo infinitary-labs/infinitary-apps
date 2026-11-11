@@ -236,6 +236,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
             ...(words ? { words: [...words] } : {}),
           })),
         ),
+      offer: (press, frame) => invoke("inf:keyboard:offer", press, frame),
       record: (recording) => invoke("inf:keyboard:record", recording),
       onRecorded: (listener) => subscribe("inf:keyboard:recorded", listener),
     },

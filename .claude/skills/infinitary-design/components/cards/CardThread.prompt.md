@@ -23,6 +23,8 @@ The limit is a reply's 4,000 typed characters (file previews do not count), with
 Trim it, or paste the long part so it goes as a file." sits on the left in `--fg-2`.
 A reply that did not send keeps its draft and file chips.
 The field keeps the focus through a send, by Enter or by Chat, so the next reply is typed straight away; on send the words and chips clear immediately; while the core takes the reply, the empty field stays read-only and never goes disabled.
+When not-typing keys are installed, an unused Escape follows the window's Escape chain and its last action leaves the reply for the shown card, preserving its draft.
+Without such keys, Escape stays isolated in the reply as before.
 Right ⌥ does not record from the reply row.
 
 **The first sent message opens the thread beside the card**, and the field moves to the thread's foot with its own Chat beside the clip.

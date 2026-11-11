@@ -15,7 +15,7 @@ import {
   type WebContents,
 } from "electron";
 import type { FrameMountRegistry } from "../frames/frameMounts";
-import { recordWindowKeys } from "../keyboard";
+import { offerWindowKey, recordWindowKeys } from "../keyboard";
 import type { RendererSourceOptions } from "../security/rendererSource";
 import type { Shell } from "../shell";
 import { MIC_SETTINGS_URL, micAccess } from "../voice/micAccess";
@@ -124,6 +124,10 @@ export function registerIpc(options: IpcOptions): void {
   handleInvoke("inf:keyboard:panels", rendererSource, (_event, panels) =>
     shell.keymap.setPanels(panels),
   );
+  handleInvoke("inf:keyboard:offer", rendererSource, (event, press, frame) => {
+    offerWindowKey(event.sender, press, frame);
+    return { ok: true as const };
+  });
   handleInvoke("inf:keyboard:record", rendererSource, (event, recording) => {
     recordWindowKeys(event.sender, recording);
     return { ok: true as const };

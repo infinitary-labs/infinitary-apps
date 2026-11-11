@@ -2,6 +2,7 @@ import { z } from "zod";
 import { CHOSEN_FILES_MAX, chosenFileSchema, droppedPathSchema } from "../attachments";
 import { crewWordSchema, firstRunViewSchema } from "../firstRun";
 import { MAIN_COMMAND_IDS, type MainCommandId } from "../keyboard";
+import { offeredKeySchema } from "../keyboardOffer";
 import { keymapSnapshotSchema, panelCommandsSchema, savedKeymapSchema } from "../keymap";
 import {
   micAccessSchema,
@@ -99,8 +100,14 @@ export const shellChannels = {
     request: z.tuple([panelCommandsSchema]),
     response: keymapSnapshotSchema,
   },
-  // Keyboard settings records a key: while on, the window's keys run
-  // nothing and each key pressed comes back as `inf:keyboard:recorded`.
+  // An unused document key, resolved only against a native press in that same focused frame.
+  "inf:keyboard:offer": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([offeredKeySchema, z.uuid().optional()]),
+    response: okSchema,
+  },
+  // While recording, keys go only to Keyboard settings, never to a command.
   "inf:keyboard:record": {
     effect: "change",
     surface: "host",

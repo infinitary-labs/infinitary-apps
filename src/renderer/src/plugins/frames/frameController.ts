@@ -167,6 +167,8 @@ export type FrameMountSpec = {
    * whether focus moves is the host's call.
    */
   onEscape?: () => void;
+  /** An unused key offered by the document; the mount checks focus before forwarding it. */
+  onKey?: (press: import("@shared/keyboard").KeyPress) => void;
   /**
    * View state pushed down to the frame, re-pushed on every document birth
    * (`inf.state` / `inf.onState`). Host-owned and not app data: the now
@@ -568,6 +570,9 @@ export class FrameController {
         return;
       // The window's own press count reads it (app/presses.ts).
       case "pressed":
+        return;
+      case "key":
+        if (message.document === this.documentId) this.spec.onKey?.(message.press);
         return;
       case "escape":
         if (message.document === this.documentId) this.spec.onEscape?.();

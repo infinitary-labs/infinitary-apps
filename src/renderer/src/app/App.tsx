@@ -18,6 +18,7 @@ import { HomeMate } from "./HomeMate";
 import { HomePrompt } from "./HomePrompt";
 import { HomeScreen } from "./HomeScreen";
 import { guardHeldPresses } from "./heldKeys";
+import { followNotTypingKeys, leaveMessageField } from "./notTypingKeys";
 import { applyTheme } from "./preferences";
 import { followShellCommands } from "./shellCommands";
 import { isHeldEntry, shownEntry } from "./stack";
@@ -31,6 +32,7 @@ export function App() {
   useEffect(() => guardFrameActivation(), []);
   useEffect(() => guardHeldPresses(), []);
   useEffect(() => followShellCommands(), []);
+  useEffect(() => followNotTypingKeys(), []);
   const theme = useShellStore((s) => s.theme);
   const view = useShellStore((s) => s.view);
   const setView = useShellStore((s) => s.setView);
@@ -82,6 +84,8 @@ export function App() {
           store.abandonRecording();
         } else if (store.view === "settings") {
           store.setView("home");
+        } else if (!event.defaultPrevented && !event.isComposing && !store.recordingKeys) {
+          leaveMessageField();
         }
       }
     };
@@ -132,6 +136,7 @@ export function App() {
         {home && <Rail side="left" panels={rails.left} theme={theme} />}
         <div
           data-stage=""
+          tabIndex={-1}
           style={{
             position: "relative",
             flex: 1,

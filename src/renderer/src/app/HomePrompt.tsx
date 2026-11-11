@@ -14,16 +14,19 @@ import {
   STANDARD_PLACEHOLDER_SHORTEST,
   withDictationKey,
 } from "@shared/firstRun";
+import { hasNotTypingKeys } from "@shared/keyboard";
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { mainDestination } from "../attachments/destinations";
 import { useFileIntake } from "../attachments/useFileIntake";
 import { CARD_SIZES } from "../cards/cardGeometry";
 import { VoiceInput } from "../design";
 import { thisDesktop } from "../design/core/desktop";
+import { useInstalledKeymap } from "../design/core/installedKeys";
 import { ComposerNotice } from "./ComposerNotice";
 import { mainInputHeld } from "./composer";
 import { DiagnosticsNotice } from "./DiagnosticsNotice";
 import { focusTakenElsewhere } from "./focusRecovery";
+import { useCommandKeys } from "./keyHints";
 import { LastTurn, useCardUp } from "./LastTurn";
 import { usePromptFoot } from "./promptFoot";
 import { lastTurnLane, lastTurnRise, promptFoldsRails, promptShellMax } from "./promptGeometry";
@@ -36,18 +39,21 @@ import { VoiceNotice } from "./VoiceNotice";
 const PROMPT_WIDTH = `min(${CARD_SIZES.regular}px, calc(100vw - var(--occupied-rail-left, 0px) - var(--occupied-rail-right, 0px) - 2 * var(--space-4)))`;
 
 /**
- * The input's hint - the gated line, the first-run hint, or the standard
- * one - fullest form first, then the shorter form a narrow input shows.
+ * The input's hint - transcription status, the gated line, the return key,
+ * the first-run hint, or the standard one - fullest form first, then the
+ * shorter form a narrow input shows.
  */
 export function inputPlaceholder(input: {
   firstRun: FirstRunView | null;
   voiceSupported: boolean | null;
   dictation?: DictationSettings | null;
   transcribing: boolean;
+  returnToMessageKey?: string;
 }): readonly string[] {
   if (input.transcribing) return ["transcribing what you said", "transcribing"];
   if (input.firstRun?.gateOpen)
     return [input.firstRun.freshCheck ? GATED_CHECK_PLACEHOLDER : GATED_PLACEHOLDER];
+  if (input.returnToMessageKey) return [`press ${input.returnToMessageKey} to write a message`];
   const noVoice =
     input.voiceSupported === false ||
     input.dictation === null ||
@@ -95,6 +101,9 @@ const PromptRoom = memo(function PromptRoom() {
 
 /** Prompt, window-centred, painted above the stage so it stays clickable. */
 export const HomePrompt = memo(function HomePrompt() {
+  const [focused, setFocused] = useState(false);
+  const { bindings } = useInstalledKeymap();
+  const messageKeys = useCommandKeys("focus.main-message");
   const inputText = useShellStore((s) => s.inputText);
   const setInputText = useShellStore((s) => s.setInputText);
   const setInputCaret = useShellStore((s) => s.setInputCaret);
@@ -264,7 +273,15 @@ export const HomePrompt = memo(function HomePrompt() {
           // Only the gate dims the pill. Before the first read the input
           // takes nothing at full strength, so a ready launch never fades in.
           style={held && !gateOpen ? { opacity: 1 } : undefined}
-          keybindHint={inputPlaceholder({ firstRun, voiceSupported, dictation, transcribing })}
+          onFocusChange={setFocused}
+          keybindHint={inputPlaceholder({
+            firstRun,
+            voiceSupported,
+            dictation,
+            transcribing,
+            returnToMessageKey:
+              !focused && !held && hasNotTypingKeys(bindings) ? messageKeys.keys : undefined,
+          })}
           attachments={attachments}
           onAttach={attachImages}
           onPictureTooBig={() => showComposerNotice("picture-too-big")}

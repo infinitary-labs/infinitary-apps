@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   followWindowCommands,
   InstalledKeymap,
+  offerWindowKey,
   recordWindowKeys,
   SECOND_KEY_WAIT_MS,
   shellCommands,
@@ -25,7 +26,10 @@ import {
 function windowWithKeys() {
   const sent: unknown[][] = [];
   let destroyed = false;
+  const mainFrame = { name: "" };
   const contents = Object.assign(new EventEmitter(), {
+    mainFrame,
+    focusedFrame: mainFrame,
     isDestroyed: () => destroyed,
     send: (...message: unknown[]) => sent.push(message),
   });
@@ -64,6 +68,9 @@ function windowWithKeys() {
     type,
     sent,
     blur: () => events.emit("blur"),
+    focusFrame: (name: string) => {
+      contents.focusedFrame = { name };
+    },
     close: () => (destroyed = true),
   };
 }
@@ -349,5 +356,104 @@ describe("InstalledKeymap", () => {
     kept.replace({ version: 1, keys: { "settings.open": [] } });
     expect(keymap.current().version).toBe(2);
     expect(keymap.bindings()["settings.open"]).toEqual([]);
+  });
+});
+
+// Accepted layers plan, piece 1: the main process witnesses a key, never a command supplied by a document.
+describe("not-typing offers", () => {
+  const press = {
+    key: "s",
+    code: "KeyS",
+    meta: false,
+    ctrl: false,
+    alt: false,
+    shift: false,
+    composing: false,
+    repeat: false,
+  };
+  function fixture() {
+    const window = windowWithKeys();
+    const recording = recordingHandlers();
+    let bindings = resolveBindings({
+      version: 1,
+      keys: { "settings.open": [{ key: press.key, when: "not-typing" }] },
+    });
+    followWindowCommands(window.win, recording.handlers, {
+      bindings: () => bindings,
+      panels: () => [],
+    });
+    return {
+      ...window,
+      ...recording,
+      install: () => {
+        bindings = resolveBindings(DEFAULT_SAVED_KEYMAP);
+      },
+    };
+  }
+
+  it("leaves the key to its document, then resolves a matching offer only once", () => {
+    const { contents, type, ran } = fixture();
+    offerWindowKey(contents, press);
+    expect(ran).toEqual([]);
+    expect(type({ key: press.key, code: press.code })).toBe(false);
+    expect(ran).toEqual([]);
+    offerWindowKey(contents, press);
+    offerWindowKey(contents, press);
+    expect(ran).toEqual(["settings.open"]);
+  });
+
+  it("refuses another key, another press, composition, repeats and a replaced map", () => {
+    const { contents, type, ran, install } = fixture();
+    type({ key: press.key, code: press.code });
+    offerWindowKey(contents, { ...press, ctrl: true });
+    offerWindowKey(contents, press);
+    type({ key: press.key, code: press.code });
+    type({ key: "a", code: "KeyA" });
+    offerWindowKey(contents, press);
+    type({ key: press.key, code: press.code, isComposing: true });
+    offerWindowKey(contents, press);
+    type({ key: press.key, code: press.code, isAutoRepeat: true });
+    offerWindowKey(contents, { ...press, repeat: true });
+    type({ key: press.key, code: press.code });
+    install();
+    offerWindowKey(contents, press);
+    expect(ran).toEqual([]);
+  });
+
+  it("binds a frame offer to native focus at the press and at the offer, never another document", () => {
+    const { contents, type, focusFrame, ran } = fixture();
+    type({ key: press.key, code: press.code });
+    focusFrame("project-note");
+    offerWindowKey(contents, press, "project-note");
+    type({ key: press.key, code: press.code });
+    offerWindowKey(contents, press);
+    type({ key: press.key, code: press.code });
+    offerWindowKey(contents, press, "another-note");
+    expect(ran).toEqual([]);
+    type({ key: press.key, code: press.code });
+    offerWindowKey(contents, press, "project-note");
+    expect(ran).toEqual(["settings.open"]);
+  });
+
+  it("forgets witnessed keys on blur, navigation and recording, and leaves Legacy unchanged", () => {
+    const { contents, type, blur, ran } = fixture();
+    type({ key: press.key, code: press.code });
+    blur();
+    offerWindowKey(contents, press);
+    type({ key: press.key, code: press.code });
+    (contents as unknown as EventEmitter).emit("did-start-navigation", { isMainFrame: true });
+    offerWindowKey(contents, press);
+    type({ key: press.key, code: press.code });
+    recordWindowKeys(contents, true);
+    offerWindowKey(contents, press);
+    expect(type({ key: press.key, code: press.code })).toBe(true);
+    recordWindowKeys(contents, false);
+    offerWindowKey(contents, press);
+    expect(ran).toEqual([]);
+    const legacy = windowWithKeys();
+    followWindowCommands(legacy.win, recordingHandlers().handlers);
+    expect(legacy.type({ key: press.key, code: press.code })).toBe(false);
+    offerWindowKey(legacy.contents, press);
+    expect(legacy.sent).toEqual([]);
   });
 });

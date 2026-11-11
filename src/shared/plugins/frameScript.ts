@@ -1,5 +1,6 @@
 import { CARD_QUESTION_LABEL_MAX, CARD_QUESTIONS_MAX_BYTES, CARD_WRITTEN_MAX } from "../cards";
 import { OWN_SPELLING, SPELLINGS } from "../codeNames";
+import { TYPING_CONTROL_SELECTOR } from "../keyboardOffer";
 import { KNOWLEDGE_ID_IN_TEXT } from "../knowledge";
 import { TASK_KEY_IN_TEXT } from "../taskKeys";
 import {
@@ -1802,6 +1803,17 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
     if (target && target.tagName === "INPUT" && target.type === "search" && target.value !== "") return;
     post({ type: "escape" });
   });
+  // Observe at capture, offer after every handler: a body's own used key stays its own.
+  window.addEventListener("keydown", function (event) {
+    var typing = event.composedPath().some(function (node) {
+      return node && node.nodeType === 1 && (node.isContentEditable || node.matches(${JSON.stringify(TYPING_CONTROL_SELECTOR)}));
+    });
+    setTimeout(function () {
+      if (!event.isTrusted || event.defaultPrevented || event.isComposing || event.keyCode === 229 || !document.hasFocus()) return;
+      if (typing) return;
+      post({ type: "key", press: { key: event.key, code: event.code, meta: event.metaKey, ctrl: event.ctrlKey, alt: event.altKey, shift: event.shiftKey, composing: false, repeat: event.repeat } });
+    });
+  }, true);
   document.addEventListener("scroll", leaveKey, true);
   new ResizeObserver(resize).observe(document.documentElement);
   window.addEventListener("load", resize);
@@ -1839,4 +1851,4 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-teFqJgn7by1TXmAGO+4kEjLH+uofnOzkyycSbE7Prbg=";
+export const FRAME_BRIDGE_SHA256 = "sha256-9SkZFDKX3DiJiUFcpAfdCnNObg8VVTGf6sGJSYEnDVU=";

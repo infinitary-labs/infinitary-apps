@@ -4,6 +4,7 @@ import {
   DEFAULT_BINDINGS,
   type DesktopKeyAction,
   desktopKeyAction,
+  hasNotTypingKeys,
   isWindowCommand,
   type KeyPress,
   type MainCommandId,
@@ -153,6 +154,14 @@ const MODIFIER_KEYS = new Set([
   "OS",
 ]);
 
+/** Each window's native-press witness, reached only through its trusted page. */
+const offers = new WeakMap<WebContents, (press: KeyPress, frame?: string) => void>();
+
+/** The trusted shell forwards only its own unused key or one from the focused frame. */
+export function offerWindowKey(contents: WebContents, press: KeyPress, frame?: string): void {
+  offers.get(contents)?.(press, frame);
+}
+
 /** Each window's recording switch, by its page, for the page's own request. */
 const recorders = new WeakMap<WebContents, (recording: boolean) => void>();
 
@@ -206,21 +215,33 @@ export function followWindowCommands(
 ): void {
   const contents = win.webContents;
   let recording = false;
-  let waiting: { first: KeyPress; timer: ReturnType<typeof setTimeout> } | null = null;
+  let waiting: {
+    first: KeyPress;
+    notTyping: boolean;
+    timer: ReturnType<typeof setTimeout>;
+  } | null = null;
   const stopWaiting = () => {
     if (waiting) clearTimeout(waiting.timer);
     waiting = null;
   };
+  let witnessed: {
+    press: KeyPress;
+    bindings: Bindings;
+    frame: WebContents["focusedFrame"];
+  } | null = null;
   const stop = () => {
+    witnessed = null;
     recording = false;
     stopWaiting();
   };
   recorders.set(contents, (on) => {
+    witnessed = null;
     stopWaiting();
     recording = on;
   });
   win.on("blur", stop);
   contents.on("did-start-navigation", (details) => {
+    witnessed = null;
     if (details.isMainFrame) stop();
   });
   const take = (event: { preventDefault: () => void }) => {
@@ -228,20 +249,20 @@ export function followWindowCommands(
     if (!contents.isDestroyed()) contents.send("inf:keyboard:taken", {});
   };
 
-  contents.on("before-input-event", (event, input) => {
-    if (input.type !== "keyDown") return;
-    const press = pressOfInput(input);
-    if (recording) {
-      if (press.composing || MODIFIER_KEYS.has(press.key)) return;
-      event.preventDefault();
-      if (press.repeat || contents.isDestroyed()) return;
-      const { key, code, meta, ctrl, alt, shift } = press;
-      contents.send("inf:keyboard:recorded", { key, code, meta, ctrl, alt, shift });
-      return;
-    }
-    const bindings = keys.bindings();
+  const resolve = (event: { preventDefault: () => void }, press: KeyPress, notTyping: boolean) => {
+    const installed = keys.bindings();
+    const bindings: Bindings = {
+      ...installed,
+      ...Object.fromEntries(
+        Object.entries(installed).map(([id, own]) => [
+          id,
+          (own ?? []).filter((binding) => (binding.when === "not-typing") === notTyping),
+        ]),
+      ),
+    };
+    const context = { notTyping };
     const panels = keys.panels();
-    if (waiting) {
+    if (waiting && waiting.notTyping === notTyping) {
       const { first } = waiting;
       if (MODIFIER_KEYS.has(press.key)) return;
       if (press.repeat && press.key === first.key) {
@@ -254,43 +275,87 @@ export function followWindowCommands(
         take(event);
         return;
       }
-      const id = secondKeyCommand(first, press, {}, bindings);
+      const id = secondKeyCommand(first, press, context, bindings);
       if (id !== undefined && isWindowCommand(id)) {
         take(event);
         handlers[id]();
         return;
       }
-      const panel = secondKeyPanelCommand(first, press, bindings, panels);
+      const panel = secondKeyPanelCommand(first, press, bindings, panels, context);
       if (panel !== undefined) {
         take(event);
         onPanelCommand(panel);
         return;
       }
-      // Not the second key of any: it is ordinary input again.
     }
-    const id = boundCommand(press, {}, bindings);
+    const id = boundCommand(press, context, bindings);
     if (id !== undefined && isWindowCommand(id)) {
       take(event);
       if (runsOnPress(id, press)) handlers[id]();
       return;
     }
-    // A panel's command never repeats, and a held key of one reaches nothing.
-    const panel = panelCommandFor({ ...press, repeat: false }, bindings, panels);
+    const panel = panelCommandFor({ ...press, repeat: false }, bindings, panels, context);
     if (panel !== undefined) {
       take(event);
       if (!press.repeat) onPanelCommand(panel);
       return;
     }
+    if (!press.repeat && startsTwoKeys(press, context, bindings, panels)) {
+      take(event);
+      waiting = { first: press, notTyping, timer: setTimeout(stopWaiting, SECOND_KEY_WAIT_MS) };
+    }
+  };
+  offers.set(contents, (press, frame) => {
+    const seen = witnessed;
+    witnessed = null;
+    if (recording || !seen || seen.bindings !== keys.bindings() || press.composing) return;
+    const focused = contents.focusedFrame;
+    if (!focused || focused !== seen.frame) return;
+    if (frame ? focused.name !== frame : focused !== contents.mainFrame) return;
+    if (
+      Object.keys(seen.press).some(
+        (key) => seen.press[key as keyof KeyPress] !== press[key as keyof KeyPress],
+      )
+    )
+      return;
+    // Resolve only installed not-typing bindings, once, against the original native press.
+    resolve({ preventDefault: () => {} }, seen.press, true);
+  });
+
+  contents.on("before-input-event", (event, input) => {
+    if (input.type !== "keyDown") return;
+    witnessed = null;
+    const press = pressOfInput(input);
+    if (recording) {
+      if (press.composing || MODIFIER_KEYS.has(press.key)) return;
+      event.preventDefault();
+      if (press.repeat || contents.isDestroyed()) return;
+      const { key, code, meta, ctrl, alt, shift } = press;
+      contents.send("inf:keyboard:recorded", { key, code, meta, ctrl, alt, shift });
+      return;
+    }
+    const bindings = keys.bindings();
+    if (!press.composing && !MODIFIER_KEYS.has(press.key) && hasNotTypingKeys(bindings))
+      witnessed = { press, bindings, frame: contents.focusedFrame };
+    // A not-typing pair must also hear its second key from the focused document.
+    if (waiting?.notTyping && (press.composing || press.key === "Escape")) stopWaiting();
     const action = desktopKeyAction(press, desktop.system);
     if (action !== undefined) {
+      witnessed = null;
       take(event);
       if (!press.repeat) desktop.run(action);
       return;
     }
-    if (!press.repeat && startsTwoKeys(press, {}, bindings, panels)) {
-      take(event);
-      waiting = { first: press, timer: setTimeout(stopWaiting, SECOND_KEY_WAIT_MS) };
-    }
+    resolve(
+      {
+        preventDefault: () => {
+          witnessed = null;
+          event.preventDefault();
+        },
+      },
+      press,
+      false,
+    );
   });
 }
 

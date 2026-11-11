@@ -28,6 +28,7 @@ import {
   drawCrewmate,
   drawDependencyLink,
   drawPacket,
+  drawStarJoin,
   type Rgb,
 } from "./crewmate";
 import { type FocusLightInput, type FocusLightState, lightFrame } from "./focusLight";
@@ -183,7 +184,8 @@ function paintFrame(
       (cm) =>
         cm.phase === "orbiting" &&
         (cm.computerId ?? HOME_COMPUTER) === HOME_COMPUTER &&
-        !seated.has(cm.id),
+        !seated.has(cm.id) &&
+        (cm.star ?? 0) < 0.5,
     ).length;
     drawWarpBackdrop(
       far.ctx,
@@ -198,6 +200,12 @@ function paintFrame(
   // A constellation lies flat at its mark's depth, under the crew it seats.
   for (const program of frame.programs)
     drawConstellation(program.depth >= 0.5 ? near.ctx : far.ctx, program, cx, cy, colors);
+  // The hairline joining the fixed stars lies under them (INF-3634).
+  for (const join of frame.starJoins ?? []) {
+    const from = byId.get(join.fromId);
+    const to = byId.get(join.toId);
+    if (from && to) drawStarJoin(near.ctx, from, to, cx, cy, colors);
+  }
   for (const link of frame.links) {
     const from = byId.get(link.fromId);
     const to = byId.get(link.toId);
@@ -902,7 +910,8 @@ export function CrewOrbit({
       for (const c of frame.crew) {
         if (c.phase === "leaving" || c.plane === undefined) continue;
         planeCounts[c.plane] = (planeCounts[c.plane] ?? 0) + 1;
-        if (c.phase === "orbiting") planeCrew[c.plane]?.push(c.id);
+        // A fixed star keeps its plane but hangs off it (INF-3634).
+        if (c.phase === "orbiting" && (c.star ?? 0) < 0.5) planeCrew[c.plane]?.push(c.id);
       }
       const counts = planeCounts.join(",");
       if (near.canvas.dataset.planeCounts !== counts) near.canvas.dataset.planeCounts = counts;
@@ -929,6 +938,13 @@ export function CrewOrbit({
         .map((link) => `${link.kind}:${link.fromId}>${link.toId}`)
         .join(" ");
       if (near.canvas.dataset.crewArrows !== arrows) near.canvas.dataset.crewArrows = arrows;
+      // The fixed stars that have reached their places (INF-3634), so a journey reads the pin off the stage.
+      const stars = frame.crew
+        .filter((c) => (c.star ?? 0) > 0.99)
+        .map((c) => c.id)
+        .sort()
+        .join(" ");
+      if (near.canvas.dataset.crewStars !== stars) near.canvas.dataset.crewStars = stars;
       if (rootRef.current?.style.getPropertyValue("--crew-plane-blend") !== blend) {
         rootRef.current?.style.setProperty("--crew-plane-blend", blend);
       }

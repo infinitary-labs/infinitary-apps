@@ -393,7 +393,11 @@ Crew sit on the desktop's growing two-orbit ring (`docs/crew-orbits.md`): the fi
 `PhoneSceneCompanions` reads published wait/review facts and reproduces the desktop's eligibility, three-companion limit, perpendicular 64-scene-pixel circles, 24°/second travel, the circle that shrinks near the scene's edge (`PhoneSceneCompanions.radius`, INF-1532) and bounds fallback at the phone/computer scale.
 Returning crew open a seat among visible survivors on the same logical orbit; a fallback crew member takes part in main-orbit spacing.
 A re-spaced or resized orbit glides its crew around it, and neither orbits nor another computer's center are outlined.
+A crewmate the Tasks list shows under Pinned, a program's parts on their branches left out, hangs as a fixed star (INF-3634, `docs/crew-orbits.md`, "Fixed stars"): `PhoneFixedStars` places the desktop's constellation from the desktop's own numbers, each computer's group over its own orbits at its share, and the group's area grows to hold it.
+A star gives up its drawing seat but keeps its orbit, eases there and back at the desktop's rates, neither circles nor is circled, rides no warp, and wears the desktop's glint, joined to its corner's neighbours by a hairline under the crew; a settled frame holds it still.
+The crew summary shows a filled pin beside a pinned task's key.
 `PhoneOrbitSeatsTests` replays the desktop's own seat choices, recorded by `scripts/generate-phone-scene.ts`.
+`PhoneFixedStarsTests` replays the desktop's own star places and settled stages, recorded the same way.
 `PhoneCardDepartureTests` replays the desktop stack's own choice of the card that comes up after a close, recorded the same way.
 Its native Browse crew command, Shift-Command-C, enters app-owned browsing with an accent viewport outline; arrow keys pan it, Tab selects a real crewmate and Space opens that crewmate's preview.
 While browsing, a scene-owned responder holds first-responder status and offers those unmodified keys as priority key commands, because SwiftUI shortcuts for them lose to the system's focus and text handling.

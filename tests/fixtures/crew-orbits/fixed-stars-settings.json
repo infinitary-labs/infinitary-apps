@@ -1,0 +1,28 @@
+{
+  "provenance": "Captain clicked Approve and build on INF-3634 (Try the fixed stars with a new look and new places) and submitted these settings and answers",
+  "captainWords": [
+    "i'd like some prototypes of how we can distinguish the \"pinned\" tasks' crewmates in the center animation. be creative and bold.",
+    "i like the fixed stars direction, but the pins don't look very good and the placement location feels not very artistic. can we tweak?"
+  ],
+  "answers": {
+    "place": "sky",
+    "star": "glint",
+    "who": "listed",
+    "summary": "glyph"
+  },
+  "pinned_crew_look": {
+    "version": 2,
+    "cue": "pinned",
+    "direction": "fixedStars",
+    "units": { "length": "px on the home stage", "rays": "glyph heights", "light": "0..1" },
+    "product": {
+      "color": "own",
+      "rays": 1.4,
+      "twinkle": 0.5,
+      "joined": true,
+      "clearOfOrbitPx": 40,
+      "easeIn": "--dur-med",
+      "reducedMotion": "one settled frame, the mark steady"
+    }
+  }
+}

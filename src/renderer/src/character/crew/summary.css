@@ -122,6 +122,13 @@
 .fm-crew-summary [data-task-mark] {
   align-self: center;
 }
+/* A pinned task's filled pin, beside its key (INF-3634). */
+.fm-crew-summary .pin {
+  flex: none;
+  align-self: center;
+  display: inline-flex;
+  color: var(--fg-3);
+}
 .fm-crew-summary :is(.note, .current) {
   min-width: 0;
   overflow: hidden;

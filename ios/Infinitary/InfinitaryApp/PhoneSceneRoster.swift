@@ -44,13 +44,21 @@ struct PhoneSceneRoster {
         let programs: [Program]
         let ordinary: [PhoneTask]
         let programParts: Set<String>
+        /// Its crew the Tasks list shows under Pinned, in that list's order, a program's parts on their branches left out:
+        /// each hangs as a fixed star (INF-3634), giving up its seat but keeping its orbit.
+        let pinned: [String]
+        /// The constellation its stars hang in, in desktop scene pixels from its center, and how far it reaches on screen.
+        let sky: PhoneFixedStars.Places
+        let skyReach: Double
         /// Where each crewmate and program ring sits on this computer's orbits.
         let book: SeatBook
         /// The share of home's size this computer's group draws at, as on the desktop.
         let share: Double
         let radius: Double
         var x: Double = 0
-        var width: Double { radius * 2 + 80 }
+        /// Its group's reach from its center: its orbits, and its stars when it has any, which hang past them.
+        var extent: Double { max(radius, skyReach) }
+        var width: Double { extent * 2 + 80 }
     }
     struct Program: Identifiable {
         let task: PhoneTask
@@ -119,6 +127,8 @@ struct PhoneSceneRoster {
         order = Dictionary(uniqueKeysWithValues: tasks.enumerated().map { ($0.element.id, $0.offset) })
         let programs = all.filter { $0.program == true && ($0.status == "active" || $0.status == "open") }
         let grouped = Dictionary(grouping: tasks, by: Self.computerID)
+        // The fixed stars, as the desktop's pinnedCrewOf reads them: the Tasks list's own Pinned rows, in its order.
+        let pinnedOrder = Self.pinnedOrder(board)
         let ids = ["home"] + Set(grouped.keys).union(retainedPrograms.values.flatMap { $0 }).filter { $0 != "home" }.sorted()
         computers = ids.map { id in
             let members = grouped[id] ?? [], observed = presence.first { $0.id == id }
@@ -133,8 +143,13 @@ struct PhoneSceneRoster {
             let programReach = roots.flatMap(\.branches).map(\.distance).max() ?? 0
             // The area follows the first orbit's current size.
             let radius = book.isEmpty ? 140 : Self.planeRadius(0, counts: book.counts) * share + programReach
+            let parts = Set(roots.flatMap { $0.parts.map(\.id) }), ids = Set(members.map(\.id))
+            let pinned = pinnedOrder.filter { ids.contains($0) && !parts.contains($0) }
+            let sky = PhoneFixedStars.places(pinned.count, orbits: PhoneFixedStars.orbits(counts: book.counts))
+            let skyReach: Double = sky.points.map { Double(max(abs($0.x), abs($0.y))) * Self.ringScale * share }.max() ?? 0
             return Computer(id: id, name: id == "home" ? homeName : observed?.name ?? all.first(where: { Self.computerID($0) == id })?.place?.name ?? "Computer",
-                            reachable: inReach && (id == "home" || observed?.inReach == true), tasks: members, programs: roots, ordinary: ordinary, programParts: Set(roots.flatMap { $0.parts.map(\.id) }), book: book, share: share, radius: radius)
+                            reachable: inReach && (id == "home" || observed?.inReach == true), tasks: members, programs: roots, ordinary: ordinary, programParts: parts,
+                            pinned: pinned, sky: sky, skyReach: skyReach, book: book, share: share, radius: radius)
         }
         var left = -computers[0].width / 2, right = computers[0].width / 2
         for i in computers.indices where i > 0 {
@@ -144,7 +159,12 @@ struct PhoneSceneRoster {
         }
         width = right - left; homeX = -left
         for i in computers.indices { computers[i].x -= left }
-        height = max(320, (computers.map(\.radius).max() ?? 140) * 2 + 64)
+        height = max(320, (computers.map(\.extent).max() ?? 140) * 2 + 64)
+    }
+    /// Every task the Tasks list shows under Pinned, in its order: each pinned task, oldest pin first, with its parts under it.
+    static func pinnedOrder(_ board: PhoneBoard?) -> [String] {
+        guard board?.tasks.contains(where: { $0.pinnedAt != nil }) == true else { return [] }
+        return PhoneTaskList(board: board, cards: []).parts.first { $0.section == .pinned }?.rows.map(\.task.id) ?? []
     }
     static func computerID(_ task: PhoneTask) -> String {
         if let id = task.executionDeviceId { return id }
@@ -236,6 +256,8 @@ final class PhoneSceneMotion: @unchecked Sendable {
         var captain = 0.0, captainSince = 0.0
         /// A warp's change of size and its light trail (CharacterWarp.ride), on the drawn frame only.
         var scale = 1.0, streak: [CGPoint] = []
+        /// A fixed star's eased blend, 0 when it is not pinned, and its glint's twinkle, 0 on a settled frame (INF-3634).
+        var star = 0.0, twinkle = 0.0
         /// Its glyph before the depth cue, as the desktop draws it: home's crowded planes, a smaller one in another
         /// computer's cluster, and smaller again once that cluster is crowded (orbit.ts, computers.ts).
         var px = CharacterCatalog.shared.ring["glyphPx"]!
@@ -251,7 +273,11 @@ final class PhoneSceneMotion: @unchecked Sendable {
         let task: PhoneTask; let computerID: String; let center: CGPoint; let point: CGPoint; let parts: [String]; let parents: [String: [String]]
         var id: String { computerID + ":" + task.id }
     }
-    struct Frame { let glyphs: [Glyph]; let marks: [Mark]; let packets: [(CGPoint, Double)]; let links: [(CGPoint, CGPoint, Bool)] }
+    struct Frame {
+        let glyphs: [Glyph]; let marks: [Mark]; let packets: [(CGPoint, Double)]; let links: [(CGPoint, CGPoint, Bool)]
+        /// The hairline joining neighbouring fixed stars within one corner of the sky, by task id, drawn under the crew.
+        var starJoins: [(from: String, to: String)] = []
+    }
     private struct Member {
         var glyph: Glyph
         var arrived: Double
@@ -263,6 +289,11 @@ final class PhoneSceneMotion: @unchecked Sendable {
         var companionBase: (blocker: String, origin: CGPoint, slot: CGPoint)?
         var dropped = false
         var flickerAt = -Double.infinity, boost = 0.0, failedAt = -Double.infinity
+        /// A fixed star's blend and its place in the sky from its computer's center, easing there (INF-3634).
+        var star = 0.0
+        var starPlace: CGPoint?
+        /// Where it was drawn last, star and circle included: a departure leaves from there.
+        var drawn: CGPoint?
     }
     private var members: [String: Member] = [:]
     private var generation: Int?
@@ -344,6 +375,8 @@ final class PhoneSceneMotion: @unchecked Sendable {
         let parts = Set(roster.computers.flatMap { $0.programParts })
         let cues = PhoneSceneCompanions.cues(roster.tasks, parts: parts)
         var circles: [String: (cue: PhoneSceneCompanions.Cue, share: Double, time: Double, reach: CGSize)] = [:]
+        // Each computer hangs its own constellation over its own orbits (INF-3634): places from its center, and the joins.
+        var starPlaces: [String: CGPoint] = [:], starJoins: [(from: String, to: String)] = []
         // Re-spacing and a resized orbit glide each crewmate around its orbit, never straight across it.
         let eased = initial || settled ? 1 : min(1, dt * 6)
         var markPlaces: [String: (orbit: PhoneSceneRoster.Orbit, center: CGPoint)] = [:]
@@ -365,12 +398,14 @@ final class PhoneSceneMotion: @unchecked Sendable {
             }
             var book = drawingBooks[computer.id] ?? computer.book
             book.synchronize(computer.book)
-            let ids = Set(computer.tasks.map(\.id))
+            let ids = Set(computer.tasks.map(\.id)), stars = Set(computer.pinned)
+            // A fixed star neither circles nor is circled: a wait on one, or by one, keeps its slot and its arrow.
             let eligible = cues.filter { id, cue in
-                cue.circles && ids.contains(id) && ids.contains(cue.blocker)
+                cue.circles && ids.contains(id) && ids.contains(cue.blocker) && !stars.contains(id) && !stars.contains(cue.blocker)
                     && (initial || settled || (members[id]?.glyph.unfold == 1 && members[cue.blocker]?.glyph.unfold == 1))
             }
-            var excluded = computer.programParts.union(eligible.keys)
+            // A fixed star gives up its seat, so the crew left on its orbit close the gap; it keeps its orbit membership.
+            var excluded = computer.programParts.union(eligible.keys).union(stars)
             // The native scene can be smaller than the desktop square, so a circle's reach also
             // respects its actual canvas. Near that edge the circle shrinks (INF-1532); only a
             // blocker past the reach leaves its group on the main orbit for this frame. Each pass
@@ -396,6 +431,14 @@ final class PhoneSceneMotion: @unchecked Sendable {
                 excluded.subtract(rejected)
             }
             drawingBooks[computer.id] = book
+            let sky = computer.sky
+            let scale = PhoneSceneRoster.ringScale * computer.share
+            for (index, id) in computer.pinned.enumerated() {
+                starPlaces[id] = CGPoint(x: sky.points[index].x * scale, y: sky.points[index].y * scale)
+            }
+            if CharacterCatalog.shared.fixedStars.joined {
+                starJoins += sky.joins.map { (from: computer.pinned[$0.0], to: computer.pinned[$0.1]) }
+            }
             for (id, cue) in eligible where excluded.contains(id) { circles[id] = (cue, computer.share, localTime, circleReach) }
             var positions: [String: (CGPoint, Double, PhoneSceneRoster.Orbit?)] = [:]
             for (id, seat) in book.crew {
@@ -485,7 +528,7 @@ final class PhoneSceneMotion: @unchecked Sendable {
         for id in Array(members.keys) where target[id] == nil {
             guard var member = members[id] else { continue }
             if settled || initial { members.removeValue(forKey: id); continue }
-            if member.left == nil { member.left = now; member.leaveFrom = member.glyph.point; member.dropped = roster.allTasks.first { $0.id == id }?.status == "dropped" }
+            if member.left == nil { member.left = now; member.leaveFrom = member.drawn ?? member.glyph.point; member.dropped = roster.allTasks.first { $0.id == id }?.status == "dropped" }
             let duration = member.dropped ? orbit["awayMs"]! / 1000 : Self.duration(orbit["homeMs"]!, glyph: member.glyph, home: firstmate, from: member.leaveFrom)
             let progress = clamp01((now - member.left!) / duration)
             if progress >= 1 { members.removeValue(forKey: id); continue }
@@ -525,7 +568,10 @@ final class PhoneSceneMotion: @unchecked Sendable {
             members[id] = member
         }
         if settled { discardLocked() }
-        var glyphs = members.values.map(\.glyph)
+        // A new scene hangs its stars at once, as it seats its crew; a settled frame holds them steady.
+        let shown = applyStars(starPlaces, now: now, snap: settled || initial, settled: settled, dt: dt)
+        for id in Array(members.keys) { members[id]?.drawn = shown[id]?.point }
+        var glyphs = members.values.map { shown[$0.glyph.task.id] ?? $0.glyph }
         riding = 0
         if let warp { riding = Self.ride(&glyphs, warp: warp, roster: roster, home: firstmate, offsets: members.mapValues(\.companion)) }
         glyphs.sort { $0.depth < $1.depth }
@@ -556,7 +602,9 @@ final class PhoneSceneMotion: @unchecked Sendable {
             let progress = clamp01((now - packet.started) / Self.duration(orbit["packetMs"]!, glyph: glyph, home: firstmate))
             return (Self.travel(from: packet.report ? glyph.point : firstmate, to: packet.report ? firstmate : glyph.point, at: easeInOut(progress)), sin(progress * .pi))
         }
-        latest = Frame(glyphs: glyphs, marks: marks, packets: flying, links: links)
+        let lit = Set(glyphs.filter { $0.star > 0.01 }.map(\.task.id))
+        latest = Frame(glyphs: glyphs, marks: marks, packets: flying, links: links,
+                       starJoins: starJoins.filter { lit.contains($0.from) && lit.contains($0.to) })
         let drawnAt = ProcessInfo.processInfo.systemUptime
         drawn.append((drawnAt, latest))
         if let stale = drawn.firstIndex(where: { drawnAt - $0.at <= 0.5 }), stale > 0 { drawn.removeFirst(stale) }
@@ -569,7 +617,8 @@ final class PhoneSceneMotion: @unchecked Sendable {
         let shrink = 1 - (warp.variant == .tunnel ? 0.12 : warp.variant == .sphere ? 0.05 : 0) * warp.k
         let riders = glyphs.indices.filter { i in
             let g = glyphs[i]
-            return !g.unknown && !g.programPart && g.unfold >= 1 && g.alpha >= 1 && g.orbit != nil && PhoneSceneRoster.computerID(g.task) == "home"
+            // A fixed star holds its place through the warp.
+            return !g.unknown && !g.programPart && g.star < 0.5 && g.unfold >= 1 && g.alpha >= 1 && g.orbit != nil && PhoneSceneRoster.computerID(g.task) == "home"
         }.sorted { (roster.order[glyphs[$0].task.id] ?? .max, glyphs[$0].task.id) < (roster.order[glyphs[$1].task.id] ?? .max, glyphs[$1].task.id) }
         for (index, i) in riders.enumerated() {
             if var orbit = glyphs[i].orbit, offsets[glyphs[i].task.id] ?? .zero == .zero {
@@ -581,6 +630,43 @@ final class PhoneSceneMotion: @unchecked Sendable {
             CharacterWarp.ride(&glyphs[i], index: index, count: riders.count, around: home, w: warp, scale: PhoneSceneRoster.ringScale)
         }
         return riders.count
+    }
+    /// Ease each pinned crewmate to its place in the sky and back (INF-3634), as the desktop's applyStars: it rises once
+    /// it has arrived, a little nearer than the orbit's middle; one leaving keeps its glint fading where it hangs. Returns
+    /// every drawn glyph the stars move, keyed by task id; the members keep their orbit places, so a star returning to a
+    /// seat glides back from the orbit it never left.
+    private func applyStars(_ places: [String: CGPoint], now: Double, snap: Bool, settled: Bool, dt: Double) -> [String: Glyph] {
+        let tuning = CharacterCatalog.shared.fixedStars
+        let blend = snap ? 1 : min(dt * tuning.blendRate, 1), glide = snap ? 1 : min(dt * tuning.placeRate, 1)
+        var drawn: [String: Glyph] = [:]
+        for id in Array(members.keys) {
+            guard var member = members[id] else { continue }
+            let place = places[id]
+            if member.left == nil && !member.glyph.unknown {
+                let target = place != nil && member.glyph.unfold >= 1 ? 1.0 : 0.0
+                member.star += (target - member.star) * blend
+                if target == 0 && member.star < 0.001 { member.star = 0 }
+                if let place {
+                    if member.star < 0.02 || member.starPlace == nil { member.starPlace = place }
+                    else if let at = member.starPlace {
+                        member.starPlace = CGPoint(x: at.x + (place.x - at.x) * glide, y: at.y + (place.y - at.y) * glide)
+                    }
+                }
+                members[id] = member
+            }
+            guard member.star > 0, let at = member.starPlace else { continue }
+            let k = member.star * member.star * (3 - 2 * member.star)
+            var glyph = member.glyph
+            if member.left == nil {
+                let point = CGPoint(x: glyph.center.x + at.x, y: glyph.center.y + at.y)
+                glyph.point = CGPoint(x: glyph.point.x + (point.x - glyph.point.x) * k, y: glyph.point.y + (point.y - glyph.point.y) * k)
+                glyph.depth += (tuning.depth - glyph.depth) * k
+            }
+            glyph.star = k
+            glyph.twinkle = PhoneFixedStars.twinkle(seed: PhoneFixedStars.seed(id), now: now, settled: settled)
+            drawn[id] = glyph
+        }
+        return drawn
     }
     /// Ride the plane's turn, then close on the target by the nearest way round, its radius and plane with it.
     private static func glide(_ place: inout PhoneSceneRoster.Orbit, toward goal: PhoneSceneRoster.Orbit, _ eased: Double) {

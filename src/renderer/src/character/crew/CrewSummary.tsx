@@ -1,4 +1,6 @@
+import { PINNED_MARK_LABEL } from "@shared/taskPin";
 import { taskStatusLabel } from "@shared/taskPresentation";
+import { PinGlyph } from "../../design/core/PinGlyph";
 import { TaskFactRows } from "../../design/core/TaskFacts";
 import { TaskStatusMark } from "../../design/core/TaskStatusMark";
 import { TaskKey } from "../../design/panel/TaskKey";
@@ -25,6 +27,8 @@ import "./summary.css";
  * the summary is open. Read-only: the record a click opens has the full
  * text of a note cut short here. The status, the task title and the project
  * wrap in full. How it comes and goes is its holder's (./summaryMotion.ts).
+ * A pinned task wears the Tasks row's filled pin beside its key (INF-3634):
+ * its crewmate is a fixed star on the stage, and this says why.
  */
 export function CrewSummary({ taskId, facts }: { taskId: string; facts: CrewFacts }) {
   const shown = useCrewRecord(taskId, facts);
@@ -42,6 +46,16 @@ export function CrewSummary({ taskId, facts }: { taskId: string; facts: CrewFact
         <span className="key" data-crew-summary-key="">
           {shown.key}
         </span>
+        {facts.task.pinnedAt !== undefined && (
+          <span
+            className="pin"
+            data-crew-summary-pinned=""
+            role="img"
+            aria-label={PINNED_MARK_LABEL}
+          >
+            <PinGlyph pinned size={12} />
+          </span>
+        )}
         <TaskStatusMark reading={shown.status} nativeTitle={false} />
         <span className="state" data-task-fact="status">
           {taskStatusLabel(shown.status)}

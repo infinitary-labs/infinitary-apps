@@ -10,6 +10,8 @@
 import { BOARD_RECENT_MS } from "./tasks";
 
 export const PIN_LABEL = "Pin";
+/** What the filled pin beside a pinned task's key in a crewmate's summary says to a screen reader (INF-3634). */
+export const PINNED_MARK_LABEL = "Pinned";
 export const UNPIN_LABEL = "Unpin";
 
 /** What a pin control is called: Pin INF-402 on a task that is not pinned, Unpin INF-402 on one that is. */

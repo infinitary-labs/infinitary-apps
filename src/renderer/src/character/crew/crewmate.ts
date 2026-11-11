@@ -31,11 +31,17 @@ import { BATCH_GATE } from "@shared/batchGate";
 // geodesic sphere (premium). A crewmate whose slot is unknown keeps the
 // tetrahedron, claiming no more than the app knows; it paints exactly as a
 // crewmate did before tiers existed.
+//
+// A fixed star (INF-3634, ./fixedStars.ts), a crewmate whose task is listed
+// under Pinned, wears a glint under its solid: a soft glow and four thin
+// tapered rays in its own light lifted toward white, the long ones up and
+// down, twinkling slowly on its own beat; reduced motion holds it steady.
 
 import type { Slot } from "@shared/modelSlots";
 import { noise1, TAU } from "../face";
 import { FLICKER_TUNING, filamentWaver } from "../flicker";
 import { CONSTELLATION } from "./constellation";
+import { FIXED_STARS } from "./fixedStars";
 import type { CrewmateFrame, DependencyLink, PacketFrame, ProgramFrame } from "./orbit";
 
 export type Rgb = [number, number, number];
@@ -328,6 +334,94 @@ function drawWaitRing(
   ctx.stroke();
 }
 
+/** A fixed star's light: the crewmate's own, lifted toward white. */
+function starColor(f: CrewmateFrame, colors: CrewColors): Rgb {
+  return mix(
+    crewmateLight(colors, f.work, f.wait, f.captain, f.job).color,
+    WHITE_HOT,
+    FIXED_STARS.lift,
+  );
+}
+
+/**
+ * The glint of a fixed star (INF-3634): a glow one glyph across and four
+ * tapered rays, the long ones up and down, breathing with its twinkle.
+ */
+function drawGlint(
+  ctx: CanvasRenderingContext2D,
+  f: CrewmateFrame,
+  px: number,
+  py: number,
+  colors: CrewColors,
+): void {
+  const on = (f.star ?? 0) * f.alpha * f.unfold;
+  if (on <= 0.01) return;
+  const tw = f.twinkle ?? 0;
+  const color = starColor(f, colors);
+  const a = on * (FIXED_STARS.light + FIXED_STARS.twinkleLight * tw) * colors.boost;
+  const s = f.size;
+  const long = FIXED_STARS.rays * s * (1 + FIXED_STARS.twinkleLength * tw);
+  ctx.globalAlpha = 1;
+  const glow = ctx.createRadialGradient(px, py, 0, px, py, s);
+  glow.addColorStop(0, rgba(color, FIXED_STARS.glow * a));
+  glow.addColorStop(1, rgba(color, 0));
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(px, py, s, 0, TAU);
+  ctx.fill();
+  const w = FIXED_STARS.rayWidth;
+  for (const [dx, dy, share] of [
+    [0, -1, 1],
+    [0, 1, 1],
+    [-1, 0, FIXED_STARS.sideRay],
+    [1, 0, FIXED_STARS.sideRay],
+  ] as const) {
+    const tx = px + dx * long * share;
+    const ty = py + dy * long * share;
+    const ray = ctx.createLinearGradient(px, py, tx, ty);
+    ray.addColorStop(0, rgba(color, a));
+    ray.addColorStop(0.4, rgba(color, a * 0.5));
+    ray.addColorStop(1, rgba(color, 0));
+    ctx.fillStyle = ray;
+    ctx.beginPath();
+    ctx.moveTo(px - dy * w, py + dx * w);
+    ctx.lineTo(tx, ty);
+    ctx.lineTo(px + dy * w, py - dx * w);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+/**
+ * The hairline between two fixed stars (INF-3634), in the later star's
+ * light, leaving a gap round each solid.
+ */
+export function drawStarJoin(
+  ctx: CanvasRenderingContext2D,
+  from: CrewmateFrame,
+  to: CrewmateFrame,
+  cx: number,
+  cy: number,
+  colors: CrewColors,
+): void {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy);
+  const gap = from.size * FIXED_STARS.joinGap;
+  if (length <= gap * 2) return;
+  const k = Math.min(from.star ?? 0, to.star ?? 0) * Math.min(from.alpha, to.alpha);
+  if (k <= 0.01) return;
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = rgba(starColor(to, colors), FIXED_STARS.joinLight * k * colors.boost);
+  ctx.beginPath();
+  ctx.moveTo(cx + from.x + (dx / length) * gap, cy + from.y + (dy / length) * gap);
+  ctx.lineTo(cx + to.x - (dx / length) * gap, cy + to.y - (dy / length) * gap);
+  ctx.stroke();
+  ctx.restore();
+}
+
 /** The light a spark or a packet carries: the Firstmate's accent lifted toward white. */
 function sparkColor(colors: CrewColors): Rgb {
   return mix(colors.accent, WHITE_HOT, 0.4);
@@ -408,6 +502,7 @@ export function drawCrewmate(
   }
   if (f.unfold <= 0.01) return;
 
+  drawGlint(ctx, f, px, py, colors);
   drawCaptainRing(ctx, f, px, py, colors);
   drawWaitRing(ctx, f, px, py, colors);
   const work = f.work;

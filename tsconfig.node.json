@@ -70,6 +70,7 @@
     "src/renderer/src/settings/reasoningWords.ts",
     "src/renderer/src/settings/levelDrops.ts",
     "src/renderer/src/character/crew/orbitalPlanes.ts",
+    "src/renderer/src/character/crew/fixedStars.ts",
     // The native scene generator consumes desktop geometry and motion without React.
     "src/renderer/src/character/targets.ts",
     "src/renderer/src/character/flicker.ts",

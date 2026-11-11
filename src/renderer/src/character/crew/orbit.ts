@@ -51,6 +51,7 @@ import { flickerEnvelope, flickerMerge } from "../flicker";
 import { type WarpFrame, warpCrewTravel } from "../warp";
 import { type CircleBase, companionTargets, seatParts, withReviewCues } from "./companions";
 import { type Program, runningParts } from "./constellation";
+import { FIXED_STARS, skyPlaces, twinkleOf } from "./fixedStars";
 import { CROWDED_PLANES, planePhase, planeRadius, projectPlane } from "./orbitalPlanes";
 import {
   type Arc,
@@ -245,6 +246,14 @@ export type CrewmateFrame = {
   /** The slot the crewmate is served on, which picks its solid (./crewmate.ts); absent when unknown. */
   tier?: Slot;
   seed: number;
+  /**
+   * 0..1 eased blend of a fixed star (./fixedStars.ts): its task is listed
+   * under Pinned, so it holds a place in the sky and wears the glint.
+   * Absent when it is not pinned.
+   */
+  star?: number;
+  /** The glint's twinkle, -0.5..0.5; absent on a settled frame, which holds it steady. */
+  twinkle?: number;
   /** Present only in a multi-computer scene. */
   computerId?: string;
   /** Last-known remote appearance is not evidence of current activity. */
@@ -313,7 +322,12 @@ export type OrbitFrame = {
   links: DependencyLink[];
   /** Every task with parts on this orbit, as a constellation. Empty when there are none. */
   programs: ProgramFrame[];
+  /** The hairline joining the fixed stars, neighbour to neighbour; absent when there are none. */
+  starJoins?: StarJoin[];
 };
+
+/** One stretch of the hairline between two fixed stars (./fixedStars.ts). */
+export type StarJoin = { fromId: string; toId: string };
 
 type Packet = { direction: PacketDirection; at: number };
 
@@ -398,6 +412,10 @@ type Crewmate = {
   companionBase?: CircleBase & { slot: { x: number; y: number; z: number } };
   /** Where it was last drawn, companion offset included; a send-off aims here. */
   drawn?: Point;
+  /** 0..1 eased blend of a fixed star, and its place in scene px, easing there; NaN before it has one. */
+  star: number;
+  starX: number;
+  starY: number;
 };
 
 /** The wait ring's travelling arc, radians a second: the fact strip's running mark, carried round. */
@@ -449,6 +467,9 @@ export class CrewOrbit {
   private offMain = new Set<string>();
   /** The crew the Tasks panel lists under Waiting on you. */
   private captainWaits = new Set<string>();
+  /** The crew listed under Pinned, oldest pin first, and the same ids as a set: fixed stars take no seat. */
+  private pinned: string[] = [];
+  private stars = new Set<string>();
   private seatsChanged = false;
   /** A circle that failed its bounds check cannot be retried by a re-spacing pass in this frame. */
   private frameFallback = new Set<string>();
@@ -684,6 +705,9 @@ export class CrewOrbit {
       planePosition: new Spring(chosenPlane, 0.8, 1),
       planeSlot: this.openPlaneSlot(chosenPlane),
       companion: { x: new Spring(0, 0.8, 1), y: new Spring(0, 0.8, 1), z: new Spring(0, 0.8, 1) },
+      star: 0,
+      starX: Number.NaN,
+      starY: Number.NaN,
       ...(tier ? { tier } : {}),
     };
     this.crew.set(id, c);
@@ -723,6 +747,28 @@ export class CrewOrbit {
     if (next.size === this.captainWaits.size && [...next].every((id) => this.captainWaits.has(id)))
       return;
     this.captainWaits = next;
+    this.bump();
+  }
+
+  /**
+   * The crew whose tasks the Tasks panel lists under Pinned, oldest pin
+   * first (INF-3634): each becomes a fixed star, giving up its seat on the
+   * orbit while it keeps its membership, and an unpinned one returns to the
+   * widest gap among the seated crew. Ids this orbit does not hold are kept
+   * for when they arrive.
+   */
+  setPinned(ids: Iterable<string>): void {
+    const next = [...new Set(ids)];
+    if (next.length === this.pinned.length && next.every((id, i) => this.pinned[i] === id)) return;
+    const keep = new Set(next);
+    for (const c of this.roster()) {
+      if (!this.stars.has(c.id) || keep.has(c.id)) continue;
+      c.planeSlot = this.openPlaneSlot(c.plane);
+      this.stars.delete(c.id);
+    }
+    this.pinned = next;
+    this.stars = keep;
+    this.respacePlanes();
     this.bump();
   }
 
@@ -891,7 +937,9 @@ export class CrewOrbit {
 
   /** Every occupant of a plane as a seat: its crew, and on the first orbit the marks too. */
   private planeSeats(plane: number, roster: Crewmate[]): PlaneSeat[] {
-    const crew = roster.filter((c) => c.plane === plane && !this.offMain.has(c.id)).map(crewSeat);
+    const crew = roster
+      .filter((c) => c.plane === plane && !this.offMain.has(c.id) && !this.stars.has(c.id))
+      .map(crewSeat);
     return plane === 0 ? [...crew, ...this.seatedRoots().map(markSeat)] : crew;
   }
 
@@ -1057,7 +1105,9 @@ export class CrewOrbit {
 
   private spacePlaneSlots(roster: Crewmate[]): void {
     for (let plane = 0; plane < CROWDED_PLANES.length; plane++) {
-      const crew = roster.filter((c) => c.plane === plane && !this.offMain.has(c.id)).map(crewSeat);
+      const crew = roster
+        .filter((c) => c.plane === plane && !this.offMain.has(c.id) && !this.stars.has(c.id))
+        .map(crewSeat);
       // The marks spread evenly among the crew, never bunched together.
       const marks = plane === 0 ? this.seatedRoots().map(markSeat) : [];
       const members = interleave(crew, marks);
@@ -1402,6 +1452,7 @@ export class CrewOrbit {
           );
     const seats = partSeats(layouts);
     const links = this.applyCompanions(crewFrames, scenes, now, settled, dt, seats);
+    const starJoins = this.applyStars(crewFrames, counts, now, settled, dt, seats);
     const { frames: programs, ended } = programFrames(
       layouts,
       crewFrames,
@@ -1420,7 +1471,9 @@ export class CrewOrbit {
     if (ended.length > 0) this.bump();
     // The warp's riders: every orbiting crewmate not drawn on a constellation.
     if (w) {
-      const riders = crewFrames.filter((f) => f.phase === "orbiting" && !seats.has(f.id));
+      const riders = crewFrames.filter(
+        (f) => f.phase === "orbiting" && !seats.has(f.id) && (f.star ?? 0) < 0.5,
+      );
       for (const [i, f] of riders.entries()) warpCrewmate(f, i, riders.length, w);
     }
     // Packets ride the line to where the crewmate is drawn, circle included.
@@ -1437,6 +1490,7 @@ export class CrewOrbit {
       packets,
       links,
       programs,
+      ...(starJoins.length > 0 ? { starJoins } : {}),
       formation: this.crowded ? "planes" : "ring",
       planeBlend: mix,
       travel,
@@ -1446,6 +1500,76 @@ export class CrewOrbit {
       working,
       idle,
     };
+  }
+
+  /**
+   * Ease each pinned crewmate to its place in the sky and back (INF-3634):
+   * the constellation over the occupied orbits, in pin order. A spark flies
+   * to its slot first and rises once it arrives; a part seated on its
+   * program's branches stays there; a departing star leaves from where it
+   * hangs. Returns the hairline joining the stars.
+   */
+  private applyStars(
+    frames: CrewmateFrame[],
+    counts: readonly number[],
+    now: number,
+    settled: boolean,
+    dt: number,
+    seats: ReadonlyMap<string, Seat>,
+  ): StarJoin[] {
+    if (this.formation !== "adaptive") return [];
+    const order = this.pinned.filter((id) => {
+      const c = this.crew.get(id);
+      return c !== undefined && c.phase !== "leaving" && !seats.has(id);
+    });
+    const orbits = counts.flatMap((n, plane) =>
+      n > 0 ? [{ plane, radius: planeRadius(plane, counts) * (1 + this.tuning.idleOffset) }] : [],
+    );
+    const places = skyPlaces(order.length, orbits);
+    const placeOf = new Map(order.map((id, i) => [id, places.points[i]]));
+    const blend = settled ? 1 : Math.min(dt * FIXED_STARS.blendRate, 1);
+    const glide = settled ? 1 : Math.min(dt * FIXED_STARS.placeRate, 1);
+    const shown = new Set<string>();
+    for (const frame of frames) {
+      const c = this.crew.get(frame.id);
+      if (!c) continue;
+      const place = placeOf.get(c.id);
+      if (c.phase !== "leaving") {
+        const target = place && c.phase === "orbiting" ? 1 : 0;
+        c.star += (target - c.star) * blend;
+        if (target === 0 && c.star < 0.001) c.star = 0;
+        if (place) {
+          if (c.star < 0.02 || Number.isNaN(c.starX)) {
+            c.starX = place.x;
+            c.starY = place.y;
+          } else {
+            c.starX += (place.x - c.starX) * glide;
+            c.starY += (place.y - c.starY) * glide;
+          }
+        }
+      }
+      if (c.star <= 0 || Number.isNaN(c.starX)) continue;
+      const fade =
+        c.phase === "leaving" && !settled ? 1 - clamp01((now - c.leaveAt) / this.leaveMs(c)) : 1;
+      const k = c.star * c.star * (3 - 2 * c.star);
+      const fix = k * fade;
+      const at = this.projectScene({ x: c.starX, y: c.starY, depth: FIXED_STARS.depth }, 0);
+      const depth = frame.depth + (at.depth - frame.depth) * fix;
+      frame.x += (at.x - frame.x) * fix;
+      frame.y += (at.y - frame.y) * fix;
+      frame.size *= (0.84 + 0.32 * depth) / (0.84 + 0.32 * frame.depth);
+      frame.depth = depth;
+      if (fix > 0.5) delete frame.streak;
+      frame.star = fix;
+      if (!settled) frame.twinkle = twinkleOf(c.seed, now, settled);
+      if (fix > 0.01) shown.add(c.id);
+    }
+    if (!FIXED_STARS.joined) return [];
+    return places.joins.flatMap(([a, b]) => {
+      const fromId = order[a];
+      const toId = order[b];
+      return fromId && toId && shown.has(fromId) && shown.has(toId) ? [{ fromId, toId }] : [];
+    });
   }
 
   /** Advance one crewmate's packets along the live line between it and the core. */
@@ -1521,13 +1645,19 @@ export class CrewOrbit {
     )
       return links;
     const byId = new Map(frames.map((frame) => [frame.id, frame]));
+    // A fixed star neither circles nor is circled: a wait on one, or by one,
+    // keeps its slot and its arrow (INF-3634).
+    const fallback = new Set(this.frameFallback);
+    for (const [id, cue] of cues)
+      if (this.stars.has(id) || (cue.mode === "satellite" && this.stars.has(cue.blockerId)))
+        fallback.add(id);
     const { wanted, offMain, circleBases, failed } = companionTargets({
       cues,
       seats,
       scenes,
       crew: this.crew,
       blending: this.planeBlend.x < 0.999,
-      fallback: this.frameFallback,
+      fallback,
       now,
       settled,
     });

@@ -359,6 +359,7 @@ export class ComputerOrbits extends CrewOrbit {
     this.locals.set(id, local);
     for (const [reviewer, builder] of this.reviewEdges) local.model.setReview(reviewer, builder);
     local.model.setCaptainWaits(this.captainIds);
+    local.model.setPinned(this.pinnedIds);
     this.routeDependencies();
     return local;
   }
@@ -479,6 +480,13 @@ export class ComputerOrbits extends CrewOrbit {
     this.captainIds = [...ids];
     super.setCaptainWaits(this.captainIds);
     for (const local of this.locals.values()) local.model.setCaptainWaits(this.captainIds);
+  }
+  private pinnedIds: string[] = [];
+  /** Every orbit hears the whole list; each hangs only the crew it holds, as its own constellation. */
+  override setPinned(ids: Iterable<string>): void {
+    this.pinnedIds = [...ids];
+    super.setPinned(this.pinnedIds);
+    for (const local of this.locals.values()) local.model.setPinned(this.pinnedIds);
   }
   override setWait(id: string, wait: CrewWait): void {
     if (this.isHome(id)) super.setWait(id, wait);
@@ -649,6 +657,7 @@ export class ComputerOrbits extends CrewOrbit {
       orbits: frames.flatMap((f) => f.orbits),
       packets: frames.flatMap((f) => f.packets),
       programs: frames.flatMap((f) => f.programs),
+      starJoins: frames.flatMap((f) => f.starJoins ?? []),
       links: [
         ...frames.flatMap((f) => f.links),
         ...this.acrossLinks(frames.flatMap((f) => f.crew)),

@@ -89,6 +89,11 @@ struct PhoneCrewSummary: View {
     private func head(_ facts: PhoneTaskFacts) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
             Text(facts.key).font(PhoneFont.micro).foregroundStyle(PhoneTheme.muted).fixedSize()
+            // INF-3634: a pinned task wears a filled pin beside its key, as on the Mac: its crewmate is a fixed star.
+            if task.pinnedAt != nil {
+                Image(systemName: "pin.fill").font(.system(size: 10)).foregroundStyle(PhoneTheme.muted)
+                    .accessibilityLabel(PhoneTaskRowWords.pinned).accessibilityIdentifier("crew-summary-pinned")
+            }
             PhoneTaskMark(status: facts.status).alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 4 }
             Text(facts.status.label).fixedSize(horizontal: false, vertical: true)
                 .accessibilityIdentifier("crew-summary-status")

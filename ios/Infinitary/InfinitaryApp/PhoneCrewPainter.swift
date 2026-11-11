@@ -18,6 +18,13 @@ enum PhoneCrewPainter {
         for mark in frame.marks {
             context.stroke(circle(mark.point, CharacterCatalog.shared.program["rootMarkPx"]!), with: .color(palette.acc.color(0.8)), lineWidth: 1.2)
         }
+        // The hairline joining the fixed stars lies under them (INF-3634).
+        if !frame.starJoins.isEmpty {
+            let byID = Dictionary(frame.glyphs.map { ($0.task.id, $0) }, uniquingKeysWith: { first, _ in first })
+            for join in frame.starJoins {
+                if let from = byID[join.from], let to = byID[join.to] { starJoin(from, to, in: &context, palette: palette) }
+            }
+        }
         for glyph in frame.glyphs {
             streak(glyph, in: &context, palette: palette)
             draw(glyph, now: now, still: still, in: &context, palette: palette)
@@ -43,6 +50,48 @@ enum PhoneCrewPainter {
             if let bracketed, bracketed.task == target.task, bracketed.computer == target.computer {
                 context.stroke(PhoneCrewBrackets(reach: target.reach).path(in: square), with: .color(palette.muted), lineWidth: 1)
             }
+        }
+    }
+    /// A fixed star's light: the crewmate's own, lifted toward white, as the desktop's starColor.
+    private static func starColor(_ glyph: PhoneSceneMotion.Glyph, palette: CharacterPainter.Palette) -> CharacterPainter.RGB {
+        let work = glyph.unknown ? 0 : glyph.work, wait = glyph.unknown ? 0 : glyph.wait
+        return palette.acc.mix(palette.hot, max(work, wait * glyph.job)).mix(CharacterPainter.RGB(255, 244, 224), CharacterCatalog.shared.fixedStars.lift)
+    }
+    /// The hairline between two fixed stars (INF-3634), in the later star's light, leaving a gap round each solid.
+    private static func starJoin(_ from: PhoneSceneMotion.Glyph, _ to: PhoneSceneMotion.Glyph, in context: inout ScenePen, palette: CharacterPainter.Palette) {
+        let stars = CharacterCatalog.shared.fixedStars
+        let dx = to.point.x - from.point.x, dy = to.point.y - from.point.y, length = hypot(dx, dy), gap = from.size * stars.joinGap
+        guard length > gap * 2 else { return }
+        let k = min(from.star, to.star) * min(from.alpha, to.alpha)
+        guard k > 0.01 else { return }
+        let path = Path {
+            $0.move(to: CGPoint(x: from.point.x + dx / length * gap, y: from.point.y + dy / length * gap))
+            $0.addLine(to: CGPoint(x: to.point.x - dx / length * gap, y: to.point.y - dy / length * gap))
+        }
+        context.stroke(path, with: .color(starColor(to, palette: palette).color(min(1, stars.joinLight * k * palette.boost))),
+                       style: StrokeStyle(lineWidth: 1, lineCap: .round))
+    }
+    /// The glint of a fixed star (INF-3634), as the desktop's drawGlint: a glow one glyph across and four tapered rays,
+    /// the long ones up and down, breathing with its twinkle, under the solid.
+    private static func glint(_ glyph: PhoneSceneMotion.Glyph, at: CGPoint, in context: inout ScenePen, palette: CharacterPainter.Palette) {
+        let on = glyph.star * glyph.alpha * glyph.unfold
+        guard on > 0.01 else { return }
+        let stars = CharacterCatalog.shared.fixedStars, tw = glyph.twinkle, color = starColor(glyph, palette: palette)
+        let a = on * (stars.light + stars.twinkleLight * tw) * palette.boost
+        let s = glyph.size, long = stars.rays * s * (1 + stars.twinkleLength * tw)
+        context.fill(circle(at, s), with: .radialGradient(PenGradient(colors: [color.color(stars.glow * a), color.color(0)]), center: at, startRadius: 0, endRadius: s))
+        let w = stars.rayWidth
+        for (dx, dy, share) in [(0.0, -1.0, 1.0), (0, 1, 1), (-1, 0, stars.sideRay), (1, 0, stars.sideRay)] {
+            let tip = CGPoint(x: at.x + dx * long * share, y: at.y + dy * long * share)
+            let ray = PenGradient(stops: [.init(color: color.color(a), location: 0), .init(color: color.color(a * 0.5), location: 0.4),
+                                          .init(color: color.color(0), location: 1)])
+            let path = Path {
+                $0.move(to: CGPoint(x: at.x - dy * w, y: at.y + dx * w))
+                $0.addLine(to: tip)
+                $0.addLine(to: CGPoint(x: at.x + dy * w, y: at.y - dx * w))
+                $0.closeSubpath()
+            }
+            context.fill(path, with: .linearGradient(ray, startPoint: at, endPoint: tip))
         }
     }
     /// A warp rider's light trail (CharacterWarp.ride), in its own light lifted toward white, thinning and fading away from it.
@@ -75,6 +124,7 @@ enum PhoneCrewPainter {
             let depth = 3 / (3 - z2)
             return (CGPoint(x: at.x + x * depth * radius * glyph.unfold, y: at.y + y * depth * radius * glyph.unfold), depth)
         }
+        glint(glyph, at: at, in: &context, palette: palette)
         // The beacon (INF-1543): the Waiting on you ring under a soft halo, breathing; a still frame holds mid light.
         let waiting = glyph.captain * glyph.alpha * glyph.unfold
         if waiting > 0.01 {

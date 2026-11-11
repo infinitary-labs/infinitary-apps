@@ -74,6 +74,55 @@ function applyCaptainWaits(model: CrewOrbit, tasks: readonly TaskView[]): void {
 }
 
 /**
+ * The crew the Tasks panel lists under Pinned (INF-3634, the captain's
+ * answer: "Every crewmate the Tasks panel lists under Pinned"), in its
+ * order: each pinned task oldest pin first, with its parts, and theirs,
+ * under it by priority then age, as `pinnedRowsOf` lists them. A part
+ * running on its program's branches stays there. These become fixed stars.
+ */
+export function pinnedCrewOf(
+  tasks: readonly TaskView[],
+  programParts: ReadonlySet<string> = new Set(),
+): string[] {
+  const pins = tasks
+    .filter((task) => task.pinnedAt !== undefined)
+    .sort((a, b) => (a.pinnedAt ?? 0) - (b.pinnedAt ?? 0));
+  if (pins.length === 0) return [];
+  const byId = new Map(tasks.map((task) => [task.id, task]));
+  const partsOf = new Map<string, TaskView[]>();
+  for (const task of tasks) {
+    if (task.parentId === null) continue;
+    const parts = partsOf.get(task.parentId) ?? [];
+    parts.push(task);
+    partsOf.set(task.parentId, parts);
+  }
+  for (const parts of partsOf.values())
+    parts.sort((a, b) => a.priority - b.priority || a.createdAt - b.createdAt);
+  const pinnedAbove = (task: TaskView) => {
+    const seen = new Set([task.id]);
+    for (let up = task.parentId; up !== null && !seen.has(up); ) {
+      seen.add(up);
+      const parent = byId.get(up);
+      if (!parent) return false;
+      if (parent.pinnedAt !== undefined) return true;
+      up = parent.parentId;
+    }
+    return false;
+  };
+  const out: string[] = [];
+  const held = new Set<string>();
+  const place = (task: TaskView) => {
+    if (held.has(task.id)) return;
+    held.add(task.id);
+    if (inOrbit(task) && !programParts.has(task.id)) out.push(task.id);
+    for (const part of partsOf.get(task.id) ?? []) place(part);
+  };
+  for (const task of pins) if (!pinnedAbove(task)) place(task);
+  for (const task of pins) place(task);
+  return out;
+}
+
+/**
  * The sequenced board's waits, for whichever orbit holds each crewmate, the
  * crew waiting on the captain, and
  * its tasks with parts, drawn from the board's own links as constellations.
@@ -88,7 +137,11 @@ export function applyCrewDependencies(
   model.setDependencies(centerCues(nodes));
   applyCaptainWaits(model, tasks);
   if (model instanceof ComputerOrbits) model.setWaits(crewedWaits(nodes));
-  model.setPrograms(programsOf(tasks, links), now);
+  const programs = programsOf(tasks, links);
+  model.setPrograms(programs, now);
+  model.setPinned(
+    pinnedCrewOf(tasks, new Set(programs.flatMap((program) => program.parts.map((p) => p.id)))),
+  );
 }
 
 /**

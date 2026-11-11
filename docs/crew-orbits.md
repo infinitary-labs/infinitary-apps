@@ -540,6 +540,28 @@ The near crew canvas publishes the warp it draws as `data-crew-warp`, compare-be
 `crew/warp.test.ts` covers each warp's ride: the home crew move, the riders end on their own seats, a remote cluster keeps its pace, and a cut warp lets go; on the phone, `PhoneWarpTests` holds the same promises for its scene.
 
 
+## Fixed stars
+
+A crewmate whose task the Tasks panel lists under Pinned leaves its orbit and hangs as a fixed star in the sky (captain's INF-3634 plan, chosen on a playable preview: the constellation, the glint, every listed crewmate, and the filled pin in its summary).
+`crewSignal.ts`'s `pinnedCrewOf` reads the list from the board the way the Tasks panel does: pins oldest first, each pinned task's open parts under it by priority, and only tasks with a crewmate in orbit.
+A program's running part stays on its branch and is not a star.
+`CrewOrbit.setPinned(ids)` takes that order, and `ComputerOrbits` hands it to every local orbit.
+The places come from `fixedStars.ts`'s `skyPlaces`: a loose zigzag grown both ways from the upper-left diagonal, each star at its own share of the room between the widest reach of either occupied orbit plus 40 px and 240 px from the center on each axis.
+A corner whose room runs out hands on to the lower right, then the upper right, then the lower left; past what every corner holds, the two roomiest tighten.
+A hairline in the stars' own light joins neighbours in pin order within one corner, never across two.
+A star keeps its membership of its orbit, so the orbit's radius does not change, but it takes no seat: the seated crew re-space as if it had left, and make room again when it is unpinned.
+An arriving crewmate unfolds on its slot first and then rises to its star; a pinned crewmate eases there and back over about half a second, and a leaving one fades where it hangs.
+The glint is a soft glow one glyph out and four thin tapered rays behind the solid, the long pair 1.4 glyphs, in the crewmate's own light lifted a quarter toward white.
+It twinkles slowly from its own seed, and status keeps the solid's color and spin.
+A star sits a little in front of the orbit's middle, does not race in the rush, rides no warp and trails no streak.
+It neither circles nor is circled: a wait or review satellite of a star is drawn as an arrow, as on a constellation.
+A remote computer's cluster hangs its own stars inside its projection.
+The summary of a pinned task wears the filled pin beside its key, named Pinned.
+Reduced motion draws one settled frame: every star at its place, the glint steady.
+The near crew canvas publishes the settled stars as `data-crew-stars`, and `data-plane-crew` leaves them out.
+
+`fixedStars.test.ts` covers the staged settings, the places at every crew size, the joins, the seat re-spacing, the easing, the rush and the unpin, and who is listed; `tests/e2e/crew-fixed-stars.spec.ts` pins a task by keys and reads its star off the stage; the phone reads the same places and look from the generated scene data.
+
 ## Batch gate
 
 A pending batch status on the offered version adds `workPosture.batch` to the checks posture, preserving older views' checks fallback.

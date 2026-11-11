@@ -37,6 +37,17 @@ struct CharacterCatalog: Decodable, Sendable {
     let saturn: Saturn
     /// The warp fidgets (INF-1755): settings, schedule, travel table and stars.
     let warp: CharacterWarp.Data
+    /// The fixed stars (INF-3634): the captain's staged look and the constellation's tables, from the desktop owner
+    /// (fixedStars.ts); PhoneFixedStars places them.
+    struct FixedStars: Decodable, Sendable {
+        let clearOfOrbitPx, edgePx, rays, sideRay, rayWidth, glow, light: Double
+        let twinkle, twinkleLight, twinkleLength, twinkleRate, lift: Double
+        let joined: Bool
+        let joinLight, joinGap, depth, placeRate, blendRate: Double
+        let corners, rho, jitter: [Double]
+        let stepDeg, roomPx, reachDeg: Double
+    }
+    let fixedStars: FixedStars
     static let shared: CharacterCatalog = {
         // A generated app resource, checked alongside the theme and contract at the phone gate.
         let url = Bundle.main.url(forResource: "PhoneSceneData.generated", withExtension: "json")!

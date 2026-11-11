@@ -39,7 +39,7 @@ try {
   const { FM_STATES } = await runner.import<typeof import("../src/renderer/src/character/targets.ts")>(join(character, "targets.ts"));
   const { EMOTE_DURATION_MS, FIDGET_DURATION_MS } = await runner.import<typeof import("../src/renderer/src/character/machine.ts")>(join(character, "machine.ts"));
   const { CAPTAIN_LIGHT, TIER_SOLIDS, WAIT_LIGHT } = await runner.import<typeof import("../src/renderer/src/character/crew/crewmate.ts")>(join(character, "crew/crewmate.ts"));
-  const { CROWDED_PLANES, GROWING_RING, outerPlaneRadius } = await runner.import<typeof import("../src/renderer/src/character/crew/orbitalPlanes.ts")>(join(character, "crew/orbitalPlanes.ts"));
+  const { CROWDED_PLANES, GROWING_RING, outerPlaneRadius, planeRadius } = await runner.import<typeof import("../src/renderer/src/character/crew/orbitalPlanes.ts")>(join(character, "crew/orbitalPlanes.ts"));
   const { CLUSTER_LAYOUT } = await runner.import<typeof import("../src/renderer/src/character/crew/computers.ts")>(join(character, "crew/computers.ts"));
   const { ORION, BIG_DIPPER } = await runner.import<typeof import("../src/renderer/src/character/constellations.ts")>(join(character, "constellations.ts"));
   const { SATURN } = await runner.import<typeof import("../src/renderer/src/character/saturn.ts")>(join(character, "saturn.ts"));
@@ -51,6 +51,7 @@ try {
   const { FLICKER_TUNING } = await runner.import<typeof import("../src/renderer/src/character/flicker.ts")>(join(character, "flicker.ts"));
   const { REPLY_EMOTES, replyFrame } = await runner.import<typeof import("../src/renderer/src/character/replies.ts")>(join(character, "replies.ts"));
   const { CAPTAIN_BREATH_MS, CrewOrbit, DEFAULT_ORBIT, PLANES_GLYPH_PX, REMOTE_TRIP, WAIT_ARC_RATE } = await runner.import<typeof import("../src/renderer/src/character/crew/orbit.ts")>(join(character, "crew/orbit.ts"));
+  const { CORNERS, FIXED_STARS, JITTER, REACH_DEG, RHO, ROOM_PX, STEP_DEG, skyPlaces } = await runner.import<typeof import("../src/renderer/src/character/crew/fixedStars.ts")>(join(character, "crew/fixedStars.ts"));
   const { CONSTELLATION } = await runner.import<typeof import("../src/renderer/src/character/crew/constellation.ts")>(join(character, "crew/constellation.ts"));
   const { FIRSTMATE_SESSION_ID } = await runner.import<typeof import("../src/shared/observe.ts")>(join(REPO_ROOT, "src/shared/observe.ts"));
   const { DEPENDENCY_VISUAL } = await runner.import<typeof import("../src/shared/dependencyVisual.ts")>(join(REPO_ROOT, "src/shared/dependencyVisual.ts"));
@@ -100,11 +101,13 @@ try {
       captain: { ...CAPTAIN_LIGHT, breathMs: CAPTAIN_BREATH_MS },
       wait: { ...WAIT_LIGHT, arcRate: WAIT_ARC_RATE },
       batch: BATCH_GATE,
+      fixedStars: { ...FIXED_STARS, corners: CORNERS, rho: RHO, jitter: JITTER, stepDeg: STEP_DEG, roomPx: ROOM_PX, reachDeg: REACH_DEG },
     },
     "ios/Infinitary/InfinitaryTests/PhoneSceneTraces.generated.json": REPLY_EMOTES.flatMap((emote) =>
       [0, 0.05, 0.15, 0.25, 0.4, 0.55, 0.7, 0.85, 1].map((progress) => ({ emote, progress, frame: replyFrame(emote, progress) }))),
     "ios/Infinitary/InfinitaryTests/PhoneCinchTraces.generated.json": cinchTraces(),
     "ios/Infinitary/InfinitaryTests/PhoneOrbitSeats.generated.json": orbitSeats(),
+    "ios/Infinitary/InfinitaryTests/PhoneFixedStars.generated.json": fixedStarReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskFacts.generated.json": taskFactReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskList.generated.json": taskListReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskRecord.generated.json": taskRecordReadings(),
@@ -554,6 +557,37 @@ try {
     ];
     const drops = effects.map(([name, read]) => ({ name, key: "INF-3201", effects: read, ask: dropAskOf("INF-3201", read) }));
     return { readings, drops };
+  }
+  /** INF-3634: the desktop's fixed stars - the constellation's places over the orbits a crew fills, and where a settled
+   * stage hangs the pinned crew - for the phone to replay. */
+  function fixedStarReadings() {
+    const round = (n: number) => Math.round(n * 1e6) / 1e6;
+    /** The occupied orbits for `n` crew, at the radius their idle crew sit at, as the orbit hands them to the stars. */
+    const orbitsFor = (n: number) => {
+      const counts = CROWDED_PLANES.map(() => 0);
+      for (let i = 0; i < n; i++) {
+        const open = counts.findIndex((c, plane) => c < (CROWDED_PLANES[plane]?.capacity ?? 0));
+        const plane = open >= 0 ? open : counts.indexOf(Math.min(...counts));
+        counts[plane] = (counts[plane] ?? 0) + 1;
+      }
+      return { counts, orbits: counts.flatMap((c, plane) => (c > 0 ? [{ plane, radius: planeRadius(plane, counts) * (1 + DEFAULT_ORBIT.idleOffset) }] : [])) };
+    };
+    const places = [1, 5, 8, 11, 24, 30, 48, 60].flatMap((crew) => [1, 2, 3, 7, 12, 24].map((count) => {
+      const { orbits } = orbitsFor(crew);
+      const sky = skyPlaces(count, orbits);
+      return { crew, count, orbits: orbits.map((o) => ({ plane: o.plane, radius: round(o.radius) })),
+        points: sky.points.map((p) => [round(p.x), round(p.y)]), joins: sky.joins };
+    }));
+    const stages = ([[6, ["crew-3", "crew-1"]], [8, ["crew-5"]], [12, ["crew-2", "crew-9", "crew-4", "crew-11"]], [30, ["crew-27", "crew-1", "crew-14"]]] as const).map(([crew, pinned]) => {
+      const orbit = new CrewOrbit(0, { ...DEFAULT_ORBIT }, () => 0.5, "adaptive");
+      for (let i = 1; i <= crew; i++) orbit.spawn(`crew-${i}`, "idle", 0, true);
+      orbit.settleBootRoster(0);
+      orbit.setPinned(pinned);
+      const frame = orbit.update(16, true);
+      const stars = Object.fromEntries(frame.crew.filter((c) => (c.star ?? 0) > 0).map((c) => [c.id, [round(c.x), round(c.y)]]));
+      return { crew, pinned, stars, joins: (frame.starJoins ?? []).map((j) => [j.fromId, j.toId]) };
+    });
+    return { places, stages };
   }
   /** INF-1325: the desktop's own seat choices through arrivals and departures, for the phone to replay. */
   function orbitSeats() {

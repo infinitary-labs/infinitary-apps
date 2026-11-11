@@ -147,11 +147,11 @@ type FollowupState = "hold" | "after" | "working" | "queued" | "backlog";
  * last three are the Tasks panel's own group words (src/shared/nowPanel.ts).
  */
 const FOLLOWUP_STATES: FollowupState[] = ["hold", "after", "working", "queued", "backlog"];
-const FOLLOWUP_WORDS: Record<FollowupState, { word: string; sentence: string }> = {
+export const FOLLOWUP_WORDS: Record<FollowupState, { word: string; sentence: string }> = {
   hold: {
-    word: "must merge first",
+    word: "must close first",
     sentence:
-      "This merge waits on it. Merge is refused until it merges, or until the wait is removed.",
+      "This merge waits on it. Merge is refused until it closes, or until the wait is removed or your words pass it.",
   },
   after: {
     word: "starts once this merges",
@@ -436,13 +436,15 @@ export class SettleFacts {
    * one moment they bear on it. Returns an HTML fragment - a micro label
    * and one row per open follow-up (key, title, one word) - or undefined
    * when there are none. The word comes from the record's links and status,
-   * never the title: this merge waits on it (`blocks_me`), it waits for
-   * this merge, a crewmate is on it, or it is queued or in the backlog by its
-   * start policy. Each row's `title` attribute is the full sentence.
+   * never the title: this merge waits on it until it closes (any wait on it,
+   * as the close gate reads it: a wait the captain's words passed holds
+   * nothing, so it reads free), it waits for this merge, a crewmate is on
+   * it, or it is queued or in the backlog by its start policy. Each row's
+   * `title` attribute is the full sentence.
    */
   followupNotice(taskId: string): string | undefined {
     const holding = new Set(
-      this.options.tasks.graph.blockersHoldingClose(taskId).map((blocker) => blocker.id),
+      this.options.tasks.graph.holdingClose(taskId).map((blocker) => blocker.id),
     );
     const waiting = new Set(this.options.tasks.graph.blocking(taskId).map((task) => task.id));
     const rows = this.options.tasks.graph

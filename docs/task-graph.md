@@ -80,7 +80,8 @@ The one way a follow-up holds its origin up is `blocks_me`, which adds a `blocks
 While nobody has started it, every report from the origin wakes the first mate and names it (`docs/report-sort.md`, row 2a).
 Migration 26 detaches the redundant parent edge from every live row whose parent is also its discovered-from origin, recording each in `followup_parent_backfill`; `blocks` edges are untouched, and closed rows keep their history.
 
-A detached follow-up must stay findable, so its origin is shown wherever the parent used to place it: `found on SCR-1` in the context-block index (`indexGraphNote`), `discovered_from` and `follow_ups` on a `tasks` row, and rows under the settle card's strip, labelled "Filed while working on this", one per open follow-up with its key, title and one word (must merge first, starts once this merges, working, queued, backlog) chosen from the links, status and start policy, never the title (`followupNotice`) - the one moment those follow-ups bear on the decision to land.
+A detached follow-up must stay findable, so its origin is shown wherever the parent used to place it: `found on SCR-1` in the context-block index (`indexGraphNote`), `discovered_from` and `follow_ups` on a `tasks` row, and rows under the settle card's strip, labelled "Filed while working on this", one per open follow-up with its key, title and one word (must close first, starts once this merges, working, queued, backlog) chosen from the links, status and start policy, never the title (`followupNotice`) - the one moment those follow-ups bear on the decision to land.
+The word must close first marks a follow-up whose wait holds this merge until it closes, read as the close gate reads it (`holdingClose`); a wait the captain's words passed reads free and takes one of the other words.
 
 ## The close rules
 
@@ -219,7 +220,7 @@ The board/detail `blockedBy` list names only the waits that hold the task now, b
 On open work that is every live (open or active) blocker.
 On active work it is every live blocker, since each holds the merge (INF-3167), unless the captain's words passed that hold (the recorded override, `overridePasses`), and the live work a standing baseline wait names.
 A crewmate working past a recorded wait is still held by it, and a hold the captain released reads as released.
-Close refusals, the active blocked flag and the context's “cannot land until” line read the same live edges (`blockersHoldingClose`).
+Close refusals, the active blocked flag, the settle card's must-close-first rows and the context's “cannot merge until” line read the same live edges and the same override (`holdingClose`), so a wait the captain's words passed reads free in all of them.
 Done, dropped and discarded work stays in graph/timeline history, not in the record's “Waiting on” banner or “Waits on” facts.
 With no live blockers, that banner disappears.
 The baseline wait (FI3-250) holds no edge to its close, but the task waits on that work all the same.
@@ -232,7 +233,7 @@ Closed blockers do not hold an active task's close.
 
 ## Context block
 
-Index rows carry the graph in a few words: `[under SCR-1; blocked by SCR-3]`, `[found on SCR-1; on request]`, `[cannot land until SCR-4]` for active work, `blocked by X (dropped)`.
+Index rows carry the graph in a few words: `[under SCR-1; blocked by SCR-3]`, `[found on SCR-1; on request]`, `[cannot merge until SCR-4 closes]` for active work, `blocked by X (dropped)`.
 `crew_status` says `starts on request` for a planned row.
 
 Task refs in tool text are keys; ids stay the join column.

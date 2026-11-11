@@ -15,6 +15,7 @@ import {
 } from "../../../tests/helpers/firstmateHarness";
 import { pngImage } from "../../../tests/helpers/images";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import {
   SEQUENCES_SEED,
   SEQUENCES_SKILL_RELATIVE_PATH,
@@ -104,6 +105,43 @@ describe("the roster places started children under their parent", () => {
     session.emitTurnEnd("Listed.");
     session.resolveNextPrompt();
     await tick();
+  });
+});
+
+describe("an active task's crew row names the waits that hold its merge", () => {
+  it("says it cannot merge until the work it waits on closes, and drops it once the captain's words pass the wait", async () => {
+    // INF-3203: the row reads the wait the way the close gate does: every
+    // live wait holds the merge until that task closes (INF-3167), and the
+    // captain's recorded override passes it, as the board and Blocked by read.
+    const fixture = setup({
+      seedTasks: [
+        { id: "feed", title: "Fix the pump feed", status: "queued" },
+        { id: "pump", title: "Make the pump read on time", status: "running" },
+      ],
+    });
+    const { agent, session, tasks } = fixture;
+    tasks.graph.link("feed", "pump", "blocks", "firstmate");
+    const turn = async (words: string) => {
+      await agent.converse(words);
+      const context = decodeContext(session.prompts.at(-1) as string);
+      session.emitTurnEnd("Noted.");
+      session.resolveNextPrompt();
+      await tick();
+      return context;
+    };
+    const first = await turn("what holds the pump?");
+    expect(first.crew.find((row) => row.task_id === "pump")?.graph).toBe(
+      `cannot merge until ${tasks.get("feed")?.key} closes`,
+    );
+    seedDelivery(tasks, "pump", {
+      override: { words: "merge it, the feed can wait", holds: ["waits"], until: "task", at: 1 },
+    });
+    const second = (await turn("and now?")) as unknown as {
+      crew: { changed: { task_id: string; graph?: string }[] };
+    };
+    const row = second.crew.changed.find((entry) => entry.task_id === "pump");
+    expect(row).toBeDefined();
+    expect(row?.graph).toBeUndefined();
   });
 });
 

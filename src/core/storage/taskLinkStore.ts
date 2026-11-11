@@ -4,9 +4,11 @@ import type { TaskEventActor } from "./taskEventStore";
 
 /**
  * Typed edges between tasks (task-system design section 4.3). `blocks`:
- * `to` is not ready until `from` closes. `holdsMerge` is the separate mark
- * that the same edge also holds `to`'s close, set only where someone
- * promised that hold (INF-416 piece E). `related` is informational;
+ * `to` does not start until `from` is done, and does not close while
+ * `from` is open or active (INF-3167).
+ * `holdsMerge` records that the writer promised the close hold, as a
+ * `blocks_me` filing does (INF-416 piece E); it is kept as history and no
+ * reader branches on it. `related` is informational;
  * `discovered-from` is provenance with no readiness effect; `replaced-by`:
  * `to` does `from`'s work now (FI3-1189's rule 1), with no readiness effect
  * of its own; writing it moves `from`'s live waits to `to` (INF-1826). P0
@@ -22,7 +24,10 @@ export type TaskLink = {
   type: TaskLinkType;
   actor: TaskEventActor;
   createdAt: number;
-  /** A blocks edge holds the waiter's close. Absent on every other type. */
+  /**
+   * Whether the writer promised the close hold; history only, since every
+   * blocks edge holds the waiter's close. False on every other type.
+   */
   holdsMerge: boolean;
 };
 

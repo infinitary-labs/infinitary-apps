@@ -505,8 +505,8 @@ export class TaskGraph {
    * edge: a task its crewmate works past a recorded wait must show it is
    * held, since the wait holds its start, draws the arrow and holds its
    * merge until the work it names closes (INF-3167), unless the captain's
-   * recorded override passed that hold (`overridePasses`, as
-   * `blockerRefusal` and Blocked by read it).
+   * recorded override passed that hold (`holdingClose`, as `blockerRefusal`
+   * reads it and Blocked by reads the same rule).
    * `ready` stays a property of open, unstarted work.
    */
   flagsOf(record: TaskRecord): TaskFlags {
@@ -530,10 +530,8 @@ export class TaskGraph {
       // for the captain, a round cap, or a timed wait (docs/task-graph.md).
       // The captain's words pass the wait (the recorded override), so a
       // released row reads free, as its Blocked by and the close gate do.
-      const delivery = record.delivery;
-      const passed = overridePasses(delivery, "waits", delivery?.headSha);
       return {
-        blocked: !passed && this.blockersHoldingClose(record.id).length > 0,
+        blocked: this.holdingClose(record.id, record).length > 0,
         held: record.gate !== null,
         ready: false,
         deadBlocker: false,
@@ -600,7 +598,8 @@ export class TaskGraph {
   }
 
   /**
-   * The blockers that still hold this task's close; empty when none do.
+   * The blockers whose edges hold this task's close, before the captain's
+   * override (`holdingClose` reads it); empty when none do.
    * Every live `blocks` edge into the task holds it (INF-3167, the
    * captain's choice A): a wait the first mate or a crewmate recorded, a
    * `blocks_me` filing and a required action's prerequisite alike. The
@@ -608,6 +607,21 @@ export class TaskGraph {
    */
   blockersHoldingClose(id: string): TaskRecord[] {
     return this.liveBlocks(id).map(({ task }) => task);
+  }
+
+  /**
+   * The blockers that hold this task's close now: every live `blocks` edge
+   * into it (`blockersHoldingClose`), unless the captain's recorded override
+   * passed the waits hold at the version on offer (`overridePasses`). The
+   * one reading the close refusal, the active blocked flag, the settle
+   * card's follow-up rows and the first mate's task line share, so a wait
+   * the captain's words passed reads free in every one of them, as it does
+   * in Blocked by (./holdingWaits.ts).
+   */
+  holdingClose(id: string, record = this.writer.store.get(id)): TaskRecord[] {
+    const delivery = record?.delivery;
+    if (overridePasses(delivery, "waits", delivery?.headSha)) return [];
+    return this.blockersHoldingClose(id);
   }
 
   /**
@@ -629,7 +643,7 @@ export class TaskGraph {
   /**
    * The blocks rule at close time: a task that waits on another does not
    * close until that work has closed (INF-3167): what `file_followup`'s
-   * `blocks_me` promises ("your task cannot land until this does"), and
+   * `blocks_me` promises ("your task cannot land until this one closes"), and
    * what every other recorded wait means too, since a wait on part of a
    * task's work is reshaped into its own task rather than held as a wait
    * that holds nothing. Returns the refusal naming the blockers and the
@@ -640,10 +654,7 @@ export class TaskGraph {
    */
   blockerRefusal(id: string): SettleRefusal | undefined {
     // The captain's override passes a wait on live work (`waits`).
-    const record = this.writer.store.get(id);
-    const delivery = record?.delivery;
-    const passed = record !== undefined && overridePasses(delivery, "waits", delivery?.headSha);
-    const holding = passed ? [] : this.blockersHoldingClose(id);
+    const holding = this.holdingClose(id);
     if (holding.length === 0) return undefined;
     const task = settleRef(this.writer.store.get(id), id);
     const blockers = holding.map((blocker) => settleRef(blocker, blocker.id));
@@ -672,9 +683,12 @@ export class TaskGraph {
   }
 
   /**
-   * A typed edge; `blocks` carries readiness. `holdsMerge` is the close
-   * mark, and only a caller that promised the hold passes it. Idempotent;
-   * a repeat that promises the hold sets the mark and never clears one.
+   * A typed edge. A `blocks` edge holds the waiter's start until the
+   * blocker is done and its close until the blocker closes, whoever writes
+   * it (INF-3167). `holdsMerge` records that the caller promised the hold,
+   * as a `blocks_me` filing does; it is kept as history and no reader
+   * branches on it. Idempotent; a repeat that promises the hold sets the
+   * mark and never clears one.
    */
   link(
     fromId: string,

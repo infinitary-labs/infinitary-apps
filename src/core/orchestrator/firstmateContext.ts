@@ -996,7 +996,7 @@ export class FirstmateContext {
    * The graph in a few words on an index row (P2): the parent, where a
    * follow-up was found, and what the row waits on - blockers by key, an
    * on-request policy - so the agent can answer "why has this not started"
-   * (or "why can this not land") without a query.
+   * (or "why can this not merge") without a query.
    */
   private indexGraphNote(record: TaskRecord, nested = false): string {
     const tasks = this.options.tasks;
@@ -1022,10 +1022,12 @@ export class FirstmateContext {
       parts.push(`found on ${origins.map((origin) => origin.key || origin.id).join(", ")}`);
     }
     if (record.status === "active") {
-      const holding = tasks.graph.blockersHoldingClose(record.id);
+      // The waits that hold its merge until that work closes, as the close
+      // gate reads them: a wait the captain's words passed holds nothing.
+      const holding = tasks.graph.holdingClose(record.id, record);
       if (holding.length > 0) {
         parts.push(
-          `cannot land until ${holding.map((blocker) => blocker.key || blocker.id).join(", ")}`,
+          `cannot merge until ${holding.map((blocker) => blocker.key || blocker.id).join(", ")} ${holding.length === 1 ? "closes" : "close"}`,
         );
       }
       // A baseline wait holds no close, but the task waits on that work

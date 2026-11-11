@@ -37,6 +37,7 @@ import { taskFeedLine } from "../tasks/taskFeed";
 import { queryTasks } from "../tasks/taskQuery";
 import type { CrewmateSpec } from "./crewSession";
 import { FOLLOWUP_PROVENANCE_OPENING } from "./intentBrief";
+import { FOLLOWUP_WORDS } from "./settleCardFacts";
 import { discardedText } from "./settleWords";
 
 fakeCrewTimersEachTest();
@@ -483,7 +484,7 @@ describe("the task graph (task-system P2)", () => {
     const body = cards().find((card) => card.taskId === taskId && card.actions.length > 0)?.body;
     expect(body).toContain("Filed while working on this");
     const rows = [...(body ?? "").matchAll(/data-followup="(\w+)"[^>]*><span[^>]*>([^<]*)</g)];
-    // Must merge first leads, whatever the filing order.
+    // Must close first leads, whatever the filing order.
     // Then the Tasks panel's own words: queued before backlog.
     expect(rows.map((row) => [row[1], row[2]])).toEqual([
       ["hold", "SCR-3"],
@@ -492,7 +493,7 @@ describe("the task graph (task-system P2)", () => {
       ["backlog", "SCR-2"],
     ]);
     expect(body).toContain("Flaky meter test");
-    expect(body).toContain("must merge first");
+    expect(body).toContain(FOLLOWUP_WORDS.hold.word);
     // A card with no settle action says nothing: this is a landing decision.
     supervisor.addFirstmateCard({
       taskId,
@@ -504,6 +505,49 @@ describe("the task graph (task-system P2)", () => {
     expect(cards().find((card) => card.title === "Something else")?.body).not.toContain(
       "Filed while working on this",
     );
+  });
+
+  it("a settle card reads a filed wait the captain's words passed as free, as the close gate does", async () => {
+    // INF-3203: the row reads the wait the way the close gate, the board's
+    // flag and Blocked by do, so once the captain's recorded override passes
+    // it, the card stops saying the follow-up must close before this merge.
+    const crewmate = fakeCrewmate();
+    const { supervisor, specs, cards, tasks } = setup(crewmate);
+    const { taskId } = await supervisor.intake.commission({
+      title: "Fix the keychain prompt",
+      intent: intentOf("fix the keychain thing"),
+    });
+    await tick();
+    (specs[0] as CrewmateSpec).onFollowup?.({
+      title: "Rotate the signing key",
+      goal: "g",
+      why: "w",
+      blocksMe: true,
+    });
+    crewmate.finishPrompt();
+    await tick();
+    const offer = async () => {
+      supervisor.addFirstmateCard({
+        id: "settle",
+        requiredActions: [],
+        taskId,
+        title: "Settle",
+        body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
+        actions: [{ id: "land", label: "Land locally", default: true, effect: SETTLE_MERGE }],
+      });
+      await tick();
+      const body =
+        cards().find((card) => card.taskId === taskId && card.actions.length > 0)?.body ?? "";
+      return [...body.matchAll(/data-followup="(\w+)"/g)].map((row) => row[1]);
+    };
+    expect(await offer()).toEqual(["hold"]);
+    expect(tasks.graph.blockerRefusal(taskId)).toBeDefined();
+    seedDelivery(tasks, taskId, {
+      override: { words: "merge it, the key can wait", holds: ["waits"], until: "task", at: 1 },
+    });
+    // The close gate lets it through, and the revised card says the same.
+    expect(tasks.graph.blockerRefusal(taskId)).toBeUndefined();
+    expect(await offer()).toEqual(["backlog"]);
   });
 
   it("appends the settle facts to any card carrying a settle effect (v2.0, ruling D4)", async () => {

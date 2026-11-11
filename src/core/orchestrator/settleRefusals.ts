@@ -28,7 +28,7 @@ type RefusalHost = Pick<
  * work cannot forbid it - only containment can. `proceed_with_open` is the
  * captain's leave to settle the task and keep its open children planned,
  * and so is his recorded override on the open parts; his override on the
- * waits passes a `blocks_me` promise.
+ * waits passes every wait, whoever recorded it (`TaskGraph.holdingClose`).
  */
 export function closeGateRefusal(
   host: RefusalHost,

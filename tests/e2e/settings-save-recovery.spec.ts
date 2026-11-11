@@ -6,6 +6,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { seedAccountAuth, seedAccountRegistry, seedAccountStore } from "./accountFixtures";
 import { THIS_DESKTOP } from "./desktop";
 import { launchApp } from "./launch";
+import { readInMain } from "./mainProcess";
 import { alwaysUseSwitch, modelsSection, openModelPanel, setLevelInPanel } from "./modelsBoard";
 import { seedQuotaFixture } from "./quotaFixtures";
 import {
@@ -445,11 +446,21 @@ test("appearance refusals show the saved look again and say why beside the choic
 
     const size = settingRow(page, "size");
     const savedSize = (await savedLook(page)).size;
-    await refuseNext(app, "inf:settings:appearance:set");
-    // The size waits for the core's answer: the window zooms to what is saved.
-    await size.getByRole("radio", { name: "110%", exact: true }).click();
+    const shown = await app.browserWindow(page);
+    // A read alone, so it may ask again when the main process loses its answer.
+    const zoom = () =>
+      readInMain(() => shown.evaluate((window) => window.webContents.getZoomFactor()));
+    // The size shows at once, as the theme does, while the window zooms only
+    // to what is saved: a pick still unanswered keeps the saved zoom. The
+    // check reads the pill right after its click, as the window-picture
+    // journeys' size choice does, so a pill that waited for the answer fails.
+    await refuseNext(app, "inf:settings:appearance:set", false, REFUSAL, true);
+    await size.getByRole("radio", { name: "110%", exact: true }).check();
+    expect(await zoom()).toBe(1);
+    await releaseSave(app);
     await assertRefusal(size.getByRole("alert"), REFUSAL);
     await expect(size.getByRole("radio", { name: "100%", exact: true })).toBeChecked();
+    expect(await zoom()).toBe(1);
     await expect(wash.getByRole("alert")).toHaveCount(0);
     expect((await savedLook(page)).size).toBe(savedSize);
 

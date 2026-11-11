@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "size-picker-shows-choice-at-once",
+      "reason": "The Size pill in Settings lights the chosen size as it is clicked instead of a moment later, when the save answers; the gap is a few milliseconds a person does not notice, and closing it removes a race the window-picture journeys hit."
+    }
+  ]
+}

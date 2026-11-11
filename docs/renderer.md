@@ -291,6 +291,7 @@ Every way of choosing it - the picker, those keys, the View menu, command search
 The keys, the menu and command search share one queue of steps (`Shell.size`, `sizeCommands` in `main/windowSize.ts`) and send each through the window's one door, `Shell.dispatch`, as the picker's choice goes: this Mac's core as the captain, or this Mac's own look while it controls another (`docs/view.md`).
 Each step starts from the size the one before it saved, so a held key still climbs.
 `main/windowSize.ts` applies the saved choice before paint and after navigation.
+The picker shows a choice at once, as every appearance control does, and the window zooms once the core has saved it; a refused choice shows the saved size again, with the reason beside Size (`src/renderer/src/app/appearance.ts`).
 The character checks its backing against current device sharpness each frame without restarting its pose.
 Regular cards use the existing temporary rail fold whenever expanded side panels leave too little room for their requested width.
 The main message folds them the same way, with no card up too, where they would leave it too narrow ("Docked rails and the input's room").

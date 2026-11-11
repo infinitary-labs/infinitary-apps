@@ -136,8 +136,12 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     refreshAppearance: () => {
       void appearanceSave.refresh();
     },
-    // The window follows the size the core saved (src/main/windowSize.ts).
-    setSize: (size) => saveAppearance("size", { size }),
+    // The picker shows the choice at once, as every other control does; the
+    // window's zoom follows only the size the core saved (src/main/windowSize.ts).
+    setSize: (size) => {
+      set({ size });
+      saveAppearance("size", { size });
+    },
     setDefaultCardSize: (defaultCardSize) => {
       set({ defaultCardSize });
       saveAppearance("defaultCardSize", { defaultCardSize });

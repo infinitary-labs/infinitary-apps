@@ -460,6 +460,7 @@ A reply the captain types under a first mate card reaches the first mate as a tu
 A feed line about a task whose fact the task's own timeline does not already hold is a row on that task: the writer names the task (`firstmate_note`'s `taskId`), and the `broadcastEvent` seam writes it as a news `note` that the feed reads back, with its words as written (`data.feedLine`).
 The feed line stays where it was, now with the task's key.
 A writer that would repeat one line on a task marks it with `data.feedOnce`, a name for the line, and the feed shows only the newest of that name per task while the timeline keeps each (`recentFeed`, `src/core/tasks/taskFeed.ts`): queued guidance going out as a crewmate's next turn is one (INF-1137).
+Each line in the first mate's computer's own words carries `saidHere`, every line but a crewmate's report and the captain's own turn, so a computer that controls it names that computer where the line says this computer (`docs/view.md`, "The first mate's own words").
 Activity sentences start with capitals at their producers, including `taskFeedLine`, which authors the same task update for live events and restored history.
 The renderer never changes the case of supplied text, so a deliberate lowercase name, key, path or command stays intact; previously stored free-text notes keep their original words.
 A line whose fact the record already holds - the captain's reply or a line the captain typed in the Crewmate tab, a start, a drop, a filing, a close, the receipt of a merge - names no task and stays task-less.

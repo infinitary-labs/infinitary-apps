@@ -25,7 +25,7 @@ import {
 import { builtinManifest } from "../../src/renderer/src/plugins/builtin/manifest";
 import type { Card } from "../../src/shared/cards";
 import { needsReauthCopy } from "../../src/shared/credentialHealth";
-import { COMPUTER } from "../../src/shared/deviceNames";
+import { COMPUTER, hereAs } from "../../src/shared/deviceNames";
 import { deviceJoinedLine, PAIRING_LINK_PREFIX } from "../../src/shared/devices";
 import { feedLineFrom } from "../../src/shared/feed";
 import {
@@ -320,8 +320,12 @@ test("a second Mac joins at its first launch, controls this Firstmate, rides out
       await expect
         .poll(() => picture.evaluate((image: HTMLImageElement) => image.naturalWidth))
         .toBe(48);
+      // That Mac's own line names it where it says this computer (docs/view.md, "The first mate's own words").
       expect(await feedTexts(page)).toContain(
-        deviceJoinedLine({ name: "MacBook Air", kind: "view" }),
+        hereAs(
+          deviceJoinedLine({ name: "MacBook Air", kind: "view" }),
+          proEnv.INFINITARY_DEVICE_NAME,
+        ),
       );
       const board = await page.evaluate(() => window.infinitary.tasks.board());
       expect(board.tasks.map((task) => task.title)).toContain("Chart the harbour");

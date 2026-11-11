@@ -15,7 +15,9 @@ import { CardNotifier } from "@core/notifications";
 import { buildUpdateTarget, upgradeCommandFor } from "@core/update/updateChannels";
 import { createUpdateChecker, type UpdateChecker } from "@core/update/updateChecker";
 import type { Card } from "@shared/cards";
+import { HERE } from "@shared/deviceNames";
 import type { DeviceKind, ThisMac } from "@shared/devices";
+import { type FeedLine, feedLineFrom } from "@shared/feed";
 import { HOME_CAPABILITIES, PROTOCOL_MAJORS_BEHIND, PROTOCOL_VERSION } from "@shared/ipc";
 import { DEFAULT_SAVED_KEYMAP, type SavedKeymap } from "@shared/keymap";
 import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
@@ -51,6 +53,43 @@ function shown(id: string, overrides: Partial<Card> = {}): Card {
     createdAt: 1,
     ...overrides,
   };
+}
+
+/**
+ * What the first mate's core says of its own computer (INF-3486), written
+ * with `here` where it says this computer: a feed line it marks as its own
+ * words, a refusal in each shape a refusal takes, and a refused request.
+ */
+function ownWords(here: string) {
+  return {
+    note: `Your saved sign-in was not used for "Sign up on the harbour site": No sign-in for harbour.example is saved on ${here}. Its browser is still paused for you.`,
+    openPage: `This task runs on another computer, so its project's page does not open on ${here}.`,
+    reopen: `Four task browsers are already open on ${here}. Stop one, then open this again.`,
+    stop: `${here === HERE.this ? HERE.This : here} keeps no task browsers.`,
+  };
+}
+const SAID = ownWords(HERE.this);
+/** The captain's own turn, which says this computer in the captain's words. */
+const CAPTAIN = captainLine(`Keep the harbour site on ${HERE.this}.`);
+
+/** The feed line of the captain's own turn, as the core draws it. */
+function captainLine(text: string): Omit<FeedLine, "at"> {
+  const line = feedLineFrom({ type: "user_turn", text });
+  if (!line) throw new Error("The captain's turn draws no feed line.");
+  return line;
+}
+
+/** A core's answer in its own words to a request that has one, or undefined. */
+function answerInOwnWords(channel: string): unknown {
+  if (channel === "inf:feed:recent")
+    return [
+      { kind: "info", text: SAID.note, at: 1, taskKey: "HAR-1", event: "note", saidHere: true },
+      { ...CAPTAIN, at: 2 },
+    ] satisfies FeedLine[];
+  if (channel === "inf:cards:open-page") return { refusal: SAID.openPage };
+  if (channel === "inf:browser:reopen") return { ok: false, text: SAID.reopen };
+  if (channel === "inf:browser:stop") throw new Error(SAID.stop);
+  return undefined;
 }
 
 /** The Mac where Firstmate lives: what it was asked, its pairing, and links to it. */
@@ -109,6 +148,8 @@ async function otherMac(
       return { status: 200, page: "Signed in to Google." };
     }
     if (channel === "inf:settings:notifications:get") return stage.notifications;
+    const said = answerInOwnWords(channel);
+    if (said !== undefined) return said;
     if (channel === "inf:app:healthcheck")
       return {
         ok: true,
@@ -590,6 +631,33 @@ describe("the app as a view of another Mac", () => {
     mini.events.emit("inf:models:changed", { ok: true });
     await air.until(() => air.pushes.some((push) => push.channel === "inf:models:changed"));
     expect(air.opened).toEqual([page]);
+  });
+
+  // INF-3486: a sentence the first mate's computer writes of itself as this computer names
+  // that computer on one that controls it, and the captain's own words stay as they are.
+  it("names that Mac where its own refusals and feed lines say this computer", async () => {
+    const mini = await otherMac();
+    const air = shell();
+    await air.shell.start();
+    await air.shell.join(await mini.link());
+    await air.until(() => air.view().contact === "in-reach");
+    const named = ownWords("MacBook Pro");
+
+    expect(await air.shell.dispatch("inf:feed:recent", [])).toEqual([
+      { kind: "info", text: named.note, at: 1, taskKey: "HAR-1", event: "note", saidHere: true },
+      { ...CAPTAIN, at: 2 },
+    ]);
+    expect(await air.shell.dispatch("inf:cards:open-page", ["page-card"])).toEqual({
+      refusal: named.openPage,
+    });
+    expect(await air.shell.dispatch("inf:browser:reopen", ["sign-up"])).toEqual({
+      ok: false,
+      text: named.reopen,
+    });
+    const refused = await air.shell.dispatch("inf:browser:stop", ["sign-up"]).catch((e) => e);
+    expect(refused).toBeInstanceOf(Error);
+    expect(refused.message).toContain(named.stop);
+    expect(refused.message).not.toContain(HERE.This);
   });
 
   // The captain's answer on the review of one rule for every view: a home too old to list the
@@ -1133,6 +1201,35 @@ describe("the window on the first mate's own computer", () => {
     // Quitting the first mate's connection leaves the window's request with no door to go through.
     await at.connection()?.close();
     await expect(at.shell.dispatch("inf:app:healthcheck", [])).rejects.toThrow();
+  });
+
+  // INF-3486: only a computer that controls the first mate names it; its own window shows
+  // what its core wrote.
+  it("shows its first mate's own refusals and feed lines as its core wrote them", async () => {
+    const at = homeShell();
+    at.own.dispatch.mockImplementation(
+      async (channel) => answerInOwnWords(channel) ?? { ownCore: channel },
+    );
+    await at.shell.start();
+
+    expect(await at.shell.dispatch("inf:feed:recent", [])).toEqual(
+      answerInOwnWords("inf:feed:recent"),
+    );
+    expect(await at.shell.dispatch("inf:cards:open-page", ["page-card"])).toEqual({
+      refusal: SAID.openPage,
+    });
+    expect(await at.shell.dispatch("inf:browser:reopen", ["sign-up"])).toEqual({
+      ok: false,
+      text: SAID.reopen,
+    });
+    await expect(at.shell.dispatch("inf:browser:stop", ["sign-up"])).rejects.toThrow(SAID.stop);
+    // Every answer came over the local door from its own core.
+    expect(at.own.dispatch.mock.calls.map((call) => call[0])).toEqual([
+      "inf:feed:recent",
+      "inf:cards:open-page",
+      "inf:browser:reopen",
+      "inf:browser:stop",
+    ]);
   });
 
   it("asks directly when the door never welcomes the window", async () => {

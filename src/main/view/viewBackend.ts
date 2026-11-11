@@ -30,6 +30,7 @@ import {
 import { readKeepingUnknown } from "@shared/openLists";
 import { type ShellPreferences, shellPreferencesSchema } from "@shared/preferences";
 import { BrowserWatches, isBrowserWatchChannel } from "./browserWatches";
+import { namedHere, namedHereError } from "./namedHere";
 import { ViewLook } from "./viewLook";
 
 /**
@@ -219,14 +220,25 @@ export class ViewBackend {
     this.link.start();
   }
 
+  /** The other Mac's address, as its grant dials it. */
+  private homeAddress(): string {
+    return splitDialAddress(this.record.grant.at)?.host ?? this.record.grant.at;
+  }
+
+  /** The other Mac's name: as it says it, as it was saved when this Mac joined, or its address. */
+  private homeName(): string {
+    return (
+      this.link.state().name ?? this.joined.read()?.name ?? this.record.name ?? this.homeAddress()
+    );
+  }
+
   /** What this app is now, for the window. */
   thisMac(): ThisMac {
     const state = this.link.state();
-    const address = splitDialAddress(this.record.grant.at)?.host ?? this.record.grant.at;
     return {
       role: "view",
-      name: state.name ?? this.joined.read()?.name ?? this.record.name ?? address,
-      address,
+      name: this.homeName(),
+      address: this.homeAddress(),
       joinedAt: this.record.joinedAt,
       contact: state.contact,
       readOnly: readOnly(state),
@@ -275,8 +287,18 @@ export class ViewBackend {
       !listsChange(this.link.state().homeChanges, contractChange("custom-token-command"))
     )
       throw new Error(`Update Infinitary on ${HOME.the} before saving a token command.`);
-    // The window's preload reads the answer against the contract, as it reads this Mac's own.
-    return (await this.link.invoke(channel, rawArgs)) as InvokeResponse<C>;
+    // The window's preload reads the answer against the contract, as it reads this Mac's own,
+    // with the other Mac's own words naming it where they say this computer.
+    const name = () => this.homeName();
+    try {
+      return namedHere(
+        channel,
+        await this.link.invoke(channel, rawArgs),
+        name,
+      ) as InvokeResponse<C>;
+    } catch (caught) {
+      throw namedHereError(caught, name);
+    }
   }
 
   /** A card picture by its name, from the other Mac, kept for this run. */

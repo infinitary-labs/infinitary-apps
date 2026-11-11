@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "view-names-first-mate-computer",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Another computer names your first mate's computer instead of saying this computer",
+      "body": "When you control your first mate from another computer, its Activity lines and the reasons it gives for not doing something name the computer your first mate lives on, such as MacBook Pro, where they used to say this computer and seemed to mean the one you were at. Your own words and a crewmate's reports keep their wording, and your first mate's own computer shows every line as before.",
+      "picture": {
+        "dark": "view-names-first-mate-computer-dark.webp",
+        "light": "view-names-first-mate-computer-light.webp",
+        "alt": "On a computer controlling the first mate, an Activity line read in full says no sign-in for the site is saved on MacBook Pro"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

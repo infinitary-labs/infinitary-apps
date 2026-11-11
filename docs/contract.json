@@ -29522,6 +29522,10 @@
                 "cap_reset",
                 "replied"
               ]
+            },
+            "saidHere": {
+              "type": "boolean",
+              "const": true
             }
           },
           "required": [

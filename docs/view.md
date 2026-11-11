@@ -116,6 +116,21 @@ Frames are built by this app, as on the Mac where the first mate lives; a card p
 A project font a preview's `@font-face` names is asked of the other Mac the same way (`inf:cards:typeface`, a `views` read of a minted font name answering the home's own copy as base64), and the frame scheme's `typefaces` host serves the answer; a font the home cannot answer is not served, and the preview draws in the app's own typefaces (`docs/card-authoring.md`, "Fonts by reference").
 A card's demo recording plays in this app's picture viewer a range at a time (a GIF demo is asked whole, in the same pieces, each time Play is pressed): each range is asked of the other Mac at most one piece of 1 MB at a time (`inf:cards:media`, a `views` read of a minted recording name, an offset and a length, answering that piece as base64 and the whole file's size), never kept, since the player asks again for what it needs.
 
+## The first mate's own words
+
+The first mate's core writes its own computer as this computer (`HERE`, `src/shared/deviceNames.ts`), which on a computer that controls it would name the computer the captain is at.
+`ViewBackend.dispatch` names the first mate's computer there instead, by the name the view shows for it (`hereAs`, through `namedHere` in `src/main/view/namedHere.ts`):
+
+- A refusal the first mate's computer answers, in the shapes the contract's refusals take: the answer's `refusal`, its `text` beside `ok: false`, and its `warning` beside `ok: true`.
+  A card's page from a task that runs elsewhere reads "This task runs on another computer, so its project's page does not open on MacBook Pro."
+- A request it refused with an error (`HomeRefusalError`, `src/core/devices/homeLink.ts`), never an error this computer gave itself.
+- A feed line the core marks as its own words (`saidHere`, set by `recentFeed` in `src/core/tasks/taskFeed.ts`): every line but a crewmate's report and the captain's own turn, whose this computer is the computer they were written at.
+  The line a view's joining writes ends "Your first mate's tasks and conversation stay on MacBook Pro."
+
+The window on the first mate's own computer asks over the local door, never through `ViewBackend`, so it shows each sentence as written.
+A first mate too old to mark its lines (the `feed-said-here` contract change) has its feed lines shown as written, and its refusals still named.
+A task's timeline in its record, the cards the host writes and the phone show those words as written.
+
 ## Pages it would open
 
 A page the first mate would open in a browser for a view's request, such as a sign-in's consent page, goes to the computers that control it as the push `inf:app:open-page` instead of opening on the first mate's computer (`asAView`, `src/core/askedFromAView.ts`), and each of those computers' Infinitary opens it in its own browser once, as it arrives; one a welcome replays after a drop is old news and is not opened (`ViewBackend.openPage`).
@@ -253,6 +268,8 @@ The first-launch gate stays derived (`docs/first-launch.md`); the line only says
 
 ## Tests
 
+- `src/main/shell.test.ts`, "names that Mac where its own refusals and feed lines say this computer" and "shows its first mate's own refusals and feed lines as its core wrote them": a view names the first mate's computer in each refusal shape, a refused request and a line it marked, and leaves the captain's own words; the first mate's own window shows each as written.
+  `src/core/tasks/taskFeed.test.ts`, "the first mate's own words on the feed": which lines the core marks.
 - `src/core/connection/localDoor.test.ts`, "the local door": the door the window dials (`docs/connection.md`, "Tests").
   Every journey drives the window through it.
 - `src/core/devices/homeLink.test.ts`: the device's side against the real connection and pairing - welcome with the other Mac's name, a read held while reaching, a change refused while out of reach and never sent, an exact catch-up after a drop, a request in flight refused and not asked again, Remove seen live and while away, Leave heard and unheard.

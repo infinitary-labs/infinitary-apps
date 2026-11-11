@@ -96,6 +96,15 @@ export class HomeOutOfReachError extends Error {
   }
 }
 
+/**
+ * The home's own refusal of a request it was asked: its words, as its
+ * request's error carried them back (`docs/contract.md`, refusals). A
+ * computer that controls it tells them apart from its own (`namedHere`,
+ * `src/main/view/namedHere.ts`). Its name stays Error's, so a window that
+ * shows the message reads what it read before.
+ */
+export class HomeRefusalError extends Error {}
+
 export type HomeLinkOptions = {
   grant: DeviceGrant;
   /** The contract version the device speaks; the version rule reads its major. */
@@ -513,7 +522,7 @@ export class HomeLink {
           if (!pending) return;
           this.pending.delete(id);
           if (frame.ok) pending.resolve(frame.value);
-          else pending.reject(new Error(frame.error));
+          else pending.reject(new HomeRefusalError(frame.error));
         } else if (frame.t === "invoke") {
           void this.answer(socket, { ...frame, channel: ownChannel(frame.channel) });
         }

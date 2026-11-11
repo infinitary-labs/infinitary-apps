@@ -36,6 +36,14 @@ export const feedLineSchema = z.object({
    * so a reader finds a line by what happened, never by its words.
    */
   event: taskEventKindSchema.optional(),
+  /**
+   * The line is the first mate's computer's own words, so its "this
+   * computer" (`HERE`) is that computer: a computer that controls it shows
+   * the line naming that computer instead (`hereAs`; docs/view.md, "The
+   * first mate's own words"). A line of the captain's or a crewmate's
+   * words has none, and neither does one from a home built before it.
+   */
+  saidHere: z.literal(true).optional(),
 });
 export type FeedLine = z.infer<typeof feedLineSchema>;
 

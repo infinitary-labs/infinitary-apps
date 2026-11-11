@@ -209,6 +209,9 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
     at: event.at,
     taskKey: record.key,
     event: event.kind,
+    // Every line but a report's is the host's own words; a report's is the
+    // crewmate's summary, whose "this computer" is wherever it ran.
+    ...(event.kind === "report" ? {} : { saidHere: true as const }),
   };
 }
 
@@ -220,7 +223,9 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
  * parts cannot crowd unrelated work out of the retained view (INF-1137).
  * A line its writer marked to show once per task (`data.feedOnce`, such
  * as queued guidance going out, or a settle's `SETTLE_FOLD`) appears only
- * at its newest; the timeline keeps every one.
+ * at its newest; the timeline keeps every one. Each line in the first mate's
+ * computer's own words says so (`saidHere`), for a computer that controls
+ * it to name that computer where the line says this computer.
  */
 export function recentFeed(tasks: TaskService, activity: ActivityStore, limit: number): FeedLine[] {
   const records = new Map<string, TaskRecord | undefined>();
@@ -253,15 +258,19 @@ export function recentFeed(tasks: TaskService, activity: ActivityStore, limit: n
                 ? ("ok" as const)
                 : ("info" as const),
           text: `${done}/${parts.length} parts done${dropped ? ` · ${dropped} stopped` : ""} · ${program.title}`,
+          saidHere: true as const,
         },
       ];
     }
     const line = taskFeedLine(record, event);
     return line ? [line] : [];
   });
+  // Every task-less line but the captain's own turn is the first mate's
+  // computer's words (`saidHere`).
+  const ownLines = activity
+    .recent(limit)
+    .map((line): FeedLine => (line.kind === "you" ? line : { ...line, saidHere: true }));
   // Both halves oldest first before the stable merge, so lines that share
   // a millisecond keep the order they were written in.
-  return [...taskLines.reverse(), ...activity.recent(limit)]
-    .sort((a, b) => a.at - b.at)
-    .slice(-limit);
+  return [...taskLines.reverse(), ...ownLines].sort((a, b) => a.at - b.at).slice(-limit);
 }

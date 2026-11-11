@@ -1,6 +1,14 @@
+import { HERE } from "@shared/deviceNames";
+import { deviceJoinedLine } from "@shared/devices";
+import { feedLineFrom } from "@shared/feed";
+import { runsOnLine } from "@shared/repos";
 import { describe, expect, it } from "vitest";
+import { freshDatabase } from "../../../tests/helpers/database";
+import { ActivityStore } from "../storage/activityStore";
 import type { TaskEvent } from "../storage/taskEventStore";
-import { type FeedSubject, taskFeedLine } from "./taskFeed";
+import { seedTask } from "./seedTask";
+import { type FeedSubject, recentFeed, taskFeedLine } from "./taskFeed";
+import { TaskService } from "./taskService";
 
 const record = {
   key: "FM3K-42",
@@ -150,5 +158,60 @@ describe("task feed updates", () => {
     expect(taskFeedLine(record, event("landed"))?.kind).toBe("ok");
     expect(taskFeedLine(record, event("failed"))?.kind).toBe("danger");
     expect(taskFeedLine(record, event("status", { status: "dropped" }))?.kind).toBe("warn");
+  });
+});
+
+// INF-3486: a computer that controls the first mate names the first mate's
+// computer where its own words say this computer, so the feed says which
+// lines are its own words - never a crewmate's report or the captain's turn.
+describe("the first mate's own words on the feed", () => {
+  it("marks every line the first mate's computer wrote, and leaves the captain's and a crewmate's words unmarked", () => {
+    const db = freshDatabase();
+    try {
+      const tasks = new TaskService({ db, strict: true });
+      const signUp = seedTask(tasks, {
+        id: "sign-up",
+        title: "Sign up on the harbour site",
+        status: "idle",
+        startPolicy: "on-request",
+        outcome: `The form is filled in on ${HERE.this} and waits for the captain's sign-in.`,
+      });
+      // The note the core writes when a saved sign-in is refused (`eventSeam`).
+      const refused = `Your saved sign-in was not used for "${signUp.title}": No sign-in for harbour.example is saved on ${HERE.this}. Its browser is still paused for you.`;
+      tasks.note(signUp.id, refused, { news: true, feed: true, data: { feedLine: true } });
+      const activity = new ActivityStore(db);
+      const joined = deviceJoinedLine({ name: "MacBook Air", kind: "view" });
+      activity.record({ kind: "info", text: runsOnLine("harbour-site", null, true) });
+      activity.record({ kind: "info", text: joined });
+      const captain = feedLineFrom({
+        type: "user_turn",
+        text: `Keep the harbour site on ${HERE.this}.`,
+      });
+      if (!captain) throw new Error("The captain's turn writes a feed line");
+      activity.record(captain);
+
+      const lines = recentFeed(tasks, activity, 20).map(({ text, event, saidHere }) => ({
+        text,
+        event,
+        saidHere,
+      }));
+      expect(lines).toEqual(
+        expect.arrayContaining([
+          { text: refused, event: "note", saidHere: true },
+          { text: runsOnLine("harbour-site", null, true), event: undefined, saidHere: true },
+          { text: joined, event: undefined, saidHere: true },
+          { text: captain.text, event: undefined, saidHere: undefined },
+          {
+            text: `Reported: The form is filled in on ${HERE.this} and waits for the captain's sign-in.`,
+            event: "report",
+            saidHere: undefined,
+          },
+        ]),
+      );
+      // Each of those sentences says this computer, so each one marked is named on a view.
+      expect(lines.filter((line) => line.text.includes(HERE.this))).toHaveLength(5);
+    } finally {
+      db.close();
+    }
   });
 });

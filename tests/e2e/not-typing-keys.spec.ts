@@ -19,7 +19,15 @@ import {
   RISKY_KEYS_TITLES,
   riskyKeys,
 } from "./scenarios/notTypingKeys";
-import { cardReply, pager, showCard, shownCard, shownEntry, stagePrepared } from "./stack";
+import {
+  cardReply,
+  minimizeForLegacyView,
+  pager,
+  showCard,
+  shownCard,
+  shownEntry,
+  stagePrepared,
+} from "./stack";
 import { browserView, clickOnPage, closeSite, pageSays, stopTaskBrowsers } from "./taskBrowser";
 import {
   chooseKeyPlace,
@@ -135,10 +143,22 @@ test("a bare key works outside typing and cannot borrow a field, another frame o
         await expect(settings()).toBeVisible();
         await home();
       }
-      await stagePrepared(page);
+      // Find a task opens the Tasks dock, and beside a wide note this window
+      // folds the docks: the dock leaves the window once its slide ends, and
+      // the shell hands the focus its search held to the main message (run
+      // 43064436321). Tasks is searched as a person can here, with the notes
+      // put aside, and they come back for the next step.
+      const notes = Object.values(NOT_TYPING_TITLES);
+      for (const cardTitle of notes) await minimizeForLegacyView(page, cardTitle);
+      await expect(shownEntry(page)).toHaveCount(0);
       await runFromSearch(app, page, "panel:now/find");
       await keepsLetter(nowFrame(page).locator("[data-now-query]"));
       await home();
+      await page.evaluate(async (titles: string[]) => {
+        for (const card of await window.infinitary.cards.list())
+          if (titles.includes(card.title)) await window.infinitary.cards.minimize(card.id, false);
+      }, notes);
+      await expect(pager(page, notes.length)).toBeVisible();
     });
 
     await test.step("a card's used key stays local; unfocused and unwitnessed offers do nothing", async () => {

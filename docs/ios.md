@@ -801,6 +801,8 @@ The scene's Command-Shift-C entry command keeps that exact-chord/current-process
 For its unmodified arrows, Tab and Space, the captain-approved contract instead observes app-owned browsing before one actual keypress and verifies the result on screen; BackBoard excludes these commands from its routable registrations.
 There is no native-focus wait, priming input or retry.
 Its touch drags read the target's and the viewport's current frames for each drag's direction and distance, at most eight drags, and a program opens from a tap near its square's corner.
+A drag moves the first mate together with its orbiting crew, and the first mate's 280-point square hides a crewmate's square from XCTest's hit test for most of its orbit, so an orbiting crewmate wholly in view is never dragged: it waits for its orbit to carry it out from under that square, or out of view (INF-3631).
+An orbiting crewmate's frame is read for a drag only once the crew ride their orbits at pace, as a tap on one waits (below), since in a warp it moves far in the second or so a drag takes.
 The scene journey proves rightward panning, leftward return to the same world point, a visible real crewmate selected by Tab and that crewmate's matching summary opened by Space, retaining pictures and an optional keyboard recording.
 It photographs the summaries of an idle, a working, a waiting, a blocked, a remote and a program crewmate and compares each one's words with the desktop's for the same task, which its fixture projects from the same records (`tests/helpers/phoneScene.ts`).
 Its fixture's crew reach the phone one push at a time, and on the iPad the home's ring fits the screen, so only the other computer's formation gives Right somewhere to pan.

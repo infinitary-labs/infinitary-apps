@@ -180,10 +180,10 @@ extension PhoneJourney {
         let pace = PhoneOrbitPace(planes: try XCTUnwrap(fixture["orbitPlanes"] as? [[String: Double]]).map {
             .init(speedDegPerSec: try XCTUnwrap($0["speedDegPerSec"]), inclination: try XCTUnwrap($0["inclination"]), node: try XCTUnwrap($0["node"]))
         })
-        let orbiting = Set(try XCTUnwrap(fixture["orbiting"] as? [String]).map { "crew-task-" + $0 })
+        let orbits = CrewOrbits(orbiting: Set(try XCTUnwrap(fixture["orbiting"] as? [String]).map { "crew-task-" + $0 }), pace: pace)
         _ = try await home("capture-scene-start")
-        revealCrew(local, in: scene)
-        tapOrbitingCrew(local, in: scene, orbiting: orbiting, pace: pace)
+        revealCrew(local, in: scene, orbits: orbits)
+        tapOrbitingCrew(local, in: scene, orbits: orbits)
         XCTAssertTrue(app.otherElements["crew-preview"].waitForPresence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Check harbour marker 1"].exists)
         try await verifyCrewSummary(try XCTUnwrap(summaries[firstID]), picture: "native-scene-task-preview")
@@ -192,8 +192,8 @@ extension PhoneJourney {
         for (id, name) in [(try XCTUnwrap(fixture["checks"] as? String), "native-scene-working-preview"),
                            (try XCTUnwrap(fixture["waiting"] as? String), "native-scene-waiting-preview")] {
             let crewmate = app.buttons["crew-task-" + id]
-            revealCrew(crewmate, in: scene)
-            tapOrbitingCrew(crewmate, in: scene, orbiting: orbiting, pace: pace)
+            revealCrew(crewmate, in: scene, orbits: orbits)
+            tapOrbitingCrew(crewmate, in: scene, orbits: orbits)
             // The working summary is the change's hero picture, so it is kept in both appearances.
             try await verifyCrewSummary(try XCTUnwrap(summaries[id]), picture: name, themes: name == "native-scene-working-preview")
             if name == "native-scene-working-preview" {
@@ -394,32 +394,106 @@ extension PhoneJourney {
         }
     }
 
+    /// INF-3631, the captain's standing direction to fix a flaky test at its root: phone run 42928811798's iPhone rest
+    /// part spent all eight drags on the waiting crewmate while it lay wholly in view under the first mate's square,
+    /// which hides it from XCTest's hit test and moves with it on every drag. Diagnostic run 42947550089 read that same
+    /// crewmate with the scene unmoved, logged to a tenth of a point: still covered at 16.77 s, carried out from under
+    /// the square by its own orbit at 17.27 s, and half past the scene's left edge at 3.03 s.
+    func testCrewRevealWaitsForTheOrbitNotADrag() {
+        let viewport = CGRect(x: 16, y: 137, width: 361, height: 454.33333333333326)
+        func square(_ x: CGFloat, _ y: CGFloat) -> CGRect { CGRect(x: x - 22, y: y - 22, width: 44, height: 44) }
+        let covered = square(222.6, 389.0), uncovered = square(233.4, 398.8), edge = square(31.8, 431.3)
+        XCTAssertEqual(crewRevealStep(false, frame: covered, in: viewport, orbits: true), .wait,
+                       "A drag cannot uncover a crewmate in view, since the first mate moves with it; only its orbit can")
+        XCTAssertEqual(crewRevealStep(true, frame: uncovered, in: viewport, orbits: true), .tap)
+        guard case .drag(let by) = crewRevealStep(false, frame: edge, in: viewport, orbits: true) else {
+            return XCTFail("A crewmate half out of view is dragged into it")
+        }
+        let moved = edge.offsetBy(dx: by.dx, dy: by.dy)
+        XCTAssertLessThan(hypot(moved.midX - viewport.midX, moved.midY - viewport.midY), hypot(edge.midX - viewport.midX, edge.midY - viewport.midY),
+                          "The drag carries the crewmate toward the viewport's center")
+        // The other computer's crewmate holds still, so INF-1066's drag still answers it: the same run read it in view and
+        // not hittable just after its task record closed.
+        let remote = CGRect(x: 262.41581476845715, y: 342.1462309710071, width: 44, height: 44)
+        guard case .drag = crewRevealStep(false, frame: remote, in: viewport, orbits: false) else {
+            return XCTFail("A still crewmate off the scene's center is dragged, as before")
+        }
+    }
+
+    /// What one look at a crewmate tells `revealCrew` to do next.
+    private enum CrewRevealStep: Equatable {
+        /// Its whole square is in view and XCTest finds it under its own hit test.
+        case tap
+        /// Let it move instead of dragging: see `crewRevealStep`.
+        case wait
+        /// Drag the scene by this much, toward bringing the crewmate's center to the viewport's.
+        case drag(CGVector)
+    }
+
+    /// INF-3631: a drag moves the first mate together with its orbiting crew, and the first mate's 280-point square, an
+    /// accessibility element of its own, hides a crewmate's 44-point square from XCTest's hit test for most of its orbit.
+    /// So an orbiting crewmate (`orbits`) wholly in view waits for its orbit, never a drag. A still crewmate already on
+    /// the scene's center waits too: a drag that barely moves lands as a tap on whatever is there.
+    private func crewRevealStep(_ hittable: Bool, frame: CGRect, in viewport: CGRect, orbits: Bool) -> CrewRevealStep {
+        if crewReadyToTap(hittable, frame: frame, in: viewport) { return .tap }
+        if frame.contains(CGPoint(x: viewport.midX, y: viewport.midY)) || orbits && !frame.isEmpty && viewport.contains(frame) {
+            return .wait
+        }
+        // A finger drags content the opposite way the viewport travels; stay inside the viewport's inner area.
+        let reach = CGVector(dx: viewport.width * 0.4, dy: viewport.height * 0.4)
+        return .drag(CGVector(dx: max(-reach.dx, min(reach.dx, viewport.midX - frame.midX)),
+                              dy: max(-reach.dy, min(reach.dy, viewport.midY - frame.midY))))
+    }
+
     /// INF-1066: each touch drag moves the scene by the target's current distance from the viewport's center,
-    /// read from both frames before the gesture, then holds so no momentum carries it past the target.
-    private func revealCrew(_ element: XCUIElement, in scene: XCUIElement) {
-        for _ in 0..<8 {
+    /// read from both frames before the gesture, then holds so no momentum carries it past the target; at most eight.
+    /// INF-3631: an orbiting crewmate is read for a drag only once the crew ride their orbits at pace, since in a warp it
+    /// moves far in the second or so a drag takes. One wholly in view but covered waits for its orbit
+    /// to carry it out from under the first mate's square, or out of view. Its waits since the last drag last at most one
+    /// turn of the slowest orbit together: watched that long with the scene unmoved, it passes every place on its orbit.
+    private func revealCrew(_ element: XCUIElement, in scene: XCUIElement, orbits: CrewOrbits? = nil) {
+        func look() -> (step: CrewRevealStep, viewport: CGRect, target: CGRect) {
             let viewport = scene.frame, target = element.frame
-            if crewReadyToTap(element.isHittable, frame: target, in: viewport) {
-                print("INF-1399 fully revealed crew: scene=\(viewport), target=\(target)")
+            return (crewRevealStep(element.isHittable, frame: target, in: viewport, orbits: orbits != nil), viewport, target)
+        }
+        var tries = 0, watched: TimeInterval = 0
+        while tries < 8 {
+            var seen = look()
+            if case .drag = seen.step, let orbits {
+                awaitOrbitPace(element, in: scene, orbits: orbits, before: "drag toward")
+                seen = look()
+            }
+            print("INF-3631 reveal \(element.identifier): \(seen.step), scene=\(seen.viewport), target=\(seen.target)")
+            switch seen.step {
+            case .tap:
+                print("INF-1399 fully revealed crew: scene=\(seen.viewport), target=\(seen.target)")
                 return
+            case .wait:
+                guard let orbits else {
+                    // In phone run 42179127070 a press on the scene's center opened another crewmate's sheet.
+                    _ = waitForPhonePredicate(NSPredicate { _, _ in
+                        self.crewReadyToTap(element.isHittable, frame: element.frame, in: scene.frame)
+                    }, object: nil, timeout: 2)
+                    tries += 1
+                    continue
+                }
+                let moved = NSPredicate { _, _ in
+                    let viewport = scene.frame, frame = element.frame
+                    return self.crewReadyToTap(element.isHittable, frame: frame, in: viewport) || !viewport.contains(frame)
+                }
+                let began = ProcessInfo.processInfo.systemUptime
+                let result = watched < orbits.turn ? waitForPhonePredicate(moved, object: nil, timeout: orbits.turn - watched) : .timedOut
+                watched += ProcessInfo.processInfo.systemUptime - began
+                guard result == .completed else {
+                    return XCTFail("\(element.identifier) stayed in view and covered for a whole turn of its orbit, \(orbits.turn) s, "
+                                   + "at \(element.frame) in \(scene.frame): a drag moves the first mate along with it")
+                }
+            case .drag(let by):
+                let start = scene.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+                start.press(forDuration: 0.05, thenDragTo: start.withOffset(by), withVelocity: .slow, thenHoldForDuration: 0.3)
+                tries += 1
+                watched = 0
             }
-            // With the scene's center already on the crewmate, the drag would barely move, and a press that never pans
-            // lands as a tap on whatever crewmate is under the center. In phone run 42179127070 a warp carried the waiting
-            // crewmate off the center between its frame read and the press, and the press opened another crewmate's sheet.
-            // So a centered crewmate is waited for instead, and the next pass drags again if it has moved on.
-            if target.contains(CGPoint(x: viewport.midX, y: viewport.midY)) {
-                _ = waitForPhonePredicate(NSPredicate { _, _ in
-                    self.crewReadyToTap(element.isHittable, frame: element.frame, in: scene.frame)
-                }, object: nil, timeout: 2)
-                continue
-            }
-            // A finger drags content the opposite way the viewport travels; stay inside the viewport's inner area.
-            let reach = CGVector(dx: viewport.width * 0.4, dy: viewport.height * 0.4)
-            let dx = max(-reach.dx, min(reach.dx, viewport.midX - target.midX))
-            let dy = max(-reach.dy, min(reach.dy, viewport.midY - target.midY))
-            let start = scene.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-            let end = start.withOffset(CGVector(dx: dx, dy: dy))
-            start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
         }
         XCTAssertTrue(crewReadyToTap(element.isHittable, frame: element.frame, in: scene.frame), "Continuous panning must bring the whole crewmate inside the scene before tapping")
     }
@@ -451,11 +525,18 @@ extension PhoneJourney {
 
     /// INF-2039: the first mate's warp fidget speeds the home crew up five to eleven times, and a crewmate trailing the
     /// target then reaches the point the tap aimed at before the touch lands, and opens its own sheet. So an orbiting
-    /// crewmate's tap waits until every orbiting crewmate (`orbiting`, by identifier) rides one of the orbits about the
-    /// first mate, their center, no faster than that orbit's own pace, then taps it at once. One snapshot of the scene
-    /// reads them all together.
-    private func tapOrbitingCrew(_ crewmate: XCUIElement, in scene: XCUIElement, orbiting: Set<String>, pace: PhoneOrbitPace) {
-        var crew = PhoneOrbitPace.Crew(pace: pace)
+    /// crewmate's tap waits until every orbiting crewmate rides one of the orbits about the first mate at pace, then taps
+    /// it at once.
+    private func tapOrbitingCrew(_ crewmate: XCUIElement, in scene: XCUIElement, orbits: CrewOrbits) {
+        awaitOrbitPace(crewmate, in: scene, orbits: orbits, before: "tap")
+        tapOnPhone(crewmate, orbiting: true)
+    }
+
+    /// INF-2039: waits until every orbiting crewmate (`orbits.orbiting`, by identifier) rides one of the orbits about the
+    /// first mate, their center, no faster than that orbit's own pace, so a reading of `crewmate` stays good for what
+    /// follows (`action`). One snapshot of the scene reads them all together.
+    private func awaitOrbitPace(_ crewmate: XCUIElement, in scene: XCUIElement, orbits: CrewOrbits, before action: String) {
+        var crew = PhoneOrbitPace.Crew(pace: orbits.pace)
         let atPace = NSPredicate { _, _ in
             guard let snapshot = try? scene.snapshot() else { return false }
             var points: [String: CGPoint] = [:], center: CGPoint?
@@ -463,7 +544,7 @@ extension PhoneJourney {
             while let next = pending.popLast() {
                 let mid = CGPoint(x: next.frame.midX, y: next.frame.midY)
                 if next.identifier == "phone-character" { center = mid }
-                if orbiting.contains(next.identifier) { points[next.identifier] = mid }
+                if orbits.orbiting.contains(next.identifier) { points[next.identifier] = mid }
                 pending += next.children
             }
             guard let center else { return false }
@@ -471,9 +552,8 @@ extension PhoneJourney {
         }
         // A warp lasts six seconds and lets the crew go home over its release.
         XCTAssertEqual(waitForPhonePredicate(atPace, object: crewmate, timeout: 20), .completed,
-                       "The crew never rode their orbits at pace to tap \(crewmate): each orbit's last turn, allowance and drift \(crew.unsteady)")
-        print("INF-2039 orbiting tap at pace: \(crewmate.identifier) with \(crew.watches.count) crewmates read")
-        tapOnPhone(crewmate, orbiting: true)
+                       "The crew never rode their orbits at pace to \(action) \(crewmate): each orbit's last turn, allowance and drift \(crew.unsteady)")
+        print("INF-2039 orbiting \(action) at pace: \(crewmate.identifier) with \(crew.watches.count) crewmates read")
     }
 
     /// INF-499: a saved-sign-in choice reaches the computer; a failed body submits its saved draft honestly.
@@ -556,4 +636,12 @@ extension PhoneJourney {
         picture("message-about-past-card")
         tapOnPhone(app.buttons["put-aside-card"])
     }
+}
+
+/// The home crew's orbits as the scene fixture gives them: the orbiting crewmates, by identifier, and each orbit's pace.
+private struct CrewOrbits {
+    let orbiting: Set<String>
+    let pace: PhoneOrbitPace
+    /// How long the slowest orbit takes to come round once, in seconds.
+    var turn: TimeInterval { 360 / (pace.planes.map { abs($0.speedDegPerSec) }.filter { $0 > 0 }.min() ?? .infinity) }
 }

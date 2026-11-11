@@ -153,3 +153,43 @@ export function fileDropHere(): string {
   }
   return `Drop files to add them`;
 }
+
+export function cardHeadingWhy(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵĥý ~]`;
+    case "ar-XB":
+      return `\u202eWhy\u202c`;
+  }
+  return `Why`;
+}
+
+export function cardHeadingWhatChanged(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵĥáţ çĥáñĝéð ~~~~]`;
+    case "ar-XB":
+      return `\u202eWhat changed\u202c`;
+  }
+  return `What changed`;
+}
+
+export function cardHeadingBefore(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ɓéƒöŕé ~~]`;
+    case "ar-XB":
+      return `\u202eBefore\u202c`;
+  }
+  return `Before`;
+}
+
+export function cardHeadingAfter(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åƒţéŕ ~~]`;
+    case "ar-XB":
+      return `\u202eAfter\u202c`;
+  }
+  return `After`;
+}

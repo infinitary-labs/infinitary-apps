@@ -26,6 +26,7 @@ import {
   SURFACES_CONTEXT_LIMIT,
   surfaceState,
 } from "../pi/personalizeTool";
+import { captainLanguageFact } from "../prompts/captainLanguage";
 import { timeZoneFact } from "../prompts/timeZone";
 import type { SelfSourceFacts } from "../selfSource/resolve";
 import type { CardResolution } from "../storage/cardStore";
@@ -624,6 +625,8 @@ export class FirstmateContext {
       quota: whole(this.options.quotaLine()),
       // The zone CARD_AUTHORING's time rule says times in (FI3-1006).
       captain_time_zone: whole(timeZoneFact(this.now())),
+      // The language CARD_AUTHORING's language rule says cards and replies in (INF-3674).
+      captain_language: whole(captainLanguageFact()),
       self_source: whole(this.options.selfSourceDir),
       self_source_facts: whole(sourceFacts ?? this.options.selfSourceFacts?.() ?? null),
     };

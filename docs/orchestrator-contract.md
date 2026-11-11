@@ -196,7 +196,7 @@ Each input the first mate is served opens with one context, and a context carrie
   A fold of the conversation, a restart and a new session each reset the view, so the next context is complete again.
   An input sent before the reset and read after that complete context still counts, in read order, so a stale fact it puts back goes again in the next input.
 - **The saved sections.**
-  `project_scopes`, `repos` (by repo id), `crew` (by task id), `computers`, `computer_versions`, `backlog`, `open_cards` (by card id), `open_asks`, `introduction`, `schedules` (by id), `recent_fleet_outcomes`, `directions`, `surfaces`, `integrations`, `models_by_intelligence_bucket`, `quota`, `captain_time_zone` and `self_source`.
+  `project_scopes`, `repos` (by repo id), `crew` (by task id), `computers`, `computer_versions`, `backlog`, `open_cards` (by card id), `open_asks`, `introduction`, `schedules` (by id), `recent_fleet_outcomes`, `directions`, `surfaces`, `integrations`, `models_by_intelligence_bucket`, `quota`, `captain_time_zone`, `captain_language` and `self_source`.
   A row carries the time a fact runs from, never an elapsed time, so it changes when its fact does and never with the clock; `as_of` says when the input was read.
   `directions` is one section: when any direction changes, every current direction goes again whole under its authority line, so the model never holds part of the set.
 - **The facts of one input.**

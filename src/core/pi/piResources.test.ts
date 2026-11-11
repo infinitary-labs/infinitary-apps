@@ -1836,9 +1836,10 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // INF-2326's approved plan adds the two rules for a card's words (a project's own term, a change's effect).
   // INF-2715's approved plan asks each question in its section and adds the task words file and start.
   // INF-2744's approved plan names the one merge card: the fact strip rides a merge or settle effect.
+  // INF-3674's approved plan writes to the captain in their language and keeps the project's for commits.
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "9d1018268629b52ef2b7d8aa0f656d9e6f7485b3786bca7459015cee28c68622",
+    "6b67e3289d8827566c6e0c57fd7d4f9e03001e39e371f6ceeefad3e60198a076",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.

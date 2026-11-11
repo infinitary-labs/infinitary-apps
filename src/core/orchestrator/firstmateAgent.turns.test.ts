@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { onStage } from "@shared/cards";
 import * as checkReadings from "@shared/checkSnapshot";
 import { HERE } from "@shared/deviceNames";
+import { setCurrentLanguage } from "@shared/i18n/current";
+import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import { AUTOMATIC_WORD } from "@shared/placement";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -586,6 +588,26 @@ describe("FirstmateAgent", () => {
       { type: "firstmate_state", busy: true, folding: false },
       { type: "firstmate_state", busy: false },
     ]);
+  });
+
+  // INF-3674's approved plan: the first mate writes to the captain in the
+  // language the app speaks on the computer where it lives.
+  it("names the captain's language in every turn's context", async () => {
+    const english = setup();
+    await english.agent.converse("what is open?");
+    expect(decodeContext(english.session.prompts[0] as string).captain_language).toBe(
+      "English (en)",
+    );
+    setCurrentLanguage("zh-Hans");
+    try {
+      const chinese = setup();
+      await chinese.agent.converse("what is open?");
+      expect(decodeContext(chinese.session.prompts[0] as string).captain_language).toBe(
+        "Simplified Chinese (zh-Hans)",
+      );
+    } finally {
+      setCurrentLanguage(SOURCE_LANGUAGE);
+    }
   });
 
   it("names the captain's time zone with its offset on the host's clock in every turn's context (FI3-1006)", async () => {

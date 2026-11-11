@@ -135,3 +135,28 @@ export function languageFormatTag(tag: string): string {
   if (isPseudoLanguage(tag)) return tag.slice(0, 2);
   return tag;
 }
+
+/**
+ * The language the crew writes to the captain in (docs/i18n.md, "The
+ * crew's language"): the language the app speaks, except that a
+ * pseudo-language, which only a test reads the window in, is written as
+ * English.
+ */
+export function writtenLanguage(tag: string): string {
+  return isPseudoLanguage(tag) ? SOURCE_LANGUAGE : tag;
+}
+
+/**
+ * A language as served text names it, in English with its tag:
+ * `English (en)`, `Simplified Chinese (zh-Hans)`. A tag the runtime has no
+ * name for is named by the tag alone.
+ */
+export function servedLanguageName(tag: string): string {
+  let name: string | undefined;
+  try {
+    name = new Intl.DisplayNames([SOURCE_LANGUAGE], { type: "language" }).of(tag);
+  } catch {
+    return tag;
+  }
+  return name && name !== tag ? `${name} (${tag})` : tag;
+}

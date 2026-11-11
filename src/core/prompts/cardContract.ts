@@ -117,6 +117,12 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   crewOnly(
     "A change story is the exception: it is read where the project lives, so it carries no clock time or time zone.",
   ),
+  // INF-3674, the captain's answer: "Your language for anything written to
+  // you; the project's own language for commits and pull requests".
+  "Write cards, replies and reports in the captain's context-named language, unless they ask otherwise; quoted words keep their own language.",
+  crewOnly(
+    "Commits, pull requests, change stories, code and its comments, and the project's documents keep the project's own language: the one its existing commits and documents use.",
+  ),
   "On a card carrying a merge or settle effect the host writes the project, the crewmate's model, the task's care level, the pull request, the checks' state and any hold it has placed on the task - as its own strip, after the body. Those facts are never the body's to repeat or to get wrong.",
 ];
 

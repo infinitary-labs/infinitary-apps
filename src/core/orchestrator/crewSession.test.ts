@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { setCurrentLanguage } from "@shared/i18n/current";
+import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import { expect, it } from "vitest";
 import { crewmateToolDelegate } from "../../../tests/helpers/crewmateToolDelegate";
 import { fakeBinding } from "../../../tests/helpers/fakeSession";
@@ -108,6 +110,34 @@ it.each(["pi", "claude"] as const)(
     );
     expect(named?.[1]).toBe(localTimeZoneName());
     expect(`${named?.[1]} (${named?.[2]})`).toBe(timeZoneFact(Date.now()));
+  },
+);
+
+// INF-3674's approved plan: anything written to the captain is in the
+// captain's language, the language the app speaks on this Mac.
+it.each(["pi", "claude"] as const)(
+  "a %s session names the captain's language for its language rule",
+  (backend) => {
+    const root = scratchDir("crew-language-");
+    const open = () =>
+      crewmateSessionSpec(
+        appPathsFor(root),
+        { machineId: LOCAL_MACHINE_ID, taskId: "task-1", cwd: root },
+        backend === "pi" ? fakeBinding("test-account") : { backend, accountId: "test-account" },
+      ).instructions.base;
+    expect(open()).toContain("The captain's language is English (en).");
+    setCurrentLanguage("ja");
+    try {
+      // The catalog has no Japanese headings yet, so none are offered.
+      const prompt = open();
+      expect(prompt).toContain("The captain's language is Japanese (ja).");
+      expect(prompt).not.toContain("may head its four sections in it");
+      // A pseudo-language is a test's window, so the crew still writes English.
+      setCurrentLanguage("en-XA");
+      expect(open()).toContain("The captain's language is English (en).");
+    } finally {
+      setCurrentLanguage(SOURCE_LANGUAGE);
+    }
   },
 );
 

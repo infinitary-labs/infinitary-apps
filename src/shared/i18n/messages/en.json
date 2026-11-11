@@ -13,5 +13,9 @@
     "one": "Added {count} file path as text",
     "other": "Added {count} file paths as text"
   },
-  "fileDropHere": "Drop files to add them"
+  "fileDropHere": "Drop files to add them",
+  "cardHeadingWhy": "Why",
+  "cardHeadingWhatChanged": "What changed",
+  "cardHeadingBefore": "Before",
+  "cardHeadingAfter": "After"
 }

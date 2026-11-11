@@ -1,5 +1,8 @@
 import { COMPLETION_CARD_HEADINGS } from "@shared/cardHeadings";
+import { setCurrentLanguage } from "@shared/i18n/current";
+import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import { describe, expect, it } from "vitest";
+import { languageCompletionHeadings } from "../prompts/captainLanguage";
 import { ABANDON, SAVE_AND_DEFER } from "../prompts/cardContract";
 import {
   ANYTHING_ELSE_TAKEN_WORDS,
@@ -717,6 +720,38 @@ describe("lintCrewmateCard", () => {
         expect(refusal).toContain(COMPLETION_CARD_HEADINGS.join(", "));
       },
     );
+
+    // INF-3674's approved plan: the crew writes to the captain in the
+    // captain's language, so the check accepts the catalog's headings in the
+    // language the app speaks. The en-XA pseudo-language is compiled from the
+    // real catalog, so its headings are the catalog's own translation.
+    it("accepts the headings in the language the app speaks, and names them when one is missing", () => {
+      setCurrentLanguage("en-XA");
+      try {
+        const translated = languageCompletionHeadings();
+        expect(translated).not.toEqual([...COMPLETION_CARD_HEADINGS]);
+        const local = (heading: string, index: number) =>
+          `<h3>${heading}</h3><p>Task-specific content.</p>${index >= 2 ? PICTURE : ""}`;
+        expect(lintCrewmateCard(completion(translated.map(local).join("")))).toBeUndefined();
+        // English stays accepted beside it.
+        expect(lintCrewmateCard(completion(outline))).toBeUndefined();
+        // The picture rule reads the translated Before and After sections.
+        const pictureless = translated.map((heading) => `<h3>${heading}</h3><p>Text.</p>`).join("");
+        expect(lintCrewmateCard(completion(pictureless))).toBe(COMPLETION_PICTURES_REFUSAL);
+        const refusal = lintCrewmateCard(
+          completion(
+            translated
+              .filter((_, index) => index !== 1)
+              .map(local)
+              .join(""),
+          ),
+        );
+        expect(refusal).toContain(`"${COMPLETION_CARD_HEADINGS[1]}"`);
+        expect(refusal).toContain(translated.join(", "));
+      } finally {
+        setCurrentLanguage(SOURCE_LANGUAGE);
+      }
+    });
 
     it("refuses out-of-order headings and does not mistake prose or scripted headings for sections", () => {
       expect(

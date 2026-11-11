@@ -6,11 +6,13 @@ import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import {
   buildCrewmateSystemPrompt,
   type CrewmateComputers,
+  type CrewmateLanguage,
   type CrewmateProcedureFacts,
   crewmateProcedureFor,
   toolFingerprints,
   toolsFingerprint,
 } from "../pi/piResources";
+import { captainCompletionHeadings, captainLanguageFact } from "../prompts/captainLanguage";
 import { timeZoneFact } from "../prompts/timeZone";
 import type { SelfSourceFacts } from "../selfSource/resolve";
 import { sourceContext, sourceIdentity } from "../selfSource/resolve";
@@ -212,6 +214,12 @@ export function crewmateRestartText(input: {
   ].join("\n\n");
 }
 
+/** The captain's language and, when the catalog translates them, a merge card's headings in it. */
+function crewmateLanguage(): CrewmateLanguage {
+  const headings = captainCompletionHeadings();
+  return { name: captainLanguageFact(), ...(headings ? { headings } : {}) };
+}
+
 /** The crewmate preset: its spec for a session on `binding`. */
 export function crewmateSessionSpec(
   paths: AppPaths,
@@ -250,6 +258,8 @@ export function crewmateSessionSpec(
           ? "list"
           : undefined,
       spec.stops === true && (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID),
+      // The captain's language as this Mac's app speaks it when the session opens.
+      crewmateLanguage(),
     ) +
     (spec.machineId === LOCAL_MACHINE_ID
       ? `\n${sourceContext(spec.source, spec.source && sourceIdentity(spec.source))}`

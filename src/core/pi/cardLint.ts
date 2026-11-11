@@ -12,6 +12,7 @@ import { ANYTHING_ELSE_ANSWER, isPreviewBody, mergeEffectOf, settleEffectOf } fr
 import { hasHook } from "@shared/codeNames";
 import type { Rigor } from "@shared/rigor";
 import { ElementType, parseDocument } from "htmlparser2";
+import { languageCompletionHeadings } from "../prompts/captainLanguage";
 import type { EmittedCard } from "./cardTool";
 
 /**
@@ -844,10 +845,24 @@ export function lintCrewmateCard(
   const headings = bodyHeadings(card.body).map((heading) => heading.toLowerCase());
   let cursor = 0;
   const outline = options.tieredStory ? TIERED_STORY_HEADINGS : COMPLETION_CARD_HEADINGS;
-  for (const heading of outline) {
-    const at = headings.indexOf(heading.toLowerCase(), cursor);
-    if (at === -1) {
-      return `the merge card is missing the "${heading}" heading in order; give the body headed sections ${outline.join(", ")} in that order, with the answer in the title alone.`;
+  // The host writes a saved story's outline itself, in English; a free-form
+  // merge card may head its sections in the captain's language instead
+  // (INF-3674), as the catalog words them for the language the app speaks.
+  const inLanguage = options.tieredStory ? undefined : languageCompletionHeadings();
+  for (const [index, heading] of outline.entries()) {
+    const translated = inLanguage?.[index];
+    const at = Math.min(
+      ...[heading, translated]
+        .filter((name): name is string => name !== undefined)
+        .map((name) => headings.indexOf(name.toLowerCase(), cursor))
+        .map((found) => (found === -1 ? Number.POSITIVE_INFINITY : found)),
+    );
+    if (at === Number.POSITIVE_INFINITY) {
+      const named =
+        inLanguage && inLanguage.join() !== outline.join()
+          ? `${outline.join(", ")}, or in the captain's language ${inLanguage.join(", ")},`
+          : outline.join(", ");
+      return `the merge card is missing the "${heading}" heading in order; give the body headed sections ${named} in that order, with the answer in the title alone.`;
     }
     cursor = at + 1;
   }
@@ -856,8 +871,11 @@ export function lintCrewmateCard(
   if (options.tieredStory || options.rigor === "quick") return undefined;
   const { sections, noPictureSentence } = readPictureDeclaration(card.body);
   if (noPictureSentence) return undefined;
-  const before = sections.get("before");
-  const after = sections.get("after");
+  const section = (english: string, translated: string | undefined) =>
+    sections.get(english.toLowerCase()) ??
+    (translated === undefined ? undefined : sections.get(translated.toLowerCase()));
+  const before = section(COMPLETION_CARD_HEADINGS[2], inLanguage?.[2]);
+  const after = section(COMPLETION_CARD_HEADINGS[3], inLanguage?.[3]);
   if (!after || after.pictures === 0) return COMPLETION_PICTURES_REFUSAL;
   if (after.fresh < after.pictures && (before?.pictures ?? 0) === 0) {
     return COMPLETION_PICTURES_REFUSAL;

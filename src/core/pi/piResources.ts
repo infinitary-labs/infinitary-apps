@@ -101,6 +101,27 @@ export function crewmateTimeZoneNote(timeZone: string): string {
   return `The captain's local time zone is ${timeZone}.`;
 }
 
+/** The captain's language, as a crewmate's prompt names it (docs/i18n.md, "The crew's language"). */
+export type CrewmateLanguage = {
+  /** Named for served text, such as `Simplified Chinese (zh-Hans)`. */
+  name: string;
+  /** A merge card's four headings in that language, when the catalog translates them. */
+  headings?: readonly string[];
+};
+
+/**
+ * The captain's language, which `CARD_AUTHORING`'s language rule reads
+ * (INF-3674): named when the crewmate's session opens, as the first mate's
+ * context block names it each turn, with the merge card's headings in it
+ * when the catalog has them.
+ */
+export function crewmateLanguageNote(language: CrewmateLanguage): string {
+  const headings = language.headings
+    ? ` A merge card may head its four sections in it, in order: ${language.headings.join(", ")}.`
+    : "";
+  return `The captain's language is ${language.name}.${headings}`;
+}
+
 /** The captain's computers, as a crewmate's prompt names them (INF-992). */
 export type CrewmateComputers = {
   /** The computer that runs work this task runs on; absent on the computer where the first mate lives. */
@@ -252,6 +273,8 @@ export function buildCrewmateSystemPrompt(
   secrets?: "use" | "list",
   /** Its shell has `infinitary-stops-axi` (docs/leftover-programs.md). */
   stops?: boolean,
+  /** The captain's language, which `CARD_AUTHORING`'s language rule reads. */
+  language?: CrewmateLanguage,
 ): string {
   const full = `You are a crewmate: a background worker aboard Infinitary, working for the first mate, the captain's calm desktop first officer.
 Work on exactly one task in your isolated git worktree, your working directory. Changes there are yours to commit; nothing outside it is your concern. The one exception is a task on the personal workspace: there you build in place in the workspace its brief names; the host commits your changes after each turn; your completion is a note showing what you built, then your report. An answer task ships nothing: no commit, push, pull request or merge card; the card is the deliverable and the captain's choice on it closes the task, unless its brief names a step whose report the next step builds on.
@@ -293,6 +316,7 @@ The user sees cards and their threads, never a chat of your own. Follow emit_car
     ...(tempDir ? [crewmateTempNote(tempDir)] : []),
     ...(cardBodiesDir ? [crewmateCardBodiesNote(cardBodiesDir)] : []),
     ...(timeZone ? [crewmateTimeZoneNote(timeZone)] : []),
+    ...(language ? [crewmateLanguageNote(language)] : []),
     ...(computers && computers.workers.length > 0 ? [crewmateComputersNote(computers)] : []),
     ...(browser ? [CREWMATE_BROWSER_LINE] : []),
     ...(integrations ? [CREWMATE_INTEGRATIONS_LINE] : []),

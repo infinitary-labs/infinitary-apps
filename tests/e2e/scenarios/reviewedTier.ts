@@ -20,8 +20,9 @@ import {
   calledTool,
   checkFactsSnapshot,
   contextRepos,
+  onlyCheckNotices,
   providerMessages,
-  sinceLastUser,
+  sinceLastAsked,
 } from "../providerRequest";
 
 /**
@@ -286,7 +287,13 @@ function crewmateMove({
   // Its reading after the journey pushes a fix: the checks at the new
   // head, then on green its proof at that version, as its first report
   // carried it. On red it has nothing more to say.
-  const turn = sinceLastUser(body);
+  // The check watch's notice is never its next assignment: when the app's
+  // own reading of the pushed version comes first, the watch steers it into
+  // the builder's running turn, after its check_change result (docs/forge.md,
+  // "The check watch"), and it names checks that reading already holds. Read
+  // past it, or it hides the steer the builder is answering and no proof is
+  // saved at that version (INF-3605, as INF-3603 found for agents-reach).
+  const turn = sinceLastAsked(body, onlyCheckNotices);
   if (turn.user.includes(MOCK_REVIEWED_READ_STEER)) {
     const reading = turn.results.findLast((result) => /^facts: /m.test(result));
     if (!reading) return { calls: [{ name: "check_change", args: {} }] };

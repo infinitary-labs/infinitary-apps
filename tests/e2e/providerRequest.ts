@@ -6,6 +6,7 @@ import {
 } from "@shared/servedFrame";
 import { decode } from "@toon-format/toon";
 import type { WakeChoice } from "../../src/core/orchestrator/captainWakes";
+import { CHECK_OBSERVATIONS_LEAD } from "../../src/core/orchestrator/deliveryWakes";
 import {
   PENDING_RESPONSES_END,
   PENDING_RESPONSES_OPENING,
@@ -462,6 +463,18 @@ export function sinceLastAsked(
     tail: JSON.stringify(messages.slice(at)),
     results: messages.slice(at + 1).flatMap(toolResults),
   };
+}
+
+/**
+ * Words made only of the check watch's notices, for `sinceLastAsked`: when
+ * the app's own reading of a pushed version comes before the crewmate's, the
+ * watch steers its notice into the running turn (docs/forge.md, "The check
+ * watch"), and it asks nothing new. A lane's rows due together ride one
+ * message, a paragraph each (`laneTurnText`), so a message that also carries
+ * another row's words still asks something and is never read past.
+ */
+export function onlyCheckNotices(words: string): boolean {
+  return words.split("\n\n").every((part) => part.startsWith(CHECK_OBSERVATIONS_LEAD));
 }
 
 /**

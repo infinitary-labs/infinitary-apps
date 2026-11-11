@@ -1,0 +1,1934 @@
+{
+  "name": "core",
+  "about": "Everything the app does with no window: the first mate, the crew, models, projects and saved state.",
+  "groups": [
+    {
+      "name": "First mate and crew",
+      "why": "Runs the first mate's turns, the crew's tasks and what they read"
+    },
+    {
+      "name": "Models and accounts",
+      "why": "Which models and accounts serve a session, and what they allow"
+    },
+    {
+      "name": "Projects",
+      "why": "The person's projects, where they live and how changes merge"
+    },
+    {
+      "name": "A crewmate's reach",
+      "why": "What a crewmate reaches from its shell beyond its working copy"
+    },
+    {
+      "name": "Other computers",
+      "why": "Pairing with and working on the person's other computers"
+    },
+    {
+      "name": "Saved state",
+      "why": "The record on disk and the reads apart from it"
+    },
+    {
+      "name": "Panels and plugins",
+      "why": "Side panels and the personal workspace that makes them"
+    },
+    {
+      "name": "The app's upkeep",
+      "why": "Keeps the app current, healthy and honest about what it sends"
+    }
+  ],
+  "parts": [
+    {
+      "name": "orchestrator",
+      "path": "src/core/orchestrator",
+      "about": "The first mate's turns, the crew supervisor, cards, merges and wakes",
+      "group": "First mate and crew"
+    },
+    {
+      "name": "session",
+      "path": "src/core/session",
+      "about": "One model session for every role, with its tools and bounds",
+      "group": "First mate and crew"
+    },
+    {
+      "name": "tasks",
+      "path": "src/core/tasks",
+      "about": "The task record: graph, starts, closes, deliveries and timelines",
+      "group": "First mate and crew"
+    },
+    {
+      "name": "program",
+      "path": "src/core/program",
+      "about": "Runs a program's script and files its parts as tasks",
+      "group": "First mate and crew"
+    },
+    {
+      "name": "decisions",
+      "path": "src/core/decisions",
+      "about": "Typed questions to a small model, and corrections",
+      "group": "First mate and crew"
+    },
+    {
+      "name": "prompts",
+      "path": "src/core/prompts",
+      "about": "The served text and its contract revisions",
+      "group": "First mate and crew"
+    },
+    {
+      "name": "runbooks",
+      "path": "src/core/runbooks",
+      "about": "Reads runbooks and serves their sections",
+      "group": "First mate and crew"
+    },
+    {
+      "name": "knowledge",
+      "path": "src/core/knowledge",
+      "about": "Concepts, findings, sources and standing directions",
+      "group": "First mate and crew"
+    },
+    {
+      "name": "dispatcher",
+      "path": "src/core/dispatcher",
+      "about": "Card media and the record of settled runs",
+      "group": "First mate and crew"
+    },
+    {
+      "name": "jobs",
+      "path": "src/core/jobs",
+      "about": "A crewmate's background commands and their exit wakes",
+      "group": "First mate and crew"
+    },
+    {
+      "name": "pi",
+      "path": "src/core/pi",
+      "about": "Sessions through Pi: the crew's tools, accounts and card checks",
+      "group": "Models and accounts"
+    },
+    {
+      "name": "claude",
+      "path": "src/core/claude",
+      "about": "Sessions through the installed Claude client, and its sign-in",
+      "group": "Models and accounts"
+    },
+    {
+      "name": "accounts",
+      "path": "src/core/accounts",
+      "about": "Whether each sign-in is healthy",
+      "group": "Models and accounts"
+    },
+    {
+      "name": "models",
+      "path": "src/core/models",
+      "about": "What each account serves",
+      "group": "Models and accounts"
+    },
+    {
+      "name": "quota",
+      "path": "src/core/quota",
+      "about": "Allowances and how much of them is spent",
+      "group": "Models and accounts"
+    },
+    {
+      "name": "routing",
+      "path": "src/core/routing",
+      "about": "Chooses the model, account and computer for each turn",
+      "group": "Models and accounts"
+    },
+    {
+      "name": "workspace",
+      "path": "src/core/workspace",
+      "about": "Projects, working copies and git",
+      "group": "Projects"
+    },
+    {
+      "name": "forge",
+      "path": "src/core/forge",
+      "about": "Where projects live: pull requests, checks and merges",
+      "group": "Projects"
+    },
+    {
+      "name": "queue",
+      "path": "src/core/queue",
+      "about": "The fix-forward queue the app writes into projects",
+      "group": "Projects"
+    },
+    {
+      "name": "axi",
+      "path": "src/core/axi",
+      "about": "The task channel behind a crewmate's commands",
+      "group": "A crewmate's reach"
+    },
+    {
+      "name": "browser",
+      "path": "src/core/browser",
+      "about": "A task's browser and the sites it may reach",
+      "group": "A crewmate's reach"
+    },
+    {
+      "name": "files",
+      "path": "src/core/files",
+      "about": "Copies files between the person's computers",
+      "group": "A crewmate's reach"
+    },
+    {
+      "name": "integrations",
+      "path": "src/core/integrations",
+      "about": "Services outside the projects, and their sign-ins",
+      "group": "A crewmate's reach"
+    },
+    {
+      "name": "secrets",
+      "path": "src/core/secrets",
+      "about": "Approved uses of the person's secrets",
+      "group": "A crewmate's reach"
+    },
+    {
+      "name": "devices",
+      "path": "src/core/devices",
+      "about": "Pairing, keys and each computer's facts",
+      "group": "Other computers"
+    },
+    {
+      "name": "connection",
+      "path": "src/core/connection",
+      "about": "The connection views and computers speak",
+      "group": "Other computers"
+    },
+    {
+      "name": "helper",
+      "path": "src/core/helper",
+      "about": "A computer that runs work, with no window",
+      "group": "Other computers"
+    },
+    {
+      "name": "placed",
+      "path": "src/core/placed",
+      "about": "Work placed on other computers",
+      "group": "Other computers"
+    },
+    {
+      "name": "storage",
+      "path": "src/core/storage",
+      "about": "The SQLite record and its stores",
+      "group": "Saved state"
+    },
+    {
+      "name": "sql",
+      "path": "src/core/sql",
+      "about": "Read-only SQL in its own process",
+      "group": "Saved state"
+    },
+    {
+      "name": "recordReads",
+      "path": "src/core/recordReads",
+      "about": "Task searches in a read-only process",
+      "group": "Saved state"
+    },
+    {
+      "name": "folderMove",
+      "path": "src/core/folderMove",
+      "about": "The one-time move of the data folder",
+      "group": "Saved state"
+    },
+    {
+      "name": "preferences",
+      "path": "src/core/preferences",
+      "about": "Appearance and panel layout",
+      "group": "Saved state"
+    },
+    {
+      "name": "personal",
+      "path": "src/core/personal",
+      "about": "The personal workspace and the panels it makes",
+      "group": "Panels and plugins"
+    },
+    {
+      "name": "panels",
+      "path": "src/core/panels",
+      "about": "A panel's background process and its log",
+      "group": "Panels and plugins"
+    },
+    {
+      "name": "plugins",
+      "path": "src/core/plugins",
+      "about": "Installing panels and runbooks by talking",
+      "group": "Panels and plugins"
+    },
+    {
+      "name": "update",
+      "path": "src/core/update",
+      "about": "Checks for and installs new versions",
+      "group": "The app's upkeep"
+    },
+    {
+      "name": "releaseNotes",
+      "path": "src/core/releaseNotes",
+      "about": "The notes shown after an update",
+      "group": "The app's upkeep"
+    },
+    {
+      "name": "freeze",
+      "path": "src/core/freeze",
+      "about": "The freeze recorder in alpha builds",
+      "group": "The app's upkeep"
+    },
+    {
+      "name": "privacy",
+      "path": "src/core/privacy",
+      "about": "Watches macOS's questions about other apps' data",
+      "group": "The app's upkeep"
+    },
+    {
+      "name": "selfSource",
+      "path": "src/core/selfSource",
+      "about": "The app's own source, for the crew to read",
+      "group": "The app's upkeep"
+    },
+    {
+      "name": "observe",
+      "path": "src/core/observe",
+      "about": "Transcripts and decisions in development builds",
+      "group": "The app's upkeep"
+    },
+    {
+      "name": "sharing",
+      "path": "src/core/sharing",
+      "about": "Diagnostics and contribution: what leaves the computer",
+      "group": "The app's upkeep"
+    }
+  ],
+  "outside": [
+    {
+      "name": "shared",
+      "path": "src/shared",
+      "about": "Shapes, channels and words every side reads"
+    },
+    {
+      "name": "main",
+      "path": "src/main",
+      "about": "The main process that starts the core"
+    },
+    {
+      "name": "runbook files",
+      "path": "resources/runbooks",
+      "about": "The bundled runbooks"
+    },
+    {
+      "name": "personal workspace files",
+      "path": "resources/personal-workspace",
+      "about": "The skills the personal workspace starts with"
+    },
+    {
+      "name": "task commands",
+      "path": "resources/axi-bin",
+      "about": "The commands on a crewmate's search path"
+    },
+    {
+      "name": "model providers",
+      "about": "Codex, Grok, OpenRouter and the other subscriptions Pi reaches"
+    },
+    {
+      "name": "Claude client",
+      "about": "The Claude Code the person installed"
+    },
+    {
+      "name": "git",
+      "about": "Working copies on the computer"
+    },
+    {
+      "name": "GitHub and GitLab",
+      "about": "Where projects live"
+    },
+    {
+      "name": "other computers",
+      "about": "Paired Macs, computers that run work and phones"
+    },
+    {
+      "name": "release feeds",
+      "about": "Where new versions are published"
+    },
+    {
+      "name": "connected services",
+      "about": "Gmail, Google Calendar and other services an integration reaches"
+    },
+    {
+      "name": "websites",
+      "about": "The pages a task's browser opens"
+    },
+    {
+      "name": "the system",
+      "about": "macOS's own logs and services"
+    }
+  ],
+  "links": [
+    {
+      "from": "axi",
+      "to": "browser",
+      "why": "runs the browser command"
+    },
+    {
+      "from": "axi",
+      "to": "integrations",
+      "why": "runs the integrations and inbox commands"
+    },
+    {
+      "from": "axi",
+      "to": "placed",
+      "why": "says why a load waits in line"
+    },
+    {
+      "from": "axi",
+      "to": "secrets",
+      "why": "runs the secrets command"
+    },
+    {
+      "from": "browser",
+      "to": "axi",
+      "why": "hears browser commands on the task channel"
+    },
+    {
+      "from": "browser",
+      "to": "integrations",
+      "why": "reads the inbox's command"
+    },
+    {
+      "from": "browser",
+      "to": "placed",
+      "why": "drives browsers on a computer that runs work"
+    },
+    {
+      "from": "browser",
+      "to": "workspace",
+      "why": "serves a project's page"
+    },
+    {
+      "from": "claude",
+      "to": "accounts",
+      "why": "reports a Claude account's health"
+    },
+    {
+      "from": "claude",
+      "to": "orchestrator",
+      "why": "keeps the host's clock"
+    },
+    {
+      "from": "claude",
+      "to": "pi",
+      "why": "serves the crew's task tools to Claude"
+    },
+    {
+      "from": "claude",
+      "to": "placed",
+      "why": "finds the Claude client's processes"
+    },
+    {
+      "from": "claude",
+      "to": "runbooks",
+      "why": "stages runbook skills"
+    },
+    {
+      "from": "claude",
+      "to": "session",
+      "why": "opens sessions to the one session contract"
+    },
+    {
+      "from": "claude",
+      "to": "storage",
+      "why": "keeps Claude session records"
+    },
+    {
+      "from": "connection",
+      "to": "devices",
+      "why": "proves each side's key"
+    },
+    {
+      "from": "decisions",
+      "to": "orchestrator",
+      "why": "raises correction cards on the host's clock"
+    },
+    {
+      "from": "decisions",
+      "to": "pi",
+      "why": "asks decision models and checks card ids"
+    },
+    {
+      "from": "decisions",
+      "to": "quota",
+      "why": "calls the decision model's provider"
+    },
+    {
+      "from": "decisions",
+      "to": "session",
+      "why": "asks typed questions"
+    },
+    {
+      "from": "decisions",
+      "to": "storage",
+      "why": "keeps decisions and their wakes"
+    },
+    {
+      "from": "devices",
+      "to": "connection",
+      "why": "reaches paired computers"
+    },
+    {
+      "from": "devices",
+      "to": "helper",
+      "why": "launches and updates a computer that runs work"
+    },
+    {
+      "from": "devices",
+      "to": "models",
+      "why": "narrows what a computer can serve"
+    },
+    {
+      "from": "devices",
+      "to": "orchestrator",
+      "why": "keeps the host's clock"
+    },
+    {
+      "from": "devices",
+      "to": "placed",
+      "why": "reads each computer's loads and resources"
+    },
+    {
+      "from": "devices",
+      "to": "privacy",
+      "why": "starts the privacy watch"
+    },
+    {
+      "from": "devices",
+      "to": "storage",
+      "why": "reads a retired data folder's mark"
+    },
+    {
+      "from": "devices",
+      "to": "tasks",
+      "why": "names the tasks on a computer"
+    },
+    {
+      "from": "devices",
+      "to": "update",
+      "why": "sends new versions to other computers"
+    },
+    {
+      "from": "files",
+      "to": "session",
+      "why": "names this computer"
+    },
+    {
+      "from": "files",
+      "to": "tasks",
+      "why": "checks hand-over files"
+    },
+    {
+      "from": "folderMove",
+      "to": "claude",
+      "why": "moves Claude's session folders"
+    },
+    {
+      "from": "folderMove",
+      "to": "helper",
+      "why": "waits for the folder's holder"
+    },
+    {
+      "from": "folderMove",
+      "to": "storage",
+      "why": "locks and checks the data folder"
+    },
+    {
+      "from": "forge",
+      "to": "queue",
+      "why": "reads the queue's stamp and pause"
+    },
+    {
+      "from": "forge",
+      "to": "workspace",
+      "why": "runs git and checks commit names"
+    },
+    {
+      "from": "freeze",
+      "to": "update",
+      "why": "recognizes an alpha build"
+    },
+    {
+      "from": "helper",
+      "to": "accounts",
+      "why": "serves account health to its home"
+    },
+    {
+      "from": "helper",
+      "to": "axi",
+      "why": "runs the task channel there"
+    },
+    {
+      "from": "helper",
+      "to": "browser",
+      "why": "runs task browsers there"
+    },
+    {
+      "from": "helper",
+      "to": "claude",
+      "why": "runs Claude sessions and sign-ins there"
+    },
+    {
+      "from": "helper",
+      "to": "connection",
+      "why": "speaks the home's contract"
+    },
+    {
+      "from": "helper",
+      "to": "devices",
+      "why": "dials and joins its home"
+    },
+    {
+      "from": "helper",
+      "to": "files",
+      "why": "answers file orders there"
+    },
+    {
+      "from": "helper",
+      "to": "folderMove",
+      "why": "moves its data folder"
+    },
+    {
+      "from": "helper",
+      "to": "forge",
+      "why": "keeps sign-ins where projects live"
+    },
+    {
+      "from": "helper",
+      "to": "integrations",
+      "why": "rewrites a conversation's outside data"
+    },
+    {
+      "from": "helper",
+      "to": "jobs",
+      "why": "runs crewmates' background commands"
+    },
+    {
+      "from": "helper",
+      "to": "models",
+      "why": "keeps the accounts it holds"
+    },
+    {
+      "from": "helper",
+      "to": "orchestrator",
+      "why": "resumes crewmate conversations"
+    },
+    {
+      "from": "helper",
+      "to": "pi",
+      "why": "runs Pi sessions and sign-ins there"
+    },
+    {
+      "from": "helper",
+      "to": "placed",
+      "why": "measures its load and answers placement facts"
+    },
+    {
+      "from": "helper",
+      "to": "quota",
+      "why": "reads allowances there"
+    },
+    {
+      "from": "helper",
+      "to": "selfSource",
+      "why": "serves the app's source facts"
+    },
+    {
+      "from": "helper",
+      "to": "session",
+      "why": "hosts sessions and their tools"
+    },
+    {
+      "from": "helper",
+      "to": "storage",
+      "why": "checks the data folder's lock"
+    },
+    {
+      "from": "helper",
+      "to": "tasks",
+      "why": "keeps a task's folders, evidence and stops"
+    },
+    {
+      "from": "helper",
+      "to": "update",
+      "why": "reads how Linux installed it"
+    },
+    {
+      "from": "helper",
+      "to": "workspace",
+      "why": "keeps working copies and git bundles"
+    },
+    {
+      "from": "integrations",
+      "to": "axi",
+      "why": "checks the task channel's key"
+    },
+    {
+      "from": "integrations",
+      "to": "claude",
+      "why": "finds Claude transcripts"
+    },
+    {
+      "from": "integrations",
+      "to": "pi",
+      "why": "guards custom addresses"
+    },
+    {
+      "from": "integrations",
+      "to": "storage",
+      "why": "scrubs saved outside data"
+    },
+    {
+      "from": "integrations",
+      "to": "tasks",
+      "why": "delivers files to a task's hand-over folder"
+    },
+    {
+      "from": "jobs",
+      "to": "pi",
+      "why": "finds bash on Windows"
+    },
+    {
+      "from": "jobs",
+      "to": "placed",
+      "why": "finds a job's processes"
+    },
+    {
+      "from": "jobs",
+      "to": "storage",
+      "why": "keeps job rows"
+    },
+    {
+      "from": "knowledge",
+      "to": "session",
+      "why": "binds the knowledge tools"
+    },
+    {
+      "from": "knowledge",
+      "to": "storage",
+      "why": "keeps the knowledge database"
+    },
+    {
+      "from": "knowledge",
+      "to": "workspace",
+      "why": "reads git facts"
+    },
+    {
+      "from": "models",
+      "to": "claude",
+      "why": "reads Claude's served models"
+    },
+    {
+      "from": "models",
+      "to": "pi",
+      "why": "reads the account vault"
+    },
+    {
+      "from": "models",
+      "to": "quota",
+      "why": "calls the provider's model list"
+    },
+    {
+      "from": "models",
+      "to": "update",
+      "why": "fetches starter models"
+    },
+    {
+      "from": "observe",
+      "to": "claude",
+      "why": "reads Claude transcripts"
+    },
+    {
+      "from": "observe",
+      "to": "pi",
+      "why": "reads usage from Pi messages"
+    },
+    {
+      "from": "observe",
+      "to": "storage",
+      "why": "reads decisions, sessions and usage"
+    },
+    {
+      "from": "observe",
+      "to": "update",
+      "why": "recognizes an alpha build"
+    },
+    {
+      "from": "orchestrator",
+      "to": "accounts",
+      "why": "reads sign-in cut-offs"
+    },
+    {
+      "from": "orchestrator",
+      "to": "browser",
+      "why": "names the browser command on cards"
+    },
+    {
+      "from": "orchestrator",
+      "to": "forge",
+      "why": "opens changes, reads checks and merges"
+    },
+    {
+      "from": "orchestrator",
+      "to": "integrations",
+      "why": "carries integration outcomes"
+    },
+    {
+      "from": "orchestrator",
+      "to": "jobs",
+      "why": "wakes a crewmate when its job exits"
+    },
+    {
+      "from": "orchestrator",
+      "to": "knowledge",
+      "why": "serves knowledge and directions in briefs"
+    },
+    {
+      "from": "orchestrator",
+      "to": "observe",
+      "why": "redacts captured decisions"
+    },
+    {
+      "from": "orchestrator",
+      "to": "personal",
+      "why": "serves the personal workspace's guidance"
+    },
+    {
+      "from": "orchestrator",
+      "to": "pi",
+      "why": "builds prompts and checks cards"
+    },
+    {
+      "from": "orchestrator",
+      "to": "placed",
+      "why": "prepares work on other computers"
+    },
+    {
+      "from": "orchestrator",
+      "to": "program",
+      "why": "runs programs"
+    },
+    {
+      "from": "orchestrator",
+      "to": "prompts",
+      "why": "reads the card contract and the time zone"
+    },
+    {
+      "from": "orchestrator",
+      "to": "queue",
+      "why": "reads the queue's labels and parts"
+    },
+    {
+      "from": "orchestrator",
+      "to": "quota",
+      "why": "reads the first mate's allowance"
+    },
+    {
+      "from": "orchestrator",
+      "to": "routing",
+      "why": "routes crewmates and classifies kinds"
+    },
+    {
+      "from": "orchestrator",
+      "to": "runbooks",
+      "why": "serves runbook sections to the crew"
+    },
+    {
+      "from": "orchestrator",
+      "to": "selfSource",
+      "why": "serves the app's source facts"
+    },
+    {
+      "from": "orchestrator",
+      "to": "session",
+      "why": "opens sessions and binds tools"
+    },
+    {
+      "from": "orchestrator",
+      "to": "storage",
+      "why": "keeps cards, asks, the inbox and changes"
+    },
+    {
+      "from": "orchestrator",
+      "to": "tasks",
+      "why": "starts, steers and closes tasks"
+    },
+    {
+      "from": "orchestrator",
+      "to": "update",
+      "why": "compares versions"
+    },
+    {
+      "from": "orchestrator",
+      "to": "workspace",
+      "why": "reads working copies and commits"
+    },
+    {
+      "from": "personal",
+      "to": "panels",
+      "why": "runs panels' background processes"
+    },
+    {
+      "from": "personal",
+      "to": "plugins",
+      "why": "checks panel sources"
+    },
+    {
+      "from": "personal",
+      "to": "workspace",
+      "why": "keeps the workspace's git"
+    },
+    {
+      "from": "pi",
+      "to": "accounts",
+      "why": "reports account health"
+    },
+    {
+      "from": "pi",
+      "to": "browser",
+      "why": "names the browser command and blocked addresses"
+    },
+    {
+      "from": "pi",
+      "to": "decisions",
+      "why": "takes correction requests"
+    },
+    {
+      "from": "pi",
+      "to": "forge",
+      "why": "refuses work that needs a sign-in"
+    },
+    {
+      "from": "pi",
+      "to": "integrations",
+      "why": "tells the crew about integrations"
+    },
+    {
+      "from": "pi",
+      "to": "knowledge",
+      "why": "serves the knowledge tools"
+    },
+    {
+      "from": "pi",
+      "to": "orchestrator",
+      "why": "words holds, briefs and schedules for the crew's tools"
+    },
+    {
+      "from": "pi",
+      "to": "personal",
+      "why": "mounts and words panels"
+    },
+    {
+      "from": "pi",
+      "to": "prompts",
+      "why": "builds the served prompts"
+    },
+    {
+      "from": "pi",
+      "to": "quota",
+      "why": "calls providers for allowances and checks"
+    },
+    {
+      "from": "pi",
+      "to": "runbooks",
+      "why": "serves care guidance and runbook skills"
+    },
+    {
+      "from": "pi",
+      "to": "secrets",
+      "why": "tells the crew about secrets"
+    },
+    {
+      "from": "pi",
+      "to": "session",
+      "why": "opens sessions to the one session contract"
+    },
+    {
+      "from": "pi",
+      "to": "storage",
+      "why": "reads sessions, cards and schedules"
+    },
+    {
+      "from": "pi",
+      "to": "tasks",
+      "why": "queries tasks for the task tools"
+    },
+    {
+      "from": "placed",
+      "to": "browser",
+      "why": "carries saved sign-ins to browsers there"
+    },
+    {
+      "from": "placed",
+      "to": "claude",
+      "why": "names Claude models there"
+    },
+    {
+      "from": "placed",
+      "to": "connection",
+      "why": "reaches computers that run work"
+    },
+    {
+      "from": "placed",
+      "to": "helper",
+      "why": "reads whether git is there"
+    },
+    {
+      "from": "placed",
+      "to": "integrations",
+      "why": "rewrites outside data for conversations there"
+    },
+    {
+      "from": "placed",
+      "to": "models",
+      "why": "narrows what a computer serves"
+    },
+    {
+      "from": "placed",
+      "to": "orchestrator",
+      "why": "wakes the first mate and resumes crewmates"
+    },
+    {
+      "from": "placed",
+      "to": "personal",
+      "why": "words errors"
+    },
+    {
+      "from": "placed",
+      "to": "pi",
+      "why": "keeps card pictures from there"
+    },
+    {
+      "from": "placed",
+      "to": "routing",
+      "why": "places work on the computer pool"
+    },
+    {
+      "from": "placed",
+      "to": "session",
+      "why": "opens sessions there and recovers changes"
+    },
+    {
+      "from": "placed",
+      "to": "storage",
+      "why": "reads timelines and session calls"
+    },
+    {
+      "from": "placed",
+      "to": "tasks",
+      "why": "records leftovers and hand-over files"
+    },
+    {
+      "from": "placed",
+      "to": "workspace",
+      "why": "copies working copies in git bundles"
+    },
+    {
+      "from": "plugins",
+      "to": "personal",
+      "why": "compiles and installs panels"
+    },
+    {
+      "from": "plugins",
+      "to": "runbooks",
+      "why": "checks and installs runbooks"
+    },
+    {
+      "from": "plugins",
+      "to": "workspace",
+      "why": "fetches plugins with git"
+    },
+    {
+      "from": "program",
+      "to": "orchestrator",
+      "why": "files parts with briefs and shapes"
+    },
+    {
+      "from": "program",
+      "to": "routing",
+      "why": "reads model tiers"
+    },
+    {
+      "from": "program",
+      "to": "session",
+      "why": "asks the program's questions"
+    },
+    {
+      "from": "program",
+      "to": "tasks",
+      "why": "files and reads its parts"
+    },
+    {
+      "from": "quota",
+      "to": "claude",
+      "why": "reads Claude's allowance store"
+    },
+    {
+      "from": "quota",
+      "to": "storage",
+      "why": "keeps allowance snapshots"
+    },
+    {
+      "from": "recordReads",
+      "to": "routing",
+      "why": "scores placed work"
+    },
+    {
+      "from": "recordReads",
+      "to": "storage",
+      "why": "searches tasks"
+    },
+    {
+      "from": "releaseNotes",
+      "to": "update",
+      "why": "compares versions"
+    },
+    {
+      "from": "routing",
+      "to": "claude",
+      "why": "reads Claude's reasoning levels"
+    },
+    {
+      "from": "routing",
+      "to": "models",
+      "why": "reads served models and starters"
+    },
+    {
+      "from": "routing",
+      "to": "pi",
+      "why": "classifies a task's kind and reads model abilities"
+    },
+    {
+      "from": "routing",
+      "to": "placed",
+      "why": "reads computers' capacity"
+    },
+    {
+      "from": "routing",
+      "to": "quota",
+      "why": "reads allowances and the catalog"
+    },
+    {
+      "from": "routing",
+      "to": "session",
+      "why": "reads opening reasoning"
+    },
+    {
+      "from": "routing",
+      "to": "storage",
+      "why": "keeps routing decisions"
+    },
+    {
+      "from": "runbooks",
+      "to": "session",
+      "why": "finds skill folders"
+    },
+    {
+      "from": "secrets",
+      "to": "orchestrator",
+      "why": "escapes card text"
+    },
+    {
+      "from": "session",
+      "to": "orchestrator",
+      "why": "keeps the host's clock"
+    },
+    {
+      "from": "session",
+      "to": "routing",
+      "why": "orders model candidates"
+    },
+    {
+      "from": "session",
+      "to": "storage",
+      "why": "follows session completions"
+    },
+    {
+      "from": "sharing",
+      "to": "observe",
+      "why": "redacts what it sends"
+    },
+    {
+      "from": "sql",
+      "to": "storage",
+      "why": "registers the record's views"
+    },
+    {
+      "from": "storage",
+      "to": "folderMove",
+      "why": "repairs moved task folders"
+    },
+    {
+      "from": "storage",
+      "to": "helper",
+      "why": "checks a lock's holder"
+    },
+    {
+      "from": "storage",
+      "to": "orchestrator",
+      "why": "reads delivery facts and wake shapes"
+    },
+    {
+      "from": "storage",
+      "to": "session",
+      "why": "fingerprints completions"
+    },
+    {
+      "from": "storage",
+      "to": "tasks",
+      "why": "derives project keys and feed lines"
+    },
+    {
+      "from": "tasks",
+      "to": "axi",
+      "why": "names task commands in transcripts"
+    },
+    {
+      "from": "tasks",
+      "to": "observe",
+      "why": "redacts transcripts"
+    },
+    {
+      "from": "tasks",
+      "to": "orchestrator",
+      "why": "renders briefs and settle words"
+    },
+    {
+      "from": "tasks",
+      "to": "placed",
+      "why": "finds programs holding a task's folders"
+    },
+    {
+      "from": "tasks",
+      "to": "routing",
+      "why": "reads kinds and tiers"
+    },
+    {
+      "from": "tasks",
+      "to": "storage",
+      "why": "keeps task records and timelines"
+    },
+    {
+      "from": "workspace",
+      "to": "forge",
+      "why": "refuses work that needs a sign-in"
+    },
+    {
+      "from": "workspace",
+      "to": "orchestrator",
+      "why": "raises project change cards"
+    },
+    {
+      "from": "workspace",
+      "to": "pi",
+      "why": "reads app action requests"
+    },
+    {
+      "from": "workspace",
+      "to": "storage",
+      "why": "keeps projects and cost limits"
+    },
+    {
+      "from": "workspace",
+      "to": "runbook files",
+      "why": "reads the naming runbook"
+    },
+    {
+      "from": "pi",
+      "to": "runbook files",
+      "why": "reads the care guides"
+    },
+    {
+      "from": "personal",
+      "to": "personal workspace files",
+      "why": "copies its skills in and reads retired ones"
+    },
+    {
+      "from": "accounts",
+      "to": "shared",
+      "why": "reads provider names and lapsed-token reasons"
+    },
+    {
+      "from": "axi",
+      "to": "shared",
+      "why": "reads the command names and load shapes"
+    },
+    {
+      "from": "browser",
+      "to": "shared",
+      "why": "reads browser limits, words and private sites"
+    },
+    {
+      "from": "claude",
+      "to": "shared",
+      "why": "reads client words and sign-in rules"
+    },
+    {
+      "from": "connection",
+      "to": "shared",
+      "why": "reads the connection's shapes and names"
+    },
+    {
+      "from": "decisions",
+      "to": "shared",
+      "why": "reads decision shapes and correction words"
+    },
+    {
+      "from": "devices",
+      "to": "shared",
+      "why": "reads device shapes and what each speaks"
+    },
+    {
+      "from": "dispatcher",
+      "to": "shared",
+      "why": "reads action names and card media names"
+    },
+    {
+      "from": "files",
+      "to": "shared",
+      "why": "reads file order shapes"
+    },
+    {
+      "from": "folderMove",
+      "to": "shared",
+      "why": "reads the data folder names"
+    },
+    {
+      "from": "forge",
+      "to": "shared",
+      "why": "reads hosts, holds and check states"
+    },
+    {
+      "from": "freeze",
+      "to": "shared",
+      "why": "reads the source identity"
+    },
+    {
+      "from": "helper",
+      "to": "shared",
+      "why": "reads device and provider shapes"
+    },
+    {
+      "from": "integrations",
+      "to": "shared",
+      "why": "reads integration kinds and shapes"
+    },
+    {
+      "from": "knowledge",
+      "to": "shared",
+      "why": "reads knowledge limits"
+    },
+    {
+      "from": "models",
+      "to": "shared",
+      "why": "reads model listings and starter slots"
+    },
+    {
+      "from": "observe",
+      "to": "shared",
+      "why": "reads session ids and sign-in failures"
+    },
+    {
+      "from": "orchestrator",
+      "to": "shared",
+      "why": "reads cards, holds and channel shapes"
+    },
+    {
+      "from": "panels",
+      "to": "shared",
+      "why": "reads the background interval"
+    },
+    {
+      "from": "personal",
+      "to": "shared",
+      "why": "reads panel manifests and contracts"
+    },
+    {
+      "from": "pi",
+      "to": "shared",
+      "why": "reads providers, sign-in failures and card shapes"
+    },
+    {
+      "from": "placed",
+      "to": "shared",
+      "why": "reads what each computer speaks"
+    },
+    {
+      "from": "plugins",
+      "to": "shared",
+      "why": "reads manifests and capabilities"
+    },
+    {
+      "from": "preferences",
+      "to": "shared",
+      "why": "arranges panels"
+    },
+    {
+      "from": "program",
+      "to": "shared",
+      "why": "reads model tiers"
+    },
+    {
+      "from": "prompts",
+      "to": "shared",
+      "why": "reads the risk dimensions"
+    },
+    {
+      "from": "quota",
+      "to": "shared",
+      "why": "reads allowance shapes and quota math"
+    },
+    {
+      "from": "routing",
+      "to": "shared",
+      "why": "reads quota math and served models"
+    },
+    {
+      "from": "runbooks",
+      "to": "shared",
+      "why": "reads runbook manifests"
+    },
+    {
+      "from": "secrets",
+      "to": "shared",
+      "why": "reads secret shapes and words"
+    },
+    {
+      "from": "session",
+      "to": "shared",
+      "why": "reads providers and work requests"
+    },
+    {
+      "from": "sharing",
+      "to": "shared",
+      "why": "reads the diagnostic events and data terms"
+    },
+    {
+      "from": "sql",
+      "to": "shared",
+      "why": "reads the published views and limits"
+    },
+    {
+      "from": "storage",
+      "to": "shared",
+      "why": "reads card, task and attachment shapes"
+    },
+    {
+      "from": "tasks",
+      "to": "shared",
+      "why": "reads holds, plans and transcript limits"
+    },
+    {
+      "from": "update",
+      "to": "shared",
+      "why": "reads update words and channels"
+    },
+    {
+      "from": "workspace",
+      "to": "shared",
+      "why": "reads hosts, actions and placement"
+    },
+    {
+      "from": "main",
+      "to": "browser",
+      "why": "reads task browser pages"
+    },
+    {
+      "from": "main",
+      "to": "claude",
+      "why": "finds Claude's folder"
+    },
+    {
+      "from": "main",
+      "to": "connection",
+      "why": "starts the connection and the local door"
+    },
+    {
+      "from": "main",
+      "to": "devices",
+      "why": "joins a home and names the computer"
+    },
+    {
+      "from": "main",
+      "to": "folderMove",
+      "why": "runs the one-time move"
+    },
+    {
+      "from": "main",
+      "to": "freeze",
+      "why": "arms the freeze watchdog"
+    },
+    {
+      "from": "main",
+      "to": "helper",
+      "why": "starts work mode and the login item"
+    },
+    {
+      "from": "main",
+      "to": "pi",
+      "why": "probes card media"
+    },
+    {
+      "from": "main",
+      "to": "secrets",
+      "why": "keeps secrets in the system's custody"
+    },
+    {
+      "from": "main",
+      "to": "selfSource",
+      "why": "reads the app's own source"
+    },
+    {
+      "from": "main",
+      "to": "storage",
+      "why": "refuses data it cannot read"
+    },
+    {
+      "from": "main",
+      "to": "update",
+      "why": "checks and installs updates"
+    },
+    {
+      "from": "axi",
+      "to": "task commands",
+      "why": "puts them on a crewmate's search path"
+    },
+    {
+      "from": "task commands",
+      "to": "axi",
+      "why": "send each command over the task channel"
+    },
+    {
+      "from": "workspace",
+      "to": "git",
+      "why": "keeps working copies and commits"
+    },
+    {
+      "from": "forge",
+      "to": "GitHub and GitLab",
+      "why": "opens changes, reads checks and merges"
+    },
+    {
+      "from": "integrations",
+      "to": "GitHub and GitLab",
+      "why": "reaches GitHub outside the projects"
+    },
+    {
+      "from": "integrations",
+      "to": "connected services",
+      "why": "runs integration actions"
+    },
+    {
+      "from": "pi",
+      "to": "model providers",
+      "why": "runs sessions through the Pi runtime"
+    },
+    {
+      "from": "claude",
+      "to": "Claude client",
+      "why": "runs Claude sessions and sign-ins"
+    },
+    {
+      "from": "quota",
+      "to": "model providers",
+      "why": "reads allowances"
+    },
+    {
+      "from": "models",
+      "to": "model providers",
+      "why": "reads model lists"
+    },
+    {
+      "from": "update",
+      "to": "release feeds",
+      "why": "checks for new versions"
+    },
+    {
+      "from": "devices",
+      "to": "release feeds",
+      "why": "reads published builds for other computers"
+    },
+    {
+      "from": "devices",
+      "to": "other computers",
+      "why": "pairs and dials them"
+    },
+    {
+      "from": "connection",
+      "to": "other computers",
+      "why": "speaks the contract with them"
+    },
+    {
+      "from": "helper",
+      "to": "other computers",
+      "why": "answers its home"
+    },
+    {
+      "from": "placed",
+      "to": "other computers",
+      "why": "runs work there"
+    },
+    {
+      "from": "browser",
+      "to": "websites",
+      "why": "opens pages for a task"
+    },
+    {
+      "from": "privacy",
+      "to": "the system",
+      "why": "reads macOS's privacy log"
+    }
+  ],
+  "machines": [
+    {
+      "name": "a task",
+      "in": "tasks",
+      "about": "A task's status, written by the task service when the orchestrator starts, closes or reopens it",
+      "states": ["open", "active", "done", "dropped"],
+      "moves": [
+        {
+          "from": "open",
+          "to": "active",
+          "why": "a start claims it",
+          "by": "orchestrator"
+        },
+        {
+          "from": "active",
+          "to": "open",
+          "why": "its start returns to the queue",
+          "by": "orchestrator"
+        },
+        {
+          "from": "active",
+          "to": "done",
+          "why": "closes answered, settled or merged",
+          "by": "orchestrator"
+        },
+        {
+          "from": "active",
+          "to": "dropped",
+          "why": "cancelled, or dropped with its program",
+          "by": "orchestrator"
+        },
+        {
+          "from": "open",
+          "to": "dropped",
+          "why": "dropped before it starts",
+          "by": "orchestrator"
+        },
+        {
+          "from": "open",
+          "to": "done",
+          "why": "closes without starting",
+          "by": "orchestrator"
+        },
+        {
+          "from": "done",
+          "to": "open",
+          "why": "the first mate corrects a required action",
+          "by": "orchestrator"
+        }
+      ],
+      "opens": {
+        "active": "a crewmate's turn"
+      }
+    },
+    {
+      "name": "a crewmate's turn",
+      "in": "orchestrator",
+      "about": "Where one crewmate's conversation stands",
+      "states": ["opening", "preparing", "prompt", "continuation", "idle", "stopped"],
+      "moves": [
+        {
+          "from": "opening",
+          "to": "preparing",
+          "why": "a new task installs and stages its brief",
+          "by": "orchestrator"
+        },
+        {
+          "from": "preparing",
+          "to": "prompt",
+          "why": "the brief goes in as the first prompt",
+          "by": "orchestrator"
+        },
+        {
+          "from": "preparing",
+          "to": "stopped",
+          "why": "a stop arrives while preparing",
+          "by": "orchestrator"
+        },
+        {
+          "from": "prompt",
+          "to": "idle",
+          "why": "the turn ends",
+          "by": "orchestrator"
+        },
+        {
+          "from": "continuation",
+          "to": "idle",
+          "why": "the turn ends",
+          "by": "orchestrator"
+        },
+        {
+          "from": "idle",
+          "to": "prompt",
+          "why": "a steer or wake is delivered",
+          "by": "orchestrator"
+        },
+        {
+          "from": "idle",
+          "to": "continuation",
+          "why": "the model goes on by itself, or another computer runs a turn",
+          "by": "orchestrator"
+        },
+        {
+          "from": "stopped",
+          "to": "prompt",
+          "why": "a steer or wake is delivered",
+          "by": "orchestrator"
+        },
+        {
+          "from": "stopped",
+          "to": "continuation",
+          "why": "the model goes on by itself",
+          "by": "orchestrator"
+        },
+        {
+          "from": "idle",
+          "to": "opening",
+          "why": "a cancel or settle while resting",
+          "by": "orchestrator"
+        },
+        {
+          "from": "stopped",
+          "to": "opening",
+          "why": "a cancel or settle while resting",
+          "by": "orchestrator"
+        }
+      ]
+    },
+    {
+      "name": "a card on the stage",
+      "in": "orchestrator",
+      "about": "Where a card stands between its author and the captain",
+      "states": ["held", "shown", "awaiting answer", "aside", "resolved", "ended"],
+      "moves": [
+        {
+          "from": "held",
+          "to": "shown",
+          "why": "its author's turn closes out",
+          "by": "orchestrator"
+        },
+        {
+          "from": "shown",
+          "to": "awaiting answer",
+          "why": "the captain replies",
+          "by": "orchestrator"
+        },
+        {
+          "from": "awaiting answer",
+          "to": "shown",
+          "why": "the answerer replies",
+          "by": "orchestrator"
+        },
+        {
+          "from": "shown",
+          "to": "aside",
+          "why": "the captain puts it away",
+          "by": "orchestrator"
+        },
+        {
+          "from": "aside",
+          "to": "shown",
+          "why": "its author writes on it, or it is brought back",
+          "by": "orchestrator"
+        },
+        {
+          "from": "shown",
+          "to": "resolved",
+          "why": "chosen, read or Done",
+          "by": "orchestrator"
+        },
+        {
+          "from": "shown",
+          "to": "ended",
+          "why": "withdrawn after the captain saw it",
+          "by": "orchestrator"
+        },
+        {
+          "from": "resolved",
+          "to": "shown",
+          "why": "raised again under its old id",
+          "by": "orchestrator"
+        }
+      ]
+    },
+    {
+      "name": "a captain's message",
+      "in": "orchestrator",
+      "about": "Whether an action took effect after the first mate read a captain's message",
+      "states": ["pending", "held", "retrying", "covered", "unresolved"],
+      "moves": [
+        {
+          "from": "pending",
+          "to": "covered",
+          "why": "an action took effect",
+          "by": "orchestrator"
+        },
+        {
+          "from": "pending",
+          "to": "held",
+          "why": "the turn failed or paused",
+          "by": "orchestrator"
+        },
+        {
+          "from": "held",
+          "to": "covered",
+          "why": "a later turn acts",
+          "by": "orchestrator"
+        },
+        {
+          "from": "pending",
+          "to": "retrying",
+          "why": "one retry that may only answer",
+          "by": "orchestrator"
+        },
+        {
+          "from": "held",
+          "to": "retrying",
+          "why": "one retry that may only answer",
+          "by": "orchestrator"
+        },
+        {
+          "from": "retrying",
+          "to": "covered",
+          "why": "the retry acted",
+          "by": "orchestrator"
+        },
+        {
+          "from": "retrying",
+          "to": "unresolved",
+          "why": "one notice offers Ask again",
+          "by": "orchestrator"
+        },
+        {
+          "from": "unresolved",
+          "to": "covered",
+          "why": "Ask again was answered",
+          "by": "orchestrator"
+        }
+      ]
+    },
+    {
+      "name": "a kept merge approval",
+      "in": "orchestrator",
+      "about": "The captain's merge click, kept while checks finish",
+      "states": ["standing", "consumed", "revoked", "invalidated", "superseded"],
+      "moves": [
+        {
+          "from": "standing",
+          "to": "consumed",
+          "why": "the merge goes through",
+          "by": "orchestrator"
+        },
+        {
+          "from": "standing",
+          "to": "revoked",
+          "why": "an interruption or withdrawal",
+          "by": "orchestrator"
+        },
+        {
+          "from": "standing",
+          "to": "invalidated",
+          "why": "the approved version or pull request changed",
+          "by": "orchestrator"
+        },
+        {
+          "from": "standing",
+          "to": "superseded",
+          "why": "a new merge card or click",
+          "by": "orchestrator"
+        }
+      ]
+    },
+    {
+      "name": "a secret use",
+      "in": "secrets",
+      "about": "One approved use of a secret, from asking to its outcome",
+      "states": [
+        "unavailable",
+        "waiting",
+        "executing",
+        "completed",
+        "denied",
+        "cancelled",
+        "expired",
+        "invalidated",
+        "unknown"
+      ],
+      "moves": [
+        {
+          "from": "unavailable",
+          "to": "waiting",
+          "why": "prepared",
+          "by": "secrets"
+        },
+        {
+          "from": "unavailable",
+          "to": "denied",
+          "why": "a never rule refuses it",
+          "by": "secrets"
+        },
+        {
+          "from": "waiting",
+          "to": "executing",
+          "why": "approved",
+          "by": "secrets"
+        },
+        {
+          "from": "waiting",
+          "to": "expired",
+          "why": "its window passes",
+          "by": "secrets"
+        },
+        {
+          "from": "waiting",
+          "to": "cancelled",
+          "why": "cancelled",
+          "by": "secrets"
+        },
+        {
+          "from": "waiting",
+          "to": "denied",
+          "why": "denied",
+          "by": "secrets"
+        },
+        {
+          "from": "waiting",
+          "to": "invalidated",
+          "why": "recovery ends unused approvals",
+          "by": "secrets"
+        },
+        {
+          "from": "executing",
+          "to": "completed",
+          "why": "finished",
+          "by": "secrets"
+        },
+        {
+          "from": "executing",
+          "to": "invalidated",
+          "why": "expired or changed before it ran",
+          "by": "secrets"
+        },
+        {
+          "from": "executing",
+          "to": "unknown",
+          "why": "its outcome is unknown",
+          "by": "secrets"
+        }
+      ]
+    }
+  ]
+}

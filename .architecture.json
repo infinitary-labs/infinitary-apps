@@ -1,0 +1,280 @@
+{
+  "name": "Infinitary",
+  "about": "A desktop AI studio: a first mate and a crew of agents working on the person's own computer and subscriptions.",
+  "groups": [
+    {
+      "name": "Desktop app",
+      "why": "Runs in the app's own processes on the computer"
+    },
+    {
+      "name": "Phone",
+      "why": "Runs on an iPhone or iPad paired with a Mac"
+    },
+    {
+      "name": "Bundled files",
+      "why": "Ships with the app for the crew and a crewmate's shell to read or run"
+    }
+  ],
+  "parts": [
+    {
+      "name": "core",
+      "path": "src/core",
+      "about": "Everything the app does with no window: tasks, crew, models, projects and saved state",
+      "group": "Desktop app"
+    },
+    {
+      "name": "main",
+      "path": "src/main",
+      "about": "The main process: the window, frames, voice and the system",
+      "group": "Desktop app"
+    },
+    {
+      "name": "preload",
+      "path": "src/preload",
+      "about": "The window's bridge into the main process",
+      "group": "Desktop app"
+    },
+    {
+      "name": "renderer",
+      "path": "src/renderer",
+      "about": "What the window draws",
+      "group": "Desktop app"
+    },
+    {
+      "name": "panels",
+      "path": "src/panels",
+      "about": "The app's own side panels, built like any other panel folder",
+      "group": "Desktop app"
+    },
+    {
+      "name": "shared",
+      "path": "src/shared",
+      "about": "Shapes, channels and words every side reads",
+      "group": "Desktop app"
+    },
+    {
+      "name": "ios",
+      "path": "ios",
+      "about": "The phone app that reads a paired Mac",
+      "group": "Phone"
+    },
+    {
+      "name": "runbooks",
+      "path": "resources/runbooks",
+      "about": "Bundled guidance the crew reads",
+      "group": "Bundled files"
+    },
+    {
+      "name": "personal workspace",
+      "path": "resources/personal-workspace",
+      "about": "The skills the personal workspace starts with",
+      "group": "Bundled files"
+    },
+    {
+      "name": "task commands",
+      "path": "resources/axi-bin",
+      "about": "The commands on a crewmate's search path",
+      "group": "Bundled files"
+    }
+  ],
+  "outside": [
+    {
+      "name": "model providers",
+      "about": "Codex, Grok, OpenRouter and the other subscriptions Pi reaches"
+    },
+    {
+      "name": "Claude client",
+      "about": "The Claude Code the person installed"
+    },
+    {
+      "name": "GitHub and GitLab",
+      "about": "Where projects live"
+    },
+    {
+      "name": "git",
+      "about": "Working copies on the computer"
+    },
+    {
+      "name": "other computers",
+      "about": "Paired Macs, computers that run work and phones"
+    },
+    {
+      "name": "the system",
+      "about": "The Keychain, notifications, the login item and the microphone"
+    },
+    {
+      "name": "release feeds",
+      "about": "Where new versions are published"
+    },
+    {
+      "name": "connected services",
+      "about": "Gmail, Google Calendar and other services an integration reaches"
+    },
+    {
+      "name": "Hugging Face",
+      "about": "Where the voice model downloads from"
+    }
+  ],
+  "links": [
+    {
+      "from": "renderer",
+      "to": "preload",
+      "why": "calls the app through window.infinitary"
+    },
+    {
+      "from": "renderer",
+      "to": "shared",
+      "why": "reads shapes, channels and words"
+    },
+    {
+      "from": "renderer",
+      "to": "panels",
+      "why": "draws them in frames on the rails"
+    },
+    {
+      "from": "preload",
+      "to": "main",
+      "why": "sends channel messages"
+    },
+    {
+      "from": "preload",
+      "to": "shared",
+      "why": "reads the channel list and the window's API"
+    },
+    {
+      "from": "main",
+      "to": "core",
+      "why": "starts the core and answers channels with it"
+    },
+    {
+      "from": "main",
+      "to": "renderer",
+      "why": "loads the window's page and the frame realm"
+    },
+    {
+      "from": "main",
+      "to": "preload",
+      "why": "loads it into the window"
+    },
+    {
+      "from": "main",
+      "to": "panels",
+      "why": "serves them in the frame library"
+    },
+    {
+      "from": "main",
+      "to": "shared",
+      "why": "reads shapes, channels and words"
+    },
+    {
+      "from": "main",
+      "to": "the system",
+      "why": "keeps secrets, notifies and starts at login"
+    },
+    {
+      "from": "main",
+      "to": "Hugging Face",
+      "why": "downloads the voice model"
+    },
+    {
+      "from": "core",
+      "to": "shared",
+      "why": "reads shapes, channels and words"
+    },
+    {
+      "from": "core",
+      "to": "main",
+      "why": "asks the shell for what only it can do"
+    },
+    {
+      "from": "core",
+      "to": "runbooks",
+      "why": "reads and serves their guidance"
+    },
+    {
+      "from": "core",
+      "to": "personal workspace",
+      "why": "copies its skills in and reads retired ones"
+    },
+    {
+      "from": "core",
+      "to": "task commands",
+      "why": "puts them on a crewmate's search path"
+    },
+    {
+      "from": "core",
+      "to": "model providers",
+      "why": "runs sessions and reads allowances"
+    },
+    {
+      "from": "core",
+      "to": "Claude client",
+      "why": "runs Claude sessions and sign-ins"
+    },
+    {
+      "from": "core",
+      "to": "GitHub and GitLab",
+      "why": "opens changes, reads checks and merges"
+    },
+    {
+      "from": "core",
+      "to": "git",
+      "why": "keeps working copies and commits"
+    },
+    {
+      "from": "core",
+      "to": "other computers",
+      "why": "pairs, connects and places work"
+    },
+    {
+      "from": "core",
+      "to": "release feeds",
+      "why": "checks for new versions"
+    },
+    {
+      "from": "core",
+      "to": "connected services",
+      "why": "runs integration actions"
+    },
+    {
+      "from": "task commands",
+      "to": "core",
+      "why": "send each command over the task channel"
+    },
+    {
+      "from": "panels",
+      "to": "renderer",
+      "why": "draw with the design library"
+    },
+    {
+      "from": "shared",
+      "to": "panels",
+      "why": "lists their manifests"
+    },
+    {
+      "from": "personal workspace",
+      "to": "renderer",
+      "why": "the lesson panel draws with the design library"
+    },
+    {
+      "from": "ios",
+      "to": "shared",
+      "why": "builds cards with the desktop's card code"
+    },
+    {
+      "from": "ios",
+      "to": "renderer",
+      "why": "draws card bodies the way the desktop does"
+    },
+    {
+      "from": "ios",
+      "to": "core",
+      "why": "reads a paired Mac over the connection"
+    },
+    {
+      "from": "ios",
+      "to": "connected services",
+      "why": "shows Google's sign-in page"
+    }
+  ]
+}

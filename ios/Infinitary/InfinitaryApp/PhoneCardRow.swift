@@ -169,13 +169,21 @@ struct PhoneCardRowPlace: ViewModifier {
 }
 
 /// Every card leans about its own foot: the one the finger took by the row's angle, every other by its share of it.
+/// INF-3704: on iOS 27 a leaning card's scrollers count the tilted top as under the top bar and draw the bar's edge
+/// band across it, a strip ending in a bright line, so a leaning card's scrollers draw no top band. An upright card
+/// keeps it for the times its scroller does run under the bar, as when the card lifts for typing.
 struct PhoneCardRowLean: ViewModifier {
     let row: PhoneCardRow
     let card: String
 
     func body(content: Content) -> some View {
         let share = row.grabbed == nil || row.grabbed == card ? 1 : PhoneCardRowMotion.besideLean
-        content.rotationEffect(.degrees(row.lean * share), anchor: .bottom)
+        let leaning = row.lean * share
+        if #available(iOS 26, *) {
+            content.scrollEdgeEffectHidden(leaning != 0, for: .top).rotationEffect(.degrees(leaning), anchor: .bottom)
+        } else {
+            content.rotationEffect(.degrees(leaning), anchor: .bottom)
+        }
     }
 }
 

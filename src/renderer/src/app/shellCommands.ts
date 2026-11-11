@@ -17,14 +17,14 @@ import {
 } from "../cards/taskTabs";
 import { crewOrbit } from "../character/crew/crewSignal";
 import { focusWithRing } from "../design/focus";
-import { giveFocusBack } from "../plugins/frames/frameFocus";
+import { giveFocusBack, moveInFrame } from "../plugins/frames/frameFocus";
 import { pluginHost } from "../plugins/host";
 import { panelCommandRefusal, runPanelCommand } from "../plugins/panelCommands";
 import { cardStage } from "./cardStage";
 import { commandRefusal, type WindowFacts } from "./commandRefusals";
 import { available, modalOpen } from "./focusRecovery";
 import { projectFocus } from "./projectFocus";
-import { enterCard, moveToRegion } from "./regions";
+import { enterCard, moveToRegion, moveToRegionToward } from "./regions";
 import { isHeldEntry, shownEntry } from "./stack";
 import { type ShellState, useShellStore } from "./store";
 import {
@@ -252,6 +252,10 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   "cards.choice-4": () => pressCardChoice(3),
   "regions.next": () => moveToRegion(1),
   "regions.previous": () => moveToRegion(-1),
+  "regions.left": () => moveToRegionToward("left"),
+  "regions.down": () => moveToRegionToward("down"),
+  "regions.up": () => moveToRegionToward("up"),
+  "regions.right": () => moveToRegionToward("right"),
   "computers.previous": () => crewOrbit().setPage(crewOrbit().page - 1),
   "computers.next": () => crewOrbit().setPage(crewOrbit().page + 1),
   "project-focus.open": () => projectFocus.askOpen(),
@@ -498,7 +502,15 @@ export function runWindowCommand(id: WindowCommandId | PanelCommandId): boolean 
  */
 export function followShellCommands(): () => void {
   let following = true;
-  const stop = window.infinitary.keyboard.onCommand(({ command }) => runWindowCommand(command));
+  const stopCommands = window.infinitary.keyboard.onCommand(({ command }) =>
+    runWindowCommand(command),
+  );
+  // A movement command's key for a frame (docs/keyboard.md, "Moving by a key of your own").
+  const stopMoves = window.infinitary.keyboard.onMove(({ key, frame }) => moveInFrame(key, frame));
+  const stop = () => {
+    stopCommands();
+    stopMoves();
+  };
   void window.infinitary.keyboard
     .keymap()
     .then(() => {

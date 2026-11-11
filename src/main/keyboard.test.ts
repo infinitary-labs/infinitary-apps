@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   followWindowCommands,
   InstalledKeymap,
+  moveCommands,
   offerWindowKey,
   recordWindowKeys,
   shellCommands,
@@ -24,13 +25,15 @@ import {
  */
 function windowWithKeys() {
   const sent: unknown[][] = [];
+  const pressed: unknown[] = [];
   let destroyed = false;
   const mainFrame = { name: "" };
   const contents = Object.assign(new EventEmitter(), {
     mainFrame,
-    focusedFrame: mainFrame,
+    focusedFrame: mainFrame as { name: string; parent?: unknown },
     isDestroyed: () => destroyed,
     send: (...message: unknown[]) => sent.push(message),
+    sendInputEvent: (event: unknown) => pressed.push(event),
   });
   const events = new EventEmitter();
   const win = Object.assign(events, {
@@ -66,9 +69,11 @@ function windowWithKeys() {
     contents: contents as unknown as WebContents,
     type,
     sent,
+    pressed,
     blur: () => events.emit("blur"),
-    focusFrame: (name: string) => {
-      contents.focusedFrame = { name };
+    focusFrame: (name: string, parent?: string) => {
+      contents.focusedFrame =
+        parent === undefined ? { name } : { name, parent: { name: parent, parent: mainFrame } };
     },
     close: () => (destroyed = true),
   };
@@ -680,5 +685,70 @@ describe("not-typing offers", () => {
     expect(legacy.type({ key: press.key, code: press.code })).toBe(false);
     offerWindowKey(legacy.contents, press);
     expect(legacy.sent).toEqual([]);
+  });
+});
+
+// INF-3547's accepted plan, piece 2: "a key bound to Move down does what the
+// down arrow does everywhere it works today".
+describe('movement commands (docs/keyboard.md, "Moving by a key of your own")', () => {
+  function fixture() {
+    const window = windowWithKeys();
+    const recording = recordingHandlers();
+    const bindings = resolveBindings({
+      version: 1,
+      keys: {
+        "move.down": [{ key: "n", alt: true }],
+        "move.last": [{ key: "e", meta: true }],
+        "move.first": [{ key: "End", when: "not-typing" }],
+      },
+    });
+    followWindowCommands(
+      window.win,
+      { ...recording.handlers, ...moveCommands(window.contents) },
+      { bindings: () => bindings, panels: () => [] },
+    );
+    return { ...window, ...recording };
+  }
+
+  it("presses the key itself into the window's own page, and keeps the person's key from it", () => {
+    const { type, pressed, sent } = fixture();
+    expect(type({ key: "˜", code: "KeyN", alt: true })).toBe(true);
+    expect(pressed).toEqual([
+      { type: "keyDown", keyCode: "Down" },
+      { type: "keyUp", keyCode: "Down" },
+    ]);
+    expect(sent.filter(([channel]) => channel === "inf:keyboard:move")).toEqual([]);
+  });
+
+  it("leaves the key it pressed to the page, so a movement never presses another", () => {
+    const { contents, type, pressed } = fixture();
+    expect(type({ key: "e", code: "KeyE", meta: true })).toBe(true);
+    expect(pressed).toHaveLength(2);
+    // The pressed End comes back through the window's keys, bound to Move to the start when not typing.
+    expect(type({ key: "End", code: "End" })).toBe(false);
+    offerWindowKey(contents, {
+      key: "End",
+      code: "End",
+      meta: false,
+      ctrl: false,
+      alt: false,
+      shift: false,
+      composing: false,
+      repeat: false,
+    });
+    expect(pressed).toHaveLength(2);
+  });
+
+  it("hands the key to the frame holding focus, named by the window's own frame around it", () => {
+    const { type, pressed, sent, focusFrame } = fixture();
+    focusFrame("6d4f9a52-8c1e-4e7b-9a43-2f1d0c5b7e18");
+    type({ key: "˜", code: "KeyN", alt: true });
+    focusFrame("inner", "0b7c2e94-3a5d-4f61-8e2a-9c4d1b6f3a70");
+    type({ key: "˜", code: "KeyN", alt: true });
+    expect(pressed).toEqual([]);
+    expect(sent.filter(([channel]) => channel === "inf:keyboard:move")).toEqual([
+      ["inf:keyboard:move", { key: "ArrowDown", frame: "6d4f9a52-8c1e-4e7b-9a43-2f1d0c5b7e18" }],
+      ["inf:keyboard:move", { key: "ArrowDown", frame: "0b7c2e94-3a5d-4f61-8e2a-9c4d1b6f3a70" }],
+    ]);
   });
 });

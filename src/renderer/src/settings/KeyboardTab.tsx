@@ -50,7 +50,8 @@ import { ROW_GAP, SectionLabel, SettingError } from "./settingRows";
  */
 
 /** The row being recorded, and the keys pressed so far. */
-type Recording = { id: AnyCommandId; keys: KeyBinding | null };
+/** `typed`: the character the last recorded press types, which an ⌥ key stops typing. */
+type Recording = { id: AnyCommandId; keys: KeyBinding | null; typed?: string };
 
 /** A command's words, the catalog's or its panel's. */
 function labelOf(id: AnyCommandId, panels: readonly PanelCommand[]): string {
@@ -171,6 +172,7 @@ export function KeyboardTab() {
               installed.panels,
               thisDesktop().keys,
             ),
+            ...(action.key.key.length === 1 ? { typed: action.key.key } : {}),
           });
         else {
           const next = savedAfterRecording(
@@ -453,6 +455,7 @@ function CommandRow({
         <Recorder
           id={id}
           keys={recording.keys}
+          typed={recording.typed}
           bindings={snapshot.bindings}
           panels={snapshot.panels}
           busy={busy}
@@ -493,7 +496,7 @@ function Keys({ keys, place }: { keys: readonly KeyBinding[]; place?: PlaceContr
           style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-2)" }}
         >
           <BindingCaps binding={binding} />
-          {place && (binding.meta || binding.ctrl || /^F\d+$/.test(binding.key)) && (
+          {place && (binding.meta || binding.ctrl || binding.alt || /^F\d+$/.test(binding.key)) && (
             <select
               aria-label={`Where ${bindingLabel(binding, thisDesktop().keys)} for ${place.label} works`}
               value={binding.when ?? "anywhere"}
@@ -547,6 +550,7 @@ function BindingCaps({ binding }: { binding: KeyBinding }) {
 function Recorder({
   id,
   keys,
+  typed,
   bindings,
   panels,
   busy,
@@ -555,6 +559,7 @@ function Recorder({
 }: {
   id: AnyCommandId;
   keys: KeyBinding | null;
+  typed?: string;
   bindings: Bindings;
   panels: readonly PanelCommand[];
   busy: boolean;
@@ -575,7 +580,7 @@ function Recorder({
             : "No other command uses it.";
   const canSave = verdict.kind === "free" || verdict.kind === "moves" || verdict.kind === "own";
   const canAdd = verdict.kind === "free" || verdict.kind === "moves";
-  const warning = keys && canSave ? bindingWarning(keys, id, panels, system) : null;
+  const warning = keys && canSave ? bindingWarning(keys, id, panels, system, typed) : null;
   const hint = [
     "Enter saves",
     `${system === "mac" ? "⇧Enter" : "Shift+Enter"} adds it beside the other keys`,

@@ -3,7 +3,7 @@ import { ACTIONS } from "@shared/actions";
 import type { CoreInvokeChannel } from "@shared/ipc";
 import { UI_SIZES, type UiSize } from "@shared/preferences";
 import type { BrowserWindow } from "electron";
-import type { MainCommandHandlers } from "./keyboard";
+import type { SizeCommandHandlers } from "./keyboard";
 
 /**
  * Where the window's size, theme and keys come from: the core's preferences
@@ -60,7 +60,7 @@ function sizeChanger(door: SizeDoor) {
 }
 
 /** The size commands' handlers: the window's keys (./keyboard.ts), the View menu and command search. */
-export function sizeCommands(door: SizeDoor): MainCommandHandlers {
+export function sizeCommands(door: SizeDoor): SizeCommandHandlers {
   const change = sizeChanger(door);
   return {
     "size.larger": () => change("in"),

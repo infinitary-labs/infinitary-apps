@@ -64,6 +64,18 @@ describe("Keyboard settings' recorder", () => {
     expect(recorderVerdict("settings.keyboard", both, DEFAULT_BINDINGS)).toEqual({ kind: "free" });
   });
 
+  // INF-3547's accepted plan, piece 2: "a key may hold Option".
+  it("records a key held with ⌥ as one that works anywhere, a plain one only when not typing", () => {
+    expect(keysAfterPress("regions.next", null, key("≈", { code: "KeyX", alt: true }))).toEqual({
+      key: "x",
+      alt: true,
+    });
+    expect(keysAfterPress("regions.next", null, key("x"))).toEqual({
+      key: "x",
+      when: "not-typing",
+    });
+  });
+
   it("says what saving would do: refuse, keep, take a free key, or move another command's", () => {
     expect(recorderVerdict("cards.next", null, DEFAULT_BINDINGS)).toEqual({ kind: "empty" });
     expect(recorderVerdict("cards.next", { key: "q", meta: true }, DEFAULT_BINDINGS)).toEqual({

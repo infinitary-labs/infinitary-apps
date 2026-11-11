@@ -221,6 +221,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
     },
     keyboard: {
       onCommand: (listener) => subscribe("inf:keyboard:command", listener),
+      onMove: (listener) => subscribe("inf:keyboard:move", listener),
       onTaken: (listener) => subscribe("inf:keyboard:taken", () => listener()),
       run: (command) => invoke("inf:keyboard:run", command),
       keymap: () => invoke("inf:keyboard:keymap"),

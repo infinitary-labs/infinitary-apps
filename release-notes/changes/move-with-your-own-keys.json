@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "move-with-your-own-keys",
+      "kind": "feature",
+      "title": "Move with keys of your own",
+      "body": "Command search and Keyboard settings now list Move left, down, up and right, Move to the start and end, Move up and down a page, and Cancel. Give them keys, such as Option with J and K, and they do what the arrows, Home, End, the page keys and Escape do: in the Tasks list, on the task board, in Settings, in command search and inside a card. New commands go to the part of the window on the left, right, above or below. A key may now hold Option alone, and Control-Tab can be a shortcut. None of these commands has a key until you give it one.",
+      "area": "settings",
+      "picture": {
+        "dark": "move-with-your-own-keys-dark.webp",
+        "light": "move-with-your-own-keys-light.webp",
+        "alt": "Keyboard settings filtered to the movement commands, recording Option-J for Move down, with a warning that the key will no longer type in text fields"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

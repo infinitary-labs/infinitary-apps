@@ -339,15 +339,50 @@ const NOT_TYPING_NAMED_KEYS = new Set(["Backspace", "Delete", "Home", "End", "Pa
 /** The arrows, which may finish a two-key shortcut: the window takes a listed second key first. */
 const ARROWS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
 
+/**
+ * A Mac text field's Control keys that move the caret, each of which a
+ * person may give only the movement command that does the same
+ * (docs/keyboard.md, "Moving by a key of your own"): in a text field it
+ * still moves the caret, and elsewhere it moves as its arrow does.
+ */
+const TEXT_MOVES: readonly { chord: KeyChord; command: AnyCommandId }[] = [
+  { chord: { key: "n", ctrl: true }, command: "move.down" },
+  { chord: { key: "p", ctrl: true }, command: "move.up" },
+  { chord: { key: "f", ctrl: true }, command: "move.right" },
+  { chord: { key: "b", ctrl: true }, command: "move.left" },
+  { chord: { key: "v", ctrl: true }, command: "move.page-down" },
+];
+
+/** Whether a chord is the Mac text key that does what this movement command does. */
+function isTextMove(chord: KeyChord, id: AnyCommandId | undefined, system: KeySystem): boolean {
+  return (
+    system === "mac" &&
+    TEXT_MOVES.some(
+      (move) =>
+        move.command === id &&
+        chord.key === move.chord.key &&
+        chord.ctrl === true &&
+        !chord.meta &&
+        !chord.alt &&
+        !chord.shift,
+    )
+  );
+}
+
 /** Whether a chord is one a keyboard can press as a shortcut at all, and if not, why. */
 function keyProblem(
   chord: KeyChord,
   system: KeySystem,
   notTyping = false,
   second = false,
+  id?: AnyCommandId,
 ): string | null {
+  // Tab with Control never moves between controls, so it may be a shortcut.
+  const controlTab = chord.key === "Tab" && chord.ctrl === true;
   const free =
-    (notTyping && NOT_TYPING_NAMED_KEYS.has(chord.key)) || (second && ARROWS.has(chord.key));
+    controlTab ||
+    (notTyping && NOT_TYPING_NAMED_KEYS.has(chord.key)) ||
+    (second && ARROWS.has(chord.key));
   const own = OWN_JOBS[chord.key];
   if (own && !free) return own;
   if (chord.key.length > 1 && !FUNCTION_KEY.test(chord.key) && !free)
@@ -355,6 +390,7 @@ function keyProblem(
       ? "That key starts an accent, so it can't be a shortcut"
       : "That key can't be a shortcut";
   if (system !== "mac" && chord.meta) return `${chordLabel(chord, system)} belongs to your desktop`;
+  if (isTextMove(chord, id, system)) return null;
   const platform = reservedKeys(system).find((entry) => chordsOverlap(entry.chord, chord));
   return platform ? `${chordLabel(chord, system)} ${platform.job}` : null;
 }
@@ -364,8 +400,21 @@ function holdsCommandOrControl(chord: KeyChord, system: KeySystem): boolean {
   return chord.ctrl === true || (system === "mac" && chord.meta === true);
 }
 
+/**
+ * Whether an anywhere key may hold only ⌥ (Alt): a key the field would
+ * otherwise type, so it stops typing that character (`bindingWarning`).
+ */
+function holdsOptionAlone(chord: KeyChord, system: KeySystem): boolean {
+  return chord.alt === true && !holdsCommandOrControl(chord, system);
+}
+
 /** Which keys a shortcut must hold, in the words the recorder shows. */
 const COMMAND_KEY_WORDS: Readonly<Record<KeySystem, string>> = { mac: "⌘ or ⌃", ctrl: "Ctrl" };
+/** Which keys an anywhere shortcut may hold instead, ⌥ among them (docs/keyboard.md). */
+const ANYWHERE_KEY_WORDS: Readonly<Record<KeySystem, string>> = {
+  mac: "⌘, ⌃ or ⌥",
+  ctrl: "Ctrl or Alt",
+};
 
 /**
  * Why a command cannot take these keys, in the words Keyboard settings
@@ -387,14 +436,15 @@ export function bindingProblem(
     return "Only a window command can work when not typing";
   if (binding.when === "not-typing" && binding.key === " ")
     return "Space scrolls and presses controls, and keeps that job";
-  const first = keyProblem(binding, system, binding.when === "not-typing");
+  const first = keyProblem(binding, system, binding.when === "not-typing", false, id);
   if (first) return first;
   if (
     binding.when !== "not-typing" &&
     !holdsCommandOrControl(binding, system) &&
+    !holdsOptionAlone(binding, system) &&
     !FUNCTION_KEY.test(binding.key)
   )
-    return `A shortcut holds ${COMMAND_KEY_WORDS[system]}, so typing never runs it`;
+    return `A shortcut that works anywhere holds ${ANYWHERE_KEY_WORDS[system]}; a plain key works only when not typing`;
   if (!binding.second) return null;
   if (entryOf(id, panels).scope !== "window")
     return "Only a command that works anywhere in the window takes two keys";
@@ -403,17 +453,29 @@ export function bindingProblem(
   return keyProblem(binding.second, system, false, true);
 }
 
-/** Advice for a risky key, never a refusal or an extra confirmation. */
+/**
+ * Advice for a risky key, never a refusal or an extra confirmation. `typed`
+ * is the character the recorded press typed, which a key held with ⌥ alone
+ * then no longer types anywhere; a press that reports its own key, as one
+ * pressed by a script or held with Alt off a Mac does, is not named.
+ */
 export function bindingWarning(
   binding: KeyBinding,
   id: AnyCommandId,
   panels: readonly PanelCommand[] = [],
   system: KeySystem = "mac",
+  typed?: string,
 ): string | null {
-  return commandEntry(id, panels, system)?.risk === "close" &&
-    !holdsCommandOrControl(binding, system)
-    ? "One press of this key can answer or close a card. This can also happen while typing inside a card if Infinitary does not recognize its text field."
-    : null;
+  if (commandEntry(id, panels, system)?.risk === "close" && !holdsCommandOrControl(binding, system))
+    return "One press of this key can answer or close a card. This can also happen while typing inside a card if Infinitary does not recognize its text field.";
+  if (binding.when !== "not-typing" && !binding.second && holdsOptionAlone(binding, system))
+    return typed &&
+      [...typed].length === 1 &&
+      typed.trim() !== "" &&
+      typed.toLowerCase() !== binding.key.toLowerCase()
+      ? `${chordLabel(binding, system)} types “${typed}”, which no text field will take from this key once it is a shortcut.`
+      : `${chordLabel(binding, system)} will no longer type in any text field once it is a shortcut.`;
+  return null;
 }
 
 // --- Where two commands' keys clash ---------------------------------------

@@ -9,6 +9,7 @@ import {
   cardAnswerSchema,
   cardQuestionsGapSchema,
 } from "../cards";
+import type { MoveKey } from "../keyboard";
 import { offeredKeySchema } from "../keyboardOffer";
 import { KNOWLEDGE_ID_EXACT } from "../knowledge";
 import { TASK_KEY_EXACT } from "../taskKeys";
@@ -480,6 +481,12 @@ export type HostMessage =
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "keys"; pictures: boolean; escape: boolean }
   /** The host just gave the frame focus back: the element that last had it takes it again. */
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "focus" }
+  /**
+   * A movement command's key (docs/keyboard.md, "Moving by a key of your
+   * own"): pressed on the focused element, and done the browser's way when
+   * nothing there used it.
+   */
+  | { fm: typeof FRAME_BRIDGE_VERSION; type: "move"; key: MoveKey }
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "tasks"; keys: string[] }
   /** The linked key a rest elsewhere in the window lights (INF-237), or null: the bridge marks `data-inf-lit` on each link to it. */
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "lit"; key: string | null }

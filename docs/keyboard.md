@@ -89,6 +89,11 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `cards.choice-4`, Press the fourth choice | window, run by the shell page | ⌘4 |
 | `regions.next`, Go to the next part of the window | window, run by the shell page | F6 |
 | `regions.previous`, Go to the previous part of the window | window, run by the shell page | ⇧F6 |
+| `regions.left`, `regions.down`, `regions.up`, `regions.right`, Go to the part of the window on the left, below, above or on the right | window, run by the shell page | none: chosen by name or given a key |
+| `move.left`, `move.down`, `move.up`, `move.right`, Move left, down, up or right | window, run by the main process | none: chosen by name or given a key |
+| `move.first`, `move.last`, Move to the start or the end | window, run by the main process | none: chosen by name or given a key |
+| `move.page-up`, `move.page-down`, Move up or down a page | window, run by the main process | none: chosen by name or given a key |
+| `cancel`, Cancel | window, run by the main process | none: chosen by name or given a key (escape, close and back find it too) |
 | `cards.previous`, Show the previous card | window, run by the shell page | ⇧⌘[ (`[` or `{` with Shift) |
 | `cards.next`, Show the next card | window, run by the shell page | ⇧⌘] (`]` or `}` with Shift) |
 | `cards.minimize`, Put card aside | window, run by the shell page | ⇧⌘M |
@@ -241,7 +246,7 @@ A message field's commands run inside `ComposerField`, which still decides wheth
 
 ### Who runs a window command
 
-A window command whose handler owns main-process state runs there (`runs: "main"`, the size commands).
+A window command whose handler owns main-process state runs there (`runs: "main"`, the size commands), and so does one that presses a key where focus is, which only the main process knows (the movement commands and Cancel).
 One that moves focus or changes what the shell shows runs in the shell page (`runs: "shell"`): its main-process handler, from `shellCommands`, sends the page the command's id alone on the `inf:keyboard:command` push.
 The key, and anything typed, never leaves the main process, and only the page's own preload listens on that channel, so no card or panel frame hears the command.
 For every key the window takes, the page is also told that it took one, never which (`inf:keyboard:taken`): after a key the window took, Chromium holds back every key's release until the next key goes down, so without it the dictation key would never learn that it was pressed with another (`docs/composer.md`, "Voice").
@@ -276,6 +281,8 @@ The main process's own commands, the size keys, are never refused by the page.
   A held key presses once.
   The button shows the installed key, and a person may change it in Keyboard settings.
 - `regions.next` and `regions.previous`, Go to the next or previous part of the window, move focus between the window's parts ("Parts of the window"); they refuse only while a recording runs.
+  The four directional part commands go the same way by where each part is drawn, and refuse only while a recording runs too.
+- The movement commands and Cancel press ←, ↓, ↑, →, Home, End, Page Up, Page Down or Escape where focus is ("Moving by a key of your own").
 - `cards.previous` and `cards.next` are the pager's own arrows, with the same slide; `cards.minimize` puts any shown card away without ending work or asking about retained drafts.
 - `cards.minimize`, Put card aside (⇧⌘M), puts a decision aside, reads a note or hides a window panel through its shared corner; it never ends work.
 - `cards.done`, Press the note's Done or Got it, presses the shown note's footer button, or the host’s Done in an answer's record, and refuses when the card has neither.
@@ -337,6 +344,11 @@ A part that is hidden, inert, held transparent (a card selected but not ready to
 A side panel on a folded rail is hidden, so it is skipped until the rail opens again (`docs/renderer.md`, "Docked rails and the input's room").
 From outside every part (the top bar, nothing), F6 starts at the first part and ⇧F6 at the last.
 
+Go to the part of the window on the left, below, above or on the right (`regions.left`, `regions.down`, `regions.up`, `regions.right`, `moveToRegionToward`) go to the nearest part drawn that way from the part that holds focus, or from the middle of the window when none does.
+A part counts as that way when its middle lies beyond the current part's middle; the nearest is the one with the smallest gap that way plus twice how far it sits off to the side (`regionDistance`), so a part straight ahead wins over a nearer one off to one side.
+A part that refuses focus is passed over for the next nearest; where no part lies that way, focus stays.
+They have no keys of their own: a person gives them keys in Keyboard settings or runs them from command search.
+
 Focus enters a part where a person starts in it:
 
 - the main message, through the store's `focusMainMessage`, with its words, pictures, pastes and caret as they were;
@@ -347,6 +359,22 @@ Focus enters a part where a person starts in it:
 
 The main process hears F6, so the page never sees the key, and a focus a script moves shows no ring unless it is asked to: every landing goes through `focusWithRing` (`src/renderer/src/design/focus.ts`), which asks Chromium for the ring (`focusVisible`).
 A panel's page counts an ask for focus it was born with as an earlier one, never a new one.
+
+## Moving by a key of your own
+
+Move left, down, up and right, Move to the start and the end, Move up and down a page, and Cancel (`move.*`, `cancel`, `MOVE_KEYS` in `src/shared/keyboard.ts`) let a person move with keys of their own, such as Emacs's or Vim's, everywhere the arrows, Home, End, the page keys and Escape work today: the Tasks list, the task board, Settings' tabs, a card while it is read, a card's question options, command search's rows and the Tasks search's.
+They have no keys in Legacy, so nothing changes until a person gives them some.
+
+The main process runs them, because only it knows which document holds focus (`pressMoveKey` in `src/main/keyboard.ts`):
+
+- focus in the window's own page: the main process presses the key itself there (`sendInputEvent`), so it does there all the key does, a text field's caret included, and the page cannot tell it from the key pressed;
+- focus in a card's or a panel's frame: Electron presses keys only into the window's own page, so the main process names the frame that holds focus (its trusted UUID name, the top frame inside the window's page) on `inf:keyboard:move`, the page hands the key to that frame's bridge only while that frame still holds focus (`moveInFrame`, `FrameController.move`), and the bridge presses it where focus is inside the frame.
+
+In a frame the bridge dispatches the key to the frame's own handlers as an untrusted key press; a handler that takes it (calls `preventDefault`) has the key.
+Otherwise the bridge does the browser's own job for the key: it steps a radio group's checked option and a menu list's choice, moves a text field's caret, and scrolls the nearest scrolling box, or the page, a line, a screen or to an end.
+Escape a frame's handlers leave alone goes on to the bridge's own Escape, which leaves the body for its card, as the real key does.
+A key the main process pressed is the page's alone: it never runs a window command or a not-typing key in turn (`pressedForMoves`), so a key of a person's own on Home or End never presses another movement.
+A held movement key repeats as the arrow does; Move to the start, Move to the end and Cancel press once.
 
 ## Lists and Settings
 
@@ -521,13 +549,15 @@ No core channel carries them: the window asks the main process on host channels 
 
 `bindingProblem` refuses, in the words the recorder shows:
 
-- an anywhere first key without ⌘ or ⌃, unless it is a function key; a bare key works only with `when: "not-typing"`;
-- Space, Enter, Tab, Escape and the arrows for not-typing keys; anywhere keys also leave Delete, Home, End and the page keys alone; dead and unknown named keys are always refused;
-- the Mac's own keys and the app's native ones (`PLATFORM_KEYS`): quit, close the window, hide, minimize, the editing keys, Spotlight, the input source, full screen, screenshots, and a text field's own Control keys;
+- an anywhere first key without ⌘, ⌃ or ⌥, unless it is a function key; a bare key works only with `when: "not-typing"`;
+- Space, Enter, Tab, Escape and the arrows for not-typing keys; anywhere keys also leave Delete, Home, End and the page keys alone, but ⌃Tab may be a shortcut, which never moves between controls; dead and unknown named keys are always refused;
+- the Mac's own keys and the app's native ones (`PLATFORM_KEYS`): quit, close the window, hide, minimize, the editing keys, Spotlight, the input source, full screen, screenshots, and a text field's own Control keys, except that ⌃N, ⌃F and ⌃B may be the key of the movement command that moves the same way (`TEXT_MOVES`: Move down, Move right, Move left), since pressing it does what the Mac did there anyway;
 - two keys for a command that is not a window command, and two keys whose first neither holds ⌘ or ⌃ nor works only when not typing;
 - a second key with its own job, except an arrow, which may finish a pair.
 
-On a Ctrl system an anywhere shortcut holds Ctrl instead, and the keys it keeps for itself are its own (`CTRL_SYSTEM_KEYS`): Ctrl+Q and Ctrl+W, Alt+F4, the editing keys with Ctrl+Y and Ctrl+Shift+V, the input method's Ctrl+Space, Ctrl+Shift+U and Ctrl+., a terminal's Ctrl+Alt+T, and Ctrl+Alt with a function key; every chord that holds the Super key belongs to the desktop.
+A key held with ⌥ alone works anywhere, as Emacs's ⌥X does; it no longer types its character in any text field, so the recorder warns, naming the character (`bindingWarning`: "⌥X types “≈”, which no text field will take from this key once it is a shortcut.").
+
+On a Ctrl system an anywhere shortcut holds Ctrl or Alt instead, and the keys it keeps for itself are its own (`CTRL_SYSTEM_KEYS`): Ctrl+Q and Ctrl+W, Alt+F4, the editing keys with Ctrl+Y and Ctrl+Shift+V, the input method's Ctrl+Space, Ctrl+Shift+U and Ctrl+., a terminal's Ctrl+Alt+T, and Ctrl+Alt with a function key; every chord that holds the Super key belongs to the desktop.
 
 Recall's ↑ and the size keys' catalog keys stay what they are; the rules judge only what a person records.
 
@@ -544,6 +574,7 @@ Record turns on the window's recording (`inf:keyboard:record`): until it stops, 
 While it records, the shell store's `recordingKeys` holds every shell command.
 Enter saves the keys in place of the command's others, ⇧Enter adds them beside the others, Escape stops without saving; the recorder's Save, Add beside the others and Cancel buttons do the same for a pointer.
 A window command's key that holds ⌘ or ⌃, or a plain key that works when not typing, waits for a second key, which makes it two keys; another key after two starts over.
+A key recorded with ⌘, ⌃ or ⌥, or a function key, works anywhere; any other works only when not typing.
 Recording stops when the window loses focus, the page navigates, the row is saved or cancelled, or Settings closes.
 
 ### The installed map
@@ -586,7 +617,7 @@ Every hint reads the installed map, the same keys the window resolves.
 
 ## Tests
 
-- Unit: `src/shared/keyboard.test.ts` (the catalog, who runs each window command, chords, scopes, repeat, changed keys, two-key shortcuts, accelerators, hints), `src/shared/keymap.test.ts` (what is saved, which keys a command may take, clashes, the installed map, a refused change, the changes Keyboard settings makes, a panel's commands and their first-come keys), `src/renderer/src/plugins/panelCards.test.ts` (a panel's commands listed, refused and run), `src/main/keyboard.test.ts` (a window command runs once and its key is cancelled, held or not; the shell is told the command's id alone; every other key reaches the page; two keys, their wait with no time limit, the next keys told to the page, a plain first key when not typing and an arrow second; recording; installs), `src/main/shell.test.ts` (a view's keys are its own), `src/core/preferences/shellPreferences.test.ts` (the `keyboard` row), `src/renderer/src/settings/keyRecorder.test.ts` (the recorder's keys, verdicts and saves), `composerKeys.test.ts` (the shell keys and recall through `messageKey`), `src/renderer/src/app/composer.test.ts` ("going to the main message"), `commandRefusals.test.ts` (why each command cannot run), `commandRows.test.ts` (command search's list, matching by a label's and other words, and arrows), `footerGroups.test.ts` (the order the choice keys press a card's buttons), `CardThread.test.tsx` (the thread's Collapse thread and its latest line, pressed by a key or the pointer), `src/main/appMenu.test.ts` (the release View boundary and the Help menu's What’s New, greyed out until a note was shown, and its key), `src/main/rendererRecovery.test.ts` (crash recovery, the one-minute limit and exits that do not reload), `src/panels/now/nav.test.ts` (the Tasks list's stops and keys), `boardTiles.test.ts` (the task board's arrows), `boardMoves.test.ts` (its menu's entries), `SettingsScreen.test.tsx` (the tabs' keys and their one Tab stop), `src/renderer/src/settings/panelsWords.test.ts` (Settings → Panels' rows and their arrows), `src/renderer/src/plugins/panelDrag.test.ts` (a panel's ⌥ and arrow chords), `railStore.test.ts` (a panel's body asked to take focus), `panelCards.test.ts` (an ask's way in and F6's ask for focus), `frameRealm/panelProps.test.ts` (both heard in a frame, and a panel's keys read from its view state), `src/renderer/src/app/keyHints.test.ts` (a panel's keys: its own commands that have one, as each system draws them, following a change), `keymap.test.ts` (a key saved under a retired command carried over), `cardKeys.test.ts` (the card's reading keys), `heldKeys.test.ts` (a held Enter presses once), `frameController.test.ts` ("a card body's keyboard": `keys`, `escape` from the current document only, `focus` to a born document) and `bridge.test.ts` (the `escape` envelope).
+- Unit: `src/shared/keyboard.test.ts` (the catalog, who runs each window command, chords, scopes, repeat, changed keys, two-key shortcuts, accelerators, hints), `src/shared/keymap.test.ts` (what is saved, which keys a command may take, clashes, the installed map, a refused change, the changes Keyboard settings makes, a panel's commands and their first-come keys), `src/renderer/src/plugins/panelCards.test.ts` (a panel's commands listed, refused and run), `src/main/keyboard.test.ts` (a window command runs once and its key is cancelled, held or not; the shell is told the command's id alone; every other key reaches the page; two keys, their wait with no time limit, the next keys told to the page, a plain first key when not typing and an arrow second; recording; installs; a movement key pressed into the page or handed to the frame holding focus, and never pressing another), `src/renderer/src/app/regions.test.ts` (the directional part commands' nearest part), `src/main/shell.test.ts` (a view's keys are its own), `src/core/preferences/shellPreferences.test.ts` (the `keyboard` row), `src/renderer/src/settings/keyRecorder.test.ts` (the recorder's keys, verdicts and saves), `composerKeys.test.ts` (the shell keys and recall through `messageKey`), `src/renderer/src/app/composer.test.ts` ("going to the main message"), `commandRefusals.test.ts` (why each command cannot run), `commandRows.test.ts` (command search's list, matching by a label's and other words, and arrows), `footerGroups.test.ts` (the order the choice keys press a card's buttons), `CardThread.test.tsx` (the thread's Collapse thread and its latest line, pressed by a key or the pointer), `src/main/appMenu.test.ts` (the release View boundary and the Help menu's What’s New, greyed out until a note was shown, and its key), `src/main/rendererRecovery.test.ts` (crash recovery, the one-minute limit and exits that do not reload), `src/panels/now/nav.test.ts` (the Tasks list's stops and keys), `boardTiles.test.ts` (the task board's arrows), `boardMoves.test.ts` (its menu's entries), `SettingsScreen.test.tsx` (the tabs' keys and their one Tab stop), `src/renderer/src/settings/panelsWords.test.ts` (Settings → Panels' rows and their arrows), `src/renderer/src/plugins/panelDrag.test.ts` (a panel's ⌥ and arrow chords), `railStore.test.ts` (a panel's body asked to take focus), `panelCards.test.ts` (an ask's way in and F6's ask for focus), `frameRealm/panelProps.test.ts` (both heard in a frame, and a panel's keys read from its view state), `src/renderer/src/app/keyHints.test.ts` (a panel's keys: its own commands that have one, as each system draws them, following a change), `keymap.test.ts` (a key saved under a retired command carried over), `cardKeys.test.ts` (the card's reading keys), `heldKeys.test.ts` (a held Enter presses once), `frameController.test.ts` ("a card body's keyboard": `keys`, `escape` from the current document only, `focus` to a born document) and `bridge.test.ts` (the `escape` envelope).
 - E2E: `tests/e2e/release-menu.spec.ts` (the developer boundary in development, stamped local packages and release, a real crashed page recovered and a second crash stopped), `tests/e2e/window-size.spec.ts` (the size keys, the menu and the picker share one saved size), `tests/e2e/keyboard-routing.spec.ts` (⌘L from a card drawn inline, a card served at its own host, a card's reply, the Tasks panel and Settings; command search from inside a card, its reasons, Escape and running a row; the reply, card, task and Settings keys from inside a card; putting a card with unsent answers aside from command search without a confirmation) and `tests/e2e/multiline-composer.spec.ts` (the shell keys with undo, Ctrl+P and recall).
   `tests/e2e/key-hints.spec.ts`: a key Keyboard settings sets, changes and removes, followed by Settings' Automation tab's label and `aria-keyshortcuts`; and the task board's Find, Backlog, Done · 7d, Dropped and a tile's ⋯ naming the keys the Tasks panel's commands have, Find's going while the caret is in it, and a changed and a removed key followed.
   `tests/e2e/keyboard-settings.spec.ts`: opening Keyboard settings from command search, recording a key, a refused key, a key moved from another command, a two-key shortcut, and a restart that keeps them all in the window, the hints and the app menu until Reset all keys.
@@ -623,14 +654,14 @@ An expand on a folded header pins it after the other panels in the fold order, w
 
 A window binding may carry `when: "not-typing"`; omission keeps the existing anywhere path, so old saved keys and every default retain their behavior.
 Keyboard settings automatically records a bare key with this place, and shows "When not typing" beside its caps.
-A saved modified key or function key has an Anywhere / When not typing selector beside it, outside the recorder so Tab and the arrows reach it normally.
+A saved key held with ⌘, ⌃ or ⌥, or a function key, has an Anywhere / When not typing selector beside it, outside the recorder so Tab and the arrows reach it normally.
 A key without Command or Control may bind a close-risk command, including card answer 1–4, Done and Decline.
 When recording a key without Command or Control for one of these commands, Keyboard settings shows the non-blocking warning "One press of this key can answer or close a card.
 This can also happen while typing inside a card if Infinitary does not recognize its text field." while keeping the normal verdict and valid save controls available.
 The warning adds no confirmation when the command runs, and previously saved function keys remain active without blocking unrelated key changes.
 Command+1 through Command+4 remain the default answer keys.
 Space, Enter, Tab, Escape and the arrows keep their existing jobs.
-A bare key may also start a two-key shortcut ("Two-key shortcuts"); movement commands and presets are separate work, not part of this layer.
+A bare key may also start a two-key shortcut ("Two-key shortcuts"); presets are separate work, not part of this layer, and the movement commands are "Moving by a key of your own".
 
 The main process lets a not-typing key reach the focused document and remembers the native press, focused frame and installed map.
 The shell and the frame bridge offer an unused trusted key after all its handlers finish, only outside text-like inputs, textareas, selects, editable content and declared typing controls, and never during composition.

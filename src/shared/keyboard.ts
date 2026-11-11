@@ -238,6 +238,131 @@ export const KEYBOARD_COMMANDS = {
     risk: "navigate",
     keys: [{ key: "F6", shift: true }],
   },
+  // The part of the window in a direction from the one focus is in
+  // (docs/keyboard.md, "Parts of the window"), read from where each part is
+  // drawn now. No key of their own: chosen by name, or given one.
+  "regions.left": {
+    label: "Go to the part of the window on the left",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["pane", "panel", "left"],
+  },
+  "regions.down": {
+    label: "Go to the part of the window below",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["pane", "panel", "down"],
+  },
+  "regions.up": {
+    label: "Go to the part of the window above",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["pane", "panel", "up"],
+  },
+  "regions.right": {
+    label: "Go to the part of the window on the right",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["pane", "panel", "right"],
+  },
+  // A key of a person's own for the arrows, Home, End, the page keys and
+  // Escape (docs/keyboard.md, "Moving by a key of your own"): each presses
+  // its key where focus is, so it does what that key does there. The main
+  // process runs them, because only it can press a real key in the window's
+  // page. No key of their own: given one, or chosen by name.
+  "move.left": {
+    label: "Move left",
+    scope: "window",
+    runs: "main",
+    repeat: true,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["arrow", "left", "previous"],
+  },
+  "move.down": {
+    label: "Move down",
+    scope: "window",
+    runs: "main",
+    repeat: true,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["arrow", "down", "next"],
+  },
+  "move.up": {
+    label: "Move up",
+    scope: "window",
+    runs: "main",
+    repeat: true,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["arrow", "up", "previous"],
+  },
+  "move.right": {
+    label: "Move right",
+    scope: "window",
+    runs: "main",
+    repeat: true,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["arrow", "right", "next"],
+  },
+  "move.first": {
+    label: "Move to the start",
+    scope: "window",
+    runs: "main",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["home", "top", "first", "beginning"],
+  },
+  "move.last": {
+    label: "Move to the end",
+    scope: "window",
+    runs: "main",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["end", "bottom", "last"],
+  },
+  "move.page-up": {
+    label: "Move up a page",
+    scope: "window",
+    runs: "main",
+    repeat: true,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["page up", "scroll"],
+  },
+  "move.page-down": {
+    label: "Move down a page",
+    scope: "window",
+    runs: "main",
+    repeat: true,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["page down", "scroll"],
+  },
+  cancel: {
+    label: "Cancel",
+    scope: "window",
+    runs: "main",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["escape", "esc", "close", "back"],
+  },
   "computers.previous": {
     label: "Previous work computers",
     scope: "window",
@@ -778,6 +903,38 @@ export const SHELL_COMMAND_IDS = COMMAND_IDS.filter(isShellCommand);
 export const MAIN_COMMAND_IDS = COMMAND_IDS.filter(
   (id): id is MainCommandId => isWindowCommand(id) && !isShellCommand(id),
 );
+
+/**
+ * The key each movement command presses where focus is (docs/keyboard.md,
+ * "Moving by a key of your own"), as `KeyboardEvent.key` names it.
+ */
+export const MOVE_KEYS = {
+  "move.left": "ArrowLeft",
+  "move.down": "ArrowDown",
+  "move.up": "ArrowUp",
+  "move.right": "ArrowRight",
+  "move.first": "Home",
+  "move.last": "End",
+  "move.page-up": "PageUp",
+  "move.page-down": "PageDown",
+  cancel: "Escape",
+} as const satisfies Partial<Record<MainCommandId, string>>;
+
+/** A movement command: it presses one of `MOVE_KEYS` where focus is. */
+export type MoveCommandId = keyof typeof MOVE_KEYS;
+
+/** A key a movement command presses. */
+export type MoveKey = (typeof MOVE_KEYS)[MoveCommandId];
+
+/** Every key a movement command presses. */
+export const MOVE_KEY_NAMES = Object.values(MOVE_KEYS) as MoveKey[];
+
+/** The window's size commands, the other commands the main process runs. */
+export type SizeCommandId = Exclude<MainCommandId, MoveCommandId>;
+
+export function isMoveCommand(id: string): id is MoveCommandId {
+  return Object.hasOwn(MOVE_KEYS, id);
+}
 
 // --- A panel's commands (docs/keyboard.md, "A panel's commands") -----------
 

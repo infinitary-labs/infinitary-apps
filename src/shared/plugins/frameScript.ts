@@ -635,6 +635,8 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
       else tagPictures();
     } else if (data.type === "focus") {
       returnFocus();
+    } else if (data.type === "move") {
+      pressMove(data.key);
     } else if (data.type === "annotation") {
       if (data.document !== documentId) return;
       annotation.enabled = true; annotation.mode = data.mode === true;
@@ -1785,6 +1787,92 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
       try { element.setSelectionRange(held.start, held.end, held.direction || "none"); } catch (error) {}
     }
   }
+  // A movement command's key (docs/keyboard.md, "Moving by a key of your
+  // own"): pressed on the focused element for the body's own handlers, and
+  // when nothing there used it, done the way the browser does that key: a
+  // radio group's next choice, a field's caret, a list's next option, or a
+  // scroll. An Escape is the body's own and the bridge's below.
+  var MOVES = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1, Home: 0, End: 0, PageUp: 0, PageDown: 0, Escape: 0 };
+  function pressMove(key) {
+    if (typeof key !== "string" || !Object.prototype.hasOwnProperty.call(MOVES, key) || !document.hasFocus()) return;
+    var target = document.activeElement || document.body;
+    if (!target) return;
+    var init = { key: key, code: key, bubbles: true, cancelable: true, composed: true };
+    var unused = target.dispatchEvent(new KeyboardEvent("keydown", init));
+    target.dispatchEvent(new KeyboardEvent("keyup", init));
+    if (unused && key !== "Escape") moveTheBrowsersWay(target, key);
+  }
+  function moveTheBrowsersWay(target, key) {
+    var step = MOVES[key];
+    var name = target.localName;
+    if (name === "input" && target.type === "radio" && step !== 0 && target.name) {
+      var scope = target.form || document;
+      var group = Array.prototype.filter.call(scope.querySelectorAll('input[type="radio"]'), function (radio) {
+        return radio.name === target.name && !radio.disabled && !boxless(radio);
+      });
+      var at = group.indexOf(target);
+      var next = group[(at + step + group.length) % group.length];
+      if (next && next !== target) { next.focus(); next.click(); }
+      return;
+    }
+    if (name === "select" && !target.multiple && step !== 0) {
+      var index = Math.min(Math.max(target.selectedIndex + step, 0), target.options.length - 1);
+      if (index !== target.selectedIndex) {
+        target.selectedIndex = index;
+        target.dispatchEvent(new Event("input", { bubbles: true }));
+        target.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      return;
+    }
+    if ((name === "textarea" || name === "input") && typeof target.selectionStart === "number" && target.selectionStart !== null) {
+      var value = target.value;
+      var start = target.selectionStart;
+      var end = target.selectionEnd;
+      var caret;
+      if (key === "ArrowLeft") caret = start === end ? Math.max(0, start - 1) : start;
+      else if (key === "ArrowRight") caret = start === end ? Math.min(value.length, end + 1) : end;
+      else if (name === "textarea" && (key === "ArrowUp" || key === "ArrowDown")) {
+        var lineStart = value.lastIndexOf("\\n", start - 1) + 1;
+        var column = start - lineStart;
+        if (key === "ArrowUp") {
+          if (lineStart === 0) caret = 0;
+          else {
+            var above = value.lastIndexOf("\\n", lineStart - 2) + 1;
+            caret = Math.min(above + column, lineStart - 1);
+          }
+        } else {
+          var lineEnd = value.indexOf("\\n", start);
+          if (lineEnd === -1) caret = value.length;
+          else {
+            var belowEnd = value.indexOf("\\n", lineEnd + 1);
+            caret = Math.min(lineEnd + 1 + column, belowEnd === -1 ? value.length : belowEnd);
+          }
+        }
+      } else if (key === "ArrowUp" || key === "Home" || key === "PageUp") caret = 0;
+      else caret = value.length;
+      target.setSelectionRange(caret, caret);
+      return;
+    }
+    var vertical = key !== "ArrowLeft" && key !== "ArrowRight";
+    var box = target.nodeType === 1 ? target : null;
+    while (box && box !== document.body && box !== document.documentElement) {
+      var style = getComputedStyle(box);
+      var overflow = vertical ? style.overflowY : style.overflowX;
+      var room = vertical ? box.scrollHeight - box.clientHeight : box.scrollWidth - box.clientWidth;
+      if (room > 0 && (overflow === "auto" || overflow === "scroll")) break;
+      box = box.parentElement;
+    }
+    if (!box || box === document.body || box === document.documentElement) box = document.scrollingElement || document.documentElement;
+    var page = Math.max(40, box.clientHeight * 0.875);
+    if (key === "ArrowLeft") box.scrollBy({ left: -40 });
+    else if (key === "ArrowRight") box.scrollBy({ left: 40 });
+    else if (key === "ArrowUp") box.scrollBy({ top: -40 });
+    else if (key === "ArrowDown") box.scrollBy({ top: 40 });
+    else if (key === "PageUp") box.scrollBy({ top: -page });
+    else if (key === "PageDown") box.scrollBy({ top: page });
+    else if (key === "Home") box.scrollTo({ top: 0 });
+    else if (key === "End") box.scrollTo({ top: box.scrollHeight });
+  }
   // After the body's own handlers: a picture opens on Enter or Space, and
   // an Escape nothing in the body used leaves the body for its card.
   document.addEventListener("keydown", function (event) {
@@ -1851,4 +1939,4 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-9SkZFDKX3DiJiUFcpAfdCnNObg8VVTGf6sGJSYEnDVU=";
+export const FRAME_BRIDGE_SHA256 = "sha256-PFRsLBy/sozYZY3eZdMVzvqzSDWgEfFebkAjM3QUs/E=";

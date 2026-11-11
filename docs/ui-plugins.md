@@ -161,6 +161,7 @@ A card body's KNOWLEDGE REFERENCES are linked the same way (FI3-1150; `docs/know
 The host takes one only for an id it told that document, and opens it only from the captain's own gesture; that moved the hash once more.
 A card body's KEYBOARD is the bridge's to complete (FI3-800 piece 6; `docs/keyboard.md` "Cards and frames"): after the host's `keys` message - sent to a mount that opens pictures (`onImage`) or hears Escape (`FrameMountSpec.onEscape`), so a panel's pictures stay off the Tab order - each picture a click would open is a Tab stop that Enter or Space opens, and an Escape nothing in the body used posts the one-way `escape`.
 A task key the keyboard moves focus to posts `rest` as the pointer's does.
+The host's `move` message presses a movement command's key where focus is in the body, for the frame that holds focus (`docs/keyboard.md`, "Moving by a key of your own"); that moved the hash again.
 A card's page is born HELD (FI3-871; `docs/renderer.md` "Held preparation"): its builder marks it, its scripts and animations wait for the host's `activate` (`FrameController.activate`, which only a card body calls), and a held page's `resize` carries `held`.
 A panel's page is never held; this too moved the hash.
 The bridge keeps the element that last had focus in its document and a text field's caret; the host's `focus` message, sent right after the host gave the frame focus back, puts focus back there, in a panel's frame as in a card's.

@@ -219,6 +219,10 @@ const REFUSALS: Readonly<
   // recording keeps it where its words will go.
   "regions.next": (s) => (s.recording ? RECORDING : null),
   "regions.previous": (s) => (s.recording ? RECORDING : null),
+  "regions.left": (s) => (s.recording ? RECORDING : null),
+  "regions.down": (s) => (s.recording ? RECORDING : null),
+  "regions.up": (s) => (s.recording ? RECORDING : null),
+  "regions.right": (s) => (s.recording ? RECORDING : null),
   "computers.previous": (s, facts) =>
     s.view !== "home"
       ? IN_SETTINGS

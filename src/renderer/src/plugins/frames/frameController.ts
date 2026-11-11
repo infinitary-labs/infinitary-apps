@@ -6,6 +6,7 @@ import {
   cardQuestionsBytes,
   cardQuestionsSchema,
 } from "@shared/cards";
+import type { MoveKey } from "@shared/keyboard";
 import {
   PERSONAL_STORE_VALUE_MAX_BYTES,
   type PersonalStoreChange,
@@ -726,6 +727,12 @@ export class FrameController {
   returnFocus(): void {
     if (this.disposed || !this.ready) return;
     this.port.post({ fm: V, type: "focus" });
+  }
+
+  /** A movement command's key: the bridge presses it on the element focused inside. */
+  move(key: MoveKey): void {
+    if (this.disposed || !this.ready) return;
+    this.port.post({ fm: V, type: "move", key });
   }
 
   /**

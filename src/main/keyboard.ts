@@ -8,6 +8,9 @@ import {
   isWindowCommand,
   type KeyPress,
   type MainCommandId,
+  MOVE_KEYS,
+  type MoveCommandId,
+  type MoveKey,
   type NextKey,
   nextKeys,
   type PanelCommand,
@@ -16,6 +19,7 @@ import {
   runsOnPress,
   SHELL_COMMAND_IDS,
   type ShellCommandId,
+  type SizeCommandId,
   secondKeyCommand,
   secondKeyPanelCommand,
   startsTwoKeys,
@@ -50,6 +54,9 @@ export type WindowCommandHandlers = Readonly<Record<WindowCommandId, () => void>
 
 /** The handlers of the window commands the main process runs itself. */
 export type MainCommandHandlers = Readonly<Record<MainCommandId, () => void>>;
+
+/** The size commands' handlers, one set for every window (./windowSize.ts). */
+export type SizeCommandHandlers = Readonly<Record<SizeCommandId, () => void>>;
 
 /**
  * Where the installed map reads and writes the keys a person changed: this
@@ -197,6 +204,60 @@ export function offerWindowKey(contents: WebContents, press: KeyPress, frame?: s
   offers.get(contents)?.(press, frame);
 }
 
+/** The name Electron's `sendInputEvent` gives each key a movement command presses. */
+const MOVE_KEY_CODES: Readonly<Record<MoveKey, string>> = {
+  ArrowLeft: "Left",
+  ArrowDown: "Down",
+  ArrowUp: "Up",
+  ArrowRight: "Right",
+  Home: "Home",
+  End: "End",
+  PageUp: "PageUp",
+  PageDown: "PageDown",
+  Escape: "Escape",
+};
+
+/**
+ * The keys the window pressed for a movement command and has not yet heard
+ * back: each reaches the page as a key pressed there, and never runs a
+ * command itself, so a key of a person's own on Home or End can never press
+ * another movement in turn.
+ */
+const pressedForMoves = new WeakMap<WebContents, MoveKey[]>();
+
+/**
+ * A movement command (docs/keyboard.md, "Moving by a key of your own"):
+ * presses its key where focus is. In the window's own page the key is a
+ * real one, so it does there all the key does, a field's caret included.
+ * Electron presses keys only into that page, never into a card's or a
+ * panel's frame, so focus in a frame has the page hand the key to that
+ * frame's bridge, named by the frame the main process saw holding focus.
+ */
+export function pressMoveKey(contents: WebContents, id: MoveCommandId): void {
+  if (contents.isDestroyed()) return;
+  const key = MOVE_KEYS[id];
+  const focused = contents.focusedFrame;
+  if (!focused || focused === contents.mainFrame) {
+    const pressed = pressedForMoves.get(contents) ?? [];
+    pressed.push(key);
+    pressedForMoves.set(contents, pressed);
+    contents.sendInputEvent({ type: "keyDown", keyCode: MOVE_KEY_CODES[key] });
+    contents.sendInputEvent({ type: "keyUp", keyCode: MOVE_KEY_CODES[key] });
+    return;
+  }
+  // A frame inside a card's frame is that card's to move in.
+  let frame = focused;
+  while (frame.parent && frame.parent !== contents.mainFrame) frame = frame.parent;
+  if (frame.name) contents.send("inf:keyboard:move", { key, frame: frame.name });
+}
+
+/** The movement commands' handlers for one window. */
+export function moveCommands(contents: WebContents): Readonly<Record<MoveCommandId, () => void>> {
+  return Object.fromEntries(
+    (Object.keys(MOVE_KEYS) as MoveCommandId[]).map((id) => [id, () => pressMoveKey(contents, id)]),
+  ) as Record<MoveCommandId, () => void>;
+}
+
 /** Each window's recording switch, by its page, for the page's own request. */
 const recorders = new WeakMap<WebContents, (recording: boolean) => void>();
 
@@ -282,7 +343,10 @@ export function followWindowCommands(
     stopWaiting();
     recording = on;
   });
-  win.on("blur", stop);
+  win.on("blur", () => {
+    stop();
+    pressedForMoves.delete(contents);
+  });
   contents.on("did-start-navigation", (details) => {
     witnessed = [];
     if (details.isMainFrame) stop();
@@ -377,6 +441,12 @@ export function followWindowCommands(
 
   contents.on("before-input-event", (event, input) => {
     if (input.type !== "keyDown") return;
+    // A key the window pressed for a movement command is the page's alone.
+    const pressed = pressedForMoves.get(contents);
+    if (pressed?.[0] === input.key) {
+      pressed.shift();
+      return;
+    }
     const press = pressOfInput(input);
     if (recording) {
       if (press.composing || MODIFIER_KEYS.has(press.key)) return;

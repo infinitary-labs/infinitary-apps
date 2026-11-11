@@ -1,3 +1,4 @@
+import type { MoveKey } from "@shared/keyboard";
 import { available } from "../../app/focusRecovery";
 import { hearOut } from "../../app/presses";
 import type { FrameController } from "./frameController";
@@ -43,6 +44,18 @@ export function trackFrame(
 function controllerOf(frame: HTMLIFrameElement): FrameController | null {
   for (const entry of tracked) if (entry.frame.current === frame) return entry.controller;
   return null;
+}
+
+/**
+ * A movement command's key (docs/keyboard.md, "Moving by a key of your
+ * own") for the frame the main process saw holding focus, named by its
+ * mount's own name: handed to that frame's bridge only while it still holds
+ * the window's focus here, which presses it on the element focused inside.
+ */
+export function moveInFrame(key: MoveKey, name: string): void {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLIFrameElement) || active.name !== name) return;
+  controllerOf(active)?.move(key);
 }
 
 /**

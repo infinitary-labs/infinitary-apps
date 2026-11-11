@@ -26,7 +26,7 @@ import { DEFAULT_SAVED_KEYMAP, type SavedKeymap, type SavedKeymapRead } from "@s
 import type { KeySystem } from "@shared/platform";
 import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
 import type { PictureSource } from "./frames/frameProtocol";
-import { InstalledKeymap, type MainCommandHandlers } from "./keyboard";
+import { InstalledKeymap, type SizeCommandHandlers } from "./keyboard";
 import { LocalWindow, type LocalWindowOptions } from "./view/localWindow";
 import { ViewBackend, type ViewBackendOptions } from "./view/viewBackend";
 import { type PreferenceSource, sizeCommands } from "./windowSize";
@@ -167,7 +167,7 @@ export class Shell {
    * The size steps every window's keys, the View menu and command search
    * share: one queue, written through `dispatch` as the picker's choice is.
    */
-  readonly size: MainCommandHandlers = sizeCommands(this);
+  readonly size: SizeCommandHandlers = sizeCommands(this);
   private mode: HomeMode | ViewMode | null = null;
   private coreStarted = false;
   /**

@@ -5,6 +5,7 @@ import { isAllowedOpenExternalUrl } from "@core/openExternal";
 import { writePrivateFile } from "@core/secrets/custody";
 import { CHOSEN_FILES_MAX } from "@shared/attachments";
 import { CORE_INVOKE_CHANNELS, type PushChannel, type PushPayload } from "@shared/ipc";
+import { isMoveCommand } from "@shared/keyboard";
 import type { RecognizerClient, RecognizerPlace } from "@shared/voiceRecognizer";
 import {
   app,
@@ -15,7 +16,7 @@ import {
   type WebContents,
 } from "electron";
 import type { FrameMountRegistry } from "../frames/frameMounts";
-import { offerWindowKey, recordWindowKeys } from "../keyboard";
+import { offerWindowKey, pressMoveKey, recordWindowKeys } from "../keyboard";
 import type { RendererSourceOptions } from "../security/rendererSource";
 import type { Shell } from "../shell";
 import { MIC_SETTINGS_URL, micAccess } from "../voice/micAccess";
@@ -110,10 +111,11 @@ export function registerIpc(options: IpcOptions): void {
     return { ok: true as const };
   });
 
-  // The size keys chosen by name in command search run their keys' own
-  // handlers (docs/keyboard.md).
-  handleInvoke("inf:keyboard:run", rendererSource, (_event, command) => {
-    shell.size[command]();
+  // The size and movement keys chosen by name in command search run their
+  // keys' own handlers (docs/keyboard.md).
+  handleInvoke("inf:keyboard:run", rendererSource, (event, command) => {
+    if (isMoveCommand(command)) pressMoveKey(event.sender, command);
+    else shell.size[command]();
     return { ok: true as const };
   });
   // The window's installed keys, a person's change to them, and recording

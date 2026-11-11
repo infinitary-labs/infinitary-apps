@@ -12,6 +12,7 @@ import {
   chordMatches,
   commandFor,
   DEFAULT_BINDINGS,
+  isMoveCommand,
   isShellCommand,
   isWindowCommand,
   KEYBOARD_COMMANDS,
@@ -60,6 +61,20 @@ describe("the command catalog", () => {
     expect(COMMAND_IDS.filter((id) => KEYBOARD_COMMANDS[id].keys.length === 0)).toEqual([
       "focus.card-body",
       "focus.card-actions",
+      // INF-3547's accepted plan, piece 2: no default keys in Legacy.
+      "regions.left",
+      "regions.down",
+      "regions.up",
+      "regions.right",
+      "move.left",
+      "move.down",
+      "move.up",
+      "move.right",
+      "move.first",
+      "move.last",
+      "move.page-up",
+      "move.page-down",
+      "cancel",
       "computers.previous",
       "computers.next",
       "project-focus.clear",
@@ -99,11 +114,22 @@ describe("the command catalog", () => {
     ]);
   });
 
-  it("never repeats a command that opens, closes or moves focus while its key is held", () => {
+  // INF-3547's accepted plan, piece 2: a key bound to Move down "does what
+  // the down arrow does", and a held arrow key moves again as it repeats.
+  it("never repeats a command that opens, closes or moves focus while its key is held, but a step's movement", () => {
     for (const id of COMMAND_IDS) {
       const { risk, repeat } = KEYBOARD_COMMANDS[id];
-      if (risk === "navigate" || risk === "close") expect(repeat).toBe(false);
+      if ((risk === "navigate" || risk === "close") && !isMoveCommand(id))
+        expect(repeat).toBe(false);
     }
+    expect(COMMAND_IDS.filter((id) => isMoveCommand(id) && KEYBOARD_COMMANDS[id].repeat)).toEqual([
+      "move.left",
+      "move.down",
+      "move.up",
+      "move.right",
+      "move.page-up",
+      "move.page-down",
+    ]);
   });
 
   it("names who runs each window command, and gives the shell page only its own", () => {
@@ -125,6 +151,10 @@ describe("the command catalog", () => {
       "cards.choice-4",
       "regions.next",
       "regions.previous",
+      "regions.left",
+      "regions.down",
+      "regions.up",
+      "regions.right",
       "computers.previous",
       "computers.next",
       "project-focus.open",
@@ -170,7 +200,20 @@ describe("the command catalog", () => {
       "allowance.recheck",
       "devices.try-again",
     ]);
-    expect(MAIN_COMMAND_IDS).toEqual(["size.larger", "size.smaller", "size.reset"]);
+    expect(MAIN_COMMAND_IDS).toEqual([
+      "move.left",
+      "move.down",
+      "move.up",
+      "move.right",
+      "move.first",
+      "move.last",
+      "move.page-up",
+      "move.page-down",
+      "cancel",
+      "size.larger",
+      "size.smaller",
+      "size.reset",
+    ]);
   });
 
   it("never gives one default key to two commands that can work in the same place", () => {

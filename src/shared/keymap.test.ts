@@ -14,6 +14,7 @@ import {
 } from "./keyboard";
 import {
   bindingProblem,
+  bindingWarning,
   chordOfPress,
   chordsOverlap,
   clashesWith,
@@ -113,21 +114,62 @@ describe("the keys a command may take", () => {
     expect(bindingProblem({ key: "]", meta: true, alt: true }, "cards.next")).toBeNull();
   });
 
-  it("refuses a key that types, alone or with only ⇧ or ⌥", () => {
-    for (const binding of [
-      { key: "k" },
-      { key: "k", shift: true },
-      { key: "k", alt: true },
-      { key: " " },
-    ])
+  it("refuses an anywhere key that types, alone or with only ⇧", () => {
+    for (const binding of [{ key: "k" }, { key: "k", shift: true }, { key: " " }])
       expect(bindingProblem(binding, "commands.search")).toBe(
-        "A shortcut holds ⌘ or ⌃, so typing never runs it",
+        "A shortcut that works anywhere holds ⌘, ⌃ or ⌥; a plain key works only when not typing",
       );
+  });
+
+  // INF-3547's accepted plan, piece 2: "a key may hold Option", as Emacs's
+  // M-x does, and the recorder names the character it stops typing.
+  it("takes an anywhere key held with ⌥ alone, and says what it stops typing", () => {
+    expect(bindingProblem({ key: "x", alt: true }, "commands.search")).toBeNull();
+    expect(bindingProblem({ key: "x", alt: true, shift: true }, "commands.search")).toBeNull();
+    expect(bindingProblem({ key: "x", alt: true }, "commands.search", [], "ctrl")).toBeNull();
+    expect(bindingWarning({ key: "x", alt: true }, "commands.search", [], "mac", "≈")).toBe(
+      "⌥X types “≈”, which no text field will take from this key once it is a shortcut.",
+    );
+    expect(
+      bindingWarning(
+        { key: "x", alt: true, when: "not-typing" },
+        "commands.search",
+        [],
+        "mac",
+        "≈",
+      ),
+    ).toBeNull();
+    expect(bindingWarning({ key: "x", alt: true }, "commands.search", [], "mac", "x")).toBe(
+      "⌥X will no longer type in any text field once it is a shortcut.",
+    );
+    expect(bindingWarning({ key: "x", meta: true }, "commands.search", [], "mac", "x")).toBeNull();
+  });
+
+  // INF-3547's accepted plan, piece 2: "Ctrl+Tab may be a shortcut".
+  it("takes Tab held with ⌃, which never moves between controls", () => {
+    expect(bindingProblem({ key: "Tab", ctrl: true }, "cards.next-tab")).toBeNull();
+    expect(
+      bindingProblem({ key: "Tab", ctrl: true, shift: true }, "cards.previous-tab"),
+    ).toBeNull();
+    expect(bindingProblem({ key: "Tab", ctrl: true }, "cards.next-tab", [], "ctrl")).toBeNull();
+  });
+
+  // INF-3547's accepted plan, piece 2: the Mac's text keys Ctrl+N, P, F, B
+  // and V "may be bound only to the movement command matching what the Mac
+  // already does there".
+  it("gives a Mac text key that moves only to the movement command that moves the same way", () => {
+    expect(bindingProblem({ key: "n", ctrl: true }, "move.down")).toBeNull();
+    expect(bindingProblem({ key: "f", ctrl: true }, "move.right")).toBeNull();
+    expect(bindingProblem({ key: "b", ctrl: true }, "move.left")).toBeNull();
+    expect(bindingProblem({ key: "n", ctrl: true }, "move.up")).toBe("⌃N moves down a line");
+    expect(bindingProblem({ key: "n", ctrl: true }, "commands.search")).toBe(
+      "⌃N moves down a line",
+    );
   });
 
   it("refuses the keys that keep their own jobs, and says which job", () => {
     expect(bindingProblem({ key: "Enter", meta: true }, "commands.search")).toMatch(/^Enter sends/);
-    expect(bindingProblem({ key: "Tab", ctrl: true }, "commands.search")).toMatch(/^Tab moves/);
+    expect(bindingProblem({ key: "Tab", meta: true }, "commands.search")).toMatch(/^Tab moves/);
     expect(bindingProblem({ key: "Escape" }, "commands.search")).toMatch(/^Escape closes/);
     expect(bindingProblem({ key: "ArrowUp", meta: true }, "message.recall")).toMatch(/arrow keys/);
     expect(bindingProblem({ key: "Dead", alt: true }, "commands.search")).toMatch(/accent/);
@@ -160,7 +202,7 @@ describe("the keys a command may take", () => {
       bindingProblem({ key: "g", when: "not-typing", second: { key: "t" } }, "settings.keyboard"),
     ).toBeNull();
     expect(bindingProblem({ key: "g", second: { key: "t" } }, "settings.keyboard")).toBe(
-      "A shortcut holds ⌘ or ⌃, so typing never runs it",
+      "A shortcut that works anywhere holds ⌘, ⌃ or ⌥; a plain key works only when not typing",
     );
     for (const key of ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]) {
       expect(bindingProblem({ key: "x", ctrl: true, second: { key } }, "cards.next")).toBeNull();

@@ -142,6 +142,78 @@ function regionAt(regions: readonly HTMLElement[]): number {
   return regions.findIndex((root) => root.contains(active));
 }
 
+/** A direction across the window, as the directional part commands name it. */
+export type RegionDirection = "left" | "right" | "up" | "down";
+
+/** A part's box on screen, as far as a direction reads it. */
+type Box = Pick<DOMRect, "left" | "right" | "top" | "bottom">;
+
+/**
+ * How far `to` lies from `from` going `direction`, or null when it is not
+ * that way: its middle must lie beyond `from`'s that way. The distance is
+ * the gap along the direction (none where the two overlap, as a card may
+ * over the main message), plus twice how far it sits off to the side, so a
+ * part straight ahead wins over a nearer one off to the side.
+ */
+export function regionDistance(from: Box, to: Box, direction: RegionDirection): number | null {
+  const middle = (box: Box) => ({
+    x: (box.left + box.right) / 2,
+    y: (box.top + box.bottom) / 2,
+  });
+  const a = middle(from);
+  const b = middle(to);
+  const beyond =
+    direction === "right"
+      ? b.x - a.x
+      : direction === "left"
+        ? a.x - b.x
+        : direction === "down"
+          ? b.y - a.y
+          : a.y - b.y;
+  if (beyond <= 1) return null;
+  const ahead =
+    direction === "right"
+      ? to.left - from.right
+      : direction === "left"
+        ? from.left - to.right
+        : direction === "down"
+          ? to.top - from.bottom
+          : from.top - to.bottom;
+  const across =
+    direction === "left" || direction === "right"
+      ? Math.max(0, to.top - from.bottom, from.top - to.bottom)
+      : Math.max(0, to.left - from.right, from.left - to.right);
+  return Math.max(0, ahead) + 2 * across;
+}
+
+/**
+ * Moves focus into the nearest part of the window in a direction from the
+ * part that holds it (docs/keyboard.md, "Parts of the window"), read from
+ * where each part is drawn now; from outside every part, from the middle of
+ * the window. Returns whether focus went somewhere.
+ */
+export function moveToRegionToward(direction: RegionDirection): boolean {
+  const regions = windowRegions();
+  const at = regionAt(regions);
+  const middle = { left: innerWidth / 2, right: innerWidth / 2, top: innerHeight / 2 };
+  const from: Box = regions[at]?.getBoundingClientRect() ?? {
+    ...middle,
+    bottom: middle.top,
+  };
+  const ranked = regions
+    .map((root, index) => ({
+      root,
+      distance: index === at ? null : regionDistance(from, root.getBoundingClientRect(), direction),
+    }))
+    .filter((entry): entry is { root: HTMLElement; distance: number } => entry.distance !== null)
+    .sort((a, b) => a.distance - b.distance);
+  for (const { root } of ranked) {
+    const kind = kindOf(root);
+    if (kind && enter(kind, root)) return true;
+  }
+  return false;
+}
+
 /**
  * Moves focus into the next part of the window, or the previous one, from
  * wherever it is; from outside every part, F6 starts at the first and ⇧F6

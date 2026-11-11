@@ -1,8 +1,8 @@
 import {
   type Bindings,
-  type MainCommandId,
   menuAccelerator,
   type ShellCommandId,
+  type SizeCommandId,
 } from "@shared/keyboard";
 import { withAllCatalogKeys } from "@shared/keymap";
 import {
@@ -12,7 +12,7 @@ import {
   type MenuItemConstructorOptions,
   type MessageBoxOptions,
 } from "electron";
-import type { InstalledKeymap, MainCommandHandlers } from "./keyboard";
+import type { InstalledKeymap, SizeCommandHandlers } from "./keyboard";
 
 /**
  * The app menu (docs/keyboard.md, "The app menu"): Electron's own, without
@@ -32,7 +32,7 @@ import type { InstalledKeymap, MainCommandHandlers } from "./keyboard";
 
 export type AppMenuActions = {
   /** The size commands' handlers (./windowSize.ts), the same steps their keys take. */
-  size: MainCommandHandlers;
+  size: SizeCommandHandlers;
   /** Tells the focused window's page a shell command, as its key would. */
   shell: (command: ShellCommandId) => void;
   /** Asks first, then puts every key back to the catalog's. */
@@ -45,13 +45,13 @@ export type AppMenuActions = {
 
 const DEVELOPER_ROLES = new Set(["reload", "forcereload", "toggledevtools"]);
 
-const SIZE_ROLES: Readonly<Record<string, MainCommandId>> = {
+const SIZE_ROLES: Readonly<Record<string, SizeCommandId>> = {
   zoomin: "size.larger",
   zoomout: "size.smaller",
   resetzoom: "size.reset",
 };
 
-const SIZE_ITEM_IDS: Readonly<Record<MainCommandId, string>> = {
+const SIZE_ITEM_IDS: Readonly<Record<SizeCommandId, string>> = {
   "size.larger": "appearance-size-in",
   "size.smaller": "appearance-size-out",
   "size.reset": "appearance-size-reset",

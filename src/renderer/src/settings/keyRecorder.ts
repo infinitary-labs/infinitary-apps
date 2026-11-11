@@ -45,7 +45,8 @@ export function recorderKey(key: RecordedKey): RecorderKey {
  * The keys after one more press: a window command's chord that holds ⌘ or
  * ⌃ (Ctrl on a Ctrl system), or a plain key that works when not typing,
  * takes a second key and becomes a two-key shortcut; anything else starts
- * over with the new key.
+ * over with the new key. A key held with ⌘, ⌃ or ⌥, or an F key, works
+ * anywhere; any other works only when not typing.
  */
 export function keysAfterPress(
   id: AnyCommandId,
@@ -56,7 +57,7 @@ export function keysAfterPress(
 ): KeyBinding {
   const chord = chordOfPress({ ...key, composing: false, repeat: false });
   const binding: KeyBinding =
-    !chord.meta && !chord.ctrl && !/^F([1-9]|1[0-9]|2[0-4])$/.test(chord.key)
+    !chord.meta && !chord.ctrl && !chord.alt && !/^F([1-9]|1[0-9]|2[0-4])$/.test(chord.key)
       ? { ...chord, when: "not-typing" }
       : chord;
   return current && takesSecondKey(id, current, panels, system)

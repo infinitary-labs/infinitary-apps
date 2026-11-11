@@ -284,6 +284,10 @@ export type FirstmateApi = {
     onCommand: (
       listener: (heard: { command: ShellCommandId | PanelCommandId }) => void,
     ) => () => void;
+    /** A movement command's key for the frame named, which the page hands to it while it holds focus. */
+    onMove: (
+      listener: (heard: { key: import("./keyboard").MoveKey; frame: string }) => void,
+    ) => () => void;
     /** The window took a key before the page, which the dictation key counts as one pressed with it. */
     onTaken: (listener: () => void) => () => void;
     /** Runs a window command the main process owns, chosen in command search. */

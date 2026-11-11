@@ -289,6 +289,8 @@ describe("ipc contract", () => {
       "inf:events",
       "inf:devices:this-mac",
       "inf:keyboard:command",
+      // INF-3547's accepted plan, piece 2: a movement key handed to the frame holding focus.
+      "inf:keyboard:move",
       "inf:keyboard:taken",
       "inf:keyboard:keymap",
       "inf:keyboard:recorded",

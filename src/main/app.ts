@@ -45,7 +45,7 @@ import {
 } from "./host/electronHost";
 import { readElectronKeychainStatus } from "./host/electronKeychain";
 import { broadcast, registerIpc } from "./ipc";
-import { followWindowCommands, shellCommands } from "./keyboard";
+import { followWindowCommands, moveCommands, shellCommands } from "./keyboard";
 import { deferCoreDisposal } from "./lifecycle";
 import { answerStartupAsks, STARTUP_ASK_BUTTONS, startupAsks } from "./linuxStartup";
 import { startOwnDisplay } from "./ownDisplay";
@@ -161,10 +161,16 @@ function createMainWindow(
   followWindowSize(win, shell.preferences);
   if (desktop.windowControls === "app") followWindowState(win);
   const { panel: panelCommand, ...pageCommands } = shellCommands(win);
-  followWindowCommands(win, { ...shell.size, ...pageCommands }, shell.keymap, panelCommand, {
-    system: desktop.keys,
-    run: (action) => (action === "quit" ? app.quit() : win.close()),
-  });
+  followWindowCommands(
+    win,
+    { ...shell.size, ...moveCommands(win.webContents), ...pageCommands },
+    shell.keymap,
+    panelCommand,
+    {
+      system: desktop.keys,
+      run: (action) => (action === "quit" ? app.quit() : win.close()),
+    },
+  );
 
   win.once("ready-to-show", () => {
     // E2E runs (isolated userData) stay hidden: the tests only need the

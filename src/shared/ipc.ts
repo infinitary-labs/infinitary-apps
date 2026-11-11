@@ -27,6 +27,8 @@ import { forgesViewSchema } from "./forges";
 import { integrationsViewSchema } from "./integrations";
 import {
   isPanelCommandId,
+  MOVE_KEY_NAMES,
+  type MoveKey,
   type PanelCommandId,
   SHELL_COMMAND_IDS,
   type ShellCommandId,
@@ -249,6 +251,12 @@ const shellCommandSchema = z.object({
   ]),
 });
 
+/** A movement command's key, for the frame that holds focus (docs/keyboard.md). */
+const moveKeySchema = z.object({
+  key: z.enum(MOVE_KEY_NAMES as [MoveKey, ...MoveKey[]]),
+  frame: z.uuid(),
+});
+
 /** A key Keyboard settings recorded, as the main process heard it (docs/keyboard.md). */
 const recordedKeySchema = z.object({
   key: z.string().min(1).max(32),
@@ -341,6 +349,9 @@ export const pushContract = {
   "inf:devices:this-mac": { payload: thisMacSchema, surface: "host" },
   // A key this window heard for one of the shell's commands, by the command's id.
   "inf:keyboard:command": { payload: shellCommandSchema, surface: "host" },
+  // A movement command's key for the frame holding focus, named by the
+  // frame the main process saw holding it (docs/keyboard.md, "Moving by a key of your own").
+  "inf:keyboard:move": { payload: moveKeySchema, surface: "host" },
   // The window took a key for itself, which the page heard nothing of, nor any
   // key's release after it until the next goes down; which key stays unsaid.
   "inf:keyboard:taken": { payload: z.object({}), surface: "host" },

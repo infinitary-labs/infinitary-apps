@@ -145,6 +145,24 @@ describe("FrameController", () => {
     controller.receive({ fm: 2, type: "interaction", document: "new" });
     expect(onInteraction).toHaveBeenCalledOnce();
   });
+  // INF-3547's accepted plan, piece 2: a key bound to Move down does what ↓
+  // does in a card's body, which only its frame's bridge can press.
+  it("hands a movement key to its frame's bridge once the document is ready, and never after", () => {
+    const { controller, posted } = harness();
+    controller.move("ArrowDown");
+    expect(posted).toEqual([]);
+    controller.receive({ fm: 2, type: "ready" });
+    controller.move("ArrowDown");
+    controller.move("Escape");
+    expect(posted.filter((message) => message.type === "move")).toEqual([
+      { fm: 2, type: "move", key: "ArrowDown" },
+      { fm: 2, type: "move", key: "Escape" },
+    ]);
+    controller.dispose();
+    controller.move("ArrowUp");
+    expect(posted.filter((message) => message.type === "move")).toHaveLength(2);
+  });
+
   it("answers ready with the theme and pushes later themes", () => {
     const { controller, posted } = harness();
     controller.setTheme("light");

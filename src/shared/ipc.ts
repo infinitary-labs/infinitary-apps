@@ -31,7 +31,7 @@ import {
   SHELL_COMMAND_IDS,
   type ShellCommandId,
 } from "./keyboard";
-import { keymapSnapshotSchema } from "./keymap";
+import { keymapSnapshotSchema, nextKeysSchema } from "./keymap";
 import { nearbyMacsViewSchema } from "./nearbyMacs";
 import { personalSnapshotSchema, personalStoreChangeSchema } from "./personal/manifest";
 import { shellPreferencesSchema } from "./preferences";
@@ -348,6 +348,9 @@ export const pushContract = {
   "inf:keyboard:keymap": { payload: keymapSnapshotSchema, surface: "host" },
   // A key pressed while Keyboard settings records one.
   "inf:keyboard:recorded": { payload: recordedKeySchema, surface: "host" },
+  // The window took a two-key shortcut's first key and waits for the second:
+  // each pair that may follow, for the next-keys hint, or null once it stopped.
+  "inf:keyboard:next": { payload: nextKeysSchema, surface: "host" },
   // The window filled the screen or stopped filling it.
   "inf:window:state": { payload: windowStateSchema, surface: "host" },
   // The fence the window asked for, behind every push it was sent before it.

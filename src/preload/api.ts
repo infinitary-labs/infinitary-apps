@@ -239,6 +239,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       offer: (press, frame) => invoke("inf:keyboard:offer", press, frame),
       record: (recording) => invoke("inf:keyboard:record", recording),
       onRecorded: (listener) => subscribe("inf:keyboard:recorded", listener),
+      onNext: (listener) => subscribe("inf:keyboard:next", ({ next }) => listener(next)),
     },
     devices: {
       shown: () => invoke("inf:devices:shown"),

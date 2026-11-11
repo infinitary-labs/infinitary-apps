@@ -8,6 +8,8 @@ import {
   isWindowCommand,
   type KeyPress,
   type MainCommandId,
+  type NextKey,
+  nextKeys,
   type PanelCommand,
   type PanelCommandId,
   panelCommandFor,
@@ -136,9 +138,6 @@ export class InstalledKeymap {
   }
 }
 
-/** How long the window waits for a two-key shortcut's second key. */
-export const SECOND_KEY_WAIT_MS = 2_000;
-
 /** Keys that only modify another: never a key of their own to record or to wait past. */
 const MODIFIER_KEYS = new Set([
   "Meta",
@@ -153,6 +152,19 @@ const MODIFIER_KEYS = new Set([
   "Super",
   "OS",
 ]);
+
+/** The installed keys of one place: the not-typing keys, or the anywhere ones. */
+function inPlace(installed: Bindings, notTyping: boolean): Bindings {
+  return {
+    ...installed,
+    ...Object.fromEntries(
+      Object.entries(installed).map(([id, own]) => [
+        id,
+        (own ?? []).filter((binding) => (binding.when === "not-typing") === notTyping),
+      ]),
+    ),
+  };
+}
 
 /** Each window's native-press witness, reached only through its trusted page. */
 const offers = new WeakMap<WebContents, (press: KeyPress, frame?: string) => void>();
@@ -182,9 +194,11 @@ export function recordWindowKeys(contents: WebContents, recording: boolean): voi
  * runs once, and a held key runs it again only when it repeats.
  *
  * A two-key shortcut's first key is the window's too, and the window waits
- * a moment for the second: the pair runs its command, and any other key
- * reaches the page as it was typed. Escape, the window losing focus, an
- * input method's composition and the wait running out end the wait.
+ * for the second with no time limit, telling the page each key that may
+ * follow (`inf:keyboard:next`), which it shows as the next-keys hint: a
+ * listed key runs its pair's command and reaches nothing else, and any other
+ * key ends the wait and acts as it would have. Escape, the window losing
+ * focus, a navigation, recording and an input method's composition end it.
  *
  * While Keyboard settings records a key the window runs nothing: every key
  * but a lone modifier goes to the page as `inf:keyboard:recorded`, and to
@@ -218,11 +232,16 @@ export function followWindowCommands(
   let waiting: {
     first: KeyPress;
     notTyping: boolean;
-    timer: ReturnType<typeof setTimeout>;
+    /** The frame that held focus at the first key: a not-typing wait ends once focus moves. */
+    frame: WebContents["focusedFrame"];
   } | null = null;
+  const tellNext = (next: NextKey[] | null) => {
+    if (!contents.isDestroyed()) contents.send("inf:keyboard:next", { next });
+  };
   const stopWaiting = () => {
-    if (waiting) clearTimeout(waiting.timer);
+    if (!waiting) return;
     waiting = null;
+    tellNext(null);
   };
   let witnessed: {
     press: KeyPress;
@@ -250,44 +269,9 @@ export function followWindowCommands(
   };
 
   const resolve = (event: { preventDefault: () => void }, press: KeyPress, notTyping: boolean) => {
-    const installed = keys.bindings();
-    const bindings: Bindings = {
-      ...installed,
-      ...Object.fromEntries(
-        Object.entries(installed).map(([id, own]) => [
-          id,
-          (own ?? []).filter((binding) => (binding.when === "not-typing") === notTyping),
-        ]),
-      ),
-    };
+    const bindings = inPlace(keys.bindings(), notTyping);
     const context = { notTyping };
     const panels = keys.panels();
-    if (waiting && waiting.notTyping === notTyping) {
-      const { first } = waiting;
-      if (MODIFIER_KEYS.has(press.key)) return;
-      if (press.repeat && press.key === first.key) {
-        take(event);
-        return;
-      }
-      stopWaiting();
-      if (press.composing) return;
-      if (press.key === "Escape") {
-        take(event);
-        return;
-      }
-      const id = secondKeyCommand(first, press, context, bindings);
-      if (id !== undefined && isWindowCommand(id)) {
-        take(event);
-        handlers[id]();
-        return;
-      }
-      const panel = secondKeyPanelCommand(first, press, bindings, panels, context);
-      if (panel !== undefined) {
-        take(event);
-        onPanelCommand(panel);
-        return;
-      }
-    }
     const id = boundCommand(press, context, bindings);
     if (id !== undefined && isWindowCommand(id)) {
       take(event);
@@ -302,8 +286,46 @@ export function followWindowCommands(
     }
     if (!press.repeat && startsTwoKeys(press, context, bindings, panels)) {
       take(event);
-      waiting = { first: press, notTyping, timer: setTimeout(stopWaiting, SECOND_KEY_WAIT_MS) };
+      waiting = { first: press, notTyping, frame: contents.focusedFrame };
+      tellNext(nextKeys(press, context, bindings, panels));
     }
+  };
+
+  /**
+   * A key pressed while the window waits for a second key, heard here before
+   * the page in either place: true when the wait used it, false when the key
+   * goes on as it would have with no wait. Only a key the hint lists runs a
+   * pair; a not-typing wait ends once focus moved to another document.
+   */
+  const second = (event: { preventDefault: () => void }, press: KeyPress): boolean => {
+    if (!waiting || MODIFIER_KEYS.has(press.key)) return false;
+    const { first, notTyping, frame } = waiting;
+    if (press.repeat && press.key === first.key) {
+      take(event);
+      return true;
+    }
+    stopWaiting();
+    if (press.composing) return false;
+    if (press.key === "Escape") {
+      take(event);
+      return true;
+    }
+    if (notTyping && contents.focusedFrame !== frame) return false;
+    const bindings = inPlace(keys.bindings(), notTyping);
+    const context = { notTyping };
+    const id = secondKeyCommand(first, press, context, bindings);
+    if (id !== undefined && isWindowCommand(id)) {
+      take(event);
+      handlers[id]();
+      return true;
+    }
+    const panel = secondKeyPanelCommand(first, press, bindings, keys.panels(), context);
+    if (panel !== undefined) {
+      take(event);
+      onPanelCommand(panel);
+      return true;
+    }
+    return false;
   };
   offers.set(contents, (press, frame) => {
     const seen = witnessed;
@@ -337,8 +359,10 @@ export function followWindowCommands(
     const bindings = keys.bindings();
     if (!press.composing && !MODIFIER_KEYS.has(press.key) && hasNotTypingKeys(bindings))
       witnessed = { press, bindings, frame: contents.focusedFrame };
-    // A not-typing pair must also hear its second key from the focused document.
-    if (waiting?.notTyping && (press.composing || press.key === "Escape")) stopWaiting();
+    if (second(event, press)) {
+      witnessed = null;
+      return;
+    }
     const action = desktopKeyAction(press, desktop.system);
     if (action !== undefined) {
       witnessed = null;

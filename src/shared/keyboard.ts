@@ -45,8 +45,9 @@ export type KeyChord = {
 
 /**
  * What a command answers to: one chord, or two pressed one after the other
- * (`second`), a two-key shortcut whose first chord holds ⌘ or ⌃. Only a
- * window command takes two keys (docs/keyboard.md, "Two-key shortcuts").
+ * (`second`), a two-key shortcut whose first chord holds ⌘ or ⌃, or is a
+ * plain key that works only when not typing. Only a window command takes
+ * two keys (docs/keyboard.md, "Two-key shortcuts").
  */
 export type KeyBinding = KeyChord & {
   second?: KeyChord;
@@ -1101,6 +1102,37 @@ export function secondKeyCommand(
           chordMatches(binding.second, second),
       ),
   );
+}
+
+/** One two-key shortcut whose first key was pressed, and the command it runs. */
+export type NextKey = { id: AnyCommandId; binding: KeyBinding & { second: KeyChord } };
+
+/**
+ * Every key that may follow `first` where it was pressed, with the command
+ * each pair runs, in the catalog's order and then the panels' (docs/keyboard.md,
+ * "Two-key shortcuts"): what the next-keys hint lists while the window waits.
+ */
+export function nextKeys(
+  first: KeyPress,
+  context: KeyContext,
+  bindings: Bindings,
+  panels: readonly PanelCommand[] = [],
+): NextKey[] {
+  if (first.composing) return [];
+  const following = (id: AnyCommandId): NextKey[] =>
+    keysOf(bindings, id).flatMap((binding) =>
+      binding.second !== undefined &&
+      bindingIsActive(binding, context) &&
+      chordMatches(binding, first)
+        ? [{ id, binding: { ...binding, second: binding.second } }]
+        : [],
+    );
+  return [
+    ...COMMAND_IDS.filter((id) => scopeIsActive(KEYBOARD_COMMANDS[id].scope, context)).flatMap(
+      following,
+    ),
+    ...panels.flatMap((command) => following(command.id)),
+  ];
 }
 
 /** Whether a press runs its command: a held key repeats only a command that allows it. */

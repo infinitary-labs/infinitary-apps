@@ -22,6 +22,8 @@ import {
   keyHint,
   MAIN_COMMAND_IDS,
   menuAccelerator,
+  nextKeys,
+  panelCommandId,
   runsOnPress,
   SHELL_COMMAND_IDS,
   scopeIsActive,
@@ -400,6 +402,34 @@ describe("two-key shortcuts", () => {
     expect(secondKeyCommand(first, press("s"), {}, twoKeys)).toBe("settings.keyboard");
     expect(secondKeyCommand(first, press("x"), {}, twoKeys)).toBeUndefined();
     expect(secondKeyCommand(first, press("s", { composing: true }), {}, twoKeys)).toBeUndefined();
+  });
+
+  // Accepted layers plan, piece 3: the next-keys hint lists each pair that may follow, where it works.
+  it("list every pair a first key starts in that place, the panels' after the catalog's", () => {
+    const panel = {
+      id: panelCommandId("reading-list", "open"),
+      label: "Open reading",
+      panel: "Reading list",
+      keys: [],
+    } as const;
+    const pairs: Bindings = {
+      ...twoKeys,
+      "cards.next": [{ key: "k", ctrl: true, second: { key: "ArrowRight" } }],
+      "settings.open": [{ key: "k", ctrl: true, second: { key: "o" }, when: "not-typing" }],
+      [panel.id]: [{ key: "k", ctrl: true, second: { key: "r" } }],
+    };
+    const first = press("k", { ctrl: true });
+    expect(
+      nextKeys(first, {}, pairs, [panel]).map(({ id, binding }) => [id, binding.second.key]),
+    ).toEqual([
+      ["cards.next", "ArrowRight"],
+      ["settings.keyboard", "s"],
+      [panel.id, "r"],
+    ]);
+    expect(nextKeys(first, { notTyping: true }, pairs, [panel]).map(({ id }) => id)).toContain(
+      "settings.open",
+    );
+    expect(nextKeys(press("j", { ctrl: true }), {}, pairs, [panel])).toEqual([]);
   });
 
   it("read as both keys in a hint, and stay out of a menu and assistive technology", () => {

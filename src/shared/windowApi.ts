@@ -300,6 +300,10 @@ export type FirstmateApi = {
     /** Records keys in Keyboard settings: the window's keys pass to it until it stops. */
     record: (recording: boolean) => Promise<{ ok: true }>;
     onRecorded: (listener: (key: RecordedKey) => void) => () => void;
+    /** The two-key shortcuts that may finish the first key the window took, or null once it stopped waiting. */
+    onNext: (
+      listener: (next: readonly import("./keyboard").NextKey[] | null) => void,
+    ) => () => void;
   };
   /** Settings -> Devices (docs/devices.md): the captain's own, on this Mac's window. */
   devices: {

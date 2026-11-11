@@ -292,6 +292,7 @@ describe("ipc contract", () => {
       "inf:keyboard:taken",
       "inf:keyboard:keymap",
       "inf:keyboard:recorded",
+      "inf:keyboard:next",
       "inf:window:state",
       "inf:window:fence",
     ]);

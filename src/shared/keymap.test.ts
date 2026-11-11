@@ -144,7 +144,7 @@ describe("the keys a command may take", () => {
       bindingProblem({ key: "k", meta: true, second: { key: "s" } }, "settings.keyboard"),
     ).toBeNull();
     expect(bindingProblem({ key: "F6", second: { key: "s" } }, "settings.keyboard")).toBe(
-      "A two-key shortcut starts with ⌘ or ⌃",
+      "A two-key shortcut starts with ⌘ or ⌃, or works when not typing",
     );
     expect(
       bindingProblem({ key: "k", ctrl: true, second: { key: "u" } }, "message.delete-word-before"),
@@ -152,6 +152,36 @@ describe("the keys a command may take", () => {
     expect(
       bindingProblem({ key: "k", meta: true, second: { key: "Escape" } }, "settings.keyboard"),
     ).toMatch(/^Escape/);
+  });
+
+  // Accepted layers plan, piece 3: a first key may be plain while not typing, and the second an arrow.
+  it("takes a plain first key only when not typing, and an arrow as a second key", () => {
+    expect(
+      bindingProblem({ key: "g", when: "not-typing", second: { key: "t" } }, "settings.keyboard"),
+    ).toBeNull();
+    expect(bindingProblem({ key: "g", second: { key: "t" } }, "settings.keyboard")).toBe(
+      "A shortcut holds ⌘ or ⌃, so typing never runs it",
+    );
+    for (const key of ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]) {
+      expect(bindingProblem({ key: "x", ctrl: true, second: { key } }, "cards.next")).toBeNull();
+      expect(
+        bindingProblem({ key: "k", meta: true, second: { key, meta: true } }, "cards.next"),
+      ).toBeNull();
+      // Alone, an arrow keeps moving the cursor and through lists.
+      expect(bindingProblem({ key, when: "not-typing" }, "cards.next")).not.toBeNull();
+    }
+    for (const key of ["Enter", "Tab", "Escape", "Home"])
+      expect(
+        bindingProblem({ key: "g", when: "not-typing", second: { key } }, "cards.next"),
+      ).not.toBeNull();
+    expect(
+      bindingProblem(
+        { key: "j", ctrl: true, second: { key: "ArrowLeft", meta: true } },
+        "cards.next",
+        [],
+        "ctrl",
+      ),
+    ).toBe("Super+← belongs to your desktop");
   });
 
   it("records a press as the chord it is, the letter in lower case and Shift as held", () => {

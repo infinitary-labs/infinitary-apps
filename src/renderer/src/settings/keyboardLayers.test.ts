@@ -126,7 +126,11 @@ describe("keys used when not typing", () => {
       "ArrowRight",
     ])
       expect(bindingProblem({ key, when: "not-typing" }, "settings.open")).not.toBeNull();
-    expect(bindingProblem({ ...bare, second: { key: "s" } }, "settings.open")).not.toBeNull();
+    // Piece 3 lets a bare first chord start two keys only when not typing.
+    expect(bindingProblem({ ...bare, second: { key: "s" } }, "settings.open")).toBeNull();
+    expect(
+      bindingProblem({ key: press.key, second: { key: "s" } }, "settings.open"),
+    ).not.toBeNull();
     expect(bindingProblem(bare, "message.recall")).not.toBeNull();
     const legacy = { version: 1 as const, keys: { "settings.open": [{ key: "p", meta: true }] } };
     expect(readSavedKeymap(legacy)).toEqual({ saved: legacy, unreadable: false });

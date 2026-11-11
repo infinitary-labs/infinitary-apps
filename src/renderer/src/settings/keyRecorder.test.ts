@@ -47,11 +47,21 @@ describe("Keyboard settings' recorder", () => {
       key: "k",
       ctrl: true,
     });
-    const typed = keysAfterPress("settings.keyboard", null, key("k"));
+    const typed = keysAfterPress("settings.keyboard", null, key(" "));
     expect(keysAfterPress("settings.keyboard", typed, key("j", { meta: true }))).toEqual({
       key: "j",
       meta: true,
     });
+  });
+
+  // Accepted layers plan, piece 3: a first key may be plain while not typing, and the second an arrow.
+  it("makes a plain key the first of two when not typing, and takes an arrow as the second", () => {
+    const first = keysAfterPress("settings.keyboard", null, key("g"));
+    expect(takesSecondKey("settings.keyboard", first)).toBe(true);
+    const both = keysAfterPress("settings.keyboard", first, key("ArrowRight"));
+    expect(both).toEqual({ key: "g", when: "not-typing", second: { key: "ArrowRight" } });
+    expect(bindingLabel(both)).toBe("G →");
+    expect(recorderVerdict("settings.keyboard", both, DEFAULT_BINDINGS)).toEqual({ kind: "free" });
   });
 
   it("says what saving would do: refuse, keep, take a free key, or move another command's", () => {

@@ -18,6 +18,7 @@ import {
   type KeyContext,
   type KeyPress,
   keysOf,
+  type NextKey,
   type PanelCommand,
   type PanelCommandId,
   scopeIsActive,
@@ -151,6 +152,22 @@ export const keymapSnapshotSchema = z.object({
   unreadable: z.boolean(),
   panels: panelCommandsSchema,
 }) as unknown as z.ZodType<KeymapSnapshot>;
+
+/**
+ * The two-key shortcuts whose first key the window just took, which the
+ * next-keys hint lists (docs/keyboard.md, "Two-key shortcuts"), or null
+ * once the window stopped waiting.
+ */
+export const nextKeysSchema = z.object({
+  next: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(64),
+        binding: bindingSchema.extend({ second: chordSchema }),
+      }),
+    )
+    .nullable(),
+}) as unknown as z.ZodType<{ next: NextKey[] | null }>;
 
 /** The catalog's own keys, before anything is installed. */
 export const DEFAULT_KEYMAP_SNAPSHOT: KeymapSnapshot = {
@@ -317,17 +334,23 @@ export function chordsOverlap(a: KeyChord, b: KeyChord): boolean {
     : (a.shift === true) === (b.shift === true) || a.shift !== true || b.shift !== true;
 }
 
-/** Whether a chord is one a keyboard can press as a shortcut at all, and if not, why. */
 const NOT_TYPING_NAMED_KEYS = new Set(["Backspace", "Delete", "Home", "End", "PageUp", "PageDown"]);
 
-function keyProblem(chord: KeyChord, system: KeySystem, notTyping = false): string | null {
+/** The arrows, which may finish a two-key shortcut: the window takes a listed second key first. */
+const ARROWS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
+
+/** Whether a chord is one a keyboard can press as a shortcut at all, and if not, why. */
+function keyProblem(
+  chord: KeyChord,
+  system: KeySystem,
+  notTyping = false,
+  second = false,
+): string | null {
+  const free =
+    (notTyping && NOT_TYPING_NAMED_KEYS.has(chord.key)) || (second && ARROWS.has(chord.key));
   const own = OWN_JOBS[chord.key];
-  if (own && !(notTyping && NOT_TYPING_NAMED_KEYS.has(chord.key))) return own;
-  if (
-    chord.key.length > 1 &&
-    !FUNCTION_KEY.test(chord.key) &&
-    !(notTyping && NOT_TYPING_NAMED_KEYS.has(chord.key))
-  )
+  if (own && !free) return own;
+  if (chord.key.length > 1 && !FUNCTION_KEY.test(chord.key) && !free)
     return chord.key === "Dead"
       ? "That key starts an accent, so it can't be a shortcut"
       : "That key can't be a shortcut";
@@ -348,7 +371,9 @@ const COMMAND_KEY_WORDS: Readonly<Record<KeySystem, string>> = { mac: "⌘ or �
  * Why a command cannot take these keys, in the words Keyboard settings
  * shows, or null. Anywhere keys hold ⌘ or ⌃ or are function keys; bare
  * keys belong to a window command outside typing. Reserved controls and
- * platform keys keep their jobs, and only a window command takes two keys.
+ * platform keys keep their jobs, and only a window command takes two keys:
+ * the first holds ⌘ or ⌃ or works only when not typing, and the second may
+ * be an arrow.
  * A risky key's non-blocking reminder belongs to `bindingWarning`.
  */
 export function bindingProblem(
@@ -373,9 +398,9 @@ export function bindingProblem(
   if (!binding.second) return null;
   if (entryOf(id, panels).scope !== "window")
     return "Only a command that works anywhere in the window takes two keys";
-  if (!holdsCommandOrControl(binding, system))
-    return `A two-key shortcut starts with ${COMMAND_KEY_WORDS[system]}`;
-  return keyProblem(binding.second, system);
+  if (binding.when !== "not-typing" && !holdsCommandOrControl(binding, system))
+    return `A two-key shortcut starts with ${COMMAND_KEY_WORDS[system]}, or works when not typing`;
+  return keyProblem(binding.second, system, false, true);
 }
 
 /** Advice for a risky key, never a refusal or an extra confirmation. */

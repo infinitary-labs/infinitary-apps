@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "two-key-hint",
+      "kind": "feature",
+      "title": "See your next keys after the first key of a two-key shortcut",
+      "body": "After the first key of a two-key shortcut, a strip at the bottom of the window lists each key that can follow and what it does, and waits for you instead of timing out. Escape cancels, and any other key works as usual. In Keyboard settings, a plain letter can now start a two-key shortcut that works when you are not typing, and an arrow can be the second key.",
+      "area": "settings",
+      "picture": {
+        "dark": "two-key-hint-dark.webp",
+        "light": "two-key-hint-light.webp",
+        "alt": "The next-keys strip at the bottom of the window after pressing G: arrow right for Search commands and S for Open Settings"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

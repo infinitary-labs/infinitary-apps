@@ -43,8 +43,9 @@ export function recorderKey(key: RecordedKey): RecorderKey {
 
 /**
  * The keys after one more press: a window command's chord that holds ⌘ or
- * ⌃ (Ctrl on a Ctrl system) takes a second key and becomes a two-key
- * shortcut; anything else starts over with the new key.
+ * ⌃ (Ctrl on a Ctrl system), or a plain key that works when not typing,
+ * takes a second key and becomes a two-key shortcut; anything else starts
+ * over with the new key.
  */
 export function keysAfterPress(
   id: AnyCommandId,
@@ -74,7 +75,7 @@ export function takesSecondKey(
     keys !== null &&
     keys.second === undefined &&
     commandEntry(id, panels)?.scope === "window" &&
-    (keys.meta === true || keys.ctrl === true) &&
+    (keys.meta === true || keys.ctrl === true || keys.when === "not-typing") &&
     bindingProblem(keys, id, panels, system) === null
   );
 }

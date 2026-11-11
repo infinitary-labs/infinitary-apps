@@ -227,6 +227,10 @@ Changing any key or resetting all keys in that older build replaces the stored m
 Release and alpha share the same saved-data folder, so switching between them does not protect the map from this downgrade behavior.
 No database schema or persisted-format revision changes; the compatibility limit is the keyboard settings reader, not a startup refusal.
 
+A two-key binding may start with a plain key that carries `when: "not-typing"`, and its second key may be an arrow (`docs/keyboard.md`, "Two-key shortcuts"); the saved shape and version are unchanged.
+A build that reads `when` but not these pairs leaves such a key out of its installed map, so the command runs from its other keys or by name.
+That build also refuses any change while the saved map still holds such a key, naming it, until the person removes or resets that command's keys there; reading alone changes nothing, and a newer build reads the pair again.
+
 ## Self-reported merge-card risk
 
 Risk assessments keep only the crewmate's seven declared levels and reasons.

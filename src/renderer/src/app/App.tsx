@@ -18,6 +18,7 @@ import { HomeMate } from "./HomeMate";
 import { HomePrompt } from "./HomePrompt";
 import { HomeScreen } from "./HomeScreen";
 import { guardHeldPresses } from "./heldKeys";
+import { NextKeysHint } from "./NextKeysHint";
 import { followNotTypingKeys, leaveMessageField } from "./notTypingKeys";
 import { applyTheme } from "./preferences";
 import { followShellCommands } from "./shellCommands";
@@ -167,6 +168,8 @@ export function App() {
         onBack={() => setView("home")}
         backButtonRef={backButtonRef}
       />
+      {/* The keys that may finish a two-key shortcut, home or Settings, under search. */}
+      <NextKeysHint />
       {/* Over everything, home or Settings: the window's commands by name. */}
       <CommandSearch />
     </div>

@@ -14,7 +14,6 @@ import {
   InstalledKeymap,
   offerWindowKey,
   recordWindowKeys,
-  SECOND_KEY_WAIT_MS,
   shellCommands,
   type WindowCommandHandlers,
 } from "./keyboard";
@@ -230,7 +229,8 @@ describe("two-key shortcuts", () => {
     expect(ran).toEqual(["settings.keyboard"]);
   });
 
-  it("stops waiting on Escape, the window losing focus, composition and time", () => {
+  // Accepted layers plan, piece 3: the next-keys hint replaces the timed wait.
+  it("stops waiting on Escape, the window losing focus and composition, and never on time alone", () => {
     vi.useFakeTimers();
     const { win, type, blur } = windowWithKeys();
     const { ran, handlers } = recordingHandlers();
@@ -243,8 +243,132 @@ describe("two-key shortcuts", () => {
     expect(type({ key: "s", code: "KeyS" })).toBe(false);
     type({ key: "j", code: "KeyJ", meta: true });
     expect(type({ key: "s", code: "KeyS", isComposing: true })).toBe(false);
+    expect(ran).toEqual([]);
     type({ key: "j", code: "KeyJ", meta: true });
-    vi.advanceTimersByTime(SECOND_KEY_WAIT_MS);
+    vi.advanceTimersByTime(60_000);
+    expect(type({ key: "s", code: "KeyS" })).toBe(true);
+    expect(ran).toEqual(["settings.keyboard"]);
+  });
+
+  // Accepted layers plan, piece 3: the hint lists each next key while the window waits.
+  it("tells the page each pair that may follow while it waits, and null once it stops", () => {
+    const { win, type, sent } = windowWithKeys();
+    const { handlers } = recordingHandlers();
+    followWindowCommands(win, handlers, keys);
+    type({ key: "j", code: "KeyJ", meta: true });
+    const pair = { key: "j", meta: true, second: { key: "s" } };
+    expect(sent.filter(([channel]) => channel === "inf:keyboard:next")).toEqual([
+      ["inf:keyboard:next", { next: [{ id: "settings.keyboard", binding: pair }] }],
+    ]);
+    type({ key: "s", code: "KeyS" });
+    type({ key: "j", code: "KeyJ", meta: true });
+    type({ key: "Escape", code: "Escape" });
+    type({ key: "j", code: "KeyJ", meta: true });
+    // An unlisted key ends the wait.
+    type({ key: "x", code: "KeyX" });
+    expect(
+      sent.filter(([channel]) => channel === "inf:keyboard:next").map(([, body]) => body),
+    ).toEqual([
+      { next: [{ id: "settings.keyboard", binding: pair }] },
+      { next: null },
+      { next: [{ id: "settings.keyboard", binding: pair }] },
+      { next: null },
+      { next: [{ id: "settings.keyboard", binding: pair }] },
+      { next: null },
+    ]);
+  });
+
+  it("runs a pair whose second key is an arrow, and an unlisted key after a first acts as usual", () => {
+    const { win, type } = windowWithKeys();
+    const { ran, handlers } = recordingHandlers();
+    followWindowCommands(win, handlers, {
+      bindings: () =>
+        resolveBindings({
+          version: 1,
+          keys: {
+            "cards.next": [{ key: "k", meta: true, second: { key: "ArrowRight", meta: true } }],
+          },
+        }),
+      panels: () => [],
+    });
+    type({ key: "k", code: "KeyK", meta: true });
+    expect(type({ key: "ArrowRight", code: "ArrowRight", meta: true })).toBe(true);
+    expect(ran).toEqual(["cards.next"]);
+    type({ key: "k", code: "KeyK", meta: true });
+    // ⌘L is not listed after ⌘K here: it ends the wait and goes to the main message as ever.
+    expect(type({ key: "l", code: "KeyL", meta: true })).toBe(true);
+    expect(ran).toEqual(["cards.next", "focus.main-message"]);
+  });
+});
+
+// Accepted layers plan, piece 3: a first key may be plain while not typing, and the second an arrow.
+describe("a plain first key when not typing", () => {
+  const g = {
+    key: "g",
+    code: "KeyG",
+    meta: false,
+    ctrl: false,
+    alt: false,
+    shift: false,
+    composing: false,
+    repeat: false,
+  };
+  function fixture() {
+    const window = windowWithKeys();
+    const recording = recordingHandlers();
+    const bindings = resolveBindings({
+      version: 1,
+      keys: {
+        "settings.open": [{ key: "g", second: { key: "s" }, when: "not-typing" }],
+        "cards.next": [{ key: "g", second: { key: "ArrowDown" }, when: "not-typing" }],
+      },
+    });
+    followWindowCommands(window.win, recording.handlers, {
+      bindings: () => bindings,
+      panels: () => [],
+    });
+    // The page heard g outside typing and offered it, as the shell does.
+    const startWait = () => {
+      window.type({ key: g.key, code: g.code });
+      offerWindowKey(window.contents, g);
+    };
+    return { ...window, ...recording, startWait };
+  }
+
+  it("waits after an offered first key, and its listed second keys run before the page hears them", () => {
+    const { type, ran, sent, startWait } = fixture();
+    // Typed in a field, g is never offered: nothing waits and s reaches the field.
+    type({ key: g.key, code: g.code });
+    expect(type({ key: "s", code: "KeyS" })).toBe(false);
+    expect(ran).toEqual([]);
+    startWait();
+    expect(sent.at(-1)).toEqual([
+      "inf:keyboard:next",
+      {
+        // In the catalog's order.
+        next: [
+          {
+            id: "cards.next",
+            binding: { key: "g", second: { key: "ArrowDown" }, when: "not-typing" },
+          },
+          { id: "settings.open", binding: { key: "g", second: { key: "s" }, when: "not-typing" } },
+        ],
+      },
+    ]);
+    // A list would use the arrow itself; the window takes it first for the pair.
+    expect(type({ key: "ArrowDown", code: "ArrowDown" })).toBe(true);
+    startWait();
+    expect(type({ key: "s", code: "KeyS" })).toBe(true);
+    expect(ran).toEqual(["cards.next", "settings.open"]);
+  });
+
+  it("ends on an unlisted key, which reaches the page, and once focus moves to another document", () => {
+    const { type, ran, startWait, focusFrame } = fixture();
+    startWait();
+    expect(type({ key: "x", code: "KeyX" })).toBe(false);
+    expect(type({ key: "s", code: "KeyS" })).toBe(false);
+    startWait();
+    focusFrame("project-note");
     expect(type({ key: "s", code: "KeyS" })).toBe(false);
     expect(ran).toEqual([]);
   });

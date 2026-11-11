@@ -120,8 +120,8 @@
         "message": "<Input> size must be one of 'md' | 'lg'."
       },
       {
-        "selector": "JSXOpeningElement[name.name='KeyCap'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|size|key|ref|className|style|children)$/]",
-        "message": "<KeyCap> doesn't accept that prop. Declared props: children, size."
+        "selector": "JSXOpeningElement[name.name='KeyCap'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|size|lit|key|ref|className|style|children)$/]",
+        "message": "<KeyCap> doesn't accept that prop. Declared props: children, size, lit."
       },
       {
         "selector": "JSXOpeningElement[name.name='KeyCap'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md)$/]",

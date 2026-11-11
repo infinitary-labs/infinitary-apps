@@ -1,10 +1,10 @@
-import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import type { PlacedEventRecord, PlacedSpec } from "@shared/work";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { writeMockClaudeClient } from "../../../tests/e2e/mockClaudeClient";
 import { type StubApi, startStubApi } from "../../../tests/helpers/anthropicDialect";
+import { boxedClaudeClientPid } from "../../../tests/helpers/boxedClaudeClient";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { PlacedTasks } from "../helper/placedTasks";
 import { SessionHost } from "../helper/sessionHost";
@@ -160,27 +160,6 @@ function workComputer() {
 }
 
 /**
- * The boxed client this test process started, as `ps` lists it now: the
- * box's launcher execs the SDK's own client, so it is this process's child,
- * as INB-9's client (pid 18902) was the work app's.
- */
-function clientProcess(): number {
-  const rows = execFileSync("ps", ["-axo", "pid=,ppid=,command="], { encoding: "utf8" })
-    .split("\n")
-    .flatMap((line) => {
-      const match = line.trim().match(/^(\d+)\s+(\d+)\s+(.*)$/);
-      return match
-        ? [{ pid: Number(match[1]), ppid: Number(match[2]), command: match[3] ?? "" }]
-        : [];
-    });
-  const client = rows
-    .filter((row) => row.ppid === process.pid && row.command.includes("claude-agent-sdk-"))
-    .at(-1);
-  if (client === undefined) throw new Error("the boxed client is not running");
-  return client.pid;
-}
-
-/**
  * One minute of the host's clock, once the session has recorded what it was
  * asked since `before` - an order's arrival, not a second of the real clock,
  * which a busy Mac can outlast (INF-857).
@@ -212,7 +191,7 @@ describe("an interrupt, on the computer that runs the crewmate, when its client 
   it("answers the interrupt and ends the turn within a tick, so the close behind it is not held", async () => {
     const at = workComputer();
     await inb9UpToTheWedge(at);
-    const client = clientProcess();
+    const client = boxedClaudeClientPid();
     stopped.push(client);
     process.kill(client, "SIGSTOP");
     const before = at.hand.reads();
@@ -244,7 +223,7 @@ describe("an interrupt, on the computer that runs the crewmate, when its client 
   it("closes the conversation for good within a tick, with no interrupt ahead of the close", async () => {
     const at = workComputer();
     await inb9UpToTheWedge(at);
-    const client = clientProcess();
+    const client = boxedClaudeClientPid();
     stopped.push(client);
     process.kill(client, "SIGSTOP");
     const before = at.hand.reads();
@@ -266,7 +245,7 @@ describe("an interrupt, on the computer that runs the crewmate, when its client 
   it("fails the turn a bound's cut ends, with the bound's failure", async () => {
     const at = workComputer();
     await inb9UpToTheWedge(at);
-    const client = clientProcess();
+    const client = boxedClaudeClientPid();
     stopped.push(client);
     process.kill(client, "SIGSTOP");
     const before = at.hand.reads();

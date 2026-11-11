@@ -321,6 +321,7 @@
         "!src/core/claude/claudeRollingSession.integration.test.ts",
         "!src/core/claude/claudeSession.integration.test.ts",
         "!src/core/claude/interruptWedge.integration.test.ts",
+        "!src/core/claude/claudeClientExit.integration.test.ts",
         "!src/core/claude/claudeCli.test.ts",
         "!src/core/claude/claudeFirstmateSeat.live.test.ts",
         "!src/core/claude/claudeFirstmateSession.integration.test.ts",

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "claude-session-closes-after-client-exit",
+      "reason": "Internal lifecycle fix: a Claude session stopped outright reports closed and hands its account's store back only once its client process has exited, rather than up to 5 s before a slow client is killed. Only a frozen client's timing changes; nothing a person sees is different."
+    }
+  ]
+}

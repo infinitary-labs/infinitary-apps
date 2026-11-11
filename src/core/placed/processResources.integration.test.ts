@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { reachMark } from "../../../tests/helpers/reachMark";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { attributedClaudeProcess } from "../claude/processResources";
+import { claudeClientSpawn } from "../claude/claudeClientProcess";
 import { hostEnv } from "../hostEnv";
 import { JobManager } from "../jobs/jobManager";
 import {
@@ -46,9 +46,12 @@ describe("live task process observation", () => {
     const decodedLog = new Promise<void>((resolve) => {
       finishLog = resolve;
     });
-    const client = attributedClaudeProcess("client", (data) => {
-      logged += data;
-      if (logged === expectedLog) finishLog();
+    const client = claudeClientSpawn({
+      owner: "client",
+      stderr: (data) => {
+        logged += data;
+        if (logged === expectedLog) finishLog();
+      },
     })({
       command: process.execPath,
       args: [

@@ -4,6 +4,7 @@ import type { FmUsage } from "@shared/events";
 import type { ModelSession, SessionEvent, SessionSpec } from "../session/session";
 import type { ClaudeAccessSettings } from "./claudeAccess";
 import { resolveClaudeExecutable } from "./claudeCli";
+import { ClaudeClientExit } from "./claudeClientProcess";
 import type { ClaudeNormalizeResult, ClaudeTurnFailure } from "./claudeEvents";
 import { claudeModelName } from "./claudeModels";
 import {
@@ -85,11 +86,13 @@ export class ClaudeOneShotSession extends ClaudeQueryCore<SessionEvent> implemen
     if (this.disposed || this.asked) return Promise.reject(new Error(ONE_QUESTION_TEXT));
     this.asked = true;
     const input = new MessageQueue();
+    const exit = new ClaudeClientExit();
     const options = claudeSessionOptions({
       spec: this.spec,
       env: this.env,
       executable: resolveClaudeExecutable(this.env),
       stderr: (data) => this.deps.log?.(data.trimEnd()),
+      exit,
       ...(this.access ? { access: this.access } : {}),
     });
     let query: Query;
@@ -105,7 +108,7 @@ export class ClaudeOneShotSession extends ClaudeQueryCore<SessionEvent> implemen
       this.turn = { resolve, reject };
     });
     input.push(userMessage(text));
-    void this.pumpQuery(query);
+    void this.pumpQuery(query, exit);
     return settled;
   }
 
@@ -139,7 +142,7 @@ export class ClaudeOneShotSession extends ClaudeQueryCore<SessionEvent> implemen
    * The caller's bound fired: the question is given up on now, and the
    * client stopped. A one-shot session has nothing to keep steerable, so it
    * does not wait for the client to agree. With a failure, the question
-   * reports it as its turn's.
+   * reports it as its turn's. The session closes once the client has exited.
    */
   async abort(failure?: string): Promise<void> {
     if (this.disposed) return;
@@ -171,7 +174,7 @@ export class ClaudeOneShotSession extends ClaudeQueryCore<SessionEvent> implemen
     }
     this.input?.close();
     // A client that has answered exits on its own once its input ends; one
-    // that has not is stopped. The lease comes back when the stream ends.
+    // that has not is stopped. The lease comes back once it has exited.
     if (!this.answered) this.query.close();
   }
 

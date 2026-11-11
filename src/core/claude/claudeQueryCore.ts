@@ -6,6 +6,7 @@ import { bareToolName } from "../storage/sessionReader";
 import type { SessionRecordStore } from "../storage/sessionRecordStore";
 import type { ClaudeAccessSettings } from "./claudeAccess";
 import { type ClaudeClientCheck, checkClaudeClient, claudeClientIssueText } from "./claudeCli";
+import type { ClaudeClientExit } from "./claudeClientProcess";
 import type { ClaudeCostReports } from "./claudeCostReports";
 import {
   type ClaudeNormalizeResult,
@@ -232,8 +233,12 @@ export abstract class ClaudeQueryCore<E extends { type: string }> {
     };
   }
 
-  /** Consume one query's messages for as long as it runs. */
-  protected async pumpQuery(query: AsyncIterable<unknown>): Promise<void> {
+  /**
+   * Consume one query's messages for as long as it runs, then wait for the
+   * client it spawned to exit: the SDK ends a closed query's stream after at
+   * most 2 s, whether its client has gone or not (`claudeClientProcess.ts`).
+   */
+  protected async pumpQuery(query: AsyncIterable<unknown>, exit?: ClaudeClientExit): Promise<void> {
     try {
       for await (const message of query) {
         this.apply(message);
@@ -241,6 +246,8 @@ export abstract class ClaudeQueryCore<E extends { type: string }> {
     } catch (caught) {
       if (!this.disposed) this.streamFailed(caught, query);
     } finally {
+      const running = exit?.running();
+      if (running) await running;
       this.streamEnded(query);
     }
   }
@@ -284,7 +291,7 @@ export abstract class ClaudeQueryCore<E extends { type: string }> {
   protected abstract resultClean(result: ClaudeNormalizeResult): void;
   /** The client's stream threw: nothing further arrives on it. */
   protected abstract streamFailed(caught: unknown, stream: AsyncIterable<unknown>): void;
-  /** The client's stream is over, however it ended. */
+  /** The client's stream is over and the client has exited, however it ended. */
   protected abstract streamEnded(stream: AsyncIterable<unknown>): void;
 
   protected emit(event: E): void {

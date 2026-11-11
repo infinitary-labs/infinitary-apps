@@ -24,6 +24,7 @@ import { claimStagingFolder, type StagingFolder } from "../session/stagingFolder
 import type { SessionRecordStore } from "../storage/sessionRecordStore";
 import { ClaudeCallUsage } from "./claudeCallUsage";
 import { resolveClaudeExecutable } from "./claudeCli";
+import { ClaudeClientExit } from "./claudeClientProcess";
 import { type ClaudeCostSubscription, hasClaudeReporting } from "./claudeCostReports";
 import {
   type ClaudeNormalizeResult,
@@ -78,7 +79,7 @@ type Connection = {
   closing: boolean;
   /** When the session ended its input; a client still running a tick later is stopped. */
   closedAt?: number;
-  /** Resolves once the stream is over and the lease is back. */
+  /** Resolves once the stream is over, the client has exited and the lease is back. */
   done: Promise<void>;
   /** Hands this client's lease on the account's store back. */
   release: () => void;
@@ -586,6 +587,7 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     // Every exit before the connection holds the lease hands it back: a
     // resume reads its transcript copy here, and that read can fail.
     const input = new MessageQueue();
+    const exit = new ClaudeClientExit();
     let query: Query;
     let costReports: ClaudeCostSubscription | undefined;
     const calls = this.callUsage();
@@ -618,6 +620,7 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
         env,
         executable: resolveClaudeExecutable(env),
         stderr: (data) => this.note((costReports?.redact(data) ?? data).trimEnd()),
+        exit,
         ...(access ? { access } : {}),
         attachment: {
           ...(this.asked ? { model: this.asked } : {}),
@@ -653,7 +656,7 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
       ...(costReports ? { costReports } : {}),
     };
     this.connection = connection;
-    connection.done = this.pumpQuery(query);
+    connection.done = this.pumpQuery(query, exit);
     return connection;
   }
 
@@ -884,6 +887,9 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
     if (!connection || connection.query !== stream || connection.closing) return;
     const message = caught instanceof Error ? caught.message : String(caught);
     this.note(`the client stopped: ${message}`);
+    // Its stream is over, but the client may not have exited yet: a prompt
+    // in between waits for it before attaching a new one.
+    this.close(connection);
     // The failure was already told; the throw is the same failure ending the stream.
     const turn = this.turn;
     if (turn.kind === "idle") return;

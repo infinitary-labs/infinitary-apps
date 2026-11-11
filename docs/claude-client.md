@@ -3,14 +3,18 @@
 How the Claude Max backend finds, checks and runs the Claude client the person installed.
 The backend's design is `docs/architecture.md` §16.1; the sign-in rules are below, and the renewal and model probes are `docs/claude-renew-probe.md` and `docs/claude-model-probe.md`.
 
-## Coding process ownership
+## The client's process
 
-On macOS and Linux, a coding session uses the SDK’s supported `spawnClaudeCodeProcess` hook (`src/core/claude/processResources.ts`) to register the actual client PID as its task’s process root.
-The hook keeps the SDK’s executable, arguments, already-filtered environment and forwarded late-abort signal unchanged, uses piped streams without a terminal, and releases the root on process exit.
+Every Claude session's client is spawned by the app through the SDK's supported `spawnClaudeCodeProcess` hook (`src/core/claude/claudeClientProcess.ts`), on every platform: the first mate's seat, a crewmate's coding session and a one-shot question alike.
+The hook keeps the SDK's executable, arguments, already-filtered environment and forwarded late-abort signal unchanged, and uses piped streams without a terminal, as the SDK's own spawn does.
+It watches the client until it exits, so a session's lease, its `closed()` and its record's last copy follow the client's real exit (INF-3500).
+The SDK cannot give that by itself: its close ends the client's input, sends SIGTERM 2 s on and SIGKILL 5 s after that, but ends the session's message stream after at most 2 s, whether the client has gone or not.
+A session stopped outright with a client slow to leave therefore waits for the client, up to the SDK's SIGKILL about 7 s after the stop.
+`src/core/claude/claudeClientExit.integration.test.ts` holds a question's abort and a crewmate's hard close to it, on the boxed client stopped with SIGSTOP.
+On macOS and Linux, a coding session's hook also registers the client's PID as its task's process root and releases the root on process exit.
 The resource observer never signals that process; the existing session lifecycle still owns close and cancellation.
-The client’s stderr goes to the existing host log callback.
-The SDK’s custom-process contract delivers plain process exit, unlike its default local adapter’s bounded stderr-close delay and built-in stderr tail in exit errors; diagnostics remain in the host log rather than that SDK-formatted tail.
-The first mate, one-shot questions and Windows keep their existing SDK spawn path.
+The client's stderr goes to the existing host log callback.
+The SDK's custom-process contract delivers plain process exit, unlike its default local adapter's bounded stderr-close delay and built-in stderr tail in exit errors, so a client's exit error carries its code but no stderr tail; diagnostics remain in the host log.
 Task attribution and its limitations are owned by `docs/helper.md`, "Running tasks’ resource use".
 
 ## Notes
@@ -276,7 +280,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The client is spawned only when the question is asked, after `checkClaudeClient` at create and the account's shared store lease, which it holds until the client has exited.
   The one result settles the question - its closing words, its usage, or a `turn_failed` with the typed class, which the adapter records on the account - and ends the client's input.
   An answer the output cap cut short is read off the first request - its typed `max_tokens` stop rides the streamed `message_delta` - and the client stopped, because `maxTurns` does not stop the client's own output-limit recovery, which re-asks within milliseconds up to three times; the one re-ask already sent is dropped unanswered.
-  `abort()` gives the question up at once and stops the client; the SDK's close takes about 2 s to end it, and the lease comes back then.
+  `abort()` gives the question up at once and stops the client; the session closes, and the lease comes back, once the client has exited ("The client's process", above).
   An explicit session output cap still reaches the client and its typed `max_tokens` stop is still read; the question preset simply supplies no answer-only cap to Claude.
   `claudeClassifierSession.integration.test.ts` runs it on the boxed client against a local stub API, beneath the real kind question: a cold spawn plus one turn answers inside the adapter's wall clock, serves no tools, reads a captured Sonnet thinking-only cutoff as a completed kind once the request has room, reads a cut-short answer with one re-ask dropped, and leaves no transcript.
   A cancel and a 401 or 403 refusal on that client are the session contract's question cases below, and `decisionKindClassifier.test.ts` owns how a cut-off reaches the account.

@@ -10,12 +10,12 @@ import type { BoundTool } from "../session/tools";
 import { CLAUDE_SEAT_TOOL_SERVER } from "../storage/sessionReader";
 import type { ClaudeAccessSettings } from "./claudeAccess";
 import { claudeEnvFor } from "./claudeCli";
+import { type ClaudeClientExit, claudeClientSpawn } from "./claudeClientProcess";
 import {
   type ClaudeProjectResources,
   claudeProjectInstructionsText,
 } from "./claudeProjectResources";
 import { claudeToolNameHint, claudeToolServer } from "./claudeTaskTools";
-import { attributedClaudeProcess } from "./processResources";
 import { claudeCodingReasoning } from "./reasoning";
 
 /**
@@ -144,6 +144,11 @@ type ClaudeSessionOptionsInput = {
   executable: string | undefined;
   stderr: (data: string) => void;
   /**
+   * Where the session learns when the client this query spawns has exited:
+   * its stream can end before then (`claudeClientProcess.ts`).
+   */
+  exit?: ClaudeClientExit;
+  /**
    * The person's own Claude Code token command and address, the only keys
    * of their settings a session is handed (`claudeAccess.ts`).
    */
@@ -226,9 +231,14 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
       );
     return {
       cwd: spec.cwd,
-      ...(coding && hostPlatform() !== "win32"
-        ? { spawnClaudeCodeProcess: attributedClaudeProcess(spec.owner, input.stderr) }
-        : {}),
+      // The app spawns the client, so the session knows when it has exited;
+      // a coding session's client is its task's process root on macOS and
+      // Linux.
+      spawnClaudeCodeProcess: claudeClientSpawn({
+        stderr: input.stderr,
+        ...(coding && hostPlatform() !== "win32" ? { owner: spec.owner } : {}),
+        ...(input.exit ? { exit: input.exit } : {}),
+      }),
       // The machine's default login and nothing ambient, none of the
       // person's Claude notes, plus the session state events the settle rule
       // reads, the output bound, for the seat none of the client's per-turn
@@ -340,6 +350,11 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
   }
   return {
     cwd: spec.cwd,
+    // The app spawns the client, so the session knows when it has exited.
+    spawnClaudeCodeProcess: claudeClientSpawn({
+      stderr: input.stderr,
+      ...(input.exit ? { exit: input.exit } : {}),
+    }),
     // The machine's default login and nothing ambient, none of the person's
     // Claude notes, plus the output bound.
     env: {

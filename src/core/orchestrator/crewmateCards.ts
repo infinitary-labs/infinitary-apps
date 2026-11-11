@@ -1,5 +1,5 @@
 import { rm } from "node:fs/promises";
-import { dirname } from "node:path";
+import { basename, dirname, extname } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import { cardPictureFiles } from "@shared/cardPictures";
 import {
@@ -257,6 +257,15 @@ export class CrewmateCards {
           });
         } catch (caught) {
           const files = cardPictureFiles(story.body, this.options.paths.crewmatesDir);
+          // Only the copies minted for this card go: the body also shows
+          // the live proof the task's validation record keeps, which every
+          // later merge card re-reads (INF-3323).
+          const minted = new Set(
+            (story.pictures ?? []).flatMap((picture) => [
+              picture.id,
+              ...(picture.demo ? [picture.demo.id] : []),
+            ]),
+          );
           // A late failure after persistence must not delete a shown card's own evidence.
           const kept = cardPictureFiles(
             this.host.cards.newestForTask(task.id)?.body ?? "",
@@ -266,7 +275,12 @@ export class CrewmateCards {
           const dir = crewmateCardPicturesDir(this.options.paths, task.id);
           await Promise.all(
             [...files.pictures, ...files.recordings].map(async (file) => {
-              if (dirname(file) !== dir || retained.has(file)) return;
+              if (
+                dirname(file) !== dir ||
+                retained.has(file) ||
+                !minted.has(basename(file, extname(file)))
+              )
+                return;
               await rm(file, { force: true }).catch((error: unknown) => {
                 console.warn("Could not remove refused merge card story copy", error);
               });

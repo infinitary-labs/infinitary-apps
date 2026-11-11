@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "kept-proof-after-refusal",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Carefully reviewed changes reach their merge card after a refused try",
+      "body": "When a crewmate's merge card for a Careful change was refused once, every later try failed with a missing-file message. The proof the change was checked with now stays in place, so the next try shows the card. If that proof is ever gone, the crewmate is told to record and review fresh evidence.",
+      "noPicture": "This fixes whether the merge card appears at all, not how it looks.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

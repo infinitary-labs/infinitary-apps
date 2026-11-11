@@ -378,6 +378,11 @@ export type CrewSupervisorOptions = {
     taskId: string,
     input: import("@shared/changePresentation").OpenChangeInput,
   ) => Promise<string>;
+  /**
+   * The saved story as its merge card shows it. `pictures` are the copies
+   * minted for this card alone, the only files a refused card removes; the
+   * body may also show the live proof the task's validation record keeps.
+   */
   completionPresentation?: (
     taskId: string,
     revision: number,

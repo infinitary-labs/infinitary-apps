@@ -125,6 +125,20 @@ export async function keepValidationEvidence(
   return { ...input, evidence };
 }
 
+/**
+ * Where a kept proof file is, or the refusal naming the way out when it is
+ * gone: a missing copy is never a bare file-system error (INF-3323).
+ */
+function keptPath(path: string): string {
+  try {
+    return realpathSync(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT")
+      throw new Error("Kept validation proof is missing; record and review fresh evidence.");
+    throw error;
+  }
+}
+
 /** The last send boundary is synchronous: it must not yield between its guard and dispatch. */
 export function verifyKeptValidationEvidenceSync(
   evidence: ValidationEvidence[],
@@ -132,7 +146,7 @@ export function verifyKeptValidationEvidenceSync(
   taskId: string,
 ): void {
   if (!evidence.length) return;
-  const home = realpathSync(dir);
+  const home = keptPath(dir);
   let total = 0;
   let textTotal = 0;
   for (const item of evidence) {
@@ -164,7 +178,7 @@ export function verifyKeptValidationEvidenceSync(
     ]) {
       if (!file || !expected || basename(file) !== file || !file.startsWith(`${taskId}-`))
         throw new Error("The proof does not belong to this task.");
-      const path = realpathSync(join(home, file));
+      const path = keptPath(join(home, file));
       if (dirname(path) !== home) throw new Error("Kept proof must stay in its task's folder.");
       const info = statSync(path);
       if (!info.isFile() || info.size > 16 * 1024 * 1024)

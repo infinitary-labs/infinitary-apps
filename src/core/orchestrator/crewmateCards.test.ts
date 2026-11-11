@@ -14,26 +14,38 @@
  * asks' own doors - and reads the record, the stack and the words.
  */
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DECLINE_ACTION_ID } from "@shared/cardLeave";
 import { LIVE_ATTACHMENT_LABEL_MAX, MERGE_NOT_NOW_ID } from "@shared/cards";
+import type { ChangePresentation } from "@shared/changePresentation";
+import type { LiveValidation } from "@shared/liveValidation";
+import { liveValidationSummary } from "@shared/liveValidationSummary";
+import { presentationValidation } from "@shared/presentationValidation";
 import { PROJECT_PAGE_RULE } from "@shared/projectPage";
 import { MERGE_NOT_NOW_WORDS, sendWriteWords } from "@shared/vocabulary";
 import type { ForgeWriteAsk, IntegrationAsk } from "@shared/writeAsk";
 import { describe, expect, it, vi } from "vitest";
+import { DEMO_POSTER, DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
 import {
+  completionBody,
   fakeCrewmate,
   fakeCrewTimersEachTest,
   intentOf,
   METER_RISK,
+  SETTLE_MERGE,
   setup,
   tick,
 } from "../../../tests/helpers/crewHarness";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import { presentationCardBody } from "../forge";
 import { EMIT_CARD_TOOL } from "../pi/cardTool";
+import { keepValidationEvidence, readKeptValidationEvidence } from "../pi/validationEvidence";
 import type { CrewMachines } from "../placed/crewMachines";
 import { bindTool } from "../session/tools";
+import { recordValidation } from "../tasks/liveValidation";
 import { seedTask } from "../tasks/seedTask";
 import type { CrewmateSpec } from "./crewSession";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
@@ -548,6 +560,380 @@ describe("a crewmate's merge cards and refusals", () => {
     expect(seeded("t-answer", { kind: "unclear", deliverable: "answer" })).toBe(false);
     seedTask(h.tasks, { id: "t-queued", title: "t-queued", status: "queued" });
     expect(h.supervisor.crewmateCards.crewmateOwesCompletion("t-queued")).toBe(false);
+  });
+});
+
+/**
+ * A task whose Careful review and live proof passed, as INF-3323's stood when
+ * its merge card would not go up: the proof its report tool kept in the
+ * task's cards folder, the passed review, and a published story whose
+ * validation table shows that proof. Its completion stand-in does what the
+ * story service's does: each call mints a fresh copy of the story's picture
+ * for that card alone and draws the story with it.
+ */
+async function reviewedWithProof() {
+  const head = "5ca2d466ee21f9733827383f23df81f3874e0d10";
+  const poster = DEMO_POSTER.bytes;
+  if (!poster) throw new Error("The demo poster must supply its bytes.");
+  const digest = createHash("sha256").update(poster).digest("hex");
+  let cards = "";
+  let story: ChangePresentation | undefined;
+  let record: LiveValidation | undefined;
+  const minted: string[] = [];
+  const completionPresentation = vi.fn(async (taskId: string) => {
+    if (!story) throw new Error("No story is saved yet.");
+    const id = `${taskId}-${randomBytes(16).toString("hex")}`;
+    writeFileSync(join(cards, `${id}.png`), poster);
+    minted.push(`${id}.png`);
+    const shown: ChangePresentation = {
+      ...story,
+      assets: story.assets.map((asset) => ({ ...asset, id, file: `${id}.png` })),
+      views: story.views.map((view) => ({
+        ...view,
+        after: view.after.map((entry) => ({ ...entry, asset: id })),
+      })),
+      pictures: story.pictures.map((picture) => ({ ...picture, id })),
+      // Each row's proof, from the task's record as the story service reads it.
+      ...(story.liveValidation
+        ? {
+            liveValidation: {
+              ...story.liveValidation,
+              rows: story.liveValidation.rows.map((row) => ({
+                ...row,
+                evidence: readKeptValidationEvidence(
+                  liveValidationSummary(record, story?.head, false)?.rows.find(
+                    (item) => item.id === row.id,
+                  )?.evidence ?? [],
+                  cards,
+                  taskId,
+                ),
+              })),
+            },
+          }
+        : {}),
+    };
+    return {
+      title: shown.title,
+      body: presentationCardBody(shown),
+      pictures: shown.pictures,
+      riskDeclaration: shown.risk,
+      requiredActions: shown.requiredActions,
+    };
+  });
+  const h = await crewmateOn({ completionPresentation, checkCi: async () => "green" });
+  vi.spyOn(h.supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
+  vi.spyOn(h.supervisor.facts, "taskAutonomy").mockReturnValue(false);
+  vi.mocked(h.workspace.branchHead).mockResolvedValue(head);
+  cards = join(h.paths.crewmatesDir, h.taskId, "cards");
+  mkdirSync(cards, { recursive: true });
+
+  // The builder's selected proof, kept the way its report tool keeps a run's.
+  const evidenceDir = scratchDir("infinitary-proof-evidence-");
+  writeFileSync(join(evidenceDir, "popover.png"), poster);
+  const run = await keepValidationEvidence(
+    {
+      kind: "run",
+      id: "phone-check",
+      head,
+      scenarioRevision: 1,
+      completion: "complete",
+      verdict: "go",
+      reason: "The phone check ran the notes journey on the iPhone simulator.",
+      observations: [
+        {
+          scenario: "point-at",
+          result: "pass",
+          live: true,
+          actual: "The paragraph lit and its popover held the typed comment.",
+          evidence: ["popover"],
+          standIns: [],
+          unproven: [],
+          attempted: [],
+        },
+      ],
+      evidence: [
+        {
+          id: "popover",
+          path: join(evidenceDir, "popover.png"),
+          description: "The lit paragraph and its note popover",
+        },
+      ],
+    },
+    { taskId: h.taskId, worktree: scratchDir("infinitary-proof-work-"), dir: cards, evidenceDir },
+  );
+  if (run.kind !== "run") throw new Error("Expected a kept run");
+  let proof = recordValidation(
+    undefined,
+    {
+      kind: "plan",
+      previousRevision: 0,
+      reason: "The change adds note popovers to the phone's cards.",
+      scenarios: [
+        {
+          id: "point-at",
+          source: "Point at a part of a card and add a comment.",
+          importance: "required",
+          action: "Tap Point at, tap a paragraph, type a comment and queue it.",
+          expected: "The paragraph lights and the popover keeps the comment.",
+          adverse: "No note is sent before the reply.",
+          environment: "The phone check's simulator against its scripted home.",
+          signal: "The popover shows the typed comment.",
+          boundary: "Card frame and its popover",
+        },
+      ],
+    },
+    { head, deviceId: null, at: 1 },
+  );
+  proof = recordValidation(proof, run, { head, deviceId: null, at: 2 });
+  const revision = proof.runs.at(-1)?.revision ?? 0;
+  proof = recordValidation(
+    proof,
+    {
+      kind: "review",
+      head,
+      revision,
+      code: "clear",
+      coverage: "complete",
+      coverageReason: "The scenario covers the requested notes.",
+      effects: [],
+      omitted: [],
+      verdict: "go",
+      reason: "Read the change and the kept proof.",
+    },
+    {
+      head,
+      deviceId: null,
+      at: 3,
+      reviewer: "reviewer",
+      assignment: { head, revision, scenarioRevision: proof.scenarioRevision, effects: [] },
+    },
+  );
+  record = proof;
+  seedDelivery(h.tasks, h.taskId, {
+    reviewVerdict: "pass",
+    liveValidation: proof,
+    headSha: head,
+    prNumber: 1,
+    ci: "green",
+  });
+
+  // The story's own picture, kept where preparing the story keeps it.
+  const assetId = `${h.taskId}-${"d".repeat(32)}`;
+  writeFileSync(join(cards, `${assetId}.png`), poster);
+  const validationRows = [
+    {
+      id: "point-at",
+      scenario: "Point at a paragraph and queue a note",
+      evidence: "The popover kept the typed comment.",
+    },
+  ];
+  story = {
+    version: 2,
+    taskId: h.taskId,
+    revision: 1,
+    destination: {
+      host: "github.com",
+      projectId: 1,
+      fullName: "octo/notes",
+      visibility: "private",
+    },
+    title: "feat: annotate card parts on the phone",
+    base: head,
+    head,
+    why: ["Notes on a card's parts reached only the Mac."],
+    whatChanged: ["The phone's cards take notes on a part or on selected words."],
+    before: ["The phone could only reply to a card."],
+    after: ["The phone queues notes and sends them with one reply."],
+    views: [
+      {
+        id: "popover",
+        caption: "A note on a paragraph",
+        kind: "new",
+        before: [],
+        after: [
+          { asset: assetId, alt: "The lit paragraph and its note popover", captureHead: head },
+        ],
+      },
+    ],
+    validationRows,
+    liveValidation: presentationValidation(proof, head, validationRows),
+    verification: ["The phone check passed on the iPhone simulator."],
+    risk: METER_RISK,
+    requiredActions: [],
+    unfinished: [],
+    projectText: "",
+    assets: [
+      {
+        id: assetId,
+        file: `${assetId}.png`,
+        mediaType: "image/png",
+        sourceSha256: digest,
+        uploadSha256: digest,
+        bytes: poster.length,
+        width: DEMO_POSTER.width,
+        height: DEMO_POSTER.height,
+      },
+    ],
+    pictures: [
+      {
+        id: assetId,
+        sha256: digest,
+        alt: "The lit paragraph and its note popover",
+        width: DEMO_POSTER.width,
+        height: DEMO_POSTER.height,
+        group: 0,
+      },
+    ],
+  };
+  const saved = story;
+  const published = {
+    state: "confirmed" as const,
+    revision: 1,
+    number: 1,
+    head,
+    region: "story",
+    regionHash: createHash("sha256").update("story").digest("hex"),
+  };
+  h.tasks.delivery.updateChangePresentation(h.taskId, () => ({
+    revisions: [saved],
+    receipts: [],
+    publication: published,
+    published,
+  }));
+  return { ...h, cards, minted, proof: run.evidence[0]!.file, poster, story: `${assetId}.png` };
+}
+
+describe("a refused saved-story merge card", () => {
+  const MERGE = {
+    title: "feat: annotate card parts on the phone",
+    presentation: 1,
+    actions: [
+      { id: "merge", default: true, effect: { kind: "merge" as const, after: "close" as const } },
+    ],
+  };
+
+  // INF-3060: a refused differing risk copy takes the story's media copies with it.
+  it.each(["unpublished", "unreadable change", "a differing risk copy"])(
+    "removes completion copies after %s refuse the card (INF-228 F3, INF-3060)",
+    async (refusal) => {
+      let taskId = "";
+      let dir = "";
+      const pictureId = () => `${taskId}-${"a".repeat(32)}`;
+      const recordingId = () => `${taskId}-${"b".repeat(32)}`;
+      const sha256 = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
+      // The story service's answer: the body it drew, and the copies it minted for this card.
+      const completionPresentation = vi.fn(async () => {
+        if (!DEMO_POSTER.bytes) throw new Error("Missing poster fixture");
+        writeFileSync(join(dir, `${pictureId()}.png`), DEMO_POSTER.bytes);
+        writeFileSync(join(dir, `${recordingId()}.mp4`), DEMO_RECORDING.bytes);
+        return {
+          title: "The story is ready",
+          body: completionBody(
+            `<figure data-inf-demo="app-frame://media/${recordingId()}.mp4"><img src="app-frame://images/${pictureId()}.png" alt="The box at its starting place"></figure>`,
+          ),
+          pictures: [
+            {
+              id: pictureId(),
+              sha256: sha256(DEMO_POSTER.bytes),
+              alt: "The box at its starting place",
+              width: DEMO_POSTER.width,
+              height: DEMO_POSTER.height,
+              group: 0,
+              demo: {
+                id: recordingId(),
+                kind: "mp4" as const,
+                width: DEMO_RECORDING.width,
+                height: DEMO_RECORDING.height,
+                durationMs: DEMO_RECORDING.durationMs,
+                bytes: DEMO_RECORDING.bytes.length,
+                sha256: sha256(DEMO_RECORDING.bytes),
+              },
+            },
+          ],
+          riskDeclaration: METER_RISK,
+          requiredActions: [],
+        };
+      });
+      const { supervisor, tasks, specs, cards, paths } = setup(fakeCrewmate(), {
+        completionPresentation,
+        checkCi: async () => ({
+          overall: "pending",
+          recorded: false,
+          problem: "The proposed change could not be read",
+        }),
+      });
+      ({ taskId } = await supervisor.intake.commission({
+        title: "Share the story",
+        intent: intentOf("share the same story"),
+        shape: { rigor_ask: "quick" },
+      }));
+      await tick();
+      vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
+      dir = join(paths.crewmatesDir, taskId, "cards");
+      mkdirSync(dir, { recursive: true });
+      // An earlier card's independent copy must survive this later refusal.
+      const earlier = `${taskId}-${"c".repeat(32)}.mp4`;
+      writeFileSync(join(dir, earlier), DEMO_RECORDING.bytes);
+      if (refusal !== "unpublished")
+        tasks.delivery.updateChangePresentation(taskId, () => ({
+          revisions: [],
+          receipts: [],
+          published: {
+            state: "confirmed",
+            revision: 1,
+            number: 1,
+            head: "5ca2d466ee21f9733827383f23df81f3874e0d10",
+            region: "story",
+            regionHash: createHash("sha256").update("story").digest("hex"),
+          },
+        }));
+      await expect(
+        specs[0]?.onCard?.({
+          title: "The story is ready",
+          body: "",
+          presentationRevision: 1,
+          actions: [{ id: "merge", effect: SETTLE_MERGE }],
+          ...(refusal === "a differing risk copy"
+            ? { riskDeclaration: { ...METER_RISK, blast: { level: "high", why: "Every file" } } }
+            : {}),
+        }),
+      ).rejects.toThrow(
+        refusal === "unpublished"
+          ? /not been published/
+          : refusal === "unreadable change"
+            ? /The proposed change could not be read/
+            : /those facts come from its saved revision/,
+      );
+      expect(cards()).toHaveLength(0);
+      expect(readdirSync(dir)).toEqual([earlier]);
+      expect(readFileSync(join(dir, earlier))).toEqual(DEMO_RECORDING.bytes);
+    },
+  );
+
+  // INF-3323: one refused merge card took the live proof its validation table
+  // shows, and every merge card after it was refused with "ENOENT ... lstat"
+  // on that proof, even a story with no pictures of its own.
+  it("takes only the copy minted for it, so the next merge card re-reads the live proof and goes up (INF-3323)", async () => {
+    const h = await reviewedWithProof();
+    await expect(
+      h.emitCard.run({
+        ...MERGE,
+        risk: { ...METER_RISK, blast: { level: "high", why: "Every file" } },
+      }),
+    ).rejects.toThrow(/those facts come from its saved revision/);
+    expect(h.own()).toEqual([]);
+    // The refused card's own copy went with it; the proof and the story's picture stayed.
+    expect(h.minted).toHaveLength(1);
+    expect(existsSync(join(h.cards, h.minted[0]!))).toBe(false);
+    expect(readFileSync(join(h.cards, h.proof))).toEqual(h.poster);
+    expect(readFileSync(join(h.cards, h.story))).toEqual(h.poster);
+
+    await h.emitCard.run(MERGE);
+    const shown = h.own()[0];
+    expect(shown?.title).toBe(MERGE.title);
+    expect(shown?.body).toContain(`app-frame://images/${h.proof}`);
+    expect(shown?.body).toContain(`app-frame://images/${h.minted[1]}`);
+    expect(readdirSync(h.cards).sort()).toEqual([h.proof, h.story, h.minted[1]].sort());
   });
 });
 

@@ -94,10 +94,11 @@ describe("INF-125 selected proof custody", () => {
     await expect(
       verifyKeptValidationEvidence(kept.evidence, root.dir, root.taskId),
     ).rejects.toThrow(/byte count|changed/);
+    // A missing copy names the way out, never a bare file-system error (INF-3323).
     await rm(file);
     await expect(
       verifyKeptValidationEvidence(kept.evidence, root.dir, root.taskId),
-    ).rejects.toThrow();
+    ).rejects.toThrow("Kept validation proof is missing; record and review fresh evidence.");
   });
 
   it("INF-203 N3: repeated record reads load only text and leave digest verification to the gates", async () => {

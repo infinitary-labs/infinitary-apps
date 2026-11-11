@@ -8,7 +8,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   type Card,
@@ -21,7 +21,6 @@ import type { ChangePresentation } from "@shared/changePresentation";
 import { softHoldWords } from "@shared/holds";
 import { CHECK_WORDS } from "@shared/vocabulary";
 import { describe, expect, it, vi } from "vitest";
-import { DEMO_POSTER, DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
 import {
   askedOn,
   completionBody,
@@ -466,84 +465,6 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     await tick();
     expect(cards().map((card) => card.title)).not.toContain("Ready to merge");
   });
-
-  // INF-3060: a refused differing risk copy takes the story's media copies with it.
-  it.each(["unpublished", "unreadable change", "a differing risk copy"])(
-    "removes completion copies after %s refuse the card (INF-228 F3, INF-3060)",
-    async (refusal) => {
-      let taskId = "";
-      let dir = "";
-      const pictureId = () => `${taskId}-${"a".repeat(32)}`;
-      const recordingId = () => `${taskId}-${"b".repeat(32)}`;
-      const completionPresentation = vi.fn(async () => {
-        if (!DEMO_POSTER.bytes) throw new Error("Missing poster fixture");
-        writeFileSync(join(dir, `${pictureId()}.png`), DEMO_POSTER.bytes);
-        writeFileSync(join(dir, `${recordingId()}.mp4`), DEMO_RECORDING.bytes);
-        return {
-          title: "The story is ready",
-          body: completionBody(
-            `<figure data-inf-demo="app-frame://media/${recordingId()}.mp4"><img src="app-frame://images/${pictureId()}.png" alt="The box at its starting place"></figure>`,
-          ),
-          pictures: [],
-          riskDeclaration: METER_RISK,
-          requiredActions: [],
-        };
-      });
-      const { supervisor, tasks, specs, cards, paths } = setup(fakeCrewmate(), {
-        completionPresentation,
-        checkCi: async () => ({
-          overall: "pending",
-          recorded: false,
-          problem: "The proposed change could not be read",
-        }),
-      });
-      ({ taskId } = await supervisor.intake.commission({
-        title: "Share the story",
-        intent: intentOf("share the same story"),
-        shape: { rigor_ask: "quick" },
-      }));
-      await tick();
-      vi.spyOn(supervisor.facts, "taskDelivery").mockReturnValue("direct-pr");
-      dir = join(paths.crewmatesDir, taskId, "cards");
-      mkdirSync(dir, { recursive: true });
-      // An earlier card's independent copy must survive this later refusal.
-      const earlier = `${taskId}-${"c".repeat(32)}.mp4`;
-      writeFileSync(join(dir, earlier), DEMO_RECORDING.bytes);
-      if (refusal !== "unpublished")
-        tasks.delivery.updateChangePresentation(taskId, () => ({
-          revisions: [],
-          receipts: [],
-          published: {
-            state: "confirmed",
-            revision: 1,
-            number: 1,
-            head: "5ca2d466ee21f9733827383f23df81f3874e0d10",
-            region: "story",
-            regionHash: createHash("sha256").update("story").digest("hex"),
-          },
-        }));
-      await expect(
-        specs[0]?.onCard?.({
-          title: "The story is ready",
-          body: "",
-          presentationRevision: 1,
-          actions: [{ id: "merge", effect: SETTLE_MERGE }],
-          ...(refusal === "a differing risk copy"
-            ? { riskDeclaration: { ...METER_RISK, blast: { level: "high", why: "Every file" } } }
-            : {}),
-        }),
-      ).rejects.toThrow(
-        refusal === "unpublished"
-          ? /not been published/
-          : refusal === "unreadable change"
-            ? /The proposed change could not be read/
-            : /those facts come from its saved revision/,
-      );
-      expect(cards()).toHaveLength(0);
-      expect(readdirSync(dir)).toEqual([earlier]);
-      expect(readFileSync(join(dir, earlier))).toEqual(DEMO_RECORDING.bytes);
-    },
-  );
 
   // INF-1965: no request number is invented, and a later story still invalidates the click.
   it.each(["hosted", "branch", "local"] as const)(

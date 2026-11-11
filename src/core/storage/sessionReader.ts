@@ -546,6 +546,40 @@ function wholeLinesBetween(
   }
 }
 
+/** Only a line that can carry a Claude call or its result is parsed. */
+const CLAUDE_CALL_LINE = /"type"\s*:\s*"tool_(use|result)"/;
+
+/**
+ * The calls a Claude transcript records between byte `from` and `to`, by
+ * the client's call id: those its assistant lines make (`tool_use`) and
+ * those its user lines answer (`tool_result`). Only whole lines are read;
+ * `bytes` is how far they reach, so a torn last line waits for the next read.
+ */
+export function claudeCallsBetween(
+  path: string,
+  from: number,
+  to: number,
+): { bytes: number; calls: string[]; results: string[] } {
+  const { text, bytes } = wholeLinesBetween(path, from, to);
+  const calls: string[] = [];
+  const results: string[] = [];
+  for (const line of text.split("\n")) {
+    if (!CLAUDE_CALL_LINE.test(line)) continue;
+    const entry = parseLine(line);
+    if (entry?.type !== "assistant" && entry?.type !== "user") continue;
+    const content = (entry.message as JsonRecord | undefined)?.content;
+    if (!Array.isArray(content)) continue;
+    for (const part of content as unknown[]) {
+      if (!part || typeof part !== "object") continue;
+      const typed = part as JsonRecord;
+      if (typed.type === "tool_use" && typeof typed.id === "string") calls.push(typed.id);
+      else if (typed.type === "tool_result" && typeof typed.tool_use_id === "string")
+        results.push(typed.tool_use_id);
+    }
+  }
+  return { bytes, calls, results };
+}
+
 /** A message's counters, not a turn total: later content blocks may finish its usage. */
 function claudeMessageUsage(value: unknown): JsonRecord | undefined {
   if (!value || typeof value !== "object") return undefined;

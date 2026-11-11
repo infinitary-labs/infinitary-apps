@@ -661,8 +661,9 @@ Its parts sit beside it in `src/core/placed/`: what the crew reads of the comput
 - **The record's copy.**
   The home copies the conversation's record into `crewmates/<task>/sessions/` as model requests start and tools start or finish, and at model turn ends, coalescing live copies to at most one start per second and keeping a trailing copy when events arrive during a transfer.
   For Claude on a computer that supports record refresh (protocol 8.15 or later), the same throttled copy keeps checking while any call is open for a client transcript written after the call was announced, even if no further event arrives.
+  A call that ended stays open for this check while this Mac's copy holds the call but not its result, because the client can write a result to its transcript after it reported the call finished, even after its next request started (`RecordCopy.awaitsResult`).
   Pi and older computers keep event-driven copies without this repeating check.
-  The loop stops after the last call ends, at a turn's or continuation's end or session release, and while its computer is out of reach; reconnect resumes it only for refresh-capable Claude calls still open.
+  The loop stops once every call has ended with its result copied, at a turn's or continuation's end or session release, and while its computer is out of reach; reconnect resumes it only for refresh-capable Claude calls still open.
   A continuation's end keeps one final coalesced copy for its completed text or the tail left by a client exit, without repeating afterward.
   Live copies never hold up a step's events; a turn's end waits for any transfer already in flight before flushing its final record.
   A turn's end, reconnect and session release flush the copy without the live throttle, from where each file's copy ends; Observe and the Crewmate tab read that copy for a task on another computer.

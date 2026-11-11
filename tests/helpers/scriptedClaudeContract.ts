@@ -146,7 +146,16 @@ const lingering: { stores: SessionRecordStore[]; mcps: Promise<Client | undefine
 };
 
 export async function scriptedClaudeWorld(
-  controls: { beforeTool?: () => Promise<void>; beforeToolRecord?: () => Promise<void> } = {},
+  controls: {
+    beforeTool?: () => Promise<void>;
+    beforeToolRecord?: () => Promise<void>;
+    /**
+     * Holds a call's result out of the transcript while the client streams
+     * it and goes on to its next request, as the real client can write a
+     * result after it reported the call finished.
+     */
+    beforeResultRecord?: () => Promise<void>;
+  } = {},
 ): Promise<
   ContractWorld & {
     continueTurn: () => void;
@@ -349,8 +358,14 @@ export async function scriptedClaudeWorld(
         },
       ],
     };
-    record(client, { type: "user", message: result });
-    emit({ type: "user", parent_tool_use_id: null, message: result });
+    if (controls.beforeResultRecord) {
+      const recorded = controls.beforeResultRecord();
+      emit({ type: "user", parent_tool_use_id: null, message: result });
+      void recorded.then(() => record(client, { type: "user", message: result }));
+    } else {
+      record(client, { type: "user", message: result });
+      emit({ type: "user", parent_tool_use_id: null, message: result });
+    }
     client.history.push(content);
     for (const steer of turn.steers.splice(0)) {
       emit(says.ack(steer));

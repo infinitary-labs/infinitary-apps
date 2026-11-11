@@ -417,6 +417,136 @@ it.each([
   }
 });
 
+// INF-3612: the real client wrote a call's result after its tool_end and its
+// next request, so the copy loop stopped first and the Crewmate tab showed the
+// finished call as running until another event came (placedClaudeCost's wait).
+it("keeps copying after a placed Claude call ends until its late result reaches the home", async () => {
+  let now = 0;
+  const scheduled = new Set<{ due: number; run: () => void }>();
+  const schedule = (ms: number, run: () => void) => {
+    expect(scheduled.size).toBe(0);
+    const timer = { due: now + ms, run };
+    scheduled.add(timer);
+    return () => {
+      scheduled.delete(timer);
+    };
+  };
+  const fireNext = () => {
+    const timer = scheduled.values().next().value;
+    if (!timer) return;
+    scheduled.delete(timer);
+    now = Math.max(now, timer.due);
+    timer.run();
+  };
+  let writeResult!: () => void;
+  const resultHeld = new Promise<void>((resolve) => {
+    writeResult = resolve;
+  });
+  const inner = await scriptedClaudeWorld({ beforeResultRecord: () => resultHeld });
+  const world = await placedContractWorld(inner, { now: () => now, schedule });
+  const { tasks, paths, devices } = world.placement;
+  const ask = devices.ask.bind(devices);
+  const copiedAt: number[] = [];
+  let copying = 0;
+  const sent = vi.spyOn(devices, "ask").mockImplementation(async (device, channel, args) => {
+    if (channel === "inf:session:copy") copying += 1;
+    try {
+      const answer = await ask(device, channel, args);
+      if (channel === "inf:session:copy") copiedAt.push(now);
+      return answer;
+    } finally {
+      if (channel === "inf:session:copy") copying -= 1;
+    }
+  });
+  const session = await world.factory.open({
+    ...crewmateSessionSpec(
+      paths,
+      {
+        taskId: CREWMATE_TASK,
+        machineId: world.machine,
+        cwd: world.homeDir,
+        model: world.model,
+      },
+      world.binding,
+    ),
+    tools: [
+      boundTool({
+        name: CONTRACT_TOOL,
+        label: "Look up",
+        description: "Look the contract answer up.",
+        parameters: Type.Object({}),
+        run: async () => {
+          inner.answer("hang");
+          return { text: "Looked up." };
+        },
+      }),
+    ],
+  });
+  tasks.turns.setSessionFile(CREWMATE_TASK, session.sessionId);
+  const events: string[] = [];
+  session.subscribe((event) => {
+    events.push(event.type);
+  });
+  const recordDirOf = (id: string) => crewmateSessionsDir(paths, id);
+  const resolver = createCrewmateTranscriptResolver({
+    recordDirOf,
+    backendOf: () => undefined,
+    configDirOf: () => undefined,
+  });
+  const reader = new CrewTranscripts({
+    recordDirOf,
+    currentSession: (task) => resolver(task).path,
+  });
+  const read = () => {
+    const task = tasks.get(CREWMATE_TASK);
+    if (!task) throw new Error("The placed Claude task is missing.");
+    return reader.of(task, tasks.timeline(CREWMATE_TASK), false);
+  };
+  const resultHome = () =>
+    read().lines.some((line) => line.kind === "tool" && line.result !== null);
+  inner.answer({ tool: CONTRACT_TOOL, answer: "Not reached while held." });
+  const asking = session.prompt("Run the footer check on Mac mini.");
+  try {
+    // The call ended and the next request hangs, so no event follows it.
+    await expect.poll(() => events.includes("tool_end")).toBe(true);
+    await expect.poll(() => events.filter((type) => type === "request_started").length).toBe(2);
+    await expect
+      .poll(() => {
+        fireNext();
+        return read().lines.some((line) => line.kind === "tool" && line.result === null);
+      })
+      .toBe(true);
+    // While the client has not written the result, the loop goes on copying.
+    const copiesBeforeResult = copiedAt.length;
+    await expect
+      .poll(() => {
+        fireNext();
+        return copiedAt.length;
+      })
+      .toBeGreaterThanOrEqual(copiesBeforeResult + 2);
+    expect(resultHome()).toBe(false);
+    expect(events).not.toContain("turn_end");
+    writeResult();
+    // Once a copy brings the result home, the loop runs out with no copy on
+    // its way and none armed. Read the loop before firing (INF-454).
+    await expect
+      .poll(() => {
+        const loop = { copying, armed: scheduled.size };
+        fireNext();
+        return { ...loop, result: resultHome() };
+      })
+      .toEqual({ copying: 0, armed: 0, result: true });
+    expect(events).not.toContain("turn_end");
+  } finally {
+    writeResult();
+    await session.abort();
+    await asking;
+    session.dispose();
+    await session.closed();
+    sent.mockRestore();
+  }
+});
+
 // INF-341 F2: only refresh-capable Claude needs eventless open-call polling.
 it.each([
   { backend: "claude", protocolVersion: "8.14.0" },

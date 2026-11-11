@@ -13,6 +13,7 @@ import { dirname, join, relative, sep } from "node:path";
 import { speaksRecordRefresh } from "@shared/contractFeatures";
 import type { WorkOrderResponse } from "@shared/work";
 import { errorText } from "../personal/errorText";
+import { claudeCallsBetween } from "../storage/sessionReader";
 import type { WorkDevices } from "./workDevices";
 
 /**
@@ -42,7 +43,10 @@ export type RecordCopyOptions = {
   readonly log: (line: string) => void;
   /** The conversation is held here and not closed, so live copies may go on. */
   readonly following: () => boolean;
-  /** A Claude call there is announced and its result has not arrived. */
+  /**
+   * A Claude call there is announced and its result has not arrived, or it
+   * ended and this Mac's copy holds the call but not yet its result.
+   */
   readonly callOpen: () => boolean;
 };
 
@@ -54,6 +58,11 @@ export class RecordCopy {
   private live: Promise<void> | undefined;
   private pending = false;
   private copiedAt = Number.NEGATIVE_INFINITY;
+  /** How far each file of the copy was read for its calls, by its path. */
+  private readonly callsReadTo = new Map<string, number>();
+  /** The Claude calls the copy holds, and those whose results it holds. */
+  private readonly calls = new Set<string>();
+  private readonly results = new Set<string>();
 
   /** `dir` is where this Mac keeps the copy: its open session's record folder. */
   constructor(
@@ -67,6 +76,33 @@ export class RecordCopy {
       this.options.callOpen() &&
       speaksRecordRefresh(this.options.devices.version(this.options.deviceId)?.contract ?? "")
     );
+  }
+
+  /**
+   * This Mac's copy holds a Claude call but not yet its result. The client
+   * reports a call's end as it streams the result, and can write that
+   * result to its transcript afterwards, even after its next request has
+   * started, so a finished call can lack its result here until a later copy.
+   */
+  awaitsResult(callId: string): boolean {
+    this.readCalls();
+    return this.calls.has(callId) && !this.results.has(callId);
+  }
+
+  /** Reads the calls and results the copy took in since the last read. */
+  private readCalls(): void {
+    for (const { name, offset } of copiedFiles(this.dir)) {
+      if (!name.endsWith(".jsonl")) continue;
+      const path = join(this.dir, ...name.split("/"));
+      const read = this.callsReadTo.get(path) ?? 0;
+      // A file copied whole again shorter is read again from its start.
+      const from = offset < read ? 0 : read;
+      if (offset === from) continue;
+      const found = claudeCallsBetween(path, from, offset);
+      for (const id of found.calls) this.calls.add(id);
+      for (const id of found.results) this.results.add(id);
+      this.callsReadTo.set(path, from + found.bytes);
+    }
   }
 
   /** Coalesced copies outside the event lane, repeated while a call's transcript can still grow. */

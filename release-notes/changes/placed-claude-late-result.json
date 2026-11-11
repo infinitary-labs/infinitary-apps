@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "placed-claude-late-result",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Finished steps of a crewmate on another computer show their results sooner",
+      "body": "When a Claude crewmate runs on another of your computers, the Crewmate tab now shows a step's result once that computer records it, rather than showing the step as running until the crewmate's next message.",
+      "noPicture": "This fixes when a result appears in the Crewmate tab, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

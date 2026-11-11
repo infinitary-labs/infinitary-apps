@@ -217,6 +217,8 @@ type Placed = {
   closed: boolean;
   /** Calls announced by the computer whose results have not arrived yet. */
   openCalls: Set<string>;
+  /** Claude calls that ended there this turn, whose results this Mac's copy may still lack. */
+  endedCalls: Set<string>;
   /** This Mac's copy of its conversation's record. */
   readonly record: RecordCopy;
   /** What its session was opened with, to open it there again after that computer restarts. */
@@ -785,6 +787,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
           if (placed.session === released) {
             placed.session = undefined;
             placed.openCalls.clear();
+            placed.endedCalls.clear();
             placed.record.cancelLive();
           }
         },
@@ -1050,14 +1053,17 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       const event = record.event;
       const type = event.type;
       if (type === "tool_start") placed.openCalls.add(event.callId);
-      else if (type === "tool_end") placed.openCalls.delete(event.callId);
-      else if (
+      else if (type === "tool_end") {
+        placed.openCalls.delete(event.callId);
+        placed.endedCalls.add(event.callId);
+      } else if (
         type === "turn_end" ||
         type === "turn_ended" ||
         type === "turn_failed" ||
         type === "continuation_ended"
       ) {
         placed.openCalls.clear();
+        placed.endedCalls.clear();
         // A continuation still needs its final tail, even when its client exited.
         if (type !== "continuation_ended") placed.record.cancelLive();
       }
@@ -1349,6 +1355,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     const placed = this.load(taskId, deviceId);
     placed.closed = true;
     placed.openCalls.clear();
+    placed.endedCalls.clear();
     placed.record.cancelLive();
     this.closeThere(deviceId, taskId).then(
       () => this.copies.retire(taskId),
@@ -1469,6 +1476,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       released: false,
       closed: false,
       openCalls: new Set(),
+      endedCalls: new Set(),
       record: new RecordCopy(
         {
           task,
@@ -1478,7 +1486,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
           ...(this.options.schedule ? { schedule: this.options.schedule } : {}),
           log: this.log,
           following: () => !placed.closed && heldSession(placed) !== undefined,
-          callOpen: () => placed.openCalls.size > 0 && placed.spec?.binding.backend === "claude",
+          callOpen: () =>
+            placed.spec?.binding.backend === "claude" &&
+            (placed.openCalls.size > 0 ||
+              [...placed.endedCalls].some((id) => placed.record.awaitsResult(id))),
         },
         crewmateSessionsDir(this.options.paths, task),
       ),

@@ -1179,8 +1179,8 @@ Local-only routing reads the task's delivery policy even when the project has an
 Both keep a completion binding of revision, head and content hash, separate from a hosted publication.
 Their cards use the same story renderer, radar, facts, required actions and merge line; self-merging notes use the same story and stay off the stack until their merge, then show once saying it merged (`docs/card-authoring.md`).
 A newer revision or moved head invalidates the prior completion.
-The offer and final merge boundary bind that exact story, and the local land checks its retained files and committed head before dispatch.
-A branch or local attempt waiting for its turn keeps the binding on its existing pending-settle record, so a restart never recaptures a newer story as approved.
+The offer and final merge boundary bind the story's version, never its words (INF-3623): a story revised at the clicked version lands as the newest one, and only another commit stops the click; the local land checks its retained files and committed head before dispatch.
+A branch or local attempt waiting for its turn keeps the binding on its existing pending-settle record, so a restart never takes a later commit as the approved one.
 A plain branch still fast-forwards the remote default branch without force; local-only still merges locally, without a remote push.
 Neither acquires a hosted request number or the kept-approval repair lineage that requires one.
 Evidence: `changePresentations.test.ts` and `tests/e2e/story-destinations.spec.ts` drive the four destinations through preparation, publication or local readiness, cards and their existing merge owners.
@@ -1219,7 +1219,9 @@ Preparation and ordinary publication reject tracked uncommitted changes, not unt
 The merge card reads its committed version and retained files; a hosted merge compares the remote request head with the published head, not a work computer's dirty copy or availability.
 A local-only merge checks its committed branch and retained story again, without a forge read.
 An accepted repair, one its crewmate declared to leave the approved work as it was, republishes the unchanged story automatically at the repaired version after checks pass, without another upload or merge card.
-The merge card binds a content hash; only the host's exact clone at a later version, for an accepted repair or any other push, inherits that hash, so a separately edited story requires a new merge card rather than borrowing the kept approval.
+Approval follows the code, never the story's words (INF-3623, the captain: all non-code changes to the pull request keep the approval).
+A story the crewmate revised at the approved version keeps the captain's click, a click on a card whose story was revised since merges with the newest story, and a person's edit inside the story on the host no longer holds the merge: their words stay, and the squash summary is the saved story's.
+The newest story must still be published at the merging version, so the merge waits for the crewmate meanwhile; the steps for the captain and the follow-up tasks stay the clicked card's until a new merge card shows others.
 The story's saved title, risk and required actions win on `emit_card presentation`; its title field is supplied, and body, body_file, risk and required_actions are omitted.
 
 ### Declared validation writes

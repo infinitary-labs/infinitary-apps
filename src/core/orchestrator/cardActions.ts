@@ -321,10 +321,10 @@ export class CardActions {
     const effect = chosen.effect;
     // The one merge effect (INF-2744), whichever pull request it names.
     const merge = mergeEffectOf(chosen);
-    // A merge click merges the change its card was shown for, with the story
-    // it showed: a card shown for another story than that change's is
-    // refused (INF-2490). A click whose approval is kept to the pull request
-    // its card showed merges that one even after another of the task's
+    // A merge click merges the change its card was shown for, at the version
+    // it showed: a card shown for another change is refused (INF-2490). A
+    // click whose approval is kept to the pull request its card showed
+    // merges that one even after another of the task's
     // became current (INF-2746); a click that approves no head merges only
     // the current change, so it is refused once another is current.
     if (merge && !merge.review && associated) {
@@ -352,15 +352,18 @@ export class CardActions {
         associated.branch,
         elsewhere?.branch ?? current.branch,
       );
-      const ready = readyPresentation(ledger);
+      // Approval follows the code, never the story's words (INF-3623): a
+      // story revised at the version the card showed keeps the click, and
+      // the merge carries the newest story. Only another commit refuses it -
+      // the newest story's version, or the pull request's own newer one.
+      const read = !elsewhere && current.number !== undefined ? delivery?.headSha : undefined;
+      const moved =
+        offered?.headSha !== ledger?.revisions.at(-1)?.head ||
+        (read !== undefined && read !== offered?.headSha);
       const story = ledger !== undefined || offered?.presentationRevision !== undefined;
       if (
         (shownFor !== undefined && shownFor !== current.number && !elsewhere) ||
-        (story &&
-          (!offered?.presentationRevision ||
-            offered.presentationRevision !== ready?.revision ||
-            offered.headSha !== ready?.head ||
-            offered.presentationContentHash !== ready?.contentHash))
+        (story && (!offered?.presentationRevision || moved))
       ) {
         this.core.cards.showOpenCard(card.id);
         throw new CardChoiceUnavailableError("action-changed");

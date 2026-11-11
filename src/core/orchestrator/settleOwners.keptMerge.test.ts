@@ -10,9 +10,12 @@
  * folder.
  */
 
+import { createHash } from "node:crypto";
 import type { Card } from "@shared/cards";
+import type { ChangePresentation } from "@shared/changePresentation";
 import { softHoldWords } from "@shared/holds";
 import type { MergeReview } from "@shared/mergeReview";
+import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import {
   CHECK_WORDS,
@@ -52,6 +55,9 @@ import {
   type ForgeCheckState,
   ForgeError,
   type ForgePull,
+  presentationCommitMessage,
+  presentationContentHash,
+  presentationMarkdown,
 } from "../forge";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
@@ -340,6 +346,122 @@ describe("CrewSupervisor", () => {
         h.forge.states = ["success"];
       });
       await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+    });
+
+    // INF-3623, the captain's "all non-code changes to the PR should keep my
+    // approval": a merge card shows the saved story; a story revised and
+    // published at the version the card showed keeps its click, through the
+    // real merge, and the merge request carries the newest story. Another
+    // commit refuses the click.
+    describe("a story revised after the merge card (INF-3623)", () => {
+      const destination = {
+        host: "github.com",
+        projectId: 7,
+        fullName: "o/r",
+        visibility: "private" as const,
+      };
+      const story = (
+        taskId: string,
+        revision: number,
+        whatChanged: string[],
+      ): ChangePresentation => ({
+        version: 1,
+        taskId,
+        revision,
+        destination,
+        title: "Ready to merge",
+        base: APPROVED,
+        head: APPROVED,
+        why: ["The meter dropped readings."],
+        whatChanged,
+        before: ["A reading could be lost."],
+        after: ["Every reading is kept."],
+        views: [],
+        noPicture: "This changes how readings are kept, not a view.",
+        verification: ["The meter tests passed."],
+        risk: Object.fromEntries(
+          RISK_DIMENSIONS.map((dimension) => [dimension, { level: "low", why: "A meter fix." }]),
+        ) as RiskDeclaration,
+        requiredActions: [],
+        unfinished: [],
+        projectText: "",
+        assets: [],
+        pictures: [],
+      });
+      const published = (shown: ChangePresentation) => {
+        const region = presentationMarkdown(shown, new Map(), "passed");
+        return {
+          revision: shown.revision,
+          head: shown.head,
+          state: "confirmed" as const,
+          region,
+          regionHash: createHash("sha256").update(region).digest("hex"),
+          contentHash: presentationContentHash(shown),
+          number: 7,
+        };
+      };
+      const withStory = () =>
+        approved({
+          story: ({ tasks, taskId, forge }) => {
+            Object.assign(forge, {
+              attachments: {
+                destination: async () => destination,
+                upload: async () => {
+                  throw new Error("No upload expected");
+                },
+              },
+            });
+            const first = story(taskId, 1, ["The meter keeps every reading."]);
+            const shown = published(first);
+            tasks.delivery.updateChangePresentation(taskId, () => ({
+              revisions: [first],
+              receipts: [],
+              publication: shown,
+              published: shown,
+            }));
+            forge.body = shown.region;
+            return 1;
+          },
+        });
+
+      it("merges the newest story on the earlier card's click when only the words changed", async () => {
+        const h = await withStory();
+        expect(h.tasks.get(h.taskId)?.delivery?.completionOffers?.at(-1)).toMatchObject({
+          cardId: h.card.id,
+          headSha: APPROVED,
+          presentationRevision: 1,
+        });
+        // The crewmate revises the story's words and publishes it at the same commit.
+        const revised = story(h.taskId, 2, ["The meter keeps every reading across a restart."]);
+        const shown = published(revised);
+        h.tasks.delivery.updateChangePresentation(h.taskId, (record) => ({
+          ...record!,
+          revisions: [...record!.revisions, revised],
+          publication: shown,
+          published: shown,
+        }));
+        h.forge.body = shown.region;
+        h.supervisor.cardActions.act(h.card.id, "merge");
+        await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+        expect(h.forge.squashes).toEqual(["The meter keeps every reading across a restart."]);
+        expect(presentationCommitMessage(revised)).toBe(h.forge.squashes[0]);
+        await vi.waitFor(() => expect(h.tasks.get(h.taskId)?.closedReason).toBe("merged"));
+        expect(
+          h.tasks
+            .timeline(h.taskId)
+            .filter((event) => event.data?.storyChangedAfterClick !== undefined),
+        ).toHaveLength(1);
+      });
+
+      it("refuses the earlier card's click after another commit, and merges nothing", async () => {
+        const h = await withStory();
+        h.forge.headSha = REPAIRED;
+        seedDelivery(h.tasks, h.taskId, { headSha: REPAIRED });
+        expect(() => h.supervisor.cardActions.act(h.card.id, "merge")).toThrow();
+        await tick();
+        expect(h.forge.sends).toBe(0);
+        expect(h.tasks.get(h.taskId)?.status).not.toBe("done");
+      });
     });
 
     // INF-2913, the captain's ask: "only show a card if the merge went wrong

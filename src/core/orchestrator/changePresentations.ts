@@ -733,12 +733,17 @@ export class ChangePresentations {
     }
     if (record.published.regionHash !== hash(record.published.region))
       throw new Error("The saved publication record changed.");
-    const projectText = replacePresentationRegion(
-      change.body ?? "",
-      record.published.region,
-      "",
-      taskId,
-    );
+    // A person's edit inside the story no longer holds the merge (INF-3623):
+    // their words stay on the host, and the squash carries the saved story
+    // with the words around it.
+    const around = presentationAround(change.body ?? "", taskId);
+    const projectText =
+      readPresentationRegion(change.body ?? "", taskId) ===
+      presentationLines(record.published.region)
+        ? replacePresentationRegion(change.body ?? "", record.published.region, "", taskId)
+        : around
+          ? around.above + around.below
+          : "";
     return { ...change, squashMessage: presentationCommitMessage({ ...story, projectText }) };
   }
 
@@ -1014,8 +1019,9 @@ export class ChangePresentations {
    * completion offer approved unchanged, as a new revision that names the
    * one its author published. Only the newest story is republished: a newer
    * revision the author prepared is theirs to publish, and nothing happens.
-   * An accepted repair names where it starts, and refuses that newer
-   * revision instead. Answers the revision now published, if any.
+   * An accepted repair names where it starts; a newer revision stays its
+   * author's there too, since approval follows the code (INF-3623).
+   * Answers the revision now published, if any.
    */
   private async republishLocked(
     taskId: string,
@@ -1059,12 +1065,8 @@ export class ChangePresentations {
     if (
       latest.revision !== published.revision &&
       JSON.stringify(latest) !== JSON.stringify(refreshed)
-    ) {
-      if (how.fromHead === undefined) return undefined;
-      throw new Error(
-        "A newer edited story needs its own merge card; it is not a repair's refresh.",
-      );
-    }
+    )
+      return undefined;
     if (latest.revision === published.revision)
       await this.save(taskId, branch, (old) => ({
         ...this.required(old),

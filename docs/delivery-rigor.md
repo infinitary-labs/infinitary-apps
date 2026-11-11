@@ -658,7 +658,8 @@ Observe is the one surface in the app where any of this renders: the crewmate he
 
 For a saved story on GitHub or GitLab, a host-accepted repair republishes the same content at its new head after checks pass, before the kept-approval merge.
 Any other push past the published story republishes it the same way, at the merge card or at a merge no kept approval of another version holds (INF-2509).
-It reuses confirmed attachments and the approved content hash; a separate story edit needs a new merge card.
+It reuses confirmed attachments and the approved content hash.
+Approval follows the code, never the story's words (INF-3623): a story revised at the approved version keeps the captain's approval, and the merge carries the newest published story, with one quiet line on the task's record; only another commit needs a new merge card.
 The merge validates the published and PR heads without waking the work computer or inspecting its uncommitted files.
 
 ## Notes moved from AGENTS.md

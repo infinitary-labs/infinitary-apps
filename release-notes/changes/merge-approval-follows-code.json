@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "merge-approval-follows-code",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Your merge click holds when only the description changes",
+      "body": "After you click Merge, a crewmate can correct the pull request's description without asking you again, and the merge goes ahead with the newest description. Edits someone makes to the description on GitHub no longer stop the merge either. Only new code needs a new merge card.",
+      "noPicture": "This changes when a merge click still counts, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

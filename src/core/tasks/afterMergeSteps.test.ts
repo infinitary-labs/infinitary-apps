@@ -3,6 +3,7 @@ import { RISK_DIMENSIONS } from "@shared/cards";
 import { type ChangePresentation, changePresentationSchema } from "@shared/changePresentation";
 import { describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { presentationContentHash } from "../forge/presentation";
 import { afterMergeWords } from "../orchestrator/deliveryWakes";
 import { seedTask } from "./seedTask";
@@ -248,6 +249,92 @@ describe("after-merge steps at the merge", () => {
       "Continue: Pull the split setup onto the Mac mini, set MAC_QUEUES",
     ]);
   });
+
+  // INF-3623, the captain's answer "Keep the card's lists; new ones need a new merge card":
+  // a story revised after the click merges, but its follow-ups stay the clicked card's.
+  it.each([false, true])(
+    "files the clicked merge card's steps when the story was revised after the click (approval ended another way: %s)",
+    (ended) => {
+      const { tasks, origin } = setup();
+      const github = {
+        host: "github.com",
+        projectId: 1421542804,
+        fullName: "example/dotfiles-private",
+        visibility: "private" as const,
+      };
+      const clicked = dop299Story(origin.id, DOP299_STEP, { destination: github });
+      const revised = dop299Story(
+        origin.id,
+        [{ ...DOP299_STEP[0], title: "Retire the old journeys queue label" } as AfterMergeStep],
+        { destination: github, revision: 3 },
+      );
+      const publication = {
+        revision: 3,
+        head: HEAD,
+        state: "confirmed" as const,
+        region: "",
+        regionHash: "",
+        contentHash: presentationContentHash(revised),
+        number: 41,
+      };
+      tasks.delivery.updateChangePresentation(origin.id, () => ({
+        revisions: [clicked, revised],
+        receipts: [],
+        publication,
+        published: publication,
+      }));
+      seedDelivery(tasks, origin.id, {
+        completionOffers: [
+          {
+            cardId: "merge-card",
+            offerId: "offer-1",
+            headSha: HEAD,
+            prNumber: 41,
+            at: 1,
+            presentationRevision: 2,
+          },
+        ],
+        mergeAuthorization: {
+          version: 1,
+          id: "approval",
+          generation: 1,
+          issuer: "captain",
+          at: 1,
+          card: { id: "merge-card", offerId: "offer-1", actionId: "merge" },
+          target: {
+            repoId: "dotfiles",
+            host: "github.com",
+            owner: "example",
+            name: "dotfiles-private",
+            prNumber: 41,
+            branch: "fm/task-dop29900",
+            delivery: "direct-pr",
+            method: "squash",
+          },
+          approvedHead: HEAD,
+          proceedWithOpen: false,
+          status: "standing",
+          lineage: [],
+        },
+      });
+
+      if (ended) {
+        const approval = tasks.get(origin.id)?.delivery?.mergeAuthorization;
+        seedDelivery(tasks, origin.id, {
+          mergeAuthorization: approval && { ...approval, status: "superseded" },
+        });
+      }
+      tasks.close(origin.id, { status: "done", reason: "merged", actor: "host" });
+
+      // An approval that ended another way (INF-3630's review) names no card the task merged by:
+      // the merged story's own steps are filed.
+      expect(continueTasks(tasks).map((record) => record.title)).toEqual([
+        ended
+          ? "Continue: Retire the old journeys queue label"
+          : "Continue: Pull the split setup onto the Mac mini, set MAC_QUEUES",
+      ]);
+    },
+  );
 
   it("files a step in the project it names, held until the work it waits for merges", () => {
     // DOP-299's step belonged to the app's project and could only run once

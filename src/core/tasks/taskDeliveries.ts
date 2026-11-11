@@ -1044,11 +1044,30 @@ export class TaskDeliveries {
 
   /** The merged story's after-merge steps, each with the id its filing takes. */
   private afterMergeSteps(sourceId: string): { id: string; step: AfterMergeStep }[] {
-    const ledger = this.tasks.get(sourceId)?.delivery?.presentation;
-    // The revision the merge card showed: published where the destination
-    // keeps a description, otherwise the completion this app keeps.
-    const shown = ledger?.published ?? ledger?.completion;
-    const story = shown && ledger?.revisions?.find((entry) => entry.revision === shown.revision);
+    const record = this.tasks.get(sourceId);
+    const ledger = record?.delivery?.presentation;
+    // The revision the clicked merge card showed (INF-3623): a story revised
+    // after the click merges, but its steps stay the card's until a new
+    // merge card shows them. Without a click, the revision published where
+    // the destination keeps a description, otherwise the completion this app keeps.
+    // Only an approval that stands or that its own merge spent: one that
+    // ended another way names a card the task no longer merges by.
+    const approval = record?.delivery?.mergeAuthorization;
+    const live = approval?.status === "standing" || approval?.status === "consumed";
+    const clicked =
+      approval &&
+      live &&
+      !approval.review &&
+      approval.target.branch === (ledger?.branch ?? record?.branch)
+        ? record?.delivery?.completionOffers?.find(
+            (offer) => offer.cardId === approval.card.id && offer.offerId === approval.card.offerId,
+          )?.presentationRevision
+        : undefined;
+    const shown = clicked ?? (ledger?.published ?? ledger?.completion)?.revision;
+    const story =
+      shown === undefined
+        ? undefined
+        : ledger?.revisions?.find((entry) => entry.revision === shown);
     if (!ledger || !story?.afterMerge?.length) return [];
     return story.afterMerge.map((step, index) => ({
       id: createHash("sha256")

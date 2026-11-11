@@ -1654,9 +1654,9 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
 
   // INF-2490, the captain's q8 "include first-mate-merge": the first mate's
   // merge card on a task with a published story passes the gate a crewmate's
-  // completion card does. A newer story revision refuses its click until
-  // that revision is published, and the click merges the finishing change
-  // and closes the task as merged (q3, q6).
+  // completion card does. INF-3623: a commit after the card refuses its
+  // click, a story revised at the card's version keeps it, and the click
+  // merges the finishing change and closes the task as merged (q3, q6).
   it("merges on the captain's click of the first mate's merge card on a published story and closes the task as merged (INF-2490)", async () => {
     const crewmate = fakeCrewmate();
     const head = "5ca2d466ee21f9733827383f23df81f3874e0d10";
@@ -1705,7 +1705,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       const region = presentationMarkdown(revision, new Map(), "passed");
       return {
         revision: revision.revision,
-        head,
+        head: revision.head,
         state: "confirmed" as const,
         region,
         regionHash: createHash("sha256").update(region).digest("hex"),
@@ -1730,26 +1730,28 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       ],
     };
     const cardId = supervisor.addFirstmateCard(mergeOffer);
-    // A newer revision prepared after the offer refuses its click.
-    const second = { ...story, revision: 2 };
-    tasks.delivery.updateChangePresentation(taskId, (record) => {
-      if (!record) throw new Error("Missing story");
-      return { ...record, revisions: [...record.revisions, second] };
-    });
+    // A newer commit with its story, prepared after the offer, refuses its click.
+    const second = { ...story, revision: 2, head: "6db3e577ff32a8844938494f34f92a940985e121" };
+    const revise = (next: ChangePresentation, publish = false) =>
+      tasks.delivery.updateChangePresentation(taskId, (record) =>
+        publish
+          ? { ...record!, publication: published(next), published: published(next) }
+          : { ...record!, revisions: [...record!.revisions, next] },
+      );
+    revise(second);
     expect(() => supervisor.cardActions.act(cardId, "merge")).toThrow();
     expect(mergePullRequest).not.toHaveBeenCalled();
     expect(tasks.get(taskId)?.status).not.toBe("done");
-    // Published, the revised offer binds the newer story and its click merges.
-    tasks.delivery.updateChangePresentation(taskId, (record) => {
-      if (!record) throw new Error("Missing story");
-      return { ...record, publication: published(second), published: published(second) };
-    });
+    // Published, the revised offer binds the newer version; a story revised there keeps its click.
+    revise(second, true);
+    seedDelivery(tasks, taskId, { headSha: second.head });
     supervisor.addFirstmateCard({ ...mergeOffer, id: cardId });
     expect(tasks.get(taskId)?.delivery?.completionOffers?.at(-1)).toMatchObject({
       cardId,
-      headSha: head,
+      headSha: second.head,
       presentationRevision: 2,
     });
+    revise({ ...second, revision: 3, after: ["Restart reuses each receipt."] });
     supervisor.cardActions.act(cardId, "merge");
     await vi.waitFor(() =>
       expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "merged" }),

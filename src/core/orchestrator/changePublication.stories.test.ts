@@ -711,7 +711,9 @@ describe("shared story delivery boundaries", () => {
     });
     expect(at.bringBranchHome).not.toHaveBeenCalled();
     expect(at.readHead).not.toHaveBeenCalled();
-    // A human-directed replacement is not the same-content exception.
+    // INF-3623 (captain: "all non-code changes to the PR should keep my approval"), in
+    // PR #1450's order: a story the crewmate revised after the click, at the same code,
+    // merges under the kept approval as the newest story, noted once on the record.
     const current = at.tasks.delivery
       .changePresentation("ab12cd34")
       ?.revisions.at(-1) as ChangePresentation;
@@ -728,15 +730,24 @@ describe("shared story delivery boundaries", () => {
       "fm/task-ab12cd34",
       "fix: ship it",
     );
-    const refused = await at.service.merges.merge("ab12cd34", {
+    const kept = await at.service.merges.merge("ab12cd34", {
       head: repaired,
       prNumber: 23,
       unattended: true,
       beforeDispatch: () => undefined,
     });
-    expect(refused.ok).toBe(false);
-    expect(refused.text).toContain("differs from the approved story");
-    expect(at.forge.calls.filter((call) => call.startsWith("putIn"))).toHaveLength(1);
+    expect(kept.ok).toBe(true);
+    const newest = at.tasks.delivery
+      .changePresentation("ab12cd34")
+      ?.revisions.at(-1) as ChangePresentation;
+    expect(newest.after).toEqual(["A different account of the work."]);
+    expect(putIn).toHaveBeenCalledTimes(2);
+    expect(putIn.mock.calls[1]?.[0].squashMessage).toBe(presentationCommitMessage(newest));
+    expect(
+      at.tasks
+        .timeline("ab12cd34")
+        .filter((event) => event.data?.storyChangedAfterClick !== undefined),
+    ).toHaveLength(1);
   });
 
   // INF-2546 R9, under the captain's kept approval (FI3-304) and "others

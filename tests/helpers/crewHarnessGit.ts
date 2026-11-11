@@ -20,6 +20,7 @@ import {
 } from "@core/forge";
 import { QUEUE_STATUS, QUEUE_WAITING_WORDS } from "@core/forge/forge";
 import { type ChangeDelivery, createChangeDelivery } from "@core/orchestrator/changeDelivery";
+import { ChangePresentations } from "@core/orchestrator/changePresentations";
 import type { LineageFacts } from "@core/orchestrator/mergeAuthorization";
 import type { Card } from "@shared/cards";
 import type { CheckChangeInput } from "@shared/checkRepair";
@@ -114,6 +115,10 @@ export class KeptForge implements Forge {
   referencedBranch?: string;
   /** The heads GitHub merged, in order. */
   merges: string[] = [];
+  /** The squash summary each merge request carried, in order. */
+  squashes: (string | undefined)[] = [];
+  /** The pull request's description, as GitHub shows it. */
+  body = "";
   sends = 0;
   async listProjects() {
     return [];
@@ -146,6 +151,7 @@ export class KeptForge implements Forge {
     this.sends += 1;
     if (this.refuse) throw this.refuse;
     this.merges.push(headSha);
+    this.squashes.push(_change.squashMessage);
     this.merged = true;
     return { sha: `squash-${headSha}` };
   }
@@ -195,7 +201,7 @@ export class KeptForge implements Forge {
       branch,
       headSha: this.headSha,
       title: "fix: ship the meter",
-      body: "",
+      body: this.body,
     };
   }
 }
@@ -216,6 +222,17 @@ export async function approved(
     /** The project merges its pull requests through its queue. */
     queue?: boolean;
     realRouter?: import("./crewHarness").SetupExtras["realRouter"];
+    /**
+     * Save the task's change story before its card goes up, through the
+     * app's own story service: the hook seeds it and answers the revision
+     * the merge card shows (INF-3623).
+     */
+    story?: (at: {
+      tasks: import("@core/tasks/taskService").TaskService;
+      taskId: string;
+      branch: string;
+      forge: KeptForge;
+    }) => number;
   } = {},
 ) {
   const forge = new KeptForge(where.kind);
@@ -229,8 +246,22 @@ export async function approved(
     if (!delivery) throw new Error("check service not ready");
     return delivery;
   };
+  const presentations = where.story
+    ? (tasks: import("@core/tasks/taskService").TaskService) =>
+        new ChangePresentations({
+          tasks,
+          mediaDir: () => scratchDir("infinitary-kept-story-"),
+          head: async () => forge.headSha,
+        })
+    : undefined;
   const harness = setup(crewmate, {
     crewmates: [reviewer],
+    ...(where.story
+      ? {
+          completionPresentation: (id: string, revision: number) =>
+            service().publication.completionPresentation(id, revision),
+        }
+      : {}),
     ...(where.realRouter ? { realRouter: where.realRouter } : {}),
     checkCi: (id) => service().checks.readForOffer(id),
     mergePullRequest: (id, guard, beforeDispatch) =>
@@ -249,6 +280,7 @@ export async function approved(
     forgeFor: () => forge,
     validateRange: async () => {},
     lineageFacts: async () => facts,
+    ...(presentations ? { presentations: presentations(harness.tasks) } : {}),
   });
   const { dir } = gitRepo("meter");
   execFileSync("git", [
@@ -273,8 +305,15 @@ export async function approved(
   await tick();
   if (where.referenced) await service().checkTool.checkForCrew(taskId, { pull: 7 });
   const review = harness.tasks.get(taskId)?.delivery?.mergeReviews?.[0];
+  const presentationRevision = where.story?.({
+    tasks: harness.tasks,
+    taskId,
+    branch: harness.tasks.get(taskId)?.branch ?? "",
+    forge,
+  });
   const emit = (title: string) =>
     harness.specs[0]?.onCard?.({
+      ...(presentationRevision === undefined ? {} : { presentationRevision }),
       requiredActions: [],
       title,
       body: completionBody("<p>The PR is ready.</p><p>CI is green on the tested head.</p>"),

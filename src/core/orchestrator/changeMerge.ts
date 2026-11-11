@@ -172,6 +172,8 @@ function storyHeld(caught: unknown): never {
  */
 export class ChangeMerge {
   private readonly options: ChangeDeliveryOptions;
+  /** The story changes after a click already noted on their task's record. */
+  private readonly storyNoted = new Set<string>();
 
   constructor(
     private readonly context: ChangeContext,
@@ -460,9 +462,9 @@ export class ChangeMerge {
    * a continuing one: the published story at this version, or the
    * description's own words under the captain's override on the story
    * (INF-1365). A pull request with no story of this task merges as it is.
-   * On the captain's kept approval of a merge card's offer the story must be
-   * the one approved; an approval that names a review needs none, since
-   * its card showed no story. A pull request that moved past the published version
+   * On the captain's kept approval of a merge card's offer the newest story
+   * merges, even one revised after the click: approval follows the code
+   * (INF-3623). A pull request that moved past the published version
    * has the story republished at its version first, words unchanged
    * (INF-2509): on a kept approval only at the version it covers, and a
    * repair the host accepted keeps its own words (FI3-304). The captain's
@@ -498,18 +500,23 @@ export class ChangeMerge {
         change: { ...read, squashMessage: messageWithoutPresentation(read.body ?? "", taskId) },
       };
     const authorization = guard ? standingAuthorization(record?.delivery) : undefined;
+    // Approval follows the code, never the story's words (INF-3623): a story
+    // revised after the click merges as the newest one, noted once.
     if (authorization && !authorization.review) {
       const offered = record?.delivery?.completionOffers?.find(
         (offer) =>
           offer.cardId === authorization.card.id && offer.offerId === authorization.card.offerId,
       );
-      if (
-        !offered?.presentationContentHash ||
-        offered.presentationContentHash !== ledger.published?.contentHash
-      )
-        throw new Error(
-          "The published story differs from the approved story. Show a new merge card before merging.",
+      const now = ledger.published?.contentHash;
+      const seen = `${taskId}:${offered?.offerId}:${now}`;
+      if (offered && now && offered.presentationContentHash !== now && !this.storyNoted.has(seen)) {
+        this.storyNoted.add(seen);
+        this.options.tasks.note(
+          taskId,
+          "The story changed after the merge click; the merge carries the newest story.",
+          { news: false, data: { storyChangedAfterClick: now } },
         );
+      }
     }
     const held = guard?.held?.();
     if (held) return { held };

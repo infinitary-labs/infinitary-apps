@@ -531,7 +531,7 @@ describe("saved change publication", () => {
     expect(at.upload).toHaveBeenCalledTimes(2);
   });
 
-  it("checks complete receipts, retained evidence, human edits and audience again before completion", async () => {
+  it("checks complete receipts, retained evidence and audience again before completion, past human edits", async () => {
     const at = await arrange();
     await at.prepare();
     const change = await at.publish();
@@ -551,13 +551,17 @@ describe("saved change publication", () => {
     ).resolves.toMatchObject({
       squashMessage: `${at.draft.whatChanged.join("\n\n")}\n\n${footer}`,
     });
+    // INF-3623 (captain: "all non-code changes to the PR should keep my approval"): a
+    // person's edit inside the story no longer holds the merge; the squash is the saved story's.
     await expect(
       at.service.assertPublished(
         TASK,
-        { ...change, body: change.body?.replace("## Why", "## Human edit") },
+        { ...change, body: `${change.body?.replace("## Why", "## Human edit")}\n\n${footer}` },
         at.forge,
       ),
-    ).rejects.toThrow(/Someone edited/);
+    ).resolves.toMatchObject({
+      squashMessage: `${at.draft.whatChanged.join("\n\n")}\n\n${footer}`,
+    });
     at.setVisibility("private");
     await expect(at.service.assertPublished(TASK, change, at.forge)).rejects.toThrow(
       /audience changed/,

@@ -152,16 +152,14 @@ export class SettleService {
         !hostedPresentation(story.destination) &&
         !overridePasses(record.delivery, "story", at)
       ) {
+        // Approval follows the code, never the story's words (INF-3623): a
+        // story revised at the clicked version lands as the newest one, and
+        // only another commit stops the click.
         const ready = readyPresentation(record.delivery?.presentation);
-        if (
-          !ready ||
-          !initialStory ||
-          ready.head !== at ||
-          ready.head !== initialStory.head ||
-          ready.revision !== initialStory.revision ||
-          ready.contentHash !== initialStory.contentHash
-        )
-          return `the current story differs from the one on the merge card. ${softHoldWords("story", "firstmate")}`;
+        if (!ready || !initialStory || ready.head !== at)
+          return `the newest story is not ready at this version. ${softHoldWords("story", "firstmate")}`;
+        if (ready.head !== initialStory.head)
+          return `another commit came after the merge card. ${softHoldWords("story", "firstmate")}`;
       }
       if (actor !== "captain" && !overridePasses(record.delivery, "decisions", at)) {
         // The first mate's own cards never hold its own merge (INF-242's

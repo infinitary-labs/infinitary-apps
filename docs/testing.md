@@ -173,6 +173,7 @@ Five main thread freezes (INF-703, INF-940, INF-1348, INF-1956, INF-2059) were s
 A plan is what grows with the record, so the statement check reads plans (INF-2061).
 `tests/helpers/statementCheck.ts` is a setup file of the `unit`, `unit-isolated`, `integration` and `probe` projects.
 It records every statement the app's own code prepares while a test file runs: the first caller under `src/` that is not a test, so a test's own statements and a helper's are left out.
+It finds that caller from the stack as the engine holds it and maps each call path to its source lines once per test worker, since a migrated record makes thousands of prepares and mapping each one's stack would cost most of a database-backed test's time (INF-3596).
 When the file ends, it plans each one with `EXPLAIN QUERY PLAN` against a freshly migrated database (the app's record, or the knowledge collection when only that schema compiles it), with every parameter bound as NULL.
 The file fails on a walk the ledger does not explain: a `SCAN` of a growing table, read through a view's alias too, and a temporary b-tree in a statement that makes one.
 A search through an index, a temporary b-tree over the rows an index sought, and a virtual table's own index are not walks.

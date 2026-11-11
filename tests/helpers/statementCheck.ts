@@ -19,24 +19,40 @@ type Census = {
   file: Map<string, string>;
   /** SQL text -> its plan, kept for the worker's life. */
   plans: Map<string, PlannedStatement | null>;
+  /** A call path's unmapped frames -> its `appOrigin`, kept for the worker's life. */
+  origins: Map<string, string | undefined>;
   planning: boolean;
 };
 
 const CENSUS = Symbol.for("infinitary.statementCensus");
 const holder = globalThis as unknown as { [CENSUS]?: Census };
-const census: Census = holder[CENSUS] ?? { file: new Map(), plans: new Map(), planning: false };
+const census: Census = holder[CENSUS] ?? {
+  file: new Map(),
+  plans: new Map(),
+  origins: new Map(),
+  planning: false,
+};
 if (!holder[CENSUS]) {
   holder[CENSUS] = census;
   const prepare = Database.prototype.prepare;
   Database.prototype.prepare = function (this: Database.Database, source: string) {
-    if (!census.planning) {
-      const origin = appOrigin();
-      if (origin && !census.file.has(source)) census.file.set(source, origin);
+    // The first origin of a statement is the one kept, so a statement this
+    // file already recorded costs nothing more.
+    if (!census.planning && !census.file.has(source)) {
+      const path = callPath();
+      if (!census.origins.has(path)) census.origins.set(path, appOrigin());
+      const origin = census.origins.get(path);
+      if (origin) census.file.set(source, origin);
     }
     return prepare.call(this, source);
   } as typeof prepare;
 }
 census.file = new Map();
+
+/** The statements the app prepared in the file now running, with where it prepared each. */
+export function recordedStatements(): ReadonlyMap<string, string> {
+  return census.file;
+}
 
 /**
  * Runs a fixture's bulk seeding without recording what it prepares. Reading
@@ -55,6 +71,51 @@ export function outsideCensus<T>(work: () => T): T {
   }
 }
 
+/** A stack line: its caller, file and line. */
+const FRAME = /^at (?:(\S+) \()?((?:file:\/\/)?\/[^()]+?):(\d+):\d+\)?$/;
+
+/** The stack lines an origin reads. */
+const FRAMES = 40;
+
+/**
+ * Whether the walk up the stack passes over a file (a package, or this
+ * check), reads it as the app's own code, or ends there (a test or a helper).
+ */
+function frameKind(path: string): "pass" | "app" | "end" {
+  if (path.includes("/node_modules/") || path.includes("/tests/helpers/statement")) return "pass";
+  return path.lastIndexOf("/src/") < 0 || /\.test\.tsx?$/.test(path) ? "end" : "app";
+}
+
+/**
+ * The stack lines `appOrigin` decides by, as the engine holds them before
+ * the module runner maps each to its source: up to the first that ends its
+ * walk. A migrated record makes thousands of prepares, and mapping each
+ * one's stack would cost a database-backed test most of its time
+ * (INF-3596). Unmapped lines map the same way each time, so a call path is
+ * mapped once.
+ */
+function callPath(): string {
+  const limit = Error.stackTraceLimit;
+  const format = Error.prepareStackTrace;
+  Error.stackTraceLimit = FRAMES;
+  Error.prepareStackTrace = (_error, sites) => sites;
+  try {
+    const held: { stack?: NodeJS.CallSite[] } = {};
+    Error.captureStackTrace(held, callPath);
+    const lines: string[] = [];
+    for (const site of held.stack ?? []) {
+      const line = `at ${site}`;
+      lines.push(line);
+      const at = FRAME.exec(line);
+      if (at && frameKind(at[2] ?? "") === "end") break;
+    }
+    return lines.join("\n");
+  } finally {
+    Error.prepareStackTrace = format;
+    Error.stackTraceLimit = limit;
+  }
+}
+
 /**
  * The first caller outside better-sqlite3 and this file, when it is the
  * app's own code: a test's own statements, and a helper's, are not the app's.
@@ -63,18 +124,18 @@ export function outsideCensus<T>(work: () => T): T {
  */
 function appOrigin(): string | undefined {
   const limit = Error.stackTraceLimit;
-  Error.stackTraceLimit = 40;
+  Error.stackTraceLimit = FRAMES;
   const stack = new Error().stack ?? "";
   Error.stackTraceLimit = limit;
   let origin: string | undefined;
   for (const line of stack.split("\n").slice(1)) {
-    const at = /^at (?:(\S+) \()?((?:file:\/\/)?\/[^()]+?):(\d+):\d+\)?$/.exec(line.trim());
+    const at = FRAME.exec(line.trim());
     if (!at) continue;
     const [, caller, path = "", lineNumber] = at;
-    if (path.includes("/node_modules/") || path.includes("/tests/helpers/statement")) continue;
-    const src = path.lastIndexOf("/src/");
-    if (src < 0 || /\.test\.tsx?$/.test(path)) return origin;
-    const file = path.slice(src + 1);
+    const kind = frameKind(path);
+    if (kind === "pass") continue;
+    if (kind === "end") return origin;
+    const file = path.slice(path.lastIndexOf("/src/") + 1);
     // A call through a module's exports names the function `Module.<name>`.
     const name = caller?.replace(/^Module\./, "");
     if (`${file} ${name}` in ONE_TIME_CALLERS) return undefined;

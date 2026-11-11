@@ -23,7 +23,7 @@ import { keepPhoneFailureLogs, runPhoneLog } from "./phone-failure-logs.ts";
 import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-leftovers.ts";
 import { phoneRecording } from "./phone-recording.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
-import { phoneSharedCacheFolder, phoneSimulator, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
+import { phoneSharedCacheFolder, phoneSimulator, phoneSimulatorBooted, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
 import { devicePhotos, endPhoneGate, PHONE_PARTS, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phonePasses, phoneStopsEarly, relaunchPairs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
@@ -112,11 +112,14 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) process.once(signal, () => 
   interrupted = true;
   for (const child of children) child.kill("SIGTERM");
 });
-// A cleanup command, such as deleting a simulator the gate started, still runs after an interruption.
-const run = async (command: string, args: string[], cleanup = false, onLine?: (line: string) => void) => {
+// A cleanup command, such as deleting a simulator the gate started, still runs after an interruption; `stop` ends one
+// the gate no longer waits for.
+const run = async (command: string, args: string[], cleanup = false, onLine?: (line: string) => void, stop?: AbortSignal) => {
   if (interrupted && !cleaningUp && !cleanup) throw new Error("The native gate was interrupted");
   const child = spawn(command, args, { cwd: REPO_ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
   children.add(child);
+  const end = () => child.kill("SIGTERM");
+  stop?.addEventListener("abort", end, { once: true });
   let output = "";
   child.stdout.on("data", (part) => { output += part; });
   child.stderr.on("data", (part) => { output += part; });
@@ -127,7 +130,7 @@ const run = async (command: string, args: string[], cleanup = false, onLine?: (l
   }) : [];
   const status = await new Promise<number | null>((resolveExit, reject) => {
     child.once("error", reject); child.once("close", resolveExit);
-  }).finally(() => { children.delete(child); for (const reader of readers) reader.close(); });
+  }).finally(() => { children.delete(child); stop?.removeEventListener("abort", end); for (const reader of readers) reader.close(); });
   const log = join(evidence, `${++number}-${command.replaceAll("/", "-")}.log`);
   writeFileSync(log, output);
   if (status !== 0) throw Object.assign(new Error(`${command} failed (${status}); see ${log}`), { output });
@@ -303,6 +306,9 @@ type Lane = { device: PhoneDevice; owned: string; booted: Date; photos?: ReturnT
 // INF-2445: once per gate, before its first simulator starts, an empty cache folder of the pinned runtime goes, so the
 // kept log every recovery reads spells out the shared cache's words (`removeEmptyPhoneSharedCache`).
 let sharedCache: Promise<void> | undefined;
+// `simctl bootstatus -b` boots the simulator and prints each step of its boot; the gate waits for it within its budget.
+const bootSimulator = (device: PhoneDevice, owned: string) => phoneSimulatorBooted({ device, simulator: owned,
+  boot: (stop, heard) => run("xcrun", ["simctl", "bootstatus", owned, "-b"], false, heard, stop) });
 const startSimulator = async (device: PhoneDevice): Promise<Lane> => {
   const catalog = JSON.parse(await run("xcrun", ["simctl", "list", "--json"]));
   const { kind, runtime } = phoneSimulator(catalog, device);
@@ -316,7 +322,11 @@ const startSimulator = async (device: PhoneDevice): Promise<Lane> => {
   ownedSimulators.add(owned);
   // CoreSimulator is a host service, not a signing operation. This new device owns its own Keychain.
   const booted = new Date();
-  await run("xcrun", ["simctl", "bootstatus", owned, "-b"]);
+  // INF-3689: a boot that never finishes fails its lane in minutes, named in the log as it happens.
+  await bootSimulator(device, owned).catch((error: Error) => {
+    console.log(`::error::${error.message}`);
+    throw error;
+  });
   console.log(`${device}: started simulator ${owned} in ${((Date.now() - booted.getTime()) / 60_000).toFixed(1)} minutes`);
   return { device, owned, booted };
 };
@@ -347,7 +357,7 @@ const readyForPart = async (lane: Lane, name: string) => {
     lane.booted = new Date();
     // Photos opens its library again after the boot; a part that chooses a photo waits for it, and its photo, again.
     lane.photos?.restarted();
-    await run("xcrun", ["simctl", "bootstatus", owned, "-b"]);
+    await bootSimulator(device, owned);
     lane.photos?.watched().catch(() => {});
   }
   const apps = await installedApps(owned);

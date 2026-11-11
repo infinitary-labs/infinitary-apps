@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-boot-budget",
+      "reason": "Internal: the phone check now fails within minutes, naming the stuck step, when its simulator never finishes booting, instead of waiting for the job's 90-minute limit; nothing in the app changes."
+    }
+  ]
+}

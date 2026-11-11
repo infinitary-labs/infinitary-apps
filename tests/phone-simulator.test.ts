@@ -1,10 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  PHONE_BOOT_BUDGET_MS,
   PHONE_PIN,
   phoneSharedCacheFolder,
   phoneSimulator,
+  phoneSimulatorBooted,
   phoneXcode,
   removeEmptyPhoneSharedCache,
   SIMULATOR_CACHES,
@@ -171,5 +173,78 @@ describe("the pinned runtime's shared-cache folder on the Mac", () => {
     expect(await removeEmptyPhoneSharedCache(kept, async () => {})).toBe(
       `Removing ${kept}, which holds no shared cache, left it in place, so the simulator's kept log cannot spell out messages whose words live in its shared cache`,
     );
+  });
+});
+
+// INF-3689: a release check's iPhone simulator never finished booting, and the gate's `simctl bootstatus -b` sat silent
+// until the job's 90-minute limit. The pinned iPhone's real `simctl bootstatus -b` output on a Mac mini, from create to
+// finished, in 15 seconds.
+const BOOT_TEXT = readFileSync("tests/fixtures/phone-simulator/bootstatus-iphone-16.txt", "utf8");
+const BOOT_READING = BOOT_TEXT.split("\n");
+const BOOTED =
+  /^Monitoring boot status for .* \(([0-9A-F-]+)\)\.$/m.exec(BOOT_TEXT)?.[1] ?? "unread";
+
+describe("the gate's wait for a simulator to boot", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  // A stand-in for the gate's `run` of `simctl bootstatus -b`: it prints `lines` as the boot does, then ends when
+  // `finishes`, or, as a boot that never finishes, only once the wait stops it.
+  const bootstatus = (lines: string[], finishes: boolean) => {
+    const stops: AbortSignal[] = [];
+    const boot = (stop: AbortSignal, heard: (line: string) => void) => {
+      stops.push(stop);
+      for (const line of lines) heard(line);
+      if (finishes) return Promise.resolve(lines.join("\n"));
+      return new Promise<string>((_resolve, reject) => {
+        stop.addEventListener("abort", () => reject(new Error("xcrun failed (null)")), {
+          once: true,
+        });
+      });
+    };
+    return { boot, stops };
+  };
+
+  it("fails a boot that never finishes once its budget has passed, naming the simulator and the step it last printed", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    // The boot as far as its first migration step that names a plugin, where it then stays.
+    const until = BOOT_READING.findIndex((line) => line.includes("Reason:Running plugin"));
+    const printed = BOOT_READING.slice(0, until + 3);
+    const { boot, stops } = bootstatus(printed, false);
+    let ended = false;
+    const waiting = phoneSimulatorBooted({ device: "iphone", simulator: BOOTED, boot }).finally(
+      () => {
+        ended = true;
+      },
+    );
+    waiting.catch(() => {});
+    await vi.advanceTimersByTimeAsync(PHONE_BOOT_BUDGET_MS - 1);
+    expect(ended).toBe(false);
+    expect(stops.map((stop) => stop.aborted)).toEqual([false]);
+    await vi.advanceTimersByTimeAsync(1);
+    const failure = await waiting.then(
+      () => undefined,
+      (error: Error) => error.message,
+    );
+    // The gate stopped the boot it no longer waits for.
+    expect(stops.map((stop) => stop.aborted)).toEqual([true]);
+    const lastStep = printed
+      .slice(printed.findLastIndex((line) => / Status=/.test(line)) + 1)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    expect(lastStep[0]).toBe("Waiting on Data Migration");
+    expect(failure).toBe(
+      `iphone: simulator ${BOOTED} had not finished booting after ${(PHONE_BOOT_BUDGET_MS / 60_000).toFixed(1)} minutes,` +
+        ` so the gate stopped waiting; its boot last printed: ${lastStep.join("; ")}`,
+    );
+  });
+
+  it("ends as soon as a boot finishes, leaving no budget running", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const { boot, stops } = bootstatus(BOOT_READING, true);
+    await phoneSimulatorBooted({ device: "iphone", simulator: BOOTED, boot });
+    expect(stops.map((stop) => stop.aborted)).toEqual([false]);
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

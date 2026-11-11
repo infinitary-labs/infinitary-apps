@@ -454,9 +454,9 @@ export const ALLOWS_PARAM =
  */
 export const SAVED_STORY_RULE = [
   "The saved-story rule, said once: every branch and local-only change uses prepare_change's story.",
-  "Pass the current revision as presentation here and to open_change, using its saved title, one merge action and no body, body_file, risk or required_actions; with autonomy on the app merges from it.",
+  "Pass the current revision as presentation here and to open_change, using its saved title, one merge action and no body, body_file, risk or required_actions; with autonomy on the app merges from it. When the host identifies an upstream contribution, show its published presentation as a note with no actions instead; its maintainers merge it.",
   "Local-only skips open_change: prepare the committed story, then show it. Publish other branches with open_change; the host uses the story after checks pass.",
-  "Public GitHub and GitLab upload selected inspected media; other description hosts publish text, keeping media on the card. Plain Git keeps the story there. Never downgrade a failed upload.",
+  "Public GitHub and GitLab upload selected inspected media unless the host declares the contribution's media card-only; that route publishes text and keeps pictures on the card. Other description hosts publish text, keeping media on the card. Plain Git keeps the story there. Never downgrade a failed upload.",
   "Keep local paths and private threads out of published text. After a push, show the same presentation: the host republishes a pull request's published story at the pushed version. Changed story words, or a later local-only or plain-branch commit, need a newly prepared revision with the same base and title and updated verification; publish where needed before the card.",
   "After the captain's merge click, a story revised at the same version keeps their approval: publish it and put up no new merge card, which would ask them again; only another commit needs one.",
 ].join(" ");
@@ -691,12 +691,15 @@ async function emitCard(
     cardBodiesDir?: string;
     /** The schema offered `browser_button`: the crewmate's task has its own browser. */
     browserButton?: boolean;
+    contributionNotes?: boolean;
   },
 ): Promise<string> {
   if (!options.firstmate && params.presentation !== undefined) {
     const actions = params.actions ?? [];
     const merges =
       actions.length === 1 && actions[0]?.effect?.kind === "merge" && !actions[0].effect.review;
+    // The home alone knows whether this task contributes upstream and may
+    // show an actionless story. It refuses that shape on an ordinary task.
     // The risk and required actions of a saved-story merge card are the
     // saved revision's facts. A copy is handed on for the home to hold
     // against the story, which leaves out one that repeats it exactly and
@@ -705,7 +708,7 @@ async function emitCard(
     // refused here as before: the story's body carries media names the home
     // mints as it shows the card, so no copy could match it.
     if (
-      !merges ||
+      (!merges && !(options.contributionNotes && actions.length === 0)) ||
       params.body !== undefined ||
       params.body_file !== undefined ||
       params.browser_button ||
@@ -880,6 +883,7 @@ function crewmateEmitCard(
         text: await emitCard(params, {
           onCard: (card) => callWithSignal(onCard, [card], signal),
           cardBodiesDir: delegate.cardBodiesDir,
+          contributionNotes: delegate.contributionNotes,
           browserButton,
           ...(pictures ? { pictures } : {}),
         }),

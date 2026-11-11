@@ -278,6 +278,13 @@ export type QueueMark = { head: string; id?: number; at: number; answered?: bool
 
 /** Delivery facts, as they become known (check_pr_ci, land, merge-pr, review). */
 export type TaskDelivery = {
+  /** A prepared task's publication target, independent of later project route choices. */
+  publicationOrigin?: string;
+  /** Credential-free push transport captured with the task's publication route. */
+  publicationPushOrigin?: string;
+  /** The selected contribution route stays with this task after project settings change. */
+  contribution?: import("@shared/contributions").ContributionRoute;
+  contributionState?: import("@shared/contributions").ContributionState;
   /**
    * The task's latest typed result as a release before INF-1296 piece 1
    * kept it: a copy of the newest report's. Nothing writes it now; the

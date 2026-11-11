@@ -216,6 +216,8 @@ export type CrewSupervisorOptions = {
   sessionSpec?: (crewmate: CrewmateSpec, binding: SessionBinding) => SessionSpec;
   workspace: WorkspaceService;
   repos: RepoRegistry;
+  /** Resolve a project's contribution destination before starting code work, on either computer. */
+  prepareContribution?: (taskId: string) => Promise<string | undefined>;
   /** The one task writer (task-system P0): every record change goes through it. */
   tasks: TaskService;
   taskTimeline?: import("../tasks/taskTimeline").TaskTimeline;

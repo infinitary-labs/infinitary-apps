@@ -12,6 +12,11 @@ import {
   unlinkSync,
 } from "node:fs";
 import { basename, isAbsolute, join, resolve, sep } from "node:path";
+import {
+  type ContributionRoute,
+  contributionOriginMatches,
+  contributionRouteSchema,
+} from "@shared/contributions";
 import { type ForgeKind, forgeOf, type KnownForgeHost } from "@shared/forge";
 import { AUTOMATIC_COMPUTER, placementRequirementsSchema } from "@shared/placement";
 import {
@@ -99,16 +104,20 @@ type Row = {
   queue_answered_at?: number | null;
   queue_pending_at?: number | null;
   queue_pause_json?: string | null;
+  contribution_json?: string | null;
 };
 
 const ROW_COLUMNS =
-  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at, queue_pending_at, queue_pause_json";
+  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope, queue_workflows_json, queue_answered_at, queue_pending_at, queue_pause_json, contribution_json";
 
 function fromRow(row: Row): RepoView {
+  const contribution = row.contribution_json ? JSON.parse(row.contribution_json) : null;
   return {
     id: row.id,
     name: row.name,
     scope: row.scope,
+    ...(row.contribution_json != null ? { contributionChecked: true } : {}),
+    ...(contribution ? { contribution: contributionRouteSchema.parse(contribution) } : {}),
     path: row.path,
     setupKind: row.setup_kind,
     kind: row.kind,
@@ -505,6 +514,27 @@ export class RepoRegistry {
     return row ? fromRow(row) : undefined;
   }
 
+  /** The registry is the only writer of verified host identities and contribution consent. */
+  setContribution(id: string, route: ContributionRoute): RepoView {
+    const repo = this.get(id);
+    if (!repo) throw new Error("That project is no longer here.");
+    const contribution = contributionRouteSchema.parse(route);
+    this.db
+      .prepare("UPDATE repos SET contribution_json = ? WHERE id = ?")
+      .run(JSON.stringify(contribution), id);
+    this.projection?.delete(id);
+    return { ...repo, contribution, contributionChecked: true };
+  }
+
+  /** JSON null records a successful inspection without a contribution route; SQL null is undiscovered. */
+  markContributionChecked(id: string): RepoView {
+    this.db.prepare("UPDATE repos SET contribution_json = 'null' WHERE id = ?").run(id);
+    this.projection?.delete(id);
+    const repo = this.get(id);
+    if (!repo) throw new Error("That project is no longer here.");
+    return repo;
+  }
+
   /**
    * Change a repo's delivery posture, autonomy flag, and/or standing rigor
    * (delivery rigor phase 3). Standard is the standing default. The personal
@@ -570,6 +600,15 @@ export class RepoRegistry {
             changes.scope === undefined ? (repo.scope ?? null) : changes.scope,
             id,
           );
+        if (
+          changes.origin !== undefined &&
+          origin !== repo.origin &&
+          (!repo.contribution ||
+            ![repo.contribution.upstream, repo.contribution.fork].some(
+              (project) => project && contributionOriginMatches(project, origin, where.kind),
+            ))
+        )
+          this.db.prepare("UPDATE repos SET contribution_json = NULL WHERE id = ?").run(id);
         // Any choice of delivery answers a batched choice that waited.
         if (changes.delivery !== undefined && repo.queuePendingAt !== undefined)
           this.db.prepare("UPDATE repos SET queue_pending_at = NULL WHERE id = ?").run(id);

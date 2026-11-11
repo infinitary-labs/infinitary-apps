@@ -1,3 +1,4 @@
+import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { forgePlace } from "@shared/forge";
 import type { ForgeProject } from "@shared/forges";
 import type { QueueCredential } from "@shared/repos";
@@ -25,6 +26,7 @@ import {
 import { gitLabReleaseUpload, nextGitLabPagePath, parseGitLabApiRequest } from "./api";
 import { GitLabAttachments, gitlabStoryDestination } from "./attachments";
 import { GITLAB_READ_MAX_BYTES, GitLabClient, type GitLabOptions } from "./client";
+import { GitLabContributions } from "./contributions";
 import { GitLabProjects } from "./projects";
 import { GitLabQueue } from "./queue";
 import { GitLabWorkflows } from "./workflows";
@@ -58,6 +60,7 @@ import { GitLabWorkflows } from "./workflows";
  */
 
 type MergeRequestJson = {
+  updated_at?: string;
   iid: number;
   project_id?: number;
   source_project_id?: number;
@@ -82,7 +85,14 @@ type MergeRequestJson = {
   merge_error?: string | null;
 };
 
-type PipelineJson = { id: number; sha: string; ref: string; status: string; source?: string };
+type PipelineJson = {
+  id: number;
+  project_id?: number;
+  sha: string;
+  ref: string;
+  status: string;
+  source?: string;
+};
 
 type JobJson = {
   id: number;
@@ -155,14 +165,31 @@ export class GitLabForge implements Forge {
     }
   }
 
+  get contributions() {
+    return new GitLabContributions(this.projectPath(), this.client);
+  }
+
+  private requireMaintainer(): void {
+    if (this.location.source) throw new ForgeError("permission", CONTRIBUTION_MERGE_REFUSAL);
+  }
+
+  private sourcePath(): string {
+    return this.location.source ? `/projects/${this.location.source.id}` : this.projectPath();
+  }
+
   async storyDestination() {
     const fullName = `${this.location.owner}/${this.location.name}`;
     const { destination } = gitlabStoryDestination(
       await this.read(this.projectPath()),
       fullName,
       this.host,
+      this.location.source ? "describe" : "upload",
     );
-    return { ...destination, format: this.kind };
+    return {
+      ...destination,
+      format: this.kind,
+      ...(this.location.source ? { media: "card-only" as const } : {}),
+    };
   }
 
   listProjects(): Promise<ForgeProject[]> {
@@ -203,8 +230,11 @@ export class GitLabForge implements Forge {
       }));
     const opened = (await this.client.write(
       "POST",
-      `${this.projectPath()}/merge_requests`,
+      `${this.sourcePath()}/merge_requests`,
       {
+        ...(this.location.source
+          ? { target_project_id: ((await this.read(this.projectPath())) as { id: number }).id }
+          : {}),
         source_branch: input.branch,
         target_branch: target,
         title: input.draft ? `Draft: ${input.title}` : input.title,
@@ -219,7 +249,7 @@ export class GitLabForge implements Forge {
     let found: { commit?: { id?: unknown } } | null;
     try {
       found = (await this.read(
-        `${this.projectPath()}/repository/branches/${encodeURIComponent(branch)}`,
+        `${this.sourcePath()}/repository/branches/${encodeURIComponent(branch)}`,
       )) as { commit?: { id?: unknown } } | null;
     } catch (caught) {
       if (caught instanceof ForgeError && caught.failure === "sign-in") throw caught;
@@ -275,13 +305,15 @@ export class GitLabForge implements Forge {
       `${this.projectPath()}/merge_requests?state=opened&source_branch=${encodeURIComponent(branch)}&per_page=20`,
     )) as MergeRequestJson[];
     if (!Array.isArray(listed)) throw unreadable(this.place, "its merge requests");
-    // A merge request from this project's own branch, never a fork's of the same name.
+    // Source identity disambiguates a fork from an upstream branch with the same name.
     const open = listed.find(
       (request) =>
         request.source_branch === branch &&
-        (request.source_project_id === undefined ||
-          request.project_id === undefined ||
-          request.source_project_id === request.project_id),
+        (this.location.source
+          ? request.source_project_id === this.location.source.id
+          : request.source_project_id === undefined ||
+            request.project_id === undefined ||
+            request.source_project_id === request.project_id),
     );
     return open ? this.changeOf(open) : null;
   }
@@ -291,7 +323,7 @@ export class GitLabForge implements Forge {
     const head = movedPast ?? change.headSha;
     const ofRequest = await this.pipelines(`${this.mergeRequestPath(iid)}/pipelines?per_page=100`);
     const onHead = await this.pipelines(
-      `${this.projectPath()}/pipelines?sha=${encodeURIComponent(head)}&per_page=100`,
+      `${this.sourcePath()}/pipelines?sha=${encodeURIComponent(head)}&per_page=100`,
     );
     const counted = await this.countedPipelines([...ofRequest, ...onHead], head, iid);
     const items: ForgeCheck[] = [];
@@ -312,11 +344,13 @@ export class GitLabForge implements Forge {
     return { items, complete };
   }
 
-  markQueued(sha: string, approval?: ForgeQueueApproval): Promise<ForgeQueueMark> {
+  async markQueued(sha: string, approval?: ForgeQueueApproval): Promise<ForgeQueueMark> {
+    this.requireMaintainer();
     return this.queue.markQueued(sha, approval);
   }
 
-  removeQueued(sha: string, number: number): Promise<void> {
+  async removeQueued(sha: string, number: number): Promise<void> {
+    this.requireMaintainer();
     return this.queue.removeQueued(sha, number);
   }
 
@@ -328,7 +362,8 @@ export class GitLabForge implements Forge {
     return this.queue.pause();
   }
 
-  startQueue(start: ForgeQueueStart): Promise<void> {
+  async startQueue(start: ForgeQueueStart): Promise<void> {
+    this.requireMaintainer();
     return this.queue.start(start);
   }
 
@@ -391,6 +426,7 @@ export class GitLabForge implements Forge {
   }
 
   async putIn(change: ForgeChange, headSha: string): Promise<{ sha?: string }> {
+    this.requireMaintainer();
     const iid = numbered(change, this.place);
     const title = requireConventional(
       change.title ?? "",
@@ -470,6 +506,7 @@ export class GitLabForge implements Forge {
       state: request.state === "opened" || request.state === "locked" ? "open" : "closed",
       merged,
       ...(merged && mergedSha ? { mergedSha } : {}),
+      ...(request.updated_at ? { updatedAt: request.updated_at } : {}),
       headSha: headOf(request, this.place),
       base: request.target_branch,
       ...(request.source_branch ? { branch: request.source_branch } : {}),
@@ -554,16 +591,23 @@ export class GitLabForge implements Forge {
       if (!ref || Number(ref[1]) !== iid || ref[2] === "head") continue;
       if (opened >= MAX_MERGE_COMMIT_READS) continue;
       opened += 1;
-      if (await this.mergesHead(pipeline.sha, head)) counted.push(pipeline);
+      if (await this.mergesHead(pipeline.sha, head, this.pipelineProject(pipeline)))
+        counted.push(pipeline);
     }
     return counted.sort((a, b) => a.id - b.id);
   }
 
   /** Whether a merged-result commit merges the head: the head is one of its parents. */
-  private async mergesHead(sha: string, head: string): Promise<boolean> {
+  private pipelineProject(pipeline: PipelineJson): string {
+    return pipeline.project_id === undefined
+      ? this.projectPath()
+      : `/projects/${pipeline.project_id}`;
+  }
+
+  private async mergesHead(sha: string, head: string, project: string): Promise<boolean> {
     try {
       const commit = (await this.read(
-        `${this.projectPath()}/repository/commits/${encodeURIComponent(sha)}`,
+        `${project}/repository/commits/${encodeURIComponent(sha)}`,
       )) as { parent_ids?: string[] } | null;
       return commit?.parent_ids?.includes(head) === true;
     } catch (caught) {
@@ -590,7 +634,7 @@ export class GitLabForge implements Forge {
     ];
     for (let page = 1; page <= MAX_JOB_PAGES; page++) {
       const jobs = await this.read(
-        `${this.projectPath()}/pipelines/${pipeline.id}/jobs?per_page=100&page=${page}`,
+        `${this.pipelineProject(pipeline)}/pipelines/${pipeline.id}/jobs?per_page=100&page=${page}`,
       );
       if (!Array.isArray(jobs)) throw unreadable(this.place, `pipeline #${pipeline.id}'s jobs`);
       for (const job of jobs as JobJson[]) {

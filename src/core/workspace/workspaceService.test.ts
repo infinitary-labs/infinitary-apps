@@ -703,6 +703,28 @@ describe("taskWorkStatus (P1: what a discard would destroy)", () => {
   });
 });
 
+// R4: optional Git bookkeeping cannot retain a saved task tree when its project disappears.
+describe("retiring a task after its project folder disappears", () => {
+  it.each([false, true])("removes the task tree with a prepared remote: %s", async (bound) => {
+    const { workspace, paths } = await service();
+    const repo = await workspace.ensureDefaultRepo();
+    const origin = join(dirname(repo), "disposable-origin.git");
+    await git(repo, ["clone", "--quiet", "--bare", repo, origin]);
+    const task = await workspace.createTaskWorktree(
+      "missing-project",
+      repo,
+      undefined,
+      bound ? { origin } : undefined,
+    );
+    await workspace.poolSettled();
+    rmSync(repo, { recursive: true, force: true });
+    await workspace.removeTaskWorktree(task);
+    await workspace.deletionsSettled();
+    expect(existsSync(task.cwd)).toBe(false);
+    expect(existsSync(paths.defaultWorkspaceDir)).toBe(false);
+  });
+});
+
 describe("retireTaskWorktree (always clean, work saved first)", () => {
   it("saves nothing for landed work and still removes the tree and branch", async () => {
     const { workspace, paths } = await service();

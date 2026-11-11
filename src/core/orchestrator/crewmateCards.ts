@@ -14,6 +14,7 @@ import {
 import { readyPresentation } from "@shared/changePresentation";
 import { everyFailureDiagnosed } from "@shared/checkRepair";
 import { currentCheckStatus, everyFailureOnMain, failedBatch } from "@shared/checkSnapshot";
+import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { forgePlace } from "@shared/forge";
 import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
 import type { ValidationPermission } from "@shared/liveValidation";
@@ -56,8 +57,8 @@ import type { TaskRuntime } from "./crewRuntime";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { skipRulesStrip, writeAskStrip } from "./requestStrips";
 import type { SettleOwners } from "./settleOwners";
-import { pendingMergeLine } from "./settleWords";
-import { deliverableOf } from "./workShape";
+import { contributionStatusLine, pendingMergeLine } from "./settleWords";
+import { deliverableOf, taskContributesUpstream } from "./workShape";
 
 /**
  * The tool's answer when a completion card's revision went up while its
@@ -224,13 +225,19 @@ export class CrewmateCards {
       const revision = input.presentationRevision;
       // The story is shown on the merge card of the task's own change, with
       // autonomy on or off: the app decides who clicks it (INF-2744).
-      const offer = input.actions.length === 1 && mergesOwn(input.actions);
+      const contributing = this.contributing(task.id);
+      const offer = contributing
+        ? input.actions.length === 0
+        : input.actions.length === 1 && mergesOwn(input.actions);
       if (!this.options.completionPresentation || !offer)
         throw new Error(
-          "A saved-story card is only the merge card of this task's current change: one merge action and the story.",
+          contributing
+            ? `${CONTRIBUTION_MERGE_REFUSAL} Show the published presentation as a note with no actions.`
+            : "A saved-story card is only the merge card of this task's current change: one merge action and the story.",
         );
       return this.options.completionPresentation(task.id, revision).then(async (presented) => {
         const { revision: shownRevision, ...story } = presented;
+        const record = this.options.tasks.get(task.id);
         try {
           // A copy of the story's risk or required actions the call repeated
           // is left out only when it is exactly the story's; one that differs
@@ -251,10 +258,23 @@ export class CrewmateCards {
               "The current story has not been published or completed for this destination.",
             );
           const { presentationRevision: _revision, ...rest } = input;
-          return await this.addCrewmateCard(task, { ...rest, ...story }, undefined, {
-            revision: shownRevision ?? revision,
-            head,
-          });
+          return await this.addCrewmateCard(
+            task,
+            {
+              ...rest,
+              ...story,
+              ...(contributing
+                ? {
+                    body: `${record ? contributionStatusLine(record) : ""}${story.body}`,
+                  }
+                : {}),
+            },
+            undefined,
+            {
+              revision: shownRevision ?? revision,
+              head,
+            },
+          );
         } catch (caught) {
           const files = cardPictureFiles(story.body, this.options.paths.crewmatesDir);
           // Only the copies minted for this card go: the body also shows
@@ -596,6 +616,8 @@ export class CrewmateCards {
             },
           );
       }
+      if (this.contributing(task.id) && presentationChecked && input.actions.length === 0)
+        this.recordCompletionOffer(task.id, id, checked, presentationChecked, false, true);
       if (declaredMerge) {
         // A merge card is up: an earlier refusal no longer stands.
         this.options.tasks.delivery.clearCardRefusal(task.id);
@@ -796,10 +818,11 @@ export class CrewmateCards {
     checked: boolean,
     presentation: { revision: number; head: string } | undefined,
     continues: boolean,
+    contribution = false,
   ): void {
     // A new merge card for the current change asks again; an approval of
     // another of the task's pull requests stands beside it (INF-2744).
-    this.host.settling.approvals.askAgain(taskId, undefined);
+    if (!contribution) this.host.settling.approvals.askAgain(taskId, undefined);
     const record = this.options.tasks.get(taskId);
     const offerId = this.host.cards.get(cardId)?.offerId;
     const head = presentation?.head ?? record?.delivery?.headSha;
@@ -892,6 +915,14 @@ export class CrewmateCards {
     return undefined;
   }
 
+  private contributing(taskId: string): boolean {
+    const record = this.options.tasks.get(taskId);
+    return taskContributesUpstream(
+      record,
+      record?.repoId ? this.options.repos.get(record.repoId) : undefined,
+    );
+  }
+
   private withCompletionActions(taskId: string, input: DeclaredCardInput): EmittedCardInput {
     const actions = input.actions ?? [];
     if (actions.some((action) => requestWriteEffectOf(action))) {
@@ -913,6 +944,10 @@ export class CrewmateCards {
     }
     const declaredMerge = mergeOf(actions);
     if (!declaredMerge) return { ...input, actions: labeledActions(actions) };
+    if (this.contributing(taskId))
+      throw new Error(
+        "This contribution waits for the project's maintainers. Show its published presentation as a note with no actions; never offer a merge or mark their queue.",
+      );
     // Only the merge card's own buttons are the host's (INF-2744): the
     // merge, Discard beside a merge that closes the task and drops its own
     // working copy, Not now beside any other, and Review carefully below

@@ -438,6 +438,7 @@
         "!src/core/secrets/protected.test.ts",
         "!src/core/utilityQos.test.ts",
         "!src/core/workspace/repoRegistry.test.ts",
+        "!src/core/workspace/projectContributions.test.ts",
         "!src/core/workspace/git.test.ts",
         "!src/core/workspace/gitWorktreeCommands.test.ts",
         "!src/core/knowledge/knowledgeSources.integration.test.ts",

@@ -8,6 +8,8 @@ export const hostedPresentationDestinationSchema = z.strictObject({
   visibility: z.enum(["public", "private", "internal"]),
   /** Older saved stories named only the two public hosts. */
   format: z.enum(["github", "gitlab"]).optional(),
+  /** Contributions publish text when fork-upload visibility has not been established. */
+  media: z.literal("card-only").optional(),
 });
 export type HostedPresentationDestination = z.infer<typeof hostedPresentationDestinationSchema>;
 
@@ -47,6 +49,7 @@ export function presentationFormat(
 export function nativePresentationMedia(destination: PresentationDestination): boolean {
   return (
     hostedPresentation(destination) &&
+    destination.media !== "card-only" &&
     ((destination.host === "github.com" && presentationFormat(destination) === "github") ||
       (destination.host === "gitlab.com" && presentationFormat(destination) === "gitlab"))
   );
@@ -63,6 +66,7 @@ export function samePresentationDestination(
       left.projectId === right.projectId &&
       left.fullName === right.fullName &&
       left.visibility === right.visibility &&
+      left.media === right.media &&
       presentationFormat(left) === presentationFormat(right)
     );
   }

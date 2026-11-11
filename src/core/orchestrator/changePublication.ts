@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import type { OpenChangeInput, StagedChangePresentation } from "@shared/changePresentation";
+import { contributesUpstream } from "@shared/contributions";
 import { forgeOf, hasChangeRequests } from "@shared/forge";
 import { overridePasses, softHoldWords } from "@shared/holds";
 import {
@@ -11,6 +12,7 @@ import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repo
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import {
   AttachmentUploadError,
+  CONTRIBUTION_DELIVERY_WORDS,
   changeTitle,
   type Forge,
   type ForgeChange,
@@ -61,6 +63,8 @@ export class ChangePublication {
    */
   async preparePresentation(taskId: string, staged: StagedChangePresentation): Promise<string> {
     try {
+      const contribution = await this.options.prepareContribution?.(taskId);
+      if (contribution) return contribution;
       const local = this.localStoryDestination(taskId);
       if (local) {
         if (!this.options.presentations) return "Saved change stories are unavailable.";
@@ -246,6 +250,8 @@ export class ChangePublication {
    * `pr_opened` on the timeline, the label and link on the delivery facts.
    */
   async open(taskId: string, input: OpenChangeInput): Promise<string> {
+    const contribution = await this.options.prepareContribution?.(taskId);
+    if (contribution) return contribution;
     const located = this.context.locate(taskId, "open", "own");
     if ("said" in located) return located.said;
     const { record, forge } = located;
@@ -488,7 +494,9 @@ export class ChangePublication {
       if (!own) await this.selectOpened(record, forge, change, input.base);
       this.checks.noteChange(record.id, { change, forge });
       const next = [
-        "Read its checks with check_change. If the rest of your work needs this merged first, list it in the story's afterMerge and end this task with the merge card after the checks pass.",
+        contributesUpstream(current.delivery?.contribution)
+          ? CONTRIBUTION_DELIVERY_WORDS
+          : "Read its checks with check_change. If the rest of your work needs this merged first, list it in the story's afterMerge and end this task with the merge card after the checks pass.",
         this.readiness.readinessProblem(taskId, change),
       ]
         .filter(Boolean)

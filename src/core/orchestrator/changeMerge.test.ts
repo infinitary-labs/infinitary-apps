@@ -887,6 +887,78 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
   });
 
+  // Approved prepared-task routing: a later first destination choice cannot redirect its queue cleanup.
+  it("withdraws the prepared task's queue approval from its saved publication project after a route choice", async () => {
+    const forge = new NumberedForge();
+    const bound: { origin?: string | null; contribution?: unknown }[] = [];
+    const h = setup({
+      forge,
+      forgeFor: (repo) => {
+        bound.push(repo ?? {});
+        return forge;
+      },
+    });
+    await insertDirectPrTask(h.tasks, h.repos);
+    const record = h.tasks.get("ab12cd34");
+    if (!record?.repoId || !forge.change?.number) throw new Error("the change is missing");
+    const originalPublication = "https://github.com/x/y.git";
+    seedDelivery(h.tasks, record.id, { publicationOrigin: originalPublication });
+    h.repos.configure(record.repoId, { origin: "https://github.com/examples/original.git" });
+    h.repos.setContribution(record.repoId, {
+      upstream: {
+        id: 1,
+        fullName: "examples/original",
+        origin: "https://github.com/examples/original.git",
+      },
+      fork: { id: 2, fullName: "x/y", origin: originalPublication },
+      destination: "upstream",
+    });
+    h.repos.recordQueue(record.repoId, {
+      workflows: [{ path: ".github/workflows/infinitary-queue.yml", active: true, shipped: 10 }],
+    });
+    const remove = vi.fn(async () => {});
+    Object.assign(forge, { removeQueued: remove });
+    await h.service.merges.removeQueuedApproval(record.id, {
+      head: forge.change.headSha,
+      target: {
+        repoId: record.repoId,
+        host: "github.com",
+        owner: "x",
+        name: "y",
+        prNumber: forge.change.number,
+        branch: record.branch ?? "",
+        delivery: "direct-pr",
+        method: "squash",
+      },
+    });
+    expect(bound.at(-1)?.origin).toBe(originalPublication);
+    expect(bound.at(-1)?.contribution).toBeUndefined();
+    expect(remove).toHaveBeenCalledExactlyOnceWith(forge.change.headSha, forge.change.number);
+
+    // A separately managed review target is not redirected by this task's own snapshot.
+    const { repo: other } = await h.repos.setup({ kind: "init", name: "other-publication" });
+    const otherOrigin = "https://github.com/review/other.git";
+    h.repos.configure(other.id, { origin: otherOrigin });
+    h.repos.recordQueue(other.id, {
+      workflows: [{ path: ".github/workflows/infinitary-queue.yml", active: true, shipped: 10 }],
+    });
+    await h.service.merges.removeQueuedApproval(record.id, {
+      head: forge.change.headSha,
+      target: {
+        repoId: other.id,
+        host: "github.com",
+        owner: "review",
+        name: "other",
+        prNumber: forge.change.number,
+        branch: record.branch ?? "",
+        delivery: "direct-pr",
+        method: "squash",
+      },
+    });
+    expect(bound.at(-1)?.origin).toBe(otherOrigin);
+    expect(remove).toHaveBeenCalledTimes(2);
+  });
+
   // F3 regression: an unreadable change is not proof that its external eligibility was removed.
   it("does not acknowledge a queue removal when its approved pull request is unreadable", async () => {
     const forge = new PinnedForge();

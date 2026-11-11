@@ -4,7 +4,7 @@ import {
   type Scenario,
   THREAD_WORKING_SIBLING_MARKER,
 } from "../mockProvider";
-import { calledTool } from "../providerRequest";
+import { calledTool, providerMessages } from "../providerRequest";
 
 export const THREAD_SETTLE_PROMPT_MARKER = "hand the settle over";
 
@@ -31,13 +31,17 @@ export const MOCK_THREAD_HANDOFF_REPORT =
  */
 export const threadSettle: Scenario =
   () =>
-  ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
+  ({ body, isFirstmate, wantsStream, hasToolResults }) => {
+    // Only conversation messages carry the task and the captain's reply, never tool definitions.
+    const messages = providerMessages(body);
+    const latestUser = messages.findLast((message) => message.role === "user")?.text ?? "";
+    const conversation = messages.map((message) => message.text).join("\n");
     if (isFirstmate && wantsStream) {
       // Cards as threads, phase 1: the crewmate closed its card and
       // handed the captain's words up. The Firstmate runs the settle it
       // would have run had he typed them in the main input.
-      if (!hasToolResults && latestUserTail.includes(THREAD_HANDOFF_PHRASE)) {
-        const taskId = latestUserTail.match(/reported on task ([\w-]+)/)?.[1] ?? "missing";
+      if (!hasToolResults && latestUser.includes(THREAD_HANDOFF_PHRASE)) {
+        const taskId = latestUser.match(/reported on task ([\w-]+)/)?.[1] ?? "missing";
         return {
           calls: [
             {
@@ -52,15 +56,15 @@ export const threadSettle: Scenario =
         };
       }
     }
-    if (!isFirstmate && body.includes(THREAD_WORKING_SIBLING_MARKER) && wantsStream) {
+    if (!isFirstmate && conversation.includes(THREAD_WORKING_SIBLING_MARKER) && wantsStream) {
       return { held: true };
     }
     // The settle hand-off: a reply asking for the change to go in is
     // not the crewmate's to run, so it closes its card and reports the
     // captain's words verbatim. No classifier reads anything.
-    if (!isFirstmate && body.includes(THREAD_SETTLE_PROMPT_MARKER) && wantsStream) {
-      const shownCardId = body.match(/Card shown: [^(]*\((card-[\w-]+)\)/)?.[1] ?? "";
-      if (!hasToolResults && latestUserTail.includes(THREAD_SETTLE_REPLY)) {
+    if (!isFirstmate && conversation.includes(THREAD_SETTLE_PROMPT_MARKER) && wantsStream) {
+      const shownCardId = conversation.match(/Card shown: [^(]*\((card-[\w-]+)\)/)?.[1] ?? "";
+      if (!hasToolResults && latestUser.includes(THREAD_SETTLE_REPLY)) {
         return {
           calls: [
             { name: "close_card", args: { card_id: shownCardId } },

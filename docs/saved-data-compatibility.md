@@ -6,6 +6,15 @@ Each moves the Firstmate 3000 folder of its flavor, `firstmate-3000` or `firstma
 An older app may open saved work only when it supports the persisted formats.
 Release names alone are not compatibility evidence.
 
+## Contribution routes
+
+`repos.contribution_json` stores the verified upstream and owned fork identities, the selected destination, and whether a fork-creation request was attempted.
+Existing projects have no route until discovery succeeds; adding the column changes no existing remote or destination on its own.
+An imported owned fork keeps a null destination until the person's choice, and an uncertain create request is reconciled by reading rather than sent again.
+A task captures its selected route and the host's contribution state on its delivery record.
+Saved story destinations may additionally carry `media: card-only`, retaining the pictures on the card while publishing the contribution as text.
+The migration history guard refuses a build that predates the new column before it can write these records.
+
 ## Before services start
 
 `createServices` first calls `assertSavedDataCompatible` in `src/core/storage/db.ts`, before overflow initialization, shell probes, account vault warming, database writes, launch/crash counters, agents or derived views.

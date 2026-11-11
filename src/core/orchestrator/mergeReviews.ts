@@ -1,5 +1,6 @@
 import type { CheckChangeInput } from "@shared/checkRepair";
 import { checkSnapshotSummary } from "@shared/checkSnapshot";
+import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { forgeOf, hasChangeRequests } from "@shared/forge";
 import { fixedHoldWords, overridePasses } from "@shared/holds";
 import {
@@ -46,6 +47,7 @@ import {
   UNDECIDED_REREAD_MS,
 } from "./changeMerge";
 import { MERGE_CHECKS_HOLD_REASON, standingAuthorization } from "./mergeAuthorization";
+import { taskContributesUpstream } from "./workShape";
 
 /**
  * What naming a pull request does, in the answer that names it (INF-2490):
@@ -271,6 +273,13 @@ export class MergeReviews {
    */
   async reviewGate(taskId: string, reviewId: string): Promise<string | undefined> {
     const record = this.options.tasks.get(taskId);
+    if (
+      taskContributesUpstream(
+        record,
+        record?.repoId ? this.options.repos.get(record.repoId) : undefined,
+      )
+    )
+      return CONTRIBUTION_MERGE_REFUSAL;
     const review = record?.delivery?.mergeReviews?.find((item) => item.id === reviewId);
     if (!review) return `Card refused: merge review ${reviewId} is not on this task.`;
     if (review.skips) {
@@ -298,6 +307,13 @@ export class MergeReviews {
    */
   async mergeReview(taskId: string, reviewId: string, guard?: MergeGuard): Promise<PrOutcome> {
     const record = this.options.tasks.get(taskId);
+    if (
+      taskContributesUpstream(
+        record,
+        record?.repoId ? this.options.repos.get(record.repoId) : undefined,
+      )
+    )
+      return { ok: false, text: CONTRIBUTION_MERGE_REFUSAL };
     const approved = guard ? standingAuthorization(record?.delivery)?.review : undefined;
     const review =
       approved?.id === reviewId

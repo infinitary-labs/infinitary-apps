@@ -280,6 +280,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/claude/claudeCli.test.ts` | stub client executables | 5 s default |
 | `src/core/hostEnv.gitSignIn.test.ts` | real git, openssl, a local HTTPS host | 5 s default |
 | `src/core/workspace/repoRegistry.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/workspace/projectContributions.test.ts` | disposable upstream and fork repositories, real fetch and branch pushes at the run's own priority | 5 s default |
 | `src/core/forge/signIns.test.ts` | the app's git sign-in helper script | 5 s default |
 | `src/core/pi/personalizeTool.test.ts` | real git | 5 s default |
 | `src/core/plugins/pluginInstaller.test.ts` | real git at the run's own priority, npm pack (a local registry that answers nothing), tar | 10 s on the npm test, 5 s default for the rest |

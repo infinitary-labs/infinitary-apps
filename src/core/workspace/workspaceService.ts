@@ -4,16 +4,26 @@ import { existsSync, readdirSync, realpathSync } from "node:fs";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { promisify } from "node:util";
+import { contributionOriginMatches } from "@shared/contributions";
 import { HERE } from "@shared/deviceNames";
 import type { FolderRefreshCause, FolderRefreshRefusal } from "@shared/folderRefresh";
 import type { KnownForgeHost } from "@shared/forge";
+import { forgeOf } from "@shared/forge";
 import type { NamingRule } from "../../shared/runbooks";
 import { hostEnv } from "../hostEnv";
 import type { AppPaths } from "../paths";
 import { atUtilityQos } from "../utilityQos";
 import { requireConventionalRange } from "./conventional";
 import { forgeAuthRequired } from "./forgeAuth";
-import { APP_GIT_IDENTITY, git, gitFailure, isGitRepo } from "./git";
+import {
+  APP_GIT_IDENTITY,
+  git,
+  gitFailure,
+  inheritWorktreeRemotes,
+  isGitRepo,
+  releaseTaskRemote,
+  taskRemoteName,
+} from "./git";
 import { WorktreePool, type WorktreePoolOptions } from "./worktreePool";
 
 const execFileAsync = promisify(execFile);
@@ -471,6 +481,7 @@ export class WorkspaceService {
     taskId: string,
     repoDir?: string,
     startAt?: DispatchBase | { headSha: string; previousHead?: string },
+    remote?: { origin: string; pushOrigin?: string },
   ): Promise<TaskWorkspace> {
     const started = Date.now();
     const at = startAt && "headSha" in startAt ? startAt : undefined;
@@ -494,6 +505,7 @@ export class WorkspaceService {
           await git(cwd, ["reset", "--keep", at.headSha]);
         }
       }
+      if (remote) await inheritWorktreeRemotes(repo, cwd, remote);
       return { taskId, cwd, branch, repoDir: repo };
     }
     if (existsSync(cwd)) {
@@ -506,37 +518,44 @@ export class WorkspaceService {
     const existingHead = existing ? await this.branchHead(repo, branch) : null;
     if (at && existing && existingHead !== at.headSha)
       throw new Error("The task's branch holds another commit; nothing was replaced.");
-    const base: DispatchBase = at
-      ? { sha: at.headSha, ref: at.headSha, fetch: "none" }
-      : existing
-        ? { sha: existingHead ?? "", ref: branch, fetch: "none" }
-        : startAt && "sha" in startAt
-          ? startAt
-          : await this.dispatchBase(repo);
-    // `checkout <branch>` / `checkout -b <branch> <base>` in a pooled tree;
-    // `worktree add <cwd> <branch>` / `worktree add -b <branch> <cwd> <base>` otherwise.
-    const checkout = existing ? [branch] : ["-b", branch, base.sha];
-    const add = existing ? [cwd, branch] : ["-b", branch, cwd, base.sha];
-    let source: WorktreeAcquisition["source"] = "new";
-    if (this.pool && (await this.pool.acquire(repo, cwd))) {
-      try {
-        await git(cwd, ["checkout", "--quiet", ...checkout]);
-        source = "pool";
-      } catch (caught) {
-        // A warm tree that cannot take the branch goes; a new one instead.
-        console.warn(`[workspace] a pooled tree could not take ${branch}:`, caught);
-        await this.discardDir(cwd);
-        await git(repo, ["worktree", "prune"]);
+    if (remote) await inheritWorktreeRemotes(repo, repo, remote, branch);
+    try {
+      const base: DispatchBase = at
+        ? { sha: at.headSha, ref: at.headSha, fetch: "none" }
+        : existing
+          ? { sha: existingHead ?? "", ref: branch, fetch: "none" }
+          : startAt && "sha" in startAt
+            ? startAt
+            : await this.dispatchBase(repo, remote ? taskRemoteName(branch) : "origin");
+      // `checkout <branch>` / `checkout -b <branch> <base>` in a pooled tree;
+      // `worktree add <cwd> <branch>` / `worktree add -b <branch> <cwd> <base>` otherwise.
+      const checkout = existing ? [branch] : ["-b", branch, base.sha];
+      const add = existing ? [cwd, branch] : ["-b", branch, cwd, base.sha];
+      let source: WorktreeAcquisition["source"] = "new";
+      if (this.pool && (await this.pool.acquire(repo, cwd))) {
+        try {
+          await git(cwd, ["checkout", "--quiet", ...checkout]);
+          source = "pool";
+        } catch (caught) {
+          // A warm tree that cannot take the branch goes; a new one instead.
+          console.warn(`[workspace] a pooled tree could not take ${branch}:`, caught);
+          await this.discardDir(cwd);
+          await git(repo, ["worktree", "prune"]);
+        }
       }
+      if (source === "new") await git(repo, ["worktree", "add", ...add]);
+      if (remote) await inheritWorktreeRemotes(repo, cwd, remote);
+      return {
+        taskId,
+        cwd,
+        branch,
+        repoDir: repo,
+        acquired: { source, base, ms: Date.now() - started },
+      };
+    } catch (error) {
+      if (remote && !existing) await releaseTaskRemote(repo, branch);
+      throw error;
     }
-    if (source === "new") await git(repo, ["worktree", "add", ...add]);
-    return {
-      taskId,
-      cwd,
-      branch,
-      repoDir: repo,
-      acquired: { source, base, ms: Date.now() - started },
-    };
   }
 
   /**
@@ -560,21 +579,21 @@ export class WorkspaceService {
    * machine last saw and says so; it never fails the dispatch. Without an
    * `origin`, the base is the repository's checked-out commit.
    */
-  async dispatchBase(repo: string): Promise<DispatchBase> {
+  async dispatchBase(repo: string, remoteName = "origin"): Promise<DispatchBase> {
     const remotes = await git(repo, ["remote"]).catch(() => "");
-    if (!remotes.split("\n").some((remote) => remote.trim() === "origin")) {
+    if (!remotes.split("\n").some((remote) => remote.trim() === remoteName)) {
       return {
         sha: await git(repo, ["rev-parse", "--verify", "HEAD^{commit}"]),
         ref: "HEAD",
         fetch: "none",
       };
     }
-    const origin = await git(repo, ["remote", "get-url", "origin"]).catch(() => "");
+    const origin = await git(repo, ["remote", "get-url", remoteName]).catch(() => "");
     const name = await defaultBranchName(repo);
     let fetch: DispatchBase["fetch"] = "fetched";
     let fetchError: string | undefined;
     try {
-      await this.fetchDefaultBranch(repo, name);
+      await this.fetchDefaultBranch(repo, name, remoteName);
     } catch (caught) {
       const authRequired = forgeAuthRequired(origin, caught, this.options.knownHosts?.() ?? []);
       if (authRequired) throw authRequired;
@@ -582,15 +601,34 @@ export class WorkspaceService {
       fetchError = gitFailure(caught);
     }
     const local = await resolveCommit(repo, `refs/heads/${name}`);
-    const remote = await resolveCommit(repo, `refs/remotes/origin/${name}`);
+    const remote = await resolveCommit(repo, `refs/remotes/${remoteName}/${name}`);
     const failure = fetchError ? { fetchError } : {};
     // The local branch wins only when it is strictly ahead of origin's.
+    const pushOrigin = await git(repo, ["config", "--get", `remote.${remoteName}.pushurl`]).catch(
+      () => "",
+    );
+    const where = forgeOf(origin, this.options.knownHosts?.() ?? []);
+    const samePush =
+      !pushOrigin ||
+      pushOrigin === origin ||
+      Boolean(
+        where.host &&
+          where.owner &&
+          where.name &&
+          contributionOriginMatches(
+            { origin, fullName: `${where.owner}/${where.name}` },
+            pushOrigin,
+            where.kind,
+          ),
+      );
     const localAhead =
+      samePush &&
       local !== null &&
       remote !== null &&
       local !== remote &&
       (await isAncestor(repo, remote, local));
-    if (remote && !localAhead) return { sha: remote, ref: `origin/${name}`, fetch, ...failure };
+    if (remote && !localAhead)
+      return { sha: remote, ref: `${remoteName}/${name}`, fetch, ...failure };
     if (local) return { sha: local, ref: name, fetch, ...failure };
     return {
       sha: await git(repo, ["rev-parse", "--verify", "HEAD^{commit}"]),
@@ -772,10 +810,16 @@ export class WorkspaceService {
    * runs again, up to `FETCH_ATTEMPTS` in all. A failure that left the ref
    * where it was is the fetch's own and throws at once.
    */
-  private async fetchDefaultBranch(repo: string, branch: string): Promise<void> {
+  private async fetchDefaultBranch(
+    repo: string,
+    branch: string,
+    remoteName = "origin",
+  ): Promise<void> {
     const key = resolve(repo);
     const prior = this.fetchQueues.get(key) ?? Promise.resolve();
-    const run = prior.catch(() => {}).then(() => this.fetchDefaultBranchOnce(repo, branch));
+    const run = prior
+      .catch(() => {})
+      .then(() => this.fetchDefaultBranchOnce(repo, branch, remoteName));
     this.fetchQueues.set(key, run);
     try {
       await run;
@@ -784,14 +828,18 @@ export class WorkspaceService {
     }
   }
 
-  private async fetchDefaultBranchOnce(repo: string, branch: string): Promise<void> {
-    const tracking = `refs/remotes/origin/${branch}`;
+  private async fetchDefaultBranchOnce(
+    repo: string,
+    branch: string,
+    remoteName: string,
+  ): Promise<void> {
+    const tracking = `refs/remotes/${remoteName}/${branch}`;
     for (let attempt = 1; ; attempt++) {
       const before = await resolveCommit(repo, tracking);
       try {
         await git(
           repo,
-          ["fetch", "--quiet", "--no-tags", "origin", `+refs/heads/${branch}:${tracking}`],
+          ["fetch", "--quiet", "--no-tags", remoteName, `+refs/heads/${branch}:${tracking}`],
           {
             timeoutMs: this.options.fetchTimeoutMs ?? FETCH_TIMEOUT_MS,
             env: { GIT_TERMINAL_PROMPT: "0" },
@@ -1135,6 +1183,10 @@ export class WorkspaceService {
     // directory: there is no worktree, and the fallback below would delete
     // that folder with everything in it (INF-585).
     if (!workspace.cwd || holds(workspace.cwd, workspace.repoDir)) return;
+    // Optional metadata cleanup must not prevent retirement when the project moved or vanished.
+    await releaseTaskRemote(workspace.repoDir, workspace.branch).catch((error: unknown) => {
+      console.warn("[workspace] task remote cleanup was unavailable:", gitFailure(error));
+    });
     if (await this.parkInPool(workspace)) {
       try {
         await git(workspace.repoDir, ["branch", "-D", workspace.branch]);
@@ -1146,8 +1198,10 @@ export class WorkspaceService {
     const trashed = await this.moveToTrash(workspace.cwd);
     if (trashed) {
       // The worktree's path is gone, so prune drops its bookkeeping.
-      await git(workspace.repoDir, ["worktree", "prune"]);
       this.deleteInBackground(trashed);
+      await git(workspace.repoDir, ["worktree", "prune"]).catch((error: unknown) => {
+        console.warn("[workspace] worktree metadata cleanup was unavailable:", gitFailure(error));
+      });
     } else {
       try {
         await git(workspace.repoDir, ["worktree", "remove", "--force", workspace.cwd]);
@@ -1160,7 +1214,9 @@ export class WorkspaceService {
         if (dirname(resolve(workspace.cwd)) === resolve(this.paths.worktreesDir)) {
           await rm(workspace.cwd, { recursive: true, force: true });
         }
-        await git(workspace.repoDir, ["worktree", "prune"]);
+        await git(workspace.repoDir, ["worktree", "prune"]).catch((error: unknown) => {
+          console.warn("[workspace] worktree metadata cleanup was unavailable:", gitFailure(error));
+        });
       }
     }
     try {

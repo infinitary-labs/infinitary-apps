@@ -3,6 +3,7 @@ import { closeSync, existsSync, mkdirSync, openSync, readSync, statSync, writeSy
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { speaksInfinitaryNames } from "@shared/contractFeatures";
+import { preparedPublicationRemote } from "@shared/contributions";
 import { HERE } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
 import { forgeOf } from "@shared/forge";
@@ -15,6 +16,7 @@ import {
   type WorkOrderResponse,
   workOrders,
 } from "@shared/work";
+import { contractChange, listsChange } from "../connection/contractChanges";
 import { type AppPaths, crewmatePlacedDir } from "../paths";
 import { TaskService } from "../tasks/taskService";
 import { ARTIFACTS_FOLDER, artifactPath, OLDER_ARTIFACTS_FOLDER } from "../workspace/artifacts";
@@ -117,15 +119,32 @@ export class PlacedCopies {
   ): Promise<PlacedCopy> {
     const name = this.options.deviceName(deviceId);
     const committed = this.options.tasks.get(taskId)?.placement?.snapshot;
-    const project =
-      committed?.origin && !base
+    const delivery = this.options.tasks.get(taskId)?.delivery;
+    const project: { origin: string; name: string; pushOrigin?: string } | undefined =
+      delivery?.publicationOrigin && !base
         ? {
-            origin: committed.origin,
+            origin: delivery.publicationOrigin,
+            pushOrigin: delivery.publicationPushOrigin,
             name: this.options.projectName(repoId ?? "") ?? "the project",
           }
-        : repoId && !base
-          ? await this.originOf(repoId)
-          : undefined;
+        : committed?.origin && !base
+          ? {
+              origin: committed.origin,
+              name: this.options.projectName(repoId ?? "") ?? "the project",
+            }
+          : repoId && !base
+            ? await this.originOf(repoId)
+            : undefined;
+    if (
+      project?.pushOrigin &&
+      !listsChange(
+        this.options.devices.version(deviceId)?.changes,
+        contractChange("fork-contributions"),
+      )
+    )
+      throw new PreparationFailed(
+        `${name} must be updated before it can push contributions through your fork.`,
+      );
     // A projectless builder starts from the home's workspace. Its reviewer
     // already has the builder's repository there, so sends no seed.
     const seed = repoId || base ? undefined : await this.seed(deviceId, taskId);
@@ -135,7 +154,14 @@ export class PlacedCopies {
         {
           orderId: committed?.orderId ?? `prepare:${taskId}:${this.options.now()}`,
           task: taskId,
-          ...(project ? { project: { origin: project.origin } } : {}),
+          ...(project
+            ? {
+                project: {
+                  origin: project.origin,
+                  ...(project.pushOrigin ? { pushOrigin: project.pushOrigin } : {}),
+                },
+              }
+            : {}),
           ...(base ? { base } : {}),
           ...(seed ? { seed } : {}),
         },
@@ -541,17 +567,35 @@ export class PlacedCopies {
       // no origin that computer can clone: its commits all cross in the
       // bundle, and its repository there starts on this one's branch at the
       // commit the task's branch left it at.
-      const origin = input.repoId
-        ? await this.originOf(input.repoId).then(
-            (found) => (forgeOf(found.origin).host ? found.origin : undefined),
-            () => undefined,
-          )
-        : undefined;
+      const prepared = preparedPublicationRemote(this.options.tasks.get(taskId));
+      const origin =
+        prepared?.origin ??
+        (input.repoId
+          ? await this.originOf(input.repoId).then(
+              (found) => (forgeOf(found.origin).host ? found.origin : undefined),
+              () => undefined,
+            )
+          : undefined);
+      if (
+        prepared?.pushOrigin &&
+        !listsChange(
+          this.options.devices.version(deviceId)?.changes,
+          contractChange("fork-contributions"),
+        )
+      )
+        throw new PreparationFailed(
+          `${this.options.deviceName(deviceId)} must be updated before it can push contributions through your fork.`,
+        );
       const seed = input.repoId ? undefined : await this.seed(deviceId, taskId);
       const base = {
         task: taskId,
         ...(origin
-          ? { project: { origin } }
+          ? {
+              project: {
+                origin,
+                ...(prepared?.pushOrigin ? { pushOrigin: prepared.pushOrigin } : {}),
+              },
+            }
           : input.repoId
             ? { project: { local: input.repoId, base: await integrationBase(repoDir, input.head) } }
             : {}),

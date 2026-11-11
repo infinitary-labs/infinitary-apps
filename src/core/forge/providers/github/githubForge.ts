@@ -1,3 +1,4 @@
+import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { settingFrom } from "@shared/envSettings";
 import { forgePlace, GITHUB_COM, isGitHubEnterpriseCloud } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
@@ -55,6 +56,7 @@ import {
 import { RELEASE_UPLOAD_TIMEOUT_MS } from "../../releaseFile";
 import type { ArchiveRanges } from "../../workflows";
 import { GitHubAttachments, githubStoryDestination } from "./attachments";
+import { GitHubContributions } from "./contributions";
 import { GitHubWorkflows } from "./workflows";
 
 /**
@@ -159,6 +161,7 @@ type PullJson = {
 
 /** The fields of one pull request read by its number that say whether it may merge. */
 type PullStateJson = PullJson & {
+  updated_at?: string;
   state: string;
   merged?: boolean;
   merge_commit_sha?: string | null;
@@ -283,14 +286,58 @@ export class GitHubForge implements Forge {
     );
   }
 
+  get contributions() {
+    return new GitHubContributions(this.repoPath(), async (method, path, body) => {
+      if (method !== "POST") return this.request(method, path, body);
+      let attempted = false;
+      let refused = false;
+      try {
+        return await this.request(
+          method,
+          path,
+          body,
+          API_VERSION,
+          () => {
+            attempted = true;
+          },
+          undefined,
+          (status) => {
+            refused = [400, 401, 403, 404, 405, 409, 413, 415, 422, 429].includes(status);
+          },
+        );
+      } catch (error) {
+        throw new ForgeWriteError(
+          !attempted || refused ? "failed" : "uncertain",
+          error instanceof ForgeError ? error.failure : "transient",
+          error instanceof ForgeError
+            ? error.message
+            : `${this.place}'s fork-creation answer could not be read.`,
+        );
+      }
+    });
+  }
+
+  private requireMaintainer(): void {
+    if (this.location.source) throw new ForgeError("permission", CONTRIBUTION_MERGE_REFUSAL);
+  }
+
+  private sourcePath(): string {
+    return this.location.source ? `/repos/${this.location.source.fullName}` : this.repoPath();
+  }
+
   async storyDestination() {
     const fullName = `${this.location.owner}/${this.location.name}`;
     const destination = githubStoryDestination(
       await this.request("GET", this.repoPath()),
       fullName,
       this.host ?? GITHUB_COM,
+      this.location.source ? "describe" : "upload",
     );
-    return { ...destination, format: this.kind };
+    return {
+      ...destination,
+      format: this.kind,
+      ...(this.location.source ? { media: "card-only" as const } : {}),
+    };
   }
 
   /**
@@ -383,7 +430,12 @@ export class GitHubForge implements Forge {
       `${this.repoPath()}/pulls`,
       JSON.stringify({
         title: input.title,
-        head: input.branch,
+        head: this.location.source
+          ? `${this.location.source.fullName.split("/")[0]}:${input.branch}`
+          : input.branch,
+        ...(this.location.source
+          ? { head_repo: this.location.source.fullName.split("/").at(-1) }
+          : {}),
         base,
         body: input.body,
         ...(input.draft ? { draft: true } : {}),
@@ -396,14 +448,18 @@ export class GitHubForge implements Forge {
 
   async branchChecks(): Promise<{ sha: string; checks: ForgeChecks }> {
     const branch = await this.defaultBranch();
-    const sha = await this.branchHead(branch);
+    const sha = await this.readBranchHead(branch, this.repoPath());
     return { sha, checks: await this.checks({ branch, headSha: sha, url: null }) };
   }
 
   async branchHead(branch: string): Promise<string> {
+    return this.readBranchHead(branch, this.sourcePath());
+  }
+
+  private async readBranchHead(branch: string, project: string): Promise<string> {
     const answer = await this.apiCall(
       "GET",
-      `${this.repoPath()}/git/ref/heads/${encodeURIComponent(branch)}`,
+      `${project}/git/ref/heads/${encodeURIComponent(branch)}`,
     );
     if (answer.status !== 200)
       throw new ForgeError(
@@ -462,12 +518,16 @@ export class GitHubForge implements Forge {
   }
 
   async changeFor(branch: string): Promise<ForgeChange | null> {
-    const head = encodeURIComponent(`${this.owner()}:${branch}`);
+    const head = encodeURIComponent(
+      `${this.location.source?.fullName.split("/")[0] ?? this.owner()}:${branch}`,
+    );
     const pulls = (await this.request(
       "GET",
       `${this.repoPath()}/pulls?head=${head}&state=open&per_page=1`,
     )) as PullJson[];
-    const pull = pulls[0];
+    const pull = this.location.source
+      ? pulls.find((item) => item.head.repo?.full_name === this.location.source?.fullName)
+      : pulls[0];
     return pull ? changeOf(pull, branch) : null;
   }
 
@@ -657,6 +717,7 @@ export class GitHubForge implements Forge {
   }
 
   async putIn(change: ForgeChange, headSha: string): Promise<{ sha?: string }> {
+    this.requireMaintainer();
     // `sha` is GitHub's "match head commit" guard: the merge is refused if
     // the change moved on after its checks were read.
     const answer = (await this.request(
@@ -735,6 +796,7 @@ export class GitHubForge implements Forge {
       state: pull.state === "open" ? "open" : "closed",
       merged,
       ...(merged && pull.merge_commit_sha ? { mergedSha: pull.merge_commit_sha } : {}),
+      ...(pull.updated_at ? { updatedAt: pull.updated_at } : {}),
       headSha: pull.head.sha,
       base: pull.base.ref,
       ...(pull.head.ref ? { branch: pull.head.ref } : {}),
@@ -811,6 +873,7 @@ export class GitHubForge implements Forge {
    * time is unknown, never a reason to send again.
    */
   async putInSkippingRules(change: ForgeChange, headSha: string): Promise<ForgeSkipMerge> {
+    this.requireMaintainer();
     const path = `${this.repoPath()}/pulls/${numbered(change)}/merge-async`;
     let reading = (await this.request(
       "PUT",
@@ -862,6 +925,7 @@ export class GitHubForge implements Forge {
   readonly markStartsQueue = true;
 
   async markQueued(sha: string, approval?: ForgeQueueApproval): Promise<ForgeQueueMark> {
+    this.requireMaintainer();
     const checkApproval = () => {
       const why = approval?.beforeDispatch?.();
       if (why) throw new ForgeError("refused", why);
@@ -931,6 +995,7 @@ export class GitHubForge implements Forge {
   }
 
   async removeQueued(sha: string, number: number): Promise<void> {
+    this.requireMaintainer();
     const record = await this.queueApproval(sha, number);
     if (!record) return;
     if (record.kind === "approval") {
@@ -1038,6 +1103,7 @@ export class GitHubForge implements Forge {
 
   /** Start the shipped queue's workflow by hand on the default branch, with its inputs. */
   async startQueue(start: ForgeQueueStart): Promise<void> {
+    this.requireMaintainer();
     const inputs: Record<string, string> = { action: start.action };
     if (start.action !== "form") inputs.reason = start.reason;
     if (start.action === "send-back") inputs.number = String(start.number);
@@ -1403,6 +1469,7 @@ export class GitHubForge implements Forge {
     version = API_VERSION,
     beforeSend?: () => void,
     url = `${this.base}${path}`,
+    observedStatus?: (status: number) => void,
   ): Promise<unknown> {
     const token = await this.options.token();
     if (!token) {
@@ -1426,6 +1493,7 @@ export class GitHubForge implements Forge {
       const message = caught instanceof Error ? caught.message : String(caught);
       throw new ForgeError("transient", `could not reach ${this.place}: ${message}`);
     }
+    observedStatus?.(response.status);
     const text = await response.text();
     if (response.status === 401) this.options.onSignInRejected?.();
     if (!response.ok) throw failureOf(response, method, path, text);

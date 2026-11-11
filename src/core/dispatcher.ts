@@ -307,7 +307,15 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         const result = await services.repos.setup(spec);
         if (result.repo.kind === "personal")
           throw new Error("Your personal workspace is already managed and cannot be added here.");
-        return result;
+        if (result.created) {
+          await services.projectContributions.discover(result.repo.id).catch((error: unknown) => {
+            services.broadcastEvent({
+              type: "firstmate_note",
+              text: `Could not read contribution settings: ${error instanceof Error ? error.message : String(error)}`,
+            });
+          });
+        }
+        return { ...result, repo: services.repos.get(result.repo.id) ?? result.repo };
       } catch (caught) {
         // A refused task key is checked before any clone, so it is never a sign-in.
         if (spec.kind === "clone" && !(caught instanceof ProjectKeyRefusal)) {
@@ -332,11 +340,12 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       tasks: services.supervisor.facts.activeTasksOnRepo(repoId),
     }),
 
-    "inf:repos:remove": (repoId) => {
+    "inf:repos:remove": async (repoId) => {
       const repo = services.repos.get(repoId);
       if (!repo) throw new Error("That project is not here. It may already be removed.");
       const tasks = services.supervisor.facts.activeTasksOnRepo(repo.id);
       if (tasks.length > 0) throw new Error(repoRemovalRefusal(repo.name, tasks));
+      await services.projectContributions.clearPushAddress(repo.id);
       services.repos.unregister(repo.id);
       return { id: repo.id, name: repo.name };
     },
@@ -347,6 +356,16 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:repos:queue-credential": (repoId) => services.queuePauses.credential(repoId),
     "inf:repos:queue-credential-create": (repoId) => services.queuePauses.createCredential(repoId),
     "inf:repos:configure": async (repoId, changes) => {
+      if (changes.contributionDestination !== undefined) {
+        const { contributionDestination, ...rest } = changes;
+        const updated = await services.projectContributions.choose(
+          repoId,
+          contributionDestination,
+          false,
+        );
+        if (Object.keys(rest).length === 0) return updated;
+        changes = rest;
+      }
       if (changes.path !== undefined && services.supervisor.facts.activeTasksOnRepo(repoId).length)
         throw new Error(
           "Finish or drop the project’s planned and working tasks before changing its folder.",
@@ -361,6 +380,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           throw new Error(
             "This project is kept on this computer. Approve where it lives before choosing pull requests.",
           );
+        if (changes.origin !== undefined && changes.origin !== current?.origin)
+          await services.projectContributions.clearPushAddress(repoId);
         // A batched choice the project cannot answer yet waits (INF-2885 B).
         return await services.queueChoice.configure(repoId, changes, (patch) =>
           services.repos.configure(repoId, patch),

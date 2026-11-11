@@ -41,6 +41,7 @@ import {
 } from "./taskBrowser";
 import { firstReleaseReportSchema } from "./taskRelease";
 import { toolObservationSchema } from "./toolCompletion";
+import { commitSchema, placedTaskIdSchema, workingCopyBaseSchema } from "./workIdentity";
 
 /**
  * A crewmate's conversation held on a computer that runs work (piece 8,
@@ -70,7 +71,7 @@ import { toolObservationSchema } from "./toolCompletion";
  */
 
 /** A task id as the home mints it; it names a folder on the computer, so nothing else passes. */
-export const placedTaskIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
+export { placedTaskIdSchema, type WorkingCopyBase, workingCopyBaseSchema } from "./workIdentity";
 
 /** The computer's own id for one callback, the same each time it asks again. */
 export const workCallIdSchema = z.string().min(1).max(128);
@@ -430,18 +431,6 @@ export const placedCardAnswerSchema = z.union([
   }),
 ]);
 export type PlacedCardAnswer = z.infer<typeof placedCardAnswerSchema>;
-
-/** A commit as git names it in full. */
-const commitSchema = z.string().regex(/^[0-9a-f]{40}(?:[0-9a-f]{24})?$/);
-
-/** An exact commit of another task on this computer, never that task's uncommitted files. */
-export const workingCopyBaseSchema = z.object({
-  task: placedTaskIdSchema,
-  headSha: commitSchema,
-  /** The last base assigned to this copy; refuse to replace any other commits. */
-  previousHead: commitSchema.optional(),
-});
-export type WorkingCopyBase = z.infer<typeof workingCopyBaseSchema>;
 
 /** check_change's declarations, as the crewmate's tool takes them (src/shared/checkRepair.ts). */
 const checkChangeInputSchema = z.object({
@@ -1441,7 +1430,12 @@ export const workOrders = {
   "inf:working-copy:prepare": {
     effect: "change",
     request: ordered({
-      project: z.object({ origin: z.string().min(1).max(4096) }).optional(),
+      project: z
+        .object({
+          origin: z.string().min(1).max(4096),
+          pushOrigin: z.string().min(1).max(4096).optional(),
+        })
+        .optional(),
       /** Use another task's local repository at this commit, without cloning or fetching. */
       base: workingCopyBaseSchema.optional(),
       /**
@@ -1698,7 +1692,10 @@ export const workOrders = {
        */
       project: z
         .union([
-          z.object({ origin: z.string().min(1).max(4096) }),
+          z.object({
+            origin: z.string().min(1).max(4096),
+            pushOrigin: z.string().min(1).max(4096).optional(),
+          }),
           z.object({
             local: z.string().min(1).max(64),
             base: z.object({ branch: z.string().min(1).max(255), sha: commitSchema }),

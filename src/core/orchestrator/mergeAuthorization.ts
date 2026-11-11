@@ -21,6 +21,7 @@ import type {
   TaskRecord,
 } from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
+import { publicationRepo } from "./publicationRepo";
 import type { WakeBody } from "./wakes";
 
 /**
@@ -94,7 +95,7 @@ export function approvableOffer(
   if (!card.offerId || !opensPullRequest(delivery)) return undefined;
   if (!repo || !record.repoId || !hasChangeRequests(repo.host?.kind) || !record.branch)
     return undefined;
-  const location = forgeLocationOf(repo);
+  const location = forgeLocationOf(publicationRepo(record, repo));
   if (!location.owner || !location.name || !location.host) return undefined;
   const baseline = record.delivery?.completionOffers?.find(
     (offer) => offer.cardId === card.cardId && offer.offerId === card.offerId,

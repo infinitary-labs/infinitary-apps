@@ -63,6 +63,7 @@ import type { TaskService } from "./tasks/taskService";
 import type { TaskTimeline } from "./tasks/taskTimeline";
 import type { UpdateChecker } from "./update/updateChecker";
 import type { ProjectChanges } from "./workspace/projectChanges";
+import type { ProjectContributions } from "./workspace/projectContributions";
 import type { ProjectSetups } from "./workspace/projectSetups";
 import type { RepoRegistry } from "./workspace/repoRegistry";
 import type { WorkspaceService } from "./workspace/workspaceService";
@@ -153,6 +154,7 @@ export type CoreServices = {
   repos: RepoRegistry;
   /** The setup card: the Firstmate's proposal and the captain's click on it (docs/fleet.md). */
   projectSetups: ProjectSetups;
+  projectContributions: ProjectContributions;
   projectChanges: ProjectChanges;
   queueChoice: QueueChoice;
   /** A project's paused batch of the shipped queue: followed, and answered by hand from Settings. */

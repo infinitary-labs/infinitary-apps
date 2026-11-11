@@ -41,10 +41,13 @@ export const workPostureSchema = z.object({
   hold: accountHoldSchema.optional(),
   /** Pending batch status on the offered version; older views keep their checks look. */
   batch: z.enum(["waiting", "in-batch", "paused"]).optional(),
+  /** The watched contribution is open with its upstream maintainers. */
+  maintainers: z.boolean().optional(),
 });
 export type WorkPosture = z.infer<typeof workPostureSchema>;
 
 export function workPostureLabel(posture: WorkPosture): string {
+  if (posture.maintainers) return "Waiting for the maintainers";
   if (posture.reason === "checks" && posture.batch) return "Waiting for the batch check";
   const reasons: Record<WorkPosture["reason"], string> = {
     turn: "Working",

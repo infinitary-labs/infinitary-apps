@@ -106,7 +106,10 @@ describe("the working copies a computer that runs work keeps", () => {
       dir: join(dataDir, "worktrees", "t-one"),
       branch: "fm/task-t-one",
       cloned: true,
-      acquired: { source: "new", base: { sha: main, ref: "origin/main", fetch: "fetched" } },
+      acquired: {
+        source: "new",
+        base: { sha: main, ref: "origin/main", fetch: "fetched" },
+      },
     });
     expect(await git(first.dir, ["rev-parse", "HEAD"])).toBe(main);
     expect(await git(first.dir, ["symbolic-ref", "--short", "HEAD"])).toBe("fm/task-t-one");

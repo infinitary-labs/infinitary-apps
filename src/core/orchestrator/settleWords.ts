@@ -1,4 +1,5 @@
 import { MERGE_CLOSES_WORDS } from "@shared/cards";
+import { CONTRIBUTION_WORDS } from "@shared/contributions";
 import {
   type FolderNoticed,
   type FolderRefreshCause,
@@ -252,6 +253,27 @@ export function receiptMergedLine(
 /** Whether a body carries the merge line. */
 export function hasMergeLine(body: string): boolean {
   return MERGE_LINE.test(body);
+}
+
+/** A contribution's read-only status, using the existing story-note status line. */
+export function contributionStatusLine(record: TaskRecord): string {
+  const state =
+    record.delivery?.ci === "merged" || record.closedReason === "merged"
+      ? "merged"
+      : (record.delivery?.contributionState?.state ?? "open");
+  const words =
+    state === "merged"
+      ? CONTRIBUTION_WORDS.merged
+      : state === "closed"
+        ? CONTRIBUTION_WORDS.closed
+        : CONTRIBUTION_WORDS.waiting;
+  const url = record.delivery?.prUrl;
+  const change = record.delivery?.prNumber;
+  const link =
+    url && /^https:\/\//.test(url) && change !== undefined
+      ? ` · <a class="inf-mono" href="${escapeCardText(url)}">${escapeCardText(changeName(record, change))}</a>`
+      : "";
+  return `${MERGE_LINE_OPEN}<strong>${words}</strong>${link}</p>`;
 }
 
 /** The body with its merge line put first, or the one it had replaced. */

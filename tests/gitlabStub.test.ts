@@ -117,6 +117,16 @@ describe.each(["gitlab.com", "gitlab.example.com"])(
       expect(writes()).toHaveLength(2);
     });
 
+    // Approved contribution change: ordinary GitLab delivery stays available during discovery.
+    it("lets contribution inspection read the ordinary GitLab project", async () => {
+      const { forge } = await forgeOver(host, {});
+      await expect(forge.contributions.inspect()).resolves.toMatchObject({
+        project: { fullName: GITLAB_STUB_PROJECT },
+        owned: false,
+        canPush: true,
+      });
+    });
+
     it("opens one merge request for a pushed branch, finds it by its branch, and closes it", async () => {
       const head = sha("meter head");
       const { gitlab, forge } = await forgeOver(host, { [BRANCH]: head });

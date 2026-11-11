@@ -68,6 +68,8 @@ export const GITLAB_STUB_LOGIN = "octo";
 /** The code a device sign-in shows, as GitLab writes it. */
 export const GITLAB_STUB_USER_CODE = "WDJBMJHT";
 export const GITLAB_STUB_PROJECT = "group/subgroup/field-notes";
+/** The project identity GitLab reports on the project, merge requests and pipelines. */
+export const GITLAB_STUB_PROJECT_ID = 7;
 
 /**
  * Public applications registered on the stand-in's host, by Application ID.
@@ -284,8 +286,15 @@ export async function startGitLabStub(host: string) {
   /** The project's access tokens, and its CI variables by key. */
   const tokens: GitLabStubToken[] = [];
   const variables = new Map<string, Record<string, unknown>>();
+  const namespacePath = GITLAB_STUB_PROJECT.slice(0, GITLAB_STUB_PROJECT.lastIndexOf("/"));
   const project = {
-    id: 7,
+    id: GITLAB_STUB_PROJECT_ID,
+    namespace: {
+      id: 2,
+      kind: "group",
+      path: namespacePath.slice(namespacePath.lastIndexOf("/") + 1),
+      full_path: namespacePath,
+    },
     path_with_namespace: GITLAB_STUB_PROJECT,
     http_url_to_repo: `https://${host}/${GITLAB_STUB_PROJECT}.git`,
     web_url: `https://${host}/${GITLAB_STUB_PROJECT}`,

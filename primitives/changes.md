@@ -51,6 +51,8 @@ A merge made elsewhere closes the task as merged when the crewmate's open merge 
 
 ## Authority
 
+An outgoing contribution's saved story is a note without merge actions, while the existing change watcher follows the upstream maintainers' activity and confirmed outcome ([the forge seam](../docs/forge.md), "Contributing through an owned fork").
+Its fork route is a project choice captured on the task, never permission to merge upstream or mark its queue.
 A change holds facts, never permission: consent at a version is the captain's click on a card, an approval carried to a repaired version by a declared repair, or an override given for that version alone, and an override given for the whole task sits on the change ([delivery rigor](../docs/delivery-rigor.md), "The record and its holds").
 The host's holds read the record's typed facts - the checks, a kept approval's version, consent for an effect - and never the care's name.
 What a care asks of the crew - Default's procedure, Careful's review and live proof - is served guidance, and the host neither orders nor refuses by it (the captain, INF-1868: "the host only knows the three names as typed fact - a metadata").

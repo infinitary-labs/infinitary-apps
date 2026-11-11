@@ -5,6 +5,7 @@ import type { PresentationDestination } from "@shared/presentationDestination";
 import type { QueueCredential, QueueWorkflow } from "@shared/repos";
 import type { ForgeApi } from "./api";
 import type { ForgeAttachments } from "./attachments";
+import type { ForgeContributions } from "./contributions";
 import type { ForgeWorkflows } from "./workflows";
 
 /**
@@ -44,6 +45,8 @@ export type ForgeLocation = {
   name?: string;
   /** The repository's working folder on this Mac: where git runs for it. */
   dir: string;
+  /** A verified fork that supplies task branches while requests target this location. */
+  source?: { id: number; fullName: string };
 };
 
 /** One proposed change where the project lives. */
@@ -199,6 +202,8 @@ export type ForgePull = {
   merged: boolean;
   /** The merge commit, once merged. */
   mergedSha?: string;
+  /** The host's last change time, including review activity, never a local guess. */
+  updatedAt?: string;
   headSha: string;
   /** The branch it merges into. */
   base: string;
@@ -352,6 +357,7 @@ export interface Forge {
   readonly workflows?: ForgeWorkflows;
   /** Native evidence attachments, offered only on hosts qualified for publication. */
   readonly attachments?: ForgeAttachments;
+  readonly contributions?: ForgeContributions;
   /** Optional project-scoped JSON gateway; absent on hosts without a REST API. */
   readonly api?: ForgeApi;
   /** Saved-story identity, also on hosts without native media or a description. */

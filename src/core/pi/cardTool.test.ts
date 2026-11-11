@@ -328,6 +328,28 @@ describe("createEmitCardTool", () => {
     expect(onCard).toHaveBeenCalledTimes(2);
   });
 
+  // Approved contribution change D: the home owns the task's upstream route, not this parser.
+  it("hands an actionless contribution story to the home and preserves its ordinary-task refusal", async () => {
+    const onCard = vi.fn(() => "card-contribution-story");
+    const tool = piToolOf(
+      bindTool(EMIT_CARD_TOOL, { onCard, contributionNotes: true }),
+    ) as unknown as AnyTool;
+    const params = { title: "docs: contribute the example", presentation: 2, actions: [] };
+    await tool.execute("contribution", params);
+    expect(onCard).toHaveBeenCalledWith({
+      title: params.title,
+      body: "",
+      presentationRevision: params.presentation,
+      actions: [],
+    });
+    onCard.mockImplementation(() => {
+      throw new Error("The ordinary task requires its merge action.");
+    });
+    await expect(tool.execute("ordinary", params)).rejects.toThrow(
+      "The ordinary task requires its merge action.",
+    );
+  });
+
   // INF-961: INF-899's crewmate left presentation out and was told only to give a body.
   it("points a merge card with neither body nor presentation at its saved story (INF-2744 words)", async () => {
     const onCard = vi.fn(() => "card-task-story");

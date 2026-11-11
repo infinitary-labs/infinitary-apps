@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, normalize, sep } from "node:path";
+import { preparedPublicationRemote } from "@shared/contributions";
 import { COMPUTER, HERE } from "@shared/deviceNames";
 import { offeringKey, parseOfferingKey, type Slot } from "@shared/modelSlots";
 import { AUTOMATIC_COMPUTER, type ComputerMove } from "@shared/placement";
@@ -765,9 +766,14 @@ export class TaskMoves {
           throw new Error(
             `${HERE.this} has no signed-in account that serves ${this.host.modelName(model)}`,
           );
-        const workspace = await this.options.workspace.createTaskWorktree(taskId, out.repoDir, {
-          headSha: out.head,
-        });
+        const workspace = await this.options.workspace.createTaskWorktree(
+          taskId,
+          out.repoDir,
+          {
+            headSha: out.head,
+          },
+          preparedPublicationRemote(record),
+        );
         await unpackWork(workspace.cwd, pack, this.localMoveFolders(taskId));
         cwd = workspace.cwd;
         branch = workspace.branch;

@@ -26,6 +26,7 @@ import {
   taskPull,
 } from "./mergeAuthorization";
 import { queueMerges, queueNoteFacts, queueWakeWords } from "./projectQueue";
+import { publicationRepo } from "./publicationRepo";
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
 import type { SettleLocks } from "./settleLocks";
 import { changeName } from "./settleWords";
@@ -512,7 +513,7 @@ export class KeptApproval {
       : undefined;
     // The review's own project: another managed one when the task opened it there (INF-2510).
     const reviewRepo = review?.repoId ? this.host.repos.get(review.repoId) : repo;
-    const location = reviewRepo ? forgeLocationOf(reviewRepo) : undefined;
+    const location = reviewRepo ? forgeLocationOf(publicationRepo(record, reviewRepo)) : undefined;
     // A request review is a typed, head-bound offer. Rule-skipping clicks remain one-shot.
     if (
       reviewId &&
@@ -842,7 +843,7 @@ export class KeptApproval {
     // the task's is current (INF-2746).
     const pull = taskPull(record, this.host.tasks.changesFor(record.id), target.prNumber);
     const changeRepo = this.changeRepoOf(record, repo, authorization.review ?? pull?.review);
-    const location = changeRepo ? forgeLocationOf(changeRepo) : undefined;
+    const location = changeRepo ? forgeLocationOf(publicationRepo(record, changeRepo)) : undefined;
     return !opensPullRequest(this.host.taskDelivery(record.id))
       ? "the project no longer delivers as a pull request"
       : record.repoId !== target.repoId || !repo

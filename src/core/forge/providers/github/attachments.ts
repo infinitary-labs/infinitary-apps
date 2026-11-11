@@ -51,6 +51,7 @@ export function githubStoryDestination(
   value: unknown,
   fullName: string,
   host: string,
+  purpose: "upload" | "describe" = "upload",
 ): AttachmentDestination {
   const result = repositorySchema.safeParse(value);
   if (!result.success)
@@ -68,7 +69,10 @@ export function githubStoryDestination(
       "refused",
       "The attachment destination or audience changed. Prepare the story again.",
     );
-  if (!(repo.permissions.push || repo.permissions.maintain || repo.permissions.admin))
+  if (
+    purpose === "upload" &&
+    !(repo.permissions.push || repo.permissions.maintain || repo.permissions.admin)
+  )
     throw new ForgeError(
       "permission",
       "Uploading evidence needs write access to this GitHub project.",

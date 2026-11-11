@@ -10,6 +10,7 @@ import {
 import type { ChangeReceipt } from "@shared/change";
 import { readyPresentation } from "@shared/changePresentation";
 import { isRepairAssessment } from "@shared/checkRepair";
+import { waitingForMaintainers } from "@shared/contributions";
 import type { CrewSpeed } from "@shared/crewSpeed";
 import {
   validationAssignment,
@@ -74,13 +75,13 @@ import { RestartWatch } from "./restartWatch";
 import { Reviews } from "./reviews";
 import { SettleFacts } from "./settleCardFacts";
 import { createSettleOwners, type SettleOwners } from "./settleOwners";
-import { hasMergeLine, receiptMergedLine } from "./settleWords";
+import { contributionStatusLine, hasMergeLine, receiptMergedLine } from "./settleWords";
 import { CrewStarts } from "./starts";
 import { TaskMoves } from "./taskMoves";
 import { TaskPlacement } from "./taskPlacement";
 import type { TypedWake } from "./wakes";
 import { WorkPostures } from "./workPosture";
-import { deliverableOf } from "./workShape";
+import { deliverableOf, taskContributesUpstream } from "./workShape";
 
 /**
  * Every fm-op excerpt the crew's owners write rides through capWithOverflow instead of a bare
@@ -637,7 +638,8 @@ export class CrewSupervisor {
         ? {
             checksWatched: (record: TaskRecord) =>
               record.delivery?.ciWatch !== undefined ||
-              (record.delivery?.runWatches?.length ?? 0) > 0,
+              (record.delivery?.runWatches?.length ?? 0) > 0 ||
+              waitingForMaintainers(record.delivery),
           }
         : {}),
       ...(options.browsers
@@ -1021,6 +1023,13 @@ export class CrewSupervisor {
     if (!card.taskId || !isStoryNote(card)) return false;
     const record = this.options.tasks.get(card.taskId);
     if (!record || TaskService.isClosed(record) || !record.delivery?.presentation) return false;
+    if (
+      taskContributesUpstream(
+        record,
+        record.repoId ? this.options.repos.get(record.repoId) : undefined,
+      )
+    )
+      return false;
     if (!this.facts.taskAutonomy(record.id)) return false;
     return mergeOf(record, card) === undefined;
   }
@@ -1037,6 +1046,16 @@ export class CrewSupervisor {
   private mergedLineOf(card: Card): string | undefined {
     if (!card.taskId || !isStoryNote(card) || !hasMergeLine(card.body)) return undefined;
     const record = this.options.tasks.get(card.taskId);
+    if (
+      taskContributesUpstream(
+        record,
+        record?.repoId ? this.options.repos.get(record.repoId) : undefined,
+      ) &&
+      (record?.delivery?.ci === "merged" ||
+        record?.delivery?.contributionState?.state === "merged" ||
+        record?.delivery?.contributionState?.state === "closed")
+    )
+      return contributionStatusLine(record);
     const merge = record ? mergeOf(record, card) : undefined;
     if (!record || merge?.at == null) return undefined;
     // Only the close that merged adds to the line: a merge that kept its

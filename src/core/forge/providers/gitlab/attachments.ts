@@ -58,6 +58,7 @@ export function gitlabStoryDestination(
   value: unknown,
   fullName: string,
   host: string,
+  purpose: "upload" | "describe" = "upload",
 ): { destination: AttachmentDestination; mediaSignedIn: boolean } {
   const result = projectSchema.safeParse(value);
   if (!result.success)
@@ -76,7 +77,7 @@ export function gitlabStoryDestination(
     project.permissions?.group_access?.access_level,
   ].filter((level): level is number => typeof level === "number");
   // An inherited role GitLab does not list leaves the decision to GitLab's own answer.
-  if (levels.length > 0 && Math.max(...levels) < DEVELOPER)
+  if (purpose === "upload" && levels.length > 0 && Math.max(...levels) < DEVELOPER)
     throw new ForgeError(
       "permission",
       "Uploading evidence needs at least the Developer role in this GitLab project.",

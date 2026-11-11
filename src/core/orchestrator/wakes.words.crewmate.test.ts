@@ -780,6 +780,15 @@ const CASES: WordsCases<CrewmateWakeKind> = {
         'INF-2758 "Repair main", which you heard was dropped, goes on in INF-2763 "Repair main again", so your task waits on INF-2763 now and its close steers you. If you carried on without that work, check what your task still needs from it.',
     },
   ],
+  // Approved D: review activity steers the contributor without granting merge authority.
+  "contribution-updated": [
+    {
+      name: "upstream review changed",
+      wake: { facts: { kind: "contribution-updated", change: "PR #12", state: "open" } },
+      words:
+        "The host reports new activity on PR #12; it is open. Read the maintainers' review and comments, apply requested fixes on the same fork branch, and update its contribution note. Never offer a merge or mark their queue. If it merged or closed, report that confirmed outcome and any remaining work.",
+    },
+  ],
   "merge-continued": [
     {
       name: "merged with work still open",

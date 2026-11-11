@@ -1,3 +1,4 @@
+import { CONTRIBUTION_WORDS } from "@shared/contributions";
 import type { ForgeKind } from "@shared/forge";
 import {
   deliveryChoices,
@@ -82,6 +83,9 @@ function applyPatch(repo: RepoView, patch: RepoPolicyPatch): RepoView {
     ...repo,
     costLimit: patch.costLimit === undefined ? repo.costLimit : patch.costLimit,
     delivery: patch.delivery ?? repo.delivery,
+    ...(patch.contributionDestination && repo.contribution
+      ? { contribution: { ...repo.contribution, destination: patch.contributionDestination } }
+      : {}),
     autonomy: patch.autonomy ?? repo.autonomy,
     rigor: patch.rigor === undefined ? repo.rigor : patch.rigor,
   };
@@ -668,6 +672,26 @@ function ProjectRow({
               )
             }
           />
+          {!personal && repo.contribution?.fork && (
+            <PolicyRow
+              title={CONTRIBUTION_WORDS.target}
+              description={CONTRIBUTION_WORDS.description}
+              control={
+                <GroupedPills
+                  name={CONTRIBUTION_WORDS.target}
+                  htmlName={`contribution-${repo.id}`}
+                  value={repo.contribution.destination ?? ""}
+                  options={[
+                    { value: "upstream", label: CONTRIBUTION_WORDS.upstream },
+                    { value: "fork", label: CONTRIBUTION_WORDS.fork },
+                  ]}
+                  onChange={(contributionDestination) => {
+                    if (contributionDestination) onPatch({ contributionDestination });
+                  }}
+                />
+              }
+            />
+          )}
           {!personal && repo.queuePendingAt !== undefined && (
             <div
               role="status"

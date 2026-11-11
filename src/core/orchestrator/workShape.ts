@@ -5,8 +5,9 @@ import {
   cardMessageText,
   replyWithSettings,
 } from "@shared/cards";
+import { type ContributionRoute, contributesUpstream } from "@shared/contributions";
 import { softHoldWords } from "@shared/holds";
-import { deliveryForRecord } from "@shared/repos";
+import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repos";
 import {
   type Deliverable,
   type Escalation,
@@ -30,6 +31,23 @@ import {
   type EscalationBriefFacts,
   type SpawnIntent,
 } from "./intentBrief";
+
+/** The task's prepared routing wins; local-only delivery never contributes to a host. */
+export function contributionForTask(
+  record: TaskRecord | undefined,
+  repo: RepoView | undefined,
+): ContributionRoute | undefined {
+  if (!record || !opensPullRequest(deliveryForRecord(record, repo?.delivery))) return undefined;
+  if (record.delivery?.publicationOrigin !== undefined) return record.delivery.contribution;
+  return record.delivery?.contribution ?? repo?.contribution;
+}
+
+export function taskContributesUpstream(
+  record: TaskRecord | undefined,
+  repo: RepoView | undefined,
+): boolean {
+  return contributesUpstream(contributionForTask(record, repo));
+}
 
 /**
  * A resolved escalation (S4): the attempt the captain rejected, the stamp

@@ -21,6 +21,8 @@ import { DELIVERY_COMPLETE } from "../src/core/orchestrator/contextDelivery";
 import { BUILD_IN_PLACE_OPENING } from "../src/core/orchestrator/intentBrief";
 import { WELCOME_WAKE_WORDS } from "../src/core/orchestrator/noticeWakes";
 import { FINISHED_REPORT_WORDS } from "../src/core/orchestrator/reportWakes";
+import { renderWake } from "../src/core/orchestrator/wakes";
+import { EMIT_CARD_TOOL_NAME, SAVED_STORY_RULE } from "../src/core/pi/cardTool";
 import { FIRSTMATE_PERSONA, KIND_CLASSIFIER_OPENING } from "../src/core/pi/piResources";
 import { CLAUDE_SEAT_TOOL_PREFIX } from "../src/core/storage/sessionReader";
 import { WRITE_ASK_ANSWER_MARKER } from "./e2e/apiWriteCases";
@@ -102,7 +104,15 @@ import {
   THREAD_TREE_PROMPT_MARKER,
 } from "./e2e/mockProvider";
 import { panelPlaceHeld } from "./e2e/scenarios/panelPlaceHeld";
+import {
+  MOCK_THREAD_HANDOFF_REPORT,
+  THREAD_SETTLE_CARD_TITLE,
+  THREAD_SETTLE_PROMPT_MARKER,
+  THREAD_SETTLE_REPLY,
+  threadSettle,
+} from "./e2e/scenarios/threadSettle";
 import type { ScriptedCall } from "./helpers/scriptedCalls";
+import { WAKE_TASK } from "./helpers/wakeWords";
 
 let server: MockProviderServer | undefined;
 afterEach(async () => {
@@ -1499,3 +1509,105 @@ describe("the Claude crewmate", () => {
     ]);
   });
 });
+
+// Regression: contribution guidance in emit_card is not a captain reply or a settle handoff.
+// Read real client wires with the product's tool prose and wake renderers, not copied trigger text.
+describe.each(["chat", "responses", "anthropic"] as const)(
+  "thread settle reads served messages (%s)",
+  (dialect) => {
+    async function askThread(messages: unknown[], firstmate = false) {
+      await start([threadSettle]);
+      const request = JSON.parse(
+        bodyOf(dialect, {
+          messages,
+          ...(firstmate ? { system: FIRSTMATE_PERSONA } : {}),
+        }),
+      );
+      const definition = {
+        name: EMIT_CARD_TOOL_NAME,
+        parameters: {
+          type: "object",
+          properties: { presentation: { type: "number", description: SAVED_STORY_RULE } },
+        },
+      };
+      // JSON member order is not a message boundary: these are the definitions after the conversation.
+      delete request.tools;
+      request.tools =
+        dialect === "chat"
+          ? [{ type: "function", function: definition }]
+          : dialect === "anthropic"
+            ? [{ name: definition.name, input_schema: definition.parameters }]
+            : [{ type: "function", ...definition }];
+      const response = await fetch(`http://127.0.0.1:${server?.port}${PATHS[dialect]}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request),
+      });
+      expect(response.ok).toBe(true);
+      return answerOf(dialect, sse(await response.text()));
+    }
+    const brief = () => user(dialect, THREAD_SETTLE_PROMPT_MARKER);
+    const card = { id: "card-thread-settle", title: THREAD_SETTLE_CARD_TITLE };
+    const shown = () =>
+      loop(
+        dialect,
+        [{ name: EMIT_CARD_TOOL_NAME, args: { title: card.title } }],
+        `Card shown: ${card.title} (${card.id})`,
+      );
+    const reply = () =>
+      user(
+        dialect,
+        renderWake({ facts: { kind: "thread-reply", card, words: THREAD_SETTLE_REPLY } }),
+      );
+    const report = () =>
+      user(
+        dialect,
+        frameServedInput([
+          {
+            kind: "wake",
+            origin: "agent",
+            body: renderWake({
+              facts: {
+                kind: "report",
+                task: WAKE_TASK,
+                crewmate: "crewmate 1",
+                excerpt: MOCK_THREAD_HANDOFF_REPORT,
+                filed: [],
+                cards: [],
+              },
+            }),
+          },
+        ]).text,
+      );
+
+    it("offers the completion card before any actual captain reply", async () => {
+      const answer = await askThread([brief()]);
+      expect(names(answer)).toEqual([EMIT_CARD_TOOL_NAME]);
+      expect(answer.calls[0]?.args).toMatchObject({ title: THREAD_SETTLE_CARD_TITLE });
+    });
+    it("hands off the current captain reply after showing the card", async () => {
+      const answer = await askThread([brief(), ...shown(), reply()]);
+      expect(names(answer)).toEqual(["close_card", "report"]);
+      expect(answer.calls[0]?.args).toEqual({ card_id: card.id });
+      expect(answer.calls[1]?.args).toEqual({ text: MOCK_THREAD_HANDOFF_REPORT });
+    });
+    it("does not replay a historical captain reply on a later turn", async () => {
+      const answer = await askThread([
+        brief(),
+        ...shown(),
+        reply(),
+        user(dialect, "Keep waiting."),
+      ]);
+      expect(answer).toMatchObject({ calls: [], text: "Holding for the captain's decision." });
+    });
+    it("keeps the first mate's current report handoff on its reported task", async () => {
+      const answer = await askThread([report()], true);
+      expect(names(answer)).toEqual(["settle_task"]);
+      expect(answer.calls[0]?.args.task_id).toBe(WAKE_TASK.id);
+    });
+    it("does not replay an older report handoff on a later captain turn", async () => {
+      const answer = await askThread([report(), user(dialect, "What happened?")], true);
+      expect(names(answer)).not.toContain("settle_task");
+    });
+  },
+);

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "fork-contributions",
+      "kind": "feature",
+      "title": "Contribute through your own fork",
+      "body": "When you cannot push to a GitHub or GitLab project, Infinitary asks before making your fork, then reuses it for contributions. Adding your own fork asks whether changes should go to the original project or stay in your fork; you can change that in Projects. Contributions wait for the original project's maintainers, without a merge button.",
+      "area": "projects",
+      "noPicture": "A contribution spans an account choice and an external review, which a single picture would not show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

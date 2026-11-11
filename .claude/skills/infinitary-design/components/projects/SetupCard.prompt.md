@@ -2,6 +2,17 @@ The setup card: the first mate proposes a project, and the captain checks it, se
 The first mate may propose at any time - on the captain's message, after a crewmate's report, or on its own judgment - and every project it adds comes through this card, typed asks included.
 Settings' own Add project (`AddProject.prompt.md`) adds at once and never shows it.
 
+**Contributing from a fork.**
+After adding an owned fork, an app-written card asks whether changes contribute to the original project or stay in the fork.
+Its buttons read "Contribute to original", "Keep changes in my fork" and "Not now".
+Neither destination is inferred from the fork relationship.
+Settings → Projects adds a "Target project" row with the "Original project" and "My fork" grouped pills, using the existing row, focus and keyboard treatment.
+The row explains that the choice sends changes upstream or keeps them in the fork.
+When a sign-in cannot push and no owned fork exists, an app-written card asks "Make your fork of …?", with "Make my fork" and "Not now".
+It explains that Infinitary asks once for this project and leaves merging to its maintainers.
+The contribution's story is a note, headed "Waiting for the maintainers", with no merge or queue action.
+It keeps the upstream change link and follows the maintainers' review, merge or closure.
+
 **Who writes it.**
 The app writes the card from what it checked, never the first mate, so the button does exactly what the card says.
 It is a host card: the Attention chip with "first mate" as its meta, no reply field, and its id comes from the project, so asking again for the same project revises the one card.

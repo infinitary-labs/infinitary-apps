@@ -19,6 +19,7 @@ import { cardBody } from "./frames";
 import {
   GITLAB_STUB_OTHER_PROJECT,
   GITLAB_STUB_PROJECT,
+  GITLAB_STUB_PROJECT_ID,
   type GitLabStub,
   seedGitLabSignIn,
   startGitLabStub,
@@ -64,7 +65,7 @@ import { factsStrip, shownCard } from "./stack";
  *
  * GitLab is a local stand-in (`./gitlabStub.ts`) the app reaches through
  * its real key sign-in, its real GitLab forge and its real git; every push
- * goes to a bare repository on this Mac through git's own `insteadOf`, so
+ * goes to a bare repository on this computer through git's own `insteadOf`, so
  * the project's recorded address is a real GitLab address in a nested
  * group. No real account is asked.
  */
@@ -213,7 +214,10 @@ for (const host of HOSTS) {
       const sentUp = headIn(bare)(`fm/task-${task.id}`);
       const project = encodeURIComponent(GITLAB_STUB_PROJECT);
       expect(gitlab.requests()).toContain(`POST /api/v4/projects/${project}/merge_requests`);
-      expect(gitlab.requests()).toContain(`GET /api/v4/projects/${project}/pipelines/101/jobs`);
+      // Approved contribution routing reads jobs under the pipeline's reported project identity.
+      expect(gitlab.requests()).toContain(
+        `GET /api/v4/projects/${GITLAB_STUB_PROJECT_ID}/pipelines/101/jobs`,
+      );
       const webUrl = `https://${host}/${GITLAB_STUB_PROJECT}/-/merge_requests/1`;
       const facts = factsStrip(cardBody(page, cardTitle));
       await expect(facts.change.locator(`a[href="${webUrl}"]`)).toHaveText("!1");

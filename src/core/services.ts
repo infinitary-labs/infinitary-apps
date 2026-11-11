@@ -53,6 +53,7 @@ import { startHomeForges } from "./forge/homeForges";
 import { FreezeRecorder, freezeWake, infinitaryProject } from "./freeze/freezeRecorder";
 import { FreezeTally } from "./freeze/freezeTally";
 import { isFreezeRecorderEnabled } from "./freeze/watchdog";
+import { startHomeProjects } from "./homeProjects";
 import type { HostCapabilities } from "./host";
 import { captureLoginPath, hostEnv } from "./hostEnv";
 import { FIRSTMATE_READER, INBOX_EVENT, INBOX_ID, SavedOutsideData } from "./integrations";
@@ -151,8 +152,7 @@ import { WorkPresentation } from "./tasks/workPresentation";
 import { createAppTelemetry } from "./telemetry";
 import { createInstalledUpdateChecker } from "./update/updateChecker";
 import { adoptBundledGit } from "./workspace/bundledGit";
-import { ProjectChanges } from "./workspace/projectChanges";
-import { ProjectSetups } from "./workspace/projectSetups";
+import { ProjectContributions } from "./workspace/projectContributions";
 import { RepoRegistry } from "./workspace/repoRegistry";
 import { WorkspaceService } from "./workspace/workspaceService";
 
@@ -786,11 +786,13 @@ export async function createServices(
     branch: (taskId) => changeDelivery.publication.presentationBranch(taskId),
     mapPart: () => runbooks.mapPart(),
   });
+  const prepareContribution = (taskId: string) => projectContributions.prepareTask(taskId, tasks);
   const changeDelivery: ChangeDelivery = createChangeDelivery({
     namingRule: () => runbooks.naming(),
     tasks,
     repos,
     presentations,
+    prepareContribution,
     // The forge seam (git integration PR 1.1): GitHub is the REST forge with
     // the app's own GitHub sign-in (PR 1.2), read at each request. A 401
     // asks the sign-in service to look again; its health read is the proof.
@@ -980,6 +982,7 @@ export async function createServices(
   });
   const leftBehind = leftoverPrograms.leftBehind(() => loadLine.snapshot().runs);
   const supervisor: CrewSupervisor = new CrewSupervisor({
+    prepareContribution: (taskId) => projectContributions.prepareTask(taskId, tasks, false),
     automaticPlacement,
     // A program's script runs in a process of its own; its ask() is one typed read.
     ...(host.programProcess ? { programProcess: host.programProcess } : {}),
@@ -1244,33 +1247,14 @@ export async function createServices(
     decline: (id) => void pluginInstaller.decline(id),
   });
   await pluginInstaller.reconcile();
-  // The setup card (docs/fleet.md, "Asking the first mate to add a project"):
-  // the Firstmate proposes, the host checks and writes the card, and only
-  // the captain's click on it sets the project up; the Firstmate, built
-  // below, hears once how he answered.
-  const projectSetups = new ProjectSetups({
+  const { projectContributions, projectSetups, projectChanges } = startHomeProjects({
     repos,
+    tasks,
     devices: () => devices.list(),
-    raiseCard: (card) => supervisor.cards.hostCards.raiseHostCard(card),
-    tell: (facts) => firstmateForSeat?.notifyOp({ facts }, "agent"),
-    broadcast: (event) => broadcastEvent(event),
-  });
-  supervisor.hostOps.setProjectSetup({
-    add: (offer, answers) => {
-      void projectSetups.add(offer, answers).catch((error: unknown) => {
-        broadcastEvent({
-          type: "firstmate_note",
-          text: `Could not add the project: ${error instanceof Error ? error.message : String(error)}`,
-        });
-      });
-    },
-    decline: (offer) => projectSetups.decline(offer),
-  });
-  const projectChanges = new ProjectChanges({
-    repos,
-    devices: () => devices.list(),
-    raiseCard: (card) => supervisor.cards.hostCards.raiseHostCard(card),
-    tell: (facts) => firstmateForSeat?.notifyOp({ facts }, "agent"),
+    forgeFor,
+    supervisor,
+    broadcastEvent,
+    notify: (notice) => firstmateForSeat?.notifyOp(notice, "agent"),
   });
   // A batched choice before the project's queue exists (INF-2885 direction
   // B, docs/forge.md "Choosing batched pull requests before a queue
@@ -1324,7 +1308,8 @@ export async function createServices(
   });
   supervisor.hostOps.setProjectChange({
     apply: (arg) => {
-      void projectChanges.apply(arg);
+      if (ProjectContributions.ownsOffer(arg)) void projectContributions.answer(arg);
+      else void projectChanges.apply(arg);
     },
     decline: (arg) => projectChanges.decline(arg),
     inspect: (repoId) => projectChanges.inspect(repoId),
@@ -1953,6 +1938,7 @@ export async function createServices(
     launchWatch,
     repos,
     projectSetups,
+    projectContributions,
     projectChanges,
     queueChoice,
     queuePauses,

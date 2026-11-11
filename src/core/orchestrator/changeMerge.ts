@@ -1,4 +1,5 @@
 import { queueAnswer } from "@shared/checkRepair";
+import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { hasChangeRequests } from "@shared/forge";
 import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
 import { isMergeConflict } from "@shared/plainProblem";
@@ -37,7 +38,9 @@ import {
   standingAuthorization,
 } from "./mergeAuthorization";
 import { type ProjectQueue, queueMerges } from "./projectQueue";
+import { publicationRepo } from "./publicationRepo";
 import { carryPassedReview } from "./reviewCarry";
+import { taskContributesUpstream } from "./workShape";
 
 /** A check state that lets a merge through: passed, or not run on purpose. */
 const PASSED_STATES = new Set<ForgeCheckState>(["success", "skipped", "neutral"]);
@@ -205,6 +208,17 @@ export class ChangeMerge {
    * that runs next.
    */
   async merge(taskId: string, guard?: MergeGuard, boundary?: MergeBoundary): Promise<PrOutcome> {
+    const record = this.options.tasks.get(taskId);
+    if (
+      taskContributesUpstream(
+        record,
+        record?.repoId ? this.options.repos.get(record.repoId) : undefined,
+      )
+    )
+      return {
+        ok: false,
+        text: CONTRIBUTION_MERGE_REFUSAL,
+      };
     let attempt: MergeAttempt = { ok: false, text: "" };
     let settle = false;
     for (let i = 0; i < MERGE_RETRY_DELAYS_MS.length + 1; i++) {
@@ -671,9 +685,10 @@ export class ChangeMerge {
     if (!record) return;
     const elsewhere = this.projectOfNumber(record, removal.target.prNumber);
     if (elsewhere === null) throw new Error("The queued change's project is no longer registered.");
-    const repo =
+    const registered =
       elsewhere ?? this.options.repos.get(removal.review?.repoId ?? removal.target.repoId);
-    if (!repo) throw new Error("The queued change's project is no longer registered.");
+    if (!registered) throw new Error("The queued change's project is no longer registered.");
+    const repo = publicationRepo(record, registered);
     const location = forgeLocationOf(repo);
     if (
       location.host !== removal.target.host ||

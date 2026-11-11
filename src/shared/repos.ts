@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { contributionDestinationSchema, contributionRouteSchema } from "./contributions";
 import { costLimitSchema } from "./costLimit";
 import { HERE } from "./deviceNames";
 import type { ForgeKind } from "./forge";
@@ -287,6 +288,7 @@ export function repoHostFrom(where: { kind: ForgeKind; host: string | null }): R
 
 export const repoPolicyPatchSchema = z
   .object({
+    contributionDestination: contributionDestinationSchema.optional(),
     placementRequirements: placementRequirementsSchema.nullable().optional(),
     delivery: repoDeliverySchema.optional(),
     autonomy: z.boolean().optional(),
@@ -390,6 +392,9 @@ export const repoViewSchema = z.object({
   origin: z.string().nullable(),
   /** Where the project lives, read from `origin`; null = kept on this Mac. */
   host: repoHostSchema,
+  contribution: contributionRouteSchema.optional(),
+  /** A successful host inspection, including a direct route with no fork requirement. */
+  contributionChecked: z.boolean().optional(),
   delivery: repoDeliverySchema,
   /** On = the agent may land green finished work on this repo by itself. */
   autonomy: z.boolean(),

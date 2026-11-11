@@ -5,6 +5,7 @@ import {
   type MainCheckEvidence,
 } from "@shared/checkSnapshot";
 import { checksTimes } from "@shared/checksSpan";
+import { type ContributionState, contributesUpstream } from "@shared/contributions";
 import { forgeOf, hasChangeRequests } from "@shared/forge";
 import type { RepoView } from "@shared/repos";
 import {
@@ -139,6 +140,7 @@ export class ChangeChecks {
       if (!change) {
         const pull = await this.namedPull(forge, current.number);
         this.assertCheckTarget(record);
+        if (pull) this.observeContribution(record, forge, pull);
         this.record(record.id, pull?.merged ? "merged" : "no-pr");
         if (pull?.merged)
           this.options.tasks.delivery.recordChangeEvidence(record.id, { headSha: pull.headSha });
@@ -148,6 +150,15 @@ export class ChangeChecks {
       const checks = await forge.checks(change);
       const main = await this.mainEvidence(record, forge, change, checks);
       this.assertCheckTarget(record);
+      if (
+        contributesUpstream(record.delivery?.contribution) &&
+        change.number !== undefined &&
+        forge.pull
+      ) {
+        const pull = await forge.pull(change.number);
+        this.assertCheckTarget(record);
+        this.observeContribution(record, forge, pull);
+      }
       const observationId = this.observeChecks(taskId, change.headSha, checks, false);
       this.queue?.observe(taskId, change.headSha, checks.items);
       const words = changeWords(forge, change);
@@ -342,11 +353,14 @@ export class ChangeChecks {
         // absence among the open ones (FI3-213).
         const pull = await this.namedPull(forge, current.number);
         this.assertCheckTarget(record);
+        if (pull) this.observeContribution(record, forge, pull);
         if (pull?.merged) {
           this.record(record.id, "merged");
           this.options.tasks.delivery.recordChangeEvidence(record.id, { headSha: pull.headSha });
           return {
-            text: mergedWords(forge, pull, audience),
+            text: contributesUpstream(record.delivery?.contribution)
+              ? `The maintainers merged ${numberLabel(forge, pull.number)}. Update the contribution note without a merge action and report the confirmed outcome; continue any remaining work.`
+              : mergedWords(forge, pull, audience),
             recorded: true,
             merged: { pull, forge },
           };
@@ -365,6 +379,7 @@ export class ChangeChecks {
       const mergeability =
         change.number !== undefined && forge.pull ? await forge.pull(change.number) : undefined;
       this.assertCheckTarget(record);
+      if (mergeability) this.observeContribution(record, forge, mergeability);
       this.observeChecks(taskId, change.headSha, checks, audience === "crewmate");
       this.queue?.observe(taskId, change.headSha, checks.items);
       const stillRunning = this.checksPending(record, { change, forge }, checks);
@@ -442,6 +457,37 @@ export class ChangeChecks {
           : {}),
       };
     }
+  }
+
+  /** Keep the latest maintainer reading; only a known change wakes the author. */
+  private observeContribution(record: TaskRecord, forge: Forge, pull: ForgePull): void {
+    if (!contributesUpstream(record.delivery?.contribution)) return;
+    const next: ContributionState = {
+      number: pull.number,
+      state: pull.merged ? "merged" : pull.state,
+      ...(pull.updatedAt ? { updatedAt: pull.updatedAt } : {}),
+    };
+    const before = this.options.tasks.get(record.id)?.delivery?.contributionState;
+    if (
+      before?.number === next.number &&
+      before.state === next.state &&
+      before.updatedAt === next.updatedAt
+    )
+      return;
+    this.options.tasks.delivery.recordChangeEvidence(record.id, { contributionState: next });
+    if (
+      before &&
+      (before.state !== next.state ||
+        (before.updatedAt && next.updatedAt && before.updatedAt !== next.updatedAt))
+    )
+      this.options.steer?.(record.id, {
+        facts: {
+          kind: "contribution-updated",
+          change: numberLabel(forge, pull.number),
+          state: next.state,
+        },
+        once: `contribution:${pull.number}:${next.state}:${next.updatedAt ?? pull.headSha}`,
+      });
   }
 
   /**

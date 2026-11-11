@@ -31,6 +31,9 @@ function riskLine(story: ChangePresentation): string {
 }
 
 /** The public record keeps commands and the full assessment behind explicit folds. */
+export const CARD_ONLY_MEDIA_WORDS =
+  "Pictures and recordings are retained on the card; this host receives the story's text only.";
+
 export function tieredPresentationMarkdown(
   story: ChangePresentation,
   urls: ReadonlyMap<string, string>,
@@ -112,9 +115,7 @@ export function tieredPresentationMarkdown(
     story.whatChanged.map((line) => `- ${md(line)}`).join("\n"),
     `## ${TIERED_STORY_HEADINGS[2]}`,
     `**Before:** ${story.before.map(md).join(" ")}\n\n**After:** ${story.after.map(md).join(" ")}`,
-    !native && story.views.length
-      ? "Pictures and recordings are retained on the merge card; this host receives the story's text only."
-      : "",
+    !native && story.views.length ? CARD_ONLY_MEDIA_WORDS : "",
     views,
     story.noPicture ? md(story.noPicture) : "",
     `## ${TIERED_STORY_HEADINGS[3]}`,

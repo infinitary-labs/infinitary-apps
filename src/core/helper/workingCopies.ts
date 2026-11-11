@@ -24,7 +24,7 @@ import {
 import { writeArtifact } from "../workspace/artifacts";
 import { bundleRef, commitOf, sha256Of, takeBundle } from "../workspace/bundles";
 import { forgeAuthRequired } from "../workspace/forgeAuth";
-import { git } from "../workspace/git";
+import { git, inheritWorktreeRemotes } from "../workspace/git";
 import { type MovedFolders, packWork, readManifest, unpackWork } from "../workspace/workMove";
 import {
   type DependencyInstall,
@@ -39,6 +39,26 @@ import {
   WorkspaceService,
   type WorkspaceServiceOptions,
 } from "../workspace/workspaceService";
+
+function checkPushOrigin(project: { origin: string; pushOrigin?: string } | undefined): void {
+  if (project?.pushOrigin) {
+    const https = project.pushOrigin.startsWith("https://");
+    const ssh = project.pushOrigin.startsWith("ssh://") || /^[^/]+@[^:]+:/.test(project.pushOrigin);
+    const source =
+      https || project.pushOrigin.startsWith("ssh://") ? new URL(project.pushOrigin) : undefined;
+    const target = forgeOf(project.origin);
+    if (
+      (!https && !ssh) ||
+      (https &&
+        project.origin.startsWith("https://") &&
+        source?.origin !== new URL(project.origin).origin) ||
+      (https && source?.username) ||
+      source?.password ||
+      forgeOf(project.pushOrigin).host !== target.host
+    )
+      throw new Error("The fork's push address must stay on the project's own host.");
+  }
+}
 
 /**
  * The working copies a computer that runs work keeps for its home
@@ -173,7 +193,7 @@ export class WorkingCopies {
    */
   prepare(
     task: string,
-    project: { origin: string } | undefined,
+    project: { origin: string; pushOrigin?: string } | undefined,
     seed?: string,
     base?: WorkingCopyBase,
   ): Promise<PreparedCopy> {
@@ -186,6 +206,7 @@ export class WorkingCopies {
         : project
           ? await this.clone(project.origin)
           : undefined;
+      checkPushOrigin(project);
       // Ordinary projectless work starts from the home's seeded workspace.
       // A review instead uses its builder's local repository and exact commit.
       const startAt = !base && !project && seed ? await this.seededBase(seed) : undefined;
@@ -193,6 +214,7 @@ export class WorkingCopies {
         checked(task),
         repo?.dir,
         base ?? startAt,
+        project?.pushOrigin ? project : undefined,
       );
       const host = project ? forgeOf(project.origin).host : null;
       return {
@@ -572,6 +594,9 @@ export class WorkingCopies {
   ): Promise<WorkOrderResponse<"inf:working-copy:move-in">> {
     const { task, project, seed, head } = request;
     return this.serial(task, async () => {
+      const remote = project && "origin" in project && project.pushOrigin ? project : undefined;
+      checkPushOrigin(remote);
+
       const repoDir = !project
         ? await this.workspace.ensureDefaultRepo()
         : "origin" in project
@@ -610,9 +635,15 @@ export class WorkingCopies {
         throw new Error("The moved work's pack is for another commit.");
       // A working copy already here - made before an answer was lost - takes
       // the work only when it is at `head` and holds that work or nothing.
-      const dir = this.has(task)
-        ? this.dir(task)
-        : (await this.workspace.createTaskWorktree(checked(task), repoDir, { headSha: head })).cwd;
+      let dir: string;
+      if (this.has(task)) {
+        dir = this.dir(task);
+        if (remote) await inheritWorktreeRemotes(repoDir, dir, remote, branch);
+      } else {
+        dir = (
+          await this.workspace.createTaskWorktree(checked(task), repoDir, { headSha: head }, remote)
+        ).cwd;
+      }
       await unpackWork(dir, pack, folders, request.pack);
       if (files.bundle) await rm(files.bundle, { force: true });
       await rm(pack, { force: true });

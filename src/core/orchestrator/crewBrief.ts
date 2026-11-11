@@ -7,6 +7,7 @@ import type { Rigor } from "@shared/rigor";
 import type { RunbookFacts } from "@shared/runbooks";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import { attachmentPath, loadImages } from "../attachments";
+import { CONTRIBUTION_DELIVERY_WORDS } from "../forge";
 import { PRIVATE_SCOPE } from "../knowledge/access";
 import {
   knowledgeShortlist,
@@ -38,7 +39,13 @@ import {
   renderRigorSection,
   withoutOriginReadLine,
 } from "./intentBrief";
-import { basisFacts, branchFromSource, deliverableOf, sourceFacts } from "./workShape";
+import {
+  basisFacts,
+  branchFromSource,
+  deliverableOf,
+  sourceFacts,
+  taskContributesUpstream,
+} from "./workShape";
 
 /** What a brief reads of the supervisor beyond its options. */
 export type CrewBriefHost = {
@@ -233,6 +240,18 @@ export class CrewBrief {
     if (deliverable === "change" && record?.shape?.internal_step)
       sections.push([FLEET_STARTED_CHANGE_WORDS]);
     if (deliverable === "change") {
+      if (record?.delivery?.publicationOrigin && record.branch)
+        sections.push([
+          "This task's branch has its own saved Git remote. Use git fetch and git push without a remote argument. Its branch.<branch>.remote setting names the saved remote; use that remote's default-branch tracking ref when bringing this branch up to date. Origin belongs to the project folder and may change.",
+        ]);
+      if (
+        taskContributesUpstream(
+          record,
+          record?.repoId ? this.options.repos.get(record.repoId) : undefined,
+        )
+      ) {
+        sections.push([CONTRIBUTION_DELIVERY_WORDS]);
+      }
       const basis = basisFacts(this.options, this.host.cards, record);
       if (basis) sections.push(basisSectionParts(await this.withCardFile(taskId, basis)));
       // A filing's discovered-from links are truthful provenance, not an

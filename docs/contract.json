@@ -1659,6 +1659,89 @@
                 }
               ]
             },
+            "contribution": {
+              "type": "object",
+              "properties": {
+                "upstream": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "fullName": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "origin": {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "fullName",
+                    "origin"
+                  ]
+                },
+                "fork": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "fullName": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "origin": {
+                          "type": "string",
+                          "format": "uri"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "fullName",
+                        "origin"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "destination": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "upstream",
+                        "fork"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "creationAttempted": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "upstream",
+                "fork",
+                "destination"
+              ]
+            },
+            "contributionChecked": {
+              "type": "boolean"
+            },
             "delivery": {
               "type": "string",
               "enum": [
@@ -2028,6 +2111,89 @@
                   }
                 ]
               },
+              "contribution": {
+                "type": "object",
+                "properties": {
+                  "upstream": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "fullName": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "origin": {
+                        "type": "string",
+                        "format": "uri"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "fullName",
+                      "origin"
+                    ]
+                  },
+                  "fork": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "integer",
+                            "exclusiveMinimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "fullName": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "origin": {
+                            "type": "string",
+                            "format": "uri"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "fullName",
+                          "origin"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "destination": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "upstream",
+                          "fork"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "creationAttempted": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "upstream",
+                  "fork",
+                  "destination"
+                ]
+              },
+              "contributionChecked": {
+                "type": "boolean"
+              },
               "delivery": {
                 "type": "string",
                 "enum": [
@@ -2329,6 +2495,13 @@
           {
             "type": "object",
             "properties": {
+              "contributionDestination": {
+                "type": "string",
+                "enum": [
+                  "upstream",
+                  "fork"
+                ]
+              },
               "placementRequirements": {
                 "anyOf": [
                   {
@@ -2565,6 +2738,89 @@
                 "type": "null"
               }
             ]
+          },
+          "contribution": {
+            "type": "object",
+            "properties": {
+              "upstream": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "fullName": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "origin": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "id",
+                  "fullName",
+                  "origin"
+                ]
+              },
+              "fork": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "fullName": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "origin": {
+                        "type": "string",
+                        "format": "uri"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "fullName",
+                      "origin"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "destination": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "upstream",
+                      "fork"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "creationAttempted": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "upstream",
+              "fork",
+              "destination"
+            ]
+          },
+          "contributionChecked": {
+            "type": "boolean"
           },
           "delivery": {
             "type": "string",
@@ -5544,6 +5800,89 @@
                 "type": "null"
               }
             ]
+          },
+          "contribution": {
+            "type": "object",
+            "properties": {
+              "upstream": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "fullName": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "origin": {
+                    "type": "string",
+                    "format": "uri"
+                  }
+                },
+                "required": [
+                  "id",
+                  "fullName",
+                  "origin"
+                ]
+              },
+              "fork": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "fullName": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "origin": {
+                        "type": "string",
+                        "format": "uri"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "fullName",
+                      "origin"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "destination": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "upstream",
+                      "fork"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "creationAttempted": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "upstream",
+              "fork",
+              "destination"
+            ]
+          },
+          "contributionChecked": {
+            "type": "boolean"
           },
           "delivery": {
             "type": "string",
@@ -29900,6 +30239,9 @@
                         "in-batch",
                         "paused"
                       ]
+                    },
+                    "maintainers": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -31594,6 +31936,9 @@
                   "in-batch",
                   "paused"
                 ]
+              },
+              "maintainers": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -36300,6 +36645,9 @@
                     "in-batch",
                     "paused"
                   ]
+                },
+                "maintainers": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -58263,6 +58611,9 @@
                                         "in-batch",
                                         "paused"
                                       ]
+                                    },
+                                    "maintainers": {
+                                      "type": "boolean"
                                     }
                                   },
                                   "required": [
@@ -61936,6 +62287,9 @@
                       "in-batch",
                       "paused"
                     ]
+                  },
+                  "maintainers": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -64073,6 +64427,9 @@
                         "in-batch",
                         "paused"
                       ]
+                    },
+                    "maintainers": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -65767,6 +66124,9 @@
                         "in-batch",
                         "paused"
                       ]
+                    },
+                    "maintainers": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -74065,6 +74425,11 @@
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 4096
+                    },
+                    "pushOrigin": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 4096
                     }
                   },
                   "required": [
@@ -74990,6 +75355,11 @@
                       "type": "object",
                       "properties": {
                         "origin": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 4096
+                        },
+                        "pushOrigin": {
                           "type": "string",
                           "minLength": 1,
                           "maxLength": 4096

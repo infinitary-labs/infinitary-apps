@@ -1319,6 +1319,8 @@ export const MIGRATIONS: readonly Migration[] = [
     json_type(merge_authorization_json, '$.queueRemovals'), task_id
   ) WHERE json_valid(merge_authorization_json)
     AND json_type(merge_authorization_json, '$.queueRemovals') = 'array';`,
+  // Contribution routing stores only project identities and the captain's destination choice.
+  `ALTER TABLE repos ADD COLUMN contribution_json TEXT;`,
 ];
 
 /**

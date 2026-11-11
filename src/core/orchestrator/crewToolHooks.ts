@@ -93,6 +93,7 @@ export class CrewToolHooks {
       ...(machine === LOCAL_MACHINE_ID && this.core.options.probeTypeface
         ? { probeTypeface: this.core.options.probeTypeface }
         : {}),
+      contributionNotes: true,
       onCard: (card) => this.core.crewmateCards.crewmateCardWrite(task, card),
       onCardRefused: (refusal) => this.core.crewmateCards.recordCardRefusal(task, refusal),
       onCloseCard: (input) =>

@@ -15,7 +15,7 @@ import { renderWake } from "./orchestrator/wakes";
 import { createAppTools } from "./pi/appTools";
 import { catalogRefreshesSettled } from "./pi/modelRuntime";
 import { seedTask } from "./tasks/seedTask";
-import { git } from "./workspace/git";
+import { git, setManagedOriginPush } from "./workspace/git";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
 // the product spawns runs at this run's own priority (tests/helpers/unclampedQos.ts).
@@ -505,6 +505,54 @@ describe("the core, driven with no Electron in the process", () => {
           core.services.supervisor.cards.hostCards.withdrawHostCard(card.id, "test over");
       for (const repo of core.services.repos.list())
         if (repo.name === "keyed-setup") core.services.repos.unregister(repo.id);
+    }
+  });
+
+  // Regression: the normal Settings and removal callers release the app's fork push address before changing metadata.
+  it("cleans a contribution push address through Settings and project removal", async () => {
+    const folder = scratchDir("contribution-cleanup-");
+    const { repo } = await core.dispatch("inf:repos:setup", [{ kind: "adopt", path: folder }]);
+    const upstream = {
+      id: 1296269,
+      fullName: "octocat/Hello-World",
+      origin: "https://github.com/octocat/Hello-World.git",
+    };
+    const fork = {
+      id: 210,
+      fullName: "contributor/Hello-World",
+      origin: "https://github.com/contributor/Hello-World.git",
+    };
+    try {
+      await git(folder, ["remote", "add", "origin", upstream.origin]);
+      core.services.repos.configure(repo.id, { origin: upstream.origin });
+      core.services.repos.setContribution(repo.id, { upstream, fork, destination: "upstream" });
+      await setManagedOriginPush(folder, fork.origin);
+      await git(folder, [
+        "remote",
+        "set-url",
+        "origin",
+        "https://github.com/octocat/Spoon-Knife.git",
+      ]);
+      const changed = await core.dispatch("inf:repos:configure", [
+        repo.id,
+        { origin: "https://github.com/octocat/Spoon-Knife.git" },
+      ]);
+      expect(changed.contribution).toBeUndefined();
+      expect(await git(folder, ["config", "--get", "remote.origin.pushurl"]).catch(() => "")).toBe(
+        "",
+      );
+      await git(folder, ["remote", "set-url", "origin", upstream.origin]);
+      core.services.repos.configure(repo.id, { origin: upstream.origin });
+      core.services.repos.setContribution(repo.id, { upstream, fork, destination: "upstream" });
+      await setManagedOriginPush(folder, fork.origin);
+      await core.dispatch("inf:repos:remove", [repo.id]);
+      expect(core.services.repos.get(repo.id)).toBeUndefined();
+      expect(existsSync(folder)).toBe(true);
+      expect(await git(folder, ["config", "--get", "remote.origin.pushurl"]).catch(() => "")).toBe(
+        "",
+      );
+    } finally {
+      if (core.services.repos.get(repo.id)) await core.dispatch("inf:repos:remove", [repo.id]);
     }
   });
 

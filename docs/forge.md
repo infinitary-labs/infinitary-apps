@@ -11,7 +11,7 @@ This is the one home of what the seam is in the code.
 
 | Call | GitHub | GitLab | Plain Git host | Kept on this Mac |
 |---|---|---|---|---|
-| `changeFor(branch)` | the open pull request for the branch | the open merge request from the project's own branch | the branch, if it has been sent up | never one |
+| `changeFor(branch)` | the open pull request for the branch and its selected source project | the open merge request from the project's own branch or its selected contribution fork | the branch, if it has been sent up | never one |
 | `checks(change)` | every page of the check runs (a cancelled run superseded by a later run of its workflow set aside) and commit statuses on the head; a suite past the ten pages read keeps a pending item, so it never reads green | the pipelines for the head and each one's jobs ("GitLab merge requests" below) | none: green with zero checks | none |
 | `holdsCommit(sha)` | whether the Git database holds that exact full commit id (`git/commits`), since the commit reads `checks` uses resolve a longer id by its first 40 characters; a 404 counts only once the repository reads | whether `repository/commits` answers that exact full id, once the project reads | absent | absent |
 | `branchesAt(sha)` | the branches whose head is that version (`branches-where-head`), where a pushed or dispatched run can still start | the branches `repository/commits/:sha/refs` says hold it whose own head it is; a full page is unknown | absent | absent |
@@ -30,6 +30,51 @@ A `Forge` is per repository.
 The composition root binds an implementation per kind (`ForgeBindings`); a kind with none is a plain host.
 GitHub and GitLab are bound; they are the kinds with change requests (`hasChangeRequests`, `src/shared/forge.ts`), which the merge path, the kept merge approval and the settle words read instead of naming GitHub.
 Bitbucket is recognised by name and behaves as a plain host.
+
+## Contributing through an owned fork
+
+On GitHub and GitLab, `ProjectContributions` reads the sign-in's project access and the host's fork relationship through `Forge.contributions` for pull-request delivery, never to prepare a local-only change.
+The project retains a successful direct-project inspection so later publications do not repeat account and project discovery.
+GitLab resolves absent or lower listed roles through effective membership, including inherited and shared-group membership; a membership 404 confirms a non-member, while other read failures remain failures.
+A project the sign-in cannot push to uses an existing verified owned fork, or asks on an app-authored project-change card before creating one.
+The project keeps the confirmed fork and reuses it; its route stores host project identities, not credentials.
+A create request is marked attempted before sending, so a lost response is reconciled by reading for the fork and is never automatically repeated.
+A definite refusal clears that attempt and permits another explicit consent-button attempt.
+A fork that the person adds as a project asks once whether changes should contribute to its original project or stay in the fork.
+Settings → Projects exposes that choice as Target project, with Original project and My fork.
+The first destination choice works for an imported project with prepared working copies; those tasks keep their previous push and publication targets.
+A later destination change waits until the project's current code working copies finish.
+Equivalent origins retain their existing Git transport, while Settings address changes and project removal clear only contribution-managed push addresses.
+
+Contributing fetches the original project's default branch and pushes task branches through the fork using a task-owned native Git remote.
+It never updates the fork's own default branch, so a stale fork does not determine a task's base.
+Target writes serialize, and a new task waits for an in-flight target choice before reading its route.
+A task with a prepared branch keeps its selected route, publication origin and credential-free preferred push transport on its delivery record.
+Each app-owned task branch uses its own named remote for default fetch and push, without enabling worktree-specific configuration or pinning person-owned linked copies.
+Copies of private Git route values keep native configuration owner-only, never putting credentials in process arguments or task delivery metadata.
+Task retirement removes that remote and its tracking refs; a newly acquired pooled copy receives its new task's route.
+A temporary folder-level fork override retains the person's original push settings privately in native Git configuration and restores them when the override ends.
+Work-computer tasks with a separate push address use independent named remotes rather than changing the shared clone; ordinary tasks retain their existing origin and dispatch behavior.
+Preparation and moves carry the prepared fetch and push addresses together, including moves back home and replay of a received pack.
+A computer that runs the task receives the separate push address only after it advertises `fork-contributions`; an older computer must be updated before preparation or moving work.
+GitHub opens the upstream pull request with the fork's owner and repository as its head.
+GitLab opens the merge request in the source fork with the upstream target project id.
+Branch-head and open-change reads retain that source identity rather than confusing an identically named upstream branch.
+
+The contributor's published story is a note without merge actions, not a merge offer.
+Card bindings explicitly advertise support for contribution notes; the home still checks each task's saved route.
+The host refuses both direct and reviewed merges on that contribution and never marks the upstream queue.
+The existing change watcher keeps reading the upstream request, records its open, merged or closed state, and steers the crewmate when the host reports new activity.
+The crewmate reads maintainer comments through the existing host reads and pushes requested fixes to the same fork branch.
+Its waiting state says Waiting for the maintainers, and its story note's existing status line follows the confirmed external outcome.
+A confirmed external merge can close a completed contribution whose saved-story note named that exact request and head, without sending another merge.
+Checks that require upstream write access are named as not run in the story; the contributor does not attempt to start the maintainers' checks or queue.
+
+A contribution destination may declare `media: card-only` before publication.
+That is the explicit text-story fallback when fork-upload visibility has not been established: the upstream description receives text, and the inspected pictures stay on the card.
+It is not recovery from a failed or uncertain native upload, and ordinary story uploads retain their existing destination, permission and send-once checks.
+`githubStoryDestination` and `gitlabStoryDestination` separate reading the upstream description's identity from requesting upload permission; only the contribution's text route uses the description reading.
+The provider tests, `projectContributions.test.ts`, and the `fork-contribution.spec.ts` journey own these boundaries.
 
 ## The kinds
 
@@ -219,7 +264,7 @@ No shared application is registered on gitlab.com; guided per-host registration 
 A GitLab project's direct-pr task delivers the way a GitHub one does: the crewmate pushes its branch and calls `open_change`, the checks gate and `check_change` read the pipelines, the check watch follows them, and the captain's merge, or a kept merge approval (FI3-304), squash-merges the checked version.
 `GitLabForge` (`providers/gitlab/gitlabForge.ts`) reaches the project at `/projects/<encoded group/subgroup/name>`, so nested groups keep their whole path, through the same `GitLabClient` and per-host sign-in.
 
-- **Its change** is a merge request from the project's own branch onto the default branch (`POST /merge_requests`, `source_branch`, `target_branch`, `title`, `description`); a fork's merge request from a branch of the same name is never taken for it.
+- **Its ordinary change** is a merge request from the project's own branch onto the default branch (`POST /merge_requests`, `source_branch`, `target_branch`, `title`, `description`); a fork's merge request from a branch of the same name is never taken for it.
   A new merge request's description is its saved story: gitlab.com confirms every selected upload first, while a self-hosted server publishes the text and retains media on the merge card ("Saved change stories" below).
   It is named `!N` with GitLab's page, and recorded on the task as `changeLabel`, `prNumber` and `prUrl` like a pull request; surfaces keep the app's word, pull request.
   Its head is the merge request's `sha`.

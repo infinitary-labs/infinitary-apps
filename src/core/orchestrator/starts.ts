@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import type { AttachmentRef } from "@shared/attachments";
 import { isClientIssueReason } from "@shared/claudeClient";
+import { preparedPublicationRemote } from "@shared/contributions";
 import { COMPUTER, HERE } from "@shared/deviceNames";
 import { noSignInsStartRefusal, updateStartRefusal } from "@shared/deviceSetup";
 import { noNewWorkStartRefusal } from "@shared/deviceUpdateNudge";
@@ -30,6 +31,7 @@ import type { TaskGate, TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import { UNCONFIRMED_START_RETURNED } from "../tasks/taskStarts";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
+import { taskRemoteName } from "../workspace/git";
 import type { DispatchBase, WorktreeAcquisition } from "../workspace/workspaceService";
 import type { CrewBrief } from "./crewBrief";
 import type { CrewCore } from "./crewCore";
@@ -145,20 +147,22 @@ function gateClearedText(gate: TaskGate): string {
  * refresh of the default branch is said, never hidden - the task still
  * starts, from what this machine last saw.
  */
-function worktreeText(acquired: WorktreeAcquisition, where?: string): string {
+function worktreeText(acquired: WorktreeAcquisition, where?: string, branch?: string): string {
   const on = where ? ` on ${where}` : "";
   const copy =
     acquired.source === "pool"
       ? `a warm working copy was reused${on}`
       : `a new working copy was made${on}`;
   const { base } = acquired;
+  const prefix = branch ? `${taskRemoteName(branch)}/` : "";
+  const ref = prefix && base.ref.startsWith(prefix) ? base.ref.slice(prefix.length) : base.ref;
   switch (base.fetch) {
     case "fetched":
-      return `${copy}, starting from the latest ${base.ref}`;
+      return `${copy}, starting from the latest ${ref}`;
     case "failed":
-      return `${copy}; ${base.ref} could not be refreshed (${base.fetchError ?? "unknown error"}), so it starts from the last one this machine saw`;
+      return `${copy}; ${ref} could not be refreshed (${base.fetchError ?? "unknown error"}), so it starts from the last one this machine saw`;
     case "none":
-      return `${copy}, starting from ${base.ref === "HEAD" ? "the project's current commit" : base.ref}`;
+      return `${copy}, starting from ${ref === "HEAD" ? "the project's current commit" : ref}`;
   }
 }
 
@@ -333,6 +337,10 @@ export class CrewStarts {
     let minted: BriefPart[];
     let pictures: Awaited<ReturnType<CrewBrief["briefPictures"]>>;
     try {
+      if (record && deliverableOf(record) === "change") {
+        const pending = await this.core.options.prepareContribution?.(taskId);
+        if (pending) throw new Error(pending);
+      }
       // Routing chose no model for a start on this Mac. With Dynamic routing
       // off, or with an account-less runtime that serves no model of its
       // own, a session opened anyway would fail as if a sign-in had lapsed.
@@ -430,6 +438,7 @@ export class CrewStarts {
           taskId,
           repoDir,
           headSha ? { headSha } : branchFrom,
+          preparedPublicationRemote(this.core.options.tasks.get(taskId)),
         );
       }
       cwd ??= task.workspace?.cwd ?? "";
@@ -523,19 +532,23 @@ export class CrewStarts {
       const acquired = task.workspace?.acquired ?? elsewhere?.acquired;
       if (acquired) {
         const where = elsewhere ? this.core.options.machines?.nameOf(machine) : undefined;
-        this.core.options.tasks.note(taskId, worktreeText(acquired, where), {
-          news: false,
-          data: {
-            worktree: acquired.source,
-            ms: acquired.ms,
-            base: {
-              ref: acquired.base.ref,
-              sha: acquired.base.sha,
-              fetch: acquired.base.fetch,
-              ...(acquired.base.fetchError ? { fetchError: acquired.base.fetchError } : {}),
+        this.core.options.tasks.note(
+          taskId,
+          worktreeText(acquired, where, task.workspace?.branch ?? elsewhere?.branch),
+          {
+            news: false,
+            data: {
+              worktree: acquired.source,
+              ms: acquired.ms,
+              base: {
+                ref: acquired.base.ref,
+                sha: acquired.base.sha,
+                fetch: acquired.base.fetch,
+                ...(acquired.base.fetchError ? { fetchError: acquired.base.fetchError } : {}),
+              },
             },
           },
-        });
+        );
       }
       task.unsubscribe = await this.core.toolHooks.follow(task, session);
       // From here every save in the workspace carries the task (the

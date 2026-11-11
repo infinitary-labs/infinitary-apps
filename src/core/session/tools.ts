@@ -342,6 +342,8 @@ export type CrewmateToolDelegate = {
    * a font file is refused.
    */
   probeTypeface?: TypefaceProbe;
+  /** This callback host resolves actionless contribution stories; it still checks the task's route. */
+  contributionNotes?: boolean;
   /**
    * Receives cards the crewmate emits through its card tool, as declared:
    * the host words a completion decision's buttons. A completion card's

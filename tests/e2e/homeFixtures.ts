@@ -18,6 +18,18 @@ export function gitCloneHome(origin: string, local: string): (homeDir: string) =
   return (homeDir) => redirectGitClone(homeDir, origin, local);
 }
 
+/** The contribution journey's two real local hosts, behind their public-looking addresses. */
+export function contributionGitHome(
+  homeDir: string,
+  routes: { origin: string; local: string }[],
+): void {
+  writeFileSync(
+    join(homeDir, ".gitconfig"),
+    `[user]\n\tname = Example contributor\n\temail = contributor@example.invalid\n[commit]\n\tgpgsign = false\n[core]\n\thooksPath = /dev/null\n` +
+      routes.map(({ origin, local }) => `[url "${local}"]\n\tinsteadOf = ${origin}\n`).join(""),
+  );
+}
+
 /**
  * A person's own git identity, as their computer has one: git authors a new
  * project's first commit, a crewmate's commit and a local merge with it.

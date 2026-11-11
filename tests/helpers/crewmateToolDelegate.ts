@@ -20,6 +20,7 @@ export function crewmateToolDelegate(): Required<
   };
   return {
     calls,
+    contributionNotes: false,
     requestedSpeed: () => "standard",
     onSpeed: (model, selection) => {
       calls.push({ callback: "onSpeed", input: { model, selection } });

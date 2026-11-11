@@ -1,3 +1,4 @@
+import { contributesUpstream } from "@shared/contributions";
 import { type ForgeKind, forgeOf, forgePlace } from "@shared/forge";
 import type { RepoView } from "@shared/repos";
 import type { Forge, ForgeLocation } from "./forge";
@@ -47,6 +48,7 @@ export type {
   UploadAttachment,
 } from "./attachments";
 export { AttachmentUploadError, sameAttachmentDestination } from "./attachments";
+export { CONTRIBUTION_DELIVERY_WORDS } from "./contributions";
 export type {
   Forge,
   ForgeBypass,
@@ -202,7 +204,7 @@ export type {
 export type ForgeBindings = Partial<Record<ForgeKind, (location: ForgeLocation) => Forge>>;
 
 /** The repository fields the seam reads; a repo-less task has none. */
-export type ForgeRepo = Pick<RepoView, "path" | "origin" | "host">;
+export type ForgeRepo = Pick<RepoView, "path" | "origin" | "host" | "contribution">;
 
 /** Where a repository lives, as the seam needs it. */
 export function forgeLocationOf(repo: ForgeRepo): ForgeLocation {
@@ -213,6 +215,9 @@ export function forgeLocationOf(repo: ForgeRepo): ForgeLocation {
     ...(parsed.owner ? { owner: parsed.owner } : {}),
     ...(parsed.name ? { name: parsed.name } : {}),
     dir: repo.path,
+    ...(contributesUpstream(repo.contribution) && repo.contribution?.fork
+      ? { source: { id: repo.contribution.fork.id, fullName: repo.contribution.fork.fullName } }
+      : {}),
   };
 }
 

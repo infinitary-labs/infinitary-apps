@@ -37,6 +37,7 @@ import {
 } from "./settleWords";
 import type { TaskClose, TaskClosing } from "./taskClose";
 import type { TaskDrop } from "./taskDrop";
+import { taskContributesUpstream } from "./workShape";
 
 /**
  * The feed line for a settle the captain clicked. An outcome with no raw
@@ -489,6 +490,12 @@ export class SettleService {
           this.host.inbox.enqueueSteerOnce(taskId, {
             facts: {
               kind: "external-merge",
+              ...(taskContributesUpstream(
+                current,
+                current.repoId ? this.host.repos.get(current.repoId) : undefined,
+              )
+                ? { contribution: true }
+                : {}),
               change: changeName(current, pull.number),
               head: pull.headSha,
               ...(other
@@ -516,6 +523,20 @@ export class SettleService {
    * the app approved on its own reads through its standing approval.
    */
   private declaresClose(record: TaskRecord, pull: ForgePull): boolean {
+    if (
+      taskContributesUpstream(
+        record,
+        record.repoId ? this.host.repos.get(record.repoId) : undefined,
+      ) &&
+      record.delivery?.completionOffers?.some(
+        (offer) =>
+          offer.prNumber === pull.number &&
+          offer.headSha === pull.headSha &&
+          offer.presentationRevision !== undefined &&
+          offer.continues !== true,
+      )
+    )
+      return true;
     // Every open merge card that names this pull request (INF-2746): a
     // review of it, or the task's own change.
     const scopes = [

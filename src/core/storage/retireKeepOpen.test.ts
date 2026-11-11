@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { REVERSE_PROJECT_CONTRIBUTIONS } from "../../../tests/helpers/migrations";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { taskRecordRetirementReverseSql } from "../../../tests/helpers/taskRecordRetirement";
 import { renderWake } from "../orchestrator/wakes";
@@ -61,6 +62,7 @@ describe("migration 73 retires saved keep-open choices", () => {
     const observations = cards.observations("open");
     dropViews(before);
     before.exec(taskRecordRetirementReverseSql());
+    before.exec(REVERSE_PROJECT_CONTRIBUTIONS);
     before.exec(`
       ALTER TABLE cards DROP COLUMN holds_place;
       ALTER TABLE inbox DROP COLUMN cuts;

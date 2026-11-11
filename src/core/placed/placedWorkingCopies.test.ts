@@ -8,7 +8,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import type { ChangePresentationDraft } from "@shared/changePresentation";
 import { RUNS_ON_THIS_MAC } from "@shared/repos";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
@@ -32,12 +32,15 @@ import {
 } from "../../../tests/helpers/placedWorld";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import { contractChange } from "../connection/contractChanges";
 import { pathsOf } from "../folderMove/due";
 import { rewriteDatabases } from "../folderMove/rewrite";
 import { PlacedTasks } from "../helper/placedTasks";
 import { crewmateCardPicturesDir } from "../paths";
+import { seedTask } from "../tasks/seedTask";
 import { git } from "../workspace/git";
 import { ProjectChanges } from "../workspace/projectChanges";
+import { ProjectContributions } from "../workspace/projectContributions";
 import { checkedOutRefFor, keptRefFor, WorkspaceService } from "../workspace/workspaceService";
 import { NO_PLACED_TASK } from "./placedWork";
 
@@ -387,6 +390,127 @@ describe("a task that runs on a computer that runs work", () => {
     ).toMatchObject({
       revision: 1,
       head: tip,
+    });
+  });
+
+  // R3: prepared contribution routing survives the actual move/pack owners in both directions.
+  // Host identities are declared fixtures; branches, bundles, packs and pushes are disposable real Git.
+  it("keeps a started contribution pushing to its fork after moving home and back", async () => {
+    const project = await gitProject();
+    const fork = join(dirname(project.origin), "fork.git");
+    await git(project.home, ["clone", "--quiet", "--bare", project.origin, fork]);
+    const upstreamAddress = "https://github.com/examples/website.git";
+    const forkAddress = "https://github.com/contributor/website.git";
+    const config = join(scratchDir("contribution-move-config-"), "gitconfig");
+    writeFileSync(
+      config,
+      `[url "${project.origin}"]\n\tinsteadOf = ${upstreamAddress}\n[url "${fork}"]\n\tinsteadOf = ${forkAddress}\n`,
+    );
+    vi.stubEnv("GIT_CONFIG_GLOBAL", config);
+    vi.stubEnv("GIT_CONFIG_NOSYSTEM", "1");
+    await git(project.home, ["remote", "set-url", "origin", upstreamAddress]);
+    const at = await world(() => project.forge(Buffer.alloc(0)), {
+      runsHere: true,
+      signedInTo: [computerAccount("acct_placed_there", PROVIDER)],
+      served: [{ accountId: "acct_placed_there", models: [{ provider: PROVIDER, id: MODEL }] }],
+      forges: () => ({
+        hosts: [{ host: "github.com", name: "GitHub" }],
+        signIns: [
+          { host: "github.com", name: "GitHub", login: "contributor", state: "ok", since: 1 },
+        ],
+      }),
+    });
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.configure(repo.id, { delivery: "direct-pr" });
+    home.repos.setContribution(repo.id, {
+      upstream: { id: 1296269, fullName: "examples/website", origin: upstreamAddress },
+      fork: { id: 210, fullName: "contributor/website", origin: forkAddress },
+      destination: "upstream",
+    });
+    model([{ text: "Started the contribution." }]);
+    // This lightweight placed-home fixture does not wire discovery: call its actual preparation owner.
+    const record = seedTask(home.tasks, {
+      id: "t-fork-move",
+      title: "Contribute the footer",
+      prompt: "Contribute the footer.",
+      status: "queued",
+      deviceId: at.deviceId,
+      repoId: repo.id,
+    });
+    const contributions = new ProjectContributions({
+      repos: home.repos,
+      tasks: home.tasks,
+      forgeFor: () => project.forge(Buffer.alloc(0)),
+      raise: () => {
+        throw new Error("The declared route needs no new consent");
+      },
+      note: () => {},
+    });
+    expect(await contributions.prepareTask(record.id, home.tasks)).toBeUndefined();
+    await home.supervisor.starts.dispatchQueuedTask(record.id);
+    expect(home.tasks.get(record.id)?.status).toBe("active");
+    await expect.poll(() => home.tasks.get("t-fork-move")?.activity).toBe("idle");
+    const there = at.folders("t-fork-move").work;
+    writeFileSync(join(there, "footer.html"), "<footer>blue</footer>\n");
+    const first = await commit(there, "feat: contribute a blue footer");
+    writeFileSync(join(there, "notes.txt"), "keep this uncommitted work\n");
+    const settleMove = async () => {
+      await expect.poll(() => home.tasks.get("t-fork-move")?.shape?.computer_move).toBeUndefined();
+    };
+    expect(
+      await home.supervisor.moves.requestComputerMove("t-fork-move", RUNS_ON_THIS_MAC, "captain"),
+    ).toMatchObject({ ok: true });
+    await settleMove();
+    const here = home.tasks.get("t-fork-move")?.worktreeDir ?? "";
+    expect(await git(here, ["rev-parse", "HEAD"])).toBe(first);
+    expect(readFileSync(join(here, "notes.txt"), "utf8")).toBe("keep this uncommitted work\n");
+    await git(here, ["push", "--quiet"]);
+    const branch = home.tasks.get("t-fork-move")?.branch ?? "";
+    expect(await git(fork, ["rev-parse", `refs/heads/${branch}`])).toBe(first);
+    // The old receiver must refuse before examining or uploading even a missing pack.
+    const readVersion = home.devices.version.bind(home.devices);
+    const version = vi.spyOn(home.devices, "version").mockImplementation((id) => {
+      const value = readVersion(id);
+      return (
+        value && {
+          ...value,
+          changes: value.changes?.filter(
+            (change) => change !== contractChange("fork-contributions"),
+          ),
+        }
+      );
+    });
+    try {
+      await expect(
+        home.placed.moveIn(at.deviceId, "t-fork-move", "unsupported", {
+          repoId: repo.id,
+          head: first,
+          branch,
+          pack: join(here, "not-uploaded.pack"),
+        }),
+      ).rejects.toThrow("must be updated");
+    } finally {
+      version.mockRestore();
+    }
+    expect(
+      await home.supervisor.moves.requestComputerMove("t-fork-move", at.deviceId, "captain"),
+    ).toMatchObject({ ok: true });
+    await settleMove();
+    const again = at.folders("t-fork-move").work;
+    expect(readFileSync(join(again, "notes.txt"), "utf8")).toBe("keep this uncommitted work\n");
+    writeFileSync(join(again, "footer.html"), "<footer>green</footer>\n");
+    const next = await commit(again, "fix: refine the contribution footer");
+    await git(again, ["push", "--quiet"]);
+    expect(await git(fork, ["rev-parse", `refs/heads/${branch}`])).toBe(next);
+    await expect(
+      git(project.origin, ["show-ref", "--verify", `refs/heads/${branch}`]),
+    ).rejects.toThrow();
+    expect(await git(fork, ["rev-parse", "refs/heads/main"])).toBe(project.main);
+    expect(await git(project.origin, ["rev-parse", "refs/heads/main"])).toBe(project.main);
+    expect(home.tasks.get("t-fork-move")?.delivery).toMatchObject({
+      publicationOrigin: upstreamAddress,
+      publicationPushOrigin: forkAddress,
     });
   });
 

@@ -1,3 +1,4 @@
+import { waitingForMaintainers } from "@shared/contributions";
 import { QUEUE_STATUS } from "@shared/repos";
 import type { AccountHold, WorkPosture } from "@shared/workPosture";
 import { queueKind } from "../queue/shipped/rules.mjs";
@@ -36,6 +37,8 @@ export function deriveWorkPosture(record: TaskRecord, gather: () => PostureFacts
       reason: "access",
       ...(facts.accountHeld && facts.hold ? { hold: facts.hold } : {}),
     };
+  if (facts.checksWatched && waitingForMaintainers(record.delivery))
+    return { state: "active", reason: "checks", maintainers: true };
   const batch = pendingBatch(record);
   if (batch) return { state: "active", reason: "checks", batch };
   if (facts.checksWatched) return { state: "active", reason: "checks" };

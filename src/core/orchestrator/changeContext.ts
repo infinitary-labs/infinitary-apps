@@ -14,6 +14,7 @@ import { git } from "../workspace/git";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { ChangePresentations } from "./changePresentations";
 import type { LineageFacts, LineageQuestion } from "./mergeAuthorization";
+import { publicationRepo } from "./publicationRepo";
 import { reviewCoversHead } from "./reviewCarry";
 import type { TypedWake, WakeFacts } from "./wakes";
 
@@ -26,6 +27,7 @@ import type { TypedWake, WakeFacts } from "./wakes";
  */
 export type ChangeDeliveryOptions = {
   namingRule?: () => NamingRule | null;
+  prepareContribution?: (taskId: string) => Promise<string | undefined>;
   tasks: TaskService;
   repos: RepoRegistry;
   presentations?: ChangePresentations;
@@ -170,7 +172,7 @@ export class ChangeContext {
     return {
       record,
       branch: record.branch,
-      forge: this.options.forgeFor(repo, dir),
+      forge: this.options.forgeFor(repo ? publicationRepo(record, repo) : repo, dir),
       repo,
       dir,
       elsewhere: false,

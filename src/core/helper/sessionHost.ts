@@ -1356,6 +1356,7 @@ export class SessionHost {
       handoverDir: join(folders.temp, HANDOVER_OUT_DIR_NAME),
       ...(this.options.probeMedia ? { probeMedia: this.options.probeMedia } : {}),
       ...(this.options.probeTypeface ? { probeTypeface: this.options.probeTypeface } : {}),
+      contributionNotes: true,
       onCard: (card, toolSignal) =>
         this.withDeadline(
           "inf:work:card",

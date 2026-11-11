@@ -361,7 +361,12 @@ html[data-card-stack-open] [data-rail] {
 /* The shell holds the shown entry's displayed height; natural measurement
    releases it once before paint. Only the shown entry follows the shell: a
    successor being prepared lays out at its own natural height, and a
-   leaving drawing keeps the rectangle it was shown in (docs/renderer.md). */
+   leaving drawing keeps the rectangle it was shown in (docs/renderer.md).
+   While waiting and unseen, the incoming entry also lays out naturally: the
+   shell still holds the previous rectangle, but must not clip the incoming
+   body below its scroller and prevent that frame from drawing. Once the
+   stage reveals it (including expiry), it follows the held shell again,
+   so late body growth cannot move a control during a pointer press. */
 [data-card-presentation] {
   position: relative;
   max-height: 100%;
@@ -383,14 +388,27 @@ html[data-card-stack-open] [data-rail] {
   [data-response-card] {
   height: 100%;
 }
-[data-card-presentation][data-card-geometry="natural"] > [data-stage-entry="shown"],
-[data-card-presentation][data-card-geometry="natural"]
+[data-card-presentation]:is(
+    [data-card-geometry="natural"],
+    [data-card-geometry="waiting"]:not([data-card-revealed])
+  )
+  > [data-stage-entry="shown"],
+[data-card-presentation]:is(
+    [data-card-geometry="natural"],
+    [data-card-geometry="waiting"]:not([data-card-revealed])
+  )
   > [data-stage-entry="shown"]
   [data-card-surface],
-[data-card-presentation][data-card-geometry="natural"]
+[data-card-presentation]:is(
+    [data-card-geometry="natural"],
+    [data-card-geometry="waiting"]:not([data-card-revealed])
+  )
   > [data-stage-entry="shown"]
   [data-card-pair],
-[data-card-presentation][data-card-geometry="natural"]
+[data-card-presentation]:is(
+    [data-card-geometry="natural"],
+    [data-card-geometry="waiting"]:not([data-card-revealed])
+  )
   > [data-stage-entry="shown"]
   [data-response-card] {
   height: auto;

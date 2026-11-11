@@ -969,6 +969,7 @@ export function CardLayer({ onEmptied }: { onEmptied: () => void }) {
           <div
             ref={shellRef}
             data-card-presentation=""
+            data-card-revealed={stage.revealed ? "" : undefined}
             onPointerDownCapture={presentation.pressGeometry}
             onFocusCapture={presentation.cancelGeometry}
           >

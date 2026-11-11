@@ -137,7 +137,9 @@ A wait that never becomes ready ends after the frame watchdog's budget, counted 
 The stylesheet narrows a lone card at once when a panel docks or the window shrinks (`STAGE_CEILING`), before the stage's own layout catches up, so a body can draw at its new width under a key that still names the old one.
 Its drawing counts once the stage's layout names the same document and the shown entry is laid out as wide as when the body drew.
 A task record is ready once its own record has loaded and its body frame has drawn once, or it could not be read (`RecordCard`, INF-510).
-Opened on an empty stage it stays unseen until then (`selectSlots`' `waits`), so it appears once at the height it keeps; a card the captain already sees holds its rectangle meanwhile, and an unseen first entry lays out at its natural height so its frame, which reports nothing while it lies below a held rectangle (FI3-948), can draw.
+Opened on an empty stage it stays unseen until then (`selectSlots`' `waits`), so it appears once at the height it keeps.
+While waiting for readiness, the unseen incoming entry lays out at its natural height, both on an empty stage and when replacing a card.
+The shell still holds the previous drawing’s rectangle, but does not constrain the incoming entry to that height: a body frame below the held scroller’s visible edge would get no drawing frames and could not report readiness.
 A record whose frame never reports appears as it is when the hold ends.
 A prepared page with a script that drew held is ready only once the card is shown, its scripts ran and it reported its drawing again.
 Readiness and the shell's natural height read laid-out sizes, so a card still scaling into place (the arrival, a card coming forward) counts at its own width and height.
@@ -160,6 +162,7 @@ Settings and the first-launch gate do not recover to an absent or disabled promp
 Initial thread history resolves before a body is born, so a card/pair is not born at a provisional width.
 Stage widths and folded rails resolve without easing; widths never tween.
 The shell stays at the previous height, bounded by current chrome and the stage envelope, until the shown entry is ready, then eases height only over the shared 360ms with the glide (`--ease-out`) and a fixed centre.
+An entry revealed by expiry follows the held shell again while its body is pending, rather than keeping its unseen natural layout, so later body growth cannot move a control during a pointer press.
 The easing ends when its animation finishes, even before the deadline the shell read from the page's clock: the animation's clock can start a frame earlier, and the shown card settles then, so the next successor is prepared (INF-624).
 A press on the card holds it still until the release, so the control under the pointer stays under it, then settles at once.
 That holds while the height eases and when it would jump with no easing, as a task record's does when its live facts change after it appears.

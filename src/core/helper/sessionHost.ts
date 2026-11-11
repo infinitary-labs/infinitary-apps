@@ -91,6 +91,9 @@ import type { PlacedJob, PlacedTaskState, PlacedTasks } from "./placedTasks";
 import { PLACED_REQUEST_WAIT_MS } from "./toolWait";
 import type { WorkingCopies } from "./workingCopies";
 
+/** A story view carrying a map (`story-map.md`). */
+const STORY_MAP = contractChange("story-map");
+
 /**
  * A crewmate's conversation held on a computer that runs work, for its home
  * (docs/helper.md, "Holding a conversation"): the computer's side of the
@@ -1533,6 +1536,13 @@ export class SessionHost {
               )
                 throw new Error(
                   `Live validation rows need a newer Infinitary on ${HOME.the}; update it before preparing this story. Nothing was sent.`,
+                );
+              if (
+                story.views.some((view) => view.map !== undefined) &&
+                !listsChange(this.options.homeChanges?.(), STORY_MAP)
+              )
+                throw new Error(
+                  `A map view needs a newer Infinitary on ${HOME.the}; update it before preparing this story. Nothing was sent.`,
                 );
               await sendPictures(story.pictures, signal);
               return await text("inf:work:prepare-change", { input: story }, signal);

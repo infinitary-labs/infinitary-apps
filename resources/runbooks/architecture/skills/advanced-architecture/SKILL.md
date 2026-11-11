@@ -1,6 +1,6 @@
 ---
 name: advanced-architecture
-description: Map a project as flat diagrams and show what a change moves on them - the .architecture.json map files, how to find parts, links and state machines, the comparison between two versions, and the map part that draws both on a card. Read before writing or updating map files, or before showing a map or what changed.
+description: Map a project as flat diagrams and show what a change moves on them - the .architecture.json map files, how to find parts, links and state machines, the comparison between two versions, the map part that draws both on a card, and the change view in a change's story. Read before writing or updating map files, or before showing a map or what changed.
 ---
 
 # Advanced architecture
@@ -106,4 +106,17 @@ A card body holds at most 65,536 characters, and the part takes about 40,000 of 
 When the data does not fit, pack it: deflate it raw, encode it in base64, put that in the block and add `data-packed` to it, for example with `node -e "process.stdout.write(require('zlib').deflateRawSync(require('fs').readFileSync(0)).toString('base64'))" < map-data.json`.
 If the map part lists problems under the drawing, fix the map files and draw it again before the card goes up.
 The reader clicks a box for its links or a pill for its state machine, goes in with a double-click or Enter, goes back with Esc, chooses with the arrows, and moves with drag, scroll, +, − and 0.
-For a picture of it, such as in a pull request, open the filled part as a page in your task's browser, photograph it and look at the picture before using it.
+For a picture of it, fill `parts/map-page.html` the same way instead: it is the part in a page with the app's colors, which a bare part has only inside a card.
+Serve its folder on this computer, for example with `python3 -m http.server --bind 127.0.0.1`, open the page in your task's browser, photograph it and look at the picture before using it; then stop the server.
+
+## In a change's story
+
+When your change moves something on the map, its story carries the change view: the merge card draws it live, and the pull request, which cannot run the part, shows a picture of it.
+
+1. Work out the comparison between your branch's head and its merge base as above, labeled `This pull request`.
+2. Write the data block as a JSON file in your evidence folder: every map file at your head in `maps`, `counts`, that one entry in `compare`, and `open` at the part your change moves most with `"changes": 0`.
+3. Fill `parts/map-page.html` with the same block and photograph it as above.
+4. Add one view to the story: `map` names the JSON file, `kind` is `changed` with no `before`, and `after` holds that picture, captured at your head.
+
+The view goes beside the story's other views, or beside `noPicture` when nothing on screen changed.
+A story holds one map view, and the whole story, the packed map included, stays under 60,000 characters: when it does not fit, leave out the map files of folders your change does not touch, keeping the top's.

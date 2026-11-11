@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "architecture-merge-card",
+      "kind": "improvement",
+      "title": "Advanced architecture draws what a change moves on its merge card",
+      "body": "With Advanced architecture on, when a crewmate's change moves something on a mapped project's map, its merge card draws the map with that change's boxes, links and states tagged added, removed or changed, and you go in and out of each part before you merge. The pull request shows a picture of the same view.",
+      "area": "cards",
+      "picture": {
+        "dark": "architecture-merge-card-dark.webp",
+        "light": "architecture-merge-card-light.webp",
+        "alt": "A merge card draws the project's core with the crew box tagged changed and the This pull request comparison turned on"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

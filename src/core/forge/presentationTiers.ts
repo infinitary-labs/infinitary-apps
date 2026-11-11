@@ -1,5 +1,6 @@
 import { TIERED_STORY_HEADINGS } from "@shared/cardHeadings";
 import type { ChangePresentation, RetainedPresentationMedia } from "@shared/changePresentation";
+import { fillMapPart } from "@shared/mapPart";
 import {
   hostedPresentation,
   nativePresentationMedia,
@@ -54,6 +55,11 @@ export function tieredPresentationMarkdown(
   };
   const views = story.views
     .map((view) => {
+      // A map view's one picture stands for the drawing the pull request cannot run.
+      if (view.map !== undefined)
+        return [`### ${md(view.caption)}`, ...view.after.map((entry) => media(entry, false))].join(
+          "\n\n",
+        );
       const paired = native && view.kind === "changed" && picturesOnly(story, view);
       const adjacentNew =
         native && view.kind === "new" && view.layout === "adjacent" && picturesOnly(story, view);
@@ -136,8 +142,12 @@ export function tieredPresentationMarkdown(
     .join("\n\n");
 }
 
-/** The glance shares every fact and file with the public record, not its risk table. */
-export function tieredPresentationCardBody(story: ChangePresentation): string {
+/**
+ * The glance shares every fact and file with the public record, not its risk
+ * table. `mapPart` is the map part a map view draws in live; without it the
+ * view shows its picture.
+ */
+export function tieredPresentationCardBody(story: ChangePresentation, mapPart?: string): string {
   const paragraphs = (lines: string[]) => lines.map((line) => `<p>${html(line)}</p>`).join("\n");
   const assetUrl = (id: string) => {
     const asset = story.assets.find((candidate) => candidate.id === id);
@@ -174,6 +184,12 @@ export function tieredPresentationCardBody(story: ChangePresentation): string {
   };
   const views = story.views
     .map((view) => {
+      if (view.map !== undefined) {
+        const drawing = mapPart
+          ? fillMapPart(mapPart, view.map, true)
+          : table('<th scope="col">After</th>', [view.after]);
+        return `<section><p>${html(view.caption)}</p>${drawing}</section>`;
+      }
       if (view.kind === "new") {
         const columns = view.layout === "adjacent" ? 2 : 1;
         const rows = Array.from({ length: Math.ceil(view.after.length / columns) }, (_, index) =>

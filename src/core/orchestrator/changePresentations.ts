@@ -134,6 +134,12 @@ export class ChangePresentations {
        * is prepared for (INF-2490); undefined for the task's current change.
        */
       branch?: (taskId: string) => Promise<string | undefined>;
+      /**
+       * The map part a story's map view draws in on the merge card
+       * (`docs/forge.md`, "A map view"); undefined where it cannot be read,
+       * and the view shows its picture.
+       */
+      mapPart?: () => Promise<string | undefined>;
     },
   ) {}
 
@@ -683,7 +689,12 @@ export class ChangePresentations {
         };
         return {
           title: story.title,
-          body: presentationCardBody(cardStory),
+          body: presentationCardBody(
+            cardStory,
+            cardStory.views.some((view) => view.map !== undefined)
+              ? await this.options.mapPart?.()
+              : undefined,
+          ),
           pictures: cardStory.pictures,
           riskDeclaration: story.risk,
           requiredActions: story.requiredActions,

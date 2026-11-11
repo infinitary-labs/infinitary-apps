@@ -36,6 +36,19 @@ export const presentationViewSchema = z.strictObject({
   caption: z.string().trim().min(1).max(1000),
   kind: z.enum(["changed", "new"]),
   layout: z.literal("adjacent").optional(),
+  /**
+   * A project map's change view (`story-map.md`): the path of a filled map
+   * part's data block, which the merge card draws live; the view's one After
+   * picture is that drawing, for the pull request, which cannot run it.
+   */
+  map: z
+    .string()
+    .min(1)
+    .max(4096)
+    .optional()
+    .describe(
+      "Path of a filled map data block (JSON); the merge card draws it live. Kind changed, no Before, one After picture of it.",
+    ),
   before: z.array(presentationMediaSchema).max(20),
   after: z.array(presentationMediaSchema).min(1).max(20),
 });
@@ -126,6 +139,11 @@ const savedPresentationShape = z.strictObject({
       caption: z.string(),
       kind: z.enum(["changed", "new"]),
       layout: z.literal("adjacent").optional(),
+      /** The map's data block as the map part reads a packed one: deflated raw, in base64. */
+      map: z
+        .string()
+        .regex(/^[A-Za-z0-9+/]+={0,2}$/)
+        .optional(),
       before: z.array(retainedPresentationMediaSchema),
       after: z.array(retainedPresentationMediaSchema),
     }),
@@ -277,6 +295,7 @@ function evidenceRelations(
       id: string;
       kind: "changed" | "new";
       layout?: "adjacent";
+      map?: string;
       before: { captureHead: string; applicability?: string }[];
       after: { captureHead: string; applicability?: string }[];
     }[];
@@ -284,15 +303,26 @@ function evidenceRelations(
   ctx: z.RefinementCtx,
 ): void {
   const issue = (message: string) => ctx.addIssue({ code: "custom", message });
-  if (draft.views.length === 0 && !draft.noPicture)
+  // A map's change view draws the project's parts, not a screen people use,
+  // so a change with nothing to see still says why beside it.
+  const screens = draft.views.filter((view) => view.map === undefined);
+  if (screens.length === 0 && !draft.noPicture)
     issue("A story without media needs a no-picture reason.");
-  if (draft.views.length > 0 && draft.noPicture)
-    issue("Use views or a no-picture account, not both.");
+  if (screens.length > 0 && draft.noPicture) issue("Use views or a no-picture account, not both.");
+  // The map part draws into fixed element ids, so one card holds one map.
+  if (draft.views.length - screens.length > 1) issue("A story holds at most one map view.");
   const ids = new Set<string>();
   for (const view of draft.views) {
     if (ids.has(view.id)) issue(`View ${view.id} appears more than once.`);
     ids.add(view.id);
-    if (view.kind === "changed" && view.before.length === 0)
+    if (
+      view.map !== undefined &&
+      (view.kind !== "changed" || view.layout || view.before.length > 0 || view.after.length !== 1)
+    )
+      issue(
+        `Map view ${view.id} is kind changed with no Before and one After picture of the drawn change view: its comparison shows what the map was.`,
+      );
+    if (view.map === undefined && view.kind === "changed" && view.before.length === 0)
       issue(`View ${view.id} needs Before evidence.`);
     if (view.kind === "new" && view.before.length > 0)
       issue(`New view ${view.id} cannot have Before evidence.`);
@@ -317,7 +347,7 @@ function evidenceRelations(
   // String.length measures serialized UTF-16 code units, including JSON punctuation.
   if (JSON.stringify(draft).length > 60000)
     issue(
-      "The story exceeds 60,000 UTF-16 code units of JSON, including its after-merge work. Shorten descriptions or file the work as tasks first and list their keys instead; keep every authorized task and dependency.",
+      "The story exceeds 60,000 UTF-16 code units of JSON, including its after-merge work and any packed map. Shorten descriptions, map fewer folders, or file the work as tasks first and list their keys instead; keep every authorized task and dependency.",
     );
 }
 

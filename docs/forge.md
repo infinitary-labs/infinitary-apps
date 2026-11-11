@@ -1084,7 +1084,7 @@ A merge card that names a story revision still needs its destination's current r
 New stories use version 2: the same conventional title on the card and pull request, up to two short Why sentences, five change bullets, one Before and After sentence, and six typed `checked` facts (`check`, `result`).
 Aim for 150 open words on the card and 250 on the pull request.
 The zod schema carries the captain’s selected item counts and refuses past them; the author owns sentence length and word targets, with no invented per-sentence character refusal.
-The `story` parameter's own description (`PREPARE_CHANGE_STORY_DESCRIPTION`, `src/core/pi/forgeTools.ts`) says the item counts, that `base`, `head` and every `captureHead` are full commit ids, that a later revision keeps the first base, which version Before and After media name, when `layout` adjacent applies, and who reads the story and what `publishable` declares, because no served schema carries those relationships or counts: the served `story` leaves its lengths and item counts to the parse (`zodParameter`, `docs/orchestrator-contract.md`).
+The `story` parameter's own description (`PREPARE_CHANGE_STORY_DESCRIPTION`, `src/core/pi/forgeTools.ts`) says the item counts, that `base`, `head` and every `captureHead` are full commit ids, that a later revision keeps the first base, which version Before and After media name, when `layout` adjacent applies, what a view's `map` is ("A map view" below), and who reads the story and what `publishable` declares, because no served schema carries those relationships or counts: the served `story` leaves its lengths and item counts to the parse (`zodParameter`, `docs/orchestrator-contract.md`).
 When a live validation record exists, the author supplies `validationRows`: one public scenario and evidence account per scenario id, exactly once.
 Preparation fills the recorded order, results and live counts from `liveValidationSummary`, never from those public words, and refuses missing, repeated or unknown scenario ids.
 The open Live validation table starts Checked on both the merge card and the Markdown description, with Scenario, Result and Evidence columns; live is part of Result.
@@ -1113,6 +1113,16 @@ A saved story's squash commit message is its plain `whatChanged` summary, follow
 That text begins as `projectText`; the merge preserves a footer the person later adds outside the verified story region too.
 Both ordinary and rules-skipping merges use that summary, never the rendered story's markers, escapes, tables, evidence URLs or risk chart; legacy descriptions keep their existing delivery.
 A merge the override passes squashes under the description's own words around this task's story region instead, any footer included, since the story may describe an older version.
+
+### A map view
+
+A story may carry one map view: the change view of the Advanced architecture runbook's map part (`docs/runbooks.md`), which its skill has a crewmate in a mapped project add when its change moves something on the map.
+The view's `map` names a JSON file in the working copy or the evidence folder holding the part's filled data block, with at least one comparison; preparation reads it, refuses a file that is not such a block, such as a single map file, and saves it packed, deflated raw and in base64, as the part reads a packed block.
+The packed map counts toward the story's 60,000-character limit.
+A map view is kind changed with no Before and one After picture, the drawing as a page with the app's colors photographed (`parts/map-page.html`), and it stands beside the story's other views, or beside its no-picture reason, since it draws the project's parts rather than a screen.
+On the merge card the host fills the part the runbook ships with the packed block under the view's caption, so the captain goes in and out of each part and turns the comparison on and off; the runbook's switch does not matter, and a card whose part cannot be read shows the picture.
+In the pull request, which cannot run the part, the view's heading is its caption and its picture follows it.
+A computer that runs work sends a story with a map view only to a home that lists `story-map` and otherwise refuses it before sending.
 
 ### No-mistakes' attestation
 

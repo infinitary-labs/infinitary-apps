@@ -784,6 +784,7 @@ export async function createServices(
     mediaDir: (taskId) => crewmateCardPicturesDir(paths, taskId),
     head: (taskId) => changeDelivery.publication.presentationHead(taskId),
     branch: (taskId) => changeDelivery.publication.presentationBranch(taskId),
+    mapPart: () => runbooks.mapPart(),
   });
   const changeDelivery: ChangeDelivery = createChangeDelivery({
     namingRule: () => runbooks.naming(),

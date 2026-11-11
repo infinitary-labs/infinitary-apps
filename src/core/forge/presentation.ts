@@ -198,10 +198,11 @@ export function presentationMarkdown(
     ? legacyPresentationMarkdown(story, urls, checks)
     : tieredPresentationMarkdown(story, urls);
 }
-export function presentationCardBody(story: ChangePresentation): string {
+/** `mapPart` is the map part a story's map view draws in (`tieredPresentationCardBody`). */
+export function presentationCardBody(story: ChangePresentation, mapPart?: string): string {
   return story.version === 1
     ? legacyPresentationCardBody(story)
-    : tieredPresentationCardBody(story);
+    : tieredPresentationCardBody(story, mapPart);
 }
 
 /** INF-228 F2: a squash carries the author's summary, not the evidence presentation. */

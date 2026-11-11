@@ -9,6 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
+import { inflateRawSync } from "node:zlib";
 import {
   type ChangePresentationDraft,
   type PresentationRecovery,
@@ -18,6 +19,7 @@ import {
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DEMO_POSTER, DEMO_RECORDING, GIF_DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
+import { MAP_DATA } from "../../../tests/helpers/architectureMap";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
@@ -34,6 +36,7 @@ import {
 } from "../forge";
 import { presentationMarkdownText } from "../forge/presentation";
 import { stageChangePresentation } from "../pi/changePresentation";
+import { Runbooks } from "../runbooks/runbooks";
 import { CardStore } from "../storage/cardStore";
 import { openDatabase } from "../storage/db";
 import { seedTask } from "../tasks/seedTask";
@@ -171,8 +174,19 @@ async function arrange(
   };
   const staged = await stageChangePresentation(draft, { taskId: TASK, worktree, dir: media });
   const readHead = vi.fn(async () => head);
+  // The map part the app ships, read as the app reads it.
+  const runbooks = new Runbooks(resolve("resources/runbooks"), {
+    getRunbookStates: () => ({}),
+    setRunbookStates: () => {},
+  });
   const create = () =>
-    new ChangePresentations({ tasks, mediaDir: () => media, head: readHead, onPrepared });
+    new ChangePresentations({
+      tasks,
+      mediaDir: () => media,
+      head: readHead,
+      onPrepared,
+      mapPart: () => runbooks.mapPart(),
+    });
   let service = create();
   return {
     root,
@@ -853,6 +867,71 @@ describe("saved change publication", () => {
       expect(readFileSync(join(at.worktree, DEMO_POSTER.path))).toEqual(DEMO_POSTER.bytes);
     },
   );
+
+  // The approved Advanced architecture plan: "A crewmate's merge card in a
+  // mapped project draws the live change view, and its pull request shows a
+  // picture of it." The data block is this project's own map files with a
+  // comparison read from its history, as the skill has a crewmate fill it.
+  it("draws a map view's change view live on the merge card and shows its picture in the pull request", async () => {
+    const at = await arrange();
+    const block = {
+      maps: MAP_DATA.maps,
+      counts: MAP_DATA.counts,
+      compare: [{ ...MAP_DATA.compare[0], label: "This pull request" }],
+      open: { at: "src/core", changes: 0 },
+    };
+    writeFileSync(join(at.worktree, "map-data.json"), JSON.stringify(block, null, 2));
+    copyFileSync(
+      resolve("release-notes/pictures/advanced-architecture-dark.webp"),
+      join(at.worktree, "map.webp"),
+    );
+    const caption = "What this change moves on the map";
+    const alt = "The core's map with the crew box tagged changed";
+    const story = {
+      ...at.draft,
+      views: [],
+      noPicture: "The turn's states are internal; nothing on screen changes.",
+    };
+    const mapView = {
+      id: "map",
+      caption,
+      kind: "changed" as const,
+      map: "map-data.json",
+      before: [],
+      after: [{ path: "map.webp", alt, captureHead: HEAD, inspected: true as const }],
+    };
+    const root = { taskId: TASK, worktree: at.worktree, dir: at.media };
+    await at.service.prepare(
+      TASK,
+      await stageChangePresentation({ ...story, views: [mapView] }, root),
+      at.forge,
+    );
+    const change = await at.publish();
+    const card = await at.service.completion(TASK, 1, HEAD);
+
+    // The pull request, which cannot run the part, shows the picture under the caption.
+    expect(at.upload).toHaveBeenCalledTimes(1);
+    expect(change.body).toContain(
+      `### ${caption}\n\n![${alt}](https://github.com/user-attachments/assets/`,
+    );
+    expect(change.body).not.toContain("data-map");
+    // The card draws the part the app ships, its block the author's map packed as the part reads it.
+    const packed = card.body.match(
+      /<script type="application\/json" data-map data-packed>\n([A-Za-z0-9+/=]+)\n<\/script>/,
+    )?.[1];
+    expect(packed && JSON.parse(inflateRawSync(Buffer.from(packed, "base64")).toString())).toEqual(
+      block,
+    );
+    expect(card.body).toContain('<svg role="application"');
+    expect(card.body.indexOf(caption)).toBeLessThan(card.body.indexOf("data-map"));
+    expect(card.body).toContain("data-inf-no-picture");
+
+    // A single map file is the likely wrong file: the part needs the whole block.
+    writeFileSync(join(at.worktree, "one-map.json"), JSON.stringify(MAP_DATA.maps["src/core"]));
+    await expect(
+      stageChangePresentation({ ...story, views: [{ ...mapView, map: "one-map.json" }] }, root),
+    ).rejects.toThrow(/not a single map file/);
+  });
 
   it("permits a no-picture story only with its explicit reason", async () => {
     const at = await arrange();

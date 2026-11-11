@@ -11,7 +11,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import {
   crewSectionsOf,
@@ -32,6 +32,9 @@ type Entry = {
   dir: string;
   source: "builtin" | "installed" | "personal";
 };
+
+/** The Advanced architecture runbook's map part, from its folder. */
+const MAP_PART_FILE = "skills/advanced-architecture/parts/map.html";
 
 /** The captain's common-to-niche order, shared by every reader and joined guidance. */
 export const BUILTIN_RUNBOOK_ORDER = [
@@ -82,6 +85,16 @@ export class Runbooks {
   }
   builtins(): RunbookManifest[] {
     return this.bundled.map(({ manifest }) => manifest);
+  }
+  /**
+   * The map part the Advanced architecture runbook ships, which a story's map
+   * view draws in on its merge card whether or not the runbook is on now
+   * (`docs/forge.md`, "A map view"); undefined when it cannot be read.
+   */
+  async mapPart(): Promise<string | undefined> {
+    const architecture = this.bundled.find(({ manifest }) => manifest.id === "architecture");
+    if (!architecture) return undefined;
+    return readFile(join(architecture.dir, MAP_PART_FILE), "utf8").catch(() => undefined);
   }
   private scan(): { entries: Entry[]; unreadable: RunbookView[] } {
     const entries = [...this.bundled];

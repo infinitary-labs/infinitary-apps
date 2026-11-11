@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
-import { readFile, rm } from "node:fs/promises";
+import { readFile, realpath, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
+import { deflateRawSync } from "node:zlib";
 import { CARD_PICTURE_TYPES } from "@shared/cardPictures";
 import {
   type ChangePresentationDraft,
@@ -11,9 +12,49 @@ import {
   type StagedChangePresentation,
 } from "@shared/changePresentation";
 import { presentationHtmlText } from "../forge";
-import { type CardPictureRoot, verifyCardImages } from "./cardImages";
+import { type CardPictureRoot, containedFile, verifyCardImages } from "./cardImages";
 
 export type { StagedChangePresentation } from "@shared/changePresentation";
+
+const MAP_REFUSED = "Story map refused";
+
+/**
+ * A map view's data block, read from the file the author named and packed
+ * as the map part reads a packed block (`docs/forge.md`, "A map view").
+ */
+async function packedMap(src: string, root: CardPictureRoot): Promise<string> {
+  const evidence = root.evidenceDir
+    ? await realpath(root.evidenceDir).catch(() => undefined)
+    : undefined;
+  const file = await containedFile(
+    src,
+    { worktree: await realpath(root.worktree), ...(evidence ? { evidence } : {}) },
+    MAP_REFUSED,
+  );
+  const info = await stat(file);
+  // Map data deflates to about a tenth of its size, so a larger file would not fit the
+  // story's 60,000-character limit; reading it whole would only spend memory.
+  if (!info.isFile() || info.size > 1024 * 1024)
+    throw new Error(`${MAP_REFUSED}: ${src} must be a file of at most 1 MB.`);
+  let data: unknown;
+  try {
+    data = JSON.parse(await readFile(file, "utf8"));
+  } catch {
+    throw new Error(`${MAP_REFUSED}: ${src} is not JSON.`);
+  }
+  const record = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null && !Array.isArray(value);
+  // A single map file is the likely wrong file: the part reads the whole data block.
+  if (!record(data) || !record(data.maps) || Object.keys(data.maps).length === 0)
+    throw new Error(
+      `${MAP_REFUSED}: ${src} must hold the map part's filled data block, { "maps": { "<folder>": <its map file> }, "compare": [...] }, not a single map file.`,
+    );
+  if (!Array.isArray(data.compare) || data.compare.length === 0)
+    throw new Error(
+      `${MAP_REFUSED}: ${src} needs a comparison in "compare" for the change view to draw.`,
+    );
+  return deflateRawSync(Buffer.from(JSON.stringify(data))).toString("base64");
+}
 
 /** Validate selected bytes using the existing card reader, without displaying a card. */
 export async function stageChangePresentation(
@@ -94,20 +135,22 @@ export async function stageChangePresentation(
       });
     }
     let cursor = 0;
-    const views = draft.views.map((view) => {
+    const views: StagedChangePresentation["views"] = [];
+    for (const view of draft.views) {
       const before = media.slice(cursor, cursor + view.before.length);
       cursor += view.before.length;
       const after = media.slice(cursor, cursor + view.after.length);
       cursor += view.after.length;
-      return {
+      views.push({
         id: view.id,
         caption: view.caption,
         kind: view.kind,
         ...(view.layout ? { layout: view.layout } : {}),
+        ...(view.map === undefined ? {} : { map: await packedMap(view.map, root) }),
         before,
         after,
-      };
-    });
+      });
+    }
     const { publishable: _publishable, views: _sourceViews, ...story } = draft;
     return {
       version: 2,

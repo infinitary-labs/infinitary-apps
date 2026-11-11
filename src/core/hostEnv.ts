@@ -307,10 +307,45 @@ export function withTaskShell(
 }
 
 /**
+ * The variables that tell git which repository, index, object store or
+ * settings file to use instead of the one it finds from its folder: the
+ * names `git rev-parse --local-env-vars` lists, which git itself clears
+ * when it moves into another repository (a submodule), and the one an older
+ * git listed beside them (`GIT_INTERNAL_SUPER_PREFIX`). Like git, the app
+ * keeps the two that carry `-c` settings, `GIT_CONFIG_PARAMETERS` and
+ * `GIT_CONFIG_COUNT`.
+ *
+ * A `git bisect run` step, a hook or a `rebase --exec` in a linked working
+ * copy runs with `GIT_DIR` set. An app started there must not hand it on:
+ * its own git would then commit into that repository and write its identity
+ * into the settings every working copy of it reads, and a crewmate's git
+ * would answer for that repository instead of its own working copy.
+ */
+export const REPOSITORY_GIT_VARIABLES = [
+  "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+  "GIT_COMMON_DIR",
+  "GIT_CONFIG",
+  "GIT_DIR",
+  "GIT_GRAFT_FILE",
+  "GIT_IMPLICIT_WORK_TREE",
+  "GIT_INDEX_FILE",
+  "GIT_INTERNAL_SUPER_PREFIX",
+  "GIT_NO_REPLACE_OBJECTS",
+  "GIT_OBJECT_DIRECTORY",
+  "GIT_PREFIX",
+  "GIT_REPLACE_REF_BASE",
+  "GIT_SHALLOW_FILE",
+  "GIT_WORK_TREE",
+] as const;
+
+/**
  * The process environment with the git environment and `extra` laid over
  * it, and the host search path. Every spawn site in the core builds its
  * child's environment here. `INFINITARY_GIT_DIR` tells the app's `git` on the
  * search path (`git-bin/git`, `scripts/git-launcher.c`) which tree to run.
+ * Nothing that chooses a repository is inherited
+ * (`REPOSITORY_GIT_VARIABLES`); a caller that wants one, such as a scratch
+ * index, names it in `extra`.
  */
 export function hostEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   // An app started from a Pi shell inherits that shell's limit and id. A
@@ -322,6 +357,7 @@ export function hostEnv(extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
   delete inherited[SHELL_STARTED_ENV];
   delete inherited[SHELL_ID_ENV];
   delete inherited.FM3000_SHELL_CAP_MS; // the older name still reads as this limit
+  for (const name of REPOSITORY_GIT_VARIABLES) delete inherited[name];
   return {
     ...inherited,
     ...gitSignInEnv(),

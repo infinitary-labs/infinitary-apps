@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "inherited-git-dir",
+      "reason": "Internal: an app started with git's repository variables in its environment, as a git bisect run step or hook in a linked working copy gives them (the project's own journey runs under bisect hit it), no longer hands them to its own git or a crewmate's shell, so its commits stay in its own folders; the packaged app is started that way only from a command line, and nothing on screen changes."
+    }
+  ]
+}

@@ -852,6 +852,9 @@ A Dock- or Finder-launched app inherits launchd's search path (on a stock Mac on
 The merged search path keeps whatever the launcher added that the shell lacks first (a terminal's tweak, a test's stand-in), then the shell's own order, then the installer directories (`installerDirs`, `src/core/userBin.ts`).
 A run started with a settings file (`<app> run --settings <file>`, `docs/run.md`, "A settings file") asks no shell at all: the file's folders stand in for the shell's answer (`configureSettingsPath`, set before the core starts), the search path is those folders in the file's order and then the process path, with no installer directories, and Claude's locator skips its login-shell rung.
 Every spawn site builds on it: crewmate shell jobs, pnpm installs, host git, and Claude's client (`claudeEnvFor`) - so the shells that client runs for a crewmate see it too.
+Nothing that chooses a git repository is inherited: `hostEnv` drops `GIT_DIR` and the other variables git itself clears when it moves into another repository (`REPOSITORY_GIT_VARIABLES`), keeping git's `-c` settings, and a caller that wants one, such as a scratch index, names it in `extra`.
+So an app started from a `git bisect run` step, a hook or a `rebase --exec` in a linked working copy, where git sets `GIT_DIR`, still commits only in its own folders, and a crewmate's git answers for its own working copy.
+`hostEnv.test.ts` holds every name the git on the search path lists, and `tests/e2e/inherited-git-dir.spec.ts` launches the app with a real bisect step's variables.
 Where the build carries the app's own git (`src/core/workspace/bundledGit.ts`), host git runs it by path and the search path starts with `git-bin/`, a directory whose one file is a compiled `git` launcher (`scripts/git-launcher.c`) that runs it, so `git` in a crewmate's shell is the app's and every other program stays behind it.
 `taskpolicy` (`utilityQos.ts`) passes the environment through unchanged.
 

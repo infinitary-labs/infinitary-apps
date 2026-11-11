@@ -163,7 +163,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/installed-update-fixtures.test.ts` | real ASAR archives, SQLite, scratch saved-work moves, child-command failures and ZIP ticket-byte comparisons; no signing | 5 s default |
 | `tests/installer-packaging.test.ts` | actual packaging commands with a stopping packager stand-in and the executable environment guard; no signing | 5 s default |
 | `tests/installer-reuse.test.ts` | scratch git histories and ZIP extraction, recorded forge metadata and streamed artifact-integrity checks; no network or signing | 5 s default |
-| `src/core/hostEnv.test.ts` | stub login shells | 10 s on the hang test |
+| `src/core/hostEnv.test.ts` | stub login shells; real git for the variables it lists and a child's answer | 10 s on the hang test |
 | `tests/export-tasks.test.ts` | node, pnpm | 60 s |
 | `tests/corpus-tools-plain-node.test.ts` | plain Node runs of the corpus and replay commands, three over recorded sessions, and four commands read through a pipe, two of them over a seeded tables dump and a database built with the app's migrations | 5 s default (Mac slowest 0.98 s, the database one) |
 | `tests/account-eval.test.ts` | twenty independently owned one-case production sessions (all ten cases on each backend), two 503/no-retry proofs, one ten-case Pi run proving every case opens with its sheet allowance, one Pi case refused on a scripted local endpoint, one Claude case cut mid-answer on one, the complete ten-case no-call sheet, plus the Claude crewmate's client read from the real process table and a mock Claude run stopped when that client ends; local mock provider and boxed Claude client | 30 s kept per case |

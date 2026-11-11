@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { realpath } from "node:fs/promises";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
@@ -324,5 +325,59 @@ describe("configureSettingsPath (a run's settings file names the folders)", () =
     // The file's folders, then what the starter's path adds, and no installer guesses.
     expect(hostEnv().PATH?.split(":")).toEqual([tools, "/usr/bin", "/bin", "/usr/sbin", "/sbin"]);
     expect(existsSync(stub.log)).toBe(false);
+  });
+});
+
+/**
+ * An app started from a `git bisect run` step, a hook or a `rebase --exec`
+ * in a linked working copy inherits that step's `GIT_DIR` (INF-3587: such an
+ * app made its default-workspace commits in that repository and wrote its
+ * identity into the settings every working copy of it reads). The names come
+ * from the git on the search path: every variable git itself clears when it
+ * moves into another repository.
+ */
+describe("hostEnv (no repository chosen by whoever started the app)", () => {
+  const CONFIG_SETTINGS = ["GIT_CONFIG_PARAMETERS", "GIT_CONFIG_COUNT"];
+
+  it("hands a child none of git's repository variables, keeps its -c settings, and lets extra name an index", async () => {
+    const listed = (await runAsChild("git rev-parse --local-env-vars")).split("\n").filter(Boolean);
+    expect(listed).toContain("GIT_DIR");
+    // The starter's repository, and the app's own folder a child is pointed at.
+    const starter = scratch();
+    const own = scratch();
+    await runAsChild(`git init -q '${starter}' && git init -q '${own}'`);
+    const starterGitDir = join(starter, ".git");
+    const inherited: Record<string, string> = {
+      GIT_CONFIG_PARAMETERS: "'core.abbrev=12'",
+      GIT_CONFIG_COUNT: "0",
+    };
+    for (const name of listed) {
+      inherited[name] ??=
+        name === "GIT_WORK_TREE" ? starter : join(starterGitDir, name.toLowerCase());
+    }
+    inherited.GIT_DIR = starterGitDir;
+    const saved = Object.fromEntries(
+      Object.keys(inherited).map((name) => [name, process.env[name]]),
+    );
+    Object.assign(process.env, inherited);
+    try {
+      const env = hostEnv();
+      for (const name of listed.filter((name) => !CONFIG_SETTINGS.includes(name))) {
+        expect(env[name], name).toBeUndefined();
+      }
+      expect(env.GIT_CONFIG_PARAMETERS).toBe(inherited.GIT_CONFIG_PARAMETERS);
+      expect(env.GIT_CONFIG_COUNT).toBe("0");
+      // A child's git answers for the folder it runs in, not the starter's.
+      expect(await runAsChild(`git -C '${own}' rev-parse --absolute-git-dir`)).toBe(
+        await realpath(join(own, ".git")),
+      );
+      const index = join(own, "scratch-index");
+      expect(hostEnv({ GIT_INDEX_FILE: index }).GIT_INDEX_FILE).toBe(index);
+    } finally {
+      for (const [name, value] of Object.entries(saved)) {
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      }
+    }
   });
 });

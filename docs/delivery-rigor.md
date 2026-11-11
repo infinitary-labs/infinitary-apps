@@ -730,6 +730,8 @@ The host appends a Check approval panel naming the check, what it uses and the c
 A card that already asks the captain which account, model or option to use carries the check request on its default action, so the captain's pick or written-in answer with that click approves it, with no separate approval card.
 `TaskService` keeps the approval on the check by its id for every later run and version of the task, including script fixes and reruns, with no limit on runs.
 A plan revision that changes the check's declared resources or cost, or removes the check, expires the approval.
+A later plan revision that declares exactly the resources and cost the captain approved restores it with no new question, since the captain's answer covers those words; it never restores an ask whose card ended unanswered, or one the captain's newer no to the same words declined (INF-3751).
+A record an earlier build left expired with those words declared again heals on its next validation write.
 The host refuses a run that executes a check whose declared resources lack a current approval, and a check request that a current approval already covers.
 Asking needs no reviewer clearance; the reviewer treats a run that used more or cost more than its check declares as a finding.
 The merge card says how many runs each approval covered.

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "check-approval-restored",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A check you approved stays approved when its words come back",
+      "body": "When you approve what a check uses and what one run costs, a crewmate that later rewords those lines and then puts your exact words back can run the check again without asking you a second time. Your approval never comes back if you said no to the same words later.",
+      "noPicture": "This changes which recorded approvals a check run may use, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

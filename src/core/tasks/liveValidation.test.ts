@@ -896,6 +896,136 @@ describe("INF-1824: one approval per check and one card for a version's gaps", (
     ).toThrow("stays accepted");
     expect(state.permissions.filter((item) => item.request.kind === "gap")).toHaveLength(1);
   });
+
+  // INF-3751: an approval covers the captain's own words for what a run uses
+  // and costs. Built from INF-3565's record, whose third plan paraphrased its
+  // two approved checks' words and whose fourth put them back word for word.
+  const forkCheck: ValidationScenario = {
+    id: "reviewed-fork-approval",
+    source:
+      "Accepted piece A: a crewmate reads a fork and the captain's merge click queues that exact source/version.",
+    importance: "required",
+    action:
+      "In the isolated actual app, review the fixture contribution, verify no queue mark before the captain's key, queue it and observe the approved version's later merge.",
+    expected:
+      "Only the reviewed source/version is queued and merged, with the approval durably retained.",
+    adverse: "A changed source or later push cannot reuse the old approval.",
+    environment:
+      "Actual Electron app and git with scripted model and private HTTP host stand-ins on Linux.",
+    signal: "Saved approval and receipt, exact-head queue mark and one merge payload.",
+    boundary:
+      "The app's review, consent, persistence and forge adapters; not real-host permissions or real-model judgment.",
+    resources:
+      "One task-branch journeys.yml request selecting only tests/e2e/request-merge.spec.ts on the project's existing Linux CI route, with disposable app homes, authored git data, local HTTP stand-ins and retained recordings/transcripts. The workflow run and artifacts are visible to project collaborators; no real contributor project, account data, signing or release resource is used.",
+    cost: "One selected Linux journey workflow run and its artifact storage, using the project's existing runner capacity and CI allowance. No purchase, new paid service or release job is authorized. Exact dispatch requires separate reviewed effect consent.",
+  };
+  const storyCheck: ValidationScenario = {
+    id: "contributor-story-preservation",
+    source:
+      "Accepted piece A and crew-title choice: keep contributor words and put the crew story in a comment and merged commit.",
+    importance: "required",
+    action:
+      "Use the actual app on both host stand-ins to prepare and publish the fork story, queue the reviewed version and observe the final squash payload.",
+    expected:
+      "Contributor title/description stay unchanged, one story comment is confirmed, and the squash uses the crew story's title and summary.",
+    adverse:
+      "Lost publication responses are reconciled without duplicate comments; another source or version is refused.",
+    environment:
+      "Actual Electron app, git and publisher with private GitHub/GitLab HTTP stand-ins on Linux.",
+    signal:
+      "Host snapshots of request text, comments, queue mark, saved approval/receipt and squash payload.",
+    boundary:
+      "Actual app publication and approval paths with host stand-ins, not real-host authorization/event delivery.",
+    resources:
+      "The same single selected Linux journey run declared by reviewed-fork-approval, not a second request, plus local edited-test rounds under a declared load. It uses only disposable app data and local host stand-ins; workflow artifacts are visible to project collaborators.",
+    cost: "No additional workflow request beyond the shared selected run. Local test rounds consume this computer's declared capacity. No purchase, real host project creation, signing or release job is authorized.",
+  };
+  const paraphrased = [
+    {
+      ...forkCheck,
+      resources:
+        "Existing approved isolated Linux workflow resources for this task; no real contributor account or request.",
+      cost: "No more than one previously approved selected workflow run per execution.",
+    },
+    {
+      ...storyCheck,
+      resources:
+        "Same previously approved isolated Linux resources and per-run cost for this task.",
+      cost: "No more than one previously approved selected workflow run per execution.",
+    },
+  ];
+  const checkAsk = (id: string, check: ValidationScenario, at = head): KeptValidationInput => ({
+    kind: "request",
+    request: { kind: "check", id, head: at, scenario: check.id },
+  });
+  const approvalStates = (state: LiveValidation) =>
+    state.permissions.filter((item) => item.request.kind === "check").map((item) => item.state);
+  const approvedThenParaphrased = () => {
+    let state = planned([forkCheck, storyCheck]);
+    state = decide(ask(state, checkAsk("piece-a-fork-proof-resources", forkCheck)), "fork", [
+      "piece-a-fork-proof-resources",
+    ]);
+    state = decide(ask(state, checkAsk("piece-a-story-proof-resources", storyCheck)), "story", [
+      "piece-a-story-proof-resources",
+    ]);
+    return planned(paraphrased, state);
+  };
+
+  it("INF-3751: a plan that puts the approved words back restores both approvals, with no new question", () => {
+    const paraphrase = approvedThenParaphrased();
+    expect(approvalStates(paraphrase)).toEqual(["expired", "expired"]);
+    expect(() => observed(paraphrase, head, "paraphrased")).toThrow(forkCheck.id);
+    const restored = planned([forkCheck, storyCheck], paraphrase, later);
+    expect(approvalStates(restored)).toEqual(["approved", "approved"]);
+    expect(observed(restored, later, "restored-words").runs.at(-1)?.id).toBe("restored-words");
+    expect(() => ask(restored, checkAsk("fork-asked-again", forkCheck, later), later)).toThrow(
+      "without asking again",
+    );
+    expect(answeredCards(restored)).toBe(2);
+  });
+
+  it("INF-3751: a record an earlier build left expired heals on its next write", () => {
+    // The earlier build's fourth plan put the words back and left both
+    // approvals expired, as INF-3565's saved record holds them.
+    const saved = structuredClone(approvedThenParaphrased());
+    saved.scenarioRevision += 1;
+    saved.scenarios = [forkCheck, storyCheck];
+    saved.plans.push({
+      revision: saved.scenarioRevision,
+      reason: "Restore the exact resource/cost wording for the two already approved checks.",
+      scenarios: saved.scenarios,
+      at: 1,
+    });
+    expect(approvalStates(saved)).toEqual(["expired", "expired"]);
+    const healed = observed(saved, later, "after-restore");
+    expect(approvalStates(healed)).toEqual(["approved", "approved"]);
+    expect(healed.scenarioRevision).toBe(saved.scenarioRevision);
+    expect(healed.stateRevision).toBeGreaterThan(saved.stateRevision ?? 0);
+  });
+
+  it("INF-3751: a newer no to the same words, the no itself and an ask whose card ended are never restored", () => {
+    let state = planned([forkCheck, storyCheck]);
+    for (const [id, check] of [
+      ["fork-yes", forkCheck],
+      ["fork-no", forkCheck],
+      ["story-withdrawn", storyCheck],
+    ] as const)
+      state = recordValidation(
+        ask(state, checkAsk(id, check)),
+        { kind: "decision", request: id, card: id, action: "accept" },
+        { ...ctx, decision: { offer: `${id}-offer` } },
+      );
+    const answered = (card: string, action: string, at: number) =>
+      decideValidation(state, { card, offer: `${card}-offer`, action, label: action, head, at });
+    state = answered("fork-yes", "accept", 5);
+    state = answered("fork-no", "keep-held", 6);
+    // As TaskDeliveries.expireValidationDecision leaves an ask whose card ended unanswered.
+    const withdrawn = state.permissions.find((item) => item.request.id === "story-withdrawn");
+    if (withdrawn) withdrawn.state = "expired";
+    const restored = planned([forkCheck, storyCheck], planned(paraphrased, state));
+    expect(approvalStates(restored)).toEqual(["expired", "declined", "expired"]);
+    expect(() => observed(restored, head, "unapproved")).toThrow(forkCheck.id);
+  });
 });
 
 // Accepted live-validation view plan: public words never supply result, count or file identity.

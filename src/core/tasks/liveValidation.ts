@@ -40,25 +40,25 @@ export function recordValidation(
   }
   if (input.kind !== "review" && context.reviewer)
     fail("A reviewer judges proof, never records a builder's runs or permissions.");
+  // INF-3751: a record an earlier build left with an expired approval its
+  // plan declares again heals on its next write, before that write is judged.
+  if (input.kind !== "review" && keepCheckApprovals(state))
+    state.stateRevision = validationStateRevision(state) + 1;
   switch (input.kind) {
     case "plan": {
       if (input.previousRevision !== state.scenarioRevision)
         fail("Read the current scenario revision before changing it.");
       if (new Set(input.scenarios.map((item) => item.id)).size !== input.scenarios.length)
         fail("Scenario identities must be unique.");
-      // INF-1824: an accepted gap lasts while its check is on the list; a
-      // check approval while the check declares the same reach and cost.
+      // INF-1824: an accepted gap lasts while its check is on the list.
       for (const permission of state.permissions) {
-        if (permission.state !== "approved" || permission.request.kind === "effect") continue;
-        const replacement = input.scenarios.find((item) => item.id === permission.scenario.id);
-        if (
-          !replacement ||
-          (permission.request.kind === "check" && !sameCheckReach(permission.scenario, replacement))
-        )
+        if (permission.state !== "approved" || permission.request.kind !== "gap") continue;
+        if (!input.scenarios.some((item) => item.id === permission.scenario.id))
           permission.state = "expired";
       }
       state.scenarioRevision++;
       state.scenarios = input.scenarios;
+      keepCheckApprovals(state);
       state.plans.push({
         revision: state.scenarioRevision,
         reason: input.reason,
@@ -312,6 +312,55 @@ export function decideValidation(
     next.stateRevision = validationStateRevision(next) + 1;
   }
   return next;
+}
+
+/**
+ * INF-1824 and INF-3751: a check approval covers the resources and cost per
+ * run the captain approved, in the check's own words. It is approved while
+ * the current plan declares those words for the check and expired otherwise:
+ * a plan that changes them or drops the check expires it, and a plan that
+ * declares them again restores it with no new question. Only the captain's
+ * own approval is restored: a check ask expires answered only from approved,
+ * since an ask whose card ended unanswered expires with no answer. Never past
+ * the captain's newer no to the same words. Says whether it changed anything.
+ */
+function keepCheckApprovals(state: LiveValidation): boolean {
+  let changed = false;
+  for (const permission of state.permissions) {
+    if (permission.request.kind !== "check") continue;
+    const scenario = state.scenarios.find((item) => item.id === permission.request.scenario);
+    const declared = scenario !== undefined && sameCheckReach(permission.scenario, scenario);
+    if (permission.state === "approved" && !declared) {
+      permission.state = "expired";
+      changed = true;
+    } else if (
+      permission.state === "expired" &&
+      permission.answer &&
+      declared &&
+      !newerNo(state, permission, permission.answer.at)
+    ) {
+      permission.state = "approved";
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+/** The captain declined the same check and words at or after this approval. */
+function newerNo(
+  state: LiveValidation,
+  approval: ValidationPermission,
+  approvedAt: number,
+): boolean {
+  return state.permissions.some(
+    (other) =>
+      other !== approval &&
+      other.state === "declined" &&
+      other.request.kind === "check" &&
+      other.request.scenario === approval.request.scenario &&
+      sameCheckReach(other.scenario, approval.scenario) &&
+      (other.answer?.at ?? other.at) >= approvedAt,
+  );
 }
 
 function unresolvedWrite(

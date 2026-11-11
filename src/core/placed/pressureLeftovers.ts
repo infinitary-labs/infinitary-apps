@@ -24,3 +24,20 @@ export function recordedPressureLeftovers(
     ];
   });
 }
+
+/**
+ * Marks resolved each unresolved close report from that computer whose close
+ * kept its leftovers in the task's folder there, once the computer's list
+ * shows the task keeps nothing any more: a cleanup look cleared it, or the
+ * folder went. A report from a close that kept no file stays as it was.
+ */
+export function resolveClearedLeftovers(
+  tasks: Pick<TaskService, "leftoverNotes" | "resolveLeftoverNote">,
+  computerId: string | null,
+  kept: readonly string[],
+): void {
+  const keeping = new Set(kept);
+  for (const event of tasks.leftoverNotes(computerId))
+    if (event.data?.leftoversKeptInFile === true && !keeping.has(event.taskId))
+      tasks.resolveLeftoverNote(event.id);
+}

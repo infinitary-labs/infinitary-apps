@@ -95,10 +95,9 @@ import { PiAuthService } from "./pi/piAuth";
 import { createPiSessionFactory } from "./pi/sessionFactory";
 import { readKeptValidationEvidence } from "./pi/validationEvidence";
 import { AutomaticPlacement } from "./placed/automaticPlacement";
+import { attachComputerNotices } from "./placed/computerNotices";
 import type { PlacedBrowsers } from "./placed/placedBrowsers";
 import { PlacedSessions } from "./placed/placedSessions";
-import { recordedPressureLeftovers } from "./placed/pressureLeftovers";
-import { ResourcePressure } from "./placed/resourcePressure";
 import { createMediatedFetch } from "./plugins/mediatedFetch";
 import { PluginInstaller } from "./plugins/pluginInstaller";
 import { PluginRecords } from "./plugins/pluginRecords";
@@ -977,6 +976,7 @@ export async function createServices(
     tasks,
     log: (line) => console.warn(`[leftovers] ${line}`),
   });
+  const leftBehind = leftoverPrograms.leftBehind(() => loadLine.snapshot().runs);
   const supervisor: CrewSupervisor = new CrewSupervisor({
     automaticPlacement,
     // A program's script runs in a process of its own; its ask() is one typed read.
@@ -1100,7 +1100,7 @@ export async function createServices(
           // Every crewmate here registers how to stop what it leaves running.
           stops: {
             forTask: (taskId: string) =>
-              taskStopsCommand(join(paths.crewmatesDir, taskId), ticker.now),
+              taskStopsCommand(join(paths.crewmatesDir, taskId), ticker.now, leftBehind),
           },
           load: {
             forTask: (taskId: string) => loadLine.forTask(taskId),
@@ -1613,14 +1613,13 @@ export async function createServices(
   homePersonal.attachFirstmate((wake) => {
     firstmate.notifyOp(wake, "agent");
   });
-  const resourcePressure = new ResourcePressure({
-    taskKey: (id) => tasks.resolve(id)?.key ?? id,
-    leftovers: (computerId) => recordedPressureLeftovers(tasks, computerId),
+  attachComputerNotices(homeDevices, computerResourceFeed.snapshot(), {
+    tasks,
+    here: leftBehind,
+    work: workDevices,
     notify: (wake) => notifyFirstmate(wake, "scheduled"),
-    activity: (fact) => broadcastEvent({ type: "firstmate_note", text: fact.text, tone: "warn" }),
+    broadcast: broadcastEvent,
   });
-  homeDevices.attachPressure((view) => resourcePressure.observe(view));
-  resourcePressure.observe(computerResourceFeed.snapshot());
   // The freeze recorder (docs/freeze-recorder.md), in alpha builds only: each
   // main thread stall goes to its record and to the per-version tally, and
   // when the app first starts on a new version each earlier version's whole

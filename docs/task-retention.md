@@ -51,7 +51,7 @@ A pack written by `pnpm export:corpus --human-supervision` is a separate local c
 ## A closed task's leftover files
 
 Each task has a folder of its own, `crewmates/<taskId>/` (`src/core/paths.ts`).
-The app keeps six parts of it for itself: `sessions/` (D2), `cards/` (the host's copies of every picture and recording a card showed, made when the card went up), `card-bodies/`, `source-cards/`, `placed/` and `captures/` (`APP_KEPT_PARTS` in `src/core/tasks/taskLeftovers.ts`).
+The app keeps seven parts of it for itself: `sessions/` (D2), `cards/` (the host's copies of every picture and recording a card showed, made when the card went up), `card-bodies/`, `source-cards/`, `placed/`, `captures/` and `leftovers.json`, what its close could not stop (`docs/leftover-programs.md`) (`APP_KEPT_PARTS` in `src/core/tasks/taskLeftovers.ts`).
 Everything else there is the crewmate's: its evidence folder and whatever scratch it left beside it, such as project copies, scripts and logs.
 A temporary folder the app provisioned is not part of that week: it goes when the task closes, as the next section says.
 

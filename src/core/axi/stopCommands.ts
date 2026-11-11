@@ -1,4 +1,4 @@
-import { STOPS_COMMAND } from "@shared/leftoverPrograms";
+import { type LeftBehind, STOPS_COMMAND } from "@shared/leftoverPrograms";
 import { encode } from "@toon-format/toon";
 import { AxiError } from "axi-sdk-js";
 import type { TaskStopsAnswer } from "../tasks/taskStops";
@@ -13,12 +13,23 @@ import type { ChannelReply } from "./protocol";
  * first, when the task closes.
  */
 
-export type StopsOp = "stops.list" | "stops.add" | "stops.drop";
+export type StopsOp =
+  | "stops.list"
+  | "stops.add"
+  | "stops.drop"
+  | "stops.left"
+  | "stops.rerun"
+  | "stops.end"
+  | "stops.dropKept";
 
 export type StopsOpInput = {
   "stops.list": Record<string, never>;
   "stops.add": { label: string; command: string };
   "stops.drop": { id: string };
+  "stops.left": Record<string, never>;
+  "stops.rerun": { task: string; id: string };
+  "stops.end": { task: string; pid: number };
+  "stops.dropKept": { task: string; id: string };
 };
 
 export type StopsReply = ChannelReply<TaskStopsAnswer>;
@@ -53,6 +64,10 @@ function output(reply: StopsReply): string {
       answer.refused === "invalid" ? "VALIDATION_ERROR" : "REFUSED",
     );
   const body: Record<string, unknown> = {};
+  if (answer.left) return `${encode(leftBody(answer.left))}\n${encode({ help: LEFT_HELP })}\n`;
+  if (answer.reran) return `${encode({ reran: answer.reran })}\n`;
+  if (answer.ended) return `${encode({ ended: answer.ended })}\n`;
+  if (answer.droppedKept) return `${encode({ dropped: answer.droppedKept })}\n`;
   if (answer.added) body.added = answer.added.id;
   if (answer.dropped) body.dropped = answer.dropped;
   const stops = answer.stops ?? [];
@@ -62,6 +77,32 @@ function output(reply: StopsReply): string {
       : stops.map((stop) => ({ id: stop.id, label: stop.label, command: stop.command }));
   return `${encode(body)}\n${encode({ help: HELP })}\n`;
 }
+
+const LEFT_HELP = [
+  "This is a record of what finished tasks left on this computer, not a reading of memory use",
+  "Each kept stop's command is for you to judge what it deletes and whether its target is gone; never show it on a card",
+  `Run \`${STOPS_COMMAND} drop <task> <stop id>\` for a kept stop whose target you found already gone`,
+  `Only after the captain picks an item: run \`${STOPS_COMMAND} rerun <task> <stop id>\` to run a kept stop again, or \`${STOPS_COMMAND} end <task> <pid>\` to end a kept program; the app checks its start time first`,
+];
+
+function leftBody(left: LeftBehind): Record<string, unknown> {
+  return {
+    stops: left.stops.length === 0 ? "0 kept stops" : left.stops,
+    programs: left.programs.length === 0 ? "0 kept programs still running" : left.programs,
+    runs:
+      left.runs.length === 0
+        ? "0 finished tasks' runs in the line"
+        : left.runs.map((run) => ({
+            task: run.task,
+            id: run.id,
+            state: run.state,
+            processors: run.demand.cpu,
+            memoryMiB: Math.round(run.demand.memoryBytes / 1024 ** 2),
+          })),
+  };
+}
+
+const TASK_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 function commandOf(args: AxiArguments): string {
   const command = args.positional.join(" ").trim();
@@ -95,15 +136,66 @@ export function stopsAxi(
         },
       },
       drop: {
-        usage: "drop <id>",
-        description: "Drop a stop you ran yourself, so the close does not run it again.",
+        usage: "drop <id> | drop <task> <stop id>",
+        description:
+          "Drop a stop you ran yourself, so the close does not run it again; or, with a finished task's id, drop its kept stop whose target is already gone, without running it.",
         run: async (args, connection) => {
+          if (args.positional.length === 2) {
+            const [task, id] = args.positional;
+            if (!task || !TASK_ID.test(task) || !id || !/^s[1-9][0-9]*$/.test(id))
+              throw new AxiError(
+                "Name the task by its id and the stop by its id, such as s1.",
+                "VALIDATION_ERROR",
+                LEFT_HELP,
+              );
+            return output(await connection.call("drop", "stops.dropKept", { task, id }));
+          }
           const [id, extra] = args.positional;
           if (!id || extra !== undefined || !/^s[1-9][0-9]*$/.test(id))
             throw new AxiError("Name one stop by its id, such as s1.", "VALIDATION_ERROR", [
               `Run \`${STOPS_COMMAND}\` for the ids`,
             ]);
           return output(await connection.call("drop", "stops.drop", { id }));
+        },
+      },
+      left: {
+        usage: "left",
+        description:
+          "List what finished tasks left on this computer: the stops their closes could not finish, the programs that survived a close and still run, and their runs still in the heavy-run line.",
+        run: async (args, connection) => {
+          if (args.positional.length > 0)
+            throw new AxiError("left takes no arguments.", "VALIDATION_ERROR", LEFT_HELP);
+          return output(await connection.call("left", "stops.left", {}));
+        },
+      },
+      rerun: {
+        usage: "rerun <task> <stop id>",
+        description:
+          "Run a finished task's kept stop again, once, as its close did; only for an item the captain picked.",
+        run: async (args, connection) => {
+          const [task, id, extra] = args.positional;
+          if (!task || !TASK_ID.test(task) || !id || !/^s[1-9][0-9]*$/.test(id) || extra)
+            throw new AxiError(
+              "Name the task by its id and the stop by its id, such as s1.",
+              "VALIDATION_ERROR",
+              LEFT_HELP,
+            );
+          return output(await connection.call("rerun", "stops.rerun", { task, id }));
+        },
+      },
+      end: {
+        usage: "end <task> <pid>",
+        description:
+          "End a finished task's kept program: an end request, then a kill, each only while it still has the start time its close kept; only for an item the captain picked.",
+        run: async (args, connection) => {
+          const [task, pid, extra] = args.positional;
+          if (!task || !TASK_ID.test(task) || !pid || !/^[1-9][0-9]*$/.test(pid) || extra)
+            throw new AxiError(
+              "Name the task by its id and the program by its number.",
+              "VALIDATION_ERROR",
+              LEFT_HELP,
+            );
+          return output(await connection.call("end", "stops.end", { task, pid: Number(pid) }));
         },
       },
     },

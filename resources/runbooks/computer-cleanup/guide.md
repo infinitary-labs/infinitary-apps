@@ -1,8 +1,9 @@
 # Computer cleanup
 
-On a warning or critical resource-pressure notice, ask the captain on one card whether to start a read-only cleanup look on the reporting computer, using their plan’s allowance; start nothing before their yes.
+On a warning or critical resource-pressure notice, or a line-blocked notice that a finished task’s run still counts as running while others wait, ask the captain on one card whether to start a read-only cleanup look on the reporting computer, using their plan’s allowance; start nothing before their yes.
+When the notice carries what finished tasks left there, the card may name those recorded items and say a look may find more.
 No pressure notice authorizes killing, pausing, slowing or moving running work; steer future work instead.
-Check the task record and cards first: while an offer or look is open there, reuse it; after an answer, do not offer again until fresh facts establish recovery and renewed pressure.
+Check the task record and cards first: while an offer or look is open there, reuse it; after an answer, do not offer again until fresh facts establish that the computer recovered and is stuck again: renewed pressure after a normal reading, or a new line-blocked notice for a different run.
 On yes, start one no-project task on that computer, even when it has no room for ordinary new tasks, with the computer-cleanup skill and the captain’s permission.
 The look offers leftovers by finished task, and unowned programs without recommendations and with stopping costs; it stops only the captain’s explicit picks.
 Recorded close outcomes are leads, not proof of current liveness, ownership or memory use.

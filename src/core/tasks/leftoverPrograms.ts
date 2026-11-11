@@ -15,6 +15,7 @@ import { endHolder, findFolderHolders, type HolderOptions } from "../placed/fold
 import { processRoots } from "../placed/processRoots";
 import { hostPlatform } from "../platform";
 import type { TaskRecord } from "../storage/taskRecords";
+import { keepLeftovers, LeftBehindHere, type LeftBehindOptions } from "./leftBehind";
 import { handOverStops, takeStops } from "./taskStops";
 import { TEMP_DIR_NAME } from "./taskTemp";
 
@@ -89,29 +90,60 @@ export function runStop(stop: TaskStop, fallbackCwd: string, timeMs: number): Pr
   });
 }
 
+/** This computer's record of what its finished tasks left, whose kept stops rerun as at a close. */
+export function leftBehindHere(
+  options: Omit<LeftBehindOptions, "runStop"> & { stopTimeMs?: number },
+): LeftBehindHere {
+  const { stopTimeMs, ...rest } = options;
+  return new LeftBehindHere({
+    ...rest,
+    runStop: (stop, cwd) => runStop(stop, cwd, stopTimeMs ?? STOP_TIME_MS),
+  });
+}
+
 /** The close's sweep of one task's leftovers on this computer, and what it did. */
 export async function sweepLeftovers(input: LeftoverSweep): Promise<LeftoversReport> {
   // A task carried on hands its stops to the task that goes on, and runs none.
   const handed = input.handTo ? handOverStops(input.taskFolder, input.handTo.folder) : 0;
   const handedTo = input.handTo && handed > 0 ? { handed, handedTo: input.handTo.key } : {};
-  const stops: StopOutcome[] = [];
+  const ran: { stop: TaskStop; outcome: StopOutcome }[] = [];
   if (!input.handTo)
     for (const stop of takeStops(input.taskFolder))
-      stops.push(await runStop(stop, input.taskFolder, input.stopTimeMs ?? STOP_TIME_MS));
+      ran.push({
+        stop,
+        outcome: await runStop(stop, input.taskFolder, input.stopTimeMs ?? STOP_TIME_MS),
+      });
+  const stops = ran.map((entry) => entry.outcome);
   // Its folders go either way, so what still holds them ends (the captain's
   // answer on the review of INF-3447's piece 1).
   const reading = await findFolderHolders(
     input.folders.filter((folder) => existsSync(folder)),
     input.holders,
   );
-  if (reading.status !== "checked")
-    return { stops, programs: [], holders: reading.status, ...handedTo };
+  if (reading.status !== "checked") {
+    const keptInFile = keepLeftovers(input.taskFolder, ran, []);
+    return {
+      stops,
+      programs: [],
+      holders: reading.status,
+      ...handedTo,
+      ...(keptInFile ? { keptInFile } : {}),
+    };
+  }
   const programs = await Promise.all(
     reading.holders.map((holder) =>
       endHolder(holder, input.graceMs !== undefined ? { graceMs: input.graceMs } : {}),
     ),
   );
-  return { stops, programs, holders: "checked", ...handedTo };
+  // What it could not finish stays here, for a later look (docs/leftover-programs.md).
+  const keptInFile = keepLeftovers(input.taskFolder, ran, programs);
+  return {
+    stops,
+    programs,
+    holders: "checked",
+    ...handedTo,
+    ...(keptInFile ? { keptInFile } : {}),
+  };
 }
 
 /**
@@ -224,6 +256,7 @@ export function noteLeftovers(
       [LEFTOVERS_DATA_KEY]: report,
       leftoversComputerId: computerId,
       leftoversUnresolved: kept.stops.length > 0 || kept.programs.length > 0,
+      ...(report.keptInFile ? { leftoversKeptInFile: true } : {}),
     },
   });
 }
@@ -253,11 +286,14 @@ export class LeftoverPrograms {
     const sweep = (async () => {
       await after?.catch(() => undefined);
       await this.sweep(taskId);
-    })().catch((caught: unknown) => {
-      this.options.log?.(
-        `could not stop the leftovers of ${taskId}: ${caught instanceof Error ? caught.message : String(caught)}`,
-      );
-    });
+    })()
+      .catch((caught: unknown) => {
+        this.options.log?.(
+          `could not stop the leftovers of ${taskId}: ${caught instanceof Error ? caught.message : String(caught)}`,
+        );
+      })
+      .finally(() => this.running.delete(taskId));
+    this.running.add(taskId);
     this.sweeps.set(taskId, sweep);
     return sweep;
   }
@@ -265,6 +301,30 @@ export class LeftoverPrograms {
   /** The task's sweep, when one was begun; resolved otherwise. */
   settled(taskId: string): Promise<void> {
     return this.sweeps.get(taskId) ?? Promise.resolve();
+  }
+
+  /** Whether the task's sweep has begun and not yet ended. */
+  sweeping(taskId: string): boolean {
+    return this.running.has(taskId);
+  }
+
+  private readonly running = new Set<string>();
+
+  /**
+   * What finished tasks left on this Mac, which the notices list and a
+   * cleanup look acts on (docs/leftover-programs.md, "What a close leaves").
+   * A task counts once its close here has finished its own cleanup.
+   */
+  leftBehind(runs: LeftBehindOptions["runs"]): LeftBehindHere {
+    return leftBehindHere({
+      tasksDir: this.options.crewmatesDir,
+      closed: (taskId) => {
+        const record = this.options.tasks.get(taskId);
+        return record !== undefined && closed(record);
+      },
+      sweeping: (taskId) => this.sweeping(taskId),
+      runs,
+    });
   }
 
   private async sweep(taskId: string): Promise<void> {

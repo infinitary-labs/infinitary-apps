@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { LEFTOVERS_DATA_KEY, leftoversOf } from "@shared/leftoverPrograms";
@@ -7,9 +7,11 @@ import { describe, expect, it, vi } from "vitest";
 import { fakeCrewmate, intentOf, setup } from "../../../tests/helpers/crewHarness";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { PlacedTasks } from "../helper/placedTasks";
+import { readProcesses } from "../placed/processResources";
 import { processRoots } from "../placed/processRoots";
 import type { TaskRecord } from "../storage/taskRecords";
-import { LeftoverPrograms, placedLeftovers } from "./leftoverPrograms";
+import { KEPT_INDEX_DIR, KEPT_LEFTOVERS_FILE, keepLeftovers } from "./leftBehind";
+import { LeftoverPrograms, leftBehindHere, placedLeftovers } from "./leftoverPrograms";
 import { legacyStateOf } from "./seedTask";
 import { readStops, taskStopsCommand } from "./taskStops";
 import { TEMP_DIR_NAME } from "./taskTemp";
@@ -147,7 +149,7 @@ describe("a closed task's leftover programs", () => {
         .find((event) => event.data && LEFTOVERS_DATA_KEY in event.data);
       expect(leftoversOf(line?.data)).toEqual({
         stops: [{ label: "scratch machine", outcome: "ran" }],
-        programs: [{ pid: holder, name: "sleep", outcome: "ended" }],
+        programs: [{ pid: holder, name: "sleep", outcome: "ended", started: expect.any(String) }],
         holders: "checked",
       });
       expect(line?.text).toBe(
@@ -204,7 +206,7 @@ describe("a closed task's leftover programs", () => {
 
       expect(leftoversOf(notes[0]?.data)).toEqual({
         stops: [],
-        programs: [{ pid: left, name: "sleep", outcome: "ended" }],
+        programs: [{ pid: left, name: "sleep", outcome: "ended", started: expect.any(String) }],
         holders: "checked",
       });
       await vi.waitFor(async () => expect(await running(left)).toBe(false), WAIT);
@@ -233,7 +235,7 @@ describe("a closed task's leftover programs", () => {
 
       expect(report).toEqual({
         stops: [],
-        programs: [{ pid: left, name: "sleep", outcome: "ended" }],
+        programs: [{ pid: left, name: "sleep", outcome: "ended", started: expect.any(String) }],
         holders: "checked",
       });
       await vi.waitFor(async () => expect(await running(left)).toBe(false), WAIT);
@@ -295,7 +297,7 @@ describe("a closed task's leftover programs", () => {
       await sweeps.begin("task-first");
       expect(leftoversOf(notes[0]?.data)).toEqual({
         stops: [],
-        programs: [{ pid: holder, name: "sleep", outcome: "ended" }],
+        programs: [{ pid: holder, name: "sleep", outcome: "ended", started: expect.any(String) }],
         holders: "checked",
         handed: 1,
         handedTo: "INF-2",
@@ -322,7 +324,7 @@ describe("a closed task's leftover programs", () => {
       });
       expect(report).toEqual({
         stops: [],
-        programs: [{ pid: there, name: "sleep", outcome: "ended" }],
+        programs: [{ pid: there, name: "sleep", outcome: "ended", started: expect.any(String) }],
         holders: "checked",
         handed: 1,
         handedTo: "INF-2",
@@ -447,3 +449,126 @@ class GuardWorld {
     return pid;
   }
 }
+
+describe("what a close leaves, and a look clearing it", () => {
+  /**
+   * INF-2574's approved plan under direction C, piece 2, done criterion 7:
+   * a scratch task's close on a computer that runs work leaves a stop that
+   * failed and a program that survived, with a finished task's run in the
+   * line; the computer lists all three, and the app's rerun and end clear
+   * the stop and the program, checking the program's start time first.
+   */
+  it("keeps a failed stop and a survivor, lists them, and clears them through the app", async () => {
+    const root = scratchDir("infinitary-left-behind-");
+    const tasks = new PlacedTasks(join(root, "work"), join(root, "worktrees"));
+    const folders = tasks.ensure("task-closed");
+    tasks.writeState("task-closed", { ...tasks.state("task-closed"), closed: true });
+    const elsewhere = scratchDir("infinitary-left-behind-elsewhere-");
+    const pids: number[] = [];
+    try {
+      // A machine its stop ends only once the machine is ready: at the close it is not, so the stop fails.
+      const machine = await detached("exec sleep 302", elsewhere, join(elsewhere, "vm.pid"));
+      pids.push(machine);
+      taskStopsCommand(folders.root, Date.now).add({
+        label: "scratch machine",
+        command: `test -f ready && kill "$(cat vm.pid)"`,
+        cwd: elsewhere,
+      });
+      // A program holding its temporary folder, which the close ends.
+      mkdirSync(folders.temp, { recursive: true });
+      const holder = await detached(
+        `exec sleep 303 3>>"${join(folders.temp, "machine.log")}"`,
+        folders.temp,
+        join(elsewhere, "holder.pid"),
+      );
+      pids.push(holder);
+
+      const report = await placedLeftovers(tasks, { graceMs: 2000 })("task-closed", {});
+      expect(report.stops).toEqual([{ label: "scratch machine", outcome: "failed", exitCode: 1 }]);
+      expect(report.programs).toEqual([
+        { pid: holder, name: "sleep", outcome: "ended", started: expect.any(String) },
+      ]);
+      expect(await running(machine)).toBe(true);
+
+      // A test cannot make a program outlive a kill, so the close's record of
+      // one that did stands in: a real program with its real start time, and
+      // one whose number the record names with another program's start time.
+      const survivor = await detached("exec sleep 304", elsewhere, join(elsewhere, "s.pid"));
+      const reused = await detached("exec sleep 305", elsewhere, join(elsewhere, "r.pid"));
+      pids.push(survivor, reused);
+      const started = (await readProcesses())?.find((row) => row.pid === survivor)?.started;
+      expect(started).toBeDefined();
+      keepLeftovers(
+        folders.root,
+        [],
+        [
+          { pid: survivor, name: "sleep", outcome: "survived", started: started ?? "" },
+          { pid: reused, name: "sleep", outcome: "survived", started: "Thu Jan  1 00:00:00 1970" },
+        ],
+      );
+      const booked = {
+        id: "6f1c2b7e-1f0a-4c55-9d3e-2b8a4f6c9e10",
+        taskId: "task-closed",
+        demand: { cpu: 4, memoryBytes: 8 * 1024 ** 3 },
+        state: "running" as const,
+        ahead: 0,
+      };
+      const here = leftBehindHere({
+        tasksDir: tasks.tasksDir,
+        closed: (task) => tasks.has(task) && tasks.state(task).closed,
+        runs: () => [booked],
+        graceMs: 2000,
+      });
+
+      expect(await here.list()).toEqual({
+        stops: [
+          {
+            task: "task-closed",
+            id: "s1",
+            label: "scratch machine",
+            outcome: "failed",
+            exitCode: 1,
+          },
+        ],
+        programs: [{ task: "task-closed", pid: survivor, name: "sleep", started }],
+        runs: [{ task: "task-closed", id: booked.id, state: "running", demand: booked.demand }],
+        kept: ["task-closed"],
+      });
+
+      // The captain picked all three: the machine is ready now, so its stop runs.
+      writeFileSync(join(elsewhere, "ready"), "");
+      expect(await here.rerun("task-closed", "s1")).toEqual({
+        label: "scratch machine",
+        outcome: "ran",
+      });
+      await vi.waitFor(async () => expect(await running(machine)).toBe(false), WAIT);
+      // The independent review of this change found `end` signalled a kept
+      // number when the process table could not be read: it must refuse.
+      const blind = leftBehindHere({
+        tasksDir: tasks.tasksDir,
+        closed: (task) => task === "task-closed",
+        runs: () => [],
+        processes: async () => null,
+        graceMs: 2000,
+      });
+      expect(await blind.end("task-closed", survivor)).toMatchObject({ refused: "refused" });
+      expect(await running(survivor)).toBe(true);
+      expect(await here.end("task-closed", survivor)).toMatchObject({ outcome: "ended" });
+      await vi.waitFor(async () => expect(await running(survivor)).toBe(false), WAIT);
+      // A number whose program is not the one the close kept is never signalled.
+      expect(await here.end("task-closed", reused)).toMatchObject({ outcome: "gone" });
+      expect(await running(reused)).toBe(true);
+
+      expect(await here.list()).toEqual({
+        stops: [],
+        programs: [],
+        runs: [{ task: "task-closed", id: booked.id, state: "running", demand: booked.demand }],
+        kept: [],
+      });
+      expect(existsSync(join(folders.root, KEPT_LEFTOVERS_FILE))).toBe(false);
+      expect(readdirSync(join(tasks.tasksDir, KEPT_INDEX_DIR))).toEqual([]);
+    } finally {
+      killAll(pids);
+    }
+  });
+});

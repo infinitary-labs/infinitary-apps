@@ -10,7 +10,7 @@ Confirm that permission in the task’s brief or card choice; if missing, ask be
 Permission to look is not permission to stop anything.
 Use the computer named in the brief; a shell on another computer cannot inspect it, so report needs_firstmate to coordinate a crewmate there rather than guessing from local readings.
 Keep one look per computer, no project, and reuse its card and task while open.
-After an answer, another offer waits for fresh evidence of recovery and renewed pressure; missing readings prove neither.
+After an answer, another offer waits for fresh evidence that the computer recovered and is stuck again: renewed pressure after a normal reading, or a new line-blocked notice for a different run; missing readings prove neither.
 No pressure notice authorizes killing, pausing, slowing or moving running work.
 
 ## Read without changing anything
@@ -28,6 +28,11 @@ Separate private/reclaimable memory from shared or unattributed memory where the
 Name the reading’s scope, units and uncertainty.
 A configured virtual machine size is not measured use, and memory freed can differ from an estimate.
 
+Start from the app’s record: `infinitary-stops-axi left` lists what finished tasks left on this computer - the stops their closes could not finish, with each one’s command, the programs that survived a close and still run with the same start time, and their runs still in the heavy-run line.
+The record is a lead, not a measurement, and it never holds everything.
+Read each kept stop’s command to learn what it stops or deletes and how to check its target with a read-only listing; never show the command on a card.
+When a kept stop’s target is already gone, drop it yourself with `infinitary-stops-axi drop <task> <stop id>`, without asking, and name it on your card or report as dropped because its target was gone.
+If you cannot establish whether its target is gone, keep it and say so.
 Inspect virtual machines, simulators, containers and stray shells, not just the app’s recorded processes.
 Check that a runtime’s service or host process is already running before asking it for a list.
 Use only installed programs’ read-only listings: for example, `xcrun simctl list devices booted`, `docker ps --no-trunc`, Apple’s `container list`, and the virtual machine manager’s list or status.
@@ -56,6 +61,7 @@ Report missing access rather than bypassing it.
 If there is nothing eligible to offer, show no cleanup card: report what holds memory, the evidence and any visibility gaps.
 Otherwise lead with what can be freed, honestly estimated, and show one card grouped by finished task, then programs no task owns.
 For each item say what it is, its measured memory or unknown, the ownership evidence, what stopping it interrupts, and whether you will delete something created for a finished task or merely stop something borrowed.
+For a kept stop, add one plain line saying whether running it again deletes something and what, such as the scratch machine and its disk, read from its command but never showing the command.
 Show open-task and CI owners separately as information, without controls.
 Use short plain labels and a compact table or still figure for the owners and memory; follow the app’s card and design rules, not a new screen.
 
@@ -76,7 +82,9 @@ Use `ps -p <pid> -o lstart=,command=` to compare a process’s start time and ex
 A reused process number, changed identity, newly active owner or new dependent invalidates that pick: leave it running and report why.
 If a tool cannot establish identity safely, do not stop it; report the gap rather than acting on a name alone.
 
-Use the program’s graceful stop or shutdown command scoped to that exact identity; never broad pkill, killall, a wildcard, or a runtime-wide shutdown for a single selected guest.
+For a picked item the record holds, act through the app: `infinitary-stops-axi rerun <task> <stop id>` runs a kept stop again as the close did, and `infinitary-stops-axi end <task> <pid>` ends a kept program only while it still has the start time its close kept.
+A rerun that fails again, or an end that answers survived, is reported, not retried by hand without new permission.
+For anything else, use the program’s graceful stop or shutdown command scoped to that exact identity; never broad pkill, killall, a wildcard, or a runtime-wide shutdown for a single selected guest.
 If the command fails or the result is unknown, re-read status and report it; do not escalate to a force stop or repeat an uncertain effect without new permission.
 Delete only the exact disposable resource a finished task created when its deletion was disclosed in the selected item.
 Only stop what a task borrowed; never delete shared disks, images, volumes, simulator sets or personal data.

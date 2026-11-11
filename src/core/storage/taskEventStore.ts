@@ -350,6 +350,19 @@ export class TaskEventStore {
     return rows.map(fromRow);
   }
 
+  /**
+   * Marks one close report resolved once the computer's list shows its task
+   * keeps nothing there any more; it leaves the leftovers index.
+   */
+  resolveLeftovers(eventId: number): void {
+    this.db
+      .prepare(
+        `UPDATE task_events SET data_json = json_set(data_json, '$.leftoversUnresolved', json('false'))
+         WHERE id = ? AND kind = 'note' AND json_valid(data_json)`,
+      )
+      .run(eventId);
+  }
+
   /** The newest event of `kind` on a task whose data holds an object under `key`. */
   latestWithObject(taskId: string, kind: TaskEventKind, key: string): TaskEvent | undefined {
     const row = this.db

@@ -685,6 +685,11 @@ export class TaskService {
     return this.writer.events.leftoverNotes(computerId);
   }
 
+  /** Marks a close report resolved: later pressure notices stop naming it (docs/leftover-programs.md). */
+  resolveLeftoverNote(eventId: number): void {
+    this.writer.events.resolveLeftovers(eventId);
+  }
+
   /** Latest host-observed recovery fact; no session is opened by this read. */
   restartObservation(id: string): Pick<TaskEvent, "at" | "text"> | undefined {
     return this.writer.events.latestRestartObservation(id);

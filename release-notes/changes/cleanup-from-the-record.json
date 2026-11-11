@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "cleanup-from-the-record",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "Cleanup offers name what finished tasks left",
+      "body": "When a finished task’s heavy run still holds a computer’s line while other runs wait, the first mate now offers the same cleanup look it offers when memory runs short. Both offers can name what the app recorded: a stop that failed when a task finished, or a program that kept running. After you pick one, the look runs the recorded stop again, or ends the program only if it is still the same one.",
+      "noPicture": "The offer is written for each computer’s current leftovers, not a fixed app view.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

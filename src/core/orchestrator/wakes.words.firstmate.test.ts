@@ -122,6 +122,47 @@ const CASES: WordsCases<FirstmateWakeKind> = {
         '[fm-op] This Mac reports critical memory pressure. Nothing was killed, paused or slowed. In response to this notice, do not kill, pause or slow running work; judge these facts and steer future work instead. Current resource facts: {"kind":"resource-pressure","computerId":null,"label":"This Mac","pressure":"critical","tasks":[{"taskId":"479823ee","key":"INF-2696","processCount":41,"residentBytes":6442450944,"cpuCores":3.5}],"other":{"residentBytes":2147483648,"processCount":212},"processCount":253,"swapUsedBytes":1073741824}. Task use is attributed only to known process trees; everything else is unclaimed, resident bytes may count shared pages more than once, and missing facts are unknown.',
     },
   ],
+  "line-blocked": [
+    {
+      name: "a finished task's run ahead of a waiting one",
+      wake: {
+        facts: {
+          kind: "line-blocked",
+          computerId: "mac-mini",
+          label: "Mac mini",
+          run: {
+            taskId: TASK.id,
+            key: "INF-2413",
+            id: "6f1c2b7e-1f0a-4c55-9d3e-2b8a4f6c9e10",
+            demand: { cpu: 4, memoryBytes: 8_589_934_592 },
+          },
+          waiting: 2,
+          leftBehind: {
+            stops: [
+              {
+                task: TASK.id,
+                key: "INF-2413",
+                id: "s1",
+                label: "Stop the test machine",
+                outcome: "timed-out",
+              },
+            ],
+            programs: [],
+            runs: [
+              {
+                task: TASK.id,
+                key: "INF-2413",
+                id: "6f1c2b7e-1f0a-4c55-9d3e-2b8a4f6c9e10",
+                state: "running",
+                demand: { cpu: 4, memoryBytes: 8_589_934_592 },
+              },
+            ],
+          },
+        },
+      },
+      words: `[fm-op] On Mac mini, a run of finished task INF-2413 still counts as running in the heavy-run line while 2 other runs wait there. Nothing was stopped. In response to this notice, do not kill, pause or slow running work; judge these facts and steer future work instead. Facts: {"kind":"line-blocked","computerId":"mac-mini","label":"Mac mini","run":{"taskId":"479823ee","key":"INF-2413","id":"6f1c2b7e-1f0a-4c55-9d3e-2b8a4f6c9e10","demand":{"cpu":4,"memoryBytes":8589934592}},"waiting":2,"leftBehind":{"stops":[{"task":"479823ee","key":"INF-2413","id":"s1","label":"Stop the test machine","outcome":"timed-out"}],"programs":[],"runs":[{"task":"479823ee","key":"INF-2413","id":"6f1c2b7e-1f0a-4c55-9d3e-2b8a4f6c9e10","state":"running","demand":{"cpu":4,"memoryBytes":8589934592}}]}}. What finished tasks left is the app's record, not a reading of memory use.`,
+    },
+  ],
   "freeze-recorded": [
     {
       name: "a version's whole tally at the next version's first start",

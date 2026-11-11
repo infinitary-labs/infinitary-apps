@@ -1,12 +1,16 @@
 import { chmodSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  type LeftBehind,
+  type ProgramOutcome,
+  type StopOutcome,
   stopCommandSchema,
   stopLabelSchema,
   type TaskStop,
   type TaskStopsFile,
   taskStopsFileSchema,
 } from "@shared/leftoverPrograms";
+import type { LeftBehindHere } from "./leftBehind";
 
 /**
  * A task's registered stops (docs/leftover-programs.md, "Registering a stop"): the
@@ -24,6 +28,14 @@ export type TaskStopsAnswer = {
   stops?: TaskStop[];
   added?: TaskStop;
   dropped?: string;
+  /** What finished tasks left on this computer (`left`). */
+  left?: LeftBehind;
+  /** How a kept stop went when run again (`rerun`). */
+  reran?: StopOutcome;
+  /** How a kept program went when ended (`end`). */
+  ended?: ProgramOutcome;
+  /** A finished task's kept stop dropped without running (`drop <task> <stop id>`). */
+  droppedKept?: { task: string; id: string; label: string };
   text?: string;
   refused?: "refused" | "invalid";
 };
@@ -33,6 +45,11 @@ export type TaskStopsCommand = {
   list: () => TaskStopsAnswer;
   add: (input: { label: string; command: string; cwd?: string }) => TaskStopsAnswer;
   drop: (id: string) => TaskStopsAnswer;
+  /** What finished tasks left on this computer; absent where the computer keeps no such record. */
+  left?: () => Promise<TaskStopsAnswer>;
+  rerun?: (task: string, id: string) => Promise<TaskStopsAnswer>;
+  end?: (task: string, pid: number) => Promise<TaskStopsAnswer>;
+  dropKept?: (task: string, id: string) => Promise<TaskStopsAnswer>;
 };
 
 const EMPTY: TaskStopsFile = { next: 1, stops: [] };
@@ -99,9 +116,38 @@ export function handOverStops(fromFolder: string, toFolder: string): number {
   return moved.length;
 }
 
-/** The task command's view of one task's stops, in its folder. */
-export function taskStopsCommand(taskFolder: string, now: () => number): TaskStopsCommand {
+/**
+ * The task command's view of one task's stops, in its folder, and of what
+ * finished tasks left on this computer (`here`), which a cleanup look acts
+ * on after the captain's pick.
+ */
+export function taskStopsCommand(
+  taskFolder: string,
+  now: () => number,
+  here?: LeftBehindHere,
+): TaskStopsCommand {
   return {
+    ...(here
+      ? {
+          // The look on this computer reads each kept stop's command, to say
+          // what it deletes and whether its target is gone, never to show it.
+          left: async () => ({ left: await here.list({ commands: true }) }),
+          dropKept: async (task: string, id: string) => {
+            const outcome = await here.drop(task, id);
+            return "refused" in outcome
+              ? outcome
+              : { droppedKept: { task, id, label: outcome.label } };
+          },
+          rerun: async (task: string, id: string) => {
+            const outcome = await here.rerun(task, id);
+            return "refused" in outcome ? outcome : { reran: outcome };
+          },
+          end: async (task: string, pid: number) => {
+            const outcome = await here.end(task, pid);
+            return "refused" in outcome ? outcome : { ended: outcome };
+          },
+        }
+      : {}),
     list: () => ({ stops: readStops(taskFolder).stops }),
     add: (input) => {
       const label = stopLabelSchema.safeParse(input.label);

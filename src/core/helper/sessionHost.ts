@@ -218,6 +218,11 @@ export type SessionHostOptions = {
     task: string,
     close: { carriedTo?: { task: string; key: string }; startedAt?: number },
   ) => Promise<import("@shared/leftoverPrograms").LeftoversReport>;
+  /**
+   * Wraps a close from its start to its sweep's end, so what finished tasks
+   * left leaves the task out until its own cleanup is done (`LeftBehindHere.sweep`).
+   */
+  closing?: <T>(task: string, run: () => Promise<T>) => Promise<T>;
   now?: () => number;
   log?: (line: string) => void;
 };
@@ -608,12 +613,12 @@ export class SessionHost {
       case "inf:session:close": {
         const [close] = request as WorkOrderRequest<"inf:session:close">;
         const wasClosed = held.state.closed;
-        await this.closeTask(held);
-        // Its stops run, and the programs holding its folders end, once its
-        // conversation and commands are gone and before its folders go
-        // (docs/leftover-programs.md, "On a computer that runs work").
-        const leftovers =
-          !wasClosed && this.options.leftovers
+        const closeAndSweep = async () => {
+          await this.closeTask(held);
+          // Its stops run, and the programs holding its folders end, once its
+          // conversation and commands are gone and before its folders go
+          // (docs/leftover-programs.md, "On a computer that runs work").
+          return !wasClosed && this.options.leftovers
             ? await this.options.leftovers(held.task, close).catch((error: unknown) => {
                 this.options.log?.(
                   `could not stop what ${held.task} left running: ${error instanceof Error ? error.message : String(error)}`,
@@ -621,6 +626,11 @@ export class SessionHost {
                 return undefined;
               })
             : undefined;
+        };
+        const leftovers =
+          !wasClosed && this.options.closing
+            ? await this.options.closing(held.task, closeAndSweep)
+            : await closeAndSweep();
         answer = { ok: true, ...(leftovers ? { leftovers } : {}) };
         break;
       }

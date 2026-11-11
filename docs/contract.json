@@ -73483,6 +73483,10 @@
                           "gone",
                           "survived"
                         ]
+                      },
+                      "started": {
+                        "type": "string",
+                        "maxLength": 64
                       }
                     },
                     "required": [
@@ -73509,6 +73513,10 @@
                     "unsupported",
                     "unreadable"
                   ]
+                },
+                "keptInFile": {
+                  "type": "boolean",
+                  "const": true
                 }
               },
               "required": [
@@ -79368,6 +79376,159 @@
           },
           "required": [
             "runs"
+          ]
+        }
+      },
+      "inf:computer:left-behind": {
+        "effect": "read",
+        "request": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "stops": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "task": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                  },
+                  "id": {
+                    "type": "string",
+                    "pattern": "^s[1-9][0-9]*$"
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "outcome": {
+                    "type": "string",
+                    "enum": [
+                      "failed",
+                      "timed-out"
+                    ]
+                  },
+                  "exitCode": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "command": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 4000
+                  },
+                  "cwd": {
+                    "type": "string",
+                    "maxLength": 4096
+                  }
+                },
+                "required": [
+                  "task",
+                  "id",
+                  "label",
+                  "outcome"
+                ]
+              }
+            },
+            "programs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "task": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                  },
+                  "pid": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 64
+                  },
+                  "started": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  }
+                },
+                "required": [
+                  "task",
+                  "pid",
+                  "name",
+                  "started"
+                ]
+              }
+            },
+            "runs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "task": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{1,64}$"
+                  },
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "waiting",
+                      "running"
+                    ]
+                  },
+                  "demand": {
+                    "type": "object",
+                    "properties": {
+                      "cpu": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      },
+                      "memoryBytes": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "cpu",
+                      "memoryBytes"
+                    ]
+                  }
+                },
+                "required": [
+                  "task",
+                  "id",
+                  "state",
+                  "demand"
+                ]
+              }
+            },
+            "kept": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              }
+            }
+          },
+          "required": [
+            "stops",
+            "programs",
+            "runs",
+            "kept"
           ]
         }
       },

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { leftBehindOrders } from "./leftoverPrograms";
 import { computerLoadReadingSchema, loadOrders } from "./load";
 import type { PanelComputerResourceReading, PanelComputerResources } from "./personal/contracts";
 
@@ -126,6 +127,7 @@ export const RESOURCE_DEMAND_LEASE_MS = 15_000;
 /** Computer facts and declared-run admission; neither loads accounts or opens a conversation. */
 export const resourceOrders = {
   ...loadOrders,
+  ...leftBehindOrders,
   [RESOURCE_ORDER]: {
     effect: "read",
     request: z.tuple([]),

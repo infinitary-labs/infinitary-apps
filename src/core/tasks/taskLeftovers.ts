@@ -12,8 +12,9 @@ import {
 /**
  * What the app keeps in a task's folder for itself, never removed here:
  * the session record (D2), the host's copies of card pictures, card body
- * files, the source cards a brief named, a placed conversation's state and
- * panel captures. Everything else in the folder is the crewmate's.
+ * files, the source cards a brief named, a placed conversation's state,
+ * panel captures and what its close could not stop (`leftovers.json`,
+ * docs/leftover-programs.md). Everything else in the folder is the crewmate's.
  */
 export const APP_KEPT_PARTS: ReadonlySet<string> = new Set([
   "sessions",
@@ -22,6 +23,7 @@ export const APP_KEPT_PARTS: ReadonlySet<string> = new Set([
   "source-cards",
   "placed",
   "captures",
+  "leftovers.json",
 ]);
 
 /** Removes only leftovers, never following a link, through the folder's own writer. */

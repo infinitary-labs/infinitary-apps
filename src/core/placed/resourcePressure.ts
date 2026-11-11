@@ -3,6 +3,7 @@ import { leftoversKept } from "@shared/leftoverPrograms";
 import type { ComputerResourcesView, ProcessResources } from "@shared/resources";
 import { taskResourceWords } from "@shared/resources";
 import type { TypedWake } from "../orchestrator/wakes";
+import type { LeftBehindFacts } from "./leftBehindNotices";
 
 /** A recorded close outcome, not a reading of what is running now. */
 export type PressureLeftover = {
@@ -22,6 +23,8 @@ export class ResourcePressure {
     private readonly options: {
       taskKey: (id: string) => string;
       leftovers?: (computerId: string | null) => PressureLeftover[];
+      /** What finished tasks left on the computer now, which the notice carries when it names anything. */
+      leftBehind?: (computerId: string | null) => Promise<LeftBehindFacts | undefined>;
       notify: (wake: TypedWake) => void;
       activity: (fact: {
         computerId: string | null;
@@ -67,40 +70,57 @@ export class ResourcePressure {
       for (const fact of novel) episode.seen.add(fact);
       // Normal permits another line but does not erase what was already
       // reported: a normal/warning oscillation with the same facts is quiet.
-      if (!episode.lineShown) {
-        episode.lineShown = true;
-        this.options.activity({
-          computerId,
-          label,
-          pressure,
-          text: pressureLine(
+      const showLine = !episode.lineShown;
+      episode.lineShown = true;
+      const other = processes?.status === "sampled" ? processes.other : undefined;
+      const once = `resource-pressure:${computerId ?? "home"}:${reading.observation.epoch}:${reading.observation.sequence}:${JSON.stringify(novel)}`;
+      // Reading the computer's list first lets a close report it shows cleared
+      // be marked resolved, so this notice no longer names it.
+      const emit = (recorded: PressureLeftover[], leftBehind?: LeftBehindFacts) => {
+        if (showLine)
+          this.options.activity({
+            computerId,
+            label,
+            pressure,
+            text: pressureLine(label, pressure, tasks, other, recorded),
+          });
+        this.options.notify({
+          facts: {
+            kind: "resource-pressure" as const,
+            computerId,
             label,
             pressure,
             tasks,
-            processes?.status === "sampled" ? processes.other : undefined,
-            recordedLeftovers,
-          ),
+            ...(recorded.length
+              ? { recordedLeftovers: recorded, leftoverUse: "unknown" as const }
+              : {}),
+            ...(processes?.status === "sampled"
+              ? { other: processes.other, processCount: processes.processCount }
+              : {}),
+            ...(reading.observation.memory.swapUsedBytes === undefined
+              ? {}
+              : { swapUsedBytes: reading.observation.memory.swapUsedBytes }),
+            ...(leftBehind &&
+            leftBehind.stops.length + leftBehind.programs.length + leftBehind.runs.length
+              ? { leftBehind }
+              : {}),
+          },
+          once,
         });
+      };
+      const listing = this.options.leftBehind?.(computerId);
+      if (!listing) {
+        emit(recordedLeftovers);
+        continue;
       }
-      this.options.notify({
-        facts: {
-          kind: "resource-pressure",
-          computerId,
-          label,
-          pressure,
-          tasks,
-          ...(recordedLeftovers.length
-            ? { recordedLeftovers, leftoverUse: "unknown" as const }
-            : {}),
-          ...(processes?.status === "sampled"
-            ? { other: processes.other, processCount: processes.processCount }
-            : {}),
-          ...(reading.observation.memory.swapUsedBytes === undefined
-            ? {}
-            : { swapUsedBytes: reading.observation.memory.swapUsedBytes }),
-        },
-        once: `resource-pressure:${computerId ?? "home"}:${reading.observation.epoch}:${reading.observation.sequence}:${JSON.stringify(novel)}`,
-      });
+      void listing
+        .catch(() => undefined)
+        .then((leftBehind) =>
+          emit(
+            leftBehind ? (this.options.leftovers?.(computerId) ?? []) : recordedLeftovers,
+            leftBehind,
+          ),
+        );
     }
   }
 }

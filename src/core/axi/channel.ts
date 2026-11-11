@@ -45,6 +45,11 @@ import {
 import type { SecretsAnswer } from "./secretsCommands";
 import type { StopsOpInput } from "./stopCommands";
 
+const NO_LEFT_BEHIND: TaskStopsAnswer = {
+  text: "This computer keeps no record of what finished tasks left.",
+  refused: "refused",
+};
+
 /**
  * The task channel (docs/axi-commands.md, "The channel"): how a crewmate's
  * `infinitary-<tool>-axi` command reaches its own task's tools in the app.
@@ -714,6 +719,24 @@ export class AxiChannel {
         case "stops.drop": {
           const { id } = (message.input ?? {}) as StopsOpInput["stops.drop"];
           return stops.drop(String(id ?? ""));
+        }
+        case "stops.left":
+          return stops.left ? await stops.left() : NO_LEFT_BEHIND;
+        case "stops.rerun": {
+          const { task, id } = (message.input ?? {}) as StopsOpInput["stops.rerun"];
+          return stops.rerun
+            ? await stops.rerun(String(task ?? ""), String(id ?? ""))
+            : NO_LEFT_BEHIND;
+        }
+        case "stops.dropKept": {
+          const { task, id } = (message.input ?? {}) as StopsOpInput["stops.dropKept"];
+          return stops.dropKept
+            ? await stops.dropKept(String(task ?? ""), String(id ?? ""))
+            : NO_LEFT_BEHIND;
+        }
+        case "stops.end": {
+          const { task, pid } = (message.input ?? {}) as StopsOpInput["stops.end"];
+          return stops.end ? await stops.end(String(task ?? ""), Number(pid)) : NO_LEFT_BEHIND;
         }
         default:
           return { text: "That is not a stops operation.", refused: "invalid" };

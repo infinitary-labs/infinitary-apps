@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { loadDemandSchema } from "./load";
 
 /**
  * What a task leaves running after it closes, and how its close stops it
@@ -54,6 +55,11 @@ export const programOutcomeSchema = z.object({
   /** The program's own short name, as the system lists it. */
   name: z.string().max(64),
   outcome: z.enum(["ended", "killed", "gone", "survived"]),
+  /**
+   * Its birth as the system listed it at the close, so a later end can tell
+   * it from a new program given the same number (`left-behind.md`).
+   */
+  started: z.string().max(64).optional(),
 });
 export type ProgramOutcome = z.infer<typeof programOutcomeSchema>;
 
@@ -68,6 +74,11 @@ export const leftoversReportSchema = z.object({
   handedTo: z.string().min(1).max(64).optional(),
   handed: z.number().int().nonnegative().optional(),
   holders: z.enum(["checked", "unsupported", "unreadable"]),
+  /**
+   * The close kept what it could not finish in the task's folder there
+   * (`left-behind.md`), so the computer's list says when it is cleared.
+   */
+  keptInFile: z.literal(true).optional(),
 });
 export type LeftoversReport = z.infer<typeof leftoversReportSchema>;
 
@@ -152,3 +163,85 @@ export const closeOrder = {
   },
   response: z.object({ ok: z.literal(true), leftovers: leftoversReportSchema.optional() }),
 };
+
+/**
+ * What a close could not finish, kept in the task's own folder on the
+ * computer that ran it, readable only by the user (docs/leftover-programs.md,
+ * "What a close leaves"): each stop that failed or did not finish, with its
+ * command, and each program that survived, with its birth.
+ */
+export const keptLeftoversSchema = z.object({
+  stops: z.array(
+    taskStopSchema.extend({
+      outcome: z.enum(["failed", "timed-out"]),
+      exitCode: z.number().int().optional(),
+    }),
+  ),
+  programs: z.array(
+    z.object({
+      pid: z.number().int().positive(),
+      name: z.string().max(64),
+      started: z.string().min(1).max(64),
+    }),
+  ),
+});
+export type KeptLeftovers = z.infer<typeof keptLeftoversSchema>;
+
+const taskIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
+
+/**
+ * What finished tasks left on one computer (`left-behind.md`): the stops
+ * their closes kept, without their commands except to a cleanup look on
+ * that computer; the programs that survived a close and still run with the
+ * same birth; their runs still in that computer's heavy-run line; and every
+ * task whose close still keeps something there (`kept`), so the home can
+ * mark a cleared close report resolved. A record, never a reading of
+ * memory use.
+ */
+export const leftBehindSchema = z.object({
+  stops: z.array(
+    z.object({
+      task: taskIdSchema,
+      id: z.string().regex(/^s[1-9][0-9]*$/),
+      label: stopLabelSchema,
+      outcome: z.enum(["failed", "timed-out"]),
+      exitCode: z.number().int().optional(),
+      /** Only in the stops command's own answer to a look on that computer, never in the order. */
+      command: stopCommandSchema.optional(),
+      cwd: z.string().max(4096).optional(),
+    }),
+  ),
+  programs: z.array(
+    z.object({
+      task: taskIdSchema,
+      pid: z.number().int().positive(),
+      name: z.string().max(64),
+      started: z.string().min(1).max(64),
+    }),
+  ),
+  runs: z.array(
+    z.object({
+      task: taskIdSchema,
+      id: z.string().uuid(),
+      state: z.enum(["waiting", "running"]),
+      demand: loadDemandSchema,
+    }),
+  ),
+  kept: z.array(taskIdSchema),
+});
+export type LeftBehind = z.infer<typeof leftBehindSchema>;
+
+/** Whether a computer's list names anything. */
+export function leftAnything(left: LeftBehind): boolean {
+  return left.stops.length + left.programs.length + left.runs.length > 0;
+}
+
+/** The order the home asks a computer that runs work for its list (`left-behind.md`). */
+export const LEFT_BEHIND_ORDER = "inf:computer:left-behind";
+export const leftBehindOrders = {
+  [LEFT_BEHIND_ORDER]: {
+    effect: "read",
+    request: z.tuple([]),
+    response: leftBehindSchema,
+  },
+} as const;

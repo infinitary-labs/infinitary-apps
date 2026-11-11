@@ -5,7 +5,7 @@ import { openDatabase } from "../storage/db";
 import { noteLeftovers } from "../tasks/leftoverPrograms";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
-import { recordedPressureLeftovers } from "./pressureLeftovers";
+import { recordedPressureLeftovers, resolveClearedLeftovers } from "./pressureLeftovers";
 
 // INF-3497 finding 5: pressure lines read the predecessor's saved close
 // outcomes by task and computer, not all closed tasks or guessed process use.
@@ -85,5 +85,49 @@ it("reads only unresolved close outcomes on their recorded computer after reopen
     expect(recordedPressureLeftovers(saved, "work")).toHaveLength(1);
   } finally {
     reopened.close();
+  }
+});
+
+// INF-3592's review, the captain's choice "Mark it resolved too, so later
+// notices stop naming it": once the computer's list shows a task keeps
+// nothing there, its close report stops being named; a report from a close
+// that kept no file is left as it was.
+it("marks a close report resolved once the computer's list shows its task keeps nothing", () => {
+  const dir = scratchDir("infinitary-pressure-leftovers-");
+  const db = openDatabase(dir);
+  try {
+    const tasks = new TaskService({ db });
+    const kept = seedTask(tasks, {
+      id: "kept",
+      title: "Boot a scratch machine",
+      status: "cancelled",
+    });
+    const cleared = seedTask(tasks, {
+      id: "cleared",
+      title: "Boot a simulator",
+      status: "cancelled",
+    });
+    const older = seedTask(tasks, { id: "older", title: "Run a server", status: "cancelled" });
+    const report: LeftoversReport = {
+      stops: [{ label: "scratch machine", outcome: "timed-out" }],
+      programs: [],
+      holders: "checked",
+      keptInFile: true,
+    };
+    noteLeftovers(tasks, kept.id, report, "work");
+    noteLeftovers(tasks, cleared.id, report, "work");
+    const { keptInFile: _kept, ...beforeTheFile } = report;
+    noteLeftovers(tasks, older.id, beforeTheFile, "work");
+
+    resolveClearedLeftovers(tasks, "work", [kept.id]);
+    expect(recordedPressureLeftovers(tasks, "work").map((leftover) => leftover.taskId)).toEqual([
+      kept.id,
+      older.id,
+    ]);
+    // Another computer's list says nothing of this one's reports.
+    resolveClearedLeftovers(tasks, null, []);
+    expect(recordedPressureLeftovers(tasks, "work")).toHaveLength(2);
+  } finally {
+    db.close();
   }
 });

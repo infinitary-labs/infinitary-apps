@@ -21,6 +21,7 @@ import type { CorrectionInput, CorrectionReview } from "../decisions/correctionT
 import type { FreezeLine } from "../freeze/freezeRecorder";
 import type { FreezeLocation, VersionSummary } from "../freeze/freezeTally";
 import { capWithOverflow } from "../overflow";
+import type { LeftBehindFacts, LineBlockedRun } from "../placed/leftBehindNotices";
 import type { PressureLeftover, PressureTaskShare } from "../placed/resourcePressure";
 import { FIX_LABEL } from "../queue/shipped/rules.mjs";
 import type { SeatPauseClass } from "./seat";
@@ -44,6 +45,21 @@ export type NoticeFacts =
       other?: { cpuCores?: number; residentBytes: number; processCount: number };
       processCount?: number;
       swapUsedBytes?: number;
+      /** What finished tasks left on the computer now, as the app recorded it. */
+      leftBehind?: LeftBehindFacts;
+    }
+  | {
+      /**
+       * A finished task's run still counts as running in the computer's
+       * heavy-run line while other runs wait there; once per run
+       * (docs/heavy-runs.md, "Capacity and pressure").
+       */
+      kind: "line-blocked";
+      computerId: string | null;
+      label: string;
+      run: LineBlockedRun;
+      waiting: number;
+      leftBehind?: LeftBehindFacts;
     }
   | {
       /**
@@ -512,6 +528,8 @@ export const NOTICE_WORDS: KindWords<NoticeFacts> = {
             ].join("\n"),
   "resource-pressure": (facts) =>
     `[fm-op] ${facts.label} reports ${facts.pressure} memory pressure. Nothing was killed, paused or slowed. In response to this notice, do not kill, pause or slow running work; judge these facts and steer future work instead. Current resource facts: ${JSON.stringify(facts)}. Task use is attributed only to known process trees; everything else is unclaimed, resident bytes may count shared pages more than once, and missing facts are unknown.`,
+  "line-blocked": (facts) =>
+    `[fm-op] On ${facts.label}, a run of finished task ${facts.run.key} still counts as running in the heavy-run line while ${facts.waiting} other ${facts.waiting === 1 ? "run waits" : "runs wait"} there. Nothing was stopped. In response to this notice, do not kill, pause or slow running work; judge these facts and steer future work instead. Facts: ${JSON.stringify(facts)}. What finished tasks left is the app's record, not a reading of memory use.`,
   "freeze-recorded": (facts) => renderFreezeRecorded(facts),
   "panel-update-asked": (facts) => renderPanelUpdateAsked(facts),
   "queue-plan-asked": (facts) => renderQueuePlanAsked(facts),

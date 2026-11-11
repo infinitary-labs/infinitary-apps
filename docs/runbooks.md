@@ -130,8 +130,8 @@ With no runbook reader present, the crewmate prompt serves the same bundled sect
 Turning it off leaves the names on the record and serves no procedure for them.
 Batched pull requests holds the shipped queue's two skills: `queue-setup`, which plans the queue on a card where the captain chooses the batch's checks and then copies the stamped files the generator writes beside it (`node scripts/generate-shipped-queue.ts`, `docs/forge.md` "The shipped queue"), and `queue-repair`, which claims a paused batch's issue and fixes forward, including flakiness, or sends one change back.
 Its stamped files are `.txt` because a runbook carries no executable file; they are generated, never edited by hand.
-Computer cleanup supplies the first mate’s ask-first procedure and the `computer-cleanup` skill for a look on a computer short on memory, after the captain agrees to use their plan’s allowance.
-The skill owns measurement, the leftovers card and stopping only the captain’s picks; the runbook’s `guide.md` owns the first mate’s response to pressure notices (`docs/heavy-runs.md`).
+Computer cleanup supplies the first mate’s ask-first procedure and the `computer-cleanup` skill for a look on a computer short on memory or whose heavy-run line a finished task's run blocks, after the captain agrees to use their plan’s allowance.
+The skill owns measurement, the leftovers card and stopping only the captain’s picks; the runbook’s `guide.md` owns the first mate’s response to pressure and line-blocked notices, including when to offer again (`docs/heavy-runs.md`).
 Disabling it removes both guides through the existing instruction-refresh and new-session doors; pressure facts and the unconditional no-kill instruction remain, and already running conversations keep what they received.
 Commit and PR naming supplies guidance and the data convention read by the existing commit-range, story-title and forge title checks.
 Turning naming off drops that check's convention, but a project's own instructions and release tooling are unchanged.

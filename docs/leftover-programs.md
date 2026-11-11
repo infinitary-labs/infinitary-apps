@@ -17,7 +17,7 @@ A stop deletes what the task created, such as a machine or a simulator it made, 
 Every record close goes through `TaskClosing.closeAndPurge`, which begins the sweep as the record closes, after the crewmate's session and shell commands have ended (`LeftoverPrograms`, `src/core/tasks/leftoverPrograms.ts`): a finished, discarded, cancelled or failed task, a stronger-model retry's earlier attempt, and a task dropped before it started alike.
 The working copy's retirement and the temporary folder's removal (`TaskTempFiles`) wait for the sweep, so nothing that holds a folder is moved away under it.
 
-1. Each registered stop runs once, newest first, in its own process group with the host's environment, for at most a minute; the file is emptied first, so a close asked again runs none.
+1. Each registered stop runs once, newest first, in its own process group with the host's environment, for at most a minute; the file is emptied first, so a close asked again runs none, and a stop that failed or did not finish is kept (see "What a close leaves").
 2. The app lists the programs that hold a file open under the working copy or the temporary folder, or work in one of them: through `lsof` on a Mac and `/proc` on Linux (`src/core/placed/folderHolders.ts`).
    Only the names under those folders are kept from what the system lists.
    A reading cut short at its time limit counts as unreadable, never as a list with no holders.
@@ -26,6 +26,29 @@ The working copy's retirement and the temporary folder's removal (`TaskTempFiles
 5. One timeline line names each stop and program and how it went; its data carries the typed report (`leftoversReportSchema`, `src/shared/leftoverPrograms.ts`) under `leftoverPrograms`.
    A stop that failed or did not finish, or a program that survived, makes the line news, and `leftoversKept` reads them back for later work.
    New reports also retain their computer (`leftoversComputerId`, null for this computer) and whether they left an unresolved outcome (`leftoversUnresolved`), so memory pressure can seek those reports without reading the closed history.
+
+## What a close leaves
+
+A close keeps what it could not finish in `leftovers.json` in the task's own folder on the computer that ran it, readable only by the user (`src/core/tasks/leftBehind.ts`): each stop that failed or did not finish, with its command and folder, and each program that survived, with its number, name and start time as the system listed it.
+The report on the timeline carries each program's start time too (`started`), never a command.
+The file is one of the parts retention keeps (`docs/task-retention.md`), and goes only with the task's folder.
+Beside the task folders, `.left-behind/` holds one empty marker per task that keeps a file, so the list reads only those tasks, never every folder the computer holds; a marker whose file is gone is removed when the list next reads it.
+
+Each computer lists what its finished tasks left (`LeftBehindHere.list`): the kept stops, by label; the kept programs still running with the same number and start time; the finished tasks' runs still in its heavy-run line (`docs/heavy-runs.md`); and every task that still keeps something there.
+A task counts as finished there only once its close has finished its own cleanup (`LeftoverPrograms.sweeping` here, `LeftBehindHere.sweep` around the close order on a computer that runs work), so nothing the close is about to end is listed.
+Only the stops command's own `left`, read by a cleanup look on that computer, carries each kept stop's command; the order and the notices never do.
+A program the process table cannot be read for is left out, never guessed alive.
+A computer that runs work answers the list through `inf:computer:left-behind` when it lists the `left-behind` contract change; the home keeps only the tasks it records as finished and names each by its key (`src/core/placed/leftBehindNotices.ts`).
+The pressure notice and the line-blocked notice carry that list (`docs/heavy-runs.md`, "Capacity and pressure").
+A close that kept a file marks its report on the timeline (`leftoversKeptInFile`); once a list read for a notice shows that task keeps nothing there any more, the home marks the report resolved, so later notices and their Activity line stop naming it (`resolveClearedLeftovers`, `src/core/placed/pressureLeftovers.ts`).
+A report from a close that kept no file stays as it was.
+
+A cleanup look acts on the list through the stops command (`docs/axi-commands.md`, "The stops command") after the captain's pick.
+`rerun` runs a kept stop once again as the close did, and drops it from the file when it runs cleanly or keeps its new outcome.
+`end` sends an end request, then a kill after the grace period, each only when the program's start time reads equal to the kept one; a program gone or replaced by a new one with the same number leaves the file.
+Unlike the close, which ends programs it read moments ago, `end` signals nothing while the process table cannot be read, and keeps the program in the file.
+`drop <task> <stop id>` removes a kept stop without running it; a cleanup look uses it, without asking, for a stop whose target it found already gone.
+All three refuse a task that is not finished on that computer, or whose close is still cleaning up.
 
 Memory pressure names those recorded unresolved outcomes by task on their recorded computer, without claiming the programs are still running or assigning them measured memory (`docs/heavy-runs.md`, "Capacity and pressure").
 Older reports without computer provenance are not guessed onto a computer, and a successful stop or ended program is not named as a leftover.

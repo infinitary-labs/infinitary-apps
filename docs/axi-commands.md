@@ -200,5 +200,9 @@ When the shell itself becomes a background job, the helper ends the turn until t
 Every task with a channel on this Mac is granted it, and a task on a computer that runs work that lists the `task-stops` change, where it keeps the stops in the task's folder there.
 The bare command lists the task's stops, `add --label "<what it stops>" '<command that stops it>'` registers one with the shell's working folder, and `drop <id>` drops one the crewmate ran itself.
 A missing label or command, or an id that is not one, exits 2 before reaching the app.
-The app runs what is left when the task closes; the command itself runs nothing.
+The app runs what is left when the task closes; those three subcommands run nothing.
+`left` lists what finished tasks left on this computer (`docs/leftover-programs.md`, "What a close leaves"), with each kept stop's command for the look to judge what it deletes and whether its target is gone, never to show on a card.
+`rerun <task> <stop id>` runs one finished task's kept stop again, and `end <task> <pid>` ends one finished task's kept program only while it still has the start time its close kept; a cleanup look uses them for the captain's picks.
+`drop <task> <stop id>` removes one finished task's kept stop without running it; a cleanup look uses it on its own for a stop whose target it found already gone.
+Both refuse a task that is not finished on this computer, and one already running for the same item.
 

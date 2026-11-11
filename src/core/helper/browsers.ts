@@ -23,6 +23,7 @@ import type { HostBrowserFrame, HostChildSpawner, HostTaskBrowser } from "../hos
 import type { TaskIntegrations } from "../integrations";
 import type { LoadLine } from "../placed/loadLine";
 import type { SecretsCatalog } from "../secrets/requests";
+import type { LeftBehindHere } from "../tasks/leftBehind";
 import { taskStopsCommand } from "../tasks/taskStops";
 
 /**
@@ -72,6 +73,8 @@ export type ComputerBrowsersOptions = {
   answering?: (shell: string) => void;
   /** Where a task's pictures go: its evidence folder here. */
   evidenceDir: (task: string) => string;
+  /** What this computer's finished tasks left, which a cleanup look acts on (docs/leftover-programs.md). */
+  leftBehind?: LeftBehindHere;
   /** A task's own folder here, which keeps its registered stops (docs/leftover-programs.md). */
   taskFolder?: (task: string) => string;
   /** The task's working copy here: the only folder its crewmate attaches a page's file from. */
@@ -275,7 +278,13 @@ export class ComputerBrowsers {
       ...(tools.secretsCatalog ? { secretsCatalog: tools.secretsCatalog } : {}),
       // Its stops are kept in its folder here, beside its shell (docs/leftover-programs.md).
       ...(tools.stops && this.options.taskFolder
-        ? { stops: taskStopsCommand(this.options.taskFolder(task), Date.now) }
+        ? {
+            stops: taskStopsCommand(
+              this.options.taskFolder(task),
+              Date.now,
+              this.options.leftBehind,
+            ),
+          }
         : {}),
     });
     return { ...(browser ? { browser } : {}), shell };

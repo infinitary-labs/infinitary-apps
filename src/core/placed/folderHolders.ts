@@ -251,23 +251,31 @@ const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve,
 /**
  * Ends one holder: an end request, then a kill after the grace period. Its
  * birth is checked before each, so a number the system gave a new program
- * meanwhile is never signalled.
+ * meanwhile is never signalled. A holder read moments ago is signalled when
+ * the table cannot be read; `onlyWhenRead`, for a number kept since an
+ * earlier close, signals only when its birth reads equal, and otherwise
+ * leaves it as it is (`survived`, never proven ended).
  */
 export async function endHolder(
   holder: FolderHolder,
-  options: { graceMs?: number; wait?: (ms: number) => Promise<void> } = {},
+  options: { graceMs?: number; wait?: (ms: number) => Promise<void>; onlyWhenRead?: boolean } = {},
 ): Promise<ProgramOutcome> {
   const wait = options.wait ?? sleep;
   const result = (outcome: ProgramOutcome["outcome"]): ProgramOutcome => ({
     pid: holder.pid,
     name: holder.name,
     outcome,
+    started: holder.started,
   });
   const before = await birthOf(holder.pid);
+  if (options.onlyWhenRead && before !== holder.started)
+    return result(before === null ? "survived" : "gone");
   if (before !== null && before !== holder.started) return result("gone");
   if (!signal(holder.pid, "SIGTERM")) return result("gone");
   if (await goneWithin(holder, options.graceMs ?? HOLDER_GRACE_MS, wait)) return result("ended");
   const still = await birthOf(holder.pid);
+  if (options.onlyWhenRead && still !== holder.started)
+    return result(still === null ? "survived" : "ended");
   if (still !== null && still !== holder.started) return result("ended");
   if (!signal(holder.pid, "SIGKILL")) return result("ended");
   return (await goneWithin(holder, KILL_WAIT_MS, wait)) ? result("killed") : result("survived");

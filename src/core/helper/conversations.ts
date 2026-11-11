@@ -162,6 +162,8 @@ export async function startConversations(options: {
   source?: import("../selfSource/resolve").SelfSourceReader;
   dataDir: string;
   load?: import("../placed/loadLine").LoadLine;
+  /** What this computer's finished tasks left, which a cleanup look acts on (docs/leftover-programs.md). */
+  leftBehind?: import("../tasks/leftBehind").LeftBehindHere;
   ask: (channel: WorkInvokeChannel, args: unknown, signal?: AbortSignal) => Promise<unknown>;
   /** Asks the home once, while it is in reach, and never again; a task browser's fact and pictures ride it. */
   tell?: (channel: WorkInvokeChannel, args: unknown) => Promise<unknown>;
@@ -239,6 +241,7 @@ export async function startConversations(options: {
           ...parts,
           keysDir: join(options.dataDir, "task-channel"),
           ...(options.load ? { load: options.load } : {}),
+          ...(options.leftBehind ? { leftBehind: options.leftBehind } : {}),
           evidenceDir: (task) => tasks.folders(task).evidence,
           taskFolder: (task) => tasks.folders(task).root,
           workingCopy: (task) => tasks.folders(task).work,
@@ -310,6 +313,7 @@ export async function startConversations(options: {
     // What a closed task left running here stops before its folders go
     // (docs/leftover-programs.md, "On a computer that runs work").
     leftovers: placedLeftovers(tasks),
+    ...(options.leftBehind ? { closing: options.leftBehind.sweep.bind(options.leftBehind) } : {}),
     log,
   });
   const held = host;

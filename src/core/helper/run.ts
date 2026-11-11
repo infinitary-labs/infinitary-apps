@@ -5,6 +5,7 @@ import type { MachineLoginOutcome } from "@shared/accounts";
 import type { DeviceGrant } from "@shared/devices";
 import { isFileOrderChannel } from "@shared/files";
 import type { WorkInvokeChannel } from "@shared/ipc";
+import { LEFT_BEHIND_ORDER, leftBehindOrders } from "@shared/leftoverPrograms";
 import { LOAD_ORDER, loadOrders } from "@shared/load";
 import { PLACEMENT_FACTS_ORDER } from "@shared/placement";
 import { RESOURCE_ORDER, type ResourceMemory, resourceOrders } from "@shared/resources";
@@ -33,6 +34,8 @@ import { LoadLine } from "../placed/loadLine";
 import { answerPlacementFacts } from "../placed/placementFacts";
 import { readProcesses } from "../placed/processResources";
 import { ResourceSampler } from "../placed/resourceSampler";
+import type { LeftBehindHere } from "../tasks/leftBehind";
+import { leftBehindHere } from "../tasks/leftoverPrograms";
 import type { ComputerAccounts } from "./accounts";
 import {
   type BackgroundContext,
@@ -148,6 +151,7 @@ export type StartHelperOptions = {
   conversations?: (options: {
     dataDir: string;
     load?: LoadLine;
+    leftBehind?: LeftBehindHere;
     ask: (channel: WorkInvokeChannel, args: unknown, signal?: AbortSignal) => Promise<unknown>;
     tell: (channel: WorkInvokeChannel, args: unknown) => Promise<unknown>;
     browser?: ComputerBrowserParts;
@@ -255,6 +259,14 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     stateFile: join(dataDir, "load", "holds.json"),
     overridden: (taskId) => loadOverrides.has(taskId),
   });
+  // What this computer's finished tasks left (docs/leftover-programs.md,
+  // "What a close leaves"), which the home lists and a cleanup look acts on.
+  const placedTasks = new PlacedTasks(dataDir);
+  const leftBehind = leftBehindHere({
+    tasksDir: placedTasks.tasksDir,
+    closed: (task) => placedTasks.has(task) && placedTasks.state(task).closed,
+    runs: () => loadLine.snapshot().runs,
+  });
   const resources = new ResourceSampler({
     memory: options.resourceMemory,
     processes: readProcesses,
@@ -350,6 +362,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
         )({
           dataDir,
           load: loadLine,
+          leftBehind,
           ask: (channel, args, signal) => link.ask(channel, args, signal),
           // A browser's fact and pictures go once, while the home is in reach.
           tell: (channel, args) => link.invoke(channel, args),
@@ -567,6 +580,10 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
         loadLine.reconsider();
         return loadLine.snapshot();
       }
+      if (channel === LEFT_BEHIND_ORDER) {
+        leftBehindOrders[LEFT_BEHIND_ORDER].request.parse(args);
+        return leftBehind.list();
+      }
       if (channel === RESOURCE_ORDER) {
         resourceOrders[RESOURCE_ORDER].request.parse(args);
         return resources.read();
@@ -622,7 +639,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     },
   });
   // A conversation left on disk by an earlier run still has things to tell the home.
-  if (new PlacedTasks(dataDir).list().length > 0) void holding().catch(() => undefined);
+  if (placedTasks.list().length > 0) void holding().catch(() => undefined);
   // A sign-in kept here has an allowance to read, or a short-lived sign-in
   // where projects live to keep renewed, and the home to tell.
   if (existsSync(join(dataDir, "accounts", "registry.json")) || holdsForgeSignIn(dataDir))

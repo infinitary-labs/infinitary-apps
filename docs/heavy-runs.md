@@ -86,8 +86,11 @@ Normal/warning oscillations with the same facts stay quiet, and missing readings
 The line names unresolved leftovers recorded at finished tasks' closes on that computer, when present, with current use explicitly unknown; otherwise it names the largest measured open-task share or the programs not linked to open tasks.
 The first mate receives the first pressure fact, the first critical reading, newly observed task identities, newly available process use and newly recorded unresolved close reports, not changes in byte counts alone.
 The wake keeps every measured task share separate from the recorded close outcomes.
+It also carries what finished tasks left on that computer, when the list names anything (`docs/leftover-programs.md`, "What a close leaves").
+When a finished task's run still counts as running in a computer's line while another run waits there, the first mate hears it once for that run (`line-blocked`, `LineBlocked` in `src/core/placed/leftBehindNotices.ts`), with the same list; this reads the line facts the resource feed already carries and stops nothing.
+It tells only once that computer's own list names the run, which it does only after the task's close has finished its own cleanup there; a list that cannot be read, or a computer without the list, tells nothing.
 No pressure change kills, pauses, slows or moves a running program.
-With Computer cleanup enabled, the first mate offers a read-only cleanup look on the reporting computer before spending the captain’s plan’s allowance, and starts it only on yes.
+With Computer cleanup enabled, on either notice the first mate offers a read-only cleanup look on the reporting computer before spending the captain’s plan’s allowance, and starts it only on yes.
 The runbook owns that procedure, not the pressure wake: disabling it withdraws the offer guidance and the skill for new looks, without cancelling running conversations or suppressing the pressure facts.
 It reuses an open offer or look there; after an answer, a new offer needs fresh evidence of recovery and renewed pressure.
 The no-project look follows the bundled `computer-cleanup` skill: measured ownership, one card of finished-task leftovers and unowned programs with stopping costs, and only explicit picks stopped after identity checks.

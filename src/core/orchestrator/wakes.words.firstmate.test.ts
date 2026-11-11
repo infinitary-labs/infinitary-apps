@@ -387,7 +387,7 @@ const CASES: WordsCases<FirstmateWakeKind> = {
         },
       },
       words:
-        '[fm-op] the queue for batched pull requests in project "meter" (repo_id p-7a21) is Infinitary\'s shipped queue version 1, and this Infinitary carries version 2. Offer the captain, on one decision card, a task in that project whose brief names the queue-setup skill\'s "Updating it": a pull request that copies the newer stamped files over the old ones and changes nothing else. Not now keeps the queue as it is; the app offers this once.',
+        "[fm-op] the queue for batched pull requests in project \"meter\" (repo_id p-7a21) is Infinitary's shipped queue version 1, and this Infinitary carries version 2. Offer the captain, on one decision card, a task in that project whose brief names the queue-setup skill's \"Updating it\": a pull request that copies the newer stamped files over the old ones, preserves the team's batch-check grants, and wires the project's after-merge workflows as that skill describes. Not now keeps the queue as it is; the app offers this once.",
     },
     {
       name: "the project's own queue",

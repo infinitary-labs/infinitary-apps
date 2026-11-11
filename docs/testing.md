@@ -537,10 +537,15 @@ The first mate's and a crewmate's fixed prompts each have a budget derived from 
 
 Main's check is the desktop app's release check (INF-2498, the captain: "the main check should be clarified to be specifically about the desktop app's release").
 Its passing run is what the desktop app's alpha is cut from; the phone app releases through its own checks (`ios-release.yml`).
-Every push to `main` starts `main.yml` (INF-2146, the captain's approved plan, direction B), which calls the full check for files no merge batch built ("The swept batch").
+Relevant pushes to `main`, and the queue's `infinitary-after-merge` signal, start `main.yml` (INF-2146, the captain's approved plan, direction B), which calls the full check for files no merge batch built ("The swept batch").
 Beside the full check it calls `linux-startup.yml`, the Linux automatic startup fixtures (INF-2441); a push the swept batch covered runs neither, since the batch ran both.
 A push whose every changed file is in the phone app or the docs starts no run (INF-2492, the captain's decision "Skip pushes that change only the phone app or the docs"): its `paths-ignore` lists `ios/`, `docs/` except the generated `docs/contract.json`, `primitives/` and `release-notes/changes/`, since a change file rides with every change.
 Phone check helpers in `scripts/` and `tests/helpers/` are not the phone app, so a push that touches them runs.
+`scripts/after-merge-paths.mjs` compares the event's default-branch version with the newest completed, non-cancelled run of the same workflow whose Select changed paths step succeeded, whatever started that run.
+A pending or cancelled run is not coverage, so a docs-only signal that replaces one still carries its unprocessed relevant changes.
+An absent or incomplete source-reading checkpoint runs conservatively instead of trusting only the latest batch's pre-merge source.
+An ignored-only signal cancels its sorting run before the full main check or an alpha starts; an incomplete path reading runs the check rather than guessing that nothing relevant changed.
+The same owner preserves `prompt-budget.yml` and `republish-casks.yml`'s existing push-path selections on that signal.
 The sentence-per-line check runs in `pnpm check` on every pull request.
 Other docs breaks that only a unit test reads, such as `tests/served-boundary.test.ts`, surface at the next push that runs, and a skipped push leaves main's green mark on the older version.
 The full check is `verify.yml`'s checks part (`part: checks`, `all_journeys: false`): the Linux checks, and the three Mac lanes with only the journeys tagged `MAC_ONLY_TAG` beside the unit, client, replay and package stages.

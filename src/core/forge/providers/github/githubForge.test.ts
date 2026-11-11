@@ -7,7 +7,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { checkSnapshotSummary } from "../../../../shared/checkSnapshot";
 import { GITHUB_QUEUE_PART, shippedFiles } from "../../../queue/shipped";
 import { WORKFLOW as QUEUE_WORKFLOW } from "../../../queue/shipped/github.mjs";
-import { PAUSE_LABEL, pauseIssue } from "../../../queue/shipped/rules.mjs";
+import {
+  commitEnvelope,
+  NAMING_DECISION,
+  readCommitEnvelope,
+  revocationEnvelope,
+} from "../../../queue/shipped/message.mjs";
+import { PAUSE_LABEL, pauseIssue, REMOVED } from "../../../queue/shipped/rules.mjs";
 import { QUEUE_STATUS, QUEUE_WAITING_WORDS } from "../../forge";
 import { presentationCommitMessage } from "../../presentation";
 import { readOpenChanges } from "./changes";
@@ -377,6 +383,160 @@ describe("GitHubForge", () => {
     expect((await forge.checks(change)).items).toMatchObject([
       { name: QUEUE_STATUS, state: "failure" },
     ]);
+  });
+
+  // F3: a local hold during the publisher's read cannot mint a newer public approval.
+  it("does not publish approval when its local permission ends during the GitHub read", async () => {
+    const head = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
+    const title = "fix: the meter";
+    let held = false;
+    const { forge, seen } = await stub({
+      "GET /repos/octo/meter/pulls/23": () => {
+        held = true;
+        return { json: { head: { sha: head }, title } };
+      },
+    });
+    await expect(
+      forge.markQueued(head, {
+        number: 23,
+        title,
+        naming: null,
+        beforeDispatch: () => (held ? "The merge approval was withdrawn" : undefined),
+      }),
+    ).rejects.toThrow("The merge approval was withdrawn");
+    expect(seen.filter((row) => row.method === "POST")).toEqual([]);
+  });
+
+  // F4/F5 + INF-3623: only an explicit approved mark may replace words, never a passive live edit.
+  it("rejects a retitled old approval and preserves a named mark's description and footer", async () => {
+    const head = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
+    const approvedTitle = "fix: meter story";
+    let liveTitle = "feat!: an unapproved edit";
+    const description = "Approved named-review summary.\n\nBREAKING CHANGE: Keep once.";
+    const comments: string[] = [];
+    const { forge, seen } = await stub({
+      "GET /repos/octo/meter/pulls/23": () => ({
+        json: { head: { sha: head }, title: liveTitle, body: description },
+      }),
+      "POST /repos/octo/meter/issues/23/comments": (request) => {
+        comments.push((request.body as { body: string }).body);
+        return { json: { html_url: "https://github.com/octo/meter/pull/23#issuecomment-72" } };
+      },
+      [`POST /repos/octo/meter/statuses/${head}`]: () => ({ json: { id: 73 } }),
+    });
+    const approval = { number: 23, title: approvedTitle, naming: null };
+    await expect(forge.markQueued(head, approval)).rejects.toThrow("moved");
+    expect(seen.filter((row) => row.method === "POST")).toEqual([]);
+    liveTitle = approvedTitle;
+    await forge.markQueued(head, approval);
+    expect(readCommitEnvelope(comments[0] ?? "", head, approvedTitle)).toBe(description);
+    expect(seen.filter((row) => row.method === "POST").map((row) => row.url)).toEqual([
+      "/repos/octo/meter/issues/23/comments",
+      `/repos/octo/meter/statuses/${head}`,
+    ]);
+  });
+
+  // The warning's second case: an active trusted grant needs a merge-level withdrawal author.
+  it("refuses repeated lower-role withdrawals before posting against another maintainer's approval", async () => {
+    const head = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
+    const { forge, seen } = await stub({
+      "GET /repos/octo/meter/issues/23/comments": () => ({
+        json: [
+          {
+            id: 71,
+            user: { login: "maintainer" },
+            body: `<!-- infinitary-merge-approval -->\n${commitEnvelope(head, "Approved words", "fix: the meter", { naming: NAMING_DECISION.off })}`,
+          },
+        ],
+      }),
+      "GET /repos/octo/meter/collaborators/maintainer/permission": () => ({
+        json: { permission: "write" },
+      }),
+      "GET /user": () => ({ json: { login: "contributor" } }),
+      "GET /repos/octo/meter/collaborators/contributor/permission": () => ({
+        json: { permission: "read" },
+      }),
+    });
+    await expect(forge.removeQueued(head, 23)).rejects.toMatchObject({ failure: "permission" });
+    await expect(forge.removeQueued(head, 23)).rejects.toMatchObject({ failure: "permission" });
+    expect(seen.filter((row) => row.method === "POST")).toEqual([]);
+  });
+
+  // Captain F3/F4/N3: the approval comment carries active naming and exact words;
+  // the waiting mark points to that comment, and removal is visible and idempotent.
+  it("publishes approved merge words before marking and removes a held mark", async () => {
+    const head = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
+    const title = "Ship queue support";
+    const message = "Current override words.\n\nBREAKING CHANGE: Keep this footer exactly once.";
+    const commentBase = "https://github.com/octo/meter/pull/23#issuecomment-71";
+    const comments: { id: number; body: string; html_url: string; user: { login: string } }[] = [
+      {
+        id: 70,
+        body: revocationEnvelope(head),
+        html_url: "https://github.com/octo/meter/pull/23#issuecomment-70",
+        user: { login: "former-maintainer" },
+      },
+    ];
+    let statuses: { context: string; description: string }[] = [];
+    const { forge, seen } = await stub({
+      "GET /repos/octo/meter/pulls/23": () => ({
+        json: { head: { sha: head }, title, body: "The older description" },
+      }),
+      "POST /repos/octo/meter/issues/23/comments": ({ body }) => {
+        const id = 71 + comments.length;
+        const comment = {
+          id,
+          body: (body as { body: string }).body,
+          html_url: commentBase.replace(/71$/, String(id)),
+          user: { login: "maintainer" },
+        };
+        comments.push(comment);
+        return { status: 201, json: comment };
+      },
+      "GET /repos/octo/meter/issues/23/comments": () => ({ json: comments }),
+      "GET /user": () => ({ json: { login: "maintainer" } }),
+      "GET /repos/octo/meter/collaborators/maintainer/permission": () => ({
+        json: { permission: "write" },
+      }),
+      [`POST /repos/octo/meter/statuses/${head}`]: ({ body }) => {
+        statuses = [body as { context: string; description: string }];
+        return { status: 201, json: { id: 41 } };
+      },
+      [`GET /repos/octo/meter/commits/${head}/statuses`]: () => ({ json: statuses }),
+    });
+    // An approval of an unmarked version must not acquire a failing queue status on withdrawal.
+    await forge.removeQueued(head, 23);
+    expect(seen.filter((row) => row.method === "POST")).toEqual([]);
+    expect(
+      await forge.markQueued(head, {
+        number: 23,
+        title,
+        message,
+        naming: { pattern: "^Ship .+$" },
+      }),
+    ).toEqual({ id: 41 });
+    const comment = seen
+      .filter((row) => row.method === "POST" && row.url.endsWith("/comments"))
+      .at(-1)?.body as { body: string };
+    const commentUrl = comments.at(-1)?.html_url;
+    const encoded = /<!-- infinitary-squash:([0-9a-f]+) -->/.exec(comment.body)?.[1];
+    if (!encoded) throw new Error("the approval packet is missing");
+    const packet = JSON.parse(Buffer.from(encoded, "hex").toString("utf8")) as { naming: unknown };
+    expect(packet.naming).toBe(NAMING_DECISION.checked);
+    expect(readCommitEnvelope(comment.body, head, title)).toBe(message);
+    expect(
+      seen.find((row) => row.url.includes("/statuses/") && row.method === "POST")?.body,
+    ).toMatchObject({ state: "pending", target_url: commentUrl });
+    await forge.removeQueued(head, 23);
+    expect(comments.at(-1)).toMatchObject({
+      user: { login: "maintainer" },
+      body: expect.stringContaining(revocationEnvelope(head)),
+    });
+    expect(statuses[0]?.description).toBe(REMOVED);
+    const writes = seen.filter((row) => row.method === "POST").length;
+    await forge.removeQueued(head, 23);
+    expect(seen.filter((row) => row.method === "POST")).toHaveLength(writes);
+    expect(seen.some((row) => row.method === "PATCH")).toBe(false);
   });
 
   // INF-2886: the captain's "warn when the queue choice finds no workflow

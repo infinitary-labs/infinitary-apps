@@ -1,7 +1,8 @@
 import { checkSnapshotSummary } from "@shared/checkSnapshot";
 import { checksTimes } from "@shared/checksSpan";
-import type { QueueStatusFact, RepoView } from "@shared/repos";
+import { type QueueStatusFact, queueShipped, type RepoView } from "@shared/repos";
 import { type ForgeCheck, QUEUE_STATUS } from "../forge";
+import { QUEUE_OWNED_MERGES_VERSION } from "../queue/shipped";
 import { HELD } from "../queue/shipped/gitlab.mjs";
 import { type QueueKind, queueKind } from "../queue/shipped/rules.mjs";
 import type { QueueMark, TaskRecord } from "../storage/taskRecords";
@@ -237,4 +238,9 @@ export function queueWakeWords(facts: QueueNoteFacts | undefined): string | unde
   if (facts.quietMs !== undefined)
     return `Nothing has written ${QUEUE_STATUS} on this version since the app marked it waiting, though the project's batch check has answered before.`;
   return undefined;
+}
+
+/** The merge route the installed project queue actually supports. */
+export function queueMerges(repo: Pick<RepoView, "queueWorkflows"> | undefined): boolean {
+  return repo !== undefined && (queueShipped(repo) ?? 0) >= QUEUE_OWNED_MERGES_VERSION;
 }

@@ -1,0 +1,12 @@
+{
+  "entries": [{
+    "id": "queue-owned-merges",
+    "kind": "feature",
+    "area": "projects",
+    "title": "Passed batches merge without an open app",
+    "body": "The updated batch queue merges passed changes on GitHub and GitLab even when nobody has Infinitary open. Your first mate includes after-merge checks when planning a queue setup or update. The batch checks keep their existing permissions.",
+    "noPicture": "This changes who performs a merge while the app is closed, not the appearance of a screen.",
+    "provenance": { "origin": "change" }
+  }],
+  "exclusions": []
+}

@@ -1,10 +1,16 @@
 import { randomUUID } from "node:crypto";
 import { failedBatch } from "@shared/checkSnapshot";
 import { hasChangeRequests } from "@shared/forge";
+import { overridePasses } from "@shared/holds";
 import { deliveryForRecord, opensPullRequest } from "@shared/repos";
-import { forgeLocationOf } from "../forge";
+import { forgeLocationOf, presentationCommitMessage } from "../forge";
 import { currentChange } from "../storage/changeProjection";
-import type { MergeAuthorization, MergeWait, TaskRecord } from "../storage/taskRecords";
+import type {
+  MergeAuthorization,
+  MergeWait,
+  QueueApprovalRemoval,
+  TaskRecord,
+} from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import type { MergeGuard, PrOutcome } from "./changeMerge";
@@ -19,7 +25,7 @@ import {
   standingAuthorization,
   taskPull,
 } from "./mergeAuthorization";
-import { queueNoteFacts, queueWakeWords } from "./projectQueue";
+import { queueMerges, queueNoteFacts, queueWakeWords } from "./projectQueue";
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
 import type { SettleLocks } from "./settleLocks";
 import { changeName } from "./settleWords";
@@ -95,6 +101,16 @@ function samePull(a: MergeAuthorization, b: MergeAuthorization): boolean {
   );
 }
 
+function sameRemoval(a: QueueApprovalRemoval, b: QueueApprovalRemoval): boolean {
+  return (
+    a.head === b.head &&
+    a.target.host === b.target.host &&
+    a.target.owner === b.target.owner &&
+    a.target.name === b.target.name &&
+    a.target.prNumber === b.target.prNumber
+  );
+}
+
 /**
  * The captain's kept merge approval (FI3-304, `./mergeAuthorization.ts`):
  * minting it at the click, the guard each attempt runs under, what an
@@ -103,6 +119,114 @@ function samePull(a: MergeAuthorization, b: MergeAuthorization): boolean {
  * the attempts themselves run in `./keptMerge.ts`.
  */
 export class KeptApproval {
+  /** Only in-flight work; unacknowledged effects live on the existing permission record. */
+  private readonly queueRemovals = new Map<string, Promise<void>>();
+
+  private pendingRemovals(taskId: string): QueueApprovalRemoval[] | undefined {
+    return this.host.tasks.get(taskId)?.delivery?.mergeAuthorization?.queueRemovals;
+  }
+
+  removeQueueMark(taskId: string, authorization: MergeAuthorization): void {
+    if (!this.host.removeQueuedApproval) return;
+    const top = this.host.tasks.get(taskId)?.delivery?.mergeAuthorization;
+    if (!top) return;
+    const removal: QueueApprovalRemoval = {
+      head: candidateHead(authorization),
+      target: authorization.target,
+      ...(authorization.review ? { review: authorization.review } : {}),
+    };
+    if (!top.queueRemovals?.some((item) => sameRemoval(item, removal))) {
+      this.host.tasks.delivery.recordPermissionRecords(taskId, {
+        mergeAuthorization: { ...top, queueRemovals: [...(top.queueRemovals ?? []), removal] },
+      });
+    }
+    void this.queueMarksSettled(taskId).catch(() => {});
+  }
+
+  /** Keep the click, but never leave its old story mergeable while a newer one is unpublished. */
+  async storyPrepared(taskId: string, head: string, branch?: string): Promise<void> {
+    const record = this.host.tasks.get(taskId);
+    if (!record || overridePasses(record.delivery, "story", head)) return;
+    const ledger = this.host.tasks.delivery.changePresentation(taskId, branch);
+    const latest = ledger?.revisions.at(-1);
+    const published = ledger?.revisions.find(
+      (story) => story.revision === ledger.published?.revision,
+    );
+    if (!latest || !published || latest.head !== head || published.head !== head) return;
+    if (
+      latest.title === published.title &&
+      presentationCommitMessage(latest) === presentationCommitMessage(published)
+    )
+      return;
+    const top = record.delivery?.mergeAuthorization;
+    for (const approval of [top, ...(top?.queued ?? [])]) {
+      if (approval?.status !== "standing" || candidateHead(approval) !== head) continue;
+      if (approval.target.branch !== (branch ?? record.branch)) continue;
+      if (!queueMerges(this.host.repos.get(approval.review?.repoId ?? approval.target.repoId)))
+        continue;
+      this.removeQueueMark(taskId, approval);
+    }
+    await this.queueMarksSettled(taskId);
+  }
+
+  /** Restore eligibility removals implied by a durable held/ended approval from an older app. */
+  restoreQueueMarks(taskId: string, approval: MergeAuthorization): void {
+    const guidance = outstandingGuidance(approval) !== undefined;
+    if (!guidance && (approval.status === "standing" || approval.status === "consumed")) return;
+    this.removeQueueMark(taskId, approval);
+    const drop = guidance ? () => true : endsWith(approval);
+    if (drop)
+      for (const item of approval.queued ?? []) if (drop(item)) this.removeQueueMark(taskId, item);
+  }
+
+  async queueMarksSettled(taskId: string): Promise<void> {
+    const running = this.queueRemovals.get(taskId);
+    if (running) return running;
+    if (!this.pendingRemovals(taskId)?.length) return;
+    let trying: QueueApprovalRemoval | undefined;
+    const operation = Promise.resolve().then(async () => {
+      const failed: QueueApprovalRemoval[] = [];
+      let firstError: unknown;
+      for (;;) {
+        const next = this.pendingRemovals(taskId)?.find(
+          (item) => !failed.some((prior) => sameRemoval(prior, item)),
+        );
+        if (!next) {
+          if (failed.length) throw firstError;
+          return;
+        }
+        try {
+          if (!this.host.removeQueuedApproval)
+            throw new Error("This app cannot remove the queued approval.");
+          await this.host.removeQueuedApproval(taskId, next);
+          const top = this.host.tasks.get(taskId)?.delivery?.mergeAuthorization;
+          if (!top) return;
+          const pending = top.queueRemovals?.filter((item) => !sameRemoval(item, next));
+          this.host.tasks.delivery.recordPermissionRecords(taskId, {
+            mergeAuthorization: { ...top, queueRemovals: pending?.length ? pending : undefined },
+          });
+        } catch (error) {
+          if (failed.length === 0) {
+            firstError = error;
+            trying = next;
+          }
+          failed.push(next);
+        }
+      }
+    });
+    this.queueRemovals.set(taskId, operation);
+    const ended = () => {
+      if (this.queueRemovals.get(taskId) === operation) this.queueRemovals.delete(taskId);
+    };
+    void operation.then(ended, (error) => {
+      ended();
+      const text = `Could not remove the queued merge approval: ${error instanceof Error ? error.message : String(error)}`;
+      this.host.tasks.note(taskId, text, { news: true, feed: true });
+      this.host.mergeContinued?.(taskId, trying?.review, { ok: false, text });
+    });
+    return operation;
+  }
+
   constructor(
     private readonly host: SettleServiceHost,
     private readonly locks: SettleLocks,
@@ -156,12 +280,15 @@ export class KeptApproval {
         ? `The app approved merging ${changeName(record, authorization.target.prNumber)} at ${authorization.approvedHead}, because this task merges on its own.`
         : `The captain approved merging ${changeName(record, authorization.target.prNumber)} at ${authorization.approvedHead}.`;
     if (minted && standing && !samePull(standing, minted)) {
+      for (const item of standing.queued ?? [])
+        if (samePull(item, minted)) this.removeQueueMark(taskId, item);
       // A task may ask for many merges (INF-2746): an approval of another
       // pull request joins the standing one, never in its place, and goes
       // ahead on its own once its crewmate is idle.
       this.host.tasks.delivery.recordPermissionRecords(taskId, {
         mergeAuthorization: {
           ...standing,
+          queueRemovals: this.pendingRemovals(taskId),
           queued: [...(standing.queued ?? []).filter((item) => !samePull(item, minted)), minted],
         },
       });
@@ -182,6 +309,9 @@ export class KeptApproval {
       const waiting = (previous?.queued ?? []).filter((item) => !samePull(item, minted));
       const kept = { ...minted, ...(waiting.length > 0 ? { queued: waiting } : {}) };
       // The approved pull request is the task's current change from the click on (INF-2490).
+      if (standing) this.removeQueueMark(taskId, standing);
+      for (const item of previous?.queued ?? [])
+        if (samePull(item, minted)) this.removeQueueMark(taskId, item);
       this.recordStanding(taskId, kept);
       this.host.tasks.note(taskId, approvedBy(minted), {
         news: true,
@@ -215,7 +345,7 @@ export class KeptApproval {
    */
   private recordStanding(taskId: string, authorization: MergeAuthorization, select = true): void {
     this.host.tasks.delivery.recordPermissionRecords(taskId, {
-      mergeAuthorization: authorization,
+      mergeAuthorization: { ...authorization, queueRemovals: this.pendingRemovals(taskId) },
     });
     if (select) this.selectCovered(taskId, authorization);
   }
@@ -316,9 +446,14 @@ export class KeptApproval {
     const record = this.host.tasks.get(taskId);
     const dropped = ended.queued?.filter(drop) ?? [];
     if (!record || dropped.length === 0) return;
+    for (const item of dropped) this.removeQueueMark(taskId, item);
     const kept = ended.queued?.filter((item) => !drop(item)) ?? [];
     this.host.tasks.delivery.recordPermissionRecords(taskId, {
-      mergeAuthorization: { ...ended, queued: kept.length > 0 ? kept : undefined },
+      mergeAuthorization: {
+        ...ended,
+        queueRemovals: this.pendingRemovals(taskId),
+        queued: kept.length > 0 ? kept : undefined,
+      },
     });
     if (TaskService.isClosed(record)) return;
     const names = dropped.map((item) => changeName(record, item.target.prNumber)).join(", ");
@@ -347,10 +482,17 @@ export class KeptApproval {
   askAgain(taskId: string, review: string | undefined): void {
     const top = this.host.tasks.get(taskId)?.delivery?.mergeAuthorization;
     const waiting = top?.queued?.filter((item) => item.review?.id !== review);
-    if (top && waiting && waiting.length !== top.queued?.length)
+    if (top && waiting && waiting.length !== top.queued?.length) {
+      for (const item of top.queued ?? [])
+        if (!waiting.includes(item)) this.removeQueueMark(taskId, item);
       this.host.tasks.delivery.recordPermissionRecords(taskId, {
-        mergeAuthorization: { ...top, queued: waiting.length > 0 ? waiting : undefined },
+        mergeAuthorization: {
+          ...top,
+          queueRemovals: this.pendingRemovals(taskId),
+          queued: waiting.length > 0 ? waiting : undefined,
+        },
       });
+    }
     if (top?.status === "standing" && top.review?.id === review)
       this.endAuthorization(taskId, "superseded", "its crewmate put up a new merge card");
   }
@@ -499,6 +641,7 @@ export class KeptApproval {
       ...(options.holds ? { holds: true } : {}),
     });
     this.host.tasks.delivery.recordPermissionRecords(taskId, { mergeAuthorization: ended });
+    this.removeQueueMark(taskId, authorization);
     // An approval of another pull request waiting behind it stands next,
     // unless this end ends it too (INF-2746, `endsWith`).
     const drop = endsWith(ended);
@@ -535,8 +678,14 @@ export class KeptApproval {
     const before = authorization.guidance ?? { latest: 0, declared: 0, at: now };
     const mark = before.latest + 1;
     const began = outstandingGuidance(authorization) === undefined;
+    this.removeQueueMark(taskId, authorization);
+    for (const item of authorization.queued ?? []) this.removeQueueMark(taskId, item);
     this.host.tasks.delivery.recordPermissionRecords(taskId, {
-      mergeAuthorization: { ...authorization, guidance: { ...before, latest: mark, at: now } },
+      mergeAuthorization: {
+        ...authorization,
+        queueRemovals: this.pendingRemovals(taskId),
+        guidance: { ...before, latest: mark, at: now },
+      },
     });
     this.host.tasks.note(
       taskId,
@@ -575,6 +724,13 @@ export class KeptApproval {
         return mark === undefined
           ? undefined
           : `the captain's guidance (mark ${mark}) waits for its crewmate to declare its impact`;
+      },
+      queueInterrupted: async () => {
+        // A prior withdrawal can finish while the publisher is still awaiting its host.
+        // Start a new durable removal after that operation, not an acknowledgement of it.
+        await this.queueMarksSettled(taskId).catch(() => {});
+        this.removeQueueMark(taskId, authorization);
+        await this.queueMarksSettled(taskId);
       },
       beforeDispatch: (dispatchHead, mark) => {
         const record = this.host.tasks.get(taskId);
@@ -809,6 +965,15 @@ export class KeptApproval {
       },
     });
     return { head, changed };
+  }
+
+  /** The installed merge route of the approved change's actual project. */
+  queueOwnsMerge(taskId: string): boolean {
+    const record = this.host.tasks.get(taskId);
+    if (!record) return false;
+    const own = record.repoId ? this.host.repos.get(record.repoId) : undefined;
+    const review = standingAuthorization(record.delivery)?.review ?? record.delivery?.checkTarget;
+    return queueMerges(this.changeRepoOf(record, own, review));
   }
 
   /**

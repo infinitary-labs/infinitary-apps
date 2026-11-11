@@ -633,6 +633,8 @@ describe("the next main check waits for the alpha cut", () => {
     });
     expect(pauseStep?.name).toBe("Stop while the captain has paused the rolling pipeline");
     expect(decide("push", "true")).toEqual({ pause: true, find: false });
+    // Approved queue-owned merges enter the same rolling-main pause boundary.
+    expect(decide("repository_dispatch", "true")).toEqual({ pause: true, find: false });
     // Not paused, or a check started by hand: the wait runs as before.
     for (const [event_name, paused] of [
       ["push", ""],
@@ -693,6 +695,7 @@ describe("the next main check waits for the alpha cut", () => {
 
   type Run = {
     id: number;
+    event?: string;
     run_number: number;
     status: string;
     conclusion: string | null;
@@ -763,7 +766,8 @@ describe("the next main check waits for the alpha cut", () => {
           }),
           listWorkflowRuns: async ({ workflow_id, ...filters }: Record<string, unknown>) => {
             if (workflow_id === "main.yml") {
-              expect(filters).toMatchObject({ branch: "main", event: "push", status: "completed" });
+              expect(filters).toMatchObject({ branch: "main", status: "completed" });
+              expect(filters.event).toBeUndefined();
               return { data: { workflow_runs: options.mains } };
             }
             expect({ workflow_id, event: filters.event }).toEqual({
@@ -841,6 +845,7 @@ describe("the next main check waits for the alpha cut", () => {
     };
   };
   const previous = (conclusion: string, run_number = 73): Run => ({
+    event: "push",
     id: 41680000000 + run_number,
     run_number,
     status: "completed",

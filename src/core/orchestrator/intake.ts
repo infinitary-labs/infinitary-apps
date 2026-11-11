@@ -30,6 +30,7 @@ import {
   renderReviewBrief,
   type SpawnIntent,
 } from "./intentBrief";
+import { queueMerges } from "./projectQueue";
 import type { Reviews } from "./reviews";
 import type { SettleOwners } from "./settleOwners";
 import { describeStatus } from "./settleService";
@@ -309,12 +310,14 @@ export class TaskIntake {
             escalation.facts,
             personal ? { ...personal, ongoing: shaped.ongoing } : undefined,
             folder,
+            queueMerges(placement.repoId ? this.options.repos.get(placement.repoId) : undefined),
           )
         : renderIntentBrief(
             input.intent,
             delivery,
             personal ? { ...personal, ongoing: shaped.ongoing } : undefined,
             folder,
+            queueMerges(placement.repoId ? this.options.repos.get(placement.repoId) : undefined),
           );
     };
     const taskId = randomUUID().slice(0, 8);
@@ -485,6 +488,7 @@ export class TaskIntake {
       intent,
       delivery,
       passedHead ? { ...facts, passedHead } : facts,
+      queueMerges(builder.repoId ? this.options.repos.get(builder.repoId) : undefined),
     );
     const taskId = randomUUID().slice(0, 8);
     const title = `Review: ${builder.title}`.slice(0, 64);
@@ -631,6 +635,7 @@ export class TaskIntake {
       placement.folder ? undefined : placement.delivery,
       undefined,
       placement.folder,
+      queueMerges(placement.repoId ? this.options.repos.get(placement.repoId) : undefined),
     );
     const taskId = randomUUID().slice(0, 8);
     const title = (input.title.trim() || input.intent.goal || "Task").slice(0, 64);

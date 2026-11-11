@@ -424,6 +424,9 @@ test("choosing batched pull requests with no queue workflow waits, asks on a car
 /** The shipped queue's one source, which a project's files are generated from. */
 const SHIPPED_SOURCE_DIR = fileURLToPath(new URL("../../src/core/queue/shipped/", import.meta.url));
 
+// The approved queue-owned merge protocol must write its approval comment
+// before the waiting status. The API owner persists it; a missing endpoint
+// must fail this journey, never be bypassed by seeding a waiting status.
 test("a project running the shipped queue is batched for every teammate, and its paused batch with a teammate's change resumes from Settings by keys", async () => {
   // The app first reads the change again when its check watch does, one
   // watch interval after the merge click, so the journey outlasts it.

@@ -263,7 +263,11 @@ export type MergeAuthorization = {
    * queue of its own.
    */
   queued?: MergeAuthorization[];
+  /** Exact external eligibility removals not yet acknowledged; retained through replacement and close. */
+  queueRemovals?: QueueApprovalRemoval[];
 };
+
+export type QueueApprovalRemoval = Pick<MergeAuthorization, "target" | "review"> & { head: string };
 
 /**
  * The app's own mark on a waiting version: the version, the status id the

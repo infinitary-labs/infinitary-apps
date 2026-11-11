@@ -317,7 +317,7 @@ export class MergeReviews {
         },
       };
     }
-    if (review.skips) return this.mergeSkippingRules(taskId, review);
+    if (review.skips) return this.mergeSkippingRules(taskId, review, guard);
     // A merge GitHub refused because the main branch moved is tried again
     // as the task's own merge is (`ChangeMerge.merge`): each try reads the
     // pull request until GitHub decides, and sends only where it may merge.
@@ -586,7 +586,11 @@ export class MergeReviews {
    * sent, then send it once. A result the app cannot read is unknown and is
    * never sent again; a confirmed merge keeps its receipt like any review.
    */
-  private async mergeSkippingRules(taskId: string, review: MergeReview): Promise<PrOutcome> {
+  private async mergeSkippingRules(
+    taskId: string,
+    review: MergeReview,
+    guard?: MergeGuard,
+  ): Promise<PrOutcome> {
     const label = `#${review.number}`;
     if (review.sent) {
       return {
@@ -654,12 +658,15 @@ export class MergeReviews {
           forge,
           change,
           fresh.queueWait.state,
-          () => undefined,
+          () => guard?.beforeDispatch(change.headSha, true),
           true,
+          false,
+          guard?.held,
+          guard?.queueInterrupted,
         );
         return {
           ...waiting,
-          text: `${waiting.text} Nothing was sent; the same review merges on a new click once the queue passes it.`,
+          text: `${waiting.text} The version is queued, not merged. ${this.merges.queueOwnsMerge(taskId, change.number) ? "The project's queue will merge it after passing." : "The app needs another merge click once the project's queue passes it."}`,
         };
       } catch (caught) {
         // A status write the host refused is an outcome like an ordinary
@@ -935,7 +942,16 @@ export class MergeReviews {
           fresh.queueWait.state,
           () => guard?.beforeDispatch(candidate.headSha, true),
           !guard?.unattended,
+          false,
+          guard?.held,
+          guard?.queueInterrupted,
         );
+      if (this.merges.queueOwnsMerge(taskId, change.number))
+        return {
+          ok: false,
+          stop: "queue",
+          text: "The batch passed; the project's queue is merging this version.",
+        };
       const stopped = guard?.beforeDispatch(candidate.headSha);
       if (stopped) return { ok: false, stop: "withdrawn", text: stopped };
       dispatched = true;

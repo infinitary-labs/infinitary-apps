@@ -3,16 +3,24 @@ import { GITLAB_QUEUE_PART, readQueueStamp } from "../../../queue/shipped";
 import type { GitLabQueueApi } from "../../../queue/shipped/gitlab.mjs";
 import {
   answer,
+  MAINTAINER,
   QUEUE_ENVIRONMENT,
   rulesState,
   startForm,
   TOKEN_VARIABLE,
 } from "../../../queue/shipped/gitlab.mjs";
-import { PAUSE_LABEL, readPauseMarker } from "../../../queue/shipped/rules.mjs";
+import {
+  commitEnvelope,
+  NAMING_DECISION,
+  newestTrustedApproval,
+  revocationEnvelope,
+} from "../../../queue/shipped/message.mjs";
+import { PAUSE_LABEL, REMOVED, readPauseMarker } from "../../../queue/shipped/rules.mjs";
 import {
   type ForgeCheck,
   type ForgeCheckState,
   ForgeError,
+  type ForgeQueueApproval,
   type ForgeQueueMark,
   type ForgeQueuePause,
   type ForgeQueueStart,
@@ -25,8 +33,6 @@ import { GITLAB_READ_MAX_BYTES, type GitLabClient } from "./client";
 
 /** The queue's project access token's name where the project lists its tokens. */
 export const QUEUE_TOKEN_NAME = "Infinitary queue";
-/** GitLab's Maintainer role: the queue starts pipelines on the protected default branch. */
-const MAINTAINER = 40;
 /** GitLab's longest project access token, in days, less one so a late clock still fits. */
 const TOKEN_DAYS = 364;
 
@@ -84,14 +90,108 @@ export class GitLabQueue {
    * waiting words, since GitLab refuses to set a waiting status waiting
    * again (gitlab.mjs). It starts nothing; the app starts the queue after.
    */
-  async markQueued(sha: string): Promise<ForgeQueueMark> {
+  async markQueued(sha: string, approval?: ForgeQueueApproval): Promise<ForgeQueueMark> {
+    const checkApproval = () => {
+      const why = approval?.beforeDispatch?.();
+      if (why) throw new ForgeError("refused", why);
+    };
+    let approvalUrl: string | undefined;
+    if (approval) {
+      const pull = (await this.client.request(
+        "GET",
+        `${this.projectPath()}/merge_requests/${approval.number}`,
+        undefined,
+        GITLAB_READ_MAX_BYTES,
+      )) as { sha?: string; description?: string; title?: string; web_url?: string };
+      if (pull.sha !== sha || pull.title !== approval.title)
+        throw new ForgeError("refused", "The approved change moved before it could be queued.");
+      checkApproval();
+      const comment = (await this.client.write(
+        "POST",
+        `${this.projectPath()}/merge_requests/${approval.number}/notes`,
+        {
+          body: `Approved for the batch queue at this version.\n\n<!-- infinitary-merge-approval -->\n${commitEnvelope(sha, approval.message ?? pull.description ?? "", approval.title, { naming: approval.naming ? NAMING_DECISION.checked : NAMING_DECISION.off })}`,
+        },
+        "publishing the approved merge words",
+      )) as { id?: number };
+      if (!comment.id || !pull.web_url)
+        throw new ForgeError("refused", "The approved merge words have no confirmed comment link.");
+      approvalUrl = `${pull.web_url}#note_${comment.id}`;
+    }
+    checkApproval();
     const answer = (await this.client.write(
       "POST",
       `${this.projectPath()}/statuses/${encodeURIComponent(sha)}`,
-      { state: "skipped", name: QUEUE_STATUS, description: QUEUE_WAITING_WORDS },
+      {
+        state: "skipped",
+        name: QUEUE_STATUS,
+        description: QUEUE_WAITING_WORDS,
+        ...(approvalUrl ? { target_url: approvalUrl } : {}),
+      },
       "marking the version for the project's queue",
     )) as { id?: unknown } | null;
     return typeof answer?.id === "number" ? { id: answer.id } : {};
+  }
+
+  private async queueAccess(id: number): Promise<number> {
+    const role = (await this.client
+      .request("GET", `${this.projectPath()}/members/all/${id}`, undefined, GITLAB_READ_MAX_BYTES)
+      .catch((error) => {
+        if (error instanceof ForgeError && error.failure === "not-found")
+          return { access_level: 0 };
+        throw error;
+      })) as { access_level: number };
+    return role.access_level;
+  }
+
+  private async approvalRecord(sha: string, number: number) {
+    const comments = (await this.list(
+      `${this.projectPath()}/merge_requests/${number}/notes?per_page=100`,
+    )) as { id: number; body?: string; system?: boolean; author?: { id?: number } }[];
+    const roles = new Map<number, number>();
+    return await newestTrustedApproval(comments, sha, async (comment) => {
+      const id = comment.author?.id;
+      if (!id) return false;
+      if (!roles.has(id)) roles.set(id, await this.queueAccess(id));
+      return (roles.get(id) ?? 0) >= MAINTAINER;
+    });
+  }
+
+  async removeQueued(sha: string, number: number): Promise<void> {
+    const record = await this.approvalRecord(sha, number);
+    if (!record) return;
+    if (record.kind === "approval") {
+      const user = (await this.client.request(
+        "GET",
+        "/user",
+        undefined,
+        GITLAB_READ_MAX_BYTES,
+      )) as { id?: number };
+      if (!user.id || (await this.queueAccess(user.id)) < MAINTAINER)
+        throw new ForgeError(
+          "permission",
+          "The current sign-in cannot withdraw this project's approved queue version.",
+        );
+      const posted = (await this.client.write(
+        "POST",
+        `${this.projectPath()}/merge_requests/${number}/notes`,
+        { body: `Merge approval withdrawn for this version.\n\n${revocationEnvelope(sha)}` },
+        "revoking the merge approval",
+      )) as { id?: number };
+      if (
+        typeof posted?.id !== "number" ||
+        (await this.approvalRecord(sha, number))?.kind !== "revocation"
+      )
+        throw unreadable(this.place, "a trusted approval revocation");
+    }
+    const current = await this.check(sha);
+    if (!current || current.detail === REMOVED) return;
+    await this.client.write(
+      "POST",
+      `${this.projectPath()}/statuses/${encodeURIComponent(sha)}`,
+      { state: "failed", name: QUEUE_STATUS, description: REMOVED },
+      "removing the queued approval",
+    );
   }
 
   /**

@@ -353,6 +353,7 @@ export class SettleService {
         text: `Cannot merge: ${placeOf(this.host.repos, record, "where the project lives")} is not reachable from here.`,
       };
     }
+    await this.approvals.queueMarksSettled(taskId);
     const result = await this.host.mergePullRequest(
       taskId,
       guard,
@@ -1148,7 +1149,7 @@ export class SettleService {
       const place = placeOf(this.host.repos, this.host.tasks.get(taskId));
       result = {
         ...result,
-        text: `${result.text}\n\n${keptNote(kept.wait, kept.head, place, currentCheckStatus(this.host.tasks.get(taskId)?.delivery), this.approvals.queueWarning(taskId, kept.wait))}`,
+        text: `${result.text}\n\n${keptNote(kept.wait, kept.head, place, currentCheckStatus(this.host.tasks.get(taskId)?.delivery), this.approvals.queueWarning(taskId, kept.wait), this.approvals.queueOwnsMerge(taskId))}`,
       };
     }
     // Only the captain's own click leaves them with no card to read (INF-2913).
@@ -1204,7 +1205,12 @@ export class SettleService {
     if (kept)
       this.settleLine(
         taskId,
-        keptFeedLine(kept, placeOf(this.host.repos, record), currentCheckStatus(record?.delivery)),
+        keptFeedLine(
+          kept,
+          placeOf(this.host.repos, record),
+          currentCheckStatus(record?.delivery),
+          this.approvals.queueOwnsMerge(taskId),
+        ),
       );
     // Contention settled nothing: the attempt that owns the task says what became of it.
     else if (!merged && !result.contention) this.settleLine(taskId, settleFeedLine(mode, result));

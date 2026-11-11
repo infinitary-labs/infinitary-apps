@@ -34,6 +34,7 @@ type Status = {
   description: string;
   target_url: string;
   created_at: string;
+  creator: { login: string };
 };
 type Pull = {
   number: number;
@@ -138,6 +139,7 @@ class Project {
       description,
       target_url: url,
       created_at: new Date(this.clock).toISOString(),
+      creator: { login: "github-actions[bot]" },
     });
     this.statuses.set(at, list);
   }
@@ -1056,6 +1058,23 @@ describe("the shipped queue on GitHub", () => {
     const checks = workflow.jobs.checks;
     expect(checks?.uses).toBe("./.github/workflows/infinitary-batch-checks.yml");
     expect(checks?.permissions).toEqual({ contents: "read" });
+    // Reviewer F9: reads and dispatches keep retries; only the merge request disables them.
+    const mergeSteps = workflow.jobs.merge?.steps as {
+      uses?: string;
+      with?: { retries?: number };
+    }[];
+    expect(mergeSteps.find((step) => step.uses === "actions/github-script@v7")?.with?.retries).toBe(
+      3,
+    );
+
+    // Approved queue-owned merges: only trusted merge instructions may write code.
+    expect(workflow.jobs.merge?.permissions).toEqual({
+      contents: "write",
+      "pull-requests": "write",
+      statuses: "write",
+      actions: "write",
+    });
+
     expect(checks).not.toHaveProperty("secrets");
     // The confirm calls the same file with the same grants, told what failed.
     const confirm = workflow.jobs.confirm;

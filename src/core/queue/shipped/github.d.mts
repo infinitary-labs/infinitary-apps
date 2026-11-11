@@ -32,3 +32,7 @@ export function decide(
 export function answer(
   args: ScriptArgs & { action: string; number?: string; reason: string },
 ): Promise<void>;
+
+export function mergePassed(args: ScriptArgs): Promise<void>;
+
+export const MERGE_PERMISSIONS: readonly string[];

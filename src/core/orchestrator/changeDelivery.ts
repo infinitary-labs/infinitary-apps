@@ -6,6 +6,7 @@ import { CheckChangeTool } from "./checkChangeTool";
 import { DraftReadiness } from "./draftReadiness";
 import { MergeReviews } from "./mergeReviews";
 import { ProjectQueue } from "./projectQueue";
+import type { SettleServiceHost } from "./settleHost";
 
 /**
  * A task's change where the project lives, by owner: its checks read, its
@@ -17,6 +18,7 @@ export type ChangeDelivery = {
   checks: ChangeChecks;
   merges: ChangeMerge;
   reviews: MergeReviews;
+  settleHooks: Pick<SettleServiceHost, "mergePullRequest" | "removeQueuedApproval" | "mergeReview">;
   checkTool: CheckChangeTool;
   publication: ChangePublication;
   /** A project's queue facts: its workflows read, and when its queue answered. */
@@ -34,6 +36,11 @@ export function createChangeDelivery(options: ChangeDeliveryOptions): ChangeDeli
     checks,
     merges,
     reviews,
+    settleHooks: {
+      mergePullRequest: merges.merge.bind(merges),
+      removeQueuedApproval: merges.removeQueuedApproval.bind(merges),
+      mergeReview: reviews.mergeReview.bind(reviews),
+    },
     checkTool: new CheckChangeTool(context, checks, reviews),
     publication: new ChangePublication(context, checks, readiness),
     queue,

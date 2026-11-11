@@ -13,16 +13,22 @@ const root = fileURLToPath(new URL("..", import.meta.url));
 const FILE = "prompt-budget.yml";
 
 type Workflow = {
-  on: Record<string, { branches?: string[]; paths?: string[] } | null>;
+  on: Record<string, { branches?: string[]; paths?: string[]; types?: string[] } | null>;
   jobs: Record<string, { steps?: { run?: string }[] }>;
 };
 
 describe("the prompt-budget check (INF-2930)", () => {
   const workflow = loadYamlFile(`.github/workflows/${FILE}`) as Workflow;
 
-  it("runs only on pushes to main and by hand", () => {
-    expect(Object.keys(workflow.on).toSorted()).toEqual(["push", "workflow_dispatch"]);
+  // Captain F6: a job-key merge reaches this check through the shared after-merge signal.
+  it("runs on main pushes, the queue's after-merge signal and by hand", () => {
+    expect(Object.keys(workflow.on).toSorted()).toEqual([
+      "push",
+      "repository_dispatch",
+      "workflow_dispatch",
+    ]);
     expect(workflow.on.push?.branches).toEqual(["main"]);
+    expect(workflow.on.repository_dispatch?.types).toEqual(["infinitary-after-merge"]);
   });
 
   it("runs the script on every change to what it measures", () => {

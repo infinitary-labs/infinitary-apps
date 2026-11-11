@@ -62,7 +62,7 @@ export type SettleWorld = SettleOwners & {
   /** The facts the supervisor reads live; a test changes them mid-settle. */
   live: {
     runtime: "starting" | "streaming" | "idle" | undefined;
-    delivery: "direct-pr" | "local-only";
+    delivery: "direct-pr" | "queue-pr" | "local-only";
     autonomy: boolean;
     deliverable: "change" | "answer" | "operation";
     pull: ForgePull | undefined;
@@ -80,10 +80,16 @@ export type SettleWorld = SettleOwners & {
   /** Every hook call, in order, with what the record showed at that moment. */
   log: string[];
   wakes: unknown[];
+  restartSettles: () => SettleOwners;
 };
 
 /** `reviews`: the host can merge a stored review (a request_merge click). */
-export function settleWorld(options: { reviews?: boolean } = {}): SettleWorld {
+export function settleWorld(
+  options: {
+    reviews?: boolean;
+    removeQueuedApproval?: SettleServiceHost["removeQueuedApproval"];
+  } = {},
+): SettleWorld {
   const now = 1_000;
   const db = freshDatabase();
   seedProject(db, {
@@ -116,7 +122,7 @@ export function settleWorld(options: { reviews?: boolean } = {}): SettleWorld {
     const record = tasks.get(TASK);
     return `${record?.status}/${record?.delivery?.mergeAuthorization?.status ?? "none"}`;
   };
-  const world: Omit<SettleWorld, keyof SettleOwners> = {
+  const world: Omit<SettleWorld, keyof SettleOwners | "restartSettles"> = {
     db,
     tasks,
     inbox,
@@ -159,7 +165,7 @@ export function settleWorld(options: { reviews?: boolean } = {}): SettleWorld {
       log.push(`remove worktree: ${state()}`);
     },
   } as unknown as SettleServiceHost["workspace"];
-  const owners = createSettleOwners({
+  const host: SettleServiceHost = {
     now: () => now,
     tasks,
     inbox,
@@ -177,6 +183,7 @@ export function settleWorld(options: { reviews?: boolean } = {}): SettleWorld {
       });
     },
     endLiveTask: () => {},
+    ...(options.removeQueuedApproval ? { removeQueuedApproval: options.removeQueuedApproval } : {}),
     mergePullRequest: (_taskId, guard, boundary) => {
       log.push(`merge: ${state()}`);
       return world.merge(guard, boundary);
@@ -209,6 +216,7 @@ export function settleWorld(options: { reviews?: boolean } = {}): SettleWorld {
     sweepGates: async () => {},
     broadcastCrewCounts: () => {},
     broadcastEvent: () => {},
-  });
-  return Object.assign(world, owners);
+  };
+  const owners = createSettleOwners(host);
+  return Object.assign(world, owners, { restartSettles: () => createSettleOwners(host) });
 }

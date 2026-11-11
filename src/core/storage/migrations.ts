@@ -1313,6 +1313,12 @@ export const MIGRATIONS: readonly Migration[] = [
   (db) => addColumn(db, "card_messages", "notes_json", "TEXT"),
   // Original captain captions stay separate from attachment decoration; old rows remain unknown.
   addOriginalCaptainText,
+  // Unacknowledged queue eligibility removals remain effects on the approval record, including after close.
+  // The expression seek and partial index read only those tasks, never all closed history.
+  `CREATE INDEX task_permissions_queue_removals ON task_permissions (
+    json_type(merge_authorization_json, '$.queueRemovals'), task_id
+  ) WHERE json_valid(merge_authorization_json)
+    AND json_type(merge_authorization_json, '$.queueRemovals') = 'array';`,
 ];
 
 /**

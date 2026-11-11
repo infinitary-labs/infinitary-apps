@@ -578,6 +578,11 @@ export class TaskService {
     return this.writer.store.listByStatus("open", "active");
   }
 
+  /** Unacknowledged external eligibility removals, including tasks that already closed. */
+  pendingQueueRemovals(): TaskRecord[] {
+    return this.writer.store.pendingQueueRemovals();
+  }
+
   /** How many active rows each computer that runs work holds, by its id, counted without composing task records. */
   activeCountsByDevice(): Map<string, number> {
     return this.writer.store.countActiveByDevice();

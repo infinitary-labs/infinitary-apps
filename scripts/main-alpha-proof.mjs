@@ -121,7 +121,7 @@ export function verifyMainEvidence(run, named, repository, source) {
 }
 
 function checkMainRun(run, jobs, repository, source) {
-  if (run.path !== ".github/workflows/main.yml" || run.event !== "push" ||
+  if (run.path !== ".github/workflows/main.yml" || !["push", "repository_dispatch"].includes(run.event) ||
       run.head_branch !== "main" || run.head_repository?.full_name !== repository ||
       run.repository?.full_name !== repository || run.head_sha !== source ||
       run.status !== "completed" || run.conclusion !== "success")

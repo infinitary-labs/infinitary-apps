@@ -58,6 +58,32 @@ const mergeRequests = (stub: GitHubStub) =>
   stub.requests().filter((line) => line.endsWith("/merge"));
 
 describe("the GitHub stand-in, through the app's forge", () => {
+  // The approved queue protocol writes trusted merge words before a waiting
+  // mark. Regression: the journeys' API lacked this comment endpoint entirely.
+  it("queues approved words and reads their trusted revocation back", async () => {
+    const branch = "fm/task-meter";
+    const head = sha("meter head");
+    const { github, forge } = await forgeOver({ [branch]: head });
+    const change = await forge.openChange({ branch, title: TITLE, body: BODY });
+    if (change.number === undefined) throw new Error("GitHub did not number the opened change");
+    await forge.markQueued(head, {
+      number: change.number,
+      title: TITLE,
+      message: BODY,
+      naming: null,
+    });
+    expect(github.statuses(head)).toMatchObject([{ state: "pending" }]);
+    await forge.removeQueued(head, change.number);
+    expect(github.statuses(head)).toMatchObject([{ state: "error" }]);
+    const writes = () =>
+      github
+        .requests()
+        .filter((line) => line === `POST /repos/octo/meterlab/issues/${change.number}/comments`);
+    expect(writes()).toHaveLength(2);
+    // A second read sees the persisted revocation rather than approving anew.
+    await forge.removeQueued(head, change.number);
+    expect(writes()).toHaveLength(2);
+  });
   // INF-285 F4: the existing endpoint override keeps real evidence bytes off GitHub.
   it("uploads and reads back pictures and recordings entirely through the local API override", async () => {
     github = await startGitHubStub();

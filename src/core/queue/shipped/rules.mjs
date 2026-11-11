@@ -30,6 +30,8 @@
  */
 
 export const QUEUE = "infinitary/queue";
+/** A local approval hold removes merge eligibility without revoking the saved head itself. */
+export const REMOVED = "Not queued: merge approval held or withdrawn";
 export const WAITING = "Waiting for the batch check";
 /**
  * The label a repair crewmate puts on its change to declare it the pause's

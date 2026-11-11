@@ -57,8 +57,9 @@ import { deferred } from "../helpers/deferred";
  * And what the shipped queue reaches (docs/forge.md, "The shipped queue on
  * GitLab"): a version's commit statuses, refusing a waiting status on a
  * version whose newest one of that name already waits, as GitLab does; a
- * pipeline started on a ref; the files on the default branch, base64 as
- * GitLab serves them; the queue's pause issue with its notes and its close;
+ * pipeline started on a ref; merge-request approval notes and their author's
+ * member access; the files on the default branch, base64 as GitLab serves
+ * them; the queue's pause issue with its notes and its close;
  * and the project's access tokens and CI variables, a variable's value never
  * read back.
  */
@@ -274,6 +275,12 @@ export async function startGitLabStub(host: string) {
     | { response: Promise<void>; waiting: boolean; release: () => void }
     | undefined;
   const notes: { iid: number; body: string }[] = [];
+  // Merge approvals belong to merge-request notes, separate from pause-issue notes.
+  const requestNotes = new Map<
+    number,
+    { id: number; body: string; author: { id: number; username: string } }[]
+  >();
+  let nextNoteId = 1;
   /** The project's access tokens, and its CI variables by key. */
   const tokens: GitLabStubToken[] = [];
   const variables = new Map<string, Record<string, unknown>>();
@@ -646,10 +653,28 @@ export async function startGitLabStub(host: string) {
         );
         return;
       }
-      const numbered = /^\/merge_requests\/(\d+)(\/merge|\/pipelines)?$/.exec(rest);
+      if (method === "GET" && rest === "/members/all/1") {
+        send(200, { id: 1, username: GITLAB_STUB_LOGIN, access_level: 40 });
+        return;
+      }
+      const numbered = /^\/merge_requests\/(\d+)(\/merge|\/pipelines|\/notes)?$/.exec(rest);
       const request = numbered ? mergeRequests.get(Number(numbered[1])) : undefined;
       if (numbered && !request) {
         send(404, { message: "404 Not found" });
+        return;
+      }
+      if (request && numbered?.[2] === "/notes" && (method === "GET" || method === "POST")) {
+        const rows = requestNotes.get(request.iid) ?? [];
+        if (method === "GET") send(200, paged(rows));
+        else {
+          const row = {
+            id: nextNoteId++,
+            body: String(body.body ?? ""),
+            author: { id: 1, username: GITLAB_STUB_LOGIN },
+          };
+          requestNotes.set(request.iid, [...rows, row]);
+          send(201, row);
+        }
         return;
       }
       if (request && method === "GET" && numbered?.[2] === undefined) {

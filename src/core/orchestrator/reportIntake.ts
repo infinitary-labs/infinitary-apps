@@ -28,6 +28,7 @@ import type { CardService } from "./cardService";
 import type { TaskRuntime } from "./crewRuntime";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { type PersonalBriefFacts, renderFollowupBrief } from "./intentBrief";
+import { queueMerges } from "./projectQueue";
 import { implausibleReport } from "./reportPlausibility";
 
 /** What the report intake reaches of the supervisor beyond its options. */
@@ -108,6 +109,7 @@ export class ReportIntake {
         { goal, why, filedBy: task.crewmate, originTitle: origin.title, originKey: origin.key },
         delivery,
         personal ? this.host.personalFacts() : undefined,
+        queueMerges(repo),
       ),
       ...(input.blocksMe ? { blocksOrigin: true } : {}),
       ...(input.testFailure ? { testFailure: true } : {}),

@@ -381,9 +381,9 @@ jobs:
               // still need this release's successful update check below.
               const candidates = await github.paginate(github.rest.actions.listWorkflowRuns, {
                 ...context.repo, workflow_id: 'main.yml', head_sha: process.env.SOURCE_COMMIT,
-                event: 'push', branch: 'main', per_page: 100
+                branch: 'main', per_page: 100
               });
-              const main = candidates.find(candidate => candidate.status === 'completed' && candidate.conclusion === 'success');
+              const main = candidates.find(candidate => ['push', 'repository_dispatch'].includes(candidate.event) && candidate.status === 'completed' && candidate.conclusion === 'success');
               if (!main) {
                 core.setFailed(`Alpha ${alpha} cannot be promoted: its release run ${run.html_url} reused main's checks, and main has no successful run of its exact source.`);
                 return;

@@ -43,7 +43,8 @@ import { focusOn, pressKey, typeInto } from "./windowKeys";
  * Settings. The captain makes the queue's key there with one press: a
  * project access token kept as a masked, protected CI variable only the
  * queue's environment receives, never shown. The merge click on a merge
- * request's card writes the waiting mark as a finished status, since GitLab
+ * request's card first persists its approved merge words as a merge-request
+ * note, then writes the waiting mark as a finished status, since GitLab
  * refuses a waiting status twice, starts the queue's pipeline on the
  * default branch and merges nothing. The queue then pauses the batch it
  * formed with a teammate's change behind one issue; the app's own reading

@@ -139,6 +139,7 @@ export class FakeForge implements Forge {
   branchesAt?: Forge["branchesAt"];
   /** Marks a version for the project's queue, where a test gives the host it. */
   markQueued?: Forge["markQueued"];
+  removeQueued?: Forge["removeQueued"];
   queueWorkflows?: Forge["queueWorkflows"];
   /** The default branch's own checks, where a test gives the host them. */
   branchChecks?: Forge["branchChecks"];
@@ -202,6 +203,7 @@ export function setup(
     tell?: (facts: Extract<WakeFacts, { kind: "queue-stalled" }>) => void;
     /** Check commit names against real git rather than skipping the check. */
     realRange?: boolean;
+    namingRule?: () => import("../../src/shared/runbooks").NamingRule | null;
     bringBranchHome?: (taskId: string) => Promise<string | undefined>;
     /** The branch a placed task's working copy has checked out there, wired as the app wires it. */
     checkedOut?: CheckedOut;
@@ -231,6 +233,7 @@ export function setup(
     ...(options.checkedOut ? { checkedOut: options.checkedOut } : {}),
     ...(options.bringBranchHome ? { bringBranchHome: options.bringBranchHome } : {}),
     ...(options.realRange ? {} : { validateRange: async () => {} }),
+    ...(options.namingRule ? { namingRule: options.namingRule } : {}),
     ...(options.now ? { now: options.now } : {}),
     ...(options.onNote ? { onNote: options.onNote } : {}),
     ...(options.steer ? { steer: options.steer } : {}),

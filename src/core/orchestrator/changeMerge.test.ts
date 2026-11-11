@@ -19,6 +19,7 @@ import {
   type ForgePull,
   type ForgeQueueStart,
   type ForgeReadiness,
+  QUEUE_REMOVED_WORDS,
   QUEUE_STATUS,
   type QueueWorkflow,
 } from "../forge";
@@ -766,6 +767,266 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
       receipt: { head: "repair01" },
     });
     expect(putIns()).toEqual(["putIn fm/task-ab12cd34 repair01"]);
+  });
+
+  // Approved contributor-queue plan, piece B: the queue merges, and the app
+  // observes its receipt without issuing a competing merge request.
+  it("waits for a queue-owned merge then reads its receipt without merging again", async () => {
+    const forge = new PinnedForge();
+    const harness = setup({ forge });
+    await insertDirectPrTask(harness.tasks, harness.repos, {
+      shape: { kind: "fix", kind_source: "none", delivery_ask: "queue-pr" },
+    });
+    const repoId = harness.tasks.get("ab12cd34")?.repoId;
+    if (!repoId) throw new Error("the task has no project");
+    harness.repos.recordQueue(repoId, {
+      workflows: [{ path: ".github/workflows/infinitary-queue.yml", active: true, shipped: 10 }],
+    });
+    forge.atHead.feedbeef = [
+      { name: "linux-checks", state: "success" },
+      { name: QUEUE_STATUS, state: "success" },
+    ];
+    const guard: MergeGuard = {
+      head: "feedbeef",
+      prNumber: 23,
+      unattended: true,
+      beforeDispatch: () => undefined,
+    };
+    expect(await harness.service.merges.merge("ab12cd34", guard)).toMatchObject({
+      ok: false,
+      stop: "queue",
+    });
+    // F5: a live edit is not a prepared story revision and cannot acquire a new approval record.
+    const mark = vi.fn<NonNullable<import("../forge").Forge["markQueued"]>>(async () => ({}));
+    forge.markQueued = mark;
+    const old = forge.change;
+    if (!old) throw new Error("The fixture has no open change");
+    forge.change = { ...old, title: "feat!: an external edit", body: "Unapproved live words" };
+    forge.atHead.feedbeef = [
+      { name: "linux-checks", state: "success" },
+      { name: QUEUE_STATUS, state: "pending" },
+    ];
+    expect(await harness.service.merges.merge("ab12cd34", guard)).toMatchObject({
+      ok: false,
+      stop: "queue",
+    });
+    forge.atHead.feedbeef = [
+      { name: "linux-checks", state: "success" },
+      { name: QUEUE_STATUS, state: "success" },
+    ];
+    expect(await harness.service.merges.merge("ab12cd34", guard)).toMatchObject({
+      ok: false,
+      stop: "queue",
+    });
+    expect(mark).not.toHaveBeenCalled();
+    forge.merged = true;
+    // GitHub no longer lists a merged pull request as an open change for its branch.
+    forge.changeFor = async () => null;
+    recordPr(harness.tasks, 23);
+    expect(await harness.service.merges.merge("ab12cd34", guard)).toMatchObject({
+      ok: true,
+      receipt: { head: "feedbeef", sha: "squash01", already: true },
+    });
+    expect(forge.calls.filter((call) => call.startsWith("putIn"))).toEqual([]);
+  });
+
+  it("leaves a passed named review to a queue-owned merge instead of racing it", async () => {
+    const forge = new PinnedForge();
+    const h = setup({ forge });
+    await insertDirectPrTask(h.tasks, h.repos, {
+      shape: { kind: "fix", kind_source: "none", delivery_ask: "queue-pr" },
+    });
+    const record = h.tasks.get("ab12cd34");
+    if (!record?.repoId) throw new Error("the project is missing");
+    h.repos.configure(record.repoId, { origin: "https://github.com/x/y.git" });
+    h.repos.recordQueue(record.repoId, {
+      workflows: [{ path: ".github/workflows/infinitary-queue.yml", active: true, shipped: 10 }],
+    });
+    const review: MergeReview = {
+      id: "named-queued",
+      kind: "github",
+      host: "github.com",
+      owner: "x",
+      name: "y",
+      number: 41,
+      headSha: "c40687d8d4f738056e62db6ab98b90f7f7d17497",
+      branch: "fm/task-other",
+      base: "main",
+      title: "fix: keep the reviewed version",
+      method: "squash",
+      at: 1,
+    };
+    seedDelivery(h.tasks, record.id, { mergeReviews: [review] });
+    Object.assign(forge, {
+      pull: async () => ({
+        number: review.number,
+        state: "open",
+        merged: false,
+        headSha: review.headSha,
+        base: review.base,
+        branch: review.branch,
+        title: review.title,
+        headRepo: "x/y",
+        readiness: "clean",
+      }),
+    });
+    // F4: this named-review path carries no body; reconciles cannot replace its marked words with empty text.
+    const mark = vi.fn<NonNullable<import("../forge").Forge["markQueued"]>>(async () => ({}));
+    forge.markQueued = mark;
+    for (const state of ["pending", "success"] as const) {
+      forge.atHead[review.headSha] = [
+        { name: "linux-checks", state: "success" },
+        { name: QUEUE_STATUS, state },
+      ];
+      expect(await h.service.reviews.mergeReview(record.id, review.id)).toMatchObject({
+        ok: false,
+        stop: "queue",
+      });
+    }
+    expect(mark).not.toHaveBeenCalled();
+    expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
+  });
+
+  // F3 regression: an unreadable change is not proof that its external eligibility was removed.
+  it("does not acknowledge a queue removal when its approved pull request is unreadable", async () => {
+    const forge = new PinnedForge();
+    const h = setup({ forge });
+    await insertDirectPrTask(h.tasks, h.repos);
+    const record = h.tasks.get("ab12cd34");
+    if (!record?.repoId || !forge.change?.number) throw new Error("the change is missing");
+    h.repos.configure(record.repoId, { origin: "https://github.com/x/y.git" });
+    h.repos.recordQueue(record.repoId, {
+      workflows: [{ path: ".github/workflows/infinitary-queue.yml", active: true, shipped: 10 }],
+    });
+    const remove = vi.fn(async () => {});
+    const read = vi.fn(async () => undefined);
+    Object.assign(forge, { pull: read, removeQueued: remove });
+    await expect(
+      h.service.merges.removeQueuedApproval(record.id, {
+        head: forge.change.headSha,
+        target: {
+          repoId: record.repoId,
+          host: "github.com",
+          owner: "x",
+          name: "y",
+          prNumber: forge.change.number,
+          branch: record.branch ?? "",
+          delivery: "direct-pr",
+          method: "squash",
+        },
+      }),
+    ).rejects.toThrow("its removal is not confirmed");
+    const target = {
+      repoId: record.repoId,
+      host: "github.com",
+      owner: "x",
+      name: "y",
+      prNumber: forge.change.number,
+      branch: record.branch ?? "",
+      delivery: "direct-pr" as const,
+      method: "squash" as const,
+    };
+    for (const changed of [
+      { host: "another.example.com" },
+      { owner: "another-owner" },
+      { name: "another-project" },
+    ]) {
+      await expect(
+        h.service.merges.removeQueuedApproval(record.id, {
+          head: forge.change.headSha,
+          target: { ...target, ...changed },
+        }),
+      ).rejects.toThrow("no longer matches");
+    }
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  // Captain F3/N3: the active naming decision rides the exact approved head, and a
+  // hold arriving during the mark removes eligibility before this attempt returns.
+  it("carries active or disabled naming into the queue and removes an in-flight held mark", async () => {
+    for (const interruptedFailure of [false, true]) {
+      for (const naming of [
+        null,
+        { pattern: "^Ship .+$", message: "Use the project's shipping subject" },
+      ] as const) {
+        const forge = new PinnedForge();
+        if (forge.change)
+          forge.change.title = naming ? "Ship queue support" : "A free-form approved title";
+        const h = setup({ forge, namingRule: () => naming });
+        await insertDirectPrTask(h.tasks, h.repos, {
+          shape: { kind: "fix", kind_source: "none", delivery_ask: "queue-pr" },
+        });
+        const repoId = h.tasks.get("ab12cd34")?.repoId;
+        if (!repoId) throw new Error("the project is missing");
+        h.repos.recordQueue(repoId, {
+          workflows: [
+            { path: ".github/workflows/infinitary-queue.yml", active: true, shipped: 10 },
+          ],
+        });
+        let held = false;
+        const approvals: unknown[] = [];
+        const removed: string[] = [];
+        forge.markQueued = async (head, approval) => {
+          approvals.push(approval);
+          held = true;
+          if (interruptedFailure) {
+            const why = approval?.beforeDispatch?.();
+            if (!why) throw new Error("the publisher did not receive the live approval guard");
+            throw new ForgeError("refused", why);
+          }
+          forge.atHead[head] = [
+            { name: "linux-checks", state: "success" },
+            { name: QUEUE_STATUS, state: "pending" },
+          ];
+          return { id: 41 };
+        };
+        forge.removeQueued = async (head) => {
+          removed.push(head);
+          forge.atHead[head] = [
+            { name: "linux-checks", state: "success" },
+            { name: QUEUE_STATUS, state: "failure", detail: QUEUE_REMOVED_WORDS },
+          ];
+        };
+        const cleanup = vi.fn(async () => {
+          await forge.removeQueued?.(guard.head, guard.prNumber);
+        });
+        const guard: MergeGuard = {
+          head: "feedbeef",
+          prNumber: 23,
+          unattended: true,
+          beforeDispatch: () => undefined,
+          queueInterrupted: cleanup,
+          held: () => (held ? "new guidance is waiting" : undefined),
+        };
+        expect(await h.service.merges.merge("ab12cd34", guard)).toMatchObject({
+          ok: false,
+          stop: "guidance",
+        });
+        expect(approvals).toEqual([
+          {
+            number: 23,
+            title: forge.change?.title,
+            message: undefined,
+            naming: naming ? { pattern: naming.pattern } : null,
+            beforeDispatch: expect.any(Function),
+          },
+        ]);
+        expect(removed).toEqual(["feedbeef"]);
+        expect(cleanup).toHaveBeenCalledOnce();
+        held = false;
+        forge.markQueued = async (head, approval) => {
+          approvals.push(approval);
+          forge.atHead[head] = [
+            { name: "linux-checks", state: "success" },
+            { name: QUEUE_STATUS, state: "pending" },
+          ];
+          return { id: 42 };
+        };
+        expect(await h.service.merges.merge("ab12cd34", guard)).toMatchObject({ stop: "queue" });
+        expect(approvals).toHaveLength(2);
+      }
+    }
   });
 
   it("puts a version the queue sent back into the queue again once, on its crewmate's declared answer, and never on the kept approval's own retry (INF-3190)", async () => {

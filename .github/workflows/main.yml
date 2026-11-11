@@ -37,6 +37,8 @@ name: main
 # a unit test reads surfaces at the next push that runs.
 on:
   workflow_dispatch:
+  repository_dispatch:
+    types: [infinitary-after-merge]
   push:
     branches: [main]
     paths-ignore:
@@ -64,10 +66,10 @@ jobs:
   # workflow gets it too (scripts/ci-job-names.mjs): a check started by hand
   # is a manual request, never a main push.
   alpha-wait:
-    name: ${{ format('{0} · Alpha cut wait', (github.event_name == 'push' && 'Main push' || 'Manual request')) }}
+    name: ${{ format('{0} · Alpha cut wait', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
     uses: ./.github/workflows/alpha-wait.yml
     with:
-      trigger: ${{ (github.event_name == 'push' && 'Main push' || 'Manual request') }}
+      trigger: ${{ (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request') }}
   # Sorts the push first (docs/testing.md, "The swept batch"): files that are
   # exactly a passed batch's are already checked, so the full check is
   # skipped, whether the batch passed in its own run or on its confirm; a
@@ -76,7 +78,7 @@ jobs:
   # files no batch built get the full check (the captain's pick on INF-3052,
   # "A: keep a fallback full check on main for versions no batch built").
   sort:
-    name: ${{ format('{0} · Compare with checked batches', (github.event_name == 'push' && 'Main push' || 'Manual request')) }}
+    name: ${{ format('{0} · Compare with checked batches', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -92,9 +94,11 @@ jobs:
           # The sort and the shipped queue's rules it reads the batch's state with.
           sparse-checkout: |
             scripts/batch.mjs
+            scripts/after-merge-paths.mjs
             .github/infinitary/rules.mjs
           sparse-checkout-cone-mode: false
       - id: sort
+        name: Select changed paths
         uses: actions/github-script@v7
         env:
           TREE: ${{ github.event.head_commit.tree_id }}
@@ -102,10 +106,18 @@ jobs:
           script: |
             const {pathToFileURL} = require('node:url');
             const batch = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/batch.mjs`).href);
+            const {afterMergeShouldRun} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/after-merge-paths.mjs`).href);
+            if (!await afterMergeShouldRun(github, context, 'main')) {
+              core.setOutput('kind', 'ignored');
+              core.notice('Only phone or documentation files changed; the full main check does not run.');
+              await github.rest.actions.cancelWorkflowRun({...context.repo, run_id: context.runId});
+              return;
+            }
             let sorted = {kind: 'full'};
-            if (context.eventName === 'push' && process.env.TREE) {
+            if (context.eventName === 'push' || context.eventName === 'repository_dispatch') {
               try {
-                sorted = await batch.readMainPush(github, context.repo, {sha: context.sha, tree: process.env.TREE});
+                const tree = process.env.TREE || (await github.rest.repos.getCommit({...context.repo, ref: context.sha})).data.commit.tree.sha;
+                sorted = await batch.readMainPush(github, context.repo, {sha: context.sha, tree});
               } catch (error) {
                 core.warning(`The push could not be sorted, so the full check runs: ${error.message}`);
               }
@@ -121,7 +133,7 @@ jobs:
   covered:
     needs: [alpha-wait, sort]
     if: needs.sort.outputs.kind == 'covered'
-    name: ${{ format('{0} · Covered by batch run {1}', (github.event_name == 'push' && 'Main push' || 'Manual request'), needs.sort.outputs.batch) }}
+    name: ${{ format('{0} · Covered by batch run {1}', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request'), needs.sort.outputs.batch) }}
     runs-on: ubuntu-24.04
     steps:
       - env:
@@ -132,11 +144,11 @@ jobs:
   # release (INF-2480).
   verify:
     needs: [alpha-wait, sort]
-    if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' && needs.sort.outputs.kind != 'landing' }}
-    name: ${{ format('{0} · Desktop checks', (github.event_name == 'push' && 'Main push' || 'Manual request')) }}
+    if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' && needs.sort.outputs.kind != 'landing' && needs.sort.outputs.kind != 'ignored' }}
+    name: ${{ format('{0} · Desktop checks', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
     uses: ./.github/workflows/verify.yml
     with:
-      trigger: ${{ (github.event_name == 'push' && 'Main push' || 'Manual request') }}
+      trigger: ${{ (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request') }}
       ref: ${{ github.sha }}
       profile: stable
       part: checks
@@ -148,9 +160,9 @@ jobs:
   # hosted Ubuntu; a covered push's batch ran them (infinitary-batch-checks.yml).
   startup:
     needs: [alpha-wait, sort]
-    if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' && needs.sort.outputs.kind != 'landing' }}
-    name: ${{ format('{0} · Linux startup', (github.event_name == 'push' && 'Main push' || 'Manual request')) }}
+    if: ${{ !cancelled() && needs.sort.outputs.kind != 'covered' && needs.sort.outputs.kind != 'landing' && needs.sort.outputs.kind != 'ignored' }}
+    name: ${{ format('{0} · Linux startup', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
     uses: ./.github/workflows/linux-startup.yml
     with:
-      trigger: ${{ (github.event_name == 'push' && 'Main push' || 'Manual request') }}
+      trigger: ${{ (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request') }}
       ref: ${{ github.sha }}

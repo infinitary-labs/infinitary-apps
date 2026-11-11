@@ -43,7 +43,7 @@ export type SettleOwners = {
 export function createSettleOwners(host: SettleServiceHost): SettleOwners {
   const locks = new SettleLocks(host);
   const approvals = new KeptApproval(host, locks);
-  const closing = new TaskClosing(host, locks);
+  const closing = new TaskClosing(host, locks, approvals);
   const drops = new TaskDrop(host, locks, closing);
   const settle = new SettleService(host, locks, approvals, closing, drops);
   const kept = new KeptMerge(host, locks, approvals, closing, settle);

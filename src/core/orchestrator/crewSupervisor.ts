@@ -67,6 +67,7 @@ import { TaskIntake } from "./intake";
 import { IntegrationAsks } from "./integrationAsks";
 import { renderReviewBrief } from "./intentBrief";
 import { mergeHold } from "./mergeAuthorization";
+import { queueMerges } from "./projectQueue";
 import { ReportIntake } from "./reportIntake";
 import type { WakeOpenReview } from "./reportWakes";
 import { RestartWatch } from "./restartWatch";
@@ -422,6 +423,9 @@ export class CrewSupervisor {
       ...(options.machines ? { placed: options.machines } : {}),
       endLiveTask: (taskId) => options.personal?.endLiveTask(taskId),
       ...(options.mergePullRequest ? { mergePullRequest: options.mergePullRequest } : {}),
+      ...(options.removeQueuedApproval
+        ? { removeQueuedApproval: options.removeQueuedApproval }
+        : {}),
       ...(options.validateLocalStory ? { validateLocalStory: options.validateLocalStory } : {}),
       ...(options.mergeReview ? { mergeReview: options.mergeReview } : {}),
       mergeContinued: (taskId, review, outcome, named) => {
@@ -996,6 +1000,7 @@ export class CrewSupervisor {
       review.intent,
       this.facts.taskDelivery(builder.id) ?? "local-only",
       passedHead ? { ...facts, passedHead } : facts,
+      queueMerges(builder.repoId ? this.options.repos.get(builder.repoId) : undefined),
     );
     // Re-send the assignment even when the head stayed put: a previous
     // prompt may have failed after preparation but before the model read it.

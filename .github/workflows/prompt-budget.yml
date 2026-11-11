@@ -9,6 +9,8 @@ name: prompt-budget
 # "A workflow run fails".
 
 on:
+  repository_dispatch:
+    types: [infinitary-after-merge]
   push:
     branches: [main]
     # What the served prompts and tool lists are built from, and the check itself.
@@ -24,6 +26,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 # Each push reads main afresh; a newer push replaces an older reading.
 concurrency:
@@ -32,7 +35,7 @@ concurrency:
 
 jobs:
   prompt-budget:
-    name: ${{ github.event_name == 'push' && 'Main push' || 'Manual request' }} · Prompt budget
+    name: ${{ github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request' }} · Prompt budget
     runs-on: ${{ fromJSON(vars.LINUX_QUEUES || '{}').ci || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
     timeout-minutes: 20
     # The path every crewmate works under (journeys.yml says why).
@@ -44,19 +47,33 @@ jobs:
         with:
           path: Application Support/firstmate
           persist-credentials: false
+      - id: paths
+        name: Select changed paths
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const {afterMergeShouldRun} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/Application Support/firstmate/scripts/after-merge-paths.mjs`).href);
+            core.setOutput('run', String(await afterMergeShouldRun(github, context, 'prompt-budget')));
       - uses: pnpm/action-setup@v4
+        if: steps.paths.outputs.run == 'true'
         with:
           package_json_file: Application Support/firstmate/package.json
       - uses: actions/setup-node@v4
+        if: steps.paths.outputs.run == 'true'
         with:
           node-version: 24
           cache: ${{ runner.environment == 'github-hosted' && 'pnpm' || '' }}
           cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
       - uses: ./Application Support/firstmate/.github/actions/node-headers
+        if: steps.paths.outputs.run == 'true'
       - uses: ./Application Support/firstmate/.github/actions/electron-download
+        if: steps.paths.outputs.run == 'true'
         with:
           working-directory: Application Support/firstmate
       - run: pnpm install --frozen-lockfile
+        if: steps.paths.outputs.run == 'true'
         env:
           NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       - run: node scripts/prompt-budget.ts
+        if: steps.paths.outputs.run == 'true'

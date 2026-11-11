@@ -77,6 +77,13 @@ describe("exact-main alpha verification inheritance", () => {
     });
   });
 
+  it("inherits the approved queue's after-merge main check at the exact source", () => {
+    const { run, jobs } = completedMain();
+    expect(
+      verifyMainEvidence({ ...run, event: "repository_dispatch" }, jobs, repository, source).runId,
+    ).toBe(run.id);
+  });
+
   it("says a main run from before INF-2480 also ran every Linux journey", () => {
     const { run, jobs } = completedMain({ journeys: true });
     expect(verifyMainEvidence(run, jobs, repository, source).journeys).toBe(true);

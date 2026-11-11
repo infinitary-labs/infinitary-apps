@@ -10,16 +10,19 @@ import {
   type ForgeCheckState,
   ForgeError,
   type ForgePull,
+  type ForgeQueueMark,
   type ForgeReadiness,
+  forgeLocationOf,
   isRedCheckState,
   isSignInForgeFailure,
   isTransientForgeFailure,
   messageWithoutPresentation,
+  QUEUE_REMOVED_WORDS,
   QUEUE_STATUS,
   QUEUE_WAITING_WORDS,
 } from "../forge";
-import type { TaskRecord } from "../storage/taskRecords";
-import { requireConventional } from "../workspace/conventional";
+import type { QueueApprovalRemoval, TaskRecord } from "../storage/taskRecords";
+import { DEFAULT_NAMING_RULE, requireConventional } from "../workspace/conventional";
 import type { ChangeChecks } from "./changeChecks";
 import {
   type ChangeContext,
@@ -33,7 +36,7 @@ import {
   MERGE_CHECKS_HOLD_REASON,
   standingAuthorization,
 } from "./mergeAuthorization";
-import type { ProjectQueue } from "./projectQueue";
+import { type ProjectQueue, queueMerges } from "./projectQueue";
 import { carryPassedReview } from "./reviewCarry";
 
 /** A check state that lets a merge through: passed, or not run on purpose. */
@@ -124,6 +127,8 @@ export type MergeGuard = {
   unattended: boolean;
   /** A hold on the approval right now: the merge waits on it and the approval stands. */
   held?: () => string | undefined;
+  /** Revoke an interrupted publication through its durable approval owner. */
+  queueInterrupted?: () => Promise<void>;
   beforeDispatch: (head: string, mark?: boolean) => string | undefined;
 };
 
@@ -290,12 +295,14 @@ export class ChangeMerge {
     // with the pull request's own checks passed, the version is marked
     // waiting again once, as a version with no status is.
     let answered = false;
+    let restoring = false;
     if (queued && checked) {
       const items = this.queueItems(taskId, checked.change);
       const queue = items?.find((item) => item.name === QUEUE_STATUS);
       const othersPassed =
         items?.every((item) => item.name === QUEUE_STATUS || PASSED_STATES.has(item.state)) ===
         true;
+      restoring = queue?.detail === QUEUE_REMOVED_WORDS && othersPassed && status.recorded;
       answered =
         queue !== undefined &&
         isRedCheckState(queue.state) &&
@@ -318,6 +325,7 @@ export class ChangeMerge {
     const unfinished = reading?.overall === "red" || reading?.overall === "pending";
     const checksPassed =
       answered ||
+      restoring ||
       (unfinished &&
         status.recorded &&
         checked !== undefined &&
@@ -381,9 +389,10 @@ export class ChangeMerge {
       // a sign-in that could bypass the branch's rules (FI3-304 section 4).
       // Guidance is read after the carry, so a newer word during that wait
       // still stops the merge.
-      const queueWait = answered
-        ? { state: undefined }
-        : this.queueWait(taskId, this.queueItems(taskId, change));
+      const queueWait =
+        answered || restoring
+          ? { state: undefined }
+          : this.queueWait(taskId, this.queueItems(taskId, change));
       if (hasChangeRequests(forge.kind) && (guard?.unattended || boundary?.unattended || settle)) {
         if (change.number === undefined)
           return { ok: false, text: "Cannot merge: the pull request identity is missing." };
@@ -408,14 +417,26 @@ export class ChangeMerge {
         return await this.enqueue(
           taskId,
           forge,
-          change,
+          publishedChange,
           queueWait.state,
           () =>
             guard?.beforeDispatch(change.headSha, true) ??
             boundary?.beforeDispatch(change.headSha, true),
           !guard?.unattended && !boundary?.unattended,
           answered,
+          guard?.held,
+          guard?.queueInterrupted,
         );
+      // Queue version 10 introduced queue-owned merges on both hosts. Older
+      // queues still depend on the approving app, so keep that compatibility.
+      if (queued && queueMerges(repo)) {
+        return {
+          ok: false,
+          text: "The batch passed; the project's queue is merging this version.",
+          plain: "the project's queue is merging this version",
+          stop: "queue",
+        };
+      }
       const withdrawn =
         guard?.beforeDispatch(change.headSha) ?? boundary?.beforeDispatch(change.headSha);
       if (withdrawn) {
@@ -635,6 +656,43 @@ export class ChangeMerge {
     return record !== undefined && deliveryForRecord(record, repo?.delivery) === "queue-pr";
   }
 
+  queueOwnsMerge(taskId: string, number: number | undefined): boolean {
+    if (!this.queued(taskId)) return false;
+    const record = this.options.tasks.get(taskId);
+    if (!record) return false;
+    const elsewhere = number === undefined ? undefined : this.projectOfNumber(record, number);
+    const repo = elsewhere ?? (record.repoId ? this.options.repos.get(record.repoId) : undefined);
+    return queueMerges(repo ?? undefined);
+  }
+
+  /** Remove the eligibility of the exact approval head; an already sent merge cannot be undone. */
+  async removeQueuedApproval(taskId: string, removal: QueueApprovalRemoval): Promise<void> {
+    const record = this.options.tasks.get(taskId);
+    if (!record) return;
+    const elsewhere = this.projectOfNumber(record, removal.target.prNumber);
+    if (elsewhere === null) throw new Error("The queued change's project is no longer registered.");
+    const repo =
+      elsewhere ?? this.options.repos.get(removal.review?.repoId ?? removal.target.repoId);
+    if (!repo) throw new Error("The queued change's project is no longer registered.");
+    const location = forgeLocationOf(repo);
+    if (
+      location.host !== removal.target.host ||
+      location.owner !== removal.target.owner ||
+      location.name !== removal.target.name
+    )
+      throw new Error(
+        "The project no longer matches the queued approval's destination; its removal is not confirmed.",
+      );
+    if (!queueMerges(repo)) return;
+    const forge = this.options.forgeFor(repo, repo.path);
+    if (!forge.removeQueued) throw new Error("This project's host cannot remove its queue mark.");
+    const pull = await forge.pull?.(removal.target.prNumber);
+    if (!pull)
+      throw new Error("The queued change cannot be read, so its removal is not confirmed.");
+    if (pull.merged) return;
+    await forge.removeQueued(removal.head, removal.target.prNumber);
+  }
+
   /**
    * Where a version of a queue-pr task stands with the project's queue:
    * undefined when the task does not merge through a queue or the queue
@@ -645,10 +703,11 @@ export class ChangeMerge {
    */
   queueWait(
     taskId: string,
-    items: { name: string; state: ForgeCheckState }[] | undefined,
+    items: { name: string; state: ForgeCheckState; detail?: string }[] | undefined,
   ): { state: ForgeCheckState | undefined } | undefined {
     if (!this.queued(taskId)) return undefined;
-    const state = items?.find((item) => item.name === QUEUE_STATUS)?.state;
+    const item = items?.find((item) => item.name === QUEUE_STATUS);
+    const state = item?.detail === QUEUE_REMOVED_WORDS ? undefined : item?.state;
     return state === "success" ? undefined : { state };
   }
 
@@ -659,14 +718,20 @@ export class ChangeMerge {
   private queueItems(
     taskId: string,
     change: ForgeChange,
-  ): { name: string; state: ForgeCheckState }[] | undefined {
+  ): { name: string; state: ForgeCheckState; detail?: string }[] | undefined {
     const record = this.options.tasks.get(taskId);
     const head = change.headSha;
     const version = record
       ? this.context.changeRecordOf(record, change)?.versions.find((item) => item.head === head)
       : undefined;
     const snapshot = version?.checks?.snapshot;
-    return snapshot?.headSha === head ? snapshot.items : undefined;
+    if (snapshot?.headSha !== head) return undefined;
+    const status = record?.delivery?.queueStatus;
+    return snapshot.items.map((item) =>
+      item.name === QUEUE_STATUS && status?.head === head
+        ? { ...item, detail: status.words }
+        : item,
+    );
   }
 
   /**
@@ -685,6 +750,8 @@ export class ChangeMerge {
     look: () => string | undefined,
     attended: boolean,
     answered = false,
+    held?: () => string | undefined,
+    queueInterrupted?: () => Promise<void>,
   ): Promise<PrOutcome> {
     if (state !== undefined && state !== "pending") {
       return {
@@ -697,12 +764,13 @@ export class ChangeMerge {
     }
     if (!forge.markQueued)
       throw new Error("This project's host cannot mark a version for its queue.");
-    const withdrawn = look();
+    const guidance = held?.();
+    const withdrawn = guidance ?? look();
     if (withdrawn) {
       return {
         ok: false,
         text: `Cannot merge: ${withdrawn}${withdrawn.endsWith(".") ? "" : "."}`,
-        stop: "withdrawn",
+        stop: guidance ? "guidance" : "withdrawn",
       };
     }
     if (state === undefined) {
@@ -710,8 +778,56 @@ export class ChangeMerge {
       // again, so its waiting note says what is there now.
       const repoId = this.options.tasks.get(taskId)?.repoId;
       if (repoId) await this.queue?.readWorkflows(repoId);
-      const mark = await forge.markQueued(change.headSha);
+      const record = this.options.tasks.get(taskId);
+      const targetRepo =
+        record && change.number !== undefined
+          ? this.projectOfNumber(record, change.number)
+          : undefined;
+      const repo =
+        targetRepo ?? (record?.repoId ? this.options.repos.get(record.repoId) : undefined);
+      const owned = queueMerges(repo ?? undefined);
+      const naming = this.options.namingRule ? this.options.namingRule() : DEFAULT_NAMING_RULE;
+      // Evaluate the captured active rule here, not in a public queue packet or a copied grammar.
+      if (owned && change.number !== undefined)
+        requireConventional(change.title ?? "", "pull request title", naming);
+      const removeIfInterrupted = async (): Promise<PrOutcome | undefined> => {
+        const guidance = held?.();
+        const interrupted = guidance ?? look();
+        if (!interrupted) return undefined;
+        if (queueInterrupted) await queueInterrupted();
+        else {
+          if (change.number === undefined)
+            throw new Error("The queued change has no pull request identity.");
+          await forge.removeQueued?.(change.headSha, change.number);
+        }
+        return {
+          ok: false,
+          text: `Cannot merge: ${interrupted}.`,
+          stop: guidance ? "guidance" : "withdrawn",
+        };
+      };
+      let mark: ForgeQueueMark;
+      try {
+        mark = await forge.markQueued(
+          change.headSha,
+          owned && change.number !== undefined
+            ? {
+                number: change.number,
+                title: change.title ?? "",
+                message: change.squashMessage ?? (change.body || undefined),
+                naming: naming ? { pattern: naming.pattern } : null,
+                beforeDispatch: () => held?.() ?? look(),
+              }
+            : undefined,
+        );
+      } catch (error) {
+        const interrupted = await removeIfInterrupted();
+        if (interrupted) return interrupted;
+        throw error;
+      }
       this.queue?.marked(taskId, change.headSha, mark.id);
+      const interrupted = await removeIfInterrupted();
+      if (interrupted) return interrupted;
       this.options.tasks.note(
         taskId,
         `Marked ${change.headSha} with ${QUEUE_STATUS}, waiting for the project's queue.`,

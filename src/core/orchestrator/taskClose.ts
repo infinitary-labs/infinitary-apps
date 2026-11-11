@@ -16,6 +16,7 @@ import { answersByShape, type ClosingPlace } from "./askEnding";
 import type { AnswerTaskClosedPayload } from "./captainWakes";
 import { escapeCardText } from "./cardText";
 import type { PrOutcome } from "./changeMerge";
+import type { KeptApproval } from "./keptApproval";
 import { endedAuthorization, standingAuthorization } from "./mergeAuthorization";
 import type { SettleServiceHost } from "./settleHost";
 import type { SettleLocks } from "./settleLocks";
@@ -100,6 +101,7 @@ export class TaskClosing {
   constructor(
     private readonly host: SettleServiceHost,
     private readonly locks: SettleLocks,
+    private readonly approvals: KeptApproval,
   ) {}
 
   private readonly retirements = new Map<string, Promise<"removed" | "kept" | "none">>();
@@ -362,7 +364,15 @@ export class TaskClosing {
       await stopping;
       this.locks.turnEnded(taskId);
     }
-    const record = this.host.tasks.get(taskId);
+    let record = this.host.tasks.get(taskId);
+    if (record && !TaskService.isClosed(record)) {
+      const approval = record.delivery?.mergeAuthorization;
+      if (approval) {
+        if (close.reason !== "merged") this.approvals.removeQueueMark(taskId, approval);
+        for (const item of approval.queued ?? []) this.approvals.removeQueueMark(taskId, item);
+        record = this.host.tasks.get(taskId) ?? record;
+      }
+    }
     // The lane and every queued wake retire with the task, in the close's
     // own transaction: a settled task makes still-recorded guidance moot.
     // A row already done or dropped keeps its close; a discard there only

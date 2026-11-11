@@ -59,6 +59,7 @@ export type {
   ForgeOverall,
   ForgeProject,
   ForgePull,
+  ForgeQueueApproval,
   ForgeQueueMark,
   ForgeQueuePause,
   ForgeQueueStart,
@@ -78,6 +79,7 @@ export {
   isRedCheckState,
   isSignInForgeFailure,
   isTransientForgeFailure,
+  QUEUE_REMOVED_WORDS,
   QUEUE_STATUS,
   QUEUE_WAITING_WORDS,
 } from "./forge";

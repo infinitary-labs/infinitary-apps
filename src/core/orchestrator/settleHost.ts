@@ -8,7 +8,7 @@ import type { ServedWakeOrigin } from "@shared/servedFrame";
 import type { ForgePull } from "../forge";
 import type { EmittedCardInput } from "../session/tools";
 import type { InboxStore } from "../storage/inboxStore";
-import type { TaskRecord } from "../storage/taskRecords";
+import type { QueueApprovalRemoval, TaskRecord } from "../storage/taskRecords";
 import type { SettleRefusal } from "../tasks/taskGraph";
 import type { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
@@ -187,6 +187,7 @@ export type SettleServiceHost = {
     result: SettleOutcome,
     change?: string,
   ) => void;
+  removeQueuedApproval?: (taskId: string, removal: QueueApprovalRemoval) => Promise<void>;
   closePullRequest?: (taskId: string) => Promise<PrOutcome>;
   /** The pinned pull request by its number, for a kept approval's reconcile (FI3-304). */
   readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;

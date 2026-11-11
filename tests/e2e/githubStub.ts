@@ -298,6 +298,13 @@ export async function startGitHubStub(
   let anyPull: StubPull | null = null;
   const opened = new Map<string, StubPull>();
   const queued: StubPull[] = [];
+  // Queue approvals and revocations are issue comments, persisted and read
+  // through GitHub's API before the app writes its waiting status.
+  const issueComments = new Map<
+    number,
+    { id: number; body: string; user: { login: string }; html_url: string }[]
+  >();
+  let nextCommentId = 1;
   const reruns: string[] = [];
   let nextNumber = 100;
   let checkRuns: StubCheckRun[] = [
@@ -738,6 +745,29 @@ export async function startGitHubStub(
           );
           return;
         }
+        const comments = /^\/issues\/(\d+)\/comments$/.exec(rest);
+        if (comments && (method === "GET" || method === "POST")) {
+          const number = Number(comments[1]);
+          const rows = issueComments.get(number) ?? [];
+          if (method === "GET") send(200, rows);
+          else {
+            const body = JSON.parse(raw || "{}") as { body?: string };
+            const id = nextCommentId++;
+            const row = {
+              id,
+              body: body.body ?? "",
+              user: { login: STUB_LOGIN },
+              html_url: `https://${webHost}/${owner}/${name}/issues/${number}#issuecomment-${id}`,
+            };
+            issueComments.set(number, [...rows, row]);
+            send(201, row);
+          }
+          return;
+        }
+        if (method === "GET" && rest === `/collaborators/${STUB_LOGIN}/permission`) {
+          send(200, { permission: "write" });
+          return;
+        }
         if (method === "POST" && rest === "/issues") {
           const body = JSON.parse(raw || "{}") as { title?: string };
           send(201, {
@@ -932,6 +962,11 @@ export async function startGitHubStub(
           const body = JSON.parse(raw) as { context: string; state: string; description?: string };
           const id = putStatus(decodeURIComponent(statusPost[1]), body);
           send(201, { id, ...body });
+          return;
+        }
+        const statusList = method === "GET" ? /^\/commits\/([^/]+)\/statuses$/.exec(rest) : null;
+        if (statusList?.[1]) {
+          send(200, commitStatuses.get(decodeURIComponent(statusList[1])) ?? []);
           return;
         }
         const statusRead = method === "GET" ? /^\/commits\/([^/]+)\/status$/.exec(rest) : null;

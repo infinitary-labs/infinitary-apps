@@ -68,6 +68,17 @@ export class TaskDeliveryStore {
     return this.present;
   }
 
+  queueRemovalTaskIds(): string[] {
+    if (!this.exists()) return [];
+    const rows = prepared(
+      this.db,
+      `SELECT task_id FROM task_permissions
+      WHERE json_valid(merge_authorization_json)
+        AND json_type(merge_authorization_json, '$.queueRemovals') = 'array'`,
+    ).all() as { task_id: string }[];
+    return rows.map((row) => row.task_id);
+  }
+
   evidence(taskId: string): EvidenceRow | undefined {
     if (!this.exists()) return undefined;
     return prepared(this.db, "SELECT * FROM task_delivery_evidence WHERE task_id = ?").get(

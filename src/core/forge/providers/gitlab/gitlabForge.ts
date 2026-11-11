@@ -12,6 +12,7 @@ import {
   ForgeError,
   type ForgeLocation,
   type ForgePull,
+  type ForgeQueueApproval,
   type ForgeQueueMark,
   type ForgeQueuePause,
   type ForgeQueueStart,
@@ -311,8 +312,12 @@ export class GitLabForge implements Forge {
     return { items, complete };
   }
 
-  markQueued(sha: string): Promise<ForgeQueueMark> {
-    return this.queue.markQueued(sha);
+  markQueued(sha: string, approval?: ForgeQueueApproval): Promise<ForgeQueueMark> {
+    return this.queue.markQueued(sha, approval);
+  }
+
+  removeQueued(sha: string, number: number): Promise<void> {
+    return this.queue.removeQueued(sha, number);
   }
 
   queueWorkflows(options?: { all?: boolean }): Promise<QueueWorkflow[]> {

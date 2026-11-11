@@ -39,7 +39,11 @@ export function rulesState(status: string): string;
 export function readHeads(heads: string | undefined): Member[];
 export function batchPipeline(args: { heads: string; base: string; tree: string }): string;
 export function noBatchPipeline(reason: string): string;
-export function readOpenQueue(api: GitLabQueueApi, env: GitLabQueueEnv): Promise<QueueEntry[]>;
+export function readOpenQueue(
+  api: GitLabQueueApi,
+  env: GitLabQueueEnv,
+  authenticating?: boolean,
+): Promise<QueueEntry[]>;
 export function startForm(api: GitLabQueueApi, env: GitLabQueueEnv): Promise<unknown>;
 export function form(
   args: GitLabQueueArgs & { compose(members: Member[]): string | Promise<string> },
@@ -56,3 +60,7 @@ export function gitlabApi(args: {
   fetchImpl?: typeof fetch;
 }): GitLabQueueApi;
 export function run(command: string, vars?: Record<string, string | undefined>): Promise<void>;
+
+export function mergePassed(args: GitLabQueueArgs): Promise<void>;
+
+export const MAINTAINER: number;

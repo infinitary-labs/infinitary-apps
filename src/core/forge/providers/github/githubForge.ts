@@ -3,8 +3,14 @@ import { forgePlace, GITHUB_COM, isGitHubEnterpriseCloud } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
 import type { NamingRule } from "../../../../shared/runbooks";
 import { GITHUB_QUEUE_PART, readQueueStamp } from "../../../queue/shipped";
-import { WORKFLOW as QUEUE_WORKFLOW } from "../../../queue/shipped/github.mjs";
-import { PAUSE_LABEL, readPauseMarker } from "../../../queue/shipped/rules.mjs";
+import { MERGE_PERMISSIONS, WORKFLOW as QUEUE_WORKFLOW } from "../../../queue/shipped/github.mjs";
+import {
+  commitEnvelope,
+  NAMING_DECISION,
+  newestTrustedApproval,
+  revocationEnvelope,
+} from "../../../queue/shipped/message.mjs";
+import { PAUSE_LABEL, REMOVED, readPauseMarker } from "../../../queue/shipped/rules.mjs";
 import { requireConventional } from "../../../workspace/conventional";
 import {
   type ApiProject,
@@ -30,6 +36,7 @@ import {
   type ForgeLocation,
   type ForgeProject,
   type ForgePull,
+  type ForgeQueueApproval,
   type ForgeQueueMark,
   type ForgeQueuePause,
   type ForgeQueueStart,
@@ -854,7 +861,34 @@ export class GitHubForge implements Forge {
   /** GitHub's status event starts the shipped queue's workflow on each mark. */
   readonly markStartsQueue = true;
 
-  async markQueued(sha: string): Promise<ForgeQueueMark> {
+  async markQueued(sha: string, approval?: ForgeQueueApproval): Promise<ForgeQueueMark> {
+    const checkApproval = () => {
+      const why = approval?.beforeDispatch?.();
+      if (why) throw new ForgeError("refused", why);
+    };
+    let approvalUrl: string | undefined;
+    if (approval) {
+      const pull = (await this.request("GET", `${this.repoPath()}/pulls/${approval.number}`)) as {
+        head?: { sha?: string };
+        body?: string | null;
+        title?: string;
+      };
+      if (pull.head?.sha !== sha || pull.title !== approval.title)
+        throw new ForgeError("refused", "The approved change moved before it could be queued.");
+      checkApproval();
+      const message = approval.message ?? pull.body ?? "";
+      const comment = (await this.request(
+        "POST",
+        `${this.repoPath()}/issues/${approval.number}/comments`,
+        {
+          body: `Approved for the batch queue at this version.\n\n<!-- infinitary-merge-approval -->\n${commitEnvelope(sha, message, approval.title, { naming: approval.naming ? NAMING_DECISION.checked : NAMING_DECISION.off })}`,
+        },
+      )) as { html_url?: string };
+      if (!comment.html_url)
+        throw new ForgeError("refused", "The approved merge words have no confirmed comment link.");
+      approvalUrl = comment.html_url;
+    }
+    checkApproval();
     const answer = (await this.request(
       "POST",
       `${this.repoPath()}/statuses/${encodeURIComponent(sha)}`,
@@ -862,9 +896,73 @@ export class GitHubForge implements Forge {
         state: "pending",
         context: QUEUE_STATUS,
         description: QUEUE_WAITING_WORDS,
+        ...(approvalUrl ? { target_url: approvalUrl } : {}),
       },
     )) as { id?: unknown } | null;
     return typeof answer?.id === "number" ? { id: answer.id } : {};
+  }
+
+  private async queuePermission(login: string): Promise<string> {
+    const role = (await this.request(
+      "GET",
+      `${this.repoPath()}/collaborators/${encodeURIComponent(login)}/permission`,
+    ).catch((error) => {
+      if (error instanceof ForgeError && error.failure === "not-found")
+        return { permission: "none" };
+      throw error;
+    })) as { permission: string };
+    return role.permission;
+  }
+
+  private async queueApproval(sha: string, number: number) {
+    const listed = await this.pages<{ id: number; body?: string; user?: { login?: string } }>(
+      `${this.repoPath()}/issues/${number}/comments`,
+      (page) => page as { id: number; body?: string; user?: { login?: string } }[],
+    );
+    if (!listed.complete)
+      throw new ForgeError("transient", "The merge approval history could not be read completely.");
+    const roles = new Map<string, string>();
+    return await newestTrustedApproval(listed.items, sha, async (comment) => {
+      const login = comment.user?.login;
+      if (!login) return false;
+      if (!roles.has(login)) roles.set(login, await this.queuePermission(login));
+      return MERGE_PERMISSIONS.includes(roles.get(login) ?? "");
+    });
+  }
+
+  async removeQueued(sha: string, number: number): Promise<void> {
+    const record = await this.queueApproval(sha, number);
+    if (!record) return;
+    if (record.kind === "approval") {
+      const user = (await this.request("GET", "/user")) as { login?: string };
+      if (!user.login || !MERGE_PERMISSIONS.includes(await this.queuePermission(user.login)))
+        throw new ForgeError(
+          "permission",
+          "The current sign-in cannot withdraw this project's approved queue version.",
+        );
+      const posted = (await this.request("POST", `${this.repoPath()}/issues/${number}/comments`, {
+        body: `Merge approval withdrawn for this version.\n\n${revocationEnvelope(sha)}`,
+      })) as { id?: number };
+      if (
+        typeof posted?.id !== "number" ||
+        (await this.queueApproval(sha, number))?.kind !== "revocation"
+      )
+        throw new ForgeError(
+          "transient",
+          "The host did not confirm a trusted approval revocation.",
+        );
+    }
+    const statuses = (await this.request(
+      "GET",
+      `${this.repoPath()}/commits/${encodeURIComponent(sha)}/statuses?per_page=100`,
+    )) as { context?: string; description?: string }[];
+    const current = statuses.find((status) => status.context === QUEUE_STATUS);
+    if (!current || current.description === REMOVED) return;
+    await this.request("POST", `${this.repoPath()}/statuses/${encodeURIComponent(sha)}`, {
+      state: "error",
+      context: QUEUE_STATUS,
+      description: REMOVED,
+    });
   }
 
   /**

@@ -123,6 +123,8 @@ export class ChangePresentations {
     private readonly options: {
       namingRule?: () => NamingRule | null;
       validationEvidence?: (taskId: string, evidence: ValidationEvidence[]) => ValidationEvidence[];
+      /** Changed unpublished merge words suspend their queue approval before prepare returns. */
+      onPrepared?: (taskId: string, head: string, branch?: string) => Promise<void>;
       tasks: PresentationLedger;
       mediaDir: (taskId: string) => string;
       /** Read actual committed code, including after asynchronous uploads. */
@@ -229,6 +231,7 @@ export class ChangePresentations {
                 : {}),
             };
           });
+          await this.options.onPrepared?.(taskId, story.head, branch);
           return revision;
         },
         staged.assets,

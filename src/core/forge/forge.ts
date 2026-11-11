@@ -135,6 +135,16 @@ export type ForgeQueueStart =
   | { action: "resume"; reason: string }
   | { action: "send-back"; number: number; reason: string };
 
+/** The active naming decision and exact squash words approved at one head. */
+export type ForgeQueueApproval = {
+  number: number;
+  title: string;
+  message?: string;
+  naming: { pattern: string } | null;
+  /** Recheck the existing local permission before publishing either hosted write; never serialized. */
+  beforeDispatch?: () => string | undefined;
+};
+
 /** The app's own queue mark on a version: the status id the host gave it back. */
 export type ForgeQueueMark = { id?: number };
 
@@ -444,7 +454,9 @@ export interface Forge {
    * project's queue"): the captain's kept merge approval at that version,
    * which the project's queue reads and answers on the same status.
    */
-  markQueued?(sha: string): Promise<ForgeQueueMark>;
+  markQueued?(sha: string, approval?: ForgeQueueApproval): Promise<ForgeQueueMark>;
+  /** Remove this head's eligibility after a local approval hold or withdrawal. */
+  removeQueued?(sha: string, number: number): Promise<void>;
   /**
    * The CI files on the default branch that mention the app's queue status
    * (`QUEUE_STATUS`), each with whether it is turned on and the shipped
@@ -488,7 +500,10 @@ export interface Forge {
 export { QUEUE_STATUS } from "@shared/repos";
 
 /** The waiting status's description, in the words a person reads on GitHub; the queue's rules own them. */
-export { WAITING as QUEUE_WAITING_WORDS } from "../queue/shipped/rules.mjs";
+export {
+  REMOVED as QUEUE_REMOVED_WORDS,
+  WAITING as QUEUE_WAITING_WORDS,
+} from "../queue/shipped/rules.mjs";
 
 /** A full commit id: 40 hexadecimal characters, or 64 in a SHA-256 repository. */
 export function isFullCommitId(sha: string): boolean {

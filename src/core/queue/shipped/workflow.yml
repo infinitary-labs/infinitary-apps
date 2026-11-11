@@ -6,7 +6,7 @@ name: Infinitary queue
 # every change so marked, composes them onto the default branch, runs the
 # project's batch checks (.github/workflows/infinitary-batch-checks.yml, the
 # one file of the queue the project writes itself) and writes the verdict:
-# green passes every change, and each approver's Infinitary merges its own.
+# green passes every change, then the isolated merge job merges it.
 # Red first confirms: the batch checks run once more on the same batch, told
 # the failed jobs and the failed test files, and run only what the project's
 # file chooses for them. A green confirm passes every change; a red one, or a
@@ -215,3 +215,28 @@ jobs:
             await queue.decide({github, context, core, result: process.env.RESULT,
               confirm: process.env.CONFIRM,
               members: JSON.parse(process.env.MEMBERS), tree: process.env.TREE});
+
+  # No batch code runs here. Only this job may write code or merge a pull request.
+  merge:
+    needs: [form, verdict]
+    if: ${{ !cancelled() && needs.form.result == 'success' }}
+    name: Merge passed changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      statuses: write
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: .github/infinitary
+          persist-credentials: false
+      - uses: actions/github-script@v7
+        with:
+          retries: 3
+          script: |
+            const {pathToFileURL} = require('node:url');
+            const queue = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/.github/infinitary/github.mjs`).href);
+            await queue.mergePassed({github, context, core});

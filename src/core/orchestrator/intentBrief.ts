@@ -136,9 +136,14 @@ export const AFTER_MERGE_DELIVERY_RULE =
 
 const DELIVERY_TEXT: Record<RepoDelivery, string> = {
   "direct-pr": `direct-pr - finished work is pushed and opened as a pull request where the project lives (git push, then open_change). ${AFTER_MERGE_DELIVERY_RULE}`,
-  "queue-pr": `queue-pr - finished work is pushed and opened as a pull request where the project lives (git push, then open_change), as with direct-pr. The captain's merge click then waits for the project's queue to pass that version before the app merges it. ${AFTER_MERGE_DELIVERY_RULE}`,
+  "queue-pr": `queue-pr - finished work is pushed and opened as a pull request where the project lives (git push, then open_change), as with direct-pr. The captain's merge click queues the approved version. ${AFTER_MERGE_DELIVERY_RULE}`,
   "local-only": "local-only - work merges on a local branch and never leaves the machine",
 };
+
+function deliveryText(delivery: RepoDelivery, queueOwned = false): string {
+  if (delivery !== "queue-pr") return DELIVERY_TEXT[delivery];
+  return `${DELIVERY_TEXT["queue-pr"]} ${queueOwned ? "The project's queue tests and merges the approved version itself." : "The app merges the approved version after the project's queue passes it."}`;
+}
 
 /**
  * The personal workspace's additions (talk-to-personalize Step 4, report
@@ -196,6 +201,7 @@ export function renderIntentBrief(
   delivery: RepoDelivery | undefined,
   personal?: PersonalBriefFacts,
   folder?: FolderBriefFacts,
+  queueOwned = false,
 ): string {
   const lines: string[] = [USER_WORDS_PRECEDENCE, intent.userWords, "", `Goal: ${intent.goal}`, ""];
   if (intent.constraints && intent.constraints.length > 0) {
@@ -215,7 +221,7 @@ export function renderIntentBrief(
     lines.push("");
   }
   if (delivery) {
-    lines.push(`Delivery: ${DELIVERY_TEXT[delivery]}.`);
+    lines.push(`Delivery: ${deliveryText(delivery, queueOwned)}.`);
     if (intent.deliveryNote) {
       lines.push(`Delivery note: ${intent.deliveryNote}`);
     }
@@ -305,8 +311,9 @@ export function renderEscalationBrief(
   escalation: EscalationBriefFacts,
   personal?: PersonalBriefFacts,
   folder?: FolderBriefFacts,
+  queueOwned = false,
 ): string {
-  const base = renderIntentBrief(intent, delivery, personal, folder);
+  const base = renderIntentBrief(intent, delivery, personal, folder, queueOwned);
   const previous = escalation.previousModel
     ? `${escalation.previousKey}, on ${escalation.previousModel}`
     : escalation.previousKey;
@@ -347,6 +354,7 @@ export function renderFollowupBrief(
   },
   delivery: RepoDelivery | undefined,
   personal?: PersonalBriefFacts,
+  queueOwned = false,
 ): string {
   return [
     `Goal: ${followup.goal}`,
@@ -357,7 +365,7 @@ export function renderFollowupBrief(
     "",
     // The provenance block already ended with a blank line, so the facts
     // need their own separator only when a Delivery line sits between.
-    ...(delivery ? [`Delivery: ${DELIVERY_TEXT[delivery]}.`] : []),
+    ...(delivery ? [`Delivery: ${deliveryText(delivery, queueOwned)}.`] : []),
     ...(personal ? [...(delivery ? [""] : []), ...renderPersonalFacts(personal)] : []),
   ].join("\n");
 }
@@ -386,9 +394,13 @@ export function withoutDeliveryLine(brief: string): string {
  * its own trailing line for that posture, or drops it for an answer
  * (`withoutDeliveryLine`), so the brief matches the merge it gets.
  */
-export function withDeliveryLine(brief: string, delivery: RepoDelivery | undefined): string {
+export function withDeliveryLine(
+  brief: string,
+  delivery: RepoDelivery | undefined,
+  queueOwned = false,
+): string {
   const rest = withoutDeliveryLine(brief);
-  return delivery ? `${rest.trimEnd()}\n\nDelivery: ${DELIVERY_TEXT[delivery]}.` : rest;
+  return delivery ? `${rest.trimEnd()}\n\nDelivery: ${deliveryText(delivery, queueOwned)}.` : rest;
 }
 
 /** The line a follow-up's brief is filed with, telling it to read its origin itself. */
@@ -1179,6 +1191,7 @@ export function renderReviewBrief(
   intent: SpawnIntent,
   delivery: RepoDelivery,
   facts: ReviewBriefFacts,
+  queueOwned = false,
 ): string {
   const userWords = intent.userWords.trim();
   if (!userWords) {
@@ -1261,6 +1274,6 @@ export function renderReviewBrief(
     "",
     ...(facts.evidenceDir ? [`The builder's evidence folder: ${facts.evidenceDir}`, ""] : []),
     ...(facts.captainCard ? captainCardLines(facts.captainCard) : []),
-    `Delivery: ${DELIVERY_TEXT[delivery]}.`,
+    `Delivery: ${deliveryText(delivery, queueOwned)}.`,
   ].join("\n");
 }

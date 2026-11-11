@@ -4,8 +4,8 @@
  * The shipped queue (.github/workflows/infinitary-queue.yml, generated from
  * src/core/queue/shipped/; docs/forge.md, "The shipped queue") writes each
  * approved change's state as the commit status infinitary/queue. A change
- * whose batch passed reads "Passed batch run N; tree T", and the app merges
- * it. This module reads that state, with the queue's own rules, for
+ * whose batch passed reads "Passed batch run N; tree T", and the updated
+ * queue merges it itself (older queues leave that merge to the app). This module reads that state, with the queue's own rules, for
  * main.yml's first job: a push whose files are exactly a passed batch's
  * needs no check run again, whether the batch passed in its own run or on
  * its confirm (the captain's pick on INF-3052, "Nothing more: the batch's

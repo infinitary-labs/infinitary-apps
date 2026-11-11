@@ -6,8 +6,8 @@
  * pipelines and their jobs' logs, and writes statuses, the pause's issue
  * and the queue's next pipeline. Its jobs write with the project access
  * token Infinitary stores in the project's CI settings, which only the
- * queue's own jobs receive; it pushes and merges nothing: each approver's
- * Infinitary merges its own passed changes.
+ * queue's own jobs receive. A separate merge job merges passed versions;
+ * GitLab starts the ordinary push pipelines for those merges.
  *
  * Two GitLab facts shape it:
  * - GitLab keeps one unfinished commit status per name and person, and
@@ -28,6 +28,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
+import { newestTrustedApproval, readCommitEnvelope } from "./message.mjs";
 import {
   answerWords,
   conflictsWithMain,
@@ -40,6 +41,7 @@ import {
   pauseIssue,
   pauseWrites,
   QUEUE,
+  REMOVED,
   readComposition,
   readQueueState,
   resume,
@@ -95,13 +97,34 @@ async function queueStatuses(api, env, sha) {
       description: status.description ?? "",
       url: status.target_url ?? "",
       createdAt: status.created_at,
+      writer: status.author?.id,
     }));
 }
 
-const queueAt = async (api, env, sha) => readQueueState(await queueStatuses(api, env, sha));
+async function queueAt(api, env, sha, authenticating = true) {
+  const statuses = await queueStatuses(api, env, sha);
+  const state = readQueueState(statuses);
+  if (state?.kind === "passed") {
+    // A by-hand pause answer never merges a passed change and must leave its status untouched.
+    if (!authenticating) return null;
+    const writer = await api.get("/user").catch(() => null);
+    // A replaced token is a different user too: publish rejection, never hide the held state.
+    if (typeof writer?.id !== "number" || statuses[0]?.writer !== writer.id) {
+      const rejected = {
+        head: sha,
+        state: "failure",
+        description: "Rejected queue pass: the current queue key did not write it",
+        url: statuses[0]?.url ?? "",
+      };
+      await writeStatus(api, env, rejected);
+      return readQueueState([{ ...rejected, createdAt: statuses[0]?.createdAt }]);
+    }
+  }
+  return state;
+}
 
 /** Every open merge request with its version, the branch it targets, whether it carries the fix label, and its queue state. */
-export async function readOpenQueue(api, env) {
+export async function readOpenQueue(api, env, authenticating = true) {
   const requests = await api.list(`${project(env)}/merge_requests?state=opened&per_page=100`);
   const open = requests.filter((request) => request.sha);
   return Promise.all(
@@ -110,7 +133,7 @@ export async function readOpenQueue(api, env) {
       head: request.sha,
       base: request.target_branch,
       fix: (request.labels ?? []).some((label) => (label?.name ?? label) === FIX_LABEL),
-      queue: await queueAt(api, env, request.sha),
+      queue: await queueAt(api, env, request.sha, authenticating),
     })),
   );
 }
@@ -140,7 +163,7 @@ async function readFixTimes(api, env, entries) {
 }
 
 /** GitLab's Maintainer role, the least that may let a change's code into a batch. */
-const MAINTAINER = 40;
+export const MAINTAINER = 40;
 
 /**
  * A held change's waiting words: a Developer opened its stretch, which a
@@ -536,7 +559,7 @@ export async function decide({ api, env, log, members, tree }) {
 export async function answer({ api, env, log, action, number, reason }) {
   if (!reason?.trim()) throw new Error("Say why the queue may go on.");
   const url = env.pipelineUrl;
-  const entries = await readOpenQueue(api, env);
+  const entries = await readOpenQueue(api, env, false);
   let except;
   let sent = false;
   let held = null;
@@ -548,7 +571,7 @@ export async function answer({ api, env, log, action, number, reason }) {
       entry = {
         number: request.iid,
         head: request.sha,
-        queue: await queueAt(api, env, request.sha),
+        queue: await queueAt(api, env, request.sha, false),
       };
     }
     const write = sendBack(entry, { reason, url });
@@ -578,7 +601,7 @@ export async function answer({ api, env, log, action, number, reason }) {
       }
     }
   }
-  const writes = resume(await readOpenQueue(api, env), { url, except, endedRun });
+  const writes = resume(await readOpenQueue(api, env, false), { url, except, endedRun });
   for (const write of writes) await writeStatus(api, env, write);
   const words = answerWords({
     number: except,
@@ -690,6 +713,10 @@ export async function run(command, vars = process.env) {
   const api = gitlabApi({ url: vars.CI_API_V4_URL, token });
   const env = ciEnv(vars);
   const log = (text) => console.log(text);
+  if (command === "merge") {
+    await mergePassed({ api, env, log });
+    return;
+  }
   if (command === "form") {
     const formed = await form({
       api,
@@ -725,4 +752,108 @@ export async function run(command, vars = process.env) {
     return;
   }
   throw new Error(`Unknown queue job: ${command}.`);
+}
+
+/** The existing queue token stays in the merge job's environment, never in batch checks. */
+export async function mergePassed({ api, env, log }) {
+  const entries = (await readOpenQueue(api, env))
+    .filter((entry) => entry.base === env.defaultBranch && entry.queue?.kind === "passed")
+    .sort((a, b) => Date.parse(a.queue.since) - Date.parse(b.queue.since) || a.number - b.number);
+  try {
+    let statusFailure;
+    for (const entry of entries) {
+      const withdrawn = async (record) => {
+        if (record?.kind !== "revocation") return false;
+        await writeStatus(api, env, {
+          head: entry.head,
+          state: "failure",
+          description: REMOVED,
+          url: env.pipelineUrl,
+        });
+        return true;
+      };
+      try {
+        const path = `${project(env)}/merge_requests/${entry.number}`;
+        const request = await api.get(path);
+        if (request.state === "locked") throw new Error("The merge request is locked");
+        if (
+          request.state !== "opened" ||
+          request.sha !== entry.head ||
+          request.target_branch !== env.defaultBranch
+        )
+          continue;
+        const queue = await queueAt(api, env, entry.head);
+        if (queue?.kind !== "passed" || queue.run !== entry.queue.run) continue;
+        const approval = await readApproval(api, env, entry.number, entry.head);
+        if (await withdrawn(approval)) continue;
+        if (approval?.kind !== "approval")
+          throw new Error(
+            "No current trusted approval for this version; it was withdrawn or has not been approved.",
+          );
+        const body = readCommitEnvelope(approval.body, entry.head, request.title);
+        const still = await queueAt(api, env, entry.head);
+        if (still?.kind !== "passed" || still.run !== queue.run) continue;
+        const finalApproval = await readApproval(api, env, entry.number, entry.head);
+        if (await withdrawn(finalApproval)) continue;
+        if (
+          finalApproval?.kind !== "approval" ||
+          finalApproval.id !== approval.id ||
+          finalApproval.body !== approval.body
+        )
+          throw new Error("The merge approval changed or was withdrawn before the merge.");
+        let receipt;
+        try {
+          receipt = await api.send("PUT", `${path}/merge`, {
+            sha: entry.head,
+            squash: true,
+            squash_commit_message: body ? `${request.title}\n\n${body}` : request.title,
+          });
+        } catch (error) {
+          const after = await api.get(path).catch(() => null);
+          if (after?.state !== "merged" || after.sha !== entry.head) throw error;
+          receipt = after;
+        }
+        if (receipt.state !== "merged") throw new Error(`GitLab did not merge !${entry.number}.`);
+        log(`Merged !${entry.number} at its passed version.`);
+      } catch (error) {
+        const reason = `Queue merge failed: ${error instanceof Error ? error.message : String(error)}`;
+        log(`!${entry.number}: ${reason}`);
+        try {
+          await writeStatus(api, env, {
+            head: entry.head,
+            state: "failure",
+            description: reason.slice(0, 140),
+            url: env.pipelineUrl,
+          });
+        } catch (writeError) {
+          statusFailure = writeError;
+          log(`!${entry.number}: could not publish the merge failure: ${String(writeError)}`);
+        }
+      }
+    }
+    if (statusFailure) throw statusFailure;
+  } finally {
+    // The access-token merge already starts normal push pipelines: no second after-merge signal.
+    if (entries.length) await startForm(api, env);
+  }
+}
+
+async function readApproval(api, env, number, head) {
+  const comments = await api.list(`${project(env)}/merge_requests/${number}/notes?per_page=100`);
+  const roles = new Map();
+  return newestTrustedApproval(comments, head, async (comment) => {
+    const id = comment.author?.id;
+    if (!id) return false;
+    if (!roles.has(id))
+      roles.set(
+        id,
+        (
+          await api.get(`${project(env)}/members/all/${id}`).catch((error) => {
+            if (error?.status === 404) return null;
+            throw error;
+          })
+        )?.access_level ?? 0,
+      );
+    return roles.get(id) >= MAINTAINER;
+  });
 }

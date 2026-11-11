@@ -57,6 +57,7 @@ export type FailedJob = { name: string; files: string[] };
 
 export const QUEUE: string;
 export const WAITING: string;
+export const REMOVED: string;
 export const FIX_LABEL: string;
 export const PAUSE_LABEL: string;
 export const CHECKS_JOB: string;

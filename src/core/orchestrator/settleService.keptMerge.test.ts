@@ -5,7 +5,10 @@
  * leaves the approval on, the checks a host-run merge makes first, and how
  * an attempt that outlived its answer is read back.
  */
+import { createHash } from "node:crypto";
 import type { Card } from "@shared/cards";
+import type { ChangePresentation } from "@shared/changePresentation";
+import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { describe, expect, it } from "vitest";
 import {
   HEAD,
@@ -16,6 +19,8 @@ import {
   TASK,
 } from "../../../tests/helpers/settleHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import { presentationMarkdown } from "../forge";
+import { QUEUE_OWNED_MERGES_VERSION } from "../queue/shipped";
 import type { MergeAuthorization } from "../storage/taskRecords";
 import type { MergeGuard, MergeStop } from "./changeMerge";
 import { PULL_NOT_THE_TASKS } from "./keptApproval";
@@ -465,4 +470,274 @@ describe("what a kept merge's wait shows", () => {
     await world.kept.runMergeAuthorization(TASK);
     expect(world.tasks.get(TASK)?.closedReason).toBe("merged");
   });
+});
+
+// Captain F3: local approval holds/withdrawals remove the exact remote queue eligibility.
+describe("removing queue marks when an approval stops", () => {
+  it("removes marks on guidance and withdrawal and waits for the effect before any resumed merge", async () => {
+    const removed: string[] = [];
+    let release: (() => void) | undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const world = settleWorld({
+      removeQueuedApproval: async (_task, approval) => {
+        removed.push(approval.head);
+        await held;
+      },
+    });
+    seedDelivery(world.tasks, TASK, { mergeAuthorization: standingApproval() });
+    expect(world.approvals.holdForGuidance(TASK)).toBe(1);
+    let settled = false;
+    const waiting = world.approvals.queueMarksSettled(TASK).then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    release?.();
+    await waiting;
+    expect(removed).toEqual([HEAD]);
+    expect(world.approvals.revokeMergeAuthorization(TASK, "the captain withdrew it")).toBe(true);
+    await world.approvals.queueMarksSettled(TASK);
+    expect(removed).toEqual([HEAD, HEAD]);
+    expect(world.log.some((line) => line.startsWith("merge:"))).toBe(false);
+  });
+});
+
+// Regression in the F3 implementation: a memory-only removal disappeared when an approval was dropped or its task closed.
+describe("durable pending queue removals", () => {
+  it("keeps a secondary approval's removal across replacement and an approval-owner restart", async () => {
+    let rejectWrite: ((error: Error) => void) | undefined;
+    let failed = true;
+    const failure = new Promise<void>((_resolve, reject) => {
+      rejectWrite = reject;
+    });
+    const removed: string[] = [];
+    const world = settleWorld({
+      removeQueuedApproval: async (_task, removal) => {
+        if (failed) await failure;
+        else removed.push(removal.head);
+      },
+    });
+    const secondary = standingApproval({ id: "secondary", approvedHead: OTHER_HEAD });
+    secondary.target = { ...secondary.target, prNumber: PR + 1, branch: "fm/task-other" };
+    secondary.review = {
+      id: "secondary-review",
+      kind: "github",
+      host: secondary.target.host,
+      owner: secondary.target.owner,
+      name: secondary.target.name,
+      number: secondary.target.prNumber,
+      headSha: OTHER_HEAD,
+      branch: secondary.target.branch,
+      base: "main",
+      title: "fix: correct another meter",
+      method: "squash",
+      at: 1,
+    };
+    seedDelivery(world.tasks, TASK, {
+      mergeAuthorization: standingApproval({ queued: [secondary] }),
+    });
+    world.approvals.askAgain(TASK, secondary.review.id);
+    expect(approvalOf(world)?.queued).toBeUndefined();
+    const stopped = world.approvals.queueMarksSettled(TASK);
+    rejectWrite?.(new Error("Host temporarily unavailable"));
+    await expect(stopped).rejects.toThrow("Host temporarily unavailable");
+    expect(approvalOf(world)?.queueRemovals).toMatchObject([
+      { head: OTHER_HEAD, target: { prNumber: PR + 1 } },
+    ]);
+    failed = false;
+    const restarted = world.restartSettles();
+    await restarted.approvals.queueMarksSettled(TASK);
+    expect(removed).toEqual([OTHER_HEAD]);
+    expect(approvalOf(world)?.queueRemovals).toBeUndefined();
+    expect(approvalOf(world)?.status).toBe("standing");
+  });
+
+  it("retries unacknowledged removals for a closed task without scanning closed history", async () => {
+    let rejectWrite: ((error: Error) => void) | undefined;
+    let failed = true;
+    const failure = new Promise<void>((_resolve, reject) => {
+      rejectWrite = reject;
+    });
+    const removed: string[] = [];
+    const world = settleWorld({
+      removeQueuedApproval: async (_task, removal) => {
+        if (failed) await failure;
+        else removed.push(removal.head);
+      },
+    });
+    const secondary = standingApproval({ id: "secondary", approvedHead: OTHER_HEAD });
+    secondary.target = { ...secondary.target, prNumber: PR + 1 };
+    seedDelivery(world.tasks, TASK, {
+      mergeAuthorization: standingApproval({ queued: [secondary] }),
+    });
+    await world.closing.closeTask(TASK, {
+      status: "dropped",
+      reason: "cancelled",
+      actor: "captain",
+    });
+    const stopped = world.approvals.queueMarksSettled(TASK);
+    rejectWrite?.(new Error("Host temporarily unavailable"));
+    await expect(stopped).rejects.toThrow("Host temporarily unavailable");
+    expect(world.tasks.get(TASK)?.status).toBe("dropped");
+    expect(world.tasks.pendingQueueRemovals().map((record) => record.id)).toEqual([TASK]);
+    failed = false;
+    const restarted = world.restartSettles();
+    restarted.kept.resumeMergeAuthorizations();
+    await restarted.approvals.queueMarksSettled(TASK);
+    expect(removed).toEqual([HEAD, OTHER_HEAD]);
+    expect(world.tasks.pendingQueueRemovals()).toEqual([]);
+    expect(world.log.some((line) => line.startsWith("merge:"))).toBe(false);
+  });
+});
+
+// F3 regression: one unavailable destination must not strand another held approval's removal.
+it("continues other queue removals after one fails and retains only the unacknowledged target", async () => {
+  const visited: string[] = [];
+  const world = settleWorld({
+    removeQueuedApproval: async (_task, removal) => {
+      visited.push(removal.head);
+      if (removal.head === HEAD) throw new Error("The first destination is unavailable");
+    },
+  });
+  const secondary = standingApproval({ id: "secondary", approvedHead: OTHER_HEAD });
+  secondary.target = { ...secondary.target, prNumber: PR + 1 };
+  seedDelivery(world.tasks, TASK, {
+    mergeAuthorization: standingApproval({ queued: [secondary] }),
+  });
+  world.approvals.holdForGuidance(TASK);
+  await expect(world.approvals.queueMarksSettled(TASK)).rejects.toThrow("first destination");
+  expect(visited).toEqual([HEAD, OTHER_HEAD]);
+  expect(approvalOf(world)?.queueRemovals?.map((item) => item.head)).toEqual([HEAD]);
+});
+
+// N6: the normal kept-merge caller carries the installed project's route into its result.
+it("uses the installed queue route in the captain's kept-merge result", async () => {
+  const world = approved();
+  world.live.delivery = "queue-pr";
+  world.repos.recordQueue("project", {
+    workflows: [
+      {
+        path: ".github/workflows/infinitary-queue.yml",
+        active: true,
+        shipped: QUEUE_OWNED_MERGES_VERSION,
+      },
+    ],
+  });
+  world.merge = async () => ({ ok: false, stop: "queue", text: "Queued." });
+  const result = await world.settle.reportCardSettle(TASK, "merge-pr");
+  expect(result.text).toContain("The project's queue merges after its pass");
+  expect(result.text).not.toContain("older or project-written");
+});
+
+// F3: late publication cleanup is a new durable effect, not the earlier withdrawal's receipt.
+it("retains a late interrupted publication's removal after an earlier withdrawal was acknowledged", async () => {
+  let failLate = false;
+  const world = settleWorld({
+    removeQueuedApproval: async () => {
+      if (failLate) throw new Error("late removal unavailable");
+    },
+  });
+  const authorization = standingApproval();
+  seedDelivery(world.tasks, TASK, { mergeAuthorization: authorization });
+  const guard = world.approvals.guardOf(TASK, authorization, false);
+  world.approvals.holdForGuidance(TASK);
+  await world.approvals.queueMarksSettled(TASK);
+  expect(approvalOf(world)?.queueRemovals).toBeUndefined();
+  failLate = true;
+  await expect(guard.queueInterrupted?.()).rejects.toThrow("late removal unavailable");
+  expect(approvalOf(world)?.queueRemovals?.map((item) => item.head)).toEqual([HEAD]);
+  const restarted = world.restartSettles();
+  failLate = false;
+  await restarted.approvals.queueMarksSettled(TASK);
+  expect(approvalOf(world)?.queueRemovals).toBeUndefined();
+});
+
+// F4 + INF-3623: an unpublished replacement must not leave old merge words eligible.
+it("suspends unpublished same-head story eligibility through durable removals without ending the click", async () => {
+  let unavailable = true;
+  const removed: string[] = [];
+  const world = settleWorld({
+    removeQueuedApproval: async (_task, removal) => {
+      removed.push(removal.head);
+      if (unavailable) throw new Error("Disposable host unavailable");
+    },
+  });
+  world.repos.recordQueue("project", {
+    workflows: [
+      {
+        path: ".github/workflows/infinitary-queue.yml",
+        active: true,
+        shipped: QUEUE_OWNED_MERGES_VERSION,
+      },
+    ],
+  });
+  const authorization = standingApproval();
+  seedDelivery(world.tasks, TASK, { mergeAuthorization: authorization });
+  const published: ChangePresentation = {
+    version: 1,
+    taskId: TASK,
+    revision: 1,
+    title: "fix: meter story",
+    base: HEAD,
+    head: HEAD,
+    destination: {
+      host: authorization.target.host,
+      projectId: PR,
+      fullName: `${authorization.target.owner}/${authorization.target.name}`,
+      visibility: "private",
+    },
+    why: ["Keep the approved merge words."],
+    whatChanged: ["Earlier approved summary."],
+    before: ["The queue is waiting."],
+    after: ["The queue merges the approved words."],
+    views: [],
+    assets: [],
+    pictures: [],
+    noPicture: "This changes background queue behavior.",
+    verification: [],
+    risk: Object.fromEntries(
+      RISK_DIMENSIONS.map((name) => [name, { level: "low", why: "Disposable queue fixture." }]),
+    ) as RiskDeclaration,
+    requiredActions: [],
+    unfinished: [],
+    projectText: "BREAKING CHANGE: Keep this footer.",
+  };
+  const region = presentationMarkdown(published, new Map(), "passed");
+  const save = (latest: ChangePresentation) =>
+    world.tasks.delivery.updateChangePresentation(TASK, () => ({
+      revisions: [published, latest],
+      receipts: [],
+      published: {
+        revision: published.revision,
+        head: HEAD,
+        state: "confirmed",
+        number: PR,
+        region,
+        regionHash: createHash("sha256").update(region).digest("hex"),
+      },
+    }));
+  // Verification, risk and non-squash surrounding text cannot spend another batch.
+  save({
+    ...published,
+    revision: 2,
+    verification: ["Additional proof."],
+    risk: Object.fromEntries(
+      RISK_DIMENSIONS.map((name) => [name, { level: "medium", why: "Updated assessment." }]),
+    ) as RiskDeclaration,
+    projectText: `Closes #24\n\n${published.projectText}`,
+  });
+  await world.approvals.storyPrepared(TASK, HEAD);
+  expect(removed).toEqual([]);
+  expect(approvalOf(world)?.queueRemovals).toBeUndefined();
+  save({ ...published, revision: 2, whatChanged: ["Newest approved summary."] });
+  await expect(world.approvals.storyPrepared(TASK, HEAD)).rejects.toThrow("unavailable");
+  expect(approvalOf(world)?.status).toBe("standing");
+  expect(approvalOf(world)?.queueRemovals?.map((item) => item.head)).toEqual([HEAD]);
+  unavailable = false;
+  await world.restartSettles().approvals.queueMarksSettled(TASK);
+  expect(removed).toEqual([HEAD, HEAD]);
+  expect(approvalOf(world)?.queueRemovals).toBeUndefined();
+  expect(approvalOf(world)?.status).toBe("standing");
 });

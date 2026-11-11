@@ -27,6 +27,7 @@ import {
   presentationMarkdown,
 } from "../forge";
 import { stageChangePresentation } from "../pi/changePresentation";
+import { commitEnvelope, NAMING_DECISION, readCommitEnvelope } from "../queue/shipped/message.mjs";
 import type { MergeAuthorization } from "../storage/taskRecords";
 
 // Integration cohort (docs/test-cohorts.md): real git at the run's own
@@ -196,6 +197,52 @@ describe("shared story delivery boundaries", () => {
           expect(at.tasks.delivery.changePresentation("ab12cd34")).toEqual(before);
           expect(at.update).not.toHaveBeenCalled();
         }
+      },
+    );
+
+    it.each(["github", "gitlab"] as const)(
+      "publishes current override words for a queue-owned merge on %s",
+      async (kind) => {
+        const at = await stale(kind);
+        override(at, "task");
+        const record = at.tasks.get("ab12cd34");
+        if (!record?.repoId) throw new Error("the project is missing");
+        at.repos.configure(record.repoId, {
+          origin: kind === "github" ? "https://github.com/x/y.git" : "https://gitlab.com/x/y.git",
+          delivery: "queue-pr",
+        });
+        at.repos.recordQueue(record.repoId, {
+          workflows: [
+            {
+              path:
+                kind === "github"
+                  ? ".github/workflows/infinitary-queue.yml"
+                  : ".gitlab/infinitary-queue.yml",
+              active: true,
+              shipped: 10,
+            },
+          ],
+        });
+        const approved: import("../forge").ForgeQueueApproval[] = [];
+        Object.assign(at.forge, { hasChecks: true, markStartsQueue: true });
+        at.forge.markQueued = async (head, details) => {
+          if (details) approved.push(details);
+          at.forge.atHead[head] = [
+            { name: "linux-checks", state: "success" },
+            { name: "infinitary/queue", state: "pending" },
+          ];
+          return { id: 41 };
+        };
+        expect(await at.service.merges.merge("ab12cd34")).toMatchObject({ stop: "queue" });
+        const details = approved[0];
+        if (!details) throw new Error("no approved queue words");
+        const packet = commitEnvelope(repaired, details.message ?? "", details.title, {
+          naming: details.naming ? NAMING_DECISION.checked : NAMING_DECISION.off,
+        });
+        expect(readCommitEnvelope(packet, repaired, details.title)).toBe(
+          "Keeps the merge moving.\n\nBREAKING CHANGE: The story hold reads the override.",
+        );
+        expect(at.putIn).not.toHaveBeenCalled();
       },
     );
 

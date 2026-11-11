@@ -84,6 +84,7 @@ export class KeptMerge {
       return { ok: false, stop: "withdrawn", text: "The kept merge approval no longer stands." };
     const lease = this.locks.claim(taskId, "merge-pr");
     try {
+      await this.approvals.queueMarksSettled(taskId);
       const result = await this.host.mergeReview(
         taskId,
         reviewId,
@@ -95,7 +96,7 @@ export class KeptMerge {
         const outcome = kept
           ? {
               ...result,
-              text: `${result.text}\n\n${keptNote(kept.wait, kept.head, placeOf(this.host.repos, record), currentCheckStatus(this.host.tasks.get(taskId)?.delivery), queueWarning)}`,
+              text: `${result.text}\n\n${keptNote(kept.wait, kept.head, placeOf(this.host.repos, record), currentCheckStatus(this.host.tasks.get(taskId)?.delivery), queueWarning, this.approvals.queueOwnsMerge(taskId))}`,
             }
           : result;
         if (kept?.changed && unattended)
@@ -107,6 +108,7 @@ export class KeptMerge {
               kept.wait,
               placeOf(this.host.repos, record),
               currentCheckStatus(this.host.tasks.get(taskId)?.delivery),
+              this.approvals.queueOwnsMerge(taskId),
             ),
           );
         }
@@ -133,6 +135,7 @@ export class KeptMerge {
    * It reads no review (INF-1876).
    */
   async runMergeAuthorization(taskId: string): Promise<void> {
+    await this.approvals.queueMarksSettled(taskId);
     // Each approved pull request on the task goes ahead on its own
     // (INF-2746): the one in front runs, and when it did not merge or end
     // it steps back so the next runs in the same pass. Each runs once.
@@ -198,6 +201,7 @@ export class KeptMerge {
               checked.wait,
               placeOf(this.host.repos, record),
               currentCheckStatus(this.host.tasks.get(taskId)?.delivery),
+              this.approvals.queueOwnsMerge(taskId),
             ),
           },
           checked.wait,
@@ -274,14 +278,22 @@ export class KeptMerge {
     if (!wakesFirstmate(wait) && (wait !== "queue" || queueWarning === undefined)) return;
     const record = this.host.tasks.get(taskId);
     const place = placeOf(this.host.repos, record);
-    this.settle.settleLine(taskId, keptFeedLine(wait, place, currentCheckStatus(record?.delivery)));
+    this.settle.settleLine(
+      taskId,
+      keptFeedLine(
+        wait,
+        place,
+        currentCheckStatus(record?.delivery),
+        this.approvals.queueOwnsMerge(taskId),
+      ),
+    );
     this.settle.wakeOnSettle(
       taskId,
       title,
       "merge-pr (kept)",
       {
         ...result,
-        text: `${result.text}\n\n${keptNote(wait, head, place, currentCheckStatus(record?.delivery), queueWarning)}`,
+        text: `${result.text}\n\n${keptNote(wait, head, place, currentCheckStatus(record?.delivery), queueWarning, this.approvals.queueOwnsMerge(taskId))}`,
       },
       [],
       standingAuthorization(record?.delivery)?.issuer !== "autonomy",
@@ -455,6 +467,8 @@ export class KeptMerge {
    * approval runs once - an attempt token first reads its pull request back.
    */
   resumeMergeAuthorizations(): void {
+    for (const record of this.host.tasks.pendingQueueRemovals())
+      void this.approvals.queueMarksSettled(record.id).catch(() => {});
     for (const record of this.host.tasks.listLive()) {
       if (record.delivery?.mergeOrder) {
         this.host.tasks.delivery.recordPermissionRecords(record.id, { mergeOrder: undefined });
@@ -465,6 +479,8 @@ export class KeptMerge {
           text,
         });
       }
+      const approval = record.delivery?.mergeAuthorization;
+      if (approval) this.approvals.restoreQueueMarks(record.id, approval);
       if (
         !standingAuthorization(record.delivery) &&
         !record.delivery?.mergeAuthorization?.queued?.length

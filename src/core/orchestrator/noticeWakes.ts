@@ -428,7 +428,7 @@ function renderQueueOffered(facts: Extract<WakeFacts, { kind: "queue-offered" }>
   const project = `"${facts.project.name}" (repo_id ${facts.project.id})`;
   const what =
     facts.offer === "update"
-      ? `is Infinitary's shipped queue ${facts.from === undefined ? "at an older version" : `version ${facts.from}`}, and this Infinitary carries version ${facts.to}. Offer the captain, on one decision card, a task in that project whose brief names the queue-setup skill's "Updating it": a pull request that copies the newer stamped files over the old ones and changes nothing else.`
+      ? `is Infinitary's shipped queue ${facts.from === undefined ? "at an older version" : `version ${facts.from}`}, and this Infinitary carries version ${facts.to}. Offer the captain, on one decision card, a task in that project whose brief names the queue-setup skill's "Updating it": a pull request that copies the newer stamped files over the old ones, preserves the team's batch-check grants, and wires the project's after-merge workflows as that skill describes.`
       : `is the project's own workflow (${(facts.workflows ?? []).map((workflow) => workflow.path).join(", ") || "as last read"}), which answers ${QUEUE_STATUS} and keeps working. Offer the captain, on one decision card, a planning task in that project whose brief names the queue-setup skill: a plan to replace it with the fix-forward queue Infinitary ships version ${facts.to}, where a red batch pauses until its fix is approved into a batch instead of failing every change.`;
   return `${QUEUE_OFFERED_OPENING} ${project} ${what} Not now keeps the queue as it is; the app offers this once.`;
 }

@@ -352,6 +352,10 @@ export type CrewSupervisorOptions = {
   panelAskAnswered?: (askId: string, choice: IntegrationApprovalChoice) => void;
   /** The pinned pull request by its number, for a kept approval's reconcile. */
   readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;
+  removeQueuedApproval?: (
+    taskId: string,
+    removal: import("../storage/taskRecords").QueueApprovalRemoval,
+  ) => Promise<void>;
   /** Close the change where the project lives on discard, injected beside mergePullRequest. */
   closePullRequest?: (taskId: string) => Promise<PrOutcome>;
   /**

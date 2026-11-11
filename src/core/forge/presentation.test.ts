@@ -5,6 +5,7 @@ import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { DomUtils, parseDocument } from "htmlparser2";
 import { describe, expect, it } from "vitest";
 import { DEMO_POSTER, DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
+import { readCommitEnvelope } from "../queue/shipped/message.mjs";
 import {
   PresentationAroundError,
   presentationCardBody,
@@ -134,6 +135,28 @@ function inGrid(body: string) {
 }
 
 describe("the layout GitHub can actually display", () => {
+  // The approval-record boundary: public stories carry narrative, not queue authority.
+  it("publishes either story format without a queue approval envelope", () => {
+    for (const version of [1, 2] as const) {
+      const selected = story([], "private");
+      selected.version = version;
+      selected.whatChanged = [
+        "Keep the summary.\nRetain its line break.",
+        "Preserve underscore_names.",
+      ];
+      selected.projectText = "BREAKING CHANGE: The queue owns merges.";
+      const rendered = `${selected.projectText}\n\n${presentationMarkdown(selected, urls, "passed")}`;
+      expect(rendered).not.toContain("<!-- infinitary-squash:");
+      expect(() =>
+        readCommitEnvelope(rendered, selected.head, "An actual pull request title"),
+      ).toThrow("approved naming policy");
+      // Literal queue words still come from the saved story, not its flattened display.
+      expect(presentationCommitMessage(selected)).toBe(
+        `${selected.whatChanged.join("\n\n")}\n\n${selected.projectText}`,
+      );
+    }
+  });
+
   it("keeps the squash summary plain and its breaking footer outside the evidence rendering (INF-228 F2)", () => {
     const selected = story(["picture", "recording"], "private");
     selected.whatChanged = [

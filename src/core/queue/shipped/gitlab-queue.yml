@@ -8,15 +8,14 @@
 # onto the default branch, and the checks job runs the project's batch checks
 # (.gitlab/infinitary-batch-checks.yml, the one file of the queue the project
 # writes itself) on the composed batch as a child pipeline. The verdict job
-# writes the result: green passes every change, and each approver's
-# Infinitary merges its own. Red pauses every change behind one issue, reruns
-# nothing and blames no change. A merge request labelled
+# writes the result: green passes every change, then the merge job merges it.
+# Red pauses every change behind one issue, reruns nothing and blames no change. A merge request labelled
 # infinitary-queue-fix after the pause began ends it once it is approved; a
 # resume or a send-back by hand from Infinitary ends it too.
 #
-# The form and verdict jobs write with the project access token Infinitary
+# The form, verdict and merge jobs write with the project access token Infinitary
 # keeps as INFINITARY_QUEUE_TOKEN: masked, protected, and scoped to the
-# infinitary-queue environment, which only these two jobs name, so nothing
+# infinitary-queue environment, which only the queue jobs name, so nothing
 # in a batch receives it.
 
 .infinitary-queue:
@@ -28,7 +27,7 @@
 # One queue job at a time across pipelines: every form reads the queue again,
 # so a start that waits loses nothing.
 # The checks job is a trigger job, which GitLab refuses an image, so only
-# the two jobs that run the queue's script name one.
+# the jobs that run the queue's script name one.
 infinitary-queue-form:
   extends: .infinitary-queue
   image: node:22
@@ -76,3 +75,19 @@ infinitary-queue-verdict:
       when: always
   script:
     - node .gitlab/infinitary/gitlab-cli.mjs decide
+
+# Only trusted queue instructions run here; the batch child never receives this environment's key.
+infinitary-queue-merge:
+  extends: .infinitary-queue
+  image: node:22
+  resource_group: infinitary-queue
+  environment:
+    name: infinitary-queue
+    action: prepare
+  needs:
+    - job: infinitary-queue-verdict
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "api" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: always
+  script:
+    - node .gitlab/infinitary/gitlab-cli.mjs merge

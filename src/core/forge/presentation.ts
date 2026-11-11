@@ -6,6 +6,7 @@ import type {
 } from "@shared/changePresentation";
 import { hostedPresentation, presentationFormat } from "@shared/presentationDestination";
 import { RISK_DIMENSIONS, RISK_WORDS } from "@shared/risk";
+import { commitMessage } from "../queue/shipped/message.mjs";
 import type { AttachmentMediaType } from "./attachments";
 import {
   presentationMarkdownText as markdown,
@@ -207,10 +208,7 @@ export function presentationCardBody(story: ChangePresentation): string {
 export function presentationCommitMessage(
   story: Pick<ChangePresentation, "whatChanged" | "projectText">,
 ): string {
-  // Conventional footers are structured project text, not scraped rendered Markdown.
-  // Keep their continuation lines so the release reader and people retain the full warning.
-  const footer = /^BREAKING[ -]CHANGE:[^\r\n]*(?:\r?\n[^\r\n]+)*/m.exec(story.projectText)?.[0];
-  return [...story.whatChanged, ...(footer ? [footer.replaceAll("\r\n", "\n")] : [])].join("\n\n");
+  return commitMessage(story);
 }
 
 /** The exact same story; CardService keeps the risk chart, requirements and merge controls. */

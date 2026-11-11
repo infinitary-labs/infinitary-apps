@@ -777,8 +777,9 @@ describe("the signed channel workflow", () => {
           },
           paginate: async (method: symbol, parameters: Record<string, unknown>) => {
             if (method === listRuns && parameters.workflow_id === "main.yml") {
-              // Only a push to main of the alpha's exact source vouches for it.
-              expect(parameters).toMatchObject({ head_sha: source, event: "push", branch: "main" });
+              // Approved queue-owned merges also start exact-source main checks by signal.
+              expect(parameters).toMatchObject({ head_sha: source, branch: "main" });
+              expect(parameters.event).toBeUndefined();
               return scenario.endsWith("with no main run") ? [] : [mainRun];
             }
             if (method === listRuns) {

@@ -30,6 +30,8 @@ const PROJECT = "acme%2Fshop";
 /** A Maintainer, whose Infinitary marks and whose queue key writes; and a Developer. */
 const MAINTAINER_ID = 7;
 const DEVELOPER_ID = 8;
+/** The separate project-token bot that writes queue verdicts. */
+const QUEUE_USER_ID = 9;
 const server = "https://gitlab.example.com";
 const sha = (n: number) => n.toString(16).padStart(40, "a");
 const TREE = "be6452e81a110b0c50d7354add8d59a231807cce";
@@ -79,6 +81,7 @@ class Project {
   /** Each member's role by user id: 40 is Maintainer, 30 Developer. The queue's own key is a Maintainer. */
   members = new Map<number, number>([
     [MAINTAINER_ID, 40],
+    [QUEUE_USER_ID, 40],
     [DEVELOPER_ID, 30],
   ]);
   /** Who approves each merge request now, by user id. */
@@ -159,7 +162,7 @@ class Project {
     ]);
   }
 
-  write(at: string, status: string, description: string, url: string, by = MAINTAINER_ID): void {
+  write(at: string, status: string, description: string, url: string, by = QUEUE_USER_ID): void {
     const list = this.statuses.get(at) ?? [];
     // GitLab keeps one unfinished status per name and refuses to set it
     // waiting again: the queue writes only finished ones.
@@ -189,10 +192,11 @@ class Project {
     return { ...queueKind(state, latest.description), ...latest };
   }
 
-  api(): GitLabQueueApi {
+  api(actor = QUEUE_USER_ID): GitLabQueueApi {
     const base = `/projects/${PROJECT}`;
     const route = (method: string, path: string, body?: Record<string, unknown>): unknown => {
       const url = new URL(path, server);
+      if (method === "GET" && url.pathname === "/user") return { id: actor };
       if (!url.pathname.startsWith(base)) throw new Error(`Not this project: ${path}`);
       const at = url.pathname.slice(base.length);
       // The path's captured parts, once `hit` matched it.
@@ -236,6 +240,7 @@ class Project {
           String(body?.state),
           String(body?.description),
           String(body?.target_url ?? ""),
+          actor,
         );
         return {};
       }
@@ -650,6 +655,33 @@ describe("the shipped queue on GitLab", () => {
     ]);
   });
 
+  // Regression: manual pause answers use a person's sign-in, not the separate verdict key.
+  it("leaves a legitimate queue-bot pass unchanged when a person resumes another batch", async () => {
+    const project = new Project();
+    project.open(61);
+    project.approve(61);
+    const passed = await formRun(project, 503);
+    project.checks.set(503, { id: 603, status: "success", web_url: `${server}/p/603` });
+    await decideRun(project, 503, passed.members);
+    const before = structuredClone(project.statuses.get(sha(61)));
+    project.open(91);
+    project.approve(91);
+    const paused = await formRun(project, 510);
+    project.checks.set(510, { id: 610, status: "failed", web_url: `${server}/p/610` });
+    await decideRun(project, 510, paused.members);
+    const started = [...project.started];
+    await answer({
+      api: project.api(MAINTAINER_ID),
+      env: envOf(0),
+      log: () => {},
+      action: "resume",
+      reason: "the failed runner is repaired",
+    });
+    expect(project.statuses.get(sha(61))).toEqual(before);
+    expect(project.queueOf(91)).toMatchObject({ kind: "waiting", author: { id: MAINTAINER_ID } });
+    expect(project.started).toEqual([...started, { ref: "main" }]);
+  });
+
   it("resumes by hand with a reason, or sends one change back and resumes the rest", async () => {
     const project = new Project();
     for (const number of [91, 92, 93]) {
@@ -826,7 +858,12 @@ describe("the shipped queue on GitLab", () => {
     const named = jobs
       .filter(([, job]) => (job.environment as { name?: string } | undefined)?.name)
       .map(([name]) => name);
-    expect(named).toEqual(["infinitary-queue-form", "infinitary-queue-verdict"]);
+    // Approved queue-owned merges add one trusted job, not authority in the checks child.
+    expect(named).toEqual([
+      "infinitary-queue-form",
+      "infinitary-queue-verdict",
+      "infinitary-queue-merge",
+    ]);
     expect(queue[CHECKS_JOB]?.environment).toBeUndefined();
     expect(queue["infinitary-queue-form"]?.environment).toEqual({
       name: QUEUE_ENVIRONMENT,
@@ -835,6 +872,10 @@ describe("the shipped queue on GitLab", () => {
     const rule = '$CI_PIPELINE_SOURCE == "api" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH';
     expect(queue[".infinitary-queue"]?.rules).toEqual([{ if: rule }]);
     expect(queue["infinitary-queue-verdict"]?.rules).toEqual([{ if: rule, when: "always" }]);
+    expect(queue["infinitary-queue-merge"]?.rules).toEqual([{ if: rule, when: "always" }]);
+    expect(queue["infinitary-queue-merge"]?.environment).toEqual(
+      queue["infinitary-queue-form"]?.environment,
+    );
 
     const child = yaml.load(batchPipeline({ heads: `1:${sha(1)}`, base: sha(9), tree: TREE }));
     expect(child.include).toEqual([

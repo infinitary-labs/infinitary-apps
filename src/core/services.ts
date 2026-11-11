@@ -775,6 +775,8 @@ export async function createServices(
       placed.copies.writeEvidenceFile(taskId, deviceId, name, file),
   });
   const presentations: ChangePresentations = new ChangePresentations({
+    onPrepared: (taskId, head, branch) =>
+      supervisor.settling.approvals.storyPrepared(taskId, head, branch),
     validationEvidence: (taskId, evidence) =>
       readKeptValidationEvidence(evidence, crewmateCardPicturesDir(paths, taskId), taskId),
     namingRule: () => runbooks.naming(),
@@ -1058,10 +1060,7 @@ export async function createServices(
         effect?.();
       });
     },
-    mergePullRequest: (taskId, guard, beforeDispatch) =>
-      changeDelivery.merges.merge(taskId, guard, beforeDispatch),
-    mergeReview: (taskId, reviewId, guard) =>
-      changeDelivery.reviews.mergeReview(taskId, reviewId, guard),
+    ...changeDelivery.settleHooks,
     // An integration's ask runs through its binding; every other is a forge write.
     sendWriteAsk: (taskId, askId, choice) =>
       tasks.get(taskId)?.delivery?.writeAsks?.find((ask) => ask.id === askId)?.kind ===

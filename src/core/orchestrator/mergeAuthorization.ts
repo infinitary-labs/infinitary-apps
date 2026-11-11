@@ -134,10 +134,11 @@ export function putInFront(
   const next = others[index];
   if (top.status !== "standing" || top.attempt || !next) return undefined;
   const rest = others.filter((_, at) => at !== index);
-  const { queued: _others, guidance: _marks, ...stepped } = top;
+  const { queued: _others, guidance: _marks, queueRemovals: _removals, ...stepped } = top;
   return {
     ...next,
     guidance: top.guidance,
+    queueRemovals: top.queueRemovals,
     queued: toBack ? [...rest, stepped] : [stepped, ...rest],
   };
 }
@@ -696,7 +697,12 @@ export const MERGE_CHECKS_HOLD_REASON = "the checks have not all passed";
  * from waiting for results (captain F20/F27), never a separate crew verdict.
  * It is a line on the task's record, so the task's key names it (INF-1845).
  */
-export function keptFeedLine(wait: MergeWait, place: string, checks?: string): string {
+export function keptFeedLine(
+  wait: MergeWait,
+  place: string,
+  checks?: string,
+  queueOwned = false,
+): string {
   const kept = "Your merge is kept";
   switch (wait) {
     case "conflict":
@@ -726,7 +732,7 @@ export function keptFeedLine(wait: MergeWait, place: string, checks?: string): s
     case "guidance":
       return `Cannot merge yet: its crewmate has not said whether your newer words change the work you approved. ${kept} and runs once it says they do not.`;
     case "queue":
-      return `${QUEUE_WAITING_WORDS}: your project's queue is testing this version with other approved work. ${kept} and runs once that check passes.`;
+      return `${QUEUE_WAITING_WORDS}: your project's queue is testing this version with other approved work. ${kept}. ${queueOwned ? "Your project's queue will merge it after its checks pass." : "The app will merge it after your project's queue passes it."}`;
   }
 }
 
@@ -750,6 +756,7 @@ export function keptNote(
   place: string,
   checks?: string,
   queueWarning?: string,
+  queueOwned = false,
 ): string {
   const kept =
     "The captain's merge approval is KEPT: the host merges by itself once the gates pass, so do not ask the captain to merge again or to put up a new card.";
@@ -782,7 +789,7 @@ export function keptNote(
     case "guidance":
       return `${kept} The captain gave the crewmate new guidance after their click, and the merge holds until it declares that guidance's impact with check_change captainGuidance: none keeps the approval; changed-work ends it and it puts up a new merge card. The message itself told the crewmate, so nothing is needed from you unless it ends its turn without declaring.`;
     case "queue":
-      return `${kept} The project merges through its queue: the host marked ${head} with the ${QUEUE_STATUS} status, waiting, and merges once the queue sets it to success.${queueWarning ? ` ${queueWarning}` : ""} A batch that fails in the queue Infinitary ships keeps the version waiting and pauses, and you hear the pause once; a change the queue fails or sends back wakes the crewmate like any failed check. ${declare}`;
+      return `${kept} The project merges through its queue: the host marked ${head} with the ${QUEUE_STATUS} status, waiting. ${queueOwned ? "The project's queue merges after its pass; the app observes its receipt." : "The app merges after the project's queue passes this version."}${queueWarning ? ` ${queueWarning}` : ""} A batch that fails in the queue Infinitary ships keeps the version waiting and pauses, and you hear the pause once; a change the queue fails or sends back wakes the crewmate like any failed check. ${declare}`;
   }
 }
 

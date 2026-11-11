@@ -219,7 +219,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The run must have succeeded with every lane's latest execution completed successfully, each Linux journey shard included.
   An alpha that ran only the journeys part, with no Linux checks job, needs complete Linux shard sets and also validated exact-source main proof for the rest.
   An automatic alpha that ran no lane reused every one, so it is promoted only when the run it reused also holds complete Linux shard sets: its swept batch's, or a main run from before INF-2480, which carried every journey (`scripts/main-alpha-proof.mjs`).
-  Reuse reads GitHub's run and latest per-job executions, requires the trusted main-push identity and the full-check owners, the Linux checks and the three Mac jobs (or, in a run from before INF-2779, the one `mac` job), and refuses skipped required owners, partial, cancelled, failed or other-source results.
+  Reuse reads GitHub's run and latest per-job executions, requires a trusted main push or queue after-merge signal and the full-check owners, the Linux checks and the three Mac jobs (or, in a run from before INF-2779, the one `mac` job), and refuses skipped required owners, partial, cancelled, failed or other-source results.
   The Linux checks are the `linux-checks` lane and every Linux test group's complete set, or, in a run from before INF-2646 split them, the one `linux-checks` job that ran them all (`scripts/main-alpha-proof.mjs`).
   A manual alpha without reusable main proof, including a rehearsal, still runs full verification.
   A stable is refused without its alpha's proof, never verified again on its own.
@@ -353,7 +353,7 @@ Main runs no phone check ("An alpha does not wait on the phone check", below).
 A failed, cancelled or incomplete main run cuts nothing; main's waiting-version coalescing and fix-forward process stay unchanged.
 
 1. **Validate the completed run.**
-   The resolver reads the completed successful trusted main-push run and every latest per-job execution from GitHub.
+   The resolver reads the completed successful trusted main run, started by a push or the queue's after-merge signal, and every latest per-job execution from GitHub.
    It requires the full-check owners, the Linux checks (the `linux-checks` lane and every Linux test group) and `mac`, at exactly the source being released.
    A covered main run, whose files a passed swept batch already checked, names that batch run instead; the resolver then reads the batch run's two owners and requires the tree its batch checks name to be the source's tree, and accepts a batch that passed on its confirm, whose failed jobs the confirm ran again (`docs/testing.md`, "The swept batch").
 2. **Keep the same source.**
@@ -390,6 +390,7 @@ Tests, the phone, docs, `.github/`, `release-notes/` and every other script neve
 A skipped merge is not lost: the next alpha that cuts carries it, and that alpha's notes check covers its note or exclusion.
 A failed or cancelled alpha publishes no tag, so the next run still finds the change and cuts.
 Main's full check still runs on every merge that changes more than the phone app or the docs, and its green mark still moves.
+Queue-owned merges reach it through the shared after-merge signal; an ignored-only signal cancels its sorting run without a full check or an alpha.
 Skipped runs leave gaps in the alpha numbers, which already skip run numbers.
 Manual alpha requests, recoveries, rehearsals and stable promotions never skip.
 

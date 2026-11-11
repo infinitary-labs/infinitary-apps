@@ -1,5 +1,12 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
+import {
+  commitEnvelope,
+  NAMING_DECISION,
+  readCommitEnvelope,
+  revocationEnvelope,
+} from "../../../queue/shipped/message.mjs";
+import { REMOVED } from "../../../queue/shipped/rules.mjs";
 import { GitLabForge } from "./gitlabForge";
 
 /**
@@ -28,9 +35,9 @@ const request = (fields: Record<string, unknown> = {}) => ({
   ...fields,
 });
 
-function forgeAnswering(answer: (method: string, path: string) => Response) {
+function forgeAnswering(answer: (method: string, path: string, init?: RequestInit) => Response) {
   const fetcher = vi.fn<typeof fetch>(async (input, init) =>
-    answer(init?.method ?? "GET", new URL(String(input)).pathname),
+    answer(init?.method ?? "GET", new URL(String(input)).pathname, init),
   );
   const rejected = vi.fn();
   const forge = new GitLabForge(
@@ -46,6 +53,203 @@ function forgeAnswering(answer: (method: string, path: string) => Response) {
 }
 
 describe("GitLabForge", () => {
+  // F3: a local hold during the publisher's read cannot mint a newer public approval.
+  it("does not publish approval when its local permission ends during the GitLab read", async () => {
+    const current = request();
+    let held = false;
+    const { forge, fetcher } = forgeAnswering((method) => {
+      if (method === "GET") {
+        held = true;
+        return Response.json(current);
+      }
+      return Response.json({ id: 71 });
+    });
+    await expect(
+      forge.markQueued(current.sha, {
+        number: current.iid,
+        title: current.title,
+        naming: null,
+        beforeDispatch: () => (held ? "The merge approval was withdrawn" : undefined),
+      }),
+    ).rejects.toThrow("The merge approval was withdrawn");
+    expect(fetcher.mock.calls.filter(([, init]) => init?.method === "POST")).toEqual([]);
+  });
+
+  // F4/F5 + INF-3623: a passive reconcile never gets authority to rebind an external edit.
+  it("rejects a retitled old approval and preserves the named mark's summary and footer", async () => {
+    const current = request({
+      title: "Approved meter story",
+      description: "Named-review summary.\n\nBREAKING CHANGE: Keep once.",
+    });
+    const approvedTitle = current.title;
+    current.title = "Unapproved edit";
+    const notes: string[] = [];
+    const { forge, fetcher } = forgeAnswering((method, path, init) => {
+      if (method === "GET" && path.endsWith(`/merge_requests/${current.iid}`))
+        return Response.json(current);
+      if (method === "POST" && path.endsWith("/notes")) {
+        notes.push((JSON.parse(String(init?.body)) as { body: string }).body);
+        return Response.json({ id: 72 });
+      }
+      if (method === "POST" && path.endsWith(`/statuses/${current.sha}`))
+        return Response.json({ id: 73 });
+      return Response.json({ message: "Unexpected request" }, { status: 500 });
+    });
+    const approval = { number: current.iid, title: approvedTitle, naming: null };
+    await expect(forge.markQueued(current.sha, approval)).rejects.toThrow("moved");
+    expect(fetcher.mock.calls.filter(([, init]) => init?.method !== "GET")).toEqual([]);
+    current.title = approvedTitle;
+    await forge.markQueued(current.sha, approval);
+    expect(readCommitEnvelope(notes[0] ?? "", current.sha, approvedTitle)).toBe(
+      current.description,
+    );
+    expect(
+      fetcher.mock.calls
+        .filter(([, init]) => init?.method !== "GET")
+        .map(([url]) => new URL(String(url)).pathname),
+    ).toEqual([
+      `/api/v4${PROJECT}/merge_requests/${current.iid}/notes`,
+      `/api/v4${PROJECT}/statuses/${current.sha}`,
+    ]);
+  });
+
+  // Withdrawal must not invent authority or repeatedly post an untrusted revocation.
+  it("acknowledges Developer-only approval data without writing on either removal attempt", async () => {
+    const current = request();
+    const notes = [
+      {
+        id: 71,
+        author: { id: 7 },
+        body: `<!-- infinitary-merge-approval -->\n${commitEnvelope(current.sha, "Approved words", current.title, { naming: NAMING_DECISION.off })}`,
+      },
+    ];
+    const { forge, fetcher } = forgeAnswering((method, path) => {
+      if (method === "GET" && path.endsWith("/notes")) return Response.json(notes);
+      if (method === "GET" && path.endsWith("/members/all/7"))
+        return Response.json({ access_level: 30 });
+      return Response.json({ message: "Unexpected write" }, { status: 500 });
+    });
+    await forge.removeQueued(current.sha, current.iid);
+    await forge.removeQueued(current.sha, current.iid);
+    expect(fetcher.mock.calls.filter(([, init]) => init?.method !== "GET")).toEqual([]);
+  });
+
+  // An active Maintainer record cannot be acknowledged or spammed with Developer revocations.
+  it("refuses repeated Developer withdrawals before posting against a Maintainer's approval", async () => {
+    const current = request();
+    const { forge, fetcher } = forgeAnswering((method, path) => {
+      if (method === "GET" && path.endsWith("/notes"))
+        return Response.json([
+          {
+            id: 71,
+            author: { id: 8 },
+            body: `<!-- infinitary-merge-approval -->\n${commitEnvelope(current.sha, "Approved words", current.title, { naming: NAMING_DECISION.off })}`,
+          },
+        ]);
+      if (method === "GET" && path.endsWith("/members/all/8"))
+        return Response.json({ access_level: 40 });
+      if (method === "GET" && path === "/api/v4/user") return Response.json({ id: 7 });
+      if (method === "GET" && path.endsWith("/members/all/7"))
+        return Response.json({ access_level: 30 });
+      return Response.json({ message: "Unexpected write" }, { status: 500 });
+    });
+    await expect(forge.removeQueued(current.sha, current.iid)).rejects.toMatchObject({
+      failure: "permission",
+    });
+    await expect(forge.removeQueued(current.sha, current.iid)).rejects.toMatchObject({
+      failure: "permission",
+    });
+    expect(fetcher.mock.calls.filter(([, init]) => init?.method !== "GET")).toEqual([]);
+  });
+
+  // Captain F3/F4/N3: the existing GitLab key receives current approved words,
+  // including naming switched off, without replacing the contributor's description.
+  it("binds the approved comment to its mark and removes a held version", async () => {
+    const current = request({ title: "An approved free-form title" });
+    const notes: { id: number; body: string; author: { id: number } }[] = [
+      { id: 70, body: revocationEnvelope(current.sha), author: { id: 8 } },
+    ];
+    const statuses: { id: number; name: string; status: string; description: string }[] = [];
+    const { forge, fetcher } = forgeAnswering((method, path, init) => {
+      if (method === "GET" && path === `/api/v4${PROJECT}/merge_requests/${current.iid}`)
+        return Response.json(current);
+      if (method === "POST" && path.endsWith("/notes")) {
+        const note = {
+          id: 71 + notes.length,
+          body: (JSON.parse(String(init?.body)) as { body: string }).body,
+          author: { id: 7 },
+        };
+        notes.push(note);
+        return Response.json(note);
+      }
+      if (method === "GET" && path.endsWith("/notes")) return Response.json(notes);
+      if (method === "GET" && path === "/api/v4/user") return Response.json({ id: 7 });
+      if (method === "GET" && path.endsWith("/members/all/7"))
+        return Response.json({ access_level: 40 });
+      if (method === "POST" && path.endsWith(`/statuses/${current.sha}`)) {
+        const body = JSON.parse(String(init?.body)) as {
+          name: string;
+          state: string;
+          description: string;
+        };
+        const id = statuses.length + 41;
+        statuses.unshift({
+          id,
+          name: body.name,
+          status: body.state,
+          description: body.description,
+        });
+        return Response.json({ id });
+      }
+      if (method === "GET" && path.endsWith(`/repository/commits/${current.sha}/statuses`))
+        return Response.json(statuses);
+      return Response.json({ message: "Not found" }, { status: 404 });
+    });
+    await forge.removeQueued(current.sha, current.iid);
+    expect(fetcher.mock.calls.filter(([, init]) => init?.method === "POST")).toEqual([]);
+    await forge.markQueued(current.sha, {
+      number: current.iid,
+      title: current.title,
+      message: "The current override",
+      naming: null,
+    });
+    const commentWrite = fetcher.mock.calls.find(
+      ([url, init]) =>
+        init?.method === "POST" &&
+        String(url).endsWith("/notes") &&
+        String(init.body).includes("infinitary-merge-approval"),
+    );
+    const comment = JSON.parse(String(commentWrite?.[1]?.body)) as { body: string };
+    const encoded = /<!-- infinitary-squash:([0-9a-f]+) -->/.exec(comment.body)?.[1];
+    if (!encoded) throw new Error("the approval packet is missing");
+    const packet = JSON.parse(Buffer.from(encoded, "hex").toString("utf8")) as { naming: unknown };
+    expect(packet.naming).toBe(NAMING_DECISION.off);
+    expect(readCommitEnvelope(comment.body, current.sha, current.title)).toBe(
+      "The current override",
+    );
+    const mark = fetcher.mock.calls.find(
+      ([url, init]) => init?.method === "POST" && String(url).endsWith(`/statuses/${current.sha}`),
+    );
+    expect(JSON.parse(String(mark?.[1]?.body))).toMatchObject({
+      state: "skipped",
+      target_url: `${current.web_url}#note_${notes.at(-1)?.id}`,
+    });
+    await forge.removeQueued(current.sha, current.iid);
+    expect(notes.at(-1)).toMatchObject({
+      author: { id: 7 },
+      body: expect.stringContaining(revocationEnvelope(current.sha)),
+    });
+    const writes = fetcher.mock.calls.filter(([, init]) => init?.method === "POST");
+    expect(JSON.parse(String(writes.at(-1)?.[1]?.body))).toMatchObject({
+      state: "failed",
+      description: REMOVED,
+    });
+    await forge.removeQueued(current.sha, current.iid);
+    expect(fetcher.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(
+      writes.length,
+    );
+  });
+
   it("INF-203 F5: removes only the prerequisite draft prefix, at the reviewed version", async () => {
     let draft = true;
     const { forge, fetcher } = forgeAnswering((method) => {

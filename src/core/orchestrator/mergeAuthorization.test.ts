@@ -1,12 +1,14 @@
 import type { AttachmentRef } from "@shared/attachments";
 import { repairImpact, wireRepairImpact } from "@shared/checkRepair";
 import { describe, expect, it } from "vitest";
+import { standingApproval } from "../../../tests/helpers/settleHarness";
 import {
   FAILED_BATCH_NOTE,
   isCaptainGuidance,
   keptFeedLine,
   keptNote,
   parseRepairAssessment,
+  putInFront,
 } from "./mergeAuthorization";
 import {
   GUIDANCE_MARK_WORDS,
@@ -122,6 +124,23 @@ describe("a repair's declared impact (INF-493)", () => {
 
 // Captain INF-1555 F12: the offer carries readiness; a checks hold names only checks.
 describe("kept merge check words", () => {
+  // Reviewer F8: the captain's wait and the first mate's note name the actual merger.
+  it.each([true, false])(
+    "names only the actual merger in kept waits (queue-owned: %s)",
+    (owned) => {
+      const feed = keptFeedLine("queue", "GitHub", undefined, owned);
+      const note = keptNote("queue", "feedbeef", "GitHub", undefined, undefined, owned);
+      expect(feed).toContain(owned ? "Your project's queue will merge" : "The app will merge");
+      expect(note).toContain(
+        owned
+          ? "the app observes its receipt"
+          : "The app merges after the project's queue passes this version",
+      );
+      expect(feed).not.toContain("older");
+      expect(note).not.toContain("Updated shipped");
+    },
+  );
+
   // Captain F20/F27: a failed check waits for a fix, not merely another passing read.
   it("names the fix and its fresh-check consequences after failed checks", () => {
     expect(keptFeedLine("checks", "GitHub", "red")).toBe(
@@ -161,4 +180,20 @@ describe("kept merge check words", () => {
     );
     expect(keptNote("conflict", "feedbeef", "GitHub")).toContain("read the current check facts");
   });
+});
+
+// F3 regression: rotating approvals must not hide pending task-wide removal effects.
+it("retains a pending queue removal at the front when another approval rotates in", () => {
+  const first = standingApproval();
+  const pending = { target: first.target, head: first.approvedHead };
+  first.queueRemovals = [pending];
+  first.queued = [
+    standingApproval({
+      id: "other",
+      target: { ...first.target, prNumber: first.target.prNumber + 1, branch: "fm/task-other" },
+    }),
+  ];
+  const rotated = putInFront(first, 0, true);
+  expect(rotated?.queueRemovals).toEqual([pending]);
+  expect(rotated?.queued?.[0]?.queueRemovals).toBeUndefined();
 });

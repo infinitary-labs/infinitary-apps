@@ -655,10 +655,12 @@ The click publishes the story and checks the title as any merge does, keeps the 
 A repair that carries the click marks its new version the same way, once that version's own checks pass.
 The mark comes after the same last look a merge request takes - the same approval and head, the crewmate idle, no newer merge card - which records no attempt, since nothing is sent to merge.
 Until the queue passes a version, GitHub's rules reading the pull request as held are not a stop: a required `infinitary/queue` status is what holds it, and the mark answers it.
-Every route to a merge waits on the queue the same way: the merge card's click, for the task's own change or a review the task owns or references, and a merge past the branch rules, whose click marks the version and sends nothing, so the same review merges on a new click once the queue passes.
+Every route to a merge waits on the queue the same way: the merge card's click, for the task's own change or a review the task owns or references, and a merge past the branch rules, whose click marks the version and sends no merge request.
+Updated shipped queues complete the merge after their pass; older or project-written queues keep their existing app-merge path.
 The project's queue finds the versions marked `pending`, tests them, and sets the status to `success` or `failure` on each, with its reason in the description and a link to the run in `target_url`.
 A queue may also keep a version `pending` with words of its own, such as the shipped queue's pause ("The shipped queue"); the app reads any `pending` as still waiting and changes nothing for it.
-The status is read as one more check (`GitHubForge.checks`), so the check watch follows it, and the kept approval merges only once it reads `success` at that exact version, through the same version guard and with no new click (`ChangeMerge.mergeOnce`).
+The status is read as one more check (`GitHubForge.checks`), so the check watch follows it, and the app observes the merge receipt from a queue-owned merge.
+For older or project-written queues, the kept approval merges only once it reads `success` at that exact version, through the same version guard and with no new click (`ChangeMerge.mergeOnce`).
 A failed status wakes the crewmate through the failed-check wake like any failed check; the crewmate reads the batch's reason and link off the status with `github_read`, and its repair declarations decide whether the click carries to the fixed version.
 No checks override passes the queue.
 The crewmate may instead answer the queue's failure at the version it is on with check_change's `declaration`, verdict `answered`, when it judges nothing is left to change there, such as a send-back written on a version that already holds the fix (INF-3190).
@@ -669,7 +671,7 @@ A merge card shows the queue status apart from the pull request's own checks (IN
 Each reading keeps those words, the link, the own checks' times and the issue a paused reading of that version linked on the task (`queueStatus`, `ProjectQueue.observe`), because a send-back links its answer's run instead; with no paused reading seen, the project's kept pause that names the change gives the issue.
 The crewmate's diagnosis rows under the strip name only the pull request's own checks, though the checks hold still reads its diagnosis of the queue status.
 Merge anyway never stands beside a failed batch check, since no checks override passes the queue, and once the crewmate answers that version the card's merge reads "Merge the pull request", whose click marks it waiting again.
-A first mate merge on project autonomy marks the version the same way and stops; it keeps no approval, so the first mate merges again once the queue passes.
+A first mate merge on project autonomy marks the version the same way and stops; updated shipped queues finish that merge themselves, while older or project-written queues keep their existing first mate merge after the pass.
 Evidence: `changeMerge.test.ts` ("merges a queue-pr change only once its queue passes ...", "puts a version the queue sent back into the queue again once ...") and `githubForge.test.ts` ("marks a version waiting for the project's queue ...").
 
 ### What the app reads about a project's queue
@@ -715,7 +717,48 @@ As shipped, the queue calls it with only a read of the project and hands down no
 A secret or a write a check needs is named in the queue's plan, and the team grants it in the queue file's `checks` job: the one edit a project makes to a stamped file, which an update carries over and the stamp, read from the first line, still names.
 GitHub hands a called workflow only the secrets its caller passes, so each named secret is passed there by name and declared in the batch checks file; an environment's secret alone reaches no batch check, and the queue never passes `secrets: inherit`, which would hand down every secret.
 The queue's states are words on the `infinitary/queue` status: waiting, in batch run N, paused after batch run N, passed batch run N with the batch's tree, or failed with its reason (`queueKind`).
-A green batch passes every change still in it, and each approver's Infinitary merges its own; after the merge, whether through the merge card or a merge review, the app starts the queue again by hand (`ChangeMerge.startNextBatch`), because a merge's own push starts no workflow there.
+A green batch passes every change still in it; from queue version 10, an isolated merge job squashes passed versions itself, rechecking their head, target branch and pass status immediately before each version-guarded merge.
+A passed status counts only when GitHub identifies its creator as `github-actions[bot]`, or GitLab identifies its author as the queue token's own user.
+The shared status reader enforces this for every read accepting a batch verdict; a rejected pass becomes a visible failure, including after a GitLab key replacement.
+A by-hand GitLab pause answer uses the person's sign-in, never accepts a pass as merge authority, and leaves passed changes to the queue's own jobs.
+Before marking a version, the app publishes its exact approved title and squash body with the active naming check's result or explicit off state in a host comment, then links that comment from the waiting mark.
+A status nominates a head for testing, never grants merge authority; its link is for people and selects no approval data.
+The newest trusted approval-or-revocation comment for exactly that head, ordered by comment id, is the authority.
+Trusted means write, maintain or admin on GitHub, and Maintainer (access level 40 or above) on GitLab.
+A newer revocation stops merging even if a status-only integration recreates Waiting and the batch passes again.
+The merge job re-reads the newest trusted record immediately before its merge request.
+A changed title, missing naming decision or malformed approval fails that change with its reason; the queue continues to the other passed changes and still starts the next batch.
+The app checks its captured active naming rule before publishing the mark; the public packet carries only `checked` or `off`, never the person's pattern.
+The queue has no fixed title pattern and does not invent new commit prose: it keeps the approved title and exact body.
+Only that GitHub job has code and pull-request write permissions; batch checks and confirmation retain their existing read-only grants.
+The queue sends one `repository_dispatch` with type `infinitary-after-merge` after its confirmed merges, with the default branch's pre-merge source in `client_payload.base`, then starts the next batch separately.
+A later refusal still signals the earlier confirmed merges; one refused merge cannot hold the other passed changes.
+Setup and update plans wire the project's after-merge workflows to this event, adapting push-only conditions and changed-path logic while preserving ordinary pushes.
+The squash keeps the title and the story's What changed plus its breaking footer, or the description when there is no story.
+On every change, including same-project requests, only the trusted approval record supplies squash words, title and naming result.
+Descriptions and review stories never supply merge authority or carry a queue approval envelope.
+The contributor's description stays unchanged.
+The trusted approval comment alone carries the head-bound literal summary, actual pull request title and naming result, independently of the story's display title.
+A story override carries the current version's override words through that same approved comment, so an older story or breaking footer cannot replace them.
+Preparing a same-head story with changed title or squash words suspends its existing queue eligibility through the durable withdrawal owner until publication, without ending the captain's click.
+Ordinary queue restoration then posts the newest approved merge words and may start a replacement batch.
+Changes only to verification, pictures, risk or other text outside the squash words leave the existing approval and batch untouched.
+Pending and passed reconciles never rebind a title or description edited on the host, or replace a named review's marked words.
+Older clients that mark without an approved naming decision receive an explicit failure and must queue the version again with a current app.
+The app waits for a queue-owned merge and reads its receipt without sending a second merge; older queues retain app-owned merging and `ChangeMerge.startNextBatch`.
+The approval owner removes the exact queued head's eligibility when guidance holds it or approval ends, including secondary approvals; an in-flight mark rechecks that hold after its write.
+Removal appends a trusted revocation comment for the head before writing `Not queued: merge approval held or withdrawn` on the existing status channel.
+The app posts only when the newest trusted record is an approval, and keeps that removal pending until the host confirms a trusted revocation.
+With no trusted record it acknowledges removal without writing; an existing revocation needs no new comment.
+Before posting against an active approval, the app verifies its sign-in has the same merge-level permission required of the record's author; a lower-role sign-in leaves the removal unconfirmed without posting repeated untrusted comments.
+Resolved unchanged guidance publishes a fresh approval record before marking it waiting again under the retained approval.
+Both approval publishers recheck the existing local dispatch guard after their metadata read and before each hosted write.
+An interrupted mark, successful or failed, makes a new durable removal after any earlier withdrawal operation finishes; its earlier acknowledgement cannot confirm cleanup of a later publication.
+The existing approval record keeps each exact removal until the host acknowledges it, through secondary-approval replacement, rotation and task closure.
+A partial expression index lets restart retry only those pending effects, including closed tasks, without walking closed history.
+A removal failure is reported and retained rather than silently treated as success.
+The app stops its own merge immediately, while the queue observes the hold only when the trusted revocation reaches the host.
+A merge request already sent to the host cannot be recalled.
 The app starts it the same way after a mark on a host whose mark starts nothing.
 A start that fails is tried once more; when that fails too, the app notes it on the task and wakes the crewmate of a task still waiting in that queue (`queue-start-failed`), which starts the queue itself or reports what stops it.
 After a mark that is the marking task; after a merge it is another, since the merged task closes and its wakes with it, and with none the first mate hears it (`queue-stalled`) and starts a task to do it.
@@ -758,17 +801,19 @@ Three GitLab facts shape it, and each was checked against GitLab's own code and 
   So the GitLab part writes those three as finished `skipped` statuses carrying the queue's words, each a new status, and the app reads a `skipped` `infinitary/queue` as still waiting, never as a pass (`GitLabQueue.check`); a pass is `success` and a failure `failed`.
   A `skipped` status leaves the merge request's pipeline as it was, so GitLab itself does not hold a merge made there, and its free plans cannot require an outside status: only an Infinitary merge waits on the queue.
 - A status starts no pipeline, and new gitlab.com projects refuse pipeline variables, so nothing tells a pipeline it is the queue's but how it started.
-  The queue's jobs run only in a pipeline the API started on the default branch, the project's own jobs leave those pipelines out, and the app starts one after each mark (`markStartsQueue` is false) and after each merge.
+  The queue's jobs run only in a pipeline the API started on the default branch, the project's own jobs leave those pipelines out, and the app starts one after each mark (`markStartsQueue` is false) and after each app-owned merge.
   A resume or a send-back from Settings runs in the app with the captain's sign-in (`GitLabQueue.start`, the same `answer` the queue's script exports), then starts that pipeline; a repairing crewmate makes the same writes itself through GitLab's API (the queue-repair skill).
-- GitLab gives a pipeline no key that may write a commit status, so the queue's form and verdict jobs write with a project access token, `INFINITARY_QUEUE_TOKEN`.
+- GitLab gives a pipeline no key that may write a commit status, so the queue's form, verdict and merge jobs write with a project access token, `INFINITARY_QUEUE_TOKEN`.
   Settings → Projects shows "Make the queue's key" under a batched project on GitLab, one click that creates the token with the captain's sign-in (Maintainer role, scope `api`, the longest life GitLab allows), keeps it as a masked, protected CI variable scoped to the `infinitary-queue` environment, and revokes the queue's older tokens (`inf:repos:queue-credential-create`, `GitLabQueue.createCredential`).
-  Only the queue's two jobs name that environment, so the batch's child pipeline never receives the key; the token never reaches the app's records.
+  Only the queue's trusted jobs name that environment, so the batch's child pipeline never receives the key; the token never reaches the app's records.
   The batch runs on the protected default branch, so its jobs do receive the project's other protected variables, and anyone who may push may write a commit status.
   So the form job counts a change in the queue - waiting, in a batch or paused - only when a Maintainer wrote the first queue status on its version since the last verdict, or approved the merge request after that version was pushed (GitLab may keep an approval across a push); any other change waits, its own status saying it waits for a Maintainer to approve that version.
   Since only a start runs the form job, the captain's own merge click on a waiting version, on the merge card or a merge review, starts the queue again (`ChangeMerge.restartQueue`); a kept approval's unattended retry starts nothing, and nothing starts the queue on a timer.
   So a held change never waits silently: when a reading of the task's checks shows the held words on its version's queue status, the task's crewmate hears them once for that version (`queue-held`, from `ProjectQueue.observe`) and puts its merge card up again saying a Maintainer must approve first.
   A later mark does not admit a held version, since it lies over the Developer's in the same waiting stretch; the held change joins the next batch when a Maintainer has approved it after its last push and the captain clicks merge.
   Project access tokens need a Premium or Ultimate plan on gitlab.com, and any plan on a team's own server; a refusal says so.
+  From version 10, the merge job uses this same environment-scoped token to squash passed versions and starts the next batch itself.
+  Its merges already start ordinary push pipelines, so no extra after-merge dispatch duplicates them.
   GitLab's part has no confirm yet: a red batch pauses at once, and its issue says nothing ran again.
   The form job composes the batch with the same `compose.sh`, onto the default branch as it fetches it after reading the queue rather than the pipeline's own version, which may be older, writes a child pipeline that includes the batch template and the project's `.gitlab/infinitary-batch-checks.yml`, and the checks job runs it; the verdict job reads that child pipeline's result, its failed jobs' logs and each merge request's diff.
   `resource_group: infinitary-queue` keeps one form or verdict job at a time across pipelines, and a queue pipeline's id is its batch run.
@@ -1229,7 +1274,9 @@ A local-only merge checks its committed branch and retained story again, without
 An accepted repair, one its crewmate declared to leave the approved work as it was, republishes the unchanged story automatically at the repaired version after checks pass, without another upload or merge card.
 Approval follows the code, never the story's words (INF-3623, the captain: all non-code changes to the pull request keep the approval).
 A story the crewmate revised at the approved version keeps the captain's click, a click on a card whose story was revised since merges with the newest story, and a person's edit inside the story on the host no longer holds the merge: their words stay, and the squash summary is the saved story's.
-The newest story must still be published at the merging version, so the merge waits for the crewmate meanwhile; the steps for the captain and the follow-up tasks stay the clicked card's until a new merge card shows others.
+An app-owned merge waits for the newest story to be published at the merging version.
+A queue-owned merge pauses for changed approved title or squash words, while verification, pictures, risk and other non-squash text leave its existing authority untouched.
+The steps for the captain and the follow-up tasks stay the clicked card's until a new merge card shows others.
 The story's saved title, risk and required actions win on `emit_card presentation`; its title field is supplied, and body, body_file, risk and required_actions are omitted.
 
 ### Declared validation writes

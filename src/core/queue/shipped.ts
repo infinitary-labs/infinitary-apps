@@ -14,6 +14,7 @@ import { join } from "node:path";
 /** Every source file of the shipped queue in `./shipped/`; each host part hashes the ones it ships. */
 export const SHIPPED_SOURCES = [
   "rules.mjs",
+  "message.mjs",
   "github.mjs",
   "compose.sh",
   "action.yml",
@@ -45,6 +46,7 @@ export const GITHUB_QUEUE_SOURCES: readonly string[] = [
   "f87b7a46ffd210c504f69471b7c48b1a163f24fb63eebec6af7d99bb8087eebb",
   "eadc3a22b4a0eaba5d522cf3dd74b10b1267b829a3fc287be232064b99ad76ad",
   "9b5c62a6d9dfc313ee33bb96543efadad45f718958484a96ef80ea186677649d",
+  "230e3abdcc3a0be73bdde7e82954d40809b4fea9da952f4b827c34e8f624df15",
 ];
 export const GITLAB_QUEUE_SOURCES: readonly string[] = [
   "b41bb2e51bccbe8ec5285463ce6ffe6aa58bbe3f0cd1a48c0d1b169dd7d91cc5",
@@ -56,7 +58,11 @@ export const GITLAB_QUEUE_SOURCES: readonly string[] = [
   "0b92537a429d8f3ba09177c49b292d2a468f8bfebc3f393e0ddbc3a2155366ac",
   "e60c818cdbd14724c933b28db90568619c1322c964065237661484215bdd862e",
   "38e66f2b2e7547127dc24d0d409d4bbc0f7a2f2ad0416a7bf62c8dbac14d3936",
+  "6cdb491dc7e916b03471e11a46690598e50e05fde2bbb07688b122c2a6c789e7",
 ];
+
+/** First shipped host-part version that merges approved changes without the app. */
+export const QUEUE_OWNED_MERGES_VERSION = 10;
 
 /** The stamp's words after its comment mark, on each shipped file's first line (the second under a shebang). */
 const STAMP_WORDS = (version: number) =>
@@ -98,7 +104,7 @@ export type QueueHostPart = {
 export const GITHUB_QUEUE_PART: QueueHostPart = {
   name: "GitHub",
   folder: "github",
-  hashed: ["rules.mjs", "github.mjs", "compose.sh", "action.yml", "workflow.yml"],
+  hashed: ["rules.mjs", "message.mjs", "github.mjs", "compose.sh", "action.yml", "workflow.yml"],
   sources: GITHUB_QUEUE_SOURCES,
   version: GITHUB_QUEUE_SOURCES.length,
   files: [
@@ -106,6 +112,7 @@ export const GITHUB_QUEUE_PART: QueueHostPart = {
     { source: "action.yml", path: ".github/actions/infinitary-batch/action.yml" },
     { source: "compose.sh", path: ".github/actions/infinitary-batch/compose.sh" },
     { source: "rules.mjs", path: ".github/infinitary/rules.mjs" },
+    { source: "message.mjs", path: ".github/infinitary/message.mjs" },
     { source: "github.mjs", path: ".github/infinitary/github.mjs" },
   ],
   queueFile: ".github/workflows/infinitary-queue.yml",
@@ -123,6 +130,7 @@ export const GITLAB_QUEUE_PART: QueueHostPart = {
   folder: "gitlab",
   hashed: [
     "rules.mjs",
+    "message.mjs",
     "gitlab.mjs",
     "gitlab-cli.mjs",
     "compose.sh",
@@ -136,6 +144,7 @@ export const GITLAB_QUEUE_PART: QueueHostPart = {
     { source: "gitlab-batch.yml", path: ".gitlab/infinitary-batch.yml" },
     { source: "compose.sh", path: ".gitlab/infinitary/compose.sh" },
     { source: "rules.mjs", path: ".gitlab/infinitary/rules.mjs" },
+    { source: "message.mjs", path: ".gitlab/infinitary/message.mjs" },
     { source: "gitlab.mjs", path: ".gitlab/infinitary/gitlab.mjs" },
     { source: "gitlab-cli.mjs", path: ".gitlab/infinitary/gitlab-cli.mjs" },
   ],

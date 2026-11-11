@@ -13,10 +13,12 @@ import { directUnitReach, unitFiles, VITEST_FILE } from "./unit-reach.ts";
  * INF-2394 measure 3 adds one local round for unedited direct importers and
  * literal path readers; a data file counts as part of the module importing it
  * (INF-2426), and so does served text such as the generated runbook fallback
- * (INF-2925). No other transitive reach or added CI jobs. Native files still require a Mac.
+ * (INF-2925). No other transitive reach or added CI jobs; the pull request's
+ * build check runs each edited file once more on Linux (`--reach`). Native files still require a Mac.
  *
  *   node scripts/unit-repeats.ts [--base <ref>] [--head <ref>] [--workers <n>] [--shard <index/count>] [--run]
- *   node scripts/unit-repeats.ts --reach [--base <ref>] [--run]   (the pull request's build check)
+ *   node scripts/unit-repeats.ts --reach [--base <ref>] [--run]   (the pull request's build check:
+ *     edited test files and their unedited direct readers, once, on Linux)
  *
  * The existing changed-path reader owns selection. Fresh rounds stop at the
  * first failure or interruption, without retries. An unreadable base fails.
@@ -48,10 +50,14 @@ export function selectLocalUnits(changed: readonly string[], root = ROOT): Local
  * The pull request's build check runs the unedited direct readers once, on
  * Linux, in the in-memory cohorts and the integration cohort: an integration
  * reader such as tests/release-workflows.test.ts was listed and never run, so
- * its break merged (INF-2478). Three kinds stay with another run, listed apart
- * with where each runs: a Mac-listed file with the crewmate's local round, a
- * probe with main's full check, since it can fail with no code change
- * (docs/test-cohorts.md, "Probes"), and a browser file with the browser step.
+ * its break merged (INF-2478). It runs each edited Vitest file once there too,
+ * beside its three local rounds: PRs #1398, #1455 and #1420 edited tests that
+ * passed on the crewmate's Mac and first failed on Linux in the merge batch
+ * (INF-3690's gap 3, the captain's "Yes: start it now"). Three kinds stay with
+ * another run, listed apart with where each runs: an unedited Mac-listed
+ * reader with the crewmate's local round, a probe with main's full check,
+ * since it can fail with no code change (docs/test-cohorts.md, "Probes"), and
+ * a browser file with the browser step.
  */
 export const REACH_PROJECTS = ["pure", "unit", "unit-isolated", "integration"];
 
@@ -61,8 +67,13 @@ export function selectLinuxReach(changed: readonly string[], root = ROOT): Linux
   const mac = new Set<string>(MAC_UNIT_FILES);
   const probes = new Set<string>(PROBE_FILES);
   const reach: LinuxReach = { run: [], elsewhere: [] };
-  for (const file of directUnitReach(changed, unitFiles(root), root)) {
-    if (mac.has(file))
+  const edited = new Set(selectRepeats(changed, (file) => existsSync(join(root, file))).repeat);
+  const readers = directUnitReach(changed, unitFiles(root), root);
+  for (const file of [...new Set([...edited, ...readers])].toSorted()) {
+    // Linux runs every file, a Mac-listed one's portable cases included
+    // (scripts/mac-unit-tests.ts), so an edited one runs here too: #1420's
+    // edited tests/run-temp-root.test.ts is Mac-listed and failed on Linux.
+    if (mac.has(file) && !edited.has(file))
       reach.elsewhere.push({ file, where: "needs a Mac: the crewmate's local round" });
     else if (probes.has(file))
       reach.elsewhere.push({ file, where: "a probe: main's full check runs every probe" });
@@ -102,7 +113,7 @@ export function unreported(
   return files.filter((file) => !ran.has(file));
 }
 
-/** Run the selected readers once; a failed round or a file that did not run fails it. */
+/** Run the selected files once; a failed round or a file that did not run fails it. */
 export function runLinuxReach(
   files: readonly string[],
   run: (args: string[], reportFile: string) => number | null,
@@ -119,7 +130,7 @@ export function runLinuxReach(
     const missing = unreported(files, parsed, root);
     if (missing.length === 0) return 0;
     report([
-      `These selected readers did not run in ${REACH_PROJECTS.join(", ")}:`,
+      `These selected test files did not run in ${REACH_PROJECTS.join(", ")}:`,
       ...missing.map((path) => `- \`${path}\``),
     ]);
     return 1;
@@ -278,13 +289,13 @@ function main(): void {
   if (args.includes("--reach")) {
     const { run, elsewhere } = selectLinuxReach(changed);
     const lines = [
-      `Unedited direct importers and literal path readers since ${base}, one round in CI:`,
+      `Edited test files, unedited direct importers and literal path readers since ${base}, one round in CI:`,
       ...run.map((file) => `- \`${file}\``),
     ];
     if (elsewhere.length > 0)
       lines.push(
         "",
-        "Readers this round leaves to another run:",
+        "Test files this round leaves to another run:",
         ...elsewhere.map(({ file, where }) => `- \`${file}\` (${where})`),
       );
     report(lines);

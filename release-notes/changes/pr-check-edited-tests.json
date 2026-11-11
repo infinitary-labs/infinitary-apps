@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "pr-check-edited-tests",
+      "reason": "The pull request check also runs each edited test file once on Linux; this changes only internal checks."
+    }
+  ]
+}

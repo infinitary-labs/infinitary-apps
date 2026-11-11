@@ -16,7 +16,8 @@ const selected = (event: string, sweep = event !== "pull_request") =>
 
 // The captain's INF-2273 ruling supersedes INF-2203's CI repeat shards:
 // edited unit files get ordinary coverage plus two more locally, so PR CI
-// must not duplicate that work. Local round counts belong to unit-repeats.test.ts.
+// adds no repeat job; its build check runs each edited file once (INF-3690's
+// gap 3). Round counts and that selection belong to unit-repeats.test.ts.
 describe("PR CI leaves edited-unit rounds to local proof", () => {
   it("selects only the retained baseline jobs for a pull request", () => {
     // INF-2234's independently approved main change also keeps probe sweeps off PRs.

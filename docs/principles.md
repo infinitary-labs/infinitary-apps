@@ -94,7 +94,7 @@ It covers every test.
 A test runs on the Mac only when it needs a Mac.
 Linux runs every test it can.
 The full-check Mac lane runs only the tests that need it, in the run on `main` too; every alpha runs every journey, or reuses the swept batch's (INF-2480, the captain: "old set at the release check only, from the first piece on"; INF-2508).
-The captain's later INF-2273 ruling makes edited unit-file proof an explicit local exception: every changed unit file gets ordinary coverage plus two more locally, including portable files, without duplicate PR CI repeat jobs.
+The captain's later INF-2273 ruling makes edited unit-file proof an explicit local exception: every changed unit file gets ordinary coverage plus two more locally, including portable files, without duplicate PR CI repeat jobs; the pull request's build check runs each edited file once on Linux, as Linux runs every test it can.
 A journey that needs a Mac carries `MAC_ONLY_TAG` (`tests/e2e/tags.ts`): it skips on Linux, or it has a step only a Mac runs.
 A unit test that needs a Mac is a file of the reviewed list in `scripts/mac-unit-tests.ts` (`docs/test-cohorts.md`).
 

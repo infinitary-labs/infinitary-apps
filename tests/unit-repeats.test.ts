@@ -1,6 +1,7 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { PROBE_FILES } from "../scripts/affected-probes.ts";
 import { MAC_UNIT_FILES } from "../scripts/mac-unit-tests.ts";
 import {
   REPEATS,
@@ -231,6 +232,49 @@ describe("the pull request's direct-reader round", () => {
     }
   });
 
+  // INF-3690's gap 3 (the captain's "Yes: start it now"): PRs #1398, #1455 and
+  // #1420 edited tests that passed their local Mac rounds and first failed on
+  // Linux in the merge batch, so the pull request runs each edited file once.
+  it("runs an edited test file once on Linux, beside its unedited readers", () => {
+    // #1420's edited test; the path is joined so this file does not read it.
+    const edited = ["tests", "run-temp-root.test.ts"].join("/");
+    const { run } = selectLinuxReach([edited, "src/shared/actions.ts"]);
+    expect(run).toContain(edited);
+    expect(run).toContain("src/shared/actions.test.ts");
+    expect(new Set(run).size).toBe(run.length);
+  });
+
+  // Linux runs a Mac-listed file's portable cases too (scripts/mac-unit-tests.ts),
+  // and #1420's edited run-temp-root test is Mac-listed: an edited one runs here.
+  it("runs an edited Mac-listed test on Linux too", () => {
+    const mac = "src/main/host/darwinFreshAuthentication.test.ts";
+    expect(MAC_UNIT_FILES).toContain(mac);
+    expect(selectLinuxReach([mac])).toEqual({ run: [mac], elsewhere: [] });
+  });
+
+  it("lists an edited probe or browser test apart, as it does a reader", () => {
+    const [probe = ""] = PROBE_FILES;
+    const browser = ["tests", "browser", "after-merge-strip.test.tsx"].join("/");
+    expect(existsSync(join(root, browser))).toBe(true);
+    const { run, elsewhere } = selectLinuxReach([probe, browser]);
+    expect(run).not.toContain(probe);
+    expect(run).not.toContain(browser);
+    expect(elsewhere).toEqual(
+      expect.arrayContaining([
+        { file: probe, where: "a probe: main's full check runs every probe" },
+        {
+          file: browser,
+          where: "a browser test: the browser step, when the renderer or its browser tests change",
+        },
+      ]),
+    );
+  });
+
+  it("selects no test file the change deletes", () => {
+    const gone = ["src", "shared", "removedByThisChange.test.ts"].join("/");
+    expect(selectLinuxReach([gone]).run).not.toContain(gone);
+  });
+
   it("selects nothing for a change no test reads", () => {
     expect(selectLinuxReach([["docs", "unread-page.md"].join("/")])).toEqual({
       run: [],
@@ -282,7 +326,7 @@ describe("the pull request's direct-reader round", () => {
     const report = vi.fn();
     expect(runLinuxReach(files, run, report, root)).toBe(1);
     expect(report).toHaveBeenCalledExactlyOnceWith([
-      "These selected readers did not run in pure, unit, unit-isolated, integration:",
+      "These selected test files did not run in pure, unit, unit-isolated, integration:",
       "- `tests/release-workflows-pr-checks.test.ts`",
     ]);
   });
@@ -291,7 +335,7 @@ describe("the pull request's direct-reader round", () => {
     const report = vi.fn();
     expect(runLinuxReach(["src/shared/actions.test.ts"], () => 0, report, root)).toBe(1);
     expect(report).toHaveBeenCalledExactlyOnceWith([
-      "These selected readers did not run in pure, unit, unit-isolated, integration:",
+      "These selected test files did not run in pure, unit, unit-isolated, integration:",
       "- `src/shared/actions.test.ts`",
     ]);
   });

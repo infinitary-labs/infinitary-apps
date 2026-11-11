@@ -43,6 +43,7 @@ Record the version, selection reasons, files or parts, required platforms or dev
   Mixed files retain Linux coverage and their Mac-required cases: those prove different platform behavior.
   A check requiring a CI environment uses `platforms=mac` or `both` instead of equivalent local proof, not in addition.
 - Every edited Vitest file runs three total fresh invocations locally, including Linux-eligible files (the captain's INF-2273 override).
+  The pull request's check also runs each one once on Linux ("Notes"), since three changes whose edited tests passed their Mac rounds first failed on Linux in the merge batch (INF-3690's gap 3, the captain's "Yes: start it now"); the three local rounds stay.
   `pnpm test:repeats --base origin/main --workers <declared workers>` uses the existing changed-path reader and stops at the first failed or interrupted round without retries.
   Unedited Vitest files that directly import a changed file or reference its literal path run once locally in the same command (INF-2394 measure 3).
   The selector resolves relative imports and the node and renderer compilers' aliases, literal paths relative to the project or test file, joined literal path segments, and template directory prefixes such as workflow readers use.
@@ -270,9 +271,11 @@ A run that fails or stalls under load is diagnosed from its own logs and fixed i
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
 - The PR's Linux `typecheck-lint-build` check owns typecheck, lint/adherence and build; do not duplicate it as a complete local pre-push gate.
-  It also runs, once, the unedited unit and integration tests that import or read a changed file (`node scripts/unit-repeats.ts --reach`, from `directUnitReach`), in the `pure`, `unit`, `unit-isolated` and `integration` cohorts (INF-2441, INF-2478).
-  It lists apart, with the run that owns each, a Mac-listed reader (the crewmate's local round), a probe (main's full check, `docs/test-cohorts.md` "Probes") and a browser test (the browser step).
-  It reads Vitest's JSON report afterwards and fails when a reader it selected did not run, so a reader none of those cohorts takes cannot pass unseen.
+  It also runs, once, each edited Vitest file and the unedited unit and integration tests that import or read a changed file (`node scripts/unit-repeats.ts --reach`, from `directUnitReach`), in the `pure`, `unit`, `unit-isolated` and `integration` cohorts (INF-2441, INF-2478, INF-3690's gap 3).
+  An edited Mac-listed file runs there too, since Linux runs its portable cases in the merge batch and main's full check.
+  It lists apart, with the run that owns each, an unedited Mac-listed reader (the crewmate's local round), a probe (main's full check, `docs/test-cohorts.md` "Probes") and a browser test (the browser step).
+  It installs Chromium first, for the browser step and for an integration file that starts it, such as `tests/run-temp-root.test.ts`.
+  It reads Vitest's JSON report afterwards and fails when a file it selected did not run, so a file none of those cohorts takes cannot pass unseen.
   Required focused proof may run before or alongside the PR and must finish for its current version before merge.
   A selected local `renderer` or `application` spec needs `--no-deps`, since its teardown otherwise runs the whole `desktop` lane.
   Run the existing unit and integration tests a change can break by path, `pnpm test <path>...` (a bare file path finds its cohort, `docs/test-cohorts.md`), and the probes it reaches with `pnpm test:probes`.
@@ -281,7 +284,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The full e2e suite runs only in CI, never locally during development or release preparation.
   The adherence lint runs the design skill's `_adherence.oxlintrc.json` through ESLint FlatCompat (current oxlint cannot execute its selector rules); its raw-px/hex rules are warn-level by the skill's own design.
 - Standing CI rule (PR 8; CI shape revised by captain decision B, 2026-09-15, scout `fm3000-ci-release-only-s1`; split across machines by the captain's direction on FI3-1204, 2026-10-07; probes moved off every push by FI3-1756's plan, 2026-10-14): `ci.yml` runs one Linux baseline job on all pull requests, including release notes: typecheck, the lint, the build and the critical-path journey ("What a pull request runs", "The critical path").
-  The captain's INF-2273 ruling removes both unit-repeat shards; every edited unit file instead gets three total local runs, including portable files.
+  The captain's INF-2273 ruling removes both unit-repeat shards; every edited unit file instead gets three total local runs, including portable files, and one more in the pull request's check ("Notes", above).
   Requested runs also run the full unit and probe sweeps and both integration shards, five jobs in total; there is no unit/integration selector.
   A push to `main` starts no `ci.yml` job (INF-2340, the captain's route "drop-ci-main"): the full check's `linux-checks` lane and its Linux test groups run the same commands, every probe included ("Main's desktop release check").
   `typecheck-lint-build` runs typecheck, biome, the build and the critical-path journey on pull requests, and the eslint adherence lint on a request; `unit-tests` runs the in-memory cohorts (`pure`, `unit`, `unit-isolated`); `integration-tests`, shown as integration test groups 1/2 and 2/2, runs the integration cohort in vitest's own `--shard` halves, which split the files by a hash of their paths; `probe-tests` runs every probe (`docs/test-cohorts.md`, "Probes").
@@ -466,7 +469,7 @@ It is not gated by CI mode, takes seconds, and prints every error; the full lint
 Crewmates start each route the way they start a full verification: `github_write` to `POST /repos/{owner}/{repo}/actions/workflows/<workflow>/dispatches` with `{"ref":"<branch>"}` and the route's inputs (`docs/forge.md`, "Verification workflow requests").
 An accepted request is not a passing check: find the run, confirm its version, then read it.
 The pull request's own `typecheck-lint-build` check is the full typecheck and lint, so only `ci.yml` started on a branch with no pull request adds Linux work for them; a request runs code and build only, and the test sweeps need the `sweep` input set to `true`.
-Every edited unit file gets three total local runs in both modes ("This project's rulings on tests"); PR CI has no unit-repeat job.
+Every edited unit file gets three total local runs in both modes ("This project's rulings on tests"); PR CI has no unit-repeat job, and runs each edited file once in its build check.
 Pictures and demos for a card stay local too: they are evidence, not checks.
 A throwaway picture or demo script is never committed, so the journey guard lets it run; an existing spec cannot take pictures in CI mode.
 Inside CI (`CI` is set) the heavy checks always run, because the Mac mini's runners run as the same user and read the same git settings.
@@ -762,7 +765,7 @@ Status-only TestFlight requests start no phone or signing job.
 
 A pull request version runs one check, `ci.yml`'s `typecheck-lint-build`, on the PC's PR line (INF-2915's plan, the captain's direction B with the light profile).
 Its steps keep what caught problems on pull requests and leave the rest to the swept batch, which runs everything on each approved change before it reaches `main` ("The swept batch").
-Every version runs the release notes check, the typecheck, `pnpm check` and the unit and integration tests that read a changed file.
+Every version runs the release notes check, the typecheck, `pnpm check`, each edited unit or integration test file and the unedited ones that read a changed file, once ("Notes").
 Its paths step, `scripts/pr-paths.ts`, reads the change against the merge commit's base parent and decides two things.
 The build and the critical path run unless every changed path is a test (under `tests/`, or a `.test` or `.spec` file), docs (`docs/`, `primitives/` or any Markdown file), a release note or the phone app (`ios/`).
 The browser tests run only when a path is under `src/renderer/` or `tests/browser/`, or is a browser test helper (`tests/helpers/browser*`).

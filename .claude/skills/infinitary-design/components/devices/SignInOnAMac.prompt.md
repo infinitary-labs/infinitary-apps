@@ -10,6 +10,7 @@ A task that runs on Mac mini uses only these."
 ("as Builder" for a user).
 Each group is the same list box and the same account rows (`SubscriptionCard`'s row: dot, "Codex · Personal", the mono allowance "5h · 88% left", its meter, its menu); the allowance is read on that device and shown here.
 A Claude row whose allowance that device cannot read without macOS asking says why in its mono state line, "Infinitary can't read this allowance there: macOS asks before it may read your sign-in, and nobody may be at that screen to answer.", with no Retry: nothing on that device ever asks on a screen nobody may be at.
+A row's state line that says this computer names that device instead, wherever the tab is open: a Claude row with no login yet reads "Sign in with Claude on Mac mini."
 An empty group holds one `--fg-3` line, "No sign-ins yet."
 Each group's foot is the `ConnectChips` foot, `ADD ACCOUNT`, whose chips start the sign-in on that device, and ends with a Custom API chip while that device is in reach.
 The chip opens the same Custom API form, titled "Add a custom API on Mac mini", and every "this computer" in the form names that device; a localhost address reads "On Mac mini".

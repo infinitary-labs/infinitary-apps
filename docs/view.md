@@ -199,6 +199,7 @@ Under it is that computer's own Devices, read and changed there through the same
 A link or command made here is the first mate's computer's, so the computer it adds joins that one.
 The Notifications switch there governs this Mac's notifications too ("Notifications", above).
 Its words name the computer the first mate lives on where they would say this computer (`firstMatePlace`, `useFirstMatePlace`), and a sentence that computer says of itself as this computer is shown with its name (`hereAs`, through `useHereAs`).
+An account row under a computer that runs work names that computer instead, since the account is on it (`AccountRow`'s `place`, from `DeviceSignInGroups`).
 General leaves out that computer's Start at login, Dock, dictation and panels, which are its own (`GeneralTab`).
 A project's folder is typed as its path on that computer, since a folder picker here shows only this computer's folders: Choose folder on the projects folder's line under Add project, and Folder on Mac mini in Add project (`FOLDER_THERE_WORDS`, `src/renderer/src/settings/addProjectWords.ts`); that computer checks the path and says why one cannot be used.
 Their keyboard commands work there (`src/renderer/src/app/commandRefusals.ts`).

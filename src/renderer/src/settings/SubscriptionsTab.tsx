@@ -6,6 +6,7 @@ import {
   CLAUDE_GATEWAY_LABEL,
 } from "@shared/claudeAccess";
 import { isCustomApiProvider } from "@shared/customApi";
+import { hereAs } from "@shared/deviceNames";
 import type { AuthNotice, AuthPromptView, ProviderView } from "@shared/providers";
 import { API_KEY_LABEL, CLAUDE_PROVIDER_ID, catalogEntry } from "@shared/providers";
 import {
@@ -557,6 +558,7 @@ export function AccountRow({
   onShowModels,
   onResetSlots,
   menu,
+  place,
 }: {
   account: AccountView;
   providerName: string;
@@ -587,6 +589,12 @@ export function AccountRow({
    * runs work offers only what that computer does with it.
    */
   menu?: RowMenuItem[];
+  /**
+   * The computer that runs work this account is on, by the name its words
+   * give "this computer". Absent, the account is the first mate's computer's:
+   * this computer where it lives, its name on a computer that controls it.
+   */
+  place?: string;
 }) {
   const [renameValue, setRenameValue] = useState(account.label);
   const [resetArmed, setResetArmed] = useState(false);
@@ -595,8 +603,9 @@ export function AccountRow({
   }, [renaming, account.label]);
   const here = useHereAs();
   const view = rowView(account, quotaRow, Date.now());
-  // The account is the first mate's computer's, as its words say of it.
-  if (view.stateText) view.stateText = here(view.stateText);
+  // Its words say "this computer" of the computer the account is on.
+  if (view.stateText)
+    view.stateText = place === undefined ? here(view.stateText) : hereAs(view.stateText, place);
   const repeated =
     view.dotLabel === "paused" && view.verdict?.text === "paused"
       ? view.verdict.text
@@ -1374,6 +1383,7 @@ export function SubscriptionsTab() {
             onShowModels={() => {}}
             onResetSlots={() => {}}
             menu={row.menu}
+            place={row.place}
           />
         )}
       />

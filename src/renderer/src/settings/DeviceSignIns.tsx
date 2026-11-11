@@ -64,6 +64,8 @@ export type Flow = DeviceSignInFlow;
 
 export type DeviceAccountRowProps = {
   account: AccountView;
+  /** The computer the account is on, named where the row's words say "this computer" (`signInPlace`'s `who`). */
+  place: string;
   providerName: string;
   quotaRow?: QuotaProviderView;
   signingIn: boolean;
@@ -211,6 +213,7 @@ export function DeviceSignInGroups({
                   <div key={account.id}>
                     {renderRow({
                       account,
+                      place: place.who,
                       providerName: providerName(account.providerId),
                       ...(row ? { quotaRow: row } : {}),
                       signingIn: flow?.accountId === account.id && !flow.ended,

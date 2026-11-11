@@ -35,6 +35,14 @@ import {
   WORK_PROGRESS_ORDER,
 } from "./work";
 
+// This test reads docs/contract.json through CONTRACT_FILE, which the pull
+// request check's selector (scripts/unit-reach.ts) cannot see from here: a
+// regenerated contract that changed a pinned reach reached the merge batch
+// unread (INF-3545). This literal project-relative path declares that read.
+// The selector reads it statically, never by importing a test; the first case
+// below keeps it the file CONTRACT_FILE names.
+const inventoryFiles = ["docs/contract.json"] as const;
+
 /**
  * The published contract (docs/contract.md) is generated: the committed file
  * is what the contract renders today, and every shape in it is one a client
@@ -100,6 +108,11 @@ describe("the published contract", () => {
       committed === renderPublishedContract(),
       `${CONTRACT_FILE} is stale: run pnpm generate:contract and commit it`,
     ).toBe(true);
+  });
+
+  // INF-3545: a contract change must select this test on its pull request.
+  it("declares the file it reads to the pull request check's selector", () => {
+    expect(inventoryFiles).toContain(CONTRACT_FILE);
   });
 
   it("publishes every core request and push with the version and its rule, and nothing of the shell's own", () => {

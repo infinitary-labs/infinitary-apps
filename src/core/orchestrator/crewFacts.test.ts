@@ -21,6 +21,19 @@ import { queryTasks } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
 import { discardedText } from "./settleWords";
 
+// This test pins the feed and timeline lines starts.ts, intake.ts and
+// taskTurns.ts write, reached through the crew harness, which the pull request
+// check's selector (scripts/unit-reach.ts) cannot see from here: a changed
+// Starting line reached the merge batch unread (INF-3545). These literal
+// project-relative paths declare those reads to it.
+const inventoryFiles = [
+  "src/core/orchestrator/starts.ts",
+  "src/core/orchestrator/intake.ts",
+  "src/core/tasks/taskTurns.ts",
+] as const;
+// The selector reads this declaration statically, never by importing a test.
+void inventoryFiles;
+
 fakeCrewTimersEachTest();
 
 describe("CrewSupervisor", () => {

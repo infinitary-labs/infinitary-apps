@@ -189,6 +189,42 @@ describe("local direct unit reach", () => {
     expect(directUnitReach([contracts, freshness], [freshness], root)).toEqual([]);
   });
 
+  // INF-3545 and INF-3614: three changes passed their pull request checks and
+  // failed the merge batch on a test that pins their output through another
+  // module. Each change's own product files, as its pull request had them.
+  it("routes the pins of a changed output to the PR check", () => {
+    const contract = "src/shared/publishedContract.test.ts";
+    const feed = "src/core/orchestrator/crewFacts.test.ts";
+    const wakes = [
+      "src/core/orchestrator/wakes.words.corrections.test.ts",
+      "src/core/orchestrator/wakes.words.crewmate.test.ts",
+      "src/core/orchestrator/wakes.words.firstmate.test.ts",
+    ];
+    const pins = [contract, feed, ...wakes];
+    // PR 1408 widened the devices requests and regenerated the contract.
+    const devices = ["docs/contract.json", "src/shared/channels/devices.ts"];
+    expect(directUnitReach(devices, pins, root)).toEqual([contract]);
+    expect(selectLinuxReach(devices, root).run).toContain(contract);
+    // PR 1427 renamed the Starting feed line.
+    expect(directUnitReach(["src/core/orchestrator/starts.ts"], pins, root)).toEqual([feed]);
+    expect(selectLinuxReach(["src/core/orchestrator/starts.ts"], root).run).toContain(feed);
+    // PR 1452 added a sentence to the review findings wake; wakes.ts itself
+    // and its other word modules reach the same pins.
+    for (const words of [
+      "src/core/orchestrator/reportWakes.ts",
+      "src/core/orchestrator/wakes.ts",
+      "src/core/orchestrator/captainWakes.ts",
+    ]) {
+      expect(directUnitReach([words], pins, root)).toEqual(wakes);
+      expect(selectLinuxReach([words], root).run).toEqual(expect.arrayContaining(wakes));
+    }
+    // A near name and an unrelated module select none of them.
+    expect(directUnitReach(["src/core/orchestrator/mainCheckWake.ts"], pins, root)).toEqual([]);
+    expect(directUnitReach(["src/shared/voice.ts"], pins, root)).toEqual([]);
+    // An edited pin keeps its own three rounds.
+    expect(directUnitReach(["src/core/orchestrator/starts.ts", feed], pins, root)).toEqual([]);
+  });
+
   it("does not broaden inventory coverage to unrelated files or the whole shared folder", () => {
     const inventory = "src/shared/actions.test.ts";
     expect(directUnitReach(["src/shared/voice.ts"], [inventory], root)).toEqual([]);

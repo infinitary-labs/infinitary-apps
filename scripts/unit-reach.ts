@@ -52,6 +52,17 @@ const CONTRACT_DEPENDENCIES: ReadonlyArray<{
     owns: (path) => path === "src/core/tasks/taskService.ts",
     readers: ["src/core/orchestrator/settleService.boundary.test.ts"],
   },
+  // The wake words pins read every wake's words byte for byte through
+  // tests/helpers/wakeWords.ts and wakes.ts, which takes them from its
+  // `*Wakes.ts` modules: a changed wake reached the merge batch unread (INF-3614).
+  {
+    owns: (path) => /^src\/core\/orchestrator\/(wakes|[a-z]+Wakes)\.ts$/.test(path),
+    readers: [
+      "src/core/orchestrator/wakes.words.corrections.test.ts",
+      "src/core/orchestrator/wakes.words.crewmate.test.ts",
+      "src/core/orchestrator/wakes.words.firstmate.test.ts",
+    ],
+  },
 ];
 
 /**

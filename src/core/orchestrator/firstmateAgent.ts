@@ -1299,7 +1299,7 @@ export class FirstmateAgent {
       },
       contract: {
         version: FIRSTMATE_CONTRACT_VERSION,
-        promptSha: firstmatePromptSha(),
+        promptSha: this.seat.promptSha ?? firstmatePromptSha(),
         toolsSha: this.seat.toolsSha,
       },
       input,

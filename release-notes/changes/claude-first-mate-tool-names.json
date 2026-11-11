@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "claude-first-mate-tool-names",
+      "reason": "Changes only what the first mate is told: on Claude it reads how its tools' short names map to their full names, and three refusals name the call that would have worked. No result a person notices."
+    }
+  ]
+}

@@ -675,7 +675,7 @@ export function describeSessionContract(harness: SessionContractHarness): void {
         expect(second?.system).not.toContain(SERVED.text);
         session.dispose();
         await session.closed();
-        const stamp = firstmateContractStamp([contractTool()]);
+        const stamp = firstmateContractStamp([contractTool()], harness.backend);
         const recorded = {
           version: stamp.version,
           prompt_sha: stamp.promptSha,

@@ -115,7 +115,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   // A seat turn is identified by its prompt even when it needs no tools;
   // the client's own housekeeping does not carry the app's prompt.
-  const prompt = buildFirstmateSystemPrompt();
+  const prompt = buildFirstmateSystemPrompt("claude");
   api = await startStubApi((body) =>
     (body.system ?? []).some((block) => block.text?.includes(prompt)),
   );
@@ -174,7 +174,7 @@ describe("the Claude seat on the real client", () => {
     );
     expect(tools).toHaveLength(FIRSTMATE_TOOLS.length + 1);
     const system = (served?.body.system ?? []).map((block) => block.text ?? "").join("\n");
-    expect(system).toContain(buildFirstmateSystemPrompt());
+    expect(system).toContain(buildFirstmateSystemPrompt("claude"));
     expect(system).toContain("Answer in one line.");
     // The seat's operational effort, until a captain turn raises it.
     expect(served?.body.output_config?.effort).toBe("low");

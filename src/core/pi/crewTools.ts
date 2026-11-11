@@ -389,7 +389,7 @@ const SHAPE_FIELD_RULES = {
   skipped_plan_because:
     "On a direct build with no chosen basis, which parts of the sequences test passed: one nameable place, no changed rule, state or meaning, and a result checkable by looking. The host shows it unjudged.",
   review_of:
-    "The task whose committed work an independent reviewer checks, read-only; pass the user's original words and the same repo_id.",
+    "The task whose committed work an independent reviewer checks, read-only; pass the user's original words and the same repo_id. It runs on its builder's computer, so omit runs_on_ask.",
 } as const satisfies Record<keyof typeof SHAPE_FIELDS, string>;
 
 /** What each wait in spawn_crewmate's `start_after` group means, on the group (v4.13). */
@@ -583,7 +583,10 @@ export function createCrewTools(delegate: CrewDelegate) {
       }),
       result_schema: Type.Optional(RESULT_SCHEMA_PARAM),
       branch_from: Type.Optional(
-        Type.String({ description: "Start from this task’s last commit." }),
+        Type.String({
+          description:
+            "Start from this task’s last commit, held on this computer; for work still on another computer, name its pushed version in the brief instead.",
+        }),
       ),
       start_after: Type.Optional(
         Type.Object(
@@ -698,7 +701,7 @@ export function createCrewTools(delegate: CrewDelegate) {
           },
           {
             description:
-              "Optional exact card lifecycle and captain message this request concerns; routing context, never edit permission.",
+              "Optional exact card, current lifecycle and captain message this request concerns, as a refusal names them; omit it otherwise. Routing context, never edit permission.",
           },
         ),
       ),

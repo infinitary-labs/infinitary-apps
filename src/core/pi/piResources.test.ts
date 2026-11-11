@@ -924,6 +924,19 @@ describe("buildFirstmateSystemPrompt (contract v3.6, v4.2, v4.41)", () => {
     );
     expect(buildFirstmateSystemPrompt()).not.toContain("STYLE (");
   });
+
+  it("tells the first mate on Claude how its tools' short names map, with the crewmates' sentence, and no other seat (INF-3718)", () => {
+    // On Claude every app tool exists only as its full name, while the
+    // prompt names each by its short one; Claude crewmates' short-name
+    // calls fell once their note said how the two match.
+    const claude = buildFirstmateSystemPrompt("claude");
+    const sentence = claude.slice(buildFirstmateSystemPrompt("pi").length).trim();
+    expect(claude.startsWith(buildFirstmateSystemPrompt("pi"))).toBe(true);
+    expect(sentence).toContain(`${CLAUDE_SEAT_TOOL_PREFIX}<name>`);
+    expect(crewmateBackendNote("claude").endsWith(sentence)).toBe(true);
+    expect(buildFirstmateSystemPrompt("pi")).not.toContain(CLAUDE_SEAT_TOOL_PREFIX);
+    expect(buildFirstmateSystemPrompt()).toBe(buildFirstmateSystemPrompt("pi"));
+  });
 });
 
 describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)", () => {

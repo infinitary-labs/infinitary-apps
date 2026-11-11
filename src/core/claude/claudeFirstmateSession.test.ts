@@ -299,7 +299,7 @@ describe("the Claude seat's options (the contract test)", () => {
     expect(options.settingSources).toEqual([]);
     // The byte-stable prompt is the cached prefix; the captain's words follow the boundary.
     expect(options.systemPrompt).toEqual([
-      buildFirstmateSystemPrompt(),
+      buildFirstmateSystemPrompt("claude"),
       SYSTEM_PROMPT_DYNAMIC_BOUNDARY,
       "Say hello first.",
     ]);
@@ -340,7 +340,7 @@ describe("the Claude seat's options (the contract test)", () => {
     const session = await s.factory(spec({ instructions: { text: "", sha: "empty" } }));
     await session.prompt("hello");
     expect(s.harness().options.systemPrompt).toEqual([
-      buildFirstmateSystemPrompt(),
+      buildFirstmateSystemPrompt("claude"),
       SYSTEM_PROMPT_DYNAMIC_BOUNDARY,
     ]);
     session.dispose();
@@ -546,7 +546,7 @@ describe("the Claude seat's attachment", () => {
       kind: "contract",
       at: 1,
       version: FIRSTMATE_CONTRACT_VERSION,
-      prompt_sha: firstmatePromptSha(),
+      prompt_sha: firstmatePromptSha("claude"),
       instructions_sha: "sha-1",
       tools_sha: toolsFingerprint([crewStatus]),
     });
@@ -572,7 +572,7 @@ describe("the Claude seat's attachment", () => {
       kind: "contract",
       at: 1,
       version: FIRSTMATE_CONTRACT_VERSION,
-      prompt_sha: firstmatePromptSha(),
+      prompt_sha: firstmatePromptSha("claude"),
       instructions_sha: "sha-1",
       tools_sha: toolsFingerprint([{ ...crewStatus, description: "What the crew was doing." }]),
     });
@@ -608,7 +608,7 @@ describe("the Claude seat's attachment", () => {
         kind: "contract",
         at: expect.any(Number),
         version: FIRSTMATE_CONTRACT_VERSION,
-        prompt_sha: firstmatePromptSha(),
+        prompt_sha: firstmatePromptSha("claude"),
         instructions_sha: "sha-1",
         tools_sha: toolsFingerprint([crewStatus]),
         tool_shas: toolFingerprints([crewStatus]),
@@ -874,7 +874,7 @@ describe("the Claude seat's turns", () => {
     expect(s.attachments).toHaveLength(2);
     expect(s.attachments[0]?.closed()).toBe(true);
     expect(s.harness().options.systemPrompt).toEqual([
-      buildFirstmateSystemPrompt(),
+      buildFirstmateSystemPrompt("claude"),
       SYSTEM_PROMPT_DYNAMIC_BOUNDARY,
       "New rule.",
     ]);

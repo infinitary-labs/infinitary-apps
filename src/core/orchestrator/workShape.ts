@@ -500,10 +500,17 @@ export function branchFromSource(
     return { task: source, ref: source.branch };
   const kept = keptRefOf(tasks, source.id);
   if (kept) return { task: source, ref: kept };
-  if (source.workspaceState === "present" && source.deviceId)
+  if (source.workspaceState === "present" && source.deviceId) {
+    // INF-3718: say what works now, not only the wait for its work to come home.
+    const change = source.delivery?.prUrl
+      ? `its pull request ${source.delivery.changeLabel ?? source.delivery.prUrl}`
+      : source.branch
+        ? `its branch ${source.branch}, if it pushed it,`
+        : "the version it pushed";
     return {
-      refused: `branch_from ${key}'s working copy is on another computer; branch from it once its work is home and saved.`,
+      refused: `branch_from ${key}'s working copy is on another computer, so nothing here can branch from it yet. What works now: leave branch_from out and name ${change} in the brief for the new crewmate to start from. Or call again with branch_from once ${key}'s work is home and saved.`,
     };
+  }
   return {
     refused: `branch_from ${key} has no branch or saved work to start from: name a task that has started work in this project.`,
   };

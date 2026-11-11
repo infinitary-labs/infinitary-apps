@@ -7,7 +7,7 @@ import { isRunawayProviderError } from "@shared/plainProblem";
 import { backendForProvider, catalogEntry } from "@shared/providers";
 import { clockTime, type QuotaSnapshotView } from "@shared/quota";
 import type { ServedSequences } from "../personal/sequencesSkill";
-import { toolsFingerprint } from "../pi/piResources";
+import { firstmatePromptSha, toolsFingerprint } from "../pi/piResources";
 import { createPiSessionFactory } from "../pi/sessionFactory";
 import type {
   ModelSession,
@@ -101,6 +101,8 @@ export class FirstmateSeat {
   private readonly seats: SessionFactories;
   /** The tool surface fingerprint of the bound session (R2 contract stamp). */
   toolsSha: string | null = null;
+  /** The bound backend's served prompt sha (R2 contract stamp); it differs on Claude. */
+  promptSha: string | null = null;
   /**
    * The dev-only local seat (roadmap 1.7): the Firstmate's model and
    * runtime outright while set. It changes only through
@@ -295,6 +297,7 @@ export class FirstmateSeat {
     const resume = this.recordedResume(binding.backend);
     const tools = this.host.tools();
     this.toolsSha = toolsFingerprint(tools);
+    this.promptSha = firstmatePromptSha(binding.backend);
     const sequences = this.host.sequences();
     const session = await factory.open(
       seatSessionSpec({

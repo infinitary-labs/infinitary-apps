@@ -394,6 +394,19 @@ export class TaskPlacement {
     return ask === null ? undefined : this.placeRefusal(handle, record, ask);
   }
 
+  /**
+   * Where a review of `builder` runs, in words: the builder's computer
+   * ("on Mac mini"), wherever Automatic starts the builder, or this one
+   * (INF-3718: the refusal of a review's runs_on_ask names it).
+   */
+  reviewPlaceWords(builder: PlacementRecord): string {
+    if (this.automaticFor(builder)) return "wherever its builder starts";
+    const device = this.placementOf(builder);
+    return device
+      ? `on ${this.options.machines?.nameOf(device) ?? `the other ${COMPUTER.one}`}`
+      : `on ${HERE.this}`;
+  }
+
   /** Resolve the first mate's placement name before any task record is written. */
   resolveRunsOn(ask: string): string {
     const machines = this.options.machines;

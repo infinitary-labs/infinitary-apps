@@ -181,7 +181,8 @@ export class CrewSteer {
       if (request?.targetTask !== taskId)
         throw new Error(`Response request ${id} does not belong to this task. Nothing was sent.`);
     }
-    if (source.response?.card) this.core.reportIntake.checkResponseCard(source.response.card);
+    if (source.response?.card)
+      this.core.reportIntake.checkResponseCard(source.response.card, "response_context");
   }
 
   /**

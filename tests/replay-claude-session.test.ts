@@ -407,7 +407,7 @@ describe("a Claude-served Firstmate session, recorded and replayed (W1 S11)", ()
     for (const turn of turns) {
       expect(turn.contract).toMatchObject({
         version: FIRSTMATE_CONTRACT_VERSION,
-        prompt_sha: firstmatePromptSha(),
+        prompt_sha: firstmatePromptSha("claude"),
       });
       expect(turn.model).toBe(`${CLAUDE_PROVIDER_ID}/mock-1`);
     }

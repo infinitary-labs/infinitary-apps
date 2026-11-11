@@ -57,7 +57,7 @@ function kindOf(url: string, body: StubRequest["body"], prompt: string): Kind {
 async function startOverflowApi(
   seatReply: (request: StubRequest, res: ServerResponse, tokens: number) => void,
 ): Promise<OverflowApi> {
-  const prompt = buildFirstmateSystemPrompt();
+  const prompt = buildFirstmateSystemPrompt("claude");
   const requests: StubRequest[] = [];
   const log: Logged[] = [];
   const open = new Set<ServerResponse>();

@@ -397,6 +397,16 @@ describe("INF-2214 reliable requested answers", () => {
       lifecycle: card.lifecycleId!,
       messageId: thread.messages.findLast((message) => message.who === "captain")!.id,
     };
+    // INF-3718: a steer's wrong reference is refused with the card's current
+    // lifecycle and captain messages, the facts nothing else shows the first mate.
+    await expect(
+      h.supervisor.steer.steerCrewmate(taskId, "Answer the path question.", "firstmate", {
+        response: { mode: "expected", card: { ...reference, lifecycle: "resolved" } },
+      }),
+    ).rejects.toThrow(
+      `Nothing changed. Card ${cardId}'s current lifecycle is ${reference.lifecycle}, with captain messages ${reference.messageId}. Name that lifecycle and one of those messages in response_context, or leave response_context out.`,
+    );
+    expect(h.inbox.pendingResponses(taskId)).toEqual([]);
     await h.supervisor.steer.steerCrewmate(taskId, "Answer the path question.", "firstmate", {
       response: { mode: "expected", card: reference },
     });

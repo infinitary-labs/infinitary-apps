@@ -427,8 +427,8 @@ WHEN IN DOUBT: read the record or delegate a read, and ask the captain only what
 export { FIRSTMATE_CONTRACT_VERSION } from "../prompts/contractVersion";
 
 /** sha256 of the served Firstmate prompt, the dispatch corpus's provenance stamp. */
-export function firstmatePromptSha(): string {
-  return createHash("sha256").update(buildFirstmateSystemPrompt()).digest("hex");
+export function firstmatePromptSha(backend: CrewmateBackend = "pi"): string {
+  return createHash("sha256").update(buildFirstmateSystemPrompt(backend)).digest("hex");
 }
 
 /**
@@ -483,8 +483,12 @@ export function toolFingerprints(
  * frontier-dogfood style appendix that used to follow it restated the
  * contract in its own words and is gone.
  */
-export function buildFirstmateSystemPrompt(): string {
-  return `${FIRSTMATE_PROMPT_CORE}\n\n${FLEET_WORK}\n\n${FIRSTMATE_CARD_AUTHORING}\n\n${CARD_REPLY}\n\n${FIRSTMATE_HANDOFF}`;
+export function buildFirstmateSystemPrompt(backend: CrewmateBackend = "pi"): string {
+  const prompt = `${FIRSTMATE_PROMPT_CORE}\n\n${FLEET_WORK}\n\n${FIRSTMATE_CARD_AUTHORING}\n\n${CARD_REPLY}\n\n${FIRSTMATE_HANDOFF}`;
+  // INF-3718: on Claude the first mate's tools exist only by their full
+  // names, while everything it reads names them short; the crewmates'
+  // sentence says how the two match.
+  return backend === "claude" ? `${prompt}\n\n${CLAUDE_TOOL_NAMES.rule}` : prompt;
 }
 
 /**

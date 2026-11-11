@@ -253,10 +253,13 @@ export type ServedState = {
  * The captain's served text is stamped beside it by the backend
  * (`instructions_sha`), so it never moves the trainable contract.
  */
-export function firstmateContractStamp(tools: readonly BoundTool[]): ContractStamp {
+export function firstmateContractStamp(
+  tools: readonly BoundTool[],
+  backend: SeatBackend = "pi",
+): ContractStamp {
   return {
     version: FIRSTMATE_CONTRACT_VERSION,
-    promptSha: firstmatePromptSha(),
+    promptSha: firstmatePromptSha(backend),
     toolsSha: toolsFingerprint(tools),
     tools: toolFingerprints(tools),
   };
@@ -302,7 +305,7 @@ export function seatSessionSpec(input: SeatSessionInput): SessionSpec {
     model: input.model,
     thinking: { level: FIRSTMATE_OPERATIONAL_THINKING_LEVEL, perTurn: true },
     instructions: {
-      base: buildFirstmateSystemPrompt(),
+      base: buildFirstmateSystemPrompt(binding.backend),
       ...(input.instructions ? { served: input.instructions } : {}),
     },
     builtins: "none",
@@ -312,7 +315,7 @@ export function seatSessionSpec(input: SeatSessionInput): SessionSpec {
       record: {
         dir: binding.backend === "claude" ? paths.firstmateClaudeDir : paths.firstmateSessionsDir,
         ...(input.resume ? { resume: input.resume } : {}),
-        stamp: firstmateContractStamp(tools),
+        stamp: firstmateContractStamp(tools, binding.backend),
       },
     },
     bounds: {

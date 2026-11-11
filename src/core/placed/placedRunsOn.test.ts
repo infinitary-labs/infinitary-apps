@@ -675,8 +675,26 @@ describe("a task's own Runs on", () => {
         shape: { review_of: "t-going", runs_on_ask: at.deviceId },
       }),
     ).rejects.toThrow(
-      "Nothing was spawned. A review follows its builder's computer; omit runs_on_ask.",
+      `Nothing was spawned. A review runs on its builder's computer: ${recordOf(home, "t-going").key} runs on this computer. The same call without runs_on_ask starts the review there.`,
     );
-    expect(home.tasks.list()).toHaveLength(before);
+    // INF-3718: the refusal names the builder's computer, the one the review runs on.
+    seedTask(home.tasks, {
+      id: "t-away",
+      title: "header",
+      status: "running",
+      repoId: repo.id,
+      deviceId: at.deviceId,
+    });
+    await expect(
+      home.supervisor.intake.commission({
+        title: "review away",
+        intent: { goal: "Review the header.", userWords: "review the header here" },
+        repoId: repo.id,
+        shape: { review_of: "t-away", runs_on_ask: "this-mac" },
+      }),
+    ).rejects.toThrow(
+      `Nothing was spawned. A review runs on its builder's computer: ${recordOf(home, "t-away").key} runs on Mac mini. The same call without runs_on_ask starts the review there.`,
+    );
+    expect(home.tasks.list()).toHaveLength(before + 1);
   });
 });

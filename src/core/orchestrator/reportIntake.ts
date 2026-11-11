@@ -487,25 +487,38 @@ export class ReportIntake {
       );
   }
 
-  /** A response's optional captain reference is factual routing, never edit authority. */
-  checkResponseCard(reference: NonNullable<ResponsePolicy["card"]>): void {
+  /**
+   * A response's optional captain reference is factual routing, never edit
+   * authority. A refusal names the card's current lifecycle and captain
+   * messages (INF-3718), since nothing else shows the first mate a
+   * lifecycle; `field` names the optional parameter that carried it, which
+   * the caller may leave out.
+   */
+  checkResponseCard(reference: NonNullable<ResponsePolicy["card"]>, field?: string): void {
     const card = this.options.cardStore.get(reference.id);
-    if (
-      !card ||
-      card.lifecycleId !== reference.lifecycle ||
-      !this.options.cardStore
-        .observations(reference.id)
-        .some(
-          (observation) =>
-            observation.lifecycleId === reference.lifecycle &&
+    const messages = card
+      ? this.options.cardStore
+          .observations(reference.id)
+          .flatMap((observation) =>
+            observation.lifecycleId === card.lifecycleId &&
             observation.kind === "message_ref" &&
-            observation.payload.messageId === reference.messageId &&
-            observation.payload.who === "captain",
-        )
-    )
-      throw new Error(
-        "The response reference does not name that card's current lifecycle and captain message. Nothing changed; read the current card before resubmitting.",
-      );
+            observation.payload.who === "captain"
+              ? [observation.payload.messageId]
+              : [],
+          )
+      : [];
+    if (card?.lifecycleId === reference.lifecycle && messages.includes(reference.messageId)) return;
+    const facts = !card
+      ? `There is no card ${reference.id}.`
+      : `Card ${reference.id}'s current lifecycle is ${card.lifecycleId}, ${messages.length ? `with captain messages ${messages.join(", ")}` : "with no captain message"}.`;
+    const way = !field
+      ? "Read the current card before resubmitting."
+      : card && messages.length
+        ? `Name that lifecycle and one of those messages in ${field}, or leave ${field} out.`
+        : `Leave ${field} out.`;
+    throw new Error(
+      `The response reference does not name that card's current lifecycle and captain message. Nothing changed. ${facts} ${way}`,
+    );
   }
 
   /** A report's declaration, normalized, or a refusal with the fix (FI3-435, FI3-710). */

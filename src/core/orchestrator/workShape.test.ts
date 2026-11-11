@@ -29,6 +29,7 @@ import { seedProject } from "../workspace/seedProject";
 import { isCardClosedSteer } from "./captainWakes";
 import type { CrewmateSpec } from "./crewSession";
 import { renderWake } from "./wakes";
+import { branchFromSource } from "./workShape";
 
 fakeCrewTimersEachTest();
 
@@ -1090,5 +1091,24 @@ describe("the deliverable axis (Task B)", () => {
     const brief = builder.promptCalls.at(-1) ?? "";
     expect(brief).toContain(`Its card, as the captain read it:\n${body}`);
     expect(brief).not.toContain("open it to read the card");
+  });
+});
+
+describe("branch_from work on another computer (INF-3718)", () => {
+  it("names a step that works now instead of only the wait for the work to come home", () => {
+    const { tasks } = setup(fakeCrewmate());
+    const source = seedTask(tasks, {
+      id: "away1",
+      title: "Fix the meter",
+      status: "running",
+      repoId: "repo-1",
+      worktreeDir: "/work/away1",
+      branch: "fm/task-away1",
+      deviceId: "mini-1",
+    });
+    const refused = branchFromSource(tasks, source.key, "repo-1");
+    expect(refused).toEqual({
+      refused: `branch_from ${source.key}'s working copy is on another computer, so nothing here can branch from it yet. What works now: leave branch_from out and name its branch fm/task-away1, if it pushed it, in the brief for the new crewmate to start from. Or call again with branch_from once ${source.key}'s work is home and saved.`,
+    });
   });
 });

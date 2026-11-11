@@ -229,10 +229,12 @@ export class TaskIntake {
       if (input.shape.in_folder)
         throw new Error(`${NOTHING_SPAWNED} A review reads its builder's branch; omit in_folder.`);
       // Review placement belongs to the builder, never a second choice.
-      if (input.shape.runs_on_ask?.trim())
+      if (input.shape.runs_on_ask?.trim()) {
+        const builder = this.resolveTaskRef(input.shape.review_of.trim(), "review_of");
         throw new Error(
-          `${NOTHING_SPAWNED} A review follows its builder's computer; omit runs_on_ask.`,
+          `${NOTHING_SPAWNED} A review runs on its builder's computer: ${builder.key || builder.id} runs ${this.host.placement.reviewPlaceWords(builder)}. The same call without runs_on_ask starts the review there.`,
         );
+      }
       return this.commissionReview(
         {
           ...input,

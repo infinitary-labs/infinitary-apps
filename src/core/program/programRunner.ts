@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { availableParallelism } from "node:os";
 import { type IntelligenceBucket, intelligenceBucketSchema } from "@shared/modelSlots";
 import type { WorkShape, WorkShapeAsk } from "@shared/routingPolicy";
+import { cutText } from "@shared/textCut";
 import type { HostChildProcess, HostChildSpawner } from "../host";
 import type { CrewSupervisorOptions, FirstmateHooks } from "../orchestrator/crewSupervisorOptions";
 import type { TaskIntake } from "../orchestrator/intake";
@@ -428,7 +429,7 @@ class RunningProgram {
       return;
     }
     if (this.ended) return;
-    this.host.tasks.note(this.programId, `asked: ${prompt.slice(0, 200)}`, {
+    this.host.tasks.note(this.programId, `asked: ${cutText(prompt, 200)}`, {
       news: false,
       actor: "host",
       // A journal event: compaction never folds an answer a replay takes back.
@@ -442,7 +443,7 @@ class RunningProgram {
    * writes again only the lines past those the record already holds.
    */
   private line(call: Call, op: "log" | "phase"): void {
-    const text = String(call.input[0] ?? "").slice(0, 500);
+    const text = cutText(String(call.input[0] ?? ""), 500);
     if (op === "phase") this.phases.push(text);
     this.written[op] += 1;
     if (this.written[op] > this.lines[op]) {
@@ -450,7 +451,7 @@ class RunningProgram {
         op === "phase"
           ? this.phases.map((label, at) => ({
               label,
-              short: label.slice(0, 16),
+              short: cutText(label, 16),
               state: at === this.phases.length - 1 ? ("current" as const) : ("done" as const),
             }))
           : undefined;
@@ -716,7 +717,7 @@ export class CrewPrograms {
       },
       intent,
     );
-    const title = part.label.slice(0, 64);
+    const title = cutText(part.label, 64);
     const record = this.options.tasks.create({
       id: randomUUID().slice(0, 8),
       kind: "work",

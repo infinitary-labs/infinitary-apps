@@ -1,6 +1,7 @@
 import { chmodSync, closeSync, mkdirSync, openSync, rmSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { basename, extname, join } from "node:path";
+import { cutText } from "@shared/textCut";
 import type { HostDownloadOffer, HostDownloadTarget } from "../host";
 import { quoted, siteOf } from "./browserRecord";
 import { clip, type PageNotices } from "./pageNotices";
@@ -32,7 +33,7 @@ function downloadFileName(suggested: string): string {
     .replace(/[\u0000-\u001f\u007f/:]/g, "_")
     .replace(/^[.\s]+/, "")
     .trim();
-  return name.slice(0, 200) || "download";
+  return cutText(name, 200) || "download";
 }
 
 /** Claim the first free name for a download: `name`, then `name-2`, `name-3`... before its extension. */

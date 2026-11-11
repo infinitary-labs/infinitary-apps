@@ -3,6 +3,7 @@ import type { CardMessage, CardObservation, CardObservationKind } from "@shared/
 import { cardWords } from "@shared/cardWords";
 import { reportSummary } from "@shared/feed";
 import { pastEndingWords } from "@shared/pastCard";
+import { cutText } from "@shared/textCut";
 import {
   TIMELINE_SCHEMA_VERSION,
   type TimelineContentKind,
@@ -784,7 +785,7 @@ function countByFile(actions: readonly SourcedAction[]): Record<string, number> 
 
 function oneLine(text: string): string {
   const line = text.trim().split("\n")[0]?.trim() ?? "";
-  return line.length > SUMMARY_CHARS ? `${line.slice(0, SUMMARY_CHARS - 1).trimEnd()}…` : line;
+  return line.length > SUMMARY_CHARS ? `${cutText(line, SUMMARY_CHARS - 1).trimEnd()}…` : line;
 }
 
 function cursorOf(cut: TimelineCut, after: SortKey): string {

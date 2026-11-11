@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import type { AttachmentRef } from "@shared/attachments";
+import { cutText } from "@shared/textCut";
 import type { MessageFile } from "../overflow";
 import {
   type AskAttachedVia,
@@ -78,8 +79,8 @@ export function askTitle(text: string, images: AskImage[] = []): string {
   const flat = text.replace(/\s+/g, " ").trim();
   if (!flat) return images.length > 0 ? "Image attachment" : "Empty turn";
   const sentence = flat.match(/^.*?[.!?](?=\s|$)/)?.[0] ?? flat;
-  const clipped = sentence.length <= ASK_TITLE_MAX ? sentence : sentence.slice(0, ASK_TITLE_MAX);
-  return clipped.trim() || flat.slice(0, ASK_TITLE_MAX);
+  const clipped = cutText(sentence, ASK_TITLE_MAX);
+  return clipped.trim() || cutText(flat, ASK_TITLE_MAX);
 }
 
 /**

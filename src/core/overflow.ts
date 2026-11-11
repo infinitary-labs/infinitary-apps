@@ -3,6 +3,7 @@ import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { safeDisplayName } from "@shared/attachments";
+import { cutText, cutTextEnd } from "@shared/textCut";
 
 /**
  * The shared message-length ceiling (captain decision, 2026-09-04, following
@@ -60,8 +61,8 @@ export function capWithOverflow(
   opts.onFile?.(file);
   const omitted = Math.max(0, text.length - limit);
   return keep === "tail"
-    ? `[truncated ${omitted} earlier characters; full text: ${file}]\n${text.slice(-limit).trimStart()}`
-    : `${text.slice(0, limit).trimEnd()}\n[truncated ${omitted} more characters; full text: ${file}]`;
+    ? `[truncated ${omitted} earlier characters; full text: ${file}]\n${cutTextEnd(text, limit).trimStart()}`
+    : `${cutText(text, limit).trimEnd()}\n[truncated ${omitted} more characters; full text: ${file}]`;
 }
 
 /**

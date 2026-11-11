@@ -2,6 +2,7 @@ import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { settingFrom } from "@shared/envSettings";
 import { forgePlace, GITHUB_COM, isGitHubEnterpriseCloud } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
+import { cutText } from "@shared/textCut";
 import type { NamingRule } from "../../../../shared/runbooks";
 import { GITHUB_QUEUE_PART, readQueueStamp } from "../../../queue/shipped";
 import { MERGE_PERMISSIONS, WORKFLOW as QUEUE_WORKFLOW } from "../../../queue/shipped/github.mjs";
@@ -1579,7 +1580,7 @@ function failureOf(response: Response, method: string, path: string, text: strin
   try {
     said = (JSON.parse(text) as { message?: string }).message ?? "";
   } catch {
-    said = text.slice(0, 200);
+    said = cutText(text, 200);
   }
   const what = `GitHub answered ${response.status} to ${method} ${path.split("?")[0]}${said ? `: ${said}` : ""}`;
   if (response.status === 401) return new ForgeError("sign-in", what);

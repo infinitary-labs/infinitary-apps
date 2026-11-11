@@ -3,6 +3,7 @@ import type { AttachmentRef } from "@shared/attachments";
 import type { TurnImage } from "@shared/cards";
 import { deviceUpdateCardOfOffer } from "@shared/deviceUpdateNudge";
 import type { HostReplyEmote } from "@shared/emotes";
+import { cutText } from "@shared/textCut";
 import { loadImages } from "../attachments";
 import type { CoreDispatch } from "../dispatcher";
 import {
@@ -961,5 +962,5 @@ function stringParam(value: unknown): string | undefined {
 /** A task title from free text: one line, at most 64 characters. */
 function clipTitle(text: string): string {
   const flat = text.replace(/\s+/g, " ").trim();
-  return flat.length <= 64 ? flat : `${flat.slice(0, 63).trimEnd()}…`;
+  return flat.length <= 64 ? flat : `${cutText(flat, 63).trimEnd()}…`;
 }

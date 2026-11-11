@@ -1,5 +1,6 @@
 import type { FmEvent } from "@shared/events";
 import type { ObserveLive } from "@shared/observe";
+import { cutTextEnd } from "@shared/textCut";
 
 /**
  * A session's in-flight turn, kept between the event stream and the
@@ -31,7 +32,7 @@ export class ObserveLiveBuffer {
     switch (event.type) {
       case "assistant_delta": {
         const current = this.sessions.get(event.taskId) ?? EMPTY;
-        const text = (current.text + event.text).slice(-LIVE_TEXT_MAX);
+        const text = cutTextEnd(current.text + event.text, LIVE_TEXT_MAX);
         this.sessions.set(event.taskId, { text, tools: current.tools });
         return;
       }

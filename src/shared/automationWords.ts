@@ -1,3 +1,4 @@
+import { cutText } from "@shared/textCut";
 import type { AutomationRule, AutomationSpec, AutomationState } from "./automation";
 import { formatDate, formatDateTime, formatTime } from "./i18n/format.ts";
 
@@ -119,7 +120,7 @@ export function automationWhenWords(spec: AutomationSpec, when?: string): string
 
 /** A rule's list title: its name, else the start of its prompt. */
 export function automationRuleTitle(rule: Pick<AutomationRule, "name" | "prompt">): string {
-  return rule.name || rule.prompt.slice(0, 48);
+  return rule.name || cutText(rule.prompt, 48);
 }
 
 /** What a rule's row says at its end: the next run, or why there is none. */

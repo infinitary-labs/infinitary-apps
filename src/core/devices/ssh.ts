@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { chmodSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import type { Writable } from "node:stream";
+import { cutTextEnd } from "@shared/textCut";
 import { hostEnv } from "../hostEnv";
 import { hostPlatform } from "../platform";
 import { findOnPath } from "../userBin";
@@ -189,14 +190,14 @@ export function runSsh(options: RunSshOptions): Promise<SshResult> {
     let partial = "";
     const keep = (kept: string, chunk: Buffer) => {
       const next = kept + chunk.toString("utf8");
-      return next.length > KEEP_BYTES ? next.slice(next.length - KEEP_BYTES) : next;
+      return cutTextEnd(next, KEEP_BYTES);
     };
     child.stdout?.on("data", (chunk: Buffer) => {
       stdout = keep(stdout, chunk);
       if (options.onLine) {
         partial += chunk.toString("utf8");
         const lines = partial.split("\n");
-        partial = (lines.pop() ?? "").slice(-KEEP_BYTES);
+        partial = cutTextEnd(lines.pop() ?? "", KEEP_BYTES);
         for (const line of lines) if (options.onLine(line, activity)) activity();
       }
     });
@@ -437,7 +438,7 @@ export class SshMaster {
 
 /** Keeps the end of a stream: the outcome line and SSH's notes fit well inside. */
 function keepEnd(text: string): string {
-  return text.length > KEEP_BYTES ? text.slice(text.length - KEEP_BYTES) : text;
+  return cutTextEnd(text, KEEP_BYTES);
 }
 
 /** Whether `promise` settles within `ms`. */

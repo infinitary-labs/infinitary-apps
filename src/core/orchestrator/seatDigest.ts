@@ -1,3 +1,4 @@
+import { cutText } from "@shared/textCut";
 import { z } from "zod";
 
 /**
@@ -114,5 +115,5 @@ export function digestFor(entries: readonly SeatDigestEntry[], seat: string): Se
 function excerpt(text: string): string {
   const flat = text.replace(/\s+/g, " ").trim();
   if (flat.length <= SEAT_DIGEST_EXCERPT_CHARS) return flat;
-  return `${flat.slice(0, SEAT_DIGEST_EXCERPT_CHARS - 1).trimEnd()}…`;
+  return `${cutText(flat, SEAT_DIGEST_EXCERPT_CHARS - 1).trimEnd()}…`;
 }

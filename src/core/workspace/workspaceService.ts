@@ -9,6 +9,7 @@ import { HERE } from "@shared/deviceNames";
 import type { FolderRefreshCause, FolderRefreshRefusal } from "@shared/folderRefresh";
 import type { KnownForgeHost } from "@shared/forge";
 import { forgeOf } from "@shared/forge";
+import { cutText } from "@shared/textCut";
 import type { NamingRule } from "../../shared/runbooks";
 import { hostEnv } from "../hostEnv";
 import type { AppPaths } from "../paths";
@@ -1549,7 +1550,7 @@ function installError(caught: unknown): string {
     .map((line) => line.trim())
     .filter(Boolean);
   const reason = lines.find((line) => /ERR_|error/i.test(line)) ?? lines.at(-1) ?? "unknown error";
-  return reason.length > 200 ? `${reason.slice(0, 200)}...` : reason;
+  return reason.length > 200 ? `${cutText(reason, 200)}...` : reason;
 }
 
 /** The first stderr-ish line of a git failure, for a card-sized reason. */

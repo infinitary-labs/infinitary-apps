@@ -1,6 +1,7 @@
 import { resolve as resolvePath } from "node:path";
 import { reportSummary } from "@shared/feed";
 import { formatDurationShort } from "@shared/quotaSignals";
+import { cutText } from "@shared/textCut";
 import { capWithOverflow } from "../overflow";
 import { errorText } from "../personal/errorText";
 import type { AnsweredRead } from "../session/openReads";
@@ -737,7 +738,7 @@ export class CrewWatch {
             ...(job
               ? {
                   job: {
-                    command: job.command.replace(/\s+/g, " ").slice(0, 80),
+                    command: cutText(job.command.replace(/\s+/g, " "), 80),
                     since: job.startedAt,
                   },
                 }

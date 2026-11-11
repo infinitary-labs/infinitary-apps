@@ -11,6 +11,7 @@ import {
   opensPullRequest,
   type RepoDelivery,
 } from "@shared/repos";
+import { cutText } from "@shared/textCut";
 import { AttachmentUnavailableError, loadImages } from "../attachments";
 import { capWithOverflow } from "../overflow";
 import type { CrewStatusEntry } from "../pi/crewTools";
@@ -437,7 +438,7 @@ export class CrewFacts {
     const waiting = record.status === "active" ? this.core.watch.namedWait(record.id) : undefined;
     const times: NonNullable<CrewStatusEntry["times"]> = {
       ...(job
-        ? { jobSince: job.startedAt, job: job.command.replace(/\s+/g, " ").slice(0, 80) }
+        ? { jobSince: job.startedAt, job: cutText(job.command.replace(/\s+/g, " "), 80) }
         : {}),
       ...(waiting?.calls.length ? { calls: waiting.calls } : {}),
       ...(waiting?.steers
@@ -449,7 +450,7 @@ export class CrewFacts {
     const words = {
       ...(job
         ? {
-            job: `running ${formatDurationShort(now - job.startedAt)}: ${job.command.replace(/\s+/g, " ").slice(0, 80)}`,
+            job: `running ${formatDurationShort(now - job.startedAt)}: ${cutText(job.command.replace(/\s+/g, " "), 80)}`,
           }
         : {}),
       ...(waiting?.words ? { waiting: waiting.words } : {}),

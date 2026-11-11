@@ -4,6 +4,7 @@ import { sep } from "node:path";
 import { promisify } from "node:util";
 import type { ProgramOutcome } from "@shared/leftoverPrograms";
 import { RESOURCE_READ_TIMEOUT_MS } from "@shared/resources";
+import { cutText } from "@shared/textCut";
 import { hostEnv } from "../hostEnv";
 import { hostPlatform } from "../platform";
 import { type ProcessReading, readProcesses } from "./processResources";
@@ -210,7 +211,7 @@ export async function findFolderHolders(
       row.bornMs + BIRTH_PRECISION_MS < options.startedAt
     )
       continue;
-    holders.push({ pid: row.pid, started: row.started, name: name.slice(0, 64) });
+    holders.push({ pid: row.pid, started: row.started, name: cutText(name, 64) });
   }
   return { status: "checked", holders };
 }

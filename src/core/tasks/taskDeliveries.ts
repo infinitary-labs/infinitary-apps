@@ -25,6 +25,7 @@ import {
   requiredActionSchema,
 } from "@shared/requiredActions";
 import { type FirstReleaseReport, firstReleaseReportSchema } from "@shared/taskRelease";
+import { cutText } from "@shared/textCut";
 import {
   type IntegrationAllowance,
   NEVER_SENT_AGAIN,
@@ -748,7 +749,7 @@ export class TaskDeliveries {
         this.tasks.create({
           id,
           kind: "operation",
-          title: action.title.slice(0, 64),
+          title: cutText(action.title, 64),
           goal: action.criterion,
           prompt: "",
           repoId: null,
@@ -788,7 +789,7 @@ export class TaskDeliveries {
       const first = state.requirements[0]?.action;
       if (first)
         this.writer.patch(id, {
-          title: first.title.slice(0, 64),
+          title: cutText(first.title, 64),
           goal: first.criterion,
           updatedAt: this.writer.now(),
         });
@@ -1204,7 +1205,7 @@ export class TaskDeliveries {
         ...(input.by.taskId ? { taskId: input.by.taskId } : {}),
         label: input.by.label,
         at: this.writer.now(),
-        reason: reason.slice(0, 500),
+        reason: cutText(reason, 500),
         generation,
         previous: Object.fromEntries(
           changed.map((field) => [field, requirement.action[field]]),
@@ -1229,7 +1230,7 @@ export class TaskDeliveries {
         changed.some((field) => field === "title" || field === "criterion")
       )
         this.writer.patch(row.id, {
-          title: first.title.slice(0, 64),
+          title: cutText(first.title, 64),
           goal: first.criterion,
           updatedAt: this.writer.now(),
         });

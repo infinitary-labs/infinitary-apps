@@ -1,6 +1,7 @@
 import { closeSync, openSync, readSync, statSync } from "node:fs";
 import { basename } from "node:path";
 import type { TaskActionLine } from "@shared/tasks";
+import { cutText } from "@shared/textCut";
 import { runsTaskCommand } from "../axi/names";
 import { redactObserveText } from "../observe/redact";
 import {
@@ -197,7 +198,7 @@ export function actionText(call: SessionToolCall, worktree: string): string {
 function oneLine(text: string): string {
   const redacted = redactObserveText(text);
   return redacted.length > ACTION_TEXT_MAX
-    ? `${redacted.slice(0, ACTION_TEXT_MAX - 1).trimEnd()}…`
+    ? `${cutText(redacted, ACTION_TEXT_MAX - 1).trimEnd()}…`
     : redacted;
 }
 

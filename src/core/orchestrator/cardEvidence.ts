@@ -20,6 +20,7 @@ import {
   cardQuestionsSchema,
   cardSubmissionSchema,
 } from "@shared/cards";
+import { cutText } from "@shared/textCut";
 import { z } from "zod";
 import { updateSightingId } from "../storage/cardStore";
 import { cardChanges } from "./cardChanges";
@@ -345,7 +346,7 @@ export class CardEvidence {
       build: this.host.build,
       payload: {
         ...payload,
-        ...(payload.note ? { note: payload.note.slice(0, CARD_OBSERVATION_NOTE_MAX) } : {}),
+        ...(payload.note ? { note: cutText(payload.note, CARD_OBSERVATION_NOTE_MAX) } : {}),
       },
     });
     return kept ? id : undefined;

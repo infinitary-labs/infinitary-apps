@@ -1,4 +1,5 @@
 import { X509Certificate } from "node:crypto";
+import { cutText } from "@shared/textCut";
 import { CustomApiError, type CustomNetworkMode } from "./customApiPolicy";
 
 const MAX_PEM_BYTES = 64 * 1024;
@@ -84,5 +85,5 @@ function parseCertificates(pem: string): X509Certificate[] {
 function safeIdentity(identity: string): string {
   // Identity is shown as text by callers, never markup, a URL or an action.
   // biome-ignore lint/suspicious/noControlCharactersInRegex: Certificate identity is untrusted display text.
-  return identity.replace(/[\u0000-\u001f\u007f]/g, " ").slice(0, 512);
+  return cutText(identity.replace(/[\u0000-\u001f\u007f]/g, " "), 512);
 }

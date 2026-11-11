@@ -5,6 +5,7 @@ import {
   KINDS_BY_DELIVERABLE,
   type WorkKind,
 } from "@shared/routingPolicy";
+import { cutText } from "@shared/textCut";
 import type { DecisionModels } from "../decisions/decisionModel";
 import {
   buildKindClassifierInstruction,
@@ -213,7 +214,7 @@ export function buildClassifierPrompt(input: KindInput): string {
 
 function clip(text: string, limit: number): string {
   const trimmed = (text ?? "").trim();
-  return trimmed.length <= limit ? trimmed : `${trimmed.slice(0, limit)}...`;
+  return trimmed.length <= limit ? trimmed : `${cutText(trimmed, limit)}...`;
 }
 
 /**

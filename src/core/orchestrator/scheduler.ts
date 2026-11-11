@@ -3,6 +3,7 @@ import { type AutomationEventItem, eventsWords, fillScheduleDetails } from "@sha
 import type { FmEvent } from "@shared/events";
 import { formatDateTime } from "@shared/i18n/format";
 import type { DecisionRecord } from "@shared/provenance";
+import { cutText } from "@shared/textCut";
 import type { InboxRow } from "../storage/inboxStore";
 import {
   MIN_INTERVAL_MINUTES,
@@ -146,7 +147,7 @@ const WEEKDAY_NAMES = [
 const MISSED_COUNT_CAP = 10_000;
 
 function label(record: Pick<ScheduleRecord, "name" | "prompt">): string {
-  return record.name ?? record.prompt.slice(0, PROMPT_EXCERPT);
+  return record.name ?? cutText(record.prompt, PROMPT_EXCERPT);
 }
 
 /** " (1 unsent prompt taken back)", or nothing when none was. */
@@ -160,15 +161,15 @@ function recalledText(count: number): string {
  */
 export const automationWords = {
   created: (draft: boolean, spec: ScheduleSpec, prompt: string) =>
-    `${draft ? "Automation saved as a draft" : "Scheduled"} - ${scheduleText(spec)}: ${prompt.slice(0, PROMPT_EXCERPT)}`,
+    `${draft ? "Automation saved as a draft" : "Scheduled"} - ${scheduleText(spec)}: ${cutText(prompt, PROMPT_EXCERPT)}`,
   saved: (turnedOn: boolean, spec: ScheduleSpec, prompt: string, recalled = 0) =>
-    `${turnedOn ? "Automation turned on" : "Automation saved"} - ${scheduleText(spec)}: ${prompt.slice(0, PROMPT_EXCERPT)}${recalledText(recalled)}`,
+    `${turnedOn ? "Automation turned on" : "Automation saved"} - ${scheduleText(spec)}: ${cutText(prompt, PROMPT_EXCERPT)}${recalledText(recalled)}`,
   paused: (rule: Pick<ScheduleRecord, "name" | "prompt">, recalled = 0) =>
     `Automation paused - ${label(rule)}${recalledText(recalled)}`,
   resumed: (rule: Pick<ScheduleRecord, "name" | "prompt">) => `Automation resumed - ${label(rule)}`,
   pausedAll: (count: number, recalled = 0) =>
     `Automation paused - ${count} ${count === 1 ? "rule" : "rules"}${recalledText(recalled)}`,
-  cancelled: (prompt: string) => `Schedule cancelled - ${prompt.slice(0, PROMPT_EXCERPT)}`,
+  cancelled: (prompt: string) => `Schedule cancelled - ${cutText(prompt, PROMPT_EXCERPT)}`,
   resynced: (rule: Pick<ScheduleRecord, "name" | "prompt">, integration: string) =>
     `Automation lost its place in ${integration} and listens again from now; nothing was sent for the gap - ${label(rule)}`,
 };

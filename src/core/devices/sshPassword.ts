@@ -4,6 +4,7 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { RemoteLoginRefusal } from "@shared/remoteLogin";
+import { cutTextEnd } from "@shared/textCut";
 import { FAR_SYSTEMS } from "./farSystems";
 import { SSH_FAILED, SSH_OPTIONS, type SshProgram, sshArguments, sshEnv } from "./ssh";
 import { sshRefusal } from "./sshRefusal";
@@ -232,5 +233,5 @@ export async function placeOwnKey(options: PlaceKeyOptions): Promise<PlaceKeyOut
 const KEEP_BYTES = 64 * 1024;
 
 function keepEnd(text: string): string {
-  return text.length > KEEP_BYTES ? text.slice(text.length - KEEP_BYTES) : text;
+  return cutTextEnd(text, KEEP_BYTES);
 }

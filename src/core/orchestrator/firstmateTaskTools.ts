@@ -1,5 +1,6 @@
 import { formatUsd } from "@shared/costLimit";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
+import { cutText } from "@shared/textCut";
 import type { TaskToolsDelegate } from "../pi/taskTools";
 import type { TaskRecord } from "../storage/taskRecords";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
@@ -154,7 +155,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
               "program_bound is raised only on the captain's words: ask the captain on a card first.",
             );
           const rest = {
-            ...(input.title !== undefined ? { title: input.title.trim().slice(0, 64) } : {}),
+            ...(input.title !== undefined ? { title: cutText(input.title.trim(), 64) } : {}),
             ...(input.programBound !== undefined ? { programBound: input.programBound } : {}),
             ...(input.basis !== undefined ? { basis: input.basis } : {}),
             ...handOff,
@@ -173,7 +174,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
               ? { startPolicy: input.startPolicy }
               : {}),
             ...(input.verdict !== undefined
-              ? { verdict: input.verdict?.trim().slice(0, 280) || null }
+              ? { verdict: cutText(input.verdict?.trim() ?? "", 280) || null }
               : {}),
           };
           const changes = tasks.atomic(

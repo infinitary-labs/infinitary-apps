@@ -14,6 +14,7 @@ import {
 } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
 import { INTEGRATION_KIND_NAMES, integrationMcpAddSchema } from "@shared/integrations";
+import { cutText, cutTextEnd } from "@shared/textCut";
 import { z } from "zod";
 import { findOnPath, isExecutable } from "../../../userBin";
 import {
@@ -164,7 +165,7 @@ export function mcpIntegration(options: McpIntegrationOptions): IntegrationBindi
       stderr: "pipe",
     });
     transport.stderr?.on("data", (chunk: Buffer) => {
-      link.stderr = `${link.stderr}${chunk.toString("utf8")}`.slice(-2048);
+      link.stderr = cutTextEnd(`${link.stderr}${chunk.toString("utf8")}`, 2048);
     });
     return transport;
   };
@@ -536,11 +537,11 @@ function titleOf(resource: Pick<McpSavedResource, "name" | "title">): string {
 
 /** The end of `text`, when what matters is how it ended. */
 function clipStart(text: string, length: number): string {
-  return text.length <= length ? text : `…${text.slice(-(length - 1))}`;
+  return text.length <= length ? text : `…${cutTextEnd(text, length - 1)}`;
 }
 
 function clip(text: string, length: number): string {
-  return text.length <= length ? text : `${text.slice(0, length - 1)}…`;
+  return text.length <= length ? text : `${cutText(text, length - 1)}…`;
 }
 
 /** A tool's answer as words: its text, and what it sent that is not text, named. */

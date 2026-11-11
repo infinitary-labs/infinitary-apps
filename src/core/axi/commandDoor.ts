@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { CORE_INVOKE_CHANNELS, type CoreInvokeChannel, invokeContract } from "@shared/ipc";
+import { cutText } from "@shared/textCut";
 import { z } from "zod";
 import { asTheCommand } from "../askedFromTheCommand";
 import { EventJournal, type JournalEntry, type JournalLimits } from "../connection/journal";
@@ -313,7 +314,7 @@ export class CommandDoor {
             : {
                 summary:
                   text.length > SUMMARY_CHARS
-                    ? `${text.slice(0, SUMMARY_CHARS)}… (${text.length - SUMMARY_CHARS} more characters)`
+                    ? `${cutText(text, SUMMARY_CHARS)}… (${text.length - SUMMARY_CHARS} more characters)`
                     : text,
               }),
         };

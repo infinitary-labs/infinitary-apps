@@ -17,6 +17,7 @@
  * lines one answer shows is `window.ts`'s.
  */
 
+import { cutText } from "@shared/textCut";
 import { browserCommand } from "./commandWords";
 
 /** One accessibility node, as the host reads it off the page. */
@@ -260,7 +261,7 @@ function flat(text: string): string {
 
 function squash(text: string): string {
   const line = flat(text);
-  return line.length > NAME_MAX ? `${line.slice(0, NAME_MAX - 1)}…` : line;
+  return line.length > NAME_MAX ? `${cutText(line, NAME_MAX - 1)}…` : line;
 }
 
 /** Whether `squash` cut this text. */
@@ -278,7 +279,7 @@ function markText(value: unknown): string | undefined {
 }
 
 function clipMark(text: string, max: number): string {
-  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+  return text.length > max ? `${cutText(text, max - 1)}…` : text;
 }
 
 /**
@@ -350,7 +351,7 @@ export function passageOf(
   if (text.length <= FULL_TEXT_MAX) return { hidden: false, text, omitted: 0 };
   return {
     hidden: false,
-    text: text.slice(0, FULL_TEXT_MAX),
+    text: cutText(text, FULL_TEXT_MAX),
     omitted: text.length - FULL_TEXT_MAX,
   };
 }

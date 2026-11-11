@@ -11,6 +11,7 @@ import {
   PASTED_TEXT_WORDS,
   type PastedText,
 } from "@shared/composer";
+import { cutText } from "@shared/textCut";
 import type React from "react";
 import { useCallback, useId, useRef, useState } from "react";
 import { useAnimationLoop } from "../../character/motion";
@@ -267,7 +268,7 @@ export function PastedTextChip({ paste, onRemove }: { paste: PastedText; onRemov
             whiteSpace: "pre",
           }}
         >
-          {paste.text.slice(0, 240)}
+          {cutText(paste.text, 240)}
         </span>
         <span style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
           <span

@@ -9,6 +9,7 @@ import {
   replyWithSettings,
   type TurnImage,
 } from "@shared/cards";
+import { characterBoundary, cutText } from "@shared/textCut";
 import { AttachmentUnavailableError, loadImages } from "../attachments";
 import type { AskRecord } from "../storage/askStore";
 import { TaskService } from "../tasks/taskService";
@@ -115,7 +116,7 @@ function inParts(
       ? `; the rest continues: read open_work with next "${cursorOf({ ...target, at: end, rev })}"`
       : "";
   return {
-    text: `${readAt}\npart ${part + 1} of ${parts}${next}\n${read.text.slice(at, end)}`,
+    text: `${readAt}\npart ${part + 1} of ${parts}${next}\n${read.text.slice(characterBoundary(read.text, at), characterBoundary(read.text, end))}`,
     ...(part === 0 && read.images ? { images: read.images } : {}),
   };
 }
@@ -199,7 +200,7 @@ function messageOf(ask: AskRecord, words: number) {
     ask_id: ask.id,
     sent: iso(ask.at),
     ...(words > 0
-      ? { words: text.length <= words ? text : `${text.slice(0, words).trimEnd()}…` }
+      ? { words: text.length <= words ? text : `${cutText(text, words).trimEnd()}…` }
       : {}),
     ...(text.length > words ? { whole: `ask ${ask.id}` } : {}),
     ...(ask.attachments.length > 0 ? { pictures: ask.attachments.length } : {}),

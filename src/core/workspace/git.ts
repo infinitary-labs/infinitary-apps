@@ -1,4 +1,5 @@
 import { appendFile, open, readFile, realpath, rename, rm, stat } from "node:fs/promises";
+import { cutText } from "@shared/textCut";
 import { bundledGit, gitHelperResetParameters, hostEnv } from "../hostEnv";
 import { atUtilityQos } from "../utilityQos";
 import { runGitProcess } from "./gitProcess";
@@ -315,7 +316,7 @@ export function gitFailure(caught: unknown): string {
     .map((line) => line.trim())
     .filter(Boolean);
   const reason = lines.find((line) => /^(fatal|error):/.test(line)) ?? lines[0] ?? "unknown error";
-  return reason.length > 200 ? `${reason.slice(0, 200)}...` : reason;
+  return reason.length > 200 ? `${cutText(reason, 200)}...` : reason;
 }
 
 export async function isGitRepo(dir: string): Promise<boolean> {

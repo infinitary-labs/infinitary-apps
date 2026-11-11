@@ -1,3 +1,4 @@
+import { cutText } from "@shared/textCut";
 import type {
   AssessmentVerdict,
   ConceptBody,
@@ -480,7 +481,7 @@ export class KnowledgeWrites {
           "retire",
           current.body,
           actor,
-          `${reason} (approved on ${approval.key})`.slice(0, MAX.reason),
+          cutText(`${reason} (approved on ${approval.key})`, MAX.reason),
           at,
         );
         done.push(entry.id);

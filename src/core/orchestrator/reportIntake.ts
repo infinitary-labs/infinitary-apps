@@ -9,6 +9,7 @@ import { formatDurationShort } from "@shared/quotaSignals";
 import { keptRecoveryWaySchema, workWaitSchema } from "@shared/recovery";
 import { deliveryFor, opensPullRequest, type RepoDelivery } from "@shared/repos";
 import { type PlanItem, readPlanItems } from "@shared/taskPlan";
+import { cutText } from "@shared/textCut";
 import { crewmateCardPicturesDir } from "../paths";
 import {
   verifyKeptValidationEvidence,
@@ -88,7 +89,7 @@ export class ReportIntake {
   fileFollowup(task: TaskRuntime, input: FollowupInput): string {
     const origin = this.options.tasks.get(task.id);
     if (!origin) throw new Error(`Task ${task.id} no longer exists.`);
-    const title = input.title.trim().slice(0, 64);
+    const title = cutText(input.title.trim(), 64);
     const goal = input.goal.trim();
     const why = input.why.trim();
     if (!title) throw new Error("title is required.");
@@ -546,7 +547,7 @@ export class ReportIntake {
       ...(waitsOn ? { waitsOn } : {}),
       ...(workWait ? { workWait } : {}),
       ...(recoveryWays ? { recoveryWays } : {}),
-      ...(ask ? { needsFirstmate: ask.slice(0, 300) } : {}),
+      ...(ask ? { needsFirstmate: cutText(ask, 300) } : {}),
       ...(captainWords ? { captainWordsFrom: captainWords.from, captainWords } : {}),
       ...(declared?.firstRelease ? { firstRelease: declared.firstRelease } : {}),
       ...(result ? { result } : {}),
@@ -562,7 +563,7 @@ export class ReportIntake {
     }
     const named = wait.cardId?.trim();
     const cardId = named ? this.ownOpenCard(task, named) : undefined;
-    return { wait: { reason: reason.slice(0, 300), ...(cardId ? { cardId } : {}) }, ...needs };
+    return { wait: { reason: cutText(reason, 300), ...(cardId ? { cardId } : {}) }, ...needs };
   }
 
   /**
@@ -742,7 +743,7 @@ export class ReportIntake {
             (event.kind === "progress" || event.kind === "compacted") &&
             !("refusal" in readPlanItems(event.data?.plan)),
         );
-    this.options.tasks.noteProgress(task.id, line.slice(0, 500), "crewmate", items);
+    this.options.tasks.noteProgress(task.id, cutText(line, 500), "crewmate", items);
     this.host.noteTaskActivity(task);
     if (items) return "Noted on your task's timeline, with your plan.";
     return planned
@@ -771,5 +772,5 @@ function checkBackOf(
       "Report refused: check_back needs waiting_for - what the running job is doing.",
     );
   }
-  return { minutes: back.minutes, waitingFor: waitingFor.slice(0, 300) };
+  return { minutes: back.minutes, waitingFor: cutText(waitingFor, 300) };
 }

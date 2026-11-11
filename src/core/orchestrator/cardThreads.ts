@@ -18,6 +18,7 @@ import {
 import type { CrewResponse } from "@shared/crewResponses";
 import { FIRSTMATE_SESSION_ID } from "@shared/observe";
 import type { RequiredActionText } from "@shared/requiredActions";
+import { cutText } from "@shared/textCut";
 import { revisedLineWords } from "@shared/threadLines";
 import { decidedCardWidth } from "../pi/cardWidth";
 import type { EmittedCardInput } from "../session/tools";
@@ -1028,7 +1029,7 @@ export class CardThreads {
       cardId,
       actor: caller.actor,
       ...(caller.actor === "crewmate" ? { taskId: caller.taskId } : {}),
-      ...(facts.reason?.trim() ? { reason: facts.reason.trim().slice(0, 500) } : {}),
+      ...(facts.reason?.trim() ? { reason: cutText(facts.reason.trim(), 500) } : {}),
       at: this.host.now(),
       result,
     });
@@ -1051,7 +1052,7 @@ export class CardThreads {
               by:
                 already.contributor?.label ??
                 (already.who === "firstmate" ? "your first mate" : "the card's author"),
-              text: already.text.replace(/\s+/g, " ").slice(0, 160),
+              text: cutText(already.text.replace(/\s+/g, " "), 160),
             },
           }
         : {}),

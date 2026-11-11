@@ -22,6 +22,7 @@ import {
 } from "@shared/taskPolicies";
 import { QUEUE_POLICY } from "@shared/taskQueue";
 import type { DropEffects } from "@shared/tasks";
+import { cutText } from "@shared/textCut";
 import type { RepetitionNotice, ToolObservation } from "@shared/toolCompletion";
 import { CARE_WORDS } from "@shared/vocabulary";
 import { amendBriefGoal, type BriefPart, type SpawnIntent } from "../orchestrator/intentBrief";
@@ -1003,7 +1004,7 @@ export class TaskService {
     const run = this.writer.write((): string[] => {
       let record = this.writer.mustGet(id);
       const changes: string[] = [];
-      const from = patch.direction?.trim() ? `, from ${patch.direction.trim().slice(0, 80)}` : "";
+      const from = patch.direction?.trim() ? `, from ${cutText(patch.direction.trim(), 80)}` : "";
       if (patch.correctRequiredAction) {
         const action = record.delivery?.captainAction;
         if (
@@ -1322,7 +1323,7 @@ export class TaskService {
         changes.push(`start policy ${patch.startPolicy}`);
       }
       if (patch.verdict !== undefined) {
-        const verdict = patch.verdict?.trim().slice(0, 280) || null;
+        const verdict = cutText(patch.verdict?.trim() ?? "", 280) || null;
         if (verdict !== (record.verdict ?? null)) {
           update.verdict = verdict;
           changes.push(verdict ? `verdict "${verdict}"` : "verdict cleared");

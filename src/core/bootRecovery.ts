@@ -1,4 +1,5 @@
 import type { FmEvent } from "@shared/events";
+import { cutText } from "@shared/textCut";
 import type { JobManager } from "./jobs/jobManager";
 import type { CrewSupervisor } from "./orchestrator/crewSupervisor";
 import type { CrewWatch } from "./orchestrator/crewWatch";
@@ -21,7 +22,7 @@ export function interruptedJobNote(
     interrupted.ownerId === "firstmate"
       ? "Your first mate's"
       : `"${taskTitle(interrupted.ownerId) ?? interrupted.ownerId}"'s`;
-  const job = `${owner} background job "${interrupted.command.slice(0, 80)}"`;
+  const job = `${owner} background job "${cutText(interrupted.command, 80)}"`;
   return {
     type: "firstmate_note",
     text: interrupted.stoppedByQuit

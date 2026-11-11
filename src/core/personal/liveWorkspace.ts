@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative, sep } from "node:path";
 import { PERSONAL_ID_PATTERN } from "@shared/personal/manifest";
+import { cutText } from "@shared/textCut";
 import type { PanelSourceFile } from "../plugins/pluginLint";
 import { requireConventional } from "../workspace/conventional";
 import { APP_GIT_IDENTITY, git } from "../workspace/git";
@@ -294,7 +295,7 @@ export async function commitWorkspace(
     subject,
   )
     ? subject
-    : `chore: ${subject.slice(0, 65)}`;
+    : `chore: ${cutText(subject, 65)}`;
   requireConventional(typedSubject);
   await git(workspaceDir, [
     ...APP_GIT_IDENTITY,
@@ -318,7 +319,7 @@ export function splitMessage(message: string): { subject: string; body: string }
   const firstLine = text.split("\n")[0] ?? "";
   const sentence = firstLine.match(/^(.+?[.!?])(?:\s|$)/)?.[1] ?? firstLine;
   const truncated = sentence.length > 72;
-  const subject = (truncated ? `${sentence.slice(0, 69).trimEnd()}...` : sentence).trim();
+  const subject = (truncated ? `${cutText(sentence, 69).trimEnd()}...` : sentence).trim();
   const rest = truncated ? text : text.slice(text.indexOf(sentence) + sentence.length).trim();
   return { subject: subject || "Update the personal workspace", body: rest };
 }

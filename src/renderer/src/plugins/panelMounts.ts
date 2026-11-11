@@ -18,6 +18,7 @@ import {
 } from "@shared/personal/mounts";
 import type { RailSide } from "@shared/plugins/manifest";
 import { effectivePlacement, isPanelHidden, type Layout } from "@shared/preferences";
+import { cutText } from "@shared/textCut";
 import { useShellStore } from "../app/store";
 import { type PanelBodyState, panelBodies } from "../personal/panelBodies";
 import type { SidePanelContribution } from "./contributions";
@@ -56,7 +57,7 @@ export type MountFacts = {
 };
 
 function cut(why: string): string {
-  return why.length > PANEL_MOUNT_WHY_MAX ? `${why.slice(0, PANEL_MOUNT_WHY_MAX - 3)}...` : why;
+  return why.length > PANEL_MOUNT_WHY_MAX ? `${cutText(why, PANEL_MOUNT_WHY_MAX - 3)}...` : why;
 }
 
 function versionOf(view: PersonalExtensionView | undefined): string | null {

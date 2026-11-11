@@ -28,6 +28,7 @@ import {
   isOfferedProvider,
   isRetiredProvider,
 } from "@shared/providers";
+import { cutText } from "@shared/textCut";
 import {
   type AccountBackend,
   type AccountBinding,
@@ -1131,7 +1132,7 @@ export class AccountVault {
     const trimmed = label.trim();
     if (!trimmed) throw new Error("An account label cannot be empty.");
     const account = this.requireRegistryAccount(accountId);
-    account.label = trimmed.slice(0, 64);
+    account.label = cutText(trimmed, 64);
     this.saveRegistry();
   }
 
@@ -1335,7 +1336,7 @@ export class AccountVault {
         return health.access ? CLAUDE_ACCESS_ACCOUNT_LABEL : health.identity?.label;
       })
       .catch(() => undefined);
-    if (identity) return identity.slice(0, 64);
+    if (identity) return cutText(identity, 64);
     const siblings = this.registry.accounts.filter(
       (account) => account.providerId === providerId,
     ).length;

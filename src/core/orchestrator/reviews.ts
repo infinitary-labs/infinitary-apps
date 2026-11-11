@@ -12,6 +12,7 @@ import {
 } from "@shared/liveValidation";
 import { REVIEW_VERDICT_OF_CODE, renderFinding } from "@shared/rigor";
 import { RISK_DIMENSIONS, RISK_WORDS } from "@shared/risk";
+import { cutText } from "@shared/textCut";
 import { capWithOverflow } from "../overflow";
 import { crewmateCardPicturesDir, crewmateEvidenceDir, crewmateSourceCardsDir } from "../paths";
 import { verifyKeptValidationEvidence } from "../pi/validationEvidence";
@@ -241,7 +242,7 @@ export class Reviews {
     const assessorId = randomUUID().slice(0, 8);
     this.preparingAssessments.add(assessorId);
     void (async () => {
-      const title = `Assess repair: ${builder.title}`.slice(0, 64);
+      const title = cutText(`Assess repair: ${builder.title}`, 64);
       let brief: string;
       let routed: RouteResult | undefined;
       try {

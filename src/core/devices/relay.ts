@@ -1,6 +1,7 @@
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import { Duplex } from "node:stream";
 import { COMPUTER } from "@shared/deviceNames";
+import { cutText } from "@shared/textCut";
 import { isLoopback } from "../connection/addresses";
 import { hostEnv } from "../hostEnv";
 import { hostPlatform } from "../platform";
@@ -69,7 +70,7 @@ class RelayedStream extends Duplex {
     child.once("error", (error) => this.destroy(error));
     child.once("exit", (code, signal) => {
       if (this.relayed || this.destroyed || code === 0) return;
-      const said = this.said.trim().slice(0, SAID_MAX);
+      const said = cutText(this.said.trim(), SAID_MAX);
       this.destroy(
         new Error(
           said ||

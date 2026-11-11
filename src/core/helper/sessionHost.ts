@@ -18,6 +18,7 @@ import {
 import { crewSpeedSchema } from "@shared/crewSpeed";
 import { HOME } from "@shared/deviceNames";
 import { invokeContract, type WorkInvokeChannel } from "@shared/ipc";
+import { cutText } from "@shared/textCut";
 import {
   isWorkOrderChannel,
   PLACED_COPY_CHUNK_BYTES,
@@ -785,7 +786,7 @@ export class SessionHost {
             if (!(caught instanceof ForgeAuthRequiredError)) {
               answer = {
                 refused: "preparation-failed",
-                message: (caught instanceof Error ? caught.message : String(caught)).slice(0, 2000),
+                message: cutText(caught instanceof Error ? caught.message : String(caught), 2000),
               };
               break;
             }

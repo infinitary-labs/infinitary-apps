@@ -1,5 +1,6 @@
 import { HERE } from "@shared/deviceNames";
 import { TASK_BROWSER_PAGES_MAX } from "@shared/taskBrowser";
+import { cutText } from "@shared/textCut";
 import type { HostBrowserRefusal } from "../host";
 import { type AddressKind, neverReachable } from "./addresses";
 import { quoted, siteOf } from "./browserRecord";
@@ -164,7 +165,7 @@ export function guardRefusalLead(site: string, refusal: GuardRefusal): string | 
 
 export function clip(text: string, max = NOTICE_MAX): string {
   const flat = text.replace(/\s+/g, " ").trim();
-  return flat.length > max ? `${flat.slice(0, max - 1)}…` : flat;
+  return flat.length > max ? `${cutText(flat, max - 1)}…` : flat;
 }
 
 /** The lists of what a page said that an answer reads out and empties. */

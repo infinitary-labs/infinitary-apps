@@ -5,6 +5,7 @@ import { chmod, mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import { cutTextEnd } from "@shared/textCut";
 import type { UpdateChannel } from "@shared/update";
 import {
   type BuildDownload,
@@ -274,7 +275,7 @@ export function createLinuxInstaller(
       );
       let stderr = "";
       child.stderr?.on("data", (chunk: Buffer) => {
-        stderr = `${stderr}${chunk.toString("utf8")}`.slice(-4000);
+        stderr = cutTextEnd(`${stderr}${chunk.toString("utf8")}`, 4000);
       });
       child.once("error", (caught: NodeJS.ErrnoException) => {
         reject(

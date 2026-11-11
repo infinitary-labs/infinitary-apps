@@ -13,6 +13,7 @@ import {
   riskDeclarationSchema,
 } from "@shared/risk";
 import { TASK_BROWSER_REQUEST_MAX, UNKNOWN_OUTCOME_WORDS } from "@shared/taskBrowser";
+import { cutText } from "@shared/textCut";
 import { type Static, type TSchema, Type } from "typebox";
 import { browserCommand } from "../browser/commandWords";
 import { cardMutationText } from "../orchestrator/cardMutationText";
@@ -121,7 +122,7 @@ export function agentEffect(effect: EffectParam): AgentEffect {
       kind: "merge",
       after: effect.after,
       ...(effect.review ? { review: effect.review } : {}),
-      ...(effect.asks_first?.trim() ? { asksFirst: effect.asks_first.trim().slice(0, 400) } : {}),
+      ...(effect.asks_first?.trim() ? { asksFirst: cutText(effect.asks_first.trim(), 400) } : {}),
       ...(effect.proceed_with_open ? { proceedWithOpen: true } : {}),
     };
   }

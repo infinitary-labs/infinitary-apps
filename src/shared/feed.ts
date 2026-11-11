@@ -1,3 +1,4 @@
+import { cutText } from "@shared/textCut";
 import { z } from "zod";
 import { deviceJoinedLine } from "./devices";
 import type { FmEvent } from "./events";
@@ -71,7 +72,7 @@ export function reportSummary(text: string, limit = FEED_REPORT_LIMIT): string {
   const collapsed = withoutIntentLead(text).replace(/\s+/g, " ").trim();
   if (!collapsed) return "";
   const sentence = collapsed.match(/^(.+?[.!?])(?:\s|$)/)?.[1] ?? collapsed;
-  return sentence.length <= limit ? sentence : sentence.slice(0, limit).trimEnd();
+  return sentence.length <= limit ? sentence : cutText(sentence, limit).trimEnd();
 }
 
 /** Event types that can change Activity; also generates the native reader's refresh filter. */

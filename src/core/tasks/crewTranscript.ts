@@ -18,6 +18,7 @@ import {
 } from "@shared/crewTranscript";
 import type { FmEvent } from "@shared/events";
 import { planItemStateSchema } from "@shared/taskPlan";
+import { cutText, cutTextEnd } from "@shared/textCut";
 import { runsTaskCommand, taskCommandShown } from "../axi/names";
 import { redactObserveText } from "../observe/redact";
 import {
@@ -128,7 +129,7 @@ export class CrewTranscripts {
     if (message?.role !== "toolResult") return null;
     const text = redactObserveText(textOf(message.content)).replace(/\s+$/, "");
     return {
-      text: text.length > CREW_RESULT_TEXT_MAX ? text.slice(0, CREW_RESULT_TEXT_MAX) : text,
+      text: cutText(text, CREW_RESULT_TEXT_MAX),
       cut: Math.max(0, text.length - CREW_RESULT_TEXT_MAX),
     };
   }
@@ -197,7 +198,7 @@ export class CrewLiveText {
     switch (event.type) {
       case "assistant_delta": {
         const current = this.text.get(event.taskId) ?? "";
-        this.text.set(event.taskId, (current + event.text).slice(-LIVE_TEXT_MAX));
+        this.text.set(event.taskId, cutTextEnd(current + event.text, LIVE_TEXT_MAX));
         return;
       }
       case "tool_start":
@@ -652,11 +653,11 @@ function firstLine(value: unknown): string {
 /** A call's target or reading in one line, ending in an ellipsis past its bound. */
 function clip(text: string): string {
   return text.length > CREW_CALL_TEXT_MAX
-    ? `${text.slice(0, CREW_CALL_TEXT_MAX - 1).trimEnd()}…`
+    ? `${cutText(text, CREW_CALL_TEXT_MAX - 1).trimEnd()}…`
     : text;
 }
 
 /** A longer text, cut at its bound. */
 function bounded(text: string): string {
-  return text.length > CREW_TEXT_MAX ? `${text.slice(0, CREW_TEXT_MAX - 1).trimEnd()}…` : text;
+  return text.length > CREW_TEXT_MAX ? `${cutText(text, CREW_TEXT_MAX - 1).trimEnd()}…` : text;
 }

@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { join } from "node:path";
+import { cutText, cutTextEnd } from "@shared/textCut";
 import { hostEnv, SHELL_CAP_ENV, SHELL_ID_ENV, SHELL_STARTED_ENV, withTaskShell } from "../hostEnv";
 import type { TypedWake, WakeLane } from "../orchestrator/wakes";
 import { appendOverflow, capWithOverflow, overflowFilePath } from "../overflow";
@@ -241,10 +242,11 @@ export class JobManager {
         // The live buffer only ever holds the tail (memory, not information,
         // is the constraint here); what falls off the front is not lost -
         // it spills to a file so the full output is still one open away.
-        const evicted = job.output.text.length - OUTPUT_CAP;
+        const kept = cutTextEnd(job.output.text, OUTPUT_CAP);
+        const evicted = job.output.text.length - kept.length;
         job.output.overflowFile ??= overflowFilePath("job-output", job.id);
         appendOverflow(job.output.overflowFile, job.output.text.slice(0, evicted));
-        job.output.text = job.output.text.slice(-OUTPUT_CAP);
+        job.output.text = kept;
         job.output.truncated = true;
       }
     };
@@ -411,7 +413,7 @@ function renderOutput(output: { text: string; truncated: boolean; overflowFile?:
 export function jobExitWake(exit: JobExit, to: WakeLane): TypedWake {
   const command =
     exit.command.length > COMMAND_EXCERPT
-      ? `${exit.command.slice(0, COMMAND_EXCERPT)}...`
+      ? `${cutText(exit.command, COMMAND_EXCERPT)}...`
       : exit.command;
   return {
     facts: {

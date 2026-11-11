@@ -1,3 +1,4 @@
+import { cutText } from "@shared/textCut";
 import { z } from "zod";
 
 /**
@@ -122,7 +123,7 @@ export function safeDisplayName(raw: string, fallback = "file"): string {
     })
     .join("")
     .trim();
-  const trimmed = clean.replace(/^\.+/, "").slice(0, 120);
+  const trimmed = cutText(clean.replace(/^\.+/, ""), 120);
   return trimmed || fallback;
 }
 

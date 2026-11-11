@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { basename, extname, join } from "node:path";
 import { HERE } from "@shared/deviceNames";
+import { cutText } from "@shared/textCut";
 import {
   type DownloadArtifactInput,
   type Forge,
@@ -93,7 +94,7 @@ export class WorkflowEvidenceService {
       let chars = 0;
       let clipped = false;
       for (const line of lines.slice(offset - 1, offset - 1 + limit)) {
-        const bounded = line.slice(0, 2000);
+        const bounded = cutText(line, 2000);
         if (chars + bounded.length > 20_000) break;
         selected.push(bounded);
         chars += bounded.length;
@@ -507,7 +508,7 @@ function oneLine(value: string): string {
 }
 
 function quoted(value: string): string {
-  return oneLine(value).replace(/"/g, "'").slice(0, 120);
+  return cutText(oneLine(value).replace(/"/g, "'"), 120);
 }
 
 function integer(

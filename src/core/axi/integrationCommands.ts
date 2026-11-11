@@ -1,3 +1,4 @@
+import { cutText } from "@shared/textCut";
 import { encode } from "@toon-format/toon";
 import { AxiError } from "axi-sdk-js";
 import { INTEGRATIONS_COMMAND } from "../integrations";
@@ -98,7 +99,7 @@ function inputArg(raw: string | undefined): unknown {
   try {
     parsed = JSON.parse(raw);
   } catch {
-    invalid(`The input is not JSON: ${raw.slice(0, 80)}`, [
+    invalid(`The input is not JSON: ${cutText(raw, 80)}`, [
       `Quote one JSON object, such as '{"path":"/user"}'`,
     ]);
   }

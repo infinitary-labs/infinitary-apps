@@ -11,6 +11,7 @@ import {
   REVISION_TARGETS_MAX,
   type RevisionTarget,
 } from "@shared/cards";
+import { cutText } from "@shared/textCut";
 import { actionsKey, mediaOf } from "./cardChanges";
 
 type Version = Pick<Card, "title" | "body" | "actions" | "pictures">;
@@ -44,7 +45,7 @@ export function revisionLinks(previous: Card, next: Card): CardRevisionLinks | u
   const add = (label: string, region: RevisionTarget["region"], start?: number) =>
     targets.push({
       id: targets.length,
-      label: label.slice(0, 160),
+      label: cutText(label, 160),
       region,
       ...(start === undefined ? {} : { start }),
     });
@@ -75,7 +76,7 @@ export function revisionLinks(previous: Card, next: Card): CardRevisionLinks | u
       const repeated = headings.filter((p) => p.area?.label === area.label);
       const number =
         repeated.length > 1 ? ` ${repeated.findIndex((p) => p.start === area.start) + 1}` : "";
-      add(`${(area.label || "Change").slice(0, 160 - number.length)}${number}`, "body", part.start);
+      add(`${cutText(area.label || "Change", 160 - number.length)}${number}`, "body", part.start);
     }
   }
   if (actionsKey(previous.actions) !== actionsKey(next.actions)) add("Buttons", "buttons");

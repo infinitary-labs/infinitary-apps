@@ -11,6 +11,7 @@ import { pastCardEndingWords } from "@shared/pastCard";
 import { catalogEntry } from "@shared/providers";
 import { PREMIUM_SLOT, SLOTS, type Slot, servedModelKey, servedProviderOf } from "@shared/quota";
 import { opensPullRequest, type RepoView } from "@shared/repos";
+import { cutText } from "@shared/textCut";
 import { encode } from "@toon-format/toon";
 import { PRIVATE_SCOPE } from "../knowledge/access";
 import { contextKnowledge, knowledgeShortlist } from "../knowledge/context";
@@ -109,7 +110,7 @@ function maybeCardContextLine(card: Card): string {
   const clipped =
     excerpt.length <= CARD_EXCERPT_LIMIT
       ? excerpt
-      : `${excerpt.slice(0, CARD_EXCERPT_LIMIT).trimEnd()}…`;
+      : `${cutText(excerpt, CARD_EXCERPT_LIMIT).trimEnd()}…`;
   return `${head}: ${clipped}`;
 }
 
@@ -146,7 +147,7 @@ function openCardContextLine(card: {
   const digest =
     text.length <= OPEN_CARD_DIGEST_CHARS
       ? text
-      : `${text.slice(0, OPEN_CARD_DIGEST_CHARS).trimEnd()}…`;
+      : `${cutText(text, OPEN_CARD_DIGEST_CHARS).trimEnd()}…`;
   const choices = card.actions.map((action) => action.id);
   const by =
     card.emitter === "host" ? "the app" : card.emitter === "firstmate" ? "you" : "its crewmate";
@@ -348,10 +349,10 @@ export class FirstmateContext {
         const about = card.taskId
           ? `on ${task?.key || card.taskId} (task_id: ${card.taskId})`
           : "no task";
-        const excerpt = cardMessageText(last)
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, THREAD_EXCERPT_CHARS);
+        const excerpt = cutText(
+          cardMessageText(last).replace(/\s+/g, " ").trim(),
+          THREAD_EXCERPT_CHARS,
+        );
         return `- card ${card.id} "${card.title}" ${about}: ${count} message${
           count === 1 ? "" : "s"
         }, last from ${last.who} ${ageText(now - last.at)} - "${excerpt}" (${THREAD_OWED_WORDS[owed]})`;
@@ -604,7 +605,7 @@ export class FirstmateContext {
           value: {
             id: record.id,
             timing: scheduleTextOf(record),
-            prompt: record.prompt.slice(0, 80),
+            prompt: cutText(record.prompt, 80),
           },
         })),
       ),
@@ -613,7 +614,7 @@ export class FirstmateContext {
           ? outcomes.map((outcome) => ({
               verdict: outcome.verdict,
               task_id: outcome.taskId,
-              summary: outcome.summary.slice(0, 100),
+              summary: cutText(outcome.summary, 100),
             }))
           : undefined,
       ),
@@ -803,7 +804,7 @@ export class FirstmateContext {
               ? {
                   running: live
                     .slice(0, 4)
-                    .map((task) => `${task.key || task.id}: ${task.title.slice(0, 80)}`),
+                    .map((task) => `${task.key || task.id}: ${cutText(task.title, 80)}`),
                 }
               : {}),
           },

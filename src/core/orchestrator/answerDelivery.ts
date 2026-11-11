@@ -1,4 +1,5 @@
 import { type Card, FIRSTMATE_CARD_META } from "@shared/cards";
+import { cutText } from "@shared/textCut";
 import { escapeCardText } from "./cardText";
 
 /**
@@ -204,7 +205,7 @@ export const EXCERPT_CHARS = 240;
 /** The captain's words, whitespace flattened and clipped. */
 export function excerptOf(text: string): string {
   const flat = text.replace(/\s+/g, " ").trim();
-  return flat.length <= EXCERPT_CHARS ? flat : `${flat.slice(0, EXCERPT_CHARS - 1)}…`;
+  return flat.length <= EXCERPT_CHARS ? flat : `${cutText(flat, EXCERPT_CHARS - 1)}…`;
 }
 
 const REASON_SENTENCE: Record<DeliveryRefusal, string> = {

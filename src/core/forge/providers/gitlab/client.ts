@@ -1,6 +1,7 @@
 import { settingFrom } from "@shared/envSettings";
 import { forgePlace } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
+import { cutText } from "@shared/textCut";
 import type { NamingRule } from "../../../../shared/runbooks";
 import {
   API_RESPONSE_MAX_BYTES,
@@ -20,7 +21,7 @@ function hostSaid(place: string, response: ForgeApiResponse): string {
     if (typeof parsed.message === "string") said = parsed.message;
     else if (typeof parsed.error === "string") said = parsed.error;
   } catch {
-    said = response.body.trim().slice(0, 200);
+    said = cutText(response.body.trim(), 200);
   }
   return said
     ? ` ${place} answered ${response.status}: ${said}`
@@ -480,12 +481,12 @@ export class GitLabClient {
     try {
       const json = JSON.parse(text) as { message?: unknown; error?: unknown };
       const said = json.message ?? json.error;
-      if (typeof said === "string") return said.slice(0, 300);
-      if (said !== undefined) return JSON.stringify(said).slice(0, 300);
+      if (typeof said === "string") return cutText(said, 300);
+      if (said !== undefined) return cutText(JSON.stringify(said), 300);
     } catch {
       /* not JSON */
     }
-    return text.trim().slice(0, 200);
+    return cutText(text.trim(), 200);
   }
 
   private async bounded(response: Response, maxBytes: number): Promise<string> {

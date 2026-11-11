@@ -1,3 +1,4 @@
+import { cutText } from "@shared/textCut";
 import type { HostBrowserNetwork, HostConsoleLevel } from "../host";
 
 /** Bounded, page-local diagnostics; never request bodies, headers or cookies. */
@@ -12,7 +13,7 @@ function address(url: string): string {
     parsed.password = "";
     parsed.search = "";
     parsed.hash = "";
-    return parsed.href.slice(0, TEXT_MAX);
+    return cutText(parsed.href, TEXT_MAX);
   } catch {
     return "(unreadable address)";
   }
@@ -57,7 +58,7 @@ export class PageDiagnostics {
     // On a returned/saved-sign-in browser even the retained buffer holds counts only.
     if (hidden) return;
     if (this.console.length === DIAGNOSTICS_KEPT) this.console.shift();
-    this.console.push({ level, text: text.slice(0, TEXT_MAX).replace(/[\r\n]+/g, " ") });
+    this.console.push({ level, text: cutText(text, TEXT_MAX).replace(/[\r\n]+/g, " ") });
   }
 
   request(event: HostBrowserNetwork): void {

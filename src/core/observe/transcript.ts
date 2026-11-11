@@ -1,6 +1,7 @@
 import { isAuthFailureMessage } from "@shared/authFailure";
 import type { ObserveTurn } from "@shared/observe";
 import { parseServedInput } from "@shared/servedFrame";
+import { cutText } from "@shared/textCut";
 import { usageFromMessage } from "../pi/piEvents";
 import { redactObserveText } from "./redact";
 
@@ -344,7 +345,7 @@ export function touchTime(meta: ParsedSessionMeta, at: number): void {
 export function truncate(text: string): string {
   if (text.length <= TOOL_TEXT_LIMIT) return text;
   const omitted = text.length - TOOL_TEXT_LIMIT;
-  return `${text.slice(0, TOOL_TEXT_LIMIT)}\n[truncated ${omitted} characters]`;
+  return `${cutText(text, TOOL_TEXT_LIMIT)}\n[truncated ${omitted} characters]`;
 }
 
 /** Synchronous offline readers use the very same line parser. */

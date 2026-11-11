@@ -1,5 +1,6 @@
 import { type DomNode, textOf } from "@shared/cardHeadings";
 import { type Card, onStage } from "@shared/cards";
+import { cutText } from "@shared/textCut";
 import { parseDocument } from "htmlparser2";
 
 /**
@@ -54,7 +55,7 @@ export class CardNotifier {
       if (!this.options.enabled() || this.options.focused()) continue;
       this.options.show({
         title: card.title,
-        body: firstLine(visibleText(card.body)).slice(0, BODY_LIMIT),
+        body: cutText(firstLine(visibleText(card.body)), BODY_LIMIT),
       });
     }
     for (const id of this.seen.keys()) {

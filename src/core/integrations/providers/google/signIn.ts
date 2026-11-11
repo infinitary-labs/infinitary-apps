@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { createServer, type Server } from "node:http";
+import { cutText } from "@shared/textCut";
 import type { SignInReturnTo } from "../../../signInReturns";
 import type { GoogleClient, GoogleEndpoints } from "./client";
 
@@ -138,7 +139,7 @@ function waitForCode(server: Server, state: string, signal: AbortSignal): Promis
           new Error(
             error === "access_denied"
               ? "The sign-in was declined on Google's page."
-              : `Google did not sign in${error ? ` (${error.slice(0, 64)})` : ""}.`,
+              : `Google did not sign in${error ? ` (${cutText(error, 64)})` : ""}.`,
           ),
         );
     });
@@ -175,7 +176,7 @@ async function exchange(
   const issued = issuedFrom(body, options.now());
   if (!response.ok || !issued)
     throw new Error(
-      `Google did not finish the sign-in${typeof body.error === "string" ? ` (${body.error.slice(0, 64)})` : ""}.`,
+      `Google did not finish the sign-in${typeof body.error === "string" ? ` (${cutText(body.error, 64)})` : ""}.`,
     );
   if (!issued.refreshToken)
     throw new Error("Google did not give the app a lasting sign-in. Sign in again.");

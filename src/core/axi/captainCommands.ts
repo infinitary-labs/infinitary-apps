@@ -6,6 +6,7 @@ import { NOW_GROUP_LABELS, type NowGroup, nowGroupOf } from "@shared/nowPanel";
 import { dropReviewKeys } from "@shared/recordDrop";
 import { foldForSearch } from "@shared/searchText";
 import type { DropEffects } from "@shared/tasks";
+import { cutText } from "@shared/textCut";
 import { encode } from "@toon-format/toon";
 import { AxiError } from "axi-sdk-js";
 import { INBOX_COMMAND, INFINITARY_COMMAND } from "../integrations/commandWords";
@@ -87,7 +88,7 @@ function words(text: string | null | undefined, full: boolean): Record<string, u
   const all = (text ?? "").trim();
   if (full || all.length <= CUT) return { text: all };
   return {
-    text: `${all.slice(0, CUT)}... (${all.length - CUT} more characters)`,
+    text: `${cutText(all, CUT)}... (${all.length - CUT} more characters)`,
     chars: all.length,
   };
 }
@@ -511,7 +512,7 @@ async function task(args: AxiArguments, connection: CaptainConnection): Promise<
         text:
           full || text.length <= 200
             ? text
-            : `${text.slice(0, 200)}... (${text.length - 200} more characters)`,
+            : `${cutText(text, 200)}... (${text.length - 200} more characters)`,
       };
     });
     // The newest lines are the ones a reader wants: `--limit` keeps the last n.
@@ -713,7 +714,7 @@ async function say(
   const files = (Array.isArray(fileRaw) ? fileRaw : []).map((path) => {
     try {
       return {
-        name: basename(path).slice(0, 120),
+        name: cutText(basename(path), 120),
         text: readFileSync(isAbsolute(path) ? path : resolve(cwd, path), "utf8"),
       };
     } catch {

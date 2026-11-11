@@ -1,3 +1,4 @@
+import { cutText } from "@shared/textCut";
 import type { RevisionRow } from "../storage/knowledgeStore";
 import { KNOWLEDGE_LIMITS } from "./access";
 import type { EntrySummary, EntryView, FindingStatus, Neighbor } from "./entries";
@@ -16,13 +17,13 @@ function bytes(text: string): number {
 
 function clip(text: string, max: number): string {
   const flat = text.replace(/\s+/g, " ").trim();
-  return flat.length <= max ? flat : `${flat.slice(0, max - 1).trimEnd()}…`;
+  return flat.length <= max ? flat : `${cutText(flat, max - 1).trimEnd()}…`;
 }
 
 function clipBytes(text: string, max: number): string {
   if (bytes(text) <= max) return text;
-  let cut = text.slice(0, max);
-  while (bytes(cut) > max - 3) cut = cut.slice(0, -64);
+  let cut = cutText(text, max);
+  while (bytes(cut) > max - 3) cut = cutText(cut, cut.length - 64);
   return `${cut}…`;
 }
 

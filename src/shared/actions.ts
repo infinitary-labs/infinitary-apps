@@ -1,3 +1,4 @@
+import { cutText } from "@shared/textCut";
 import { z } from "zod";
 import type { AccountView } from "./accounts";
 import { type AutomationList, type AutomationRule, automationSpecSchema } from "./automation";
@@ -227,7 +228,7 @@ function automationValue(current: unknown, brief = false): Record<string, unknow
   return {
     rules: list.rules.map((rule) =>
       brief
-        ? { id: rule.id, label: rule.name ?? rule.prompt.slice(0, 80), state: rule.state }
+        ? { id: rule.id, label: rule.name ?? cutText(rule.prompt, 80), state: rule.state }
         : {
             id: rule.id,
             name: rule.name,
@@ -939,7 +940,7 @@ const actionLines = {
     },
     done: (v) => {
       const text = String(v.text);
-      return `${DIRECTION_DONE[v.op as keyof typeof DIRECTION_DONE]} the standing direction "${text.length > 120 ? `${text.slice(0, 119)}…` : text}"`;
+      return `${DIRECTION_DONE[v.op as keyof typeof DIRECTION_DONE]} the standing direction "${text.length > 120 ? `${cutText(text, 119)}…` : text}"`;
     },
   },
   "start-at-login": presence("startAtLogin", "start at login"),

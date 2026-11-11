@@ -620,47 +620,84 @@ const job = (name: string) => {
 };
 
 describe("automatic alpha workflow handoff (INF-2259)", () => {
-  it("starts only a completed successful main event, pins that source and inherits its observed full proof", async () => {
-    expect((workflow.on as Record<string, unknown>).workflow_run).toEqual({
-      workflows: ["main"],
-      types: ["completed"],
-      branches: ["main"],
-    });
-    const { run, jobs: readings } = completedMain();
-    const contexts = {
-      github: {
-        event_name: "workflow_run",
-        sha: "aa46269bb969bd40890eb07ace70b28fd00a3de1",
-        event: { workflow_run: run },
+  /**
+   * INF-3738: main checks #538 to #541 were started by the queue's
+   * after-merge signal with GitHub's own token, and none got an alpha, since
+   * GitHub starts no workflow_run for that token's events. Main's check now
+   * starts its alpha by dispatch, the one start that token may make, and the
+   * release waits for that check to end before reading its proof.
+   */
+  it("starts the alpha by dispatch from a passed main check, waits for it to end and inherits its proof", async () => {
+    expect(Object.keys(workflow.on as Record<string, unknown>)).toEqual(["workflow_dispatch"]);
+    const { run: ended, jobs: readings } = completedMain();
+    const run = { ...ended, run_number: 541 };
+    // The main check's last job, run unchanged against GitHub's dispatch call.
+    const main = loadYamlFile(".github/workflows/main.yml") as {
+      jobs: Record<string, { steps: WorkflowStep[] }>;
+    };
+    const dispatches: Array<Record<string, unknown>> = [];
+    const summary = { addHeading: () => summary, addRaw: () => summary, write: async () => {} };
+    await compileFunction(
+      `return (async () => {\n${main.jobs.alpha!.steps[0]!.with!.script}\n})()`,
+      ["github", "context", "core"],
+    )(
+      {
+        rest: {
+          actions: {
+            createWorkflowDispatch: async (parameters: Record<string, unknown>) => {
+              dispatches.push(parameters);
+            },
+          },
+        },
       },
-      inputs: {},
+      {
+        repo: { owner: "infinitary-labs", repo: "infinitary" },
+        sha: source,
+        runId: run.id,
+        runNumber: 541,
+      },
+      { summary },
+    );
+    expect(dispatches).toEqual([
+      {
+        owner: "infinitary-labs",
+        repo: "infinitary",
+        workflow_id: "release.yml",
+        ref: "main",
+        inputs: {
+          channel: "alpha",
+          candidate: source,
+          main_run: String(run.id),
+          main_run_number: "541",
+        },
+      },
+    ]);
+    const contexts = {
+      github: { event_name: "workflow_dispatch", sha: "aa46269bb969bd40890eb07ace70b28fd00a3de1" },
+      inputs: { ...(dispatches[0]!.inputs as Record<string, string>), dry_run: false },
       steps: { "main-proof": { outputs: { source } } },
     };
-    expect(workflowValue(job("resolve").if!, contexts)).toBe(true);
-    // INF-2492: main runs no phone check, so only a successful main run starts a cut.
-    for (const [conclusion, starts] of [
-      ["failure", false],
-      ["cancelled", false],
-    ] as const)
-      expect(
-        workflowValue(job("resolve").if!, {
-          ...contexts,
-          github: { ...contexts.github, event: { workflow_run: { ...run, conclusion } } },
-        }),
-        conclusion,
-      ).toBe(starts);
+    expect(workflowString(workflow["run-name"] as string, contexts)).toBe(
+      "Alpha from main run 541",
+    );
     const proof = job("resolve").steps!.find((step) => step.id === "main-proof")!;
+    expect(
+      workflowValue(proof.if!, { ...contexts, steps: { gate: { outputs: { skip: "false" } } } }),
+    ).toBe(true);
     const env = Object.fromEntries(
       Object.entries(proof.env!).map(([key, value]) => [key, workflowString(value, contexts)]),
     );
     expect(env).toMatchObject({ SOURCE: source, CHANNEL: "alpha", MAIN_RUN: String(run.id) });
     const outputs: Record<string, unknown> = {};
-    const summary = { addHeading: () => summary, addRaw: () => summary, write: async () => {} };
+    // The release starts while main's last job is still running: the step
+    // reads the run until it ends, and only then reads its jobs.
+    const states = ["in_progress", "in_progress", "completed"];
+    const reads: string[] = [];
     // Execute the unchanged action body with Node's real module loader;
     // Vitest's realm does not install a loader on newly constructed async functions.
     const execute = compileFunction(
       `return (async () => {\n${proof.with!.script}\n})()`,
-      ["github", "context", "core", "process", "require"],
+      ["github", "context", "core", "process", "require", "setTimeout"],
       { importModuleDynamically: constants.USE_MAIN_CONTEXT_DEFAULT_LOADER },
     );
     await execute(
@@ -669,7 +706,9 @@ describe("automatic alpha workflow handoff (INF-2259)", () => {
           actions: {
             getWorkflowRun: async (parameters: { run_id: number }) => {
               expect(parameters.run_id).toBe(run.id);
-              return { data: run };
+              const status = states.shift() ?? "completed";
+              reads.push(status);
+              return { data: status === "completed" ? run : { ...run, status, conclusion: null } };
             },
             listJobsForWorkflowRun: "latest-job-executions",
           },
@@ -677,7 +716,11 @@ describe("automatic alpha workflow handoff (INF-2259)", () => {
         paginate: async (method: string, parameters: { run_id: number; filter: string }) => {
           expect(method).toBe("latest-job-executions");
           expect(parameters).toMatchObject({ run_id: run.id, filter: "latest" });
-          return readings;
+          reads.push("jobs");
+          return [
+            ...readings,
+            { ...readings[0]!, name: "alpha / Main push · Start the alpha cut" },
+          ];
         },
       },
       { repo: { owner: "infinitary-labs", repo: "infinitary" } },
@@ -689,11 +732,45 @@ describe("automatic alpha workflow handoff (INF-2259)", () => {
       },
       { env: { ...env, GITHUB_WORKSPACE: fileURLToPath(new URL("../", import.meta.url)) } },
       createRequire(import.meta.url),
+      // GitHub's ten-second pause between reads, taken at once here.
+      (done: () => void) => queueMicrotask(done),
     );
+    expect(reads).toEqual(["in_progress", "in_progress", "completed", "jobs"]);
     expect(outputs).toEqual({ inherited: "true", source, url: run.html_url, journeys: "false" });
     const resolver = job("resolve").steps!.find((step) => step.id === "resolve")!;
     expect(workflowString(resolver.env!.CANDIDATE!, contexts)).toBe(source);
     expect(workflowString(resolver.env!.CHANNEL!, contexts)).toBe("alpha");
+  });
+
+  // INF-2492: main runs no phone check, so only a passed main check starts a
+  // cut; one started by hand or ended by its sort starts none.
+  it("dispatches the alpha only from a passed pushed or after-merge main check", () => {
+    const main = loadYamlFile(".github/workflows/main.yml") as {
+      jobs: Record<string, { if?: string; needs?: string[] }>;
+    };
+    const alpha = main.jobs.alpha!;
+    // It runs after every other job of the check.
+    expect([...(alpha.needs ?? [])].sort()).toEqual(
+      Object.keys(main.jobs)
+        .filter((id) => id !== "alpha")
+        .sort(),
+    );
+    const condition = alpha.if!.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
+    const decide = (event_name: string, kind: string, failed = false, cancelled = false) =>
+      workflowValue(
+        condition,
+        { github: { event_name }, needs: { sort: { outputs: { kind } } } },
+        { success: !failed && !cancelled, failure: failed, always: true, cancelled },
+      );
+    for (const event_name of ["push", "repository_dispatch"]) {
+      expect(decide(event_name, "full"), event_name).toBe(true);
+      expect(decide(event_name, "covered"), event_name).toBe(true);
+      expect(decide(event_name, "landing"), event_name).toBe(false);
+      expect(decide(event_name, "ignored"), event_name).toBe(false);
+      expect(decide(event_name, "full", true), event_name).toBe(false);
+      expect(decide(event_name, "full", false, true), event_name).toBe(false);
+    }
+    expect(decide("workflow_dispatch", "full")).toBe(false);
   });
 
   // The captain on INF-2508: "Keep every journey in the batch, and let an

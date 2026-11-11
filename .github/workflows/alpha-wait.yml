@@ -10,11 +10,12 @@ name: Wait for the alpha cut
 # hold no machine. 590 hosted minutes a day, with no change to anyone's
 # wait."). release.yml names each rolling alpha run after its main run
 # ("Alpha from main run N") and runs it in the concurrency group
-# rolling-alpha-from-main-run-N. The find job lists those runs by name: every
-# one still running, including one re-run after it ended (INF-2780), and the
-# alpha GitHub is about to start from the newest earlier main check that ran
-# (it passed, or failed, which release.yml also reads), which it waits for
-# on its machine for the moments GitHub takes to start it. The wait job then
+# rolling-alpha-from-main-run-N. Every release starts by dispatch, main's
+# check starting its own alpha in its last job, so the find job lists those
+# runs by name alone: every one still running, including one re-run after it
+# ended (INF-2780), and the alpha the newest earlier main check started if it
+# passed, which it waits for on its machine for the moments GitHub takes to
+# list it. The wait job then
 # joins each running alpha's group, so GitHub holds it with no machine until
 # that alpha run ends, however it ends: a failed cut must not hold main's
 # fixes. The ended job confirms every alpha ended, polling as before only for
@@ -80,19 +81,19 @@ jobs:
               ...context.repo, workflow_id: 'main.yml', branch: 'main', status: 'completed', per_page: 100
             });
             const previous = mains.workflow_runs
-              .filter((run) => ['push', 'repository_dispatch'].includes(run.event) && run.run_number < me.run_number && ['success', 'failure'].includes(run.conclusion))
+              .filter((run) => ['push', 'repository_dispatch'].includes(run.event) && run.run_number < me.run_number && run.conclusion === 'success')
               .sort((a, b) => b.run_number - a.run_number)[0];
             const prefix = 'Alpha from main run ';
             const title = previous && `${prefix}${previous.run_number}`;
             let waited = false;
             for (;;) {
               const {data} = await github.rest.actions.listWorkflowRuns({
-                ...context.repo, workflow_id: 'release.yml', event: 'workflow_run', per_page: 100
+                ...context.repo, workflow_id: 'release.yml', per_page: 100
               });
               const alphas = data.workflow_runs.filter((run) => run.display_title?.startsWith(prefix));
               const running = alphas.filter((run) => run.status !== 'completed');
-              // GitHub starts the alpha run moments after the main check ends;
-              // one that never started, such as before run names, holds nothing.
+              // A passed main check started its alpha in its last job; one that
+              // never started, such as before run names, holds nothing.
               const pending = previous && !alphas.some((run) => run.display_title === title) &&
                 Date.now() - Date.parse(previous.updated_at) <= 10 * minute;
               // A run GitHub has not yet put in its group: the wait would join
@@ -154,7 +155,7 @@ jobs:
             const waited = JSON.parse(process.env.WAITED || '[]');
             for (;;) {
               const {data} = await github.rest.actions.listWorkflowRuns({
-                ...context.repo, workflow_id: 'release.yml', event: 'workflow_run', per_page: 100
+                ...context.repo, workflow_id: 'release.yml', per_page: 100
               });
               const alphas = data.workflow_runs.filter((run) => run.display_title?.startsWith(prefix));
               // Normally none: each ended before its group let the wait go on.

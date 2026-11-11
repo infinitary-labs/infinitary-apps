@@ -166,3 +166,36 @@ jobs:
     with:
       trigger: ${{ (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request') }}
       ref: ${{ github.sha }}
+  # The alpha cut from this run (docs/alpha.md, "Cutting an alpha"): once
+  # every check above passed, the last job starts release.yml by dispatch,
+  # naming this run. GitHub starts no run for an event its own token caused,
+  # except a dispatch, and the queue's after-merge signal starts this run with
+  # that token, so a completion trigger on release.yml would never fire for a
+  # merge the queue made. The release names itself after this run, waits for
+  # it to end and reads its proof (scripts/main-alpha-proof.mjs). A check
+  # started by hand cuts no alpha, and neither does a run the sort ended.
+  alpha:
+    needs: [alpha-wait, sort, covered, verify, startup]
+    if: ${{ !cancelled() && !failure() && github.event_name != 'workflow_dispatch' && (needs.sort.outputs.kind == 'full' || needs.sort.outputs.kind == 'covered') }}
+    name: ${{ format('{0} · Start the alpha cut', (github.event_name != 'workflow_dispatch' && 'Main push' || 'Manual request')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: write
+    steps:
+      - name: Start the alpha cut from this run
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              ...context.repo,
+              workflow_id: 'release.yml',
+              ref: 'main',
+              inputs: {
+                channel: 'alpha',
+                candidate: context.sha,
+                main_run: String(context.runId),
+                main_run_number: String(context.runNumber),
+              },
+            });
+            await core.summary.addHeading('Alpha cut started').addRaw(`release.yml runs as "Alpha from main run ${context.runNumber}", cutting an alpha from ${context.sha} once this run ends.`).write();

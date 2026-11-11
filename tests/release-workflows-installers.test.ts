@@ -288,8 +288,14 @@ it("runs the update check on Apple silicon only, updating from the signing job's
   expect(update.with?.trigger).toBe(release.jobs.verify?.with?.trigger);
   // The trigger is the resolve job's output (INF-2539), read into this name.
   const trigger = workflowString(release.jobs.resolve?.outputs?.trigger ?? "", {
-    github: { event_name: "workflow_run" },
-    inputs: {},
+    github: { event_name: "workflow_dispatch" },
+    // What main.yml's last job dispatches an automatic alpha with (INF-3738).
+    inputs: {
+      channel: "alpha",
+      candidate: "a".repeat(40),
+      main_run: "43086357186",
+      main_run_number: "541",
+    },
   });
   expect(workflowString(update.name, { needs: { resolve: { outputs: { trigger } } } })).toBe(
     "Automatic alpha · Published-alpha update check",

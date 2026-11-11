@@ -317,8 +317,10 @@ describe("the signed channel workflow", () => {
   });
 
   // INF-2259 preserves manual defaults and adds optional exact-main recovery.
-  it("retains manual release inputs beside the successful-main trigger", () => {
-    expect(Object.keys(release.on)).toEqual(["workflow_run", "workflow_dispatch"]);
+  // INF-3738: an automatic alpha is a dispatch from main's check too, naming
+  // its run, since GitHub starts no completion trigger for the queue's merges.
+  it("retains manual release inputs beside the automatic alpha's main run", () => {
+    expect(Object.keys(release.on)).toEqual(["workflow_dispatch"]);
     expect(Object.keys(release.on.workflow_dispatch?.inputs ?? {})).toEqual([
       "channel",
       "candidate",
@@ -326,8 +328,17 @@ describe("the signed channel workflow", () => {
       "promote",
       "highlights",
       "dry_run",
+      "main_run",
+      "main_run_number",
     ]);
-    for (const input of ["candidate", "verified_main_run", "promote", "highlights"])
+    for (const input of [
+      "candidate",
+      "verified_main_run",
+      "promote",
+      "highlights",
+      "main_run",
+      "main_run_number",
+    ])
       expect(release.on.workflow_dispatch?.inputs?.[input]).toMatchObject({
         type: "string",
         required: false,

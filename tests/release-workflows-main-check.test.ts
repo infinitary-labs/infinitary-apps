@@ -117,10 +117,11 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(main.concurrency.group).not.toContain("${{");
     expect(main.concurrency["cancel-in-progress"]).toBe(false);
     // Each job but the swept batch's sort and its covered mark (INF-2430's
-    // plan, piece 3; tests/batch.test.ts holds them) only calls a check, so
-    // a full run is exactly those checks.
+    // plan, piece 3; tests/batch.test.ts holds them) and the last job that
+    // dispatches the alpha cut (INF-3738; tests/main-alpha-proof.test.ts holds
+    // it) only calls a check, so a full run is exactly those checks.
     const own = Object.entries(main.jobs).filter(([, job]) => !job.uses);
-    expect(own.map(([id]) => id).sort()).toEqual(["covered", "sort"]);
+    expect(own.map(([id]) => id).sort()).toEqual(["alpha", "covered", "sort"]);
     const calls = Object.values(main.jobs)
       .filter((job) => job.uses)
       .map((job) => job.uses);

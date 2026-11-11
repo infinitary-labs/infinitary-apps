@@ -28,6 +28,13 @@ const releaseNeeds = {
 };
 // A main check that waited for the alpha cut from main run 204, as run
 // 42232009514 did, so the wait's own jobs are named too (alpha-wait.yml).
+// What main.yml's last job dispatches release.yml with (INF-3738).
+const automaticAlpha = {
+  channel: "alpha",
+  candidate: "a".repeat(40),
+  main_run: "43086357186",
+  main_run_number: "541",
+};
 const waitedForAlpha = { outputs: { alphas: "[204]", waited: "true" } };
 const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
   { file: "ci.yml", trigger: "Pull request", scenario: { github: { event_name: "pull_request" } } },
@@ -81,7 +88,8 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     file: "release.yml",
     trigger: "Automatic alpha",
     scenario: {
-      github: { event_name: "workflow_run", event: { workflow_run: { conclusion: "success" } } },
+      github: { event_name: "workflow_dispatch" },
+      inputs: automaticAlpha,
       needs: releaseNeeds,
     },
   },
@@ -90,7 +98,8 @@ const SCENARIOS: { file: string; trigger: string; scenario: Scenario }[] = [
     file: "release.yml",
     trigger: "Automatic alpha",
     scenario: {
-      github: { event_name: "workflow_run", event: { workflow_run: { conclusion: "success" } } },
+      github: { event_name: "workflow_dispatch" },
+      inputs: automaticAlpha,
       needs: {
         ...releaseNeeds,
         resolve: {
@@ -287,7 +296,7 @@ describe("CI job names (INF-2410 scheme A, trigger first)", () => {
     const { jobs } = workflow("release.yml");
     const trigger = (github: Record<string, unknown>, inputs: Record<string, unknown>) =>
       workflowString(jobs.resolve?.outputs?.trigger ?? "", { github, inputs });
-    expect(trigger({ event_name: "workflow_run" }, {})).toBe("Automatic alpha");
+    expect(trigger({ event_name: "workflow_dispatch" }, automaticAlpha)).toBe("Automatic alpha");
     expect(trigger({ event_name: "workflow_dispatch" }, { channel: "alpha", dry_run: true })).toBe(
       "Requested alpha rehearsal",
     );

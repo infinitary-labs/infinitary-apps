@@ -107,15 +107,10 @@ describe("the signed channel workflow", () => {
     expect(lanes("stable")).toEqual(all);
     expect(lanes()).toEqual(all);
     expect(lanes("alpha")).toEqual(all);
-    // INF-2259 adds an automatic-event success guard, not a manual profile skip.
-    // Both manual profiles still resolve; lane jobs never turn a skip into a pass.
-    for (const channel of ["stable", "alpha"])
-      expect(
-        workflowValue(jobOf(release, "resolve").if ?? "", {
-          github: { event_name: "workflow_dispatch" },
-          inputs: { channel },
-        }),
-      ).toBe(true);
+    // Every start resolves: main's check dispatches an automatic alpha only
+    // once it passed (INF-3738), so resolve holds no success guard, and both
+    // manual profiles resolve; lane jobs never turn a skip into a pass.
+    expect(jobOf(release, "resolve").if).toBeUndefined();
     expect(workflowValue(lane.if ?? "", { inputs: {} })).toBe(true);
     expect(workflowValue(lane.if ?? "", { inputs: { installer_only: true } })).toBe(false);
     expect(workflowValue(jobOf(verify, "installer").if ?? "", { inputs: {} })).toBe(false);
@@ -566,7 +561,14 @@ describe("the signed channel workflow", () => {
     const pass = { result: "success" };
     const renamed = (outputs: Record<string, string>) =>
       runJobNames("release.yml", {
-        github: { event_name: "workflow_run", event: { workflow_run: { conclusion: "success" } } },
+        // What main.yml's last job dispatches an automatic alpha with (INF-3738).
+        github: { event_name: "workflow_dispatch" },
+        inputs: {
+          channel: "alpha",
+          candidate: source,
+          main_run: "41657804530",
+          main_run_number: "73",
+        },
         needs: {
           resolve: { ...pass, outputs: { skip: "false", verify_required: "true", ...outputs } },
           ...Object.fromEntries(
@@ -789,7 +791,7 @@ describe("the signed channel workflow", () => {
                 workflow_id: "release.yml",
                 branch: "main",
               });
-              // INF-2259: automatic workflow_run alphas and manual candidates
+              // INF-2259: automatic alphas and manual candidates
               // share the same run-number namespace and remain promotable.
               expect(parameters.event).toBeUndefined();
               expect(parameters.head_sha).toBeUndefined();

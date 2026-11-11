@@ -178,7 +178,7 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   For an automatic alpha it is the successful rolling-main run's exact `head_sha`; a manual alpha names its `candidate`, and a stable names the `promote`d alpha's own commit ("Promoting an alpha").
   The verify lanes, the update check, the signing job and the source tag use exactly it, and the targets file records it.
 - **One candidate.**
-  A successful completed `main` workflow automatically starts an alpha through `workflow_run`, supplying its exact source as the candidate.
+  A `main` workflow run that passed automatically starts an alpha: its last job dispatches `release.yml` with its exact source as the candidate and its run as `main_run` and `main_run_number` ("Cutting an alpha").
   A manually dispatched live alpha still requires a full candidate commit id.
   `verified_main_run` is the recovery route for reusing a successful exact-source main run, not an unchecked skip switch.
   The resolver refuses it unless `git diff --name-only $(git merge-base <candidate> origin/main) <candidate>` lies under `release-notes/`: its code is exactly main's at the commit the review started from.
@@ -347,7 +347,10 @@ After that setup, a separately authorized alpha proves public fetch-back, both t
 
 A rolling `main.yml` run that passed automatically starts an alpha at that exact commit (INF-2259, the captain's accepted override).
 The alpha cuts only when no earlier alpha is still being cut, no stable is being promoted, and something the desktop app is built from changed since the previous release ("An alpha with nothing new to build", below).
-The `workflow_run` completion trigger uses the checked source, not main's newer head, and runs only the journeys part of the full check, which main leaves to the release (INF-2480, the captain: "old set at the release check only, from the first piece on").
+Main's last job, once every check before it passed, dispatches `release.yml` with `channel` alpha, the checked source as `candidate`, and its own run as `main_run` and `main_run_number`.
+It starts the cut by dispatch because the queue's after-merge signal starts main's check with GitHub's own token, and GitHub starts no new run for that token's events except a dispatch, so a completion trigger on `release.yml` never fired for a merge the queue made (INF-3738).
+A check started by hand, and a run its sort ended, dispatches nothing.
+The dispatched release uses the checked source, not main's newer head, waits for that main run to end, since it starts during the run's last job, and runs only the journeys part of the full check, which main leaves to the release (INF-2480, the captain: "old set at the release check only, from the first piece on").
 A source the swept batch checked with every journey runs no part: the batch already ran them on its files (the captain on INF-2508: "Keep every journey in the batch, and let an alpha reuse them").
 Main runs no phone check ("An alpha does not wait on the phone check", below).
 A failed, cancelled or incomplete main run cuts nothing; main's waiting-version coalescing and fix-forward process stay unchanged.
@@ -395,7 +398,7 @@ Skipped runs leave gaps in the alpha numbers, which already skip run numbers.
 Manual alpha requests, recoveries, rehearsals and stable promotions never skip.
 
 Main's next check waits while an alpha is cut, so merges made meanwhile queue and are checked together once the cut ends (`docs/testing.md`, "Main's desktop release check").
-Each rolling alpha run is named "Alpha from main run N" after the main run it cuts from, which is how that wait finds it.
+Each rolling alpha run is named "Alpha from main run N" after the main run it cuts from, which is how that wait and the alpha's own gate find it: every release run starts by dispatch, so only the name tells a rolling alpha apart.
 It runs in the concurrency group `rolling-alpha-from-main-run-N`, where that wait sits on no machine until the run ends; no other release run shares the group.
 
 ### Pausing the rolling pipeline

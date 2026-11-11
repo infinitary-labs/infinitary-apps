@@ -8,7 +8,8 @@ name: release
 #
 # Two channels through one pipeline (docs/alpha.md "The signed channel
 # workflow"), from main. Passing rolling-main runs automatically start an
-# alpha at their exact source without duplicating main's checks. A manually
+# alpha at their exact source without duplicating main's checks (main.yml's
+# last job dispatches this workflow, naming its run). A manually
 # dispatched alpha releases its candidate - the
 # commit the release crewmate committed its notes review on, main's code plus
 # release-notes/ changes only - named X.Y.Z-alpha.<run number> from the
@@ -71,13 +72,14 @@ name: release
 
 # A rolling alpha is named after its main run, so that run's next check can
 # find it and wait in its concurrency group while it is cut (alpha-wait.yml).
-run-name: ${{ github.event_name == 'workflow_run' && format('Alpha from main run {0}', github.event.workflow_run.run_number) || 'release' }}
+run-name: ${{ inputs.main_run != '' && format('Alpha from main run {0}', inputs.main_run_number) || 'release' }}
 
+# Every release starts by dispatch. A rolling alpha is dispatched by main.yml's
+# last job once main's check passed, with main_run and main_run_number set; a
+# completion trigger would never fire for a check the queue's after-merge
+# signal started, since GitHub starts no run for its own token's events except
+# a dispatch (docs/alpha.md, "Cutting an alpha").
 on:
-  workflow_run:
-    workflows: [main]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
     inputs:
       channel:
@@ -109,6 +111,14 @@ on:
         required: false
         type: boolean
         default: false
+      main_run:
+        description: Automatic alpha only, set by main.yml's last job - the id of the rolling-main run that passed at the candidate. The release waits for that run to end, reuses its proof and cuts an alpha from its exact commit
+        required: false
+        type: string
+      main_run_number:
+        description: Automatic alpha only, set by main.yml's last job - that main run's number, which names this run and its concurrency group (Alpha from main run N)
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -123,7 +133,7 @@ permissions:
 # after its main run, as its run is, and main's next check waits in it with
 # no machine until the cut ends (alpha-wait.yml; INF-2834).
 concurrency:
-  group: ${{ inputs.dry_run && format('release-dry-run-{0}-{1}', inputs.channel || 'stable', inputs.promote || inputs.candidate || github.ref_name) || github.event_name == 'workflow_run' && format('rolling-alpha-from-main-run-{0}', github.event.workflow_run.run_number) || format('release-{0}', github.run_id) }}
+  group: ${{ inputs.dry_run && format('release-dry-run-{0}-{1}', inputs.channel || 'stable', inputs.promote || inputs.candidate || github.ref_name) || inputs.main_run != '' && format('rolling-alpha-from-main-run-{0}', inputs.main_run_number) || format('release-{0}', github.run_id) }}
   cancel-in-progress: ${{ inputs.dry_run == true }}
 
 env:
@@ -152,14 +162,13 @@ jobs:
   # Every later job checks out exactly this commit. The resolver runs from the
   # workflow's own commit and reads the rest from git. No secret or dependency install.
   resolve:
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
-    name: ${{ format('{0} · Select source and version', (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
+    name: ${{ format('{0} · Select source and version', (inputs.main_run != '' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || ''))) }}
     # A release's Linux jobs run on GitHub's hosted machines (docs/testing.md, "A release's hosted machines").
     runs-on: ubuntu-24.04
     outputs:
       # What started this release, said once; every later job's name and
       # every called workflow's trigger read it from here.
-      trigger: ${{ (github.event_name == 'workflow_run' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || '')) }}
+      trigger: ${{ (inputs.main_run != '' && 'Automatic alpha' || format('Requested {0}{1}', inputs.channel || 'stable', inputs.dry_run && ' rehearsal' || '')) }}
       skip: ${{ steps.gate.outputs.skip == 'true' && 'true' || 'false' }}
       channel: ${{ steps.resolve.outputs.channel }}
       dry_run: ${{ steps.resolve.outputs.dry_run }}
@@ -215,10 +224,10 @@ jobs:
       # rehearsals and stables never skip.
       - name: Skip an alpha with nothing new to build
         id: gate
-        if: github.event_name == 'workflow_run'
+        if: inputs.main_run != ''
         uses: actions/github-script@v7
         env:
-          SOURCE: ${{ github.event.workflow_run.head_sha }}
+          SOURCE: ${{ inputs.candidate }}
           PAUSED: ${{ vars.ROLLING_ALPHA_PAUSED }}
         with:
           script: |
@@ -231,10 +240,13 @@ jobs:
             }
             const {pathToFileURL} = require('node:url');
             const {legacyJobName, splitLevel} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/ci-job-names.mjs`).href);
+            // Every release starts by dispatch, so a rolling alpha is told
+            // apart by the name main's check gives it, as alpha-wait.yml does.
             const {data} = await github.rest.actions.listWorkflowRuns({
-              ...context.repo, workflow_id: 'release.yml', event: 'workflow_run', per_page: 100
+              ...context.repo, workflow_id: 'release.yml', per_page: 100
             });
             for (const run of data.workflow_runs) {
+              if (!run.display_title?.startsWith('Alpha from main run ')) continue;
               if (run.run_number >= context.runNumber || run.status === 'completed') continue;
               const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
                 ...context.repo, run_id: run.id, filter: 'latest', per_page: 100
@@ -244,10 +256,7 @@ jobs:
                 return skip(`An earlier alpha is still being cut in ${run.html_url}, so this run starts no other. The next alpha carries main's changes at ${process.env.SOURCE}.`);
               }
             }
-            const {data: requested} = await github.rest.actions.listWorkflowRuns({
-              ...context.repo, workflow_id: 'release.yml', event: 'workflow_dispatch', per_page: 100
-            });
-            for (const run of requested.workflow_runs) {
+            for (const run of data.workflow_runs) {
               if (run.status === 'completed') continue;
               const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
                 ...context.repo, run_id: run.id, filter: 'latest', per_page: 100
@@ -269,18 +278,29 @@ jobs:
 
       - name: Validate completed rolling-main proof
         id: main-proof
-        if: steps.gate.outputs.skip != 'true' && (github.event_name == 'workflow_run' || inputs.verified_main_run != '')
+        if: steps.gate.outputs.skip != 'true' && (inputs.main_run != '' || inputs.verified_main_run != '')
         uses: actions/github-script@v7
         env:
-          MAIN_RUN: ${{ github.event.workflow_run.id || inputs.verified_main_run }}
-          SOURCE: ${{ github.event.workflow_run.head_sha || inputs.candidate }}
-          CHANNEL: ${{ github.event_name == 'workflow_run' && 'alpha' || inputs.channel }}
+          MAIN_RUN: ${{ inputs.main_run || inputs.verified_main_run }}
+          SOURCE: ${{ inputs.candidate }}
+          CHANNEL: ${{ inputs.main_run != '' && 'alpha' || inputs.channel }}
         with:
           script: |
             if (process.env.CHANNEL !== 'alpha') throw new Error('Rolling-main reuse is alpha-only');
             const {pathToFileURL} = require('node:url');
             const {proveMain} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/main-alpha-proof.mjs`).href);
-            const {data: run} = await github.rest.actions.getWorkflowRun({...context.repo, run_id: Number(process.env.MAIN_RUN)});
+            // main.yml's last job starts this run before its own run ends,
+            // and the proof reads only a completed run: wait for it, which
+            // takes as long as that job takes to finish after its dispatch.
+            const read = async () => (await github.rest.actions.getWorkflowRun({...context.repo, run_id: Number(process.env.MAIN_RUN)})).data;
+            const started = Date.now();
+            let run = await read();
+            while (run.status !== 'completed') {
+              if (Date.now() - started > 30 * 60_000)
+                throw new Error(`Main's run ${run.html_url} had not ended 30 minutes after it started this alpha.`);
+              await new Promise((done) => setTimeout(done, 10_000));
+              run = await read();
+            }
             // Main's own full check, or the swept batch a covered push names.
             const proof = await proveMain(github, context.repo, run, process.env.SOURCE);
             core.setOutput('inherited', 'true');
@@ -299,7 +319,7 @@ jobs:
         id: resolve
         if: steps.gate.outputs.skip != 'true'
         env:
-          CHANNEL: ${{ github.event_name == 'workflow_run' && 'alpha' || inputs.channel || 'stable' }}
+          CHANNEL: ${{ inputs.main_run != '' && 'alpha' || inputs.channel || 'stable' }}
           CANDIDATE: ${{ steps.main-proof.outputs.source || inputs.candidate }}
           PROMOTE: ${{ inputs.promote }}
           HIGHLIGHTS: ${{ inputs.highlights }}

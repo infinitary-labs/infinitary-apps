@@ -385,6 +385,8 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     // The swept batch and main's sort of each push (INF-2430's plan, piece 3).
     "main.yml:sort",
     "main.yml:covered",
+    // Main's last job, which dispatches its alpha cut (INF-3738).
+    "main.yml:alpha",
     "infinitary-batch-checks.yml:passed",
     // Its confirm reruns failed files on the machines the sweep took, which
     // are hosted on Linux (INF-3012's direction A).

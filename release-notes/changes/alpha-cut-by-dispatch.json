@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-cut-by-dispatch",
+      "reason": "Main's check starts its alpha cut by dispatch, so a merge the queue made gets an alpha too; this changes only how releases are cut."
+    }
+  ]
+}

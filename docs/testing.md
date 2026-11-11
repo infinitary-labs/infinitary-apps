@@ -559,7 +559,7 @@ Main runs no phone check (INF-2492, the captain: "remove phone check from main a
 The workflow's concurrency group never cancels a run in progress, so GitHub keeps the running run and at most one waiting run; a newer push replaces the waiting one, and a burst of merges is checked once at its newest version.
 No check starts while the previous check's alpha is being cut (INF-2465, the captain: "i want to make it so that the next main check keeps queueing all merges until the alpha is actually cut successfully, not while the alpha cut is still happening").
 The run's wait, `alpha-wait.yml`, lists the rolling alpha runs by the name `release.yml` gives them ("Alpha from main run N") and waits while any is still running, including one re-run after it ended.
-It also waits for the alpha cut from the newest earlier main run that passed or failed, which GitHub starts moments after that run ends.
+It also waits for the alpha cut from the newest earlier main run that passed, which that run's last job dispatched (`docs/alpha.md`, "Cutting an alpha"); a failed run dispatches none.
 The wait holds no machine while an alpha is cut, and nobody waits longer for it (INF-2834, the captain's pick: "Make main's wait for an alpha cut hold no machine").
 Each rolling alpha run holds the concurrency group `rolling-alpha-from-main-run-N` (`release.yml`), and the wait's `wait` job joins the group of each alpha still running, so GitHub keeps it pending, on no machine, until that run ends.
 Only its `find` job, for the moments GitHub takes to start an alpha and put it in its group, and its `ended` job, which confirms every alpha ended, take a machine, about a minute each.

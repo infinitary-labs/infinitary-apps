@@ -21,6 +21,18 @@ vi.setConfig({ testTimeout: 10_000 });
 /** When a rolling alpha is cut and how main's next check waits for it (release.yml, alpha-wait.yml). */
 
 /**
+ * The inputs main.yml's last job dispatches release.yml with for main run
+ * `run_number` (INF-3738: a completion trigger never fired for a main check
+ * the queue's after-merge signal started with GitHub's own token).
+ */
+const automaticAlpha = (run_number: number) => ({
+  channel: "alpha",
+  candidate: "29ff10079a",
+  main_run: String(41680000000 + run_number),
+  main_run_number: String(run_number),
+});
+
+/**
  * An alpha with nothing new to build (INF-2465, docs/alpha.md): the captain
  * asked that "the rolling alpha release pipeline on main only runs when there
  * are desktop app code changes", and wrote in "as long as there's one main
@@ -214,7 +226,13 @@ describe("an alpha with nothing new to build", () => {
       expect(reached.has(exempt), exempt).toBe(true);
   });
 
-  type Run = { id: number; run_number: number; status: string; html_url: string };
+  type Run = {
+    id: number;
+    run_number: number;
+    status: string;
+    html_url: string;
+    display_title?: string;
+  };
   /**
    * The gate step's own script, against GitHub's answers and the
    * desktop-changes reading: `runs` are the rolling alphas main started,
@@ -255,11 +273,23 @@ describe("an alpha with nothing new to build", () => {
       rest: {
         actions: {
           listWorkflowRuns: async (parameters: Record<string, unknown>) => {
+            // Every release starts by dispatch (INF-3738): one listing holds
+            // the rolling alphas, told apart by name, and the requested runs.
             expect(parameters).toMatchObject({ workflow_id: "release.yml" });
-            expect(["workflow_run", "workflow_dispatch"]).toContain(parameters.event);
-            reads.push(`release.yml ${parameters.event}`);
+            expect(parameters.event).toBeUndefined();
+            reads.push("release.yml");
+            // GitHub lists each run by its name: a rolling alpha by its main
+            // run, a requested release as "release".
             return {
-              data: { workflow_runs: parameters.event === "workflow_run" ? runs : requested },
+              data: {
+                workflow_runs: [
+                  ...runs.map((run) => ({
+                    display_title: `Alpha from main run ${run.run_number - 16}`,
+                    ...run,
+                  })),
+                  ...requested.map((run) => ({ display_title: "release", ...run })),
+                ],
+              },
             };
           },
           listJobsForWorkflowRun: async ({ run_id }: { run_id: number }) => jobs[run_id] ?? [],
@@ -297,8 +327,8 @@ describe("an alpha with nothing new to build", () => {
   // The notes job as an automatic alpha names it (docs/testing.md, "CI job
   // names"), reading the trigger from the resolve job's output.
   const trigger = workflowString(release.jobs.resolve?.outputs?.trigger as string, {
-    github: { event_name: "workflow_run" },
-    inputs: {},
+    github: { event_name: "workflow_dispatch" },
+    inputs: automaticAlpha(73),
   });
   const notesJob = workflowString(release.jobs.notes?.name as string, {
     needs: { resolve: { outputs: { trigger } } },
@@ -318,7 +348,7 @@ describe("an alpha with nothing new to build", () => {
     expect(result.commands).toEqual([]);
   });
 
-  it("ignores an earlier run still deciding, a skipped one, a finished one and a later one", async () => {
+  it("ignores an earlier run still deciding, a skipped one, a finished one, a later one and a requested alpha", async () => {
     const runs: Run[] = [
       { id: 91, run_number: 91, status: "in_progress", html_url: url(91) },
       { id: 89, run_number: 89, status: "in_progress", html_url: url(89) },
@@ -330,11 +360,17 @@ describe("an alpha with nothing new to build", () => {
       89: [{ name: "Resolve the source commit and version", conclusion: null }],
       88: [{ name: notesJob, conclusion: "skipped" }],
       87: [{ name: notesJob, conclusion: "success" }],
+      // A requested alpha checking its notes is no rolling cut: every release
+      // starts by dispatch, so only its name tells it apart (INF-3738).
+      86: [{ name: notesJob, conclusion: null }],
     };
-    const cut = await runGate(runs, jobs, {
-      previous: "0.6.2-alpha.81",
-      changed: ["src/main/app.ts"],
-    });
+    const cut = await runGate(
+      runs,
+      jobs,
+      { previous: "0.6.2-alpha.81", changed: ["src/main/app.ts"] },
+      "",
+      [{ id: 86, run_number: 86, status: "in_progress", html_url: url(86) }],
+    );
     expect(cut.skip).toBe("false");
     expect(cut.commands).toEqual([
       [
@@ -400,7 +436,7 @@ describe("an alpha with nothing new to build", () => {
       const result = await runGate([], jobs, changed, "", runs);
       expect(jobs[511][0]?.name).toBe("Requested stable rehearsal · Select source and version");
       expect(result.skip).toBe("false");
-      expect(result.reads).toEqual(["release.yml workflow_run", "release.yml workflow_dispatch"]);
+      expect(result.reads).toEqual(["release.yml"]);
       expect(result.commands).toHaveLength(1);
     });
   });
@@ -510,8 +546,8 @@ describe("an alpha with nothing new to build", () => {
       expect(
         workflowValue(step?.if ?? "true", {
           steps: { gate: { outputs: { skip: "true" } } },
-          github: { event_name: "workflow_run" },
-          inputs: {},
+          github: { event_name: "workflow_dispatch" },
+          inputs: automaticAlpha(73),
         }),
         id,
       ).toBe(false);
@@ -519,10 +555,16 @@ describe("an alpha with nothing new to build", () => {
   });
 
   it("decides only for a rolling alpha", () => {
-    for (const event_name of ["workflow_run", "workflow_dispatch"])
-      expect(workflowValue(gate?.if ?? "", { github: { event_name } })).toBe(
-        event_name === "workflow_run",
-      );
+    const decides = (inputs: Record<string, unknown>) =>
+      workflowValue(gate?.if ?? "", { github: { event_name: "workflow_dispatch" }, inputs });
+    expect(decides(automaticAlpha(73))).toBe(true);
+    // A requested alpha, a recovery from a main run and a stable never skip.
+    expect(decides({ channel: "alpha", candidate: "29ff10079a", dry_run: false })).toBe(false);
+    expect(
+      decides({ channel: "alpha", candidate: "29ff10079a", verified_main_run: "43086357186" }),
+    ).toBe(false);
+    expect(decides({ channel: "stable", promote: "0.7.0-alpha.503" })).toBe(false);
+    expect(decides({})).toBe(false);
   });
 });
 
@@ -557,18 +599,14 @@ describe("the next main check waits for the alpha cut", () => {
   /** The name release.yml gives the rolling alpha cut from a main run. */
   const alphaName = (run_number: number) =>
     workflowString(release["run-name"], {
-      github: { event_name: "workflow_run", event: { workflow_run: { run_number } } },
+      github: { event_name: "workflow_dispatch" },
+      inputs: automaticAlpha(run_number),
     });
   /** The concurrency group release.yml's rolling alpha cut from a main run holds. */
   const alphaGroup = (run_number: number) =>
     workflowString(release.concurrency.group, {
-      github: {
-        event_name: "workflow_run",
-        event: { workflow_run: { run_number } },
-        run_id: 41685700000,
-        ref_name: "main",
-      },
-      inputs: {},
+      github: { event_name: "workflow_dispatch", run_id: 41685700000, ref_name: "main" },
+      inputs: automaticAlpha(run_number),
     });
   /** The groups the wait job joins, one job each, for the alphas the find job names. */
   const joined = (alphas: string) =>
@@ -587,7 +625,10 @@ describe("the next main check waits for the alpha cut", () => {
         expect([job.needs].flat(), id).toContain("alpha-wait");
     expect(alphaName(73)).toBe("Alpha from main run 73");
     expect(
-      workflowString(release["run-name"], { github: { event_name: "workflow_dispatch" } }),
+      workflowString(release["run-name"], {
+        github: { event_name: "workflow_dispatch" },
+        inputs: { channel: "alpha", dry_run: false },
+      }),
     ).toBe("release");
   });
 
@@ -770,9 +811,11 @@ describe("the next main check waits for the alpha cut", () => {
               expect(filters.event).toBeUndefined();
               return { data: { workflow_runs: options.mains } };
             }
+            // Every release starts by dispatch (INF-3738), so rolling alphas
+            // are found by name among every release run.
             expect({ workflow_id, event: filters.event }).toEqual({
               workflow_id: "release.yml",
-              event: "workflow_run",
+              event: undefined,
             });
             return { data: { workflow_runs: listed() } };
           },
@@ -862,7 +905,7 @@ describe("the next main check waits for the alpha cut", () => {
     main: 73,
     grouped,
   });
-  /** The alpha GitHub starts six seconds after the main check ended, cut for `minutes`. */
+  /** The alpha the main check dispatched, listed six seconds after the check ended, cut for `minutes`. */
   const cut =
     (minutes: number, conclusion = "success") =>
     (at: number) =>
@@ -918,6 +961,15 @@ describe("the next main check waits for the alpha cut", () => {
     });
     expect(first.legs).toEqual([]);
     expect(first.minutes).toBeLessThan(0.5);
+    // INF-3738: a failed main check dispatches no alpha, so nothing is
+    // waited for, where a completion trigger once started one that skipped.
+    const failed = await runWait({
+      mains: [previous("failure")],
+      alpha: () => undefined,
+      head: () => "b2c0ffee00000000000000000000000000000000",
+    });
+    expect(failed.legs).toEqual([]);
+    expect(failed.minutes).toBeLessThan(0.5);
   });
 
   /**

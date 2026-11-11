@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "seen-frame-focus",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A card you read no longer stays marked new",
+      "body": "When you clicked inside a card and later came back to the window, the card on screen could keep counting as new while you read it, so the stack's new count never went down. It now counts as seen as soon as the window is back in front of you.",
+      "noPicture": "The card looks the same; what changed is whether it counts as seen.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

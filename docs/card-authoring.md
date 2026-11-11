@@ -970,6 +970,7 @@ The visual rules are the design skill's (`components/cards/ResponseCard.prompt.m
 
 - **Seen.**
   An updated window reports the exact released update only after its body draws while the window is visible and focused (`inf:cards:seen-update`, `useSeenReport`; focus inside a card's own frame counts).
+  The window coming back to the front with the focus inside a card's frame gives the page no focus of its own, so the report also reads the window again when a frame's bridge says its window gained or lost the focus (`focused`, `docs/ui-plugins.md` "Focus and the frames").
   `CardService.seenUpdate` deduplicates the exact identifier, rejects stale reports and broadcasts the shared current-update mark without moving or hiding a card.
   The same sighting retains its offer for revision comparisons; an older home uses the unchanged two-argument `inf:cards:seen` path and local unread fallback (`docs/card-evidence.md`).
 - **Compared with what.**

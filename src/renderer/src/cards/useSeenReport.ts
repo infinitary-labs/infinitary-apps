@@ -9,6 +9,17 @@ function windowPresent(): boolean {
   return document.visibilityState === "visible" && document.hasFocus();
 }
 
+/**
+ * Whether `event` is a frame's bridge saying its own window gained or lost
+ * the focus (frameScript.ts). The window coming back to the front while the
+ * focus sits inside a card's body gives that frame the focus, and the
+ * window's own page hears no focus of its own.
+ */
+function frameFocusNotice(event: MessageEvent): boolean {
+  const data: unknown = event.data;
+  return typeof data === "object" && data !== null && "type" in data && data.type === "focused";
+}
+
 /** Choose only a request the home advertised; legacy reports keep their two arguments. */
 export async function reportDrawnUpdate(
   card: Pick<Card, "id" | "offerId" | "lifecycleId" | "currentUpdateId">,
@@ -36,14 +47,19 @@ export function useSeenReport(card: Card | undefined, drawn: boolean): void {
       clearTimeout(timer);
       timer = setTimeout(update, 0);
     };
+    const notice = (event: MessageEvent) => {
+      if (frameFocusNotice(event)) settle();
+    };
     document.addEventListener("visibilitychange", update);
     window.addEventListener("focus", update);
     window.addEventListener("blur", settle);
+    window.addEventListener("message", notice);
     return () => {
       clearTimeout(timer);
       document.removeEventListener("visibilitychange", update);
       window.removeEventListener("focus", update);
       window.removeEventListener("blur", settle);
+      window.removeEventListener("message", notice);
     };
   }, []);
   const id = card?.id;

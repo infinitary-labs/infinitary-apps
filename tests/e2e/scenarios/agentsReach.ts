@@ -1,4 +1,3 @@
-import { CHECK_OBSERVATIONS_LEAD } from "../../../src/core/orchestrator/deliveryWakes";
 import { captainTurn, renderWake } from "../../../src/core/orchestrator/wakes";
 import { checkSnapshotSummary } from "../../../src/shared/checkSnapshot";
 import { fixedHoldWords, type OverridableHold } from "../../../src/shared/holds";
@@ -19,6 +18,7 @@ import {
   findCrewTaskId,
   holdsSegment,
   latestServedTurn,
+  onlyCheckNotices,
   providerMessages,
   served,
   sinceLastAsked,
@@ -258,8 +258,11 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
   //    it into the builder's running turn, after its check_change result
   //    (docs/forge.md, "The check watch"), and it names checks that reading
   //    already holds. Read past it, or it hides the steer the builder is
-  //    answering and no proof is saved at that version (INF-3603).
-  const turn = sinceLastAsked(body, (words) => words.includes(CHECK_OBSERVATIONS_LEAD));
+  //    answering and no proof is saved at that version (INF-3603). Only a
+  //    message made wholly of notices is read past: when the notice and the
+  //    steer are both due as the turn starts, the lane serves them as one
+  //    message, which still asks for the reading (INF-3627).
+  const turn = sinceLastAsked(body, onlyCheckNotices);
   if (body.includes(REVIEWED_TIER_PROMPT_MARKER) && turn.user.includes(REACH_READ_STEER)) {
     const { results } = turn;
     const reading = results.findLast((result) => /^facts: /m.test(result));

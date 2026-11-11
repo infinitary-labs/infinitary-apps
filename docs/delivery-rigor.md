@@ -335,6 +335,11 @@ Since FI3-566 (cut C) those instructions sit where each step arises: the first m
    Info findings never block and need no steer.
    The first mate decides an ask-user finding itself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, listing them verbatim with the step it would take as the default.
    Every finding's question always includes an option for what the code does now, marked `data-inf-current`, which the app tags As built; the reviewer's ask-user finding says what that is.
+   The reviewer's ask-user finding also lists every way forward with a rough size in its own words, what the code does now being no further change, and names the way it recommends with one reason, or says it recommends none.
+   Every option on the card shows the reviewer's size, and the Recommended mark goes on the reviewer's pick, named as the reviewer's, with its reason.
+   When the first mate would pick differently, it says so on that option under its own name, with its reason and where that reason comes from; when the reviewer recommends none, it marks nothing or marks its own pick, named as its own.
+   A builder's view appears only when the builder gave one, on its option, under the builder's name.
+   The app defines no size scale and checks no size: sizes and reasons ride the finding's text.
    The builder's next report names its open review, that review's last verdict and the head it read (`review` on the `report` wake).
    When that report brings a new committed head, evidence revision or validation state, the host returns it directly to the same reviewer, once per assignment.
    An unchanged report starts no review turn and takes the ordinary report sort, so a dispute or prose blocker still reaches an owner; the review history carries the captain's declined findings without anyone retyping them.

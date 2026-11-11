@@ -405,6 +405,12 @@ describe("renderReviewBrief (delivery rigor phase 2, review-before-PR)", () => {
       "ask-user for anything about functional requirements or product behavior, or that challenges a deliberate choice, even if it looks wrong, and when in doubt",
     );
     expect(brief).toContain("high: should not be merged without explicit human approval");
+    // INF-3716 (captain: the reason should come from whoever gave that
+    // recommendation): the reviewer sizes every way forward and recommends one
+    // with its reason, or says it recommends none.
+    expect(brief).toContain(
+      "An ask-user finding's text may run past one sentence: it says what the code does now, lists every way forward with a rough size in your own words (what the code does now is sized as no further change), and names the way you recommend with one reason, or says you recommend none.",
+    );
     expect(brief).toContain(
       "An error, a warning or an ask-user finding blocks; info findings never block, so they ride a clear review",
     );

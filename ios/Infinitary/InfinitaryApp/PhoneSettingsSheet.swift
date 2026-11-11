@@ -8,13 +8,14 @@ struct PhoneSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(PhoneSecrets.self) private var secrets: PhoneSecrets?
     @Environment(PhoneAppearance.self) private var appearance: PhoneAppearance?
+    @Environment(PhoneGoogle.self) private var google: PhoneGoogle?
     @FocusState private var themeFocused: Bool
     @State private var section: Section?
     @State private var lastSection: Section = .general
     @State private var browsing = false
 
     private enum Section: String, CaseIterable {
-        case general = "General", appearance = "Appearance", devices = "Devices"
+        case general = "General", appearance = "Appearance", integrations = "Integrations", devices = "Devices"
         var id: String { rawValue.lowercased() }
     }
 
@@ -45,6 +46,9 @@ struct PhoneSettingsSheet: View {
                         }
                     case .appearance:
                         if let appearance { theme(appearance) }
+                    case .integrations:
+                        // INF-3454's phone part: Google's row, under Integrations as on the computer.
+                        if let google { PhoneGoogleSection(session: session, google: google) }
                     case .devices:
                         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
                             Text(device).font(PhoneFont.headline)
@@ -77,13 +81,15 @@ struct PhoneSettingsSheet: View {
                 }
             }
         }
+        // INF-3454: Integrations shows once the computer answered its connections; one that cannot hides it.
+        .task(id: session.contact) { await google?.refresh() }
         .font(PhoneFont.body).foregroundStyle(PhoneTheme.text).tint(PhoneTheme.accent)
         .presentationDetents([.medium, .large]).presentationDragIndicator(.visible).phoneSheetSurface()
     }
 
     private var sections: some View {
         PhoneList {
-            ForEach(Section.allCases, id: \.self) { section in
+            ForEach(shown, id: \.self) { section in
                 Button { open(section) } label: {
                     PhoneRow(title: section.rawValue, line: summary(section), chevron: true)
                 }
@@ -116,10 +122,16 @@ struct PhoneSettingsSheet: View {
             : "Answers cards, sends messages and controls tasks on your computer."
     }
 
+    /// Sections with nothing to show stay off the list: Integrations waits for the computer's connections.
+    private var shown: [Section] {
+        Section.allCases.filter { $0 != .integrations || google?.read == true }
+    }
+
     private func summary(_ section: Section) -> String {
         switch section {
         case .general: "Version \(Self.version)"
         case .appearance: "Theme: \(appearance?.look.words ?? PhoneLook.device.words)"
+        case .integrations: "Google: \(google?.row.map { $0.account ?? "Signed in" } ?? "Not signed in")"
         case .devices: device
         }
     }
@@ -130,7 +142,7 @@ struct PhoneSettingsSheet: View {
     }
 
     private func moveSection(by offset: Int) {
-        let sections = Section.allCases
+        let sections = shown
         let index = sections.firstIndex(of: lastSection) ?? 0
         if sections.indices.contains(index + offset) { lastSection = sections[index + offset] }
     }

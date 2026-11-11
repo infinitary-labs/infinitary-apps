@@ -61,6 +61,7 @@
   "InfinitaryUITests/PhoneJourney/testComposeAndSend",
   "InfinitaryUITests/PhoneJourney/testCrewRevealRejectsRecordedClippingEdge",
   "InfinitaryUITests/PhoneJourney/testDraftsAcrossHomes",
+  "InfinitaryUITests/PhoneJourney/testGoogleSignInAndOut",
   "InfinitaryUITests/PhoneJourney/testJoinAndRead",
   "InfinitaryUITests/PhoneJourney/testJoinByAddress",
   "InfinitaryUITests/PhoneJourney/testKeyboardOverPinnedCard",

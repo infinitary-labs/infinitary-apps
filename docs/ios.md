@@ -320,12 +320,12 @@ Home is one column: the stage, then the last turn and the message box under it, 
 No bar height is measured or guessed, and nothing recedes on scroll.
 No panel sits behind the message box: the last turn is its rounds of lines over the capsule, which is native glass on iOS 26 and the field's fill and hairline on iOS 18.
 The capsule is 48 points tall, with the photo glyph 16 points in, the words 52 points in and send a 32-point filled circle 8 points from its end, each control in a 44-point touch area (INF-1517, following ChatGPT's input).
-Settings is this phone's own sheet, `PhoneSettingsSheet`, opening on General, Appearance and Devices in the desktop's order.
+Settings is this phone's own sheet, `PhoneSettingsSheet`, opening on General, Appearance, Integrations and Devices in the desktop's order.
 Each row has its name, one current-state line and a chevron, with no icon, and opens its page inside the same sheet on iPhone and iPad alike.
-General holds Infinitary and its version, Appearance holds Theme, and Devices holds This phone (This iPad on a tablet), what it can do and the existing Approves secret uses switch while the computer offers it.
+General holds Infinitary and its version, Appearance holds Theme, Integrations holds Google on the computer it controls (below), and Devices holds This phone (This iPad on a tablet), what it can do and the existing Approves secret uses switch while the computer offers it.
 Back returns to the list, Command-[ presses Back, Done closes from any page, and Command-Comma opens the list.
 The list starts focused on General; arrow keys move among the rows and Return or Space opens the focused section, with native keyboard focus on its controls.
-Sections with nothing to show stay off the list; the computer's sheet keeps the computer's name, reach, address and Leave or Forget.
+Sections with nothing to show stay off the list, so Integrations shows once the computer answers its connections; the computer's sheet keeps the computer's name, reach, address and Leave or Forget.
 Theme is this device's own (`PhoneLook`, `PhoneAppearance`): Apple's segmented control worded Device, Dark and Light, like the computer's Dark and Light pills, under a line saying it is set on this iPhone only (this iPad on an iPad) and the computer keeps its own.
 It starts on Device, which follows iOS's own setting and its Automatic switching; Dark or Light sets the window's interface style, so every screen, sheet, the keyboard, the crew, card bodies and the picture viewer follow it at once.
 The choice is saved in the app's own defaults, never in the connection file, so it survives a relaunch, an update, Leave, Forget, Removed and joining another computer; a reinstall resets it.
@@ -546,6 +546,20 @@ A reply notice leaves after five seconds unless VoiceOver is running; a new-card
 The first snapshot and a reload seed the notice history without announcing old cards; a body-only revision is not new news.
 The end of the app's background time stops the connection and clears the notice; there is no background notification service or push relay.
 
+## Google in Settings
+
+Settings → Integrations has a Google row for the computer the phone controls, showing who is signed in, with Sign in and Sign out (INF-3454's phone part, the captain's choices where=settings and how=catch); the list's Integrations line names the signed-in account or says Not signed in.
+The sign-in runs on that computer and its keys stay there; the phone asks for it (`inf:integrations:sign-in`), shows its page and passes back what the browser brings, as a computer that controls a first mate does (`docs/view.md`, "A sign-in that returns to the first mate's computer").
+Sign in shows Google's notice first, in the words the computer's Settings shows, generated from their owner (`PhoneGoogleWords`), and nothing is asked of the computer until Accept.
+The phone lists the `sign-in-return` contract change in its hello, and shows the row's Sign in only when the computer's welcome lists it too or the computer is a newer major; otherwise the row says to update that computer.
+The sign-in's answer comes only once the browser is back, so the phone does not count it as a computer that stopped answering (`request(_:waits:)`).
+Only a sign-in this phone asked for opens its page here: on `inf:app:sign-in-page` the phone listens on the same port of its own loopback address (`PhoneSignInReturnListener`), then shows the page in the system's browser view inside the app, since Google refuses its sign-in in an app's own web view and the app must stay open to catch the return.
+The listener passes only GET, as its path, to `inf:integrations:sign-in-return`, and answers the browser with the page the computer said.
+When the phone cannot listen on that port, or the computer refused what it passed on, the row asks for the address the browser ended on and sends it; a refused address is named under the field (`RETURN_PASTE_WORDS`).
+`inf:app:sign-in-ended` ends the wait, live or replayed after a reconnect, and the row reads the computer's connections again.
+Sign out asks once, then removes the connection on the computer (`inf:integrations:remove`).
+The isolated phone check opens no browser: the simulator shares its computer's loopback address, where the sign-in itself listens, so its google part pastes the address the stand-in Google sends the browser to (`tests/helpers/phoneGoogle.ts`), and `PhoneSignInReturnTests` drives the real listener with a real request.
+
 ## Installing on a phone
 
 The captain installs Infinitary through TestFlight, not Xcode.
@@ -640,7 +654,7 @@ Add `--ipad` for the iPad Pro 11-inch (M4); the default uses an iPhone 16.
 The gate refuses any other Xcode before it builds, and `scripts/phone-simulator.ts` refuses a Mac without that runtime, or one whose runtime does not support the device, naming the download that fixes it; it never takes a newer or older runtime in its place.
 Moving to a new pair is one pull request that edits the pin, after the virtual Mac image and every Mac that runs the check have the new pair.
 Add `--both` to run the checks and build once, then the iPhone and the iPad side by side; the evidence folder then holds the shared logs and an `iphone` and an `ipad` folder.
-The native journey is tests in `PhoneJourney`, one per part (`scripts/phone-test-plan.ts`): three join parts (`join-read`, `join-activity`, `join-away`), three talk parts (`talk-compose`, `talk-tasks`, `talk-drafts`), two relaunch parts (`relaunch-first`, `relaunch-second`), three cards parts (`cards-merge`, `cards-form`, `cards-media`), `address` (join by its address), `pick` (a card pager pick across a workspace redraw), `cards-revise` (a revision while the thread shows, then the thread's minus), `cards-notes` (notes on a card's parts and selected words, queued and sent as one reply, INF-3296), four keyboard parts (`keyboard-pinned`, `keyboard-scrolling`: the message box and a card's reply with the keyboard up, INF-2568; `keyboard-ways-out`: each way out of that keyboard, INF-3106; `body-field`: a text box inside a card's body with the keyboard up, INF-3427), `weak-link` (the app-hosted `PhoneWeakLinkTests` class alone), and `rest`, which runs the character and past choices with the other app-hosted tests and any test no other part names.
+The native journey is tests in `PhoneJourney`, one per part (`scripts/phone-test-plan.ts`): three join parts (`join-read`, `join-activity`, `join-away`), three talk parts (`talk-compose`, `talk-tasks`, `talk-drafts`), two relaunch parts (`relaunch-first`, `relaunch-second`), three cards parts (`cards-merge`, `cards-form`, `cards-media`), `address` (join by its address), `pick` (a card pager pick across a workspace redraw), `cards-revise` (a revision while the thread shows, then the thread's minus), `cards-notes` (notes on a card's parts and selected words, queued and sent as one reply, INF-3296), four keyboard parts (`keyboard-pinned`, `keyboard-scrolling`: the message box and a card's reply with the keyboard up, INF-2568; `keyboard-ways-out`: each way out of that keyboard, INF-3106; `body-field`: a text box inside a card's body with the keyboard up, INF-3427), `google` (Google's row in Settings, INF-3454), `weak-link` (the app-hosted `PhoneWeakLinkTests` class alone), and `rest`, which runs the character and past choices with the other app-hosted tests and any test no other part names.
 The weak link checks wait out real slow links, outages and silences, about five minutes a device, so they take a part of their own rather than doubling the rest part, and a change to the other app-hosted tests does not repeat them (INF-2989).
 Each part's test, with the steps only it takes, is in a file of its own beside `InfinitaryUITests/PhoneJourney.swift`, named for the part (`PhoneJourney+JoinRead.swift` for `join-read`, `PhoneJourney+Rest.swift` for `rest`).
 `PhoneJourney.swift` keeps the class and the steps two or more parts share.

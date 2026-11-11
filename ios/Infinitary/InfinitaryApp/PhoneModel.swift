@@ -28,6 +28,8 @@ struct AddressJoin: Equatable {
     var connection: ReadOnlySession?
     /// This phone's Secrets approvals with the joined computer.
     var secrets: PhoneSecrets?
+    /// INF-3454's phone part: Google's row in Settings → Integrations, for the computer this phone controls.
+    var google: PhoneGoogle?
     var proposal: JoinLink?
     var problem: String?
     var busy = false
@@ -286,7 +288,7 @@ struct AddressJoin: Equatable {
     func forgetMac() {
         do {
             try forget()
-            connection?.stop(); connection = nil; secrets = nil
+            connection?.stop(); connection = nil; secrets = nil; google = nil
             removed = false; proposal = nil; problem = nil
         } catch {
             problem = needsUnlock(error) ? "Could not forget this computer. Unlock your phone and try again."
@@ -350,6 +352,7 @@ struct AddressJoin: Equatable {
         session.onSceneSignal = { signal in CharacterCues.signal(signal) }
         connection = session
         secrets = PhoneSecrets(session: session, label: UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone")
+        google = PhoneGoogle(session: session)
         session.found(addresses: nearby.macs.map(\.address))
         if foreground { session.start() }
     }

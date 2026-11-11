@@ -45,6 +45,7 @@ import { budgetTimer, type DeadlineTimer, keepControlConnection } from "./budget
 import { claimedPort } from "./claimedPort";
 import { disposableCustody } from "./disposableCustody";
 import { standInDnsSd } from "./dnsSdStandIn";
+import { phoneGoogleControls, startPhoneGoogle } from "./phoneGoogle";
 import type {
   PhoneChord,
   PhoneDisplayReport,
@@ -100,6 +101,7 @@ export async function startPhoneHome(
   process.env.INFINITARY_CONNECTION_LOOPBACK_PORT = String(port);
   process.env.INFINITARY_DNS_SD = standInDnsSd([]);
   const provider = await startMockProvider();
+  const googleStandIn = await startPhoneGoogle();
   const userData = join(root, "app");
   const paths = appPathsFor(userData);
   mkdirSync(paths.authDir, { recursive: true });
@@ -143,6 +145,7 @@ export async function startPhoneHome(
     },
   });
   const scene = phoneSceneFixture(core, userData, () => connection.settled());
+  const google = phoneGoogleControls(core);
   const readings = {
     cards: 0,
     feed: 0,
@@ -956,6 +959,13 @@ export async function startPhoneHome(
                 : "face-away",
           );
           result = { ok: true };
+          break;
+        // INF-3454's phone part: approve on the stand-in Google's page, and what the computer kept.
+        case "POST google-approve":
+          result = await google.approve();
+          break;
+        case "GET google-state":
+          result = await google.state();
           break;
         case "GET state":
           result = {
@@ -2723,8 +2733,10 @@ export async function startPhoneHome(
       for (const socket of relaySockets) socket.destroy();
       await new Promise<void>((resolve) => relayServer.close(() => resolve()));
       stopConversationReading();
+      google.close();
       await core.dispose();
       await provider.close();
+      await googleStandIn.close();
     },
   };
 }

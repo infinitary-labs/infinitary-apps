@@ -65,10 +65,14 @@ extension PhoneJourney {
         // Completion: each destination's content, Back restoring the list, and Done closing the sheet.
         let general = app.buttons["phone-settings-general"]
         let appearance = app.buttons["phone-settings-appearance"]
+        let integrations = app.buttons["phone-settings-integrations"]
         let devicesSection = app.buttons["phone-settings-devices"]
         XCTAssertTrue(general.waitForPresence(timeout: 10), app.debugDescription)
+        // INF-3454: Integrations joins the list once the computer answers its connections, in the desktop's place.
+        XCTAssertTrue(integrations.waitForPresence(timeout: 20), app.debugDescription)
         XCTAssertLessThan(general.frame.maxY, appearance.frame.minY)
-        XCTAssertLessThan(appearance.frame.maxY, devicesSection.frame.minY)
+        XCTAssertLessThan(appearance.frame.maxY, integrations.frame.minY)
+        XCTAssertLessThan(integrations.frame.maxY, devicesSection.frame.minY)
         XCTAssertFalse(app.staticTexts["app-version"].exists, "Version content lives on General, not the list")
         XCTAssertFalse(app.segmentedControls["phone-theme"].exists)
         XCTAssertFalse(app.buttons["leave"].exists)
@@ -87,6 +91,12 @@ extension PhoneJourney {
         try await phoneTheme()
         try await settingsBack()
         XCTAssertTrue(app.staticTexts["Theme: Device"].exists, "The list reads the current saved choice")
+        XCTAssertTrue(app.staticTexts["Google: Not signed in"].exists, "The list reads the computer's Google state")
+        waitForSteadyTarget(integrations)
+        app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
+        app.typeKey("\n", modifierFlags: [])
+        XCTAssertTrue(app.descendants(matching: .any)["google-section"].waitForPresence(timeout: 10), app.debugDescription)
+        try await settingsBack()
         waitForSteadyTarget(devicesSection)
         app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
         app.typeKey("\n", modifierFlags: [])

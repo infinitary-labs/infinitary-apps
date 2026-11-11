@@ -126,6 +126,11 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
   { parts: family("keyboard"), files: [
     "ios/Infinitary/InfinitaryApp/PhoneHideKeyboard.swift",
   ] },
+  { parts: family("google"), files: [
+    "ios/Infinitary/InfinitaryApp/PhoneGoogleSection.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneGoogle.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSignInReturn.swift",
+  ] },
   { parts: family("pick"), files: [
     "ios/Infinitary/InfinitaryApp/PhoneMenuTapProbe.swift",
   ] },

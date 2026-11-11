@@ -123,6 +123,12 @@ public struct PhoneNotice: Equatable, Sendable {
     /// The Mac's first mate reacted (a firstmate_emote), heard live; a replay on reconnect is not a reaction now.
     public var onEmote: ((String) -> Void)?
     public var onSceneSignal: ((PhoneSceneSignal) -> Void)?
+    /// INF-3454: a sign-in page the computer would open for its view, heard live, and a sign-in there that stopped
+    /// waiting, heard live or replayed (docs/ios.md, "Google in Settings").
+    public var onSignInPage: ((PhoneSignInPage) -> Void)?
+    public var onSignInEnded: ((String) -> Void)?
+    /// The computer takes a sign-in's return from this phone (`sign-in-return`), said in its welcome or implied by a newer major.
+    public private(set) var homeTakesSignInReturn = false
     @ObservationIgnored private let phone: PhoneIdentity
     @ObservationIgnored private var loop: Task<Void, Never>?
     @ObservationIgnored private var socket: URLSessionWebSocketTask?
@@ -181,7 +187,13 @@ public struct PhoneNotice: Equatable, Sendable {
 
     /// No write is queued or retried. A lost reply is explicitly an unknown outcome.
     public func request<T: Decodable & Sendable>(_ channel: PhoneRequest, args: [Any] = [], as: T.Type = T.self) async throws -> T {
-        let answer = try await invoke(channel.rawValue, changes: channel.changes, args: args)
+        try await request(channel, args: args, as: T.self, waits: true)
+    }
+
+    /// `waits` false is an ask the computer answers only once the person finishes elsewhere, such as a sign-in in a
+    /// browser: it never counts as a computer that stopped answering.
+    public func request<T: Decodable & Sendable>(_ channel: PhoneRequest, args: [Any] = [], as: T.Type = T.self, waits: Bool) async throws -> T {
+        let answer = try await invoke(channel.rawValue, changes: channel.changes, args: args, waits: waits)
         try Task.checkCancellation()
         do { return try JSONDecoder().decode(T.self, from: answer) }
         catch {
@@ -190,7 +202,7 @@ public struct PhoneNotice: Equatable, Sendable {
         }
     }
 
-    private func invoke(_ channel: String, changes: Bool, args: [Any]) async throws -> Data {
+    private func invoke(_ channel: String, changes: Bool, args: [Any], waits: Bool = true) async throws -> Data {
         guard !Task.isCancelled, contact == "in-reach", let socket, !removed else { throw PhoneError.unavailable }
         if changes, let reason = changeRefusal { throw PhoneError.refused(reason) }
         nextID += 1
@@ -198,7 +210,7 @@ public struct PhoneNotice: Equatable, Sendable {
         let data = try JSONSerialization.data(withJSONObject: ["t": "invoke", "id": id, "channel": channel, "args": args])
         guard data.count <= PhoneContract.maxFrameBytes, let text = String(data: data, encoding: .utf8) else { throw PhoneError.invalidReply }
         let answer: Data = try await withCheckedThrowingContinuation { continuation in
-            calls[id] = (changes, continuation); waitingSince[id] = Date()
+            calls[id] = (changes, continuation); if waits { waitingSince[id] = Date() }
             Task {
                 do { try await socket.send(.string(text)) }
                 catch { self.failCall(id) }
@@ -792,7 +804,7 @@ public struct PhoneNotice: Equatable, Sendable {
         var reached = false
         var hello: [String: Any] = ["t": "hello", "protocolVersion": PhoneContract.version,
             "as": "view", "viewFloor": PhoneContract.viewFloor, "system": "ios", "spellings": ["inf"], "appVersion": "0.1.0",
-            "changes": [PhoneContract.frameParts, PhoneContract.cardAnnotations]]
+            "changes": [PhoneContract.frameParts, PhoneContract.cardAnnotations, PhoneGoogleWords.signInReturn]]
         if let epoch { hello["cursor"] = ["epoch": epoch, "seq": sequence] }
         let opened = ContinuousClock.now
         // INF-2668: the connection is cut for silence alone, never because an answer is slow. Quiet for `patience`
@@ -905,6 +917,7 @@ public struct PhoneNotice: Equatable, Sendable {
             cardNotes = homeMajor > ownMajor || (frame["changes"] as? [String] ?? []).contains(PhoneContract.cardAnnotations)
             homeTakesUsage = homeMajor >= PhoneContract.phoneDiagnosticsSince
                 || (frame["changes"] as? [String] ?? []).contains(PhoneDiagnosticEvent.change)
+            homeTakesSignInReturn = homeMajor > ownMajor || (frame["changes"] as? [String] ?? []).contains(PhoneGoogleWords.signInReturn)
             if !sceneObservations { computers = [] }
             sceneGeneration += 1
             contact = "reaching"
@@ -1005,6 +1018,13 @@ public struct PhoneNotice: Equatable, Sendable {
                 }
             }
             if frame["channel"] as? String == "inf:secrets:changed" { secretsRevision += 1 }
+            // A page opens only as it is asked; an ending still ends the wait after a reconnect.
+            if frame["channel"] as? String == "inf:app:sign-in-page", !replayed, let page = PhoneSignInPage(frame["payload"]) {
+                onSignInPage?(page)
+            }
+            if frame["channel"] as? String == "inf:app:sign-in-ended", let id = (frame["payload"] as? [String: Any])?["id"] as? String {
+                onSignInEnded?(id)
+            }
             if frame["channel"] as? String == "inf:cards:thread", let payload = frame["payload"] {
                 let thread = try PhoneJSON.read(payload)
                 if let id = thread["cardId"].text {

@@ -58,10 +58,10 @@ Remove any temporary copies the task creates after the intended fields are consu
 
 ## Architecture and data inventory for reviewers
 
-Infinitary is a desktop application, not a hosted mail service.
+Infinitary is a desktop application, with an iPhone and iPad app that controls it, not a hosted mail service.
 The computer running the first mate makes OAuth, Gmail and Calendar requests directly to Google.
 Other paired computers can run agents that request those operations through the first mate's computer; the results, but not the Google tokens, can travel to those computers.
-A person can start the sign-in from a paired computer: Google's page opens in that computer's browser, and that computer passes the one-time code and state back to the first mate's computer, which alone makes the PKCE exchange and keeps the tokens.
+A person can start the sign-in from a paired computer, or from Infinitary on iPhone or iPad: Google's page opens in that computer's browser or the phone's in-app browser, and that computer or phone passes the one-time code and state back to the first mate's computer, which alone makes the PKCE exchange and keeps the tokens.
 The chosen AI providers receive the task context and tool answers needed for the work.
 Consequently, this is **not** a claim that Google data never leaves the user's computers or never reaches third-party servers.
 
@@ -71,6 +71,8 @@ flowchart LR
   Google -->|Code and state on loopback| Home[Infinitary on the first mate's computer]
   Google -->|Code and state on loopback, when signing in from a paired computer| Computer
   Computer -->|Code and state only, over the paired connection| Home
+  Google -->|Code and state on loopback, when signing in from iPhone or iPad| Phone[Infinitary on iPhone or iPad]
+  Phone -->|Code and state only, over the paired connection| Home
   Home -->|PKCE exchange and renewal over HTTPS| Google
   Home <-->|Authorized operations over HTTPS| Gmail[Gmail API]
   Home <-->|Authorized operations over HTTPS| Calendar[Calendar API]

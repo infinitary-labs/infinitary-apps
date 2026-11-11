@@ -140,6 +140,7 @@ A browser that comes back while the connection is down is not passed on, since a
 A first mate that does not list the `sign-in-return` contract change sends the view nothing for this sign-in, so the view's Google notice says to update that computer and its accept stays off (`googleUpdateThereWords`).
 A view that does not list it is refused before any page opens, with words saying to update the view; the first mate's own window, and a first mate started by a command, sign in as before at home.
 A development run may set the loopback address the view listens on with `INFINITARY_SIGN_IN_RETURN_HOST`, so two development runs on one Linux PC each play a computer of their own; a packaged app ignores it.
+Infinitary on iPhone and iPad does the same from its Settings (`docs/ios.md`, "Google in Settings").
 
 ## A first mate on an older version
 

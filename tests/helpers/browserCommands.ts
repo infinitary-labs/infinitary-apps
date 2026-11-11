@@ -1,8 +1,11 @@
+import { availableParallelism, loadavg } from "node:os";
 import { basename, join } from "node:path";
 import type { BrowserCommand } from "vitest/node";
 import type { HomeRead, HomeSeed, readHome } from "./browserFreshHome";
-import type { ReducedMotion } from "./browserProvided";
+import type { LoadReading, ReducedMotion } from "./browserProvided";
+import { GRADES_BUDGETS } from "./budgets";
 import { firstmateIdleReadings, layoutReadings } from "./journeyHelperPages";
+import { processorShare } from "./loadClock";
 
 /**
  * What a browser test asks of the page that holds it, beyond the runner's
@@ -12,7 +15,7 @@ import { firstmateIdleReadings, layoutReadings } from "./journeyHelperPages";
  * sandboxed frame the page cannot script, the page's cookies cleared, its
  * garbage collected, the answers of a home seeded for the test's story, and
  * the journeys' own Playwright helpers read on a plain page
- * (`journeyHelperPages.ts`).
+ * (`journeyHelperPages.ts`), and the beat of the page's load clock.
  */
 const emulateReducedMotion: BrowserCommand<[ReducedMotion]> = async (context, reducedMotion) => {
   await context.page.emulateMedia({ reducedMotion });
@@ -95,6 +98,28 @@ const seededHome: BrowserCommand<[input?: unknown]> = async ({ project, testPath
   return home.readHome(seed.default, input, seed.asked);
 };
 
+/**
+ * The beat of the page's load clock (tests/browser/loadClock.ts): the page
+ * asks for it on every tick, so while this process - the one that answers
+ * every command, a seeded home's boot among them - is stalled, the beat waits
+ * and the page's limits stop counting. It answers whether the run grades
+ * budgets, which keeps the wall clock, and the share of a processor this
+ * computer's load leaves.
+ */
+const loadReading: BrowserCommand<[]> = (): LoadReading => ({
+  grades: GRADES_BUDGETS,
+  share: processorShare(loadavg()[0] ?? 0, availableParallelism()),
+});
+
+/**
+ * Holds this process for `milliseconds`, its event loop blocked as a read
+ * from a starved disk blocks it, so a test shows its limit does not count
+ * the time (tests/browser/load-clock.test.ts).
+ */
+const holdCommandProcess: BrowserCommand<[milliseconds: number]> = (_context, milliseconds) => {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
+};
+
 export const browserCommands = {
   emulateReducedMotion,
   evaluateInFrame,
@@ -103,4 +128,6 @@ export const browserCommands = {
   seededHome,
   layoutReadings,
   firstmateIdleReadings,
+  loadReading,
+  holdCommandProcess,
 };

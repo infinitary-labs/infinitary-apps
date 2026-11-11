@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "browser-tests-load-clock",
+      "reason": "Test infrastructure only: browser tests' time limits count only the time the test page and its command process got to run, as every other test project's limits do, so a stalled CI runner no longer fails them. No app behavior changes."
+    }
+  ]
+}

@@ -129,6 +129,7 @@ export const PROBES = [
       "patches/playwright@1.62.1.patch",
       "tests/fixtures/load-clock/",
       "tests/helpers/budgets.ts",
+      "tests/helpers/loadClock.ts",
     ],
   },
   {
@@ -139,6 +140,7 @@ export const PROBES = [
       "patches/vitest@4.1.10.patch",
       "tests/fixtures/frozen-work/",
       "tests/helpers/budgets.ts",
+      "tests/helpers/loadClock.ts",
       "tests/helpers/waitWindow.ts",
     ],
   },

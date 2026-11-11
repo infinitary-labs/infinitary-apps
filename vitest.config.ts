@@ -156,8 +156,9 @@ export default defineConfig({
     environment: "node",
     // A test's time limit, and a wait's window, count load time and end by
     // their wall cap; a run that grades budgets keeps the wall clock
-    // (tests/helpers/budgets.ts, INF-1083): waitWindow.ts starts the clock
-    // and the patched runner and vitest read it.
+    // (tests/helpers/budgets.ts, INF-1083): waitWindow.ts starts the clock,
+    // tests/browser/loadClock.ts the browser page's, and the patched runner
+    // and vitest read it.
     // One private TMPDIR per run, required empty at the end (runTempRoot.ts).
     globalSetup: ["./tests/helpers/vitestGlobalSetup.ts"],
     projects: [
@@ -248,7 +249,10 @@ export default defineConfig({
             "./tests/helpers/vitestGlobalSetup.ts",
             "./tests/helpers/browserFreshHome.ts",
           ],
-          setupFiles: ["./tests/browser/freshPageSetup.ts"],
+          // Its limits and waits count load time, as every project's do,
+          // on a clock its command process ticks too (tests/browser/loadClock.ts);
+          // then each file starts from a fresh page.
+          setupFiles: ["./tests/browser/loadClock.ts", "./tests/browser/freshPageSetup.ts"],
           browser: {
             enabled: true,
             headless: true,

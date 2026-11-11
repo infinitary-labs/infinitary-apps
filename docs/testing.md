@@ -135,6 +135,9 @@ A card body with no script draws in its own frame, as in the app, and so do a se
 A card's pictures are the core's own copies: the home reads each through `inf:cards:picture` and names it by a data address in the card's body, since a page cannot load the shell's scheme.
 `bodyDrawn(title)` waits until the shown card's body has drawn, and `inCardBody(title, read)` runs `read` inside it.
 
+A browser test's limit and its waits count only the time the page and the Node process that answers its commands both got to run, and end by their wall cap, as every project's do (`tests/browser/loadClock.ts`, `docs/test-cohorts.md` "Budgets").
+So a runner whose disk stalls that process, such as during a seeded home's boot, does not fail a test.
+
 Browser commands (`tests/helpers/browserCommands.ts`) reach the page itself, such as the media a person's Mac sets, and `evaluateInFrame` reads inside a sandboxed frame, found by its name or its title, such as a card body, that the page cannot script; `cdp()` from `vitest/browser` reads the browser's own counters.
 A journey helper that takes a Playwright page, such as the layout invariant or the first mate idle wait, is checked here on a plain page of the browser's own, through a command in `tests/helpers/journeyHelperPages.ts`, never by launching the app only to replace its page.
 A frame program served as text, such as Observe's, draws in a same-origin frame the test builds from the program and the design tokens (`tests/browser/observe-frame.test.ts`).

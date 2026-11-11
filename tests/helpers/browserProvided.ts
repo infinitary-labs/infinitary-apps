@@ -53,6 +53,12 @@ export type LayoutProbe = { left: number; top: number; controlRemoved?: boolean 
 /** What the layout helper read of one probe: its losses, and whether `expectClearOf` accepted it. */
 export type LayoutReading = { losses: string[]; accepted: boolean };
 
+/**
+ * The command process's beat for the page's load clock: whether the run
+ * grades budgets, and the share of a processor its computer's load leaves.
+ */
+export type LoadReading = { grades: boolean; share: number };
+
 /** One reading of the first mate idle wait: the label it read last, and whether it resolved. */
 export type IdleReading = { read: string | null; resolved: boolean };
 
@@ -76,5 +82,7 @@ declare module "vitest/browser" {
     seededHome(input?: unknown): Promise<FreshHomeAnswers>;
     layoutReadings(probes: LayoutProbe[]): Promise<LayoutReading[]>;
     firstmateIdleReadings(): Promise<IdleReading[]>;
+    loadReading(): Promise<LoadReading>;
+    holdCommandProcess(milliseconds: number): Promise<void>;
   }
 }

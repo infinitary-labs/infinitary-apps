@@ -29,7 +29,6 @@ async function wired() {
       },
     },
     jobs: { answering: () => undefined },
-    inbox: { serve: () => undefined },
     browsers: h.browsers,
   });
   const close = (id: string, to: "done" | "dropped") => {

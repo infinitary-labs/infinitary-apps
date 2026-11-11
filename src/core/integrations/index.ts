@@ -17,7 +17,12 @@ export type {
   PanelCaller,
 } from "./binding";
 export { IntegrationOutcomeUnknown } from "./binding";
-export { CREWMATE_INTEGRATIONS_LINE, INBOX_COMMAND, INTEGRATIONS_COMMAND } from "./commandWords";
+export {
+  CREWMATE_INTEGRATIONS_LINE,
+  INBOX_COMMAND,
+  INFINITARY_COMMAND,
+  INTEGRATIONS_COMMAND,
+} from "./commandWords";
 export {
   ClaudeFiles,
   conversationFiles,
@@ -48,11 +53,10 @@ export {
   INBOX_FENCE,
   INBOX_ID,
   Inbox,
-  type InboxChannel,
   type InboxDoor,
   type InboxReceipt,
   type InboxReceiptLine,
-  launcherDefaultDir,
+  launcherDataDir,
 } from "./providers/inbox";
 export { type McpIntegrationOptions, mcpIntegration } from "./providers/mcp/mcpIntegration";
 export {

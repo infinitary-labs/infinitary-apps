@@ -445,12 +445,13 @@ describe("electron-builder configuration", () => {
     // the build's copy of the source cannot make one there (INF-1238).
     const launcher = readFileSync(join(root, "resources/axi-bin/infinitary-axi"));
     for (const name of [
+      // INF-1894's command, which the person runs from any shell of theirs.
       "infinitary-axi",
       "infinitary-browser-axi",
       "infinitary-integrations-axi",
       // INF-2468's files command, which reads a file on another of the captain's computers.
       "infinitary-files-axi",
-      // INF-1214's inbox command, which a person's own script runs.
+      // INF-1214's inbox command, now infinitary-axi's old name for one release (INF-1894).
       "infinitary-inbox-axi",
       // INF-1085's command ships even while its production grant remains unavailable.
       "infinitary-secrets-axi",

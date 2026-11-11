@@ -33,18 +33,19 @@ for OLD in /opt/firstmate-3000/firstmate-3000 /usr/bin/firstmate-3000; do
     ln -sfn '/opt/${sanitizedProductName}/${executable}' "$OLD"
 done
 
-# Added: the inbox's command on everyone's path (docs/linux-packages.md,
-# "The inbox's command"; docs/integrations.md, "The inbox"), so a script
-# runs infinitary-inbox-axi by its short name. A path that already holds
-# something not of this package's is left as it is.
-INBOX=/usr/bin/infinitary-inbox-axi
-case "$(readlink "$INBOX" 2>/dev/null)" in
-    '/opt/${sanitizedProductName}/'*) ;;
-    *) if [ -e "$INBOX" ] || [ -L "$INBOX" ]; then INBOX=; fi ;;
-esac
-if [ -n "$INBOX" ]; then
-    ln -sfn '/opt/${sanitizedProductName}/resources/axi-bin/infinitary-inbox-axi' "$INBOX"
-fi
+# Added: your own command on everyone's path, and its old name for one
+# release (docs/linux-packages.md, "Your own command"; docs/axi-commands.md,
+# "Infinitary from your terminal"), so a script runs infinitary-axi by its
+# short name. A path that already holds something not of this package's is
+# left as it is.
+for NAME in infinitary-axi infinitary-inbox-axi; do
+    LINK=/usr/bin/$NAME
+    case "$(readlink "$LINK" 2>/dev/null)" in
+        '/opt/${sanitizedProductName}/'*) ;;
+        *) if [ -e "$LINK" ] || [ -L "$LINK" ]; then continue; fi ;;
+    esac
+    ln -sfn "/opt/${sanitizedProductName}/resources/axi-bin/$NAME" "$LINK"
+done
 
 # Check if user namespaces are supported by the kernel and working with a quick test:
 if ! { [[ -L /proc/self/ns/user ]] && unshare --user true; }; then

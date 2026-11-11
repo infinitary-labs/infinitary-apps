@@ -1,6 +1,7 @@
 import { rm } from "node:fs/promises";
 import { homedir, hostname, userInfo } from "node:os";
 import { basename, join } from "node:path";
+import { openCommandDoor } from "@core/axi/commandDoor";
 import { defaultClaudeConfigDir } from "@core/claude/claudeQuota";
 import { startConnection } from "@core/connection/connection";
 import { ownComputerName } from "@core/devices/computerName";
@@ -624,8 +625,11 @@ export async function startApp(
         // for them only while a device is paired or a link to pair one is
         // open (docs/devices.md), and on its local door for as long as it
         // runs, windowed or started by a command.
-        startConnection: (core) =>
-          startConnection({
+        startConnection: (core) => {
+          // The captain's own command enters at the local door, as the
+          // captain, while its switch in Integrations is on (docs/axi-commands.md).
+          const commandDoor = openCommandDoor(core);
+          const connection = startConnection({
             dispatch: core.dispatch,
             events: core.events,
             devices: core.services.devices,
@@ -641,7 +645,16 @@ export async function startApp(
             ...(standInContract ? { protocolVersion: standInContract } : {}),
             ...(Number.isInteger(standInViewFloor) ? { viewFloor: standInViewFloor } : {}),
             ...(standInSpelling ? { speaks: standInSpelling } : {}),
-          }),
+            ...(commandDoor ? { command: commandDoor.serve } : {}),
+          });
+          return {
+            ...connection,
+            close: async () => {
+              commandDoor?.close();
+              await connection.close();
+            },
+          };
+        },
         // The window here reaches its first mate through that door, as a
         // view of it (docs/view.md); a command's run has no window to.
         ...(windowless ? {} : { localDoor: (core: Core) => core.paths.localDoorDir }),

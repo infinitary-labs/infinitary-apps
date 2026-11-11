@@ -67,7 +67,7 @@ It follows the phone door's pattern (`docs/devices.md`, "A phone that joins by i
   The same TLS 1.3, with a key of the door's own, made in memory each run and never written, so pairing still writes nothing, not even the home's key, until the first link (`docs/devices.md`).
   The client pins it as every dial is, and shows no key of its own.
   An upgrade on `CONNECTION_PATH` carrying the key in `x-infinitary-local-key` (`LOCAL_DOOR_KEY_HEADER`) is admitted; a wrong or missing key is 401, an `Origin` 403 and another path 404, before any frame.
-  It answers no pairing and no download of the app: every plain request is 426 on `CONNECTION_PATH` and 404 elsewhere.
+  It answers no pairing and no download of the app: every plain request is 426 on `CONNECTION_PATH` and 404 elsewhere, except a POST on `COMMAND_PATH` (`/command`) carrying the same key, which goes to the captain's own command, `infinitary-axi`, while the app wires one (`docs/axi-commands.md`, "Infinitary from your terminal"); a wrong key there is 401 and an `Origin` 403.
 - **What a local client is.**
   Every local client shares one id, `local` (`LOCAL_CLIENT`), and any number may be connected at once with the same key.
   It is no device: it is on no list, is never heard coming or going (`onViewDevice`), never says its system or version, is never told a version is waiting, and has nothing to `leave`.

@@ -143,8 +143,9 @@ stdenv.mkDerivation {
     # Firstmate 3000's command, which this package takes the place of
     # (docs/linux-packages.md, "Arch, Omarchy and NixOS").
     ln -s "$out/bin/infinitary" "$out/bin/firstmate-3000"
-    # The inbox's command by its short name (docs/linux-packages.md, "The
-    # inbox's command").
+    # Your own command by its short name, and its old name for one release
+    # (docs/linux-packages.md, "Your own command").
+    ln -s "$out/lib/infinitary/resources/axi-bin/infinitary-axi" "$out/bin/infinitary-axi"
     ln -s "$out/lib/infinitary/resources/axi-bin/infinitary-inbox-axi" "$out/bin/infinitary-inbox-axi"
     substituteInPlace "$out/share/applications/infinitary.desktop" \
       --replace-fail "/opt/infinitary/infinitary" "$out/bin/infinitary"

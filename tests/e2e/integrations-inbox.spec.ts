@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { INBOX_WORDS, INTEGRATION_KIND_NAMES } from "@shared/integrations";
 import { decode } from "@toon-format/toon";
-import { INBOX_COMMAND, INBOX_EVENT, INBOX_FENCE } from "../../src/core/integrations";
+import { INBOX_EVENT, INBOX_FENCE, INFINITARY_COMMAND } from "../../src/core/integrations";
 import { NOTICE_WORDS } from "../../src/core/orchestrator/noticeWakes";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -16,6 +16,10 @@ import { focusOn, pressKey, runFromSearch } from "./windowKeys";
  * INF-1214, direction A (the captain's "Approve and build" with all seven
  * recommended answers): a program on this computer drops a freeform event
  * into the inbox and the first mate wakes on it as evidence from outside.
+ *
+ * INF-1894 (INF-1893's agreed design): the box is now the captain's own
+ * command's, `infinitary-axi`, titled "Infinitary command", and a note is
+ * its `note` verb; the line to copy is the bare command.
  *
  * - Promised result: the inbox's own section, off at first, says what it
  *   is (the captain's reply: "it should be its own section, and default
@@ -83,12 +87,13 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
   const door = tab.locator("[data-inbox-door]");
   await expect(door).toBeVisible();
   await expect(door).toContainText(INBOX_WORDS.exampleNote);
+  await expect(door.locator("[data-inbox-setup]")).toContainText("setup");
 
   // The short name's link, by one press, into the folder this run names.
   const link = door.getByRole("button", { name: INBOX_WORDS.link });
   await focusOn(link);
   await pressKey(link, "Enter");
-  const linked = join(linkDir, INBOX_COMMAND);
+  const linked = join(linkDir, INFINITARY_COMMAND);
   await expect(door.locator('[data-inbox-link="linked"]')).toContainText(
     INBOX_WORDS.linked(linked),
   );
@@ -110,10 +115,7 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
 
   // The line as Settings shows it, with a request id and a source, answers at once.
   const words = "Deploy of the website finished";
-  const dropLine = line.replace(
-    /note "[^"]*"$/,
-    `note --request-id deploy-7 --source ci "${words}"`,
-  );
+  const dropLine = `${line} note --request-id deploy-7 --source ci "${words}"`;
   const dropped = await sh(dropLine, process.env.PATH ?? "");
   expect(dropped.exitCode).toBe(0);
   const receipt = decode(dropped.stdout.split("\nhelp")[0] ?? "") as {
@@ -149,10 +151,7 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
   );
 
   // Once the turn handled it, the receipts read it handled, by the short name.
-  const receiptsLine = line.replace(
-    /'[^']*infinitary-inbox-axi' note "[^"]*"$/,
-    `${INBOX_COMMAND} receipts`,
-  );
+  const receiptsLine = line.replace(/'[^']*infinitary-axi'$/, `${INFINITARY_COMMAND} receipts`);
   await expect
     .poll(
       async () => {
@@ -187,9 +186,10 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
   await pressKey(toggle, "Space");
   await expect(section).toHaveAttribute("data-inbox-section", "off");
   await expect(section.locator('[data-inbox-off="kept"]')).toContainText(INBOX_WORDS.offKept);
-  const refused = await sh(line, process.env.PATH ?? "");
+  const noteLine = `${line} note "Confirm you have received this"`;
+  const refused = await sh(noteLine, process.env.PATH ?? "");
   expect(refused.exitCode).not.toBe(0);
-  expect(refused.stdout).toContain("The inbox is off");
+  expect(refused.stdout).toContain(`${INFINITARY_COMMAND} is off`);
 
   // On again, the same line works, the one rule listens, and the first note is still there.
   await pressKey(toggle, "Space");
@@ -198,7 +198,7 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
   expect((await rules()).map((entry) => [entry.name, entry.state, entry.stopped ?? null])).toEqual([
     [INBOX_WORDS.ruleName, "enabled", null],
   ]);
-  const again = await sh(line, process.env.PATH ?? "");
+  const again = await sh(noteLine, process.env.PATH ?? "");
   expect(again.exitCode).toBe(0);
   await expect.poll(() => seen.turns.length, { timeout: 30_000 }).toBe(2);
   const kept = await sh(receiptsLine, `${linkDir}:${process.env.PATH ?? ""}`);
@@ -220,6 +220,6 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
   await pressKey(confirm, "Enter");
   await expect(section.locator('[data-inbox-off="new"]')).toContainText(INBOX_WORDS.off);
   await expect(remove).toHaveCount(0);
-  const gone = await sh(line, process.env.PATH ?? "");
+  const gone = await sh(noteLine, process.env.PATH ?? "");
   expect(gone.exitCode).not.toBe(0);
 });

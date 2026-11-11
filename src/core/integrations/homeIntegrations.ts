@@ -12,14 +12,14 @@ import type { PanelOutsideData } from "../personal/panelOutsideData";
 import type { StandIns } from "../standIns";
 import type { TaskService } from "../tasks/taskService";
 import { atUtilityQos } from "../utilityQos";
-import { INBOX_COMMAND } from "./commandWords";
+import { INFINITARY_COMMAND } from "./commandWords";
 import { OutsideReads } from "./outsideReads";
 import { PanelAsks } from "./panelAsks";
 import { forgeHostIntegration } from "./providers/forgeHosts";
 import { githubIntegration } from "./providers/github";
 import { googleSetup } from "./providers/google/client";
 import { googleIntegration } from "./providers/google/googleIntegration";
-import { INBOX_ID, Inbox, launcherDefaultDir } from "./providers/inbox";
+import { INBOX_ID, Inbox, launcherDataDir } from "./providers/inbox";
 import { mcpIntegration } from "./providers/mcp/mcpIntegration";
 import { standInIntegration } from "./providers/standIn";
 import { FileIntegrationSecrets } from "./secrets";
@@ -50,7 +50,7 @@ export type IntegrationsCrew = Pick<CrewSupervisor, "integrationAsks" | "session
 
 export function startHomeIntegrations(options: {
   host: Pick<HostCapabilities, "app" | "openExternal" | "openSignInPage">;
-  paths: Pick<AppPaths, "integrationsDir">;
+  paths: Pick<AppPaths, "integrationsDir" | "userData">;
   standIns: Pick<StandIns, "integrationDir" | "inboxLinkDir">;
   /** The folder of the app's own task commands, the inbox's among them. */
   axiBinDir: string;
@@ -74,14 +74,15 @@ export function startHomeIntegrations(options: {
   const integrationSecrets = new FileIntegrationSecrets(join(paths.integrationsDir, "secrets"));
   // Which conversations received fenced words, and when, so they go when due.
   const outsideReads = new OutsideReads(paths.integrationsDir);
-  // The inbox (docs/integrations.md, "The inbox"): a door the person's own
-  // programs drop events through, with the launcher's inbox command. Its
+  // The inbox (docs/integrations.md, "The inbox"): infinitary-axi's switch
+  // and the notes the person's own programs drop with it. The command's
   // link goes into /usr/local/bin, or where an unpackaged run names; a Linux
   // package installs its own in /usr/bin.
   const integrationInbox = new Inbox({
     dir: join(paths.integrationsDir, INBOX_ID),
-    command: join(options.axiBinDir, INBOX_COMMAND),
-    defaultDir: launcherDefaultDir(
+    dataDir: paths.userData,
+    command: join(options.axiBinDir, INFINITARY_COMMAND),
+    defaultDataDir: launcherDataDir(
       host.app.platform,
       hostEnv().HOME ?? homedir(),
       hostEnv().XDG_CONFIG_HOME,

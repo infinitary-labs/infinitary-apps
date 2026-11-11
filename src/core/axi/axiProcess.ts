@@ -1,7 +1,8 @@
+import { INBOX_COMMAND, INFINITARY_COMMAND } from "../integrations/commandWords";
 import { browserAxi } from "./browserCommands";
+import { captainAxi, RENAMED_NOTICE } from "./captainCommands";
 import { runTaskAxiCli, type TaskAxiCli } from "./cli";
 import { type FilesOp, filesAxi } from "./fileCommands";
-import { inboxAxi } from "./inboxCommands";
 import { integrationsAxi } from "./integrationCommands";
 import { type LoadOp, loadAxi } from "./loadCommands";
 import type {
@@ -9,6 +10,7 @@ import type {
   AxiParentMessage,
   AxiRunMessage,
   BrowserOp,
+  CaptainOp,
   InboxOp,
   IntegrationOp,
 } from "./protocol";
@@ -66,7 +68,7 @@ function parentPort(): Port {
 type Connection = {
   call: (
     command: string,
-    op: BrowserOp | IntegrationOp | InboxOp | SecretsOp | LoadOp | FilesOp | StopsOp,
+    op: BrowserOp | IntegrationOp | InboxOp | CaptainOp | SecretsOp | LoadOp | FilesOp | StopsOp,
     input: unknown,
   ) => Promise<never>;
 };
@@ -74,12 +76,14 @@ type Connection = {
 /** The commands this process can run, by the name the shell ran. */
 const TOOLS: Record<
   string,
-  (version: string, connect: () => Promise<Connection>) => TaskAxiCli<Connection>
+  (version: string, connect: () => Promise<Connection>, cwd: string) => TaskAxiCli<Connection>
 > = {
   "infinitary-browser-axi": browserAxi as never,
   "infinitary-integrations-axi": integrationsAxi as never,
   "infinitary-secrets-axi": secretsAxi as never,
-  "infinitary-inbox-axi": inboxAxi as never,
+  [INFINITARY_COMMAND]: captainAxi as never,
+  // The old name, for the one release after the rename: the same command, with a notice.
+  [INBOX_COMMAND]: captainAxi as never,
   "infinitary-load-axi": loadAxi as never,
   "infinitary-files-axi": filesAxi as never,
   "infinitary-stops-axi": stopsAxi as never,
@@ -110,20 +114,25 @@ async function run(message: AxiRunMessage): Promise<void> {
     });
     return;
   }
-  const tool = make(message.version, async () => ({
-    call: (command, op, input) =>
-      new Promise<never>((resolve) => {
-        calls += 1;
-        waiting.set(calls, resolve);
-        port.send({ type: "call", id: calls, command, op, input });
-      }),
-  }));
+  const tool = make(
+    message.version,
+    async () => ({
+      call: (command, op, input) =>
+        new Promise<never>((resolve) => {
+          calls += 1;
+          waiting.set(calls, resolve);
+          port.send({ type: "call", id: calls, command, op, input });
+        }),
+    }),
+    message.cwd,
+  );
   try {
     await runTaskAxiCli(tool, message.argv, capture);
   } catch (error) {
     stdout += `error: ${error instanceof Error ? error.message : String(error)}\ncode: UNKNOWN\n`;
     process.exitCode = 1;
   }
+  if (message.tool === INBOX_COMMAND) stdout = `${RENAMED_NOTICE}\n${stdout}`;
   const code = Number(process.exitCode ?? 0);
   port.send({ type: "done", stdout, exitCode: Number.isInteger(code) ? code : 1 });
 }

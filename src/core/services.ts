@@ -935,7 +935,6 @@ export async function createServices(
     axiBinDir,
     tasks,
     jobs,
-    inbox: integrationInbox,
     browsers,
   });
   if (browsers) browserFactOf = (taskId) => browsers.fact(taskId);

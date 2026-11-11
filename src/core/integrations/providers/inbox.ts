@@ -17,7 +17,7 @@ import { join } from "node:path";
 import type { IntegrationDoorView } from "@shared/integrations";
 import { AXI_KEY_HEADER } from "../../axi/protocol";
 import type { IntegrationBinding, IntegrationEventItem, IntegrationEventSpec } from "../binding";
-import { INBOX_COMMAND } from "../commandWords";
+import { INFINITARY_COMMAND } from "../commandWords";
 
 /**
  * The inbox (docs/integrations.md, "The inbox"; INF-1214, direction A): a
@@ -26,19 +26,23 @@ import { INBOX_COMMAND } from "../commandWords";
  * listens to, so the first mate wakes on it as evidence from outside, never
  * an instruction.
  *
- * Its folder, `userData/integrations/inbox/` (0700), holds the person key
- * as the one header line the launcher's curl sends (`key`, 0600), the
- * running app's loopback address while it is open (`address`, 0600), and a
- * log of what happened (`events.jsonl`, 0600): each event as it was
- * recorded, and each handled mark once a first mate turn handled the rule's
- * delivery that carried it. A line's `seq` is its place in the log: a look
- * reads events after a cursor of it, and a receipts read lists lines after
- * one. The key lets a program drop an event and read receipts, nothing
- * more; the channel admits it for `infinitary-inbox-axi` alone.
+ * Since `infinitary-axi` (INF-1894) the inbox is that command's switch and
+ * its notes: a program drops an event with `infinitary-axi note`, which
+ * enters through the connection's local door like every other verb
+ * (docs/axi-commands.md, "Infinitary from your terminal"), and the inbox
+ * answers it through `door`.
+ *
+ * Its folder, `userData/integrations/inbox/` (0700), holds the mark that it
+ * was turned on (`key`, 0600, the inbox's own door key before the command,
+ * which admits nothing now) and a log of what happened (`events.jsonl`,
+ * 0600): each event as it was recorded, and each handled mark once a first
+ * mate turn handled the rule's delivery that carried it. A line's `seq` is
+ * its place in the log: a look reads events after a cursor of it, and a
+ * receipts read lists lines after one.
  *
  * The switch in Settings is the connection's pause (INF-1567, the
- * captain's direction C): off, the door refuses and the rule is told
- * nothing, while the key and the log stay. Deleting, in Settings'
+ * captain's direction C): off, the command refuses and the rule is told
+ * nothing, while the mark and the log stay. Deleting, in Settings'
  * Data section, removes the folder.
  */
 
@@ -47,7 +51,7 @@ export const INBOX_EVENT: IntegrationEventSpec = {
   name: "event_arrived",
   label: "An event arrives",
   description:
-    "Each event a program on this computer drops into the inbox with infinitary-inbox-axi; the summary is where it came from, when the program named it, and its words.",
+    "Each event a program on this computer drops into the inbox with infinitary-axi note; the summary is where it came from, when the program named it, and its words.",
   every: 1,
   atOnce: true,
 };
@@ -96,11 +100,10 @@ export type InboxReceiptLine = {
   source?: string;
 };
 
-/** What a program may ask of the inbox through its door: drop, read receipts, read how it stands. */
+/** What a program may ask of the inbox through its door: drop, and read receipts. */
 export type InboxDoor = {
   note: (input: { text: string; requestId?: string; source?: string }) => InboxReceipt;
   receipts: (after: number) => { receipts: InboxReceiptLine[]; cursor: number; more: boolean };
-  status: () => { on: boolean; events: number; handled: number; listening: number };
 };
 
 /** What the inbox asks of Automation: a look now, how many rules listen, and its rule added. */
@@ -110,24 +113,19 @@ export type InboxWake = {
   added: (say?: (text: string) => void) => void;
 };
 
-/** Where the channel admits the person key and where the launcher finds the app. */
-export type InboxChannel = {
-  address: string;
-  admit: (key: string, door: InboxDoor) => void;
-  shut: () => void;
-};
-
 export type InboxOptions = {
   /** `userData/integrations/inbox`. */
   dir: string;
-  /** The launcher's `infinitary-inbox-axi` link in the app's `axi-bin` folder. */
+  /** The app's data folder, whose local door the command enters through. */
+  dataDir: string;
+  /** The launcher's `infinitary-axi` name in the app's `axi-bin` folder. */
   command: string;
   /**
-   * The folder the launcher finds the inbox in when nothing names one: the
-   * release's (`launcherDefaultDir`). A run whose folder is elsewhere names
+   * The data folder the launcher reads when nothing names one: the
+   * release's (`launcherDataDir`). A run whose folder is elsewhere names
    * it in the line to copy.
    */
-  defaultDir: string;
+  defaultDataDir: string;
   /** The folder the one-click link goes into (`/usr/local/bin`). */
   linkDir: string;
   /** A folder whose link the Linux packages install, read only (`/usr/bin`). */
@@ -136,17 +134,17 @@ export type InboxOptions = {
 };
 
 /**
- * The folder the launcher reads when `INFINITARY_INBOX` names none: the
- * release's own data folder, `~/Library/Application Support/infinitary` on
- * a Mac and `$XDG_CONFIG_HOME/infinitary` (or `~/.config`) on Linux, as
+ * The data folder the launcher reads when `INFINITARY_DATA` names none: the
+ * release's own, `~/Library/Application Support/infinitary` on a Mac and
+ * `$XDG_CONFIG_HOME/infinitary` (or `~/.config`) on Linux, as
  * `resources/axi-bin/infinitary-axi` writes it.
  */
-export function launcherDefaultDir(platform: string, home: string, xdgConfigHome?: string): string {
+export function launcherDataDir(platform: string, home: string, xdgConfigHome?: string): string {
   const appData =
     platform === "darwin"
       ? join(home, "Library", "Application Support")
       : xdgConfigHome?.trim() || join(home, ".config");
-  return join(appData, "infinitary", "integrations", INBOX_ID);
+  return join(appData, "infinitary");
 }
 
 /** A path as a POSIX shell reads it inside single quotes. */
@@ -156,7 +154,6 @@ function quoted(path: string): string {
 
 export class Inbox {
   private readonly now: () => number;
-  private channel: InboxChannel | undefined;
   /** Late-bound: the Scheduler is built after the integrations. */
   private wake: InboxWake = {
     dropped: () => {},
@@ -198,13 +195,7 @@ export class Inbox {
     if (this.kept) this.wake.added(say);
   }
 
-  /** The channel is open: admit the key, and tell the launcher where the app is. */
-  serve(channel: InboxChannel): void {
-    this.channel = channel;
-    this.open();
-  }
-
-  /** Turn the inbox on: a new key once, kept until it is deleted. */
+  /** Turn the inbox on: its mark once, kept until it is deleted. */
   turnOn(): string {
     if (!this.kept) {
       this.folder();
@@ -212,20 +203,19 @@ export class Inbox {
       writeFileSync(this.path("key"), `${AXI_KEY_HEADER}: ${key}\n`, { mode: 0o600 });
       chmodSync(this.path("key"), 0o600);
     }
-    this.open();
     return INBOX_ID;
   }
 
-  /** Delete it: the door shuts, and the key, the address and the log go. */
+  /** Delete it: the mark and the log go, so the command is off. */
   delete(): void {
-    this.channel?.shut();
     rmSync(this.options.dir, { recursive: true, force: true });
   }
 
-  /** The app quits: nothing more is admitted, and no address points at a closed app. */
+  /**
+   * The app quits. The inbox's own door kept its address here before the
+   * command entered through the local door; a run that quits removes it.
+   */
   close(): void {
-    this.channel?.shut();
-    this.channel = undefined;
     rmSync(this.path("address"), { force: true });
   }
 
@@ -248,27 +238,17 @@ export class Inbox {
   readonly door: InboxDoor = {
     note: (input) => this.note(input),
     receipts: (after) => this.receipts(after),
-    status: () => {
-      const lines = this.kept ? this.lines() : [];
-      return {
-        on: this.on,
-        events: lines.filter((line) => line.type === "event").length,
-        handled: lines.filter((line) => line.type === "handled").length,
-        listening: this.wake.listening(),
-      };
-    },
   };
 
   /** What Settings shows: the line to copy, and the link a click can make. */
   doorView(): IntegrationDoorView {
-    const { command, defaultDir, linkDir, installedDir } = this.options;
-    const named =
-      this.options.dir === defaultDir ? "" : `INFINITARY_INBOX=${quoted(this.options.dir)} `;
-    const line = `${named}${quoted(command)} note "Confirm you have received this"`;
-    const installed = installedDir ? join(installedDir, INBOX_COMMAND) : undefined;
+    const { command, dataDir, defaultDataDir, linkDir, installedDir } = this.options;
+    const named = dataDir === defaultDataDir ? "" : `INFINITARY_DATA=${quoted(dataDir)} `;
+    const line = `${named}${quoted(command)}`;
+    const installed = installedDir ? join(installedDir, INFINITARY_COMMAND) : undefined;
     if (installed && this.leadsHere(installed))
       return { command, line, link: { state: "linked", path: installed } };
-    const path = join(linkDir, INBOX_COMMAND);
+    const path = join(linkDir, INFINITARY_COMMAND);
     if (this.leadsHere(path)) return { command, line, link: { state: "linked", path } };
     if (this.exists(path)) return { command, line, link: { state: "taken", path } };
     return {
@@ -317,7 +297,7 @@ export class Inbox {
       check: async () => {},
       remove: () => this.delete(),
       call: async () => ({
-        text: "The inbox has no actions: an event arrives through infinitary-inbox-axi, and a rule listens to it.",
+        text: `The inbox has no actions: an event arrives through ${INFINITARY_COMMAND} note, and a rule listens to it.`,
         refused: "invalid",
       }),
       look: async (_id, _event, cursor) => this.look(cursor),
@@ -345,7 +325,8 @@ export class Inbox {
   }
 
   private note(input: { text: string; requestId?: string; source?: string }): InboxReceipt {
-    if (!this.on) throw new Error("The inbox is off: turn it on in Settings → Integrations.");
+    if (!this.on)
+      throw new Error(`${INFINITARY_COMMAND} is off: turn it on in Settings → Integrations.`);
     const text = input.text.trim();
     if (!text) throw new Error("An event needs words.");
     for (const [name, value] of [
@@ -379,7 +360,8 @@ export class Inbox {
   }
 
   private receipts(after: number): { receipts: InboxReceiptLine[]; cursor: number; more: boolean } {
-    if (!this.on) throw new Error("The inbox is off: turn it on in Settings → Integrations.");
+    if (!this.on)
+      throw new Error(`${INFINITARY_COMMAND} is off: turn it on in Settings → Integrations.`);
     const lines = this.lines();
     const events = new Map(
       lines.flatMap((line) => (line.type === "event" ? [[line.id, line] as const] : [])),
@@ -401,15 +383,6 @@ export class Inbox {
       cursor: page.at(-1)?.seq ?? after,
       more: due.length > page.length,
     };
-  }
-
-  /** Admit the key and write the address, while the channel is open and the inbox on. */
-  private open(): void {
-    const key = this.key();
-    if (!this.channel || key === undefined) return;
-    this.channel.admit(key, this.door);
-    writeFileSync(this.path("address"), `${this.channel.address}\n`, { mode: 0o600 });
-    chmodSync(this.path("address"), 0o600);
   }
 
   private key(): string | undefined {

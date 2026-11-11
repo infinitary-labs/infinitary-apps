@@ -55,6 +55,11 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
       way: "captain chose a short bounded history; current and running-request tokens stay guarded independently",
     },
   },
+  "src/core/axi/commandDoor.ts": {
+    WATCH_WAIT_CEILING_MS: physical(
+      "watch answers what it has with its cursor; the next watch --after reads on",
+    ),
+  },
   "src/core/axi/channel.ts": {
     CAP_MARGIN_MS: physical("the op keeps running; the shell's next command gets its kept answer"),
     REQUEST_MAX: physical("refused in words: arguments too long; the 1 MiB bound is not named"),

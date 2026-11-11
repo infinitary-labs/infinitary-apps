@@ -14,6 +14,7 @@ import {
 } from "@shared/codeNames";
 import {
   type ClientFrame,
+  COMMAND_PATH,
   CONNECTION_CLOSE,
   CONNECTION_MAX_FRAME_BYTES,
   CONNECTION_PATH,
@@ -303,6 +304,13 @@ export type ConnectionOptions = {
    * is paired.
    */
   localDoor?: string;
+  /**
+   * The captain's own command at the local door (docs/axi-commands.md,
+   * "Infinitary from your terminal"): a POST on `COMMAND_PATH` carrying the
+   * door's key goes to it, answered as the command prints it. Absent, that
+   * path is 404 as any other.
+   */
+  command?: (request: IncomingMessage, response: ServerResponse) => void;
   /**
    * This Mac's own name, which the welcome tells a device (a view says the
    * Mac it controls by it). Read at each welcome; absent, the welcome names
@@ -1307,6 +1315,30 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       sockets.handleUpgrade(request, socket, head, (ws) => attach(ws, admitted, false));
     };
 
+    // The captain's own command on the door's listener: by the door's key
+    // alone, as an upgrade is, and never from a web page.
+    const command = (
+      request: IncomingMessage,
+      response: ServerResponse,
+      door: { open: OpenLocalDoor | null },
+    ) => {
+      const refuse = (status: number, words: string) => {
+        request.resume();
+        response
+          .writeHead(status, { "content-type": "text/plain; charset=utf-8", Connection: "close" })
+          .end(`1\nerror: ${words}\ncode: NO_CHANNEL\n`);
+      };
+      if (request.headers.origin !== undefined)
+        return refuse(403, "No web page reaches this door.");
+      if (request.method !== "POST") return refuse(405, "The command posts its request.");
+      if (!door.open?.admits(request) || !run)
+        return refuse(
+          401,
+          "This key opens nothing now: Infinitary started again since it was read.",
+        );
+      options.command?.(request, response);
+    };
+
     // TLS 1.3 only, with the key it is given - the home's own for devices,
     // the door's own for the local door - on every address including
     // loopback: a device checks the key before it sends anything, and
@@ -1331,7 +1363,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
     ): Promise<{ server: Server; port: number }> => {
       const server = createServer(tlsWith(identity), (request, response) => {
         const path = new URL(request.url ?? "/", "https://home").pathname;
-        if (!door && path === PAIR_PATH) void pair(request, response);
+        if (door && path === COMMAND_PATH && options.command) command(request, response, door);
+        else if (!door && path === PAIR_PATH) void pair(request, response);
         else if (!door && path === FETCH_APP_PATH) void fetchApp(request, response);
         else
           response.writeHead(path === CONNECTION_PATH ? 426 : 404, { Connection: "close" }).end();

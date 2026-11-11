@@ -877,7 +877,9 @@ function IntegrationActions({
 }
 
 /**
- * The Infinitary Inbox's own box (docs/integrations.md, "The inbox"; the
+ * The box of the captain's own command, `infinitary-axi`, in the inbox's
+ * place (docs/axi-commands.md, "Infinitary from your terminal"; INF-1894),
+ * kept as the inbox's box was (docs/integrations.md, "The inbox"; the
  * captain's reply on INF-1214: "it should be its own section, and default
  * it's off, and we tell the user what it is, and that they can turn it
  * on"): its name, what it is and a switch, then, while it is on, the line
@@ -990,6 +992,9 @@ function InboxDoorPanel({
           )}
         </div>
       )}
+      <p className="fm-integrations-door-note" data-inbox-setup="">
+        {INBOX_WORDS.setup(link.state === "linked")}
+      </p>
       <p className="fm-integrations-door-lead" data-inbox-rule={rule?.state ?? "unread"}>
         {rule ? `${rule.words} ` : ""}
         {INBOX_WORDS.offKeeps}

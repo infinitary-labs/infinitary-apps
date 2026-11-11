@@ -3,7 +3,6 @@ import { canOpenAgain } from "@shared/taskBrowser";
 import { AxiChannel } from "../axi/channel";
 import type { DevicePairing } from "../devices/pairing";
 import type { HostCapabilities } from "../host";
-import { INBOX_ID, type Inbox } from "../integrations";
 import type { JobManager } from "../jobs/jobManager";
 import type { CrewSupervisor } from "../orchestrator/crewSupervisor";
 import { type AppPaths, crewmateEvidenceDir } from "../paths";
@@ -78,8 +77,7 @@ export function startTaskBrowsers(options: {
  * The task channel (docs/axi-commands.md): a crewmate reaches its task's
  * browser through `infinitary-browser-axi` in its shell, each command in a
  * process of its own. With no such process, or no browser, no crewmate has
- * one. The inbox's person key reaches the channel too, and a closed task's
- * key answers nothing more, whatever its browser did.
+ * one. A closed task's key answers nothing more, whatever its browser did.
  */
 export async function openTaskChannel(options: {
   host: Pick<HostCapabilities, "app" | "axiProcess">;
@@ -88,8 +86,6 @@ export async function openTaskChannel(options: {
   axiBinDir: string;
   tasks: Pick<TaskService, "get" | "onChange">;
   jobs: Pick<JobManager, "answering">;
-  /** The inbox, whose person key the channel admits for the inbox command alone. */
-  inbox: Pick<Inbox, "serve">;
   /** The task browsers, which go with their tasks. */
   browsers: Pick<HomeBrowsers, "fact" | "closeTask"> | undefined;
 }): Promise<AxiChannel | undefined> {
@@ -109,14 +105,6 @@ export async function openTaskChannel(options: {
         return undefined;
       })
     : undefined;
-  // The inbox's person key reaches the channel, which admits it for the
-  // inbox command alone, and the launcher learns where the app listens.
-  if (taskCommands)
-    options.inbox.serve({
-      address: taskCommands.address,
-      admit: (key, door) => taskCommands.admit(INBOX_ID, key, { inbox: door }),
-      shut: () => taskCommands.shut(INBOX_ID),
-    });
   if (browsers || taskCommands) {
     tasks.onChange((change) => {
       for (const taskId of change.removed) {

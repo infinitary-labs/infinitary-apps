@@ -30,14 +30,16 @@ case "$1" in
         ;;
 esac
 
-# Added: the inbox's command link after-install.tpl made goes on a removal
-# alone, and only while it still leads into this package's folder
-# (docs/linux-packages.md, "The inbox's command").
+# Added: the command links after-install.tpl made go on a removal alone,
+# and only while they still lead into this package's folder
+# (docs/linux-packages.md, "Your own command").
 case "$1" in
     0|remove|purge)
-        case "$(readlink /usr/bin/infinitary-inbox-axi 2>/dev/null)" in
-            '/opt/${sanitizedProductName}/'*) rm -f /usr/bin/infinitary-inbox-axi ;;
-        esac
+        for LINK in /usr/bin/infinitary-axi /usr/bin/infinitary-inbox-axi; do
+            case "$(readlink "$LINK" 2>/dev/null)" in
+                '/opt/${sanitizedProductName}/'*) rm -f "$LINK" ;;
+            esac
+        done
         ;;
 esac
 

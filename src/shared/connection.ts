@@ -240,6 +240,12 @@ export const LOCAL_DOOR_FOLDER = "local-door";
 export const LOCAL_DOOR_FILES = { address: "address", pin: "pin", key: "key" } as const;
 /** The header the local door's key travels in on the WebSocket upgrade. */
 export const LOCAL_DOOR_KEY_HEADER = "x-infinitary-local-key";
+/**
+ * Where `infinitary-axi` posts on the local door's own listener, carrying
+ * the door's key in the same header (docs/axi-commands.md, "Infinitary from
+ * your terminal"). Only the door's listener answers it.
+ */
+export const COMMAND_PATH = "/command";
 
 /**
  * The largest frame either side accepts. Sized to the largest request the

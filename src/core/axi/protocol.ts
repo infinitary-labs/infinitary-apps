@@ -22,9 +22,10 @@ import type { StopsOp, StopsReply } from "./stopCommands";
  */
 
 /**
- * The header a request carries its key in: a task's key file, and the
- * inbox's (docs/integrations.md, "The inbox"), is that one header line,
- * which the launcher's curl sends as it is.
+ * The header a request carries its key in: a task's key file is that one
+ * header line, which the launcher's curl sends as it is. A request to
+ * `infinitary-axi` that carries it comes from a crewmate's shell and is
+ * refused (docs/axi-commands.md, "Infinitary from your terminal").
  */
 export const AXI_KEY_HEADER = "x-infinitary-axi-key";
 
@@ -58,15 +59,28 @@ export type IntegrationOpInput = {
 
 /**
  * The inbox's operations its command may ask for (docs/integrations.md,
- * "The inbox"): drop one event, read the receipts after a cursor, and read
- * how it stands - `InboxDoor`'s, nothing more.
+ * "The inbox"): drop one event and read the receipts after a cursor -
+ * `InboxDoor`'s, nothing more.
  */
-export type InboxOp = "inbox.note" | "inbox.receipts" | "inbox.status";
+export type InboxOp = "inbox.note" | "inbox.receipts";
 
 export type InboxOpInput = {
   "inbox.note": { text: string; requestId?: string; source?: string };
   "inbox.receipts": { after: number };
-  "inbox.status": Record<string, never>;
+};
+
+/**
+ * What `infinitary-axi` may ask of the app as the captain
+ * (docs/axi-commands.md, "Infinitary from your terminal"): one read of the
+ * published contract, a channel's argument list, and the changes pushed
+ * after a cursor - `CommandDoor`'s, nothing more.
+ */
+export type CaptainOp = "captain.request" | "captain.channels" | "captain.watch";
+
+export type CaptainOpInput = {
+  "captain.request": { channel: string; args: unknown[] };
+  "captain.channels": { channel?: string };
+  "captain.watch": { after?: string; waitMs: number; channels?: string[]; full?: boolean };
 };
 
 /** An integrations answer: structured rows, a call's words, or a refusal's. */
@@ -93,6 +107,8 @@ export type BrowserReply = ChannelReply<ChannelAnswer>;
 export type IntegrationReply = ChannelReply<IntegrationChannelAnswer>;
 /** The inbox answers as the integrations do: rows, or a refusal's words. */
 export type InboxReply = ChannelReply<IntegrationChannelAnswer>;
+/** The captain's command answers as the integrations do: rows, or a refusal's words. */
+export type CaptainReply = ChannelReply<IntegrationChannelAnswer>;
 
 /** The app's first and only instruction to a command process. */
 export type AxiRunMessage = {
@@ -115,7 +131,7 @@ export type AxiCallMessage = {
   id: number;
   /** The command as the crewmate named it (`click`), for the words of a kept answer. */
   command: string;
-  op: BrowserOp | IntegrationOp | InboxOp | SecretsOp | LoadOp | FilesOp | StopsOp;
+  op: BrowserOp | IntegrationOp | InboxOp | CaptainOp | SecretsOp | LoadOp | FilesOp | StopsOp;
   input: unknown;
 };
 

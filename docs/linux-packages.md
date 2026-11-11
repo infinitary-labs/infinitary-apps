@@ -41,12 +41,12 @@ The removal script (`packaging/linux/scripts/after-remove.tpl`) takes the links 
 `scripts/check-linux-package.sh` checks that both paths lead to the installed program after each Ubuntu and Fedora install.
 No check installs a package over Firstmate 3000's yet: each installs on a clean system ("The checks").
 
-## The inbox's command
+## Your own command
 
-Each package puts the inbox's command on everyone's search path, so a script runs `infinitary-inbox-axi` by its short name (`docs/integrations.md`, "The inbox").
-The Ubuntu and Fedora install script links `/usr/bin/infinitary-inbox-axi` to `/opt/infinitary/resources/axi-bin/infinitary-inbox-axi`, leaving the path alone while it holds something not of this package's, and the removal script takes the link away on a removal alone while it still leads into `/opt/infinitary`.
-The Arch package owns the same link, and the Nix package links it in its `bin` to the command in its `lib/infinitary/resources/axi-bin`.
-Settings reads the `/usr/bin` link as linked; the Nix link is on the person's path but Settings does not look for it, so it offers the full path.
+Each package puts the person's own command on everyone's search path, so a script runs `infinitary-axi` by its short name (`docs/axi-commands.md`, "Infinitary from your terminal"), and its old name `infinitary-inbox-axi` for one release.
+The Ubuntu and Fedora install script links `/usr/bin/infinitary-axi` and `/usr/bin/infinitary-inbox-axi` to the same names in `/opt/infinitary/resources/axi-bin`, leaving a path alone while it holds something not of this package's, and the removal script takes each link away on a removal alone while it still leads into `/opt/infinitary`.
+The Arch package owns the same links, and the Nix package links them in its `bin` to the commands in its `lib/infinitary/resources/axi-bin`.
+Settings reads the `/usr/bin/infinitary-axi` link as linked; the Nix link is on the person's path but Settings does not look for it, so it offers the full path.
 
 ## Arch, Omarchy and NixOS
 

@@ -14,6 +14,7 @@ import type { TaskFiles } from "../files/taskFiles";
 import type { HostChildProcess, HostChildSpawner } from "../host";
 import {
   INBOX_COMMAND,
+  INFINITARY_COMMAND,
   INTEGRATIONS_COMMAND,
   type InboxDoor,
   isIntegrationAnswer,
@@ -36,6 +37,8 @@ import {
   type AxiCallMessage,
   type AxiChildMessage,
   type BrowserOp,
+  type CaptainOp,
+  type CaptainOpInput,
   type ChannelAnswer,
   type ChannelReply,
   type InboxOpInput,
@@ -115,10 +118,24 @@ export type TaskTools = {
    */
   secretsCatalog?: SecretsCatalog;
   /**
-   * The inbox's door (docs/integrations.md, "The inbox"): only the person
-   * key `admit` takes holds it, never a task's.
+   * The inbox's door (docs/integrations.md, "The inbox"): only the
+   * captain's own command reaches it (`person`), never a task's.
    */
   inbox?: InboxDoor;
+  /**
+   * What `infinitary-axi` asks as the captain (`CommandDoor`,
+   * docs/axi-commands.md, "Infinitary from your terminal"): only a request
+   * the connection's local door admitted reaches it (`person`).
+   */
+  captain?: CaptainTool;
+};
+
+/** A captain's ask the contract refuses as it is written: the command exits 2. */
+export class CaptainInvalid extends Error {}
+
+/** The captain's reads, the contract's channels and the changes pushed, as `CommandDoor` answers them. */
+export type CaptainTool = {
+  [Op in CaptainOp]: (input: CaptainOpInput[Op]) => Promise<Record<string, unknown>>;
 };
 
 /** What one operation answers, for any tool. */
@@ -315,30 +332,62 @@ export class AxiChannel {
   }
 
   /**
-   * Admit a person key the app keeps outside this folder (the inbox's,
-   * docs/integrations.md "The inbox"), for the tools it may reach and no
-   * task's. Admitted again, it takes the key and tools it is given now.
+   * One request of the captain's own command, `infinitary-axi` or its old
+   * name, which the connection's local door admitted by its key
+   * (docs/axi-commands.md, "Infinitary from your terminal"). It reaches the
+   * tools it is given and no task's. A request that also carries a task's
+   * key came from a crewmate's shell and is refused: the command is the
+   * captain's, never the crew's. No shell's limit applies: the captain's
+   * program waits for its answer.
    */
-  admit(id: string, key: string, tools: TaskTools): void {
-    if (this.closed) throw new Error("The task channel is closed.");
-    this.shut(id);
-    const grant: Grant = {
-      taskId: `person:${id}`,
-      keyFile: "",
-      digest: digestOf(key),
-      tools,
-      parked: new Map(),
+  async person(
+    request: IncomingMessage,
+    response: ServerResponse,
+    tools: TaskTools | { refused: string; help: string },
+  ): Promise<void> {
+    const answer = (outcome: Outcome): void => {
+      response.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
+      response.end(`${outcome.exitCode}\n${outcome.stdout}`);
     };
-    this.grants.set(grant.taskId, grant);
-    this.byDigest.set(grant.digest, grant);
-  }
-
-  /** A person key answers nothing from now on; its file is its owner's to remove. */
-  shut(id: string): void {
-    const grant = this.grants.get(`person:${id}`);
-    if (!grant) return;
-    this.grants.delete(grant.taskId);
-    this.byDigest.delete(grant.digest);
+    if (this.closed) {
+      request.resume();
+      answer(failed("Infinitary is quitting.", "NO_CHANNEL"));
+      return;
+    }
+    if (request.headers[KEY_HEADER] !== undefined) {
+      request.resume();
+      answer(failed(`${INFINITARY_COMMAND} is for you, never for the crew.`, "REFUSED"));
+      return;
+    }
+    const body = await this.readBody(request);
+    if (body === undefined) {
+      answer(failed("The command's arguments are too long.", "VALIDATION_ERROR", 2));
+      return;
+    }
+    const form = new URLSearchParams(body);
+    const tool = form.get("tool") ?? "";
+    if (tool !== INFINITARY_COMMAND && tool !== INBOX_COMMAND) {
+      answer(failed(`${tool || "That"} is not a command this door runs.`, "NO_TOOL"));
+      return;
+    }
+    if ("refused" in tools) {
+      answer({
+        exitCode: 1,
+        stdout: `error: ${tools.refused}\ncode: REFUSED\nhelp[1]: ${tools.help}\n`,
+      });
+      return;
+    }
+    answer(
+      await this.run(
+        { taskId: "person:captain", keyFile: "", digest: "", tools, parked: new Map() },
+        {
+          tool,
+          argv: form.getAll("arg"),
+          bin: form.get("bin") || tool,
+          cwd: form.get("cwd") ?? "",
+        },
+      ),
+    );
   }
 
   /** Whether a task holds a key now. */
@@ -423,8 +472,7 @@ export class AxiChannel {
         (grant.tools.secrets !== undefined || grant.tools.secretsCatalog !== undefined)) ||
       (tool === LOAD_COMMAND && grant.tools.load !== undefined) ||
       (tool === FILES_COMMAND && grant.tools.files !== undefined) ||
-      (tool === STOPS_COMMAND && grant.tools.stops !== undefined) ||
-      (tool === INBOX_COMMAND && grant.tools.inbox !== undefined);
+      (tool === STOPS_COMMAND && grant.tools.stops !== undefined);
     if (!has) {
       answer(
         failed(
@@ -567,8 +615,10 @@ export class AxiChannel {
             )
           : tool === SECRETS_COMMAND
             ? this.secret(grant, message, command.cwd)
-            : tool === INBOX_COMMAND
-              ? this.inbox(grant, message)
+            : tool === INFINITARY_COMMAND || tool === INBOX_COMMAND
+              ? message.op.startsWith("inbox.")
+                ? this.inbox(grant, message)
+                : this.captain(grant, message)
               : tool === FILES_COMMAND
                 ? this.files(grant, message)
                 : tool === STOPS_COMMAND
@@ -750,7 +800,24 @@ export class AxiChannel {
     }
   }
 
-  /** One of the inbox's operations, through the door the person key holds. */
+  /** One of the captain's reads, as `CommandDoor` answers it. */
+  private async captain(grant: Grant, message: AxiCallMessage): Promise<IntegrationChannelAnswer> {
+    const captain = grant.tools.captain;
+    const op = message.op as CaptainOp;
+    if (!captain || !Object.hasOwn(captain, op))
+      return { text: "That is not an infinitary-axi operation.", refused: "invalid" };
+    try {
+      return { data: await captain[op]((message.input ?? {}) as never) };
+    } catch (error) {
+      const invalid = error instanceof CaptainInvalid;
+      return {
+        text: error instanceof Error ? error.message : String(error),
+        refused: invalid ? "invalid" : "refused",
+      };
+    }
+  }
+
+  /** One of the inbox's operations, through the door the captain's command holds. */
   private async inbox(grant: Grant, message: AxiCallMessage): Promise<IntegrationChannelAnswer> {
     const inbox = grant.tools.inbox;
     if (!inbox) return { text: "This key has no inbox.", refused: "refused" };
@@ -770,8 +837,6 @@ export class AxiChannel {
           const { after } = (message.input ?? {}) as InboxOpInput["inbox.receipts"];
           return { data: inbox.receipts(Number.isInteger(after) ? after : 0) };
         }
-        case "inbox.status":
-          return { data: inbox.status() };
         default:
           return { text: "That is not an inbox operation.", refused: "invalid" };
       }

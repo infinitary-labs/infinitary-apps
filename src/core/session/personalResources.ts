@@ -3,6 +3,7 @@ import { readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { HERE } from "@shared/deviceNames";
+import { INFINITARY_COMMAND } from "../integrations/commandWords";
 import { type ProjectInstructions, skillFolders } from "./projectResources";
 
 export const PERSONAL_INSTRUCTION_FILES = [
@@ -44,7 +45,10 @@ export function personalResources(
   }
   const folders = skillFolders([join(home, ".agents", "skills"), join(home, ".claude", "skills")]);
   const skills = folders
-    .filter((skill) => !excluded.has(skill.name))
+    // The skill `infinitary-axi setup` writes is the person's own: it points
+    // their agents at a command that reads Infinitary as them, so it stays in
+    // their folder and is never handed to a crewmate.
+    .filter((skill) => skill.name !== INFINITARY_COMMAND && !excluded.has(skill.name))
     .slice(0, 256)
     .flatMap((skill) => {
       const content = read(join(skill.dir, "SKILL.md"));

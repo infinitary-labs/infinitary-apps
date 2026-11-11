@@ -287,36 +287,43 @@ export const INTEGRATIONS_MCP_WORDS = {
 } as const;
 
 /**
- * The words of the inbox's box (docs/integrations.md, "The inbox"; design
- * skill `components/integrations/IntegrationRow`; INF-1474, the captain's
- * wording B, shown whole on their reply): the line to copy and one note,
- * then the short name's link where one can be made or already was. The
- * switch is the inbox's pause, and the box says whether a rule tells the
- * first mate, never "told at once" when none does (INF-1567, the
- * captain's direction C and their q4). The delete in the Data section
- * removes the notes and the key.
+ * The words of the box of the captain's own command, `infinitary-axi`
+ * (docs/axi-commands.md, "Infinitary from your terminal"; INF-1894, from
+ * INF-1893's agreed design, titled as the captain picked). It took the
+ * inbox's place (docs/integrations.md, "The inbox"; INF-1474, INF-1567):
+ * the line to copy and what to run, then the short name's link where one
+ * can be made or already was. The switch is still the inbox's pause, and
+ * the box says whether a rule tells the first mate of a note, never "told
+ * at once" when none does (INF-1567, the captain's q4). The delete in the
+ * Data section removes the notes and the key.
  */
 export const INBOX_WORDS = {
-  title: "Infinitary Inbox",
+  title: "Infinitary command",
   intro:
-    "Scripts on this computer can send your first mate a short note, such as a finished deploy. Each note is information, never an instruction.",
-  off: "Turn it on to see the line your scripts run.",
+    "Programs on this computer, and your own AI agents, can read your cards and tasks and send your first mate a note with one command. A crewmate never gets it, and a note is information, never an instruction.",
+  off: "Turn it on to see the line to run.",
   /** Switched off after it was on: the notes and the key are kept. */
-  offKept: "Off. The saved notes stay, and scripts get an error until you turn it on.",
-  toggle: "Infinitary Inbox on",
-  exampleNote: "Run it from any script or terminal, with your own words in the quotes.",
+  offKept: "Off. The saved notes stay, and the command answers with an error until you turn it on.",
+  toggle: "Infinitary command on",
+  exampleNote:
+    'Run it bare to see what waits on you, or with card, task, watch and the rest. Add note "your words" to send your first mate a note.',
+  /** The thin skill that points the person's own AI agents at the command, by its short name once linked. */
+  setup: (linked: boolean) =>
+    linked
+      ? "Set up your own AI agents with infinitary-axi setup."
+      : "Add setup to the line to set up your own AI agents.",
   copy: "Copy",
   linked: (path: string) => `Linked as ${path}, so the short name works too.`,
-  offered: (folder: string) => `Link it into ${folder} to use the short name infinitary-inbox-axi.`,
+  offered: (folder: string) => `Link it into ${folder} to use the short name infinitary-axi.`,
   link: "Link it",
   /** A turned-on rule listens. */
-  told: "Your first mate is told at once.",
+  told: "Your first mate is told of a note at once.",
   /** Every rule on the inbox is paused in Automation. */
   rulePaused: (name: string) =>
-    `The rule ${name} is paused in Automation, so your first mate is not told. Notes are still saved.`,
+    `The rule ${name} is paused in Automation, so your first mate is not told of a note. Notes are still saved.`,
   /** No rule on the inbox is left. */
-  noRule: "No rule listens to the inbox, so your first mate is not told.",
-  offKeeps: "Off keeps the notes and stops your scripts until you turn it on.",
+  noRule: "No rule listens to the notes, so your first mate is not told of one.",
+  offKeeps: "Off keeps the notes and stops the command until you turn it on.",
   ruleName: "Infinitary Inbox events",
   rulePrompt:
     "New events arrived in your Infinitary Inbox from programs on this computer. Read each one, decide what it needs, and act with your usual judgment: answer on a card, start a task, or do nothing.\n\n{{events}}",

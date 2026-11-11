@@ -2,6 +2,8 @@ import { mkdirSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { SKILL_TEXT } from "../axi/captainCommands";
+import { INFINITARY_COMMAND } from "../integrations/commandWords";
 import { PERSONAL_FILE_BYTES, personalResources } from "./personalResources";
 
 function put(path: string, content: string) {
@@ -43,4 +45,15 @@ it("reads only the chosen local file and skill folders, honoring order, links, c
   put(join(otherHome, "AGENTS.md"), "other Mac's rules");
   expect(personalResources(otherHome).instructions?.content).toBe("other Mac's rules");
   expect(personalResources(otherHome).skills).toEqual([]);
+});
+
+// The captain's answer on the review of INF-1894: "Keep the skill in your skills
+// folder, but never hand it to crewmates".
+it("never hands a crewmate the skill infinitary-axi setup writes, in either skills folder", () => {
+  const home = scratchDir("infinitary-personal-command-skill-");
+  for (const root of [".agents", ".claude"]) {
+    put(join(home, root, "skills", INFINITARY_COMMAND, "SKILL.md"), SKILL_TEXT);
+  }
+  put(join(home, ".claude", "skills", "unique", "SKILL.md"), "unique body");
+  expect(personalResources(home).skills.map((skill) => skill.name)).toEqual(["unique"]);
 });

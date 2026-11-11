@@ -14,6 +14,7 @@ An absent, unreadable, non-file or oversized candidate falls through to the next
 The maximum is 128 KiB per instruction file or SKILL.md.
 The reader lists at most 256 skills directly beneath `~/.agents/skills`, then `~/.claude/skills`; the first folder holding a name wins.
 Project skill names take precedence over personal names, including in the personal workspace.
+The `infinitary-axi` skill, which `infinitary-axi setup` writes for the person's own agents, is never listed: that command reads Infinitary as the person, never as the crew (`docs/axi-commands.md`).
 Links are supported, so a user's files managed elsewhere remain usable.
 The reader never writes to the home files or reads settings, MCP configuration, hooks, other agent folders or automatic notes.
 No instruction or skill file is transported: the placed open order carries only the optional `personalResources` boolean.

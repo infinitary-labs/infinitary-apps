@@ -385,7 +385,18 @@ export function ReplyRow({
           ))}
         </div>
       )}
-      <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "flex-end" }}>
+      <div
+        style={
+          {
+            display: "flex",
+            gap: "var(--space-2)",
+            alignItems: "flex-end",
+            // The field's last line, where the controls at both ends centre:
+            // `--reply-height` plus the field's own 2px above and below it.
+            "--reply-line": "calc(var(--reply-height) + 4px)",
+          } as CSSProperties
+        }
+      >
         <AnnotationControls cardId={cardId} collect={collect} />
         <div
           style={{
@@ -464,7 +475,7 @@ export function ReplyRow({
             display: "flex",
             alignItems: "center",
             gap: "var(--space-1)",
-            height: "var(--reply-height)",
+            height: "var(--reply-line)",
           }}
         >
           {files && <AddFilesButton intake={files} size={28} label="Add files to this reply" />}

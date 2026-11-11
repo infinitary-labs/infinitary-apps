@@ -12,7 +12,12 @@ import { seededHome } from "./freshHome";
 import { bodyDrawn, inCardBody, stageAtRest } from "./stack";
 import { openSize, openWindow } from "./window";
 
-/** Captain's approved prototype: cursor outside the bordered field, bottom-aligned, with a visible choices-row count. */
+/**
+ * Captain's approved prototype: cursor outside the bordered field, kept at its
+ * last line as the reply grows, with a visible choices-row count. The captain's
+ * later ask, that the icons at the row's ends look vertically centred, centres
+ * it on that line rather than on the field's bottom edge.
+ */
 test("the reply-row cursor keeps its placement, keyboard action and visible unsent count", async () => {
   await openSize();
   await openWindow(fakeBridge(await seededHome()));
@@ -33,9 +38,15 @@ test("the reply-row cursor keeps its placement, keyboard action and visible unse
   };
   const besideField = () => {
     const icon = button.getBoundingClientRect(),
-      border = fieldBox();
+      border = fieldBox(),
+      words = field.getBoundingClientRect(),
+      style = getComputedStyle(field);
+    const lastLine =
+      words.bottom -
+      Number.parseFloat(style.paddingBottom) -
+      Number.parseFloat(style.lineHeight) / 2;
     expect(icon.right).toBeLessThanOrEqual(border.left);
-    expect(icon.bottom).toBe(border.bottom);
+    expect(icon.top + icon.height / 2).toBe(lastLine);
   };
   besideField();
   const singleLineHeight = fieldBox().height;

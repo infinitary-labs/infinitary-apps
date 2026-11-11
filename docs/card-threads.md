@@ -514,7 +514,7 @@ A desktop view below major 14 that does not name `shared-cards` gets thread line
 ### Pointing at a card
 
 On desktop cards that take replies, the cursor icon at the left of the input row or Point at in command search enters whole-part selection.
-The shared icon button sits outside the bordered field, bottom-aligned as the reply grows, and shows Point at with its command key on rest, without a native tooltip.
+The shared icon button sits outside the bordered field, centred on its last line as the reply grows, and shows Point at with its command key on rest, without a native tooltip.
 The choices row keeps the queued-note count visible while notes wait.
 Its default key is ⇧⌘A (Ctrl+Shift+A on Linux).
 Arrow keys move through the body parts, Enter opens an annotation popover, and Escape leaves Point at.

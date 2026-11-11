@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "card-reply-icons-centred",
+      "kind": "fix",
+      "area": "cards",
+      "title": "The icons at either end of a card's reply field sit level with it",
+      "body": "The Point at icon to the left of a card's reply field and the paperclip to its right sat a few pixels low. Both are now centred on the field, and on its last line when your reply runs to more lines.",
+      "noPicture": "The icons move by two to four pixels, which a picture at release size cannot show; the change's own before and after pictures are zoomed in.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -52,32 +52,35 @@ export function AnnotationControls({
   if (!supported) return null;
   return (
     <>
-      <IconButton
-        label={POINT_AT}
-        size={34}
-        disabled={sending}
-        keys={keys.keys}
-        data-card-point-at={cardId}
-        aria-pressed={mode}
-        aria-keyshortcuts={keys["aria-keyshortcuts"]}
-        style={{ flexShrink: 0, ...(mode ? { background: "var(--accent-dim)" } : {}) }}
-        tone={mode ? "accent" : "neutral"}
-        onClick={() => useShellStore.setState({ pointAtCard: mode ? null : cardId })}
-      >
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
+      {/* Centred on the reply field's last line (`--reply-line`), as the row's far end is. */}
+      <span style={{ display: "flex", alignItems: "center", height: "var(--reply-line)" }}>
+        <IconButton
+          label={POINT_AT}
+          size={34}
+          disabled={sending}
+          keys={keys.keys}
+          data-card-point-at={cardId}
+          aria-pressed={mode}
+          aria-keyshortcuts={keys["aria-keyshortcuts"]}
+          style={{ flexShrink: 0, ...(mode ? { background: "var(--accent-dim)" } : {}) }}
+          tone={mode ? "accent" : "neutral"}
+          onClick={() => useShellStore.setState({ pointAtCard: mode ? null : cardId })}
         >
-          <path d="m4 4 7.07 17 2.51-7.39L21 11.07 4 4z" />
-        </svg>
-      </IconButton>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m4 4 7.07 17 2.51-7.39L21 11.07 4 4z" />
+          </svg>
+        </IconButton>
+      </span>
       {pick && (
         <AnnotationPopover
           key={`${pick.note.key}-${JSON.stringify(pick.note.span)}`}

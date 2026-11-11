@@ -160,7 +160,8 @@ public struct PhoneNotice: Equatable, Sendable {
     /// When the computer last sent a frame or a part of one, which a pong is not.
     @ObservationIgnored private var framed: ContinuousClock.Instant?
     @ObservationIgnored private var reachTimer: Task<Void, Never>?
-    /// INF-2668: every first read has answered since the last reload, so a replaying welcome needs none of them.
+    /// INF-2668: every first read, the board included, has answered since the last reload, so a replaying welcome
+    /// needs none of them.
     @ObservationIgnored private var caughtUp = false
     /// Reads that were still out when a connection ended; a replaying welcome sends them again without waiting on them.
     @ObservationIgnored private var owed = Set<String>()
@@ -180,10 +181,14 @@ public struct PhoneNotice: Equatable, Sendable {
         var busy: Bool?
         var computers: [PhoneComputerPresence]?
     }
-    private var initialReads: [String] {
-        [PhoneContract.cards, PhoneContract.feed, PhoneRequest.board.rawValue, PhoneRequest.lastTurn.rawValue]
+    /// INF-3750's option A: the first reads In reach waits for, each small. The computer answers in the order asked,
+    /// so these go before the task board, which on a large record outweighs them all and fills in once it arrives.
+    private var reachReads: [String] {
+        [PhoneContract.cards, PhoneContract.feed, PhoneRequest.lastTurn.rawValue]
             + (sceneObservations ? [PhoneRequest.conversationState.rawValue, PhoneRequest.computers.rawValue] : [])
     }
+    /// Every first read, the board last; a replaying welcome needs none of them only once all have answered.
+    private var initialReads: [String] { reachReads + [PhoneRequest.board.rawValue] }
 
     /// No write is queued or retried. A lost reply is explicitly an unknown outcome.
     public func request<T: Decodable & Sendable>(_ channel: PhoneRequest, args: [Any] = [], as: T.Type = T.self) async throws -> T {
@@ -1092,8 +1097,8 @@ public struct PhoneNotice: Equatable, Sendable {
 
     private func markReady(_ channel: String) {
         ready.insert(channel); owed.remove(channel)
-        guard initialReads.allSatisfy({ ready.contains($0) }) else { return }
-        caughtUp = true
+        if initialReads.allSatisfy({ ready.contains($0) }) { caughtUp = true }
+        guard reachReads.allSatisfy({ ready.contains($0) }) else { return }
         let reached = contact != "in-reach"
         if reached { reachRoute() }
         contact = "in-reach"

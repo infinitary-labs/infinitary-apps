@@ -83,7 +83,10 @@ struct PhoneTasks: View {
                 if searchShown { search }
                 if let problem = problem ?? reading.asideLine ?? sideNotice { Text(problem).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("tasks-problem") }
                 LazyVStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                    if list.isEmpty { Text(query.isEmpty ? "No tasks yet." : "No matching tasks.").foregroundStyle(PhoneTheme.secondary) }
+                    // INF-3750: In reach comes before the board's first read, so an empty list says nothing until it is read.
+                    if list.isEmpty, !query.isEmpty || list.board != nil {
+                        Text(query.isEmpty ? "No tasks yet." : "No matching tasks.").foregroundStyle(PhoneTheme.secondary)
+                    }
                     // INF-2928 piece 1: only the groups with rows show, as on the Mac, and a search opens every one.
                     ForEach(list.parts) { part in
                         let open = !part.section.folds || searching || expanded.contains(part.section)

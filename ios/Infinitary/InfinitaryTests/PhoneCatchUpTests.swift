@@ -62,9 +62,11 @@ import XCTest
         session.onEmote = { emotes.append($0) }
         session.start()
         defer { session.stop() }
-        // The harmless read waits for every first read, so the next welcome replays rather than reading again.
+        // The harmless read waits for In reach, which comes before the board's first read (INF-3750); once the board is
+        // read too, every first read has answered, so the next welcome replays rather than reading again.
         _ = try await session.read(.past, [.string("no-such-catch-up-card")])
         XCTAssertEqual(session.contact, "in-reach")
+        try await until("the first board") { session.board != nil }
 
         // Away: the connection is closed while the computer adds six tasks, one board update each, two cards, one card
         // list each, and a reaction. One at a time, the screens would change six times and twice.
@@ -94,6 +96,42 @@ import XCTest
         _ = try await home("emote")
         try await until("the live reaction") { emotes == ["ponder"] }
         _ = try await home("away-cleanup")
+        _ = try await home("remove")
+    }
+
+    /// INF-3750, the captain: "after i don't use the ios app for a while and come back to it, it takes quite a while for
+    /// it to finish connection". On a large record the task board outweighs every other first read together, and the
+    /// computer answers in the order asked. The phone asks for the board last and says In reach once the small reads
+    /// answer, so the computer holding the board's answer leaves the phone in reach with no board, until it arrives.
+    func testInReachDoesNotWaitForTheTaskBoard() async throws {
+        #if !targetEnvironment(simulator)
+        throw PhoneError.refused("This check requires a disposable simulator.")
+        #endif
+        _ = try await home("remove")
+        let invitation = try await home("link")
+        let link = try JoinLink(XCTUnwrap(invitation["link"] as? String))
+        let phone = try PhoneIdentity.loadOrCreate()
+        let transport = PinnedTransport(pin: link.pin, phone: phone, purpose: .pairing)
+        let mac = try await transport.pair(link, name: "Board-last test phone")
+        transport.close()
+        _ = try await home("hold-board-read")
+        // The held answer goes out even when this check fails, so it holds nothing up for the checks after it.
+        addTeardownBlock {
+            guard let control = ProcessInfo.processInfo.environment["PHONE_TEST_HOME"],
+                  let url = URL(string: control + "/release-board-read") else { return }
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            _ = try? await URLSession.shared.data(for: request)
+        }
+        let session = ReadOnlySession(mac: mac, phone: phone)
+        session.start()
+        defer { session.stop() }
+        _ = try await home("board-read-held")
+        try await until("in reach while the board's answer is held") { session.contact == "in-reach" }
+        XCTAssertNil(session.board, "In reach came before the board")
+        _ = try await home("release-board-read")
+        try await until("the board once its answer is sent") { session.board != nil }
+        XCTAssertEqual(session.contact, "in-reach")
         _ = try await home("remove")
     }
 }

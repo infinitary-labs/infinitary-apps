@@ -91,7 +91,10 @@ The shown card reads its thread once and follows numbered `inf:cards:thread` pus
 Its card requests are a closed enum generated from the published contract, not a channel an HTML body chooses.
 
 A return consumes numbered replay pushes, or reads fresh snapshots after a reload welcome.
-All four initial snapshots must arrive before the app says **In reach**.
+The app says **In reach** once its small first reads arrive: cards, Activity, the last turn and, from a computer with scene observations, its conversation state and computers.
+The task board is asked last and fills in Tasks and the crew scene when it arrives (INF-3750): the computer answers in the order asked, and on a large record the board outweighs every other first read together, so asking it first held In reach on a weak link for several times as long.
+Tasks says nothing in place of an empty list until the board is read.
+`PhoneCatchUpTests` holds the computer's answer to the board read (`hold-board-read`) and checks the phone is in reach with no board, then shows the board once the answer is sent.
 A card or task-board push supplies the new snapshot directly and supersedes any older initial read still in flight.
 A task-board delta folds onto the board the app holds, as the Mac’s `applyTaskBoardDelta` does (`PhoneBoard.applying`), because a full read of a large board on every task change stalled the crew scene on the main thread (INF-1854).
 A welcome that replays is caught up in one step (INF-2773, the captain's pick "keep what they showed, then change once when the catch-up is read"): while the phone reads the replayed pushes, they update its own copies of the cards, board and threads and its held busy state, presence and work count, and the screens keep what they showed.
@@ -114,7 +117,7 @@ Each round dials every saved and nearby address together (INF-2157): private IPv
 The first attempt whose WebSocket opens (`PinnedTransport.opened`, after the pinned TLS, the phone's key and the upgrade) is kept and greeted; the others are closed before any hello, so each round makes one welcomed connection.
 A round fails once every attempt failed or none opened within `ReadOnlySession.dialLimit`, which cancels the transport too, so a stalled TLS handshake does not inherit the socket's longer lifetime.
 Failed rounds wait 2, 4 and 8 s and so on, each up to a quarter longer at random, never past `ReadOnlySession.longestWait`, so a computer that comes back is found within 15 s.
-A welcome that replays brings every push the phone missed, so once the phone has read everything since its last reload it says In reach at once and sends only the scene's two small reads and any read a cut left unanswered; a reload, or a change whose result was lost, reads everything first.
+A welcome that replays brings every push the phone missed, so once the phone has read everything since its last reload, the board included, it says In reach at once and sends only the scene's two small reads and any read a cut left unanswered; a reload, or a change whose result was lost, reads everything first.
 `contact` is where the connection is and gates reads and changes; `reach` is what the reach line and the computer button say.
 `reach` follows `contact`, except that after the computer was in reach it keeps saying In reach while the phone redials, until the computer has been quiet for `patience`, so a cell pause passes unnoticed and a dead path is named within half a minute.
 A deliberate stop, such as the close when iOS ends the app's background time, has nothing to be patient about, so the words follow `contact` at once and a reopen reads Reaching until its dial is in reach.

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-board-last",
+      "kind": "improvement",
+      "title": "Your iPhone and iPad are in reach sooner after time away",
+      "body": "When you come back to Infinitary on your iPhone or iPad, it says In reach as soon as your cards, Activity and the last reply arrive. Tasks and the crew scene fill in once your task list arrives, so a weak connection no longer holds everything up while a long task list loads.",
+      "area": "devices",
+      "noPicture": "This changes how soon the reach line clears, not how any screen looks once it has.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

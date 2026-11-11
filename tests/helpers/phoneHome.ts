@@ -1747,6 +1747,11 @@ export async function startPhoneHome(
           result = { title, words: "The survey arrived while your phone was away." };
           break;
         }
+        // INF-3750: the phone's next board read is held, so its In reach is read while the board's answer is out.
+        case "POST hold-board-read":
+          boardHold = { taken: false, entered: cardBarrier(), released: cardBarrier() };
+          result = { ok: true };
+          break;
         case "POST board-read-held": {
           const held = boardHold;
           if (!held) throw new Error("No board read is held");

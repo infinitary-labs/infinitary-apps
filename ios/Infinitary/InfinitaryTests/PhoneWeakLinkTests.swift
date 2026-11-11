@@ -186,9 +186,11 @@ import XCTest
             _ = try? await URLSession.shared.data(for: request)
         }
         session.start()
-        try await inReach(session, Watch(session), within: 30)
-        // The harmless read waits for every first read, so the next welcome replays rather than reading again.
-        _ = try await session.read(.past, [.string("no-such-catch-up-card")])
+        let first = Watch(session)
+        try await inReach(session, first, within: 30)
+        // In reach comes before the board's first read (INF-3750); once it is read too, every first read has answered,
+        // so the next welcome replays rather than reading again.
+        try await first.until(30, "the first board") { session.board != nil }
         session.stop()
         let away = try await home("heavy-away")
         let cards = try XCTUnwrap(away["cards"] as? [String])

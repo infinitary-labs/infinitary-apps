@@ -1,7 +1,7 @@
 import { join } from "node:path";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { createModelRuntime } from "./modelRuntime";
+import { catalogRefreshesSettled, createModelRuntime } from "./modelRuntime";
 
 /**
  * Real Pi openai-codex login, stopped before any browser open: the first
@@ -10,6 +10,15 @@ import { createModelRuntime } from "./modelRuntime";
  */
 
 describe("Codex oauth login", () => {
+  // The runtime's background catalog refresh reads and writes auth.json and
+  // models-store.json in this test's folder, and the file's cleanup removes
+  // the folder once the file ends. A refresh still running then put the
+  // folder back, and the unit run failed on the leftover folder
+  // (docs/testing.md: work that writes after a test returns is awaited).
+  afterEach(async () => {
+    await catalogRefreshesSettled();
+  });
+
   it("asks for a login method instead of hanging with no follow-up", async () => {
     process.env.PI_OFFLINE = "1";
     const dir = scratchDir("infinitary-codex-login-");

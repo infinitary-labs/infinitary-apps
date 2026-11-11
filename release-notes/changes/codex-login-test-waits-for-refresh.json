@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "codex-login-test-waits-for-refresh",
+      "reason": "The Codex sign-in test waits for its model list's background refresh before its folder is removed, so the refresh no longer puts the folder back and fails the unit run; a test-only change with nothing a person notices."
+    }
+  ]
+}

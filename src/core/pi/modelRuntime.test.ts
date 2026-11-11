@@ -1,10 +1,15 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { createModelRuntime, MODEL_REFRESH_TIMEOUT_MS, modelLookup } from "./modelRuntime";
+import {
+  catalogRefreshesSettled,
+  createModelRuntime,
+  MODEL_REFRESH_TIMEOUT_MS,
+  modelLookup,
+} from "./modelRuntime";
 
 /**
  * The captain's hard requirements on the live pi.dev catalog: every failure
@@ -233,5 +238,50 @@ describe("createModelRuntime", () => {
     expect(defOf("xai", "grok-build-0.1")?.reasoning).toBe(false);
     expect(defOf("xai", "no-such-model")).toBeUndefined();
     expect(listings).toEqual(["xai", "openrouter"]);
+  });
+});
+
+describe("catalogRefreshesSettled", () => {
+  // A paused merge batch: the Codex sign-in test ended while its runtime's
+  // background refresh still ran, the file's cleanup removed the test's
+  // folder, and the refresh's next store write put the folder back, so the
+  // unit run failed on a leftover folder. A test that removes a runtime's
+  // folder waits here first (docs/testing.md), so this must not resolve
+  // before the refresh's last write into it.
+  it("resolves only after the background refresh's late write into the store's folder", async () => {
+    const held: (() => void)[] = [];
+    let released = false;
+    let asked: () => void = () => {};
+    const requested = new Promise<void>((resolve) => {
+      asked = resolve;
+    });
+    // Shaped like pi.dev's provider catalog, as the overlay test serves it.
+    const catalogBaseUrl = await startCatalog(({ status }) => {
+      const answer = () =>
+        status(
+          200,
+          JSON.stringify([{ id: "grok-9.9", name: "Grok 9.9", api: "openai-responses" }]),
+          {
+            "last-modified": new Date(Date.now() + 60_000).toUTCString(),
+          },
+        );
+      if (released) answer();
+      else held.push(answer);
+      asked();
+    });
+    const store = signedInStore();
+    const folder = dirname(store.authPath);
+    await createModelRuntime({ ...store, catalogBaseUrl });
+    // The refresh has read the store and waits on the catalog's answer.
+    await requested;
+    const settled = catalogRefreshesSettled();
+    // A cleanup that does not wait removes the folder here, mid-refresh.
+    rmSync(folder, { recursive: true, force: true });
+    released = true;
+    for (const answer of held.splice(0)) answer();
+    await settled;
+    // The refresh wrote the overlay after the folder was removed, putting it
+    // back, and the wait above resolved only once that write had landed.
+    expect(readFileSync(join(folder, "models-store.json"), "utf8")).toContain("grok-9.9");
   });
 });

@@ -1,7 +1,10 @@
 import { createHash, randomBytes } from "node:crypto";
 import {
+  type Dirent,
   existsSync,
+  lstatSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   renameSync,
   rmSync,
@@ -9,7 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { basename, extname, isAbsolute, join, relative, resolve } from "node:path";
 import {
   CARD_MEDIA_TYPES,
   CARD_TYPEFACE_TYPES,
@@ -534,6 +537,58 @@ export function keepContentFile(file: string, bytes: Buffer): void {
     rmSync(temporary, { force: true });
     throw error;
   }
+}
+
+/**
+ * Makes a kept card file again when its own copy is gone (INF-3672). Every
+ * card and every story revision keeps its own independently named copy of a
+ * picture, so when one name is lost another file of the same task's folder
+ * may still hold exactly its bytes - the same extension, size and SHA-256 -
+ * and those bytes are kept again under the lost name. A file already at the
+ * name is left alone for the caller's own checks. True when a file is there
+ * now; false when nothing is and nothing identical is left, so the caller
+ * says what to do instead of failing on a missing file.
+ */
+export function restoreKeptCopy(
+  dir: string,
+  file: string,
+  kept: { taskId: string; sha256: string; bytes?: number },
+): boolean {
+  if (basename(file) !== file || !file.startsWith(`${kept.taskId}-`)) return false;
+  const target = join(dir, file);
+  try {
+    lstatSync(target);
+    return true;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") return true;
+  }
+  let entries: Dirent[];
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+  for (const entry of entries) {
+    if (
+      !entry.isFile() ||
+      entry.name === file ||
+      !entry.name.startsWith(`${kept.taskId}-`) ||
+      extname(entry.name) !== extname(file)
+    )
+      continue;
+    let bytes: Buffer;
+    try {
+      const source = join(dir, entry.name);
+      if (kept.bytes !== undefined && statSync(source).size !== kept.bytes) continue;
+      bytes = readFileSync(source);
+    } catch {
+      continue;
+    }
+    if (createHash("sha256").update(bytes).digest("hex") !== kept.sha256) continue;
+    keepContentFile(target, bytes);
+    return true;
+  }
+  return false;
 }
 
 /**

@@ -48,6 +48,7 @@ import {
   sameAroundPresentation,
   sameAttachmentDestination,
 } from "../forge";
+import { restoreKeptCopy } from "../pi/cardImages";
 import type { StagedChangePresentation } from "../pi/changePresentation";
 import { storyLedgers } from "../storage/changeProjection";
 import type { TaskService } from "../tasks/taskService";
@@ -60,6 +61,20 @@ export type PresentationLedger = Pick<TaskService, "get"> & {
   >;
 };
 const hash = (text: string | Uint8Array) => createHash("sha256").update(text).digest("hex");
+
+/**
+ * What to do when the app's stored copy of a story picture is gone and no
+ * identical copy is left to keep again: the view and side it showed, and
+ * preparing again from the picture's original file, whose bytes still pass
+ * the kept Before comparison (INF-3672).
+ */
+function missingMediaWords(story: ChangePresentation, asset: PresentationAsset): string {
+  for (const view of story.views)
+    for (const side of ["before", "after"] as const)
+      if (view[side].some((media) => media.asset === asset.id || media.poster === asset.id))
+        return `The app's stored copy of the ${side === "before" ? "Before" : "After"} picture for ${view.caption} is gone, and no identical copy is left. Prepare the story again naming that picture's original file.`;
+  return "The app's stored copy of a story picture is gone, and no identical copy is left. Prepare the story again naming each picture's original file.";
+}
 /** GitHub's body limit covers the rendered region and all surrounding project/human text. */
 export const GITHUB_STORY_BODY_LIMIT = presentationBodyLimit("github.com");
 
@@ -1179,9 +1194,19 @@ export class ChangePresentations {
     story: ChangePresentation,
     asset: PresentationAsset,
   ): Promise<Uint8Array> {
-    const root = await realpath(this.options.mediaDir(story.taskId));
+    const dir = this.options.mediaDir(story.taskId);
     if (!asset.id.startsWith(`${story.taskId}-`))
       throw new Error("The retained media belongs to another task.");
+    // A lost copy comes back from an identical one, or the refusal says what to do (INF-3672).
+    if (
+      !restoreKeptCopy(dir, asset.file, {
+        taskId: story.taskId,
+        sha256: asset.uploadSha256,
+        bytes: asset.bytes,
+      })
+    )
+      throw new Error(missingMediaWords(story, asset));
+    const root = await realpath(dir);
     const file = await realpath(join(root, asset.file));
     if (relative(root, file) !== asset.file)
       throw new Error("The retained media escaped its task folder.");

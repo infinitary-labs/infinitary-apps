@@ -755,6 +755,7 @@ The task record reads only bounded retained text for presentation; it does not r
 Review and delivery gates still re-read and verify every selected artifact without a cache.
 The home verifies incoming proof, gives a reviewer readable copies on its own computer, and rechecks digests at review, completion, publication and the final merge boundary.
 A changed transcript or a displayed attachment that does not name the kept bytes is refused.
+A kept proof file that is gone comes back from another file in the task's cards folder holding exactly its bytes, such as an earlier run's copy of the same picture; only with none left is it refused as missing, asking for fresh evidence.
 
 The existing review assignment binds the commit, evidence revision, scenario revision and validation-state revision.
 A captain-granted gap exception or an effect request recorded after assignment permits re-review at the same commit and evidence revision; no duplicate run is needed.

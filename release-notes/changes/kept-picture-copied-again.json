@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "kept-picture-copied-again",
+      "kind": "fix",
+      "title": "A merge card no longer fails when a stored picture is gone",
+      "body": "When the app's own copy of a picture on a merge card was gone, the card could not go up. The app now copies the picture again from an identical copy it still has, or says what to do.",
+      "area": "cards",
+      "noPicture": "The fix restores a missing file behind the card; the card itself looks the same.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

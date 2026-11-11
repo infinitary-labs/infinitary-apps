@@ -15,7 +15,7 @@
  */
 
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { DECLINE_ACTION_ID } from "@shared/cardLeave";
 import { LIVE_ATTACHMENT_LABEL_MAX, MERGE_NOT_NOW_ID } from "@shared/cards";
@@ -934,6 +934,21 @@ describe("a refused saved-story merge card", () => {
     expect(shown?.body).toContain(`app-frame://images/${h.proof}`);
     expect(shown?.body).toContain(`app-frame://images/${h.minted[1]}`);
     expect(readdirSync(h.cards).sort()).toEqual([h.proof, h.story, h.minted[1]].sort());
+  });
+
+  // INF-3672: INF-1894's merge card kept failing with "ENOENT ... lstat" on
+  // a proof picture an earlier build's refused card had taken, though the
+  // task's folder still held another copy of exactly that picture.
+  it("copies a lost proof picture again from an identical copy, and the merge card goes up (INF-3672)", async () => {
+    const h = await reviewedWithProof();
+    // The story's own picture is the same screenshot as the proof.
+    rmSync(join(h.cards, h.proof));
+    await h.emitCard.run(MERGE);
+    const shown = h.own()[0];
+    expect(shown?.title).toBe(MERGE.title);
+    expect(shown?.body).toContain(`app-frame://images/${h.proof}`);
+    expect(readFileSync(join(h.cards, h.proof))).toEqual(h.poster);
+    expect(readFileSync(join(h.cards, h.story))).toEqual(h.poster);
   });
 });
 

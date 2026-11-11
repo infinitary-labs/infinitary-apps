@@ -13,7 +13,12 @@ import type {
   LiveValidationInput,
   ValidationEvidence,
 } from "@shared/liveValidation";
-import { type CardPictureRoot, containedFile, verifyCardImages } from "./cardImages";
+import {
+  type CardPictureRoot,
+  containedFile,
+  restoreKeptCopy,
+  verifyCardImages,
+} from "./cardImages";
 
 const digest = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
 const attribute = (text: string) =>
@@ -178,6 +183,12 @@ export function verifyKeptValidationEvidenceSync(
     ]) {
       if (!file || !expected || basename(file) !== file || !file.startsWith(`${taskId}-`))
         throw new Error("The proof does not belong to this task.");
+      // An identical copy left in the folder stands in for a lost one (INF-3672).
+      restoreKeptCopy(home, file, {
+        taskId,
+        sha256: expected,
+        ...(file === item.file ? { bytes: item.bytes } : {}),
+      });
       const path = keptPath(join(home, file));
       if (dirname(path) !== home) throw new Error("Kept proof must stay in its task's folder.");
       const info = statSync(path);

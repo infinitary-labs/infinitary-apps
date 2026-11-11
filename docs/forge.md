@@ -1086,6 +1086,8 @@ The work computer discards its staging copies after transfer; the home retains t
 A refused preparation discards unretained staging copies even before host or legacy-PR validation, or when another story operation is running; it never removes that active operation's files.
 Merge cards receive independently named copies of the validated media in the task's `cards/` folder, so later story pruning leaves shown cards and their history intact.
 A staging refusal removes every newly minted picture and recording, and a refused merge card removes its new copies unless the card was already persisted.
+When the stored copy a saved story names is gone, the home keeps it again from another file in the same task's folder with the same extension, size and SHA-256, such as an earlier card's or revision's copy (`restoreKeptCopy`).
+With no identical copy left, the refusal names the view and side the picture showed and asks for the story to be prepared again from the picture's original file, whose bytes still pass the kept Before comparison.
 
 `open_change` takes the prepared `presentation` revision instead of `body` for a new pull request, merge request or plain branch; local-only work skips that call.
 The native GitHub attachment capability checks destination identity, public/private/internal visibility and write/maintain/admin permission before each upload.

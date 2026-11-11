@@ -45,6 +45,7 @@ import { ChangePresentations, GITHUB_STORY_BODY_LIMIT } from "./changePresentati
 const HEAD = "5ca2d466ee21f9733827383f23df81f3874e0d10";
 const TASK = "ab12cd34";
 const BRANCH = `fm/task-${TASK}`;
+const sha256 = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
 const risk = Object.fromEntries(
   RISK_DIMENSIONS.map((dimension) => [
     dimension,
@@ -722,6 +723,51 @@ describe("saved change publication", () => {
     await expect(at.publish(2)).rejects.toThrow();
     expect(at.change?.body).toBe(previous);
     await expect(at.service.completion(TASK, 2, HEAD)).rejects.toThrow(/must be published/);
+  });
+
+  // INF-3672: a merge card whose story keeps an earlier revision's Before
+  // picture failed on a missing file once the app's stored copy was gone.
+  it("copies a kept Before picture again when its stored copy is gone, or says what to do (INF-3672)", async () => {
+    const at = await arrange();
+    await at.prepare();
+    await at.publish();
+    // The first merge card keeps its own copies of both pictures.
+    const first = await at.service.completion(TASK, 1, HEAD);
+    const earlier = join(at.media, `${first.pictures[0]?.id}.webp`);
+    const revise = async (after: string) =>
+      at.service.prepare(
+        TASK,
+        await stageChangePresentation(
+          { ...at.draft, after: [after] },
+          { taskId: TASK, worktree: at.worktree, dir: at.media },
+        ),
+        at.forge,
+      );
+    await at.publish(await revise("The revised account keeps the original Before picture."));
+    const story = at.tasks.delivery.changePresentation(TASK)?.revisions.at(-1);
+    const before = story?.assets.find((asset) => asset.id === story.views[0]?.before[0]?.asset);
+    if (!story || !before) throw new Error("Missing the kept Before picture");
+    expect(story.revision).toBe(2);
+    rmSync(join(at.media, before.file));
+
+    const card = await at.service.completion(TASK, 2, HEAD);
+    expect(card.body).toContain("The existing dark completion view");
+    expect(readFileSync(join(at.media, before.file))).toEqual(readFileSync(earlier));
+    expect(sha256(readFileSync(join(at.media, before.file)))).toBe(before.uploadSha256);
+
+    // With no identical copy left, the refusal names the picture and the way out.
+    for (const name of readdirSync(at.media))
+      if (sha256(readFileSync(join(at.media, name))) === before.uploadSha256)
+        rmSync(join(at.media, name));
+    await expect(at.service.completion(TASK, 2, HEAD)).rejects.toThrow(
+      "The app's stored copy of the Before picture for Completion story is gone, and no identical copy is left. Prepare the story again naming that picture's original file.",
+    );
+    // The original file still passes the kept Before comparison.
+    const revision = await revise("The account prepared again from the original picture.");
+    await at.publish(revision);
+    await expect(at.service.completion(TASK, revision, HEAD)).resolves.toMatchObject({
+      title: at.draft.title,
+    });
   });
 
   it("refuses changed code or audience before publishing, including a change during upload", async () => {
@@ -1805,7 +1851,10 @@ describe("stories without native attachment publication", () => {
     at.setHead(HEAD);
     const asset = at.tasks.delivery.changePresentation(TASK)?.revisions[0]?.assets[0];
     if (!asset) throw new Error("Missing retained fixture");
-    rmSync(join(at.media, asset.file));
+    // The card above keeps its own copy, which would stand in for a lost one (INF-3672).
+    for (const name of readdirSync(at.media))
+      if (sha256(readFileSync(join(at.media, name))) === asset.uploadSha256)
+        rmSync(join(at.media, name));
     await expect(at.service.assertLocal(TASK, local)).rejects.toThrow();
   });
 

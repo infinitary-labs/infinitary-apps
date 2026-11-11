@@ -166,7 +166,30 @@ function inPlace(installed: Bindings, notTyping: boolean): Bindings {
   };
 }
 
-/** Each window's native-press witness, reached only through its trusted page. */
+/**
+ * A key the window let reach a document, kept until that document offers it
+ * back (docs/keyboard.md, "Keys used when not typing"): the native press, the
+ * map installed then and the frame that held focus.
+ */
+type Witness = {
+  press: KeyPress;
+  bindings: Bindings;
+  frame: WebContents["focusedFrame"];
+};
+
+/**
+ * The most witnesses a window keeps. A key typed into a text field is
+ * witnessed but never offered, so without a bound the list would grow with
+ * every key typed while focus stays in one document.
+ */
+const WITNESSES_MAX = 256;
+
+/** Whether two presses are the same key with the same modifiers, held or not. */
+function samePress(a: KeyPress, b: KeyPress): boolean {
+  return (Object.keys(a) as (keyof KeyPress)[]).every((key) => a[key] === b[key]);
+}
+
+/** Each window's native-press witnesses, reached only through its trusted page. */
 const offers = new WeakMap<WebContents, (press: KeyPress, frame?: string) => void>();
 
 /** The trusted shell forwards only its own unused key or one from the focused frame. */
@@ -243,24 +266,25 @@ export function followWindowCommands(
     waiting = null;
     tellNext(null);
   };
-  let witnessed: {
-    press: KeyPress;
-    bindings: Bindings;
-    frame: WebContents["focusedFrame"];
-  } | null = null;
+  /**
+   * The keys that reached a document and are not yet offered back, oldest
+   * first. The page offers a key only after a timer and a round trip, so the
+   * next key is often pressed before the last one's offer lands.
+   */
+  let witnessed: Witness[] = [];
   const stop = () => {
-    witnessed = null;
+    witnessed = [];
     recording = false;
     stopWaiting();
   };
   recorders.set(contents, (on) => {
-    witnessed = null;
+    witnessed = [];
     stopWaiting();
     recording = on;
   });
   win.on("blur", stop);
   contents.on("did-start-navigation", (details) => {
-    witnessed = null;
+    witnessed = [];
     if (details.isMainFrame) stop();
   });
   const take = (event: { preventDefault: () => void }) => {
@@ -328,25 +352,31 @@ export function followWindowCommands(
     return false;
   };
   offers.set(contents, (press, frame) => {
-    const seen = witnessed;
-    witnessed = null;
-    if (recording || !seen || seen.bindings !== keys.bindings() || press.composing) return;
+    if (recording || press.composing) return;
     const focused = contents.focusedFrame;
-    if (!focused || focused !== seen.frame) return;
+    if (!focused) return;
     if (frame ? focused.name !== frame : focused !== contents.mainFrame) return;
-    if (
-      Object.keys(seen.press).some(
-        (key) => seen.press[key as keyof KeyPress] !== press[key as keyof KeyPress],
-      )
-    )
-      return;
+    const bindings = keys.bindings();
+    // A document offers its keys in the order they were pressed: the oldest
+    // match is this offer's press, and any older witness will never be offered.
+    const index = witnessed.findIndex(
+      (seen) =>
+        seen.frame === focused && seen.bindings === bindings && samePress(seen.press, press),
+    );
+    const seen = witnessed[index];
+    if (!seen) return;
+    witnessed = witnessed.slice(index + 1);
+    const offered = { preventDefault: () => {} };
+    // A not-typing wait began at an earlier key's offer, which dropped every
+    // older witness: this key was pressed after that first key, before its
+    // offer landed, so the wait hears it as a second key would be heard.
+    if (waiting?.notTyping && second(offered, seen.press)) return;
     // Resolve only installed not-typing bindings, once, against the original native press.
-    resolve({ preventDefault: () => {} }, seen.press, true);
+    resolve(offered, seen.press, true);
   });
 
   contents.on("before-input-event", (event, input) => {
     if (input.type !== "keyDown") return;
-    witnessed = null;
     const press = pressOfInput(input);
     if (recording) {
       if (press.composing || MODIFIER_KEYS.has(press.key)) return;
@@ -357,15 +387,28 @@ export function followWindowCommands(
       return;
     }
     const bindings = keys.bindings();
-    if (!press.composing && !MODIFIER_KEYS.has(press.key) && hasNotTypingKeys(bindings))
-      witnessed = { press, bindings, frame: contents.focusedFrame };
+    const frame = contents.focusedFrame;
+    // A witness for another document or an earlier map can never be offered
+    // back, and an input method's composition ends every one.
+    witnessed = press.composing
+      ? []
+      : witnessed.filter((seen) => seen.frame === frame && seen.bindings === bindings);
+    let witness: Witness | null = null;
+    if (!press.composing && !MODIFIER_KEYS.has(press.key) && hasNotTypingKeys(bindings)) {
+      witness = { press, bindings, frame };
+      witnessed = [...witnessed, witness].slice(-WITNESSES_MAX);
+    }
+    // A key the window takes reaches no document, which therefore never offers it.
+    const forget = () => {
+      witnessed = witnessed.filter((seen) => seen !== witness);
+    };
     if (second(event, press)) {
-      witnessed = null;
+      forget();
       return;
     }
     const action = desktopKeyAction(press, desktop.system);
     if (action !== undefined) {
-      witnessed = null;
+      forget();
       take(event);
       if (!press.repeat) desktop.run(action);
       return;
@@ -373,7 +416,7 @@ export function followWindowCommands(
     resolve(
       {
         preventDefault: () => {
-          witnessed = null;
+          forget();
           event.preventDefault();
         },
       },

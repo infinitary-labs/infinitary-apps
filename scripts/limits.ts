@@ -373,6 +373,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/main/host/taskBrowser.ts": {
     FULL_PAGE_MAX_HEIGHT: physical("cut at 8,000 px without saying so; scroll and photograph the rest"),
   },
+  "src/main/keyboard.ts": {
+    WITNESSES_MAX: physical("the oldest key's witness drops; its late offer runs nothing, as typed text"),
+  },
   "src/shared/attachments.ts": {
     ATTACHMENT_MAX_BYTES: physical("a notice says it is too big; nothing attaches, not even its path"),
     CHOSEN_FILES_MAX: physical("files past twenty are silently not read; choose them again"),

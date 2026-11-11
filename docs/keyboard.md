@@ -496,6 +496,7 @@ The second key may be an arrow, held or not (`⌘K ⌘→`, `G ↓`), because th
 `followWindowCommands` takes a first key that starts one (`startsTwoKeys`) for the window, heard before the page or offered by a document outside typing ("Keys used when not typing"), and waits for the second with no time limit.
 While it waits, the page is told each pair that may follow (`nextKeys`, the `inf:keyboard:next` push) and shows the next-keys hint, a quiet strip at the window's bottom listing each next key and its command's words; the push says null once the wait ends.
 The window hears the second key in `before-input-event`, whichever place the first was in: a listed key runs its pair once (`secondKeyCommand`) and reaches nothing else, and any other key ends the wait and acts as it would have, so a mismatch never swallows input.
+A key pressed after a not-typing first key but before that key's offer landed reached its document before the wait began, so the wait hears it at its own offer instead, the same way.
 Escape (taken, to stop the wait), the window losing focus, a navigation, recording a key and an input method's composition end it too, and so does focus moving to another document while a not-typing pair waits; a lone modifier and the first key held do not.
 A hint draws both keys (`⌘K S`); a menu cannot show two keys, so it shows the command's first single key, and `aria-keyshortcuts`, which has no way to say two keys in turn, leaves them out.
 
@@ -638,7 +639,11 @@ Every text field, the Crewmate prompt and the recorder therefore keep their lett
 A frame's `key` message carries the key, not a command; `FrameController` accepts only the current document and `FrameMount` forwards only the frame that holds focus, with no focus grace.
 The host-only `inf:keyboard:offer` request resolves only installed not-typing bindings against the same native key, modifiers and focused frame, once.
 The trusted mount gives its frame a UUID name at element creation, before the first navigation, which the main process checks against Electron's focused frame at both the press and the offer; a shell offer must come from the native main frame.
-A different key, composition, a changed map, recording, a window blur or any navigation invalidates the witness.
+The main process keeps every such witness until its document offers it back, because a fast typist presses the next key before the last one's offer lands.
+An offer uses the oldest witness of the same key, modifiers and focused frame under the current map, once.
+A document offers its keys in the order they were pressed, so that offer also drops every older witness, whose offer will never come.
+Each new press drops the witnesses of another document or an earlier map, which can never be offered back, and composition, recording, a window blur or any navigation drops them all.
+The window keeps the newest 256 witnesses, so a long stretch of typing in one field cannot grow the list.
 A not-typing binding has no menu accelerator, which would otherwise bypass the typing check.
 Not-typing bindings may share a message-editing key because their places do not overlap; two window commands still cannot share a key.
 

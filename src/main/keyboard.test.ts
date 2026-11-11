@@ -530,10 +530,15 @@ describe("not-typing offers", () => {
     const { contents, type, ran, install } = fixture();
     type({ key: press.key, code: press.code });
     offerWindowKey(contents, { ...press, ctrl: true });
-    offerWindowKey(contents, press);
+    offerWindowKey(contents, { ...press, key: "a", code: "KeyA" });
+    expect(ran).toEqual([]);
+    // Offers come back in the order their keys went: once a later key's offer
+    // arrives, an earlier key's never will.
     type({ key: press.key, code: press.code });
     type({ key: "a", code: "KeyA" });
+    offerWindowKey(contents, { ...press, key: "a", code: "KeyA" });
     offerWindowKey(contents, press);
+    expect(ran).toEqual([]);
     type({ key: press.key, code: press.code, isComposing: true });
     offerWindowKey(contents, press);
     type({ key: press.key, code: press.code, isAutoRepeat: true });
@@ -542,6 +547,102 @@ describe("not-typing offers", () => {
     install();
     offerWindowKey(contents, press);
     expect(ran).toEqual([]);
+  });
+
+  // INF-3693: an offer reaches the main process after a timer and a round trip, so a fast typist's next key is pressed before it lands.
+  it("keeps each key's witness when an earlier key's offer lands after a later press", () => {
+    const { contents, type, ran } = fixture();
+    const other = { ...press, key: "x", code: "KeyX" };
+    type({ key: other.key, code: other.code });
+    type({ key: press.key, code: press.code });
+    offerWindowKey(contents, other);
+    offerWindowKey(contents, press);
+    expect(ran).toEqual(["settings.open"]);
+    type({ key: press.key, code: press.code });
+    type({ key: other.key, code: other.code });
+    offerWindowKey(contents, press);
+    offerWindowKey(contents, other);
+    expect(ran).toEqual(["settings.open", "settings.open"]);
+    type({ key: press.key, code: press.code });
+    type({ key: press.key, code: press.code });
+    offerWindowKey(contents, press);
+    offerWindowKey(contents, press);
+    offerWindowKey(contents, press);
+    expect(ran).toEqual(["settings.open", "settings.open", "settings.open", "settings.open"]);
+  });
+
+  it("keeps a key's witness past a modifier pressed before its offer lands", () => {
+    const { contents, type, ran } = fixture();
+    const shift = { ...press, key: "Shift", code: "ShiftLeft", shift: true };
+    type({ key: press.key, code: press.code });
+    type({ key: shift.key, code: shift.code, shift: true });
+    offerWindowKey(contents, press);
+    offerWindowKey(contents, shift);
+    expect(ran).toEqual(["settings.open"]);
+  });
+
+  // INF-3693: a plain key pressed right after another starts or finishes its pair however late the offers land.
+  describe("a pair typed before its first key's offer lands", () => {
+    const g = { ...press, key: "g", code: "KeyG" };
+    const x = { ...press, key: "x", code: "KeyX" };
+    function pairFixture() {
+      const window = windowWithKeys();
+      const recording = recordingHandlers();
+      const bindings = resolveBindings({
+        version: 1,
+        keys: {
+          "settings.open": [{ key: "g", when: "not-typing", second: { key: "s" } }],
+          "commands.search": [{ key: "x", when: "not-typing" }],
+          "settings.keyboard": [{ key: "j", meta: true, second: { key: "s" } }],
+        },
+      });
+      followWindowCommands(window.win, recording.handlers, {
+        bindings: () => bindings,
+        panels: () => [],
+      });
+      const next = () =>
+        window.sent.filter(([channel]) => channel === "inf:keyboard:next").map(([, body]) => body);
+      return { ...window, ...recording, next };
+    }
+
+    it("runs the pair when both keys were pressed before the first key's offer", () => {
+      const { contents, type, ran, next } = pairFixture();
+      type({ key: x.key, code: x.code });
+      type({ key: g.key, code: g.code });
+      type({ key: press.key, code: press.code });
+      offerWindowKey(contents, x);
+      offerWindowKey(contents, g);
+      expect(ran).toEqual(["commands.search"]);
+      offerWindowKey(contents, press);
+      expect(ran).toEqual(["commands.search", "settings.open"]);
+      expect(next().at(-1)).toEqual({ next: null });
+      // Used once: a later key acts as itself.
+      expect(type({ key: press.key, code: press.code })).toBe(false);
+      expect(ran).toEqual(["commands.search", "settings.open"]);
+    });
+
+    it("ends the wait on an unlisted key typed before the offer, which then acts as itself", () => {
+      const { contents, type, ran, next } = pairFixture();
+      type({ key: g.key, code: g.code });
+      type({ key: x.key, code: x.code });
+      type({ key: press.key, code: press.code });
+      offerWindowKey(contents, g);
+      offerWindowKey(contents, x);
+      offerWindowKey(contents, press);
+      expect(ran).toEqual(["commands.search"]);
+      expect(next().at(-1)).toEqual({ next: null });
+    });
+
+    it("never finishes a pair with a key pressed before the pair's first key", () => {
+      const { contents, type, ran } = pairFixture();
+      type({ key: press.key, code: press.code });
+      // ⌘J starts an anywhere pair at its press, after S reached its document.
+      expect(type({ key: "j", code: "KeyJ", meta: true })).toBe(true);
+      offerWindowKey(contents, press);
+      expect(ran).toEqual([]);
+      expect(type({ key: press.key, code: press.code })).toBe(true);
+      expect(ran).toEqual(["settings.keyboard"]);
+    });
   });
 
   it("binds a frame offer to native focus at the press and at the offer, never another document", () => {

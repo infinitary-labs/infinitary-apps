@@ -289,11 +289,14 @@ struct PhoneTouchCell: Shape {
 struct PhoneBrowsingKeys: UIViewRepresentable {
     enum Key: CaseIterable { case left, right, up, down, next, open, stop }
     let active: Bool
+    /// A section list opens with Return too; scene browsing keeps its existing Space-only activation.
+    var returnOpens = false
     let handle: (Key) -> Void
 
     func makeUIView(context: Context) -> Responder { Responder() }
     func updateUIView(_ view: Responder, context: Context) {
         view.handle = handle
+        view.returnOpens = returnOpens
         view.active = active
         view.sync()
     }
@@ -305,6 +308,7 @@ struct PhoneBrowsingKeys: UIViewRepresentable {
     final class Responder: UIView {
         var handle: (Key) -> Void = { _ in }
         var active = false
+        var returnOpens = false
         override var canBecomeFirstResponder: Bool { active }
         override func didMoveToWindow() { super.didMoveToWindow(); sync() }
         func sync() {
@@ -313,7 +317,7 @@ struct PhoneBrowsingKeys: UIViewRepresentable {
         }
         override var keyCommands: [UIKeyCommand]? {
             guard active else { return nil }
-            return Key.allCases.map { key in
+            var commands = Key.allCases.map { key in
                 let input: String
                 switch key {
                 case .left: input = UIKeyCommand.inputLeftArrow
@@ -328,6 +332,12 @@ struct PhoneBrowsingKeys: UIViewRepresentable {
                 command.wantsPriorityOverSystemBehavior = true
                 return command
             }
+            if returnOpens {
+                let command = UIKeyCommand(input: "\r", modifierFlags: [], action: #selector(press(_:)))
+                command.wantsPriorityOverSystemBehavior = true
+                commands.append(command)
+            }
+            return commands
         }
         @objc private func press(_ command: UIKeyCommand) {
             let key: Key?
@@ -337,7 +347,7 @@ struct PhoneBrowsingKeys: UIViewRepresentable {
             case UIKeyCommand.inputUpArrow: key = .up
             case UIKeyCommand.inputDownArrow: key = .down
             case "\t": key = .next
-            case " ": key = .open
+            case " ", "\r": key = .open
             case UIKeyCommand.inputEscape: key = .stop
             default: key = nil
             }

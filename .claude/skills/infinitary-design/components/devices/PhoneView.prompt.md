@@ -47,7 +47,13 @@ In reach the bar says nothing more.
 Out of reach is said once, by one line under the bar on every tab with its dot, state and last-heard time; no strip above the content or line on a card repeats it, and only the current in-memory view remains.
 The message capsule and a card's reply row dim, and one line under the message box says only “Changes are off until <computer> is back.”, as the Mac says it.
 The computer button opens a native sheet with the computer's name, its reach and its address.
-The Settings button, the Lucide gear, opens this phone's own sheet: this device and its current capability, its own Theme, and the app's version.
+The Settings button, the Lucide gear, opens this phone's own sheet on a list of General, Appearance and Devices, in the desktop's order.
+Each row has no icon: its section name, one current-state line and a trailing chevron, in the shared list shape.
+A row opens its page in the same sheet, on iPad as on iPhone, never a sidebar.
+General shows Infinitary and the version, Appearance shows Theme, and Devices shows This phone (This iPad on a tablet), its current capability and the existing Approves secret uses switch when the computer offers it.
+Sections with nothing to show stay off the list.
+Back returns to the list, with Command-[ from the keyboard, and Done closes from any page.
+The list starts focused on General, arrow keys move between its rows, and Return or Space opens one; native controls retain their keyboard focus treatment.
 Theme is Apple's segmented control worded Device, Dark and Light, like the computer's Dark and Light pills, under one secondary line saying it is set on this iPhone only and the computer keeps its own; it starts on Device and never changes the computer's Theme.
 Command-1, Command-2 and Command-3 switch tabs, Command-Comma opens Settings and Command-I the computer.
 The sheet shows a joining time only if the saved connection supplies one; it never invents one for an older record.

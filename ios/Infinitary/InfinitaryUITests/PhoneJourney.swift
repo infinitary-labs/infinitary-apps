@@ -456,6 +456,10 @@ import XCTest
         func openSettings() {
             let settings = app.buttons["phone-settings"]
             tapOnPhone(settings, repeatDiscarded: false)
+            // The accepted Settings section plan keeps the same approvals under Devices → This phone.
+            let devices = app.buttons["phone-settings-devices"]
+            XCTAssertTrue(devices.waitForPresence(timeout: 10), app.debugDescription)
+            tapOnPhone(devices, repeatDiscarded: false)
         }
 
         // INF-1109: an enrolled label can appear before Settings finishes entering, while UIKit still ignores

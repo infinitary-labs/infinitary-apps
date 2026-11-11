@@ -60,10 +60,41 @@ extension PhoneJourney {
         // INF-1062, the captain's pick: Settings at the bar's left is this phone's own sheet, with no Leave in it.
         try await pressPhoneKey(",", modifiers: .command, in: app)
         XCTAssertTrue(app.buttons["close-phone-settings"].waitForPresence(timeout: 10), app.debugDescription)
-        XCTAssertTrue(app.staticTexts["app-version"].label.hasPrefix("Version "), app.staticTexts["app-version"].label)
+        // Accepted phone Settings plan: the same section list on iPhone and iPad, with keyboard reach to each page.
+        // Real data: this part's joined disposable home, the built version and this install's saved Theme.
+        // Completion: each destination's content, Back restoring the list, and Done closing the sheet.
+        let general = app.buttons["phone-settings-general"]
+        let appearance = app.buttons["phone-settings-appearance"]
+        let devicesSection = app.buttons["phone-settings-devices"]
+        XCTAssertTrue(general.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertLessThan(general.frame.maxY, appearance.frame.minY)
+        XCTAssertLessThan(appearance.frame.maxY, devicesSection.frame.minY)
+        XCTAssertFalse(app.staticTexts["app-version"].exists, "Version content lives on General, not the list")
+        XCTAssertFalse(app.segmentedControls["phone-theme"].exists)
         XCTAssertFalse(app.buttons["leave"].exists)
-        try await appearances("phone-settings", showing: app.staticTexts["app-version"])
+        try await appearances("phone-settings", showing: general)
+        // The list starts on General. As PhoneKeys owns, Xcode emits the physical Return for LF, not CR.
+        // Unmodified keys have no BackBoard registration; send each physical key once and prove its result.
+        waitForSteadyTarget(general)
+        app.typeKey("\n", modifierFlags: [])
+        XCTAssertTrue(app.staticTexts["app-version"].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["app-version"].label.hasPrefix("Version "), app.staticTexts["app-version"].label)
+        try await appearances("phone-settings-general", showing: app.staticTexts["app-version"])
+        try await settingsBack()
+        waitForSteadyTarget(appearance)
+        app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
+        app.typeKey("\n", modifierFlags: [])
         try await phoneTheme()
+        try await settingsBack()
+        XCTAssertTrue(app.staticTexts["Theme: Device"].exists, "The list reads the current saved choice")
+        waitForSteadyTarget(devicesSection)
+        app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
+        app.typeKey("\n", modifierFlags: [])
+        let device = UIDevice.current.userInterfaceIdiom == .pad ? "This iPad" : "This phone"
+        XCTAssertTrue(app.staticTexts[device].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Conversation stays on your computer."].exists)
+        XCTAssertFalse(app.segmentedControls["phone-theme"].exists)
+        try await appearances("phone-settings-devices", showing: app.staticTexts[device])
         tapOnPhone(app.buttons["close-phone-settings"])
         XCTAssertTrue(app.buttons["close-phone-settings"].waitForAbsence(timeout: 10))
         let settings = app.buttons["phone-settings"]
@@ -157,6 +188,16 @@ extension PhoneJourney {
             (beforeInactive["readings"] as? [String: Int])?["connections"], "An inactive scene keeps its connection")
     }
 
+    /// Back uses the system's Command-[ chord, witnessed through the existing key owner before one press.
+    private func settingsBack() async throws {
+        let back = app.buttons["phone-settings-back"]
+        XCTAssertTrue(back.waitForPresence(timeout: 10), app.debugDescription)
+        waitForSteadyTarget(back)
+        try await pressPhoneKey("[", modifiers: .command, in: app)
+        XCTAssertTrue(app.buttons["phone-settings-general"].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(back.waitForAbsence(timeout: 10), "Back leaves the destination once its navigation transition finishes")
+    }
+
     /// The captain's Approve and build on the phone's own theme, from Settings open on a light simulator: Dark drawn
     /// dark across the whole screen with the simulator still light, still dark after a relaunch, and Device chosen by
     /// keyboard (the left arrow) follows the simulator's light again. Leaves Settings open, drawing light.
@@ -164,6 +205,7 @@ extension PhoneJourney {
     func phoneTheme() async throws {
         let theme = app.segmentedControls["phone-theme"]
         XCTAssertTrue(theme.waitForPresence(timeout: 10), app.debugDescription)
+        try await appearances("phone-settings-appearance", showing: theme)
         let device = UIDevice.current.userInterfaceIdiom == .pad ? "iPad" : "iPhone"
         XCTAssertEqual(app.staticTexts["phone-theme-scope"].label, "Set on this \(device) only. Test Mac mini keeps its own.")
         XCTAssertEqual(theme.buttons.allElementsBoundByIndex.map(\.label), ["Device", "Dark", "Light"])
@@ -176,6 +218,10 @@ extension PhoneJourney {
         XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].waitForPresence(timeout: 10), app.debugDescription)
         try drawn("phone-theme-dark-relaunched", dark: true)
         try await pressPhoneKey(",", modifiers: .command, in: app)
+        let appearance = app.buttons["phone-settings-appearance"]
+        XCTAssertTrue(appearance.waitForPresence(timeout: 10), "Command-Comma opens the list after relaunch")
+        XCTAssertFalse(theme.exists)
+        tapOnPhone(appearance)
         XCTAssertTrue(theme.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(theme.buttons["Dark"].isSelected, "The choice survives a relaunch")
         waitForSteadyTarget(theme)

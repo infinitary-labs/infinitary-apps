@@ -312,16 +312,21 @@ Home is one column: the stage, then the last turn and the message box under it, 
 No bar height is measured or guessed, and nothing recedes on scroll.
 No panel sits behind the message box: the last turn is its rounds of lines over the capsule, which is native glass on iOS 26 and the field's fill and hairline on iOS 18.
 The capsule is 48 points tall, with the photo glyph 16 points in, the words 52 points in and send a 32-point filled circle 8 points from its end, each control in a 44-point touch area (INF-1517, following ChatGPT's input).
-Settings is this phone's own sheet, `PhoneSettingsSheet`: this device and what it can do, its own Theme, and the app's version; the computer's sheet keeps the computer's name, reach, address and Leave or Forget.
+Settings is this phone's own sheet, `PhoneSettingsSheet`, opening on General, Appearance and Devices in the desktop's order.
+Each row has its name, one current-state line and a chevron, with no icon, and opens its page inside the same sheet on iPhone and iPad alike.
+General holds Infinitary and its version, Appearance holds Theme, and Devices holds This phone (This iPad on a tablet), what it can do and the existing Approves secret uses switch while the computer offers it.
+Back returns to the list, Command-[ presses Back, Done closes from any page, and Command-Comma opens the list.
+The list starts focused on General; arrow keys move among the rows and Return or Space opens the focused section, with native keyboard focus on its controls.
+Sections with nothing to show stay off the list; the computer's sheet keeps the computer's name, reach, address and Leave or Forget.
 Theme is this device's own (`PhoneLook`, `PhoneAppearance`): Apple's segmented control worded Device, Dark and Light, like the computer's Dark and Light pills, under a line saying it is set on this iPhone only (this iPad on an iPad) and the computer keeps its own.
 It starts on Device, which follows iOS's own setting and its Automatic switching; Dark or Light sets the window's interface style, so every screen, sheet, the keyboard, the crew, card bodies and the picture viewer follow it at once.
 The choice is saved in the app's own defaults, never in the connection file, so it survives a relaunch, an update, Leave, Forget, Removed and joining another computer; a reinstall resets it.
 It never reaches the computer, and the computer's Theme never reaches the phone; asking the first mate to switch the theme still switches the computer's.
 The launch screen, which iOS draws before the app runs, keeps the device's own appearance.
-While Settings is open the control holds focus and the left and right arrow keys move the choice, with no command of its own; an unseen shortcut under the sheet never hears an unmodified arrow.
+While Appearance is open the control holds focus and the left and right arrow keys move the choice, with no command of its own; an unseen shortcut under the sheet never hears an unmodified arrow.
 `PhoneLookTests` holds the saved choice, and the join-read part chooses Dark on a light simulator, sees it drawn dark before and after a relaunch, and chooses Device again by keyboard.
 Both open at half height on the system's glass and can be pulled up, with the same headings and spacing; Leave, or Forget while out of reach, is the computer sheet's second section under its own heading.
-While the computer's Secrets are set up and open, Settings also shows Secrets approvals: the Approves secret uses switch, the code to compare with the computer's card, or that this device can allow uses, and Set up approvals again in place of the switch for a damaged record.
+While the computer's Secrets are set up and open, Settings → Devices also shows Secrets approvals: the Approves secret uses switch, the code to compare with the computer's card, or that this device can allow uses, and Set up approvals again in place of the switch for a damaged record.
 While the keyboard is open, Done takes Settings' place in the leading slot and the Hide keyboard command (Shift-Command-K) dismisses it without sending or clearing the draft.
 The dismissal command does not belong to the keyboard’s transient accessory view.
 Apple's iPhone keyboard has no hide key and no app may add one, so while the software keyboard is up for a card's reply or the message box, a keyboard-down button sits inside that field just before its send circle, on an iPhone and an iPad alike (INF-3106, `PhoneHideKeyboard.swift`).

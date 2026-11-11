@@ -1,14 +1,22 @@
 import InfinitaryKit
 import SwiftUI
 
-/// INF-1062, the captain's pick: Settings at the bar's left is this phone's own sheet, with what this device can do,
-/// its own Theme and the app's version. Leave and Forget stay with the computer in its sheet.
+/// The accepted phone Settings plan: the desktop's section names and order, each opening in this same sheet.
+/// Leave and Forget stay with the computer in its sheet; Theme and approvals keep their existing owners.
 struct PhoneSettingsSheet: View {
     let session: ReadOnlySession
     @Environment(\.dismiss) private var dismiss
     @Environment(PhoneSecrets.self) private var secrets: PhoneSecrets?
     @Environment(PhoneAppearance.self) private var appearance: PhoneAppearance?
     @FocusState private var themeFocused: Bool
+    @State private var section: Section?
+    @State private var lastSection: Section = .general
+    @State private var browsing = false
+
+    private enum Section: String, CaseIterable {
+        case general = "General", appearance = "Appearance", devices = "Devices"
+        var id: String { rawValue.lowercased() }
+    }
 
     private var device: String { UIDevice.current.userInterfaceIdiom == .pad ? "This iPad" : "This phone" }
     /// The same device inside a sentence: lowercasing the heading would read "this ipad".
@@ -26,32 +34,113 @@ struct PhoneSettingsSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: PhoneTheme.space5) {
-                    VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                        Text(device).font(PhoneFont.headline)
-                        Text(session.contact == "in-reach" && session.access != "full"
-                            ? "Reads cards, Activity and tasks. \(PhoneUpdate.side(phone: PhoneContract.version, computer: session.homeVersion).words)"
-                            : "Answers cards, sends messages and controls tasks on your computer.")
-                            .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-                        Text("Conversation stays on your computer.").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+            page(section?.rawValue ?? "Settings") {
+                if let section {
+                    switch section {
+                    case .general:
+                        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+                            Text("Infinitary").font(PhoneFont.headline)
+                            Text("Version \(Self.version)").font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
+                                .accessibilityIdentifier("app-version")
+                        }
+                    case .appearance:
+                        if let appearance { theme(appearance) }
+                    case .devices:
+                        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+                            Text(device).font(PhoneFont.headline)
+                            Text(capability).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                            Text("Conversation stays on your computer.").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                            if let secrets, secrets.standing != .unavailable { approvals(secrets) }
+                        }
                     }
-                    if let secrets, secrets.standing != .unavailable { approvals(secrets) }
-                    if let appearance { theme(appearance) }
-                    VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                        Text("Infinitary").font(PhoneFont.headline)
-                        Text("Version \(Self.version)").font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
-                            .accessibilityIdentifier("app-version")
-                    }
-                }.padding(PhoneTheme.space5).frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    sections
+                }
             }
-            .phoneTitle("Settings")
-            .toolbar { ToolbarItem(placement: .confirmationAction) {
-                Button("Done") { dismiss() }.accessibilityIdentifier("close-phone-settings")
-            } }
+            // One navigation content owner keeps exactly one Done on every page, with no inherited toolbar items.
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }.accessibilityIdentifier("close-phone-settings")
+                }
+                if section != nil {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button { section = nil } label: {
+                            HStack(spacing: PhoneTheme.space2) {
+                                PhoneSymbol.chevron.image.rotationEffect(.degrees(180))
+                                Text("Settings")
+                            }
+                        }
+                        .keyboardShortcut("[", modifiers: .command)
+                        .accessibilityLabel("Back to Settings")
+                        .accessibilityIdentifier("phone-settings-back")
+                    }
+                }
+            }
         }
         .font(PhoneFont.body).foregroundStyle(PhoneTheme.text).tint(PhoneTheme.accent)
         .presentationDetents([.medium, .large]).presentationDragIndicator(.visible).phoneSheetSurface()
+    }
+
+    private var sections: some View {
+        PhoneList {
+            ForEach(Section.allCases, id: \.self) { section in
+                Button { open(section) } label: {
+                    PhoneRow(title: section.rawValue, line: summary(section), chevron: true)
+                }
+                .buttonStyle(PhoneRowStyle())
+                .overlay {
+                    if browsing, section == lastSection {
+                        RoundedRectangle(cornerRadius: PhoneTheme.controlRadius)
+                            .strokeBorder(PhoneTheme.accent, lineWidth: 1.5)
+                    }
+                }
+                .accessibilityIdentifier("phone-settings-\(section.id)")
+            }
+        }
+        // The list reuses the scene's native keyboard owner, so a card behind the sheet never keeps its keys.
+        .background(PhoneBrowsingKeys(active: section == nil, returnOpens: true) { key in
+            browsing = true
+            switch key {
+            case .up: moveSection(by: -1)
+            case .down, .next: moveSection(by: 1)
+            case .open: open(lastSection)
+            case .stop: dismiss()
+            case .left, .right: break
+            }
+        })
+    }
+
+    private var capability: String {
+        session.contact == "in-reach" && session.access != "full"
+            ? "Reads cards, Activity and tasks. \(PhoneUpdate.side(phone: PhoneContract.version, computer: session.homeVersion).words)"
+            : "Answers cards, sends messages and controls tasks on your computer."
+    }
+
+    private func summary(_ section: Section) -> String {
+        switch section {
+        case .general: "Version \(Self.version)"
+        case .appearance: "Theme: \(appearance?.look.words ?? PhoneLook.device.words)"
+        case .devices: device
+        }
+    }
+
+    private func open(_ section: Section) {
+        lastSection = section
+        self.section = section
+    }
+
+    private func moveSection(by offset: Int) {
+        let sections = Section.allCases
+        let index = sections.firstIndex(of: lastSection) ?? 0
+        if sections.indices.contains(index + offset) { lastSection = sections[index + offset] }
+    }
+
+    private func page<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: PhoneTheme.space5, content: content)
+                .padding(PhoneTheme.space5).frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .phoneTitle(title)
     }
 
     /// The captain's Approve and build: this device's own Theme, in Apple's segmented control like the computer's Dark
@@ -67,7 +156,7 @@ struct PhoneSettingsSheet: View {
             }
             .pickerStyle(.segmented).labelsHidden().accessibilityIdentifier("phone-theme")
             // A segmented control takes no keys of its own, and an unseen shortcut under a sheet never hears an unmodified
-            // arrow. So the control holds focus while Settings is open and its arrows move the choice, with no command.
+            // arrow. So the control holds focus while Appearance is open and its arrows move the choice, with no command.
             .focusable().focused($themeFocused)
             .onKeyPress(.leftArrow) { appearance.step(by: -1); return .handled }
             .onKeyPress(.rightArrow) { appearance.step(by: 1); return .handled }

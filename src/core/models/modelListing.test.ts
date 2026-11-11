@@ -5,6 +5,7 @@ import {
   staleDefaults,
   vanishedFamilies,
 } from "@shared/modelListing";
+import { HELD_BACK } from "@shared/modelSlots";
 import { describe, expect, it } from "vitest";
 import { checkCatalog } from "./catalogChecks";
 
@@ -106,6 +107,52 @@ describe("what a live check fails on", () => {
         `Dead default in STARTER_SLOTS["openai-codex"] (no longer served): ${starter}`,
       );
     }
+  });
+
+  // INF-3678: pi.dev's overlay began serving claude-fable-5.2 for Copilot
+  // and the live probe failed a merge batch on the 5.1 starter, which the
+  // pinned Pi catalog still bounds. These are Copilot's ids as that overlay
+  // served them.
+  it("holds Copilot's Fable 5.1 starter back from the overlay's Fable 5.2 with its reason", () => {
+    const served = [
+      "claude-fable-5",
+      "claude-fable-5.1",
+      "claude-fable-5.2",
+      "claude-haiku-4.5",
+      "claude-haiku-5.5",
+      "claude-opus-4.8",
+      "claude-opus-5",
+      "claude-opus-5.5",
+      "claude-sonnet-4.6",
+      "claude-sonnet-5",
+      "claude-sonnet-5.5",
+      "gemini-3.8-flash",
+      "gemini-4-argon",
+      "gemini-4-carbon",
+      "gpt-5.3-codex",
+      "gpt-5.4-nano",
+      "gpt-5.6-luna",
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+      "gpt-6-astra",
+      "gpt-6-luna",
+      "gpt-6-sol",
+      "gpt-6.1-sol",
+      "gpt-6.1-terra",
+      "grok-4.5",
+      "grok-4.6",
+      "grok-4.7",
+      "kimi-k3",
+      "mai-code-1.1-flash",
+    ];
+    const reason = HELD_BACK["github-copilot"]?.["claude-fable-5.1"];
+    expect(reason).toBeTruthy();
+    expect(staleDefaults("github-copilot", served)).toEqual([
+      { id: "claude-fable-5.1", newer: "claude-fable-5.2", heldBack: reason },
+    ]);
+    expect(checkCatalog({ providerId: "github-copilot", served }).failures).toEqual([]);
+    // The hold names only that starter: Opus and Sonnet are already current.
+    expect(Object.keys(HELD_BACK["github-copilot"] ?? {})).toEqual(["claude-fable-5.1"]);
   });
 
   it("names a tracked id the catalog no longer serves", () => {

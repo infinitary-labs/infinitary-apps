@@ -67,6 +67,7 @@ Changing the starting levels is a commit to that file in the tap; a development 
 
 Claude ships Haiku 5.5 (`claude-haiku-5-5`) as its low starter; Sonnet 5.5 remains medium, Opus 5.5 high and Fable 5.2 premium.
 Copilot's starters are the same Claude rows as Copilot serves them - Fable 5.1 premium, Opus 5.5 high, Sonnet 5.5 medium - with no low row: the captain left out Haiku 4.5 (INF-560).
+Copilot's Fable 5.1 is in `HELD_BACK`: pi.dev's overlay serves Fable 5.2 there, but Pi 1.5.0 bundles none, so a 5.2 starter would fail the pinned catalog check.
 Reconciliation seeds only unseen models, preserving saved Sonnet or Haiku 4.5 placements and leaving an already-seen, turned-off Haiku 5.5 off.
 A pre-2.1.293 client can run the explicit Haiku 5.5 id while omitting it from a successful picker catalog.
 `claudeCatalogIsOutdated` treats that specific omission as an unavailable read, so the existing fallback keeps the new default routable; it never inserts an account-specific row.

@@ -193,7 +193,12 @@ export const TRACKED_FAMILIES: Readonly<
  * generation (docs/model-lists.md); an entry here is how a person answers
  * that failure without moving the default. Keyed provider, then starter id.
  */
-export const HELD_BACK: Readonly<Record<string, Readonly<Record<string, string>>>> = {};
+export const HELD_BACK: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  "github-copilot": {
+    "claude-fable-5.1":
+      "Pi 1.5.0 bundles no claude-fable-5.2 for Copilot, so the pinned catalog check fails a 5.2 starter; only pi.dev's overlay serves it, and moving it is a captain call",
+  },
+};
 
 /** A starter map's shape: provider, then model id, then its starting slots. */
 export type StarterMap = Readonly<Record<string, Readonly<Record<string, readonly Slot[]>>>>;

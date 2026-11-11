@@ -41,24 +41,24 @@ export const CHECK_CHANGE_TOOL_NAME = "check_change";
 export const OPEN_CHANGE_TOOL_DESCRIPTION = [
   "Offer your task's branch as a pull request on GitHub, a merge request on GitLab, or the pushed branch on a plain Git host.",
   "On GitHub or GitLab, push your branch first (git push); the app's sign-in answers the host for you.",
-  "On native-media hosts every selected attachment uploads before opening or replacing a story. A failed or uncertain upload opens no PR, including a draft; report its blocker, never omit evidence or use a fallback. Other description hosts publish text only; plain Git retains the story on its card.",
-  "When body is the description, it replaces the open description whole; the answer says what the host shows when read back.",
-  "A saved story is replaced whole, preserving surrounding text; to change those words, pass around. Held writes are read first. A closed story PR stops publication.",
+  "Native-media hosts upload selected attachments before opening or replacing a story. A failed or uncertain upload opens no PR, even a draft: report the blocker, never omit evidence or use a fallback. Other description hosts publish text only; plain Git keeps the story on its card.",
+  "A body description replaces the open description whole; the answer says what the host shows on readback.",
+  "Replacing a saved story preserves surrounding text; change that text with around. Held writes are read first. A closed story PR stops publication.",
 ].join(" ");
 
 /** The around parameter's own words: no app tool describes a nested field, so from and to are explained here (INF-497). */
 export const OPEN_CHANGE_AROUND_DESCRIPTION = [
-  "Change one passage around this task's saved story on its open pull or merge request, such as a footer, leaving the story as published. Pass the newest presentation revision with it.",
-  "from is that passage exactly as the description shows it now, found once above or below the story; to replaces it. An empty from adds to only when nothing surrounds the story.",
-  "A passage someone changed since you read it is not found: nothing is sent and the answer quotes the current words. Change a person's words only when asked.",
+  "Change one passage around this task's saved story on its open pull or merge request, such as a footer, without changing the story. Pass the newest presentation revision.",
+  "from is the passage exactly as shown, found once above or below the story; to replaces it. An empty from adds to only when nothing surrounds the story.",
+  "A passage changed since you read it is not found: nothing is sent and the answer quotes the current words. Change a person's words only when asked.",
 ].join(" ");
 
 export const CHECK_CHANGE_TOOL_DESCRIPTION = [
-  "Read typed facts on the newest pull request: each check's name, state, run, workflow and event, mergeability, and whether the version moved. The host does not judge the work or settle repairs. facts.main is the default branch's newest run of a failed check: evidence on the cause, never a merge input.",
-  "Your merge card says the work is ready; record no separate ready or red verdict. Check facts still hold the merge; only the captain's separate choice authorizes it. Use declaration only for flake, settled or answered, with headSha and evidence. Settle at the recorded repair's headSha with repairId and outcome; check may name a renamed job and evidence explains the link. Facts list repair checks absent from this reading without guessing replacements.",
-  "Read failed logs and record diagnosis with evidence; repair records your fix. Judge readiness, flakes, settlement and when to stop from your delivery guidance, not a host count. Raw check readings never settle a repair. An unclear write is never replayed.",
-  "An empty hosted reading stays pending. absentChecks, with pull or alone for your own pull request, records positive no-CI evidence from trusted default-branch policy and the local gate; time, history or missing workflow files prove nothing.",
-  "While checks run the app watches them and wakes you on the first failure and when they finish. End your turn until that wake. With no watchable checks no wake comes.",
+  "Read the newest pull request's typed facts: check names, states, runs, workflows and events, mergeability and version movement. The host neither judges work nor settles repairs. facts.main is the default branch's newest run of a failed check: evidence of cause, never a merge input.",
+  "Your merge card says the work is ready; record no separate ready or red verdict. Check facts hold the merge; only the captain's separate choice authorizes it. Declare only flake, settled or answered, with headSha and evidence. Settle at the repair's headSha with repairId and outcome; check may name a renamed job, explained by evidence. Facts list absent repair checks without guessing replacements.",
+  "Read failed logs and record diagnosis with evidence; repair records your fix. Judge readiness, flakes, settlement and when to stop from your delivery guidance, not a host count. Raw readings never settle a repair. Never replay an unclear write.",
+  "An empty hosted reading stays pending. absentChecks, with pull or alone for your own pull request, records positive no-CI evidence from trusted default-branch policy and the local gate; time, history or missing workflows prove nothing.",
+  "The app watches running checks, waking you on first failure and completion. End your turn until that wake; no watchable checks means no wake.",
   "conflictRepair and captainGuidance grant no fresh merge consent.",
   "Put pull's review id in your merge card's merge effect, with after saying whether the task continues or closes. Only the captain's click sends it with autonomy off.",
 ].join(" ");
@@ -76,17 +76,17 @@ export const QUEUE_ANSWER_DESCRIPTION = [
 
 /** The conflictRepair parameter's own words: the rule a Claude crewmate must see is here. */
 export const CONFLICT_REPAIR_DESCRIPTION = [
-  "Their merge approval is kept after the host refused their click: after each push, declare what that version did to the approved work.",
-  "fromHead is the head their approval covers (the approved head, or your last accepted repair); toHead your pushed head; newBase the default branch commit it sits on.",
-  "none keeps their approval; after checks pass the host automatically republishes the unchanged story at the repaired version, then merges. End your turn with no new card; changed-work ends it - put up a new merge card; unknown holds the merge; once your turn ends an independent crewmate assesses the repair and its verdict decides - do not declare it again.",
-  "changedPaths names every path that now differs from the approved change. Few lines or only conflicted files is not proof: compare the behavior.",
+  "After the host refuses their merge click, their approval is kept: declare each push's impact on the approved work.",
+  "fromHead is the approved head or last accepted repair; toHead the pushed head; newBase its default branch commit.",
+  "none keeps approval: after checks pass the host republishes the unchanged story at the repaired version, then merges; end your turn without a card. changed-work ends approval: show a new merge card. unknown holds merge; after your turn an independent crewmate assesses the repair and its verdict decides. Do not declare it again.",
+  "changedPaths names every path now differing from the approved change. Few lines or only conflicted files is not proof: compare behavior.",
 ].join(" ");
 
 /** The captainGuidance parameter's own words: the rule a Claude crewmate must see is here. */
 export const CAPTAIN_GUIDANCE_DESCRIPTION = [
-  "The captain sent new words while their merge approval is kept: they hold its merge until you declare their impact.",
-  "mark is the number their message named - the newest you read; marks you have not read stay held.",
-  "none leaves the approved work as it was and the merge goes on; changed-work ends their approval - do the work and put up a new merge card.",
+  "New captain words while merge approval is kept hold the merge until you declare their impact.",
+  "mark is the newest message number you read; unread marks stay held.",
+  "none keeps the approved work and merge; changed-work ends approval: do the work and show a new merge card.",
   "evidence says why.",
 ].join(" ");
 
@@ -125,7 +125,7 @@ export const PREPARE_CHANGE_TOOL = crewmateTool({
   name: "prepare_change",
   label: "Prepare change story",
   description:
-    "Prepare one two-tier change story, without showing a card or uploading. Commit the demonstrated code first. Use the same title on the story, pull request and merge card. Aim for 150 open words on the card, 250 on the pull request. Put commands, file names and counts in verification, which folds; nonempty unfinished work folds too. Risk is the card radar and one PR line with its table folded. Omit empty sections and boilerplate. Never write code versions, hashes or story revision numbers in any text, even folded; keep versions only in base, head and captureHead. Ordered views pair Before and After pictures under one heading; recordings stack. Inspect the exact publishable pictures or MP4s and posters before selecting them; no private threads or secrets. No visible change gives noPicture and no views. Keep public template text and issue references in projectText. No setting, new approval, upload fallback or evidence commit. Meaningful drawn figures need inspected raster exports. A private GitLab project uploads only while GitLab requires sign-in to view media; report that refusal, never change the setting.",
+    "Prepare one two-tier change story without showing a card or uploading. Commit demonstrated code first; use one title for story, pull request and merge card. Aim for 150 open words on the card, 250 on the pull request. Put commands, file names and counts in folded verification; unfinished work folds too. Risk is the card radar and one PR line with a folded table. Omit empty sections and boilerplate. Never write versions, hashes or story revision numbers in text, even folded; versions belong only in base, head and captureHead. Ordered views pair Before and After pictures under one heading; recordings stack. Inspect publishable pictures or MP4s and posters before selecting; no private threads or secrets. No visible change gives noPicture and no views. Put public templates and issue references in projectText. No setting, new approval, upload fallback or evidence commit. Meaningful drawn figures need inspected raster exports. A private GitLab project uploads only while GitLab requires sign-in for media; report refusal, never change the setting.",
   parameters: Type.Object({
     story: zodParameter<ChangePresentationDraft>(changePresentationDraftSchema, {
       description: PREPARE_CHANGE_STORY_DESCRIPTION,

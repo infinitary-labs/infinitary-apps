@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "trim-crewmate-budget",
+      "reason": "Shortens internal crewmate instructions without changing their intent."
+    }
+  ]
+}

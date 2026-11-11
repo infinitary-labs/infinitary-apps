@@ -203,7 +203,13 @@ jobs:
       # don't start any new alpha cuts"), or when nothing on the desktop build
       # list (scripts/desktop-build.ts) changed since the previous release.
       # An earlier run counts once its notes job exists: its own gate chose to
-      # cut. It also skips while the captain has paused the rolling pipeline
+      # cut. It also skips while a stable is being promoted: the stable tags
+      # its numeric core only when it publishes, so an alpha numbered before
+      # then takes that same core and sorts below the stable its subscribers
+      # are moved to (INF-3648: alpha 0.7.0-alpha.510, cut while 0.7.0 was
+      # promoted, failed its update check against 0.7.0). A stable counts
+      # once its first job exists; a rehearsal publishes nothing and never
+      # counts. It also skips while the captain has paused the rolling pipeline
       # (ROLLING_ALPHA_PAUSED, docs/alpha.md "Pausing the rolling pipeline");
       # a cut already past this step finishes. Requested alphas, recoveries,
       # rehearsals and stables never skip.
@@ -224,7 +230,7 @@ jobs:
               return skip(`Paused by the captain: the rolling pipeline is paused, so this run cuts no alpha from main's ${process.env.SOURCE}. After Resume, the next merge's check and its alpha carry this version's changes.`);
             }
             const {pathToFileURL} = require('node:url');
-            const {legacyJobName} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/ci-job-names.mjs`).href);
+            const {legacyJobName, splitLevel} = await import(pathToFileURL(`${process.env.GITHUB_WORKSPACE}/scripts/ci-job-names.mjs`).href);
             const {data} = await github.rest.actions.listWorkflowRuns({
               ...context.repo, workflow_id: 'release.yml', event: 'workflow_run', per_page: 100
             });
@@ -236,6 +242,19 @@ jobs:
               // Read by the names jobs had before the trigger-first rename (scripts/ci-job-names.mjs).
               if (jobs.some(job => legacyJobName(job.name) === 'Check the release notes' && job.conclusion !== 'skipped')) {
                 return skip(`An earlier alpha is still being cut in ${run.html_url}, so this run starts no other. The next alpha carries main's changes at ${process.env.SOURCE}.`);
+              }
+            }
+            const {data: requested} = await github.rest.actions.listWorkflowRuns({
+              ...context.repo, workflow_id: 'release.yml', event: 'workflow_dispatch', per_page: 100
+            });
+            for (const run of requested.workflow_runs) {
+              if (run.status === 'completed') continue;
+              const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                ...context.repo, run_id: run.id, filter: 'latest', per_page: 100
+              });
+              // Every level of a job's name leads with what started its run (scripts/ci-job-names.mjs).
+              if (jobs.some(job => splitLevel(job.name.split(' / ')[0])?.trigger === 'Requested stable')) {
+                return skip(`A stable is being promoted in ${run.html_url}. An alpha cut now would be numbered before that stable publishes its version, and could sort below it, so this run cuts no alpha. The next alpha is numbered from that stable and carries main's changes at ${process.env.SOURCE}.`);
               }
             }
             const {execFileSync} = require('node:child_process');

@@ -346,7 +346,7 @@ After that setup, a separately authorized alpha proves public fetch-back, both t
 ## Cutting an alpha
 
 A rolling `main.yml` run that passed automatically starts an alpha at that exact commit (INF-2259, the captain's accepted override).
-The alpha cuts only when no earlier alpha is still being cut and something the desktop app is built from changed since the previous release ("An alpha with nothing new to build", below).
+The alpha cuts only when no earlier alpha is still being cut, no stable is being promoted, and something the desktop app is built from changed since the previous release ("An alpha with nothing new to build", below).
 The `workflow_run` completion trigger uses the checked source, not main's newer head, and runs only the journeys part of the full check, which main leaves to the release (INF-2480, the captain: "old set at the release check only, from the first piece on").
 A source the swept batch checked with every journey runs no part: the batch already ran them on its files (the captain on INF-2508: "Keep every journey in the batch, and let an alpha reuse them").
 Main runs no phone check ("An alpha does not wait on the phone check", below).
@@ -370,12 +370,16 @@ A failed, cancelled or incomplete main run cuts nothing; main's waiting-version 
 
 A rolling alpha cuts only when it has something new to ship (INF-2465, the captain: "make it so that the rolling alpha release pipeline on main only runs when there are desktop app code changes").
 The resolve job's first step decides it, before main's proof is read, and when it skips, the run ends green with a summary saying why and no later job runs.
-It skips in two cases:
+It skips in three cases:
 
 1. **An earlier alpha is still being cut.**
    While an earlier rolling alpha run is still going, no new one cuts, whatever either holds (the captain: "as long as there's one main alpha release still happening, don't start any new alpha cuts. doesn't matter what changes are in each").
    An earlier run counts once its notes job exists, so a run still deciding whether to skip never stops another.
-2. **Nothing the desktop app is built from changed.**
+2. **A stable is being promoted.**
+   A promotion tags its version only when it publishes, so an alpha numbered meanwhile takes the newest stable tag before it and can share the promoted stable's numeric core.
+   A stable outranks every alpha of its own core, so once the stable reaches the alpha feed, subscribers are never offered that alpha, and its update check fails (INF-3648: `0.7.0-alpha.510`, cut while `0.7.0` was promoted).
+   While a requested stable run is still going, no rolling alpha cuts; a run counts once its first job exists, and a stable rehearsal, which publishes nothing, never counts.
+3. **Nothing the desktop app is built from changed.**
    `node scripts/release-notes.ts desktop-changes --source <commit>` finds the previous release by the notes check's own rule and lists the paths that changed since it on the desktop build list, `scripts/desktop-build.ts`.
    An empty list skips; a source with no previous release cuts.
 
@@ -485,7 +489,7 @@ Read the named job's log on a failure wake; a release run outcome is not a pull 
    It keeps the picks, as the stable's source release names them: `node scripts/release-notes.ts manifest --version <X.Y.Z> --highlights <picks> --write`.
    Pinning a promoted stable without `--highlights` is refused.
 
-The next alpha is numbered from the new stable tag ("The signed channel workflow").
+The next alpha is numbered from the new stable tag ("The signed channel workflow"); no rolling alpha cuts while the promotion runs ("An alpha with nothing new to build").
 A stable rehearsal (`release.yml -f channel=stable -f dry_run=true`) promotes an alpha the same way, or builds the dispatched commit as the next stable when it names none, and publishes nothing.
 It may leave `highlights` empty to keep the alpha reviews' ranks.
 
@@ -515,6 +519,7 @@ The `update` job runs after the signing job and every check, from its handoff, a
 It is the release's only update check: the rehearsal that ran before signing repeated only its first checks, so INF-2498's plan removed it.
 
 - The handoff's zip must be the one the signing job handed over.
+- The release must be newer than the version alpha subscribers have, or the check stops before installing anything and names both versions.
 - The installed app must trust the local feed and offer the release on Alpha without downloading anything before consent.
 - A real streaming turn through a local custom connection is running when the installed app takes the update; the release's own signed zip must replace it natively, the app must restart on its own as the new version on Alpha, with a valid signature and its direct receipt.
   The live reply must stop before the replacement, and the captain's message and a personal draft must survive.

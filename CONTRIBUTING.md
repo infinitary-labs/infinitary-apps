@@ -19,7 +19,7 @@ Pull requests from outside are not merged yet: the repository opens with the pub
   Weakening, skipping or deleting a test still requires the captain's approval.
   Full local journeys remain prohibited, and full pre-merge verification is exceptional, not a response to breadth, confidence or care alone (`docs/testing.md`, "When to request full verification").
   Rolling main supplies broad coverage except the old journey set; a fully passing run automatically cuts its exact commit as an alpha, which runs every journey, unless the swept batch already ran them, and the release-specific gates without repeating main's checks.
-  It cuts nothing while an earlier alpha is still being cut, or when nothing the desktop app is built from changed since the previous release (`docs/alpha.md`, "An alpha with nothing new to build").
+  It cuts nothing while an earlier alpha is still being cut or a stable is being promoted, or when nothing the desktop app is built from changed since the previous release (`docs/alpha.md`, "An alpha with nothing new to build").
   Full unit, integration and probe sweeps remain on main, manual runs and release verification, not PRs.
   Passing checks never grants merge permission.
 - All UI work follows the design skill under `.claude/skills/infinitary-design/`.

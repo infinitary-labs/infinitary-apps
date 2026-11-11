@@ -215,12 +215,17 @@ describe("an alpha with nothing new to build", () => {
   });
 
   type Run = { id: number; run_number: number; status: string; html_url: string };
-  /** The gate step's own script, against GitHub's answers and the desktop-changes reading. */
+  /**
+   * The gate step's own script, against GitHub's answers and the
+   * desktop-changes reading: `runs` are the rolling alphas main started,
+   * `requested` the release runs dispatched by hand.
+   */
   const runGate = async (
     runs: Run[],
     jobs: Record<number, { name: string; conclusion: string | null }[]>,
     desktop: { previous: string | null; changed: string[] },
     paused = "",
+    requested: Run[] = [],
   ) => {
     const script = gate?.with?.script;
     expect(typeof script).toBe("string");
@@ -250,9 +255,12 @@ describe("an alpha with nothing new to build", () => {
       rest: {
         actions: {
           listWorkflowRuns: async (parameters: Record<string, unknown>) => {
-            expect(parameters).toMatchObject({ workflow_id: "release.yml", event: "workflow_run" });
-            reads.push("release.yml");
-            return { data: { workflow_runs: runs } };
+            expect(parameters).toMatchObject({ workflow_id: "release.yml" });
+            expect(["workflow_run", "workflow_dispatch"]).toContain(parameters.event);
+            reads.push(`release.yml ${parameters.event}`);
+            return {
+              data: { workflow_runs: parameters.event === "workflow_run" ? runs : requested },
+            };
           },
           listJobsForWorkflowRun: async ({ run_id }: { run_id: number }) => jobs[run_id] ?? [],
         },
@@ -338,6 +346,63 @@ describe("an alpha with nothing new to build", () => {
         "29ff10079a",
       ],
     ]);
+  });
+
+  /**
+   * INF-3648: rolling alpha run 510 numbered itself 0.7.0-alpha.510 from the
+   * newest stable tag, v0.6.5, while run 509 was still promoting
+   * 0.7.0-alpha.503 to stable 0.7.0. The stable tagged v0.7.0 only when it
+   * published, the alpha feed then carried 0.7.0, which outranks every
+   * 0.7.0 alpha, and the alpha's update check found no update to offer.
+   */
+  describe("a stable being promoted", () => {
+    /** A dispatched release's job name, as the workflow file names it for `inputs`. */
+    const requestedJob = (job: string, inputs: Record<string, unknown>) => {
+      const event = { github: { event_name: "workflow_dispatch" }, inputs };
+      if (job === "resolve") return workflowString(release.jobs.resolve?.name as string, event);
+      const trigger = workflowString(release.jobs.resolve?.outputs?.trigger as string, event);
+      return workflowString(release.jobs[job]?.name as string, {
+        needs: { resolve: { outputs: { trigger } } },
+      });
+    };
+    /** Run 509's jobs while run 510 decided: chosen, its notes checked, the Mac build signing. */
+    const promotionJobs = (inputs: Record<string, unknown>) => [
+      { name: requestedJob("resolve", inputs), conclusion: "success" },
+      { name: requestedJob("phone", inputs), conclusion: "success" },
+      { name: requestedJob("release", inputs), conclusion: null },
+    ];
+    const stable = { channel: "stable", promote: "0.7.0-alpha.503", dry_run: false };
+    const changed = { previous: "0.7.0-alpha.508", changed: ["src/core/pi/forgeTools.ts"] };
+
+    it("starts no rolling cut while a stable promotion is still going", async () => {
+      const promoting = { id: 509, run_number: 509, status: "in_progress", html_url: url(509) };
+      const result = await runGate([], { 509: promotionJobs(stable) }, changed, "", [promoting]);
+      expect(promotionJobs(stable)[0]?.name).toBe("Requested stable · Select source and version");
+      expect(result.skip).toBe("true");
+      expect(result.summary).toContain(url(509));
+      expect(result.summary).toContain("A stable is being promoted");
+      // It decides before the desktop reading, which a stable makes moot.
+      expect(result.commands).toEqual([]);
+    });
+
+    it("cuts beside a stable rehearsal, a requested alpha, a finished stable and a run with no job yet", async () => {
+      const runs: Run[] = [
+        { id: 511, run_number: 511, status: "in_progress", html_url: url(511) },
+        { id: 512, run_number: 512, status: "in_progress", html_url: url(512) },
+        { id: 509, run_number: 509, status: "completed", html_url: url(509) },
+        { id: 513, run_number: 513, status: "queued", html_url: url(513) },
+      ];
+      const jobs = {
+        511: promotionJobs({ ...stable, dry_run: true }),
+        512: promotionJobs({ channel: "alpha", dry_run: false }),
+        509: promotionJobs(stable).map((job) => ({ ...job, conclusion: "success" })),
+      };
+      const result = await runGate([], jobs, changed, "", runs);
+      expect(jobs[511][0]?.name).toBe("Requested stable rehearsal · Select source and version");
+      expect(result.skip).toBe("false");
+      expect(result.reads).toEqual(["release.yml workflow_run", "release.yml workflow_dispatch"]);
+      expect(result.commands).toHaveLength(1);
+    });
   });
 
   it("ends green when nothing the desktop app is built from changed, and cuts with no previous release", async () => {

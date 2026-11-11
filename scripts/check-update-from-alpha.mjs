@@ -141,7 +141,10 @@ try {
   const published = load(run("/usr/bin/curl", ["--fail", "--silent", "--show-error", "--retry", "5", "--retry-delay", "15", "--retry-all-errors", "--max-time", "60", feedUrl]));
   const from = published?.version;
   assert.match(from ?? "", /^\d+\.\d+\.\d+(-alpha\.\d+)?$/, "The published alpha feed must name a version");
-  assert.notEqual(from, target, "The release must be newer than what alpha subscribers have");
+  // A stable outranks every alpha of its own numeric core, so an alpha cut
+  // while that stable was promoted is never offered to subscribers who have it.
+  const { isNewerVersion } = await runner.import(join(REPO_ROOT, "src/core/update/semver.ts"));
+  assert(isNewerVersion(target, from), `The release ${target} must be newer than ${from}, the version alpha subscribers have, or they are never offered it`);
   const zipName = `Infinitary-${from}-universal.zip`;
   assert.equal(new URL(published.path).pathname, `/releases/v${from}/${zipName}`);
   const dmgName = `Infinitary-${from}-mac-universal.dmg`;

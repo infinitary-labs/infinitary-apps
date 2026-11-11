@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-waits-for-stable-promotion",
+      "reason": "Release workflow only: a rolling alpha no longer cuts while a stable is being promoted, so it cannot take a version below that stable, and the update check names an alpha older than the published one; the app itself does not change."
+    }
+  ]
+}

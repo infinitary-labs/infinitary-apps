@@ -888,6 +888,12 @@ It stays after the watch ends, so a finished run says `passed in 3h 26m · 5m ag
 A reading of another run replaces it only when that run started at or after it, so the newest run shows.
 The run is read by its number, never by its commit, which may carry other checks; a task with a change shows the change's checks.
 
+A merge card shows each requested run the app watches for the version on offer in a cell of its own after its Checks cell, because the Checks cell counts only the pull request's own checks (INF-3220).
+Every reading of a run still going keeps on its watch the run's version, its page, whether it is queued or running, since when the app's readings have seen that state, and when it read (`RunWatch.reading`, `watchReadingOf` in `src/core/orchestrator/runWatch.ts`).
+A run reads as queued while none of its jobs has a machine, so a run whose first jobs finished while the rest wait for one reads as queued too.
+The cell is named by the run, such as `phone`, and reads `queued for 1h 27m` or `running for 5m`, linked to the run's page; on rest it names the run's number and version and when the app read it.
+A run read at another version shows no cell, and the cell goes when the watch ends (`watchedRuns` in `src/core/orchestrator/settleCardFacts.ts`).
+
 ## The run watch
 
 A crewmate's short `read_workflow({ runId })` of a run still going saves a watch in the task's `runWatches` delivery facts (`WorkflowEvidenceService`, `RunWatcher`).

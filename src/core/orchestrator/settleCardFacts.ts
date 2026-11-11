@@ -11,6 +11,7 @@ import {
 } from "@shared/cards";
 import { currentCheckSummary, ownChecks } from "@shared/checkSnapshot";
 import {
+  checksDuration,
   checksFinishedAgo,
   checksRestWords,
   checksSpanOf,
@@ -29,10 +30,11 @@ import {
   MERGE_ANYWAY_WORDS,
   REVIEW_EARLIER_WORDS,
   REVIEW_WORDS,
+  RUN_WATCH_WORDS,
 } from "@shared/vocabulary";
 import { queueKind } from "../queue/shipped/rules.mjs";
 import type { EmittedCardInput } from "../session/tools";
-import type { TaskDelivery, TaskRecord } from "../storage/taskRecords";
+import type { RunWatch, TaskDelivery, TaskRecord } from "../storage/taskRecords";
 import { TaskService } from "../tasks/taskService";
 import { escapeCardText } from "./cardText";
 import { checkVerdicts } from "./checkVerdicts";
@@ -317,6 +319,18 @@ export class SettleFacts {
     } else if (opensPullRequest(delivery)) {
       cell("checks", "Checks", `${statusDot("idle")}${CHECKS_NOT_READ_WORDS}`);
     }
+    // Each requested run the app watches for the version on offer, such as
+    // a phone check, in a cell of its own named by the run: the Checks
+    // cell counts only the pull request's own checks, so a long wait for a
+    // machine would otherwise show nowhere.
+    for (const run of record.delivery ? watchedRuns(record.delivery) : []) {
+      cell(
+        "run",
+        escapeCardText(run.name),
+        `${statusDot(run.reading.state === "running" ? "running" : "idle")}${runLink(run.reading.url, `${RUN_WATCH_WORDS[run.reading.state]} for ${checksDuration(this.host.now() - run.reading.since)}`)}`,
+        `Requested run ${run.runId} at ${run.reading.head.slice(0, 7)}, which the app watches; read ${checksFinishedAgo(run.reading.at, this.host.now())}`,
+      );
+    }
     const batch = record.delivery ? batchCheck(record.delivery) : undefined;
     if (batch) cell("batch", BATCH_CHECK_WORDS.label, batch.value, batch.title);
     if (record.delivery) cells.push(checkVerdicts(record.delivery, this.host.now()));
@@ -495,6 +509,26 @@ function ownDelivery(delivery: TaskDelivery): TaskDelivery {
     ciStartedAt: kept?.checksStartedAt,
     ciFinishedAt: kept?.checksFinishedAt,
   };
+}
+
+/**
+ * The requested runs the app watches that a read found unfinished at the
+ * version on offer, in the order they were watched; at any version while
+ * none is on offer.
+ */
+function watchedRuns(
+  delivery: TaskDelivery,
+): (RunWatch & { reading: NonNullable<RunWatch["reading"]> })[] {
+  return (delivery.runWatches ?? []).flatMap((watch) =>
+    watch.reading && (delivery.headSha === undefined || watch.reading.head === delivery.headSha)
+      ? [{ ...watch, reading: watch.reading }]
+      : [],
+  );
+}
+
+/** Words linked to a run's page where the host gave an https one. */
+function runLink(url: string, words: string): string {
+  return /^https:\/\//.test(url) ? `<a href="${escapeCardText(url)}">${words}</a>` : words;
 }
 
 /**

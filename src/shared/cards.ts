@@ -485,6 +485,7 @@ export const SETTLE_FACTS = [
   "change",
   "lines",
   "checks",
+  "run",
   "batch",
   "review",
   "override",

@@ -118,6 +118,16 @@ export const RUN_CHECK_WORDS: Words<RunChecks["state"]> = {
   cancelled: "cancelled",
 };
 
+/**
+ * A requested run the app watches, in its own cell on the merge card's
+ * strip beside the pull request's own checks: queued while every unfinished
+ * job waits for a machine, running once a machine has taken one.
+ */
+export const RUN_WATCH_WORDS = {
+  queued: "queued",
+  running: CHECK_WORDS.pending,
+} as const;
+
 /** What the checks say of a change no reading has reached yet. */
 export const CHECKS_NOT_READ_WORDS = "not read yet";
 

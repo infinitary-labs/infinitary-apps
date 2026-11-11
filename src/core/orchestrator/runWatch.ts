@@ -8,7 +8,7 @@ import {
   type WorkflowRun,
 } from "../forge";
 import type { InboxStore } from "../storage/inboxStore";
-import type { RunWatch, TaskDelivery } from "../storage/taskRecords";
+import type { RunWatch, RunWatchReading, TaskDelivery } from "../storage/taskRecords";
 import type { ChangeEvidenceUpdate } from "../tasks/taskDeliveries";
 import { TaskService } from "../tasks/taskService";
 import { observeRunFailures } from "./checkRepair";
@@ -42,6 +42,29 @@ function runChecksState(run: WorkflowRun): RunChecks["state"] {
   if (conclusion === "success" || conclusion === "skipped") return "passed";
   if (conclusion === "cancelled" || conclusion === "canceled") return "cancelled";
   return "failed";
+}
+
+/** Job states on both hosts that mean a machine has taken the job. */
+const STARTED_JOB_STATES = new Set(["in_progress", "running"]);
+
+/**
+ * What a read of an unfinished run shows on the merge card's strip: its
+ * version and page, and whether a machine runs any of its jobs now or every
+ * unfinished job still waits for one - a run whose first jobs finished
+ * while the rest wait reads as queued. The state keeps the time the app's
+ * reads first saw it, so a long wait shows how long. None once the run
+ * finished.
+ */
+export function watchReadingOf(
+  watch: RunWatch | undefined,
+  { run, list }: RunReading,
+  now: number,
+): RunWatchReading | undefined {
+  if (runFinished(run)) return undefined;
+  const state = list.jobs.some((job) => STARTED_JOB_STATES.has(job.status)) ? "running" : "queued";
+  const kept = watch?.reading;
+  const since = kept && kept.state === state && kept.head === run.headSha ? kept.since : now;
+  return { head: run.headSha, url: run.url, state, since, at: now };
 }
 
 /**
@@ -193,7 +216,13 @@ export class RunWatcher {
         ...(runChecks ? { runChecks } : {}),
         ...(ciRepair ? { ciRepair } : {}),
       };
-      const current = { ...watch, attempt: read.run.attempt, name: read.run.name };
+      const reading = watchReadingOf(watch, read, now);
+      const current: RunWatch = {
+        ...watch,
+        attempt: read.run.attempt,
+        name: read.run.name,
+        ...(reading ? { reading } : {}),
+      };
       const failed = failedRunJobs(read.list);
       const facts = {
         kind: "run-watch" as const,

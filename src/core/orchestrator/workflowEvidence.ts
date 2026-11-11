@@ -28,6 +28,7 @@ import {
   recordRunChecks,
   recordRunFailures,
   runFinished,
+  watchReadingOf,
 } from "./runWatch";
 
 /**
@@ -174,12 +175,14 @@ export class WorkflowEvidenceService {
       return "The task already watches 5 runs; this run is not watched. No wake will come for it until a slot is free and you read it again.";
     }
     recordRunChecks(this.options.tasks, taskId, run, now);
+    const reading = watchReadingOf(existing, { run, list }, now);
     const watch = {
       ...(existing ?? { since: now }),
       runId: run.id,
       name: run.name,
       attempt: run.attempt,
       nextAt: now + RUN_WATCH_TICK_MS,
+      ...(reading ? { reading } : {}),
       // A crewmate reading the failure itself already knows: suppress that early wake only.
       failureSeen: existing?.failureSeen === true || failedRunJobs(list).length > 0,
     };

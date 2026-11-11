@@ -549,6 +549,23 @@ export type RunWatch = {
   since: number;
   nextAt: number;
   failureSeen?: boolean;
+  /** What the app's newest read of the unfinished run saw, for the merge card's strip. */
+  reading?: RunWatchReading;
+};
+
+/**
+ * A watched run as the app last read it while it had not finished: the
+ * version it runs at, its page, whether any job runs yet or every job still
+ * waits for a machine, since when the app's reads have seen that state, and
+ * when it read. The merge card shows it beside the pull request's own checks
+ * while the run is for the version on offer.
+ */
+export type RunWatchReading = {
+  head: string;
+  url: string;
+  state: "queued" | "running";
+  since: number;
+  at: number;
 };
 
 /**

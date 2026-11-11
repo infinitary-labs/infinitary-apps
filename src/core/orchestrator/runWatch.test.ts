@@ -135,7 +135,20 @@ describe("RunWatcher's ordinary read (INF-2220)", () => {
       const delivery = tasks.get("t1")?.delivery;
       // The read's own time and the next read move on every read, the run unchanged.
       expect(delivery?.runChecks).toMatchObject({ runId: watch.runId, state: "running", at });
-      expect(delivery?.runWatches).toEqual([{ ...watch, nextAt: at + RUN_WATCH_TICK_MS }]);
+      expect(delivery?.runWatches).toEqual([
+        {
+          ...watch,
+          nextAt: at + RUN_WATCH_TICK_MS,
+          // No job has a machine yet: the run reads as queued since the first read.
+          reading: {
+            head: running.run.headSha,
+            url: running.run.url,
+            state: "queued",
+            since: start,
+            at,
+          },
+        },
+      ]);
       expect(delivery?.cardRefusal).toEqual(refusal);
       expect(delivery?.checkBack).toEqual(checkBack);
       expect(writes.take()).toEqual([

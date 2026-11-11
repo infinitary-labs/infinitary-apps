@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "personal-contracts-freshness-selection",
+      "reason": "Internal: a pull request that changes the personal extension contracts now runs their generated file's freshness test; app behavior is unchanged."
+    }
+  ]
+}

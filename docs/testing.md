@@ -52,6 +52,7 @@ Record the version, selection reasons, files or parts, required platforms or dev
   Six audited indirect contracts have explicit links in `scripts/unit-reach.ts`: channel definitions select the action and IPC inventories, `src/core/storage/migrations.ts` selects the decision, inbox and keep-open migration tests, and `src/core/tasks/taskService.ts` selects the settle boundary test.
   These links add no readers for unrelated changes and leave edited tests to their local rounds.
   An inventory test declares additional indirect files in an `inventoryFiles` literal array of project-relative file paths in its own test file, as `src/shared/actions.test.ts` does for its settings request schemas.
+  A generated file's freshness test that reads its source only through the generator's path constant declares that source the same way, as `src/core/personal/infinitaryEnv.test.ts` does for `src/shared/personal/contracts.ts`.
   The existing literal-path reader selects it whenever a named file changes, including deletion; no new parser, transitive traversal or CI job is needed.
   Name only files the inventory actually checks that direct imports or the six explicit links do not already cover, and add a real-file selector regression with unrelated nonselection.
   Edited inventories still belong only to their local rounds; the PR check runs unedited selected inventories once through the same cohort routing and selected-versus-ran reconciliation.

@@ -1,5 +1,6 @@
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { CONTRACTS_PATH } from "../scripts/generate-personal-env.ts";
 import { directUnitReach } from "../scripts/unit-reach.ts";
 import { selectLinuxReach } from "../scripts/unit-repeats.ts";
 
@@ -174,6 +175,18 @@ describe("local direct unit reach", () => {
     expect(directUnitReach([schema], [inventory], root)).toEqual([inventory]);
     expect(selectLinuxReach([schema], root).run).toContain(inventory);
     expect(directUnitReach([schema, inventory], [inventory], root)).toEqual([]);
+  });
+
+  // A contracts edit without `pnpm generate:personal-env` passed its pull
+  // request check and failed the merge batch: the freshness test reads the
+  // contracts only through the generator's path, so it declares that read.
+  it("routes the personal contracts' freshness test to the PR check when the contracts change", () => {
+    const freshness = "src/core/personal/infinitaryEnv.test.ts";
+    const contracts = relative(root, CONTRACTS_PATH);
+    expect(directUnitReach([contracts], [freshness], root)).toEqual([freshness]);
+    expect(selectLinuxReach([contracts], root).run).toContain(freshness);
+    expect(directUnitReach(["src/shared/voice.ts"], [freshness], root)).toEqual([]);
+    expect(directUnitReach([contracts, freshness], [freshness], root)).toEqual([]);
   });
 
   it("does not broaden inventory coverage to unrelated files or the whole shared folder", () => {

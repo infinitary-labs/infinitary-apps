@@ -9,6 +9,14 @@ import {
 } from "../../../scripts/generate-personal-env";
 import { INFINITARY_ENV_DTS } from "./seed/infinitaryEnv.generated";
 
+// The generator reads the contracts through CONTRACTS_PATH, which the pull
+// request check's selector (scripts/unit-reach.ts) cannot see from here: a
+// contracts edit without a regenerated file reached the merge batch unread.
+// This literal project-relative path declares that indirect read to it.
+const inventoryFiles = ["src/shared/personal/contracts.ts"] as const;
+// The selector reads this declaration statically, never by importing a test.
+void inventoryFiles;
+
 /**
  * The generated contract is fresh (baby-menu's `generate:contracts` test):
  * a change to src/shared/personal/contracts.ts without

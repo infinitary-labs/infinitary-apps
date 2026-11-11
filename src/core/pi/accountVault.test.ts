@@ -1208,6 +1208,43 @@ describe("a typed cut-off on the account", () => {
     expect(world.open().get(id)?.label).toBe("alex.two@example.com");
   });
 
+  it("INF-3307 audit: one failed registry write during a health read does not break later reads", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const world = claudeWorld({
+        health: {
+          state: "healthy",
+          authType: "oauth",
+          identity: { label: "alex.one@example.com" },
+        },
+      });
+      const { vault, id } = await signedInClaude(world);
+      await vault.health(id, { refresh: true });
+      expect(vault.get(id)?.label).toBe("alex.one@example.com");
+
+      // The client now names another email, and the registry cannot be
+      // written at that moment (a directory stands where the file was).
+      const registry = join(world.paths.accountsDir, "registry.json");
+      rmSync(registry);
+      mkdirSync(registry);
+      world.facts.health = {
+        state: "healthy",
+        authType: "oauth",
+        identity: { label: "alex.two@example.com" },
+      };
+      await vault.health(id, { refresh: true }).catch(() => undefined);
+
+      // The disk recovers; the next reads - a refresh, and the Subscriptions
+      // list once its cached status is stale - answer again, no restart.
+      rmSync(registry, { recursive: true });
+      expect(await vault.health(id, { refresh: true })).toMatchObject({ state: "healthy" });
+      vi.setSystemTime(Date.now() + 60_000);
+      expect(await vault.views()).toContainEqual(expect.objectContaining({ id, connected: true }));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("hears another login once from the unified health read and across a restart", async () => {
     const world = claudeWorld();
     const { vault, id } = await signedInClaude(world);

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, stat } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
 import type { Card } from "@shared/cards";
 import type { FmEvent } from "@shared/events";
@@ -127,6 +127,9 @@ export type CheckedPlugin = {
   views: string[];
 };
 
+/** An install `commit` moved aside while its update goes in: `.old-<id>-<uuid>`. */
+const OLD_INSTALL = /^\.old-(.+)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 export class PluginInstaller {
   private readonly fetch: PluginFetcher;
   private readonly log: (message: string) => void;
@@ -163,11 +166,34 @@ export class PluginInstaller {
    * answered or lost while the app was down, and nothing adds it now; a
    * staging directory no record explains goes too.
    */
-  async reconcile(): Promise<void> {
+  reconcile(): Promise<void> {
+    // In the chain, so no install of this run is ever mid-way while it sweeps.
+    return this.serial(() => this.runReconcile());
+  }
+
+  private async runReconcile(): Promise<void> {
     for (const record of this.options.records.pending()) {
       if (this.options.cards.has(consentCardId(record.id))) continue;
       this.options.records.dropPending(record.id);
       await rm(join(this.options.stagingDir, record.id), { recursive: true, force: true });
+    }
+    // What a quit mid-install left (INF-3307 audit): a fetch, a check, a
+    // staged copy no pending record names, or an install moved aside for an
+    // update that never landed - which goes back in place if nothing took it.
+    const pending = new Set(this.options.records.pending().map((record) => record.id));
+    for (const name of await readdir(this.options.stagingDir).catch(() => [])) {
+      if (pending.has(name)) continue;
+      const path = join(this.options.stagingDir, name);
+      const id = OLD_INSTALL.exec(name)?.[1];
+      const target = id ? join(this.options.pluginsDir, id) : null;
+      const installed = id ? this.options.records.get(id)?.installedAt : null;
+      if (target && installed && !(await isDirectory(target))) {
+        await rename(path, target).catch((error: unknown) => {
+          this.log(`plugins: could not put ${name} back: ${errorText(error)}`);
+        });
+        continue;
+      }
+      await rm(path, { recursive: true, force: true });
     }
   }
 

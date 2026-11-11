@@ -80,7 +80,13 @@ export type DialTarget = { address: string } | { socket: string };
  * null to dial it directly, or by default the one `relayFor` picks for it. A
  * socket on this Mac is dialed directly: it is no dial to the network.
  */
-export type DialOptions = { timeoutMs?: number; target?: DialTarget; relay?: string | null };
+export type DialOptions = {
+  timeoutMs?: number;
+  target?: DialTarget;
+  relay?: string | null;
+  /** Ends a Firstmate fetch at once, as when the run that asked for it stops (`fetchFirstmate`). */
+  signal?: AbortSignal;
+};
 
 /**
  * A link or grant that reaches its home only through the home's SSH
@@ -474,6 +480,8 @@ export async function fetchFirstmate(
   const socket = await pinnedSocket(targetOf(grant, options.target), grant.homeKey, grant, options);
   const { host, port } = addressOf(grant.at);
   const body = JSON.stringify(want ? { system: want.system, chip: want.chip } : {});
+  // What lets the copy go when the run stops, removed once the request settles.
+  const stopping: { stop?: () => void } = {};
   try {
     await new Promise<void>((resolve, reject) => {
       const asked = request(
@@ -545,9 +553,15 @@ export async function fetchFirstmate(
         asked.destroy(new Error(`${HOME.The} stopped sending Infinitary.`)),
       );
       asked.once("error", reject);
+      // A run that stops lets the copy go at once, leaving the sink open.
+      const stop = () => asked.destroy(new Error("Infinitary stopped here before all of it came."));
+      stopping.stop = stop;
+      if (options.signal?.aborted) stop();
+      else options.signal?.addEventListener("abort", stop, { once: true });
       asked.end(body);
     });
   } finally {
+    if (stopping.stop) options.signal?.removeEventListener("abort", stopping.stop);
     socket.destroy();
   }
 }

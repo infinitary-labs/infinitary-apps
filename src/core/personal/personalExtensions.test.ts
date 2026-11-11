@@ -471,6 +471,50 @@ describe("PersonalExtensions", () => {
     }
   });
 
+  // INF-3307 audit: an update that never lands - its build ends with the
+  // panel still on the earlier API - must not leave Update panel pressed for
+  // the rest of the run; the captain can ask again.
+  it("INF-3307 audit: lets the captain ask again once the update's build ends with the panel still paused", async () => {
+    const h = await harness();
+    const asks: unknown[] = [];
+    const older =
+      'export const actions = { ping: (_i: unknown, c: { db: { get: (k: string) => unknown } }) => c.db.get("n") };';
+    seedTask(h.tasks, { id: "t-update", title: "Update Counter panel", status: "running" });
+    const service = await PersonalExtensions.start({
+      ...h,
+      watch: false,
+      askUpdate: (ask) => asks.push(ask),
+    });
+    try {
+      h.write("counter/manifest.json", JSON.stringify({ title: "Counter" }));
+      h.write("counter/panel.tsx", PANEL);
+      h.write("counter/server.ts", older);
+      commitAll(h.workspaceDir);
+      await service.refresh();
+      const counter = () => service.snapshot().extensions.find((e) => e.id === "counter");
+      expect(counter()?.paused).toEqual({ api: 1, serves: [2], asked: false });
+      expect(service.askUpdate("counter")).toBe(true);
+
+      // The first mate's update starts, edits the server, and is given up
+      // with the panel still written for the earlier API.
+      service.beginLiveTask("t-update");
+      h.write("counter/server.ts", `${older}\n// started on the update`);
+      await service.refresh();
+      expect(counter()?.paused?.asked).toBe(true);
+      expect(service.askUpdate("counter")).toBe(false);
+      expect((await service.commitTurn("t-update", "Update started.")).committed).toBe(true);
+      service.endLiveTask("t-update");
+      h.tasks.close("t-update", { status: "dropped", reason: "failed", actor: "host" });
+      await service.refresh();
+
+      expect(counter()?.paused).toEqual({ api: 1, serves: [2], asked: false });
+      expect(service.askUpdate("counter")).toBe(true);
+      expect(asks).toHaveLength(2);
+    } finally {
+      service.dispose();
+    }
+  });
+
   // INF-2205 piece B, the captain's "Stop only the identified panel; keep the
   // broad fallback": the stop holds across a restart and a new version until
   // the captain's Retry, and the panel's data stays.

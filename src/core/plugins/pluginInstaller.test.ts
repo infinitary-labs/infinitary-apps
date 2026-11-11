@@ -6,6 +6,7 @@ import {
   readdirSync,
   readFileSync,
   realpathSync,
+  renameSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -660,6 +661,45 @@ describe("PluginInstaller", () => {
       await h.installer.reconcile();
       expect(h.records.get("token-watch")).toBeUndefined();
       expect(existsSync(join(h.paths.pluginsStagingDir, "token-watch"))).toBe(false);
+    } finally {
+      h.personal.dispose();
+    }
+  });
+
+  it("INF-3307 audit: sweeps staging folders a quit mid-install left behind when the app starts again", async () => {
+    const h = await harness();
+    const waiting = h.plugin("token-watch", { "manifest.json": manifest(), "panel.tsx": PANEL });
+    const added = h.plugin("clock", {
+      "manifest.json": manifest({ title: "Clock" }),
+      "panel.tsx": PANEL,
+    });
+    const leftover = (path: string) => {
+      mkdirSync(join(h.paths.pluginsStagingDir, path), { recursive: true });
+      writeFileSync(join(h.paths.pluginsStagingDir, path, "panel.tsx"), PANEL);
+    };
+    try {
+      // One install still waits on the captain's card; one is added.
+      await h.installer.install({ source: "path", spec: waiting });
+      await h.installer.install({ source: "path", spec: added });
+      h.supervisor.cardActions.act(consentCardId("clock"), "add");
+      await h.settled();
+      expect(existsSync(join(h.paths.pluginsDir, "clock", "panel.tsx"))).toBe(true);
+      // The app quit mid-install: a fetch, a check, a staged copy no record
+      // names yet, and a replaced install moved aside before its update landed.
+      leftover(".fetch-6f1c0d52-3b1e-4c55-9a51-0d2f9e8b7a10/token-watch");
+      leftover(".check/1b7e4f2a-8c3d-4e9f-a2b1-5c6d7e8f9a0b");
+      leftover("weather");
+      renameSync(
+        join(h.paths.pluginsDir, "clock"),
+        join(h.paths.pluginsStagingDir, ".old-clock-2c3d4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f"),
+      );
+
+      await h.installer.reconcile();
+
+      // What a record explains stays; the moved-aside install goes back in place.
+      expect(readdirSync(h.paths.pluginsStagingDir).sort()).toEqual(["token-watch"]);
+      expect(h.records.get("token-watch")?.pending).toBeDefined();
+      expect(existsSync(join(h.paths.pluginsDir, "clock", "panel.tsx"))).toBe(true);
     } finally {
       h.personal.dispose();
     }

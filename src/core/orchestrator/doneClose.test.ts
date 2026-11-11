@@ -410,3 +410,31 @@ describe("why the work is done", () => {
     expect(world.tasks.get(id)?.status).not.toBe("done");
   });
 });
+
+describe("guidance its crewmate never took", () => {
+  it("INF-3307 audit: a steer set aside after three refusals no longer holds the first mate's close", async () => {
+    const world = settleWorld();
+    world.live.pull = merged(PR);
+    const id = world.inbox.enqueue(TASK, "Re-run the meter bench with the new clock.");
+    // Three refused deliveries spend the ladder, and the crew watch sets it aside.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      world.inbox.markDelivered([id]);
+      world.inbox.release([id]);
+    }
+    world.inbox.markEscalated(id);
+    const closed = await world.done.close(TASK, { why: "finished", evidence: EVIDENCE });
+    expect(closed.text).not.toContain("guidance is still queued");
+    expect(closed).toMatchObject({ ok: true });
+    expect(world.tasks.get(TASK)).toMatchObject({ status: "done", closedReason: "finished" });
+  });
+
+  it("INF-3307 audit: guidance still waiting to be delivered holds the close", async () => {
+    const world = settleWorld();
+    world.live.pull = merged(PR);
+    world.inbox.enqueue(TASK, "Re-run the meter bench with the new clock.");
+    const held = await world.done.close(TASK, { why: "finished", evidence: EVIDENCE });
+    expect(held).toMatchObject({ ok: false });
+    expect(held.text).toContain("guidance is still queued for its crewmate");
+    expect(world.tasks.get(TASK)?.status).toBe("active");
+  });
+});

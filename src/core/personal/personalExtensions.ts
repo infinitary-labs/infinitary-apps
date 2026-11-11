@@ -380,8 +380,13 @@ export class PersonalExtensions {
   private readonly drafts = new Map<string, Loaded>();
   /** Each refused `server.ts` already logged, by id and the hash of its text: one line per code version. */
   private readonly refusalsLogged = new Set<string>();
-  /** The panels whose Update panel the captain pressed, until their background work is no longer refused. */
-  private readonly updateAsked = new Set<string>();
+  /**
+   * The panels whose Update panel the captain pressed, until their background
+   * work is no longer refused, each with the task that took the update up
+   * (null until a build starts). An update whose build closes with the panel
+   * still refused never landed: the press is free again (INF-3307 audit).
+   */
+  private readonly updateAsked = new Map<string, string | null>();
   private watcher: FSWatcher | null = null;
   private debounce: ReturnType<typeof setTimeout> | null = null;
   private poll: ReturnType<typeof setInterval> | null = null;
@@ -942,10 +947,10 @@ export class PersonalExtensions {
     const entry = this.loaded.get(extensionId);
     const ask = this.options.askUpdate;
     if (!ask || entry?.source !== "yours" || entry.paused === null) return false;
-    if (this.updateAsked.has(extensionId) || entry.builder || this.drafts.has(extensionId)) {
+    if (this.asked(extensionId) || entry.builder || this.drafts.has(extensionId)) {
       return false;
     }
-    this.updateAsked.add(extensionId);
+    this.updateAsked.set(extensionId, null);
     ask({
       id: extensionId,
       title: entry.manifest.title ?? extensionId,
@@ -1401,7 +1406,17 @@ export class PersonalExtensions {
     if (!next) return;
     next.builder = builder;
     if (next.paused === null) this.updateAsked.delete(id);
+    else if (builder && this.updateAsked.has(id)) this.updateAsked.set(id, builder);
     this.loaded.set(id, next);
+  }
+
+  /** The captain's Update panel press still stands: asked, and no build of it has closed since. */
+  private asked(id: string): boolean {
+    if (!this.updateAsked.has(id)) return false;
+    const by = this.updateAsked.get(id);
+    if (!by) return true;
+    const status = this.options.tasks.get(by)?.status;
+    return status !== "done" && status !== "dropped";
   }
 
   /** The app log's line for a refused `server.ts`, the first time each version of its text is refused. */
@@ -1793,7 +1808,7 @@ export class PersonalExtensions {
             paused: {
               api: entry.paused,
               serves: [...SERVED_PANEL_APIS],
-              asked: this.updateAsked.has(entry.id),
+              asked: this.asked(entry.id),
             },
           }
         : {}),

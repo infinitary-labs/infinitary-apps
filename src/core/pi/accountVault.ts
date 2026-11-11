@@ -842,26 +842,32 @@ export class AccountVault {
     const inFlight = this.healthInFlight.get(accountId);
     if (inFlight) return inFlight;
     const pending = (async () => {
-      let health: CredentialHealth;
-      let read = false;
+      // However this read ends - a failed registry write included - it
+      // leaves the flight, so the next read asks again instead of
+      // re-answering this one's failure until restart.
       try {
-        health = await this.requireBackend(account.providerId).health(this.refFor(account));
-        read = true;
-      } catch {
-        health = this.lastHealth.get(accountId) ?? { state: "degraded", reason: "unknown" };
+        let health: CredentialHealth;
+        let read = false;
+        try {
+          health = await this.requireBackend(account.providerId).health(this.refFor(account));
+          read = true;
+        } catch {
+          health = this.lastHealth.get(accountId) ?? { state: "degraded", reason: "unknown" };
+        }
+        // A fresh read is where a changed login or client clears a cut-off.
+        if (read) {
+          this.noteCredentialRead(accountId, health.stamp, health.identity, health.access);
+        }
+        this.lastHealth.set(accountId, health);
+        const reported = this.withCutOff(accountId, health);
+        this.lastStatus.set(accountId, statusFromHealth(reported));
+        this.healthReadAt.set(accountId, Date.now());
+        this.statusReadAt.set(accountId, Date.now());
+        return reported;
+      } finally {
+        this.healthInFlight.delete(accountId);
+        this.statusInFlight.delete(accountId);
       }
-      // A fresh read is where a changed login or client clears a cut-off.
-      if (read) {
-        this.noteCredentialRead(accountId, health.stamp, health.identity, health.access);
-      }
-      this.lastHealth.set(accountId, health);
-      const reported = this.withCutOff(accountId, health);
-      this.lastStatus.set(accountId, statusFromHealth(reported));
-      this.healthReadAt.set(accountId, Date.now());
-      this.statusReadAt.set(accountId, Date.now());
-      this.healthInFlight.delete(accountId);
-      this.statusInFlight.delete(accountId);
-      return reported;
     })();
     this.healthInFlight.set(accountId, pending);
     return pending;

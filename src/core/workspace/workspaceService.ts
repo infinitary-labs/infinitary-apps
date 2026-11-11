@@ -411,17 +411,37 @@ export class WorkspaceService {
   ensureDefaultRepo(): Promise<string> {
     if (this.creatingDefaultRepo) return this.creatingDefaultRepo;
     const dir = this.paths.defaultWorkspaceDir;
-    if (existsSync(join(dir, ".git"))) return Promise.resolve(dir);
-    const creating = this.createDefaultRepo(dir).finally(() => {
-      if (this.creatingDefaultRepo === creating) this.creatingDefaultRepo = undefined;
-    });
+    if (this.defaultRepoReady && existsSync(join(dir, ".git"))) return Promise.resolve(dir);
+    const creating = this.createDefaultRepo(dir)
+      .then((made) => {
+        this.defaultRepoReady = true;
+        return made;
+      })
+      .finally(() => {
+        if (this.creatingDefaultRepo === creating) this.creatingDefaultRepo = undefined;
+      });
     this.creatingDefaultRepo = creating;
     return creating;
   }
 
   private creatingDefaultRepo: Promise<string> | undefined;
+  /** Set once this run has seen the default repository's first commit. */
+  private defaultRepoReady = false;
 
+  /**
+   * Makes the default repository, or finishes one an earlier launch stopped
+   * before its first commit (INF-3307): a `.git` with no commit has nothing a
+   * task's branch can start from. Each step is safe to run again.
+   */
   private async createDefaultRepo(dir: string): Promise<string> {
+    if (existsSync(join(dir, ".git"))) {
+      try {
+        await git(dir, ["rev-parse", "--verify", "HEAD^{commit}"]);
+        return dir;
+      } catch {
+        // No first commit yet: finish making it below.
+      }
+    }
     await mkdir(dir, { recursive: true });
     await git(dir, ["init", "--initial-branch=main"]);
     await git(dir, ["config", "user.name", "Infinitary"]);

@@ -405,6 +405,32 @@ describe("a crewmate's integration approval card (INF-2993)", () => {
     expect(h.supervisor.cards.get("integration-ask-notes")).toBeDefined();
   });
 
+  it("INF-3307 audit: a later Allow for the rest of this task never runs an ask whose card its crewmate withdrew", async () => {
+    const send = sendTaken();
+    const { h, crewmate, taskId } = await started(send);
+    const withdrawn = integrationAsk("pr-a", "/repos/octo/queue-proof-4ca5/pulls", SCOPE, 1);
+    h.tasks.delivery.keepWriteAsk(taskId, withdrawn);
+    h.supervisor.integrationAsks.askIntegration(taskId, withdrawn);
+    // The crewmate takes its ask back before the captain answers it.
+    h.supervisor.closeCard(
+      "integration-ask-pr-a",
+      { kind: "crewmate", taskId },
+      "The proof no longer needs that pull request.",
+    );
+    const later = integrationAsk("pr-b", "/repos/octo/queue-proof-4ca5/pulls", SCOPE, 2);
+    h.tasks.delivery.keepWriteAsk(taskId, later);
+    expect(h.supervisor.integrationAsks.askIntegration(taskId, later)).toBe(false);
+    await endTurn(crewmate, taskId, "The proof pull request waits on the captain's click.");
+
+    expect(h.supervisor.cardActions.act("integration-ask-pr-b", "task")).toEqual({});
+    await tick();
+    await tick();
+
+    expect(ran(send)).toEqual(["pr-b task"]);
+    const kept = h.tasks.get(taskId)?.delivery?.writeAsks?.find((ask) => ask.id === "pr-a");
+    expect(kept?.sentAt).toBeUndefined();
+  });
+
   it("refuses a click on an offer the card showed before an ask joined, and shows the current list", async () => {
     const send = sendTaken();
     const { h, crewmate, taskId } = await started(send);

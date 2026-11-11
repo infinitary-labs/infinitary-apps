@@ -94,6 +94,9 @@ export const PRIVACY_WORDS = {
       "macOS has your answer, Don't Allow, and this task's search goes on without that app's data.",
     other: "macOS has an answer, and this task's search goes on.",
   },
+  /** The log reader ended while the question was open, so its answer is never heard. */
+  unheard:
+    "The app stopped reading macOS's privacy log, so it cannot tell when macOS has your answer. The search goes on once you answer.",
 } as const;
 
 /** What the watch reads of a process: its parent and its working folder. */
@@ -235,6 +238,7 @@ export class AppDataWatch {
       line: (text) => this.heard(text),
       ended: () => {
         this.running = undefined;
+        this.unheard();
       },
     });
   }
@@ -270,7 +274,27 @@ export class AppDataWatch {
     if (request.looked) this.settle(line.request, request);
   }
 
+  /**
+   * The log reader ended on its own: no open question's answer will be
+   * heard, so each task still waiting gets a line saying so instead of
+   * keeping its waiting line for good, and a lookup still running writes
+   * nothing.
+   */
+  private unheard(): void {
+    this.services.clear();
+    this.requests.clear();
+    const open = [...this.waiting.keys()];
+    this.waiting.clear();
+    for (const taskId of open) {
+      this.options.note(taskId, PRIVACY_WORDS.unheard, {
+        macosPrivacy: "unheard",
+        service: APP_DATA_SERVICE,
+      });
+    }
+  }
+
   private found(id: string, request: Request, taskId: string | undefined): void {
+    if (this.requests.get(id) !== request) return;
     request.looked = true;
     if (taskId) request.taskId = taskId;
     if (request.answer !== undefined || !taskId) {

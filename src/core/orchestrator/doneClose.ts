@@ -266,10 +266,12 @@ export class DoneClose {
     )
       return "its crewmate is still working; wait for its report.";
     // Guidance still queued for the crewmate is work it has not done; work
-    // another task carries on leaves that guidance to the carrier.
+    // another task carries on leaves that guidance to the carrier. Guidance
+    // set aside after its refusals went to the first mate instead and is
+    // never delivered, so it holds nothing (INF-3307 audit).
     if (
       why !== "carried_on" &&
-      (this.host.inbox.allFor(record.id).length > 0 ||
+      (this.host.inbox.allFor(record.id).some((row) => row.escalatedAt === null) ||
         this.host.inbox.inFlight(record.id).length > 0)
     )
       return "guidance is still queued for its crewmate; let it finish that first.";

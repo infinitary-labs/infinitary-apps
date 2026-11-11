@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   chmodSync,
   copyFileSync,
@@ -575,6 +575,74 @@ describe("the one-time move of a data folder", () => {
     }
     expect(await runMove(world.move, world.deps)).toMatchObject({ kind: "ask" });
     expect(await runMove(world.move, world.deps, "bring")).toMatchObject({ kind: "moved" });
+  });
+
+  // INF-3307 audit: "A folder move killed mid-copy loses the only pointer to the saved work".
+  // A launch that brings the older work sets this app's own work aside before it copies,
+  // and only the checked copy's record names where it went; a launch killed mid-copy
+  // leaves that folder named by nothing. The next launch puts it back and asks again.
+  /** Brings the older work under a launch killed mid-copy, leaving the disk as it stopped. */
+  async function killedMidCopy(world: ReturnType<typeof olderFolder>): Promise<void> {
+    mkdirSync(join(world.to, "crewmates", "mine"), { recursive: true });
+    writeFileSync(join(world.to, "crewmates", "mine", "notes.md"), "my own work\n");
+    // The killed launch: a process that is gone now, its locks left behind.
+    const gone = spawnSync("true").pid;
+    expect(processAlive(gone)).toBe(false);
+    let reached: () => void = () => {};
+    const copying = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    void runMove(
+      world.move,
+      {
+        ...world.deps,
+        pid: gone,
+        copy: async (_root, staged) => {
+          mkdirSync(join(staged, "fleet"), { recursive: true });
+          writeFileSync(join(staged, "fleet", "half.bin"), "half");
+          reached();
+          // Killed here: the copy never ends and nothing after it runs.
+          await new Promise(() => {});
+        },
+      },
+      "bring",
+    );
+    await copying;
+    expect(existsSync(world.to)).toBe(false);
+  }
+
+  it("puts the app's own work back after a launch killed mid-copy, and asks again", async () => {
+    const world = olderFolder();
+    await killedMidCopy(world);
+
+    // The next launch, with the disk as the killed one left it.
+    expect(dueMove({ appData: world.appData, spelling: "inf", flavor: "release" })).toEqual(
+      world.move,
+    );
+    expect(await runMove(world.move, world.deps)).toMatchObject({ kind: "ask" });
+    expect(readFileSync(join(world.to, "crewmates", "mine", "notes.md"), "utf8")).toBe(
+      "my own work\n",
+    );
+    expect(await runMove(world.move, world.deps, "bring")).toMatchObject({ kind: "moved" });
+    const record = readMoveRecord(world.to);
+    expect(
+      readFileSync(join(record?.setAside ?? "", "crewmates", "mine", "notes.md"), "utf8"),
+    ).toBe("my own work\n");
+  });
+
+  // INF-3307 review: a reinstall after the kill writes its channel marker into a fresh
+  // folder; the work set aside still comes back, keeping the newer marker.
+  it("puts the app's own work back past the channel marker a reinstall wrote after the kill", async () => {
+    const world = olderFolder();
+    await killedMidCopy(world);
+    mkdirSync(world.to, { recursive: true });
+    writeFileSync(join(world.to, "update-channel.json"), '{"schemaVersion":1,"channel":"alpha"}\n');
+
+    expect(await runMove(world.move, world.deps)).toMatchObject({ kind: "ask" });
+    expect(readFileSync(join(world.to, "crewmates", "mine", "notes.md"), "utf8")).toBe(
+      "my own work\n",
+    );
+    expect(readFileSync(join(world.to, "update-channel.json"), "utf8")).toContain('"alpha"');
   });
 
   it("resumes a move stopped after its copy was checked, without copying again", async () => {

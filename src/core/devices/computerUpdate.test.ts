@@ -1,8 +1,10 @@
 import {
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readdirSync,
   readFileSync,
+  rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -239,7 +241,7 @@ async function world(
   const start = (
     versions: Pick<
       StartHelperOptions,
-      "protocolVersion" | "appVersion" | "verifier" | "downloadIdleSeconds"
+      "protocolVersion" | "appVersion" | "verifier" | "downloadIdleSeconds" | "update"
     >,
     background?: BackgroundContext,
     from: string = dataDir,
@@ -374,6 +376,43 @@ describe("a computer that runs work on another version of Firstmate", () => {
     ]);
     // Nothing of the copy it got is left beside the one it kept.
     expect(readdirSync(at.dataDir).filter((entry) => entry.startsWith("update-"))).toEqual([]);
+  });
+
+  // INF-3307 audit: a stop during a work computer's update can leave its temporary folder behind.
+  it("stopped while it gets this Mac's Firstmate, lets the copy go and leaves no temporary folder beside its work (INF-3307 audit)", async () => {
+    const at = await world({ kept: true });
+    let reached!: () => void;
+    const getting = new Promise<void>((resolve) => {
+      reached = resolve;
+    });
+    const before = at.start({
+      appVersion: "0.1.20",
+      // As `updateHere` gets the copy: into a folder of its own beside the
+      // work, taken away whatever happens, from a home that never finishes
+      // sending it; only a stop ends it.
+      update: async (_grant, signal) => {
+        const into = mkdtempSync(join(at.dataDir, "update-"));
+        try {
+          reached();
+          await new Promise((_, reject) => {
+            signal?.addEventListener("abort", () => reject(new Error("stopped")), { once: true });
+          });
+          throw new Error("unreachable");
+        } finally {
+          rmSync(into, { recursive: true, force: true });
+        }
+      },
+    });
+    await expect.poll(() => at.view()?.inReach).toBe(true);
+    const asked = at.work.ask(at.deviceId, "fm:firstmate:update", [], { anyVersion: true });
+    asked.catch(() => undefined);
+    await getting;
+
+    await before.stop();
+    expect(await before.ended).toBe("stopped");
+    expect(readdirSync(at.dataDir).filter((entry) => entry.startsWith("update-"))).toEqual([]);
+    // Nothing was kept: the copy it had stays.
+    expect(at.kept()).toBe("the copy it kept");
   });
 
   it("running this Mac's own app, gets nothing and starts again", async () => {

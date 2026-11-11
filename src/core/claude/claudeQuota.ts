@@ -449,8 +449,10 @@ async function readKeychain(options: KeychainReadOptions): Promise<KeychainRead>
     credentialCache.delete(configDir);
     return { kind: "absent" };
   }
+  // The attribute read asks nobody, so its failure declined nothing: report
+  // it, but never hold it - the next background tick must look again.
   if (presence.kind === "failed")
-    return lockFromFailure(configDir, classifyHostFailure(presence), persistLock);
+    return lockFromFailure(configDir, classifyHostFailure(presence), false);
   const keychainModifiedAt = presence.kind === "found" ? presence.modifiedAt : undefined;
   const storeIdentity =
     accountIdentity?.observed || keychainModifiedAt

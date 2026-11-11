@@ -1,3 +1,4 @@
+import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { Writable } from "node:stream";
 import {
@@ -11,6 +12,8 @@ import { deviceGrantSchema } from "@shared/devices";
 import { afterEach, describe, expect, it } from "vitest";
 import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { writeInstalled } from "../helper/background";
+import { updateHere } from "../helper/update";
 import { claimLink, fetchFirstmate } from "./dial";
 import { createKeyIdentity } from "./identity";
 import { DevicePairing } from "./pairing";
@@ -113,5 +116,86 @@ describe("a request to a home that goes quiet ends after its quiet stretch", () 
     // What came is in the sink, which stays open: nothing reads part of an app as whole.
     expect(Buffer.concat(came)).toEqual(part);
     expect(sink.writableEnded).toBe(false);
+  });
+});
+
+// INF-3307 audit: a stop during a work computer's update can leave its
+// temporary folder behind - the run that stops lets its fetch go at once,
+// rather than waiting out the quiet stretch, so its folder can be taken away.
+describe("a Firstmate fetch the computer stops", () => {
+  it("ends at once with its own words, long before its quiet stretch, leaving what came unfinished (INF-3307 audit)", async () => {
+    const part = Buffer.alloc(16, 7);
+    const { pin, at } = await quietHome((socket) => {
+      socket.write(
+        "HTTP/1.1 200 OK\r\ncontent-type: application/zip\r\ncontent-length: 1024\r\n\r\n",
+      );
+      socket.write(part);
+    });
+    const device = createKeyIdentity("Firstmate device");
+    const grant = deviceGrantSchema.parse({
+      at,
+      homeKey: pin,
+      deviceId: "stopped-device",
+      kind: "work",
+      key: device.key,
+      cert: device.cert,
+    });
+    const came: Buffer[] = [];
+    const sink = new Writable({
+      write(chunk: Buffer, _encoding, done) {
+        came.push(chunk);
+        done();
+      },
+    });
+    const stopping = new AbortController();
+
+    // A quiet stretch far past this test's own limit: only the stop can end it.
+    const fetched = fetchFirstmate(grant, sink, { timeoutMs: 600_000, signal: stopping.signal });
+    fetched.catch(() => undefined);
+    await expect.poll(() => Buffer.concat(came)).toEqual(part);
+    stopping.abort();
+
+    await expect(fetched).rejects.toThrow("Infinitary stopped here before all of it came.");
+    expect(sink.writableEnded).toBe(false);
+  });
+});
+
+// INF-3307 review: a stop during a Linux work computer's update must end the
+// update, not leave it waiting on the AppImage file the cut-short fetch left open.
+describe("a Linux work computer's update the computer stops", () => {
+  it("ends and takes its temporary folder away when stopped part way through the AppImage (INF-3307 review)", async () => {
+    let sent = false;
+    const { pin, at } = await quietHome((socket) => {
+      socket.write(
+        "HTTP/1.1 200 OK\r\ncontent-type: application/octet-stream\r\ncontent-length: 1024\r\n\r\n",
+      );
+      socket.write(Buffer.alloc(16, 7), () => {
+        sent = true;
+      });
+    });
+    const device = createKeyIdentity("Firstmate device");
+    const grant = deviceGrantSchema.parse({
+      at,
+      homeKey: pin,
+      deviceId: "stopped-linux-device",
+      kind: "work",
+      key: device.key,
+      cert: device.cert,
+    });
+    const dataDir = scratchDir("infinitary-stopped-update-");
+    writeInstalled(dataDir, { service: null, app: join(dataDir, "app", "infinitary.AppImage") });
+    const stopping = new AbortController();
+
+    // A quiet stretch far past this test's own limit: only the stop can end it.
+    const updating = updateHere({ dataDir, grant, timeoutMs: 600_000, signal: stopping.signal });
+    updating.catch(() => undefined);
+    await expect.poll(() => sent).toBe(true);
+    await expect
+      .poll(() => readdirSync(dataDir).some((name) => name.startsWith("update-")))
+      .toBe(true);
+    stopping.abort();
+
+    await expect(updating).rejects.toThrow("Infinitary stopped here before all of it came.");
+    expect(readdirSync(dataDir).filter((name) => name.startsWith("update-"))).toEqual([]);
   });
 });

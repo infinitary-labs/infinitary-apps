@@ -229,6 +229,22 @@ describe("WorkspaceService", () => {
     expect((await git(first, ["log", "--oneline"])).split("\n")).toHaveLength(1);
   });
 
+  // INF-3307 audit: "A half-made default repository stops every task with no project from
+  // starting". A launch stopped between the default repository's `git init` and its first
+  // commit leaves a `.git` with no commit; every later start must still find a usable one.
+  it("finishes a default repo a stopped launch left with no first commit, and starts a task in it", async () => {
+    const { paths, workspace } = emptyService();
+    const repo = paths.defaultWorkspaceDir;
+    mkdirSync(repo, { recursive: true });
+    await git(repo, ["init", "--initial-branch=main"]);
+    writeFileSync(join(repo, "README.md"), "# Infinitary workspace\n");
+    const ws = await workspace.createTaskWorktree("cccc3333");
+    expect(await git(ws.cwd, ["rev-parse", "--abbrev-ref", "HEAD"])).toBe("fm/task-cccc3333");
+    expect(await git(repo, ["log", "--oneline"])).toContain("initialize default workspace");
+    expect(await workspace.ensureDefaultRepo()).toBe(repo);
+    expect((await git(repo, ["log", "--oneline"])).split("\n")).toHaveLength(1);
+  });
+
   it("creates one worktree per task on its own branch", async () => {
     const { paths, workspace } = await service();
     const a = await workspace.createTaskWorktree("aaaa1111");

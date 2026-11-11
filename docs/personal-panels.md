@@ -288,6 +288,7 @@ The snapshot carries `paused`: the API the manifest names (1 when it names none)
 The window draws the host's own line and an Update panel button above the panel's body (`BackgroundPaused`, `[data-panel-background-paused]`), outside the panel's code and reached with Tab.
 It draws them only on a live panel, never on a draft, and not while a crewmate is building that panel.
 Update panel (`inf:plugins:update`) tells the first mate once, as the `panel-update-asked` wake, and the first mate starts one personal-workspace task to update the panel; a second press, or a press while the panel is being built, tells no one.
+Once the task that built the update closes with the panel still paused, the press is free again.
 The first mate's surfaces context says which panels are paused.
 The update steps for each older API have one home, the personal-panel skill's "Updating a panel written for an earlier panel API", which the refusal line names.
 When the files are fixed, the next reconcile accepts the file, the line goes and the background work starts, with no Retry.

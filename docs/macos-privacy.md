@@ -32,6 +32,7 @@ A live read needs no password on an administrator account; where it cannot start
 3. It finds the task: the process, or the nearest of its parents, works inside a live task's working copy on this computer (`taskOfProcess`, through macOS's `ps` and `lsof`).
 4. If the request still has no answer once the task is found, the task's timeline gets a progress line from the host that it waits on macOS, which stands as its Now.
 5. When macOS writes the result line, the timeline gets a second line naming the answer, Allow or Don't Allow.
+6. If the log reader ends on its own while a task still waits, that task gets a closing line saying the app can no longer tell when macOS has the answer, so the waiting line never stands for good.
 
 A request macOS answers at once from an earlier choice shows no dialog and records nothing.
 One search's several requests make one waiting line and one answered line.

@@ -90,6 +90,8 @@ export type UpdateHereOptions = {
   moveDeps?: MoveDeps;
   /** Where notes about the update go: the folder's own log. */
   log?: (line: string) => void;
+  /** Lets the copy go part way, as when the run stops (`fetchFirstmate`). */
+  signal?: AbortSignal;
 };
 
 /**
@@ -139,6 +141,7 @@ export async function updateHere(options: UpdateHereOptions): Promise<UpdatedHer
         {
           timeoutMs: options.timeoutMs ?? QUIET_MS,
           ...homeDialOptions(dataDir, grant, options.now),
+          ...(options.signal ? { signal: options.signal } : {}),
         },
         options.homeProtocol && readsFetchAppSystem(options.homeProtocol) && chip
           ? { system, chip }
@@ -471,6 +474,7 @@ async function getFirstmate(
   let tar: ChildProcess | null = null;
   let unpacked: Promise<number | null> = Promise.resolve(0);
   let written: Promise<void> = Promise.resolve();
+  let kept: Writable | null = null;
   const open = (contentType: string): Writable => {
     const type = contentType.split(";")[0]?.trim().toLowerCase() ?? "";
     if (type === FETCH_APP_TYPES.zip || type === FETCH_APP_TYPES.appImage) {
@@ -479,9 +483,12 @@ async function getFirstmate(
         join(into, form === "zip" ? ".firstmate.zip" : LINUX_APP_FILE),
         { mode: 0o700 },
       );
+      kept = file;
       written = new Promise((resolve, reject) => {
         file.once("finish", resolve);
         file.once("error", reject);
+        // An answer cut short leaves the file open; its catch destroys it, and this settles.
+        file.once("close", resolve);
       });
       return file;
     }
@@ -499,6 +506,7 @@ async function getFirstmate(
     await fetchFirstmate(grant, open, dial, want);
   } catch (error) {
     (tar as ChildProcess | null)?.kill();
+    (kept as Writable | null)?.destroy();
     await unpacked;
     await written.catch(() => undefined);
     throw error;

@@ -187,9 +187,10 @@ export type StartHelperOptions = {
   cleanUp?: () => Promise<CleanUpResult>;
   /**
    * Brings Firstmate here to the home's version when the home asks
-   * (`updateHere`), unless a test stands in its own.
+   * (`updateHere`), unless a test stands in its own. `signal` aborts when
+   * the run stops part way, which lets the copy go.
    */
-  update?: (grant: DeviceGrant) => Promise<UpdatedHere>;
+  update?: (grant: DeviceGrant, signal: AbortSignal) => Promise<UpdatedHere>;
   /**
    * The program a download here checks its publisher with (`downloadHere`):
    * this Mac's own codesign unless a development run or a test stands in
@@ -394,12 +395,14 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     clearInterval(alive);
     loadLine.dispose();
     downloading?.abort();
-    // Every conversation lets go and writes what it holds, and a download
-    // stopped part way takes what it fetched away, before the link and the
-    // folder go.
+    stopUpdating.abort();
+    // Every conversation lets go and writes what it holds, and a download or
+    // update stopped part way takes what it fetched away, before the link
+    // and the folder go.
     const letGo = Promise.all([
       leftSignedOut,
       fetching,
+      updating?.catch(() => undefined),
       conversations?.then((held) => held.close()).catch(() => undefined),
       signIns?.then((held) => held.close()).catch(() => undefined),
       files.close().catch(() => undefined),
@@ -432,6 +435,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
   // so the background starts it again from what is kept. One order at a
   // time; one that failed changed nothing, and the home may ask again.
   let updating: Promise<UpdatedHere> | undefined;
+  const stopUpdating = new AbortController();
   let afterUpdate: (() => Promise<void>) | undefined;
   const update = async (args: unknown): Promise<WorkUpdateAnswer> => {
     updateOrders[WORK_UPDATE_ORDER].request.parse(args);
@@ -441,6 +445,8 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     // lets this update go on.
     while (downloading) await fetching;
     if (downloaded) return downloaded;
+    // A run that stopped while that download ran starts no update.
+    if (stopped) throw new Error("This computer is stopping.");
     progress = { received: 0, state: "updating" };
     updating ??= (
       options.update ??
@@ -454,8 +460,9 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
           background: options.background ?? null,
           ...(options.moveDeps ? { moveDeps: options.moveDeps } : {}),
           log,
+          signal: stopUpdating.signal,
         }))
-    )(joined.grant);
+    )(joined.grant, stopUpdating.signal);
     let answer: WorkUpdateAnswer;
     try {
       const { afterRun, ...answered } = await updating;

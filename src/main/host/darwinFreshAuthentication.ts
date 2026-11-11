@@ -165,7 +165,8 @@ function bindLocalAuthentication(): LocalAuthentication {
     },
     evaluate: (reason, interactionNotAllowed) => {
       const turn = queue.then(() => evaluateOnce(reason, interactionNotAllowed));
-      queue = turn;
+      // A turn that failed answers its own caller; the next one still asks.
+      queue = turn.catch(() => undefined);
       return turn;
     },
   };

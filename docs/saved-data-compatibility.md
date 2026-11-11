@@ -94,6 +94,7 @@ A full disk, the older app still open, its background work still running, anothe
 
 When both folders hold saved work, the hand-over asks which to open and never merges them.
 Bringing the older work moves the app's own folder aside first, to `<folder>-set-aside-<time>` beside it, and names that folder in the record.
+A launch stopped hard before its copy was checked leaves that folder named nowhere, so the next launch puts the newest set-aside folder back in place before it asks again, when no move holds the lock, no checked copy waits and the app's own folder holds no saved work; an installer's channel marker written there since is kept, as when a checked copy goes in.
 Keeping the app's own work records `kept-own` in its folder, so the question is not asked again, and leaves the older folder as it is.
 
 The hand-over window (`src/main/handOver.ts`, its page in `src/main/handOverPage.ts`) is a standalone page like the refusal windows: no preload and no script of its own, its buttons a form whose navigation the window reads and stops.

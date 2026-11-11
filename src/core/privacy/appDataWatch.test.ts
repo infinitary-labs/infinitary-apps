@@ -50,8 +50,12 @@ function watch(found: string | null = "task-1", self = APP) {
     release = done;
   });
   const asked: number[] = [];
+  let reader: Parameters<PrivacyLogRun>[0] | undefined;
   const subject = new AppDataWatch({
-    run: (() => ({ stop: () => {} })) satisfies PrivacyLogRun,
+    run: ((heard) => {
+      reader = heard;
+      return { stop: () => {} };
+    }) satisfies PrivacyLogRun,
     self,
     findTask: async (pid) => {
       asked.push(pid);
@@ -66,7 +70,9 @@ function watch(found: string | null = "task-1", self = APP) {
     await pending;
     await Promise.resolve();
   };
-  return { subject, notes, asked, look };
+  /** The log reader ends on its own, as `log stream` does when it exits. */
+  const end = () => reader?.ended();
+  return { subject, notes, asked, look, end };
 }
 
 describe("reading macOS's privacy log", () => {
@@ -151,6 +157,34 @@ describe("the privacy watch", () => {
     await noTask.look();
     noTask.subject.heard(resultOf(APP_DATA));
     expect(noTask.notes).toEqual([]);
+  });
+
+  // INF-3307 audit: a task's "Waiting on macOS" line never got a closing line
+  // once the log reader ended, so it stood as the task's Now for good.
+  it("closes a task's waiting line when the log reader ends with its question still open", async () => {
+    const { subject, notes, look, end } = watch();
+    subject.start();
+    for (const line of withoutResult(APP_DATA)) subject.heard(line);
+    await look();
+    expect(notes.map((note) => note.text)).toEqual([PRIVACY_WORDS.waiting]);
+    end();
+    expect(notes.at(-1)).toEqual({
+      taskId: "task-1",
+      text: PRIVACY_WORDS.unheard,
+      facts: { macosPrivacy: "unheard", service: "kTCCServiceSystemPolicyAppData" },
+    });
+    // The answer it can no longer hear writes nothing more.
+    subject.heard(resultOf(APP_DATA));
+    expect(notes).toHaveLength(2);
+  });
+
+  it("writes no waiting line for a question whose task is found after the log reader ended", async () => {
+    const { subject, notes, look, end } = watch();
+    subject.start();
+    for (const line of withoutResult(APP_DATA)) subject.heard(line);
+    end();
+    await look();
+    expect(notes).toEqual([]);
   });
 
   it("writes one waiting line and one answered line for one search's several questions", async () => {

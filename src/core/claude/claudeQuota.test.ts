@@ -312,7 +312,32 @@ describe("readClaudeStore", () => {
     });
     const result = await readClaudeStore(dir, { keychain, env: { USER: "kun" } });
     expect(result).toEqual({ state: "unreadable", reason: "keychain_prompt_timeout" });
-    expect(isKeychainLocked(dir)).toBe(true);
+    // INF-3307 audit: unreadable, but not a held lock - no dialog was declined.
+    expect(isKeychainLocked(dir)).toBe(false);
+  });
+
+  it("INF-3307 audit: one failed presence read does not hold background reads until Retry", async () => {
+    const dir = storeDir();
+    let presenceFails = true;
+    const keychain = fakeKeychain({
+      find: () =>
+        presenceFails
+          ? { kind: "failed", message: "timed out" }
+          : { kind: "found", modifiedAt: "20261110093000Z", locked: false },
+      read: { kind: "value", value: credentialJson("kc-after-blip") },
+    });
+    const tick = () => readClaudeStore(dir, { keychain, env: { USER: "kun" } });
+    expect(await tick()).toEqual({ state: "unreadable", reason: "keychain_prompt_timeout" });
+
+    // The attribute read asks nobody, so nothing was declined: the next
+    // background tick reads again and the meter comes back with no Retry.
+    presenceFails = false;
+    expect(await tick()).toMatchObject({
+      state: "present",
+      auth: { accessToken: "kc-after-blip" },
+    });
+    expect(keychain.reads).toHaveLength(1);
+    expect(keychain.reads[0]?.interactive).toBeUndefined();
   });
 
   it("an unparseable Keychain value is a read failure, not an empty store", async () => {

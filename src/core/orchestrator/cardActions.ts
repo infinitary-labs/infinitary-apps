@@ -1214,10 +1214,16 @@ export class CardActions {
     };
     for (const one of taken) await run(one.id, one.taken, choice);
     // The waiting asks of the same task inside a new allowance run on the
-    // same click (INF-2993), their cards revised or taken down.
+    // same click (INF-2993), their cards revised or taken down. An ask
+    // whose card its crewmate withdrew no longer waits, so it never runs
+    // (INF-3307 audit).
     const covered = waitingIntegrationAsks(
       this.core.options.tasks.get(taskId)?.delivery?.writeAsks,
-    ).filter((ask) => allowances.some((allowance) => allowanceCovers(allowance, ask)));
+    ).filter(
+      (ask) =>
+        this.core.cards.get(ask.card ?? `integration-ask-${ask.id}`) !== undefined &&
+        allowances.some((allowance) => allowanceCovers(allowance, ask)),
+    );
     const more = covered.map((ask) => ({
       id: ask.id,
       taken: delivery.takeWriteAsk(taskId, ask.id),

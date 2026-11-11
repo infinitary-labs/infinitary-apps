@@ -254,13 +254,16 @@ export function CustomApiForm({
   const [pausedDraft, setPausedDraft] = useState<string>();
   const [savedView, setSavedView] = useState<CustomApiView>();
   const draftId = useRef<string | undefined>(undefined);
+  // Cancelled or gone: a draft that answers after that is let go, never saved.
+  const closed = useRef(false);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    closed.current = false;
+    return () => {
+      closed.current = true;
       if (draftId.current) void apiRef.current.cancel(draftId.current);
-    },
-    [],
-  );
+    };
+  }, []);
   // The live line under the address: where Save sends, and the network its name points to.
   useEffect(() => {
     const typed = baseUrl.trim();
@@ -338,6 +341,7 @@ export function CustomApiForm({
     );
   };
   const cancel = () => {
+    closed.current = true;
     setKey("");
     if (draftId.current) void api.cancel(draftId.current);
     draftId.current = undefined;
@@ -430,8 +434,14 @@ export function CustomApiForm({
     setFix(undefined);
     setPausedDraft(undefined);
   };
-  const keep = (view?: CustomApiView) => {
+  /** Holds the draft the server's reach prepared; false, and lets it go, once the form was cancelled. */
+  const keep = (view?: CustomApiView): boolean => {
+    if (closed.current) {
+      if (view?.draftId) void apiRef.current.cancel(view.draftId);
+      return false;
+    }
     if (view?.draftId) draftId.current = view.draftId;
+    return true;
   };
 
   const validCommand = () => {
@@ -466,7 +476,7 @@ export function CustomApiForm({
           return;
         }
         const result = await api.connect(connectInput(models, read.destination));
-        keep(result.view);
+        if (!keep(result.view)) return;
         if (result.failure) {
           const placed = placeCustomApiFailure(result.failure.category, {
             address: read.destination,
@@ -555,7 +565,7 @@ export function CustomApiForm({
         }
         // 2 · Reach the server: its network, a draft, and its model list.
         const result = await api.connect(connectInput(models, read.destination));
-        keep(result.view);
+        if (!keep(result.view)) return;
         failedDraft = result.view?.draftId;
         if (result.listed) setListed(result.listed);
         const context: Omit<FailureContext, "stage"> = {
@@ -630,7 +640,8 @@ export function CustomApiForm({
         // Nothing could be tested, and the list did not answer at this path either.
         if (!tested && noListHint) show(noListHint, found);
         if (Object.keys(found).length || Object.keys(rows).length) return stop();
-        // 4 · Saved and ready.
+        // 4 · Saved and ready, unless the form was cancelled meanwhile.
+        if (closed.current) return;
         setProgress("Saving…");
         finish(await api.save(view.draftId, false));
       } catch (caught) {

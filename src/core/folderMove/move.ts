@@ -12,7 +12,12 @@ import {
 import { basename, dirname, join } from "node:path";
 import { folderHolder, holderAlive, processAlive } from "../helper/lock";
 import { assertSavedDataCompatible } from "../storage/db";
-import { acquireMoveLock, moveLockPathFor, releaseMoveLock } from "../storage/moveLock";
+import {
+  acquireMoveLock,
+  moveLockHeld,
+  moveLockPathFor,
+  releaseMoveLock,
+} from "../storage/moveLock";
 import { isProfileRetired } from "../storage/retiredProfile";
 import { readStartAtLogin } from "../storage/startAtLoginRecord";
 import { mapClaudeSessions } from "./claudeSessions";
@@ -284,6 +289,7 @@ export async function runMove(
   const toCommit = verifiedStage(to, from);
   if (!resuming && !toCommit) {
     if (isProfileRetired(from) || !holdsSavedWork(from)) return { kind: "nothing" };
+    if (!moveLockHeld(moveLockPathFor(to), alive)) restoreSetAside(to);
     if (holdsSavedWork(to)) {
       if (!choice)
         return {
@@ -371,7 +377,10 @@ export async function stageMove(move: FolderMove, deps: MoveDeps): Promise<MoveO
   rmSync(staged, { recursive: true, force: true });
   try {
     if (holdsSavedWork(to)) {
-      setAside = `${to}-set-aside-${now().toISOString().replace(/[:.]/g, "-")}`;
+      setAside = join(
+        dirname(to),
+        `${setAsidePrefix(to)}${now().toISOString().replace(/[:.]/g, "-")}`,
+      );
       renameSync(to, setAside);
     }
     mkdirSync(staged, { mode: 0o700 });
@@ -475,6 +484,34 @@ export async function stageMove(move: FolderMove, deps: MoveDeps): Promise<MoveO
       refusal: { reason: "failed", detail: said(error), committed: false },
     };
   }
+}
+
+function setAsidePrefix(to: string): string {
+  return `${basename(to)}-set-aside-`;
+}
+
+/**
+ * Puts back the app's own work a launch set aside and was stopped hard
+ * before its copy was checked (INF-3307): only that copy's record would have
+ * named the folder, so nothing else points at it. Run before the question,
+ * with no move under way, no checked copy waiting and the older folder not
+ * yet retired, so the newest set-aside folder is the stopped launch's.
+ */
+function restoreSetAside(to: string): void {
+  if (holdsSavedWork(to)) return;
+  let names: string[];
+  try {
+    names = readdirSync(dirname(to));
+  } catch {
+    return;
+  }
+  const newest = names
+    .filter((name) => name.startsWith(setAsidePrefix(to)))
+    .sort()
+    .at(-1);
+  if (!newest) return;
+  // As a checked copy goes in: an installer's channel marker written since is kept.
+  commit(join(dirname(to), newest), to);
 }
 
 /** Takes a staged copy away, and puts back the app's own work if the move had set it aside. */

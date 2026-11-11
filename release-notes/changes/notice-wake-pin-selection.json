@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "notice-wake-pin-selection",
+      "reason": "Internal: a test replays a change to the queue's notice words and holds that the pull request check runs the wake words tests for it; app behavior is unchanged."
+    }
+  ]
+}

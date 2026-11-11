@@ -189,9 +189,9 @@ describe("local direct unit reach", () => {
     expect(directUnitReach([contracts, freshness], [freshness], root)).toEqual([]);
   });
 
-  // INF-3545 and INF-3614: three changes passed their pull request checks and
-  // failed the merge batch on a test that pins their output through another
-  // module. Each change's own product files, as its pull request had them.
+  // INF-3545, INF-3614 and INF-3678: four changes passed their pull request
+  // checks and failed the merge batch on a test that pins their output through
+  // another module. Each change's own product files, as its pull request had them.
   it("routes the pins of a changed output to the PR check", () => {
     const contract = "src/shared/publishedContract.test.ts";
     const feed = "src/core/orchestrator/crewFacts.test.ts";
@@ -208,10 +208,12 @@ describe("local direct unit reach", () => {
     // PR 1427 renamed the Starting feed line.
     expect(directUnitReach(["src/core/orchestrator/starts.ts"], pins, root)).toEqual([feed]);
     expect(selectLinuxReach(["src/core/orchestrator/starts.ts"], root).run).toContain(feed);
-    // PR 1452 added a sentence to the review findings wake; wakes.ts itself
+    // PR 1452 added a sentence to the review findings wake, and PR 1444
+    // reworded the queue update offer in the notice wakes; wakes.ts itself
     // and its other word modules reach the same pins.
     for (const words of [
       "src/core/orchestrator/reportWakes.ts",
+      "src/core/orchestrator/noticeWakes.ts",
       "src/core/orchestrator/wakes.ts",
       "src/core/orchestrator/captainWakes.ts",
     ]) {

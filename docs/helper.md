@@ -811,7 +811,7 @@ An explicit computer stays the captain's choice; Automatic chooses separately fo
 - **A card from there.**
   A crewmate card's head names where its task runs right after its meta line, the task's title, as "Fix the footer · on Mac mini" (`Card.place`, migration 67).
   The place rides as its own field, never inside the meta text, so a long title gives way and the place reads whole.
-  A merge card's fact strip has a Runs cell after the project ("on Mac mini", `device`).
+  A merge card's fact strip names no computer: the card's top line already says where its author's session runs (INF-3709's plan).
 - **The Tasks row, the summary and the status.**
   A task another computer runs carries where on the board, in words (`TaskView.place`, `TaskPlacement.taskPlace`): where it started, or where it would start now, and `reach` (`in-reach`, `connecting`, `reconnecting` or `out-of-reach`) while open or underway work's computer is not in reach.
   A computer that is connected while the home is not yet caught up with the task - its roster not yet read after either side restarted, the task's conversation still opening here, or events there the home has not taken in - is in reach, and the place carries since when it has been catching up (`place.catchingUpSince`, `PlacedSessions.catchingUpSince`): from the contact that brought the computer back, or from when the conversation began opening here, whichever is later.

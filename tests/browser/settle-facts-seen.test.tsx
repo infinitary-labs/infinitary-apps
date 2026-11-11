@@ -1,5 +1,5 @@
 import { type Card, splitSettleFacts } from "@shared/cards";
-import { changeLinesWords } from "@shared/vocabulary";
+import { changeLinesShortWords } from "@shared/vocabulary";
 import { expect, test } from "vitest";
 import { fakeBridge } from "./bridge";
 import { seededHome } from "./freshHome";
@@ -55,11 +55,11 @@ test("a merge card counts as seen once shown, though its facts came in after its
     await stageAtRest();
 
     // Section: the host's strip gains the Lines fact, as it does once it has
-    // read the change; the card's facts show it beside the buttons.
+    // read the change; the card's facts show it above the buttons.
     bridge.push("inf:cards", [{ ...card, body: refreshed.body }]);
     await expect
       .poll(() => inFrameTitled(`${TITLE} facts`, () => document.body.textContent ?? ""))
-      .toContain(changeLinesWords(LINES.added, LINES.deleted));
+      .toContain(changeLinesShortWords(LINES.added, LINES.deleted));
     expect(bridge.requests("inf:cards:seen-update")).toEqual([]);
 
     // Section: the captain comes back to the window; the card on screen is

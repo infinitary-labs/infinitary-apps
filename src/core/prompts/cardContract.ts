@@ -45,9 +45,9 @@ export const ORDINARY_NOTE_READ_GUIDANCE = `${ORDINARY_NOTE_READ_ACK} After Got 
  * recent card carrying the same one figure. Never reintroduce a recipe list.
  * The accent budget is scoped PER FIGURE (v2.6, the captain's call reversing
  * v2.5's whole-card reading). At v2.7 the settle facts the host appends are
- * the labeled fact strip (`.inf-facts`, `SettleFacts.strip`); at v3.6
- * that strip also carries the holds the host placed on the task, so no prompt
- * asks an agent to type out a round count it cannot see.
+ * the fact strip (`.inf-facts`, `SettleFacts.strip`), a status line since
+ * INF-3709's plan, so no prompt asks an agent to type out a fact the host
+ * holds.
  */
 
 /**

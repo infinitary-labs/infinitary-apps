@@ -116,20 +116,24 @@ test("a press on the fact strip's pull request link opens it though the strip re
     await expect(link).toBeVisible();
     const span = checksSpanOf(delivery);
     if (!span) throw new Error("The seeded checks have a start and a finish");
-    await expect(facts.cell("checks")).toContainText(
-      checksSpanWords(CHECK_WORDS.green, span, Date.now()),
-    );
+    // In the open the checks say their one state; how long they took, when
+    // they started and when they were read are the state's words on rest
+    // (INF-587, INF-3709's plan).
+    await expect(facts.checks).toContainText(CHECK_WORDS.green);
+    const took = checksSpanWords(CHECK_WORDS.green, span, Date.now());
+    await expect(facts.checks).not.toContainText(took);
     const title = await facts.cell("checks").getAttribute("title");
-    expect(title).toBe(checksRestWords(span, delivery.ciAt));
+    expect(title).toBe(checksRestWords(span, delivery.ciAt, took));
     // The host's next reading, a minute later.
-    const later = checksRestWords(span, delivery.ciAt + 60_000);
+    const later = checksRestWords(span, delivery.ciAt + 60_000, took);
     expect(later).not.toBe(title);
 
     // INF-92: the captain asked to repair repeated completion facts without
     // changing the rigor-standard journey. Replay this real document with
-    // its parser stopped before the care value. The host's initial markup
-    // refresh must arrive before the parser finishes, without a timed race.
-    const parseState = await facts.care.evaluate(
+    // its parser stopped before the pull request's value, in the reference
+    // at the status line's far end. The host's initial markup refresh must
+    // arrive before the parser finishes, without a timed race.
+    const parseState = await facts.change.evaluate(
       (value) =>
         new Promise<DocumentReadyState>((resolve) => {
           const doc = value.ownerDocument;
@@ -139,7 +143,7 @@ test("a press on the fact strip's pull request link opens it though the strip re
           const valueHtml = value.outerHTML;
           const at = html.indexOf(valueHtml);
           if (at < 0 || html.indexOf(valueHtml, at + valueHtml.length) !== -1)
-            throw new Error("The care value must identify one parser position");
+            throw new Error("The pull request's value must identify one parser position");
           doc.open();
           doc.write(html.slice(0, at));
           // Install after the bridge: it receives the refresh first, while
@@ -156,9 +160,9 @@ test("a press on the fact strip's pull request link opens it though the strip re
         }),
     );
     expect(parseState).toBe("loading");
-    await expect(facts.care).toHaveCount(1);
-    await expect(facts.change).toHaveCount(1);
+    // Each fact once: the one the parser had read, and the one it had left.
     await expect(facts.checks).toHaveCount(1);
+    await expect(facts.change).toHaveCount(1);
 
     // The card grows into place as it arrives; the press goes where it rests.
     await atRest(page.locator("[data-card-facts]"));

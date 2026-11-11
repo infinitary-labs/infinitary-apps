@@ -4,12 +4,20 @@ import {
   mergeEffectOf,
   SETTLE_FACT_VALUE_CLASS,
   SETTLE_FACTS_OPEN,
+  SETTLE_LEVELS,
   type SettleFact,
+  type SettleLevel,
   splitSettleFacts,
   takesTaskFacts,
   withMergeClosesLine,
 } from "@shared/cards";
-import { currentCheckSummary, ownChecks } from "@shared/checkSnapshot";
+import {
+  CHECKS_ABSENT_WORDS,
+  CHECKS_UNREADABLE_WORDS,
+  checkSnapshotState,
+  currentCheckSummary,
+  ownChecks,
+} from "@shared/checkSnapshot";
 import {
   checksDuration,
   checksFinishedAgo,
@@ -17,14 +25,16 @@ import {
   checksSpanOf,
   checksSpanWords,
 } from "@shared/checksSpan";
-import { factDotSvg } from "@shared/factDot";
+import { type FactDotState, factDotSvg } from "@shared/factDot";
 import { overrideCellWords, overrideWords, standingOverride } from "@shared/holds";
 import { opensPullRequest, QUEUE_STATUS, type RepoDelivery } from "@shared/repos";
 import {
   BATCH_CHECK_WORDS,
+  CARE_REFERENCE_WORD,
   CARE_WORDS,
   CHECK_WORDS,
   CHECKS_NOT_READ_WORDS,
+  changeLinesShortWords,
   changeLinesWords,
   DEFAULT_WORKSPACE_WORD,
   MERGE_ANYWAY_WORDS,
@@ -201,54 +211,183 @@ export class SettleFacts {
 
   /**
    * What the host knows about a settle card's task and writes on the card
-   * itself (contract v2.0, captain ruling D4; restyled at v2.7 as the fact
-   * strip by the captain's design pass, 2026-09-19): the project, the
-   * crewmate's model, the task's effective care, the PR link, and the CI
-   * reading check_pr_ci recorded - facts the host holds at emit time, so
-   * the crewmate's completion card and any Firstmate settle card need not
-   * repeat them and cannot get them wrong. Each fact is one labeled
-   * single-line cell (`.inf-facts`, frameStylesheet.ts); what a merge does,
-   * the CI reading's age, and the review's risk note ride the cells'
-   * `title` attributes, never lines of their own (the captain's call).
-   * Returns an HTML fragment, or undefined when the task is unknown.
+   * itself (contract v2.0, captain ruling D4; the fact strip of v2.7,
+   * rebuilt as a status line by INF-3709's plan): the facts the host holds
+   * at emit time, so the crewmate's completion card and any Firstmate
+   * settle card need not repeat them and cannot get them wrong. The strip
+   * is at most two parts, each the card's full width:
+   *
+   * - The status line: one item per state the task has - its checks, each
+   *   requested run the app watches, the batch check, a review, the
+   *   captain's override - each a state mark and its words on one line,
+   *   sorted failing, warning, running or waiting, passed (`SETTLE_LEVELS`);
+   *   and at the line's far end the reference in quiet mono: the project,
+   *   the change as a link, its lines, and the care level when it is not
+   *   Default. Counts, durations, read times and a review's risk ride each
+   *   state's `title`, shown on rest; a state with such words is a Tab stop
+   *   whose focus shows them on a line under the states.
+   * - What needs the captain: the queue's own words under a batch check
+   *   that failed or paused, why the checks could not be read, and a row
+   *   per failed check (`checkVerdicts`).
+   *
+   * The model and the computer are not here: the card's top line draws
+   * both. Returns an HTML fragment, or undefined when the task is unknown.
    */
   strip(taskId: string): string | undefined {
     const record = this.options.tasks.get(taskId);
     if (!record) return undefined;
     const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
     const delivery = this.host.taskDelivery(taskId) ?? "local-only";
-    const cells: string[] = [];
-    // Each cell names its fact in `data-fact`, so a reader finds a fact by
-    // what it is, never by its label's words.
-    const cell = (fact: SettleFact, label: string, value: string, title?: string) =>
-      cells.push(
-        `<span class="inf-fact" data-fact="${fact}"${title ? ` title="${escapeCardText(title)}"` : ""}><span class="inf-fact-k">${label}</span><span class="${SETTLE_FACT_VALUE_CLASS}">${value}</span></span>`,
-      );
-    cell("project", "Project", repo ? escapeCardText(repo.name) : DEFAULT_WORKSPACE_WORD);
-    // Where it runs, right after the project, for a task on a computer that
-    // runs work (design skill `components/devices/RunsOn`).
-    const place = record.deviceId ? this.options.machines?.placeOf(record.deviceId) : undefined;
-    if (place) cell("device", "Runs", escapeCardText(place.where));
-    // The model that built the work, named right after the project
-    // (captain, 2026-09-19): the task record's model - what the session
-    // reported at dispatch, kept current when the backend moved the work to
-    // another (`recordServedModel`) - by the one model-name lookup with the
-    // raw id as fallback, never the newest routing choice, which can
-    // disagree with what actually served (review F1). Labelled Model, as
-    // every surface labels a model (FI3-565 piece 2).
-    if (record.model) {
-      const slash = record.model.indexOf("/");
-      const ref =
-        slash > 0
-          ? { provider: record.model.slice(0, slash), id: record.model.slice(slash + 1) }
+    const now = this.host.now();
+    const states: { level: SettleLevel; html: string }[] = [];
+    const needs: string[] = [];
+    // Each state names its fact in `data-fact`, so a reader finds a fact by
+    // what it is, never by its label's words. Its words on rest are its
+    // `title`, and the same words on a line the keyboard's focus shows: a
+    // state whose value holds a link rides that link's focus.
+    const state = (
+      fact: SettleFact,
+      dot: FactDotState,
+      label: string | undefined,
+      value: string,
+      rest?: string,
+    ) => {
+      const level = LEVEL_OF_DOT[dot];
+      const stop = rest && !value.includes("<a ") ? ' tabindex="0"' : "";
+      const title = rest ? ` title="${escapeCardText(rest)}"` : "";
+      states.push({
+        level,
+        html: `<span class="inf-foot-state${label ? "" : " inf-foot-alone"}" data-fact="${fact}" data-level="${level}"${title}${stop}>${statusDot(dot)}${label ? `<span class="inf-foot-k">${label}</span> ` : ""}<span class="${SETTLE_FACT_VALUE_CLASS}">${value}</span></span>${rest ? `<span class="inf-foot-rest" data-rest="${fact}" aria-hidden="true">${escapeCardText(rest)}</span>` : ""}`,
+      });
+    };
+    const ci = record.delivery?.ci;
+    // The Checks state counts and times the pull request's own checks; the
+    // project's queue status, which says where the change stands in the
+    // batch, has its own Batch check state (INF-3208).
+    const own = record.delivery ? ownDelivery(record.delivery) : undefined;
+    const observed = own ? currentCheckSummary(own) : undefined;
+    const ciAt = record.delivery?.ciAt;
+    if ((ci || observed) && ciAt !== undefined) {
+      // In the open: the one state word, how long running checks have run
+      // and how long ago finished ones finished. On rest: the counts, how
+      // long they took, when they started and when the app last read them
+      // (INF-587; the captain's answer 4 on INF-3709's plan). The host
+      // rewrites the strip on every tick, so both ages stay current while
+      // the card is up.
+      const span = own ? checksSpanOf(own) : null;
+      const counts = observed?.words ?? (ci ? CHECK_WORDS[ci] : CHECKS_NOT_READ_WORDS);
+      const dot =
+        observed?.dot ??
+        (ci === "green" || ci === "merged"
+          ? "ok"
+          : ci === "red"
+            ? "failed"
+            : ci === "pending"
+              ? "running"
+              : "idle");
+      const reading =
+        own?.checks && (!own.headSha || own.checks.headSha === own.headSha)
+          ? own.checks
           : undefined;
-      const label = ref ? (this.options.router?.modelLabel(ref) ?? ref.id) : record.model;
-      cell("crewmate", "Model", escapeCardText(label));
+      const word = reading ? checkSnapshotState(reading) : counts;
+      const words = span && word === CHECK_WORDS.pending ? checksSpanWords(word, span, now) : word;
+      const detail = span ? checksSpanWords(counts, span, now) : counts;
+      const age =
+        span?.finishedAt != null
+          ? `<span class="inf-foot-age"> · ${checksFinishedAgo(span.finishedAt, now)}</span>`
+          : "";
+      const alone = STANDALONE_CHECK_WORDS.has(word);
+      state(
+        "checks",
+        dot,
+        alone ? undefined : "Checks",
+        `${escapeCardText(words)}${age}`,
+        checksRestWords(span, ciAt, detail === words ? undefined : detail),
+      );
+      // Why the app could not read them all, in the open under the line.
+      if (observed?.problem) needs.push(why("checks", escapeCardText(observed.problem)));
+    } else if (opensPullRequest(delivery)) {
+      state("checks", "idle", "Checks", CHECKS_NOT_READ_WORDS);
     }
-    // The stamped tier is the care this task actually ran at, including
-    // the captain's per-task ask, not the project's standing setting.
-    const policies = this.options.tasks.policiesOf(record);
-    if (policies) cell("care", "Care", CARE_WORDS[policies.rigor.value]);
+    // Each requested run the app watches for the version on offer, such as
+    // a phone check, in a state of its own named by the run: the Checks
+    // state counts only the pull request's own checks, so a long wait for a
+    // machine would otherwise show nowhere.
+    for (const run of record.delivery ? watchedRuns(record.delivery) : []) {
+      state(
+        "run",
+        run.reading.state === "running" ? "running" : "idle",
+        escapeCardText(run.name),
+        runLink(
+          run.reading.url,
+          `${RUN_WATCH_WORDS[run.reading.state]} for ${checksDuration(now - run.reading.since)}`,
+        ),
+        `Requested run ${run.runId} at ${run.reading.head.slice(0, 7)}, which the app watches; read ${checksFinishedAgo(run.reading.at, now)}`,
+      );
+    }
+    const batch = record.delivery ? batchCheck(record.delivery) : undefined;
+    if (batch) {
+      state("batch", batch.dot, BATCH_CHECK_WORDS.label, batch.value, batch.rest);
+      if (batch.why) needs.push(why("batch", batch.why));
+    }
+    const verdicts = record.delivery ? checkVerdicts(record.delivery, now) : "";
+    if (verdicts) needs.push(verdicts);
+    // The independent review's word on a change (delivery rigor phase 2,
+    // at any care since INF-1875): the verdict in the open, the head it
+    // read and the risk beside CI on rest, never a hold (Q4), or where the
+    // review stands while it is live; only a Careful task awaits one.
+    const offered = record.delivery?.headSha;
+    {
+      const review = record.delivery;
+      if (review?.reviewVerdict) {
+        // A pass that does not cover the version on offer reads as one at
+        // an earlier version, never a plain green pass (INF-3141).
+        const earlier =
+          review.reviewVerdict === "pass" &&
+          offered !== undefined &&
+          !reviewCoversHead(review, offered);
+        state(
+          "review",
+          review.reviewVerdict === "pass" && !earlier
+            ? "ok"
+            : review.reviewVerdict === "blocked"
+              ? "failed"
+              : "warn",
+          "Review",
+          earlier ? REVIEW_EARLIER_WORDS : REVIEW_WORDS[review.reviewVerdict],
+          // On rest: the version it read and its risk, then that it reads
+          // an earlier version, then the reviewer's note on the risk.
+          [
+            `${capital(REVIEW_WORDS[review.reviewVerdict])}${review.reviewSha ? ` ${review.reviewSha.slice(0, 7)}` : ""}${review.reviewRisk ? ` · risk ${review.reviewRisk}` : ""}${earlier || review.reviewRiskNote ? "." : ""}`,
+            ...(earlier ? [`It does not cover ${offered.slice(0, 7)}, the version on offer.`] : []),
+            ...(review.reviewRiskNote ? [review.reviewRiskNote] : []),
+          ].join(" "),
+        );
+      } else if (this.host.reviewOpen(record.id)) {
+        state("review", "running", "Review", "open");
+      }
+    }
+    // The captain's standing override (docs/delivery-rigor.md, "The
+    // holds"): what his words passed, with his words and how long on rest.
+    // One for an earlier version passes nothing now, so it shows nothing.
+    const override = standingOverride(record.delivery, record.delivery?.headSha);
+    if (override) {
+      state(
+        "override",
+        "warn",
+        "Override",
+        escapeCardText(overrideCellWords(override.holds)),
+        overrideWords(override),
+      );
+    }
+    // The reference, at the line's far end: what the card is about, never
+    // a state.
+    const refs: string[] = [];
+    const ref = (fact: SettleFact, value: string, title?: string, after = "") =>
+      refs.push(
+        `<span data-fact="${fact}"${title ? ` title="${escapeCardText(title)}"` : ""}><span class="${SETTLE_FACT_VALUE_CLASS}">${value}</span>${after}</span>`,
+      );
+    ref("project", repo ? escapeCardText(repo.name) : DEFAULT_WORKSPACE_WORD);
     // The change by the forge's own label (`#N`, or the sent-up branch) and
     // its page where the host has one - never parsed back out of a link.
     const changeLabel =
@@ -267,115 +406,41 @@ export class SettleFacts {
       const label = escapeCardText(
         `${elsewhere ? `${elsewhere} ` : ""}${changeLabel ?? (prUrl as string)}`,
       );
-      cell(
-        "change",
-        record.delivery?.prNumber !== undefined ? "Pull request" : "Branch",
-        link ? `<a href="${link}">${label}</a>` : label,
-      );
+      ref("change", link ? `<a href="${link}">${label}</a>` : label);
     }
     // What the whole offered change adds and deletes (INF-820), read from
-    // git by the host, beside the change it measures. Shown only while it
-    // was read at the version on offer; an unread change shows no cell,
-    // never a zero.
+    // git by the host, beside the change it measures: the signed counts in
+    // the open, the words on rest. Shown only while it was read at the
+    // version on offer; an unread change shows nothing, never a zero.
     const lines = record.delivery?.changeLines;
-    const offered = record.delivery?.headSha;
     if (lines && (offered === undefined || lines.head === offered)) {
-      cell(
+      ref(
         "lines",
-        "Lines",
-        `<span class="inf-mono">${changeLinesWords(lines.added, lines.deleted)}</span>`,
+        changeLinesShortWords(lines.added, lines.deleted),
+        changeLinesWords(lines.added, lines.deleted),
       );
     }
     this.readChangeLines(record);
-    const ci = record.delivery?.ci;
-    // The Checks cell counts and times the pull request's own checks; the
-    // project's queue status, which says where the change stands in the
-    // batch, has its own Batch check cell (INF-3208).
-    const own = record.delivery ? ownDelivery(record.delivery) : undefined;
-    const observed = own ? currentCheckSummary(own) : undefined;
-    const ciAt = record.delivery?.ciAt;
-    if ((ci || observed) && ciAt !== undefined) {
-      // How long the checks ran or took and how long ago they finished, in
-      // the open; when they started and when the app last read them, on
-      // rest (INF-587). The host rewrites the strip on every tick, so both
-      // ages stay current while the card is up.
-      const span = own ? checksSpanOf(own) : null;
-      const words = observed?.words ?? (ci ? CHECK_WORDS[ci] : CHECKS_NOT_READ_WORDS);
-      const dot =
-        observed?.dot ??
-        (ci === "green" || ci === "merged"
-          ? "ok"
-          : ci === "red"
-            ? "failed"
-            : ci === "pending"
-              ? "running"
-              : "idle");
-      cell(
-        "checks",
-        "Checks",
-        `${statusDot(dot)}${span ? checksSpanWords(words, span, this.host.now()) : words}${span?.finishedAt != null ? ` · ${checksFinishedAgo(span.finishedAt, this.host.now())}` : ""}`,
-        checksRestWords(span, ciAt),
-      );
-    } else if (opensPullRequest(delivery)) {
-      cell("checks", "Checks", `${statusDot("idle")}${CHECKS_NOT_READ_WORDS}`);
-    }
-    // Each requested run the app watches for the version on offer, such as
-    // a phone check, in a cell of its own named by the run: the Checks
-    // cell counts only the pull request's own checks, so a long wait for a
-    // machine would otherwise show nowhere.
-    for (const run of record.delivery ? watchedRuns(record.delivery) : []) {
-      cell(
-        "run",
-        escapeCardText(run.name),
-        `${statusDot(run.reading.state === "running" ? "running" : "idle")}${runLink(run.reading.url, `${RUN_WATCH_WORDS[run.reading.state]} for ${checksDuration(this.host.now() - run.reading.since)}`)}`,
-        `Requested run ${run.runId} at ${run.reading.head.slice(0, 7)}, which the app watches; read ${checksFinishedAgo(run.reading.at, this.host.now())}`,
-      );
-    }
-    const batch = record.delivery ? batchCheck(record.delivery) : undefined;
-    if (batch) cell("batch", BATCH_CHECK_WORDS.label, batch.value, batch.title);
-    if (record.delivery) cells.push(checkVerdicts(record.delivery, this.host.now()));
-    // The independent review's word on a change (delivery rigor phase 2,
-    // at any care since INF-1875): the verdict and the head it read, the
-    // risk beside CI and never a hold (Q4), or where the review stands
-    // while it is live; only a Careful task awaits one.
-    {
-      const review = record.delivery;
-      if (review?.reviewVerdict) {
-        const at = review.reviewSha
-          ? ` <span class="inf-mono">${escapeCardText(review.reviewSha.slice(0, 7))}</span>`
-          : "";
-        const risk = review.reviewRisk ? ` · risk ${review.reviewRisk}` : "";
-        // A pass that does not cover the version on offer reads as one at
-        // an earlier version, never a plain green pass (INF-3141).
-        const earlier =
-          review.reviewVerdict === "pass" &&
-          offered !== undefined &&
-          !reviewCoversHead(review, offered);
-        cell(
-          "review",
-          "Review",
-          `${statusDot(review.reviewVerdict === "pass" && !earlier ? "ok" : review.reviewVerdict === "blocked" ? "failed" : "warn")}${earlier ? REVIEW_EARLIER_WORDS : REVIEW_WORDS[review.reviewVerdict]}${at}${risk}`,
-          earlier
-            ? `It does not cover ${offered.slice(0, 7)}, the version on offer.${review.reviewRiskNote ? ` ${review.reviewRiskNote}` : ""}`
-            : review.reviewRiskNote,
-        );
-      } else if (this.host.reviewOpen(record.id)) {
-        cell("review", "Review", `${statusDot("running")}open`);
-      }
-    }
-    // The captain's standing override (docs/delivery-rigor.md, "The
-    // holds"): what his words passed, with his words and how long on rest.
-    // One for an earlier version passes nothing now, so it shows nothing.
-    const override = standingOverride(record.delivery, record.delivery?.headSha);
-    if (override) {
-      cell(
-        "override",
-        "Override",
-        `${statusDot("warn")}${escapeCardText(overrideCellWords(override.holds))}`,
-        overrideWords(override),
-      );
-    }
-    return `${SETTLE_FACTS_OPEN}${cells.join("")}</div>`;
+    // The stamped tier is the care this task actually ran at, including
+    // the captain's per-task ask, not the project's standing setting; it
+    // shows only when it is not Default (the captain's answer 3).
+    const policies = this.options.tasks.policiesOf(record);
+    if (policies && policies.rigor.value !== "standard")
+      ref("care", CARE_WORDS[policies.rigor.value], undefined, ` ${CARE_REFERENCE_WORD}`);
+    const line = `<p class="inf-foot-line">${
+      states.length > 0
+        ? `<span class="inf-foot-states">${states
+            .map((each, index) => ({ ...each, index }))
+            .sort(
+              (a, b) =>
+                SETTLE_LEVELS.indexOf(a.level) - SETTLE_LEVELS.indexOf(b.level) ||
+                a.index - b.index,
+            )
+            .map((each) => each.html)
+            .join("")}</span>`
+        : ""
+    }<span class="inf-foot-ref">${refs.join("")}</span></p>`;
+    return `${SETTLE_FACTS_OPEN}${line}${needs.length > 0 ? `<section class="inf-foot-needs">${needs.join("")}</section>` : ""}</div>`;
   }
 
   /**
@@ -532,12 +597,17 @@ function runLink(url: string, words: string): string {
 }
 
 /**
- * The Batch check cell (INF-3208): the project's queue status on the version
- * on offer, in the queue's own words, linked to its run, with the paused
- * batch's issue beside a paused or failed status. Undefined when the reading
- * of the version on offer carries no queue status.
+ * The Batch check state (INF-3208): the project's queue status on the
+ * version on offer. Its state word stands on the status line; a status that
+ * failed or paused says the queue's own words under the line, wrapped whole,
+ * followed by its links - the queue's run, and the paused batch's issue.
+ * Any other status keeps the queue's words on rest and links its word to the
+ * run. Undefined when the reading of the version on offer carries no queue
+ * status.
  */
-function batchCheck(delivery: TaskDelivery): { value: string; title?: string } | undefined {
+function batchCheck(
+  delivery: TaskDelivery,
+): { dot: FactDotState; value: string; rest?: string; why?: string } | undefined {
   const reading = delivery.checks;
   if (!reading || (delivery.headSha && reading.headSha !== delivery.headSha)) return undefined;
   const item = reading.items.find((check) => check.name === QUEUE_STATUS);
@@ -554,14 +624,50 @@ function batchCheck(delivery: TaskDelivery): { value: string; title?: string } |
           : state.kind === "in-batch"
             ? "running"
             : "idle";
-  const words = escapeCardText(kept?.words ?? BATCH_CHECK_WORDS.states[state.kind]);
+  const word = BATCH_CHECK_WORDS.states[state.kind];
   const https = (url: string | undefined) =>
     url && /^https:\/\//.test(url) ? escapeCardText(url) : undefined;
   const pause = state.kind === "paused" || state.kind === "failed" ? https(kept?.pause) : undefined;
-  // A paused status links the issue itself: its words are not linked twice.
+  // A paused status links the issue itself: it is not linked twice.
   const run = kept?.link !== kept?.pause ? https(kept?.link) : undefined;
+  if (kept?.words && (state.kind === "paused" || state.kind === "failed")) {
+    const links = [
+      ...(run ? [`<a href="${run}">${BATCH_CHECK_WORDS.run}</a>`] : []),
+      ...(pause ? [`<a href="${pause}">${BATCH_CHECK_WORDS.pause}</a>`] : []),
+    ].join(" · ");
+    return { dot, value: word, why: `${escapeCardText(kept.words)}${links ? ` ${links}` : ""}` };
+  }
   return {
-    value: `${statusDot(dot)}${run ? `<a href="${run}">${words}</a>` : words}${pause ? ` · <a href="${pause}">${BATCH_CHECK_WORDS.pause}</a>` : ""}`,
-    ...(kept?.words ? { title: kept.words } : {}),
+    dot,
+    value: `${run ? `<a href="${run}">${word}</a>` : word}${pause ? ` · <a href="${pause}">${BATCH_CHECK_WORDS.pause}</a>` : ""}`,
+    ...(kept?.words ? { rest: kept.words } : {}),
   };
 }
+
+const capital = (words: string) => words.charAt(0).toUpperCase() + words.slice(1);
+
+/** A line under the status line saying why a state needs the captain, in the open. */
+function why(fact: SettleFact, words: string): string {
+  return `<p class="inf-foot-why" data-why="${fact}">${words}</p>`;
+}
+
+/** How much a state needs the captain, by the mark it draws. */
+const LEVEL_OF_DOT: Record<FactDotState, SettleLevel> = {
+  failed: "problem",
+  warn: "warn",
+  running: "waiting",
+  idle: "waiting",
+  ok: "ok",
+};
+
+/**
+ * Checks words that say the whole state by themselves, so the status line
+ * reads them without the Checks label before them, their first letter drawn
+ * as a capital: `No checks`, never `Checks no checks`.
+ */
+const STANDALONE_CHECK_WORDS: ReadonlySet<string> = new Set([
+  CHECKS_ABSENT_WORDS,
+  CHECKS_UNREADABLE_WORDS,
+  CHECK_WORDS["no-pr"],
+  CHECK_WORDS.merged,
+]);

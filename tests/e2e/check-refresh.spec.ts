@@ -194,7 +194,10 @@ for (const kind of ["failed", "empty", "unreadable"] as const) {
       expect(checkReads()).toBeGreaterThan(readsBefore);
       const reading = ledger()!.delivery!.checks!;
       const expectedWords = checkSnapshotSummary(reading).words;
-      await expect(factsStrip(frame).checks).toHaveText(expectedWords);
+      // The merge card says the checks' one state in the open (INF-3709's
+      // plan); the task record keeps the whole summary.
+      const stripWords = checkSnapshotState(reading);
+      await expect(factsStrip(frame).checks).toHaveText(stripWords);
       expect(await factsStrip(frame).facts()).not.toContain("crew-verdict");
       // Captain INF-1555 F20 preserves his distinct failed-check wording.
       await expect(
@@ -203,7 +206,8 @@ for (const kind of ["failed", "empty", "unreadable"] as const) {
       await expect(merge(MERGE_WORDS["merge-pr"])).toHaveCount(0);
       await expect(merge(MERGE_ANYWAY_WORDS)).toHaveCount(empty || unreadable ? 0 : 1);
       if (unreadable) {
-        await expect(factsStrip(frame).checks).toContainText(refusal);
+        // Why they could not be read stands in the open under the status line.
+        await expect(factsStrip(frame).why("checks")).toContainText(refusal);
       } else {
         await expect(factsStrip(frame).checks).toHaveText(
           empty ? CHECKS_NOT_REPORTED_WORDS : CHECK_WORDS.red,
@@ -282,7 +286,7 @@ for (const kind of ["failed", "empty", "unreadable"] as const) {
         .scrollIntoViewIfNeeded();
       await regionShot(recordCard(app.page), test.info().outputPath("activity-after.png"));
       await hideRecord(app.page).click();
-      await expect(factsStrip(frame).checks).toHaveText(expectedWords);
+      await expect(factsStrip(frame).checks).toHaveText(stripWords);
       // Captain F27: the kept approval's Activity line names a fix only for actual failed checks.
       await (await completionAction(app.page, STALE_CHECKS_CARD)).click();
       await expect.poll(() => ledger()?.delivery?.mergeAuthorization?.waiting?.on).toBe("checks");

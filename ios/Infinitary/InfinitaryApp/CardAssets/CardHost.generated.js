@@ -12780,7 +12780,46 @@ details[open]::details-content {
   /* The host's own line under a failed check: main fails it too, in the open. */
   .inf-facts > .inf-check-outside { flex-basis: 100%; min-width: 0; margin: calc(-1 * var(--space-1)) 0 0; font-size: var(--text-sm); color: var(--fg-2); overflow-wrap: anywhere; }
   /* The app's line on a merge card: whether its click closes the task (INF-2490). */
-  .inf-facts > .inf-merge-closes { flex-basis: 100%; min-width: 0; margin: 0; font-size: var(--text-sm); color: var(--fg-1); }
+  .inf-facts > .inf-merge-closes { flex-basis: 100%; min-width: 0; margin: 0; font-size: var(--text-sm); color: var(--fg-2); }
+  /* A merge card's foot (INF-3709's plan): a status line, one state per fact, the
+     reference at its far end, then what needs the captain. The rules above still
+     draw the strips saved on past cards and the setup card's cells. */
+  .inf-facts > .inf-foot-line { flex-basis: 100%; min-width: 0; max-width: none; margin: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-5); }
+  /* The states take the room the reference leaves, which keeps it at the far end. */
+  .inf-foot-states { flex: 1 1 auto; display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-1) var(--space-5); min-width: 0; }
+  /* A state reads on one line; one wider than the card is cut by an ellipsis, never widening the card.
+     Its padding, taken back by its margin, keeps the focus ring clear of its words. */
+  .inf-foot-state { max-width: 100%; overflow: hidden; text-overflow: ellipsis; padding: 0 3px; margin: 0 -3px; font-size: var(--text-sm); color: var(--fg-2); white-space: nowrap; border-radius: var(--radius-s); }
+  /* What fails or warns reads first: it is sorted first and takes the primary text color. */
+  .inf-foot-state[data-level="problem"], .inf-foot-state[data-level="warn"] { color: var(--fg-1); font-weight: 500; }
+  .inf-foot-state .inf-fact-dot { margin-right: 6px; }
+  /* Words that stand without a label, such as no checks, start the state with a capital. */
+  .inf-foot-alone .inf-foot-v { display: inline-block; }
+  .inf-foot-alone .inf-foot-v::first-letter { text-transform: uppercase; }
+  .inf-foot-age { font-weight: 400; color: var(--fg-3); }
+  .inf-foot-line a, .inf-foot-why a { text-decoration: none; }
+  .inf-foot-line a:hover, .inf-foot-why a:hover { text-decoration: underline; }
+  /* A state's words on rest, for the keyboard: its title is the pointer's. The line
+     takes the row under the states without widening them, so the reference stays put. */
+  .inf-foot-rest { display: none; order: 1; flex: none; width: 0; min-width: 100%; font-size: var(--text-xs); color: var(--fg-3); overflow-wrap: anywhere; }
+  .inf-foot-state:focus-visible + .inf-foot-rest, .inf-foot-state:has(:focus-visible) + .inf-foot-rest { display: block; }
+  .inf-foot-ref { min-width: 0; max-width: 100%; display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px var(--space-4); font-family: var(--font-mono); font-size: var(--text-xs); color: var(--fg-3); white-space: nowrap; }
+  .inf-foot-ref > span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .inf-facts > .inf-foot-needs { flex-basis: 100%; min-width: 0; display: grid; gap: 6px; padding-left: var(--space-4); }
+  /* Why a state needs the captain, such as the queue's own words, wrapped whole (INF-3208). */
+  .inf-foot-why { margin: 0; font-size: var(--text-sm); color: var(--fg-2); max-width: 76ch; overflow-wrap: anywhere; }
+  .inf-foot-why a { white-space: nowrap; }
+  /* A failed check: the verdict, never broken, then the name on the same line, cut by
+     an ellipsis; an open row shows the whole name. */
+  .inf-foot-needs > .inf-check-verdict { min-width: 0; max-width: none; margin: 0; padding: 0; border: 0; font-size: var(--text-sm); }
+  .inf-foot-needs > details.inf-check-verdict > summary { max-width: none; border-radius: var(--radius-s); display: grid; grid-template-columns: auto max-content minmax(0, 1fr); align-items: center; gap: var(--space-2); font-weight: 400; padding: 0 var(--space-1); margin: 0 calc(-1 * var(--space-1)); }
+  .inf-foot-needs > details.inf-check-verdict[open] > summary { margin-bottom: var(--space-1); }
+  .inf-foot-needs > p.inf-check-verdict { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: center; gap: var(--space-2); padding-left: 13px; }
+  .inf-foot-needs .inf-check-v { color: var(--fg-1); white-space: nowrap; }
+  .inf-foot-needs .inf-check-verdict .inf-check-name { min-width: 0; font-size: var(--text-xs); color: var(--fg-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .inf-foot-needs details.inf-check-verdict[open] .inf-check-name { white-space: normal; overflow-wrap: anywhere; }
+  .inf-foot-needs .inf-check-evidence { margin: 0 0 0 13px; color: var(--fg-2); max-width: 76ch; }
+  .inf-foot-needs > .inf-check-outside { min-width: 0; margin: -2px 0 0 13px; font-size: var(--text-sm); color: var(--fg-2); max-width: 76ch; overflow-wrap: anywhere; }
   .inf-followups { margin: var(--space-3) 0 0; }
   .inf-followups-k { font-size: var(--text-xs); color: var(--fg-3); letter-spacing: var(--tracking-label); text-transform: uppercase; margin-bottom: 2px; }
   .inf-followup { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; column-gap: var(--space-2); font-size: var(--text-sm); line-height: 1.8; }

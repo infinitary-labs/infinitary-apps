@@ -9,7 +9,7 @@ import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
-import { currentCheckSummary } from "../../src/shared/checkSnapshot";
+import { checkSnapshotState, currentCheckSummary } from "../../src/shared/checkSnapshot";
 import type { TaskDetail } from "../../src/shared/tasks";
 import { MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -221,9 +221,15 @@ for (const host of HOSTS) {
       const webUrl = `https://${host}/${GITLAB_STUB_PROJECT}/-/merge_requests/1`;
       const facts = factsStrip(cardBody(page, cardTitle));
       await expect(facts.change.locator(`a[href="${webUrl}"]`)).toHaveText("!1");
+      // In the open the checks say their one state; the counts of the
+      // pipeline's reading are the state's words on rest (INF-3709's plan).
+      const reading = task.delivery?.checks;
       await expect(facts.checks).toHaveText(
-        currentCheckSummary(task.delivery ?? {})?.words ?? "missing check reading",
+        reading ? checkSnapshotState(reading) : "missing check reading",
       );
+      await expect
+        .poll(() => facts.cell("checks").getAttribute("title"))
+        .toContain(currentCheckSummary(task.delivery ?? {})?.words ?? "missing check reading");
       await expect(cardBody(page, cardTitle).locator('[data-inf-fact="crew-verdict"]')).toHaveCount(
         0,
       );

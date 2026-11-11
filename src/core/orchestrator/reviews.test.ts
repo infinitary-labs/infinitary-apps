@@ -3,8 +3,9 @@ import { createHash } from "node:crypto";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { alreadyAllowedWords } from "@shared/captainAllowances";
+import { SETTLE_FACT_VALUE_CLASS } from "@shared/cards";
 import { acceptedValidation } from "@shared/liveValidation";
-import { REVIEW_EARLIER_WORDS } from "@shared/vocabulary";
+import { REVIEW_EARLIER_WORDS, REVIEW_WORDS } from "@shared/vocabulary";
 import { describe, expect, it, vi } from "vitest";
 import {
   completionBody,
@@ -770,9 +771,9 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
 
       // After the pass the builder pushes and opens the PR (the new
       // ordering); the completion card then publishes, with the review
-      // beside CI in the host's facts strip - the verdict and risk on the
-      // line, the risk note on the cell's title - and the merge goes
-      // through.
+      // beside CI in the host's facts strip - the verdict on the status
+      // line, and on rest the version it read, the risk and the risk note
+      // (INF-3709's plan) - and the merge goes through.
       seedDelivery(tasks, builderId, {
         prUrl: "https://github.com/o/r/pull/55",
         prNumber: 55,
@@ -784,9 +785,11 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       const cardId = (await premature()) as string;
       await tick();
       const card = cards().find((entry) => entry.id === cardId);
-      expect(card?.body).toContain('passed <span class="inf-mono">0123456</span> · risk low');
+      expect(card?.body).toContain(
+        `<span class="inf-foot-k">Review</span> <span class="${SETTLE_FACT_VALUE_CLASS}">${REVIEW_WORDS.pass}</span>`,
+      );
       // The review risk note remains; retired findings counts do not ride it.
-      expect(card?.body).toContain('title="one test file changed."');
+      expect(card?.body).toContain('title="Passed 0123456 · risk low. one test file changed."');
       expect(
         await supervisor.settling.settle.settleTask(builderId, "merge-pr", undefined, "captain"),
       ).toContain("Change #55");
@@ -1794,9 +1797,11 @@ describe("a review bound to the version it read (INF-3141)", () => {
       await tick();
       const body = h.cards().find((entry) => entry.id === cardId)?.body ?? "";
       expect(body).toContain(
-        `${REVIEW_EARLIER_WORDS} <span class="inf-mono">${OLD.slice(0, 7)}</span> · risk low`,
+        `<span class="inf-foot-k">Review</span> <span class="${SETTLE_FACT_VALUE_CLASS}">${REVIEW_EARLIER_WORDS}</span>`,
       );
-      expect(body).toContain(`It does not cover ${NEW.slice(0, 7)}, the version on offer.`);
+      expect(body).toContain(
+        `Passed ${OLD.slice(0, 7)} · risk low. It does not cover ${NEW.slice(0, 7)}, the version on offer.`,
+      );
     } finally {
       h.repo.dispose();
     }

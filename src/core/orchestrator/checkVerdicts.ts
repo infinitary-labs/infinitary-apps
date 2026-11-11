@@ -1,7 +1,8 @@
-import type { CheckDiagnosis, CheckRepairLedger } from "@shared/checkRepair";
+import { type CheckDiagnosis, type CheckRepairLedger, failingRun } from "@shared/checkRepair";
 import {
   type CheckSnapshot,
   checksFailingOnMain,
+  isRedCheckState,
   type MainCheckEvidence,
 } from "@shared/checkSnapshot";
 import { checksFinishedAgo } from "@shared/checksSpan";
@@ -35,10 +36,36 @@ export function failsOnMainSentence(main: { sha: string; at: number }, now: numb
 }
 
 /**
- * Only failures at the offered version belong on its merge card (nightly
- * audit finding 3), and only the pull request's own checks: the crewmate's
- * diagnosis applies to them, while the project's queue status says the
- * queue's own words in the strip's Batch check cell (INF-3208).
+ * Whether a check recorded failed at `headSha` still fails there, by the
+ * newest reading of it (the captain's answer on INF-3709's plan: an earlier
+ * failure the newest reading no longer shows is left out). The pull
+ * request's reading of that version shows it red, or a requested run's
+ * newest attempt still lists it failed. A reading that is missing, or could
+ * not list every check, cannot say a check stopped failing, so the check
+ * stays.
+ */
+function stillFails(
+  delivery: { headSha?: string; ciRepair?: CheckRepairLedger; checks?: CheckSnapshot },
+  headSha: string,
+  check: string,
+): boolean {
+  const reading = delivery.checks?.headSha === headSha ? delivery.checks : undefined;
+  if (!reading) return true;
+  if (reading.items.some((item) => item.name === check && isRedCheckState(item.state))) return true;
+  if (failingRun(delivery, { headSha, check })) return true;
+  if (reading.items.some((item) => item.name === check)) return false;
+  return reading.complete === false || Boolean(reading.problem);
+}
+
+/**
+ * The rows under a merge card's status line, one per failed check: the
+ * crewmate's verdict first, then the check's name in mono on the same line,
+ * cut by an ellipsis where it runs long; a diagnosed row opens to the whole
+ * name and the evidence. Only failures at the offered version belong on its
+ * merge card (nightly audit finding 3), only while the newest reading still
+ * shows them failing (`stillFails`), and only the pull request's own checks:
+ * the crewmate's diagnosis applies to them, while the project's queue status
+ * says the queue's own words under the Batch check state (INF-3208).
  */
 export function checkVerdicts(
   delivery: {
@@ -54,7 +81,7 @@ export function checkVerdicts(
   if (ci !== "red" || !headSha || !ciRepair) return "";
   const failed = (
     ciRepair.failures.find((reading) => reading.headSha === headSha)?.checks ?? []
-  ).filter((check) => check !== QUEUE_STATUS);
+  ).filter((check) => check !== QUEUE_STATUS && stillFails(delivery, headSha, check));
   const onMain = new Set(checksFailingOnMain(delivery));
   return failed
     .map((check) => {
@@ -62,13 +89,12 @@ export function checkVerdicts(
         (d) => d.headSha === headSha && d.check === check,
       );
       const main = onMain.has(check) ? mainChecks : undefined;
-      const name = `<span class="inf-mono">${escapeCardText(check)}</span>`;
       const verdict = diagnosis
         ? CHECK_VERDICT_WORDS[diagnosis.classification]
         : main
           ? CHECK_FAILS_ON_MAIN_WORDS
           : CHECK_VERDICT_MISSING;
-      const summary = `${name} <span>· ${verdict}</span>`;
+      const summary = `<span class="inf-check-v">${verdict}</span> <span class="inf-mono inf-check-name">${escapeCardText(check)}</span>`;
       // The host's fact stays in the open under the check, whatever the
       // crewmate's verdict says, so the two never hide each other.
       const fact = main

@@ -109,16 +109,27 @@ Its name says the length in words: "Play the demo, 12 seconds".
 The button opens the viewer playing the recording; the poster, as a picture would, opens the viewer resting on the poster.
 Nothing in the body moves: the recording plays only in the viewer, and only on that press.
 A GIF demo, the fallback when no MP4 could be made, shows the same poster and the same Play button; the GIF itself never loads in the body.
-A card carrying a settle effect or a validated review shows the host-rendered `.inf-facts` strip (project, crewmate model, posture, PR link, reported check facts and the review on a reviewed task) that the body never repeats.
-A failed reading adds a quiet, full-width disclosure row per failed check beneath the checks: its name in mono, then the crewmate's recorded verdict in `--fg-2`, with evidence one click or Enter deeper in `--fg-3`.
-The row wraps rather than truncating the verdict, preserves the reader's open state during time refreshes, and resets when its version or evidence changes.
+A card carrying a settle effect or a validated review shows the host-rendered `.inf-facts` strip that the body never repeats: the card's foot (INF-3709's plan, after the captain found eleven equal cells beside the buttons too much, with no arrangement).
+The foot is at most three parts, each the card's full width: the status line, what needs the captain, and the buttons row.
+The status line holds one state per fact the task has - Checks, each requested run, Batch check, Review, Override - each a `StatusDot`-language mark, its label and its words on one line, in `--text-sm`.
+The states are sorted failing, warning, running or waiting, passed, so what needs the captain reads first; a failing or warning state is `--fg-1` at medium weight, and the rest are `--fg-2`.
+A state says one word in the open (`passed`, `failed`, `running for 15m`, `findings`), with how long ago finished checks finished in `--fg-3` (`· 5m ago`); words that say the whole state stand without a label (`No checks`).
+Check counts, how long the checks took, when they started and were read, a review's version and risk, and the queue's words while nothing is wrong wait for rest: the pointer's rest shows them, and a state with such words is a Tab stop that draws the focus ring and shows the same words on a `--text-xs` `--fg-3` line under the states while it holds focus.
+At the line's far end stands the reference in quiet mono (`--font-mono`, `--text-xs`, `--fg-3`): the project, the pull request link, the change's lines as `+316 −13`, and the care level only when it is not Default (`Careful care`).
+The reference wraps under the states as a whole when the card is narrow.
+The foot names no model and no computer: the card's top line shows both.
+What needs the captain stands under the status line in body color, and only under a state that is not passing.
+A batch check that failed or paused says the queue's own words there, wrapped whole, followed by its links, "Open the run" and "paused batch's issue"; checks the app could not read say why there.
+A failed reading adds a quiet, full-width disclosure row per failed check: the crewmate's recorded verdict first in `--fg-1`, then the check's name in mono `--text-xs` `--fg-3`, on one line with the name cut by an ellipsis, so no verdict breaks inside a word at any card width; the whole name and the evidence, in `--fg-2`, are one click or Enter deeper.
+The row preserves the reader's open state during time refreshes, and resets when its version or evidence changes.
 Unknown or undiagnosed causes say so, and a suspected intermittent failure never reads as proven.
-A change that merges through the project's queue keeps the queue's status out of the Checks cell, which counts only the pull request's own checks (INF-3208).
-A Batch check cell after it says the status in the queue's own words, linked to its run, with "paused batch's issue" linked beside a paused or failed status; its dot is the status's state, and its words wrap whole so the issue link stays in view.
-Each requested run the app watches for the version on offer, such as a phone check, gets a cell of its own after the Checks cell, named by the run, saying `queued for 1h 27m` or `running for 5m` linked to the run's page; its dot is idle while queued and running while running (INF-3220).
+A check recorded failed at this version that the newest reading no longer shows failing gets no row.
+A change that merges through the project's queue keeps the queue's status out of the Checks state, which counts only the pull request's own checks (INF-3208).
+Each requested run the app watches for the version on offer, such as a phone check, gets a state of its own named by the run, saying `queued for 1h 27m` or `running for 5m` linked to the run's page; its dot is idle while queued and running while running (INF-3220).
 The queue status gets no verdict row, and no Merge anyway stands beside a failed batch check, since no checks override passes the queue.
-Its cells are the shape the task's own fact strip takes on its record and its crew summary (`../now/NowPanel.prompt.md`, Shared task facts), with the same state dot and words, and its pull request link is every pull request link's: `--accent`, underlined only while the pointer rests on it (`TaskRecord.prompt.md`, "Pull request links").
-The strip is the first thing in the action row, pushed left of the buttons in a frame of its own, so it stays in view however long the body is; when the row cannot hold both it takes its own row above the buttons, and its hairline shows only where it follows a body, on a past card.
+Its states carry the same state dot and words as the task's own fact strip on its record and its crew summary (`../now/NowPanel.prompt.md`, Shared task facts), and its pull request link is every pull request link's: `--accent`, underlined only while the pointer rests on it (`TaskRecord.prompt.md`, "Pull request links").
+The strip draws in a frame of its own across the card's foot, above the buttons, so it stays in view however long the body is; its hairline shows only where it follows a body, on a past card.
+The buttons row starts with the line on what the merge does to the task, "Merging closes this task" or "The task continues after this merge", in `--text-sm` `--fg-2` at its left end, beside the buttons it describes; it takes a line above them when the row is too narrow, and on a past card and the phone it is the strip's last line.
 The merge card's merge says what a click does and follows its actual check hold (captain INF-1555 F12).
 It reads "Merge the pull request" when its checks pass, "Merge when checks pass" while its checks are pending or unreadable, and "Merge after fixing errors" when its checks fail (captain INF-1555 F20).
 The merge offer itself expresses the crew's judgment that the work is ready; its separate captain click authorizes the merge and can keep that approval while checks hold it.
@@ -129,7 +140,7 @@ The click takes the card away and nothing takes its place (INF-2913): Activity's
 
 **The risk chart.**
 A crewmate's merge card carries its risk as a radar the app draws at the card's top right, level with the title's top and flush with its content edge (FI3-1127's plan; the app's `docs/card-authoring.md`, "The risk chart").
-The story note of a task that merges on its own carries it the same way, with the merge card's fact strip beside Chat, and opens with its merge line in an `inf-panel` that keeps clear of the chart (INF-1219).
+The story note of a task that merges on its own carries it the same way, with the merge card's fact strip above Chat, and opens with its merge line in an `inf-panel` that keeps clear of the chart (INF-1219).
 It is 128 px tall - from the title's top through What changed when each section has one line - and as wide as its labels need, 216 px for the seven names, with rings 80 px across; the box keeps each label's width at its axis end, so a label on the outer ring never leaves it.
 Seven axes run clockwise from the top: Blast radius, Behavior, Undo, Evidence, Sensitivity, Novelty, Dependencies.
 Three faint rings and the axes are `--line-1`; the shape of the seven levels is filled `--accent-dim` and stroked `--accent` at 1.25, and answers to nothing; each vertex is a 4 px dot in its own level's color from the checks - low `--ok`, medium `--warn`, high `--danger` - with a 1.5 `--bg-2` ring.

@@ -277,8 +277,11 @@ test("a reviewed task's review passes before its completion card, which merges w
   );
   const findingFacts = factsStrip(cardBody(page, MOCK_REVIEW_ASK_CARD_TITLE));
   await expect(findingFacts.project).toContainText(REPO_NAME);
-  await expect(findingFacts.review).toContainText(HEAD_SHA.slice(0, 7));
-  await expect(findingFacts.review).toContainText(`risk ${MOCK_REVIEW_FINDINGS_RISK.level}`);
+  // The version the review read and its risk are the review state's words
+  // on rest (INF-3709's plan).
+  await expect(findingFacts.review).toBeVisible();
+  for (const words of [HEAD_SHA.slice(0, 7), `risk ${MOCK_REVIEW_FINDINGS_RISK.level}`])
+    await expect.poll(() => findingFacts.cell("review").getAttribute("title")).toContain(words);
   await expect(page.getByRole("button", { name: MOCK_REVIEW_KEEP_LABEL })).toBeVisible();
   await expect(
     reportLine(page, builder.key).filter({ hasText: reportSummary(MOCK_REVIEWED_FIX_REPORT) }),
@@ -383,11 +386,15 @@ test("a reviewed task's review passes before its completion card, which merges w
     "#55",
   );
   await expect(facts.checks).toHaveText(CHECK_WORDS.green);
-  // The review cell names the head it read and the risk; the risk note
-  // rides the cell's title, never a line of its own.
-  await expect(facts.review).toContainText(FINAL_SHA.slice(0, 7));
-  await expect(facts.review).toContainText(MOCK_REVIEW_PASS_RISK.level);
-  await expect(facts.cell("review")).toHaveAttribute("title", MOCK_REVIEW_PASS_RISK.why);
+  // The review state's words on rest name the head it read, the risk and
+  // the risk note, never a line of their own (INF-3709's plan).
+  await expect(facts.review).toBeVisible();
+  for (const words of [
+    FINAL_SHA.slice(0, 7),
+    `risk ${MOCK_REVIEW_PASS_RISK.level}`,
+    MOCK_REVIEW_PASS_RISK.why,
+  ])
+    await expect.poll(() => facts.cell("review").getAttribute("title")).toContain(words);
   // While the ask-user card stands, the merge would leave the task open for
   // that question, and the card says so (INF-2525, docs/forge.md "A
   // requested merge").

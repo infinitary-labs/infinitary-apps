@@ -15,6 +15,7 @@ import {
   MERGE_CLOSES_WORDS,
   migrateLegacyActions,
   opensSettings,
+  splitMergeClosesLine,
   splitSettleFacts,
   takesTaskFacts,
   withMergeClosesLine,
@@ -264,10 +265,10 @@ describe("isPreviewBody", () => {
 describe("splitSettleFacts", () => {
   // The strip as the host writes it (intake.taskGraph.test.ts pins the same markup).
   const strip =
-    '<div class="inf-facts" data-facts>' +
-    '<span class="inf-fact" data-fact="project"><span class="inf-fact-k">Project</span><span class="inf-fact-v">Default workspace</span></span>' +
-    '<span class="inf-fact" data-fact="checks" title="read just now"><span class="inf-fact-k">Checks</span><span class="inf-fact-v"><svg class="inf-fact-dot" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4.5" fill="var(--ok)"/></svg>passed</span></span>' +
-    "</div>";
+    '<div class="inf-facts" data-facts><p class="inf-foot-line">' +
+    '<span class="inf-foot-states"><span class="inf-foot-state" data-fact="checks" data-level="ok" title="read just now" tabindex="0"><svg class="inf-fact-dot" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4.5" fill="var(--ok)"/></svg><span class="inf-foot-k">Checks</span> <span class="inf-foot-v">passed</span></span></span>' +
+    '<span class="inf-foot-ref"><span data-fact="project"><span class="inf-foot-v">Default workspace</span></span></span>' +
+    "</p></div>";
   const followups = '<div class="inf-followups" data-followups><div>FM3K-2</div></div>';
 
   it("lifts the host's strip out from between the author's body and the follow-up rows", () => {
@@ -309,9 +310,9 @@ describe("splitSettleFacts", () => {
 // after this merge", read from the card's own actions.
 describe("the merge card's closes line", () => {
   const strip =
-    '<div class="inf-facts" data-facts>' +
-    '<span class="inf-fact" data-fact="project"><span class="inf-fact-k">Project</span><span class="inf-fact-v">meterlab</span></span>' +
-    "</div>";
+    '<div class="inf-facts" data-facts><p class="inf-foot-line">' +
+    '<span class="inf-foot-ref"><span data-fact="project"><span class="inf-foot-v">meterlab</span></span></span>' +
+    "</p></div>";
   const requestMerge: Card = {
     ...card,
     title: "Merge the continued work",
@@ -347,6 +348,25 @@ describe("the merge card's closes line", () => {
     const discard = card.actions.filter((action) => action.id === "discard");
     expect(withMergeClosesLine(strip, discard)).toBe(strip);
     expect(withMergeClosesLine(undefined, [{}])).toBeUndefined();
+  });
+
+  // INF-3709's plan, done point 10: the line stands at the left end of the
+  // buttons row, so the stage takes it out of the strip it draws above them.
+  it("hands the stage the line's words and the strip without it, for the buttons row", () => {
+    expect(splitMergeClosesLine(withMergeClosesLine(strip, card.actions) ?? "")).toEqual({
+      strip,
+      words: MERGE_CLOSES_WORDS.closes,
+    });
+  });
+
+  it("leaves no strip to draw when the line was all a merge card's strip held (INF-2744)", () => {
+    expect(
+      splitMergeClosesLine(withMergeClosesLine(undefined, requestMerge.actions) ?? ""),
+    ).toEqual({ strip: undefined, words: MERGE_CLOSES_WORDS.continues });
+  });
+
+  it("leaves a strip that carries no line as it is", () => {
+    expect(splitMergeClosesLine(strip)).toEqual({ strip, words: undefined });
   });
 });
 

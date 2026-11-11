@@ -116,8 +116,9 @@ test("a Default pull request's merge card is made Careful by ⌘2, reviewed, and
   const card = shownCard(page, MOCK_CAREFUL_CARD_TITLE);
   await expect(card).toBeVisible({ timeout: 30_000 });
   const frame = cardBody(page, MOCK_CAREFUL_CARD_TITLE);
-  await expect(factsStrip(frame).care).toHaveText(CARE_WORDS.standard);
   await expect(factsStrip(frame).checks).toHaveText(CHECK_WORDS.green);
+  // Default care is not named on the card (INF-3709's plan, the captain's answer 3).
+  await expect(factsStrip(frame).care).toHaveCount(0);
   const footer = card.getByRole("button", {
     name: new RegExp(`^(Discard|${REVIEW_CAREFULLY_WORDS}|${MERGE_WORDS["merge-pr"]})`),
   });
@@ -205,7 +206,8 @@ test("a Default pull request's merge card is made Careful by ⌘2, reviewed, and
   await expect(again).toBeVisible({ timeout: 30_000 });
   const againFacts = factsStrip(cardBody(page, MOCK_CAREFUL_REVIEWED_CARD_TITLE));
   await expect(againFacts.care).toHaveText(CARE_WORDS.reviewed);
-  await expect(againFacts.review).toContainText("risk low");
+  // The review's risk is among its state's words on rest (INF-3709's plan).
+  await expect(againFacts.cell("review")).toHaveAttribute("title", /risk low/);
   await expect(again.getByRole("button", reviewChoice)).toHaveCount(0);
   await expect(again.getByRole("button", { name: MERGE_WORDS["merge-pr"] })).toBeVisible();
   await again.screenshot({ path: test.info().outputPath("merge-card-after-review.png") });

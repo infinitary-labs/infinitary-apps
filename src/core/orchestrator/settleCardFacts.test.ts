@@ -1,6 +1,13 @@
 import { SETTLE_FACT_VALUE_CLASS } from "@shared/cards";
-import { checksDuration } from "@shared/checksSpan";
-import { RUN_WATCH_WORDS } from "@shared/vocabulary";
+import { checkSnapshotState, checkSnapshotSummary } from "@shared/checkSnapshot";
+import {
+  checksDuration,
+  checksFinishedAgo,
+  checksRestWords,
+  checksSpanOf,
+  checksSpanWords,
+} from "@shared/checksSpan";
+import { REVIEW_WORDS, RUN_WATCH_WORDS } from "@shared/vocabulary";
 import { describe, expect, it } from "vitest";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { WorkflowJobLine } from "../forge";
@@ -12,11 +19,11 @@ import { RUN_WATCH_TICK_MS, type RunReading, RunWatcher } from "./runWatch";
 import { SettleFacts } from "./settleCardFacts";
 
 /**
- * INF-3220: a merge card's Checks cell read passed while the crewmate held
+ * INF-3220: a merge card's Checks state read passed while the crewmate held
  * the card for a requested phone check, which waited 87 minutes for a free
  * phone Mac; nothing on the card showed that wait. The captain picked the
  * fix "Show watched requested checks on the card's checks line": each
- * requested run the app watches for the version on offer gets its own cell
+ * requested run the app watches for the version on offer gets its own state
  * beside the pull request's checks, saying whether it is queued or running
  * and for how long.
  *
@@ -107,7 +114,7 @@ describe("a merge card's requested runs (INF-3220)", () => {
     const cells = () =>
       [
         ...(facts.strip("t1") ?? "").matchAll(
-          /<span class="inf-fact" data-fact="run"[^>]*><span class="inf-fact-k">(.*?)<\/span><span class="[^"]*">(.*?)<\/span><\/span>/g,
+          /<span class="inf-foot-state" data-fact="run"[^>]*>.*?<span class="inf-foot-k">(.*?)<\/span> <span class="[^"]*">(.*?)<\/span><\/span>/g,
         ),
       ].map(([, label, value]) => ({ label, words: value?.replace(/<[^>]*>/g, "") }));
 
@@ -139,5 +146,139 @@ describe("a merge card's requested runs (INF-3220)", () => {
     // A newer version on offer: the run read at the earlier one leaves the strip.
     seedDelivery(tasks, "t1", { headSha: "0d4e2b6f8a1c3e5d7b9f2a4c6e8d0b1f3a5c7e9d" });
     expect(cells()).toEqual([]);
+  });
+});
+
+/**
+ * INF-3709: the captain said of the merge card's foot, eleven equal cells
+ * beside the buttons, that it threw too much information at the reader with
+ * no arrangement, and approved the plan's status line with the answers
+ * "check counts: on rest" and "layout: status line". These tests hold what
+ * that plan promises of the strip's own markup: one state per fact, sorted
+ * by how much it needs the captain; the counts, duration and read times on
+ * rest; and every state with words on rest reached with Tab.
+ *
+ * The record is the phone run's own pull request once its checks passed: the
+ * three skipped jobs and the one passing check GitHub listed, the phone run
+ * still waiting for a phone Mac, and an independent review that came back
+ * with findings.
+ */
+describe("a merge card's status line (INF-3709)", () => {
+  const startedAt = Date.parse("2026-11-09T03:11:20Z");
+  const finishedAt = Date.parse("2026-11-09T03:18:52Z");
+  const readAt = Date.parse("2026-11-09T03:25:45Z");
+  const now = readAt + 4 * 60_000;
+  const checks = {
+    headSha: HEAD,
+    absenceDeclared: false,
+    items: [
+      { name: "journey-repeats", state: "skipped" as const },
+      { name: "phone-affected", state: "skipped" as const },
+      { name: "replay-gate", state: "skipped" as const },
+      { name: "typecheck-lint-build", state: "success" as const, startedAt, finishedAt },
+    ],
+  };
+  const strip = () => {
+    const db = openInMemoryDatabase();
+    const tasks = new TaskService({ db, strict: true, now: () => now });
+    seedTask(tasks, { id: "t1", title: "Show the card's pictures", status: "completed" });
+    seedDelivery(tasks, "t1", {
+      mode: "direct-pr",
+      prNumber: 412,
+      headSha: HEAD,
+      ci: "green",
+      ciAt: readAt,
+      ciStartedAt: startedAt,
+      ciFinishedAt: finishedAt,
+      checks,
+      runWatches: [
+        {
+          runId: RUN,
+          name: "phone",
+          attempt: 1,
+          since: readAt,
+          nextAt: now + RUN_WATCH_TICK_MS,
+          reading: { head: HEAD, url: PAGE, state: "queued", since: readAt, at: now - 60_000 },
+        },
+      ],
+      reviewVerdict: "findings",
+      reviewSha: HEAD,
+      reviewRisk: "medium",
+      reviewRiskNote: "one production line moves.",
+    });
+    const facts = new SettleFacts(
+      { tasks, repos: { get: () => undefined } } as unknown as CrewSupervisorOptions,
+      { now: () => now, taskDelivery: () => "direct-pr", reviewOpen: () => false },
+    );
+    return facts.strip("t1") ?? "";
+  };
+  /** Each state of the line in the order drawn: its fact, level, opening tag and words. */
+  const states = (html: string) =>
+    [
+      ...html.matchAll(
+        /(<span class="inf-foot-state[^"]*" data-fact="(\w+)" data-level="(\w+)"[^>]*>)<svg.*?<\/svg>(.*?)<\/span><\/span>/g,
+      ),
+    ].map(([, tag, fact, level, words]) => ({
+      fact,
+      level,
+      tag: tag ?? "",
+      words: (words ?? "").replace(/<[^>]*>/g, ""),
+    }));
+
+  it("draws one state per fact, the one that needs the captain first and the passed one last", () => {
+    const line = states(strip());
+    // The record holds them checks, run, review: the line sorts them.
+    expect(line.map(({ fact, level }) => `${fact} ${level}`)).toEqual([
+      "review warn",
+      "run waiting",
+      "checks ok",
+    ]);
+    expect(line.map(({ words }) => words)).toEqual([
+      `Review ${REVIEW_WORDS.findings}`,
+      `phone ${RUN_WATCH_WORDS.queued} for ${checksDuration(now - readAt)}`,
+      `Checks ${checkSnapshotState(checks)} · ${checksFinishedAgo(finishedAt, now)}`,
+    ]);
+    // The reference follows the states, on the same line.
+    const html = strip();
+    expect(html.indexOf('class="inf-foot-ref"')).toBeGreaterThan(
+      html.lastIndexOf('class="inf-foot-state'),
+    );
+    expect(html.match(/<p class="inf-foot-line">/g)).toHaveLength(1);
+  });
+
+  it("keeps the counts, how long the checks took and when they were read for rest", () => {
+    const span = checksSpanOf({
+      ci: "green",
+      checks,
+      headSha: HEAD,
+      ciStartedAt: startedAt,
+      ciFinishedAt: finishedAt,
+    });
+    if (!span) throw new Error("the passed checks have a span");
+    const rest = checksRestWords(
+      span,
+      readAt,
+      checksSpanWords(checkSnapshotSummary(checks).words, span, now),
+    );
+    expect(rest).toContain(checksDuration(finishedAt - startedAt));
+    const html = strip();
+    const state = states(html).find(({ fact }) => fact === "checks");
+    expect(state?.tag).toContain(`title="${rest}"`);
+    // In the open the state says one word and its age, never the counts.
+    expect(state?.words).not.toContain("skipped");
+    // The same words stand on the line a keyboard's focus shows under the states.
+    expect(html).toContain(
+      `<span class="inf-foot-rest" data-rest="checks" aria-hidden="true">${rest}</span>`,
+    );
+  });
+
+  it("makes each state with words on rest a Tab stop, by itself or through its link", () => {
+    const line = states(strip());
+    const tag = (fact: string) => line.find((state) => state.fact === fact)?.tag ?? "";
+    expect(tag("checks")).toContain('tabindex="0"');
+    expect(tag("review")).toContain('tabindex="0"');
+    // The run's words are a link to its page, which is the Tab stop.
+    expect(tag("run")).not.toContain("tabindex");
+    expect(strip()).toContain(`<a href="${PAGE}">${RUN_WATCH_WORDS.queued} for`);
   });
 });

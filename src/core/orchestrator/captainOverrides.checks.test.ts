@@ -15,7 +15,6 @@ import {
   CHECKS_NOT_REPORTED_WORDS,
   currentCheckStatus,
 } from "@shared/checkSnapshot";
-import { factDotSvg } from "@shared/factDot";
 import {
   choiceWords,
   mergeClickRefusal,
@@ -433,7 +432,7 @@ describe("CrewSupervisor", () => {
 
       // INF-3208, the captain's INF-3183 plan, piece 2: after the project's
       // queue sends a change back, its merge card says the queue's own words
-      // and the paused batch's issue in a Batch check cell, counts only the
+      // and the paused batch's issue under a Batch check state, counts only the
       // pull request's own checks, keeps the crewmate's diagnosis words off
       // the queue status, and offers no Merge anyway, since no checks
       // override passes the queue; the crewmate's answer at that version
@@ -450,6 +449,9 @@ describe("CrewSupervisor", () => {
           new RegExp(
             `data-fact="${fact}"[^>]*>.*?<span class="${SETTLE_FACT_VALUE_CLASS}">(.*?)</span></span>`,
           ).exec(strip())?.[1];
+        // The queue's own words under the status line, with their links.
+        const why = (fact: string) =>
+          new RegExp(`<p class="inf-foot-why" data-why="${fact}">(.*?)</p>`).exec(strip())?.[1];
         // The batch paused on this version, linking its issue.
         h.forge.queue = {
           name: QUEUE_STATUS,
@@ -458,7 +460,8 @@ describe("CrewSupervisor", () => {
           link: issue,
         };
         await h.declare({});
-        await vi.waitFor(() => expect(cell("batch")).toContain(BATCH_CHECK_WORDS.pause));
+        await vi.waitFor(() => expect(why("batch")).toContain(BATCH_CHECK_WORDS.pause));
+        expect(cell("batch")).toBe(BATCH_CHECK_WORDS.states.paused);
         // A send-back by hand fails it, linking the answer's run instead.
         h.forge.queue = {
           name: QUEUE_STATUS,
@@ -481,13 +484,20 @@ describe("CrewSupervisor", () => {
             evidence: "The batch failed because the earlier version left the key off the list.",
           },
         });
-        await vi.waitFor(() => expect(cell("batch")).toContain(words));
-        expect(cell("batch")).toBe(
-          `${factDotSvg("failed")}<a href="${run}">${words}</a> · <a href="${issue}">${BATCH_CHECK_WORDS.pause}</a>`,
+        await vi.waitFor(() => expect(why("batch")).toContain(words));
+        // The state says failed, first on the line; the queue's words stand
+        // whole under it, followed by its run and the paused batch's issue
+        // (INF-3709's plan).
+        expect(cell("batch")).toBe(BATCH_CHECK_WORDS.states.failed);
+        expect(why("batch")).toBe(
+          `${words} <a href="${run}">${BATCH_CHECK_WORDS.run}</a> · <a href="${issue}">${BATCH_CHECK_WORDS.pause}</a>`,
         );
-        // The Checks cell counts the pull request's own check alone, and
+        expect(strip().indexOf('data-fact="batch"')).toBeLessThan(
+          strip().indexOf('data-fact="checks"'),
+        );
+        // The Checks state counts the pull request's own check alone, and
         // never times it by the queue status's own times.
-        expect(cell("checks")).toBe(`${factDotSvg("ok")}${CHECK_WORDS.green}`);
+        expect(cell("checks")).toBe(CHECK_WORDS.green);
         expect(strip()).not.toContain("data-check-verdict");
         expect(strip()).not.toContain(CHECK_VERDICT_WORDS["own-regression"]);
         expect(anywayOf(h)).toBeUndefined();
@@ -513,7 +523,7 @@ describe("CrewSupervisor", () => {
         await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_AFTER_FIXING_WORDS));
         expect(anywayOf(h)).toBeUndefined();
         // With no failed batch check, the pull request's own failed check
-        // brings Merge anyway back as before, and the Batch check cell goes.
+        // brings Merge anyway back as before, and the Batch check state goes.
         h.forge.queue = undefined;
         await h.declare({});
         await vi.waitFor(() => expect(anywayOf(h)).toBeDefined());
@@ -811,7 +821,7 @@ describe("CrewSupervisor", () => {
             .cards()
             .find((card) => card.id === h.card.id)
             ?.body.match(
-              /<span class="inf-fact" data-fact="override"[\s\S]*?<\/span><\/span>/,
+              /<span class="inf-foot-state" data-fact="override"[\s\S]*?<\/span><\/span>/,
             )?.[0];
         expect(strip()).toBeUndefined();
         h.supervisor.overrides.declareOverride(h.taskId, {

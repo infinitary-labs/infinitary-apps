@@ -475,37 +475,46 @@ export const riskAssessmentSchema = z.object({
 export type RiskAssessment = z.infer<typeof riskAssessmentSchema>;
 
 /**
- * The facts the host writes on a settle card's fact strip (`SettleFacts.strip`), in order;
- * each cell carries its fact in `data-fact`, present only when the host holds that fact.
+ * The facts the host writes on a settle card's fact strip (`SettleFacts.strip`);
+ * each carries its fact in `data-fact`, present only when the host holds that fact.
+ * The first five are the task's states, one item each on the strip's status
+ * line, sorted there by what needs the captain first; the last four are its
+ * reference, at the line's far end in this order.
  */
 export const SETTLE_FACTS = [
-  "project",
-  "device",
-  "crewmate",
-  "care",
-  "change",
-  "lines",
   "checks",
   "run",
   "batch",
   "review",
   "override",
+  "project",
+  "change",
+  "lines",
+  "care",
 ] as const;
 export type SettleFact = (typeof SETTLE_FACTS)[number];
 
 /**
- * The class of a settle fact's value inside its `data-fact` cell, as the
+ * How much a state on the status line needs the captain, in the order the
+ * line sorts by: failing, a warning, running or waiting, passed. Each state
+ * carries its level in `data-level`.
+ */
+export const SETTLE_LEVELS = ["problem", "warn", "waiting", "ok"] as const;
+export type SettleLevel = (typeof SETTLE_LEVELS)[number];
+
+/**
+ * The class of a settle fact's value inside its `data-fact` element, as the
  * host writes the strip: a reader takes a fact's value by it, never by the
  * label beside it. The frame stylesheet gives it its look.
  */
-export const SETTLE_FACT_VALUE_CLASS = "inf-fact-v";
+export const SETTLE_FACT_VALUE_CLASS = "inf-foot-v";
 
 /** How the host opens a settle card's fact strip; its cells hold no `div`, so the next `</div>` closes it. */
 export const SETTLE_FACTS_OPEN = '<div class="inf-facts" data-facts>';
 
 /**
  * Whether the host writes its task's facts on a card's strip, which the
- * stage draws beside the buttons: every merge card and a discard card, an
+ * stage draws above the buttons: every merge card and a discard card, an
  * independent review's card, and the merge card of a task that merges on
  * its own (INF-1219), which carries the story's risk and no buttons - the
  * risk rides only a merge card, written by the host from the crewmate's
@@ -623,7 +632,8 @@ export function withoutMergeClosesLine(body: string): string {
 }
 
 /**
- * A card's strip with its merge line as the last part, beside the buttons;
+ * A card's strip with its merge line as the last part, which the stage
+ * draws beside the buttons (`splitMergeClosesLine`);
  * a merge card with no task facts gets a strip holding only the line.
  */
 export function withMergeClosesLine(
@@ -638,8 +648,29 @@ export function withMergeClosesLine(
 }
 
 /**
+ * A strip without its merge line, and the line's words: the stage draws the
+ * line at the start of the card's buttons row, beside the buttons it
+ * describes, and the strip's frame draws the rest. `strip` is undefined when
+ * the line was all the strip held. A strip with no merge line comes back as
+ * it is; the phone and a past card keep the line where the host wrote it, as
+ * the strip's last part.
+ */
+export function splitMergeClosesLine(strip: string): {
+  strip: string | undefined;
+  words: string | undefined;
+} {
+  for (const words of Object.values(MERGE_CLOSES_WORDS)) {
+    const line = mergeClosesMarkup(words);
+    if (!strip.includes(line)) continue;
+    const rest = strip.replace(line, "");
+    return { strip: rest === `${SETTLE_FACTS_OPEN}</div>` ? undefined : rest, words };
+  }
+  return { strip, words: undefined };
+}
+
+/**
  * A settle card's body without the host's fact strip, and the strip itself,
- * so the stage shows the strip beside the card's buttons rather than at the
+ * so the stage shows the strip above the card's buttons rather than at the
  * end of a body that may scroll it out of view. The host appends its strip
  * after the author's body, so the last one is the host's. `at` is where it
  * was cut out. Undefined when the body carries no strip.

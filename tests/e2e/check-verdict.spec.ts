@@ -12,6 +12,7 @@ import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { type Card, SETTLE_FACTS_OPEN } from "../../src/shared/cards";
+import { checkSnapshotSummary } from "../../src/shared/checkSnapshot";
 import { checksFinishedAgo, checksRestWords, checksSpanOf } from "../../src/shared/checksSpan";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedDelivery } from "../helpers/taskDelivery";
@@ -20,7 +21,7 @@ import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { heroShot, regionShot } from "./pictures";
 import { factsStrip, pushCards, showCard, shownEntry } from "./stack";
-import { pressKey } from "./windowKeys";
+import { pressKey, untilFocused } from "./windowKeys";
 
 /** Nightly session audit finding 3: a failed merge check must carry the
  * crewmate's verdict and evidence, not make the captain ask if it is related.
@@ -103,6 +104,17 @@ test("failed merge checks carry head-bound verdicts with keyboard-readable evide
     status: "completed",
     worktreeDir,
   });
+  const outsideChecks = {
+    headSha: outsideHead,
+    prNumber: 59,
+    items: [
+      { name: "typecheck-lint-build", state: "success" as const },
+      { name: "unit-tests", state: "failure" as const },
+      { name: "probe-tests", state: "success" as const },
+    ],
+    complete: true,
+    absenceDeclared: false,
+  };
   seedDelivery(tasks, "check-outside", {
     mode: "direct-pr",
     prNumber: 59,
@@ -112,17 +124,7 @@ test("failed merge checks carry head-bound verdicts with keyboard-readable evide
     ciAt: now - 5 * 60_000,
     ciStartedAt: now - 14 * 60_000,
     ciFinishedAt: now - 5 * 60_000,
-    checks: {
-      headSha: outsideHead,
-      prNumber: 59,
-      items: [
-        { name: "typecheck-lint-build", state: "success" },
-        { name: "unit-tests", state: "failure" },
-        { name: "probe-tests", state: "success" },
-      ],
-      complete: true,
-      absenceDeclared: false,
-    },
+    checks: outsideChecks,
     mainChecks: {
       head: outsideHead,
       sha: mainSha,
@@ -223,6 +225,23 @@ test("failed merge checks carry head-bound verdicts with keyboard-readable evide
       region: shownEntry(launched.page),
       name: "failed-check-outside-change",
     });
+    // INF-3709's plan, as the captain approved it with "check counts: on
+    // rest": the keyboard reaches the Checks state, and what it keeps for
+    // rest - the counts, how long the checks took, when they started and
+    // were read - shows on a line under the states while it holds focus.
+    const facts = factsStrip(cardBody(launched.page, "The liters fix is ready"));
+    await expect(facts.rest("checks")).toBeHidden();
+    await pressKey(facts.change.locator("a"), "Shift+Tab");
+    await untilFocused(facts.cell("checks"));
+    await expect(facts.rest("checks")).toBeVisible();
+    await expect(facts.rest("checks")).toHaveText(
+      (await facts.cell("checks").getAttribute("title")) ?? "",
+    );
+    await expect(facts.rest("checks")).toContainText(checkSnapshotSummary(outsideChecks).words);
+    // Tab moves on to the pull request's link, and the line goes with the focus.
+    await launched.page.keyboard.press("Tab");
+    await untilFocused(facts.change.locator("a"));
+    await expect(facts.rest("checks")).toBeHidden();
   } finally {
     await launched.close();
   }

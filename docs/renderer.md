@@ -130,7 +130,7 @@ An unready successor stays invisible and unavailable to interaction until its bo
 Decorative peeks belong inside each entry drawing (`CardPeeks`), sharing its opacity, transform and lifetime; the stack envelope owns only placement and the pager, never a separately painted border.
 The incoming drawing owns the peeks' one-place lift, so a pending successor cannot leave them visible after a departure.
 The selected card is ready when its current document drew at its width (`FrameController.onDrawn`), or shows a usable error or Retry.
-Its document is the one its body frame draws: a settle card's body less the host's fact strip, which draws in a frame of its own beside the buttons (`drawnBody`, `stage/entryView.ts`).
+Its document is the one its body frame draws: a settle card's body less the host's fact strip, which draws in a frame of its own above the buttons (`drawnBody`, `stage/entryView.ts`).
 The host rewrites that strip as its facts come in, such as the lines a change adds and the checks' ages, so a new fact leaves the drawn body current and never holds the card's seen report (`useSeenReport`) waiting for a drawing that does not come.
 A drawing reported while the frame is briefly at another width, as when a card's first height flashes a scrollbar on Linux, waits and counts once the frame is back at that width; a newer report or a new document replaces it (`cards/drawnAtWidth.ts`).
 A wait that never becomes ready ends after the frame watchdog's budget, counted from the selection, and the entry appears as it is, never counted as ready: a paging or replacement hold, and a successor whose departed drawing has already dropped away.

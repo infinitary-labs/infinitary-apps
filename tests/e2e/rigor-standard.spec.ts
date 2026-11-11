@@ -14,12 +14,7 @@ import { TaskStore } from "../../src/core/storage/taskRecords";
 import { RepoRegistry } from "../../src/core/workspace/repoRegistry";
 import { COMPLETION_CARD_HEADINGS } from "../../src/shared/cardHeadings";
 import { reportSummary } from "../../src/shared/feed";
-import {
-  CARE_WORDS,
-  CHECK_WORDS,
-  DEFAULT_WORKSPACE_WORD,
-  MERGE_WORDS,
-} from "../../src/shared/vocabulary";
+import { CHECK_WORDS, DEFAULT_WORKSPACE_WORD, MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import {
@@ -129,11 +124,13 @@ test("a standard-tier crewmate's completion card renders the completion outline 
       .getByRole("heading", { name: COMPLETION_CARD_HEADINGS[3], exact: true })
       .locator("xpath=following-sibling::p[1]"),
   ).toContainText(MOCK_STANDARD_AFTER);
-  // The host's facts strip stands beside the buttons (ruling D4, the fact
-  // strip at v2.7): the body never repeats the project's care.
+  // The host's facts strip stands above the buttons (ruling D4, the fact
+  // strip at v2.7): the body never repeats the project's care, and the
+  // strip names a care level only when it is not Default (INF-3709's plan,
+  // the captain's answer 3).
   const facts = factsStrip(frame);
   await expect(facts.project).toHaveText(DEFAULT_WORKSPACE_WORD);
-  await expect(facts.care).toHaveText(CARE_WORDS.standard);
+  await expect(facts.care).toHaveCount(0);
   // The completion decision: the merge action, default, and the discard.
   await expect(page.getByRole("button", { name: MERGE_WORDS.land })).toBeVisible();
   await expect(page.getByRole("button", { name: "Discard" })).toBeVisible();
@@ -263,8 +260,8 @@ test("the host attaches completion buttons and facts after the outline", async (
   // The host still writes its own facts after the body.
   const facts = factsStrip(frame);
   await expect(facts.project).toHaveText(REPO_NAME);
-  await expect(facts.care).toHaveText(CARE_WORDS.standard);
   await expect(facts.checks).toHaveText(CHECK_WORDS.green);
+  await expect(facts.care).toHaveCount(0);
   await facts.strip.screenshot({ path: test.info().outputPath("completion-outline-facts.png") });
 
   // Nothing was refused on the way: the crewmate never saw a lint error.

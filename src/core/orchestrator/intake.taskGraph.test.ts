@@ -7,12 +7,24 @@
  * (tests/helpers/crewHarness.ts) and reads what it answers, the cards and the record.
  */
 
-import { type Card, MERGE_CLOSES_MARK, MERGE_CLOSES_WORDS, SETTLE_FACTS_OPEN } from "@shared/cards";
+import {
+  type Card,
+  MERGE_CLOSES_MARK,
+  MERGE_CLOSES_WORDS,
+  SETTLE_FACT_VALUE_CLASS,
+  SETTLE_FACTS_OPEN,
+} from "@shared/cards";
 import { softHoldWords } from "@shared/holds";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { DROP_REVIEW_STALE, dropReviewKeys, NO_LONGER_WANTED } from "@shared/recordDrop";
 import type { WorkShape } from "@shared/routingPolicy";
-import { changeLinesWords, DEFAULT_WORKSPACE_WORD } from "@shared/vocabulary";
+import {
+  CARE_REFERENCE_WORD,
+  CARE_WORDS,
+  changeLinesShortWords,
+  changeLinesWords,
+  DEFAULT_WORKSPACE_WORD,
+} from "@shared/vocabulary";
 import { describe, expect, it, vi } from "vitest";
 import {
   completionBody,
@@ -583,9 +595,11 @@ describe("the task graph (task-system P2)", () => {
         "<p>The prompt no longer fires on every rebuild.</p><ul><li>Verified on a packaged build.</li></ul>",
       ) +
         SETTLE_FACTS_OPEN +
-        `<span class="inf-fact" data-fact="project"><span class="inf-fact-k">Project</span><span class="inf-fact-v">${DEFAULT_WORKSPACE_WORD}</span></span>` +
-        '<span class="inf-fact" data-fact="crewmate"><span class="inf-fact-k">Model</span><span class="inf-fact-v">mock-1</span></span>' +
-        '<span class="inf-fact" data-fact="care"><span class="inf-fact-k">Care</span><span class="inf-fact-v">Quick</span></span>' +
+        // The status line (INF-3709's plan): a task with no checks has no
+        // state, so the line holds only the reference - the project, and
+        // the care level because it is not Default.
+        `<p class="inf-foot-line"><span class="inf-foot-ref"><span data-fact="project"><span class="${SETTLE_FACT_VALUE_CLASS}">${DEFAULT_WORKSPACE_WORD}</span></span>` +
+        `<span data-fact="care"><span class="${SETTLE_FACT_VALUE_CLASS}">${CARE_WORDS.quick}</span> ${CARE_REFERENCE_WORD}</span></span></p>` +
         // The app's line says the merge closes the task (INF-2490).
         `<p class="inf-merge-closes" ${MERGE_CLOSES_MARK}>${MERGE_CLOSES_WORDS.closes}</p>` +
         "</div>",
@@ -649,9 +663,7 @@ describe("the task graph (task-system P2)", () => {
       const lines = () =>
         cards()
           .find((card) => card.taskId === taskId && card.actions.length > 0)
-          ?.body.match(
-            /<span class="inf-fact" data-fact="lines">[\s\S]*?<\/span><\/span><\/span>/,
-          )?.[0];
+          ?.body.match(/<span data-fact="lines"[^>]*>[\s\S]*?<\/span><\/span>/)?.[0];
       const emit = () =>
         (specs[0] as CrewmateSpec).onCard?.({
           requiredActions: [],
@@ -677,11 +689,11 @@ describe("the task graph (task-system P2)", () => {
       expect(lines()).toBeUndefined();
       expect(cards().find((card) => card.taskId === taskId)?.body).not.toContain("+0");
 
-      // A readable version: the counts, labeled apart, in mono.
+      // A readable version: the signed counts in the open, their words on rest.
       seedDelivery(tasks, taskId, { headSha: first, ci: "green", ciAt: Date.now() });
       await tick();
       expect(lines()).toBe(
-        `<span class="inf-fact" data-fact="lines"><span class="inf-fact-k">Lines</span><span class="inf-fact-v"><span class="inf-mono">${changeLinesWords(128, 42)}</span></span></span>`,
+        `<span data-fact="lines" title="${changeLinesWords(128, 42)}"><span class="${SETTLE_FACT_VALUE_CLASS}">${changeLinesShortWords(128, 42)}</span></span>`,
       );
       expect(tasks.get(taskId)?.delivery?.changeLines).toMatchObject({
         base,
@@ -689,9 +701,10 @@ describe("the task graph (task-system P2)", () => {
         added: 128,
         deleted: 42,
       });
-      // It sits after the change and before the checks.
+      // It sits in the reference at the line's far end, after the states.
       const body = cards().find((card) => card.taskId === taskId)?.body ?? "";
-      expect(body.indexOf('data-fact="lines"')).toBeLessThan(body.indexOf('data-fact="checks"'));
+      expect(body.indexOf('data-fact="checks"')).toBeLessThan(body.indexOf('data-fact="lines"'));
+      expect(body.indexOf('class="inf-foot-ref"')).toBeLessThan(body.indexOf('data-fact="lines"'));
 
       // The change is revised: the strip shows the new version's counts.
       seedDelivery(tasks, taskId, { headSha: revised, ci: "green", ciAt: Date.now() });
@@ -738,11 +751,12 @@ describe("the task graph (task-system P2)", () => {
     },
   );
 
-  it("names the DISPATCHED model right after the project, never the routing choice (review F1)", async () => {
-    const crewmate = fakeCrewmate();
+  it("names the DISPATCHED model on the card's top line, never the routing choice (review F1)", async () => {
+    const crewmate = fakeCrewmate({ modelLabel: "Mock 1" });
     // The router chose one model, but the transport actually served
-    // another (fm-mock/mock-1, fakeCrewmate's modelRef): the strip names
-    // what served, off the task record's dispatched model.
+    // another (fm-mock/mock-1, fakeCrewmate's modelRef): the card names
+    // what served, by the session's own word, on its top line. Its foot
+    // names no model (INF-3709's plan: the top line already does).
     const { supervisor, specs, cards } = setup(crewmate, {
       routedModel: { provider: "anthropic", id: "claude-fable-5" },
     });
@@ -769,20 +783,20 @@ describe("the task graph (task-system P2)", () => {
       ],
     });
     await tick();
-    const body = cards().find((card) => card.taskId === taskId && card.actions.length > 0)?.body;
-    expect(body).toContain(
-      '<span class="inf-fact" data-fact="crewmate"><span class="inf-fact-k">Model</span><span class="inf-fact-v">mock-1</span></span>',
-    );
+    const card = cards().find((each) => each.taskId === taskId && each.actions.length > 0);
+    expect(card?.model).toBe("Mock 1");
+    const body = card?.body;
     expect(body).not.toContain("claude-fable-5");
-    const project = body?.indexOf(">Project<") ?? -1;
-    const crewmateAt = body?.indexOf(">Model<") ?? -1;
-    const care = body?.indexOf(">Care<") ?? -1;
+    expect(body).not.toContain("Mock 1");
+    expect(body).not.toContain("mock-1");
+    // The reference names the project, then the care level.
+    const project = body?.indexOf('data-fact="project"') ?? -1;
+    const care = body?.indexOf('data-fact="care"') ?? -1;
     expect(project).toBeGreaterThanOrEqual(0);
-    expect(crewmateAt).toBeGreaterThan(project);
-    expect(care).toBeGreaterThan(crewmateAt);
+    expect(care).toBeGreaterThan(project);
   });
 
-  it("keeps the task record on the model that answers, says what moved it, and names it on the strip (FI3-967)", async () => {
+  it("keeps the task record on the model that answers, says what moved it, and names it on the card (FI3-967)", async () => {
     const opus55 = { provider: CLAUDE_PROVIDER_ID, id: "claude-opus-5-5" };
     const opus48 = { provider: CLAUDE_PROVIDER_ID, id: "claude-opus-4-8" };
     const served = (model: { provider: string; id: string }) => `${model.provider}/${model.id}`;
@@ -829,7 +843,10 @@ describe("the task graph (task-system P2)", () => {
     // Owner-only: the session's word never reaches the feed as its own event.
     expect(events.some((event) => (event as { type: string }).type === "model_served")).toBe(false);
 
-    // The completion card's strip names the model doing the work now.
+    // The completion card names the model doing the work now on its top
+    // line (its foot names no model, INF-3709's plan): a session's own word
+    // follows the model that answers, as a Claude session's does.
+    crewmate.modelLabel = () => "Claude Opus 4.8";
     (specs[0] as CrewmateSpec).onCard?.({
       requiredActions: [],
       title: "Adding a computer by its address works",
@@ -842,9 +859,8 @@ describe("the task graph (task-system P2)", () => {
       ],
     });
     await tick();
-    const body = cards().find((card) => card.taskId === taskId && card.actions.length > 0)?.body;
-    expect(body).toContain(
-      '<span class="inf-fact" data-fact="crewmate"><span class="inf-fact-k">Model</span><span class="inf-fact-v">claude-opus-4-8</span></span>',
+    expect(cards().find((card) => card.taskId === taskId && card.actions.length > 0)?.model).toBe(
+      "Claude Opus 4.8",
     );
 
     // A reattach asked for the routed model again, and the client honored it.

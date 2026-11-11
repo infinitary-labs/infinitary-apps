@@ -8,6 +8,7 @@ import { CHECKS_ABSENT_WORDS } from "../../src/shared/checkSnapshot";
 import {
   CARE_WORDS,
   CHECK_WORDS,
+  changeLinesShortWords,
   changeLinesWords,
   MERGE_WORDS,
 } from "../../src/shared/vocabulary";
@@ -184,7 +185,9 @@ test("a project on a plain Git host: the work is sent up, the card names it ther
     deleted += Number(minus) || 0;
   }
   expect(added).toBeGreaterThan(0);
-  await expect(facts.lines).toHaveText(changeLinesWords(added, deleted));
+  // The signed counts in the open, the words on rest (INF-3709's plan).
+  await expect(facts.lines).toHaveText(changeLinesShortWords(added, deleted));
+  await expect(facts.cell("lines")).toHaveAttribute("title", changeLinesWords(added, deleted));
   await expect(facts.strip).not.toContainText("GitHub");
   await page.screenshot({ path: test.info().outputPath("forge-seam-plain-host-card.png") });
 

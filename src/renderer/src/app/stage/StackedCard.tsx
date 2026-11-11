@@ -10,6 +10,8 @@ import {
   cardTakesReplies,
   firstmateOwnCard,
   isPreviewBody,
+  MERGE_CLOSES_MARK,
+  splitMergeClosesLine,
 } from "@shared/cards";
 import { CARD_CHOICE_COMMANDS } from "@shared/keyboard";
 import type { FrameAnswers } from "@shared/plugins/bridge";
@@ -194,12 +196,20 @@ export function StackedCard({
       onDrawn?.();
     }
   }, [bodyPending, showThread, bodyEntrance.onDrawn, onDrawn]);
-  // A settle card's fact strip stands beside its buttons, in view however
+  // A settle card's fact strip stands above its buttons, in view however
   // long the body is, and the body shows the rest (`factStripOf`); so
   // does the strip on the note of a task that merges on its own. The stage's
   // draw key names the same body (`drawnBody`).
   const split = useMemo(() => factStripOf(card), [card]);
   const body = split?.body ?? card.body;
+  // The strip's merge line stands at the start of the buttons row, beside
+  // the buttons it describes; the strip's frame draws the rest, the card's
+  // full width above them.
+  const foot = useMemo(
+    () => (split && card.actions.length > 0 ? splitMergeClosesLine(split.facts) : undefined),
+    [split, card.actions.length],
+  );
+  const strip = foot ? foot.strip : split?.facts;
   // A merge card's risk chart is chrome at its top right (docs/card-authoring.md
   // "The risk chart"); the body keeps clear of the box it holds.
   const asideRef = useRef<HTMLDivElement>(null);
@@ -228,6 +238,21 @@ export function StackedCard({
   const footer =
     card.actions.length > 0 || reply !== undefined || noteDone || notesFirst ? (
       <>
+        {foot?.words && (
+          <span
+            {...{ [MERGE_CLOSES_MARK]: "" }}
+            style={{
+              alignSelf: "center",
+              marginRight: "auto",
+              // Level with the strip's words, which stand one step inside their frame.
+              paddingLeft: "var(--space-1)",
+              fontSize: "var(--text-sm)",
+              color: "var(--fg-2)",
+            }}
+          >
+            {foot.words}
+          </span>
+        )}
         {notesFirst && (
           <span className="inf-annotation-count" data-card-note-count="" aria-live="polite">
             {queuedNotesWords(noteCount)}
@@ -435,8 +460,8 @@ export function StackedCard({
           ) : undefined
         }
         facts={
-          split && !bare ? (
-            <CardFactsFrame facts={split.facts} theme={theme} title={card.title} width={size} />
+          strip && !bare ? (
+            <CardFactsFrame facts={strip} theme={theme} title={card.title} width={size} />
           ) : undefined
         }
         style={style}

@@ -12,6 +12,9 @@ import {
 // default branch's newest run fails too, in the open, from the recorded
 // evidence alone; the crew's verdict stays the crew's.
 describe("checkVerdicts", () => {
+  /** A row's open line: the verdict first, then the check's name in mono. */
+  const row = (verdict: string, check: string) =>
+    `<span class="inf-check-v">${verdict}</span> <span class="inf-mono inf-check-name">${check}</span>`;
   const headSha = "a".repeat(40);
   const mainSha = "b".repeat(40);
   const now = 10 * 60_000;
@@ -35,7 +38,7 @@ describe("checkVerdicts", () => {
 
   it("states that main fails an undiagnosed check too, naming main's version and when it was read", () => {
     const html = checkVerdicts(reading(["unit-tests", "probe-tests"], ["unit-tests"]), now);
-    expect(html).toContain(`unit-tests</span> <span>· ${CHECK_FAILS_ON_MAIN_WORDS}</span>`);
+    expect(html).toContain(row(CHECK_FAILS_ON_MAIN_WORDS, "unit-tests"));
     expect(html).toContain(
       `<p class="inf-check-outside" data-check-outside="unit-tests">${failsOnMainSentence({ sha: mainSha, at: now - 5 * 60_000 }, now)}</p>`,
     );
@@ -43,7 +46,7 @@ describe("checkVerdicts", () => {
       "Main's newest run of this check failed too, at bbbbbbb, read 5m ago, so the failure is outside this change; the app watches main's run of it.",
     );
     // A check main passes keeps the missing-verdict words and no fact line.
-    expect(html).toContain(`probe-tests</span> <span>· ${CHECK_VERDICT_MISSING}</span>`);
+    expect(html).toContain(row(CHECK_VERDICT_MISSING, "probe-tests"));
     expect(html).not.toContain('data-check-outside="probe-tests"');
     expect(html.match(/data-check-outside=/g)).toHaveLength(1);
   });
@@ -58,7 +61,9 @@ describe("checkVerdicts", () => {
       at: 1,
     } as (typeof delivery.ciRepair.diagnoses)[number]);
     const html = checkVerdicts(delivery, now);
-    expect(html).toContain(`· ${CHECK_VERDICT_WORDS["baseline-blocked"]}</span></summary>`);
+    expect(html).toContain(
+      `<summary>${row(CHECK_VERDICT_WORDS["baseline-blocked"], "unit-tests")}</summary>`,
+    );
     expect(html).not.toContain(CHECK_FAILS_ON_MAIN_WORDS);
     expect(html).toContain('data-check-outside="unit-tests"');
     expect(html).toContain("outside this change");
@@ -77,8 +82,8 @@ describe("checkVerdicts", () => {
   });
 
   // INF-3208: the crewmate's diagnosis words apply to the pull request's
-  // own checks; the queue status says the queue's own words in the strip's
-  // Batch check cell instead.
+  // own checks; the queue status says the queue's own words under the
+  // strip's Batch check state instead.
   it("lists no row for the project's queue status, diagnosed or not, beside an own check's row", () => {
     const delivery = reading(["unit-tests", QUEUE_STATUS], []);
     delivery.ciRepair.diagnoses.push({
@@ -89,9 +94,61 @@ describe("checkVerdicts", () => {
       at: 1,
     } as (typeof delivery.ciRepair.diagnoses)[number]);
     const html = checkVerdicts(delivery, now);
-    expect(html).toContain(`unit-tests</span> <span>· ${CHECK_VERDICT_MISSING}</span>`);
+    expect(html).toContain(row(CHECK_VERDICT_MISSING, "unit-tests"));
     expect(html).not.toContain(QUEUE_STATUS);
     expect(html).not.toContain(CHECK_VERDICT_WORDS["own-regression"]);
     expect(checkVerdicts(reading([QUEUE_STATUS], []), now)).toBe("");
+  });
+
+  // The captain's answer on INF-3709's plan, "earlier failures: hidden": a
+  // check recorded failed at this version that the newest reading no longer
+  // shows failing is left out of the merge card.
+  describe("a failure the newest reading no longer shows", () => {
+    const rerun = (states: Record<string, "success" | "failure" | "pending">) => {
+      const delivery = reading(["unit-tests", "journeys"], []);
+      delivery.checks.items = Object.entries(states).map(([name, state]) => ({
+        name,
+        state: state as "failure",
+      }));
+      return delivery;
+    };
+
+    it("leaves out a check that passed or runs again, and keeps the one still failing", () => {
+      const html = checkVerdicts(rerun({ "unit-tests": "success", journeys: "failure" }), now);
+      expect(html).toContain(row(CHECK_VERDICT_MISSING, "journeys"));
+      expect(html).not.toContain("unit-tests");
+      expect(
+        checkVerdicts(rerun({ "unit-tests": "pending", journeys: "failure" }), now),
+      ).not.toContain("unit-tests");
+    });
+
+    it("leaves out a requested run's job once the run's newest attempt stops listing it", () => {
+      // The run's job is not one of the pull request's checks, so the reading
+      // of them never names it: the run's own newest reading decides.
+      const delivery = {
+        ...rerun({ "unit-tests": "failure" }),
+        ciRepair: {
+          failures: [{ headSha, checks: ["unit-tests", "journeys"] }],
+          runs: [{ runId: 7, headSha, attempt: 1, failed: ["journeys"] }],
+          diagnoses: [],
+          repairs: [],
+        },
+      };
+      expect(checkVerdicts(delivery, now)).toContain(row(CHECK_VERDICT_MISSING, "journeys"));
+      delivery.ciRepair.runs = [{ runId: 7, headSha, attempt: 2, failed: [] }];
+      const html = checkVerdicts(delivery, now);
+      expect(html).not.toContain("journeys");
+      expect(html).toContain(row(CHECK_VERDICT_MISSING, "unit-tests"));
+    });
+
+    it("keeps a check a missing or incomplete reading cannot speak for", () => {
+      const unread = { ...rerun({}), checks: undefined };
+      expect(checkVerdicts(unread, now)).toContain(row(CHECK_VERDICT_MISSING, "unit-tests"));
+      const incomplete = rerun({ journeys: "failure" });
+      Object.assign(incomplete.checks, { complete: false });
+      expect(checkVerdicts(incomplete, now)).toContain(row(CHECK_VERDICT_MISSING, "unit-tests"));
+      // A whole reading that does not list the check says it no longer fails.
+      expect(checkVerdicts(rerun({ journeys: "failure" }), now)).not.toContain("unit-tests");
+    });
   });
 });

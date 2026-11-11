@@ -69,10 +69,9 @@ export type ResponseCardProps = {
    */
   comment?: React.ReactNode;
   /**
-   * Host chrome at the start of the action row, pushed left: a settle card's
-   * fact strip, in view however long the body is. It shares the row with
-   * the actions while there is room and takes a row of its own above them
-   * when there is not.
+   * Host chrome above the action row, the card's full width: a settle
+   * card's fact strip, in view however long the body is. The actions take
+   * the row under it.
    */
   facts?: React.ReactNode;
   /**
@@ -459,15 +458,16 @@ export function ResponseCard({
       {!bare && (actions || facts) && (
         <div
           // The card's buttons: one of the shown card's places a key goes to
-          // (docs/keyboard.md, "Cards and frames"). Its fact strip stays here
-          // alone while the buttons stand under an open thread's field.
+          // (docs/keyboard.md, "Cards and frames"). Its fact strip takes the
+          // row above them, and stays here alone while the buttons stand
+          // under an open thread's field.
           data-card-actions={actions ? "" : undefined}
           style={{
             display: "flex",
             flexShrink: 0,
             flexWrap: "wrap",
             justifyContent: "flex-end",
-            // Beside a strip taller than they are, buttons keep their height.
+            // Beside a line of words taller than they are, buttons keep their height.
             alignItems: facts ? "center" : undefined,
             gap: "var(--space-2)",
             rowGap: "var(--space-2)",
@@ -478,7 +478,7 @@ export function ResponseCard({
           }}
         >
           {facts && (
-            <div data-card-facts="" style={{ flex: "1 1 320px", minWidth: 0 }}>
+            <div data-card-facts="" style={{ flex: "0 0 100%", minWidth: 0 }}>
               {facts}
             </div>
           )}

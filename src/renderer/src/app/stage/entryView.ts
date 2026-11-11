@@ -150,7 +150,7 @@ export function unpreparable(entry: StackEntry, windowShown: boolean): Unprepare
 /**
  * A card's body cut from the host's fact strip, and the strip, when the card
  * takes its task's facts (`takesTaskFacts`): the stage draws the strip in a
- * frame of its own beside the buttons, in view however long the body is, and
+ * frame of its own above the buttons, in view however long the body is, and
  * the body frame draws the rest (`splitSettleFacts`).
  */
 export function factStripOf(card: Pick<Card, "body" | "actions" | "reviewTaskId" | "risk">) {

@@ -1083,7 +1083,9 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
       await tick();
       const card = h.cards().find((entry) => entry.taskId === h.taskId);
       expect(card?.body).not.toContain(">On its own<");
-      expect(card?.body).toContain('>Care</span><span class="inf-fact-v">Default<');
+      // Default care is not written on the card (INF-3709's plan): only a
+      // care level that is not Default shows in the strip's reference.
+      expect(card?.body).not.toContain('data-fact="care"');
     } finally {
       h.dispose();
     }

@@ -30,7 +30,7 @@ Right ⌥ does not record from the reply row.
 **The first sent message opens the thread beside the card**, and the field moves to the thread's foot with its own Chat beside the clip.
 The card's choices move with it, under the field at the thread's foot, in the same order and grouping, so a click on one plainly carries the field's words (the captain: "move that action buttons to the safe place below the reply input box so it's clear that the reply text will be taken by any of the action buttons").
 The column is narrower than the card, so there a group of choices wraps rather than squeezing its labels: the default stays last at the trailing edge, and a label never breaks inside a word.
-A settle card's fact strip stays at the card's foot, where its row was.
+A settle card's fact strip stays at the card's foot, where its row was, and its line on what the merge does to the task moves with the choices it describes.
 When the thread collapses, the choices go back under the field at the card's foot.
 The field keeps its draft, chips and focus across the move, and the card body is the same one, never rebuilt: what the captain did in the body (a preview's state, an open disclosure, scrolling) is still there beside the thread.
 A reply never moves the card (INF-770): it stays shown beside its thread whatever waits behind it, the pager and the arrows do not change, and the waiting line says who answers next and the way on.

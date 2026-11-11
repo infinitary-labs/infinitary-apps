@@ -11,7 +11,7 @@ export const MOCK_PROVIDER_ID = "fm-mock";
 export const MOCK_MODEL_ID = "mock-1";
 
 /** The catalog name of the one mock model - what a card's model chip calls it. */
-const MOCK_MODEL_LABEL = "Mock model";
+export const MOCK_MODEL_LABEL = "Mock model";
 
 /**
  * A models.json that defines NO custom provider and only points a real,

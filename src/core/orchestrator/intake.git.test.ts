@@ -10,6 +10,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { SETTLE_FACT_VALUE_CLASS } from "@shared/cards";
+import { CARE_REFERENCE_WORD, CARE_WORDS } from "@shared/vocabulary";
 import { describe, expect, it, vi } from "vitest";
 import {
   completionBody,
@@ -89,11 +91,11 @@ describe("the task graph (task-system P2)", () => {
       const body = () => cards().find((card) => card.title === "The smoke test is fixed")?.body;
       // Before any CI read the strip says so, instead of inventing a state.
       expect(body()).toContain(
-        '<span class="inf-fact" data-fact="project"><span class="inf-fact-k">Project</span><span class="inf-fact-v">firstmate-3000</span></span>',
+        `<span data-fact="project"><span class="${SETTLE_FACT_VALUE_CLASS}">firstmate-3000</span></span>`,
       );
-      expect(body()).toContain(
-        '<span class="inf-fact" data-fact="care"><span class="inf-fact-k">Care</span><span class="inf-fact-v">Default</span></span>',
-      );
+      // The care level shows only when it is not Default (the captain's
+      // answer on INF-3709's plan).
+      expect(body()).not.toContain('data-fact="care"');
       expect(body()).not.toContain(">Goes in<");
       expect(body()).not.toContain(">On its own<");
       expect(body()).toContain("not read yet");
@@ -108,14 +110,15 @@ describe("the task graph (task-system P2)", () => {
         ciFinishedAt: Date.now() - 6 * 60_000,
       });
       // A revision under the same id re-renders the facts from the record:
-      // the PR is its number, never the raw URL; how long the checks took
-      // shows in the open (INF-587), and their start and the reading ride
-      // the cell's title.
+      // the PR is its number, never the raw URL; the checks' state and how
+      // long ago they finished show in the open, and how long they took
+      // (INF-587), their start and the reading ride the state's title
+      // (INF-3709's plan: counts and durations on rest).
       emit();
       await tick();
       expect(body()).toContain('<a href="https://github.com/o/r/pull/55">#55</a>');
-      expect(body()).toContain("</svg>passed in 14m · 6m ago</span>");
-      expect(body()).toMatch(/title="Started [^"]+ · read [^"]+"/);
+      expect(body()).toContain('passed<span class="inf-foot-age"> · 6m ago</span>');
+      expect(body()).toMatch(/title="Passed in 14m · started [^"]+ · read [^"]+"/);
       expect(body()).not.toContain("not read yet");
       expect(cards().filter((card) => card.title === "The smoke test is fixed")).toHaveLength(1);
       // Saved round fields remain history; they add no counter cells, marks
@@ -126,8 +129,8 @@ describe("the task graph (task-system P2)", () => {
       });
       emit();
       await tick();
-      expect(body()).toContain("passed in 14m · 6m ago");
-      expect(body()).toMatch(/title="Started [^"]+ · read [^"]+"/);
+      expect(body()).toContain('passed<span class="inf-foot-age"> · 6m ago</span>');
+      expect(body()).toMatch(/title="Passed in 14m · started [^"]+ · read [^"]+"/);
       expect(body()).not.toContain('data-fact="check-rounds"');
       expect(body()).not.toContain('data-fact="look-rounds"');
       expect(body()).not.toContain('aria-label="round');
@@ -255,10 +258,10 @@ describe("the task graph (task-system P2)", () => {
       await tick();
       const body = cards().find((card) => card.title === "The meter is fixed")?.body ?? "";
       expect(body).toContain(
-        '<span class="inf-fact" data-fact="care"><span class="inf-fact-k">Care</span><span class="inf-fact-v">Quick</span></span>',
+        `<span data-fact="care"><span class="${SETTLE_FACT_VALUE_CLASS}">${CARE_WORDS.quick}</span> ${CARE_REFERENCE_WORD}</span>`,
       );
       expect(body).toContain(
-        `<span class="inf-fact" data-fact="change"><span class="inf-fact-k">Branch</span><span class="inf-fact-v">fm/task-${taskId}</span></span>`,
+        `<span data-fact="change"><span class="${SETTLE_FACT_VALUE_CLASS}">fm/task-${taskId}</span></span>`,
       );
       expect(body).not.toContain("GitHub");
       expect(body).not.toContain("<a ");

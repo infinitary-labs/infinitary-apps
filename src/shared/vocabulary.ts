@@ -148,6 +148,8 @@ export const BATCH_CHECK_WORDS = {
     failed: "failed",
   },
   pause: "paused batch's issue",
+  /** The link to the queue's run, after its words under the status line. */
+  run: "Open the run",
 } as const;
 
 /**
@@ -169,6 +171,22 @@ export const PULL_REQUEST_WORDS = {
 export function changeLinesWords(added: number, deleted: number): string {
   return `+${formatNumber(added)} added · −${formatNumber(deleted)} deleted`;
 }
+
+/**
+ * The same counts as a merge card's reference says them in the open
+ * (INF-3709's plan): `+316 −13`, the signs alone; the words above ride on
+ * rest.
+ */
+export function changeLinesShortWords(added: number, deleted: number): string {
+  return `+${formatNumber(added)} −${formatNumber(deleted)}`;
+}
+
+/**
+ * The word after the care level's name in a merge card's reference, shown
+ * only when the level is not Default (INF-3709's plan, the captain's answer
+ * 3): `Careful care`.
+ */
+export const CARE_REFERENCE_WORD = "care";
 
 /** An independent review's verdict, as a fact strip says it. */
 export const REVIEW_WORDS: Words<"pass" | "findings" | "blocked"> = {

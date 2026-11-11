@@ -5,7 +5,7 @@ import { openDatabase } from "../../src/core/storage/db";
 import { DecisionStore } from "../../src/core/storage/decisionStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
-import { currentCheckSummary } from "../../src/shared/checkSnapshot";
+import { checkSnapshotState, currentCheckSummary } from "../../src/shared/checkSnapshot";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
@@ -223,9 +223,15 @@ test("two baseline failures and one flake request diagnosis without a captain ca
       ]),
     );
     const frame = cardBody(app.page, CI_REPAIR_CARD);
+    // In the open the checks say their one state; the counts of the reading
+    // are the state's words on rest (INF-3709's plan).
+    const reading = ledger()?.checks;
     await expect(factsStrip(frame).checks).toHaveText(
-      currentCheckSummary(ledger() ?? {})?.words ?? "missing check reading",
+      reading ? checkSnapshotState(reading) : "missing check reading",
     );
+    await expect
+      .poll(() => factsStrip(frame).cell("checks").getAttribute("title"))
+      .toContain(currentCheckSummary(ledger() ?? {})?.words ?? "missing check reading");
     await app.page.screenshot({ path: test.info().outputPath("check-repair-completion.png") });
     expect(await factsStrip(frame).facts()).not.toContain("crew-verdict");
     expect(ledger()?.ci).toBe("green");

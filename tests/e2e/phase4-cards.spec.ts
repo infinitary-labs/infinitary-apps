@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { CARE_WORDS, DEFAULT_WORKSPACE_WORD, MERGE_WORDS } from "../../src/shared/vocabulary";
 import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
-import { MOCK_MODEL_ID } from "./mockModels";
+import { MOCK_MODEL_LABEL } from "./mockModels";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import {
@@ -107,23 +107,26 @@ test("an entity-escaped body is refused by name and the raw-tag retry renders as
   await expect(frame.locator("li")).toHaveText(MOCK_ESCAPED_CARD_ITEM);
   await expect(frame.locator("body")).not.toContainText("<p>");
   // A settle card ends with the host's own facts strip: the project and
-  // the task's effective care are labeled cells, not a delivery posture.
+  // the task's effective care are named there, not a delivery posture.
   const facts = factsStrip(frame);
   await expect(facts.project).toHaveText(DEFAULT_WORKSPACE_WORD);
   await expect(facts.care).toHaveText(CARE_WORDS.quick);
-  // The crewmate cell names the DISPATCHED model off the task record
-  // (review F1) - the mock transport's model, by raw id since the mock
-  // sits in no quota catalog.
-  await expect(facts.crewmate).toHaveText(MOCK_MODEL_ID);
+  // The card names the DISPATCHED model (review F1) on its top line, the
+  // mock transport's model by its catalog name; the strip no longer
+  // repeats it (INF-3709's plan).
+  await expect(shownCard(page, MOCK_ESCAPED_CARD_TITLE).locator("[data-model-chip]")).toHaveText(
+    MOCK_MODEL_LABEL,
+  );
   // Even a value far wider than the card never widens the card body
   // (review F2).
   const overflow = await facts.strip.evaluate((strip) => {
     const doc = strip.ownerDocument;
-    // A copy of the host's own project cell, its value made far too wide.
-    const cell = strip.querySelector('[data-fact="project"]')?.cloneNode(true) as HTMLElement;
+    // A copy of the host's own project fact beside it, its value made far too wide.
+    const project = strip.querySelector('[data-fact="project"]') as HTMLElement;
+    const cell = project.cloneNode(true) as HTMLElement;
     const value = cell.lastElementChild as HTMLElement;
     value.textContent = `${"an-unreasonably-long-value-".repeat(12)}end`;
-    strip.append(cell);
+    project.after(cell);
     const metrics = {
       bodyOverflows: doc.documentElement.scrollWidth > doc.documentElement.clientWidth,
     };

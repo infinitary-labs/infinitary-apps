@@ -40,7 +40,7 @@ The task's record shows it read-only in Details (`../cards/TaskRecord.prompt.md`
 **A card from there.**
 A card from a task that runs elsewhere is the same card.
 Its head names where it runs right after its meta line, "Fix the footer · on Mac mini", however long the task's title: the title gives way, the place never does (`../cards/ResponseCard.prompt.md`).
-The facts strip after its body names the device right after the project, "website · on Mac mini · …", the device in `--fg-1`.
+The facts strip at its foot names no computer, since the head already does.
 The crewmate's summary and its Tasks row carry the same fact, "website · on Mac mini", and its task record names the computer in Details' Runs on.
 Pull requests are still opened, checked and merged from this computer.
 

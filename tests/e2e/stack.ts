@@ -353,28 +353,31 @@ export async function completionAction(page: Page, title: string): Promise<Locat
   return page.locator("[data-card-layer]").getByRole("button", { name: label, exact: true });
 }
 
-/** A settle card's fact strip, as the stage shows it beside the card's buttons. */
+/** A settle card's fact strip, as the stage shows it above the card's buttons. */
 export type FactsStrip = Readonly<Record<SettleFact, Locator>> & {
   /** The strip itself. */
   readonly strip: Locator;
-  /** A fact's whole cell, where its `title` rides. */
+  /** A fact's whole item, where its `title` rides: a state of the status line, or a part of its reference. */
   readonly cell: (fact: SettleFact) => Locator;
+  /** A state's words on rest, on the line the keyboard's focus shows under the states. */
+  readonly rest: (fact: SettleFact) => Locator;
+  /** Why a state needs the captain, in the open under the status line. */
+  readonly why: (fact: SettleFact) => Locator;
   /** The facts the strip holds, in the order it shows them. */
   readonly facts: () => Promise<SettleFact[]>;
-  /** The app's line saying whether the merge closes the task (INF-2490). */
+  /** The app's line saying whether the merge closes the task (INF-2490), at the left end of the buttons row. */
   readonly mergeLine: Locator;
 };
 
 /**
- * The host's fact strip beside the buttons of the card whose body frame this
- * is, found by the fact each cell carries (`data-fact`), never by its label's
+ * The host's fact strip above the buttons of the card whose body frame this
+ * is, found by the fact each item carries (`data-fact`), never by its label's
  * words. Each fact's locator is its value, whose text is the value alone (a
  * status dot draws no text).
  */
 export function factsStrip(frame: FrameLocator): FactsStrip {
-  const strip = frame
-    .owner()
-    .locator("xpath=ancestor::section[@data-response-card][1]")
+  const card = frame.owner().locator("xpath=ancestor::section[@data-response-card][1]");
+  const strip = card
     .frameLocator("[data-card-facts] iframe[data-frame-drawn]")
     .locator("[data-facts]");
   const cell = (fact: SettleFact) => strip.locator(`[data-fact="${fact}"]`);
@@ -385,7 +388,10 @@ export function factsStrip(frame: FrameLocator): FactsStrip {
     ...values,
     strip,
     cell,
-    mergeLine: strip.locator(`[${MERGE_CLOSES_MARK}]`),
+    rest: (fact) => strip.locator(`[data-rest="${fact}"]`),
+    why: (fact) => strip.locator(`[data-why="${fact}"]`),
+    // The stage draws the line in the window, with the buttons it describes.
+    mergeLine: card.locator(`[${MERGE_CLOSES_MARK}]`),
     facts: () =>
       strip
         .locator("[data-fact]")

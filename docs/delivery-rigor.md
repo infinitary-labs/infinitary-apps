@@ -265,7 +265,7 @@ What is left closes after After when decision-relevant, otherwise in details, no
 The crewmate's standing instructions carry one sentence; its card boundary refuses a declared settle-merge decision missing an ordered heading, but notes follow the instruction alone.
 Answer cards, previews included, keep their own shape.
 The report's five headings and rigor numbers are unchanged.
-The host appends the project, crewmate model, effective care, PR link, CI state and its own holds itself (`SettleFacts.strip` in `settleCardFacts.ts`, contract v2.0 ruling D4; the labeled fact strip since v2.7), so the body never repeats those either.
+The host appends the CI state, a review, the captain's override, the project, the PR link, the change's lines and a care level other than Default itself (`SettleFacts.strip` in `settleCardFacts.ts`, contract v2.0 ruling D4; a status line since INF-3709's plan), so the body never repeats those either.
 
 `tests/e2e/rigor-standard.spec.ts` is the binding test: a crewmate commissioned through the real app on a real Pi session is served the prompt for its own delivery and care, which names its care, and reports under the five headings, and a merge card with the four-heading outline publishes through the real emit -> lint -> CI gate -> frame path with the host's own buttons on it; a missing heading is refused and the corrected card publishes, with no answer line before Why.
 
@@ -351,10 +351,8 @@ Since FI3-566 (cut C) those instructions sit where each step arises: the first m
    The one feed line is the builder's own event - `review passed at <sha>, risk <level>: <note> - <builder title>` - and the review's close is silent.
    The direct handoff tells the builder to follow its brief's delivery and show its completion card; local-only work needs no push or PR, and merge consent is unchanged.
    When the builder planned live-validation scenarios, the host reads whether its proof is accepted at the passed head (`acceptedValidation`); while the proof is not accepted, its direct handoff asks for proof instead: the builder proves once and reports the run without pushing, the host returns the new proof to the same reviewer, a repair gets a review of its own difference, and proof that only runs on a pushed branch finishes beside the checks.
-   The merge card carries the review beside CI in the host's facts strip (a Review cell: `passed
-   <sha> · risk <level>` with the note on the cell's title; `open` while
-   one is live).
-   A pass that does not cover the version on offer (`reviewCoversHead`: the exact version, or a stored change reading that matches) reads `passed at an earlier version <sha>` with a warning dot, on the merge card and in Details (the task view's `reviewCovers`); `crew_status` says `review passed at <sha> only, an earlier version than <sha> on offer`, and the builder's report wake names both versions (`earlierPass`), so an earlier review never reads as covering later work (INF-3141).
+   The merge card carries the review beside CI in the host's facts strip (a Review state: `passed`, with `Passed <sha> · risk <level>` and the note on rest; `open` while one is live).
+   A pass that does not cover the version on offer (`reviewCoversHead`: the exact version, or a stored change reading that matches) reads `passed at an earlier version <sha>` with a warning dot in Details (the task view's `reviewCovers`), and `passed at an earlier version` on the merge card, which keeps both versions for rest; `crew_status` says `review passed at <sha> only, an earlier version than <sha> on offer`, and the builder's report wake names both versions (`earlierPass`), so an earlier review never reads as covering later work (INF-3141).
 
 **Risk never holds (Q4).**
 The reviewer's risk is recorded on the builder and rendered beside CI; autonomy on is consent to merge at any risk, so a green reviewed PR on an autonomy-on repository merges like any other, and the first mate settles after a pass without reading it.
@@ -442,7 +440,7 @@ The captain's merge click on a merge card is an approval of that change, and a r
   The merge card's merge says what a click does, on an offer a click would approve (`approvableOffer`, `CardActions.mergeLabel`): Merge when checks pass while checks are pending or unreadable, Merge after fixing errors when checks fail (captain INF-1555 F20), and Merge the pull request once the checks pass.
   While the captain's override passes the checks at the card's version and the pull request is still at it, a click merges at once, so it reads Merge the pull request whatever the checks read (INF-756).
   While the checks fail at the card's version and no checks override passes them, the host draws Merge anyway beside the merge (`CardActions.mergeAnyway`, INF-1137 friction 6).
-  Under the Checks cell, a failed check whose newest run on the default branch failed too reads Fails on main too, with the host's sentence naming that run and when it was read, so the captain sees what failed and why it is outside the change before choosing (`checkVerdicts`, INF-1915 fix 1).
+  Under the status line, a failed check whose newest run on the default branch failed too reads Fails on main too, with the host's sentence naming that run and when it was read, so the captain sees what failed and why it is outside the change before choosing (`checkVerdicts`, INF-1915 fix 1).
   Its click is the captain's own word: it records the override on the checks for that version in his name, with the button's words and the card's title as its reason (`choiceWords`), and the merge runs at once; GitHub's own rules still decide whether it merges.
   It goes once the checks no longer fail, the pull request moves past the card's version, or an override already passes it.
   `CardService.refreshSettleFacts` writes it with the fact strip whenever the task's record changes, so it follows each new reading.
@@ -585,7 +583,7 @@ Empty `holds` takes it back, and a new declaration replaces the old one.
 The row is a `note` event on the timeline with one feed line, quoting the captain's words and naming the holds and how long; a new event kind would be a contract major.
 Each site reads it with `overridePasses(delivery, kind, head)`: a task-long override always passes, and a version-long one passes only at the version it covers, so a new version brings the hold back.
 The captain's merge click reads the same record, since the settle boundary is one function for the captain's click and the first mate's merge.
-The merge card's fact strip shows an Override cell naming the holds the captain's words pass.
+The merge card's fact strip shows an Override state naming the holds the captain's words pass.
 The first mate's task line in its context and `crew_status` show the standing override: what it passes, for how long, and, in `crew_status`, the captain's words.
 Every crewmate turn on the task is served the standing words: the brief carries them when the work starts with one standing, and each new override, or its withdrawal, is a `task-override-changed` notice on the task's lane that rides the next turn, on this computer or another, and starts none of its own.
 The crewmate reads them as its consent for what they reach among its own consent asks (`RIGOR_SAFETY`), such as the captain's plan's allowance, and judges which those are; keychain or signing access, writes outside the project and browser handoffs still ask.

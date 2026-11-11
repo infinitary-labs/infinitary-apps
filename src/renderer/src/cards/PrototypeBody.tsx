@@ -602,7 +602,7 @@ function useBodyReveal(
 }
 
 /**
- * A settle card's fact strip, beside its buttons so it stays in view however
+ * A settle card's fact strip, above its buttons so it stays in view however
  * long the body is (`splitSettleFacts`): the vehicle a body without a script
  * rides, without the body's inset or floor, so it is exactly as tall as the
  * strip. It declares no actions; its pull request link opens like a body's.

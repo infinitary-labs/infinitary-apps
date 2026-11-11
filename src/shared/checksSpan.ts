@@ -106,10 +106,17 @@ function clock(at: number): string {
 /**
  * What the checks' words show on rest: when the first check started and
  * when the app last read them, `Started 9:01 PM · read 9:13 PM`; either part
- * left out where it is unknown.
+ * left out where it is unknown. `lead` goes first: what a merge card's
+ * status line keeps for rest, the counts and how long the checks took,
+ * `3 skipped · 1 passed in 7m · started 9:01 PM · read 9:13 PM`.
  */
-export function checksRestWords(span: ChecksSpan | null, readAt: number | null): string {
+export function checksRestWords(
+  span: ChecksSpan | null,
+  readAt: number | null,
+  lead?: string,
+): string {
   const words = [
+    ...(lead ? [lead] : []),
     ...(span ? [`started ${clock(span.startedAt)}`] : []),
     ...(readAt !== null ? [`read ${clock(readAt)}`] : []),
   ].join(" · ");

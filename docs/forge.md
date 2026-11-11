@@ -575,7 +575,7 @@ It takes the change's id (`change`) and refuses another task's; a task reads onl
 A pull request's checks are the runs the host started for it (INF-1891, the captain: "for merge we only care about the PR checks"): on GitHub a check whose run carries an event stays only when that event is `pull_request` or `pull_request_target`, so a run a person or a tool started on the branch by hand, such as a dispatched heavy check, is read through `read_workflow` and never holds or passes the merge (`ownChecksOf` in `src/core/forge/forge.ts`); a check with no event, such as a commit status, stays as read, and a branch's own checks, read with no number, keep every run at their version.
 When a reading of the task's own pull request finds a check red, the same reading asks the host for the default branch's own checks (`Forge.branchChecks`) and records that branch's newest run of each failed check beside the reading - its version, when, and each check's state there (`TaskDelivery.mainChecks`, `facts.main`, `ChangeChecks.main`; INF-1915 fix 1).
 That is evidence about the failure's cause for the crewmate's diagnosis and the merge card, never a merge input: the merge boundary does not read it, a default branch that fails the same check passes nothing, and a selected pull request gets none.
-The merge card's checks hold does read it (`docs/delivery-rigor.md`, "Check facts and declarations"): when that branch's newest run of every failed check at the offered version failed too, the card goes up at once, says so under its Checks cell and offers Merge anyway, so the crewmate spends no rerun and asks for no reopening; the merge is still the captain's click.
+The merge card's checks hold does read it (`docs/delivery-rigor.md`, "Check facts and declarations"): when that branch's newest run of every failed check at the offered version failed too, the card goes up at once, says so under its status line and offers Merge anyway, so the crewmate spends no rerun and asks for no reopening; the merge is still the captain's click.
 The evidence is kept while the same checks fail at the same version, read again when the failures change, and cleared by a reading with no failure; a host that cannot read a branch's checks, or a read that fails, records none.
 GitHub check runs retain their reported status, conclusion and available run identity.
 The captain’s F26 choice restores the existing exception for a cancelled duplicate: a later run of the same workflow and event decides that check of the same name; unrelated and latest cancellations still count.
@@ -714,7 +714,8 @@ The crewmate may instead answer the queue's failure at the version it is on with
 The host records the answer only while its newest reading shows `infinitary/queue` failed at that version, and the kept approval's next run then marks that version waiting again once, with the pull request's own checks passed, a feed line and no card (`queueAnswer`, `src/shared/checkRepair.ts`).
 The mark spends the answer, so a later failure there stops the kept approval on the checks until a new answer; the kept approval's own retry never marks a failed version by itself.
 While the queue runs, the kept approval waits on `queue` with no card for the captain, Activity's line reads "Waiting for the batch check", and the tick reads it again every ten minutes past the watch's bound.
-A merge card shows the queue status apart from the pull request's own checks (INF-3208): its Checks cell counts and times only the pull request's own checks, and a Batch check cell says the queue status in the queue's own words, linked to its run, with a link to the paused batch's issue beside a paused or failed status (`batchCheck`, `src/core/orchestrator/settleCardFacts.ts`).
+A merge card shows the queue status apart from the pull request's own checks (INF-3208): its Checks state counts and times only the pull request's own checks, and a Batch check state says where the change stands in one word, linked to its run, with the queue's own words on rest (`batchCheck`, `src/core/orchestrator/settleCardFacts.ts`).
+A failed or paused status says the queue's own words in the open under the status line, wrapped whole, followed by links to the run and to the paused batch's issue.
 Each reading keeps those words, the link, the own checks' times and the issue a paused reading of that version linked on the task (`queueStatus`, `ProjectQueue.observe`), because a send-back links its answer's run instead; with no paused reading seen, the project's kept pause that names the change gives the issue.
 The crewmate's diagnosis rows under the strip name only the pull request's own checks, though the checks hold still reads its diagnosis of the queue status.
 Merge anyway never stands beside a failed batch check, since no checks override passes the queue, and once the crewmate answers that version the card's merge reads "Merge the pull request", whose click marks it waiting again.
@@ -971,12 +972,13 @@ The same branch reading answers a crewmate's own failed check at once: a reading
 
 ## The checks cell's time
 
-Wherever the app shows a task's checks - the fact strip on the crew summary and the task record, and the merge card's Checks cell - it says how long they have been running, or how long they took, counted by the host's own times (INF-587).
+Wherever the app shows a task's checks - the fact strip on the crew summary and the task record, and the merge card's Checks state - it says how long they have been running, or how long they took, counted by the host's own times (INF-587).
 `checks()` keeps each check's start and finish where the host gives them (`ForgeCheck.startedAt`, `finishedAt`): a GitHub check run's `started_at` and `completed_at`, a commit status's `created_at` and, once settled, its `updated_at`, a workflow run not yet listed as a check by its `run_started_at`, and a GitLab job's `started_at` and `finished_at`.
 Every reading writes `ciStartedAt` and `ciFinishedAt` on the task's delivery facts (`checksTimes` in `src/shared/checksSpan.ts`): the first check's start; once green the last check's finish; once red the first failure's finish.
-A merge card's Checks cell on a reading that carries the project's queue status times the pull request's own checks alone, as the queue status's reading kept them ("A project's queue" above).
+A merge card's Checks state on a reading that carries the project's queue status times the pull request's own checks alone, as the queue status's reading kept them ("A project's queue" above).
 A reading with no start clears both, so a new version starts the count again, and a rerun that the host lists as the newer check counts from its own start.
-The cell reads `running for 15m`, `passed in 14m · 5m ago` or `failed after 9m · 5m ago`, in whole minutes redrawn each minute (`src/shared/checksSpan.ts`); on rest it shows when the first check started and when the app last read them.
+The task record's cell reads `running for 15m`, `passed in 14m · 5m ago` or `failed after 9m · 5m ago`, in whole minutes redrawn each minute (`src/shared/checksSpan.ts`); on rest it shows when the first check started and when the app last read them.
+The merge card's Checks state says `running for 15m`, `passed · 5m ago` or `failed · 5m ago` in the open, and keeps the counts, how long the checks took and both times for rest (`checksRestWords`, INF-3709's plan).
 The crew summary says the checks as one state with that time beside the pull request, with no counts and no `ago` (`running for 11m`, `checkSnapshotState`, INF-2528).
 Checks that have not started, not read yet or merged outside the app show no time.
 The first mate's own facts keep the reading's age (`ciFact.ts`), because it judges a reading's freshness by it; Activity and the Now line keep each reading's own time.
@@ -988,11 +990,11 @@ It stays after the watch ends, so a finished run says `passed in 3h 26m · 5m ag
 A reading of another run replaces it only when that run started at or after it, so the newest run shows.
 The run is read by its number, never by its commit, which may carry other checks; a task with a change shows the change's checks.
 
-A merge card shows each requested run the app watches for the version on offer in a cell of its own after its Checks cell, because the Checks cell counts only the pull request's own checks (INF-3220).
+A merge card shows each requested run the app watches for the version on offer in a state of its own on its status line, because the Checks state counts only the pull request's own checks (INF-3220).
 Every reading of a run still going keeps on its watch the run's version, its page, whether it is queued or running, since when the app's readings have seen that state, and when it read (`RunWatch.reading`, `watchReadingOf` in `src/core/orchestrator/runWatch.ts`).
 A run reads as queued while none of its jobs has a machine, so a run whose first jobs finished while the rest wait for one reads as queued too.
-The cell is named by the run, such as `phone`, and reads `queued for 1h 27m` or `running for 5m`, linked to the run's page; on rest it names the run's number and version and when the app read it.
-A run read at another version shows no cell, and the cell goes when the watch ends (`watchedRuns` in `src/core/orchestrator/settleCardFacts.ts`).
+The state is named by the run, such as `phone`, and reads `queued for 1h 27m` or `running for 5m`, linked to the run's page; on rest it names the run's number and version and when the app read it.
+A run read at another version shows no state, and the state goes when the watch ends (`watchedRuns` in `src/core/orchestrator/settleCardFacts.ts`).
 
 ## The run watch
 

@@ -95,6 +95,7 @@ Every merge of a pull request or branch is asked on one card, the merge card (IN
 The host writes that card's buttons (captain lock 3, `CrewmateCards.withCompletionActions`): the merge labelled for the task's posture; the discard (`danger`, `settle discard`) beside it only when the merge closes the task and drops its own working copy; Not now beside any other merge; and Review carefully below Careful.
 With autonomy on, the app authorizes the merge from the card as it goes up and the card shows the merging line instead of buttons, unless the crewmate declared `asksFirst`, a standing direction's reason for the captain to decide (`docs/forge.md`, "A requested merge").
 Every merge card's strip ends with the host's line on whether its click closes the task: "Merging closes this task" for `after: close`, "The task continues after this merge" for `after: continue` (`withMergeClosesLine`, INF-2490).
+The stage draws that line at the left end of the card's buttons row, beside the buttons it describes ("The host's settle facts" below).
 A closing merge says the task continues too while a question or another pull request on the task is open, and changes back when that clears (INF-2525; `docs/forge.md`, "A requested merge").
 A crewmate's card rule tells it to settle its open questions before it raises the merge card; nothing refuses the card, and the line above catches a miss (the captain's answer "words" on INF-2525).
 A review that skips the branch rules labels it Merge, skipping the rules, and after the lint the host adds what the click does at the end of the body (`.inf-call`): the version, every rule it may skip and every failed check (`docs/forge.md`, "A merge past the branch rules").
@@ -119,33 +120,44 @@ The replay keeps its recorded reading and still drops them.
 
 ## The host's settle facts
 
-On any card carrying a `settle` effect, and on the story note of a task that merges on its own (INF-1219, "Work that closed without the captain's click"), the host appends its own fact strip (`SettleFacts.strip`, captain ruling D4 of the v2.0 audit; restyled at v2.7 by the captain's design pass, 2026-09-19): one labeled single-line cell per fact - the project (or "Default workspace"), the crewmate's model right after it (the task record's model
-- what the session reported at dispatch, kept current when the backend moves the work to another model (`CrewTurns.recordServedModel`), review F1 - by its catalog display label), the task's effective care (Quick, Default or Careful, including a per-task ask), the PR number as a link when one is recorded on the task, and the CI state with a `StatusDot`-language dot and how long the checks have run or took by the host's own times (`running for 15m`, `passed in 14m · 5m ago`, `docs/forge.md` "The checks cell's time") - or "not read yet" on a direct-pr task no check has read yet.
-  A Lines cell (`lines`), after the change, says what the whole offered change adds and deletes in mono (`+128 added · −42 deleted`, INF-820).
-  The host reads it from git at the offered version - the head the last check reading saw, else the task's branch - against the merge base with the default branch, with renames found and binary files adding no text lines (`WorkspaceService.changeLines`), and keeps it on the task's delivery facts with both versions.
+On any card carrying a `settle` effect, and on the story note of a task that merges on its own (INF-1219, "Work that closed without the captain's click"), the host appends its own fact strip (`SettleFacts.strip`, captain ruling D4 of the v2.0 audit; the fact strip of v2.7, rebuilt as a status line by INF-3709's plan after the captain found its eleven equal cells too much, with no arrangement).
+The strip is at most two parts, each the card's full width: the status line, and under it what needs the captain.
+- The status line holds one state per fact the task has: its checks (`checks`), each requested run the app watches (`run`), the batch check (`batch`), a review (`review`) and the captain's override (`override`).
+  Each state is a `StatusDot`-language mark and its words on one line.
+  The line sorts them failing, warning, running or waiting, passed (`SETTLE_LEVELS`, `src/shared/cards.ts`, each state's `data-level`), and a failing or warning state reads in the primary text color.
+  The Checks state says one word for the reading (`running`, `passed`, `failed`; `checkSnapshotState`), with how long running checks have run and how long ago finished ones finished (`running for 15m`, `passed · 5m ago`), or "not read yet" on a direct-pr task no check has read yet.
+  Words that say the whole state stand without the Checks label, their first letter drawn as a capital: `No checks`, `Cannot read all checks`, a change merged elsewhere.
+  A state keeps its detail for rest: the checks' counts, how long they took, when they started and when they were last read (`3 skipped · 1 passed in 7m · started 9:01 PM · read 9:13 PM`, `docs/forge.md` "The checks cell's time"); a review's version, risk and risk note; a batch check's own words while nothing is wrong; the captain's words behind an override and how long they stand.
+  Words on rest ride the state's `title` for the pointer.
+  For the keyboard a state with such words is a Tab stop, by itself or through the link its words hold, and while it holds focus the same words show on a line under the states (`data-rest`), which never moves the reference.
+  At the line's far end stands the reference, in quiet mono: the project (or "Default workspace"), the PR number as a link when one is recorded on the task, the lines the offered change adds and deletes (`+128 −42`, with `+128 added · −42 deleted` on rest, INF-820), and the task's effective care only when it is not Default (`Quick care`, `Careful care`, including a per-task ask).
+  The reference wraps under the states as a whole when the card is narrow, and a state or a reference wider than the card is cut by an ellipsis, never widening the card.
+  The strip names no model and no computer, because the card's top line shows both; the branch is deliberately not shown.
+  The host reads the lines from git at the offered version - the head the last check reading saw, else the task's branch - against the merge base with the default branch, with renames found and binary files adding no text lines (`WorkspaceService.changeLines`), and keeps it on the task's delivery facts with both versions.
   For work on another computer, its host measures the same git diff and returns optional counts with its revision read; an older computer returns no counts.
-  It shows only while that reading is of the version on offer and is read again when that version or its base moves; an unread change shows no cell, never a zero.
+  The lines show only while that reading is of the version on offer and are read again when that version or its base moves; an unread change shows nothing, never a zero.
   A reading that finishes after the offered version or placement changes is discarded.
-  Since v3.6 it also carries the HOLDS the host placed on the task: the CI rounds and the review rounds it counted, each against its cap.
-  The rounds ride the cell they belong to, never a cell of their own (INF-1501): marks after the Checks cell's words, and after the Review cell's on a reviewed task, one per round the cap allows, filled for each round spent (`factRoundsSvg`, `src/shared/factDot.ts`).
-  The count in the feed's own words (`round 2 of 3`) rides the cell's title and the drawing's label, after the checks' times, with the head CI last went red on.
-  Once the cap is standing every mark turns `--danger` and the word held follows, since the cell's own dot can be a tick by then; a direct-pr task with a round counted and no reading yet still shows `not read yet` with its marks.
-  The prompts used to ask an agent to type out a round count it cannot see; here the captain reads it off the card.
-  An Override cell (`override`) names the holds the captain's recorded words pass, with the captain's words and how long in its title, and says the merge goes without live proof when they pass it (`docs/delivery-rigor.md`, "The holds").
-  When the checks started and when they were last read (`Started 9:01 PM · read 9:13 PM`) and a review's risk note ride the cells' `title` attributes, never lines of their own; the branch is deliberately not shown.
-  It is rendered from the task record every time the card is emitted or revised; the host refreshes open strips on task changes and their running times on the shared tick.
+  An Override state names the holds the captain's recorded words pass, and says the merge goes without live proof when they pass it (`docs/delivery-rigor.md`, "The holds").
+- What needs the captain stands under the status line, in the open (`inf-foot-needs`), and only under a state that is not passing.
+  A batch check that failed or paused says the queue's own words there, wrapped whole, followed by its links (`data-why="batch"`, `docs/forge.md` "A project's queue").
+  Checks the app could not read say why there (`data-why="checks"`).
+  A failed reading adds one row per failed check at the offered version (`checkVerdicts`, `src/core/orchestrator/checkVerdicts.ts`; nightly session audit finding 3).
+  The row leads with the crewmate's recorded `check_change` classification - Caused by this change, Broken on main too, Suspected intermittent failure, or Cause not established - then the check's name in mono, on one line, the name cut by an ellipsis where the card is too narrow, so no verdict breaks inside a word.
+  A check without a diagnosis says Not diagnosed yet; the host never infers a verdict from a report or the logs, and a suspected flake is not presented as a proven intermittent failure.
+  Opening the row by click or keyboard shows the whole name and the crewmate's evidence as text.
+  Its `data-inf-disclosure` identity keeps the reader's open state through live time refreshes and resets it when the version, check or diagnosis changes.
+  Earlier-version diagnoses and non-failing readings show no verdicts.
+  A check recorded failed at this version that the newest reading no longer shows failing - it passed, or runs again - is left out (`stillFails`, the captain's answer on INF-3709's plan); for a job of a requested run the newest reading is that run's newest attempt.
+  A failed check whose newest run on the default branch failed too (`TaskDelivery.mainChecks`, INF-1915 fix 1) reads Fails on main too when the crewmate has not diagnosed it, and under its line the host writes, in the open, that main's newest run of this check failed as well, at which version and when it was read, so the captain sees what failed and why it is outside the change without opening anything; a diagnosed check keeps the crewmate's verdict as its row and gets the same host line under it.
+- The strip is rendered from the task record every time the card is emitted or revised; the host refreshes open strips on task changes and their running times on the shared tick.
   Host fact refreshes update both the shown and staged card without an author revision or thread message, so the card, record and paired view read the same delivery facts.
   Each refresh shares a task's fact strip across those revisions inside the task-read projection; a task write invalidates it, and the next refresh reads again so time wording stays current.
   The shown strip takes a refresh in place: its frame keeps the one document it was born with and the bridge rewrites only what changed (`markup`, `docs/ui-plugins.md` "Bridge v2"), so a press on its pull request link that the minute's refresh lands in still opens the pull request (FI3-1093).
-  A failed reading adds one disclosure per failed check at the offered version, directly under the Checks cell (`checkVerdicts`, `src/core/orchestrator/checkVerdicts.ts`; nightly session audit finding 3).
-  Its summary carries the check name and the crewmate's recorded `check_change` classification: Caused by this change, Broken on main too, Suspected intermittent failure, or Cause not established.
-  A check without a diagnosis says Not diagnosed yet; the host never infers a verdict from a report or the logs, and a suspected flake is not presented as a proven intermittent failure.
-  Opening the disclosure by click or keyboard reveals the crewmate's evidence as text.
-  Its `data-inf-disclosure` identity keeps the reader's open state through live time refreshes and resets it when the version, check or diagnosis changes.
-  Earlier-version diagnoses and non-failing readings show no verdicts.
-  A failed check whose newest run on the default branch failed too (`TaskDelivery.mainChecks`, INF-1915 fix 1) reads Fails on main too when the crewmate has not diagnosed it, and under its line the host writes, in the open, that main's newest run of this check failed as well, at which version and when it was read, so the captain sees what failed and why it is outside the change without opening anything; a diagnosed check keeps the crewmate's verdict as its summary and gets the same host line under it.
-  Each cell names its fact in `data-fact` (one of `SETTLE_FACTS`, `src/shared/cards.ts`), so a test finds a fact by what it is (`factsStrip` in `tests/e2e/stack.ts`), never by its label's words.
-  The stage lifts the strip out of the body (`splitSettleFacts`, `src/shared/cards.ts`) and shows it in a sandboxed frame of its own at the start of the card's action row, left of the buttons, so a long body never scrolls it out of view; a past card shows the body whole, strip last.
+  Each state and each part of the reference names its fact in `data-fact` (one of `SETTLE_FACTS`, `src/shared/cards.ts`), so a test finds a fact by what it is (`factsStrip` in `tests/e2e/stack.ts`), never by its label's words.
+  The stage lifts the strip out of the body (`splitSettleFacts`, `src/shared/cards.ts`) and shows it in a sandboxed frame of its own across the card's foot, above the buttons, so a long body never scrolls it out of view.
+  It takes the merge line out of that strip (`splitMergeClosesLine`) and draws it at the left end of the buttons row, on a line above the buttons when the row is too narrow.
+  A past card shows the body whole, strip last, and the phone draws the same strip with the merge line above its own buttons.
+  The frame's styles still draw the labelled cells of a strip saved on a card that closed before the status line, and the cells of the app's other cards (`.inf-fact`).
   A finished code-work merge card or note opens at **Why**, then **What changed**, **Before**, **After** (contract v4.37, FI3-253); the title alone carries the answer, with no answer line before Why.
   This is a loose outline, not a recipe for each section: Why gives the ask or defect, preferring the captain's original intent, wording or framing when available (contract v4.38).
   Paraphrase faithfully and quote only exact words; otherwise use factual motivation.
@@ -861,7 +873,7 @@ Title and body must make sense with no prior conversation.
 The captain is multi-tasking.
 Name the work in plain language (what changed / what they are deciding), not only a PR number or SHA.
 A finished code-work merge card uses Why / What changed / Before / After, with verification inside After and remaining work after it when decision-relevant, otherwise in details.
-The project, crewmate model, care, PR link, checks and holds are the host's settle facts strip, so the body does not repeat them.
+The checks, a review, the captain's override, the project, the PR link, the change's lines and a care level other than Default are the host's settle facts strip, so the body does not repeat them.
 SHAs and job timings are optional detail, not the lead.
 Decision options stay 2-3, sentence case; labels can stay short if the body already states the choice.
 
@@ -921,7 +933,7 @@ Save and defer has no recording yet, so the approval-handoff evaluation's `save-
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
 - Card rule (product): a card is allowed only when work cannot move forward without a captain decision or the captain cannot move forward without seeing that fact; forbid all progress, CI-wait, and status cards (they belong in the feed).
-  A card that implies a next step is a decision with that step as its `default`; on any card carrying a settle effect the host appends the project, the crewmate's model, the task's effective care, the proposed change, the checks' state and any hold of its own - the CI and review round counts against their caps, contract v3.6 - as the labeled fact strip (`SettleFacts.strip`, v2.0 ruling D4, restyled at v2.7), so bodies never repeat them and the lint asks for none of them; a revision keeps the replaced version in `card_revisions` (migration 24).
+  A card that implies a next step is a decision with that step as its `default`; on any card carrying a settle effect the host appends the checks' state, a review, the captain's override, the project, the proposed change, its lines and a care level other than Default as the fact strip (`SettleFacts.strip`, v2.0 ruling D4, a status line since INF-3709's plan), so bodies never repeat them and the lint asks for none of them; a revision keeps the replaced version in `card_revisions` (migration 24).
   `keepsOpen` is retired (orchestrator contract v4.65, `src/core/prompts/contract-revisions/README.md`): no prompt or tool description offers it and `emit_card` refuses it; migration 73 removes the old actions from open cards before the click path is removed.
   A card carries exactly the actions its author declares (cards/tasks/agents P0, captain rulings D1-D8): no automatic Later, no park; a deferral is an action the author offers and its reminder is `schedule_prompt`.
   The ONE exception is the merge card (contract v3.6, captain lock 3; INF-2744): a crewmate declares a `merge` action and the host replaces every merge and settle action on that card with the merge labelled for the posture plus the danger discard or Not now, leaving the author's other actions untouched - the labels and the count were facts the host held and an agent was transcribing, and `confirm` is deliberately not host-set, because it is a claim about the body and auto-confirming would destroy unlanded work without the captain choosing.

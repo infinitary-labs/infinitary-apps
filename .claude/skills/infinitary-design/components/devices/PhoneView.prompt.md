@@ -95,7 +95,7 @@ A merge card's risk is a row of seven dots in the levels' colors, and a tap open
 The native controls inherit the shell's tint and retain platform focus and touch behavior.
 A review-finding card shows Review finding in the warning color on its head's first line.
 The default choice is filled with the accent, with the dark void's ink, in either appearance, as the approved card does; while a required question waits it is drawn muted, and a pressed choice shows a pending mark.
-Above the choices sit the host's fact strip, the actions to take after merging, one written out or more folded under their count, and the reply field, which reads "anything to add?", takes photos from the library or camera, and whose words go with a choice too.
+Above the choices sit the host's fact strip, the Mac's status line ending with the line on what the merge does to the task, the actions to take after merging, one written out or more folded under their count, and the reply field, which reads "anything to add?", takes photos from the library or camera, and whose words go with a choice too.
 The body uses the Mac’s card stylesheet and fonts and fits the available width; it never zooms or scrolls on its own, since the card has one scroller.
 A tap on a picture or a diagram opens it full screen, fitted, titled Card picture or Card diagram, with its caption under it and Done at the top.
 There a pinch zooms from fitted to eight times fitted, a double-tap goes to its own size centred where tapped (twice fitted when that is no larger) and back, a drag pans a zoomed one, turning the device refits it, and a swipe down while fitted closes it.

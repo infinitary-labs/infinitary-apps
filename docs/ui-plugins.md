@@ -313,7 +313,7 @@ The task key also stays on hover, search, and the row locator; project chips kee
 
 **A row's gestures are pointing.**
 The panel points with the calls every panel that reads the board gets ("Pointing and the view" below), which the host checks like any input from across the frame boundary.
-A click on a row is `point.openTask`: a row waiting on you has its decision card come to the front while that card is on the stack; otherwise the task's record card opens.
+A click on a row is `point.openTask`: put-aside cards return first, then the waiting decision, deferred required action or newest showable card comes forward; only with none does the task's record open.
 Resting on a row is `point.peekTask` with the row's box in the panel's page, or `null`; the host adds the frame's rect and opens the crew summary beside that row (FI3-565 piece 3, `docs/crew-orbits.md` "From a Tasks row").
 A panel that reads `feed.recent` may also send `point.peekLine` with the line exactly as read and its box, or `null` to let go.
 The host checks the line against the feed it presented and opens its full recorded words and time in the same window-wide summary layer, with the task title and project when known.
@@ -547,7 +547,7 @@ A card's own page declares `card.keep` beside the card actions (`PANEL_CARD_VIEW
 
 A panel that reads `tasks.board` gets `PanelProps.point` (`src/renderer/src/plugins/panelPoint.ts`), in either realm:
 
-- `openTask(taskId)` opens a task as a Tasks row does: its waiting card forward, or its record at the front (`openTask` in `plugins/point/openTask.ts`).
+- `openTask(taskId)` opens a task as a Tasks row does: restore put-aside cards, then show its waiting decision, deferred action, newest showable card or record (`openTask` in `plugins/point/openTask.ts`).
 - `openRecord(taskId)` opens the task's record at the front even while a card waits for it, as the board's Open record does.
 - `peekTask({ taskId, box } | null)` rests on a task: the box is in the page's own pixels, the host adds where the page's frame currently sits, and the crew summary opens beside the panel on its rail, as a Tasks row's does, or on the stack beside the box itself, as the task board's tiles' always have (`PanelPeek` in `plugins/point/taskPeek.ts`, drawn by `PeekSummary` as `[data-point-summary]`).
   A frame resizing after the page reports its row repositions the summary from those page coordinates, so a shorter row moving into Backlog keeps its hairline.
@@ -569,7 +569,7 @@ A panel draws `litTaskId` as its own rest, without the summary: the Tasks panel 
 A card body's and a record's frame hears the same through the bridge's host-to-frame `lit` message, the key of the lit task or null, pushed only to a mount whose `taskKeys` name that key and again to every new document: the bridge sets `data-inf-lit` on each `a[data-inf-task]` for that key, and the frame stylesheet draws it as the hover surface.
 A panel that does not read the board gets an empty view, and its `point` throws at the call - every call but `draft`.
 
-A panel links the task keys its words write with the library's own pieces (FI3-1271; the design skill's core rule "Task keys"): `usePanelTaskKeys(reads, texts)` finds which keys name tasks from the panel's own `tasks.board` read, and from one exact `tasks.search` for a key the board does not list, and `PanelTaskKeyText` draws the words with each such key a `TaskKey` link - a rest is `point.peekTask` with the key's box, a click or Enter is `point.openTask`.
+A panel links the task keys its words write with the library's own pieces (FI3-1271; the design skill's core rule "Task keys"): `usePanelTaskKeys(reads, texts)` finds which keys name tasks from the panel's own `tasks.board` read, and from one exact `tasks.search` for a key the board does not list, and `PanelTaskKeyText` draws the words with each such key a `TaskKey` link - a rest is `point.peekTask` with the key's box, a click or Enter is `point.openRecord`.
 Activity links every key on its lines and the Knowledge browser the keys in its inspector, outside its rows; neither changes the shape of a read.
 
 ### Moving tasks (piece 4)
@@ -739,7 +739,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The right rail carries the now panel (task-system P4, below) and nothing else.
 - The collapsed Tasks header counts each task by its own state, not the contextual tree rows the expanded Working group shows (`summaryOf` in `src/panels/now/rows.ts`).
 - The now panel and the record card (task-system P4, design section 10, captain decisions D3/D4 and the two panel notes; "Task-system P4" in `docs/ui-plugins.md`): the right rail's ONE panel is the folder `src/panels/now/` (the Tasks panel, id `now`; an ordinary panel folder in the frame realm, "The app's own panels are ordinary folders" above) over `tasks.board` - minimal by default (counts, "waiting on you" and "working" rows, the other groups collapsed to a count, filters behind the header), visible once its `onRail` (`src/panels/now/rows.ts`, on the one grouping rule in `src/shared/nowPanel.ts`; `tests/e2e/now-panel.spec.ts` pins what it paints) says the board holds an ask's record or a row it lists - dropped rows and closed question/operation rows never show as rows, and an ask's record docks the panel collapsed, with its counts (FI3-1164: Tasks shows from the welcome on).
-  A row's gestures are POINTING, never a mutation: a click is `point.openTask`, which brings a waiting row's decision card to the front or opens the task record, and a rest is `point.peekTask`, which opens the crew summary beside the row the pointer rests on.
+  A row's gestures are POINTING, never a mutation: a click is `point.openTask`, which restores put-aside cards and shows the waiting decision, deferred action, newest showable card or record, and a rest is `point.peekTask`, which opens the crew summary beside the row the pointer rests on.
   Hover-only view updates reuse the Tasks panel's grouped rows, navigation and measured row positions; memoized row components repaint only changed row inputs.
   A pushed board is reconciled against the one the panel holds (`src/panels/now/reconcile.ts`, INF-2105 on INF-2078's accepted plan): a task or project whose fields read the same keeps its object, so a change paints only the rows it touched, and a push that moves nothing listed paints nothing; every row stays in the page.
   A group's derived row list also keeps its identity while its tasks, order and nesting stay unchanged, and its body reuses the actual row elements until a row input changes rather than rebuilding them on another group's crew write.

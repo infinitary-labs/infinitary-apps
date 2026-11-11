@@ -1,8 +1,16 @@
 import type { Card } from "@shared/cards";
-import type { TaskDetail } from "@shared/tasks";
+import { endedLineWords } from "@shared/endedCard";
+import type { TaskBoard, TaskDetail } from "@shared/tasks";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { shownEntry } from "../../app/stack";
 import { useShellStore } from "../../app/store";
-import { openTask, openTaskOn } from "./openTask";
+import { openTask, openTaskFromKey, openTaskOn } from "./openTask";
+
+const navigation = vi.hoisted(() => ({ board: undefined as TaskBoard | undefined }));
+vi.mock("../reads/appExecutor", () => ({
+  boardOnScreen: () => navigation.board,
+  searchedTask: () => undefined,
+}));
 
 /** The one way a pointing gesture opens a task: its waiting card forward, or its record. */
 
@@ -119,5 +127,125 @@ describe("opening a task whose required action was deferred", () => {
     detail.mockResolvedValue(detailOf("deferred", null, "done"));
     await openTask({ taskId: "op1" });
     expect(run).not.toHaveBeenCalled();
+  });
+});
+
+/** Approved navigation plan: rows show the waiting decision before the newest showable card;
+ * links always open records. These exercise the shell owner, not a duplicate selector. */
+describe("row cards and task links", () => {
+  const detail = vi.fn();
+  const card = (id: string, createdAt: number, extra: Partial<Card> = {}): Card => ({
+    id,
+    taskId: "harbour",
+    author: "crewmate",
+    priority: 20,
+    title: id,
+    meta: "harbour",
+    body: "<p>The harbour summary is ready.</p>",
+    actions: [],
+    status: "ready",
+    createdAt,
+    ...extra,
+  });
+  const row = { id: "harbour", status: "open", waitingCardId: null } as TaskDetail;
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+    navigation.board = undefined;
+    useShellStore.setState({ cards: [], records: [], cardIndex: 0 });
+  });
+  const prepare = (cards: Card[], task: TaskDetail = row) => {
+    navigation.board = { seq: 1, at: 1, tasks: [task], projects: [], links: [] };
+    vi.stubGlobal("window", { infinitary: { tasks: { detail } } });
+    useShellStore.setState({ cards, records: [], cardIndex: 0 });
+  };
+  it("opens the newest note without a task lookup and keeps it on another row press", async () => {
+    prepare([card("earlier", 1), card("answer-note", 2)]);
+    await openTask({ taskId: row.id });
+    expect(useShellStore.getState().cardFocusTarget).toBe("answer-note");
+    await openTask({ taskId: row.id });
+    expect(useShellStore.getState().cardFocusTarget).toBe("answer-note");
+    expect(useShellStore.getState().records).toEqual([]);
+    expect(detail).not.toHaveBeenCalled();
+  });
+  it("uses the same waiting decision as Waiting on you ahead of a newer note", async () => {
+    prepare(
+      [
+        card("decision", 1, { actions: [{ id: "chart", label: "Use the chart" }] }),
+        card("note", 2),
+      ],
+      { ...row, waitingCardId: "decision" },
+    );
+    await openTask({ taskId: row.id });
+    expect(useShellStore.getState().cardFocusTarget).toBe("decision");
+    expect(detail).not.toHaveBeenCalled();
+  });
+  it("includes a replied-under card but not an off-stage or ended card", async () => {
+    prepare([
+      card("reply", 1, { awaiting: "answer", sentBackAt: 1 }),
+      card("off-stage", 2, { awaiting: "answer" }),
+      card("ended", 3, {
+        ended: {
+          by: "crewmate",
+          reason: "withdrawn",
+          at: 3,
+          line: endedLineWords("crewmate", "withdrawn"),
+        },
+      }),
+    ]);
+    await openTask({ taskId: row.id });
+    expect(useShellStore.getState().cardFocusTarget).toBe("reply");
+  });
+  it("restores put-aside notes before choosing the newest one", async () => {
+    const notes = [card("earlier", 1, { minimized: true }), card("newest", 2, { minimized: true })];
+    prepare(notes);
+    const minimize = vi.fn(async () => {});
+    const list = vi.fn(async () => notes.map((note) => ({ ...note, minimized: false })));
+    vi.stubGlobal("window", { infinitary: { tasks: { detail }, cards: { minimize, list } } });
+    await openTask({ taskId: row.id });
+    expect(minimize.mock.calls).toEqual([
+      ["earlier", false],
+      ["newest", false],
+    ]);
+    expect(useShellStore.getState().cardFocusTarget).toBe("newest");
+    expect(detail).not.toHaveBeenCalled();
+  });
+  it("shows a deferred action before an existing newer note", async () => {
+    prepare([card("note", 2)], {
+      ...row,
+      requiredAction: { state: "deferred", cardId: "action" },
+    } as TaskDetail);
+    const run = vi.fn(async () => {
+      useShellStore.setState({
+        cards: [
+          card("note", 2),
+          card("action", 1, { actions: [{ id: "done", label: "I installed it" }] }),
+        ],
+      });
+      return { ok: true };
+    });
+    detail.mockResolvedValue({ ...row, waitingCardId: "action" });
+    vi.stubGlobal("window", { infinitary: { tasks: { detail }, task: { run } } });
+    await openTask({ taskId: row.id });
+    expect(run).toHaveBeenCalledWith(row.id, "show-card");
+    expect(useShellStore.getState().cardFocusTarget).toBe("action");
+  });
+  it("opens the record when none of its cards can be shown", async () => {
+    prepare([card("off-stage", 2, { awaiting: "answer" })]);
+    await openTask({ taskId: row.id });
+    expect(useShellStore.getState().records).toEqual([{ taskId: row.id }]);
+  });
+  it("opens a linked task's record in front and Hide returns to the originating card", async () => {
+    prepare([
+      card("summary", 1),
+      card("decision", 2, { actions: [{ id: "chart", label: "Use the chart" }] }),
+    ]);
+    await openTaskFromKey({ id: row.id });
+    expect(useShellStore.getState().records).toEqual([
+      { taskId: row.id, from: { cardId: "summary" } },
+    ]);
+    useShellStore.getState().closeRecord();
+    expect(shownEntry(useShellStore.getState())?.id).toBe("summary");
+    expect(detail).not.toHaveBeenCalled();
   });
 });

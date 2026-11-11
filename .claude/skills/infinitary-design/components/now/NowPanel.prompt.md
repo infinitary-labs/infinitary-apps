@@ -41,7 +41,9 @@ Nothing else in the rail: no chips, meters, models, or ages - everything richer 
 }} onOpen={(t)=>openRecord(t.id)}/>
 ```
 
-Clicking a row is a pointing gesture, never a work change: a row waiting on you refreshes its ready decision and brings it to the front of the stack (or opens the record if no eligible choice remains); any other row opens the task's record (`TaskRecord`) as a front entry in the main card stack, shown at once.
+Clicking a row is a pointing gesture: restore put-aside cards, then show its waiting decision, deferred required action, newest showable card or record (`TaskRecord`), in that order.
+Newest means when the card was put up, not revised; off-stage and ended cards do not count.
+A card already in front stays there, and a held card comes forward without a task lookup.
 One entry per task can remain open; each row reads selected while its record is open, even when paged away (FI3-309, replacing the gutter pane).
 Open task board in its header shows every task at once on the stage (`TaskBoard.prompt.md`).
 The panel's buttons that change a task are a backlog row's Start and every row's pin (below); it has no drag, no inline editing and no manual create - the record's action bar carries Drop task and the one next step (`TaskRecord`), and every other write happens by talking to the first mate.
@@ -99,7 +101,7 @@ Typing in the filter also searches work the panel does not list: closed work old
 Matches are by key, title and goal, never by card or report text.
 Nothing earlier is listed until text is typed; clearing the field removes the group at once, and the normal groups (and their seven-day window) are unchanged.
 Matches appear as one more group labelled `earlier` after `done · 7d`, open (it exists only while text is typed), with the same row, status mark and accessible label as any row, newest closed first, at most 50.
-A row opens the task's record exactly as any row does, including an answer or decision record the first mate owns.
+A row follows the same card-first rule as any row, including an answer or decision record the first mate owns.
 The project chips narrow earlier matches like any others; a query matching nothing shows no group.
 The panel stays read-only: this is a pointing gesture, never a write.
 
@@ -227,7 +229,7 @@ Resting on a row still does not slow the stage.
 - **The stage is untouched.**
   Pointing at a row selects no crewmate, pauses nothing and slows nothing; a working row's crewmate keeps its orbit.
 - **The same summary from a card.**
-  A task key anywhere the app shows one opens this same summary (`../core/TaskKey`), and a click on the key opens the task as a click on its row does.
+  A task key anywhere the app shows one opens this same summary (`../core/TaskKey`), and a click on the key opens the task's record.
 
 ## Keyboard
 

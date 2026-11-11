@@ -40,7 +40,7 @@ import { pressKey, runFromSearch } from "./windowKeys";
 /**
  * A task key a card body names is a link to that task (FI3-594): resting on
  * it opens the same summary a Tasks row opens, beside the card, and a click
- * opens the task the way a click on its Tasks row does. Only a key that is
+ * opens the task’s record. Only a key that is
  * exactly a recorded task's links; key-shaped words that name no task -
  * the captain's own example spelling among them - stay text.
  */
@@ -270,7 +270,7 @@ test("a task key in a card body opens its task's summary on a rest and the task 
       await expect(shownCard(page, SUMMARY_CARD)).toBeVisible();
     });
 
-    await test.step("a click opens the task's record, as a click on its Tasks row does", async () => {
+    await test.step("a click opens the task's record", async () => {
       await clickInBody(keyLink(seeded.ledger));
       await expect(recordCard(page)).toHaveAttribute(
         "data-task-record",
@@ -283,13 +283,18 @@ test("a task key in a card body opens its task's summary on a rest and the task 
       await expect(recordCard(page)).toHaveCount(0);
     });
 
-    await test.step("a click on a task waiting on a decision brings that decision forward", async () => {
+    await test.step("a key opens the record even when its task has a waiting decision", async () => {
       await showCard(page, SUMMARY_CARD);
       // The record leaving the stage may cover the card for a moment.
       await expect.poll(() => onTop(page, keyLink(seeded.format))).toBe(true);
       await clickInBody(keyLink(seeded.format));
-      await expect(shownCard(page, DECISION_CARD)).toBeVisible();
-      await expect(recordCard(page)).toHaveCount(0);
+      await expect(recordCard(page)).toHaveAttribute(
+        "data-task-record",
+        seeded.ids[seeded.format] ?? "",
+      );
+      await expectRecordBody(page);
+      await hideRecord(page).click();
+      await expect(shownCard(page, SUMMARY_CARD)).toBeVisible();
     });
   } finally {
     await launched.close();

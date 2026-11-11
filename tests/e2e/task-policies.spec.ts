@@ -86,6 +86,8 @@ async function openRecord(app: LaunchedApp, key: string, backlog: boolean | "lan
       .locator(`[data-now-group-header="${backlog === "landed" ? "landed" : "backlog"}"]`)
       .evaluate((el) => (el as HTMLElement).click());
   await pressKey(nowRow(app.page, key), "Enter");
+  // A completed merge keeps its outcome note on the stage; policies are read on its record.
+  if (backlog === "landed") await runFromSearch(app.app, app.page, "cards.show-info");
   await expect(recordCard(app.page)).toBeVisible();
   const summary = recordFrame(app.page).locator('[data-record-section="details"] > summary');
   await runFromSearch(app.app, app.page, "focus.card-body");

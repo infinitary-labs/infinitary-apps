@@ -874,6 +874,8 @@ test("ready waiting follows reachable choices through a reply, reload and return
     expect(hidden.detail.waitingCardId).toBeNull();
     expect(hidden.projects[0]?.counts.waitingOnYou).toBe(0);
     await pressRow(page, key);
+    await expect(shownCard(page, THREAD_CARD_TITLE)).toBeVisible();
+    await runFromSearch(own.app, page, "cards.show-info");
     await expect(recordCard(page)).toBeVisible();
     await expect(recordBar(page)).not.toHaveAttribute("data-record-next", "show-card");
     await page.screenshot({ path: test.info().outputPath("ready-waiting-hidden.png") });
@@ -916,6 +918,8 @@ test("ready waiting follows reachable choices through a reply, reload and return
     await expect(shownCard(page, THREAD_CARD_TITLE)).toBeVisible();
     // A ready return waits behind the record, rather than stealing its place.
     await pressRow(page, key);
+    await expect(shownCard(page, THREAD_CARD_TITLE)).toBeVisible();
+    await runFromSearch(own.app, page, "cards.show-info");
     await expect(recordCard(page)).toBeVisible();
     await expectRecordBody(page);
     mockProvider?.releaseThreadAnswer();

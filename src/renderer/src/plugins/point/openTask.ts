@@ -1,8 +1,11 @@
-import type { TaskDetail, TaskView } from "@shared/tasks";
+import { type Card, onStage } from "@shared/cards";
+import type { TaskView } from "@shared/tasks";
 import { minimizedRowId, presentTask } from "@shared/taskWaiting";
 import { z } from "zod";
 import { pressesSoFar } from "../../app/presses";
+import { isHeldEntry, shownEntry } from "../../app/stack";
 import { useShellStore } from "../../app/store";
+import { boardOnScreen, searchedTask } from "../reads/appExecutor";
 
 /** A pointing gesture at a task: it opens its waiting decision, or its record. */
 export const openTaskValueSchema = z.strictObject({
@@ -42,22 +45,16 @@ export function openTaskOn(
  * up again, as the record's Show the card does. One still blocked by its
  * prerequisites has no card to show, and the operation would refuse it.
  */
-function showableRequiredAction(detail: Pick<TaskDetail, "status" | "requiredAction">): boolean {
+function showableRequiredAction(detail: Pick<TaskView, "status" | "requiredAction">): boolean {
   const state = detail.requiredAction?.state;
   return detail.status === "open" && (state === "ready" || state === "deferred");
 }
 
 /**
- * Opens a task the way a click on its Tasks row does (task-system P4): its
- * ready decision comes forward, or its record opens at the front of the
- * main stack. A panel's `point.openTask` and a card body's task key open a
- * task the same way (FI3-594). A shortcut to a decision may have aged since
- * the page painted it, so the task's associations are refreshed and
- * reconciled with the focusable local stack first; a task with no reachable
- * decision whose required action the captain deferred gets its card shown
- * again (INF-358), and only a task with neither opens its record. `since`
- * is the captain's presses counted when he pointed, by default now: a
- * press he begins while the task's associations are read is his to finish.
+ * Tasks rows and board tiles restore put-aside cards, then show the waiting
+ * decision, a deferred required action, the newest showable card, or the record.
+ * Use the task already presented to the row; bringing a held card forward
+ * does not wait for a task lookup. Task links have their own record-only rule.
  */
 export async function openTask(value: OpenTaskValue, since = pressesSoFar()): Promise<void> {
   const shell = useShellStore.getState();
@@ -68,7 +65,10 @@ export async function openTask(value: OpenTaskValue, since = pressesSoFar()): Pr
     shell.focusCard(standalone.id, since);
     return;
   }
-  let detail = await window.infinitary.tasks.detail(value.taskId);
+  let detail =
+    boardOnScreen()?.tasks.find((task) => task.id === value.taskId) ??
+    searchedTask(value.taskId) ??
+    (await window.infinitary.tasks.detail(value.taskId));
   const cards = useShellStore.getState().cards;
   const minimized = cards.filter(
     (card) => card.minimized && (card.taskId === detail.id || card.id === detail.waitingCardId),
@@ -78,7 +78,6 @@ export async function openTask(value: OpenTaskValue, since = pressesSoFar()): Pr
     shell.applyCards(await window.infinitary.cards.list());
   }
   let { waitingCardId } = presentTask(detail, useShellStore.getState().cards);
-  if (minimized[0]) waitingCardId = minimized[0].id;
   if (!waitingCardId && showableRequiredAction(detail)) {
     const shown = await window.infinitary.task.run(value.taskId, "show-card");
     if (shown.ok) {
@@ -87,22 +86,37 @@ export async function openTask(value: OpenTaskValue, since = pressesSoFar()): Pr
     }
   }
   openTaskOn(
-    { taskId: value.taskId, cardId: waitingCardId ?? undefined },
+    {
+      taskId: value.taskId,
+      cardId: waitingCardId ?? newestTaskCard(detail, useShellStore.getState().cards)?.id,
+    },
     useShellStore.getState(),
     since,
   );
 }
 
-/**
- * Opens the task a key the window draws names (FI3-1271): on the main view
- * - a key in Settings leaves Settings for it - as a click on its Tasks row
- * does.
- */
-export function openTaskFromKey(task: Pick<TaskView, "id" | "waitingCardId">): Promise<void> {
+/** The newest card the task owns or waits on, excluding ended and off-stage cards. */
+function newestTaskCard(
+  task: Pick<TaskView, "id" | "waitingCardId">,
+  cards: readonly Card[],
+): Card | undefined {
+  return cards.reduce<Card | undefined>(
+    (newest, card) =>
+      (card.taskId === task.id || card.id === task.waitingCardId) &&
+      card.status === "ready" &&
+      !card.ended &&
+      onStage(card) &&
+      (!newest || card.createdAt > newest.createdAt)
+        ? card
+        : newest,
+    undefined,
+  );
+}
+
+/** Every task link opens its record; Hide returns to the originating live card. */
+export async function openTaskFromKey(task: Pick<TaskView, "id">): Promise<void> {
   const shell = useShellStore.getState();
+  const from = shownEntry(shell);
   if (shell.view !== "home") shell.setView("home");
-  return openTask({
-    taskId: task.id,
-    ...(task.waitingCardId ? { cardId: task.waitingCardId } : {}),
-  });
+  shell.openRecord(task.id, from && !isHeldEntry(from) ? { cardId: from.id } : undefined);
 }

@@ -159,6 +159,7 @@ test("legacy note-minimize requests keep the task or title row and retain visibi
       text: "Reviewed the launch.",
     });
     const store = new CardStore(db);
+    let createdAt = Date.now();
     for (const [id, title, taskId] of [
       ["review-ready", "The launch review is ready", "finished-review"],
       ["review-notes", "Keep Friday for the launch", "finished-review"],
@@ -174,7 +175,7 @@ test("legacy note-minimize requests keep the task or title row and retain visibi
         actions: [],
         status: "ready",
         priority: 20,
-        createdAt: Date.now(),
+        createdAt: createdAt++,
       });
   } finally {
     db.close();
@@ -199,7 +200,8 @@ test("legacy note-minimize requests keep the task or title row and retain visibi
       (await page.evaluate(() => window.infinitary.tasks.detail("finished-review"))).status,
     ).toBe("done");
     await pressRow(page, key);
-    await expect(shownCard(page, "The launch review is ready")).toBeVisible();
+    // Restoring both notes uses the newest card, not their stack order.
+    await expect(shownCard(page, "Keep Friday for the launch")).toBeVisible();
     expect(
       (await page.evaluate(() => window.infinitary.cards.list())).filter((card) => card.minimized),
     ).toEqual([]);

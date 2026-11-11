@@ -6,7 +6,7 @@ import { z } from "zod";
 import { mainMessageRefusal } from "../app/composer";
 import { pressesSoFar } from "../app/presses";
 import { projectFocus, useProjectFocus } from "../app/projectFocus";
-import { shownEntry } from "../app/stack";
+import { isHeldEntry, shownEntry } from "../app/stack";
 import { type ShellState, useShellStore } from "../app/store";
 import { showsSection } from "../devices/viewWords";
 import { hearFrameOut } from "./frames/frameFocus";
@@ -160,7 +160,10 @@ export function panelPoint(panel: string, page: PointPage): PanelPoint {
       if (!task || !(await page.gate())) return false;
       if (task.minimizedCardId && !task.key)
         return useShellStore.getState().focusCard(task.minimizedCardId, since);
-      useShellStore.getState().openRecord(id);
+      const shell = useShellStore.getState();
+      const from = shownEntry(shell);
+      if (from && !isHeldEntry(from)) shell.openRecord(id, { cardId: from.id });
+      else shell.openRecord(id);
       return true;
     },
     peekLine: (peek) => {

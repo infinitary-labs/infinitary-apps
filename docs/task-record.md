@@ -538,7 +538,7 @@ The task export carries each event's concerns on its line (`concerns`), and an i
 
 ## Other tasks' keys in the record
 
-Every other task's key the record shows is a link to that task (FI3-1271; the design skill's core rule "Task keys"): resting on it opens that task's summary beside the record, and a click or Enter opens it as its Tasks row does.
+Every other task's key the record shows is a link to that task (FI3-1271; the design skill's core rule "Task keys"): resting on it opens that task's summary beside the record, and a click or Enter opens its record in front.
 That holds for the Waiting on box, the Info tab's Part of, Waits on and Holds up rows, the Now line, Activity's lines and the texts they open to, the goal, the captain's words and a refused drop; the record's own key stays text, as do Cards tab titles, an Activity line's toggle and Drop task's question.
 The window finds which keys name tasks from the record's own read (`recordWords` in `RecordCard.tsx`, then `useTaskLinks`), and the record's frame links them where its text writes them, as a card's body does (`docs/card-authoring.md`, "Task keys").
 Part of names the parent's key, never its id: the frame reads the parent's own record when the board does not list it.
@@ -743,7 +743,9 @@ Masking changes only placement and its counts, not the card’s minimized state:
 The raw board includes finished tasks while they have minimized cards, however old; the phone keeps its existing card list.
 `presentBoard` gives a taskless minimized card one presentation-only row, titled by the card, never a saved task.
 The task board and compact Tasks count use that same projection, and restoring or withdrawing the last minimized card removes that presentation override.
-Click or Enter restores the task’s minimized cards; a task’s existing ready card already opens on a row click through `openTask`.
+Click or Enter restores the task’s minimized cards, then `openTask` shows its waiting decision, deferred required action, newest showable card, or record, in that order.
+Newest means `createdAt`, not revision time; off-stage and ended cards do not count.
+A card already held by the window comes forward using the presented task, without a task detail lookup.
 The record’s Cards tab labels an open minimized card Put aside, and its link brings the live card back.
 A put-aside note keeps its task's row there until the captain presses the note's Done or Got it, which reads it (INF-2794); the minus never reads a note.
 The record’s Show the card also brings back a minimized decision.

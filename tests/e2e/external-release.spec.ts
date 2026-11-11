@@ -14,6 +14,7 @@ import { promptInput } from "./prompt";
 import { nowFrame, pressRow, recordCard } from "./rails";
 import { externalRelease, RELEASE_PROMPT_MARKER } from "./scenarios/externalRelease";
 import { noteDone, shownCard } from "./stack";
+import { runFromSearch } from "./windowKeys";
 
 /** The crewmate's note the spec seeds on the stage, and finds there. */
 const RELEASE_NOTE_TITLE = "The release was published";
@@ -110,6 +111,8 @@ test("a verified external release closes reported work, not a dismissed note, an
     const row = nowFrame(page).locator('[data-now-group="landed"] [data-now-row]');
     await expect(row).toHaveCount(1);
     await pressRow(page, (await row.getAttribute("data-now-key")) ?? "");
+    // The row shows the completion note; the record remains available through Show Info.
+    await runFromSearch(launched.app, page, "cards.show-info");
     // The closed line leads the Info tab in the card itself (INF-2261).
     await expect(recordCard(page).getByText(/Released/)).toBeVisible();
     await page.screenshot({

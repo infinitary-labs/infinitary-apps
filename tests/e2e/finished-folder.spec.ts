@@ -17,7 +17,7 @@ import {
   finishedFolder,
   MISSING_FOLDER_PROOF_PROMPT,
 } from "./scenarios/finishedFolder";
-import { pressKey } from "./windowKeys";
+import { pressKey, runFromSearch } from "./windowKeys";
 
 /**
  * INF-1279: verified folder work is done, not discarded, without changing
@@ -129,6 +129,8 @@ test("verified folder work finishes through its owner and preserves the project"
     await expect(done).toBeVisible();
     await done.evaluate((element) => (element as HTMLElement).click());
     await pressRow(page, task.key);
+    // The row opens the completion note; Show Info opens the record it belongs to.
+    await runFromSearch(launched.app, page, "cards.show-info");
     await expect(recordFrame(page).locator("[data-record-content]")).toBeVisible();
     await expectRecordTaskStatus(page);
     await expect(recordBar(page)).toHaveCount(0);

@@ -1,7 +1,7 @@
 # Task keys (FI3-594, FI3-1271)
 
 A task key the app shows as text - `FI3-572` - is a link to that task wherever a person reads it: a card's body, its title and its thread, the task record, Activity, Knowledge and Settings.
-Resting on it shows the task's summary, and a click or Enter opens the task.
+Resting on it shows the task's summary, and a click or Enter opens the task's record.
 One rule, one summary and one way of opening serve every place; a card body's keys are linked by its frame's bridge (`../cards/ResponseCard`, "Task keys in a body"), a panel's through its pointing (`PanelTaskKeyText`), and the window's own through `TaskKeyLink`.
 
 - **Which words.**
@@ -43,7 +43,9 @@ One rule, one summary and one way of opening serve every place; a card body's ke
   After Esc or a press it stays closed until the pointer leaves that key, or focus does.
   Esc closes only the summary, never the card or the Settings under it.
 - **Click.**
-  A click on the key, or Enter on it, opens the task exactly as a click on its Tasks row does: its waiting decision comes forward, or its record opens at the front of the stack.
+  A click on the key, or Enter on it, opens the task's record at the front of the stack, even when a card waits for that task.
+  Hide or Esc returns to the card the key was clicked from while that card is still shown.
+  Tasks rows and board tiles instead show the waiting decision, deferred action or newest showable card, with the record as the fallback.
   A key in Settings leaves Settings for the main view first.
   Only the captain's own click or key opens a task; resting needs none.
   It is navigation, never a card action: it runs no effect, sends nothing to an author, and works on a past card too.

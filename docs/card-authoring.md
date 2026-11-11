@@ -567,7 +567,8 @@ A card cannot merge its own PR.
 ### Task keys
 
 A task key a body writes as text (`FI3-572`, in prose or in `inf-mono`) becomes a link to that task with no markup from the author (FI3-594; the design skill's core rule "Task keys" and ResponseCard, "Task keys in a body").
-Resting on it opens the task's summary beside the card, and a click opens the task the way a click on its Tasks row does.
+Resting on it opens the task's summary beside the card, and a click or Enter opens the task's record in front.
+Hide or Esc returns to the card the key was clicked from.
 Only a key that is exactly a recorded task's key links: a key-shaped word that names no task stays text, and so does a lowercase key or one inside a link, a button, a toggle's summary, a label, a form control, a drawing, a `role=button` element, a draft button or a `data-inf-action` element.
 The card's own task's key stays text too, since opening it would only bring the same card forward (FI3-1271); the first mate's own card has no task of its own in its head, so every key in its words links (INF-2714).
 The host finds the keys: `taskKeysIn` (`src/shared/taskKeys.ts`) reads the body's candidates, the window's one store (`taskKeyIndex`, `useTaskLinks` in `src/renderer/src/cards/taskLinks.ts`) keeps those the board or the search of earlier work answers with that exact key, and the bridge wraps them where text writes them (`tasks` and `task` messages, `docs/ui-plugins.md`).

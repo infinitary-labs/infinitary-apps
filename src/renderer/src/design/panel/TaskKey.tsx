@@ -243,7 +243,7 @@ function boxOf(key: HTMLElement) {
 /**
  * A panel's words with the task keys in them linked (FI3-1271): resting on
  * one opens the task's summary beside the panel (`point.peekTask`), and a
- * click or Enter opens the task as its Tasks row does (`point.openTask`).
+ * click or Enter opens the task’s record (`point.openRecord`).
  */
 export function PanelTaskKeyText({
   text,
@@ -254,7 +254,7 @@ export function PanelTaskKeyText({
 }: {
   text: string;
   taskOf: PanelTaskKeys;
-  point: Pick<PanelPoint, "peekTask" | "openTask">;
+  point: Pick<PanelPoint, "peekTask" | "openRecord">;
   look?: TaskKeyLook;
   /** The panel's `view.litTaskId`: a key of that task takes its rest look (INF-237). */
   litTaskId?: string | null;
@@ -270,7 +270,7 @@ export function PanelTaskKeyText({
             {...(look ? { look } : {})}
             lit={litTaskId === taskId}
             onRest={(at) => point.peekTask(at ? { taskId, box: boxOf(at) } : null)}
-            onOpen={() => void point.openTask(taskId).catch(() => {})}
+            onOpen={() => void point.openRecord(taskId).catch(() => {})}
           >
             {key}
           </TaskKey>

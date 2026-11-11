@@ -103,7 +103,7 @@ A start behind the first mate's answer queues a backlog task while it starts (`T
 
 ## A tile is a pointing gesture
 
-A click or Enter opens the tile's or row's task exactly as a Tasks row does (`point.openTask`): its minimized cards or waiting decision come forward, or its record opens at the front.
+A click or Enter opens the tile's or row's task exactly as a Tasks row does (`point.openTask`): its put-aside cards return first, then its waiting decision, deferred required action or newest showable card comes forward, with its record as the fallback.
 Resting on a tile, with the pointer or the keyboard's focus, opens the crew summary beside the tile, the same summary and beat as a Tasks row's (`point.peekTask`).
 Where neither side of the tile has room, as beside a list's full-width row in a narrow window, the summary sits under the tile or over it (`placeKeySummary`).
 The board lets the summary go when the pointer leaves the tile, on a press, on Esc, and when the tile moves or leaves; a scroll of the body or a list that left the tile where the summary was placed keeps it, since Chromium can deliver that scroll a frame after the summary read the tile's place.

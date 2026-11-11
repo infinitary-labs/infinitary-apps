@@ -1092,8 +1092,8 @@ declare module "@infinitary/contracts" {
    */
   export type PanelPoint = {
     /**
-     * Opens a task as a Tasks row does: its waiting card comes forward, or
-     * its record opens at the front of the stack.
+     * Opens a task as a Tasks row does: restore put-aside cards, then show its
+     * waiting decision, deferred action, newest showable card or record.
      */
     openTask: (taskId: string) => Promise<boolean>;
     /** Opens a task's record at the front of the stack, even while a card of it waits. */

@@ -12,12 +12,15 @@ import {
   expandDock,
   noteLines,
   nowFrame,
+  nowRow,
   pressRow,
   RECORD_FRAME_SELECTOR,
   recordFrame,
   showRecordTab,
 } from "./rails";
 import { expectNoCard, noteDone, shownCard } from "./stack";
+import { boardTile, focusedTileKey } from "./taskBoard";
+import { pressKey, runFromSearch } from "./windowKeys";
 
 /**
  * The Cards row (FI3-579 piece 1): a closed task's record lists every card it
@@ -153,7 +156,16 @@ test("a card still on the stage reads On the stage and its link focuses the live
     const { page } = launched;
     await expandDock(page, "now");
     await click(nowFrame(page).locator('[data-now-group-header="backlog"]'));
-    await pressRow(page, task.key);
+    // Approved navigation plan: row and board Enter open the live note, not its record.
+    await pressKey(nowRow(page, task.key), "Enter");
+    await expect(shownCard(page, TIDES_TITLE)).toBeVisible();
+    // The board command gives its page the keyboard; its header is pointer-only.
+    await runFromSearch(launched.app, page, "panel:now/board-backlog");
+    await expect.poll(() => focusedTileKey(page)).toBe(task.key);
+    await pressKey(boardTile(page, task.key), "Enter");
+    await expect(shownCard(page, TIDES_TITLE)).toBeVisible();
+    // Keep the Cards-tab assertion through the existing record command.
+    await runFromSearch(launched.app, page, "cards.show-info");
     await showRecordTab(page, "cards");
     const line = recordFrame(page).locator('[data-record-card="bay-note"]');
     // Its line says the card is on the stage; record.frame.test.ts owns the words it reads.

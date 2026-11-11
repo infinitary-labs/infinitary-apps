@@ -45,7 +45,7 @@ function useKeyRest(taskId: string): (anchor: HTMLElement | null) => void {
  * A task key the window itself draws, as a link to that task (FI3-1271; the
  * design skill's core rule "Task keys"): resting on it or focusing it opens
  * the task's summary beside its card, as a card body's key does; a click or
- * Enter - only the captain's own - opens the task as its Tasks row does,
+ * Enter - only the captain's own - opens the task’s record,
  * leaving Settings first when the key is there.
  */
 export function TaskKeyLink({

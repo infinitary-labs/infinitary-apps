@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "task-row-cards",
+      "kind": "fix",
+      "title": "Tasks open the card you need",
+      "body": "Clicking a Tasks row or board tile shows its waiting decision, then its newest available card. Task links always open the task's record, and hiding the record returns you to the card.",
+      "area": "tasks",
+      "noPicture": "This changes where a click takes you, not how the task or card looks.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

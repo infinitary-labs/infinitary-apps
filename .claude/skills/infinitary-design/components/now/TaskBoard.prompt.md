@@ -66,7 +66,7 @@ A child whose parent is on another page stands alone there with "part of KEY".
 
 ## Gestures and keys
 
-A click or Enter opens the tile's task as a Tasks row does: its waiting card comes forward, or its record opens at the front.
+A click or Enter opens the tile's task as a Tasks row does: put-aside cards return first, then its waiting decision, deferred required action or newest showable card comes forward, with its record as the fallback.
 Resting on a tile, with the pointer or the keyboard's focus, opens the crew summary beside the tile after the usual beat, with the same hairline (`NowPanel.prompt.md`, "Row hover").
 A rest on the same task elsewhere lights its tile at once with the tile's hover surface only (`--bg-3`): no summary, and the status reason keeps its two lines, so nothing moves (`NowPanel.prompt.md`, "The lit row").
 The tile focus is on is the selected one, and while the board is shown it points the first mate's input turn at its task, as a shown record does.

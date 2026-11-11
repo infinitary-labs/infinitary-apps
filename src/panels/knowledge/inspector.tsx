@@ -55,7 +55,7 @@ import {
  */
 export type InspectorTaskKeys = {
   taskOf: PanelTaskKeys;
-  point: Pick<PanelPoint, "peekTask" | "openTask">;
+  point: Pick<PanelPoint, "peekTask" | "openRecord">;
   /** The panel's `view.litTaskId` (INF-237). */
   litTaskId: string | null;
 };

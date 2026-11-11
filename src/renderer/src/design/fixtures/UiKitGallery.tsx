@@ -103,7 +103,7 @@ export const HELPER_EXPORTS: readonly string[] = [
 ];
 
 /** A gallery's pointing goes nowhere: it has no tasks to point at. */
-const NO_POINT = { peekTask: () => {}, openTask: () => Promise.resolve(false) };
+const NO_POINT = { peekTask: () => {}, openRecord: () => Promise.resolve(false) };
 
 const check = (
   <svg

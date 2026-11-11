@@ -3,7 +3,7 @@ import { taskKeysIn } from "@shared/taskKeys";
 import type { TaskBoard, TaskView } from "@shared/tasks";
 import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { useLitTaskId } from "../plugins/point/litTask";
-import { openTask } from "../plugins/point/openTask";
+import { openTaskFromKey } from "../plugins/point/openTask";
 import { taskPeek } from "../plugins/point/taskPeek";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 
@@ -203,8 +203,7 @@ const CARD_SURFACE = "[data-card-presentation]";
  * A gesture on a linked key in the body shown in `frame` - a card's body or
  * a task's record: a rest opens the task's summary beside the card, level
  * with the key, as resting on its Tasks row does beside the panel; a leave
- * lets it go; an open lets it go and opens the task as a click on its Tasks
- * row does. A body the captain cannot act on now (`admitted` false) opens
+ * lets it go; an open lets it go and opens the task’s record in front of the card. A body the captain cannot act on now (`admitted` false) opens
  * nothing.
  */
 export function taskKeyGesture(
@@ -218,10 +217,7 @@ export function taskKeyGesture(
   const task = links.task(key);
   if (!frame || !task || !admitted) return;
   if (gesture === "open") {
-    void openTask({
-      taskId: task.id,
-      ...(task.waitingCardId ? { cardId: task.waitingCardId } : {}),
-    }).catch(() => {});
+    void openTaskFromKey(task).catch(() => {});
     return;
   }
   if (gesture !== "rest" || !box) return;

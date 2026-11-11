@@ -34,7 +34,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { CLAUDE_CONTROL_PROFILE } from "../claude/claudeQueryCore";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
-import { createModelRuntime } from "../pi/modelRuntime";
+import { catalogRefreshesSettled, createModelRuntime } from "../pi/modelRuntime";
 import { piSessionEvents } from "../pi/piEvents";
 import { createPiSessionFactory } from "../pi/session";
 import type { KindInput } from "../routing/kindClassifier";
@@ -238,6 +238,9 @@ describe("CrewSupervisor", () => {
       expect(inbox.inFlight(taskId)).toEqual([]);
     } finally {
       opened.dispose();
+      // The runtime's catalog refresh writes its store into this folder; a
+      // refresh still running would put the removed folder back.
+      await catalogRefreshesSettled();
       await new Promise<void>((resolve) => server.close(() => resolve()));
       rmSync(dir, { recursive: true, force: true });
     }

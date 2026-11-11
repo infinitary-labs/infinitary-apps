@@ -265,7 +265,7 @@ it("INF-2373: a delayed captain request uses the replacement after a pending mod
   vi.useRealTimers();
   const { startMockProvider } = await import("../../../tests/e2e/mockProvider");
   const { mockModelsJson } = await import("../../../tests/e2e/mockModels");
-  const { createModelRuntime } = await import("../pi/modelRuntime");
+  const { catalogRefreshesSettled, createModelRuntime } = await import("../pi/modelRuntime");
   const { createPiSessionFactory } = await import("../pi/session");
   const provider = await startMockProvider();
   const root = scratchDir("pending-rebind-laboratory-");
@@ -383,6 +383,10 @@ it("INF-2373: a delayed captain request uses the replacement after a pending mod
     await Promise.all(opened.map((session) => session.closed()));
     await f.supervisor.disposeAll();
     f.db.close();
+    // The runtime's catalog refresh writes its store into the scratch
+    // folder, which the file's cleanup removes; a refresh still running
+    // would put it back.
+    await catalogRefreshesSettled();
     await provider.close();
   }
 });

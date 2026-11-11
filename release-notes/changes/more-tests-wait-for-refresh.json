@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "more-tests-wait-for-refresh",
+      "reason": "Three more tests that create a model runtime wait for its model list's background refresh before their folders are removed, so a late refresh cannot put a folder back and fail the unit run; a test-only change with nothing a person notices."
+    }
+  ]
+}

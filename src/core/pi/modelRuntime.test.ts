@@ -50,6 +50,10 @@ afterEach(async () => {
     each.closeAllConnections();
     await new Promise<void>((resolve) => each.close(() => resolve()));
   }
+  // A stand-in that never answered left its runtime's refresh waiting; the
+  // closed connection ends it, and its store write lands in the test's
+  // folder, so the file's cleanup waits for it (docs/testing.md).
+  await catalogRefreshesSettled();
 });
 
 /** Creates a runtime and a promise for its background refresh settling. */

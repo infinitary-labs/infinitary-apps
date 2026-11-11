@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "inf-3656",
+      "reason": "Shorten existing first mate instructions without adding a user-facing feature."
+    }
+  ]
+}

@@ -6,7 +6,6 @@ import {
   renderBasisSection,
   renderRigorSection,
 } from "../orchestrator/intentBrief";
-import { reviewFindingsNext } from "../orchestrator/reportWakes";
 import { renderWake } from "../orchestrator/wakes";
 import { SEQUENCES_SEED } from "../personal/sequencesSkill";
 import {
@@ -146,13 +145,13 @@ describe("continuation instructions served at the seven moments", () => {
       "first link_tasks blocks from origin to filing, then set update_task start_policy when-ready",
     );
     expect(FIRSTMATE_PROMPT_CORE).toContain(
-      'A merge\'s wake or settle_task result names the "Continue: …" tasks it filed, which start on their own; drop one only when another task does that work.',
+      'Merge wakes and settle_task results name "Continue: …" tasks that start themselves; drop one only when another task does its work.',
     );
-    expect(FIRSTMATE_PROMPT_CORE).toContain("no button on it can");
+    expect(FIRSTMATE_PROMPT_CORE).toContain("without a merge action");
     // INF-3167, the captain's choice A: every wait is recorded and holds
     // the waiter's start and merge until the other task closes.
     expect(FIRSTMATE_PROMPT_CORE).toContain(
-      "Record every wait between tasks that turn as link_tasks blocks from the task whose close gives what the waiter needs: it holds the waiter's start and merge until that close.",
+      "Record every wait that turn with link_tasks blocks from the task whose close gives what the waiter needs; it holds start and merge until then.",
     );
   });
 });
@@ -223,22 +222,18 @@ describe("selective filing reaches every agent that acts on it", () => {
 
   it("has the Firstmate weed out repeats, keep a filing with a reason, offer optional ideas together, and check what a merge covered", () => {
     const core = FIRSTMATE_PROMPT_CORE;
-    expect(core).toContain("Search tasks first: drop a repeat as covered");
-    expect(core).toContain("leave planned with a verdict and the priority it deserves");
-    expect(core).toContain(
-      "Optional ideas a report names stay there, unfiled, unless the captain picks them",
-    );
-    expect(core).toContain("offer them in one decision card.");
+    expect(core).toContain("Search tasks first; drop a repeat as covered");
+    expect(core).toContain("leave planned with a verdict and priority");
+    expect(core).toContain("Optional ideas stay unfiled unless the captain picks them");
+    expect(core).toContain("offer worthwhile choices on one decision card.");
     // A captain's merge wakes the first mate only when it fails or frees work
     // only a start begins (INF-834's friction 7), so a covered task is linked
     // to wait on the merge that covers it.
     expect(core).toContain(
-      "Link each unstarted task a report says it covers to wait on it (link_tasks blocks, on request); once it merges, drop one as covered only when the merge met its whole goal",
+      "Link unstarted tasks the report says it covers to wait on it (link_tasks blocks, on request); after merge, drop one as covered only if its whole goal was met",
     );
-    expect(core).toContain("removing its blocks links first; partial or unsure ones stay");
-    expect(core).toContain(
-      "the review names each key checked, its fate, and the keys left unchecked",
-    );
+    expect(core).toContain("removing blocks links first. Partial or unsure tasks stay");
+    expect(core).toContain("naming each key checked, its fate and those unchecked");
     expect(updateParameters.properties.verdict?.description).toContain(
       "what waiting costs and who pays it, and what would start it",
     );
@@ -454,7 +449,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1)", () => {
     }
     // The null outcome is first-class: an op wake may need nothing.
     expect(core).toContain(
-      "An operational wake that needs none of them gets no tool calls and ends with the same short sentence, which nobody reads.",
+      "A wake needing none gets no tool calls and the same short sentence, unread.",
     );
   });
 
@@ -470,17 +465,11 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1)", () => {
       "End every turn after tool calls with one plain sentence of about 40 characters saying what took effect this turn",
     );
     expect(core).toContain("an answer goes on a card, never here");
-    expect(core).toContain("in your card's thread when the turn answers a reply under it");
-    expect(core).toContain(
-      "It is not a card action; a turn ends with this sentence, never close_card.",
-    );
-    expect(core).toContain(
-      "A card emitted as this turn's answer is current and must not be withdrawn this turn.",
-    );
-    expect(core).toContain(
-      "Zero cards plus this sentence is correct when nothing needs the captain",
-    );
-    expect(core).toContain("call emote before it for one reaction, motion only");
+    expect(core).toContain("for a reply, in its card thread");
+    expect(core).toContain("It is not a card action; never end with close_card.");
+    expect(core).toContain("Never withdraw this turn's answer card.");
+    expect(core).toContain("Zero cards is correct when nothing needs the captain");
+    expect(core).toContain("call emote for one motion reaction");
     expect(core).toContain("never instead of a required card or action");
     // Revises infinitary-firstmate-empty-turn-instruction option B: no magic token,
     // and do not revert to "write nothing" (the 21-minute silence loop).
@@ -532,14 +521,14 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1)", () => {
     // v4.6 a step under the ask's parent, grounded on its basis. Since v4.19
     // only an ask of more than one step has a parent, and the next step is
     // filed in the same turn.
-    expect(core).toContain("The appended instructions say how work is sequenced.");
+    expect(core).toContain("Follow the appended sequencing instructions");
     expect(SEQUENCES_SEED).toContain("An ask that takes one step is that step alone,");
     expect(core).toContain("the parent is create_task");
     expect(core).toContain("the next is create_task on request with parent and basis");
     // A parent stays on request: the false "carries no crewmate" invariant
     // the model used to explain a duplicate crewmate away is gone.
     expect(core).toContain(
-      "bend them only on the user's words, never on your own reading of the ask's size",
+      "bending them only on the user's words, never your reading of the ask's size",
     );
     expect(SEQUENCES_SEED).toContain("parent task, left on\nrequest");
     expect(core).not.toContain("A parent carries no crewmate");
@@ -584,7 +573,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1)", () => {
       "Returns the task id immediately; the crewmate's results arrive later as [fm-op] messages, so end your turn.",
     );
     expect(core).toContain(
-      "A crewmate's report is for you to act on, not to relay: what in it the captain must see or decide, steer its active author to show on its own card",
+      "Act on crewmate reports, not relay them: steer the active author to show what the captain must see or decide on its own card",
     );
     expect(core).toContain("nothing parks or returns on its own");
     // INF-3170: doubt sends the first mate to the record, not to the captain;
@@ -669,7 +658,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.1, interaction P1 WI-9 and WI-12)",
       "Emit the answer by CARD_AUTHORING's decision/note rule and emit_card's default-action rule",
     );
     expect(FIRSTMATE_CARD_AUTHORING).toContain(
-      "An answer that implies any next step for the captain, even an optional one, is a decision; only a pure fact is a note.",
+      "An answer implying any captain next step, even optional, is a decision; only a pure fact is a note.",
     );
     expect(FIRSTMATE_EMIT_CARD_DESCRIPTION).toContain(
       "marks exactly one default, the step you would take",
@@ -712,7 +701,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.1, interaction P1 WI-9 and WI-12)",
 
   it("replaces answer ownership with steer-not-answer and revise-in-place", () => {
     expect(core).not.toContain("answer owner");
-    expect(core).toContain("The context block lists each task's open cards.");
+    expect(core).toContain("Context lists open cards.");
     // Steer-not-answer is enforced, so its refusal says it, once (INF-490):
     // tests/firstmate-fixed-context.test.ts's ledger names that home.
     expect(core).not.toContain("your move is steer or nothing");
@@ -730,8 +719,8 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.5 and v1.6, cards/tasks/agents P0 a
   const core = FIRSTMATE_PROMPT_CORE;
 
   it("declares the card's actions as exactly the author's, with no automatic Later", () => {
-    expect(core).toContain("A card carries exactly the actions you declare");
-    expect(core).toContain("Offer a deferral as an action; its reminder is schedule_prompt.");
+    expect(core).toContain("A card carries exactly the declared actions");
+    expect(core).toContain("Offer deferral as an action; its reminder is schedule_prompt.");
     expect(core).not.toMatch(/\bLater\b/);
     expect(core).not.toMatch(/parked/);
     expect(core).not.toContain("recall_decision");
@@ -759,8 +748,8 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.5 and v1.6, cards/tasks/agents P0 a
     expect(core).toContain("A crewmate's report names the follow-ups it filed that turn");
     expect(core).toContain("update_task start_policy when-ready");
     expect(core).toContain("No message comes per filing.");
-    expect(core).toContain("Never drop a filing by age.");
-    expect(core).toContain("At a release cut, re-verify filings older than the last release");
+    expect(core).toContain("Never drop by age;");
+    expect(core).toContain("at a release cut re-verify filings older than the last release");
     expect(core).not.toMatch(/\bpropose\b/);
   });
 });
@@ -774,23 +763,21 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.4 and v1.7, host-run settle outcome
       "Exhausted repairs follow stall recovery; only captain-owned decisions/access/information earn a card",
     );
     expect(served).toContain(
-      'That card offers exactly one extra, non-default, effect-free action labeled "Try a premium model"',
+      'Offer exactly one extra, non-default, effect-free "Try a premium model" action',
     );
     expect(served).toContain("neither ran at premium nor spent both escalation rounds");
     expect(served).toContain(
-      'If premium is unavailable (quota/models line), say so on the card and use the hold\'s "Try a stronger model" way instead',
+      'If premium is unavailable (quota/models line), say so and offer the hold\'s "Try a stronger model" instead',
     );
-    expect(served).toContain("When ineligible, omit the premium action");
-    expect(served).toContain("Never offer both model actions");
-    expect(served).toContain('on "Try a stronger model", omit premium_ask');
-    expect(served).toContain(
-      "The escalate_from spawn sets shape.premium_ask true only on the captain's premium click",
-    );
+    expect(served).toContain("Omit premium when ineligible");
+    expect(served).toContain("Omit premium when ineligible; never offer both.");
+    expect(served).toContain("omit it for a stronger model");
+    expect(served).toContain("Set shape.premium_ask true only on the premium click");
     // What that spawn carries is said once, where the trigger is.
     expect(served).toContain(
       "spawn_crewmate again with escalate_from naming that task, their words verbatim as user_words, and the original goal",
     );
-    expect(served.match(/effect-free action labeled "Try a premium model"/g)).toHaveLength(1);
+    expect(served.match(/effect-free "Try a premium model" action/g)).toHaveLength(1);
   });
 
   it("keeps idle crew resumable until explicitly settled, including verified folder work (WI-11, INF-1279)", () => {
@@ -806,10 +793,10 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.4 and v1.7, host-run settle outcome
   it("acts on a settle refusal's structured ways while letting final outcomes end quietly (WI-12)", () => {
     expect(core).toContain("Host-run settle finals may need nothing.");
     expect(core).toContain(
-      "A settle refusal names its ways out as structured options: run the obvious one yourself, or answer with one decision card whose actions carry those ways as effects - a merge that keeps a task's open children planned is settle merge with proceed_with_open - or as replies you will run.",
+      "A settle refusal names structured ways out: run the obvious one or offer one decision card carrying them as effects - a merge that keeps a task's open children planned is settle merge with proceed_with_open - or replies you will run.",
     );
     expect(core).toContain(
-      "Act on the ways, never the narration, and never confirm destruction without the captain's choice.",
+      "Act on the ways, not the narration; never confirm destruction without the captain's choice.",
     );
   });
 });
@@ -825,7 +812,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v3.3, delivery rigor phase 2: the revi
     expect(core).toContain(
       "The host derives rigor (standard by default), delivery and autonomy from repository settings; escalation never changes rigor.",
     );
-    expect(core).toContain("Their spawn fields carry the captain-only override rules");
+    expect(core).toContain("Spawn fields carry captain-only overrides");
     // What each ask takes, and that the repository's default stays as it
     // was, is the field's own rule (v4.59).
     expect(SHAPE_GROUP_DESCRIPTION).toContain(
@@ -847,15 +834,13 @@ describe("FIRSTMATE_PROMPT_CORE (contract v3.3, delivery rigor phase 2: the revi
     // Contract v3.7: the personal workspace is a workspace KIND, so the
     // prompt names no `live` posture anywhere - not as a delivery, not as a
     // rigor rule.
-    expect(core).toContain(
-      "The personal workspace builds in place and takes no delivery or rigor.",
-    );
+    expect(core).toContain("The personal workspace builds in place without delivery or rigor.");
     expect(core).not.toMatch(/\blive\b/);
   });
 
   it("commissions a review as an operation at any care, leaving what each care asks to the care guidance (INF-1876)", () => {
     expect(core).toContain(
-      "A review is an operation on a change at a version, at any care: when a builder's report or the captain asks for one, spawn_crewmate with review_of naming that task and the user's words - the host briefs the reviewer on the builder's branch and its wakes name each later step; what each care asks is the care guidance's, never a hold of the host's.",
+      "A review is an operation on a version at any care: when a builder's report or the captain asks for one, spawn_crewmate with review_of naming that task and the user's words - the host briefs the reviewer on the branch and wakes name later steps; what each care asks is the care guidance's, never a hold of the host's.",
     );
     expect(core).not.toContain("holds the push and merge until it passes");
     expect(core).not.toContain("On a reviewed task the review comes BEFORE the pull request");
@@ -894,7 +879,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v3.3, delivery rigor phase 2: the revi
   // INF-1540 approved B/C: recovery comes before a remaining captain-only choice (INF-1550).
   it("routes a crewmate blocker through stall recovery, then its guidance, without hard-coding a repair count", () => {
     expect(core).toContain(
-      "A crewmate's blocker report first follows stall recovery, then its delivery guidance: coordinate the next owner, or ask for a captain-only decision on its task, carrying the other ways that wake names. Steer the crewmate with the captain's answer; never infer merge consent.",
+      "A blocker follows stall recovery then delivery guidance: coordinate the next owner or ask for a captain-only decision on its task, carrying the wake's other ways. Steer with the answer; never infer merge consent.",
     );
     // A blocker never grants merge consent or invents a host allowance.
     expect(core).not.toContain("until then the host holds its completion card");
@@ -912,9 +897,9 @@ describe("FIRSTMATE_PROMPT_CORE (contract v3.3, delivery rigor phase 2: the revi
 
   // Source: INF-1554 F2, "Give takeovers their own title prefix so they start right away".
   it("starts a takeover filing now from its origin's branch, unlike a Continue filing", () => {
-    const takeover = core.slice(core.indexOf('For a "Take over: …" filing'));
+    const takeover = core.slice(core.indexOf('For "Take over: …"'));
     expect(takeover).toMatch(
-      /^For a "Take over: …" filing, reuse any existing takeover, set branch_from to the origin and start it now, hand files on with steer_crewmate files_from, and link related and blocks from successor to origin; never block the successor on the origin\. A merge's wake or settle_task result names the "Continue: …" tasks it filed/,
+      /^For "Take over: …", reuse an existing takeover, set branch_from to the origin, start now, hand files via steer_crewmate files_from, and link related and blocks from successor to origin; never block the successor on the origin\. Merge wakes and settle_task results name "Continue: …" tasks that start themselves/,
     );
     // The crewmate's half rides file_followup, which both backends serve whole.
     const fileFollowup = CREWMATE_TOOLS.find((tool) => tool.name === "file_followup");
@@ -960,7 +945,7 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
 
   it("gives every persona the authoring text exactly once", () => {
     const decisionFirst =
-      "An answer that implies any next step for the captain, even an optional one, is a decision; only a pure fact is a note.";
+      "An answer implying any captain next step, even optional, is a decision; only a pure fact is a note.";
     expect(CARD_AUTHORING.split(decisionFirst).length - 1).toBe(1);
     for (const [name, prompt] of personas) {
       const text = name === "firstmate" ? FIRSTMATE_CARD_AUTHORING : CARD_AUTHORING;
@@ -973,11 +958,11 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
     // FI3-542: the habits are the project's own words. No persona is told to
     // write in an outside standard, and none carries a word list for it.
     const habits = [
-      "A sentence of card copy holds one fact in at most 25 words.",
+      "A card sentence holds one fact in at most 25 words.",
       "One thing keeps one name, and takes its full name wherever two things share a number",
       "A sentence names who or what did the work",
-      "It says the thing literally, with no figure of speech.",
-      "Three or more actions in a row are a numbered list.",
+      "Speak literally, without figures of speech.",
+      "Number three or more actions in a row.",
     ];
     for (const [name, prompt] of personas) {
       for (const habit of habits)
@@ -1216,7 +1201,7 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
     expect(FIRSTMATE_PROMPT_CORE).not.toContain(
       "retry, a stronger model on the user's word, or discard",
     );
-    expect(FIRSTMATE_PROMPT_CORE).toContain("carrying the other ways that wake names");
+    expect(FIRSTMATE_PROMPT_CORE).toContain("carrying the wake's other ways");
   });
 });
 
@@ -1551,26 +1536,22 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(prompt).not.toContain("Merge PR");
     // Questions are named form controls a footer click sends (contract
     // 4.22), and a playable preview's settings ride the same click.
-    expect(prompt).toContain("never call inf.action from a control");
+    expect(prompt).toContain("Never call inf.action from a control");
     // Contract 4.56 (FI3-517 direction A): choices arrive unpicked with the
     // recommendation marked, never checked for the captain.
+    expect(prompt).toContain("Radio, checkbox and select answers arrive unpicked");
+    expect(prompt).toContain('Open selects on <option value="">Choose</option>');
     expect(prompt).toContain(
-      "Radio, checkbox and select questions arrive unpicked so every answer is the captain's own",
+      "mark recommended inputs or options data-inf-recommended, which tags them without picking them",
     );
-    expect(prompt).toContain('open a select on an empty <option value="">Choose</option>');
-    expect(prompt).toContain(
-      "put data-inf-recommended on the input or <option> you recommend - the app tags it Recommended without picking it",
-    );
-    expect(prompt).toContain("A text field keeps its prefilled text.");
+    expect(prompt).toContain("Text fields keep prefilled text.");
     // INF-2715: each question sits in the section it is about, and a new
     // task's choice is file (the backlog) or start.
     expect(prompt).toContain(
-      "A decision asks each question inside the finding or section it is about, never in one closing list",
+      "A decision asks each question in its finding or section, never a closing list",
     );
     expect(prompt).toContain("offering both for each proposed task");
-    expect(prompt).toContain(
-      "the default once every required question has an answer, any other button whatever is picked so far",
-    );
+    expect(prompt).toContain("the default after required answers, others whatever is picked");
     expect(prompt).not.toContain("check or select the option you propose");
     expect(prompt).toContain(
       "Controls update only the preview and the renderer's draft, never an author turn",
@@ -1857,7 +1838,7 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // INF-2744's approved plan names the one merge card: the fact strip rides a merge or settle effect.
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "fd2515e14e6ee6fdce708937dc4c9dc5c0f9753240dfe43d5cf06e4da72bcaab",
+    "9d1018268629b52ef2b7d8aa0f656d9e6f7485b3786bca7459015cee28c68622",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.

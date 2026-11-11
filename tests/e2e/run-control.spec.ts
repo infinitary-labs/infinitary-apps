@@ -26,7 +26,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { BUILDER, linkInTab, openDevices } from "./deviceFixtures";
 import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type HelperRun, startHelper } from "./helperRun";
-import { knowledgePanel, OPEN_KNOWLEDGE } from "./knowledgeBrowser";
+import { knowledgePanel } from "./knowledgeBrowser";
 import { seedKnowledge } from "./knowledgeSeed";
 import {
   builtAppDir,
@@ -407,10 +407,15 @@ test("another computer controls a first mate with its window: a card's Settings 
         "data-screen-label",
         "Settings",
       );
-      const panel = knowledgePanel(view?.page as Page);
-      await expect(panel).toBeAttached({ timeout: 30_000 });
-      // Its command opens it, by keys, whatever room the rail gives the panel.
-      await runFromSearch((view as LaunchedApp).app, (view as LaunchedApp).page, OPEN_KNOWLEDGE);
+      // Its header's open button opens it, by keys. The panel's own page
+      // says when it shows, and Settings closed that page, so the panel is
+      // back but hidden until the page loads again: wait for the button to
+      // show, since a key pressed on a hidden button reaches nothing.
+      const open = knowledgePanel(view?.page as Page).locator(
+        '[data-panel-header-button="open"] button',
+      );
+      await expect(open).toBeVisible({ timeout: 30_000 });
+      await pressKey(open, "Enter");
       await expect(
         (view as LaunchedApp).page.locator('[data-panel-card="knowledge/browser"]'),
       ).toBeVisible();

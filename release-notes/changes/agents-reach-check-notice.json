@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "agents-reach-check-notice",
+      "reason": "The agents-reach journey's scripted builder reads past the check watch's notice that reaches its running check reading, so it saves its proof at the version it read; a test-only change with nothing a person notices."
+    }
+  ]
+}

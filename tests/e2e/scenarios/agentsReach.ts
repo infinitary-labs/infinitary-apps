@@ -1,3 +1,4 @@
+import { CHECK_OBSERVATIONS_LEAD } from "../../../src/core/orchestrator/deliveryWakes";
 import { captainTurn, renderWake } from "../../../src/core/orchestrator/wakes";
 import { checkSnapshotSummary } from "../../../src/shared/checkSnapshot";
 import { fixedHoldWords, type OverridableHold } from "../../../src/shared/holds";
@@ -20,7 +21,7 @@ import {
   latestServedTurn,
   providerMessages,
   served,
-  sinceLastUser,
+  sinceLastAsked,
 } from "../providerRequest";
 
 /**
@@ -252,7 +253,13 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
   // 1. The reviewed builder's reading: its checks at the pushed fix, then
   //    on green its proof at that version, as the first reading's report
   //    carried it (`reviewedTier`). On red it has nothing more to say.
-  const turn = sinceLastUser(body);
+  //    The check watch's notice is never its next assignment: when the
+  //    app's own reading of the pushed version comes first, the watch steers
+  //    it into the builder's running turn, after its check_change result
+  //    (docs/forge.md, "The check watch"), and it names checks that reading
+  //    already holds. Read past it, or it hides the steer the builder is
+  //    answering and no proof is saved at that version (INF-3603).
+  const turn = sinceLastAsked(body, (words) => words.includes(CHECK_OBSERVATIONS_LEAD));
   if (body.includes(REVIEWED_TIER_PROMPT_MARKER) && turn.user.includes(REACH_READ_STEER)) {
     const { results } = turn;
     const reading = results.findLast((result) => /^facts: /m.test(result));
@@ -283,7 +290,7 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
 
   // 1. The reviewed builder, steered with the captain's words.
   if (body.includes(REVIEWED_TIER_PROMPT_MARKER) && turn.user.includes(REACH_STOP_STEER)) {
-    if (hasToolResults) return { text: "done" };
+    if (turn.results.length > 0) return { text: "done" };
     return {
       calls: [
         {

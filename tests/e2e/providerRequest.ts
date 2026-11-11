@@ -431,12 +431,26 @@ function saidIn(content: unknown): string {
  * Anthropic dialect's) is a step of that turn, not a new one.
  */
 export function sinceLastUser(body: string): { user: string; results: string[]; tail: string } {
+  return sinceLastAsked(body, () => false);
+}
+
+/**
+ * `sinceLastUser`, read past the user messages whose words `passing` names:
+ * words the host steers into a running turn that ask nothing new of it, so
+ * the turn's own words and every result since stay in view.
+ */
+export function sinceLastAsked(
+  body: string,
+  passing: (words: string) => boolean,
+): { user: string; results: string[]; tail: string } {
   if (!body.trimStart().startsWith("{")) return { user: "", results: [], tail: "" };
   const messages = (JSON.parse(body) as ChatRequest).messages ?? [];
   let at = -1;
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index];
-    const step = message && toolResults(message).length > 0 && !saidIn(message.content);
+    const said = message ? saidIn(message.content) : "";
+    const step =
+      message && ((toolResults(message).length > 0 && !said) || (said !== "" && passing(said)));
     if (message?.role === "user" && !step) {
       at = index;
       break;

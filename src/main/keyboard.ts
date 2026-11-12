@@ -282,7 +282,8 @@ export function recordWindowKeys(contents: WebContents, recording: boolean): voi
  * follow (`inf:keyboard:next`), which it shows as the next-keys hint: a
  * listed key runs its pair's command and reaches nothing else, and any other
  * key ends the wait and acts as it would have. Escape, the window losing
- * focus, a navigation, recording and an input method's composition end it.
+ * focus, the window page's navigation, recording and an input method's
+ * composition end it.
  *
  * While Keyboard settings records a key the window runs nothing: every key
  * but a lone modifier goes to the page as `inf:keyboard:recorded`, and to
@@ -362,8 +363,15 @@ export function followWindowCommands(
     pressedForMoves.delete(contents);
   });
   contents.on("did-start-navigation", (details) => {
-    witnessed = [];
-    if (details.isMainFrame) stop();
+    // The window page's new document replaces every frame, so no witness can
+    // be offered back. A card's frame starts loading whenever the shown card
+    // changes, between a quick press and its offer, so it drops only the keys
+    // pressed in that frame and the window page's keys wait for their offer.
+    if (details.isMainFrame) {
+      stop();
+      return;
+    }
+    witnessed = witnessed.filter((seen) => seen.frame !== details.frame);
   });
   const take = (event: { preventDefault: () => void }) => {
     event.preventDefault();

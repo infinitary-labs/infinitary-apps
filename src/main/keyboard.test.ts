@@ -75,6 +75,9 @@ function windowWithKeys() {
       contents.focusedFrame =
         parent === undefined ? { name } : { name, parent: { name: parent, parent: mainFrame } };
     },
+    focusPage: () => {
+      contents.focusedFrame = mainFrame;
+    },
     close: () => (destroyed = true),
   };
 }
@@ -590,6 +593,32 @@ describe("not-typing offers", () => {
     offerWindowKey(contents, press);
     offerWindowKey(contents, shift);
     expect(ran).toEqual(["settings.open"]);
+  });
+
+  // INF-3693: a quick press's offer lands after the next press, and paging the
+  // cards starts the next card's frame loading in between; that load is only
+  // its own frame's new document (docs/keyboard.md, "Keys used when not typing").
+  it("keeps the window page's keys while a card's frame starts loading, and drops only that frame's", () => {
+    const { contents, type, focusFrame, focusPage, ran } = fixture();
+    const navigate = (frame: unknown) =>
+      (contents as unknown as EventEmitter).emit("did-start-navigation", {
+        isMainFrame: false,
+        isSameDocument: false,
+        frame,
+      });
+    focusFrame("card-body");
+    const card = contents.focusedFrame;
+    type({ key: press.key, code: press.code });
+    navigate(card);
+    offerWindowKey(contents, press, "card-body");
+    expect(ran).toEqual([]);
+    focusPage();
+    type({ key: press.key, code: press.code });
+    type({ key: press.key, code: press.code });
+    navigate(card);
+    offerWindowKey(contents, press);
+    offerWindowKey(contents, press);
+    expect(ran).toEqual(["settings.open", "settings.open"]);
   });
 
   // INF-3693: a plain key pressed right after another starts or finishes its pair however late the offers land.

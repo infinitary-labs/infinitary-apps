@@ -227,29 +227,55 @@ function visibleMiddle(drop: Locator): Promise<PagePoint> {
   });
 }
 
+/** The pointer's fields for one of a mouse drag's events; each caller adds where. */
+function mouseOf(type: string) {
+  return {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    button: 0,
+    buttons: type === "pointerup" ? 0 : 1,
+    pointerId: 1,
+    pointerType: "mouse",
+    isPrimary: true,
+  };
+}
+
 /** One pointer event in the board's page, at a point of it, on whatever is there. */
 function pointerAt(board: Locator, type: string, at: PagePoint): Promise<void> {
   return board.evaluate(
-    (root, { type, at }) => {
+    (root, { type, at, init }) => {
       const doc = root.ownerDocument;
       const target = doc.elementFromPoint(at.x, at.y) ?? doc.body;
-      target.dispatchEvent(
-        new PointerEvent(type, {
-          bubbles: true,
-          cancelable: true,
-          composed: true,
-          clientX: at.x,
-          clientY: at.y,
-          button: 0,
-          buttons: type === "pointerup" ? 0 : 1,
-          pointerId: 1,
-          pointerType: "mouse",
-          isPrimary: true,
-        }),
-      );
+      target.dispatchEvent(new PointerEvent(type, { ...init, clientX: at.x, clientY: at.y }));
     },
-    { type, at },
+    { type, at, init: mouseOf(type) },
   );
+}
+
+/**
+ * Presses the pointer on a tile, brought to the middle of the body first so
+ * the drag does not scroll it, and returns where. It finds the point and
+ * presses there in one go: the board redraws as tasks change underneath, and
+ * a point read before a redraw can lie on another tile by the press. It
+ * refuses to press when the tile is not what shows at its own point.
+ */
+function pressTile(tile: Locator): Promise<PagePoint> {
+  return tile.evaluate((element, init) => {
+    element.scrollIntoView({ block: "center", inline: "nearest" });
+    const box = element.getBoundingClientRect();
+    const at = { x: box.left + box.width / 2, y: box.top + Math.min(24, box.height / 2) };
+    const target = element.ownerDocument.elementFromPoint(at.x, at.y);
+    if (!target || !element.contains(target)) {
+      throw new Error(
+        `The tile ${element.getAttribute("data-board-key")} is not under its own point`,
+      );
+    }
+    target.dispatchEvent(
+      new PointerEvent("pointerdown", { ...init, clientX: at.x, clientY: at.y }),
+    );
+    return at;
+  }, mouseOf("pointerdown"));
 }
 
 /**
@@ -259,9 +285,8 @@ function pointerAt(board: Locator, type: string, at: PagePoint): Promise<void> {
  * a release there. The pointer's events are dispatched in the board's own
  * page (Chromium hands a hidden window's native pointer to a sandboxed
  * frame unreliably), so the page's focus stays where the captain's keys
- * put it. The tile is brought to the middle of the body first, so the drag
- * does not scroll it; `whileOver` runs with the tile held over the drop,
- * before it is let go.
+ * put it. `whileOver` runs with the tile held over the drop, before it is
+ * let go.
  */
 export async function dragTile(
   page: Page,
@@ -271,13 +296,7 @@ export async function dragTile(
 ): Promise<void> {
   const panel = options.panel ?? BOARD_PANEL;
   const board = boardEntry(page, panel);
-  const tile = boardTile(page, key, panel);
-  const start = await tile.evaluate((element) => {
-    element.scrollIntoView({ block: "center", inline: "nearest" });
-    const box = element.getBoundingClientRect();
-    return { x: box.left + box.width / 2, y: box.top + Math.min(24, box.height / 2) };
-  });
-  await pointerAt(board, "pointerdown", start);
+  const start = await pressTile(boardTile(page, key, panel));
   // A press becomes a drag only once the pointer has travelled.
   await pointerAt(board, "pointermove", { x: start.x + 4, y: start.y + 4 });
   await pointerAt(board, "pointermove", { x: start.x + 8, y: start.y + 8 });

@@ -322,7 +322,7 @@ It waits until the body's handlers finish and offers only a trusted, unused, non
 The window accepts the current frame document only while that frame holds focus, without the gesture grace used for pointer actions.
 The main process must have witnessed the exact native press in that same focused frame under the same installed map, consumes it once, and resolves only that map's not-typing bindings.
 The trusted mount sets each frame's UUID name when creating the element, before its first navigation, and passes it with the offer; Electron's native focused frame must match at both the press and the offer, so a frame cannot borrow a key pressed earlier in another document.
-Blur, navigation, recording and the next native press discard an earlier witness.
+Blur, recording and the window page's navigation discard every witness, a frame's navigation discards the witnesses of keys pressed in that frame, and the next native press discards those of another document or an earlier map.
 A frame cannot create an unwitnessed command, replay a consumed key or use another frame's focus.
 Answer, Done and Decline bindings remain available inside focused card content, including plain and function keys without Command or Control; Keyboard settings warns when recording these keys but does not refuse them.
 Residual: a deliberately constructed card can hide its typing control from the bridge or misrepresent whether it used a witnessed native press.

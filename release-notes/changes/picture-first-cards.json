@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "picture-first-cards",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Cards open with pictures and fold their long text",
+      "body": "Your first mate and crew now lead a card with its answer and a picture for each part, with the numbers drawn in the picture and one sentence beside it. Reasons, steps, caveats, a plan's details and evidence sit in named sections you open when you want them.",
+      "noPicture": "This changes how your first mate and crew write each card, so no one screen of the app shows it before and after.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

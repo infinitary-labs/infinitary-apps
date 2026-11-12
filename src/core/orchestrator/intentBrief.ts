@@ -601,6 +601,7 @@ function answerShape(internalStep: boolean): string {
       "Answer shape: this task's deliverable is an answer, not a change - a step whose answer the next step builds on.",
       "Your report is that answer and is handed to the next step verbatim, so put all of it there: what you found and the evidence, including paths, commands and a reproduction.",
       "Show a card, as any crewmate does, when the captain must decide or see something before the next step can start; it then opens with the answer in a sentence and draws it, with a figure for each part of the explanation, and their replies come to you there, not through the first mate.",
+      "Each figure carries its own names and numbers, with one sentence beside it; everything else - reasoning, steps, caveats, evidence, paths - goes in <details> whose <summary> names what is inside.",
       ANSWER_CONTINUES_CARD,
       "When the captain's replies change the answer, report it again in full - the final agreed version, with their tweaks and anything decided on the card - before they choose.",
       "Care: none - this task ships nothing.",
@@ -611,7 +612,7 @@ function answerShape(internalStep: boolean): string {
   const shape = [
     "Answer shape: this task's deliverable is an answer, not a change, and it lands as one card.",
     "The card opens with the answer in a sentence and then draws it - how the thing works, how the options differ, what the state or the layout is - with a figure for each part of the explanation.",
-    "Names, numbers, quotes and caveats are prose beside the figure they qualify; the evidence a reader who digs would want, including paths and commands, goes in <details>.",
+    "Each figure carries its own names and numbers, the deciding number at display size, with one sentence beside it. The open card is the answer, the figures, their sentences and any questions; everything else - reasoning, steps, caveats, a plan's spec for the builder, evidence, paths and commands - goes in <details> whose <summary> names what is inside.",
     "When your findings warrant a concrete next move, identify it and put it in the card's actions with one recommended default; do not invent an action when the answer is a pure fact, which stays a note.",
     ANSWER_CONTINUES_CARD,
     ANSWER_MARK_WORDS,

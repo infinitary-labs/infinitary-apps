@@ -13,6 +13,7 @@ import {
   approvalLabelKey,
   baselineFrom,
   cardLabelKey,
+  cardOpenWords,
   compareToBaseline,
   countReasks,
   duplicatePairs,
@@ -122,6 +123,7 @@ describe("the metric catalog", () => {
       "closed_without_evidence",
       "visual_card_share",
       "mean_card_body_chars",
+      "mean_card_open_words",
     ]);
     for (const mode of Object.keys(FRUSTRATION_MODES) as FrustrationMode[]) {
       expect(
@@ -324,6 +326,23 @@ describe("scoring a session", () => {
     // Observational: counted and printed, never graded.
     expect(scores.asks_without_action.value).toBe(2);
     expect(metricDef("asks_without_action").direction).toBe("either");
+  });
+
+  // INF-3749, the captain: long text should "be hidden in an expand", so the
+  // report counts the words a reader meets before opening anything.
+  it("counts a card's open words, leaving out folded text, drawings and scripts, and grades nothing", () => {
+    const body = [
+      "<p>Cards now open with a picture and fold the rest.</p>",
+      '<figure aria-label="Open words before and after"><svg viewBox="0 0 750 120"><text x="10" y="40">945 words</text><text x="400" y="40">207 words</text></svg><figcaption>The plan card, before and after.</figcaption></figure>',
+      "<details><summary>Why cards ran long</summary><p>The rules kept names, numbers, quotes and caveats in the open and let the expand hold only evidence.</p></details>",
+      "<script>document.title = 'not counted';</script>",
+    ].join("");
+    // 10 lead words + 6 caption words + 4 summary words.
+    expect(cardOpenWords(body)).toBe(20);
+    const scores = scoreSession(observation({ cards: [card({ id: "card-t1-1", body })] }));
+    expect(scores.mean_card_open_words.value).toBe(20);
+    expect(metricDef("mean_card_open_words").direction).toBe("either");
+    expect(metricDef("mean_card_open_words").target).toBeNull();
   });
 
   it("leaves a ratio with nothing to measure as null, never zero", () => {

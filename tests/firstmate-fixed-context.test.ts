@@ -574,9 +574,9 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     says: "one accent per figure, not one per card",
   },
   {
-    rule: "details holds what a reader who digs would want",
+    rule: "the open body is the answer, figures and questions; the rest folds under a named expand",
     home: "authoring",
-    says: "<details> holds only what a reader who digs would want: evidence, exact code paths, qualifications",
+    says: "the rest - reasons, steps, caveats, a builder's spec, evidence, paths - folds in <details> whose <summary> names it",
   },
   // INF-416 piece H: the handoff no longer restates the core's read-by-key rule.
   {

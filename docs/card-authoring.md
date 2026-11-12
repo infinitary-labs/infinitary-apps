@@ -172,7 +172,7 @@ The strip is at most two parts, each the card's full width: the status line, and
   It retakes a mostly blank, half-drawn or cut-off capture unless that is the intended subject, which its alt text then names.
   When it cannot inspect a file, it leaves it off the card and reports the gap.
   This is agent judgment, not a pixel threshold or a host refusal.
-  What is left closes after After when it bears on the decision, otherwise in `<details>`, not a fifth heading.
+  What is left folds in `<details>`, not a fifth heading.
   Answer cards, previews included, keep their own shape.
   The report keeps its five evidence headings; every new branch-based change and its merge card share the saved story (`docs/forge.md`, "Saved change stories"), while an existing PR that predates stories keeps its five-heading description.
   The card never copies the host's strip.
@@ -317,9 +317,10 @@ The hooks a body writes are Infinitary's (`data-inf-*`, the `inf-*` classes, `in
 
 For finished code-work merge cards the title carries the answer and the body opens at Why under the outline above; other cards lead with a brief answer.
 Explain visually wherever a picture carries a point better than prose.
-When an explanation has several parts, give each part a figure beside the short sentence it illustrates rather than crowding them into one drawing.
-Keep prose needed to follow the answer in the open.
-Reserve `<details>` for evidence, exact code paths, qualifications, and other material for a reader who digs.
+Each part of an explanation gets its own figure, never one crowded drawing, and a figure carries its own names and numbers, the deciding one at display size.
+The open body is the answer, the figures, one sentence beside each, and any questions.
+The rest - reasons, steps, caveats, a plan's spec for its builder, evidence, paths - folds in a `<details>` whose `<summary>` names what is inside, so long text is supporting material a reader opens, never the card's first read.
+The served words are `CARD_AUTHORING`'s and the answer brief's (`answerShape`, `src/core/orchestrator/intentBrief.ts`); the replay report counts the open words per card (`docs/replay-harness.md`) and nothing refuses a card for its length.
 
 Figures are free-form: no shape is prescribed, and all of SVG renders.
 Give an SVG a `viewBox` and `width="100%"` at 750 units, or a pixel width when it is smaller; use theme tokens so it follows light and dark.
@@ -465,7 +466,7 @@ Mechanism and the security review: `docs/live-prototype-security.md`, "Agent scr
 No figure shape is prescribed.
 Draw whatever the explanation calls for - a diagram, a chart, a picture of the thing itself - and let the design system make it look like the app.
 A drawing of a project's screens is the one exception: it takes that project's own look (Style, above).
-An explanation with several parts gets several small figures, each beside the sentence it illustrates, rather than one crowded drawing; a single figure is right only when the explanation has one part.
+Each part of an explanation gets its own figure, never one crowded drawing, and the figure carries its own names and numbers, the deciding one at display size, with one sentence beside it.
 
 The design skill states the whole rule (`.claude/skills/infinitary-design/components/viz/Viz.prompt.md`); in brief:
 
@@ -872,7 +873,7 @@ The first mate's context block carries `captain_language` each turn, and a crewm
 Title and body must make sense with no prior conversation.
 The captain is multi-tasking.
 Name the work in plain language (what changed / what they are deciding), not only a PR number or SHA.
-A finished code-work merge card uses Why / What changed / Before / After, with verification inside After and remaining work after it when decision-relevant, otherwise in details.
+A finished code-work merge card uses Why / What changed / Before / After, with verification inside After and remaining work folded in details.
 The checks, a review, the captain's override, the project, the PR link, the change's lines and a care level other than Default are the host's settle facts strip, so the body does not repeat them.
 SHAs and job timings are optional detail, not the lead.
 Decision options stay 2-3, sentence case; labels can stay short if the body already states the choice.

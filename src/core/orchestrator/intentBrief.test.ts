@@ -600,6 +600,18 @@ describe("the answer-shape section (contract v3.6, captain lock 2; Task B)", () 
     expect(section).not.toMatch(/wherever|if a picture|when a picture|you may/i);
   });
 
+  // INF-3749, the captain: long text is supporting material, "and most of the
+  // time even when we write long text snippets they should be hidden in an
+  // expand". Both branches fold everything but the answer, figures and questions.
+  it("keeps the open card to the answer, figures and questions and folds the rest under a named expand", () => {
+    for (const section of [renderAnswerShapeSection(), renderAnswerShapeSection(true)]) {
+      expect(section).toContain("Each figure carries its own names and numbers");
+      expect(section).toContain("in <details> whose <summary> names what is inside");
+    }
+    expect(renderAnswerShapeSection()).toContain("a plan's spec for the builder");
+    expect(renderAnswerShapeSection()).not.toContain("are prose beside the figure they qualify");
+  });
+
   // The answer brief marks a saved note for explicit Done, never corner
   // closure. Other acknowledged work uses the typed finished report;
   // an internal step's answer goes to its report instead of a card.

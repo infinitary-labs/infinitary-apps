@@ -215,6 +215,9 @@ It carries:
   A card without such a decision or task carries no verdict for that reading and is out of its denominator; the labels file's header says what counts, and `tests/interaction-metrics.test.ts` fails when a verdict has no note.
   The committed evenings predate the rules: 4 of the 5 recorded decisions across sections place their questions there (none uses a form control; their choices are footer buttons), and 6 of the 11 cards that name a task's start use the words this way.
   Both are graded `higher`, and neither is a lint - which section a question belongs to and which verb fits are the author's judgment.
+- **The open words row** (INF-3749): `mean_card_open_words`, beside `visual_card_share` and `mean_card_body_chars`, is the mean number of words an agent's card shows before the reader opens anything (`cardOpenWords`, `scripts/interaction-metrics.ts`).
+  An expand counts only its summary, and a drawing, canvas, script or style counts nothing, since its labels belong to the picture; a figure's caption is open words.
+  It is observational, and nothing refuses a card for its length: it shows whether cards follow `CARD_AUTHORING`'s rule that the open body is the answer, the figures, one sentence beside each and any questions.
 - **Data per metric:** its direction, the measured Sep 14 value, and the captain's target.
   A metric whose `direction` is `either` is **observational**: it is written to the baseline and printed in the report, and the gate never grades it.
   A tier mix that moves toward high is the policy working, not a regression - but the move still has to be explained, which is what having it in the baseline diff buys.

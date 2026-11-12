@@ -34,6 +34,7 @@ export type MetricId =
   | "closed_without_evidence"
   | "visual_card_share"
   | "mean_card_body_chars"
+  | "mean_card_open_words"
   | "escalations"
   | "wakes_after_cancel"
   | "guidance_queued_wakes"
@@ -240,6 +241,18 @@ export const METRICS: readonly MetricDef[] = [
     modes: ["F6"],
     sep14: { value: 1197, text: "1,197 chars" },
     target: { op: "<", value: 1197, text: "shorter" },
+  },
+  {
+    // INF-3749, the captain's "fewer words, big visuals": the words a reader
+    // meets before opening anything. Observational: counted and printed, never
+    // graded, because no card is refused for its length.
+    id: "mean_card_open_words",
+    label: "Mean open words per card (outside expands, drawings and scripts)",
+    group: "section4",
+    direction: "either",
+    modes: [],
+    sep14: { value: null, text: "not recorded" },
+    target: null,
   },
   {
     id: "escalations",
@@ -1746,6 +1759,7 @@ export function scoreSession(observation: SessionObservation): MetricScores {
   }
   const visualPool = authored;
   const bodyChars = visualPool.map((card) => card.body.length);
+  const openWords = visualPool.map((card) => cardOpenWords(card.body));
   return {
     questions_answered_in_turn: ratio(
       questions.filter((question) => question.answeredInTurn).length,
@@ -1807,6 +1821,12 @@ export function scoreSession(observation: SessionObservation): MetricScores {
           ? null
           : Math.round(bodyChars.reduce((sum, chars) => sum + chars, 0) / bodyChars.length),
     },
+    mean_card_open_words: {
+      value:
+        openWords.length === 0
+          ? null
+          : Math.round(openWords.reduce((sum, words) => sum + words, 0) / openWords.length),
+    },
     escalations: count(observation.escalations.length),
     wakes_after_cancel: count(observation.wakesAfterCancel),
     guidance_queued_wakes: count(observation.guidanceQueuedWakes),
@@ -1818,6 +1838,23 @@ export function scoreSession(observation: SessionObservation): MetricScores {
     ...scorePlanSkips(observation.dispatches, observation.reviews),
     ...scoreRigor(observation.dispatches, observation.reviews),
   };
+}
+
+/**
+ * The words a card shows before the reader opens anything (INF-3749): an
+ * expand counts only its summary, and a drawing, script or style counts
+ * nothing, since its labels belong to the picture.
+ */
+export function cardOpenWords(body: string): number {
+  const text = body
+    .replace(/<(script|style|svg|canvas)\b[\s\S]*?<\/\1\s*>/gi, " ")
+    .replace(/<details\b[^>]*>([\s\S]*?)<\/details\s*>/gi, (_whole, inner: string) => {
+      const summary = /<summary\b[^>]*>([\s\S]*?)<\/summary\s*>/i.exec(inner);
+      return ` ${summary?.[1] ?? ""} `;
+    })
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&[#a-z0-9]+;/gi, " ");
+  return text.split(/\s+/).filter((word) => /[\p{L}\p{N}]/u.test(word)).length;
 }
 
 /** A declaration is counted, never inferred; historical changes stay in the denominator. */

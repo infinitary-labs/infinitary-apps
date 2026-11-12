@@ -93,8 +93,8 @@ The frame stylesheet dresses a plain `fieldset` as a hairline `--line-1` box at 
 Every ready card body is semantic HTML in a sandboxed iframe.
 The host owns the chip, title, size control, minimize corner, pager, and footer actions.
 Follow the card contract the models read (`CARD_AUTHORING` in `src/core/prompts/cardContract.ts`, mirrored by the readme's Card bodies bullet): a card leads with its answer in one sentence (finished code-work merge cards are the exception: the title alone carries the answer, and the body opens at Why, then What changed, Before and After; `docs/card-authoring.md` owns that loose outline), and an answer that explains how something works, compares options, or shows state, shape or layout is drawn - that sentence, then the figures carrying it.
-An explanation with several parts gets several figures, each beside the short sentence it illustrates, rather than one crowded drawing.
-Keep prose needed to follow the answer in the open; reserve `<details>` for evidence, exact code paths, qualifications, and other material for a reader who digs.
+Each part of an explanation gets its own figure, never one crowded drawing, and a figure carries its own names and numbers, the deciding one at display size.
+The open body is the answer, the figures, one sentence beside each, and any questions; the rest - reasons, steps, caveats, a builder's spec, evidence, paths - folds in a `<details>` whose `<summary>` names what is inside.
 Figures are free-form and all of SVG renders.
 No shape is prescribed.
 Give each SVG a `viewBox`, 750 units wide with `width="100%"` when it is full width, or its pixel width when it is smaller so the card only shrinks it; use theme tokens so it follows light and dark, `--accent` for the single most-current or lit element within each figure - one accent per figure, not one per card - non-accent tokens for everything else it draws, and `--ok`, `--warn`, or `--danger` only for real state.

@@ -1095,7 +1095,7 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
     expect(CARD_AUTHORING).toContain("one accent per figure, not one per card");
     expect(CARD_AUTHORING).not.toContain("across the whole card");
     expect(CARD_AUTHORING).toContain("ok/warn/danger for real state");
-    expect(CARD_AUTHORING).toContain("An explanation with several parts gets several figures");
+    expect(CARD_AUTHORING).toContain("Each part of an explanation gets its own figure");
     expect(CARD_AUTHORING).not.toContain("an image the body carries as a data: URI renders");
     expect(CARD_AUTHORING).not.toContain("literal colors, <image>, filters");
     // FI3-869: served guidance asks what a press adds, not the subject alone.
@@ -1597,9 +1597,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
       expect(prompt).toContain("each result picture beside the sentence it describes");
       expect(prompt).toContain("data-inf-new");
       expect(prompt).toContain("data-inf-no-picture");
-      expect(prompt).toContain(
-        "what is left closes after After when it bears on the decision, otherwise in <details>",
-      );
+      expect(prompt).toContain("what is left folds in <details>");
       expect(prompt).toContain("answer cards, previews included, keep their own shape");
     }
     expect(CREWMATE_EMIT_CARD_DESCRIPTION).not.toContain("The decision body says");
@@ -1851,9 +1849,10 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // INF-2744's approved plan names the one merge card: the fact strip rides a merge or settle effect.
   // INF-3674's approved plan writes to the captain in their language and keeps the project's for commits.
   // The prompt-budget trim says the same card rules in fewer words.
+  // INF-3749's approved plan (Picture first) gives each figure its numbers and folds the rest under a named expand.
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "0151ae8cb7aaa89e36ec7f2d72a8a3284aed199e1cf957313d0088b4cb704d7b",
+    "e87ef1321912986081a80c8fc24e4c62f7a15fddbe6d0662cf2b66ceecef2d67",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
   // INF-976 widens the first mate's check before a start to filing, read off the built-on work.

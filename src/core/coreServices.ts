@@ -8,6 +8,7 @@ import type { AxiChannel } from "./axi/channel";
 import type { DecisionModels } from "./decisions/decisionModel";
 import type { startCorrections } from "./decisions/startCorrections";
 import type { HomeAnnouncement } from "./devices/announce";
+import type { CaptainPlaces } from "./devices/captainPlaces";
 import type { Computers } from "./devices/computers";
 import type { DeviceSignIns } from "./devices/deviceSignIns";
 import type { FarBuild } from "./devices/farBuilds";
@@ -78,6 +79,8 @@ export type CoreServices = {
   paths: AppPaths;
   /** A card's files for the captain, read a piece at a time for a window's Save (docs/card-authoring.md). */
   cardFiles: CardFileReads;
+  /** Where the captain's input comes from: the computer or phone whose window sent it (docs/devices.md). */
+  captainPlaces: CaptainPlaces;
   auth: PiAuthService;
   vault: AccountVault;
   flagship: Flagship;

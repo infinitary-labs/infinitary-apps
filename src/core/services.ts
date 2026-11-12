@@ -43,6 +43,7 @@ import type { CoreServices } from "./coreServices";
 import { CORRECTION_CASES, CORRECTION_QUESTIONS } from "./decisions/correctionConsumer";
 import { startHomeDecisions } from "./decisions/homeDecisions";
 import { startCorrections } from "./decisions/startCorrections";
+import { CaptainPlaces } from "./devices/captainPlaces";
 import { ownComputerName } from "./devices/computerName";
 import { startHomeDevices } from "./devices/homeDevices";
 import { createEventSeam } from "./eventSeam";
@@ -986,7 +987,15 @@ export async function createServices(
     log: (line) => console.warn(`[leftovers] ${line}`),
   });
   const leftBehind = leftoverPrograms.leftBehind(() => loadLine.snapshot().runs);
+  // Where the captain's input comes from, for a crewmate's card that needs
+  // them at a named computer (docs/devices.md, "Where the captain is").
+  const captainPlaces = new CaptainPlaces({
+    devices: () => devices.list(),
+    homeName: sourceComputer,
+    now: ticker.now,
+  });
   const supervisor: CrewSupervisor = new CrewSupervisor({
+    captainPlaces,
     prepareContribution: (taskId) => projectContributions.prepareTask(taskId, tasks, false),
     automaticPlacement,
     // A program's script runs in a process of its own; its ask() is one typed read.
@@ -1837,6 +1846,7 @@ export async function createServices(
   return {
     paths,
     cardFiles: homeCardFileReads((cardId) => cardStore.get(cardId), paths, files),
+    captainPlaces,
     timeline,
     auth,
     vault,

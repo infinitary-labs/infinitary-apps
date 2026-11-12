@@ -12,6 +12,7 @@ import type { Card } from "@shared/cards";
 import { describe, expect, it, vi } from "vitest";
 import { firstmateSeat, toolsCrew } from "../../../tests/helpers/firstmateTools";
 import type { CoreServices } from "../coreServices";
+import { CaptainPlaces } from "../devices/captainPlaces";
 import { createCoreDispatcher } from "../dispatcher";
 import type { HostCapabilities } from "../host";
 import type { BoundTool } from "../session/tools";
@@ -20,9 +21,11 @@ import { seedTask } from "../tasks/seedTask";
 /** A supervisor over an in-memory record with no first mate attached, and the window's dispatch over it. */
 function crew(saved: Card[] = []) {
   const { supervisor, tasks } = toolsCrew(saved);
-  // The window's card channels read only the supervisor and the event sink.
+  // The window's card channels read the supervisor, the event sink, and
+  // where the captain's input came from: one computer, nothing paired.
+  const captainPlaces = new CaptainPlaces({ devices: () => [], now: () => Date.now() });
   const dispatch = createCoreDispatcher({
-    services: { supervisor, broadcastEvent: () => {} } as unknown as CoreServices,
+    services: { supervisor, broadcastEvent: () => {}, captainPlaces } as unknown as CoreServices,
     // Showing a card is a catalog action, which reads the app's health first.
     host: { app: { version: "0.0.0-test", platform: "darwin" } } as unknown as HostCapabilities,
     emit: () => {},

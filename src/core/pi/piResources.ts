@@ -137,6 +137,14 @@ export type CrewmateComputers = {
   cardFiles?: false;
 };
 
+/**
+ * Where the captain is (docs/devices.md, "Where the captain is"): the app
+ * names the computer or phone of each choice, reply and latest input, and
+ * the crewmate decides what its card says and whether a wait can start.
+ */
+export const CAPTAIN_PLACE_RULE =
+  "Beside each of the captain's choices and replies, and in emit_card's answer, the app names the computer or phone whose window they used, which is where they are, whatever a card's words said. A card that needs the captain at one of these computers names that computer, the one they are using now, and how to reach it from there. When their choice comes from another one than your next step needs them at, say so on a card before you start anything that waits on them there.";
+
 /** A crewmate's word for a computer that runs work, with its role. */
 function workerWords(worker: CrewmateComputers["workers"][number]): string {
   return worker.sameComputer
@@ -164,7 +172,7 @@ export function crewmateComputersNote(computers: CrewmateComputers): string {
   const reach = computers.files
     ? `To read a file on another of these computers, copy it with ${FILES_COMMAND} in your shell: \`ls <computer>:<folder>\` lists a folder, \`get <computer>:<path>\` copies one file into your hand-over folder and prints its path, and the bare command names each computer. A program or action on another of these computers, or a file that command refuses, is out of your reach: report it with needs_firstmate, naming the computer, what is needed - a path, or how to recognize it - and where you need the result, then keep working on the rest; never ask the captain to move it. Until a file reaches you, say plainly that you could not open it, and never answer as if you had: a picture the captain's words name by its path on another computer reaches you only once you copy it.`
     : `A file, folder, program or action on another of these computers is out of your reach: report it with needs_firstmate, naming the computer, what is needed - a path, or how to recognize it - and where you need the result, then keep working on the rest; never ask the captain to move it. Until it reaches you, say plainly that you could not open it, and never answer as if you had: a picture the captain's words name by its path on another computer is such a file.`;
-  return `The captain's computers: ${listed.join("; ")}. ${here} ${reach} The first mate coordinates it, and a file another task finds reaches you as a steer naming its verified copy in your hand-over folder. To hand files to another task, pass their paths in report files.${computers.cardFiles === false ? "" : " A file for the captain to open, edit, attach or send rides your card's files, which the captain saves on the computer in use: never name its path for the captain, least of all one on another computer."} A handed${computers.files ? " or copied" : ""} file may hold secrets: never print, quote or paste its content in a report, card, note, commit, command line or output, and read only what your work needs.`;
+  return `The captain's computers: ${listed.join("; ")}. ${here} ${CAPTAIN_PLACE_RULE} ${reach} The first mate coordinates it, and a file another task finds reaches you as a steer naming its verified copy in your hand-over folder. To hand files to another task, pass their paths in report files.${computers.cardFiles === false ? "" : " A file for the captain to open, edit, attach or send rides your card's files, which the captain saves on the computer in use: never name its path for the captain, least of all one on another computer."} A handed${computers.files ? " or copied" : ""} file may hold secrets: never print, quote or paste its content in a report, card, note, commit, command line or output, and read only what your work needs.`;
 }
 
 export function crewmateCardBodiesNote(cardBodiesDir: string): string {

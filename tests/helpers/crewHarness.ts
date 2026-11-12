@@ -296,6 +296,8 @@ export type SetupExtras = {
   sendTakenIntegrationAsk?: CrewSupervisorOptions["sendTakenIntegrationAsk"];
   /** The captain's click on a crewmate's kept write sends it once (`GithubGatewayService.sendAsk`). */
   sendWriteAsk?: CrewSupervisorOptions["sendWriteAsk"];
+  /** Where the captain's input comes from (docs/devices.md, "Where the captain is"). */
+  captainPlaces?: CrewSupervisorOptions["captainPlaces"];
   /** A panel's held call was answered: the panel hears the choice (`HomeIntegrations`). */
   panelAskAnswered?: CrewSupervisorOptions["panelAskAnswered"];
   checkCi?: CrewSupervisorOptions["checkCi"];
@@ -580,6 +582,7 @@ export function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
       ? { sendTakenIntegrationAsk: extras.sendTakenIntegrationAsk }
       : {}),
     ...(extras.sendWriteAsk ? { sendWriteAsk: extras.sendWriteAsk } : {}),
+    ...(extras.captainPlaces ? { captainPlaces: extras.captainPlaces } : {}),
     ...(extras.panelAskAnswered ? { panelAskAnswered: extras.panelAskAnswered } : {}),
     ...(extras.checkCi ? { checkCi: extras.checkCi } : {}),
     ...(extras.runbooks ? { runbooks: extras.runbooks } : {}),

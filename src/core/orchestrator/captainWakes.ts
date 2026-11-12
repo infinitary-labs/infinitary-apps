@@ -45,6 +45,12 @@ export type CaptainFacts =
       source?: "chrome" | "frame";
       choice: WakeChoice;
       /**
+       * The computer or phone whose window the captain chose from, in the
+       * crewmate's words (docs/devices.md, "Where the captain is"); absent
+       * with one computer, from a script, and on older rows.
+       */
+      from?: string;
+      /**
        * The choice was a request card's open-browser action, and the browser
        * the card named was gone (docs/task-browser.md, "Asking for help"): it
        * had stopped, or it ended when the app quit.
@@ -101,6 +107,8 @@ export type CaptainFacts =
       words: string;
       answers?: CardAnswer[];
       notes?: CardNote[];
+      /** The computer or phone whose window they wrote from, as `card-choice` names it. */
+      from?: string;
     }
   | {
       /**
@@ -294,7 +302,7 @@ export function answerMissingWake(
 export function threadReplyLead(facts: Extract<WakeFacts, { kind: "thread-reply" }>): string {
   return [
     THREAD_STEER_PREAMBLE,
-    `Card "${facts.card.title}" (${facts.card.id}).${facts.card.messageId !== undefined ? ` This is the captain's message ${facts.card.messageId}${facts.card.lifecycle ? ` in lifecycle ${facts.card.lifecycle}` : ""}; a line on this card answers it only when it names it in answers_message.` : ""}`,
+    `Card "${facts.card.title}" (${facts.card.id}).${facts.card.messageId !== undefined ? ` This is the captain's message ${facts.card.messageId}${facts.card.lifecycle ? ` in lifecycle ${facts.card.lifecycle}` : ""}; a line on this card answers it only when it names it in answers_message.` : ""}${fromText(facts.from, "wrote it")}`,
     "The captain's words, verbatim:",
   ].join("\n");
 }
@@ -337,6 +345,15 @@ function renderAnswerMissing(facts: Extract<WakeFacts, { kind: "answer-missing" 
 export const ANSWER_MISSING_ENDED_OPENING =
   "The work for the captain's message ended with no card that answers it";
 
+/**
+ * Where the captain's choice or reply came from (docs/devices.md, "Where
+ * the captain is"): the computer or phone whose window they used, which is
+ * where they are, whatever the card's words said.
+ */
+function fromText(from: string | undefined, did: string): string {
+  return from ? ` The captain ${did} in their window on ${from}.` : "";
+}
+
 /** A frame action's value, as the choice's author reads it. */
 function valueText(choice: WakeChoice): string {
   return choice.value !== undefined ? `\nCard action value (JSON): ${choice.value}` : "";
@@ -372,7 +389,7 @@ export const CAPTAIN_WORDS: KindWords<CaptainFacts> = {
         : `[user]\n${facts.choice.label}\nChoice on ${about}.${declined}${valueText(facts.choice)}${answersText(facts.choice)}`;
     }
     if (facts.browserGone) return renderBrowserGone(facts);
-    return `Card "${facts.card.title}": ${facts.source === "frame" ? "a script" : "the user"} chose "${facts.choice.label}" (${facts.choice.id}).${declined}${valueText(facts.choice)}${answersText(facts.choice, facts.source)}`;
+    return `Card "${facts.card.title}": ${facts.source === "frame" ? "a script" : "the user"} chose "${facts.choice.label}" (${facts.choice.id}).${fromText(facts.from, "chose it")}${declined}${valueText(facts.choice)}${answersText(facts.choice, facts.source)}`;
   },
   "card-closed": (facts) =>
     facts.duplicateOf

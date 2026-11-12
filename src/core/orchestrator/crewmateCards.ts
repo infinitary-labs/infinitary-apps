@@ -37,6 +37,7 @@ import {
   sendWriteWords,
 } from "@shared/vocabulary";
 import { NEVER_SENT_AGAIN, type WriteAsk } from "@shared/writeAsk";
+import type { CaptainPlace } from "../devices/captainPlaces";
 import { crewmateCardPicturesDir } from "../paths";
 import { lintCrewmateCard } from "../pi/cardLint";
 import {
@@ -841,7 +842,8 @@ export class CrewmateCards {
     const pausedWords = handoff
       ? " Your browser is paused for the captain: your browser commands refuse until the captain takes control and returns it, which wakes you once. End your turn when nothing else needs doing; report with waiting_on_captain naming this card."
       : "";
-    const answer = (text: string) => `${text}${advisory}${unmarked}${pausedWords}`;
+    const placeWords = captainPlaceWords(this.options.captainPlaces?.latest(), this.host.now());
+    const answer = (text: string) => `${text}${advisory}${unmarked}${pausedWords}${placeWords}`;
     // A revision that went up while the checks run says what still holds
     // the merge, and what to do once they pass.
     const gated = (risk?: RiskAssessment) =>
@@ -1464,4 +1466,22 @@ function allowsStrip(label: string, covers: string): string {
     '<p class="inf-muted">It holds for the rest of this task, its review, a retry on a stronger model and any task that takes over its work. Tell the first mate to take it back.</p>',
     "</section>",
   ].join("");
+}
+
+/**
+ * Where the captain was at their latest input, in emit_card's answer
+ * (docs/devices.md, "Where the captain is"), so a card that needs them at
+ * a named computer can say which one they are using now; nothing with one
+ * computer or before any input.
+ */
+export function captainPlaceWords(place: CaptainPlace | undefined, now: number): string {
+  if (!place) return "";
+  const minutes = Math.max(0, Math.round((now - place.at) / 60_000));
+  const ago =
+    minutes === 0
+      ? "less than a minute ago"
+      : minutes === 1
+        ? "1 minute ago"
+        : `${minutes} minutes ago`;
+  return ` The captain's latest click or words came from their window on ${place.words}, ${ago}.`;
 }

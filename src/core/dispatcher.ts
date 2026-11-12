@@ -58,6 +58,7 @@ import { addedPrivateSite, privateSiteChannels } from "./browser/privateSites";
 import { prepareComposerTurn } from "./composerTurn";
 import { CONTRACT_CHANGES } from "./connection/contractChanges";
 import type { CoreServices } from "./coreServices";
+import { isCaptainInput } from "./devices/captainPlaces";
 import { RemoteLoginRefusedError } from "./devices/remoteLogin";
 import { createActionTrail } from "./dispatcher/actionTrail";
 import { cardMediaHandlers } from "./dispatcher/cardMedia";
@@ -1925,8 +1926,12 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return Promise.reject(
         new Error(`${channel} is not a request a computer that runs work asks.`),
       );
-    const answer = () =>
+    const routed = () =>
       route(channel as Exclude<C, WorkInvokeChannel>, rawArgs, actor) as Promise<InvokeResponse<C>>;
+    // The captain's own input names where it came from (docs/devices.md, "Where the captain is").
+    const answer = isCaptainInput(channel, actor)
+      ? () => services.captainPlaces.during(routed)
+      : routed;
     return actor?.kind === "captain" && actor.view
       ? asAView(answer, { view: actor.view, changes: actor.viewChanges })
       : answer();

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "card-names-your-computer",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate that needs you at another computer knows which one you are using",
+      "body": "When you have more than one computer or a phone connected, a crewmate now hears which one you clicked or wrote from. A card that needs you at a particular computer says which one you are using now and how to reach the other one. If you answer from a different computer than the one it needs, the crewmate says so before it starts anything that waits on you there.",
+      "noPicture": "Cards look the same; the change is in what a crewmate is told about where you clicked.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

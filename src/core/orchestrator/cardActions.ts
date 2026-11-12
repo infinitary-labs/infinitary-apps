@@ -220,6 +220,7 @@ export class CardActions {
           words: text,
           answers,
           notes,
+          ...this.captainFrom(),
         },
       };
       void this.core.steer
@@ -871,6 +872,16 @@ export class CardActions {
     this.core.overrides.overrideNoticed(taskId, override);
   }
 
+  /**
+   * Where the captain input running now came from, for a crewmate's steer
+   * (docs/devices.md, "Where the captain is"): nothing outside the captain's
+   * own input, or with one computer.
+   */
+  private captainFrom(): { from?: string } {
+    const from = this.core.options.captainPlaces?.inputFrom();
+    return from ? { from } : {};
+  }
+
   /** A choice on a crewmate's card, steered to its session through the task's durable lane. */
   private steerChoice(
     taskId: string,
@@ -889,6 +900,7 @@ export class CardActions {
             source,
             card: { title: card.title, id: card.id },
             choice,
+            ...(source === "chrome" ? this.captainFrom() : {}),
             ...(browserGone ? { browserGone } : {}),
           },
         },

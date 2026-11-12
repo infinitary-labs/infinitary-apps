@@ -957,6 +957,22 @@ A lost Mac or phone that still controls this first mate can make links and add a
 Words typed on a paired view are the captain's own words (the captain's pick on FI3-709): in its input or under a card, they may ask the first mate for an own-words change - removing a project, disconnecting an account, signing out of GitHub, moving the projects folder or removing a panel - as words typed on this Mac may.
 A lost view can therefore ask for those until the captain removes it here, and it asks directly what a view may (`docs/view.md`, "What the window asks"): sign-ins and API keys, settings, projects, deleting tasks and purging their data.
 
+## Where the captain is
+
+The captain may click and write from more than one window: the one on the computer where the first mate lives, a computer that controls it, or a phone.
+Each request says which, as a typed fact the connection proved: the window on the first mate's own computer asks as the captain with no device, and a paired view asks naming its device (`docs/connection.md`, "Requests").
+`CaptainPlaces` (`src/core/devices/captainPlaces.ts`) reads it for the captain's own input - a message, a card's choice, close or Got it, a reply under a card, and a line in the Crewmate tab (`CAPTAIN_INPUT_CHANNELS`) - and keeps the latest, in memory only, with its time.
+
+A crewmate hears it in three places, and only while another computer or phone is paired: with one computer there is nowhere else to be.
+
+- A choice on its card and a reply under it say which window they came from: "The captain chose it in their window on Sam's Mac mini."
+  Each is named precisely: a computer or phone by the name it joined with, a phone as one, and the first mate's own computer by the name macOS gives it with its role, as the crewmate's prompt lists it: "Sam's MacBook Pro, the computer where your first mate lives".
+- emit_card's answer names where the captain's latest click or words came from, and how long ago.
+- The paragraph naming the captain's computers (`crewmateComputersNote`, `src/core/pi/piResources.ts`), there once a computer that runs work is listed, tells it what to do with them: a card that needs the captain at one of these computers names it, the one they are using now and how to reach it from there, and a choice from another one than the next step needs is said on a card before anything starts that waits on them there.
+
+The host names the places and decides nothing from them: whether a card needs the captain somewhere, and whether a wait can start, are the crewmate's (`docs/principles.md`, "Build the agent's reach, never its verdicts").
+A click from a script in a card's frame names no window.
+
 ## Settings -> Devices
 
 Every build offers the tab and the first mate's device cards: `inf:devices:shown` answers yes on every home, stable, alpha and development alike.

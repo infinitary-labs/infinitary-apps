@@ -153,6 +153,12 @@ export type AccountAttachment = {
 };
 
 export type CrewSupervisorOptions = {
+  /**
+   * Where the captain's input comes from (docs/devices.md, "Where the
+   * captain is"): a crewmate hears it beside each choice and reply, and in
+   * emit_card's answer. Absent, nothing names it.
+   */
+  captainPlaces?: import("../devices/captainPlaces").CaptainPlaceReads;
   taskSelection?: (
     input: import("../storage/taskSelection").TaskSelectionInput,
   ) => Promise<import("../storage/taskSelection").TaskSelection>;

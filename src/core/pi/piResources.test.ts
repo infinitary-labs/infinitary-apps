@@ -37,6 +37,7 @@ import {
 import {
   buildCrewmateSystemPrompt,
   buildFirstmateSystemPrompt,
+  CAPTAIN_PLACE_RULE,
   CREWMATE_TEST_DEFAULT,
   type CrewmateProcedureFacts,
   crewmateBackendNote,
@@ -1476,6 +1477,10 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
       "Until it reaches you, say plainly that you could not open it, and never answer as if you had: a picture the captain's words name by its path on another computer is such a file.",
     );
     expect(atHome).toContain("never print, quote or paste its content");
+    // The session audit's finding 5: a card that needs the captain at one of
+    // them says which one they are using now, and a click from another stops a wait.
+    expect(atHome).toContain(CAPTAIN_PLACE_RULE);
+    expect(prompt()).not.toContain(CAPTAIN_PLACE_RULE);
     expect(prompt({ here: mini.name, workers: [mini] })).toContain(
       "This task runs on Kun's Mac mini, so a project folder's path names nothing on Kun's Mac mini.",
     );

@@ -18,8 +18,8 @@ import {
   recordFrame,
   showRecordTab,
 } from "./rails";
-import { expectNoCard, noteDone, shownCard } from "./stack";
-import { boardTile, focusedTileKey } from "./taskBoard";
+import { expectNoCard, focusFrameAfterStage, noteDone, shownCard, shownEntry } from "./stack";
+import { boardFrameElement, boardTile, focusedTileKey } from "./taskBoard";
 import { pressKey, runFromSearch } from "./windowKeys";
 
 /**
@@ -162,6 +162,12 @@ test("a card still on the stage reads On the stage and its link focuses the live
     // The board command gives its page the keyboard; its header is pointer-only.
     await runFromSearch(launched.app, page, "panel:now/board-backlog");
     await expect.poll(() => focusedTileKey(page)).toBe(task.key);
+    // The note behind the board gets a page of its own while the board has the
+    // keyboard, so Playwright's next key would hand focus to the window's own
+    // page and be lost. Bring focus into the board from the window's own page
+    // first; with no subscription the main message is disabled, so from the
+    // shown entry.
+    await focusFrameAfterStage(page, boardFrameElement(page), shownEntry(page));
     await pressKey(boardTile(page, task.key), "Enter");
     await expect(shownCard(page, TIDES_TITLE)).toBeVisible();
     // Keep the Cards-tab assertion through the existing record command.

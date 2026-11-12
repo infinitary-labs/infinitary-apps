@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "record-cards-board-key-focus",
+      "reason": "The record-cards journey brings the keyboard into the task board from the window's own page before pressing a tile, so the page prepared for the note behind the board cannot take that key; a test-only change with nothing a person notices."
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import type { FrameLocator, Locator, Page } from "@playwright/test";
-import { drawnFrame } from "./frames";
+import { drawnFrame, frameElement } from "./frames";
 import { SHOWN_ENTRY } from "./stack";
 
 /**
@@ -33,9 +33,17 @@ export function boardsOnStage(page: Page, panel = BOARD_PANEL): Locator {
   return page.locator(`[data-card-layer] ${boardCardSelector(panel)}`);
 }
 
+/** The shown board's frame element, by its panel. */
+const boardFrameSelector = (panel: string) => `${SHOWN_ENTRY} ${boardCardSelector(panel)} iframe`;
+
 /** The shown board's own page. */
 export function boardPage(page: Page, panel = BOARD_PANEL): FrameLocator {
-  return drawnFrame(page, `${SHOWN_ENTRY} ${boardCardSelector(panel)} iframe`);
+  return drawnFrame(page, boardFrameSelector(panel));
+}
+
+/** The shown board's frame element, drawn or not: where a journey puts the window's focus. */
+export function boardFrameElement(page: Page, panel = BOARD_PANEL): Locator {
+  return frameElement(page, boardFrameSelector(panel));
 }
 
 /** The board itself, inside its page, while it is the shown entry. */
@@ -106,13 +114,10 @@ export function laneKeys(page: Page, lane: string, panel = BOARD_PANEL): Promise
 
 /** Whether the window's focus is in the shown board's page: its frame is the focused element. */
 function boardHoldsFocus(page: Page, panel: string): Promise<boolean> {
-  return page.evaluate(
-    (selector) => {
-      const frame = document.querySelector(selector);
-      return frame !== null && document.activeElement === frame;
-    },
-    `${SHOWN_ENTRY} ${boardCardSelector(panel)} iframe`,
-  );
+  return page.evaluate((selector) => {
+    const frame = document.querySelector(selector);
+    return frame !== null && document.activeElement === frame;
+  }, boardFrameSelector(panel));
 }
 
 /**

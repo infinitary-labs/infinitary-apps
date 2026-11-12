@@ -210,11 +210,18 @@ export async function stagePrepared(page: Page): Promise<void> {
  * the window's focus to the window's own page at Playwright's next key,
  * which can be lost (docs/keyboard.md, "Cards and frames"). A journey whose
  * next Playwright key goes into a frame right after the stage changed
- * starts here, then focuses the control it presses inside `frame`.
+ * starts here, then focuses the control it presses inside `frame`. Focus
+ * leaves for `from`, a place in the window's own page that takes focus: the
+ * main message, or the shown entry where no subscription leaves the main
+ * message disabled.
  */
-export async function focusFrameAfterStage(page: Page, frame: Locator): Promise<void> {
+export async function focusFrameAfterStage(
+  page: Page,
+  frame: Locator,
+  from: Locator = promptInput(page),
+): Promise<void> {
   await stagePrepared(page);
-  await focusOn(promptInput(page));
+  await focusOn(from);
   await focusOn(frame);
 }
 

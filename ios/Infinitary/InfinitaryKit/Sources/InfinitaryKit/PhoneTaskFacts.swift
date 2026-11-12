@@ -265,6 +265,10 @@ public struct PhoneTaskFacts: Sendable {
             return CheckSummary(overall: "pending", words: words, dot: reading.problem != nil ? "warn" : "running", problem: reading.problem)
         }
         if counts["neutral"] != nil { return CheckSummary(overall: "pending", words: words, dot: "warn", problem: nil) }
+        // Only skipped checks: none has run yet, so it waits as an empty reading does (INF-3915).
+        if noCheckRan(reading) && reading.absenceDeclared != true {
+            return CheckSummary(overall: "pending", words: words, dot: "running", problem: nil)
+        }
         return CheckSummary(overall: "green", words: words, dot: "ok", problem: nil)
     }
 
@@ -275,10 +279,17 @@ public struct PhoneTaskFacts: Sendable {
         if summary.overall == "red" { return "failed" }
         if reading.problem != nil { return "cannot read all checks" }
         if reading.items.isEmpty { return summary.words }
+        // Only skipped checks never read passed, even once declared (INF-3915).
+        if noCheckRan(reading) && reading.complete != false { return "skipped" }
         if summary.overall == "green" { return "passed" }
         if reading.items.contains(where: { $0.state == "pending" }) { return "running" }
         if reading.complete == false { return "reading incomplete" }
         return "neutral"
+    }
+
+    /// No check that ran: none at all, or only skipped ones (`noCheckRan`, INF-3915).
+    static func noCheckRan(_ reading: PhoneTask.Delivery.CheckSnapshot) -> Bool {
+        reading.items.allSatisfy { $0.state == "skipped" }
     }
 
     /// The reading for the change's current version; one of an earlier version says so.

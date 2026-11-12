@@ -583,8 +583,8 @@ The captain’s F26 choice restores the existing exception for a cancelled dupli
 No observed checks or workflow runs yields an empty list.
 The restored cancellation filter keeps a replacement pending while its known later workflow run has not created that check; it does not invent a successful check.
 The reading identifies incomplete lists rather than inventing a check for a physical read limit.
-An empty hosted reading stays pending and watched until checks register or the crew records positive, exact-version absence evidence through `absentChecks`, with `pull` or, for the task's own pull request, alone (INF-1955: `CheckChangeTool.declareOwnAbsence` matches it to the pull request the task's branch holds, by number, branch and version, and stores it on an owned merge review).
-A declaration the record cannot match - no open pull request yet, another version, a host that runs no checks - is refused in words, never dropped; the merge card's checks hold names the declaration when an empty reading holds the card.
+An empty hosted reading, or one where every check skipped, stays pending and watched until checks run or the crew records positive, exact-version absence evidence through `absentChecks`, with `pull` or, for the task's own pull request, alone (INF-1955: `CheckChangeTool.declareOwnAbsence` matches it to the pull request the task's branch holds, by number, branch and version, and stores it on an owned merge review).
+A declaration the record cannot match - no open pull request yet, another version, a host that runs no checks - is refused in words, never dropped; the merge card's checks hold names the declaration when an empty or all-skipped reading holds the card.
 That evidence names an explicit no-CI policy from the trusted default branch and the applicable local gate; elapsed time, history and missing workflow files are not evidence of that policy.
 A host that runs no checks, such as a plain Git host, needs no invented hosted check.
 An absence declaration never removes registered checks from the reading or marks them passed.

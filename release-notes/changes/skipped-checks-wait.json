@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "skipped-checks-wait",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A merge card waits for checks that run, not only ones that skipped",
+      "body": "Right after a pull request opens, its project can list a check that skipped before the checks that run have started. Infinitary read that as checks passed and could show the merge card too early. It now waits until checks run and pass. A pull request whose checks all skip by design still gets its merge card once your crewmate confirms that it has no checks that run.",
+      "noPicture": "The merge card looks the same; the change is when it appears.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

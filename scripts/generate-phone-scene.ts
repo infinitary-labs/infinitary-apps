@@ -235,6 +235,9 @@ try {
       ["a reading still incomplete", { delivery: { ...pr, ci: "pending", checks: checks(["success", "neutral"], { complete: false }) } }],
       ["a neutral check", { delivery: { ...pr, ci: "pending", checks: checks(["neutral", "success"]) } }],
       ["no checks reported yet", { delivery: { ...pr, ci: "pending", ciStartedAt: now - 2 * min, checks: checks([]) } }],
+      // INF-3915: PR #1600's first reading, one skipped check before the checks that run registered.
+      ["only a skipped check", { delivery: { ...pr, ci: "pending", ciStartedAt: now - 2 * min, checks: checks(["skipped"], { complete: true }) } }],
+      ["only skipped checks, declared", { delivery: { ...pr, ci: "green", checks: checks(["skipped", "skipped"], { complete: true, absenceDeclared: true }) } }],
       ["a branch with no reading", { delivery: { mode: "local-only", changeLabel: "fm/task-1887", ci: "no-pr" } }],
       ["green with no reading", { delivery: { ...pr, ci: "green", ciStartedAt: now - 3 * 60 * min - 5 * min, ciFinishedAt: now - 30 * 1000 } }],
       ["a run started by hand", { delivery: { mode: "local-only", ci: "no-pr", runChecks: { runId: 7, name: "verify", state: "running", startedAt: now - 70 * min, at: now - min } } }],

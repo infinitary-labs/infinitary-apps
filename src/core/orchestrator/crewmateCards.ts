@@ -13,7 +13,12 @@ import {
 } from "@shared/cards";
 import { type MergeCardRequest, readyPresentation } from "@shared/changePresentation";
 import { everyFailureDiagnosed } from "@shared/checkRepair";
-import { currentCheckStatus, everyFailureOnMain, failedBatch } from "@shared/checkSnapshot";
+import {
+  currentCheckStatus,
+  everyFailureOnMain,
+  failedBatch,
+  noCheckRan,
+} from "@shared/checkSnapshot";
 import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { forgePlace } from "@shared/forge";
 import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
@@ -1255,7 +1260,7 @@ export class CrewmateCards {
           ? `${CHECK_WORDS.pending} (${read.problem})`
           : CHECK_WORDS[read.overall];
       // An empty reading with no declaration is pending, never no checks
-      // (INF-1955): the refusal names the declaration that registers them
+      // (INF-1955), and so is one where every check skipped (INF-3915): the refusal names the declaration that registers them
       // absent, so a project that runs no checks is not held for a wake
       // that never comes.
       // A failed batch check gets no Merge anyway (INF-3208): no checks
@@ -1270,11 +1275,11 @@ export class CrewmateCards {
         read.overall === "pending" &&
         reading !== undefined &&
         reading.headSha === delivery?.headSha &&
-        reading.items.length === 0 &&
+        noCheckRan(reading.items) &&
         !reading.absenceDeclared &&
         !reading.problem;
       throw new CardRefusedError(
-        `Card refused: the checks read ${state}, not passed; a merge decision must wait. Read them again with check_change, fix or wait, and emit the merge card again once they pass.${read.overall === "red" ? " If they still fail after you tried, it goes up once every failed check at this version carries your diagnosis (check_change diagnosis), and the app offers Merge anyway on it; when main's newest run of every failed check failed too, the reading says so and the card goes up at once stating that fact, so spend no rerun on it." : ""}${batch ? " The failed batch check is the project's queue's: no checks override passes it, so it gets no Merge anyway; fix the cause in a new version, or answer a send-back of a version that already holds the fix with check_change's answered verdict." : ""}${empty ? " No check has registered at this version: if this pull request has no checks at all, declare that with check_change absentChecks (its version, the evidence and the local gate run at it), and the reading then says no checks; an empty reading alone stays pending." : ""}${this.waitingReplyNote(taskId)} ${softHoldWords("checks", "crewmate")}`,
+        `Card refused: the checks read ${state}, not passed; a merge decision must wait. Read them again with check_change, fix or wait, and emit the merge card again once they pass.${read.overall === "red" ? " If they still fail after you tried, it goes up once every failed check at this version carries your diagnosis (check_change diagnosis), and the app offers Merge anyway on it; when main's newest run of every failed check failed too, the reading says so and the card goes up at once stating that fact, so spend no rerun on it." : ""}${batch ? " The failed batch check is the project's queue's: no checks override passes it, so it gets no Merge anyway; fix the cause in a new version, or answer a send-back of a version that already holds the fix with check_change's answered verdict." : ""}${empty ? " No check has run at this version: if this pull request has no checks that run, declare that with check_change absentChecks (its version, the evidence and the local gate run at it), and the reading then says no checks; an empty or all-skipped reading alone stays pending." : ""}${this.waitingReplyNote(taskId)} ${softHoldWords("checks", "crewmate")}`,
         "checks",
         `its checks read ${state}, not passed`,
         read.overall === "pending" && !empty && !read.problem,

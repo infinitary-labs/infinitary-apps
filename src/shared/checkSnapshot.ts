@@ -85,6 +85,17 @@ export const CHECKS_UNREADABLE_WORDS = "cannot read all checks";
 /** What the checks say when the reading came back incomplete with no reason. */
 export const CHECKS_INCOMPLETE_WORDS = "reading incomplete";
 
+/**
+ * Whether a reading shows no check that ran (INF-3915): no check at all, or
+ * only skipped ones. Right after a pull request opens, the host may list a
+ * job that skips on that event before the jobs that run have registered, so
+ * such a reading is still pending until the crew declares the absence of
+ * checks at that version, exactly as an empty one is.
+ */
+export function noCheckRan(items: readonly { state: ForgeCheckState }[]): boolean {
+  return items.every((item) => item.state === "skipped");
+}
+
 /** Display-only tally of reported facts; never a readiness or merge decision. */
 export function checkSnapshotSummary(reading: CheckSnapshot): {
   overall: "green" | "red" | "pending" | "none";
@@ -119,6 +130,8 @@ export function checkSnapshotSummary(reading: CheckSnapshot): {
   if (incomplete || counts.has("pending"))
     return { ...problem, overall: "pending", words, dot: reading.problem ? "warn" : "running" };
   if (counts.has("neutral")) return { overall: "pending", words, dot: "warn" };
+  if (noCheckRan(reading.items) && !reading.absenceDeclared)
+    return { overall: "pending", words, dot: "running" };
   return { overall: "green", words, dot: "ok" };
 }
 
@@ -132,6 +145,8 @@ export function checkSnapshotState(reading: CheckSnapshot): string {
   if (overall === "red") return STATE_WORDS.failure;
   if (reading.problem) return CHECKS_UNREADABLE_WORDS;
   if (reading.items.length === 0) return words;
+  // Only skipped checks never read passed, even once declared (INF-3915).
+  if (noCheckRan(reading.items) && reading.complete !== false) return STATE_WORDS.skipped;
   if (overall === "green") return STATE_WORDS.success;
   if (reading.items.some((check) => check.state === "pending")) return STATE_WORDS.pending;
   if (reading.complete === false) return CHECKS_INCOMPLETE_WORDS;

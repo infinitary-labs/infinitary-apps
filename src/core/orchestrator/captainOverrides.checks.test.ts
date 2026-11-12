@@ -13,6 +13,8 @@ import { MERGE_ANYWAY_ACTION, SETTLE_FACT_VALUE_CLASS, splitSettleFacts } from "
 import {
   CHECKS_ABSENT_WORDS,
   CHECKS_NOT_REPORTED_WORDS,
+  checkSnapshotState,
+  checkSnapshotSummary,
   currentCheckStatus,
 } from "@shared/checkSnapshot";
 import {
@@ -704,6 +706,60 @@ describe("CrewSupervisor", () => {
         });
         const card = h.cards().find((entry) => entry.title === "The no-CI change is ready");
         expect(card?.actions.some((action) => action.passes === "checks")).toBe(false);
+        expect(h.forge.merges).toEqual([]);
+      });
+
+      // INF-3915 (the captain: "why this card popped up when checks are still
+      // running?"): right after PR #1600 opened, the host listed one check,
+      // skipped, with the reading complete, before the jobs that run had
+      // registered. That read green and a new merge card went up saying the
+      // checks passed. A reading where every check skipped holds the card as
+      // an empty one does; a pull request whose checks truly all skip goes up
+      // once the crew declares that version's absence of checks.
+      it("holds a new merge card on a reading whose only check skipped until real checks pass, and lets a declared all-skipped version up (INF-3915)", async () => {
+        const h = await approved();
+        h.forge.referencedBranch = h.tasks.get(h.taskId)?.branch ?? "";
+        h.forge.headSha = NO_CI;
+        h.forge.states = ["skipped"];
+        await h.declare({});
+        expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({
+          headSha: NO_CI,
+          ci: "pending",
+          checks: { items: [{ state: "skipped" }], absenceDeclared: false },
+        });
+        const held = h.emit("Skipped checks are not passed");
+        await expect(held).rejects.toThrow(`the checks read ${CHECK_WORDS.pending}, not passed`);
+        await expect(held).rejects.toThrow("absentChecks");
+        // The jobs that run register beside the skipped one: still held while they run.
+        h.forge.states = ["skipped", "pending"];
+        await h.declare({});
+        await expect(h.emit("Skipped checks are not passed")).rejects.toThrow(
+          `the checks read ${CHECK_WORDS.pending}, not passed`,
+        );
+        // Once they pass, a skipped job beside them does not hold the card.
+        h.forge.states = ["skipped", "success"];
+        await h.declare({});
+        expect(h.tasks.get(h.taskId)?.delivery?.ci).toBe("green");
+        // A version whose every check skips goes up once its absence is declared.
+        h.forge.states = ["skipped"];
+        await h.declare({});
+        expect(h.tasks.get(h.taskId)?.delivery?.ci).toBe("pending");
+        expect(await h.declare({ absentChecks: absence(NO_CI) })).toContain(
+          "Absence evidence stored for this version",
+        );
+        const delivery = h.tasks.get(h.taskId)?.delivery;
+        expect(delivery?.checks).toMatchObject({
+          items: [{ state: "skipped" }],
+          absenceDeclared: true,
+        });
+        expect(delivery && currentCheckStatus(delivery)).toBe("green");
+        // Green lets the card up, but no check ran, so the card says skipped, never passed.
+        const declared = delivery!.checks!;
+        expect(checkSnapshotState(declared)).toBe(checkSnapshotSummary(declared).words);
+        expect(checkSnapshotSummary(declared).dot).toBe("ok");
+        await repairTurn(h, async () => {
+          await expect(h.emit("Every check skips here")).resolves.toContain("card-");
+        });
         expect(h.forge.merges).toEqual([]);
       });
 

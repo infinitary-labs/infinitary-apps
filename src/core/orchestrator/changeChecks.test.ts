@@ -561,7 +561,7 @@ describe('the check watch\'s side of a reading (docs/forge.md, "The check watch"
     expect(tasks.get("ab12cd34")?.delivery?.ciWatch).toBeUndefined();
   });
 
-  it.each([{ states: ["success", "skipped"] }, { states: ["skipped"] }] as const)(
+  it.each([{ states: ["success", "skipped"] }] as const)(
     "accepts finished skipped checks %j without watching or repair diagnosis",
     async ({ states }) => {
       const forge = new FakeForge();
@@ -589,6 +589,56 @@ ${said}`);
       expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(true);
     },
   );
+
+  // INF-3915: right after a pull request opens, the host can list only a job
+  // that skips on that event, before the jobs that run register. Such a
+  // reading is pending and watched like an empty one, and the merge waits,
+  // until checks run or the crew declares that version has none that run.
+  it("keeps a reading where every check skipped pending and watched, and merges it once its absence is declared", async () => {
+    const { tasks, repos, service, forge } = setup();
+    await insertDirectPrTask(tasks, repos);
+    const task = tasks.get("ab12cd34")!;
+    repos.configure(task.repoId!, { origin: "https://github.com/x/y.git" });
+    const headSha = await git(task.repoDir, ["rev-parse", "HEAD"]);
+    forge.change = { ...forge.change!, headSha };
+    forge.states = ["skipped"];
+    Object.assign(forge, {
+      pull: async () => ({
+        number: 23,
+        state: "open",
+        merged: false,
+        headSha,
+        base: "main",
+        branch: task.branch,
+        headRepo: "x/y",
+        title: "fix: ship the meter",
+      }),
+    });
+    await service.checkTool.checkForCrew(task.id);
+    expect(tasks.get(task.id)?.delivery).toMatchObject({
+      ci: "pending",
+      checks: { items: [{ state: "skipped" }], absenceDeclared: false },
+      ciWatch: { head: headSha },
+    });
+    expect(service.checks.reading(task.id)?.overall).toBe("pending");
+    const held = await service.merges.merge(task.id);
+    expect(held.ok).toBe(false);
+    expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
+    const stored = await service.checkTool.checkForCrew(task.id, {
+      absentChecks: {
+        headSha,
+        evidence: "Every workflow skips on this change's paths by the default branch's own rules.",
+        localGate: "The fixture's applicable local checks passed.",
+      },
+    });
+    expect(stored).toContain("Absence evidence stored for this version");
+    expect(tasks.get(task.id)?.delivery).toMatchObject({
+      ci: "green",
+      checks: { items: [{ state: "skipped" }], absenceDeclared: true },
+    });
+    expect((await service.merges.merge(task.id)).ok).toBe(true);
+    expect(forge.calls).toContain(`putIn ${task.branch} ${headSha}`);
+  });
 
   it("watches nothing on a host with no checks, and tells the crewmate so", async () => {
     const forge = new FakeForge({ kind: "git", place: "git.example.com" });

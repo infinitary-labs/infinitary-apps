@@ -3,6 +3,7 @@ import {
   checkSnapshotSummary,
   currentCheckStatus,
   type MainCheckEvidence,
+  noCheckRan,
 } from "@shared/checkSnapshot";
 import { checksTimes } from "@shared/checksSpan";
 import { type ContributionState, contributesUpstream } from "@shared/contributions";
@@ -541,7 +542,7 @@ export class ChangeChecks {
       !checks.problem &&
       (checks.complete === false ||
         running(checks.items) ||
-        (checks.items.length === 0 && !this.absenceDeclared(record, checked)))
+        (noCheckRan(checks.items) && !this.absenceDeclared(record, checked)))
     );
   }
 

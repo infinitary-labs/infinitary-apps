@@ -1674,7 +1674,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
       "A failed run that is not one of the pull request's own checks is yours to handle like a failed command, never a merge input; if it stays failed, your merge card names the run, what failed and why it lies outside this change.",
     );
     expect(prompt).toContain(
-      "A reading with no check registered is pending, not no checks, until you declare their absence with check_change's absentChecks from positive evidence.",
+      "A reading where no check ran, none registered or every one skipped, is pending, not no checks, until you declare their absence with check_change's absentChecks from positive evidence.",
     );
     // The freshness rule is the host's: a completion card is refused unless
     // the checks it reads at that moment passed (INF-490).

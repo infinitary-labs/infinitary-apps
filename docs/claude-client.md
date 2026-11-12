@@ -17,6 +17,18 @@ The client's stderr goes to the existing host log callback.
 The SDK's custom-process contract delivers plain process exit, unlike its default local adapter's bounded stderr-close delay and built-in stderr tail in exit errors, so a client's exit error carries its code but no stderr tail; diagnostics remain in the host log.
 Task attribution and its limitations are owned by `docs/helper.md`, "Running tasks’ resource use".
 
+## A crewmate's shell
+
+A crewmate's coding session hands its client the task's shell: the task channel's variables, and the app's command folder first on the search path (`withTaskShell`; `docs/axi-commands.md`, "The channel").
+It also sets `CLAUDE_CODE_SHELL_PREFIX` to that folder's `infinitary-crew-shell`, and `CLAUDE_CODE_SHELL` to the shell the client picks first anyway (`withCrewShell` in `src/core/claude/claudeCrewShell.ts`): its own setting when that names a bash or zsh that runs, then the person's login shell when it is one, then the system's zsh or bash, in the client's order.
+The client starts each command's shell leading a process group of its own and, with a prefix, runs `'<prefix>' '<command>'` in it.
+The program tells the task channel its process number with the task's key, then runs the command in `CLAUDE_CODE_SHELL`, so the door refuses a program the command left running with `&` or nohup until its task closes (`docs/axi-commands.md`, "Never the crew's").
+When the app cannot be told within the program's wait, the command still runs.
+The command itself first restores the client's own search path from its shell snapshot, so a system's shell start-up files that set another do not hide the app's commands.
+With a prefix, the client also runs its command-line tool servers and command hooks through it; a crewmate's session declares neither (`settingSources: []`, `strictMcpConfig: true`, and its hooks are the app's own in-process callbacks), and those would run in the client's group, which neither they nor the client leads, so the channel would keep none of them.
+A prefix the person set for their own client stays theirs, so a command left running from that crewmate's shell is not refused; Windows, where the door has no reading, and a command folder whose path the client would split at ` -` get no prefix.
+`claudeSession.test.ts` holds the two settings and a person's own prefix kept, and `captainCommands.test.ts` a program left running from a shell started the client's way, refused after the shell ended.
+
 ## Notes
 
 `claudeEnvFor` unconditionally sets `CLAUDE_CODE_ENTRYPOINT=infinitary`, replacing absent, empty and inherited labels with the app's own identity without mutating the supplied environment.

@@ -21,6 +21,7 @@ import {
   type TaskIntegrations,
 } from "../integrations";
 import { type LoadClaim, type LoadReceipt, loadWaitWords, type TaskLoad } from "../placed/loadLine";
+import { claimShellGroup, type ShellGroups } from "../placed/shellGroups";
 import { checkWords, SECRETS_CHECK_WORDS, SECRETS_ELSEWHERE_HELP } from "../secrets/commandWords";
 import {
   type Injection,
@@ -31,7 +32,7 @@ import {
 } from "../secrets/requests";
 import type { TaskStopsAnswer, TaskStopsCommand } from "../tasks/taskStops";
 import type { FilesOpInput } from "./fileCommands";
-import { ownTaskCommand } from "./names";
+import { CREW_SHELL_PROGRAM, ownTaskCommand } from "./names";
 import {
   AXI_KEY_HEADER,
   type AxiCallMessage,
@@ -160,6 +161,12 @@ export type AxiChannelOptions = {
    * (`JobManager.answering`), so that shell waits for its answer.
    */
   answering?: (shell: string) => void;
+  /**
+   * Where a Claude crewmate's shell that names itself is kept
+   * (`CREW_SHELL_PROGRAM`), so the command door refuses what it leaves
+   * running until its task closes. Without it, nothing is kept.
+   */
+  shellGroups?: Pick<ShellGroups, "add">;
 };
 
 /** The variables a task's shell carries (`resources/axi-bin/infinitary-axi` reads them). */
@@ -337,13 +344,15 @@ export class AxiChannel {
    * (docs/axi-commands.md, "Infinitary from your terminal"). It reaches the
    * tools it is given and no task's. A request that also carries a task's
    * key came from a crewmate's shell and is refused: the command is the
-   * captain's, never the crew's. No shell's limit applies: the captain's
-   * program waits for its answer.
+   * captain's, never the crew's. The door refuses one from a program the
+   * app started before it gets here (`CommandDoor`), as the refusal it
+   * passes. No shell's limit applies: the captain's program waits for its
+   * answer.
    */
   async person(
     request: IncomingMessage,
     response: ServerResponse,
-    tools: TaskTools | { refused: string; help: string },
+    tools: TaskTools | { refused: string; help?: string },
   ): Promise<void> {
     const answer = (outcome: Outcome): void => {
       response.writeHead(200, { "content-type": "text/plain; charset=utf-8" });
@@ -376,7 +385,7 @@ export class AxiChannel {
     if ("refused" in tools) {
       answer({
         exitCode: 1,
-        stdout: `error: ${tools.refused}\ncode: REFUSED\nhelp[1]: ${tools.help}\n`,
+        stdout: `error: ${tools.refused}\ncode: REFUSED\n${tools.help ? `help[1]: ${tools.help}\n` : ""}`,
       });
       return;
     }
@@ -462,6 +471,22 @@ export class AxiChannel {
       return;
     }
     const form = new URLSearchParams(body);
+    // A Claude crewmate's shell naming its process number: no command runs,
+    // and its answer says nothing either way, so the command it runs next
+    // starts as it would have.
+    if (form.get("tool") === CREW_SHELL_PROGRAM) {
+      const pid = Number(form.get("pid"));
+      const groups = this.options.shellGroups;
+      if (groups && Number.isSafeInteger(pid) && pid > 0) {
+        const kept = await claimShellGroup(groups, grant.taskId, pid).catch(() => false);
+        if (!kept)
+          console.warn(
+            `[task-commands] kept no shell group for program ${pid} of task ${grant.taskId}, so the command door cannot refuse what it leaves running`,
+          );
+      }
+      answer({ exitCode: 0, stdout: "" });
+      return;
+    }
     // Every answer from here comes back through the shell, a refusal too.
     const shell = form.get("shell");
     if (shell) this.options.answering?.(shell);

@@ -1,15 +1,11 @@
-import { execFile } from "node:child_process";
-import { readdir, readFile, readlink, realpath } from "node:fs/promises";
+import { readFile, readlink, realpath } from "node:fs/promises";
 import { sep } from "node:path";
-import { promisify } from "node:util";
 import type { ProgramOutcome } from "@shared/leftoverPrograms";
 import { RESOURCE_READ_TIMEOUT_MS } from "@shared/resources";
 import { cutText } from "@shared/textCut";
-import { hostEnv } from "../hostEnv";
 import { hostPlatform } from "../platform";
-import { type ProcessReading, readProcesses } from "./processResources";
-
-const exec = promisify(execFile);
+import { procOpenFiles, procPids, readLsof } from "./openFiles";
+import { descendsFrom, type ProcessReading, readProcesses } from "./processResources";
 
 /**
  * The programs still holding a closed task's folders, and their end
@@ -82,28 +78,11 @@ async function lsofHolders(
   prefixes: readonly string[],
   excluded: readonly string[],
 ): Promise<Map<number, string> | null> {
-  try {
-    // `-b` keeps lsof off the kernel calls that can block on a stuck mount,
-    // which once held a whole reading past its time limit.
-    const { stdout } = await exec("/usr/sbin/lsof", ["-b", "-n", "-P", "-w", "-F", "pcn"], {
-      env: hostEnv({ LC_ALL: "C" }),
-      encoding: "utf8",
-      timeout: RESOURCE_READ_TIMEOUT_MS * 4,
-      maxBuffer: 256 * 1024 * 1024,
-    });
-    return holdersFromLsof(stdout, prefixes, excluded);
-  } catch (caught) {
-    // lsof exits 1 when some listing failed, with what it could read on
-    // stdout. A reading stopped at its time limit is cut short, so it is
-    // unreadable: a holder it never reached would be missed.
-    const failed = caught as { stdout?: unknown; code?: unknown; killed?: boolean };
-    return failed.code === 1 &&
-      failed.killed !== true &&
-      typeof failed.stdout === "string" &&
-      failed.stdout.length > 0
-      ? holdersFromLsof(failed.stdout, prefixes, excluded)
-      : null;
-  }
+  const listed = await readLsof(["-F", "pcn"], {
+    timeoutMs: RESOURCE_READ_TIMEOUT_MS * 4,
+    maxBuffer: 256 * 1024 * 1024,
+  });
+  return listed === null ? null : holdersFromLsof(listed, prefixes, excluded);
 }
 
 /** Each of this user's programs' working folder and open files, read from /proc on Linux. */
@@ -111,26 +90,17 @@ async function procHolders(
   prefixes: readonly string[],
   excluded: readonly string[],
 ): Promise<Map<number, string> | null> {
-  let entries: string[];
-  try {
-    entries = await readdir("/proc");
-  } catch {
-    return null;
-  }
+  const pids = await procPids();
+  if (!pids) return null;
   const holders = new Map<number, string>();
-  for (const entry of entries) {
-    if (!/^\d+$/.test(entry)) continue;
-    const pid = Number(entry);
+  for (const pid of pids) {
     const names: string[] = [];
-    const cwd = await readlink(`/proc/${entry}/cwd`).catch(() => undefined);
-    if (cwd) names.push(cwd.replace(/ \(deleted\)$/, ""));
-    const fds = await readdir(`/proc/${entry}/fd`).catch(() => [] as string[]);
-    for (const fd of fds) {
-      const target = await readlink(`/proc/${entry}/fd/${fd}`).catch(() => undefined);
-      if (target) names.push(target.replace(/ \(deleted\)$/, ""));
-    }
-    if (!names.some((name) => under(name, prefixes) && !under(name, excluded))) continue;
-    const comm = await readFile(`/proc/${entry}/comm`, "utf8").catch(() => "");
+    const cwd = await readlink(`/proc/${pid}/cwd`).catch(() => undefined);
+    if (cwd) names.push(cwd);
+    names.push(...(await procOpenFiles(pid)));
+    const held = names.map((name) => name.replace(/ \(deleted\)$/, ""));
+    if (!held.some((name) => under(name, prefixes) && !under(name, excluded))) continue;
+    const comm = await readFile(`/proc/${pid}/comm`, "utf8").catch(() => "");
     holders.set(pid, comm.trim());
   }
   return holders;
@@ -147,18 +117,7 @@ function ownFamily(
   for (let row = byPid.get(appPid); row && !family.has(row.parent); row = byPid.get(row.parent))
     family.add(row.parent);
   if (!protectDescendants) return family;
-  for (const row of rows) {
-    const seen = new Set<number>();
-    for (let current: ProcessReading | undefined = row; current; ) {
-      if (current.pid === appPid) {
-        family.add(row.pid);
-        break;
-      }
-      if (seen.has(current.pid)) break;
-      seen.add(current.pid);
-      current = byPid.get(current.parent);
-    }
-  }
+  for (const row of rows) if (descendsFrom(row.pid, appPid, byPid)) family.add(row.pid);
   return family;
 }
 

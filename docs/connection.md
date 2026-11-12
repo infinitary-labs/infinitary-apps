@@ -63,6 +63,7 @@ It follows the phone door's pattern (`docs/devices.md`, "A phone that joins by i
 - **Reading the key is the permission.**
   Only the account the home runs as can read it, and that account could already read the home's record.
   Another account on the same computer reaches the loopback port but not the key.
+  Every program of that account can read it, a crewmate's shell included, so the captain's command also refuses a request from the crew's programs (`docs/axi-commands.md`, "Never the crew's"); the connection's path admits by the key alone.
 - **Its listener.**
   The same TLS 1.3, with a key of the door's own, made in memory each run and never written, so pairing still writes nothing, not even the home's key, until the first link (`docs/devices.md`).
   The client pins it as every dial is, and shows no key of its own.

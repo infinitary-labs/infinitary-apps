@@ -1,5 +1,5 @@
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { CutOff } from "@shared/authFailure";
@@ -13,6 +13,7 @@ import {
   scriptedClaudeQuery as scriptedQuery,
   scriptedRecordsFlushed,
 } from "../../../tests/helpers/scriptedClaudeQuery";
+import { CREW_SHELL_PROGRAM } from "../axi/names";
 import { crewmateContractStamp } from "../orchestrator/crewSession";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { followCompletions } from "../session/followCompletions";
@@ -265,6 +266,47 @@ describe("the Claude crewmate's coding session", () => {
     expect(env?.INFINITARY_AXI_KEY).toBe("/channel/task-1.key");
     expect(env?.PATH?.split(":")[0]).toBe("/app/axi-bin");
     session.dispose();
+  });
+
+  it("runs each of the client's commands through the crew shell program, unless the person set their own", async () => {
+    // The captain's choice that a Claude crewmate's backgrounded commands are
+    // refused too (docs/axi-commands.md, "Never the crew's"): the app's own
+    // command folder holds the program the client runs each command through.
+    const binDir = resolve(__dirname, "../../../resources/axi-bin");
+    const shell = { env: { INFINITARY_AXI_KEY: "/channel/task-1.key" }, path: [binDir] };
+    const opened = async (env: NodeJS.ProcessEnv) => {
+      const { factory, harness } = scriptedQuery({
+        onInput: answering(() => [result({ cost: 0.01, input: 10, output: 2 })]),
+      });
+      const session = await scriptedClaudeFactory({
+        configDir: baseSpec.configDir,
+        query: factory,
+        env: () => env,
+      }).open(
+        codingSpec({
+          binding: { backend: "claude", accountId: "acct_claude" },
+          cwd: baseSpec.cwd,
+          shell,
+        }),
+      );
+      await session.prompt("go");
+      session.dispose();
+      return harness().options.env;
+    };
+
+    const crew = await opened({ PATH: "/usr/bin", HOME: baseSpec.configDir });
+    expect(crew?.CLAUDE_CODE_SHELL_PREFIX).toBe(join(binDir, CREW_SHELL_PROGRAM));
+    // The shell the program runs the command in is the one the client picks first.
+    expect(crew?.CLAUDE_CODE_SHELL).toMatch(/\/(bash|zsh)$/);
+
+    const own = "/opt/audit/log-command";
+    const person = await opened({
+      PATH: "/usr/bin",
+      HOME: baseSpec.configDir,
+      CLAUDE_CODE_SHELL_PREFIX: own,
+    });
+    expect(person?.CLAUDE_CODE_SHELL_PREFIX).toBe(own);
+    expect(person?.CLAUDE_CODE_SHELL).toBeUndefined();
   });
 
   it("opens Quick one rung below the served level, omits effort on legacy Haiku, and says what it opened at", async () => {

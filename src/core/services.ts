@@ -100,6 +100,7 @@ import { AutomaticPlacement } from "./placed/automaticPlacement";
 import { attachComputerNotices } from "./placed/computerNotices";
 import type { PlacedBrowsers } from "./placed/placedBrowsers";
 import { PlacedSessions } from "./placed/placedSessions";
+import { shellGroupsOf } from "./placed/shellGroups";
 import { createMediatedFetch } from "./plugins/mediatedFetch";
 import { PluginInstaller } from "./plugins/pluginInstaller";
 import { PluginRecords } from "./plugins/pluginRecords";
@@ -492,11 +493,13 @@ export async function createServices(
   // Background jobs (R2): the exit is the wake. Routing is late-bound
   // because the agent and supervisor are built below.
   let routeJobExit: (exit: JobExit) => void = () => {};
+  const shellGroups = shellGroupsOf(tasks);
   const jobs = new JobManager({
     db,
     onExit: (exit) => routeJobExit(exit),
     now: ticker.now,
     onChange: () => scheduleWorkPresentation(),
+    shellGroups,
   });
   // A crewmate's transcript is its task's record: Pi's is the session file
   // itself, Claude's the app's copy under the session id the row holds,
@@ -928,8 +931,7 @@ export async function createServices(
   // The class's first consumer (S7a): what a spawn IS, so the captain's
   // table can route it. The seam and the call site are unchanged.
   const classifier = new DecisionKindClassifier(decisions);
-  // Each task's own browser and the task channel a crewmate reaches it
-  // through (browser/homeTaskBrowsers.ts).
+  // Each task's own browser and its task channel (browser/homeTaskBrowsers.ts).
   const browsers = startTaskBrowsers({
     host,
     paths,
@@ -946,6 +948,7 @@ export async function createServices(
     axiBinDir,
     tasks,
     jobs,
+    shellGroups,
     browsers,
   });
   if (browsers) browserFactOf = (taskId) => browsers.fact(taskId);
@@ -1854,6 +1857,7 @@ export async function createServices(
     scheduler,
     ticker,
     jobs,
+    shellGroups,
     providerViews: () =>
       buildProviderViews({
         piProviders: () => auth.providers(),

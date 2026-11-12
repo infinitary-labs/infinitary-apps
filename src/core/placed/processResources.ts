@@ -21,6 +21,29 @@ export type ProcessReading = {
   exited?: boolean;
 };
 
+/**
+ * Whether `ancestor` is above `pid` in the table: it started the program,
+ * directly or through programs it started. A parent missing from the table
+ * breaks the walk, so the answer is unknown.
+ */
+export function descendsFrom(
+  pid: number,
+  ancestor: number,
+  byPid: ReadonlyMap<number, ProcessReading>,
+): boolean | undefined {
+  let current = byPid.get(pid);
+  if (!current) return undefined;
+  const seen = new Set<number>([pid]);
+  while (current.parent > 0 && !seen.has(current.parent)) {
+    if (current.parent === ancestor) return true;
+    seen.add(current.parent);
+    const parent = byPid.get(current.parent);
+    if (!parent) return undefined;
+    current = parent;
+  }
+  return false;
+}
+
 /** A Mac's lstart stamp counts whole seconds, so a birth reads up to one second early. */
 const BIRTH_STAMP_PRECISION_MS = 1000;
 

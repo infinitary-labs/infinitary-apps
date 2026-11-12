@@ -7,6 +7,14 @@
  */
 export const TASK_COMMAND_NAME = /^(infinitary|fm)-[a-z][a-z0-9-]*-axi$/;
 
+/**
+ * The program a Claude crewmate's client runs each shell command through
+ * (`resources/axi-bin/infinitary-crew-shell`, docs/axi-commands.md, "Never
+ * the crew's"), and the name its message on the task channel carries. It is
+ * no command of a crewmate's: it only names its shell's process group.
+ */
+export const CREW_SHELL_PROGRAM = "infinitary-crew-shell";
+
 /** A task command under its own name: `fm-browser-axi` is `infinitary-browser-axi`. */
 export function ownTaskCommand(name: string): string {
   return name.startsWith("fm-") ? `infinitary-${name.slice("fm-".length)}` : name;

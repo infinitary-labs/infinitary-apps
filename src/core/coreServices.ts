@@ -47,6 +47,7 @@ import type { ComputerResources } from "./placed/computerResources";
 import type { LoadLine } from "./placed/loadLine";
 import type { HomeBrowsers } from "./placed/placedBrowsers";
 import type { PlacedWork } from "./placed/placedWork";
+import type { ShellGroups } from "./placed/shellGroups";
 import type { WorkDevices } from "./placed/workDevices";
 import type { MediatedFetch } from "./plugins/mediatedFetch";
 import type { ShellPreferencesService } from "./preferences/shellPreferences";
@@ -88,6 +89,8 @@ export type CoreServices = {
   /** The host's one clock and interval (P5); stopped at dispose. */
   ticker: Ticker;
   jobs: JobManager;
+  /** Each crewmate shell's process group while its task is open (docs/axi-commands.md, "Never the crew's"). */
+  shellGroups: ShellGroups;
   /** Provider rows across every registered backend, for the Subscriptions tab. */
   providerViews: () => ProviderView[];
   /** The pooled availability: vault accounts plus base-runtime customs. */

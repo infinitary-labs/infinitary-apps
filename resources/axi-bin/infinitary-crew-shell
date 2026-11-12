@@ -1,0 +1,47 @@
+#!/bin/sh
+# What a Claude crewmate's client runs each of its shell commands through
+# (CLAUDE_CODE_SHELL_PREFIX; docs/axi-commands.md, "Never the crew's").
+#
+# The client starts each command's shell in a process group of its own and
+# hands this program the whole command as its last argument. This program
+# tells the app's task channel its own process number, so the app keeps that
+# group for the task: a program the command leaves running with & or nohup
+# stays in it after the shell ends, and the app refuses it the captain's
+# command until the task closes. Then it runs the command in the shell the
+# client was told to use (CLAUDE_CODE_SHELL). If the app cannot be told, the
+# command still runs. Only shell builtins and the system's curl run here; the
+# key travels as a header read from its file, never on a command line.
+
+for command do :; done
+if [ "$#" -eq 0 ]; then
+  printf 'error: infinitary-crew-shell runs a command its client hands it\ncode: VALIDATION_ERROR\n' >&2
+  exit 2
+fi
+
+address=${INFINITARY_AXI_ADDRESS:-}
+key=${INFINITARY_AXI_KEY:-}
+# Only this Mac's loopback and a port number.
+case $address in
+  127.0.0.1:*) port=${address#127.0.0.1:} ;;
+  *) port= ;;
+esac
+case $port in
+  '' | *[!0-9]*) ;;
+  *)
+    if [ -r "$key" ]; then
+      curl=/usr/bin/curl
+      [ -x "$curl" ] || curl=curl
+      # -q first: no ~/.curlrc may add options to this request. The app
+      # answers once it has read the process table, which it gives up on
+      # after 5 s (RESOURCE_READ_TIMEOUT_MS); this waits twice that for an
+      # app that does not answer, then runs the command anyway.
+      "$curl" -q --silent --noproxy '*' --max-time 10 --output /dev/null \
+        -H @"$key" \
+        --data-urlencode "tool=infinitary-crew-shell" \
+        --data-urlencode "pid=$$" \
+        "http://$address/run" 2>/dev/null
+    fi
+    ;;
+esac
+
+exec "${CLAUDE_CODE_SHELL:-/bin/sh}" -c "$command"

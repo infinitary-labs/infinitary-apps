@@ -7,6 +7,8 @@ import { EventJournal, type JournalEntry, type JournalLimits } from "../connecti
 import { type CoreDispatch, VIEWER_CHANNELS } from "../dispatcher";
 import type { CoreEventBus } from "../events";
 import { INFINITARY_COMMAND, type Inbox } from "../integrations";
+import { loopbackCaller } from "../placed/loopbackCaller";
+import type { ShellGroup, ShellGroups } from "../placed/shellGroups";
 import { type AxiChannel, CaptainInvalid, type CaptainTool } from "./channel";
 import type { CaptainOpInput } from "./protocol";
 
@@ -27,12 +29,33 @@ import type { CaptainOpInput } from "./protocol";
  * the command. Every argument list is checked against the published
  * contract before it is sent.
  *
+ * It is never the crew's (docs/axi-commands.md, "Never the crew's"): a
+ * request from a program this app started, directly or through programs it
+ * started - a crewmate's agent, its shell, a script it ran - is refused
+ * whatever that shell carries, and so is one from a program a crewmate
+ * shell the app started left running in its process group, with `&` or
+ * nohup, until that shell's task closes. Both are read from the system's
+ * process table (`loopbackCaller`). A program that starts a group of its
+ * own, as setsid and tmux do, is not caught; a request whose caller cannot
+ * be read is refused.
+ *
  * It keeps the pushes the core sends while the switch is on, in the
  * connection's own `EventJournal` bounded in bytes, so `watch` prints what
  * changed after a cursor, waits for the next change, and answers a cursor
  * from another run, from before the switch was off or older than it keeps
  * with `reloaded`.
  */
+
+/** The refusal the crew hears: the command is the captain's alone. */
+export const CREW_REFUSED = `${INFINITARY_COMMAND} is for you, never for the crew, and a program Infinitary started asked, so nothing was sent.`;
+
+/** The refusal when the system could not say which program asked. */
+const CALLER_UNREAD = `Infinitary could not tell which program asked, so nothing was sent.`;
+
+/** A refusal `person` answers: its words, and a help line when there is a next step. */
+type Refusal = { refused: string; help?: string };
+
+const UNREAD: Refusal = { refused: CALLER_UNREAD, help: `Run ${INFINITARY_COMMAND} again` };
 
 /** Whether `infinitary-axi` reaches a core request at all, read or change. */
 export function commandReaches(channel: CoreInvokeChannel): boolean {
@@ -137,6 +160,13 @@ export type CommandDoorOptions = {
   events: Pick<CoreEventBus, "subscribe">;
   /** The inbox, whose switch is the command's and whose notes `note` drops. */
   inbox: Pick<Inbox, "on" | "kept" | "door">;
+  /**
+   * The app's own process: a program it started, directly or not, is the
+   * crew's and refused. This process unless named.
+   */
+  appPid?: number;
+  /** The crewmate shell that started a process group, while its task is open (`ShellGroups`). */
+  crewShell?: (group: number) => ShellGroup | undefined;
   now?: () => number;
 };
 
@@ -170,24 +200,50 @@ export class CommandDoor {
     });
   }
 
-  /** One request the local door admitted: as the captain while the switch is on. */
+  /**
+   * One request the local door admitted: refused when a program this app
+   * started asked, else as the captain while the switch is on.
+   */
   readonly serve = (request: IncomingMessage, response: ServerResponse): void => {
-    const { inbox } = this.options;
-    void this.options.channel.person(
-      request,
-      response,
-      inbox.on
-        ? { captain: this.tool, inbox: inbox.door }
-        : {
-            refused: `${INFINITARY_COMMAND} is off in Settings → Integrations.`,
-            // Notes stay only while they are kept: never before the first
-            // turn-on, nor after Delete in Data (the captain's answer on F17).
-            help: inbox.kept
-              ? "Turn it on in Settings → Integrations; your saved notes stay"
-              : "Turn it on in Settings → Integrations",
-          },
-    );
+    void this.crewRefusal(request)
+      .catch(() => UNREAD)
+      .then((refusal) => {
+        const { inbox } = this.options;
+        return this.options.channel.person(
+          request,
+          response,
+          refusal ??
+            (inbox.on
+              ? { captain: this.tool, inbox: inbox.door }
+              : {
+                  refused: `${INFINITARY_COMMAND} is off in Settings → Integrations.`,
+                  // Notes stay only while they are kept: never before the first
+                  // turn-on, nor after Delete in Data (the captain's answer on F17).
+                  help: inbox.kept
+                    ? "Turn it on in Settings → Integrations; your saved notes stay"
+                    : "Turn it on in Settings → Integrations",
+                }),
+        );
+      });
   };
+
+  /**
+   * The refusal for a request the crew made, whatever its shell carries -
+   * a program this app started, or one left in a crewmate shell's group
+   * while its task is open - or for one whose caller the system could not
+   * name. A system the app cannot read callers on (Windows) leaves the
+   * launcher's own check, of a task shell's key, as the only one.
+   */
+  private async crewRefusal(request: IncomingMessage): Promise<Refusal | undefined> {
+    const { remotePort, localPort } = request.socket;
+    const { crewShell } = this.options;
+    const reading = await loopbackCaller(
+      { clientPort: Number(remotePort), serverPort: Number(localPort) },
+      { appPid: this.options.appPid ?? process.pid, ...(crewShell ? { shells: crewShell } : {}) },
+    );
+    if (reading.status === "checked") return reading.crew ? { refused: CREW_REFUSED } : undefined;
+    return reading.status === "unreadable" ? UNREAD : undefined;
+  }
 
   /** The app quits: nothing more is kept, and a waiting watch answers now. */
   close(): void {
@@ -324,21 +380,28 @@ export class CommandDoor {
  * when the core has no command process to run it in. The app and the
  * command's own tests open it here, so both serve the same door.
  */
-export function openCommandDoor(core: {
-  dispatch: CoreDispatch;
-  events: Pick<CoreEventBus, "subscribe">;
-  services: {
-    taskCommands?: Pick<AxiChannel, "person">;
-    integrationInbox: Pick<Inbox, "on" | "kept" | "door">;
-  };
-}): CommandDoor | undefined {
+export function openCommandDoor(
+  core: {
+    dispatch: CoreDispatch;
+    events: Pick<CoreEventBus, "subscribe">;
+    services: {
+      taskCommands?: Pick<AxiChannel, "person">;
+      integrationInbox: Pick<Inbox, "on" | "kept" | "door">;
+      shellGroups?: Pick<ShellGroups, "of">;
+    };
+  },
+  options: Pick<CommandDoorOptions, "appPid"> = {},
+): CommandDoor | undefined {
   const channel = core.services.taskCommands;
+  const groups = core.services.shellGroups;
   return channel
     ? new CommandDoor({
         channel,
         dispatch: core.dispatch,
         events: core.events,
         inbox: core.services.integrationInbox,
+        ...(groups ? { crewShell: (group: number) => groups.of(group) } : {}),
+        ...options,
       })
     : undefined;
 }

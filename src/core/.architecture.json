@@ -372,7 +372,7 @@
     {
       "from": "axi",
       "to": "placed",
-      "why": "says why a load waits in line"
+      "why": "says why a load waits in line, reads who asked the captain's command and keeps a Claude shell's group"
     },
     {
       "from": "axi",
@@ -392,12 +392,17 @@
     {
       "from": "browser",
       "to": "placed",
-      "why": "drives browsers on a computer that runs work"
+      "why": "drives browsers on a computer that runs work and hands the task channel its shell groups"
     },
     {
       "from": "browser",
       "to": "workspace",
       "why": "serves a project's page"
+    },
+    {
+      "from": "claude",
+      "to": "axi",
+      "why": "names the program its client runs each shell command through"
     },
     {
       "from": "claude",
@@ -692,7 +697,7 @@
     {
       "from": "jobs",
       "to": "placed",
-      "why": "finds a job's processes"
+      "why": "finds a job's processes and keeps each shell's group"
     },
     {
       "from": "jobs",
@@ -1017,7 +1022,7 @@
     {
       "from": "placed",
       "to": "tasks",
-      "why": "records leftovers and hand-over files"
+      "why": "records leftovers and hand-over files and forgets a closed task's shell groups"
     },
     {
       "from": "placed",
@@ -1497,7 +1502,7 @@
     {
       "from": "task commands",
       "to": "axi",
-      "why": "send each command over the task channel"
+      "why": "send each command, and each Claude shell's number, over the task channel"
     },
     {
       "from": "workspace",

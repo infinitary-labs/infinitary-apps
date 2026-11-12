@@ -7,6 +7,7 @@ import type { TypedWake, WakeLane } from "../orchestrator/wakes";
 import { appendOverflow, capWithOverflow, overflowFilePath } from "../overflow";
 import { windowsBash } from "../pi/windowsBash";
 import { processRoots } from "../placed/processRoots";
+import type { ShellGroups } from "../placed/shellGroups";
 import { hostPlatform } from "../platform";
 import type { TaskShell } from "../session/session";
 import type { AppDatabase } from "../storage/db";
@@ -113,6 +114,13 @@ export type JobManagerOptions = {
   platform?: NodeJS.Platform;
   /** On Windows, the bash its commands run in (tests); absent asks Pi (`windowsBash`). */
   windowsBash?: () => string | undefined;
+  /**
+   * Where each shell's own process group is kept for its owner, after the
+   * shell ends, so a program it left running is still known as the crew's
+   * (docs/axi-commands.md, "Never the crew's"). The home keeps them, where
+   * the Infinitary command's door reads them; absent keeps none.
+   */
+  shellGroups?: Pick<ShellGroups, "add">;
 };
 
 /**
@@ -225,7 +233,15 @@ export class JobManager {
     });
     if (child.pid) {
       const releaseRoot = processRoots.add(child.pid, input.ownerId);
-      child.once("exit", releaseRoot);
+      // Detached, the shell leads a group numbered after it, which a program
+      // it starts in the background stays in after the shell ends.
+      const shellEnded = windows
+        ? undefined
+        : this.options.shellGroups?.add(child.pid, input.ownerId);
+      child.once("exit", () => {
+        releaseRoot();
+        shellEnded?.();
+      });
     }
     const job: RunningJob = {
       id,

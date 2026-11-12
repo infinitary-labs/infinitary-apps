@@ -11,6 +11,7 @@ import {
 } from "../session/session";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
 import { ClaudeCostReports } from "./claudeCostReports";
+import { withCrewShell } from "./claudeCrewShell";
 import { ClaudeOneShotSession } from "./claudeOneShotSession";
 import {
   CLAUDE_CONTROL_PROFILE,
@@ -240,8 +241,12 @@ export function createClaudeSessionFactory(deps: ClaudeSessionDeps): SessionFact
         throw new Error("A rolling Claude session needs the host's clock.");
       }
       // The session's own shell (its task's commands) rides the client's
-      // environment, so every command the client runs carries it.
-      const env = withTaskShell((deps.env ?? (() => hostEnv()))(), spec.shell);
+      // environment, so every command the client runs carries it, through
+      // the program that names each command's shell to the task channel.
+      const env = withCrewShell(
+        withTaskShell((deps.env ?? (() => hostEnv()))(), spec.shell),
+        spec.shell,
+      );
       // The machine's own client (F14): a session whose client is gone or too
       // old fails its open with the client's sentence, as any attach does.
       await refuseMissingClient(deps, env);

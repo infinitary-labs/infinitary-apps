@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "infinitary-command-never-crew",
+      "kind": "fix",
+      "title": "Your crew cannot use the Infinitary command",
+      "body": "infinitary-axi acts as you, so it is never your crew's. It now refuses a program Infinitary started for a crewmate, such as its terminal, even when that terminal hides that it belongs to a task.",
+      "area": "settings",
+      "noPicture": "The refusal shows only in a crewmate's terminal; nothing in a window changes.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,5 +1,11 @@
-import { execFile } from "node:child_process";
+import {
+  type ChildProcessWithoutNullStreams,
+  execFile,
+  execFileSync,
+  spawn,
+} from "node:child_process";
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { writeFile } from "node:fs/promises";
 import { request as httpsRequest } from "node:https";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
@@ -12,9 +18,11 @@ import { bundleAxiProcess } from "../../../tests/helpers/axiProcessBundle";
 import { fakeHost, quotaFixture, waitFor } from "../../../tests/helpers/bootedCore";
 import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { withCrewShell } from "../claude/claudeCrewShell";
 import { startConnection } from "../connection/connection";
 import { readLocalDoor } from "../connection/localDoor";
 import { VIEWER_CHANNELS } from "../dispatcher";
+import { withTaskShell } from "../hostEnv";
 import { type Core, startCore } from "../index";
 import { INBOX_COMMAND, INFINITARY_COMMAND } from "../integrations/commandWords";
 import { INBOX_ID } from "../integrations/providers/inbox";
@@ -24,7 +32,7 @@ import { openDatabase } from "../storage/db";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { SKILL_TEXT } from "./captainCommands";
-import { openCommandDoor } from "./commandDoor";
+import { CREW_REFUSED, openCommandDoor } from "./commandDoor";
 import { AXI_KEY_HEADER } from "./protocol";
 
 // The core chains real git here and is not about the utility-QoS clamp, so
@@ -55,7 +63,24 @@ let connection: ReturnType<typeof startConnection>;
 let closeDoor: () => void;
 /** Every request the door sent on to the core, by channel. */
 const sent: string[] = [];
-const stuck = ["axi-read", "axi-watch", "axi-off", "axi-act", "axi-api"] as const;
+/**
+ * The app's own process as the door sees it: every program it runs stands
+ * for one Infinitary started, as a crewmate's shell is. The core runs in
+ * this test's own process, which also starts the person's shells below, so
+ * a stand-in keeps the two apart.
+ */
+let app: ChildProcessWithoutNullStreams;
+const stuck = [
+  "axi-read",
+  "axi-watch",
+  "axi-off",
+  "axi-act",
+  "axi-api",
+  "axi-crew",
+  "axi-background",
+  "axi-closing",
+  "axi-claude",
+] as const;
 
 beforeAll(async () => {
   const entry = await bundleAxiProcess();
@@ -84,14 +109,18 @@ beforeAll(async () => {
     axiProcess: forkChildProcess(entry),
   });
   // As the app wires it (src/main/app.ts): the door's command beside the connection.
+  app = spawn("/bin/sh", ["-s"], { stdio: "pipe" });
   const booting = core;
-  const door = openCommandDoor({
-    ...core,
-    dispatch: (channel, args, actor, viewer) => {
-      sent.push(channel);
-      return booting.dispatch(channel, args, actor, viewer);
+  const door = openCommandDoor(
+    {
+      ...core,
+      dispatch: (channel, args, actor, viewer) => {
+        sent.push(channel);
+        return booting.dispatch(channel, args, actor, viewer);
+      },
     },
-  });
+    { appPid: app.pid },
+  );
   if (!door) throw new Error("the core opened no command process");
   closeDoor = () => door.close();
   connection = startConnection({
@@ -115,6 +144,7 @@ beforeAll(async () => {
 }, 90_000);
 
 afterAll(async () => {
+  app?.kill();
   closeDoor?.();
   await connection?.close();
   core?.dispose();
@@ -143,6 +173,115 @@ function run(
       (error, stdout) =>
         done({ stdout, exitCode: error ? Number((error as { code?: number }).code ?? 1) : 0 }),
     );
+  });
+}
+
+/**
+ * One line run in a crewmate's shell: by a program the app started, in the
+ * environment the task channel gives a task's shell (`AxiChannel.grant`).
+ */
+function inTheCrewsShell(line: string): Promise<{ stdout: string; exitCode: number }> {
+  const grant = core.services.taskCommands?.grant("axi-crew", {});
+  if (!grant) throw new Error("the core has no task channel");
+  const env = {
+    ...grant.env,
+    PATH: [...grant.path, process.env.PATH ?? ""].join(":"),
+    HOME: scratchDir("infinitary-axi-crew-home-"),
+    INFINITARY_DATA: userDataDir,
+  };
+  const exported = Object.entries(env)
+    .map(([name, value]) => `export ${name}='${value.split("'").join(`'\\''`)}'`)
+    .join("; ");
+  const end = `end-${Math.random().toString(36).slice(2)}`;
+  return new Promise((done) => {
+    let text = "";
+    const heard = (chunk: Buffer) => {
+      text += chunk.toString("utf8");
+      const at = text.search(new RegExp(`${end} (\\d+)\n`));
+      if (at < 0) return;
+      app.stdout.off("data", heard);
+      done({ stdout: text.slice(0, at), exitCode: Number(text.slice(at + end.length + 1).trim()) });
+    };
+    app.stdout.on("data", heard);
+    app.stdin.write(`(${exported}; ${line}); echo "${end} $?"\n`);
+  });
+}
+
+/**
+ * One line a crewmate's own shell leaves running and ends: the core's job
+ * shell, as a crewmate's bash runs, starts `script` in the background by
+ * `background` and ends at once. The script waits for `go`, then runs the
+ * line and writes what it printed, so the shell has ended before it asks.
+ */
+async function leftRunning(
+  owner: string,
+  background: (script: string) => string,
+  line: string,
+  by: "job" | "claude" = "job",
+): Promise<{ go: () => Promise<string> }> {
+  const grant = core.services.taskCommands?.grant(owner, {});
+  if (!grant) throw new Error("the core has no task channel");
+  const dir = scratchDir("infinitary-axi-left-");
+  const [script, fifo, out] = ["ask.sh", "go", "out"].map((name) => join(dir, name)) as [
+    string,
+    string,
+    string,
+  ];
+  execFileSync("mkfifo", [fifo]);
+  writeFileSync(script, `read _ < '${fifo}'\n${line}\necho "[exit $?]"\n`);
+  const command = `${background(`sh '${script}'`)} > '${out}' 2>&1 &`;
+  const shell = {
+    env: {
+      ...grant.env,
+      INFINITARY_DATA: userDataDir,
+      HOME: scratchDir("infinitary-axi-crew-home-"),
+    },
+    path: grant.path,
+  };
+  if (by === "claude") expect(await asClaudeRuns(command, dir, shell)).toBe(0);
+  else
+    expect(
+      await core.services.jobs.run({ ownerId: owner, command, cwd: dir, shell }),
+    ).toMatchObject({ kind: "done", exitCode: 0 });
+  return {
+    go: async () => {
+      await writeFile(fifo, "go\n");
+      await waitFor(() => readFileSync(out, "utf8").includes("[exit "), 20_000);
+      return readFileSync(out, "utf8");
+    },
+  };
+}
+
+/**
+ * One command as the Claude client runs a crewmate's (docs/claude-client.md,
+ * "A crewmate's shell"): in the environment a Claude crewmate's session hands
+ * its client, a shell that leads a process group of its own runs the crew
+ * shell program with the command as its one argument. The client's command
+ * first restores its own search path, as its shell snapshot does, since a
+ * system's shell start-up files may set another.
+ */
+function asClaudeRuns(
+  command: string,
+  cwd: string,
+  shell: { env: Record<string, string>; path: readonly string[] },
+): Promise<number | null> {
+  const env = withCrewShell(withTaskShell({ PATH: process.env.PATH ?? "" }, shell), shell);
+  const { CLAUDE_CODE_SHELL: clientShell, CLAUDE_CODE_SHELL_PREFIX: prefix } = env;
+  if (!clientShell || !prefix) throw new Error("the session gave its client no crew shell");
+  const quoted = (text: string) => `'${text.split("'").join(`'\\''`)}'`;
+  return new Promise((done, fail) => {
+    const child = spawn(
+      clientShell,
+      ["-c", `${quoted(prefix)} ${quoted(`export PATH=${quoted(env.PATH ?? "")} && ${command}`)}`],
+      {
+        cwd,
+        env,
+        detached: true,
+        stdio: "ignore",
+      },
+    );
+    child.on("error", fail);
+    child.on("exit", (code) => done(code));
   });
 }
 
@@ -370,6 +509,90 @@ describe("infinitary-axi", () => {
     // Nothing only a window asks is listed, such as this computer's own window saying it is open.
     const names = new Set(listed.channels.map((row) => row.channel));
     expect([...VIEWER_CHANNELS].filter((channel) => names.has(channel))).toEqual([]);
+  });
+
+  it("refuses a crewmate's shell at the door, even with the task's key cleared", async () => {
+    // INF-3901: a crewmate's shell that clears its task's key passes the
+    // launcher's own check, and the door's key is readable by the account;
+    // the door reads who asked and refuses every program the app started.
+    const cardId = "card-stall-axi-crew";
+    const live = core.services.supervisor.cards.snapshot().find((one) => one.id === cardId);
+    const button = live?.actions[0];
+    if (!button) throw new Error("the stall card has no button");
+
+    // As given, the shell's key stops the launcher before it reaches the door.
+    const given = await inTheCrewsShell(`${INFINITARY_COMMAND} card act ${cardId} ${button.id}`);
+    expect(given.exitCode).toBe(1);
+    expect(given.stdout).toContain("does not run in a task's shell");
+
+    // Cleared, the request reaches the door, which refuses it and presses nothing.
+    const cleared = await inTheCrewsShell(
+      `INFINITARY_AXI_KEY= ${INFINITARY_COMMAND} card act ${cardId} ${button.id}`,
+    );
+    expect(cleared.exitCode).toBe(1);
+    expect(cleared.stdout).toBe(`error: ${CREW_REFUSED}\ncode: REFUSED\n`);
+    expect(core.services.supervisor.cards.snapshot().map((one) => one.id)).toContain(cardId);
+    expect(
+      core.services.tasks.timeline("axi-crew").filter((event) => event.kind === "card_resolved"),
+    ).toEqual([]);
+
+    // The person's own shell, which the app did not start, still presses it.
+    const pressed = await run(["card", "act", cardId, button.id]);
+    expect(pressed.exitCode).toBe(0);
+    expect(core.services.supervisor.cards.snapshot().map((one) => one.id)).not.toContain(cardId);
+  });
+
+  it("refuses a command a crewmate's shell left running with & or nohup, until its task closes", async () => {
+    // The captain's pick on review: a program in a crewmate shell's process
+    // group is the crew's until its task closes, whoever its parent is once
+    // the shell ends. The door's stand-in app started none of these, so only
+    // the shell's group can say they are the crew's.
+    const cardId = "card-stall-axi-background";
+    const live = core.services.supervisor.cards.snapshot().find((one) => one.id === cardId);
+    const button = live?.actions[0];
+    if (!button) throw new Error("the stall card has no button");
+    const press = `INFINITARY_AXI_KEY= ${INFINITARY_COMMAND} card act ${cardId} ${button.id}`;
+
+    const backgrounded = await leftRunning("axi-background", (script) => script, press);
+    expect(await backgrounded.go()).toBe(`error: ${CREW_REFUSED}\ncode: REFUSED\n[exit 1]\n`);
+    const nohup = await leftRunning("axi-background", (script) => `nohup ${script}`, press);
+    expect(await nohup.go()).toBe(`error: ${CREW_REFUSED}\ncode: REFUSED\n[exit 1]\n`);
+    expect(core.services.supervisor.cards.snapshot().map((one) => one.id)).toContain(cardId);
+    expect(
+      core.services.tasks
+        .timeline("axi-background")
+        .filter((event) => event.kind === "card_resolved"),
+    ).toEqual([]);
+
+    // Once the shell's task closes, its group is no longer the crew's.
+    const closing = await leftRunning("axi-closing", (script) => script, press);
+    core.services.tasks.close("axi-closing", {
+      status: "dropped",
+      reason: "cancelled",
+      actor: "host",
+    });
+    expect(await closing.go()).toContain("[exit 0]");
+    expect(core.services.supervisor.cards.snapshot().map((one) => one.id)).not.toContain(cardId);
+  });
+
+  it("refuses a command a Claude crewmate's shell left running, as its client runs it", async () => {
+    // The captain's choice to cover Claude crewmates too: their client starts
+    // each command's shell in a group of its own, and the crew shell program
+    // it runs first names that shell to the task channel.
+    const cardId = "card-stall-axi-claude";
+    const live = core.services.supervisor.cards.snapshot().find((one) => one.id === cardId);
+    const button = live?.actions[0];
+    if (!button) throw new Error("the stall card has no button");
+    const press = `INFINITARY_AXI_KEY= ${INFINITARY_COMMAND} card act ${cardId} ${button.id}`;
+
+    const backgrounded = await leftRunning("axi-claude", (script) => script, press, "claude");
+    expect(await backgrounded.go()).toBe(`error: ${CREW_REFUSED}\ncode: REFUSED\n[exit 1]\n`);
+    const nohup = await leftRunning("axi-claude", (script) => `nohup ${script}`, press, "claude");
+    expect(await nohup.go()).toBe(`error: ${CREW_REFUSED}\ncode: REFUSED\n[exit 1]\n`);
+    expect(core.services.supervisor.cards.snapshot().map((one) => one.id)).toContain(cardId);
+    expect(
+      core.services.tasks.timeline("axi-claude").filter((event) => event.kind === "card_resolved"),
+    ).toEqual([]);
   });
 
   it("answers its old name with a notice until you retire it, and keeps the inbox's note", async () => {

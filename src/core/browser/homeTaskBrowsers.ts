@@ -7,6 +7,7 @@ import type { JobManager } from "../jobs/jobManager";
 import type { CrewSupervisor } from "../orchestrator/crewSupervisor";
 import { type AppPaths, crewmateEvidenceDir } from "../paths";
 import { HomeBrowsers, PlacedBrowsers, type PlacedBrowsersOptions } from "../placed/placedBrowsers";
+import type { ShellGroups } from "../placed/shellGroups";
 import type { TaskService } from "../tasks/taskService";
 import { browserLookup } from "./connectionGuard";
 import { PrivateSites } from "./privateSites";
@@ -86,6 +87,8 @@ export async function openTaskChannel(options: {
   axiBinDir: string;
   tasks: Pick<TaskService, "get" | "onChange">;
   jobs: Pick<JobManager, "answering">;
+  /** Where a Claude crewmate's shell that names itself is kept (docs/axi-commands.md, "Never the crew's"). */
+  shellGroups?: Pick<ShellGroups, "add">;
   /** The task browsers, which go with their tasks. */
   browsers: Pick<HomeBrowsers, "fact" | "closeTask"> | undefined;
 }): Promise<AxiChannel | undefined> {
@@ -98,6 +101,7 @@ export async function openTaskChannel(options: {
         keysDir: options.paths.taskChannelDir,
         // A command that reached the app keeps Pi's shell waiting for its answer.
         answering: (shell) => options.jobs.answering(shell),
+        ...(options.shellGroups ? { shellGroups: options.shellGroups } : {}),
       }).catch((error: unknown) => {
         console.warn(
           `[task-commands] no task channel, so no crewmate has a browser or integrations: ${error instanceof Error ? error.message : String(error)}`,

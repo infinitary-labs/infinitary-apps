@@ -196,7 +196,8 @@ jobs:
         uses: ./Application Support/firstmate/.github/actions/demo-encoder
         with:
           working-directory: Application Support/firstmate
-      - name: Run each failed test file three rounds
+      - id: rounds
+        name: Run each failed test file three rounds
         env:
           FILES: ${{ needs.failures.outputs.files }}
           PLATFORM: ${{ matrix.platform }}
@@ -211,6 +212,22 @@ jobs:
           else
             node scripts/batch-confirm.ts --files "$FILES"
           fi
+      # What a failed round leaves for whoever repairs the batch, as
+      # verify.yml's journey jobs keep theirs (docs/testing.md, "The swept
+      # batch"): every result directory under test-results/ - each failed
+      # journey's error context, trace and screenshot, and each round's JSON
+      # result - which the machine would otherwise take with it. A failed
+      # Vitest file leaves none. Each platform keeps its own, under a name
+      # no job of the batch's own run uses. It runs only when the rounds
+      # failed, so it never turns a passing confirm red.
+      - name: Keep the failed journeys' evidence
+        if: ${{ always() && steps.rounds.outcome == 'failure' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ format('confirm-failures-{0}', matrix.platform) }}
+          path: Application Support/firstmate/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
 
   # Passes once the sweep, the critical path and the startup fixtures all
   # passed, or once the confirm passed, and names the tree they built and

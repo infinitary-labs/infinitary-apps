@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { batchBase, readMainPush, readQueueStatus, sortMainPush } from "../scripts/batch.mjs";
 import { confirmFiles, confirmRound } from "../scripts/batch-confirm.ts";
 import { legacyJobName } from "../scripts/ci-job-names.mjs";
+import { RUNS_DIR } from "./e2e/runEvidence.ts";
 import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWorkflows.ts";
 
 // INF-2430 piece 3, the captain's approved plan for the swept batch, run by
@@ -481,6 +482,51 @@ describe("the batch's confirm", () => {
       "mini-mac-release-split",
     );
     expect(workflowString(runsOn, { matrix: { platform: "linux" }, vars })).toBe("ubuntu-24.04");
+  });
+
+  // INF-3937: a failure that shows only in the confirm (queue run
+  // 43213829706's Mac confirm, whose log named a trace, a picture and an
+  // error context the machine took with it) has to be readable from the run,
+  // as the sweep's journey jobs keep theirs (docs/testing.md, "The swept
+  // batch").
+  it("keeps a failed round's result directories on the run, under a name of each platform's own", () => {
+    const job = batch.jobs.confirm as Job & { defaults: { run: { "working-directory": string } } };
+    const rounds = job.steps!.find((step) => step.run?.includes("scripts/batch-confirm.ts"))!;
+    const kept = job.steps!.find((step) => step.uses?.startsWith("actions/upload-artifact@"))!;
+    const keeps = (outcome: string) =>
+      workflowValue(
+        kept.if!,
+        { steps: { [rounds.id!]: { outcome } } },
+        {
+          success: outcome !== "failure",
+          failure: outcome === "failure",
+          always: true,
+          cancelled: false,
+        },
+      );
+    expect(["success", "failure", "skipped"].map(keeps)).toEqual([false, true, false]);
+    // Each Playwright run's directory, where a failed journey's trace,
+    // picture and error context land, sits inside the kept folder.
+    const runs = `${job.defaults.run["working-directory"]}/${RUNS_DIR}/`;
+    expect(runs.startsWith(String(kept.with!.path)), runs).toBe(true);
+    // The confirm runs in the queue's run after the sweep, whose Mac lanes
+    // keep their own failures, and an artifact's name is the run's once.
+    const named = (platform: string) =>
+      workflowString(String(kept.with!.name), { matrix: { platform } });
+    const names = ["linux", "mac"].map(named);
+    const lanes = workflow(".github/workflows/verify.yml").jobs.lane!.steps!.filter((step) =>
+      step.uses?.startsWith("actions/upload-artifact@"),
+    );
+    const sweepNames = ["linux-checks", "mac", "parallel", "desktop"].flatMap((lane) =>
+      lanes.map((step) =>
+        workflowString(String(step.with!.name), {
+          matrix: { lane },
+          inputs: { all_journeys: true },
+        }),
+      ),
+    );
+    expect(sweepNames).toContain("e2e-failures-mac");
+    expect(new Set([...names, ...sweepNames]).size).toBe(names.length + new Set(sweepNames).size);
   });
 
   it("finds each failed file as the logs name it, and runs Vitest files and journeys by their lanes", () => {

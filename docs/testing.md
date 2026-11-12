@@ -602,6 +602,7 @@ The `startup` job runs the Linux automatic startup fixtures, `linux-startup.yml`
 Every job composes the batch with the shipped compose script, `.github/actions/infinitary-batch/compose.sh apply`, in its own checkout, and fails if its tree differs from the one the queue composed.
 The last job, `Merge batch · Batch passed (tree T; base B)`, passes only once all three did and names the tree they built and the main version B the batch composed onto.
 When they fail, the queue's confirm calls the same file again with the failed jobs and files, and only its `confirm` job runs: each failed test file three rounds with no retries, on hosted Linux when a Linux job failed and on the `release_split` Mac when a Mac job did, while the sweep, the critical path and the startup fixtures skip (`scripts/batch-confirm.ts`; the captain's pick on INF-3012, "A only: the confirm step").
+When the confirm fails, it keeps everything under `test-results/` on the run as `confirm-failures-mac` or `confirm-failures-linux` for 7 days: each failed journey's error context, trace and screenshot, as `e2e-failures-<lane>` keeps the sweep's ("A red verify's evidence"), so a failure that shows only in the confirm can still be read.
 The last job then passes once the confirm did, and names the same tree and base.
 A green confirm passes the batch; its run's summary names what failed, and that flaky test still needs an owner who fixes its root cause.
 A red confirm fixes forward (INF-2948, the captain: "whenever we meet a failure, we pause the sweeps until a fix arrives, then we rerun the sweep with everything queued + the fix, if there's another error, repeat"): the queue pauses its changes behind one issue, and the app starts the repair ("A paused batch's repair").
@@ -634,6 +635,7 @@ A newer version of the pull request cancels the run of the older one.
 That job calls `batch-checks.yml` on the pull request's version, which runs what the shipped queue's batch runs with nothing composed, since the branch already holds its changes.
 Its `sweep`, `critical-path` and `startup` jobs make the same calls as `infinitary-batch-checks.yml` with that version as `ref` and no batch to compose.
 When one of them fails, its `failures` job reads each failed job's log for the test files it names as failed, with the shipped queue's own reader (`scripts/batch-failures.mjs`), and its `confirm` job runs those files three rounds with no retries on the same version, on hosted Linux when a Linux job failed and on the `release_split` Mac when a Mac job did (`scripts/batch-confirm.ts`).
+A failed confirm keeps the same evidence the queue's confirm keeps ("The swept batch").
 A failed job whose log names no test file failed for something no rerun of a test answers, so nothing runs again.
 The last job, `Merge batch · Batch passed (tree T; base B)`, passes once all three checks passed, or once the confirm passed, and names the tree T of the pull request's version and the main version B the branch left `main` at.
 A batch that passed on its confirm still shows its failed job on the pull request and its run ends failed, so its last job, not the run's result, says the batch passed.
@@ -1078,7 +1080,7 @@ Every `launchApp` keeps a unique `launches/<pid>-<id>/` folder inside that run, 
 It streams `main.stdout.log`, `main.stderr.log` and `provider.requests.jsonl` while the app runs, then copies app-owned `crewmates/<task>/sessions/` before and after closing, before scratch cleanup removes userData.
 The provider record keeps decoded request bodies with sequence numbers and timestamps, including tool-result follow-ups, never authentication headers; a reused provider replays its history to the new launch's record.
 `launch.json` identifies the disposable userData and worker; no account store or whole HOME is copied.
-The existing failure uploads in `journeys.yml`, `source-journeys.yml` and `verify.yml` already keep this run directory under `test-results/`.
+The existing failure uploads in `journeys.yml`, `source-journeys.yml`, `verify.yml` and the batch checks' confirm job already keep this run directory under `test-results/`.
 Main-process streams attach as soon as Playwright returns the launched process; a failure inside `electron.launch` itself has only Playwright's launch error, not these streams.
 On Linux, just before each close, the launcher also adds to `threads.txt` every process of the app and of the virtual screen, with each thread's name, its state and the kernel function it sleeps in (`appThreads` in `tests/e2e/launchDiagnostics.ts`).
 A window whose drawing process stops raises no error, and Playwright's failure picture then waits five seconds for a frame and gives up, so this record is what names the process and thread that held the window.

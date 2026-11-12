@@ -38,7 +38,9 @@ type Job = {
   needs?: string | string[];
   with?: Record<string, unknown>;
   steps?: {
+    id?: string;
     name?: string;
+    if?: string;
     uses?: string;
     run?: string;
     with?: Record<string, unknown>;
@@ -193,6 +195,12 @@ describe("batch-checks.yml", () => {
     const round = (job: Job) =>
       steps(job).find((step) => step.name === "Run each failed test file three rounds");
     expect(round(checks.jobs.confirm!)?.run).toBe(round(queue.jobs.confirm!)?.run);
+    // A failed round keeps its evidence the same way (tests/batch.test.ts).
+    const kept = (job: Job) =>
+      steps(job).find((step) => step.uses?.startsWith("actions/upload-artifact@"));
+    expect(kept(checks.jobs.confirm!)).toBeDefined();
+    expect(kept(checks.jobs.confirm!)).toEqual(kept(queue.jobs.confirm!));
+    expect(round(checks.jobs.confirm!)?.id).toBe(round(queue.jobs.confirm!)?.id);
   });
 
   it("confirms on the platform whose job failed", () => {

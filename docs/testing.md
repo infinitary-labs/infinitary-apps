@@ -701,7 +701,7 @@ Each part's live simulator log lives in `phone-simulator-logs`, never in `phone-
 The pictures the journeys took live in the small `phone-pictures` artifact, exported from the result bundles by device and part.
 A failure on either device fails that device's job and the run, and a complete branch selection or a request with edited-part passes stops at the first failed part ("The phone check on request").
 That gate checks and builds once, starts its device's simulator, and runs the phone journey's parts on it, one after the other, the parts that choose a photo last, each part with its own test home and a clean app (`docs/ios.md`, "Disposable verification").
-Each placed vBoxx guest runs one simulator, its job's device's.
+Each placed guest runs one simulator, its job's device's.
 
 ### The phone parts a request runs
 
@@ -731,7 +731,7 @@ The job summary names each kept part with its distance and reason, and the `phon
 `tests/phone-chooser.test.ts` replays real changes merged to `main` through the chooser.
 Unlike the desktop journey workflow, a device gate that already started finishes and deletes the simulator it started for each device.
 Each native phone job uses a group unique to its run and attempt, with `queue: max` and `cancel-in-progress: false`; the run's own group, which lets a newer same-selection request on a task branch cancel it, is in "What a task branch requests".
-The two vBoxx virtual places run phone checks independently; the mini serves no phone queue (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
+The phone queue is served from every Mac place the placement service runs, the two rented vBoxx places and the compute Macs alike, and each of those places also takes other kinds of Mac work, the merge batch's Mac lanes included, so a phone check waits for any free place and holds one that a batch lane could take (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
 Desktop journey jobs from different pull requests remain parallel.
 Desktop journeys and native phone gates run directly, without a command lease, so real and virtual Macs can check concurrently.
 The phone workflow keeps its configured concurrency groups; they do not exclude desktop checks or a local phone command.
@@ -759,6 +759,7 @@ The optional `device` input, `ipad` or `iphone`, starts that device's job alone,
 That job runs with every other input as it would beside the other device's, so a replacement proof of one device sends the original request's inputs with `device`, at the branch's current version, which a rerun of the original run cannot reach since it keeps the original version.
 An iPad request whose every kept part runs on the iPhone alone checks nothing, as the iPad's job of a both-device request would.
 To reproduce a known failure, send its one named `parts` value and `device` (`iphone` or `ipad`); named diagnostic parts do not add repeat rounds.
+A retry after a failed request names only the failing part and its device this way, never the whole affected selection again, and the whole affected selection runs once more only at the final version ("A retry after a failed phone request").
 The ordinary weak-link suite runs on the iPhone alone on manual requests unless a device is explicitly named; its own edited test code still gets its three iPhone rounds.
 Release calls continue to run every part on both devices, weak-link included.
 The `request` job refuses any other device, on every route, before a phone Mac is taken, and names the device in the request summary.
@@ -784,7 +785,7 @@ Every request uses `MAC_QUEUES.phone`, currently `mini-mac-phone`; no `mac_runne
 Do not use local mini borrows for phone proof.
 The same-source unsigned call from `ios-release.yml` passes its resolved `source_commit` and runs every part without repeats, once per device through a matrix (`ipad`, `iphone`) with fail-fast off, so both phone Macs check one device each at once (INF-2582, reusing INF-2409's split); both calls must succeed before host signing starts.
 Each device's job, on request or in a call, names its device in its job name and in each artifact (`phone-logs-ipad`, `phone-results-iphone` and so on), keeps its evidence under its device's folder, and writes that device's `part-times.json` there.
-The two calls share the one computer both phone Macs run on, which reported memory pressure warnings in 5 of 29 readings while both guests ran (INF-2409).
+Two phone guests on the one rented computer reported memory pressure warnings in 5 of 29 readings while both ran (INF-2409).
 Status-only TestFlight requests start no phone or signing job.
 
 ## What a pull request runs
@@ -862,6 +863,7 @@ So a journey the change only reaches is checked there, and a break found there s
 
 Each request goes once per task, at the final version, after the pull request's own checks passed.
 A request made while the change is still being written is a diagnostic, never its proof.
+A phone request that failed is retried with only its failing part and device, and the whole affected selection runs once at the final version ("A retry after a failed phone request").
 Before a request, read the runs already on that version, running ones included, and reuse one that passed or is still running.
 A later version keeps a run's proof when the files that differ from the proved version reach none of that run's selection: the journey chooser selects none of the proved journeys, the phone chooser keeps no part, or none of those files makes the Linux packages.
 That holds across a repair and across bringing the branch up to date; otherwise request the check again, once, at the new final version.
@@ -873,6 +875,16 @@ A request on `main`, a rerun and every call from another workflow keep a group o
 Cancel any other run no longer needed by its id (`POST /repos/{owner}/{repo}/actions/runs/{id}/cancel`).
 `phone.yml`'s `request` job refuses a branch request for every part, one with no `affected` or `parts`, without `task` and `reason`, on a light Linux machine before the run waits for a phone guest; `main`, a narrower request and the phone release's call pass.
 `tests/release-workflows-journey-suites.test.ts` runs that guard's shell.
+
+### A retry after a failed phone request
+
+A retry of a failed phone request names only the part that failed and the device it failed on (INF-3726's fix 2): `phone.yml` with that one `parts` value and `device`, at the repaired version.
+It never sends the whole affected selection again, and never the device that passed.
+An affected request runs every part a shared app file reaches, often twenty or more on both devices, for about an hour on the iPhone; a one-part retry on one device takes minutes and holds one phone Mac, which the merge batch's Mac jobs share.
+Read the failed part's logs and repair it before the retry, as for any failed check; a retry that fails again names that same part and device again.
+A retry is a diagnostic, never the change's proof, and its named part gets no repeat rounds.
+Once the repair is final and the pull request's own checks pass, the whole affected selection runs once at that final version, as "What a task branch requests" says, with its repeat rounds for edited test code.
+A failure there is retried the same way, and the whole affected selection then runs once more at the version that holds the repair.
 
 ## Journeys on the pull request
 
@@ -1363,7 +1375,7 @@ Outside CI, `image.sh` and `run.sh` enter that command automatically where it ex
 An existing `BORROWED_PLACE` reuses the outer borrow without asking again; scripts use its `BORROWED_VM` name and granted processor and memory size.
 Where the command is missing, the scripts start at once as before; CI keeps its existing placement.
 For example, `BORROW_MINUTES=30 scripts/virtual-mac/run.sh tests/e2e/mic-access.spec.ts` borrows for the journey and cleanup.
-Phone checks use `phone.yml` on the vBoxx queue, never these local mini borrows.
+Phone checks use `phone.yml` on the phone queue, never these local mini borrows.
 A local split `start` refuses where borrowing is available, because returning from it would free the place before the gates ran.
 
 A virtual Mac runs the journeys like the Mac mini does only when its image holds two things the app and macOS look for there.
@@ -1429,7 +1441,7 @@ Other jobs read `fromJSON(vars.MAC_QUEUES || '{}').<kind>` before their old labe
 | `split` | `verify.yml`'s three Mac lanes, the full Mac check: native tests, replay and package; parallel journeys; desktop journeys | in a virtual Mac only |
 | `check` | none of its own: the full Mac check's lanes fall back to it after `split` and `journeys` | anywhere |
 | `journeys` | `journeys.yml`'s `affected-journeys` | anywhere |
-| `phone` | `phone.yml`'s `native-phone` | only in the two vBoxx phone VMs |
+| `phone` | `phone.yml`'s `native-phone` | on any Mac place: the rented vBoxx places and the compute Macs alike |
 | `testflight` | `ios-release.yml`'s `testflight`, which signs after the separate unsigned phone job succeeds | on the real Mac |
 | `build` | `mac-installer.yml`'s `build` | in a virtual Mac only |
 | `sign` | `release.yml`'s signing job | on the real Mac |
@@ -1445,13 +1457,13 @@ The batch checks' sweep, the alpha's full check, hands `release_split` the same 
 The full Mac check's lanes ask for `split`, then the `journeys` kind, whose queue already takes journeys-sized jobs, then `check`, then the old label, so until `MAC_QUEUES` names `split` they run where journeys run.
 The signed installer's Intel check stays on `macos-15-intel` and takes no kind.
 `tests/release-workflows-runners.test.ts` ("each Mac job's kind") evaluates every Mac job with the variable set, unset and for a publishing release, and refuses a Mac job without a kind.
-The `phone` mapping remains `mini-mac-phone`; DOP-246 removes that label from the mini and activates vBoxx-only eligibility, without interrupting running work.
-The two rented places serve only that queue; journeys, signing, publishing, installer checks and borrows stay off it.
+The `phone` mapping remains `mini-mac-phone`, served from every Mac place the placement service runs, the two rented vBoxx places and the compute Macs alike.
+Those places also take other queues, such as the merge batch's Mac lanes (`release_split`), so phone checks and batch lanes wait for the same places (INF-3726).
 `tests/phone-pool-isolation.test.ts` evaluates workflow runner expressions, including matrix entries and both release modes, against the configured queues.
 It requires exactly the three native phone-check jobs on the phone queue and rejects secret reads in any job resolving there, including inherited workflow environments.
 The ordinary GitHub job token used for checkout and results is not a repository signing or publishing secret.
 Explicit proof-run label overrides remain operator-controlled; do not direct another kind of job to `mini-mac-phone`.
-No change to `VIRTUAL_MAC_RUNNER` is needed: phone jobs ignore it, and unavailable vBoxx places leave phone work waiting rather than falling back to the mini.
+No change to `VIRTUAL_MAC_RUNNER` is needed: phone jobs ignore it, and when no place serving the phone queue is free, phone work waits rather than falling back to another label.
 Already-created requests and reruns of older workflows retain their old routing; preserve running jobs and use the current workflow for new phone proof.
 
 Where the placement service names a job's size, it sets `RUNNER_UP_CORES` to the job's cores.

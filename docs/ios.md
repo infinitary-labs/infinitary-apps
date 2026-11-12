@@ -670,7 +670,7 @@ Apple's internal-testing state means testers can install the build, not that a p
 `pnpm test:phone --evidence <absolute-folder-outside-the-project>` runs the foundation's native gate directly on a Mac with the pinned Xcode and its own iOS simulator.
 On a computer in CI mode (`infinitary.checks = ci`, `docs/testing.md` "Where the heavy checks run") it refuses before starting the gate and names `phone.yml` on request instead.
 Add `--ipad` for the iPad Pro 11-inch (M4); the default uses an iPhone 16.
-`scripts/phone-pin.json` names the one Xcode, the one iOS simulator runtime by version and build, and the iPhone and iPad every Mac's phone check uses (INF-1645): the same pair in the vBoxx guests for ordinary checks and unsigned TestFlight checks.
+`scripts/phone-pin.json` names the one Xcode, the one iOS simulator runtime by version and build, and the iPhone and iPad every Mac's phone check uses (INF-1645): the same pair in the phone guests for ordinary checks and unsigned TestFlight checks.
 The gate refuses any other Xcode before it builds, and `scripts/phone-simulator.ts` refuses a Mac without that runtime, or one whose runtime does not support the device, naming the download that fixes it; it never takes a newer or older runtime in its place.
 Moving to a new pair is one pull request that edits the pin, after the virtual Mac image and every Mac that runs the check have the new pair.
 Add `--both` to run the checks and build once, then the iPhone and the iPad side by side; the evidence folder then holds the shared logs and an `iphone` and an `ipad` folder.
@@ -1000,7 +1000,7 @@ Its package install also uses a scratch HOME and an empty local-signing director
 `phone.yml`'s run-level group never makes a run wait behind another: a newer request on the same task branch with the same selection cancels the older run, and `main`, a rerun and each of the phone release's calls keep a group of their own (INF-3380; `docs/testing.md`, "What a task branch requests").
 Each run and attempt waits only for a free phone guest, and a device gate that started finishes and deletes the simulator it started for each device.
 Every native phone job takes a per-run, per-attempt concurrency group, with `queue: max` and cancellation disabled.
-Phone checks run side by side, one per free vBoxx virtual place ("A phone check the placement service puts in a virtual Mac").
+Phone checks run side by side, one per free place serving the phone queue ("A phone check the placement service puts in a virtual Mac").
 Desktop jobs from different pull requests have no common job-level concurrency group, so they can run side by side.
 Desktop journeys and native device gates run directly, without a command lease, so real and virtual Mac checks can overlap.
 The `test:phone` package script checks the configured execution mode before running `scripts/test-phone.ts` directly; the gate owns a scratch HOME and disposable simulators.
@@ -1029,19 +1029,18 @@ A rerun of an old workflow still uses its old routing, so use the current workfl
 ### A phone check the placement service puts in a virtual Mac
 
 The `phone` kind in `MAC_QUEUES` keeps the exact label `mini-mac-phone` (INF-2202, DOP-246).
-The fleet must serve that label only from the two vBoxx virtual places, never the captain's Mac mini VM; activation is a separate fleet operation.
+The fleet serves that label from every Mac place the placement service runs, the two rented vBoxx places and the compute Macs alike, never the captain's Mac mini VM; which places serve it is the fleet's setup, not this project's.
 The one native job, `native-phone`, requires that mapping with no per-run override, fixed-clone switch or generic-Mac fallback.
 An absent, empty or malformed mapping supplies no runnable destination instead of redirecting to the mini.
 The other nine queue mappings and the generic Mac labels remain unchanged for non-phone jobs.
 Each guest runs `scripts/test-phone.ts --simulators 1` directly for one device, the iPad (`--ipad`) or the iPhone (INF-2101).
 A request runs each device in its own job (INF-2970's fix 1), and the unsigned TestFlight call runs each in its own call (INF-2582).
 The ordinary request and the unsigned TestFlight call use the same gate and failure behavior.
-The rented places serve only this phone queue, not journeys, signing, publishing, installer checks or borrows.
+Those places also take other kinds of Mac work, such as the merge batch's Mac lanes, so a phone check and a batch lane wait for the same free places (INF-3726); a phone retry after a failure therefore names only the failing part and device (`docs/testing.md`, "A retry after a failed phone request").
 `tests/phone-pool-isolation.test.ts` evaluates the workflows with configured queues and both release modes, allowing only the native phone job there and refusing secret reads.
 Other workflows' operator-controlled overrides must never point at the phone queue.
 The disposable guests have no captain signing material; the ordinary GitHub job token permits checkout and result uploads.
-Every run and attempt has its own concurrency group, so the two vBoxx places may check independently without a shared one-at-a-time line.
-A runner started for this queue may take another waiting phone job, but never another kind of work.
+Every run and attempt has its own concurrency group, so the places may check independently without a shared one-at-a-time line.
 
 ## Generated and bundled assets
 

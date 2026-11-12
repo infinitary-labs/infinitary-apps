@@ -1,38 +1,59 @@
-import { COMPUTER } from "./deviceNames";
+import { inLanguage } from "./i18n/current";
+import { SOURCE_LANGUAGE } from "./i18n/languages";
+import * as m from "./i18n/messages.generated";
+
 /**
  * The welcome note (FI3-1164, the captain's Approve and build;
  * docs/first-launch.md "The welcome"): a picture of the window that shows
  * one part per press, each with its words inside the picture beside the
  * thing it names, then three starters that put the start of an ask in the
  * message box. App copy, never a model's.
+ *
+ * Its words are catalog messages, worded in the language of whoever shows
+ * them (docs/i18n.md, "Saved facts"): the record keeps the English body,
+ * marked `data-inf-app-body="welcome"`, and a window draws `welcomeBody()`
+ * in its own language in its place (`appBodyOf`).
  */
+/** Words in English, as the record keeps them. */
+const english = <T>(word: () => T): T => inLanguage(SOURCE_LANGUAGE, word);
+
 /** Captain, INF-417: the previous screen already says welcome, so this card does not. */
-export const WELCOME_TITLE = "How we work";
+export const WELCOME_TITLE = english(() => m.welcomeTitle());
 
 /** Each chapter's words, beside the part of the picture they name. */
-export const WELCOME_WORDS = {
-  box: "Type what you want done in the message box under this card.",
-  card: "I bring back answers and choices as cards like this one.",
-  activity: "Crewmates do the work in the background and report here.",
-  tasks: "Every ask gets a record here.",
-  end: "That is all of it. To begin, press a starter below.",
-} as const;
-
-export const WELCOME_STARTERS_LEAD = "To begin, press one and finish the sentence:";
+function chapterWords() {
+  return {
+    box: m.welcomeBox(),
+    card: m.welcomeCard(),
+    activity: m.welcomeActivity(),
+    tasks: m.welcomeTasks(),
+    end: m.welcomeEnd(),
+  };
+}
 
 /** Each starter's button, and the words its press puts in the message box. */
-export const WELCOME_STARTERS = [
-  { label: "Clone a project", words: "Clone the project at " },
-  { label: "Start a new project", words: "Start a new project called " },
-  { label: `Work in a folder on my ${COMPUTER.one}`, words: "Work in the folder " },
-] as const;
+function starters() {
+  return [
+    { label: m.welcomeStarterClone(), words: m.welcomeStarterCloneWords() },
+    { label: m.welcomeStarterNew(), words: m.welcomeStarterNewWords() },
+    { label: m.welcomeStarterFolder(), words: m.welcomeStarterFolderWords() },
+  ] as const;
+}
 
 /** The picture's own labels: its columns and the box. */
-export const WELCOME_LABELS = {
-  activity: "Activity",
-  tasks: "Tasks",
-  box: "the message box",
-} as const;
+function labels() {
+  return {
+    activity: m.welcomeLabelActivity(),
+    tasks: m.welcomeLabelTasks(),
+    box: m.welcomeLabelBox(),
+  };
+}
+
+/** The English words, as the record keeps them. */
+export const WELCOME_WORDS = english(chapterWords);
+export const WELCOME_STARTERS_LEAD = english(() => m.welcomeStartersLead());
+export const WELCOME_STARTERS = english(starters);
+export const WELCOME_LABELS = english(labels);
 
 /** The chapters as the picture counts them. */
 export const WELCOME_CHAPTERS = 5;
@@ -116,19 +137,22 @@ const words = (x: number, y: number, width: number, height: number, text: string
  * script beside it starts it at the first chapter and shows one part per
  * press; without the script the card still reads whole.
  */
-const PICTURE = `<svg viewBox="0 0 520 190" width="520" style="display:block;font-size:var(--text-sm)">
+const picture = (
+  said = chapterWords(),
+  named = labels(),
+) => `<svg viewBox="0 0 520 190" width="520" style="display:block;font-size:var(--text-sm)">
 <rect x="0.5" y="0.5" width="519" height="189" rx="8" style="fill:var(--bg-1);stroke:var(--line-1)"/>
 <g data-part="firstmate" style="visibility:hidden">${firstmateStill(263, 66, 50)}</g>
-<g data-part="box"><rect data-look="box" x="190" y="122" width="140" height="18" rx="9" style="fill:none;stroke:var(--accent)"/><text data-look="box-label" x="260" y="135" text-anchor="middle" style="fill:var(--fg-1)">${WELCOME_LABELS.box}</text>
-${words(140, 146, 240, 42, WELCOME_WORDS.box, ";text-align:center").replace("<div ", `<div data-part="words" data-last="${WELCOME_WORDS.end}" `)}</g>
-<g data-part="card"><rect data-look="card" x="160" y="40" width="200" height="62" rx="6" style="fill:var(--bg-2);stroke:var(--line-2)"/>${words(171, 48, 180, 50, WELCOME_WORDS.card, ";color:var(--fg-1)")}</g>
-<g data-part="activity"><line x1="130" y1="1" x2="130" y2="189" style="stroke:var(--line-1)"/><text x="14" y="24" style="fill:var(--fg-1)">${WELCOME_LABELS.activity}</text>
+<g data-part="box"><rect data-look="box" x="190" y="122" width="140" height="18" rx="9" style="fill:none;stroke:var(--accent)"/><text data-look="box-label" x="260" y="135" text-anchor="middle" style="fill:var(--fg-1)">${named.box}</text>
+${words(140, 146, 240, 42, said.box, ";text-align:center").replace("<div ", `<div data-part="words" data-last="${said.end}" `)}</g>
+<g data-part="card"><rect data-look="card" x="160" y="40" width="200" height="62" rx="6" style="fill:var(--bg-2);stroke:var(--line-2)"/>${words(171, 48, 180, 50, said.card, ";color:var(--fg-1)")}</g>
+<g data-part="activity"><line x1="130" y1="1" x2="130" y2="189" style="stroke:var(--line-1)"/><text x="14" y="24" style="fill:var(--fg-1)">${named.activity}</text>
 <g style="fill:var(--line-2)"><circle cx="18" cy="42" r="2.5"/><rect x="26" y="40.5" width="88" height="3" rx="1.5"/><circle cx="18" cy="58" r="2.5"/><rect x="26" y="56.5" width="70" height="3" rx="1.5"/><circle cx="18" cy="74" r="2.5"/><rect x="26" y="72.5" width="94" height="3" rx="1.5"/></g>
-${words(12, 88, 112, 98, WELCOME_WORDS.activity)}
+${words(12, 88, 112, 98, said.activity)}
 <path data-look="crew" d="M374 12l9 16h-18zM374 12v16" style="fill:none;stroke:var(--line-2);stroke-linejoin:round"/><path d="M364 24C300 18 200 26 132 40" style="fill:none;stroke:var(--line-2);stroke-dasharray:3 3"/></g>
-<g data-part="tasks"><line x1="390" y1="1" x2="390" y2="189" style="stroke:var(--line-1)"/><text x="404" y="24" style="fill:var(--fg-1)">${WELCOME_LABELS.tasks}</text>
+<g data-part="tasks"><line x1="390" y1="1" x2="390" y2="189" style="stroke:var(--line-1)"/><text x="404" y="24" style="fill:var(--fg-1)">${named.tasks}</text>
 <g style="fill:var(--line-2)"><rect data-look="task" x="404" y="40.5" width="96" height="3" rx="1.5"/><rect x="404" y="56.5" width="72" height="3" rx="1.5"/><rect x="404" y="72.5" width="84" height="3" rx="1.5"/></g>
-${words(402, 88, 112, 98, WELCOME_WORDS.tasks)}</g>
+${words(402, 88, 112, 98, said.tasks)}</g>
 </svg>`;
 
 /**
@@ -136,10 +160,11 @@ ${words(402, 88, 112, 98, WELCOME_WORDS.tasks)}</g>
  * and a count, then Back and Next. Without the script nothing here is drawn,
  * so nothing on the card looks pressable that is not.
  */
-const STEPS = `<div data-welcome-steps hidden><div style="display:flex;align-items:center;gap:var(--space-3);margin-top:var(--space-2);max-width:520px">
+const steps =
+  () => `<div data-welcome-steps hidden><div style="display:flex;align-items:center;gap:var(--space-3);margin-top:var(--space-2);max-width:520px">
 <span data-dots style="display:inline-flex;gap:6px" aria-hidden="true">${'<span style="width:7px;height:7px;border-radius:50%;border:1px solid var(--line-2)"></span>'.repeat(WELCOME_CHAPTERS)}</span>
 <span data-count style="font-family:var(--font-mono);font-size:var(--text-xs);color:var(--fg-3)">1 / ${WELCOME_CHAPTERS}</span>
-<span style="margin-left:auto;display:inline-flex;gap:var(--space-2)"><button type="button" data-step="back">Back</button><button type="button" data-step="next">Next</button></span>
+<span style="margin-left:auto;display:inline-flex;gap:var(--space-2)"><button type="button" data-step="back">${m.welcomeBack()}</button><button type="button" data-step="next">${m.welcomeNext()}</button></span>
 </div></div>`;
 
 /**
@@ -235,22 +260,35 @@ const PRESENTATION_SCRIPT = `<script>
 </script>`;
 
 /** Each starter is a button the frame bridge carries to the message box (`data-inf-draft`). */
-const STARTERS = `<p>${WELCOME_STARTERS_LEAD}</p>
-<div style="display:flex;flex-wrap:wrap;gap:var(--space-2)">${WELCOME_STARTERS.map(
-  (starter) => `<button type="button" data-inf-draft="${starter.words}">${starter.label}</button>`,
-).join("")}</div>`;
+const startersHtml = () => `<p>${m.welcomeStartersLead()}</p>
+<div style="display:flex;flex-wrap:wrap;gap:var(--space-2)">${starters()
+  .map(
+    (starter) =>
+      `<button type="button" data-inf-draft="${starter.words}">${starter.label}</button>`,
+  )
+  .join("")}</div>`;
 
-export const WELCOME_BODY = `<figure aria-label="Your window, one part per press: the message box, a card, Activity and Tasks" style="margin:0 0 var(--space-3)">
-${PICTURE}
-${STEPS}
+/** The mark a saved welcome body carries, so a window draws it again in its own language. */
+export const WELCOME_BODY_MARK = 'data-inf-app-body="welcome"';
+
+/** The welcome's body in the process's language. */
+export function welcomeBody(): string {
+  return `<figure ${WELCOME_BODY_MARK} aria-label="${m.welcomeFigure()}" style="margin:0 0 var(--space-3)">
+${picture()}
+${steps()}
 ${PRESENTATION_SCRIPT}
 </figure>
-${STARTERS}`;
+${startersHtml()}`;
+}
+
+/** The body the record keeps: the English one, which a window words again (`appBodyOf`). */
+export const WELCOME_BODY = english(welcomeBody);
 
 /**
  * The welcome in words, as its record keeps it: the answer its task holds
- * and the introduction the Firstmate's context carries. The body's picture
- * and script would cost every turn and say nothing a model reads.
+ * and the introduction the Firstmate's context carries, in English as all
+ * a model reads is. The body's picture and script would cost every turn and
+ * say nothing a model reads.
  */
 export const WELCOME_ANSWER = `<p>A picture of the window, one part per press, each with its words:</p>
 <ul>
@@ -265,3 +303,16 @@ export const WELCOME_ANSWER = `<p>A picture of the window, one part per press, e
 
 /** The note the host presents: its title, its body, and the answer its record keeps. */
 export const WELCOME_NOTE = { title: WELCOME_TITLE, body: WELCOME_BODY, answer: WELCOME_ANSWER };
+
+/**
+ * A saved card body the app wrote itself, worded again in the process's
+ * language, or undefined for any other body. Only the welcome is one.
+ */
+export function appBodyOf(saved: string): string | undefined {
+  return saved.includes(WELCOME_BODY_MARK) ? welcomeBody() : undefined;
+}
+
+/** A card's title in the process's language, when its body is one the app wrote itself. */
+export function wordedTitle(title: string, body: string | undefined): string {
+  return body?.includes(WELCOME_BODY_MARK) && title === WELCOME_TITLE ? m.welcomeTitle() : title;
+}

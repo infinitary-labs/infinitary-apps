@@ -52,6 +52,21 @@ import { migratePublishedViews } from "./views";
 
 type Migration = string | ((db: AppDatabase, fresh: boolean) => void);
 
+/**
+ * Keyboard presets (docs/keyboard.md, "Presets"): a profile that ran a
+ * version from before them keeps today's keys, Legacy. One with changed keys
+ * already has its `keyboard` row, which reads as Legacy with its changes;
+ * one without gets Legacy's row with nothing changed, in the form those
+ * versions saved, so going back to one reads it too. A new profile gets no
+ * row and starts on Vim. Deleting the row undoes it.
+ */
+export const keyboardPresets = (db: AppDatabase, fresh: boolean): void => {
+  if (fresh) return;
+  db.prepare(
+    "INSERT INTO settings (key, value) VALUES ('keyboard', ?) ON CONFLICT(key) DO NOTHING",
+  ).run(JSON.stringify({ version: 1, keys: {} }));
+};
+
 export const MIGRATIONS: readonly Migration[] = [
   // 1: work substrate - registered repos and tasks (worktree per task).
   `
@@ -1321,18 +1336,10 @@ export const MIGRATIONS: readonly Migration[] = [
     AND json_type(merge_authorization_json, '$.queueRemovals') = 'array';`,
   // Contribution routing stores only project identities and the captain's destination choice.
   `ALTER TABLE repos ADD COLUMN contribution_json TEXT;`,
-  // Keyboard presets (docs/keyboard.md, "Presets"): a profile that ran a
-  // version from before them keeps today's keys, Legacy. One with changed
-  // keys already has its `keyboard` row, which reads as Legacy with its
-  // changes; one without gets Legacy's row with nothing changed, in the
-  // form those versions saved, so going back to one reads it too. A new
-  // profile gets no row and starts on Vim. Deleting the row undoes it.
-  (db, fresh) => {
-    if (fresh) return;
-    db.prepare(
-      "INSERT INTO settings (key, value) VALUES ('keyboard', ?) ON CONFLICT(key) DO NOTHING",
-    ).run(JSON.stringify({ version: 1, keys: {} }));
-  },
+  // Keyboard presets (`keyboardPresets`).
+  keyboardPresets,
+  // A task-less feed line's fact beside its English (docs/i18n.md, "Saved facts"); older lines keep their words.
+  (db) => addColumn(db, "activity_events", "said_json", "TEXT"),
 ];
 
 /**

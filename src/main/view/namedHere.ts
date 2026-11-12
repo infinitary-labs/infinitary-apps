@@ -26,9 +26,14 @@ export function namedHere(
   name: () => string,
 ): unknown {
   if (channel === "inf:feed:recent" && Array.isArray(answer))
-    return answer.map((line: FeedLine) =>
-      line?.saidHere === true ? { ...line, text: hereAs(line.text, name()) } : line,
-    );
+    return answer.map((line: FeedLine) => {
+      if (line?.saidHere !== true) return line;
+      const text = hereAs(line.text, name());
+      if (text === line.text) return line;
+      // The line's fact would word this computer again: the named English stands (docs/i18n.md, "Saved facts").
+      const { said: _said, ...named } = line;
+      return { ...named, text };
+    });
   if (!answer || typeof answer !== "object" || Array.isArray(answer)) return answer;
   const fields = answer as Record<string, unknown>;
   const field =

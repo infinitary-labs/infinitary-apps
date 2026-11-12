@@ -7,6 +7,7 @@ import type { KeptApproval } from "./keptApproval";
 import {
   candidateHead,
   keptFeedLine,
+  keptFeedSaid,
   keptNote,
   retryAfter,
   standingAuthorization,
@@ -104,9 +105,9 @@ export class KeptMerge {
         else if (kept?.changed) {
           this.settle.settleLine(
             taskId,
-            keptFeedLine(
+            keptFeedSaid(
               kept.wait,
-              placeOf(this.host.repos, record),
+              placeOf(this.host.repos, record, ""),
               currentCheckStatus(this.host.tasks.get(taskId)?.delivery),
               this.approvals.queueOwnsMerge(taskId),
             ),
@@ -280,9 +281,9 @@ export class KeptMerge {
     const place = placeOf(this.host.repos, record);
     this.settle.settleLine(
       taskId,
-      keptFeedLine(
+      keptFeedSaid(
         wait,
-        place,
+        placeOf(this.host.repos, record, ""),
         currentCheckStatus(record?.delivery),
         this.approvals.queueOwnsMerge(taskId),
       ),

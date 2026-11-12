@@ -4,6 +4,7 @@ import type { HostCapabilities } from "@core/index";
 import { isAllowedOpenExternalUrl } from "@core/openExternal";
 import { writePrivateFile } from "@core/secrets/custody";
 import { CHOSEN_FILES_MAX } from "@shared/attachments";
+import * as m from "@shared/i18n/messages.generated";
 import { CORE_INVOKE_CHANNELS, type PushChannel, type PushPayload } from "@shared/ipc";
 import { isMoveCommand } from "@shared/keyboard";
 import type { RecognizerClient, RecognizerPlace } from "@shared/voiceRecognizer";
@@ -188,9 +189,9 @@ export function registerIpc(options: IpcOptions): void {
     if (history === null) return { saved: false };
     const owner = BrowserWindow.fromWebContents(event.sender);
     const options = {
-      title: "Export Secrets history",
+      title: m.secretsHistoryExportTitle(),
       defaultPath: "secrets-history.json",
-      buttonLabel: "Export",
+      buttonLabel: m.dialogExport(),
       filters: [{ name: "JSON", extensions: ["json"] }],
     };
     const picked = owner
@@ -207,7 +208,7 @@ export function registerIpc(options: IpcOptions): void {
   handleInvoke("inf:app:choose-folder", rendererSource, async (event, startAt) => {
     const options: OpenDialogOptions = {
       properties: ["openDirectory", "createDirectory"],
-      buttonLabel: "Choose",
+      buttonLabel: m.dialogChoose(),
       ...(startAt ? { defaultPath: startAt } : {}),
     };
     const owner = BrowserWindow.fromWebContents(event.sender);
@@ -229,7 +230,7 @@ export function registerIpc(options: IpcOptions): void {
   handleInvoke("inf:files:choose", rendererSource, async (event) => {
     const options: OpenDialogOptions = {
       properties: ["openFile", "multiSelections"],
-      buttonLabel: "Add",
+      buttonLabel: m.dialogAdd(),
     };
     const owner = BrowserWindow.fromWebContents(event.sender);
     const picked = owner

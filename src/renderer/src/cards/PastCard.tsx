@@ -2,6 +2,7 @@ import { anythingElseOf, type CardWidth, PAST_CARD_WORDS_LEAD, type PastCard } f
 import { formatDateTime } from "@shared/i18n/format";
 import { pastCardEndingWords } from "@shared/pastCard";
 import type { FramePicture } from "@shared/plugins/bridge";
+import { wordedTitle } from "@shared/welcome";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Button, MicroLabel } from "../design";
 import { CardCorner } from "../design/cards/CardSize";
@@ -126,10 +127,12 @@ export function PastCardColumn({
   const risk = past.risk;
   const sentWords = anythingElseOf(past.answers);
   const bodyRef = useCardReadingPlace(pastReadingPlaceId(past.id));
+  // A card the app wrote itself is titled in the window's language (docs/i18n.md).
+  const shownTitle = wordedTitle(past.title, past.body);
   return (
     <ResponseCard
       bodyRef={bodyRef}
-      title={past.title}
+      title={shownTitle}
       width={width}
       surface={surface}
       chrome={
@@ -177,10 +180,10 @@ export function PastCardColumn({
           >
             {risk ? (
               <span>
-                <KeyedText text={past.title} own={past.taskId} />
+                <KeyedText text={shownTitle} own={past.taskId} />
               </span>
             ) : (
-              <KeyedText text={past.title} own={past.taskId} />
+              <KeyedText text={shownTitle} own={past.taskId} />
             )}
             {risk && (
               <div

@@ -283,6 +283,15 @@ export function compileCatalogs(sources: Record<string, string>): { output: stri
     `export const CATALOG_LANGUAGES = ${JSON.stringify([SOURCE_LANGUAGE, ...languages.map(([tag]) => tag)])} as const;`,
     "",
     ...[...english].map(([id, message]) => `${compiledFunction(id, message, languages)}\n`),
+    "/** Every message by its name, for words saved as a fact and worded when shown (docs/i18n.md, \"Saved facts\"). */",
+    `export const MESSAGES = { ${[...english.keys()].join(", ")} } as const;`,
+    "",
+    "/** The name of a message in the catalog. */",
+    "export type MessageName = keyof typeof MESSAGES;",
+    "",
+    "/** What each message fills, its plural count included: a saved fact missing one is shown as saved. */",
+    `export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = ${JSON.stringify(Object.fromEntries([...english].map(([id, message]) => [id, placeholdersOf(message)])))};`,
+    "",
   ].join("\n");
   return { output, problems };
 }

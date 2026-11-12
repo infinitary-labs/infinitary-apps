@@ -1,3 +1,5 @@
+import { onLanguageChange } from "@shared/i18n/current";
+import * as m from "@shared/i18n/messages.generated";
 import {
   type Bindings,
   menuAccelerator,
@@ -26,7 +28,8 @@ import type { InstalledKeymap, SizeCommandHandlers } from "./keyboard";
  * command shows that command's first key from the installed map, and the
  * menu is built again at every install, so it never shows a key the window
  * no longer takes. The window takes a command's key before the menu does,
- * so an accelerator here only shows it. Keyboard Settings…, Reset All Keys…
+ * so an accelerator here only shows it. The app's own items are worded in
+ * the app's language, and the menu is built again when it changes. Keyboard Settings…, Reset All Keys…
  * and What’s New stay whatever keys a person removes: the way back is never
  * a key.
  */
@@ -63,7 +66,7 @@ function settingsItems(bindings: Bindings, actions: AppMenuActions): MenuItemCon
   return [
     {
       id: "updates-check",
-      label: "Check for Updates…",
+      label: m.menuCheckUpdates(),
       accelerator: menuAccelerator("updates.check", bindings),
       enabled: actions.checksUpdates(),
       click: () => actions.shell("updates.check"),
@@ -71,17 +74,17 @@ function settingsItems(bindings: Bindings, actions: AppMenuActions): MenuItemCon
     { type: "separator" },
     {
       id: "settings-open",
-      label: "Settings…",
+      label: m.menuSettings(),
       accelerator: menuAccelerator("settings.open", bindings),
       click: () => actions.shell("settings.open"),
     },
     {
       id: "settings-keyboard",
-      label: "Keyboard Settings…",
+      label: m.menuKeyboardSettings(),
       accelerator: menuAccelerator("settings.keyboard", bindings),
       click: () => actions.shell("settings.keyboard"),
     },
-    { id: "keyboard-reset-all", label: "Reset All Keys…", click: () => actions.resetAllKeys() },
+    { id: "keyboard-reset-all", label: m.menuResetAllKeys(), click: () => actions.resetAllKeys() },
   ];
 }
 
@@ -89,7 +92,7 @@ function settingsItems(bindings: Bindings, actions: AppMenuActions): MenuItemCon
 function whatsNewItem(bindings: Bindings, actions: AppMenuActions): MenuItemConstructorOptions {
   return {
     id: "whats-new",
-    label: "What’s New in Infinitary",
+    label: m.menuWhatsNew(),
     accelerator: menuAccelerator("whats-new.show", bindings),
     enabled: actions.whatsNew(),
     click: () => actions.shell("whats-new.show"),
@@ -139,7 +142,7 @@ export function appMenuTemplate(
   const help = menu.find((item) => item.role?.toLowerCase() === "help");
   if (help && Array.isArray(help.submenu))
     help.submenu.unshift(whatsNewItem(bindings, actions), { type: "separator" });
-  else menu.push({ role: "help", label: "Help", submenu: [whatsNewItem(bindings, actions)] });
+  else menu.push({ role: "help", label: m.menuHelp(), submenu: [whatsNewItem(bindings, actions)] });
   return menu;
 }
 
@@ -161,6 +164,8 @@ export function installAppMenu(
     );
   build(keymap.bindings());
   keymap.subscribe((snapshot) => build(snapshot.bindings));
+  // The app's own items are worded in the app's language when built (docs/i18n.md).
+  onLanguageChange(() => build(keymap.bindings()));
   return () => build(keymap.bindings());
 }
 
@@ -176,9 +181,9 @@ export function resetAllKeysAfterAsking(
   const preset = PRESET_LABELS[keymap.current().saved.preset];
   const options: MessageBoxOptions = {
     type: "question",
-    message: `Reset every key to the ${preset} preset's?`,
-    detail: `Every shortcut you changed in Keyboard settings goes back to the one the ${preset} preset gives it.`,
-    buttons: ["Reset All Keys", "Cancel"],
+    message: m.resetKeysAsk({ preset }),
+    detail: m.resetKeysDetail({ preset }),
+    buttons: [m.resetKeysConfirm(), m.dialogCancel()],
     defaultId: 0,
     cancelId: 1,
   };

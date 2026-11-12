@@ -5,6 +5,7 @@ import { readyPresentation } from "@shared/changePresentation";
 import { currentCheckStatus } from "@shared/checkSnapshot";
 import type { FolderRefreshRefusal } from "@shared/folderRefresh";
 import { fixedHoldWords, overridePasses, softHoldWords, withoutHoldWords } from "@shared/holds";
+import { englishOf, type Said, said } from "@shared/i18n/said";
 import type { MergeReview } from "@shared/mergeReview";
 import { plainProblem } from "@shared/plainProblem";
 import { hostedPresentation } from "@shared/presentationDestination";
@@ -18,7 +19,7 @@ import { TaskService } from "../tasks/taskService";
 import { type MergeGuard, mergedReceipt, type PrOutcome } from "./changeMerge";
 import { afterMergeWords } from "./deliveryWakes";
 import type { KeptApproval } from "./keptApproval";
-import { candidateHead, keptFeedLine, keptNote, standingAuthorization } from "./mergeAuthorization";
+import { candidateHead, keptFeedSaid, keptNote, standingAuthorization } from "./mergeAuthorization";
 import type { SettleOutcome, SettleServiceHost } from "./settleHost";
 import type { SettleLease, SettleLocks } from "./settleLocks";
 import {
@@ -29,11 +30,12 @@ import {
   openCurrentMerge,
 } from "./settleRefusals";
 import {
-  cannotMergeText,
+  cannotMergeSaid,
   changeName,
   folderNotUpdatedText,
+  mergedOnLine,
   placeOf,
-  settlingText,
+  settlingSaid,
 } from "./settleWords";
 import type { TaskClose, TaskClosing } from "./taskClose";
 import type { TaskDrop } from "./taskDrop";
@@ -50,15 +52,28 @@ export function settleFeedLine(
   mode: "merge-pr" | "land" | "discard",
   result: { ok: boolean; text: string; problem?: string; plain?: string; followup?: string },
 ): string {
+  const line = settleFeedSaid(mode, result);
+  return typeof line === "string" ? line : englishOf(line);
+}
+
+/**
+ * The settle's feed line (`settleFeedLine`) as a fact where the app words
+ * it; an outcome already written in words reads as written.
+ */
+export function settleFeedSaid(
+  mode: "merge-pr" | "land" | "discard",
+  result: { ok: boolean; text: string; problem?: string; plain?: string; followup?: string },
+): string | Said {
   // A hold's sentence tells an agent how it passes; his line leaves it out.
   if (!result.problem && !result.plain) return withoutHoldWords(result.text);
   const plain = result.problem ? plainProblem(result.problem) : (result.plain as string);
   if (mode === "discard") {
-    return result.ok
-      ? `Discarded. Its pull request is still open where the project lives: ${plain}${result.followup ? `. ${result.followup}` : ""}`
-      : `Could not discard: ${plain}`;
+    if (!result.ok) return said("settleCouldNotDiscard", { problem: plain });
+    return result.followup
+      ? said("settleDiscardedPullOpenThen", { problem: plain, followup: result.followup })
+      : said("settleDiscardedPullOpen", { problem: plain });
   }
-  return cannotMergeText(plain);
+  return cannotMergeSaid(plain);
 }
 
 /** The record's state in the words the tools and refusals use. */
@@ -650,7 +665,7 @@ export class SettleService {
     return this.closeMerged(record, actor, {
       ok: true,
       text: `${changeName(record, pull.number)} is already merged on ${placeOf(this.host.repos, record)}.`,
-      line: `Merged ${changeName(record, pull.number)} on ${placeOf(this.host.repos, record)}`,
+      ...mergedOnLine(changeName(record, pull.number), placeOf(this.host.repos, record, "")),
       receipt: mergedReceipt(pull),
     });
   }
@@ -677,7 +692,13 @@ export class SettleService {
         // Activity's line for the merge: the change and where it went in,
         // never its address (INF-1845).
         ...(result.line || data
-          ? { data: { ...data, ...(result.line ? { line: result.line } : {}) } }
+          ? {
+              data: {
+                ...data,
+                ...(result.line ? { line: result.line } : {}),
+                ...(result.line && result.lineSaid ? { lineSaid: result.lineSaid } : {}),
+              },
+            }
           : {}),
         delivery: {
           landedMode: "pr",
@@ -1132,7 +1153,7 @@ export class SettleService {
       const number = record.delivery?.prNumber;
       const change =
         mode === "merge-pr" && number !== undefined ? changeName(record, number) : undefined;
-      this.settleLine(taskId, settlingText(mode, change, waitsForTurn));
+      this.settleLine(taskId, settlingSaid(mode, change, waitsForTurn));
     }
     // The click's own approval, minted with its card resolution (FI3-304):
     // this attempt merges only the head that approval covers.
@@ -1184,12 +1205,14 @@ export class SettleService {
    * task's key: the click, then whatever became of it, each taking the
    * last one's place (`SETTLE_FOLD`, INF-1845).
    */
-  settleLine(taskId: string, text: string): void {
+  settleLine(taskId: string, line: string | Said): void {
     if (!this.host.tasks.get(taskId)) return;
-    this.host.tasks.note(taskId, text, {
+    // A line in the app's words is saved as a fact beside its English (docs/i18n.md, "Saved facts").
+    const fact = typeof line === "string" ? undefined : line;
+    this.host.tasks.note(taskId, fact ? englishOf(fact) : (line as string), {
       news: true,
       feed: true,
-      data: { feedLine: true, feedOnce: SETTLE_FOLD },
+      data: { feedLine: true, feedOnce: SETTLE_FOLD, ...(fact ? { said: fact } : {}) },
     });
   }
 
@@ -1226,15 +1249,15 @@ export class SettleService {
     if (kept)
       this.settleLine(
         taskId,
-        keptFeedLine(
+        keptFeedSaid(
           kept,
-          placeOf(this.host.repos, record),
+          placeOf(this.host.repos, record, ""),
           currentCheckStatus(record?.delivery),
           this.approvals.queueOwnsMerge(taskId),
         ),
       );
     // Contention settled nothing: the attempt that owns the task says what became of it.
-    else if (!merged && !result.contention) this.settleLine(taskId, settleFeedLine(mode, result));
+    else if (!merged && !result.contention) this.settleLine(taskId, settleFeedSaid(mode, result));
     // A healthy queue wait needs no decision, card or first mate turn.
     // An unanswered queue's warning still needs an agent to recover it.
     if (kept === "queue" && this.approvals.queueWarning(taskId, kept) === undefined) return;

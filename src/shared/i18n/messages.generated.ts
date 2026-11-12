@@ -193,3 +193,2011 @@ export function cardHeadingAfter(): string {
   }
   return `After`;
 }
+
+export function feedStarted(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šţáŕţéð ~~~]`;
+    case "ar-XB":
+      return `\u202eStarted\u202c`;
+  }
+  return `Started`;
+}
+
+export function feedReported(input: { summary: string }): string {
+  const summary = input.summary;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéþöŕţéð: ${summary} ~~~~]`;
+    case "ar-XB":
+      return `\u202eReported: \u202c${summary}`;
+  }
+  return `Reported: ${summary}`;
+}
+
+export function feedReportedBare(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéþöŕţéð ~~~]`;
+    case "ar-XB":
+      return `\u202eReported\u202c`;
+  }
+  return `Reported`;
+}
+
+export function feedProblem(input: { problem: string }): string {
+  const problem = input.problem;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þŕöƀļéɱ: ${problem} ~~~]`;
+    case "ar-XB":
+      return `\u202eProblem: \u202c${problem}`;
+  }
+  return `Problem: ${problem}`;
+}
+
+export function feedFailed(input: { problem: string }): string {
+  const problem = input.problem;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒáîļéð: ${problem} ~~~]`;
+    case "ar-XB":
+      return `\u202eFailed: \u202c${problem}`;
+  }
+  return `Failed: ${problem}`;
+}
+
+export function feedMerged(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁéŕĝéð ~~]`;
+    case "ar-XB":
+      return `\u202eMerged\u202c`;
+  }
+  return `Merged`;
+}
+
+export function feedCarriedOnBy(input: { key: string }): string {
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáŕŕîéð öñ ƀý ${key} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eCarried on by \u202c${key}`;
+  }
+  return `Carried on by ${key}`;
+}
+
+export function feedDropped(input: { sentence: string }): string {
+  const sentence = input.sentence;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðŕöþþéð: ${sentence} ~~~]`;
+    case "ar-XB":
+      return `\u202eDropped: \u202c${sentence}`;
+  }
+  return `Dropped: ${sentence}`;
+}
+
+export function feedContainerFinished(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðöñé: éṽéŕýţĥîñĝ ûñðéŕ îţ îš ƒîñîšĥéð ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDone: everything under it is finished\u202c`;
+  }
+  return `Done: everything under it is finished`;
+}
+
+export function feedContainerStopped(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šţöþþéð: ñöţĥîñĝ ûñðéŕ îţ ŵéñţ áĥéáð ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eStopped: nothing under it went ahead\u202c`;
+  }
+  return `Stopped: nothing under it went ahead`;
+}
+
+export function feedYouChose(input: { choice: string }): string {
+  const choice = input.choice;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöû çĥöšé "${choice}" ~~~~]`;
+    case "ar-XB":
+      return `\u202eYou chose "\u202c${choice}\u202e"\u202c`;
+  }
+  return `You chose "${choice}"`;
+}
+
+export function feedAnsweredWith(input: { answer: string }): string {
+  const answer = input.answer;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åñšŵéŕéð: ${answer} ~~~~]`;
+    case "ar-XB":
+      return `\u202eAnswered: \u202c${answer}`;
+  }
+  return `Answered: ${answer}`;
+}
+
+export function feedAnswered(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åñšŵéŕéð ~~~]`;
+    case "ar-XB":
+      return `\u202eAnswered\u202c`;
+  }
+  return `Answered`;
+}
+
+export function feedDiscarded(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðîšçáŕðéð ~~~]`;
+    case "ar-XB":
+      return `\u202eDiscarded\u202c`;
+  }
+  return `Discarded`;
+}
+
+export function feedReleased(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéļéášéð öûţšîðé ţĥîš ţášķ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReleased outside this task\u202c`;
+  }
+  return `Released outside this task`;
+}
+
+export function feedBuiltInPlace(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ɓûîļţ îñ þļáçé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eBuilt in place\u202c`;
+  }
+  return `Built in place`;
+}
+
+export function feedFinished(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒîñîšĥéð ~~~]`;
+    case "ar-XB":
+      return `\u202eFinished\u202c`;
+  }
+  return `Finished`;
+}
+
+export function feedStopped(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šţöþþéð ~~~]`;
+    case "ar-XB":
+      return `\u202eStopped\u202c`;
+  }
+  return `Stopped`;
+}
+
+export function feedUpdated(input: { text: string }): string {
+  const text = input.text;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ûþðáţéð: ${text} ~~~]`;
+    case "ar-XB":
+      return `\u202eUpdated: \u202c${text}`;
+  }
+  return `Updated: ${text}`;
+}
+
+export function feedMovedOnTier(input: { key: string; tier: string }): string {
+  const key = input.key;
+  const tier = input.tier;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁöṽéð ţö á šţŕöñĝéŕ ɱöðéļ: ${tier}; çöñţîñûéš áš ${key} ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMoved to a stronger model: \u202c${tier}\u202e; continues as \u202c${key}`;
+  }
+  return `Moved to a stronger model: ${tier}; continues as ${key}`;
+}
+
+export function feedMoved(input: { key: string }): string {
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁöṽéð ţö á šţŕöñĝéŕ ɱöðéļ: çöñţîñûéš áš ${key} ~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMoved to a stronger model: continues as \u202c${key}`;
+  }
+  return `Moved to a stronger model: continues as ${key}`;
+}
+
+export function feedFirstMateSaid(input: { text: string }): string {
+  const text = input.text;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒîŕšţ ɱáţé: ${text} ~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst mate: \u202c${text}`;
+  }
+  return `First mate: ${text}`;
+}
+
+export function feedUndelivered(input: { why: string }): string {
+  const why = input.why;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁéššáĝé ûñðéļîṽéŕéð: ${why} ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMessage undelivered: \u202c${why}`;
+  }
+  return `Message undelivered: ${why}`;
+}
+
+export function feedNoted(input: { text: string }): string {
+  const text = input.text;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñöţéð: ${text} ~~~]`;
+    case "ar-XB":
+      return `\u202eNoted: \u202c${text}`;
+  }
+  return `Noted: ${text}`;
+}
+
+export function feedPullOpened(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Öþéñéð á þûļļ ŕéǫûéšţ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpened a pull request\u202c`;
+  }
+  return `Opened a pull request`;
+}
+
+export function feedBranchPushed(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þûšĥéð ţĥé ƀŕáñçĥ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePushed the branch\u202c`;
+  }
+  return `Pushed the branch`;
+}
+
+export function feedRepairsCapped(input: { rounds: number }): string {
+  const rounds = formatNumber(input.rounds);
+  switch (currentLanguage()) {
+    case "en-XA":
+      switch (pluralCategory(input.rounds, "en")) {
+        case "one":
+          return `[${rounds} ŕéþáîŕš ðîð ñöţ ĝéţ ţĥé çĥéçķš ţö þášš - ýöûŕ ƒîŕšţ ɱáţé ŵîļļ ášķ ýöû ŵĥáţ ţö ðö ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        default:
+          return `[${rounds} ŕéþáîŕš ðîð ñöţ ĝéţ ţĥé çĥéçķš ţö þášš - ýöûŕ ƒîŕšţ ɱáţé ŵîļļ ášķ ýöû ŵĥáţ ţö ðö ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      }
+    case "ar-XB":
+      switch (pluralCategory(input.rounds, "en")) {
+        case "one":
+          return `${rounds}\u202e repairs did not get the checks to pass - your first mate will ask you what to do\u202c`;
+        default:
+          return `${rounds}\u202e repairs did not get the checks to pass - your first mate will ask you what to do\u202c`;
+      }
+  }
+  switch (pluralCategory(input.rounds)) {
+    case "one":
+      return `${rounds} repairs did not get the checks to pass - your first mate will ask you what to do`;
+    default:
+      return `${rounds} repairs did not get the checks to pass - your first mate will ask you what to do`;
+  }
+}
+
+export function feedChecksPassed(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé çĥéçķš þáššéð ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe checks passed\u202c`;
+  }
+  return `The checks passed`;
+}
+
+export function feedChecksFailed(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé çĥéçķš ƒáîļéð ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe checks failed\u202c`;
+  }
+  return `The checks failed`;
+}
+
+export function feedChecksRunning(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé çĥéçķš ŕûññîñĝ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe checks running\u202c`;
+  }
+  return `The checks running`;
+}
+
+export function feedChecksNoPull(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé çĥéçķš ñö þûļļ ŕéǫûéšţ ýéţ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe checks no pull request yet\u202c`;
+  }
+  return `The checks no pull request yet`;
+}
+
+export function feedChecksMergedOutside(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé çĥéçķš ɱéŕĝéð öûţšîðé ţĥé áþþ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe checks merged outside the app\u202c`;
+  }
+  return `The checks merged outside the app`;
+}
+
+export function feedChecksUpdated(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çĥéçķš ûþðáţéð ~~~~~]`;
+    case "ar-XB":
+      return `\u202eChecks updated\u202c`;
+  }
+  return `Checks updated`;
+}
+
+export function feedReviewPassedRisk(input: { risk: string }): string {
+  const risk = input.risk;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þáššéð îţš ŕéṽîéŵ, ${risk} ŕîšķ ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePassed its review, \u202c${risk}\u202e risk\u202c`;
+  }
+  return `Passed its review, ${risk} risk`;
+}
+
+export function feedReviewPassed(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Þáššéð îţš ŕéṽîéŵ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202ePassed its review\u202c`;
+  }
+  return `Passed its review`;
+}
+
+export function feedReviewFindings(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé ŕéṽîéŵ ƒöûñð ţĥîñĝš ţö ƒîẋ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe review found things to fix\u202c`;
+  }
+  return `The review found things to fix`;
+}
+
+export function feedReviewBlocked(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé ŕéṽîéŵ çöûļð ñöţ ƒîñîšĥ ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe review could not finish\u202c`;
+  }
+  return `The review could not finish`;
+}
+
+export function feedReviewUpdated(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéṽîéŵ ûþðáţéð ~~~~~]`;
+    case "ar-XB":
+      return `\u202eReview updated\u202c`;
+  }
+  return `Review updated`;
+}
+
+export function riskLow(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ļöŵ ~]`;
+    case "ar-XB":
+      return `\u202elow\u202c`;
+  }
+  return `low`;
+}
+
+export function riskMedium(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ɱéðîûɱ ~~]`;
+    case "ar-XB":
+      return `\u202emedium\u202c`;
+  }
+  return `medium`;
+}
+
+export function riskHigh(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ĥîĝĥ ~~]`;
+    case "ar-XB":
+      return `\u202ehigh\u202c`;
+  }
+  return `high`;
+}
+
+export function feedProgramParts(input: { done: string; title: string; total: string }): string {
+  const done = input.done;
+  const title = input.title;
+  const total = input.total;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${done}/${total} þáŕţš ðöñé · ${title} ~~~~~]`;
+    case "ar-XB":
+      return `${done}\u202e/\u202c${total}\u202e parts done · \u202c${title}`;
+  }
+  return `${done}/${total} parts done · ${title}`;
+}
+
+export function feedProgramPartsStopped(input: {
+  done: string;
+  stopped: string;
+  title: string;
+  total: string;
+}): string {
+  const done = input.done;
+  const stopped = input.stopped;
+  const title = input.title;
+  const total = input.total;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${done}/${total} þáŕţš ðöñé · ${stopped} šţöþþéð · ${title} ~~~~~~~~~]`;
+    case "ar-XB":
+      return `${done}\u202e/\u202c${total}\u202e parts done · \u202c${stopped}\u202e stopped · \u202c${title}`;
+  }
+  return `${done}/${total} parts done · ${stopped} stopped · ${title}`;
+}
+
+export function feedRemembered(input: { text: string }): string {
+  const text = input.text;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒîŕšţ ɱáţé · ŕéɱéɱƀéŕéð: ${text} ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst mate · remembered: \u202c${text}`;
+  }
+  return `First mate · remembered: ${text}`;
+}
+
+export function feedCaptainSet(input: { text: string }): string {
+  const text = input.text;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáþţáîñ · ${text} ~~~~]`;
+    case "ar-XB":
+      return `\u202eCaptain · \u202c${text}`;
+  }
+  return `Captain · ${text}`;
+}
+
+export function feedFirstMateSet(input: { text: string }): string {
+  const text = input.text;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒîŕšţ ɱáţé · ${text} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst mate · \u202c${text}`;
+  }
+  return `First mate · ${text}`;
+}
+
+export function feedPersonalized(input: { text: string }): string {
+  const text = input.text;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒîŕšţ ɱáţé · þéŕšöñáļîžéð: ${text} ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst mate · personalized: \u202c${text}`;
+  }
+  return `First mate · personalized: ${text}`;
+}
+
+export function feedCaptainSaid(input: { preview: string }): string {
+  const preview = input.preview;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáþţáîñ: ${preview} ~~~]`;
+    case "ar-XB":
+      return `\u202eCaptain: \u202c${preview}`;
+  }
+  return `Captain: ${preview}`;
+}
+
+export function feedCaptainImage(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáþţáîñ: îɱáĝé ~~~~~]`;
+    case "ar-XB":
+      return `\u202eCaptain: image\u202c`;
+  }
+  return `Captain: image`;
+}
+
+export function feedProjectCloned(input: { name: string; who: string }): string {
+  const name = input.name;
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${who}Þŕöĵéçţ ${name} · çļöñéð ~~~~~~]`;
+    case "ar-XB":
+      return `${who}\u202eProject \u202c${name}\u202e · cloned\u202c`;
+  }
+  return `${who}Project ${name} · cloned`;
+}
+
+export function feedProjectCreated(input: { name: string; who: string }): string {
+  const name = input.name;
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${who}Þŕöĵéçţ ${name} · çŕéáţéð ~~~~~~]`;
+    case "ar-XB":
+      return `${who}\u202eProject \u202c${name}\u202e · created\u202c`;
+  }
+  return `${who}Project ${name} · created`;
+}
+
+export function feedProjectLinked(input: { name: string; who: string }): string {
+  const name = input.name;
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${who}Þŕöĵéçţ ${name} · ļîñķéð ~~~~~~]`;
+    case "ar-XB":
+      return `${who}\u202eProject \u202c${name}\u202e · linked\u202c`;
+  }
+  return `${who}Project ${name} · linked`;
+}
+
+export function feedProjectRemoved(input: { name: string; who: string }): string {
+  const name = input.name;
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${who}Þŕöĵéçţ ${name} · ŕéɱöṽéð ~~~~~~]`;
+    case "ar-XB":
+      return `${who}\u202eProject \u202c${name}\u202e · removed\u202c`;
+  }
+  return `${who}Project ${name} · removed`;
+}
+
+export function feedByCaptain(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáþţáîñ ·  ~~~~]`;
+    case "ar-XB":
+      return `\u202eCaptain · \u202c`;
+  }
+  return `Captain · `;
+}
+
+export function feedByFirstMate(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒîŕšţ ɱáţé ·  ~~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst mate · \u202c`;
+  }
+  return `First mate · `;
+}
+
+export function feedProjectSettings(input: {
+  delivery: string;
+  merging: string;
+  name: string;
+  who: string;
+}): string {
+  const delivery = input.delivery;
+  const merging = input.merging;
+  const name = input.name;
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${who}Þŕöĵéçţ ${name} · šéţţîñĝš: ${delivery}, ${merging} ~~~~~~~~]`;
+    case "ar-XB":
+      return `${who}\u202eProject \u202c${name}\u202e · settings: \u202c${delivery}\u202e, \u202c${merging}`;
+  }
+  return `${who}Project ${name} · settings: ${delivery}, ${merging}`;
+}
+
+export function feedProjectSettingsCare(input: {
+  care: string;
+  delivery: string;
+  merging: string;
+  name: string;
+  who: string;
+}): string {
+  const care = input.care;
+  const delivery = input.delivery;
+  const merging = input.merging;
+  const name = input.name;
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${who}Þŕöĵéçţ ${name} · šéţţîñĝš: ${delivery}, ${merging}, çáŕé: ${care} ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `${who}\u202eProject \u202c${name}\u202e · settings: \u202c${delivery}\u202e, \u202c${merging}\u202e, care: \u202c${care}`;
+  }
+  return `${who}Project ${name} · settings: ${delivery}, ${merging}, care: ${care}`;
+}
+
+export function feedDeliveryPull(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[þûļļ ŕéǫûéšţ ~~~~]`;
+    case "ar-XB":
+      return `\u202epull request\u202c`;
+  }
+  return `pull request`;
+}
+
+export function feedDeliveryBatched(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ƀáţçĥéð þûļļ ŕéǫûéšţ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ebatched pull request\u202c`;
+  }
+  return `batched pull request`;
+}
+
+export function feedDeliveryLocal(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ɱéŕĝéð ļöçáļļý ~~~~~]`;
+    case "ar-XB":
+      return `\u202emerged locally\u202c`;
+  }
+  return `merged locally`;
+}
+
+export function feedDeliveryInPlace(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ƀûîļţ îñ þļáçé ~~~~~]`;
+    case "ar-XB":
+      return `\u202ebuilt in place\u202c`;
+  }
+  return `built in place`;
+}
+
+export function feedMergesOnItsOwn(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ɱéŕĝéš öñ îţš öŵñ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202emerges on its own\u202c`;
+  }
+  return `merges on its own`;
+}
+
+export function feedAsksFirst(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ášķš ƒîŕšţ ~~~~]`;
+    case "ar-XB":
+      return `\u202easks first\u202c`;
+  }
+  return `asks first`;
+}
+
+export function feedCareQuick(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ǫûîçķ ~~]`;
+    case "ar-XB":
+      return `\u202eQuick\u202c`;
+  }
+  return `Quick`;
+}
+
+export function feedCareStandard(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðéƒáûļţ ~~~]`;
+    case "ar-XB":
+      return `\u202eDefault\u202c`;
+  }
+  return `Default`;
+}
+
+export function feedCareReviewed(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáŕéƒûļ ~~~]`;
+    case "ar-XB":
+      return `\u202eCareful\u202c`;
+  }
+  return `Careful`;
+}
+
+export function feedComputerLeft(input: { name: string }): string {
+  const name = input.name;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${name} ļéƒţ. ~~]`;
+    case "ar-XB":
+      return `${name}\u202e left.\u202c`;
+  }
+  return `${name} left.`;
+}
+
+export function feedComputerSignedIn(input: { provider: string; who: string }): string {
+  const provider = input.provider;
+  const who = input.who;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${who} îš šîĝñéð îñ ţö ${provider}. ~~~~~~]`;
+    case "ar-XB":
+      return `${who}\u202e is signed in to \u202c${provider}\u202e.\u202c`;
+  }
+  return `${who} is signed in to ${provider}.`;
+}
+
+export function feedFirstMateProblem(input: { problem: string }): string {
+  const problem = input.problem;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ƒîŕšţ ɱáţé · þŕöƀļéɱ: ${problem} ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eFirst mate · problem: \u202c${problem}`;
+  }
+  return `First mate · problem: ${problem}`;
+}
+
+export function settleMergingChange(input: { change: string }): string {
+  const change = input.change;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁéŕĝîñĝ ${change} ~~~]`;
+    case "ar-XB":
+      return `\u202eMerging \u202c${change}`;
+  }
+  return `Merging ${change}`;
+}
+
+export function settleMerging(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁéŕĝîñĝ ~~~]`;
+    case "ar-XB":
+      return `\u202eMerging\u202c`;
+  }
+  return `Merging`;
+}
+
+export function settleDiscarding(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðîšçáŕðîñĝ ~~~~]`;
+    case "ar-XB":
+      return `\u202eDiscarding\u202c`;
+  }
+  return `Discarding`;
+}
+
+export function settleMergingChangeAfterTurn(input: { change: string }): string {
+  const change = input.change;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁéŕĝîñĝ ${change} öñçé îţš çŕéŵɱáţé ƒîñîšĥéš ŵĥáţ îţ îš ðöîñĝ ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMerging \u202c${change}\u202e once its crewmate finishes what it is doing\u202c`;
+  }
+  return `Merging ${change} once its crewmate finishes what it is doing`;
+}
+
+export function settleMergingAfterTurn(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁéŕĝîñĝ öñçé îţš çŕéŵɱáţé ƒîñîšĥéš ŵĥáţ îţ îš ðöîñĝ ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMerging once its crewmate finishes what it is doing\u202c`;
+  }
+  return `Merging once its crewmate finishes what it is doing`;
+}
+
+export function settleDiscardingAfterTurn(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðîšçáŕðîñĝ öñçé îţš çŕéŵɱáţé ƒîñîšĥéš ŵĥáţ îţ îš ðöîñĝ ~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDiscarding once its crewmate finishes what it is doing\u202c`;
+  }
+  return `Discarding once its crewmate finishes what it is doing`;
+}
+
+export function settleCannotMerge(input: { problem: string }): string {
+  const problem = input.problem;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáññöţ ɱéŕĝé: ${problem} ~~~~~]`;
+    case "ar-XB":
+      return `\u202eCannot merge: \u202c${problem}`;
+  }
+  return `Cannot merge: ${problem}`;
+}
+
+export function settleCouldNotDiscard(input: { problem: string }): string {
+  const problem = input.problem;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çöûļð ñöţ ðîšçáŕð: ${problem} ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCould not discard: \u202c${problem}`;
+  }
+  return `Could not discard: ${problem}`;
+}
+
+export function settleDiscardedPullOpen(input: { problem: string }): string {
+  const problem = input.problem;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðîšçáŕðéð. Îţš þûļļ ŕéǫûéšţ îš šţîļļ öþéñ ŵĥéŕé ţĥé þŕöĵéçţ ļîṽéš: ${problem} ~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDiscarded. Its pull request is still open where the project lives: \u202c${problem}`;
+  }
+  return `Discarded. Its pull request is still open where the project lives: ${problem}`;
+}
+
+export function settleDiscardedPullOpenThen(input: { followup: string; problem: string }): string {
+  const followup = input.followup;
+  const problem = input.problem;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ðîšçáŕðéð. Îţš þûļļ ŕéǫûéšţ îš šţîļļ öþéñ ŵĥéŕé ţĥé þŕöĵéçţ ļîṽéš: ${problem}. ${followup} ~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eDiscarded. Its pull request is still open where the project lives: \u202c${problem}\u202e. \u202c${followup}`;
+  }
+  return `Discarded. Its pull request is still open where the project lives: ${problem}. ${followup}`;
+}
+
+export function mergedChangeOn(input: { change: string; place: string }): string {
+  const change = input.change;
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁéŕĝéð ${change} öñ ${place} ~~~~]`;
+    case "ar-XB":
+      return `\u202eMerged \u202c${change}\u202e on \u202c${place}`;
+  }
+  return `Merged ${change} on ${place}`;
+}
+
+export function mergedChangeWhereItLives(input: { change: string }): string {
+  const change = input.change;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁéŕĝéð ${change} ŵĥéŕé ţĥé þŕöĵéçţ ļîṽéš ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMerged \u202c${change}\u202e where the project lives\u202c`;
+  }
+  return `Merged ${change} where the project lives`;
+}
+
+export function mergedChangeOnHost(input: { change: string }): string {
+  const change = input.change;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁéŕĝéð ${change} öñ ţĥé þŕöĵéçţ'š ĥöšţ ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMerged \u202c${change}\u202e on the project's host\u202c`;
+  }
+  return `Merged ${change} on the project's host`;
+}
+
+export function mergedOn(input: { place: string }): string {
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁéŕĝéð öñ ${place} ~~~~]`;
+    case "ar-XB":
+      return `\u202eMerged on \u202c${place}`;
+  }
+  return `Merged on ${place}`;
+}
+
+export function mergedWhereItLives(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁéŕĝéð ŵĥéŕé ţĥé þŕöĵéçţ ļîṽéš ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMerged where the project lives\u202c`;
+  }
+  return `Merged where the project lives`;
+}
+
+export function mergedInPull(input: { change: string }): string {
+  const change = input.change;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁéŕĝéð îñ þûļļ ŕéǫûéšţ ${change} ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMerged in pull request \u202c${change}`;
+  }
+  return `Merged in pull request ${change}`;
+}
+
+export function mergedInCommit(input: { commit: string }): string {
+  const commit = input.commit;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁéŕĝéð îñ çöɱɱîţ ${commit} ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMerged in commit \u202c${commit}`;
+  }
+  return `Merged in commit ${commit}`;
+}
+
+export function closedMerged(input: { key: string }): string {
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${key} ɱéŕĝéð ~~~]`;
+    case "ar-XB":
+      return `${key}\u202e merged\u202c`;
+  }
+  return `${key} merged`;
+}
+
+export function closedReleased(input: { key: string }): string {
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${key} ŕéļéášéð ~~~]`;
+    case "ar-XB":
+      return `${key}\u202e released\u202c`;
+  }
+  return `${key} released`;
+}
+
+export function closedFinished(input: { key: string }): string {
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${key} ƒîñîšĥéð ~~~]`;
+    case "ar-XB":
+      return `${key}\u202e finished\u202c`;
+  }
+  return `${key} finished`;
+}
+
+export function closedDropped(input: { key: string }): string {
+  const key = input.key;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[${key} ðŕöþþéð ~~~]`;
+    case "ar-XB":
+      return `${key}\u202e dropped\u202c`;
+  }
+  return `${key} dropped`;
+}
+
+export function closeYourFirstMate(input: { sentence: string }): string {
+  const sentence = input.sentence;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ƒîŕšţ ɱáţé: “${sentence}” ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour first mate: “\u202c${sentence}\u202e”\u202c`;
+  }
+  return `Your first mate: “${sentence}”`;
+}
+
+export function mergedOnItsOwnAt(input: { at: string }): string {
+  const at = input.at;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁéŕĝéð öñ îţš öŵñ áţ ${at} ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMerged on its own at \u202c${at}`;
+  }
+  return `Merged on its own at ${at}`;
+}
+
+export function mergedAt(input: { at: string }): string {
+  const at = input.at;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁéŕĝéð áţ ${at} ~~~~]`;
+    case "ar-XB":
+      return `\u202eMerged at \u202c${at}`;
+  }
+  return `Merged at ${at}`;
+}
+
+export function mergeContinues(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥé ţášķ çöñţîñûéš áƒţéŕ ţĥîš ɱéŕĝé. ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThe task continues after this merge.\u202c`;
+  }
+  return `The task continues after this merge.`;
+}
+
+export function mergesOnItsOwn(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ṁéŕĝéš öñ îţš öŵñ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eMerges on its own\u202c`;
+  }
+  return `Merges on its own`;
+}
+
+export function mergesNext(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţĥé áþþ ɱéŕĝéš îţ öñçé îţš çĥéçķš þášš. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202ethe app merges it once its checks pass.\u202c`;
+  }
+  return `the app merges it once its checks pass.`;
+}
+
+export function mergeSetByFirstMate(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéţ ƀý ýöûŕ ƒîŕšţ ɱáţé ƒöŕ ţĥîš ţášķ. ~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSet by your first mate for this task.\u202c`;
+  }
+  return `Set by your first mate for this task.`;
+}
+
+export function mergeSetInProject(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéţ îñ ţĥîš þŕöĵéçţ'š šéţţîñĝš. ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSet in this project's settings.\u202c`;
+  }
+  return `Set in this project's settings.`;
+}
+
+export function projectsHost(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţĥé þŕöĵéçţ'š ĥöšţ ~~~~~~]`;
+    case "ar-XB":
+      return `\u202ethe project's host\u202c`;
+  }
+  return `the project's host`;
+}
+
+export function keptConflict(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáññöţ ɱéŕĝé ýéţ: îţ çöñƒļîçţš ŵîţĥ ñéŵéŕ ŵöŕķ îñ ţĥé þŕöĵéçţ. Ýöûŕ ɱéŕĝé îš ķéþţ áñð ŕûñš öñçé îţš çŕéŵɱáţé ĥáš ƀŕöûĝĥţ îţ ûþ ţö ðáţé áñð îţš çĥéçķš þášš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCannot merge yet: it conflicts with newer work in the project. Your merge is kept and runs once its crewmate has brought it up to date and its checks pass.\u202c`;
+  }
+  return `Cannot merge yet: it conflicts with newer work in the project. Your merge is kept and runs once its crewmate has brought it up to date and its checks pass.`;
+}
+
+export function keptRepair(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáññöţ ɱéŕĝé ýéţ: îţ çĥáñĝéð áƒţéŕ ţĥé çáŕð ýöû áþþŕöṽéð. Ýöûŕ ɱéŕĝé îš ķéþţ áñð ŕûñš öñçé îţš çŕéŵɱáţé šĥöŵš ţĥé ŵöŕķ îš šţîļļ ŵĥáţ ýöû áþþŕöṽéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCannot merge yet: it changed after the card you approved. Your merge is kept and runs once its crewmate shows the work is still what you approved.\u202c`;
+  }
+  return `Cannot merge yet: it changed after the card you approved. Your merge is kept and runs once its crewmate shows the work is still what you approved.`;
+}
+
+export function keptEvidence(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáññöţ ɱéŕĝé ýéţ: îţš çŕéŵɱáţé çöûļð ñöţ ţéļļ ŵĥéţĥéŕ îţš ļášţ çĥáñĝé ķéþţ ţĥé ŵöŕķ ýöû áþþŕöṽéð, šö áñöţĥéŕ çŕéŵɱáţé îš çĥéçķîñĝ. Ýöûŕ ɱéŕĝé îš ķéþţ áñð ŕûñš îƒ ţĥáţ çĥéçķ ƒîñðš ţĥé ŵöŕķ îš šţîļļ ŵĥáţ ýöû áþþŕöṽéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCannot merge yet: its crewmate could not tell whether its last change kept the work you approved, so another crewmate is checking. Your merge is kept and runs if that check finds the work is still what you approved.\u202c`;
+  }
+  return `Cannot merge yet: its crewmate could not tell whether its last change kept the work you approved, so another crewmate is checking. Your merge is kept and runs if that check finds the work is still what you approved.`;
+}
+
+export function keptChecksFailed(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ɱéŕĝé ŵáîţš ƒöŕ á ƒîẋ: îţš çĥéçķš ƒáîļéð. Å ƒîẋ ƀŕîñĝš á ñéŵ ṽéŕšîöñ ŵîţĥ ƒŕéšĥ çĥéçķš: ŵĥéñ îţ çĥáñĝéð ţĥé ŵöŕķ, îţš çŕéŵɱáţé ášķš ýöû áĝáîñ öñ á ñéŵ çáŕð; öţĥéŕŵîšé ýöûŕ ɱéŕĝé ŕûñš öñçé ţĥéý þášš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour merge waits for a fix: its checks failed. A fix brings a new version with fresh checks: when it changed the work, its crewmate asks you again on a new card; otherwise your merge runs once they pass.\u202c`;
+  }
+  return `Your merge waits for a fix: its checks failed. A fix brings a new version with fresh checks: when it changed the work, its crewmate asks you again on a new card; otherwise your merge runs once they pass.`;
+}
+
+export function keptChecks(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ɱéŕĝé ŵáîţš: ţĥé çĥéçķš ĥáṽé ñöţ áļļ þáššéð. Ýöûŕ áþþŕöṽáļ îš ķéþţ. Îƒ á ƒîẋ çĥáñĝéš ţĥé ŵöŕķ, îţš çŕéŵɱáţé ášķš ýöû áĝáîñ; öţĥéŕŵîšé ţĥé ɱéŕĝé ŕûñš ŵĥéñ îţš çĥéçķš þášš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour merge waits: the checks have not all passed. Your approval is kept. If a fix changes the work, its crewmate asks you again; otherwise the merge runs when its checks pass.\u202c`;
+  }
+  return `Your merge waits: the checks have not all passed. Your approval is kept. If a fix changes the work, its crewmate asks you again; otherwise the merge runs when its checks pass.`;
+}
+
+export function keptCap(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáññöţ ɱéŕĝé ýéţ: îţ îš ŵáîţîñĝ ƒöŕ ýöûŕ áñšŵéŕ áƀöûţ îţš ŕéþáîŕ áţţéɱþţš. Ýöûŕ ɱéŕĝé îš ķéþţ ƒöŕ áƒţéŕ ţĥáţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCannot merge yet: it is waiting for your answer about its repair attempts. Your merge is kept for after that.\u202c`;
+  }
+  return `Cannot merge yet: it is waiting for your answer about its repair attempts. Your merge is kept for after that.`;
+}
+
+export function keptProtected(input: { place: string }): string {
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáññöţ ɱéŕĝé ýéţ: ${place} ĥöļðš îţ ƒöŕ á ŕéǫûîŕéð ŕéṽîéŵ öŕ áñöţĥéŕ ŕûļé öñ ţĥé ɱáîñ ƀŕáñçĥ. Ýöûŕ ɱéŕĝé îš ķéþţ áñð ŕûñš öñçé ${place} áļļöŵš îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCannot merge yet: \u202c${place}\u202e holds it for a required review or another rule on the main branch. Your merge is kept and runs once \u202c${place}\u202e allows it.\u202c`;
+  }
+  return `Cannot merge yet: ${place} holds it for a required review or another rule on the main branch. Your merge is kept and runs once ${place} allows it.`;
+}
+
+export function keptUnclear(input: { place: string }): string {
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáññöţ ɱéŕĝé ýéţ: ${place} ðîð ñöţ ĝîṽé á çļéáŕ áñšŵéŕ. Ýöûŕ ɱéŕĝé îš ķéþţ áñð ţĥé áþþ ţŕîéš áĝáîñ šĥöŕţļý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCannot merge yet: \u202c${place}\u202e did not give a clear answer. Your merge is kept and the app tries again shortly.\u202c`;
+  }
+  return `Cannot merge yet: ${place} did not give a clear answer. Your merge is kept and the app tries again shortly.`;
+}
+
+export function keptDraft(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáññöţ ɱéŕĝé ýéţ: îţš þûļļ ŕéǫûéšţ îš á ðŕáƒţ. Ýöûŕ ɱéŕĝé îš ķéþţ áñð ŕûñš öñçé îţ îš ŕéáðý ƒöŕ ŕéṽîéŵ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCannot merge yet: its pull request is a draft. Your merge is kept and runs once it is ready for review.\u202c`;
+  }
+  return `Cannot merge yet: its pull request is a draft. Your merge is kept and runs once it is ready for review.`;
+}
+
+export function keptSignIn(input: { place: string }): string {
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáññöţ ɱéŕĝé ýéţ: ţĥé áþþ'š ${place} šîĝñ-îñ îš ñééðéð. Ýöûŕ ɱéŕĝé îš ķéþţ áñð ŕûñš öñçé ýöû šîĝñ îñ áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCannot merge yet: the app's \u202c${place}\u202e sign-in is needed. Your merge is kept and runs once you sign in again.\u202c`;
+  }
+  return `Cannot merge yet: the app's ${place} sign-in is needed. Your merge is kept and runs once you sign in again.`;
+}
+
+export function keptRefused(input: { place: string }): string {
+  const place = input.place;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáññöţ ɱéŕĝé ýéţ: ${place} ŕéƒûšéð îţ. Ýöûŕ ɱéŕĝé îš ķéþţ áñð ŕûñš áĝáîñ öñçé îţš çŕéŵɱáţé ĥáš ƒîẋéð ţĥé çáûšé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCannot merge yet: \u202c${place}\u202e refused it. Your merge is kept and runs again once its crewmate has fixed the cause.\u202c`;
+  }
+  return `Cannot merge yet: ${place} refused it. Your merge is kept and runs again once its crewmate has fixed the cause.`;
+}
+
+export function keptGuidance(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáññöţ ɱéŕĝé ýéţ: îţš çŕéŵɱáţé ĥáš ñöţ šáîð ŵĥéţĥéŕ ýöûŕ ñéŵéŕ ŵöŕðš çĥáñĝé ţĥé ŵöŕķ ýöû áþþŕöṽéð. Ýöûŕ ɱéŕĝé îš ķéþţ áñð ŕûñš öñçé îţ šáýš ţĥéý ðö ñöţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCannot merge yet: its crewmate has not said whether your newer words change the work you approved. Your merge is kept and runs once it says they do not.\u202c`;
+  }
+  return `Cannot merge yet: its crewmate has not said whether your newer words change the work you approved. Your merge is kept and runs once it says they do not.`;
+}
+
+export function keptQueueOwned(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵáîţîñĝ ƒöŕ ţĥé ƀáţçĥ çĥéçķ: ýöûŕ þŕöĵéçţ'š ǫûéûé îš ţéšţîñĝ ţĥîš ṽéŕšîöñ ŵîţĥ öţĥéŕ áþþŕöṽéð ŵöŕķ. Ýöûŕ ɱéŕĝé îš ķéþţ. Ýöûŕ þŕöĵéçţ'š ǫûéûé ŵîļļ ɱéŕĝé îţ áƒţéŕ îţš çĥéçķš þášš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWaiting for the batch check: your project's queue is testing this version with other approved work. Your merge is kept. Your project's queue will merge it after its checks pass.\u202c`;
+  }
+  return `Waiting for the batch check: your project's queue is testing this version with other approved work. Your merge is kept. Your project's queue will merge it after its checks pass.`;
+}
+
+export function keptQueue(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵáîţîñĝ ƒöŕ ţĥé ƀáţçĥ çĥéçķ: ýöûŕ þŕöĵéçţ'š ǫûéûé îš ţéšţîñĝ ţĥîš ṽéŕšîöñ ŵîţĥ öţĥéŕ áþþŕöṽéð ŵöŕķ. Ýöûŕ ɱéŕĝé îš ķéþţ. Ţĥé áþþ ŵîļļ ɱéŕĝé îţ áƒţéŕ ýöûŕ þŕöĵéçţ'š ǫûéûé þáššéš îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWaiting for the batch check: your project's queue is testing this version with other approved work. Your merge is kept. The app will merge it after your project's queue passes it.\u202c`;
+  }
+  return `Waiting for the batch check: your project's queue is testing this version with other approved work. Your merge is kept. The app will merge it after your project's queue passes it.`;
+}
+
+export function menuCheckUpdates(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çĥéçķ ƒöŕ Ûþðáţéš… ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCheck for Updates…\u202c`;
+  }
+  return `Check for Updates…`;
+}
+
+export function menuSettings(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šéţţîñĝš… ~~~]`;
+    case "ar-XB":
+      return `\u202eSettings…\u202c`;
+  }
+  return `Settings…`;
+}
+
+export function menuKeyboardSettings(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ķéýƀöáŕð Šéţţîñĝš… ~~~~~~]`;
+    case "ar-XB":
+      return `\u202eKeyboard Settings…\u202c`;
+  }
+  return `Keyboard Settings…`;
+}
+
+export function menuResetAllKeys(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéšéţ Åļļ Ķéýš… ~~~~~]`;
+    case "ar-XB":
+      return `\u202eReset All Keys…\u202c`;
+  }
+  return `Reset All Keys…`;
+}
+
+export function menuWhatsNew(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵĥáţ’š Ñéŵ îñ Îñƒîñîţáŕý ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWhat’s New in Infinitary\u202c`;
+  }
+  return `What’s New in Infinitary`;
+}
+
+export function menuHelp(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĥéļþ ~~]`;
+    case "ar-XB":
+      return `\u202eHelp\u202c`;
+  }
+  return `Help`;
+}
+
+export function resetKeysAsk(input: { preset: string }): string {
+  const preset = input.preset;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéšéţ éṽéŕý ķéý ţö ţĥé ${preset} þŕéšéţ'š? ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eReset every key to the \u202c${preset}\u202e preset's?\u202c`;
+  }
+  return `Reset every key to the ${preset} preset's?`;
+}
+
+export function resetKeysDetail(input: { preset: string }): string {
+  const preset = input.preset;
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Éṽéŕý šĥöŕţçûţ ýöû çĥáñĝéð îñ Ķéýƀöáŕð šéţţîñĝš ĝöéš ƀáçķ ţö ţĥé öñé ţĥé ${preset} þŕéšéţ ĝîṽéš îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEvery shortcut you changed in Keyboard settings goes back to the one the \u202c${preset}\u202e preset gives it.\u202c`;
+  }
+  return `Every shortcut you changed in Keyboard settings goes back to the one the ${preset} preset gives it.`;
+}
+
+export function resetKeysConfirm(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŕéšéţ Åļļ Ķéýš ~~~~~]`;
+    case "ar-XB":
+      return `\u202eReset All Keys\u202c`;
+  }
+  return `Reset All Keys`;
+}
+
+export function dialogCancel(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çáñçéļ ~~]`;
+    case "ar-XB":
+      return `\u202eCancel\u202c`;
+  }
+  return `Cancel`;
+}
+
+export function trayOpen(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Öþéñ Îñƒîñîţáŕý ~~~~~]`;
+    case "ar-XB":
+      return `\u202eOpen Infinitary\u202c`;
+  }
+  return `Open Infinitary`;
+}
+
+export function trayQuit(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ǫûîţ Îñƒîñîţáŕý ~~~~~]`;
+    case "ar-XB":
+      return `\u202eQuit Infinitary\u202c`;
+  }
+  return `Quit Infinitary`;
+}
+
+export function secretsArchiveSaveTitle(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šáṽé éñçŕýþţéð Šéçŕéţš áŕçĥîṽé ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSave encrypted Secrets archive\u202c`;
+  }
+  return `Save encrypted Secrets archive`;
+}
+
+export function secretsArchiveSaveMessage(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çĥööšé á ñéŵ ƒîļé. Éẋîšţîñĝ áŕçĥîṽéš ŵîļļ ñöţ ƀé ŕéþļáçéð. ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChoose a new file. Existing archives will not be replaced.\u202c`;
+  }
+  return `Choose a new file. Existing archives will not be replaced.`;
+}
+
+export function secretsKeySaveTitle(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šáṽé ţĥé šéþáŕáţé ŕéçöṽéŕý ķéý ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eSave the separate recovery key\u202c`;
+  }
+  return `Save the separate recovery key`;
+}
+
+export function secretsKeySaveMessage(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ķééþ ţĥîš ķéý šéþáŕáţéļý ƒŕöɱ ţĥé áŕçĥîṽé. Åñýöñé ŵîţĥ ƀöţĥ çáñ ŕéáð ţĥé šáṽéð šéçŕéţš. Ţĥéŕé îš ñö ķéý ŕéšéţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eKeep this key separately from the archive. Anyone with both can read the saved secrets. There is no key reset.\u202c`;
+  }
+  return `Keep this key separately from the archive. Anyone with both can read the saved secrets. There is no key reset.`;
+}
+
+export function secretsArchiveOpenTitle(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çĥööšé ţĥé éñçŕýþţéð Šéçŕéţš áŕçĥîṽé ~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChoose the encrypted Secrets archive\u202c`;
+  }
+  return `Choose the encrypted Secrets archive`;
+}
+
+export function secretsKeyOpenTitle(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çĥööšé îţš šéþáŕáţé ŕéçöṽéŕý ķéý ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eChoose its separate recovery key\u202c`;
+  }
+  return `Choose its separate recovery key`;
+}
+
+export function secretsHistoryExportTitle(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Éẋþöŕţ Šéçŕéţš ĥîšţöŕý ~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eExport Secrets history\u202c`;
+  }
+  return `Export Secrets history`;
+}
+
+export function dialogExport(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Éẋþöŕţ ~~]`;
+    case "ar-XB":
+      return `\u202eExport\u202c`;
+  }
+  return `Export`;
+}
+
+export function dialogChoose(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çĥööšé ~~]`;
+    case "ar-XB":
+      return `\u202eChoose\u202c`;
+  }
+  return `Choose`;
+}
+
+export function dialogAdd(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åðð ~]`;
+    case "ar-XB":
+      return `\u202eAdd\u202c`;
+  }
+  return `Add`;
+}
+
+export function dialogAttach(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åţţáçĥ ~~]`;
+    case "ar-XB":
+      return `\u202eAttach\u202c`;
+  }
+  return `Attach`;
+}
+
+export function welcomeTitle(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ĥöŵ ŵé ŵöŕķ ~~~~]`;
+    case "ar-XB":
+      return `\u202eHow we work\u202c`;
+  }
+  return `How we work`;
+}
+
+export function welcomeBox(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţýþé ŵĥáţ ýöû ŵáñţ ðöñé îñ ţĥé ɱéššáĝé ƀöẋ ûñðéŕ ţĥîš çáŕð. ~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eType what you want done in the message box under this card.\u202c`;
+  }
+  return `Type what you want done in the message box under this card.`;
+}
+
+export function welcomeCard(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Î ƀŕîñĝ ƀáçķ áñšŵéŕš áñð çĥöîçéš áš çáŕðš ļîķé ţĥîš öñé. ~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eI bring back answers and choices as cards like this one.\u202c`;
+  }
+  return `I bring back answers and choices as cards like this one.`;
+}
+
+export function welcomeActivity(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çŕéŵɱáţéš ðö ţĥé ŵöŕķ îñ ţĥé ƀáçķĝŕöûñð áñð ŕéþöŕţ ĥéŕé. ~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eCrewmates do the work in the background and report here.\u202c`;
+  }
+  return `Crewmates do the work in the background and report here.`;
+}
+
+export function welcomeTasks(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Éṽéŕý ášķ ĝéţš á ŕéçöŕð ĥéŕé. ~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eEvery ask gets a record here.\u202c`;
+  }
+  return `Every ask gets a record here.`;
+}
+
+export function welcomeEnd(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţĥáţ îš áļļ öƒ îţ. Ţö ƀéĝîñ, þŕéšš á šţáŕţéŕ ƀéļöŵ. ~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThat is all of it. To begin, press a starter below.\u202c`;
+  }
+  return `That is all of it. To begin, press a starter below.`;
+}
+
+export function welcomeStartersLead(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţö ƀéĝîñ, þŕéšš öñé áñð ƒîñîšĥ ţĥé šéñţéñçé: ~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eTo begin, press one and finish the sentence:\u202c`;
+  }
+  return `To begin, press one and finish the sentence:`;
+}
+
+export function welcomeStarterClone(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çļöñé á þŕöĵéçţ ~~~~~]`;
+    case "ar-XB":
+      return `\u202eClone a project\u202c`;
+  }
+  return `Clone a project`;
+}
+
+export function welcomeStarterCloneWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Çļöñé ţĥé þŕöĵéçţ áţ  ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eClone the project at \u202c`;
+  }
+  return `Clone the project at `;
+}
+
+export function welcomeStarterNew(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šţáŕţ á ñéŵ þŕöĵéçţ ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eStart a new project\u202c`;
+  }
+  return `Start a new project`;
+}
+
+export function welcomeStarterNewWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Šţáŕţ á ñéŵ þŕöĵéçţ çáļļéð  ~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eStart a new project called \u202c`;
+  }
+  return `Start a new project called `;
+}
+
+export function welcomeStarterFolder(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵöŕķ îñ á ƒöļðéŕ öñ ɱý çöɱþûţéŕ ~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWork in a folder on my computer\u202c`;
+  }
+  return `Work in a folder on my computer`;
+}
+
+export function welcomeStarterFolderWords(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ŵöŕķ îñ ţĥé ƒöļðéŕ  ~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eWork in the folder \u202c`;
+  }
+  return `Work in the folder `;
+}
+
+export function welcomeLabelActivity(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Åçţîṽîţý ~~~]`;
+    case "ar-XB":
+      return `\u202eActivity\u202c`;
+  }
+  return `Activity`;
+}
+
+export function welcomeLabelTasks(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ţášķš ~~]`;
+    case "ar-XB":
+      return `\u202eTasks\u202c`;
+  }
+  return `Tasks`;
+}
+
+export function welcomeLabelBox(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[ţĥé ɱéššáĝé ƀöẋ ~~~~~]`;
+    case "ar-XB":
+      return `\u202ethe message box\u202c`;
+  }
+  return `the message box`;
+}
+
+export function welcomeBack(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ɓáçķ ~~]`;
+    case "ar-XB":
+      return `\u202eBack\u202c`;
+  }
+  return `Back`;
+}
+
+export function welcomeNext(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ñéẋţ ~~]`;
+    case "ar-XB":
+      return `\u202eNext\u202c`;
+  }
+  return `Next`;
+}
+
+export function welcomeFigure(): string {
+  switch (currentLanguage()) {
+    case "en-XA":
+      return `[Ýöûŕ ŵîñðöŵ, öñé þáŕţ þéŕ þŕéšš: ţĥé ɱéššáĝé ƀöẋ, á çáŕð, Åçţîṽîţý áñð Ţášķš ~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eYour window, one part per press: the message box, a card, Activity and Tasks\u202c`;
+  }
+  return `Your window, one part per press: the message box, a card, Activity and Tasks`;
+}
+
+/** Every message by its name, for words saved as a fact and worded when shown (docs/i18n.md, "Saved facts"). */
+export const MESSAGES = {
+  composerLines,
+  pastedFileMeta,
+  pastedFileRemove,
+  pastedFileRemoveNamed,
+  fileAdd,
+  filePreparing,
+  fileReady,
+  fileCancel,
+  fileReadyAnnounce,
+  filePathsAnnounce,
+  fileDropHere,
+  cardHeadingWhy,
+  cardHeadingWhatChanged,
+  cardHeadingBefore,
+  cardHeadingAfter,
+  feedStarted,
+  feedReported,
+  feedReportedBare,
+  feedProblem,
+  feedFailed,
+  feedMerged,
+  feedCarriedOnBy,
+  feedDropped,
+  feedContainerFinished,
+  feedContainerStopped,
+  feedYouChose,
+  feedAnsweredWith,
+  feedAnswered,
+  feedDiscarded,
+  feedReleased,
+  feedBuiltInPlace,
+  feedFinished,
+  feedStopped,
+  feedUpdated,
+  feedMovedOnTier,
+  feedMoved,
+  feedFirstMateSaid,
+  feedUndelivered,
+  feedNoted,
+  feedPullOpened,
+  feedBranchPushed,
+  feedRepairsCapped,
+  feedChecksPassed,
+  feedChecksFailed,
+  feedChecksRunning,
+  feedChecksNoPull,
+  feedChecksMergedOutside,
+  feedChecksUpdated,
+  feedReviewPassedRisk,
+  feedReviewPassed,
+  feedReviewFindings,
+  feedReviewBlocked,
+  feedReviewUpdated,
+  riskLow,
+  riskMedium,
+  riskHigh,
+  feedProgramParts,
+  feedProgramPartsStopped,
+  feedRemembered,
+  feedCaptainSet,
+  feedFirstMateSet,
+  feedPersonalized,
+  feedCaptainSaid,
+  feedCaptainImage,
+  feedProjectCloned,
+  feedProjectCreated,
+  feedProjectLinked,
+  feedProjectRemoved,
+  feedByCaptain,
+  feedByFirstMate,
+  feedProjectSettings,
+  feedProjectSettingsCare,
+  feedDeliveryPull,
+  feedDeliveryBatched,
+  feedDeliveryLocal,
+  feedDeliveryInPlace,
+  feedMergesOnItsOwn,
+  feedAsksFirst,
+  feedCareQuick,
+  feedCareStandard,
+  feedCareReviewed,
+  feedComputerLeft,
+  feedComputerSignedIn,
+  feedFirstMateProblem,
+  settleMergingChange,
+  settleMerging,
+  settleDiscarding,
+  settleMergingChangeAfterTurn,
+  settleMergingAfterTurn,
+  settleDiscardingAfterTurn,
+  settleCannotMerge,
+  settleCouldNotDiscard,
+  settleDiscardedPullOpen,
+  settleDiscardedPullOpenThen,
+  mergedChangeOn,
+  mergedChangeWhereItLives,
+  mergedChangeOnHost,
+  mergedOn,
+  mergedWhereItLives,
+  mergedInPull,
+  mergedInCommit,
+  closedMerged,
+  closedReleased,
+  closedFinished,
+  closedDropped,
+  closeYourFirstMate,
+  mergedOnItsOwnAt,
+  mergedAt,
+  mergeContinues,
+  mergesOnItsOwn,
+  mergesNext,
+  mergeSetByFirstMate,
+  mergeSetInProject,
+  projectsHost,
+  keptConflict,
+  keptRepair,
+  keptEvidence,
+  keptChecksFailed,
+  keptChecks,
+  keptCap,
+  keptProtected,
+  keptUnclear,
+  keptDraft,
+  keptSignIn,
+  keptRefused,
+  keptGuidance,
+  keptQueueOwned,
+  keptQueue,
+  menuCheckUpdates,
+  menuSettings,
+  menuKeyboardSettings,
+  menuResetAllKeys,
+  menuWhatsNew,
+  menuHelp,
+  resetKeysAsk,
+  resetKeysDetail,
+  resetKeysConfirm,
+  dialogCancel,
+  trayOpen,
+  trayQuit,
+  secretsArchiveSaveTitle,
+  secretsArchiveSaveMessage,
+  secretsKeySaveTitle,
+  secretsKeySaveMessage,
+  secretsArchiveOpenTitle,
+  secretsKeyOpenTitle,
+  secretsHistoryExportTitle,
+  dialogExport,
+  dialogChoose,
+  dialogAdd,
+  dialogAttach,
+  welcomeTitle,
+  welcomeBox,
+  welcomeCard,
+  welcomeActivity,
+  welcomeTasks,
+  welcomeEnd,
+  welcomeStartersLead,
+  welcomeStarterClone,
+  welcomeStarterCloneWords,
+  welcomeStarterNew,
+  welcomeStarterNewWords,
+  welcomeStarterFolder,
+  welcomeStarterFolderWords,
+  welcomeLabelActivity,
+  welcomeLabelTasks,
+  welcomeLabelBox,
+  welcomeBack,
+  welcomeNext,
+  welcomeFigure,
+} as const;
+
+/** The name of a message in the catalog. */
+export type MessageName = keyof typeof MESSAGES;
+
+/** What each message fills, its plural count included: a saved fact missing one is shown as saved. */
+export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
+  composerLines: ["count"],
+  pastedFileMeta: ["kilobytes", "lines"],
+  pastedFileRemove: ["lines"],
+  pastedFileRemoveNamed: ["name"],
+  fileAdd: [],
+  filePreparing: [],
+  fileReady: [],
+  fileCancel: ["name"],
+  fileReadyAnnounce: ["name"],
+  filePathsAnnounce: ["count"],
+  fileDropHere: [],
+  cardHeadingWhy: [],
+  cardHeadingWhatChanged: [],
+  cardHeadingBefore: [],
+  cardHeadingAfter: [],
+  feedStarted: [],
+  feedReported: ["summary"],
+  feedReportedBare: [],
+  feedProblem: ["problem"],
+  feedFailed: ["problem"],
+  feedMerged: [],
+  feedCarriedOnBy: ["key"],
+  feedDropped: ["sentence"],
+  feedContainerFinished: [],
+  feedContainerStopped: [],
+  feedYouChose: ["choice"],
+  feedAnsweredWith: ["answer"],
+  feedAnswered: [],
+  feedDiscarded: [],
+  feedReleased: [],
+  feedBuiltInPlace: [],
+  feedFinished: [],
+  feedStopped: [],
+  feedUpdated: ["text"],
+  feedMovedOnTier: ["key", "tier"],
+  feedMoved: ["key"],
+  feedFirstMateSaid: ["text"],
+  feedUndelivered: ["why"],
+  feedNoted: ["text"],
+  feedPullOpened: [],
+  feedBranchPushed: [],
+  feedRepairsCapped: ["rounds"],
+  feedChecksPassed: [],
+  feedChecksFailed: [],
+  feedChecksRunning: [],
+  feedChecksNoPull: [],
+  feedChecksMergedOutside: [],
+  feedChecksUpdated: [],
+  feedReviewPassedRisk: ["risk"],
+  feedReviewPassed: [],
+  feedReviewFindings: [],
+  feedReviewBlocked: [],
+  feedReviewUpdated: [],
+  riskLow: [],
+  riskMedium: [],
+  riskHigh: [],
+  feedProgramParts: ["done", "title", "total"],
+  feedProgramPartsStopped: ["done", "stopped", "title", "total"],
+  feedRemembered: ["text"],
+  feedCaptainSet: ["text"],
+  feedFirstMateSet: ["text"],
+  feedPersonalized: ["text"],
+  feedCaptainSaid: ["preview"],
+  feedCaptainImage: [],
+  feedProjectCloned: ["name", "who"],
+  feedProjectCreated: ["name", "who"],
+  feedProjectLinked: ["name", "who"],
+  feedProjectRemoved: ["name", "who"],
+  feedByCaptain: [],
+  feedByFirstMate: [],
+  feedProjectSettings: ["delivery", "merging", "name", "who"],
+  feedProjectSettingsCare: ["care", "delivery", "merging", "name", "who"],
+  feedDeliveryPull: [],
+  feedDeliveryBatched: [],
+  feedDeliveryLocal: [],
+  feedDeliveryInPlace: [],
+  feedMergesOnItsOwn: [],
+  feedAsksFirst: [],
+  feedCareQuick: [],
+  feedCareStandard: [],
+  feedCareReviewed: [],
+  feedComputerLeft: ["name"],
+  feedComputerSignedIn: ["provider", "who"],
+  feedFirstMateProblem: ["problem"],
+  settleMergingChange: ["change"],
+  settleMerging: [],
+  settleDiscarding: [],
+  settleMergingChangeAfterTurn: ["change"],
+  settleMergingAfterTurn: [],
+  settleDiscardingAfterTurn: [],
+  settleCannotMerge: ["problem"],
+  settleCouldNotDiscard: ["problem"],
+  settleDiscardedPullOpen: ["problem"],
+  settleDiscardedPullOpenThen: ["followup", "problem"],
+  mergedChangeOn: ["change", "place"],
+  mergedChangeWhereItLives: ["change"],
+  mergedChangeOnHost: ["change"],
+  mergedOn: ["place"],
+  mergedWhereItLives: [],
+  mergedInPull: ["change"],
+  mergedInCommit: ["commit"],
+  closedMerged: ["key"],
+  closedReleased: ["key"],
+  closedFinished: ["key"],
+  closedDropped: ["key"],
+  closeYourFirstMate: ["sentence"],
+  mergedOnItsOwnAt: ["at"],
+  mergedAt: ["at"],
+  mergeContinues: [],
+  mergesOnItsOwn: [],
+  mergesNext: [],
+  mergeSetByFirstMate: [],
+  mergeSetInProject: [],
+  projectsHost: [],
+  keptConflict: [],
+  keptRepair: [],
+  keptEvidence: [],
+  keptChecksFailed: [],
+  keptChecks: [],
+  keptCap: [],
+  keptProtected: ["place"],
+  keptUnclear: ["place"],
+  keptDraft: [],
+  keptSignIn: ["place"],
+  keptRefused: ["place"],
+  keptGuidance: [],
+  keptQueueOwned: [],
+  keptQueue: [],
+  menuCheckUpdates: [],
+  menuSettings: [],
+  menuKeyboardSettings: [],
+  menuResetAllKeys: [],
+  menuWhatsNew: [],
+  menuHelp: [],
+  resetKeysAsk: ["preset"],
+  resetKeysDetail: ["preset"],
+  resetKeysConfirm: [],
+  dialogCancel: [],
+  trayOpen: [],
+  trayQuit: [],
+  secretsArchiveSaveTitle: [],
+  secretsArchiveSaveMessage: [],
+  secretsKeySaveTitle: [],
+  secretsKeySaveMessage: [],
+  secretsArchiveOpenTitle: [],
+  secretsKeyOpenTitle: [],
+  secretsHistoryExportTitle: [],
+  dialogExport: [],
+  dialogChoose: [],
+  dialogAdd: [],
+  dialogAttach: [],
+  welcomeTitle: [],
+  welcomeBox: [],
+  welcomeCard: [],
+  welcomeActivity: [],
+  welcomeTasks: [],
+  welcomeEnd: [],
+  welcomeStartersLead: [],
+  welcomeStarterClone: [],
+  welcomeStarterCloneWords: [],
+  welcomeStarterNew: [],
+  welcomeStarterNewWords: [],
+  welcomeStarterFolder: [],
+  welcomeStarterFolderWords: [],
+  welcomeLabelActivity: [],
+  welcomeLabelTasks: [],
+  welcomeLabelBox: [],
+  welcomeBack: [],
+  welcomeNext: [],
+  welcomeFigure: [],
+};

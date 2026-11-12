@@ -1,7 +1,8 @@
 import { type FeedLine, reportSummary, taskFeedKind } from "@shared/feed";
+import { formatNumber } from "@shared/i18n/format";
+import { englishOf, type Said, said, saidLine, saidPart, saidSchema } from "@shared/i18n/said";
 import { plainProblem, typedFailureOf } from "@shared/plainProblem";
-import { CHECK_WORDS } from "@shared/vocabulary";
-import { droppedLine } from "../orchestrator/settleWords";
+import { droppedSaid } from "../orchestrator/settleWords";
 import type { ActivityStore } from "../storage/activityStore";
 import type { TaskEvent } from "../storage/taskEventStore";
 import type { TaskRecord } from "../storage/taskRecords";
@@ -33,10 +34,39 @@ import type { TaskService } from "./taskService";
 export const SETTLE_FOLD = "settle";
 
 /** A discarded task's own line: its close says it, with nothing more to add. */
-export const DISCARDED_LINE = "Discarded";
+export const DISCARDED_LINE = englishOf(said("feedDiscarded"));
 
 /** An answered task's own line when its close names no choice and no use. */
-export const ANSWERED_LINE = "Answered";
+export const ANSWERED_LINE = englishOf(said("feedAnswered"));
+
+/** The checks' state a `ci` event names, as its line says it. */
+const CHECKS_SAID: Record<string, Said> = {
+  green: said("feedChecksPassed"),
+  red: said("feedChecksFailed"),
+  pending: said("feedChecksRunning"),
+  "no-pr": said("feedChecksNoPull"),
+  merged: said("feedChecksMergedOutside"),
+};
+
+/** A review's risk level, as its line says it; another level is said as recorded. */
+function riskWords(risk: string) {
+  return risk === "low"
+    ? saidPart("riskLow")
+    : risk === "medium"
+      ? saidPart("riskMedium")
+      : risk === "high"
+        ? saidPart("riskHigh")
+        : risk;
+}
+
+/**
+ * The fact a host line saved beside its words (`data.said`, docs/i18n.md
+ * "Saved facts"), when it is one this version can read.
+ */
+export function savedSaid(value: unknown): Said | undefined {
+  const parsed = saidSchema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
+}
 
 /** The fold a timeline event's feed line belongs to, if any (`recentFeed`). */
 function foldOf(event: TaskEvent): string | undefined {
@@ -59,17 +89,20 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
   if (!event.feed) return null;
   const data = event.data ?? {};
   const status = text(data.status);
-  let line: string;
+  // Each line is a fact worded where it is shown, its English beside it
+  // (docs/i18n.md, "Saved facts"); a line said as it was written has none.
+  let fact: Said | undefined;
+  let written: string | undefined;
   switch (event.kind) {
     case "dispatched":
-      line = "Started";
+      fact = said("feedStarted");
       break;
     case "report": {
       // A finished report is followed by its task's own Finished line, so
       // it writes none of its own (INF-1845).
       if (data.finished === true) return null;
       const summary = text(data.summary) ?? reportSummary(event.text);
-      line = summary ? `Reported: ${summary}` : "Reported";
+      fact = summary ? said("feedReported", { summary }) : said("feedReportedBare");
       break;
     }
     case "failed": {
@@ -78,35 +111,36 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
       // failed on a task that lives on (recordTurnFailure marks it
       // non-fatal) reads differently from a task that failed for good.
       const problem = plainProblem(text(data.error) ?? event.text, typedFailureOf(data));
-      line = `${data.fatal === false ? "Problem" : "Failed"}: ${problem}`;
+      fact =
+        data.fatal === false ? said("feedProblem", { problem }) : said("feedFailed", { problem });
       break;
     }
     case "landed":
     case "merged":
       // The close carries the change and where it went in (INF-1845).
-      line = text(data.line) ?? "Merged";
+      fact = savedSaid(data.lineSaid);
+      written = fact ? undefined : text(data.line);
+      if (!fact && !written) fact = said("feedMerged");
       break;
     case "status": {
       const reason = text(data.reason);
       const sentence = text(data.closingSentence);
       const carriedBy = text(data.carriedBy);
+      const choice = text(data.choice);
       if (status === "done" && reason === "superseded" && carriedBy) {
         // Work another task carries on (INF-1825): one line, no note.
-        line = `Carried on by ${carriedBy}`;
+        fact = said("feedCarriedOnBy", { key: carriedBy });
       } else if (status === "dropped" && sentence) {
         // A drop the first mate made carries its own sentence (INF-547):
         // the line says what the drop was, the same words as its note.
-        line = droppedLine(sentence);
+        fact = droppedSaid(sentence);
       } else if (data.container === true) {
         // A parent that carried no crewmate closed with its children (the
         // container rule): its line says what became of the work under it.
-        line =
-          reason === "finished"
-            ? "Done: everything under it is finished"
-            : "Stopped: nothing under it went ahead";
-      } else if (reason === "answered" && text(data.choice)) {
+        fact = reason === "finished" ? said("feedContainerFinished") : said("feedContainerStopped");
+      } else if (reason === "answered" && choice) {
         // The captain's own choice on the answer's card (INF-1845).
-        line = `You chose "${text(data.choice)}"`;
+        fact = said("feedYouChose", { choice });
       } else if (
         reason === "answered" &&
         (typeof data.basisOf === "string" ||
@@ -116,23 +150,23 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
         // An answer the next task took as its basis, a step a live task
         // waited on, or a step whose reported answer the first mate passed
         // on itself (settle_task done, why answered): it was used, not thrown away.
-        line = `Answered: ${event.text.replace(/^answered - /, "")}`;
+        fact = said("feedAnsweredWith", { answer: event.text.replace(/^answered - /, "") });
       } else if (reason === "answered") {
-        line = ANSWERED_LINE;
+        fact = said("feedAnswered");
       } else if (reason === "discarded") {
-        line = DISCARDED_LINE;
+        fact = said("feedDiscarded");
       } else if (reason === "released") {
-        line = "Released outside this task";
+        fact = said("feedReleased");
       } else if (reason === "finished" && record.delivery?.mode === "in-place") {
         // The personal workspace (talk-to-personalize Step 4): the work is in
         // place and committed; nothing was decommissioned or landed.
-        line = "Built in place";
+        fact = said("feedBuiltInPlace");
       } else if (reason === "finished") {
-        line = "Finished";
+        fact = said("feedFinished");
       } else if (reason === "cancelled" && record.assignee) {
-        line = "Stopped";
+        fact = said("feedStopped");
       } else {
-        line = `Updated: ${event.text}`;
+        fact = said("feedUpdated", { text: event.text });
       }
       break;
     }
@@ -142,9 +176,11 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
       // on. The fresh attempt's own `escalated` row is feed = 0.
       const tier = text(data.tier);
       const continues = text(data.escalated_to);
-      line = continues
-        ? `Moved to a stronger model: ${tier ? `${tier}; ` : ""}continues as ${continues}`
-        : `Updated: ${event.text}`;
+      fact = !continues
+        ? said("feedUpdated", { text: event.text })
+        : tier
+          ? said("feedMovedOnTier", { tier, key: continues })
+          : said("feedMoved", { key: continues });
       break;
     }
     case "note": {
@@ -152,50 +188,49 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
       // the feed line stays short and says what happened to it.
       // A filing verdict is the one line the quiet ledger promised. A move
       // to another model (`recordServedModel`), and a feed line written as
-      // a row on its task (`data.feedLine`), is said as it was written.
+      // a row on its task (`data.feedLine`), is said as it was written,
+      // with the fact its writer saved beside it, if any.
       const why = text(data.why);
-      line =
-        text(data.ledger) === "verdict"
-          ? `First mate: ${event.text}`
-          : typeof data.undelivered === "number" && why
-            ? `Message undelivered: ${why}`
-            : text(data.servedModel) || data.feedLine === true
-              ? event.text
-              : `Noted: ${event.text}`;
+      if (text(data.ledger) === "verdict") fact = said("feedFirstMateSaid", { text: event.text });
+      else if (typeof data.undelivered === "number" && why) fact = said("feedUndelivered", { why });
+      else if (text(data.servedModel) || data.feedLine === true) {
+        fact = savedSaid(data.said);
+        written = fact ? undefined : event.text;
+      } else fact = said("feedNoted", { text: event.text });
       break;
     }
     // The delivery lines are authored from the facts the event carries, not
     // its text: the timeline keeps the PR number, link and SHA for the
     // record, and the feed says what they mean.
     case "pr_opened":
-      line = typeof data.prNumber === "number" ? "Opened a pull request" : "Pushed the branch";
+      fact = typeof data.prNumber === "number" ? said("feedPullOpened") : said("feedBranchPushed");
       break;
     case "ci": {
       const rounds = typeof data.ciRounds === "number" ? data.ciRounds : undefined;
       const checks = text(data.ci);
-      line =
+      fact =
         data.ciCapAt !== undefined && rounds !== undefined
-          ? `${rounds} repairs did not get the checks to pass - your first mate will ask you what to do`
-          : checks && CHECK_WORDS[checks]
-            ? `The checks ${CHECK_WORDS[checks]}`
-            : "Checks updated";
+          ? said("feedRepairsCapped", { rounds })
+          : ((checks ? CHECKS_SAID[checks] : undefined) ?? said("feedChecksUpdated"));
       break;
     }
     case "review": {
       const verdict = text(data.reviewVerdict);
       const risk = text(data.reviewRisk);
-      line =
+      fact =
         verdict === "pass"
-          ? `Passed its review${risk ? `, ${risk} risk` : ""}`
+          ? risk
+            ? said("feedReviewPassedRisk", { risk: riskWords(risk) })
+            : said("feedReviewPassed")
           : verdict === "findings"
-            ? "The review found things to fix"
+            ? said("feedReviewFindings")
             : verdict === "blocked"
-              ? "The review could not finish"
-              : "Review updated";
+              ? said("feedReviewBlocked")
+              : said("feedReviewUpdated");
       break;
     }
     default:
-      line = `Updated: ${event.text}`;
+      fact = said("feedUpdated", { text: event.text });
   }
   return {
     // A model the backend chose on its own, or a project folder a merge
@@ -205,7 +240,8 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
       ((data.fallback !== undefined && text(data.servedModel)) || data.folderRefresh !== undefined)
         ? "warn"
         : taskFeedKind(event.kind, status),
-    text: line,
+    text: written ?? (fact ? englishOf(fact) : ""),
+    ...(fact ? { said: fact } : {}),
     at: event.at,
     taskKey: record.key,
     event: event.kind,
@@ -257,7 +293,20 @@ export function recentFeed(tasks: TaskService, activity: ActivityStore, limit: n
               : program.status === "done"
                 ? ("ok" as const)
                 : ("info" as const),
-          text: `${done}/${parts.length} parts done${dropped ? ` · ${dropped} stopped` : ""} · ${program.title}`,
+          ...saidLine(
+            dropped
+              ? said("feedProgramPartsStopped", {
+                  done: formatNumber(done),
+                  total: formatNumber(parts.length),
+                  stopped: formatNumber(dropped),
+                  title: program.title,
+                })
+              : said("feedProgramParts", {
+                  done: formatNumber(done),
+                  total: formatNumber(parts.length),
+                  title: program.title,
+                }),
+          ),
           saidHere: true as const,
         },
       ];

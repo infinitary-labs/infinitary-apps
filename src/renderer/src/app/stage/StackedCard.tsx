@@ -16,6 +16,7 @@ import {
 import { CARD_CHOICE_COMMANDS } from "@shared/keyboard";
 import type { FrameAnswers } from "@shared/plugins/bridge";
 import type { Theme } from "@shared/preferences";
+import { wordedTitle } from "@shared/welcome";
 import { type CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AskedLine } from "../../cards/AskedLine";
@@ -210,6 +211,8 @@ export function StackedCard({
     [split, card.actions.length],
   );
   const strip = foot ? foot.strip : split?.facts;
+  // A card the app wrote itself is titled in the window's language (docs/i18n.md).
+  const shownTitle = wordedTitle(card.title, card.body);
   // A merge card's risk chart is chrome at its top right (docs/card-authoring.md
   // "The risk chart"); the body keeps clear of the box it holds.
   const asideRef = useRef<HTMLDivElement>(null);
@@ -423,8 +426,8 @@ export function StackedCard({
       <ResponseCard
         kind={card.ended ? "ended" : chrome}
         bodyRef={bodyRef}
-        title={card.title}
-        titleWords={<KeyedText text={card.title} own={ownTaskId} />}
+        title={shownTitle}
+        titleWords={<KeyedText text={shownTitle} own={ownTaskId} />}
         taskKey={task && !bare ? <CardTaskKey task={task} cardId={card.id} /> : undefined}
         meta={cardMetaWords(card.meta)}
         reviewFinding={Boolean(card.reviewTaskId)}

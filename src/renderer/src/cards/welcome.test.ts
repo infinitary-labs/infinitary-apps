@@ -1,5 +1,8 @@
 import { isPreviewBody } from "@shared/cards";
+import { setCurrentLanguage } from "@shared/i18n/current";
+import * as m from "@shared/i18n/messages.generated";
 import {
+  appBodyOf,
   WELCOME_ANSWER,
   WELCOME_BODY,
   WELCOME_CHAPTERS,
@@ -9,9 +12,10 @@ import {
   WELCOME_STARTERS_LEAD,
   WELCOME_TITLE,
   WELCOME_WORDS,
+  wordedTitle,
 } from "@shared/welcome";
 import { DomUtils, parseDocument } from "htmlparser2";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { buildPrototypeSrcdoc } from "./prototypeSrcdoc";
 
 type Element = ReturnType<typeof DomUtils.getElementsByTagName>[number];
@@ -149,5 +153,22 @@ describe("approved welcome document", () => {
     expect(isPreviewBody(WELCOME_BODY)).toBe(false);
     expect(WELCOME_BODY.match(/<script>/g)).toHaveLength(1);
     expect(WELCOME_BODY).not.toMatch(/<style/);
+  });
+});
+
+// The approved plan (INF-3674, piece 3): the welcome the record keeps in
+// English is drawn again in the window's language, its title too.
+describe("the welcome in another language", () => {
+  afterEach(() => setCurrentLanguage("en"));
+
+  it("is drawn in the window's language in place of the saved English", () => {
+    setCurrentLanguage("en-XA");
+    const drawn = appBodyOf(WELCOME_NOTE.body);
+    expect(drawn).toContain(m.welcomeBox());
+    expect(drawn).toContain(m.welcomeStarterClone());
+    expect(drawn).not.toContain(WELCOME_WORDS.box);
+    expect(wordedTitle(WELCOME_NOTE.title, WELCOME_NOTE.body)).toBe(m.welcomeTitle());
+    expect(wordedTitle(WELCOME_NOTE.title, "<p>Another card</p>")).toBe(WELCOME_TITLE);
+    expect(appBodyOf("<p>Another card</p>")).toBeUndefined();
   });
 });

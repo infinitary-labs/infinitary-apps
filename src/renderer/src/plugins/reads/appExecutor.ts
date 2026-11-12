@@ -1,4 +1,6 @@
 import { computerPresenceOf } from "@shared/devices";
+import type { FeedLine } from "@shared/feed";
+import { wordedLine } from "@shared/i18n/said";
 import type { CorePushChannel } from "@shared/ipc";
 import type { PanelFeedLine } from "@shared/personal/contracts";
 import { type ComputerResourcesView, panelComputerResources } from "@shared/resources";
@@ -162,7 +164,14 @@ export function firstmateReadApi(): ReadApi {
       if (name === "tasks.board") {
         return projectBoard(rememberBoard(value as TaskBoard));
       }
-      if (name === "feed.recent") presentedFeed = value as PanelFeedLine[];
+      if (name === "feed.recent") {
+        // Each line the app saved as a fact is worded now, in the window's
+        // language (docs/i18n.md, "Saved facts"); a panel reads the words.
+        presentedFeed = (value as FeedLine[]).map(({ said, ...line }) =>
+          said ? { ...line, text: wordedLine({ text: line.text, said }) } : line,
+        );
+        return presentedFeed;
+      }
       if (name === "tasks.detail") return presentTask(value as TaskDetail, cards);
       if (name === "tasks.search") rememberFound(value as TaskView[]);
       if (name === "projects.list" && board) {

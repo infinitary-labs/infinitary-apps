@@ -2,9 +2,11 @@ import { cardNavigationParts } from "@shared/cardParts";
 import { demoSources, playableDemoKind, viewablePictures } from "@shared/cardPictures";
 import type { CardWidth } from "@shared/cards";
 import { isPreviewBody, REVISION_TARGETS_MAX } from "@shared/cards";
+import { wordSaidBody } from "@shared/i18n/said";
 import type { FrameAnswers, FramePicture } from "@shared/plugins/bridge";
 import { FRAME_ALLOW, FRAME_SANDBOX } from "@shared/plugins/containment";
 import type { FrameMount, FrameTheme } from "@shared/plugins/frameDocument";
+import { appBodyOf } from "@shared/welcome";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { available } from "../app/focusRecovery";
 import { Button } from "../design";
@@ -254,8 +256,9 @@ const frameStyle = (height: number): React.CSSProperties => ({
  * wedges it. A body drawing in a project's own font is mounted too, so the
  * font engine reads that file in a renderer process of its own.
  */
-export function HtmlCardBody({ inset: chrome, lead, ...authored }: BodyProps) {
+export function HtmlCardBody({ inset: chrome, lead, ...saved }: BodyProps) {
   const navigation = useRevisionNavigation();
+  const authored = useWordedBody(saved);
   const input = lead ? leadBody(authored, lead) : authored;
   const given: BodyProps = navigation?.offerId
     ? {
@@ -323,6 +326,27 @@ export function HtmlCardBody({ inset: chrome, lead, ...authored }: BodyProps) {
  * document after it as markup (a plain text body would otherwise read as
  * markup once led); its change bars and revision offsets move past the lead.
  */
+/**
+ * The body with each run of the app's own words worded in the window's
+ * language (docs/i18n.md, "Saved facts"), its change bars and revision
+ * places moved with it.
+ */
+function useWordedBody(
+  saved: Omit<BodyProps, "inset" | "lead">,
+): Omit<BodyProps, "inset" | "lead"> {
+  const worded = useMemo(() => {
+    const app = appBodyOf(saved.body);
+    return app === undefined ? wordSaidBody(saved.body) : { body: app, at: () => 0 };
+  }, [saved.body]);
+  if (worded.body === saved.body) return saved;
+  return {
+    ...saved,
+    body: worded.body,
+    ...(saved.marks ? { marks: saved.marks.map(worded.at) } : {}),
+    revisionStart: (start) => worded.at(saved.revisionStart?.(start) ?? start),
+  };
+}
+
 function leadBody(input: Omit<BodyProps, "inset" | "lead">, lead: string): BodyProps {
   const at = lead.length;
   return {

@@ -1,4 +1,3 @@
-import { MERGE_CLOSES_WORDS } from "@shared/cards";
 import { CONTRIBUTION_WORDS } from "@shared/contributions";
 import {
   type FolderNoticed,
@@ -6,8 +5,7 @@ import {
   folderRefreshWords,
 } from "@shared/folderRefresh";
 import { forgePlace } from "@shared/forge";
-import { formatTime } from "@shared/i18n/format";
-import { POLICY_MERGING_WORDS } from "@shared/taskPolicies";
+import { englishOf, type Said, said, saidMark } from "@shared/i18n/said";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import { escapeCardText } from "./cardText";
@@ -35,8 +33,22 @@ export function settlingText(
   change: string | undefined,
   waitsForTurn: boolean,
 ): string {
-  const action = mode === "discard" ? "Discarding" : change ? `Merging ${change}` : "Merging";
-  return waitsForTurn ? `${action} once its crewmate finishes what it is doing` : action;
+  return englishOf(settlingSaid(mode, change, waitsForTurn));
+}
+
+/** The captain's click as a fact (`settlingText`), worded where it is shown. */
+export function settlingSaid(
+  mode: "merge-pr" | "land" | "discard",
+  change: string | undefined,
+  waitsForTurn: boolean,
+): Said {
+  if (mode === "discard")
+    return waitsForTurn ? said("settleDiscardingAfterTurn") : said("settleDiscarding");
+  if (change)
+    return waitsForTurn
+      ? said("settleMergingChangeAfterTurn", { change })
+      : said("settleMergingChange", { change });
+  return waitsForTurn ? said("settleMergingAfterTurn") : said("settleMerging");
 }
 
 /** A discard that closed the task, then what became of its pull request, when it had one. */
@@ -51,7 +63,12 @@ export function decisionDropRefusal(key: string): string {
 
 /** A merge that did not go in, in what its failure means. */
 export function cannotMergeText(plain: string): string {
-  return `Cannot merge: ${plain}`;
+  return englishOf(cannotMergeSaid(plain));
+}
+
+/** A merge that did not go in, as a fact (`cannotMergeText`). */
+export function cannotMergeSaid(plain: string): Said {
+  return said("settleCannotMerge", { problem: plain });
 }
 
 /**
@@ -152,8 +169,13 @@ const CLOSE_LINE = new RegExp(`${CLOSE_LINE_OPEN}[\\s\\S]*?</p>`);
 
 /** The close line: the work's key and what became of it, then the first mate's sentence. */
 export function closedLine(key: string, outcome: ClosedWithoutClick, sentence?: string): string {
-  const said = sentence?.trim() ? `<br>Your first mate: “${escapeCardText(sentence.trim())}”` : "";
-  return `${CLOSE_LINE_OPEN}<strong>${escapeCardText(closingNoteTitle(key, outcome))}</strong>${said}</p>`;
+  return `${CLOSE_LINE_OPEN}${saidMark(closingNoteSaid(key, outcome), "strong")}${firstMateSaid(sentence)}</p>`;
+}
+
+/** The first mate's own sentence after a line, inside the app's words around it. */
+function firstMateSaid(sentence: string | undefined): string {
+  const trimmed = sentence?.trim();
+  return trimmed ? `<br>${saidMark(said("closeYourFirstMate", { sentence: trimmed }))}` : "";
 }
 
 /** The body with its close line put first, or the one it had replaced. */
@@ -163,12 +185,31 @@ export function withCloseLine(body: string, line: string): string {
 
 /** The first mate's note on a task it closed: its key and what became of it. */
 export function closingNoteTitle(key: string, outcome: ClosedWithoutClick): string {
-  return `${key} ${outcome}`;
+  return englishOf(closingNoteSaid(key, outcome));
+}
+
+/** The close's title as a fact (`closingNoteTitle`). */
+export function closingNoteSaid(key: string, outcome: ClosedWithoutClick): Said {
+  switch (outcome) {
+    case "merged":
+      return said("closedMerged", { key });
+    case "released":
+      return said("closedReleased", { key });
+    case "finished":
+      return said("closedFinished", { key });
+    case "dropped":
+      return said("closedDropped", { key });
+  }
 }
 
 /** Activity's line for a drop that carries the first mate's sentence. */
 export function droppedLine(sentence: string): string {
-  return `Dropped: ${sentence}`;
+  return englishOf(droppedSaid(sentence));
+}
+
+/** A drop's line as a fact (`droppedLine`). */
+export function droppedSaid(sentence: string): Said {
+  return said("feedDropped", { sentence });
 }
 
 /**
@@ -183,23 +224,29 @@ export const MERGE_LINE_MARK = "data-merge-line";
 const MERGE_LINE_OPEN = `<p class="inf-panel" ${MERGE_LINE_MARK}>`;
 const MERGE_LINE = new RegExp(`${MERGE_LINE_OPEN}[\\s\\S]*?</p>`);
 
+/** Who set the task to merge on its own, as facts. */
+const MERGE_SETTING_SAID = {
+  task: said("mergeSetByFirstMate"),
+  project: said("mergeSetInProject"),
+} as const;
+
 /** Who set the task to merge on its own, in the app's words. */
 export const MERGE_SETTING_WORDS = {
-  task: "Set by your first mate for this task.",
-  project: "Set in this project's settings.",
+  task: englishOf(MERGE_SETTING_SAID.task),
+  project: englishOf(MERGE_SETTING_SAID.project),
 } as const;
 
 /** What the line says while the merge is still to come. */
-export const MERGES_NEXT_WORDS = "the app merges it once its checks pass.";
+export const MERGES_NEXT_WORDS = englishOf(said("mergesNext"));
 
 /** The merged line's lead: on its own, or by the captain's own click. */
 export function mergedWords(at: string, onItsOwn: boolean): string {
-  return `${onItsOwn ? "Merged on its own" : "Merged"} at ${at}`;
+  return englishOf(said(onItsOwn ? "mergedOnItsOwnAt" : "mergedAt", { at }));
 }
 
 /** The line before the merge. */
 export function pendingMergeLine(source: keyof typeof MERGE_SETTING_WORDS): string {
-  return `${MERGE_LINE_OPEN}<strong>${POLICY_MERGING_WORDS.on}</strong> · ${MERGES_NEXT_WORDS}<br><span class="inf-muted">${MERGE_SETTING_WORDS[source]}</span></p>`;
+  return `${MERGE_LINE_OPEN}${saidMark(said("mergesOnItsOwn"), "strong")} · ${saidMark(said("mergesNext"))}<br>${saidMark(MERGE_SETTING_SAID[source], "span", 'class="inf-muted"')}</p>`;
 }
 
 /** The line after the merge; `change` is the pull request as the card names it ("PR #476"). */
@@ -211,7 +258,7 @@ export function mergedLine(input: {
   /** The merge kept the task open (INF-2533): the line says it continues. */
   continues?: boolean;
 }): string {
-  const time = formatTime(input.at, { hour: "numeric", minute: "2-digit" });
+  const at = { time: input.at };
   const change = input.change
     ? ` · ${
         input.change.url && /^https:\/\//.test(input.change.url)
@@ -219,11 +266,9 @@ export function mergedLine(input: {
           : `<span class="inf-mono">${escapeCardText(input.change.label)}</span>`
       }`
     : "";
-  const sentence = input.sentence?.trim()
-    ? `<br>Your first mate: “${escapeCardText(input.sentence.trim())}”`
-    : "";
-  const continues = input.continues ? `<br>${MERGE_CLOSES_WORDS.continues}.` : "";
-  return `${MERGE_LINE_OPEN}<strong>${mergedWords(time, input.onItsOwn)}</strong>${change}${continues}${sentence}</p>`;
+  const continues = input.continues ? `<br>${saidMark(said("mergeContinues"))}` : "";
+  const lead = said(input.onItsOwn ? "mergedOnItsOwnAt" : "mergedAt", { at });
+  return `${MERGE_LINE_OPEN}${saidMark(lead, "strong")}${change}${continues}${firstMateSaid(input.sentence)}</p>`;
 }
 
 /**
@@ -315,4 +360,27 @@ export function changeName(record: TaskRecord | undefined, number: number): stri
   return delivery?.prNumber === number && delivery.changeLabel
     ? delivery.changeLabel
     : `#${number}`;
+}
+
+/**
+ * A merged change's Activity line ("Merged #709 on GitHub") and its fact:
+ * `place` is where the project lives, empty when its repository names no host.
+ */
+export function mergedOnLine(change: string, place: string): { line: string; lineSaid: Said } {
+  const lineSaid = place
+    ? said("mergedChangeOn", { change, place })
+    : said("mergedChangeOnHost", { change });
+  return { line: englishOf(lineSaid), lineSaid };
+}
+
+/** A merge found already in, by its pull request or its commit: its Activity line and fact. */
+export function mergedInLine(found: { pull: string } | { commit: string }): {
+  line: string;
+  lineSaid: Said;
+} {
+  const lineSaid =
+    "pull" in found
+      ? said("mergedInPull", { change: found.pull })
+      : said("mergedInCommit", { commit: found.commit });
+  return { line: englishOf(lineSaid), lineSaid };
 }

@@ -1,4 +1,5 @@
 import type { FeedLine } from "@shared/feed";
+import { saidSchema } from "@shared/i18n/said";
 import type { AppDatabase } from "./db";
 
 /**
@@ -9,6 +10,22 @@ import type { AppDatabase } from "./db";
 
 const RETAINED = 200;
 
+/** A line's fact as saved beside its words (docs/i18n.md, "Saved facts"). */
+function saidJson(line: Omit<FeedLine, "at">): string | null {
+  return line.said ? JSON.stringify(line.said) : null;
+}
+
+/** A saved fact this version can read; any other is left out, and the line shows its words. */
+function savedFact(json: string | null) {
+  if (!json) return undefined;
+  try {
+    const parsed = saidSchema.safeParse(JSON.parse(json));
+    return parsed.success ? parsed.data : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export class ActivityStore {
   constructor(
     private readonly db: AppDatabase,
@@ -18,8 +35,8 @@ export class ActivityStore {
   /** Writes a line and returns its row, for a settled run to rewrite. */
   record(line: Omit<FeedLine, "at">): number {
     const { lastInsertRowid } = this.db
-      .prepare("INSERT INTO activity_events (kind, text, at) VALUES (?, ?, ?)")
-      .run(line.kind, line.text, this.now());
+      .prepare("INSERT INTO activity_events (kind, text, said_json, at) VALUES (?, ?, ?, ?)")
+      .run(line.kind, line.text, saidJson(line), this.now());
     this.db
       .prepare(
         "DELETE FROM activity_events WHERE id NOT IN (SELECT id FROM activity_events ORDER BY id DESC LIMIT ?)",
@@ -34,8 +51,8 @@ export class ActivityStore {
    */
   rewrite(id: number, line: Omit<FeedLine, "at">): void {
     this.db
-      .prepare("UPDATE activity_events SET kind = ?, text = ?, at = ? WHERE id = ?")
-      .run(line.kind, line.text, this.now(), id);
+      .prepare("UPDATE activity_events SET kind = ?, text = ?, said_json = ?, at = ? WHERE id = ?")
+      .run(line.kind, line.text, saidJson(line), this.now(), id);
   }
 
   /** A settled run that came back where it started leaves no line. */
@@ -47,10 +64,13 @@ export class ActivityStore {
   recent(limit = 20): FeedLine[] {
     const rows = this.db
       .prepare(
-        "SELECT kind, text, at FROM (SELECT * FROM activity_events ORDER BY id DESC LIMIT ?) ORDER BY id ASC",
+        "SELECT kind, text, said_json, at FROM (SELECT * FROM activity_events ORDER BY id DESC LIMIT ?) ORDER BY id ASC",
       )
-      .all(limit) as FeedLine[];
-    return rows;
+      .all(limit) as (Omit<FeedLine, "said"> & { said_json: string | null })[];
+    return rows.map(({ said_json, ...line }) => {
+      const said = savedFact(said_json);
+      return said ? { ...line, said } : line;
+    });
   }
 
   clear(): void {

@@ -3,6 +3,17 @@ import { describe, expect, it } from "vitest";
 import { ActivityStore } from "./activityStore";
 import { openInMemoryDatabase } from "./db";
 
+/**
+ * A line's English as Activity saved it, without the fact it keeps beside
+ * it (docs/i18n.md, "Saved facts"; INF-3674's piece 3): the fact is
+ * `src/shared/i18n/said.test.ts`'s, the words are this test's.
+ */
+const english = (line: ReturnType<typeof feedLineFrom>) => {
+  if (!line) return line;
+  const { said: _said, ...words } = line;
+  return words;
+};
+
 describe("ActivityStore (P10: the feed survives)", () => {
   it("caps retention and the read limit independently", () => {
     const store = new ActivityStore(openInMemoryDatabase());
@@ -15,6 +26,21 @@ describe("ActivityStore (P10: the feed survives)", () => {
     expect(recent.at(-1)?.text).toBe("line 259");
     expect(store.recent(500)).toHaveLength(200);
     expect(store.recent(500)[0]?.text).toBe("line 60");
+  });
+
+  // INF-3674's piece 3: a line's fact survives a restart beside its English,
+  // so a line written before a language change follows it.
+  it("keeps a line's fact beside its words, and leaves out a fact it cannot read", () => {
+    const db = openInMemoryDatabase();
+    const store = new ActivityStore(db, () => 1_000);
+    const said = { m: "settleMergingChange", a: { change: "PR #61" } };
+    store.record({ kind: "info", text: "Merging PR #61", said });
+    const unread = store.record({ kind: "info", text: "Old words" });
+    db.prepare("UPDATE activity_events SET said_json = ? WHERE id = ?").run('{"m":1}', unread);
+    expect(new ActivityStore(db, () => 1_000).recent()).toEqual([
+      { kind: "info", text: "Merging PR #61", said, at: 1_000 },
+      { kind: "info", text: "Old words", at: 1_000 },
+    ]);
   });
 
   it("rewrites a line in its place and withdraws it, as a settled run does", () => {
@@ -42,51 +68,61 @@ describe("ActivityStore (P10: the feed survives)", () => {
 
 describe("feedLineFrom (the one shared mapping)", () => {
   it("maps the task-less events to the same lines the renderer shows", () => {
-    expect(feedLineFrom({ type: "firstmate_note", text: "queued - starts at 9" })).toEqual({
-      kind: "info",
-      text: "queued - starts at 9",
-    });
+    expect(english(feedLineFrom({ type: "firstmate_note", text: "queued - starts at 9" }))).toEqual(
+      {
+        kind: "info",
+        text: "queued - starts at 9",
+      },
+    );
     expect(
-      feedLineFrom({ type: "memory_noted", text: "Always squash-merge when landing work." }),
+      english(
+        feedLineFrom({ type: "memory_noted", text: "Always squash-merge when landing work." }),
+      ),
     ).toEqual({
       kind: "info",
       text: "First mate · remembered: Always squash-merge when landing work.",
     });
-    expect(feedLineFrom({ type: "user_turn", text: "hello" })).toEqual({
+    expect(english(feedLineFrom({ type: "user_turn", text: "hello" }))).toEqual({
       kind: "you",
       text: "Captain: hello",
     });
-    expect(feedLineFrom({ type: "user_turn", text: "" })).toEqual({
+    expect(english(feedLineFrom({ type: "user_turn", text: "" }))).toEqual({
       kind: "you",
       text: "Captain: image",
     });
     // The Firstmate's own failed turn has no task record, so it is still
     // authored here and never silent.
     expect(
-      feedLineFrom({ type: "turn_failed", taskId: "firstmate", error: "Connection error." }),
+      english(
+        feedLineFrom({ type: "turn_failed", taskId: "firstmate", error: "Connection error." }),
+      ),
     ).toEqual({
       kind: "danger",
       text: "First mate · problem: could not reach the provider - try again",
     });
     // A cut-off the seat paused on is not a problem: its pause line speaks.
     expect(
-      feedLineFrom({
-        type: "turn_failed",
-        taskId: "firstmate",
-        error: "Not logged in",
-        cutOff: { class: "signed_out" },
-        paused: true,
-      }),
+      english(
+        feedLineFrom({
+          type: "turn_failed",
+          taskId: "firstmate",
+          error: "Not logged in",
+          cutOff: { class: "signed_out" },
+          paused: true,
+        }),
+      ),
     ).toBeNull();
     // One that paused nothing - a spent allowance with no known reset - is
     // an ordinary failure, and says so.
     expect(
-      feedLineFrom({
-        type: "turn_failed",
-        taskId: "firstmate",
-        error: "rate limited",
-        cutOff: { class: "no_headroom" },
-      }),
+      english(
+        feedLineFrom({
+          type: "turn_failed",
+          taskId: "firstmate",
+          error: "rate limited",
+          cutOff: { class: "no_headroom" },
+        }),
+      ),
     ).toEqual({
       kind: "danger",
       text: expect.stringMatching(/^First mate · problem: /),
@@ -95,38 +131,44 @@ describe("feedLineFrom (the one shared mapping)", () => {
 
   it("carries a task's own line as the core authored it, keyed to the task (P3)", () => {
     expect(
-      feedLineFrom({
-        type: "task_event",
-        taskId: "t1",
-        key: "SCR-1",
-        kind: "dispatched",
-        text: "started",
-        at: 5,
-        feed: true,
-      }),
+      english(
+        feedLineFrom({
+          type: "task_event",
+          taskId: "t1",
+          key: "SCR-1",
+          kind: "dispatched",
+          text: "started",
+          at: 5,
+          feed: true,
+        }),
+      ),
     ).toEqual({ kind: "info", text: "started", taskKey: "SCR-1" });
     expect(
-      feedLineFrom({
-        type: "task_event",
-        taskId: "t1",
-        key: "SCR-1",
-        kind: "landed",
-        text: "Fix it · put in",
-        at: 5,
-        feed: true,
-      }),
+      english(
+        feedLineFrom({
+          type: "task_event",
+          taskId: "t1",
+          key: "SCR-1",
+          kind: "landed",
+          text: "Fix it · put in",
+          at: 5,
+          feed: true,
+        }),
+      ),
     ).toMatchObject({ kind: "ok" });
     // A crewmate's own progress note stays off the global feed.
     expect(
-      feedLineFrom({
-        type: "task_event",
-        taskId: "t1",
-        key: "SCR-1",
-        kind: "progress",
-        text: "halfway",
-        at: 5,
-        feed: false,
-      }),
+      english(
+        feedLineFrom({
+          type: "task_event",
+          taskId: "t1",
+          key: "SCR-1",
+          kind: "progress",
+          text: "halfway",
+          at: 5,
+          feed: false,
+        }),
+      ),
     ).toBeNull();
   });
 
@@ -135,30 +177,45 @@ describe("feedLineFrom (the one shared mapping)", () => {
     // but the feed line for each is derived from the task_events row the
     // same moment writes, so it is not authored twice.
     expect(
-      feedLineFrom({
-        type: "task_started",
-        taskId: "t1",
-        title: "Fix it",
-        machineId: "local",
-        crewmate: "crewmate 1",
-      }),
+      english(
+        feedLineFrom({
+          type: "task_started",
+          taskId: "t1",
+          title: "Fix it",
+          machineId: "local",
+          crewmate: "crewmate 1",
+        }),
+      ),
     ).toBeNull();
     expect(
-      feedLineFrom({ type: "task_report", taskId: "t1", title: "Fix it", crewmate: "crewmate 1" }),
+      english(
+        feedLineFrom({
+          type: "task_report",
+          taskId: "t1",
+          title: "Fix it",
+          crewmate: "crewmate 1",
+        }),
+      ),
     ).toBeNull();
     expect(
-      feedLineFrom({ type: "task_landed", taskId: "t1", title: "Fix it", mode: "merge" }),
+      english(feedLineFrom({ type: "task_landed", taskId: "t1", title: "Fix it", mode: "merge" })),
     ).toBeNull();
     expect(
-      feedLineFrom({ type: "task_finished", taskId: "t1", status: "completed", title: "Fix it" }),
+      english(
+        feedLineFrom({ type: "task_finished", taskId: "t1", status: "completed", title: "Fix it" }),
+      ),
     ).toBeNull();
     expect(
-      feedLineFrom({ type: "turn_failed", taskId: "t1", error: "boom", crewmate: "crewmate 2" }),
+      english(
+        feedLineFrom({ type: "turn_failed", taskId: "t1", error: "boom", crewmate: "crewmate 2" }),
+      ),
     ).toBeNull();
   });
 
   it("keeps non-feed events out of the feed", () => {
-    expect(feedLineFrom({ type: "assistant_delta", taskId: "t1", text: "..." })).toBeNull();
-    expect(feedLineFrom({ type: "firstmate_state", busy: true })).toBeNull();
+    expect(
+      english(feedLineFrom({ type: "assistant_delta", taskId: "t1", text: "..." })),
+    ).toBeNull();
+    expect(english(feedLineFrom({ type: "firstmate_state", busy: true }))).toBeNull();
   });
 });

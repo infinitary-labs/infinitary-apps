@@ -19,6 +19,7 @@ import {
 } from "@shared/cards";
 import type { ChangePresentation } from "@shared/changePresentation";
 import { softHoldWords } from "@shared/holds";
+import { SAID_MARK } from "@shared/i18n/said";
 import { CHECK_WORDS } from "@shared/vocabulary";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -1237,7 +1238,10 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     const shown = note() as Card;
     expect(onStage(shown)).toBe(true);
     expect(mergeLineOf(shown)).toContain(SENTENCE);
-    expect(shown.body.split(SENTENCE)).toHaveLength(2);
+    // Once in the words the card shows; the merged line's fact on its mark
+    // also carries the sentence, as what the line is worded from (docs/i18n.md, "Saved facts").
+    const shownWords = shown.body.replace(new RegExp(` ${SAID_MARK}="[^"]*"`, "g"), "");
+    expect(shownWords.split(SENTENCE)).toHaveLength(2);
     expect(supervisor.cards.snapshot().filter((card) => card.id !== shown.id)).toEqual([]);
   });
 

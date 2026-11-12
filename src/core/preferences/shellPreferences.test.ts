@@ -1,8 +1,8 @@
 import type { PushPayload } from "@shared/ipc";
 import { DEFAULT_SAVED_KEYMAP, presetKeymap } from "@shared/keymap";
 import { describe, expect, it } from "vitest";
-import { DATABASE_VERSION, openInMemoryDatabase } from "../storage/db";
-import { MIGRATIONS } from "../storage/migrations";
+import { openInMemoryDatabase } from "../storage/db";
+import { keyboardPresets, MIGRATIONS } from "../storage/migrations";
 import { SettingsStore } from "../storage/settingsStore";
 import { ShellPreferencesService } from "./shellPreferences";
 
@@ -166,15 +166,16 @@ describe("ShellPreferencesService", () => {
 
   it("keeps a profile updated from before presets on Legacy, with any keys it changed", () => {
     // INF-3547's accepted plan: "They stay on Legacy with every changed key intact".
-    const upgrade = MIGRATIONS[DATABASE_VERSION - 1];
-    if (typeof upgrade !== "function") throw new Error("The presets migration is a function");
-    const untouched = openInMemoryDatabase(DATABASE_VERSION - 1);
+    // The database as it stood just before the presets migration, wherever later migrations put it.
+    const before = MIGRATIONS.indexOf(keyboardPresets);
+    const upgrade = keyboardPresets;
+    const untouched = openInMemoryDatabase(before);
     upgrade(untouched, false);
     expect(new ShellPreferencesService(new SettingsStore(untouched), () => {}).keymap()).toEqual({
       saved: DEFAULT_SAVED_KEYMAP,
       unreadable: false,
     });
-    const changed = openInMemoryDatabase(DATABASE_VERSION - 1);
+    const changed = openInMemoryDatabase(before);
     const keys = { "commands.search": [{ key: "p", meta: true }] };
     changed
       .prepare("INSERT INTO settings (key, value) VALUES (?, ?)")

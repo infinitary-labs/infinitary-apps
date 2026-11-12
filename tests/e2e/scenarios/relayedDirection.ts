@@ -16,6 +16,7 @@ import { sinceLastUser } from "../providerRequest";
 export const RELAYED_DIRECTION_MARKER = "weigh the slow alpha";
 export const RELAYED_DIRECTION_CARD = "The alpha's late failures cost a day";
 export const RELAYED_DIRECTION_CHOICE = { id: "save-direction", label: "Save the direction" };
+// e2e-typed-words: the standing direction the captain chose; it only shares a phrase with the product's
 export const RELAYED_DIRECTION =
   "A fix for a broken main merges on its own once all of its checks pass.";
 /** The first mate's reason, which the direction's history keeps. */

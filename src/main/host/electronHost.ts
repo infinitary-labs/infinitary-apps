@@ -1,4 +1,5 @@
 import type { HostCapabilities } from "@core/host";
+import * as m from "@shared/i18n/messages.generated";
 import { userDataFolderFor } from "@shared/userDataFolders";
 import { app, dialog, Notification, shell } from "electron";
 import { hostDesktop, hostPlatform, hostPlatformProfile } from "../../core/platform";
@@ -211,7 +212,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
       if (!owner) return [];
       const picked = await dialog.showOpenDialog(owner, {
         properties: multiple ? ["openFile", "multiSelections"] : ["openFile"],
-        buttonLabel: "Attach",
+        buttonLabel: m.dialogAttach(),
       });
       return picked.canceled ? [] : picked.filePaths;
     }),

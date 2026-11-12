@@ -1,6 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { changesFeed, feedLineFrom, feedRelativeAge } from "./feed";
 
+/**
+ * A line's English as Activity saved it, without the fact it keeps beside
+ * it (docs/i18n.md, "Saved facts"; INF-3674's piece 3): the fact is
+ * `src/shared/i18n/said.test.ts`'s, the words are this test's.
+ */
+const english = (line: ReturnType<typeof feedLineFrom>) => {
+  if (!line) return line;
+  const { said: _said, ...words } = line;
+  return words;
+};
+
 describe("feedRelativeAge", () => {
   const now = 1_700_000_000_000;
 
@@ -27,12 +38,13 @@ describe("authored Activity text", () => {
     "pnpm test passed.",
     "iOS is the target.",
   ])("keeps deliberate lowercase names rather than applying a display transform: %s", (text) => {
-    expect(feedLineFrom({ type: "firstmate_note", text })?.text).toBe(text);
+    expect(english(feedLineFrom({ type: "firstmate_note", text }))?.text).toBe(text);
   });
 
   it("preserves a device's lowercase name", () => {
     expect(
-      feedLineFrom({ type: "device_left", deviceId: "d1", name: "mini", kind: "work" })?.text,
+      english(feedLineFrom({ type: "device_left", deviceId: "d1", name: "mini", kind: "work" }))
+        ?.text,
     ).toBe("mini left.");
   });
 });
@@ -40,14 +52,14 @@ describe("authored Activity text", () => {
 describe("catalog action actor trail", () => {
   it("names whoever made the change, without claiming a captain click was Firstmate's", () => {
     expect(
-      feedLineFrom({ type: "personalized", actor: "captain", text: "notifications off" }),
+      english(feedLineFrom({ type: "personalized", actor: "captain", text: "notifications off" })),
     ).toEqual({ kind: "info", text: "Captain · notifications off" });
     expect(
-      feedLineFrom({ type: "personalized", actor: "firstmate", text: "notifications on" }),
+      english(feedLineFrom({ type: "personalized", actor: "firstmate", text: "notifications on" })),
     ).toEqual({ kind: "info", text: "First mate · notifications on" });
-    expect(feedLineFrom({ type: "personalized", text: "switched to the light theme" })?.text).toBe(
-      "First mate · personalized: switched to the light theme",
-    );
+    expect(
+      english(feedLineFrom({ type: "personalized", text: "switched to the light theme" }))?.text,
+    ).toBe("First mate · personalized: switched to the light theme");
   });
 
   it("writes a settled run's step as a line and its withdrawal as none, and both change the feed", () => {
@@ -57,10 +69,13 @@ describe("catalog action actor trail", () => {
       text: "window wash 48% → 76%",
       run: { id: "run-1" },
     };
-    expect(feedLineFrom(step)).toEqual({ kind: "info", text: "Captain · window wash 48% → 76%" });
+    expect(english(feedLineFrom(step))).toEqual({
+      kind: "info",
+      text: "Captain · window wash 48% → 76%",
+    });
     expect(changesFeed(step)).toBe(true);
     const withdrawn = { ...step, run: { id: "run-1", withdrawn: true } };
-    expect(feedLineFrom(withdrawn)).toBeNull();
+    expect(english(feedLineFrom(withdrawn))).toBeNull();
     expect(changesFeed(withdrawn)).toBe(true);
     expect(changesFeed({ type: "past_card_shown", cardId: "card-1" })).toBe(false);
   });
@@ -75,13 +90,13 @@ describe("project setup actor trail", () => {
       path: "/site",
       kind: "adopt" as const,
     };
-    expect(feedLineFrom({ ...event, actor: "captain" })?.text).toBe(
+    expect(english(feedLineFrom({ ...event, actor: "captain" }))?.text).toBe(
       "Captain · Project site · linked",
     );
-    expect(feedLineFrom({ ...event, actor: "firstmate", kind: "clone" })?.text).toBe(
+    expect(english(feedLineFrom({ ...event, actor: "firstmate", kind: "clone" }))?.text).toBe(
       "First mate · Project site · cloned",
     );
-    expect(feedLineFrom(event)?.text).toBe("Project site · linked");
+    expect(english(feedLineFrom(event))?.text).toBe("Project site · linked");
   });
 });
 
@@ -89,19 +104,23 @@ describe("a computer signed out of one of its own subscriptions", () => {
   const signedOut = { type: "device_signed_out", deviceId: "d1", who: "Mac mini" } as const;
 
   it("says so, and for Claude whether Firstmate signed out the login it made there", () => {
-    expect(feedLineFrom({ ...signedOut, provider: "Codex" })).toEqual({
+    expect(english(feedLineFrom({ ...signedOut, provider: "Codex" }))).toEqual({
       kind: "info",
       text: "Mac mini is signed out of Codex.",
     });
-    expect(feedLineFrom({ ...signedOut, provider: "Claude", login: "signed-out" })).toEqual({
+    expect(
+      english(feedLineFrom({ ...signedOut, provider: "Claude", login: "signed-out" })),
+    ).toEqual({
       kind: "info",
       text: "Infinitary signed Mac mini out of the Claude login it made.",
     });
-    expect(feedLineFrom({ ...signedOut, provider: "Claude", login: "kept" })).toEqual({
+    expect(english(feedLineFrom({ ...signedOut, provider: "Claude", login: "kept" }))).toEqual({
       kind: "info",
       text: "Infinitary stopped using Mac mini's Claude login. It stays, since Infinitary did not make it.",
     });
-    expect(feedLineFrom({ ...signedOut, provider: "Claude", login: "not-signed-out" })).toEqual({
+    expect(
+      english(feedLineFrom({ ...signedOut, provider: "Claude", login: "not-signed-out" })),
+    ).toEqual({
       kind: "warn",
       text: "Infinitary stopped using Mac mini's Claude login, but could not sign it out.",
     });

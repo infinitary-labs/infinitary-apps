@@ -3,6 +3,7 @@ import { machineLoginOutcomeSchema } from "./accounts";
 import { CUT_OFF_CLASSES } from "./authFailure";
 import { deviceKindSchema, foundToolsSchema } from "./devices";
 import { emoteWords, FIRSTMATE_EMOTES } from "./emotes";
+import { saidSchema } from "./i18n/said";
 import { lastTurnEligibilitySchema } from "./lastTurn";
 import { slotSchema } from "./modelSlots";
 import {
@@ -351,6 +352,8 @@ export const fmEventSchema = z.discriminatedUnion("type", [
     taskId: z.string().optional(),
     /** A task-less host notice may carry a physical warning; older views still receive its text. */
     tone: z.enum(["info", "warn"]).optional(),
+    /** The note as a fact, worded where it is shown; `text` is its English (docs/i18n.md, "Saved facts"). */
+    said: saidSchema.optional(),
   }),
   /**
    * A character reaction, drained by the character renderer: one the
@@ -507,6 +510,8 @@ export const fmEventSchema = z.discriminatedUnion("type", [
      * `feed` false. Absent on every timeline event.
      */
     reached: z.literal(true).optional(),
+    /** A feed line's fact, worded where it is shown; `text` is its English (docs/i18n.md, "Saved facts"). */
+    said: saidSchema.optional(),
   }),
   /**
    * The Firstmate agent's own busy state (drives the thinking phase), and

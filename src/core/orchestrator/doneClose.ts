@@ -10,7 +10,7 @@ import type { DeclaredCloses } from "./declaredCloses";
 import type { SettleServiceHost } from "./settleHost";
 import type { SettleLocks } from "./settleLocks";
 import { describeStatus, type SettleService } from "./settleService";
-import { changeName } from "./settleWords";
+import { changeName, mergedInLine } from "./settleWords";
 import { type TaskClose, type TaskClosing, workspaceOf } from "./taskClose";
 
 /** What a done close is asked to record (`settle_task` mode done). */
@@ -544,13 +544,16 @@ export class DoneClose {
       const name = pull
         ? `pull request ${changeName(record, pull.number)}`
         : `commit ${sha?.slice(0, 12)}`;
+      const mergedIn = mergedInLine(
+        pull ? { pull: changeName(record, pull.number) } : { commit: `${sha?.slice(0, 12)}` },
+      );
       const merged = await this.settle.closeMerged(
         record,
         actor,
         {
           ok: true,
           text: `Merged in ${name}.`,
-          line: `Merged in ${name}`,
+          ...mergedIn,
           ...(sha ? { receipt: { head: pull?.headSha ?? sha, sha, already: true } } : {}),
         },
         recorded,

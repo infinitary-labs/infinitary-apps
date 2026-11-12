@@ -1,4 +1,5 @@
 import type { HostSecretsRecovery } from "@core/host";
+import * as m from "@shared/i18n/messages.generated";
 import { dialog } from "electron";
 import { appWindows } from "../windows";
 import { readSecretRecoveryFiles, saveSecretRecoveryFiles } from "./secretRecoveryFiles";
@@ -10,16 +11,15 @@ export function createSecretRecoveryDialogs(): HostSecretsRecovery {
       const window = appWindows()[0];
       if (!window || window.isDestroyed()) return undefined;
       const archive = await dialog.showSaveDialog(window, {
-        title: "Save encrypted Secrets archive",
-        message: "Choose a new file. Existing archives will not be replaced.",
+        title: m.secretsArchiveSaveTitle(),
+        message: m.secretsArchiveSaveMessage(),
         defaultPath: "Secrets.infinitary-recovery",
         properties: ["createDirectory", "dontAddToRecent"],
       });
       if (archive.canceled || !archive.filePath) return undefined;
       const key = await dialog.showSaveDialog(window, {
-        title: "Save the separate recovery key",
-        message:
-          "Keep this key separately from the archive. Anyone with both can read the saved secrets. There is no key reset.",
+        title: m.secretsKeySaveTitle(),
+        message: m.secretsKeySaveMessage(),
         defaultPath: "Secrets.infinitary-recovery-key",
         properties: ["createDirectory", "dontAddToRecent"],
       });
@@ -31,12 +31,12 @@ export function createSecretRecoveryDialogs(): HostSecretsRecovery {
       const window = appWindows()[0];
       if (!window || window.isDestroyed()) return undefined;
       const archive = await dialog.showOpenDialog(window, {
-        title: "Choose the encrypted Secrets archive",
+        title: m.secretsArchiveOpenTitle(),
         properties: ["openFile", "dontAddToRecent"],
       });
       if (archive.canceled || !archive.filePaths[0]) return undefined;
       const key = await dialog.showOpenDialog(window, {
-        title: "Choose its separate recovery key",
+        title: m.secretsKeyOpenTitle(),
         properties: ["openFile", "dontAddToRecent"],
       });
       if (key.canceled || !key.filePaths[0]) return undefined;

@@ -1,5 +1,6 @@
 import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
-import { DATABASE_VERSION, openDatabase } from "../../src/core/storage/db";
+import { openDatabase } from "../../src/core/storage/db";
+import { keyboardPresets, MIGRATIONS } from "../../src/core/storage/migrations";
 import { bindingLabel, type CommandId, type KeyBinding } from "../../src/shared/keyboard";
 import { type PresetId, presetKeys, presetsOffered } from "../../src/shared/keyPresets";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -228,7 +229,8 @@ test("VS Code: picked in the Preset row, and driven by ⇧⌘P and ⌘K ⌘S", a
 test("Legacy: a profile updated from before presets stays on it with its changed key", async () => {
   // A profile an older version kept, with a key its person changed in it.
   const userDataDir = scratchDir("infinitary-keyboard-presets-");
-  const db = openDatabase(userDataDir, DATABASE_VERSION - 1);
+  // Saved as it stood just before the presets migration, wherever later migrations put it.
+  const db = openDatabase(userDataDir, MIGRATIONS.indexOf(keyboardPresets));
   db.prepare("INSERT INTO settings (key, value) VALUES (?, ?)").run(
     "keyboard",
     JSON.stringify({ version: 1, keys: { "settings.open": [OWN_KEY] } }),

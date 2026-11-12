@@ -2,6 +2,7 @@ import { queueAnswer } from "@shared/checkRepair";
 import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { hasChangeRequests } from "@shared/forge";
 import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
+import { englishOf, type Said, said } from "@shared/i18n/said";
 import { isMergeConflict } from "@shared/plainProblem";
 import { deliveryForRecord, opensPullRequest, queueShipped, type RepoView } from "@shared/repos";
 import {
@@ -72,6 +73,8 @@ export type PrOutcome = {
    * period ("Merged #709 on GitHub", INF-1845).
    */
   line?: string;
+  /** The merge's line as a fact, worded where it is shown; `line` is its English (docs/i18n.md, "Saved facts"). */
+  lineSaid?: Said;
   /**
    * The host refused who the app is (git integration PR 1.2): not signed
    * in to it here, or a sign-in it no longer accepts. The settle path
@@ -989,15 +992,21 @@ export class ChangeMerge {
     taskId: string,
     forge: Forge,
     change: ForgeChange,
-  ): { text: string; line: string } {
+  ): { text: string; line: string; lineSaid: Said } {
     const url = forge.url(change);
     const where = forge.place ? `on ${forge.place}` : "where the project lives";
+    const place = forge.place;
     if (change.number !== undefined) {
-      const line = `Merged ${forge.label(change)} ${where}`;
-      return { text: `${line}.${url ? ` ${url}` : ""}`, line };
+      const label = forge.label(change);
+      const lineSaid = place
+        ? said("mergedChangeOn", { change: label, place })
+        : said("mergedChangeWhereItLives", { change: label });
+      const line = englishOf(lineSaid);
+      return { text: `${line}.${url ? ` ${url}` : ""}`, line, lineSaid };
     }
     const title = this.options.tasks.get(taskId)?.title ?? forge.label(change);
-    return { text: `Merged "${title}" ${where}.`, line: `Merged ${where}` };
+    const lineSaid = place ? said("mergedOn", { place }) : said("mergedWhereItLives");
+    return { text: `Merged "${title}" ${where}.`, line: englishOf(lineSaid), lineSaid };
   }
 
   /**

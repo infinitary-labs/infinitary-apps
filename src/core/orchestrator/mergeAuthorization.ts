@@ -7,6 +7,7 @@ import {
   repairImpact,
 } from "@shared/checkRepair";
 import { hasChangeRequests } from "@shared/forge";
+import { englishOf, type Said, said, saidPart } from "@shared/i18n/said";
 import type { MergeReview } from "@shared/mergeReview";
 import { opensPullRequest, type RepoDelivery } from "@shared/repos";
 import { type ForgeRepo, forgeLocationOf, QUEUE_STATUS, QUEUE_WAITING_WORDS } from "../forge";
@@ -704,36 +705,47 @@ export function keptFeedLine(
   checks?: string,
   queueOwned = false,
 ): string {
-  const kept = "Your merge is kept";
+  return englishOf(keptFeedSaid(wait, place, checks, queueOwned));
+}
+
+/**
+ * The kept merge's feed line as a fact (`keptFeedLine`), worded where it is
+ * shown; `place` empty names the project's host in the app's words.
+ */
+export function keptFeedSaid(
+  wait: MergeWait,
+  place: string,
+  checks?: string,
+  queueOwned = false,
+): Said {
+  const where = { place: place || saidPart("projectsHost") };
   switch (wait) {
     case "conflict":
-      return `Cannot merge yet: it conflicts with newer work in the project. ${kept} and runs once its crewmate has brought it up to date and its checks pass.`;
+      return said("keptConflict");
     case "repair":
-      return `Cannot merge yet: it changed after the card you approved. ${kept} and runs once its crewmate shows the work is still what you approved.`;
+      return said("keptRepair");
     case "evidence":
-      return `Cannot merge yet: its crewmate could not tell whether its last change kept the work you approved, so another crewmate is checking. ${kept} and runs if that check finds the work is still what you approved.`;
+      return said("keptEvidence");
     case "checks":
-      return checks === "red"
-        ? `Your merge waits for a fix: its checks failed. A fix brings a new version with fresh checks: when it changed the work, its crewmate asks you again on a new card; otherwise your merge runs once they pass.`
-        : `Your merge waits: ${MERGE_CHECKS_HOLD_REASON}. Your approval is kept. If a fix changes the work, its crewmate asks you again; otherwise the merge runs when its checks pass.`;
+      return checks === "red" ? said("keptChecksFailed") : said("keptChecks");
     case "cap":
-      return `Cannot merge yet: it is waiting for your answer about its repair attempts. ${kept} for after that.`;
+      return said("keptCap");
     case "protected":
-      return `Cannot merge yet: ${place} holds it for a required review or another rule on the main branch. ${kept} and runs once ${place} allows it.`;
+      return said("keptProtected", where);
     case "computing":
     case "transient":
     case "outcome":
-      return `Cannot merge yet: ${place} did not give a clear answer. ${kept} and the app tries again shortly.`;
+      return said("keptUnclear", where);
     case "draft":
-      return `Cannot merge yet: its pull request is a draft. ${kept} and runs once it is ready for review.`;
+      return said("keptDraft");
     case "sign-in":
-      return `Cannot merge yet: the app's ${place} sign-in is needed. ${kept} and runs once you sign in again.`;
+      return said("keptSignIn", where);
     case "refused":
-      return `Cannot merge yet: ${place} refused it. ${kept} and runs again once its crewmate has fixed the cause.`;
+      return said("keptRefused", where);
     case "guidance":
-      return `Cannot merge yet: its crewmate has not said whether your newer words change the work you approved. ${kept} and runs once it says they do not.`;
+      return said("keptGuidance");
     case "queue":
-      return `${QUEUE_WAITING_WORDS}: your project's queue is testing this version with other approved work. ${kept}. ${queueOwned ? "Your project's queue will merge it after its checks pass." : "The app will merge it after your project's queue passes it."}`;
+      return queueOwned ? said("keptQueueOwned") : said("keptQueue");
   }
 }
 

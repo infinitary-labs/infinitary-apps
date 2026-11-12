@@ -239,6 +239,8 @@ describe("ChangeMerge", () => {
       ok: true,
       text: "Merged #23 on GitHub. https://github.com/x/y/pull/23",
       line: "Merged #23 on GitHub",
+      // The line as a fact, worded where it is shown (INF-3674, piece 3).
+      lineSaid: { m: "mergedChangeOn", a: { change: "#23", place: "GitHub" } },
     });
     expect(forge.calls).toEqual([
       "changeFor fm/task-ab12cd34",
@@ -323,6 +325,8 @@ describe("ChangeMerge", () => {
       ok: true,
       text: "Merged #23 on GitHub. https://github.com/x/y/pull/23",
       line: "Merged #23 on GitHub",
+      // The line as a fact, worded where it is shown (INF-3674, piece 3).
+      lineSaid: { m: "mergedChangeOn", a: { change: "#23", place: "GitHub" } },
     });
     expect(forge.calls.filter((call) => call.startsWith("changeFor"))).toHaveLength(2);
   });
@@ -390,6 +394,7 @@ describe("ChangeMerge", () => {
         ok: true,
         text: 'Merged "Ship it" on git.example.com.',
         line: "Merged on git.example.com",
+        lineSaid: { m: "mergedOn", a: { place: "git.example.com" } },
       });
     });
 

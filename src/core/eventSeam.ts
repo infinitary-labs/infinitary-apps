@@ -52,7 +52,11 @@ export function createEventSeam(options: {
     // rule 1): written there as news, and the feed reads it back as the
     // task's own line (docs/task-record.md, "What Activity holds").
     if (event.type === "firstmate_note" && event.taskId && tasks.get(event.taskId)) {
-      tasks.note(event.taskId, event.text, { news: true, feed: true, data: { feedLine: true } });
+      tasks.note(event.taskId, event.text, {
+        news: true,
+        feed: true,
+        data: { feedLine: true, ...(event.said ? { said: event.said } : {}) },
+      });
       return;
     }
     // Crew changes only; streaming deltas must not scan the task table, and

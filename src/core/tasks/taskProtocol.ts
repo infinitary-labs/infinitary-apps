@@ -1831,6 +1831,7 @@ export function taskEventOf(record: TaskRecord, event: TaskEvent): FmEvent {
     text: line?.text ?? event.text,
     at: event.at,
     feed: line !== null,
+    ...(line?.said ? { said: line.said } : {}),
   };
 }
 

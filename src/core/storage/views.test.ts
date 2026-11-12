@@ -236,7 +236,10 @@ function migratedFixture(): AppDatabase {
         ],
       }),
     );
-  new ActivityStore(before, () => T0 + 8 * MIN).record({ kind: "you", text: "you · ship it" });
+  // Written in the columns this schema had, as that version wrote it.
+  before
+    .prepare("INSERT INTO activity_events (kind, text, at) VALUES (?, ?, ?)")
+    .run("you", "you · ship it", T0 + 8 * MIN);
   before.close();
   return openDatabase(dir);
 }

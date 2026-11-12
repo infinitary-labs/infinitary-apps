@@ -2,12 +2,12 @@ import { cutText } from "@shared/textCut";
 import { z } from "zod";
 import { deviceJoinedLine } from "./devices";
 import type { FmEvent } from "./events";
+import { englishOf, type Said, type SaidPart, said, saidPart, saidSchema } from "./i18n/said";
 import { FIRSTMATE_SESSION_ID } from "./observe";
 import { plainProblem } from "./plainProblem";
 import { withoutIntentLead } from "./rigor";
 import { deviceSignedOutLine } from "./signIns";
 import { taskEventKindSchema } from "./tasks";
-import { AUTONOMY_WORDS, CARE_WORDS, DELIVERY_WORDS } from "./vocabulary";
 
 /**
  * The one mapping from FmEvents to activity-feed lines, shared by the
@@ -45,6 +45,12 @@ export const feedLineSchema = z.object({
    * words has none, and neither does one from a home built before it.
    */
   saidHere: z.literal(true).optional(),
+  /**
+   * The line as a fact, worded where it is shown (docs/i18n.md, "Saved
+   * facts"); `text` is its English, for a reader that words nothing itself.
+   * A line said as it was written, such as a crewmate's, has none.
+   */
+  said: saidSchema.optional(),
 });
 export type FeedLine = z.infer<typeof feedLineSchema>;
 
@@ -102,6 +108,33 @@ function isFeedEvent(event: FmEvent): event is FeedEvent {
   return feedTypes.has(event.type);
 }
 
+/** Who set a project's fact, as a line's lead ("Captain · "); none when the app did. */
+function byWho(actor: string | undefined): string | SaidPart {
+  return actor === "captain"
+    ? saidPart("feedByCaptain")
+    : actor === "firstmate"
+      ? saidPart("feedByFirstMate")
+      : "";
+}
+
+const DELIVERY_SAID: Readonly<Record<string, SaidPart>> = {
+  "direct-pr": saidPart("feedDeliveryPull"),
+  "queue-pr": saidPart("feedDeliveryBatched"),
+  "local-only": saidPart("feedDeliveryLocal"),
+  "in-place": saidPart("feedDeliveryInPlace"),
+};
+
+const CARE_SAID: Readonly<Record<string, SaidPart>> = {
+  quick: saidPart("feedCareQuick"),
+  standard: saidPart("feedCareStandard"),
+  reviewed: saidPart("feedCareReviewed"),
+};
+
+/** A line as its fact, with the fact's English as its text. */
+function line(kind: FeedLine["kind"], fact: Said): Omit<FeedLine, "at"> {
+  return { kind, text: englishOf(fact), said: fact };
+}
+
 export function feedLineFrom(event: FmEvent): Omit<FeedLine, "at"> | null {
   if (!isFeedEvent(event)) return null;
   switch (event.type) {
@@ -109,55 +142,80 @@ export function feedLineFrom(event: FmEvent): Omit<FeedLine, "at"> | null {
       // Already authored by the core from the record; the line is in
       // task_events, so the persistence seam must not record it again.
       return event.feed
-        ? { kind: taskFeedKind(event.kind), text: event.text, taskKey: event.key }
+        ? {
+            kind: taskFeedKind(event.kind),
+            text: event.text,
+            taskKey: event.key,
+            ...(event.said ? { said: event.said } : {}),
+          }
         : null;
     case "firstmate_note":
       // The captain's call: show the note's own words. Activity and the
       // whisper paint this text as saved; lines already stored keep the
-      // old prefix until retention drops them.
-      return { kind: event.tone ?? "info", text: event.text };
+      // old prefix until retention drops them. A note the app wrote as a
+      // fact keeps it beside its words.
+      return {
+        kind: event.tone ?? "info",
+        text: event.text,
+        ...(event.said ? { said: event.said } : {}),
+      };
     case "memory_noted":
-      return { kind: "info", text: `First mate · remembered: ${event.text}` };
+      return line("info", said("feedRemembered", { text: event.text }));
     case "personalized":
       // A settled run that came back where it started leaves no line.
       if (event.run?.withdrawn) return null;
       // Tier A of talk-to-personalize: the change is the line, no card.
-      return {
-        kind: "info",
-        text: event.actor
-          ? `${event.actor === "captain" ? "Captain" : "First mate"} · ${event.text}`
-          : `First mate · personalized: ${event.text}`,
-      };
+      return line(
+        "info",
+        event.actor === "captain"
+          ? said("feedCaptainSet", { text: event.text })
+          : event.actor
+            ? said("feedFirstMateSet", { text: event.text })
+            : said("feedPersonalized", { text: event.text }),
+      );
     case "user_turn": {
       const preview = reportSummary(event.text);
-      return { kind: "you", text: preview ? `Captain: ${preview}` : "Captain: image" };
+      return line("you", preview ? said("feedCaptainSaid", { preview }) : said("feedCaptainImage"));
     }
-    case "repo_setup":
-      return {
-        kind: "info",
-        text: `${event.actor === "captain" ? "Captain · " : event.actor === "firstmate" ? "First mate · " : ""}Project ${event.name} · ${
-          event.kind === "clone" ? "cloned" : event.kind === "init" ? "created" : "linked"
-        }`,
-      };
-    case "repo_configured":
+    case "repo_setup": {
+      const fills = { who: byWho(event.actor), name: event.name };
+      return line(
+        "info",
+        event.kind === "clone"
+          ? said("feedProjectCloned", fills)
+          : event.kind === "init"
+            ? said("feedProjectCreated", fills)
+            : said("feedProjectLinked", fills),
+      );
+    }
+    case "repo_configured": {
       // The standing rigor is named only when the repository declares one
       // (delivery rigor phase 3); a derived rigor is the default and says
       // nothing here.
-      return {
-        kind: "info",
-        text:
-          event.description ??
-          `${event.actor ? `${event.actor === "captain" ? "Captain" : "First mate"} · ` : ""}Project ${event.name} · settings: ${DELIVERY_WORDS[event.delivery] ?? event.delivery}, ${(
-            event.autonomy ? AUTONOMY_WORDS.putsInItself : AUTONOMY_WORDS.asksFirst
-          ).toLowerCase()}${event.rigor ? `, care: ${CARE_WORDS[event.rigor] ?? event.rigor}` : ""}`,
+      if (event.description) return { kind: "info", text: event.description };
+      const fills = {
+        who: byWho(event.actor),
+        name: event.name,
+        delivery: DELIVERY_SAID[event.delivery] ?? event.delivery,
+        merging: event.autonomy ? saidPart("feedMergesOnItsOwn") : saidPart("feedAsksFirst"),
       };
+      return line(
+        "info",
+        event.rigor
+          ? said("feedProjectSettingsCare", {
+              ...fills,
+              care: CARE_SAID[event.rigor] ?? event.rigor,
+            })
+          : said("feedProjectSettings", fills),
+      );
+    }
     case "repo_runs_on":
       return { kind: "info", text: event.text };
     case "repo_unregistered":
-      return {
-        kind: "info",
-        text: `${event.actor === "captain" ? "Captain · " : event.actor === "firstmate" ? "First mate · " : ""}Project ${event.name} · removed`,
-      };
+      return line(
+        "info",
+        said("feedProjectRemoved", { who: byWho(event.actor), name: event.name }),
+      );
     case "device_joined":
       return { kind: "info", text: deviceJoinedLine(event) };
     case "device_setup":
@@ -165,9 +223,12 @@ export function feedLineFrom(event: FmEvent): Omit<FeedLine, "at"> | null {
     case "device_connection":
       return { kind: event.tone, text: event.text };
     case "device_left":
-      return { kind: "info", text: `${event.name} left.` };
+      return line("info", said("feedComputerLeft", { name: event.name }));
     case "device_signed_in":
-      return { kind: "info", text: `${event.who} is signed in to ${event.provider}.` };
+      return line(
+        "info",
+        said("feedComputerSignedIn", { who: event.who, provider: event.provider }),
+      );
     case "device_signed_out":
       return deviceSignedOutLine(event);
     case "turn_failed": {
@@ -181,7 +242,7 @@ export function feedLineFrom(event: FmEvent): Omit<FeedLine, "at"> | null {
       // seat's own line says what stopped it and what is kept ("Firstmate
       // paused: ..."). One that paused nothing is an ordinary failure.
       if (event.paused) return null;
-      return { kind: "danger", text: `First mate · problem: ${plainProblem(event.error)}` };
+      return line("danger", said("feedFirstMateProblem", { problem: plainProblem(event.error) }));
     }
     default: {
       // Adding a listed type without its author, or an author without its type, fails typecheck.

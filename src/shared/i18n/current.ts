@@ -18,8 +18,38 @@ export function currentLanguage(): string {
   return language;
 }
 
+const listeners = new Set<(tag: string) => void>();
+
+/**
+ * Sets the language the process speaks; each listener hears a change, so
+ * what the process worded ahead of time, such as a menu, is worded again.
+ */
 export function setCurrentLanguage(tag: string): void {
+  if (tag === language) return;
   language = tag;
+  for (const listener of listeners) listener(tag);
+}
+
+/** Hears each later change of the process's language; answers what stops hearing. */
+export function onLanguageChange(listener: (tag: string) => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+/**
+ * Words `word` in `tag` and answers it, the process's own language left as
+ * it was: the English a saved fact keeps beside it is worded this way
+ * whatever the process speaks (docs/i18n.md, "Saved facts"). Nothing hears
+ * the change, since it never outlives the call.
+ */
+export function inLanguage<T>(tag: string, word: () => T): T {
+  const spoken = language;
+  language = tag;
+  try {
+    return word();
+  } finally {
+    language = spoken;
+  }
 }
 
 export function currentDirection(): TextDirection {

@@ -574,6 +574,10 @@ export async function startApp(
       // gear, so no window carries Electron's default menu or its keys.
       if (desktop.windowControls === "app") Menu.setApplicationMenu(null);
       installCsp(session.defaultSession, rendererSource);
+      // The frame realm's lib this build made (out/frame-lib, beside
+      // out/main), which the shell serves its own frames and the first mate
+      // answers a phone (docs/view.md, "Panels on the phone").
+      const frameLib = { dir: join(mainDir, "../frame-lib"), pins: frameLibPins };
       const host = createElectronHost({
         // Beside a command's first mate, that first mate ends first, with its
         // crew's work saved, before this window's update replaces the copy.
@@ -588,6 +592,7 @@ export async function startApp(
         ...(userDataChoice.kind === "flavor"
           ? { autostartName: basename(userDataChoice.dir) }
           : {}),
+        frameLib,
         keychainProcessPath: join(mainDir, "keychainProcessMain.js"),
         sqlProcessPath: join(mainDir, "sqlProcess.js"),
         recordProcessPath: join(mainDir, "recordProcess.js"),
@@ -859,7 +864,7 @@ export async function startApp(
         mounts: frameMounts,
         fonts: frameFontFiles,
         pictures: () => shell.pictures(),
-        lib: { dir: join(mainDir, "../frame-lib"), pins: frameLibPins },
+        lib: frameLib,
       });
       // A 5-minute setInterval fires once late after a sleep and then drifts,
       // which is exactly when a reading is most likely to be both wrong and

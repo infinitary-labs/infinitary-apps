@@ -1,0 +1,3 @@
+A home answers a paired view the panel library its panels' files import: the request `inf:plugins:library` is new, and answers, for the version of the app a panel's files were built for, every file of the frame realm's library but the app's own panels, each with its pin, or null when the home is on another version or has no library.
+A phone, which never carries the home's build, draws the captain's panels from that library and the files `inf:plugins:files` answers, whatever its own version.
+A home without this change refuses the request as not one it answers, and a phone that knows its home does not list this change shows no panel of the captain's.

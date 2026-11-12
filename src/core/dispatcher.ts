@@ -68,6 +68,7 @@ import { isAllowedOpenExternalUrl } from "./openExternal";
 import { CardChoiceUnavailableError } from "./orchestrator/cardActions";
 import type { OwnWindow } from "./ownWindow";
 import { readPanelGraph } from "./personal/panelGraph";
+import { type PanelLibraryFile, readPanelLibrary } from "./personal/panelLibrary";
 import { actionValue } from "./pi/appTools";
 import { customCapabilityProfiles } from "./pi/customApiModels";
 import { listSurfaces, type SurfaceView } from "./pi/personalizeTool";
@@ -210,6 +211,8 @@ export type CoreDispatcherOptions = {
 export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispatch {
   const { services, host, emit, ownWindow } = options;
   const browserViews = new BrowserViews(() => services.browsers);
+  /** The panel library as this run read it, which its build fixed (`inf:plugins:library`). */
+  let panelLibrary: Promise<PanelLibraryFile[]> | undefined;
   /**
    * Start at login is the system's own setting for the program a person
    * opens, so a first mate a command started reads and changes it through
@@ -1409,6 +1412,17 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           data: Buffer.from(bytes).toString("base64"),
         })),
       };
+    },
+    // The library a panel's files import, for a phone (docs/view.md, "Panels
+    // on the phone"): only at this computer's version, read once a run.
+    "inf:plugins:library": async ({ version }) => {
+      const lib = host.frameLib;
+      if (!lib || version !== host.app.version) return null;
+      panelLibrary ??= readPanelLibrary(lib).catch((error: unknown) => {
+        panelLibrary = undefined;
+        throw error;
+      });
+      return { version, files: await panelLibrary };
     },
     // The placement a crewmate waits on is this computer's window's: a
     // window on another computer places its panels its own way.

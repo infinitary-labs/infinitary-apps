@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   cpSync,
   existsSync,
@@ -8,6 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { HandoverOffer } from "@shared/actions";
 import type { Card } from "@shared/cards";
 import { CONNECTION_CLOSE, CONNECTION_PORT } from "@shared/connection";
@@ -23,6 +25,7 @@ import {
 } from "@shared/ipc";
 import { presetKeymap, type SavedKeymap } from "@shared/keymap";
 import { OWN_WINDOW_WORDS, type OwnWindowAsked } from "@shared/ownWindow";
+import type { PersonalSnapshot } from "@shared/personal/manifest";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { mockModelsJson } from "../../tests/e2e/mockModels";
 import {
@@ -56,6 +59,7 @@ import { type Core, startCore } from "./index";
 import { createAppTools } from "./pi/appTools";
 import { catalogRefreshesSettled } from "./pi/modelRuntime";
 import { SIGN_IN_RETURN_WORDS } from "./signInReturns";
+import { forkChildProcess } from "./sql/forkChildProcess";
 import type { AskRecord } from "./storage/askStore";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
@@ -80,11 +84,20 @@ describe("the connection serves the core to paired devices", () => {
   let core: Core;
   let connection: ReturnType<typeof startConnection>;
   let at: string;
+  let frameLib: { dir: string; pins: Record<string, string> } | undefined;
 
   beforeAll(async () => {
     userDataDir = scratchDir("infinitary-core-connection-");
     process.env.PI_OFFLINE = "1";
-    core = await startCore(fakeHost(userDataDir).host);
+    frameLib = panelLibraryOnDisk(scratchDir("infinitary-core-connection-lib-"));
+    core = await startCore({
+      ...fakeHost(userDataDir).host,
+      frameLib,
+      // A panel's server actions run in the real panel process, as in the app.
+      panelProcess: forkChildProcess(
+        fileURLToPath(new URL("./panels/panelProcess.ts", import.meta.url)),
+      ),
+    });
     ({ connection, at } = await serveConnection(core));
   }, 60_000);
 
@@ -92,6 +105,7 @@ describe("the connection serves the core to paired devices", () => {
     await connection?.close();
     await core?.dispose();
     rmSync(userDataDir, { recursive: true, force: true });
+    if (frameLib) rmSync(frameLib.dir, { recursive: true, force: true });
   });
 
   /** The captain makes a link on this Mac; a device uses it. */
@@ -382,6 +396,94 @@ describe("the connection serves the core to paired devices", () => {
     // Removed, as each test here leaves the first mate with no device.
     await core.dispatch("inf:devices:remove", [grant.deviceId]);
     expect(await view.closed).toBe(CONNECTION_CLOSE.unpaired);
+  });
+
+  // INF-3830's plan, piece 1 (the captain's answer entry=tab): "the computer
+  // serves panels to a phone: the panel list and its changes, the panel
+  // library by version, any listed panel's files at any phone version, data,
+  // usage queries and presses answered as to a desktop window".
+  it("serves a phone on another version its panels: the list, the files, the library they import, data and presses", async () => {
+    const { link } = await core.dispatch("inf:devices:invite", [{ kind: "mac", at }]);
+    await connection.settled();
+    const grant = await claimLink(link, { ...AT_FIRST_LAUNCH, name: "iPhone" });
+    const phone = await connectClient(grant, { system: { system: "ios" }, appVersion: "1.4.0" });
+    const home = (await core.dispatch("inf:app:healthcheck", [])).version;
+    expect(home).not.toBe("1.4.0");
+
+    // The list and its changes: a panel saved now reaches the phone as a push.
+    const pushed = phone.push(
+      (push) =>
+        push.channel === "inf:plugins:personal" &&
+        (push.payload as PersonalSnapshot).extensions.some(
+          (extension) => extension.id === "open-items" && extension.frame,
+        ),
+    );
+    cpSync(
+      join(process.cwd(), "tests", "fixtures", "personal", "open-items"),
+      join(core.paths.personalWorkspaceDir, "open-items"),
+      { recursive: true },
+    );
+    await pushed;
+    const listed = (await phone.invoke("inf:plugins:personal:list", [])).extensions.find(
+      (extension) => extension.id === "open-items",
+    );
+    const version = listed?.frame?.version as string;
+    expect(version).toBeTruthy();
+
+    // Its files, whatever the phone's own version, built for the home's.
+    const files = await phone.invoke("inf:plugins:files", [
+      { source: "yours", id: "open-items", version },
+    ]);
+    expect(files?.builtFor).toBe(home);
+    expect(files?.files.map((file) => file.path)).toContain("panel.mjs");
+
+    // The library they import, at that version: every pinned file with its
+    // pin, but the app's own panels.
+    const lib = frameLib as { dir: string; pins: Record<string, string> };
+    // A file that is no longer the one the build made is never served.
+    const chunk = join(lib.dir, "chunks", "react-e5f6a7b8.mjs");
+    const built = readFileSync(chunk);
+    writeFileSync(chunk, "export const createElement = () => fetch('https://example.com');\n");
+    await expect(phone.invoke("inf:plugins:library", [{ version: home }])).rejects.toThrow(
+      /not the file this build made/,
+    );
+    writeFileSync(chunk, built);
+    const library = await phone.invoke("inf:plugins:library", [{ version: home }]);
+    expect(library?.version).toBe(home);
+    expect(library?.files.map((file) => file.path)).toEqual(
+      Object.keys(lib.pins)
+        .filter((path) => !path.startsWith("builtin/"))
+        .sort(),
+    );
+    for (const file of library?.files ?? []) {
+      const bytes = readFileSync(join(lib.dir, file.path));
+      expect(file.data).toBe(bytes.toString("base64"));
+      expect(file.integrity).toBe(lib.pins[file.path]);
+    }
+    // Another version's library is the phone's to keep: this home answers none.
+    expect(await phone.invoke("inf:plugins:library", [{ version: "1.4.0" }])).toBeNull();
+
+    // A press runs on the home, and the data it writes reaches the phone.
+    const changed = phone.push(
+      (push) =>
+        push.channel === "inf:plugins:db" &&
+        (push.payload as { extensionId: string; key: string }).extensionId === "open-items",
+    );
+    expect(await phone.invoke("inf:plugins:invoke", ["open-items", "fill", ["milk"]])).toEqual({
+      ok: true,
+      result: { filled: 1, host: "string" },
+    });
+    await changed;
+    expect(
+      await phone.invoke("inf:plugins:db", [
+        { op: "get", extensionId: "open-items", key: "items" },
+      ]),
+    ).toEqual({ value: ["milk"] });
+
+    // Removed, as each test here leaves the first mate with no device.
+    rmSync(join(core.paths.personalWorkspaceDir, "open-items"), { recursive: true, force: true });
+    await core.dispatch("inf:devices:remove", [grant.deviceId]);
+    expect(await phone.closed).toBe(CONNECTION_CLOSE.unpaired);
   });
 
   it("makes a link only for the captain's own window, and keeps it out of everything saved", async () => {
@@ -1123,3 +1225,28 @@ describe("a phone's usage events reach Diagnostics through its computer", () => 
     expect((await core.dispatch("inf:settings:sharing:get", [])).diagnostics.phones).toEqual({});
   }, 60_000);
 });
+
+/**
+ * A frame realm library as the build lays it out (scripts/frame-lib.ts):
+ * the boot module, the host modules, a shared chunk they import, and one of
+ * the app's own panels under `builtin/`, each pinned by its SHA-256.
+ */
+function panelLibraryOnDisk(dir: string): { dir: string; pins: Record<string, string> } {
+  const files: Record<string, string> = {
+    "boot.mjs": 'import { bootPanel } from "./chunks/runtime-a1b2c3d4.mjs";\nbootPanel();\n',
+    "react.mjs": 'import * as React from "./chunks/react-e5f6a7b8.mjs";\nexport default React;\n',
+    "jsx-runtime.mjs": 'import * as jsx from "./chunks/react-e5f6a7b8.mjs";\nexport default jsx;\n',
+    "ui.mjs": 'import * as ui from "./chunks/runtime-a1b2c3d4.mjs";\nexport default ui;\n',
+    "chunks/react-e5f6a7b8.mjs": "export const createElement = () => null;\n",
+    "chunks/runtime-a1b2c3d4.mjs": "export function bootPanel() {}\n",
+    "builtin/activity/panel.mjs":
+      'import React from "../../react.mjs";\nexport default () => null;\n',
+  };
+  const pins: Record<string, string> = {};
+  for (const [path, text] of Object.entries(files)) {
+    mkdirSync(join(dir, ...path.split("/").slice(0, -1)), { recursive: true });
+    writeFileSync(join(dir, path), text);
+    pins[path] = `sha256-${createHash("sha256").update(text).digest("base64")}`;
+  }
+  return { dir, pins };
+}

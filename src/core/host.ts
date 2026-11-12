@@ -1,3 +1,4 @@
+import type { FrameLibPins } from "@shared/plugins/frameLib";
 import type { ResourceMemory } from "@shared/resources";
 import type { TaskBrowserInput } from "@shared/taskBrowser";
 import type { BuildFlavor } from "@shared/userDataFolders";
@@ -496,6 +497,14 @@ export type HostCapabilities = {
     unlock?: () => Promise<boolean>;
     recovery?: HostSecretsRecovery;
   };
+  /**
+   * The frame realm's library this build made (docs/ui-plugins.md, "The
+   * frame realm"): where its files are and the pins they must match. The
+   * core answers it to a view that carries no copy of this build, as a
+   * phone never does (docs/view.md, "Panels on the phone"); absent, it
+   * answers no library.
+   */
+  readonly frameLib?: { readonly dir: string; readonly pins: FrameLibPins };
   /** A screenshot of a docked panel; absent on a host with no window. */
   readonly capture?: HostPanelCapture;
   /**

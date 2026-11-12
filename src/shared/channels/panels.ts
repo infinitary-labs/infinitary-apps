@@ -10,7 +10,12 @@ import {
   personalStoreResponseSchema,
 } from "../personal/manifest";
 import { panelMountsSchema } from "../personal/mounts";
-import { panelFilesRequestSchema, panelFilesSchema } from "../personal/panelFiles";
+import {
+  panelFilesRequestSchema,
+  panelFilesSchema,
+  panelLibraryRequestSchema,
+  panelLibrarySchema,
+} from "../personal/panelFiles";
 import { mediatedFetchCallSchema, mediatedFetchResultSchema } from "../plugins/fetch";
 import { frameMountRequestSchema, frameMountSchema } from "../plugins/frameDocument";
 import { sqlAnswerSchema, sqlRequestSchema } from "../sql";
@@ -67,6 +72,17 @@ export const panelChannels = {
     reach: "views",
     request: z.tuple([panelFilesRequestSchema]),
     response: panelFilesSchema,
+  },
+  // The frame realm's library, for a view that does not carry this
+  // computer's own build, as a phone never does (docs/view.md, "Panels on
+  // the phone"): answered only at this computer's version, so a panel's
+  // files and the library they import always match.
+  "inf:plugins:library": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([panelLibraryRequestSchema]),
+    response: panelLibrarySchema,
   },
   // What the window did with each panel (docs/personal-panels.md, "Placed
   // on the rail"): drawn, refused and why, sent whenever it changes.

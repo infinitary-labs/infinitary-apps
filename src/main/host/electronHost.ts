@@ -26,6 +26,8 @@ import { createTaskBrowserHost } from "./taskBrowser";
  */
 
 export type ElectronHostOptions = {
+  /** The frame realm's library this build made (`HostCapabilities.frameLib`). */
+  frameLib?: HostCapabilities["frameLib"];
   /** Settle running work before Squirrel replaces and restarts this app. */
   prepareUpdateRestart?: () => Promise<void>;
   /**
@@ -159,6 +161,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
       resourcesDir: process.resourcesPath,
       flavor: app.isPackaged ? packagedFlavor(readPackageJsonAt(app.getAppPath())) : "dev",
     },
+    ...(options.frameLib ? { frameLib: options.frameLib } : {}),
     openExternal: (url) => shell.openExternal(url),
     temporaryDir: () => app.getPath("temp"),
     ...(hostPlatform() === "darwin" &&

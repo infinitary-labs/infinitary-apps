@@ -463,6 +463,7 @@ describe("ipc contract", () => {
       "inf:plugins:files",
       "inf:plugins:integrations",
       "inf:plugins:invoke",
+      "inf:plugins:library",
       "inf:plugins:personal:list",
       "inf:plugins:personal:mounts",
       "inf:plugins:retry",

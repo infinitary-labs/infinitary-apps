@@ -164,6 +164,22 @@ The first mate keeps each panel, builds it and holds its data; a window asks for
 - **An older first mate.**
   A first mate that does not list `panels-in-every-window` refuses these requests from a view, as before, and the view shows no panel of the captain's.
 
+## Panels on the phone
+
+The first mate answers Infinitary on iPhone and iPad everything a window on another computer asks for the captain's panels ("Panels in every window" above): the list and its push, each panel's built files, its data, its server actions, its integrations and SQL, all as the captain at another computer.
+It answers a phone a panel's files whatever the phone's own version, since a phone never carries the first mate's build.
+The phone itself shows no panel yet.
+
+- **The library.**
+  A panel's files import the frame realm's library of the version they were built for (`PanelFiles.builtFor`), which only a window on that version serves, so the first mate also answers that library by its version (`inf:plugins:library`, `src/shared/personal/panelFiles.ts`), for a device that keeps one copy per version.
+  It answers every file of the library its own build made, each with its pin, but the app's own panels under `builtin/` (`readPanelLibrary`, `src/core/personal/panelLibrary.ts`).
+  It answers nothing for another version, and refuses a file whose bytes no longer match its pin, as the shell never serves one to its own frames.
+  It reads the library once a run, from where the host says this build put it (`HostCapabilities.frameLib`).
+- **Desktop windows.**
+  A window on another computer still draws a panel only on the first mate's own version and never asks for the library ("Versions" above).
+- **An older first mate.**
+  A first mate that does not list `panels-on-the-phone` refuses the library as not a request it answers.
+
 ## Pages it would open
 
 A page the first mate would open in a browser for a view's request, such as a sign-in's consent page, goes to the computers that control it as the push `inf:app:open-page` instead of opening on the first mate's computer (`asAView`, `src/core/askedFromAView.ts`), and each of those computers' Infinitary opens it in its own browser once, as it arrives; one a welcome replays after a drop is old news and is not opened (`ViewBackend.openPage`).

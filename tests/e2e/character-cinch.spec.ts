@@ -10,7 +10,7 @@ import { closeOpenCards, shownCard } from "./stack";
 
 /** INF-3011: while the first mate shortens its conversation, the character draws itself tight (the cinch) for the whole shortening, then springs back.
  * Fixture: real boxed Claude client, dummy subscription, isolated HOME/userData and a loopback provider that refuses the conversation as too long, then takes its time over the summary.
- * Completion: the window hears the shortening start and end inside the turn, the character's ink draws in between them, and the answer card arrives.
+ * Completion: the window hears the shortening start and end inside the turn, the character's ink draws in between them, and the turn ends (the busy state falls) after the answer card arrives.
  * Prerequisites: Electron and the SDK's client on macOS/Linux; no shared resources or real sign-in.
  */
 
@@ -73,6 +73,22 @@ async function watch(page: Page): Promise<void> {
 const states = (page: Page) => page.evaluate(() => window.__fmStates ?? []);
 const reaches = (page: Page) => page.evaluate(() => window.__fmReach ?? []);
 
+/** Starts the record over, so it holds the next turn alone. */
+const restart = (page: Page) =>
+  page.evaluate(() => {
+    window.__fmStates?.splice(0);
+    window.__fmReach?.splice(0);
+  });
+
+/**
+ * Returns once the last state the window heard is the first mate falling idle: the turn's end.
+ * The answer card is filed inside the turn and shown while the first mate still asks
+ * for its closing words, so a shown card is not the turn's end; reading the record
+ * at the card raced that last request and missed the turn's end on a loaded run.
+ */
+const turnEnded = (page: Page) =>
+  expect.poll(async () => (await states(page)).at(-1)?.busy, { timeout: 45_000 }).toBe(false);
+
 test("the first mate draws itself tight while it shortens its conversation", async () => {
   const evidence = process.env.INFINITARY_CINCH_EVIDENCE_DIR;
   const mockProvider = await startMockProvider({ scenarios: [contextOverflow, slowShortening] });
@@ -80,10 +96,13 @@ test("the first mate draws itself tight while it shortens its conversation", asy
   try {
     launched = await launchClaudeSeat({ mockProvider });
     const { app, page } = launched;
+    await watch(page);
     await say(page, `hello ${ANSWER_PROMPT_MARKER}`);
     await expect(shownCard(page, MOCK_ANSWER_TITLE)).toBeVisible();
+    // The first turn has ended before the record starts over, so none of it reaches the next.
+    await turnEnded(page);
     await closeOpenCards(page);
-    await watch(page);
+    await restart(page);
     const character = page.getByRole("img", { name: /^First mate - / });
 
     await say(page, `hello ${CONTEXT_OVERFLOW_PROMPT_MARKER} ${ANSWER_PROMPT_MARKER}`);
@@ -112,6 +131,7 @@ test("the first mate draws itself tight while it shortens its conversation", asy
 
     // It ends inside the same turn, and the answer comes.
     await expect(shownCard(page, MOCK_ANSWER_TITLE)).toBeVisible({ timeout: 45_000 });
+    await turnEnded(page);
     expect(await states(page)).toEqual([
       { busy: true },
       { busy: true, folding: true },

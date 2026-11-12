@@ -60,7 +60,7 @@ export default async function seed(userDataDir: string, words: Words): Promise<v
         caption: view.caption,
         ...(view.fresh ? { layout: "adjacent" as const } : {}),
         before: view.before.map(shown),
-        after: view.after.map(shown),
+        after: view.after.map((name) => ({ ...shown(name), faults: [] })),
       })),
       risk: {
         blast: { level: "low", why: "The merge card's views" },

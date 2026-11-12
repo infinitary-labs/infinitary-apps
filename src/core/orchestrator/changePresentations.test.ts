@@ -161,6 +161,7 @@ async function arrange(
             alt: "The inspected light completion view",
             captureHead: HEAD,
             inspected: true,
+            faults: [],
           },
         ],
       },
@@ -523,7 +524,7 @@ describe("saved change publication", () => {
             kind: "new",
             layout: "adjacent",
             before: [],
-            after: [...view.before, ...view.after],
+            after: [...view.before.map((media) => ({ ...media, faults: [] })), ...view.after],
           },
         ],
         requiredActions: [requirement],
@@ -896,7 +897,7 @@ describe("saved change publication", () => {
       kind: "changed" as const,
       map: "map-data.json",
       before: [],
-      after: [{ path: "map.webp", alt, captureHead: HEAD, inspected: true as const }],
+      after: [{ path: "map.webp", alt, captureHead: HEAD, inspected: true as const, faults: [] }],
     };
     const root = { taskId: TASK, worktree: at.worktree, dir: at.media };
     await at.service.prepare(
@@ -1650,6 +1651,7 @@ it("keeps a closed card's pictures and recording after later publications prune 
                 alt: DEMO_POSTER.alt,
                 inspected: true,
                 captureHead: HEAD,
+                faults: [],
               },
             ],
           },
@@ -1659,12 +1661,10 @@ it("keeps a closed card's pictures and recording after later publications prune 
         taskId: TASK,
         worktree: at.worktree,
         dir: at.media,
-        probe: async () => ({
-          ok: true,
-          width: DEMO_RECORDING.width,
-          height: DEMO_RECORDING.height,
-          durationMs: DEMO_RECORDING.durationMs,
-        }),
+        probe: async () => {
+          const { width, height, durationMs } = DEMO_RECORDING;
+          return { ok: true, width, height, durationMs };
+        },
       },
     );
   const first = await stage();

@@ -194,6 +194,7 @@ describe("a task that runs on a computer that runs work", () => {
                         alt: "The task reply in the dark appearance",
                         inspected: true,
                         captureHead: project.main,
+                        faults: [],
                       },
                     ],
                   },

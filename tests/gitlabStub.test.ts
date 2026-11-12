@@ -505,14 +505,20 @@ describe("a saved story through the real GitLab forge and the stand-in", () => {
           caption: "Completion story",
           kind: "changed" as const,
           before: [media0("dark.webp", "The existing dark completion view")],
-          after: [media0("light.webp", "The inspected light completion view")],
+          after: [{ ...media0("light.webp", "The inspected light completion view"), faults: [] }],
         },
         {
           id: "drag",
           caption: "The box slides right",
           kind: "new" as const,
           before: [],
-          after: [{ ...media0(DEMO_RECORDING.path, DEMO_POSTER.alt), poster: DEMO_POSTER.path }],
+          after: [
+            {
+              ...media0(DEMO_RECORDING.path, DEMO_POSTER.alt),
+              poster: DEMO_POSTER.path,
+              faults: [],
+            },
+          ],
         },
       ],
       checked: [{ check: "Publication", result: "The selected story and evidence agree." }],

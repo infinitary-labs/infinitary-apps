@@ -169,7 +169,12 @@ The strip is at most two parts, each the card's full width: the status line, and
   The crewmate takes the Before pictures before its first edit (`docs/delivery-rigor.md`, `docs/testing.md` "Capturing pictures").
   Out of scope for the host's picture checks: a side-by-side layout, a capture command, recordings and any check that a picture is blank or framed alike.
   Every crewmate is instructed to open each picture and demo poster with its image-reading tool before attaching it, and to write alt text from what the file shows rather than the capture script's intent.
-  It retakes a mostly blank, half-drawn or cut-off capture unless that is the intended subject, which its alt text then names.
+  It looks twice (INF-3814's direction B).
+  First as the author: it retakes a mostly blank, half-drawn or cut-off capture unless that is the intended subject, which its alt text then names.
+  Then as a person who uses the view and has never seen the change: it names what that person would call wrong, such as covered words, clipped text, crowded spacing or something out of line.
+  It fixes every fault its change caused, takes the picture again and looks at the new take the same way before showing it; when it doubts whether something its change drew is a fault, it fixes it.
+  A fault that was there before the change is not fixed in passing, and a choice the captain's words or an approved plan made is not a fault.
+  A change story holds it to that look: each After picture carries the crewmate's answer for its final take (`faults`, "Saved change stories" in `docs/forge.md`).
   When it cannot inspect a file, it leaves it off the card and reports the gap.
   This is agent judgment, not a pixel threshold or a host refusal.
   What is left folds in `<details>`, not a fifth heading.

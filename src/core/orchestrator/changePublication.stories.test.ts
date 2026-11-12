@@ -1513,7 +1513,13 @@ describe("shared story delivery boundaries", () => {
               caption: "The reply view",
               before: [],
               after: [
-                { path, alt: "The dark reply view", inspected: true, captureHead: story.head },
+                {
+                  path,
+                  alt: "The dark reply view",
+                  inspected: true,
+                  captureHead: story.head,
+                  faults: [],
+                },
               ],
             },
           ],

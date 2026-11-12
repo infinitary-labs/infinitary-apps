@@ -76,6 +76,7 @@ export const forkContribution: Scenario = () => {
                           alt: "A cyan panel with a dark cross",
                           inspected: true,
                           captureHead: head,
+                          faults: [],
                         },
                       ],
                     },

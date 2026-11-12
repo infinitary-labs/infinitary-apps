@@ -62,8 +62,13 @@ describe("picture review reaches every crewmate", () => {
         expect(review).toBeLessThan(prompt.indexOf(RIGOR_SAFETY));
         expect(prompt).toContain("open the file with your image-reading tool");
         expect(prompt).toContain("Write its alt text from the file");
+        expect(prompt).toContain("Retake one that is mostly blank, half-drawn or cut off");
+        // INF-3814's direction B: the second look, as a person using the view, and the fix.
         expect(prompt).toContain(
-          "Retake a picture or poster that is mostly blank, half-drawn or cut off",
+          "Then as a person who uses this view and has never seen your change",
+        );
+        expect(prompt).toContain(
+          "Fix every fault your change caused, take the picture again and give the new take both looks",
         );
         expect(prompt).toContain("unless that is what it is meant to show");
         expect(prompt).toContain("when intentional, say so in its alt text");

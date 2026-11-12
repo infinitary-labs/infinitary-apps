@@ -117,6 +117,7 @@ export const PREPARE_CHANGE_STORY_DESCRIPTION = [
   "base, head and every captureHead are full 40-character commit ids from git rev-parse, never short; a later revision keeps the first base and each kept view's Before media.",
   "Before media name base, After media head; media taken on another version name it with applicability, kept as data, not displayed; kind new has no Before.",
   "layout adjacent needs exactly two media in each shown state.",
+  "Every After picture or poster carries faults, your answer for its final take to what a person using the view would call wrong: [] when nothing. A fault your change caused is refused: fix it, take the picture again and answer for the new take. before-change and chosen faults are kept on the task's record, never drawn.",
   "A view's map names a filled map data block file: the merge card draws it live and the pull request shows its one After picture of that drawing; it is kind changed with no Before, one per story, beside noPicture when nothing on screen changed.",
   "Everyone who can see the project reads the story: write it for a stranger, naming the captain's setup only by its kind, with no computer, host, user or account names, keys and what they reach, addresses, paths, clock times, time zones, other projects, task keys or the captain's own words.",
   "publishable true is your declaration that you read the whole story once as that stranger and it holds nothing personal or local.",

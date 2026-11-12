@@ -31,6 +31,28 @@ export const presentationMediaSchema = z.strictObject({
 });
 export type PresentationMedia = z.infer<typeof presentationMediaSchema>;
 
+/**
+ * The crewmate's answer, for one After picture or poster's final take, to
+ * what a person using that view would call wrong in it (INF-3814's
+ * direction B): each fault it noticed, with whose it is. The app sees no
+ * picture; it carries this declaration and refuses a story only while a
+ * fault is the change's own (`ownFaults`). The answer stays on the task's
+ * record with the tool call and is never drawn on a card or published.
+ */
+export const PICTURE_FAULT_CAUSES = ["change", "before-change", "chosen"] as const;
+export const presentationFaultSchema = z.strictObject({
+  fault: words,
+  cause: z.enum(PICTURE_FAULT_CAUSES),
+});
+const afterMediaSchema = presentationMediaSchema.extend({
+  faults: z
+    .array(presentationFaultSchema)
+    .max(20)
+    .describe(
+      "What a person using this view would call wrong in this final take: [] when nothing. cause change is refused until fixed and taken again; before-change was there before the change; chosen is what the captain's words or an approved plan chose.",
+    ),
+});
+
 export const presentationViewSchema = z.strictObject({
   id: key,
   caption: z.string().trim().min(1).max(1000),
@@ -50,7 +72,7 @@ export const presentationViewSchema = z.strictObject({
       "Path of a filled map data block (JSON); the merge card draws it live. Kind changed, no Before, one After picture of it.",
     ),
   before: z.array(presentationMediaSchema).max(20),
-  after: z.array(presentationMediaSchema).min(1).max(20),
+  after: z.array(afterMediaSchema).min(1).max(20),
 });
 
 /** INF-467: a checked fact is a short subject and its observed result, not a command transcript. */
@@ -95,7 +117,8 @@ export const changePresentationDraftSchema = z
     /** Public project-required fields, issue references or template text, outside the owned region. */
     projectText: z.string().max(12000).optional(),
   })
-  .superRefine(evidenceRelations);
+  .superRefine(evidenceRelations)
+  .superRefine(ownFaults);
 export type ChangePresentationDraft = z.infer<typeof changePresentationDraftSchema>;
 
 /** A retained image or recording, kept while its story is the newest or last published revision. */
@@ -377,6 +400,27 @@ function evidenceRelations(
     issue(
       "The story exceeds 60,000 UTF-16 code units of JSON, including its after-merge work and any packed map. Shorten descriptions, map fewer folders, or file the work as tasks first and list their keys instead; keep every authorized task and dependency.",
     );
+}
+
+/**
+ * INF-3814's direction B: a story is saved only once no After picture shows a
+ * fault its change caused. The crewmate judged the picture; the host only
+ * reads the cause it declared.
+ */
+function ownFaults(
+  draft: {
+    views: { id: string; after: { path: string; faults: { fault: string; cause: string }[] }[] }[];
+  },
+  ctx: z.RefinementCtx,
+): void {
+  for (const view of draft.views)
+    for (const media of view.after)
+      for (const { fault, cause } of media.faults)
+        if (cause === "change")
+          ctx.addIssue({
+            code: "custom",
+            message: `${media.path} in view ${view.id} shows a fault your change caused: ${fault} Fix it, take the picture again, open the new take and answer again for it. The story was not saved.`,
+          });
 }
 
 /** Keep old saved stories readable without rewriting their authored content. */

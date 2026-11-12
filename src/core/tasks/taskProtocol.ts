@@ -16,7 +16,7 @@ import { liveValidationSummary } from "@shared/liveValidationSummary";
 import type { ModelChoice } from "@shared/modelChoice";
 import type { ModelReason } from "@shared/modelReason";
 import { providerLabel, type Slot, slotSchema } from "@shared/modelSlots";
-import { plainProblem, typedFailureOf } from "@shared/plainProblem";
+import { crewProblem, typedFailureOf } from "@shared/plainProblem";
 import { isAllowanceProvider, servedProviderOf } from "@shared/quota";
 import { type Reasoning, reasoningSchema } from "@shared/reasoning";
 import type { RepoDelivery } from "@shared/repos";
@@ -1951,7 +1951,7 @@ function problemOf(events: readonly TaskEventView[]): string | null {
   if (!last) return null;
   if (last.kind === "interrupted") return "Its turn was stopped before it finished.";
   const error = typeof last.data?.error === "string" ? last.data.error : last.text;
-  const words = plainProblem(error, typedFailureOf(last.data ?? {}));
+  const words = crewProblem(error, typedFailureOf(last.data ?? {}));
   return `${words.charAt(0).toUpperCase()}${words.slice(1)}.`;
 }
 

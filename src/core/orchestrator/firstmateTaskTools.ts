@@ -100,6 +100,14 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
               ? undefined
               : [...new Set(input.declaredBlockers.map((ref) => resolve(ref).id))];
           host.asks.attach(record.id, "update_task");
+          // The answer to a task stuck at its provider (docs/inbox.md): the
+          // app's own pick, never a model named here.
+          if (input.unstick) {
+            const answer = await supervisor.turns.unstick(record.id, input.unstick);
+            if (!answer.ok) throw new TaskGraphRefusal(answer.text);
+            tookEffect(record.id);
+            return answer.text;
+          }
           const beforePolicies = input.policies
             ? effectiveTaskPolicies(
                 record,

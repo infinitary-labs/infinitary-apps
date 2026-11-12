@@ -36,6 +36,27 @@ export type OutageFacts =
       failures: number;
     }
   | {
+      /**
+       * Stuck at its provider (docs/inbox.md, "Stuck at its provider"): the
+       * same refusal `refusals` times in a row, so the host stopped
+       * retrying and keeps the guidance until the first mate answers.
+       */
+      kind: "provider-stuck";
+      task: WakeTask;
+      crewmate: string;
+      /** The task's key, which update_task takes. */
+      key: string;
+      /** The provider's words, already capped for a wake. */
+      error: string;
+      /** When its outage began. */
+      since: number;
+      refusals: number;
+      /** The model the app would move it to, when one serves; absent when no move can work. */
+      moveTo?: string;
+      /** The provider that refused it, as the captain names it. */
+      provider?: string;
+    }
+  | {
       /** The honest retry: the provider answered after two or more failures. */
       kind: "outage-recovered";
       task: WakeTask;
@@ -118,6 +139,26 @@ export function stillDownWake(
       failures: outage.failures,
     },
     once: stillDownOnce(outage.since),
+  };
+}
+
+/** The one wake when a task gets stuck at its provider. */
+export function stuckWake(
+  task: WakeTask & { key: string; crewmate: string },
+  stuck: { error: string; since: number; refusals: number; moveTo?: string; provider?: string },
+): TypedWake {
+  return {
+    facts: {
+      kind: "provider-stuck",
+      task: { id: task.id, title: task.title },
+      crewmate: task.crewmate,
+      key: task.key,
+      error: stuck.error,
+      since: stuck.since,
+      refusals: stuck.refusals,
+      ...(stuck.moveTo ? { moveTo: stuck.moveTo } : {}),
+      ...(stuck.provider ? { provider: stuck.provider } : {}),
+    },
   };
 }
 
@@ -237,6 +278,8 @@ export const OUTAGE_WORDS: KindWords<OutageFacts> = {
     `[fm-op] ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}" failed at the provider: ${facts.error}.${keptReportWords(facts.keptReport)} Nothing was set aside: the host keeps its guidance and retries it on its own, backing off to every 15 minutes, so do not resend it. You will hear when it answers again, and if it is still failing in 15 minutes. You can still steer or interrupt it.`,
   "outage-still-down": (facts) =>
     `[fm-op] ${facts.crewmate ?? `the crewmate on ${facts.key}`} on task ${facts.task.id} "${facts.task.title}" is still failing at the provider after ${Math.round(facts.downMs / 60_000)} minutes and ${facts.failures} tries. Its guidance is kept and retried every 15 minutes until the provider answers; nothing is lost. You can steer or interrupt it, or wait.`,
+  "provider-stuck": (facts) =>
+    `[fm-op] ${facts.crewmate} on task ${facts.task.id} "${facts.task.title}" is stuck at its provider: the provider refused its request the same way ${facts.refusals} times in a row since ${new Date(facts.since).toISOString()}: ${facts.error}. The host stopped retrying and keeps its guidance; nothing is lost. Answer it one way: steer_crewmate with new words; update_task task ${facts.key} unstick restart, to continue in a fresh conversation from its brief and record${facts.moveTo ? `; or update_task task ${facts.key} unstick move, to move it to ${facts.moveTo}${facts.provider ? ` off ${facts.provider}` : ""}` : ""}. If the answer meets the same refusal, you hear at once. Until you answer it counts as idle.`,
   "outage-recovered": (facts) =>
     `[fm-op] ${facts.crewmate} on task ${facts.task.id} "${facts.task.title}" is answering again after ${facts.failures} failed tries at the provider; its guidance went through.`,
   "provider-cut-off": (facts) =>

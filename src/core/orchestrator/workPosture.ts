@@ -17,6 +17,8 @@ export type PostureFacts = Witnesses & {
   blocked: boolean;
   /** The typed cut-off behind `accountHeld`, as the waiting line names it. */
   hold?: AccountHold;
+  /** Its lane is failing at the provider: retried on its own, or stuck (docs/inbox.md). */
+  atProvider?: "retrying" | "stuck";
 };
 
 /**
@@ -37,13 +39,22 @@ export function deriveWorkPosture(record: TaskRecord, gather: () => PostureFacts
       reason: "access",
       ...(facts.accountHeld && facts.hold ? { hold: facts.hold } : {}),
     };
+  // Stuck at its provider: nothing moves until the first mate answers.
+  if (facts.atProvider === "stuck")
+    return { state: "idle", reason: "inactive", atProvider: "stuck" };
   if (facts.checksWatched && waitingForMaintainers(record.delivery))
     return { state: "active", reason: "checks", maintainers: true };
   const batch = pendingBatch(record);
   if (batch) return { state: "active", reason: "checks", batch };
   if (facts.checksWatched) return { state: "active", reason: "checks" };
   if (facts.deliverable || facts.threadAwaitingAuthor)
-    return { state: "active", reason: "guidance" };
+    return {
+      state: "active",
+      reason: "guidance",
+      ...(facts.deliverable && facts.atProvider === "retrying"
+        ? { atProvider: "retrying" as const }
+        : {}),
+    };
   if (facts.timedWait && Number.isFinite(record.gate?.until))
     return { state: "active", reason: "timed-wait" };
   if (facts.decisionCardOpen || facts.captainGateOwed) return { state: "idle", reason: "captain" };
@@ -124,6 +135,11 @@ export class WorkPostures {
     return this.options.tasks.projectedFact(record, this.postureInputs, () => {
       const runtime = this.host.runtime(record.id);
       const hold = this.holdOf(record);
+      const atProvider = this.options.inbox.stuck(record.id)
+        ? ("stuck" as const)
+        : this.options.inbox.outage(record.id).failures > 0
+          ? ("retrying" as const)
+          : undefined;
       return {
         ...this.host.witnesses(record.id, this.host.now()),
         turnRunning: runtime !== undefined && runtime.turn.busy,
@@ -132,6 +148,7 @@ export class WorkPostures {
         observable: runtime?.session?.controlProfile.backgroundWork === "host",
         blocked: this.options.tasks.graph.flagsOf(record).blocked,
         ...(hold ? { hold } : {}),
+        ...(atProvider ? { atProvider } : {}),
       };
     });
   }

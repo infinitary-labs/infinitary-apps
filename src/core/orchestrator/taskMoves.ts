@@ -140,6 +140,11 @@ export class TaskMoves {
     );
   }
 
+  /** A provider as the captain names it, for words outside the move. */
+  providerLabel(provider: string): string {
+    return this.providerName(provider);
+  }
+
   /** The name a person knows a provider by: its catalog name, else its id. */
   private providerName(provider: string): string {
     return PROVIDER_CATALOG.find((entry) => entry.id === provider)?.name ?? provider;

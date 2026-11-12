@@ -2,7 +2,12 @@ import type { CutOffClass } from "@shared/authFailure";
 import { type Card, cardWord } from "@shared/cards";
 import { reportSummary } from "@shared/feed";
 import { holdNames, type OverridableHold } from "@shared/holds";
-import { plainProblem, typedFailureOf } from "@shared/plainProblem";
+import {
+  answeringAgainLine,
+  crewProblem,
+  providerOutageFold,
+  typedFailureOf,
+} from "@shared/plainProblem";
 import { type SteerEventData, TASK_CARD_VIA } from "@shared/provenance";
 import { formatDurationShort } from "@shared/quotaSignals";
 import { withoutDigest, workWaitSchema } from "@shared/recovery";
@@ -758,6 +763,8 @@ export class IdleLadder {
     // speak for it (`checkCutOffs`); a lane whose computer is out of reach
     // waits for that computer.
     if (this.cutOffHolds(record) || this.host.outOfReach?.(record.id) === true) return;
+    // A lane stuck at its provider was told once, with its ways out.
+    if (this.host.inbox.stuck(record.id)) return;
     const outage = this.host.inbox.outage(record.id);
     if (outage.failures === 0 || outage.since === null) return;
     if (now - outage.since < STILL_DOWN_MS) return;
@@ -779,8 +786,19 @@ export class IdleLadder {
    * backing off is due now, and after two or more failures the Firstmate
    * hears that it recovered.
    */
-  endOutage(task: { id: string; title: string; crewmate: string }, failures: number): void {
+  endOutage(
+    task: { id: string; title: string; crewmate: string },
+    failures: number,
+    since: number | null = null,
+  ): void {
     this.host.inbox.endOutage(task.id);
+    // The outage's one feed line says the crewmate answers again.
+    if (since !== null)
+      this.host.tasks.note(task.id, answeringAgainLine(failures), {
+        news: false,
+        feed: true,
+        data: { feedLine: true, feedOnce: providerOutageFold(since) },
+      });
     if (failures < 2) return;
     this.host.notifyOp(recoveredWake(task, failures), "agent", task.id);
   }
@@ -1285,7 +1303,7 @@ export class IdleLadder {
       ? "<p>It has not reported anything yet.</p>"
       : last.kind === "report"
         ? `<p>What it last said: ${escapeCardText(reportSummary(last.text) || last.text)}</p>`
-        : `<p>Its last try ended in a problem: ${escapeCardText(plainProblem(typeof last.data?.error === "string" ? last.data.error : last.text, typedFailureOf(last.data)))}.</p>`;
+        : `<p>Its last try ended in a problem: ${escapeCardText(crewProblem(typeof last.data?.error === "string" ? last.data.error : last.text, typedFailureOf(last.data)))}.</p>`;
     const told = this.episodeNudged(record)
       ? "It was nudged once, and your first mate was told twice, and nothing has moved since."
       : "Your first mate was told twice, and nothing has moved since.";

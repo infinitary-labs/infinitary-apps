@@ -701,6 +701,7 @@ The crewmate sign-in card's default, "Move to" the app's pick, is the captain's:
 The button names that model by its Settings name (`ModelSlots.nameOf`), the model the task would run on.
 Its `move-task` effect names the task, the provider it moves off and the model offered, so a card left up after another move, or after the app's pick changed, refuses in a feed line rather than move somewhere the card did not name.
 `update_task override_model_id` on started work is the first mate's, on the captain's words: the router pins the named model as R0 does, and a model that cannot serve is refused as text.
+`update_task unstick move` is the first mate's own answer to a task stuck at its provider (`docs/inbox.md`, "Stuck at its provider"): the app's pick with the refusing provider left out, as the sign-in card's Move, never a model the first mate names.
 A crewmate mid-turn moves once that turn ends; a turn is never cut short.
 The move prepares a routing preview and selects the account (`selectForSpawn`) before committing the routing decision.
 After checking that the task is still active and its turn idle, it commits the routing decision with who asked, lets go of the old session, and writes the record's model and account with one timeline row and feed line naming who moved it (`TaskService.placement.recordMove`).

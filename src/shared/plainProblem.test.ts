@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  crewProblem,
+  isProviderRefusal,
   isRunawayProviderError,
   PLAIN_PROBLEM_FALLBACK,
   plainProblem,
+  refusalWords,
   typedFailureOf,
 } from "./plainProblem";
 
@@ -242,5 +245,44 @@ describe("plainProblem for a typed failure", () => {
     expect(
       typedFailureOf({ error: "x", failureSignals: "typed", cutOff: { class: "gone" } }),
     ).toEqual({});
+  });
+});
+
+// INF-3714: a crewmate's request the provider refused (its 400) reads as that,
+// and three identical ones make the task stuck. The review of that change
+// found the Claude client's words missed and the line reaching failures that
+// are not a crewmate's.
+describe("a crewmate's refused request", () => {
+  /** The Claude client's result text for a 400, as its turn failure carries it. */
+  const claudeRefusal = (requestId: string) =>
+    `API Error: 400 {"type":"error","error":{"type":"invalid_request_error","message":"messages.3: tool_use ids must be unique"},"request_id":"${requestId}"}`;
+
+  it("reads Pi's and the Claude client's 400 as the provider refusing the crewmate's request", () => {
+    for (const words of [
+      '{"detail":"Bad Request"}',
+      "400 status code (no body)",
+      claudeRefusal("req_011CVabc"),
+    ]) {
+      expect(crewProblem(words)).toBe("the provider refused the crewmate's request");
+      expect(isProviderRefusal(words)).toBe(true);
+    }
+    expect(isProviderRefusal("upstream 529 overloaded")).toBe(false);
+    expect(isProviderRefusal("401 Unauthorized")).toBe(false);
+  });
+
+  it("leaves the first mate's own failure and a forge's answer to the plain fallback", () => {
+    // feed.ts and firstmateAgent.ts read the first mate's failure, and
+    // settleService.ts and taskClose.ts a forge's answer, through plainProblem.
+    expect(plainProblem('{"detail":"Bad Request"}')).toBe(PLAIN_PROBLEM_FALLBACK);
+    expect(plainProblem("400 Bad request - Merge request is not mergeable")).toBe(
+      PLAIN_PROBLEM_FALLBACK,
+    );
+  });
+
+  it("compares the same refusal's words without its per-response request id", () => {
+    expect(refusalWords(claudeRefusal("req_011CVabc"))).toBe(
+      refusalWords(claudeRefusal("req_011CVxyz")),
+    );
+    expect(refusalWords('{"detail":"Bad Request"}')).toBe('{"detail":"Bad Request"}');
   });
 });

@@ -101,6 +101,13 @@ const INBOX_BACKOFF_CEILING_MS = 15 * 60_000;
 export function inboxBackoffMs(failures: number): number {
   return INBOX_BACKOFF_MS[Math.max(failures, 1) - 1] ?? INBOX_BACKOFF_CEILING_MS;
 }
+/**
+ * How many provider failures in a row with the same words make a task lane
+ * stuck at its provider (INF-3714's direction A, the captain's "after the
+ * third identical failure"): the lane stops retrying, keeps its rows, and
+ * the first mate is told once (docs/inbox.md, "Stuck at its provider").
+ */
+export const STUCK_REFUSAL_LIMIT = 3;
 /** The orchestrator's own lane. */
 export const FIRSTMATE_RECIPIENT = "firstmate";
 /** The supervision session's lane (design B); its owner drains it. */
@@ -206,6 +213,10 @@ export type InboxRow = WakeEnvelope & {
   nextAttemptAt: number | null;
   /** Turns serving this row that a quit or crash cut short; each was given its attempt back. */
   cuts: number;
+  /** Provider failures in a row this row met with the same words (`STUCK_REFUSAL_LIMIT`). */
+  refusals: number;
+  /** When its lane stopped retrying, stuck at its provider; null while it is not. */
+  stuckAt: number | null;
 };
 
 type ResponseRequestRow = {
@@ -279,6 +290,8 @@ type Row = {
   failing_since: number | null;
   next_attempt_at: number | null;
   cuts: number | null;
+  refusals: number | null;
+  stuck_at: number | null;
   ref: string | null;
   origin: string | null;
 };
@@ -301,6 +314,8 @@ function fromRow(row: Row): InboxRow {
     failingSince: row.failing_since,
     nextAttemptAt: row.next_attempt_at,
     cuts: row.cuts ?? 0,
+    refusals: row.refusals ?? 0,
+    stuckAt: row.stuck_at ?? null,
     ref: row.ref,
     origin: originOf(row.origin),
   };
@@ -510,7 +525,8 @@ export class InboxStore {
     return this.db
       .prepare(
         `UPDATE inbox SET recipient = ?, attempts = 0, last_attempt_at = NULL, escalated_at = NULL, delivered_at = NULL,
-           failures = 0, failing_since = NULL, next_attempt_at = NULL, cuts = 0
+           failures = 0, failing_since = NULL, next_attempt_at = NULL, cuts = 0,
+           refusal = NULL, refusals = 0, stuck_at = NULL
          WHERE id IN (${placeholders(ids)})`,
       )
       .run(recipient, ...ids).changes;
@@ -532,7 +548,7 @@ export class InboxStore {
     const rows = this.db
       .prepare(
         `SELECT * FROM inbox
-         WHERE recipient = ? AND delivered_at IS NULL AND escalated_at IS NULL
+         WHERE recipient = ? AND delivered_at IS NULL AND escalated_at IS NULL AND stuck_at IS NULL
            AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
            ${options.maxAttempts !== undefined ? "AND attempts < ?" : ""}
          ORDER BY id LIMIT ?`,
@@ -646,31 +662,102 @@ export class InboxStore {
    * WITHOUT spending the attempt, one more failure counted, and due after
    * the backoff for that count - or at `notBefore` when that is later: a
    * spent allowance is not asked again before it resets (the cut-off
-   * contract). Returns the highest failure count among the rows, after
-   * this one.
+   * contract). `refusal`, the words of a request the provider refused,
+   * counts the refusals in a row that met the same words (`refusals`); a
+   * failure in other words, or no refusal, starts that count again. Returns the highest failure count among the
+   * rows, after this one, and the highest same-words count.
    */
-  releaseAfterProviderFailure(ids: number[], options: { notBefore?: number } = {}): number {
+  releaseAfterProviderFailure(
+    ids: number[],
+    options: { notBefore?: number; refusal?: string } = {},
+  ): { failures: number; refusals: number } {
     this.changed();
-    if (ids.length === 0) return 0;
+    if (ids.length === 0) return { failures: 0, refusals: 0 };
     const now = this.now();
     const notBefore = options.notBefore ?? 0;
+    const refusal = options.refusal !== undefined ? inboxContentHash(options.refusal) : null;
     return this.transaction(() => {
       const rows = this.db
-        .prepare(`SELECT id, failures FROM inbox WHERE id IN (${placeholders(ids)})`)
-        .all(...ids) as { id: number; failures: number }[];
+        .prepare(
+          `SELECT id, failures, refusal, refusals FROM inbox WHERE id IN (${placeholders(ids)})`,
+        )
+        .all(...ids) as {
+        id: number;
+        failures: number;
+        refusal: string | null;
+        refusals: number | null;
+      }[];
       const update = this.db.prepare(
         `UPDATE inbox SET delivered_at = NULL, attempts = MAX(attempts - 1, 0), failures = ?,
-           failing_since = COALESCE(failing_since, ?), next_attempt_at = ?
+           failing_since = COALESCE(failing_since, ?), next_attempt_at = ?, refusal = ?, refusals = ?
          WHERE id = ?`,
       );
       let highest = 0;
+      let same = 0;
       for (const row of rows) {
         const failures = row.failures + 1;
-        update.run(failures, now, Math.max(now + inboxBackoffMs(failures), notBefore), row.id);
+        const refusals =
+          refusal === null ? 0 : row.refusal === refusal ? (row.refusals ?? 0) + 1 : 1;
+        update.run(
+          failures,
+          now,
+          Math.max(now + inboxBackoffMs(failures), notBefore),
+          refusal,
+          refusals,
+          row.id,
+        );
         highest = Math.max(highest, failures);
+        same = Math.max(same, refusals);
       }
-      return highest;
+      return { failures: highest, refusals: same };
     });
+  }
+
+  /**
+   * The lane is stuck at its provider (docs/inbox.md, "Stuck at its
+   * provider"): every row still waiting on it stops being attempted and is
+   * kept, until an answer - a steer, a fresh conversation or another model
+   * - unsticks it (`unstick`, `movedProvider`), or a turn goes through
+   * (`endOutage`).
+   */
+  holdStuck(recipient: string): void {
+    this.changed();
+    this.db
+      .prepare(
+        `UPDATE inbox SET stuck_at = ?
+         WHERE recipient = ? AND delivered_at IS NULL AND escalated_at IS NULL AND stuck_at IS NULL`,
+      )
+      .run(this.now(), recipient);
+  }
+
+  /**
+   * Whether the lane is stuck at its provider, and since when and after how
+   * many same-words failures; undefined while it is not.
+   */
+  stuck(recipient: string): { since: number; refusals: number } | undefined {
+    const row = prepared(
+      this.db,
+      `SELECT MIN(stuck_at) AS since, MAX(refusals) AS refusals FROM inbox
+       WHERE recipient = ? AND stuck_at IS NOT NULL AND delivered_at IS NULL AND escalated_at IS NULL`,
+    ).get(recipient) as { since: number | null; refusals: number | null };
+    return row.since === null ? undefined : { since: row.since, refusals: row.refusals ?? 0 };
+  }
+
+  /**
+   * An answer reached a stuck lane: its kept rows are due now. Their
+   * same-words count stays, so an answer that meets the same refusal again
+   * makes the lane stuck at once. Returns whether the lane was stuck.
+   */
+  unstick(recipient: string): boolean {
+    this.changed();
+    return (
+      this.db
+        .prepare(
+          `UPDATE inbox SET stuck_at = NULL, next_attempt_at = NULL
+           WHERE recipient = ? AND stuck_at IS NOT NULL`,
+        )
+        .run(recipient).changes > 0
+    );
   }
 
   /**
@@ -679,12 +766,12 @@ export class InboxStore {
    * failures means the lane is not in an outage.
    */
   outage(recipient: string): { failures: number; since: number | null } {
-    const row = this.db
-      .prepare(
-        `SELECT MAX(failures) AS failures, MIN(failing_since) AS since FROM inbox
-         WHERE recipient = ? AND escalated_at IS NULL AND failures > 0`,
-      )
-      .get(recipient) as { failures: number | null; since: number | null };
+    // Every posture read asks it, so it is compiled once (INF-683).
+    const row = prepared(
+      this.db,
+      `SELECT MAX(failures) AS failures, MIN(failing_since) AS since FROM inbox
+       WHERE recipient = ? AND escalated_at IS NULL AND failures > 0`,
+    ).get(recipient) as { failures: number | null; since: number | null };
     return { failures: row.failures ?? 0, since: row.since };
   }
 
@@ -696,8 +783,9 @@ export class InboxStore {
     this.changed();
     this.db
       .prepare(
-        `UPDATE inbox SET failures = 0, failing_since = NULL, next_attempt_at = NULL
-         WHERE recipient = ? AND failures > 0 AND delivered_at IS NULL`,
+        `UPDATE inbox SET failures = 0, failing_since = NULL, next_attempt_at = NULL,
+           refusal = NULL, refusals = 0, stuck_at = NULL
+         WHERE recipient = ? AND (failures > 0 OR stuck_at IS NOT NULL) AND delivered_at IS NULL`,
       )
       .run(recipient);
   }
@@ -705,14 +793,17 @@ export class InboxStore {
   /**
    * The lane's task moved to another provider (INF-849): what waits on it
    * is due now, with the attempts and failures the provider it left spent
-   * given back, so the new provider gets the whole budget. Rows already set
+   * given back, so the new provider gets the whole budget, and a lane stuck
+   * at the provider it left goes on. The same-words count stays, so the new
+   * provider refusing the same way makes it stuck at once. Rows already set
    * aside stay set aside.
    */
   movedProvider(recipient: string): void {
     this.changed();
     this.db
       .prepare(
-        `UPDATE inbox SET attempts = 0, failures = 0, failing_since = NULL, next_attempt_at = NULL
+        `UPDATE inbox SET attempts = 0, failures = 0, failing_since = NULL, next_attempt_at = NULL,
+           stuck_at = NULL
          WHERE recipient = ? AND delivered_at IS NULL AND escalated_at IS NULL`,
       )
       .run(recipient);
@@ -720,15 +811,17 @@ export class InboxStore {
 
   /**
    * Whether the lane holds guidance that will still be delivered: not in
-   * flight, not set aside, budget not spent - due now or waiting out its
-   * grace or backoff. The idle ladder's "moving" witness.
+   * flight, not set aside, not stuck at its provider, budget not spent -
+   * due now or waiting out its grace or backoff. The idle ladder's "moving"
+   * witness.
    */
   hasDeliverable(recipient: string, maxAttempts: number): boolean {
     return (
       prepared(
         this.db,
         `SELECT 1 FROM inbox
-         WHERE recipient = ? AND delivered_at IS NULL AND escalated_at IS NULL AND attempts < ?
+         WHERE recipient = ? AND delivered_at IS NULL AND escalated_at IS NULL AND stuck_at IS NULL
+           AND attempts < ?
          LIMIT 1`,
       ).get(recipient, maxAttempts) !== undefined
     );

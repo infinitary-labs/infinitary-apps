@@ -78,6 +78,18 @@ export function migrateIdleRecovery(db: AppDatabase): void {
   addColumn(db, "tasks", "recovery_at", "INTEGER");
 }
 
+/**
+ * A task lane stuck at its provider (INF-3714's direction A, docs/inbox.md
+ * "Stuck at its provider"): the words of the last provider failure a row met
+ * (`refusal`, their hash), how many failures in a row met those same words
+ * (`refusals`), and when the lane stopped retrying (`stuck_at`).
+ */
+export function addProviderRefusals(db: AppDatabase): void {
+  addColumn(db, "inbox", "refusal", "TEXT");
+  addColumn(db, "inbox", "refusals", "INTEGER NOT NULL DEFAULT 0");
+  addColumn(db, "inbox", "stuck_at", "INTEGER");
+}
+
 /** The inbox owns these additive records; worker closure never cascades into them. */
 export function addCrewResponses(db: AppDatabase): void {
   db.exec(`

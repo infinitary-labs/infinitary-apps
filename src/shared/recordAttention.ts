@@ -1,5 +1,6 @@
 import type { TaskDetail } from "./tasks";
 import { recordAttentionWaits, taskWaitText } from "./taskWaits";
+import { AT_PROVIDER_WORDS } from "./workPosture";
 
 /**
  * The sentence the task record leads its Info tab with when something is
@@ -36,6 +37,10 @@ type AttentionDetail = Pick<
   | "waits"
 >;
 
+/** What the record says under "Stuck at its provider". */
+export const STUCK_GUIDANCE =
+  "The provider kept refusing its request the same way, so the app stopped retrying and keeps its message. Your first mate is choosing whether to restart it in a new conversation or move it to another model.";
+
 /** What the record's attention box says for `task` at `now`, or null when nothing needs saying. */
 export function recordAttentionOf(task: AttentionDetail, now: number): RecordAttention | null {
   const closed = task.status === "done" || task.status === "dropped";
@@ -65,6 +70,12 @@ export function recordAttentionOf(task: AttentionDetail, now: number): RecordAtt
     // (docs/task-graph.md).
     title = "A task it waits on was dropped";
     guidance = "Ask your first mate about its dependencies before starting.";
+  } else if (live && task.workPosture?.atProvider === "stuck") {
+    // Stuck at its provider (docs/inbox.md): the app stopped retrying and
+    // the first mate chooses the way on, so the captain has nothing to do.
+    title = AT_PROVIDER_WORDS.stuck;
+    guidance = STUCK_GUIDANCE;
+    urgent = true;
   } else if (live && task.workPosture?.state === "active") {
     // Checks, jobs and replies still move without the captain. A declared
     // wait or an older report must not turn them into a request for them.

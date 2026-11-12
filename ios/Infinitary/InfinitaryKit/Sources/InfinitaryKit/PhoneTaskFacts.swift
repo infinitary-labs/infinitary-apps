@@ -83,6 +83,8 @@ public struct PhoneTaskFacts: Sendable {
                                "timed-wait": "Waiting to continue automatically", "captain": "Work is paused",
                                "inactive": "No continuing work", "access": "Paused for access",
                                "dependency": "Blocked by another task", "unobserved": "Background work is unknown"]
+    /// The Mac's `AT_PROVIDER_WORDS` (src/shared/workPosture.ts), which outrank the reason's words.
+    static let atProviderWords = ["retrying": "Retrying at its provider", "stuck": "Stuck at its provider"]
 
     /// The Mac's `formatDurationShort` (src/shared/quotaSignals.ts): whole minutes as 2d 3h, 1h 35m or 4m.
     static func durationShort(_ ms: Double) -> String {
@@ -143,7 +145,10 @@ public struct PhoneTaskFacts: Sendable {
         let dependency = task.workPosture?.reason == "dependency" && !waits.isEmpty
         let running = task.activity == "running" || task.activity == "starting"
         let reason = dependency ? dependencyWaitWords(waits)
-            : task.workPosture.map { $0.reason == "checks" && $0.batch != nil ? "Waiting for the batch check" : postureWords[$0.reason] ?? "" }
+            : task.workPosture.map { posture in
+                posture.reason == "checks" && posture.batch != nil ? "Waiting for the batch check"
+                    : posture.atProvider.flatMap { atProviderWords[$0] } ?? postureWords[posture.reason] ?? ""
+            }
             ?? (running ? "Working" : task.activity == "interrupted" ? "Work was interrupted" : "No continuing work")
         if task.workPosture?.state == "active" || (task.workPosture == nil && running) {
             if away != nil { return awayReading("working", nil) }

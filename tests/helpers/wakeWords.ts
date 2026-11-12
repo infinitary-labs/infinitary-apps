@@ -38,6 +38,7 @@ export type FirstmateWakeKind =
   | "outage-failed"
   | "outage-still-down"
   | "outage-recovered"
+  | "provider-stuck"
   | "provider-cut-off"
   | "provider-back"
   | "job-bound"

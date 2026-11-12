@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { CrewResponse } from "@shared/crewResponses";
 import { reportSummary } from "@shared/feed";
 import type { KeptValidationInput } from "@shared/liveValidation";
-import type { TypedFailure } from "@shared/plainProblem";
+import { providerOutageFold, type TypedFailure } from "@shared/plainProblem";
 import type { DecisionRecord, InterruptEventData, SteerEventData } from "@shared/provenance";
 import type { IntelligenceBucket } from "@shared/quota";
 import { type KeptRecoveryWay, recoveryWay, type WorkWait } from "@shared/recovery";
@@ -389,9 +389,18 @@ export class TaskTurns {
    * A provider-failed turn on a task that stays alive and steerable. A
    * failure a typed backend reported keeps its class beside the words
    * (`typedFailureOf` reads it back), so nothing downstream reads the words
-   * for it (docs/quota.md "Typed cut-offs").
+   * for it (docs/quota.md "Typed cut-offs"). A failure the honest retry
+   * takes carries its outage (`retry`): how many tries failed, since when,
+   * and whether the lane is now stuck at its provider. The outage's lines
+   * fold into one on the feed, by when it began (docs/inbox.md); the
+   * timeline keeps each.
    */
-  recordTurnFailure(id: string, error: string, typed?: TypedFailure): void {
+  recordTurnFailure(
+    id: string,
+    error: string,
+    typed?: TypedFailure,
+    retry?: { failures: number; since: number; stuck?: true },
+  ): void {
     const at = this.writer.now();
     const run = this.writer.write(() => {
       this.writer.patch(id, { updatedAt: at });
@@ -407,6 +416,7 @@ export class TaskTurns {
           ...(typed ? { failureSignals: "typed" } : {}),
           ...(typed?.cutOff ? { cutOff: typed.cutOff } : {}),
           ...(typed?.access ? { access: typed.access } : {}),
+          ...(retry ? { retry, feedOnce: providerOutageFold(retry.since) } : {}),
         },
       });
     });

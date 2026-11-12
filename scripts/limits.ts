@@ -326,6 +326,11 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   },
   "src/core/storage/inboxStore.ts": {
     INBOX_BACKOFF_CEILING_MS: record("retried every 15 minutes, forever, until the provider answers"),
+    // The captain's "after the third identical failure" (INF-3714, direction A).
+    STUCK_REFUSAL_LIMIT: {
+      rests: "consent",
+      way: "the lane stops retrying and the first mate is told once: a steer, a fresh conversation or another model goes on",
+    },
   },
   "src/core/storage/scheduleStore.ts": {
     RUN_RETENTION_CAP: physical("the oldest settled runs are deleted for good"),

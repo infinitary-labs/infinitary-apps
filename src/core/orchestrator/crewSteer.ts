@@ -137,6 +137,9 @@ export class CrewSteer {
     source: NonNullable<Parameters<CrewSteer["steerCrewmate"]>[3]>,
     held = false,
   ): Promise<SteerDelivery> {
+    // A steer answers a lane stuck at its provider: what it kept goes again
+    // with the new words (docs/inbox.md, "Stuck at its provider").
+    this.core.options.inbox.unstick(taskId);
     const steer: SteerSource = {
       actor,
       via: source.via ?? "tool",

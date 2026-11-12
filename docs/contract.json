@@ -30325,6 +30325,13 @@
                         "provider"
                       ]
                     },
+                    "atProvider": {
+                      "type": "string",
+                      "enum": [
+                        "retrying",
+                        "stuck"
+                      ]
+                    },
                     "batch": {
                       "type": "string",
                       "enum": [
@@ -32040,6 +32047,13 @@
                 "required": [
                   "class",
                   "provider"
+                ]
+              },
+              "atProvider": {
+                "type": "string",
+                "enum": [
+                  "retrying",
+                  "stuck"
                 ]
               },
               "batch": {
@@ -36753,6 +36767,13 @@
                   "required": [
                     "class",
                     "provider"
+                  ]
+                },
+                "atProvider": {
+                  "type": "string",
+                  "enum": [
+                    "retrying",
+                    "stuck"
                   ]
                 },
                 "batch": {
@@ -60492,6 +60513,13 @@
                                         "provider"
                                       ]
                                     },
+                                    "atProvider": {
+                                      "type": "string",
+                                      "enum": [
+                                        "retrying",
+                                        "stuck"
+                                      ]
+                                    },
                                     "batch": {
                                       "type": "string",
                                       "enum": [
@@ -64332,6 +64360,13 @@
                       "provider"
                     ]
                   },
+                  "atProvider": {
+                    "type": "string",
+                    "enum": [
+                      "retrying",
+                      "stuck"
+                    ]
+                  },
                   "batch": {
                     "type": "string",
                     "enum": [
@@ -66552,6 +66587,13 @@
                         "provider"
                       ]
                     },
+                    "atProvider": {
+                      "type": "string",
+                      "enum": [
+                        "retrying",
+                        "stuck"
+                      ]
+                    },
                     "batch": {
                       "type": "string",
                       "enum": [
@@ -68267,6 +68309,13 @@
                       "required": [
                         "class",
                         "provider"
+                      ]
+                    },
+                    "atProvider": {
+                      "type": "string",
+                      "enum": [
+                        "retrying",
+                        "stuck"
                       ]
                     },
                     "batch": {

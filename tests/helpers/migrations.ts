@@ -211,8 +211,11 @@ export const REVERSE_MIGRATION_50 = `
  * older inbox tests queue only prose, so `$.text` is all there is.
  */
 const REVERSE_MIGRATION_48_PROSE = "UPDATE inbox SET payload = json_extract(payload, '$.text');";
-/** Migration 74's cut count, undone: the `inbox` column. */
-export const REVERSE_MIGRATION_74 = "ALTER TABLE inbox DROP COLUMN cuts;";
+/** The provider refusal count (`addProviderRefusals`), undone: its three `inbox` columns. */
+export const REVERSE_PROVIDER_REFUSALS =
+  "ALTER TABLE inbox DROP COLUMN refusal; ALTER TABLE inbox DROP COLUMN refusals; ALTER TABLE inbox DROP COLUMN stuck_at;";
+/** Migration 74's cut count, undone (the refusal count's first): the `inbox` column. */
+export const REVERSE_MIGRATION_74 = `${REVERSE_PROVIDER_REFUSALS} ALTER TABLE inbox DROP COLUMN cuts;`;
 /** Migration 76's start notice, undone: the `tasks` column. */
 export const REVERSE_MIGRATION_76 = "ALTER TABLE tasks DROP COLUMN start_notice;";
 /** Migration 45's inbox columns, dropped (74's first): what an older inbox reversal undoes first. */

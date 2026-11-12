@@ -13,6 +13,7 @@ import { addOriginalCaptainText } from "./correctionMigrations";
 import type { AppDatabase } from "./db";
 import {
   addCrewResponses,
+  addProviderRefusals,
   migrateIdleRecovery,
   migrateInboxContentHash,
   migrateInboxOrigin,
@@ -1340,6 +1341,8 @@ export const MIGRATIONS: readonly Migration[] = [
   keyboardPresets,
   // A task-less feed line's fact beside its English (docs/i18n.md, "Saved facts"); older lines keep their words.
   (db) => addColumn(db, "activity_events", "said_json", "TEXT"),
+  // A task lane stuck at its provider after the same refusal three times in a row.
+  addProviderRefusals,
 ];
 
 /**

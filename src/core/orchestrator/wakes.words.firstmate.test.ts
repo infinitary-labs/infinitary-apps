@@ -691,6 +691,42 @@ const CASES: WordsCases<FirstmateWakeKind> = {
         '[fm-op] crewmate 61 on task 479823ee "Restructure the wakes file" is answering again after 3 failed tries at the provider; its guidance went through.',
     },
   ],
+  "provider-stuck": [
+    {
+      name: "with another model to move to",
+      wake: {
+        facts: {
+          kind: "provider-stuck",
+          task: TASK,
+          crewmate: "crewmate 61",
+          key: "INF-3570",
+          error: 'hit a problem: {"detail":"Bad Request"}',
+          since: Date.UTC(2026, 10, 11, 0, 55),
+          refusals: 3,
+          moveTo: "Claude Opus 5.5",
+          provider: "OpenAI",
+        },
+      },
+      words:
+        '[fm-op] crewmate 61 on task 479823ee "Restructure the wakes file" is stuck at its provider: the provider refused its request the same way 3 times in a row since 2026-11-11T00:55:00.000Z: hit a problem: {"detail":"Bad Request"}. The host stopped retrying and keeps its guidance; nothing is lost. Answer it one way: steer_crewmate with new words; update_task task INF-3570 unstick restart, to continue in a fresh conversation from its brief and record; or update_task task INF-3570 unstick move, to move it to Claude Opus 5.5 off OpenAI. If the answer meets the same refusal, you hear at once. Until you answer it counts as idle.',
+    },
+    {
+      name: "with no move that can work",
+      wake: {
+        facts: {
+          kind: "provider-stuck",
+          task: TASK,
+          crewmate: "crewmate 61",
+          key: "INF-3570",
+          error: "Bad Request",
+          since: Date.UTC(2026, 10, 11, 0, 55),
+          refusals: 4,
+        },
+      },
+      words:
+        '[fm-op] crewmate 61 on task 479823ee "Restructure the wakes file" is stuck at its provider: the provider refused its request the same way 4 times in a row since 2026-11-11T00:55:00.000Z: Bad Request. The host stopped retrying and keeps its guidance; nothing is lost. Answer it one way: steer_crewmate with new words; update_task task INF-3570 unstick restart, to continue in a fresh conversation from its brief and record. If the answer meets the same refusal, you hear at once. Until you answer it counts as idle.',
+    },
+  ],
   "provider-cut-off": [
     {
       name: "refused",

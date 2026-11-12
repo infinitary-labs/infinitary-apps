@@ -425,6 +425,8 @@ function row(id: number, body: Pick<WakeEnvelope, "facts" | "text">, cuts = 0): 
     failingSince: null,
     nextAttemptAt: null,
     cuts,
+    refusals: 0,
+    stuckAt: null,
   };
 }
 

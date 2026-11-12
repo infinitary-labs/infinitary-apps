@@ -327,6 +327,7 @@ A job this Mac cannot see is named as its runner names it: a computer that runs 
 
 **A provider outage is not idleness.**
 A turn the provider failed releases its guidance for the honest retry (`docs/inbox.md`), so the row stays deliverable and the task reads as moving; the retry's own wakes (the first failure, fifteen minutes still down, recovered) are the first mate's news of it.
+A lane stuck at its provider is the exception (`docs/inbox.md`, "Stuck at its provider"): its kept rows are not deliverable, so the task reads as idle and the ladder climbs from it while the first mate has not answered its `provider-stuck` wake.
 
 **Nor is a cut-off.**
 A lane whose account a typed cut-off holds keeps its guidance (`docs/inbox.md`, "A lane on a withheld account"), and the hold is its own witness (`accountHeld`), read after the gate: the crewmate's own turn reads as moving, so nothing climbs - not even the thread nudge, which nothing could answer yet - while a card the first mate owes is still owed and its reminders still come.

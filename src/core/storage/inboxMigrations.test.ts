@@ -208,8 +208,15 @@ describe("migration 48 (the typed wake envelope, the primitives review P3)", () 
 
     const upgraded = openDatabase(dir);
     expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
-    // The envelope adds no column; migration 74 adds the cut count.
-    expect(columnNames(upgraded, "inbox")).toEqual([...inboxColumnsAt47, "cuts"]);
+    // The envelope adds no column; migration 74 adds the cut count, and the
+    // refusal count its three.
+    expect(columnNames(upgraded, "inbox")).toEqual([
+      ...inboxColumnsAt47,
+      "cuts",
+      "refusal",
+      "refusals",
+      "stuck_at",
+    ]);
     const inbox = new InboxStore(upgraded);
     expect(
       [...inbox.allFor("firstmate"), ...inbox.allFor("t1")].map(({ v, text, facts, origin }) => ({

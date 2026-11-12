@@ -39,6 +39,12 @@ export const workPostureSchema = z.object({
   ]),
   /** Present on `access` while a typed cut-off stands on the task's account. */
   hold: accountHoldSchema.optional(),
+  /**
+   * A crewmate failing at its provider (docs/inbox.md): `retrying` on the
+   * guidance posture while the app retries on its own, `stuck` once the same
+   * refusal stopped the retry. Older views ignore it and keep the reason's words.
+   */
+  atProvider: z.enum(["retrying", "stuck"]).optional(),
   /** Pending batch status on the offered version; older views keep their checks look. */
   batch: z.enum(["waiting", "in-batch", "paused"]).optional(),
   /** The watched contribution is open with its upstream maintainers. */
@@ -46,9 +52,16 @@ export const workPostureSchema = z.object({
 });
 export type WorkPosture = z.infer<typeof workPostureSchema>;
 
+/** What a crewmate failing at its provider reads, on desktop and phone alike. */
+export const AT_PROVIDER_WORDS = {
+  retrying: "Retrying at its provider",
+  stuck: "Stuck at its provider",
+} as const;
+
 export function workPostureLabel(posture: WorkPosture): string {
   if (posture.maintainers) return "Waiting for the maintainers";
   if (posture.reason === "checks" && posture.batch) return "Waiting for the batch check";
+  if (posture.atProvider) return AT_PROVIDER_WORDS[posture.atProvider];
   const reasons: Record<WorkPosture["reason"], string> = {
     turn: "Working",
     job: "Background work continues",

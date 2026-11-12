@@ -8,7 +8,7 @@ import { isCustomApiProvider } from "@shared/customApi";
 import type { FmEvent } from "@shared/events";
 import { reportSummary } from "@shared/feed";
 import { offeringKey } from "@shared/modelSlots";
-import type { TypedFailure } from "@shared/plainProblem";
+import { isProviderRefusal, refusalWords, type TypedFailure } from "@shared/plainProblem";
 import { PROVIDER_CATALOG } from "@shared/providers";
 import { waitStall } from "@shared/recovery";
 import type { HandoverFile } from "@shared/work";
@@ -22,7 +22,7 @@ import {
   type SessionEvent,
   StoppedBeforeStartError,
 } from "../session/session";
-import type { InboxRow } from "../storage/inboxStore";
+import { type InboxRow, STUCK_REFUSAL_LIMIT } from "../storage/inboxStore";
 import type { TaskRecord } from "../storage/taskRecords";
 import { verifyHandoverFiles } from "../tasks/handoverFiles";
 import { modelMoveWords } from "../tasks/recordActivity";
@@ -40,7 +40,7 @@ import { updatePauseLine } from "./crewUpdates";
 import { JOB_BOUND_MS } from "./idleLadder";
 import { type BriefPart, briefText } from "./intentBrief";
 import { checkBackAsk, checkBackAskOnce } from "./jobWakes";
-import { outageFailedWake } from "./outageWakes";
+import { outageFailedWake, stuckWake } from "./outageWakes";
 import { implausibleReport } from "./reportPlausibility";
 import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import { PENDING_RESPONSES_END, PENDING_RESPONSES_OPENING, wakeBuiltOn } from "./reportWakes";
@@ -658,6 +658,11 @@ export class CrewTurns {
     const unread = new Set(this.undeliveredSteerRows(task));
     const inFlight = task.turn.takeRows();
     const consumed = inFlight.filter((id) => !unread.has(id));
+    // The same provider refusal three times in a row makes the lane stuck
+    // at its provider (docs/inbox.md, "Stuck at its provider"): only a plain
+    // provider failure counts, never a sign-in, a cut-off or a full
+    // conversation, each of which has its own way back.
+    let released: { failures: number; refusals: number } | undefined;
     if (inFlight.length > 0) {
       if (recoverContext) {
         // Its words never reached a conversation that goes on: they go
@@ -676,11 +681,15 @@ export class CrewTurns {
         this.core.options.inbox.ack(inFlight);
       } else if (providerError && !signInFailure) {
         // A spent allowance is not asked again before its reset.
-        this.core.options.inbox.releaseAfterProviderFailure(
+        released = this.core.options.inbox.releaseAfterProviderFailure(
           inFlight,
           cutOff?.class === "no_headroom" && cutOff.resetsAt !== undefined
             ? { notBefore: cutOff.resetsAt }
-            : {},
+            : cutOff
+              ? {}
+              : isProviderRefusal(providerError)
+                ? { refusal: refusalWords(providerError) }
+                : {},
         );
       } else if (providerError) {
         this.core.options.inbox.release(inFlight);
@@ -705,8 +714,20 @@ export class CrewTurns {
     const retrying =
       providerError !== undefined && !signInFailure && !overflowed && inFlight.length > 0;
     const firstFailure = !retrying || outage.failures === 0;
+    const stuck =
+      retrying && !cutOff && released !== undefined && released.refusals >= STUCK_REFUSAL_LIMIT;
+    if (stuck) this.core.options.inbox.holdStuck(task.id);
+    // The outage as it stands after this failure, for the feed line.
+    const retry =
+      retrying && released && !cutOff
+        ? {
+            failures: released.failures,
+            since: this.core.options.inbox.outage(task.id).since ?? this.core.now(),
+            ...(stuck ? { stuck: true as const } : {}),
+          }
+        : undefined;
     if (!providerError && !paused && outage.failures > 0)
-      this.core.ladder.endOutage(task, outage.failures);
+      this.core.ladder.endOutage(task, outage.failures, outage.since);
     // A paused turn that reported needs no carrying on: its report stands.
     // Nor does one its model never took: its own rows carry it.
     if (paused?.row !== undefined && (report || paused.unstarted))
@@ -731,7 +752,7 @@ export class CrewTurns {
         // class too, so the feed line reads the class and not the words.
         typed = { cutOff };
       }
-      this.core.options.tasks.turns.recordTurnFailure(task.id, turnError, typed);
+      this.core.options.tasks.turns.recordTurnFailure(task.id, turnError, typed, retry);
     } else if (report) {
       reportEventId = this.core.options.tasks.turns.recordReport(task.id, {
         text: report,
@@ -859,6 +880,10 @@ export class CrewTurns {
           text: `Task ${task.title} reached its conversation limit and continues with its brief in a new conversation.`,
           taskId: task.id,
         });
+      } else if (stuck && !accountTells) {
+        // Stuck at its provider: the first mate is told once, with the ways
+        // that can work, instead of the outage's own wakes.
+        void this.tellStuck(task, error, retry?.since ?? this.core.now(), released?.refusals ?? 0);
       } else if (firstFailure && !accountTells) {
         this.core.routeCrewEvent(task.id, failedOp, "agent");
       }
@@ -940,6 +965,102 @@ export class CrewTurns {
     return task.accountId && local
       ? this.core.options.accounts?.accessOf?.(task.accountId)
       : undefined;
+  }
+
+  /**
+   * A task stuck at its provider (docs/inbox.md, "Stuck at its provider"):
+   * the first mate hears it once, with the refusal, how many times and
+   * since when, and only the ways that can work - another model is named
+   * only when the app has one to move it to.
+   */
+  private async tellStuck(
+    task: TaskRuntime,
+    error: string,
+    since: number,
+    refusals: number,
+  ): Promise<void> {
+    let moveTo: string | undefined;
+    let provider: string | undefined;
+    try {
+      const plan = await this.core.moves.planMove(task.id);
+      if (!("refused" in plan) && plan.from) {
+        moveTo = this.modelName(plan.choice);
+        provider = this.core.moves.providerLabel(plan.from);
+      }
+    } catch (caught) {
+      console.warn("[crew] another model could not be evaluated:", caught);
+    }
+    const record = this.core.options.tasks.get(task.id);
+    if (!record || TaskService.isClosed(record) || !this.core.options.inbox.stuck(task.id)) return;
+    this.core.routeCrewEvent(
+      task.id,
+      stuckWake(
+        { id: task.id, title: task.title, key: record.key || task.id, crewmate: task.crewmate },
+        {
+          error,
+          since,
+          refusals,
+          ...(moveTo ? { moveTo } : {}),
+          ...(provider ? { provider } : {}),
+        },
+      ),
+      "agent",
+    );
+  }
+
+  /**
+   * The first mate's answer to a task stuck at its provider (update_task
+   * unstick): `restart` lets the conversation go and opens a fresh one told
+   * why, which serves its brief and the kept guidance; `move` moves it to
+   * the app's pick off the provider that refused it. A task that is not
+   * stuck is refused as text and nothing changes.
+   */
+  async unstick(taskId: string, how: "restart" | "move"): Promise<{ ok: boolean; text: string }> {
+    const record = this.core.options.tasks.get(taskId);
+    if (!record) return { ok: false, text: `Unknown task "${taskId}".` };
+    const handle = `${record.key || record.id} "${record.title}"`;
+    if (!this.core.options.inbox.stuck(taskId))
+      return { ok: false, text: `${handle} is not stuck at its provider, so nothing changed.` };
+    if (how === "move") {
+      const moved = await this.core.moves.requestMove(taskId, { by: "firstmate" });
+      return moved;
+    }
+    const task = this.core.tasks.get(taskId);
+    if (task?.turn.busy)
+      return { ok: false, text: `${handle} is in a turn now, so nothing changed.` };
+    const from = record.sessionFile;
+    if (!from)
+      return {
+        ok: false,
+        text: `${handle} has no earlier conversation on its record to restart from.`,
+      };
+    this.core.options.inbox.unstick(taskId);
+    this.core.options.tasks.note(
+      taskId,
+      "the first mate restarted it in a new conversation, because the provider kept refusing its requests the same way; the earlier one is kept",
+      { news: false },
+    );
+    if (task) {
+      this.core.sessions.releaseSession(task);
+      this.core.tasks.delete(taskId);
+    }
+    try {
+      const resumed = await this.core.sessions.resumeTask(taskId, undefined, {
+        from,
+        changed: "refused",
+      });
+      this.deliverPendingToTask(resumed);
+      return {
+        ok: true,
+        text: `${handle} continues in a new conversation with its brief and kept guidance.`,
+      };
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : String(caught);
+      this.core.options.tasks.note(taskId, `its new conversation could not open: ${message}`, {
+        news: true,
+      });
+      return { ok: false, text: `${handle}'s new conversation could not open: ${message}` };
+    }
   }
 
   private async presentSignInCard(task: TaskRuntime): Promise<void> {

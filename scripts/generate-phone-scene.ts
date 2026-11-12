@@ -209,6 +209,8 @@ try {
       ["waiting for a batch", { ...read, workPosture: { state: "active", reason: "checks", batch: "waiting" } }],
       ["running in a batch", { ...read, workPosture: { state: "active", reason: "checks", batch: "in-batch" } }],
       ["paused in a batch", { ...read, workPosture: { state: "active", reason: "checks", batch: "paused" } }],
+      ["retrying at its provider", { ...read, workPosture: { state: "active", reason: "guidance", atProvider: "retrying" } }],
+      ["stuck at its provider", { ...read, workPosture: { state: "idle", reason: "inactive", atProvider: "stuck" } }],
       ["waiting for its checks", { ...read, workPosture: { state: "active", reason: "checks" }, delivery: { ...pr, ci: "red", ciStartedAt: now - 50 * min, ciFinishedAt: now - 38 * min,
         checks: checks(["failure", "success", "success"]) } }],
       ["background work", { workPosture: { state: "active", reason: "job" } }],

@@ -748,7 +748,10 @@ describe("CrewSupervisor", () => {
     // The honest retry keeps its guidance, as for any provider failure.
     expect(ops.at(-1)).toContain("failed at the provider: 401: invalid_api_key");
     // Nor does the feed line read a sign-in out of those words.
-    expect(lastFeedLine()).toBe(`Problem: ${PLAIN_PROBLEM_FALLBACK}`);
+    // It says the app retries on its own (INF-3714), never asking for a sign-in.
+    expect(lastFeedLine()).toMatch(
+      /^Problem: something went wrong - the app tries again on its own \(/,
+    );
     // A spent allowance or a refusal keeps today's provider-failure path,
     // and its feed line is its class's.
     for (const [cutOff, line] of [

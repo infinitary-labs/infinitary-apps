@@ -142,6 +142,7 @@ export function conversationRestartOnce(restart: CrewmateRestart): string {
   const changed =
     restart.changed === "unopenable" ||
     restart.changed === "context" ||
+    restart.changed === "refused" ||
     restart.changed === "moved" ||
     restart.changed === "computer"
       ? restart.changed
@@ -162,6 +163,7 @@ export function conversationRestartWake(input: {
   const restart =
     input.restart.changed === "unopenable" ||
     input.restart.changed === "context" ||
+    input.restart.changed === "refused" ||
     input.restart.changed === "moved" ||
     input.restart.changed === "computer"
       ? input.restart

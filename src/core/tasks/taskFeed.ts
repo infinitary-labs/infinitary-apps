@@ -1,7 +1,7 @@
 import { type FeedLine, reportSummary, taskFeedKind } from "@shared/feed";
 import { formatNumber } from "@shared/i18n/format";
 import { englishOf, type Said, said, saidLine, saidPart, saidSchema } from "@shared/i18n/said";
-import { plainProblem, typedFailureOf } from "@shared/plainProblem";
+import { crewProblem, retriedProblemLine, typedFailureOf } from "@shared/plainProblem";
 import { droppedSaid } from "../orchestrator/settleWords";
 import type { ActivityStore } from "../storage/activityStore";
 import type { TaskEvent } from "../storage/taskEventStore";
@@ -84,6 +84,14 @@ function text(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
+/** The honest retry's outage a failure recorded (`recordTurnFailure`'s `retry`). */
+function retryOf(value: unknown): { failures: number; since: number; stuck?: boolean } | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const { failures, since, stuck } = value as Record<string, unknown>;
+  if (typeof failures !== "number" || typeof since !== "number") return undefined;
+  return { failures, since, ...(stuck === true ? { stuck: true } : {}) };
+}
+
 /** The feed line for one timeline event, or null when it stays off the feed. */
 export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | null {
   if (!event.feed) return null;
@@ -110,9 +118,12 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
       // feed says what it means (the vocabulary's error row). A turn that
       // failed on a task that lives on (recordTurnFailure marks it
       // non-fatal) reads differently from a task that failed for good.
-      const problem = plainProblem(text(data.error) ?? event.text, typedFailureOf(data));
-      fact =
-        data.fatal === false ? said("feedProblem", { problem }) : said("feedFailed", { problem });
+      const problem = crewProblem(text(data.error) ?? event.text, typedFailureOf(data));
+      const retry = retryOf(data.retry);
+      if (retry) written = retriedProblemLine(problem, retry);
+      else
+        fact =
+          data.fatal === false ? said("feedProblem", { problem }) : said("feedFailed", { problem });
       break;
     }
     case "landed":

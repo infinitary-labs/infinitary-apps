@@ -185,5 +185,7 @@ function row(id: number, wake: TypedWake): InboxRow {
     failingSince: null,
     nextAttemptAt: null,
     cuts: 0,
+    refusals: 0,
+    stuckAt: null,
   };
 }

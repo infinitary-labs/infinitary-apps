@@ -6,6 +6,7 @@ import {
 } from "./authFailure";
 import { CLAUDE_ACCESS_REFUSED_LINE, type ClaudeAccessSource } from "./claudeAccess";
 import { HERE } from "./deviceNames";
+import { formatTime } from "./i18n/format";
 
 /**
  * What a failure means for the person, in the vocabulary's words (roadmap
@@ -78,6 +79,7 @@ type Rule = {
  */
 export type TypedFailure = { cutOff?: CutOff; access?: ClaudeAccessSource };
 
+const PROVIDER_REFUSED_LINE = "the provider refused the crewmate's request";
 const SIGN_IN_LINE = "the provider did not accept your sign-in - sign in again";
 const ALLOWANCE_LINE = "your plan's allowance ran out - it comes back when it resets";
 
@@ -209,6 +211,48 @@ const RULES: readonly Rule[] = [
   },
 ];
 
+/**
+ * The fold a provider outage's feed lines share (`data.feedOnce`): one
+ * line per outage, named by when it began, which each new failure and the
+ * crewmate answering again update (docs/inbox.md, "The honest retry").
+ */
+export function providerOutageFold(since: number): string {
+  return `provider-outage:${since}`;
+}
+
+/** A moment's time of day as a feed line writes it: "4:55 PM". */
+function feedClock(at: number): string {
+  return formatTime(at, { hour: "numeric", minute: "2-digit" });
+}
+
+/** A provider line without its "try again", which the app does on its own. */
+function withoutTryAgain(line: string): string {
+  return line.replace(/ - try again(?: shortly)?$/, "");
+}
+
+/**
+ * The feed line of a failure the honest retry takes (`data.retry`): what
+ * happened, that the app tries again itself - never asking the person to -
+ * and how many tries failed since when; or, once the same refusal stopped
+ * the retry, that the task is stuck at its provider and its first mate is
+ * choosing what to do (docs/inbox.md, "Stuck at its provider").
+ */
+export function retriedProblemLine(
+  problem: string,
+  retry: { failures: number; since: number; stuck?: boolean },
+): string {
+  const what = withoutTryAgain(problem);
+  const tries = `${retry.failures} ${retry.failures === 1 ? "try" : "tries"}`;
+  return retry.stuck
+    ? `Stuck at its provider: ${what}, ${tries} in a row since ${feedClock(retry.since)} - the app stopped retrying, and your first mate is choosing what to do`
+    : `Problem: ${what} - the app tries again on its own (${tries} failed since ${feedClock(retry.since)})`;
+}
+
+/** The feed line when the crewmate answers again after an outage. */
+export function answeringAgainLine(failures: number): string {
+  return `Answering again after ${failures} failed ${failures === 1 ? "try" : "tries"} at its provider`;
+}
+
 /** The fallback when no known shape matches: plain, and still true. */
 export const PLAIN_PROBLEM_FALLBACK = "something went wrong - try again";
 
@@ -230,6 +274,49 @@ export function plainProblem(error: string | undefined, typed?: TypedFailure): s
   if (!raw) return PLAIN_PROBLEM_FALLBACK;
   const rules = typed ? WORD_RULES : RULES;
   return rules.find((rule) => rule.test(raw))?.line ?? PLAIN_PROBLEM_FALLBACK;
+}
+
+/**
+ * A provider's words for a request it refused as malformed, its HTTP 400:
+ * Pi's ("400 Bad Request", "status code 400") and the Claude client's
+ * ("API Error: 400 {...}").
+ */
+const PROVIDER_REFUSAL =
+  /\bBad Request\b|^\s*400\b|\bAPI Error:\s*400\b|\(400\)|\b(?:status(?:\s+code)?|code)["']?\s*[:=]?\s*["']?400\b/i;
+
+/**
+ * The plain line for a crewmate's failed turn at its provider: `plainProblem`'s,
+ * except that a request the provider refused (a 400 no other rule names)
+ * reads as the provider refusing the crewmate's request, which the app retries
+ * on its own (INF-3714). Only a crewmate's turn reads it: the first mate's own
+ * failure and a forge's answer keep `plainProblem`'s words.
+ */
+export function crewProblem(error: string | undefined, typed?: TypedFailure): string {
+  const line = plainProblem(error, typed);
+  return line === PLAIN_PROBLEM_FALLBACK && !typed?.cutOff && PROVIDER_REFUSAL.test(error ?? "")
+    ? PROVIDER_REFUSED_LINE
+    : line;
+}
+
+/**
+ * Whether a crewmate's provider failure is a refusal, the one failure the
+ * stuck count reads (INF-3714: "stop the retry after three identical
+ * refusals"); an outage, such as an overloaded provider, keeps the honest
+ * retry however often it repeats.
+ */
+export function isProviderRefusal(error: string | undefined): boolean {
+  return crewProblem(error) === PROVIDER_REFUSED_LINE;
+}
+
+/**
+ * A refusal's words as the stuck count compares them: the provider's
+ * per-response request id (Anthropic's `"request_id": "req_..."`) left out,
+ * so the same refusal twice reads as the same words.
+ */
+export function refusalWords(error: string): string {
+  return error
+    .replace(/"request_id"\s*:\s*"[^"]*"/g, '"request_id":""')
+    .replace(/\breq_[A-Za-z0-9]+/g, "req_");
 }
 
 /**

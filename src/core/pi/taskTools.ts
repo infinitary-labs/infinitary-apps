@@ -74,6 +74,8 @@ export type TaskToolsDelegate = {
     programBound?: number;
     /** The model the user named (override_model_id); empty clears it. */
     model?: string;
+    /** The answer to a task stuck at its provider: a fresh conversation, or the app's pick of another model. */
+    unstick?: "restart" | "move";
     speed?: import("@shared/crewSpeed").CrewSpeed | null;
     /** The reasoning effort the user named (override_reasoning); null inherits Models. */
     reasoning?: ReasoningChoice | null;
@@ -316,6 +318,12 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         Type.String({
           description:
             "As spawn_crewmate.shape.override_model_id; routes open work at start, moves started work between turns. Empty clears it.",
+        }),
+      ),
+      unstick: Type.Optional(
+        stringEnum(["restart", "move"], {
+          description:
+            "Only for a task stuck at its provider: restart continues in a fresh conversation; move goes to the app's pick off that provider.",
         }),
       ),
       reasoning: Type.Optional(
@@ -573,6 +581,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         ...(params.program_bound !== undefined ? { programBound: params.program_bound } : {}),
         ...(params.crew_speed !== undefined ? { speed: params.crew_speed } : {}),
         ...(params.override_model_id !== undefined ? { model: params.override_model_id } : {}),
+        ...(params.unstick !== undefined ? { unstick: params.unstick } : {}),
         ...(params.reasoning !== undefined ? { reasoning: params.reasoning } : {}),
         ...(params.placement_requirements !== undefined
           ? { placementRequirements: params.placement_requirements }

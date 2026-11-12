@@ -22085,6 +22085,34 @@ export function settingsCommandStartAtLogin(): string {
   return `Start your first mate and crew when you sign in.`;
 }
 
+export function settingsWebsiteSignInsStorage(): string {
+  switch (currentLanguage()) {
+    case "ar":
+      return `تبقى على هذا الحاسوب في مساحة تخزين خاصة بها، لا في التخزين المحمي.`;
+    case "de":
+      return `Sie bleiben auf diesem Computer in ihrem eigenen Speicher, nicht im geschützten Speicher.`;
+    case "es":
+      return `Se quedan en este ordenador, en su propio almacenamiento, no en el almacenamiento protegido.`;
+    case "fr":
+      return `Ils restent sur cet ordinateur, dans leur propre stockage, et non dans le stockage protégé.`;
+    case "ja":
+      return `これらはこのコンピュータ上の専用の保存場所に保管され、保護された保存場所には入りません。`;
+    case "ko":
+      return `이 로그인은 보호된 저장소가 아니라 이 컴퓨터의 별도 저장소에 보관됩니다.`;
+    case "pt-BR":
+      return `Eles ficam neste computador, em um armazenamento próprio, não no armazenamento protegido.`;
+    case "zh-Hans":
+      return `它们保存在这台电脑上自己的存储中，不在受保护的存储中。`;
+    case "zh-Hant":
+      return `它們保存在這台電腦上自己的儲存空間中，不在受保護的儲存空間中。`;
+    case "en-XA":
+      return `[Ţĥéý šţáý öñ ţĥîš çöɱþûţéŕ îñ ţĥéîŕ öŵñ šţöŕáĝé, ñöţ îñ þŕöţéçţéð šţöŕáĝé. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+    case "ar-XB":
+      return `\u202eThey stay on this computer in their own storage, not in protected storage.\u202c`;
+  }
+  return `They stay on this computer in their own storage, not in protected storage.`;
+}
+
 /** Every message by its name, for words saved as a fact and worded when shown (docs/i18n.md, "Saved facts"). */
 export const MESSAGES = {
   composerLines,
@@ -22828,6 +22856,7 @@ export const MESSAGES = {
   settingsCommandStopping,
   settingsCommandStopFailed,
   settingsCommandStartAtLogin,
+  settingsWebsiteSignInsStorage,
 } as const;
 
 /** The name of a message in the catalog. */
@@ -23576,4 +23605,5 @@ export const MESSAGE_FILLS: Record<MessageName, readonly string[]> = {
   settingsCommandStopping: [],
   settingsCommandStopFailed: [],
   settingsCommandStartAtLogin: [],
+  settingsWebsiteSignInsStorage: [],
 };

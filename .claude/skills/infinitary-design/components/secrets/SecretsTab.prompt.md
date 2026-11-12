@@ -47,6 +47,12 @@ It says in short sentences that the copy and the key are kept apart, that there 
 Each operation requires fresh system confirmation after file choice, and cancellation grants nothing.
 An interrupted save reports partial files without deleting an earlier working pair; an unknown restore asks the person to inspect the selected entries rather than replaying it.
 
+## Website sign-ins
+
+The page ends with the website sign-ins task browsers saved (`components/cards/TaskBrowser`, "Saved sign-ins"), after the quiet rows and in every storage state: loading, locked, unavailable, needing recovery and empty.
+Its lead adds that they stay on this computer in their own storage, not in protected storage, so nothing reads them as secrets.
+Its rows, Remove, permission and empty line are the same as anywhere else; a build with no task browsers draws nothing there.
+
 ## The exact-use card
 
 The title asks in one sentence: Give the Website deployment (Staging) secret to Deploy the site?, naming one or two secrets (or a count) and the task that asked, or Infinitary when no task asked.

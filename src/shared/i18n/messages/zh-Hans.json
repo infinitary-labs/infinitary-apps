@@ -787,5 +787,6 @@
   "settingsCommandStopConfirm": "确认停止",
   "settingsCommandStopping": "正在停止...",
   "settingsCommandStopFailed": "你的大副已经停止了。",
-  "settingsCommandStartAtLogin": "登录时开始你的大副和船员们。"
+  "settingsCommandStartAtLogin": "登录时开始你的大副和船员们。",
+  "settingsWebsiteSignInsStorage": "它们保存在这台电脑上自己的存储中，不在受保护的存储中。"
 }

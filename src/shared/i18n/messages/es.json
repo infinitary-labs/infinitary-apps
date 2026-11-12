@@ -819,5 +819,6 @@
   "settingsCommandStopConfirm": "Confirmar detención",
   "settingsCommandStopping": "Deteniendo...",
   "settingsCommandStopFailed": "Tu primer oficial ya se había detenido.",
-  "settingsCommandStartAtLogin": "Iniciar tu primer oficial y tu tripulación cuando inicies sesión."
+  "settingsCommandStartAtLogin": "Iniciar tu primer oficial y tu tripulación cuando inicies sesión.",
+  "settingsWebsiteSignInsStorage": "Se quedan en este ordenador, en su propio almacenamiento, no en el almacenamiento protegido."
 }

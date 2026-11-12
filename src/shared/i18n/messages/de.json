@@ -795,5 +795,6 @@
   "settingsCommandStopConfirm": "Stoppen bestätigen",
   "settingsCommandStopping": "Wird gestoppt ...",
   "settingsCommandStopFailed": "Dein erster Offizier war bereits gestoppt.",
-  "settingsCommandStartAtLogin": "Deinen ersten Offizier und deine Crew starten, wenn du dich anmeldest."
+  "settingsCommandStartAtLogin": "Deinen ersten Offizier und deine Crew starten, wenn du dich anmeldest.",
+  "settingsWebsiteSignInsStorage": "Sie bleiben auf diesem Computer in ihrem eigenen Speicher, nicht im geschützten Speicher."
 }

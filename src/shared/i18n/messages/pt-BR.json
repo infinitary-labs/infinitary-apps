@@ -819,5 +819,6 @@
   "settingsCommandStopConfirm": "Confirmar parada",
   "settingsCommandStopping": "Parando...",
   "settingsCommandStopFailed": "Seu imediato já tinha parado.",
-  "settingsCommandStartAtLogin": "Iniciar seu imediato e a tripulação quando você fizer login."
+  "settingsCommandStartAtLogin": "Iniciar seu imediato e a tripulação quando você fizer login.",
+  "settingsWebsiteSignInsStorage": "Eles ficam neste computador, em um armazenamento próprio, não no armazenamento protegido."
 }

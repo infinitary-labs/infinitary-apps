@@ -378,7 +378,7 @@ A paste with no words, or past `TASK_BROWSER_PASTE_MAX`, is the page's own paste
 Return control hands the browser back with one press.
 While the captain has control, the view shows `Returning control lets the crewmate read and use this browser, including signed-in pages.` before that press.
 Command search's `Take or return browser control` runs the same control on the shown browser.
-An unsaved site offers an unticked `Remember my <site> sign-in on this computer`; a saved site shows `Sign-in saved on this computer · updates on return` and Manage, which opens Settings → General → Website sign-ins.
+An unsaved site offers an unticked `Remember my <site> sign-in on this computer`; a saved site shows `Sign-in saved on this computer · updates on return` and Manage, which opens Website sign-ins in view, in Settings → Secrets or, where that tab is not offered, Settings → General (`openSavedSignIns`, `src/renderer/src/app/shellCommands.ts`).
 `TaskBrowsers.returnControl` waits, at most ten seconds, for a load the captain started to finish, so a return during a reload hands back the loaded page; then every page starts a new book, so every older ref is refused, nothing from the captain's time is kept, the crewmate's next answer leads with a line saying control came back, and its fact carries `returned`, which the view's caption reads as `temporary · keeps what you signed in to until it stops`.
 The crewmate is woken once through its task's durable lane: `CardActions.browserReturned` steers the typed `browser-returned` wake (`docs/inbox.md`), named by the run, the browser and its count of returns, so the inbox queues each return once.
 The wake names the site, says the old refs are gone and to take a fresh look with `infinitary-browser-axi`, the command's home view, repeats what the crewmate said it would do next, and says returning gives the task the signed-in site, never permission to buy, pay or submit anything that matters.
@@ -472,7 +472,8 @@ A site that holds no cookies by then copies none back over the save, and an orig
 The app's quit closes every browser at once and copies nothing back.
 
 **Settings.**
-Settings → General lists them under Website sign-ins, one row per site with when it was saved, its initially off future-task permission and Remove (`WebsiteSignInsSection`, `src/renderer/src/settings/`), read with `inf:browser:sign-ins`, which answers `available: false` where this build keeps no task browsers, so the section draws nothing there.
+Settings → Secrets lists them last, under Website sign-ins, in every storage state, and says they stay on this computer in their own storage, not in protected storage; where this window offers no Secrets tab - a build without protected storage, or a computer that controls another - Settings → General lists them instead, after Sharing (`signInsInSecrets`).
+Each row shows the site with when it was saved, its initially off future-task permission and Remove (`WebsiteSignInsSection`, `src/renderer/src/settings/`), read with `inf:browser:sign-ins`, which answers `available: false` where this build keeps no task browsers, so the section draws nothing there.
 Remove (`inf:browser:sign-ins:remove`, `TaskBrowsers.removeSavedSignIn`) deletes the site's file, signs every browser using it out of that site at once - its cookies there, its own origins' local storage, and their session storage in each of its pages go, and nothing is copied back - writes a timeline line on each such task, and tells each crewmate on its next command.
 The list, Remove and `inf:browser:sign-ins:automatic` are core requests the captain asks from any window that controls the first mate; the first mate never changes saved-site permission or removes a saved sign-in.
 

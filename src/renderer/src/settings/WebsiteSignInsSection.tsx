@@ -1,4 +1,6 @@
+import type { ThisMac } from "@shared/devices";
 import { formatDate } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import {
   AUTOMATIC_SIGN_IN_LABEL,
   AUTOMATIC_SIGN_IN_NOTICE,
@@ -6,8 +8,10 @@ import {
   type SavedSignInsView,
 } from "@shared/taskBrowser";
 import { useCallback, useEffect, useState } from "react";
+import { useShellStore } from "../app/store";
 import { Button } from "../design";
 import { useFirstMatePlace, useHereAs } from "../devices/useFirstMatePlace";
+import { isView } from "../devices/viewWords";
 import { ROW_GAP, SECTION_GAP, SectionLabel, SettingError } from "./settingRows";
 
 /**
@@ -16,7 +20,24 @@ import { ROW_GAP, SECTION_GAP, SectionLabel, SettingError } from "./settingRows"
  * `components/cards/TaskBrowser`, "Saved sign-ins"): one row per site, with
  * when it was saved and Remove. Shown only where this Mac keeps task
  * browsers, so a host with no browser engine draws nothing here.
+ *
+ * It sits last in Settings → Secrets wherever this window offers that tab,
+ * and stays in General where it does not: a build without protected storage,
+ * or a computer that controls another (`signInsInSecrets`).
  */
+
+/**
+ * Whether the section lives in Secrets: this build keeps protected storage
+ * and this window is the first mate's own, the same two facts that offer the
+ * Secrets tab (the built-in Secrets section's gate and `showsSection`).
+ */
+export function signInsInSecrets(secretsShown: boolean, thisMac: ThisMac | null): boolean {
+  return secretsShown && !isView(thisMac);
+}
+
+export function useSignInsInSecrets(): boolean {
+  return useShellStore((s) => signInsInSecrets(s.secretsShown, s.thisMac));
+}
 
 /** "saved today", "saved yesterday" or "saved Oct 1": when a sign-in was saved. */
 export function savedWhen(at: number, now: number): string {
@@ -40,6 +61,7 @@ export function WebsiteSignInsSectionView({
   error,
   onRemove,
   onAutomatic,
+  inSecrets = false,
 }: {
   view: SavedSignInsView | null;
   now: number;
@@ -48,11 +70,13 @@ export function WebsiteSignInsSectionView({
   error: string | null;
   onRemove: (site: string) => void;
   onAutomatic?: (signIn: SavedSignIn, automatic: boolean) => void;
+  /** Shown in Secrets, where the lead also names the sign-ins' own storage. */
+  inSecrets?: boolean;
 }) {
   const here = useHereAs();
   if (!view?.available) return null;
   return (
-    <div data-website-sign-ins="" style={{ marginTop: SECTION_GAP }}>
+    <div data-website-sign-ins="" tabIndex={-1} style={{ marginTop: SECTION_GAP, outline: "none" }}>
       <SectionLabel>Website sign-ins</SectionLabel>
       <div
         style={{
@@ -63,6 +87,8 @@ export function WebsiteSignInsSectionView({
         }}
       >
         {WEBSITE_SIGN_INS_LEAD}
+        {/* Said in Secrets, beside the protected secrets these sign-ins are not. */}
+        {inSecrets && ` ${m.settingsWebsiteSignInsStorage()}`}
       </div>
       <ul
         aria-label="Website sign-ins"
@@ -167,7 +193,7 @@ export function WebsiteSignInsSectionView({
   );
 }
 
-export function WebsiteSignInsSection() {
+export function WebsiteSignInsSection({ inSecrets = false }: { inSecrets?: boolean } = {}) {
   const place = useFirstMatePlace();
   const [view, setView] = useState<SavedSignInsView | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
@@ -218,6 +244,7 @@ export function WebsiteSignInsSection() {
       error={error}
       onRemove={(site) => void remove(site)}
       onAutomatic={(signIn, allowed) => void automatic(signIn, allowed)}
+      inSecrets={inSecrets}
     />
   );
 }

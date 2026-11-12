@@ -57,7 +57,7 @@ The foot line's caption reads `temporary · returning control shares this page`.
 `Return control` hands back with one press, without another confirmation or Keep control button.
 While the captain holds a crewmate's browser, a violet row under the chrome shows `Returning control lets the crewmate read and use this browser, including signed-in pages.` in `--text-sm --fg-1`, wrapping at narrow widths.
 Below it, an unsaved site offers an unticked `Remember my <site> sign-in on this computer` in `--text-xs --fg-2`, with the checkbox in `--accent` and `--space-2` from its words.
-A saved site instead shows `Sign-in saved on this computer · updates on return` and a small ghost `Manage` button, which opens Settings → General → Website sign-ins.
+A saved site instead shows `Sign-in saved on this computer · updates on return` and a small ghost `Manage` button, which opens Website sign-ins in view: in Settings → Secrets, or in Settings → General where that tab is not offered.
 Remember clears on a different site or browser, and the return checks the site and save identity again before saving or refreshing.
 A saved status refreshes the same site's existing save on return, including a different account chosen there; a removed or replaced record stays untouched.
 A failed or unsupported save says why under the foot line even if control returned successfully.
@@ -95,9 +95,11 @@ That click gives the browser that one site's sign-in, reloads its page, hands it
 `Sign in myself` is the ordinary handoff above, whose saved status refreshes the existing site save without another tick.
 The browser copies the site's sign-in back when it stops, so a session the site refreshed stays current.
 
-Settings → General lists them under the micro label `WEBSITE SIGN-INS`, after Sharing, in every build.
+Settings → Secrets lists them last, under the micro label `WEBSITE SIGN-INS`, after the quiet rows, in every storage state (`components/secrets/SecretsTab`, "Website sign-ins").
+Where the window offers no Secrets tab - a build without protected storage, or a computer that controls another - Settings → General lists them instead, after Sharing.
 One `--text-sm --fg-2` line leads: "Sign-ins you saved as you handed a task's browser back.
 Allow future tasks separately for each site, or choose access on each task’s request."
+In Secrets it goes on: "They stay on this computer in their own storage, not in protected storage."
 Then one list box (`--bg-1`, `--line-1` hairline, `--radius-m`) with a row per site, `--space-3` by `--space-4`, a `--line-1` hairline between rows: the site in mono `--text-sm` `--fg-1`, then when it was saved - `saved today`, `saved yesterday` or the day, `saved Oct 4` - in `--text-xs` `--fg-3`, and a small secondary Button `Remove`.
 Each row also has an initially unticked `Allow future tasks to use this sign-in automatically` checkbox, separately changeable from Remove.
 Below the list, `--text-xs --fg-3` explains that permission applies across projects sharing this computer; turning it off stops future grants, and Remove signs current browsers out too.

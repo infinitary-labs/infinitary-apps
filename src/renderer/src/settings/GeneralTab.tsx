@@ -25,7 +25,7 @@ import { ROW_GAP, SECTION_GAP, SectionLabel, SettingRow } from "./settingRows";
 import { UpdateChannelRow } from "./UpdateChannelRow";
 import { useSettingSave } from "./useSettingSave";
 import { VersionRow } from "./VersionRow";
-import { WebsiteSignInsSection } from "./WebsiteSignInsSection";
+import { useSignInsInSecrets, WebsiteSignInsSection } from "./WebsiteSignInsSection";
 
 // Re-exported for the sections that grew up importing them from here.
 export { SectionLabel, SettingRow } from "./settingRows";
@@ -507,6 +507,7 @@ export function GeneralTab() {
   // are that computer's own: their rows stay off this tab (docs/view.md).
   const thisMac = useShellStore((s) => s.thisMac);
   const remote = isView(thisMac);
+  const signInsInSecrets = useSignInsInSecrets();
   // Beside a command that runs (`ThisMac.byCommand`), quitting closes only
   // the window: Stop is offered, and Start at login starts the first mate.
   const byCommand = thisMac?.role === "home" && thisMac.byCommand === true && !thisMac.command;
@@ -658,7 +659,8 @@ export function GeneralTab() {
         />
       </div>
       <SharingSection />
-      <WebsiteSignInsSection />
+      {/* In Secrets wherever this window offers it (WebsiteSignInsSection.tsx). */}
+      {!signInsInSecrets && <WebsiteSignInsSection />}
       <PrivateSitesSection />
       <LocalSeatSection />
       <div style={{ marginTop: SECTION_GAP, display: "grid", gap: ROW_GAP }}>

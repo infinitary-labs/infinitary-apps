@@ -867,5 +867,6 @@
   "settingsCommandStopConfirm": "تأكيد الإيقاف",
   "settingsCommandStopping": "جارٍ الإيقاف...",
   "settingsCommandStopFailed": "كان نائب القبطان متوقفًا بالفعل.",
-  "settingsCommandStartAtLogin": "ابدأ نائب القبطان والطاقم عند تسجيل الدخول."
+  "settingsCommandStartAtLogin": "ابدأ نائب القبطان والطاقم عند تسجيل الدخول.",
+  "settingsWebsiteSignInsStorage": "تبقى على هذا الحاسوب في مساحة تخزين خاصة بها، لا في التخزين المحمي."
 }

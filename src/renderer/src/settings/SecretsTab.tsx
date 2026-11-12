@@ -25,6 +25,7 @@ import { useShellStore } from "../app/store";
 import { Badge, Button, Input } from "../design";
 import { thisDesktop } from "../design/core/desktop";
 import { LABEL_GAP, ROW_GAP, SECTION_GAP, SettingError } from "./settingRows";
+import { WebsiteSignInsSection } from "./WebsiteSignInsSection";
 import "./secrets.css";
 
 type Entry = SecretsView["entries"][number];
@@ -295,6 +296,9 @@ export function SecretsTab() {
         </>
       )}
       <SettingError error={error} surface="secrets" />
+      {/* Last, in every storage state: the sign-ins keep their own storage
+          (docs/task-browser.md, "Saved sign-ins"). */}
+      <WebsiteSignInsSection inSecrets />
     </section>
   );
 }

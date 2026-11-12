@@ -819,5 +819,6 @@
   "settingsCommandStopConfirm": "Confirmer l’arrêt",
   "settingsCommandStopping": "Arrêt en cours...",
   "settingsCommandStopFailed": "Votre second était déjà arrêté.",
-  "settingsCommandStartAtLogin": "Démarrer votre second et l’équipage quand vous vous connectez."
+  "settingsCommandStartAtLogin": "Démarrer votre second et l’équipage quand vous vous connectez.",
+  "settingsWebsiteSignInsStorage": "Ils restent sur cet ordinateur, dans leur propre stockage, et non dans le stockage protégé."
 }

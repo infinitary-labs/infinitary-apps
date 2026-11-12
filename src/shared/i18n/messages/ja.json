@@ -748,5 +748,6 @@
   "settingsCommandStopConfirm": "停止を確定",
   "settingsCommandStopping": "停止中...",
   "settingsCommandStopFailed": "一等航海士はすでに停止していました。",
-  "settingsCommandStartAtLogin": "サインインしたときに一等航海士と乗組員を開始します。"
+  "settingsCommandStartAtLogin": "サインインしたときに一等航海士と乗組員を開始します。",
+  "settingsWebsiteSignInsStorage": "これらはこのコンピュータ上の専用の保存場所に保管され、保護された保存場所には入りません。"
 }

@@ -787,5 +787,6 @@
   "settingsCommandStopConfirm": "Confirm stop",
   "settingsCommandStopping": "Stopping...",
   "settingsCommandStopFailed": "Your first mate had already stopped.",
-  "settingsCommandStartAtLogin": "Start your first mate and crew when you sign in."
+  "settingsCommandStartAtLogin": "Start your first mate and crew when you sign in.",
+  "settingsWebsiteSignInsStorage": "They stay on this computer in their own storage, not in protected storage."
 }

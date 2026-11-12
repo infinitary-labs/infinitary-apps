@@ -31,6 +31,7 @@ import type { TaskDetail } from "@shared/tasks";
 import type React from "react";
 import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useCommandKeys } from "../app/keyHints";
+import { openSavedSignIns } from "../app/shellCommands";
 import { useShellStore } from "../app/store";
 import { useModelNames } from "../app/useModelNames";
 import { Button, IconButton, RowMenu, StatusDot } from "../design";
@@ -1058,13 +1059,7 @@ export function TaskBrowserView({
               }}
             >
               <span>{savedSignInStatus(place)}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  useShellStore.setState({ view: "settings", settingsSection: "general" })
-                }
-              >
+              <Button variant="ghost" size="sm" onClick={openSavedSignIns}>
                 {m.cardBrowserManage()}
               </Button>
             </div>

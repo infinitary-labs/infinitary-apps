@@ -166,6 +166,7 @@ Opening a row offers Replace, Forget and that secret's saved decisions; a tempor
 Secure entry asks for a name, the masked value and an optional place, never a reference: the controller makes one from the name when saving.
 The form locates the returned entry through the controller's `saved` receipt; replacements keep their existing reference and exact-record checks.
 Four quiet rows below the list open in place: Saved decisions, Approve from your phone, What happened (history) and Keep a copy (recovery).
+The page ends with Website sign-ins in every storage state (`docs/task-browser.md`, "Saved sign-ins"): they keep their own storage, outside the protected owner, and the section says so (the consumer register's Remembered websites row).
 Saved decisions are the existing Never, Ask and Allow rules, each as one plain sentence with Remove, which proposes the rules without it on the host's Remove card; the page has no rule editor and no rehearsal form: the crew checks a run before asking.
 A decision is saved only from an approval card: Always allow this run saves an Allow for that exact run, and Don't allow offers a second card that saves a Never for that secret.
 The exact-use card's title names the secrets and the task that asked; its body says who asks, what runs and why, with every checked fact, reference and version under one disclosure.

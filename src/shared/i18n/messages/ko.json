@@ -787,5 +787,6 @@
   "settingsCommandStopConfirm": "중지 확인",
   "settingsCommandStopping": "중지하는 중...",
   "settingsCommandStopFailed": "일등항해사는 이미 멈춰 있었어요.",
-  "settingsCommandStartAtLogin": "로그인할 때 일등항해사와 선원들을 시작해요."
+  "settingsCommandStartAtLogin": "로그인할 때 일등항해사와 선원들을 시작해요.",
+  "settingsWebsiteSignInsStorage": "이 로그인은 보호된 저장소가 아니라 이 컴퓨터의 별도 저장소에 보관됩니다."
 }

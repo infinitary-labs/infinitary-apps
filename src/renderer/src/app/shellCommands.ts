@@ -20,6 +20,7 @@ import { focusWithRing } from "../design/focus";
 import { giveFocusBack, moveInFrame } from "../plugins/frames/frameFocus";
 import { pluginHost } from "../plugins/host";
 import { panelCommandRefusal, runPanelCommand } from "../plugins/panelCommands";
+import { signInsInSecrets } from "../settings/WebsiteSignInsSection";
 import { cardStage } from "./cardStage";
 import { commandRefusal, type WindowFacts } from "./commandRefusals";
 import { landLostFocus, typingWhereFocusRested } from "./focusLanding";
@@ -366,6 +367,23 @@ function openSettingsAt(
       if (now !== from && now?.closest(`[data-settings-section="${CSS.escape(section)}"]`)) return;
       const found = document.querySelector<HTMLElement>(place);
       if (found) enter(found);
+    },
+  );
+}
+
+/**
+ * A task browser's Manage: Website sign-ins in view, in Secrets where this
+ * window offers that tab and in General otherwise (`signInsInSecrets`).
+ * Focus rests on the section itself, so Tab goes on to its first row.
+ */
+export function openSavedSignIns(): void {
+  const { secretsShown, thisMac } = useShellStore.getState();
+  openSettingsAt(
+    signInsInSecrets(secretsShown, thisMac) ? "secrets" : "general",
+    "[data-website-sign-ins]",
+    (found) => {
+      found.scrollIntoView({ block: "start" });
+      found.focus({ preventScroll: true });
     },
   );
 }

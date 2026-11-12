@@ -5,17 +5,20 @@ import { expect, test } from "@playwright/test";
 import { WebSignIns } from "../../src/core/browser/webSignIns";
 import { AUTOMATIC_SIGN_IN_LABEL, SAVED_SIGN_IN_STATUS } from "../../src/shared/taskBrowser";
 import { scratchDir } from "../helpers/scratchDirs";
-import { launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { expandDock, expectRecordBody, pressRow, recordCard, taskFact } from "./rails";
 import { SAVED_SITE_VISIT, savedSiteTitle, savedSiteVisit } from "./scenarios/savedSiteVisit";
+import { launchSecrets } from "./secretsHarness";
+import { settingsSection } from "./settings";
 import { browserView, closeSite, pageSays } from "./taskBrowser";
 import { focusOn, pressKey, runFromSearch } from "./windowKeys";
 
 // Approved INF-920 direction C. Fixture: a disposable club whose own-origin storage
 // is its session. Signal: the real Electron page and the crewmate's actual reading.
 // Desktop prerequisites only; its server, task homes and saved sign-ins are private.
+// INF-1493's approved direction A: with protected storage on (disposable custody), the
+// sign-ins sit last in Settings → Secrets, and Manage opens them there.
 test("one site permission survives restart, signs future tasks in, and revocation leaves existing access until Remove", async () => {
   const server = createServer((_request, response) => {
     response.setHeader("content-type", "text/html");
@@ -32,25 +35,21 @@ test("one site permission survives restart, signs future tasks in, and revocatio
     cookies: [],
     storage: [{ origin: new URL(url).origin, items: [["member", "Sam"]] }],
   });
-  let launched = await launchApp({
-    withMockProvider: true,
-    userDataDir,
-    scenarios: [savedSiteVisit],
-  });
+  let launched = await launchSecrets({ userDataDir, scenarios: [savedSiteVisit] });
   try {
-    await runFromSearch(launched.app, launched.page, "settings.open");
-    const row = () => launched.page.locator(`[data-website-sign-in="${site}"]`);
+    await runFromSearch(launched.app, launched.page, "settings.secrets");
+    const row = () =>
+      settingsSection(launched.page, "secrets").locator(`[data-website-sign-in="${site}"]`);
     const permission = () => row().getByRole("checkbox", { name: AUTOMATIC_SIGN_IN_LABEL });
     await expect(permission()).not.toBeChecked();
     await focusOn(permission());
     await pressKey(permission(), "Space");
     await expect(permission()).toBeChecked();
+    await launched.page.getByRole("tab", { name: "General", exact: true }).click();
+    await expect(settingsSection(launched.page, "general")).toBeVisible();
+    await expect(launched.page.locator("[data-website-sign-ins]")).toHaveCount(0);
     await launched.close();
-    launched = await launchApp({
-      withMockProvider: true,
-      userDataDir,
-      scenarios: [savedSiteVisit],
-    });
+    launched = await launchSecrets({ userDataDir, scenarios: [savedSiteVisit] });
     const { app, page } = launched;
     const visit = async (name: string) => {
       const address = `${url}?visit=${name}`;
@@ -112,7 +111,7 @@ test("one site permission survives restart, signs future tasks in, and revocatio
         revokedBrowser: second.browser,
       }),
     );
-    await runFromSearch(app, page, "settings.open");
+    await runFromSearch(app, page, "settings.secrets");
     await row().getByRole("button", { name: "Remove", exact: true }).click();
     await expect(row()).toHaveCount(0);
     await expect

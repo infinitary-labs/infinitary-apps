@@ -26,7 +26,7 @@ Do not add a second store of website sign-ins: saved sign-ins have one owner, re
 - The page itself: the host's effects only ([`../src/main/host/taskBrowser.ts`](../src/main/host/taskBrowser.ts), behind `HostTaskBrowser` in [`../src/core/host.ts`](../src/core/host.ts)); the core keeps every decision.
 - Shared facts and words: [`../src/shared/taskBrowser.ts`](../src/shared/taskBrowser.ts) (the browser fact schema, `UNKNOWN_OUTCOME_WORDS`).
 - Crewmate: the `infinitary-browser-axi` command and one instruction line, granted where the browser binds (`CrewToolHooks.taskCommandHooks`, [`../src/core/orchestrator/crewToolHooks.ts`](../src/core/orchestrator/crewToolHooks.ts)); `emit_card`'s `browser_button`, `browser_page` and `browser_handoff`.
-- Captain: the task card's Browser tab ([`../src/renderer/src/cards/TaskBrowserView.tsx`](../src/renderer/src/cards/TaskBrowserView.tsx)) and Settings -> General -> Website sign-ins ([`../src/renderer/src/settings/WebsiteSignInsSection.tsx`](../src/renderer/src/settings/WebsiteSignInsSection.tsx)).
+- Captain: the task card's Browser tab ([`../src/renderer/src/cards/TaskBrowserView.tsx`](../src/renderer/src/cards/TaskBrowserView.tsx)) and Website sign-ins, last in Settings -> Secrets, or in Settings -> General where that tab is not offered ([`../src/renderer/src/settings/WebsiteSignInsSection.tsx`](../src/renderer/src/settings/WebsiteSignInsSection.tsx)).
 
 ## Operations and lifecycle
 

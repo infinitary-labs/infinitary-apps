@@ -73,6 +73,8 @@ test("on a view, a work computer's own account row names that computer and the f
   bridge.answer("inf:accounts:list", [OWN]);
   bridge.answer("inf:devices:shown", { shown: true });
   bridge.answer("inf:devices:sign-ins", [IMAC]);
+  // Opening Subscriptions asks the home for any allowance read only on a press; it has none new.
+  bridge.answer("inf:quota:opened", null);
   await openSize();
   await openWindow(bridge);
   await userEvent.click(page.getByRole("button", { name: "Settings", exact: true }));

@@ -40,6 +40,15 @@ export const modelChannels = {
     request: z.tuple([]),
     response: quotaSnapshotViewSchema.nullable(),
   },
+  // The person opened Subscriptions: an allowance read only on a press is
+  // read now (allowance-opened.md).
+  "inf:quota:opened": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: quotaSnapshotViewSchema.nullable(),
+  },
   "inf:quota:models": {
     effect: "read",
     surface: "core",

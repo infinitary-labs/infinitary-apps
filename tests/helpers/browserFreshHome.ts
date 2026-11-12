@@ -142,6 +142,10 @@ async function bootAndRead<T>(
           // Work-only reads refuse on a computer that runs no work; a test that needs one answers it.
         }
       }
+      // Opening Subscriptions asks for any allowance read only on a press
+      // (docs/antigravity-client.md, "The allowance"); a home with no such
+      // account reads nothing and answers its latest snapshot.
+      answers.plain["inf:quota:opened"] = await core.dispatch("inf:quota:opened", []);
       for (const [channel, request] of asked) {
         const byRequest = answers.asked[channel] ?? {};
         byRequest[JSON.stringify(request)] = await core.dispatch(channel, request as never);

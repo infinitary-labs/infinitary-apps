@@ -167,6 +167,10 @@ export const TRACKED_FAMILIES: Readonly<
   // Kimi Code lists only its two starter rows; k3-256k and the highspeed
   // row stay reachable by name.
   "kimi-coding": { ids: ["k3", "kimi-for-coding"] },
+  // Antigravity serves the Gemini models the person's plan offers, and
+  // Infinitary runs only those (INF-3776): each family's newest generation
+  // is its row, so a person can place one.
+  "google-antigravity": "every",
   // Copilot serves several makers' families, filtered to what the account
   // may use; each family's newest generation is its row, as elsewhere.
   "github-copilot": "every",

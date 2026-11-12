@@ -475,6 +475,7 @@ describe("ipc contract", () => {
       "inf:plugins:update",
       "inf:projects:list",
       "inf:quota:models",
+      "inf:quota:opened",
       "inf:quota:refresh",
       "inf:quota:snapshot",
       "inf:repos:configure",

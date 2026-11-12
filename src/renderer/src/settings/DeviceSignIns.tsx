@@ -15,6 +15,7 @@ import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import {
   AuthMethodChoice,
+  asksFirst,
   CUSTOM_API_UPDATE_THERE_NOTE,
   connectMethods,
   ProviderChips,
@@ -122,7 +123,7 @@ export function DeviceSignInGroups({
   const connect = useCallback(
     (deviceId: string, provider: ProviderView) => {
       const methods = connectMethods(provider);
-      if (methods.length > 1) {
+      if (asksFirst(provider)) {
         setChoice({ deviceId, provider });
         return;
       }

@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { ANTIGRAVITY_PROVIDER_ID } from "@shared/antigravity";
 import { Type } from "typebox";
 import { afterEach, describe, expect, it } from "vitest";
 import type { AgyScenario } from "../../../tests/helpers/agyStandIn";
@@ -8,6 +9,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { ModelSession, SessionEvent, SessionResume } from "../session/session";
 import { boundTool } from "../session/tools";
 import { readSession, sessionAssistantLines, sessionToolCalls } from "../storage/sessionReader";
+import { AntigravityOffers } from "./antigravityModels";
 import {
   ANTIGRAVITY_PERSONAL_MCP,
   ANTIGRAVITY_PERSONAL_OFF,
@@ -28,6 +30,7 @@ import { createAntigravitySessionFactory } from "./session";
 const STAND_IN = join(import.meta.dirname, "../../../tests/helpers/agyStandIn.ts");
 const GEMINI = { id: "gemini-3-pro", name: "Gemini 3 Pro" };
 const OTHER = { id: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" };
+const ACCOUNT = { accountId: "antigravity", providerId: ANTIGRAVITY_PROVIDER_ID };
 
 const open: ModelSession[] = [];
 afterEach(async () => {
@@ -48,7 +51,12 @@ const noteTool = boundTool({
 
 function setUp(
   scenario: AgyScenario,
-  options: { resume?: SessionResume; model?: string; personal?: boolean } = {},
+  options: {
+    resume?: SessionResume;
+    model?: string;
+    personal?: boolean;
+    offers?: AntigravityOffers;
+  } = {},
 ) {
   const home = scratchDir("infinitary-antigravity-");
   // The person's own home, where their instructions and skills are read from.
@@ -65,6 +73,7 @@ function setUp(
     clientVersion: "9.9.9-test",
     cancelGraceMs: 2_000,
     home: personHome,
+    ...(options.offers ? { onOffered: options.offers.note.bind(options.offers) } : {}),
     launch: () => {
       const args = [STAND_IN, scenarioPath, logPath];
       launches.push(args);
@@ -220,6 +229,27 @@ describe("an Antigravity crewmate", () => {
       "Done: the tests pass.",
       "Second turn.",
     ]);
+  });
+
+  it("gives the account the Gemini models the program offered when a conversation opened", async () => {
+    // Intent: INF-3776's approved plan - Gemini models only, listed from the
+    // program's own answer on that sign-in, with nothing started just to ask.
+    const offers = new AntigravityOffers();
+    const read = offers.reader();
+    expect(await read(ACCOUNT)).toEqual({
+      status: "skipped",
+    });
+    const run = setUp(
+      { models: [OTHER, GEMINI], currentModel: GEMINI.id, turns: [[{ say: "Ready." }]] },
+      { offers },
+    );
+    const session = await run.start();
+    await session.prompt("Look at the footer.");
+
+    expect(await read(ACCOUNT)).toEqual({
+      status: "ok",
+      models: [GEMINI],
+    });
   });
 
   it("refuses a model that is not Gemini, and a program that offers none", async () => {

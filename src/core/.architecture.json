@@ -1613,6 +1613,41 @@
       "from": "antigravity",
       "to": "Antigravity program",
       "why": "runs crewmate conversations and serves them the app's tools"
+    },
+    {
+      "from": "antigravity",
+      "to": "accounts",
+      "why": "signs in as an account backend"
+    },
+    {
+      "from": "antigravity",
+      "to": "pi",
+      "why": "keeps the one login in the account vault"
+    },
+    {
+      "from": "antigravity",
+      "to": "quota",
+      "why": "keeps allowance readings"
+    },
+    {
+      "from": "antigravity",
+      "to": "models",
+      "why": "refreshes the models the program offers"
+    },
+    {
+      "from": "models",
+      "to": "antigravity",
+      "why": "serves the models the program offers"
+    },
+    {
+      "from": "quota",
+      "to": "antigravity",
+      "why": "names the Gemini models in the allowance catalog"
+    },
+    {
+      "from": "routing",
+      "to": "antigravity",
+      "why": "reads the thinking levels the program offers"
     }
   ],
   "machines": [

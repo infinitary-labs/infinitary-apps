@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ANTIGRAVITY_PROVIDER_ID } from "./antigravity";
 import {
   backendForProvider,
   CLAUDE_PROVIDER_ID,
@@ -13,13 +14,14 @@ import {
 import { isSensedProvider, QUOTA_TO_PI_PROVIDER, quotaSnapshotViewSchema } from "./quota";
 
 describe("PROVIDER_CATALOG", () => {
-  it("offers the five managed providers, Claude the one outside Pi", () => {
+  it("offers the managed providers, Claude and Antigravity the ones outside Pi", () => {
     expect(PROVIDER_CATALOG.map((entry) => entry.id)).toEqual([
       "openai-codex",
       "xai",
       CLAUDE_PROVIDER_ID,
       "kimi-coding",
       "github-copilot",
+      ANTIGRAVITY_PROVIDER_ID,
       "openrouter",
     ]);
     // INF-560: the chip's name is "Kimi Code", after Claude.
@@ -29,6 +31,7 @@ describe("PROVIDER_CATALOG", () => {
       "Claude",
       "Kimi Code",
       "Copilot",
+      "Antigravity",
       "OpenRouter",
     ]);
     expect(PROVIDER_CATALOG.find((entry) => entry.id === "kimi-coding")?.tier).toBe("subscription");
@@ -43,9 +46,10 @@ describe("PROVIDER_CATALOG", () => {
     expect(isOfferedProvider("openrouter")).toBe(true);
   });
 
-  it("serves every subscription through Pi, Claude the sole exception (captain, 2026-09-24)", () => {
+  it("serves every subscription through Pi, Claude and Antigravity the exceptions (captain, 2026-09-24, 2026-11-11)", () => {
     expect(PROVIDER_CATALOG.filter((entry) => entry.backend !== "pi").map((e) => e.id)).toEqual([
       CLAUDE_PROVIDER_ID,
+      ANTIGRAVITY_PROVIDER_ID,
     ]);
     // Cursor left: not offered, and a stored account for it is
     // retired rather than read as a Pi provider. Kimi Code and Copilot came back (INF-560).
@@ -88,9 +92,9 @@ describe("PROVIDER_CATALOG", () => {
     expect(githubEnterpriseHost("company")).toBeNull();
   });
 
-  it("lets every offered provider run the Firstmate and crew, Claude included (W1)", () => {
+  it("lets every offered provider run the Firstmate and crew, Claude included (W1), Antigravity crew only (INF-3776)", () => {
     for (const entry of PROVIDER_CATALOG) {
-      expect(providerServesRole(entry.id, "firstmate")).toBe(true);
+      expect(providerServesRole(entry.id, "firstmate")).toBe(entry.id !== ANTIGRAVITY_PROVIDER_ID);
       expect(providerServesRole(entry.id, "crewmate")).toBe(true);
     }
     expect(providerServesRole(CLAUDE_PROVIDER_ID, "firstmate")).toBe(true);

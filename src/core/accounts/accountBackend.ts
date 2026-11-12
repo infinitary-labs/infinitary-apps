@@ -19,8 +19,8 @@ import type { CredentialHealth, RenewalOutcome, RenewReason } from "./credential
  *
  * Phase 7 registers the second backend (Claude) behind the first (Pi). The
  * shape is deliberately backend-neutral, but the set is closed: a supported
- * subscription runs through Pi, and Claude is the sole exception (captain,
- * 2026-09-24).
+ * subscription runs through Pi, and Claude and Antigravity are the two
+ * exceptions (captain, 2026-09-24 and 2026-11-11).
  */
 
 /**
@@ -28,11 +28,13 @@ import type { CredentialHealth, RenewalOutcome, RenewReason } from "./credential
  * `pi-runtime` is in-process (one ModelRuntime per account's auth file);
  * `default-login` is Claude's machine-default login (CD-1=B) - no
  * per-account store, CLAUDE_CONFIG_DIR left unset so the client uses the
- * bare Keychain item.
+ * bare Keychain item. `antigravity-login` is the sign-in the installed
+ * Antigravity program keeps for this user, which only the program reads.
  */
 export type AccountBinding =
   | { via: "pi-runtime"; authPath: string; modelsPath: string }
-  | { via: "default-login" };
+  | { via: "default-login" }
+  | { via: "antigravity-login" };
 
 export type AccountStatus = {
   connected: boolean;

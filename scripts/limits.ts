@@ -55,6 +55,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
       way: "captain chose a short bounded history; current and running-request tokens stay guarded independently",
     },
   },
+  "src/core/antigravity/antigravityUsage.ts": {
+    REPORT_OUTPUT_MAX_BYTES: physical("the read stops and counts as unreadable; the last reading is kept"),
+  },
   "src/core/axi/commandDoor.ts": {
     WATCH_WAIT_CEILING_MS: physical(
       "watch answers what it has with its cursor; the next watch --after reads on",

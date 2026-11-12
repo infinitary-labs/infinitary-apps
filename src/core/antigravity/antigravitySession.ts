@@ -115,6 +115,8 @@ export type AntigravitySessionDeps = {
   now?: () => number;
   /** The home the person's own instructions and skills are read from; this user's by default. */
   home?: string;
+  /** The models the program offered when a conversation opened, for the account's own list. */
+  onOffered?: (accountId: string, models: readonly OfferedModel[]) => void;
 };
 
 /**
@@ -468,6 +470,10 @@ export class AntigravitySession implements ModelSession {
   /** The Gemini model and the thinking level the conversation runs at, set once per attachment. */
   private async chooseModel(live: Live, opened: unknown): Promise<void> {
     const choice: ModelChoice = modelChoiceOf(opened);
+    // The models the program offers this sign-in, the account's own list.
+    if (choice.offered.length > 0 && this.spec.binding.backend === "antigravity") {
+      this.deps.onOffered?.(this.spec.binding.accountId, choice.offered);
+    }
     const wanted = this.spec.model?.id ?? this.model?.id;
     const chosen = chooseGeminiModel(choice, wanted);
     if (typeof chosen === "string") throw new Error(chosen);

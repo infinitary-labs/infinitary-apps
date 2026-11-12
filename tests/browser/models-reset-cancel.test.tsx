@@ -72,6 +72,8 @@ function answerIntelligence(bridge: ReturnType<typeof fakeBridge>) {
   };
   bridge.answer("inf:accounts:list", accounts);
   bridge.answer("inf:quota:snapshot", snapshot);
+  // Opening Subscriptions asks the home for any allowance read only on a press; it has none new.
+  bridge.answer("inf:quota:opened", snapshot);
   bridge.answer("inf:models:available", pool);
   bridge.answer("inf:models:slots", slots);
   bridge.answer("inf:models:slots:reset", slots);

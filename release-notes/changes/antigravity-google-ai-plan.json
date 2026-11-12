@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "antigravity-google-ai-plan",
+      "kind": "feature",
+      "title": "Crewmates can run on your Google AI plan through Antigravity",
+      "body": "If Google's Antigravity is installed on your computer, Settings → Intelligence offers it as a new subscription for crewmates. Before you sign in, Infinitary shows what Google's terms and forum say about using Antigravity this way. Signing in uses Antigravity's own Google sign-in, and Infinitary never sees your password or tokens. Crewmates use the Gemini models in your plan. Your remaining allowance is read when you sign in, open Settings → Intelligence or press Recheck allowance.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "antigravity-google-ai-plan-dark.webp",
+        "light": "antigravity-google-ai-plan-light.webp",
+        "alt": "The Antigravity sign-in in Settings shows what Google's terms say, with Sign in with Google and Not now"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

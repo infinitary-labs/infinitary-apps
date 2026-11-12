@@ -93,6 +93,9 @@ export const QUOTA_PROVIDERS = (
     { quotaId: "claude", label: "Claude", sensed: true },
     { quotaId: "kimi", label: "Kimi Code", sensed: true },
     { quotaId: "copilot", label: "Copilot", sensed: true },
+    // Read from the program's own usage report, never with its sign-in
+    // (docs/antigravity-client.md, "The allowance"), so no sensor polls it.
+    { quotaId: "antigravity", label: "Antigravity", sensed: false },
   ] as const
 ).map((entry) => ({ ...entry, piId: servedProviderOf(entry.quotaId) }));
 

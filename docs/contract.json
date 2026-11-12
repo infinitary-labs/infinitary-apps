@@ -22463,6 +22463,139 @@
         ]
       }
     },
+    "inf:quota:opened": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "generatedAt": {
+                "type": "string"
+              },
+              "fetchedAt": {
+                "type": "number"
+              },
+              "providers": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "provider": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "accountId": {
+                      "type": "string"
+                    },
+                    "accountLabel": {
+                      "type": "string"
+                    },
+                    "plan": {
+                      "type": "string"
+                    },
+                    "account": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "auth_required",
+                        "rate_limited",
+                        "unavailable",
+                        "not_measured",
+                        "error",
+                        "skipped"
+                      ]
+                    },
+                    "stale": {
+                      "type": "boolean"
+                    },
+                    "measuredAt": {
+                      "type": "number"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "retryAfter": {
+                      "type": "string"
+                    },
+                    "windows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          },
+                          "percentRemaining": {
+                            "type": "number"
+                          },
+                          "pace": {
+                            "type": "string",
+                            "enum": [
+                              "ahead",
+                              "on_pace",
+                              "behind",
+                              "unknown"
+                            ]
+                          },
+                          "resetText": {
+                            "type": "string"
+                          },
+                          "resetsAtMs": {
+                            "type": "number"
+                          },
+                          "startsAtMs": {
+                            "type": "number"
+                          },
+                          "windowSeconds": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "label"
+                        ]
+                      }
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "provider",
+                    "label",
+                    "status",
+                    "stale",
+                    "windows"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "generatedAt",
+              "fetchedAt",
+              "providers"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
     "inf:quota:models": {
       "effect": "read",
       "reach": "views",

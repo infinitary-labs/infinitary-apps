@@ -13,7 +13,7 @@ It offers Gemini models only: a session moves off a non-Gemini default to a Gemi
 A program that lists no models keeps its own model only when that one is Gemini.
 When the program moves a conversation to another model on its own, the session asks for its Gemini model back.
 When the program refuses, the session ends a running turn with the Gemini-only words and stops the program, so the next prompt starts it again and chooses a Gemini model or refuses.
-Tests use a scripted stand-in for the program (`tests/helpers/agyStandIn.ts`), never a real Google sign-in.
+Tests use scripted stand-ins for the program (`tests/helpers/agyStandIn.ts` for `agy acp`, `tests/helpers/agyCommandStandIn.ts` for its sign-in and usage report), never a real Google sign-in.
 
 ## Finding and starting the program
 
@@ -68,7 +68,35 @@ A steer waits for the next turn, since steering a running turn is not proven on 
 The only typed failure is the `refusal` stop, read as a spent plan; every other failure is prose.
 Background work runs inside the program, out of the host's sight.
 
+## Signing in
+
+Antigravity is a crew-only provider in the catalog (`google-antigravity`, `src/shared/providers.ts`), backed by `AntigravityAuthBackend` (`antigravityAuth.ts`).
+Its chip is off, with "install Antigravity first", on a computer without the program.
+Pressing it shows Google's terms before anything starts, in the catalog entry's own words (`signInWarning`, `ANTIGRAVITY_SIGN_IN_WORDS` in `src/shared/antigravity.ts`): five sentences, links to Google's terms and to Google's forum reply, and "Sign in with Google" beside "Not now" (design skill `components/core/ConnectChips`).
+Only "Sign in with Google" runs the program's own sign-in, `agy acp --login`.
+The program opens no browser: it prints Google's sign-in link and waits on its stdin for the code Google's page shows after the person signs in.
+The app opens that link in the browser, also shows it in the sign-in's aside, and asks for the code in one prompt, which it writes to the program's stdin; the program's exit says whether it signed in.
+Stopping the sign-in stops the program.
+The program keeps one sign-in for the whole user, so the vault keeps one Antigravity account at most and runs one sign-in at a time (`MACHINE_LOGINS`, `src/core/pi/accountVault.ts`), as it does for Claude.
+Removing the account never signs the program out.
+Nothing asks Google whether the sign-in still holds: a session that meets the protocol's sign-in error records the typed `signed_out` cut-off, which withholds the account until its row's Sign in runs the program's sign-in again (`docs/quota.md`, "Typed cut-offs").
+
+## The model list
+
+An Antigravity account serves the shipped Gemini list (`ANTIGRAVITY_MODELS`, `antigravityModels.ts`) until one of its sessions has opened a conversation.
+Each session hands over the models the program offered that sign-in when its conversation opened, and `AntigravityOffers` keeps the Gemini ones as the account's list, read by the served-models catalog (`docs/model-lists.md`).
+Nothing starts the program just to ask for its models.
+
+## The allowance
+
+The program's print-mode usage report, `agy -p /usage --output-format json --print-timeout 20s`, answers without starting a turn, spending any of the plan or leaving a conversation behind (`antigravityUsage.ts`).
+It runs only on the person's press: opening Settings → Intelligence (`inf:quota:opened`), pressing Recheck allowance (the first mate's recheck) or finishing a sign-in, which asks for the same recheck; never on a timer and never while the account is signed out, since a signed-out program opens a browser to sign in.
+It runs with the program's automatic update off (`AGY_CLI_DISABLE_AUTO_UPDATE`) and its account line hidden (`AGY_CLI_HIDE_ACCOUNT_INFO`).
+Its JSON names each model group (`command.data.groups`) with its limits (`buckets`), each a `window` ("weekly"), a `remaining_fraction` and a `reset_time`.
+The Gemini group's weekly limit becomes the account's `seven_day` window in the pushed quota store (`usageReport.ts`, `docs/quota.md`), shown with its age like any pushed reading; the other group (Claude and GPT models) and a limit of any other length are left out, and with no reading the row says nothing was read rather than drawing a meter.
+`agy acp` lists no usage command for other apps, so a running session is never asked.
+A spent plan stops work through the typed `refusal` stop, above.
+
 ## What is not here yet
 
-Antigravity runs crewmates only: the first mate's seat and the one-shot roles are refused, and a computer that runs work for another refuses an Antigravity conversation.
-No provider catalog entry, sign-in card or model list reaches Antigravity yet, so nothing binds a crewmate to it until those arrive.
+Antigravity runs crewmates only: the first mate's seat and the one-shot roles are refused, and a computer that runs work for another neither signs in to Antigravity nor runs an Antigravity conversation.

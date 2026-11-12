@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { ANTIGRAVITY_PROVIDER_ID } from "@shared/antigravity";
 import { CLAUDE_CLIENT_MISSING_TEXT } from "@shared/claudeClient";
 import { HERE } from "@shared/deviceNames";
 import type { AuthNotice, AuthPromptView } from "@shared/providers";
@@ -1461,5 +1462,76 @@ describe("a typed cut-off on the account", () => {
     world.facts.now = resetsAt;
     expect(vault.cutOff(id)).toBeUndefined();
     expect(world.open().cutOff(id)).toBeUndefined();
+  });
+});
+
+describe("an Antigravity account on the program's one login", () => {
+  /**
+   * Intent: INF-3776's approved plan - a Google AI plan signs in through the
+   * installed Antigravity, which keeps one sign-in for the whole user, and a
+   * session that meets that sign-in signed out withholds the account until
+   * the row's Sign in runs the program's own login again. The backend here
+   * stands in for the program's login, which the backend's own tests run.
+   */
+  function antigravityVault() {
+    let logins = 0;
+    let holdLogin: Promise<void> | undefined;
+    const backend: AccountBackend = {
+      id: "antigravity",
+      authTypes: () => ["oauth"],
+      login: async () => {
+        logins += 1;
+        await holdLogin;
+      },
+      logout: async () => ({ login: "kept" }),
+      health: async () => ({ state: "healthy", authType: "oauth" }),
+      renew: async () => ({ outcome: "unsupported" }),
+      status: async () => statusFromHealth({ state: "healthy", authType: "oauth" }),
+      binding: () => ({ via: "antigravity-login" }),
+    };
+    const vault = AccountVault.create(freshPaths(), { backends: [backend] });
+    return {
+      vault,
+      logins: () => logins,
+      hold: (until: Promise<void>) => {
+        holdLogin = until;
+      },
+    };
+  }
+
+  it("keeps one account, and one sign-in at a time", async () => {
+    const world = antigravityVault();
+    let release: () => void = () => {};
+    world.hold(
+      new Promise<void>((resolve) => {
+        release = resolve;
+      }),
+    );
+    const adding = world.vault.add(ANTIGRAVITY_PROVIDER_ID, "oauth", bridge());
+    await vi.waitFor(() => expect(world.logins()).toBe(1));
+    await expect(world.vault.add(ANTIGRAVITY_PROVIDER_ID, "oauth", bridge())).rejects.toThrow(
+      `An Antigravity sign-in is already in progress on ${HERE.this}.`,
+    );
+    release();
+    const account = await adding;
+    expect(account.providerId).toBe(ANTIGRAVITY_PROVIDER_ID);
+    await expect(world.vault.add(ANTIGRAVITY_PROVIDER_ID, "oauth", bridge())).rejects.toThrow(
+      `Antigravity uses the login already on ${HERE.this}.`,
+    );
+    expect(world.logins()).toBe(1);
+    expect(world.vault.list(ANTIGRAVITY_PROVIDER_ID)).toHaveLength(1);
+  });
+
+  it("withholds a signed-out account until its Sign in runs the program's login again", async () => {
+    const world = antigravityVault();
+    const account = await world.vault.add(ANTIGRAVITY_PROVIDER_ID, "oauth", bridge());
+
+    world.vault.noteCutOff(account.id, { class: "signed_out" });
+    expect(world.vault.servesSync(account.id)).toBe(false);
+
+    await world.vault.signIn(account.id, bridge());
+    expect(world.logins()).toBe(2);
+    expect(world.vault.cutOff(account.id)).toBeUndefined();
+    expect(world.vault.servesSync(account.id)).toBe(true);
   });
 });

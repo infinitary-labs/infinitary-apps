@@ -3,6 +3,7 @@ import type { DeviceChip, DeviceInvite, DeviceInviteRequest, DeviceSystem } from
 import type { FmEvent } from "@shared/events";
 import type { ForgeChangesView } from "@shared/forges";
 import type { ProviderView } from "@shared/providers";
+import type { QuotaSnapshotView } from "@shared/quota";
 import type { UsageQuery, UsageSummary, UsageTasks, UsageTasksQuery } from "@shared/usage";
 import type { AxiChannel } from "./axi/channel";
 import type { DecisionModels } from "./decisions/decisionModel";
@@ -273,6 +274,12 @@ export type CoreServices = {
    */
   activityRun: () => string | null;
   quota: QuotaService;
+  /**
+   * The person opened Subscriptions: the allowances read only on a press
+   * are read now, and the snapshot comes back (docs/quota.md). Absent reads
+   * nothing.
+   */
+  allowanceOpened?: () => Promise<QuotaSnapshotView | undefined>;
   settings: SettingsStore;
   /** The one writer of the captain's presentation preferences; pushes every write. */
   preferences: ShellPreferencesService;

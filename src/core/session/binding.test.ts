@@ -1,3 +1,4 @@
+import { ANTIGRAVITY_PROVIDER_ID } from "@shared/antigravity";
 import { describe, expect, it, vi } from "vitest";
 import type { ModelRuntime } from "../pi/types";
 import { SessionBinder } from "./binding";
@@ -38,6 +39,17 @@ describe("SessionBinder", () => {
     const binding = await binder.bind("acct_claude", "anthropic-claude");
 
     expect(binding).toEqual({ backend: "claude", accountId: "acct_claude" });
+    expect(built).toEqual([]);
+  });
+
+  it("binds an Antigravity account to the installed program's login without building a runtime", async () => {
+    // Intent: INF-3776's approved plan - a crewmate on a Google AI plan runs
+    // through the installed Antigravity, which holds the sign-in itself.
+    const { binder, built } = binderOf();
+
+    const binding = await binder.bind("acct_antigravity", ANTIGRAVITY_PROVIDER_ID);
+
+    expect(binding).toEqual({ backend: "antigravity", accountId: "acct_antigravity" });
     expect(built).toEqual([]);
   });
 

@@ -139,6 +139,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/folderMove/copy.test.ts` | the system's copier on a scratch data folder, on a Mac whose disks are numbered as on another startup | 5 s default (Mac slowest per-case minimum 0.007 s) |
 | `src/core/folderMove/move.test.ts` | real git, the system's copier, SQLite, a vite build and the Electron binary: the one-time move of a scratch data folder | 10 s (Mac slowest per-case minimum 0.588 s) |
 | `src/core/tasks/taskTemp.integration.test.ts` | a vite build and the Electron binary: a closed task's temporary folder and leftover files on a scratch work folder | 5 s default (Mac fastest per case 0.12 s, the bundle 0.55 s) |
+| `src/core/antigravity/antigravityAccount.integration.test.ts` | a scripted stand-in for the Antigravity program's sign-in and usage report run as a real child process | 5 s default (Mac slowest case 0.25 s) |
 | `src/core/antigravity/antigravitySession.integration.test.ts` | a scripted stand-in for the Antigravity program run as a real child process, which calls the app's tool server over loopback HTTP | 5 s default (Mac slowest case 0.45 s) |
 | `src/core/tasks/leftoverPrograms.integration.test.ts` | real detached programs, `lsof` on a Mac or `/proc` on Linux, a registered stop run through the shell: a discarded task's leftover programs, and the programs its close leaves alone | 10 s (Mac slowest case 2.5 s) |
 | `src/core/helper/workingCopies.test.ts` | real git: a computer's clones, working copies and bundles, at the run's own priority | 10 s |

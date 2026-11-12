@@ -1,12 +1,16 @@
 import { mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { ANTIGRAVITY_PROVIDER_ID } from "@shared/antigravity";
 import { FIRSTMATE_SESSION_ID } from "@shared/observe";
+import type { BackendId } from "@shared/providers";
 import type { WorkShape } from "@shared/routingPolicy";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import { AntigravityRecord } from "../antigravity/antigravityRecord";
 import { encodeClaudeProjectDir } from "../claude/claudeTranscript";
+import { ANTIGRAVITY_TOKEN } from "../session/session";
 import { openInMemoryDatabase } from "../storage/db";
 import { SettingsStore } from "../storage/settingsStore";
 import { UsageStore } from "../storage/usageStore";
@@ -637,8 +641,9 @@ describe("ObserveService", () => {
       const root = scratchDir("infinitary-observe-backends-");
       const db = openInMemoryDatabase();
       const tasks = new TaskService({ db, strict: true });
-      const accounts: Record<string, { backend: "pi" | "claude"; dir: string }> = {
+      const accounts: Record<string, { backend: BackendId; dir: string }> = {
         "acct-claude": { backend: "claude", dir: join(root, "accounts", "anthropic-claude", "a1") },
+        "acct-agy": { backend: "antigravity", dir: join(root, "accounts", "google-antigravity") },
       };
       const service = new ObserveService({
         enabled: true,
@@ -798,6 +803,40 @@ describe("ObserveService", () => {
       expect(detail.transcriptNote).toMatch(/not written this session's transcript yet/);
       expect(detail.turns.map((turn) => turn.kind)).toEqual(["op"]);
       expect(detail.turns[0]?.text).toBe("[fm-op] brief for cl2");
+    });
+
+    it("renders an Antigravity crewmate from the record the app writes for it", async () => {
+      // Intent: INF-3791's after-merge step for INF-3776's sign-in pull
+      // request - Observe reads an Antigravity crewmate's transcript through
+      // the Pi reader, from the record the app writes under the task.
+      const { root, tasks, service } = fixture();
+      const conversation = "0b8f3c1e-agy-conversation";
+      const record = new AntigravityRecord(
+        join(root, "crewmates", "ag1", "sessions", `${conversation}.jsonl`),
+        conversation,
+        "/w/worktrees/ag1",
+      );
+      record.user("Fix the footer.");
+      record.text("Fixed the footer.");
+      record.end("stop", { provider: ANTIGRAVITY_PROVIDER_ID, id: "gemini-3.8-flash" });
+      seedTask(
+        tasks,
+        taskRow({
+          id: "ag1",
+          title: "fix the footer",
+          sessionFile: `${ANTIGRAVITY_TOKEN}${conversation}`,
+          accountId: "acct-agy",
+          status: "idle",
+        }),
+      );
+
+      expect((await service.list()).find((session) => session.id === "ag1")).toMatchObject({
+        backend: "pi",
+        transcriptNote: null,
+      });
+      expect((await service.detail("ag1")).turns.map((turn) => turn.text)).toContain(
+        "Fixed the footer.",
+      );
     });
 
     it("names a removed account and a vanished Pi session file rather than rendering nothing", async () => {

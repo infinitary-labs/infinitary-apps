@@ -140,6 +140,43 @@
   padding-top: var(--space-3);
 }
 
+/* What a provider's terms need said before its sign-in (INF-3776). */
+.fm-sign-in-warning {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: 4px;
+}
+.fm-sign-in-warning-title {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg-1);
+}
+.fm-sign-in-warning-line {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--fg-2);
+}
+.fm-sign-in-warning-links {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.fm-sign-in-warning-link {
+  color: var(--accent);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  border-radius: var(--radius-s);
+}
+.fm-sign-in-warning-link:hover {
+  text-decoration: underline;
+}
+.fm-sign-in-warning-link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 /* A provider's code step (INF-838), after Settings -> Integrations' sign-in. */
 .fm-code-step {
   display: flex;

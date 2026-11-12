@@ -420,6 +420,7 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
     quota: {
       snapshot: () => invoke("inf:quota:snapshot"),
       refresh: () => readableRequest("inf:quota:refresh", () => invoke("inf:quota:refresh")),
+      opened: () => invoke("inf:quota:opened"),
       models: () => invoke("inf:quota:models"),
       onSnapshot: (listener) => subscribe("inf:quota", listener),
     },

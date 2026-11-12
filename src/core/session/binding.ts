@@ -15,7 +15,8 @@ export type SessionBinderOptions = {
  * selection - which account, for which provider - and hands the binder the
  * result; the binder only knows how an account becomes a binding. The
  * account's backend is its provider's: a Claude account binds to the
- * machine's own login, which the app never builds a runtime for, and a Pi
+ * machine's own login, which the app never builds a runtime for, as an
+ * Antigravity account binds to the installed program's sign-in, and a Pi
  * account to its own runtime.
  */
 export class SessionBinder {
@@ -32,9 +33,10 @@ export class SessionBinder {
    * build a runtime throws, so a caller walking candidates moves on.
    */
   async bindAccount(accountId: string, providerId: string | undefined): Promise<SessionBinding> {
-    if (providerId && backendForProvider(providerId) === "claude") {
-      return { backend: "claude", accountId };
-    }
+    const backend = providerId ? backendForProvider(providerId) : "pi";
+    if (backend === "claude") return { backend: "claude", accountId };
+    // The installed Antigravity's own sign-in, which only the program reads.
+    if (backend === "antigravity") return { backend: "antigravity", accountId };
     return { backend: "pi", accountId, runtime: await this.options.runtimeFor(accountId) };
   }
 

@@ -212,6 +212,10 @@ export class TaskPlacement {
       );
     if (backendForProvider(provider) === "claude")
       return { backend: "claude", accountId: there ?? "claude" };
+    // Antigravity runs only on the computer it is signed in on
+    // (docs/antigravity-client.md); a computer that runs work holds none.
+    if (backendForProvider(provider) === "antigravity")
+      throw new Error("This computer cannot run Antigravity conversations.");
     // Only the control-plane runtime is needed here. The provider's checked
     // connection belongs to that computer, and is resolved by bindHere there.
     const binding = await this.options.bind(undefined, undefined);

@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { cardMessageSchema } from "./cards";
 import { usageSchema } from "./events";
-import { backendIdSchema } from "./providers";
 
 /**
  * Dev-observe IPC shapes. The gate lives in main; these schemas only
@@ -102,6 +101,10 @@ export const observeRoutingSchema = z.object({
 });
 export type ObserveRouting = z.infer<typeof observeRoutingSchema>;
 
+/** The two transcript dialects a session's record is read in. */
+export const transcriptDialectSchema = z.enum(["pi", "claude"]);
+export type TranscriptDialect = z.infer<typeof transcriptDialectSchema>;
+
 export const observeSessionSummarySchema = z.object({
   id: z.string(),
   kind: observeSessionKindSchema,
@@ -116,12 +119,13 @@ export const observeSessionSummarySchema = z.object({
   error: z.string().nullable(),
   authFailure: z.boolean(),
   /**
-   * The backend that serves this session's transcript. The main session's
+   * The dialect this session's transcript is written in. The main session's
    * is the seat that wrote its file (Pi, or Claude since W1); a crewmate's
-   * is the backend of the account it ran on, or null when that account is
-   * no longer registered.
+   * is its account's backend's, or null when that account is no longer
+   * registered. An Antigravity crewmate's record is written in the Pi
+   * dialect (docs/antigravity-client.md, "The record"), so it reads as Pi.
    */
-  backend: backendIdSchema.nullable(),
+  backend: transcriptDialectSchema.nullable(),
   /**
    * Why no transcript can be shown, in plain words, or null when one was
    * read (even if it holds no turns yet). The detail pane renders it in

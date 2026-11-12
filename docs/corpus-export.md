@@ -47,6 +47,9 @@ Five files in `--out`:
 | `dispatch.jsonl` | C5's dispatch records, unchanged (`docs/dispatch-extractor.md`): both seats' first mate sessions, a Claude-served one under `firstmate/claude/` read through the one session reader like a Pi one |
 | `manifest.json` | counts, the class/verdict/confidence tallies, the provenance slices, the contract-version tally, the supervision-turn joins and misses (with the `fleet` tripwire warnings), the provenance-event tally, the routing rollup (below), what was excluded as copied session history, the sources, and how the gate opened |
 
+Each JSONL file is written one record at a time and is never built as one string, since a full record's `dispatch.jsonl` outgrows the longest string Node can hold.
+The frozen pack's checksum and size per file are taken from the same lines as they are written.
+
 `--human-supervision` is current card evidence, independent of the retired supervision session.
 With `--human-supervision` the pack also carries the card evidence view: `human-supervision.jsonl` (one episode per card lifecycle), `human-supervision-labels.jsonl` (empty), the pictures those offers show and their demo recordings under `assets/pictures/`, and a `human_supervision` manifest section with a checksum per file.
 That run is staged and renamed into place and refuses a nonempty `--out` (exit 4); without the flag nothing above changes.

@@ -31,10 +31,12 @@
 import Database from "better-sqlite3";
 import { createHash } from "node:crypto";
 import {
+  closeSync,
   copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
+  openSync,
   readdirSync,
   readFileSync,
   renameSync,
@@ -841,12 +843,27 @@ function tally(values: (string | null | undefined)[]): Record<string, number> {
   return counts;
 }
 
-function jsonl(records: unknown[]): string {
-  return records.length === 0 ? "" : `${records.map((r) => JSON.stringify(r)).join("\n")}\n`;
-}
-
-function writeJsonl(path: string, records: unknown[]): void {
-  writeFileSync(path, jsonl(records));
+/**
+ * Writes one JSON line per record, a line at a time, and never holds the file
+ * as one string: a full record's dispatch turns outgrow the longest string
+ * Node can build. Returns the checksum and size the frozen pack's manifest
+ * records for the file.
+ */
+function writeJsonl(path: string, records: readonly unknown[]): { sha256: string; bytes: number } {
+  const hash = createHash("sha256");
+  let bytes = 0;
+  const fd = openSync(path, "w");
+  try {
+    for (const record of records) {
+      const line = Buffer.from(`${JSON.stringify(record)}\n`);
+      writeFileSync(fd, line);
+      hash.update(line);
+      bytes += line.byteLength;
+    }
+  } finally {
+    closeSync(fd);
+  }
+  return { sha256: hash.digest("hex"), bytes };
 }
 
 /**
@@ -986,18 +1003,17 @@ export function exportCorpus(options: CorpusExportOptions): CorpusExportResult {
   mkdirSync(dirname(outDir), { recursive: true });
   const staging = mkdtempSync(join(dirname(outDir), `.${basename(outDir)}.staging-`));
   try {
-    const texts: [string, string, number | null][] = [
-      ["supervision.jsonl", jsonl(supervision), supervision.length],
-      ["supervision-turns.jsonl", jsonl(supervisionTurns), supervisionTurns.length],
-      ["decisions.jsonl", jsonl(provenanceEvents), provenanceEvents.length],
-      ["dispatch.jsonl", jsonl(dispatch), dispatch.length],
-      [HUMAN_SUPERVISION_FILE, jsonl(pack.episodes), pack.episodes.length],
-      [HUMAN_SUPERVISION_LABELS_FILE, jsonl(pack.labels), pack.labels.length],
+    const jsonlFiles: [string, readonly unknown[]][] = [
+      ["supervision.jsonl", supervision],
+      ["supervision-turns.jsonl", supervisionTurns],
+      ["decisions.jsonl", provenanceEvents],
+      ["dispatch.jsonl", dispatch],
+      [HUMAN_SUPERVISION_FILE, pack.episodes],
+      [HUMAN_SUPERVISION_LABELS_FILE, pack.labels],
     ];
     const files: Record<string, { sha256: string; bytes: number; records: number | null }> = {};
-    for (const [name, text, records] of texts) {
-      writeFileSync(join(staging, name), text);
-      files[name] = { sha256: sha256Of(text), bytes: Buffer.byteLength(text), records };
+    for (const [name, records] of jsonlFiles) {
+      files[name] = { ...writeJsonl(join(staging, name), records), records: records.length };
     }
     for (const asset of pack.assets) {
       const to = join(staging, asset.to);

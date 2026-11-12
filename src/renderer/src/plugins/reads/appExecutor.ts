@@ -57,6 +57,11 @@ const PUSHES: Record<Exclude<CorePushChannel, "inf:event">, ReadApi["onPush"]> =
   "inf:browser:frame": (_channel, listener) => window.infinitary.browser.onFrame(listener),
   "inf:app:sign-in-page": () => () => {},
   "inf:app:sign-in-ended": () => () => {},
+  // What a first mate a command started asks of this computer's window, and
+  // Show in Dock as it keeps it: the window's main process answers and
+  // applies them (docs/run.md, "The window opened beside it"); no page hears.
+  "inf:own-window:ask": () => () => {},
+  "inf:presence:dock": () => () => {},
   "inf:auth:prompt": (_channel, listener) => window.infinitary.auth.onPrompt(listener),
   "inf:auth:notice": (_channel, listener) => window.infinitary.auth.onNotice(listener),
   // Personal extensions (talk-to-personalize Step 2): no read names these

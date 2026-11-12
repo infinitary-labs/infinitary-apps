@@ -2,7 +2,7 @@ import { readFileSync, readlinkSync, renameSync, rmSync, statSync, writeFileSync
 import { join } from "node:path";
 import type { DataRefusal } from "@core/storage/dataFolderRefusal";
 import { APP_IDENTITIES } from "@shared/codeNames";
-import { COMPUTER, HERE } from "@shared/deviceNames";
+import { COMPUTER } from "@shared/deviceNames";
 import { z } from "zod";
 import { type RunEnvironment, RunEnvironmentSchema } from "./runEnvironment";
 import { commandWords } from "./workCommand";
@@ -81,16 +81,18 @@ export const RUN_WORDS = {
 } as const;
 
 /**
- * What Infinitary's window says when it is opened while the command runs
- * here, then it quits (captain's pick on INF-1228: "It says a command started
- * Infinitary here, and quits"): the same page the window shows for any other
- * folder it does not open (./savedDataRefusal.ts).
+ * The window opened while the command runs here joins it as a view of its
+ * first mate (docs/run.md, "The window opened beside it"; INF-1352's plan,
+ * the captain's answer window_joins=join). Two programs cannot share one
+ * browser profile, so the window keeps its own in this folder inside the
+ * data folder, and holds its single-instance lock there.
  */
-export const RUNNING_BY_COMMAND: DataRefusal = {
-  title: "A command started Infinitary here",
-  message: `Infinitary is already running on ${HERE.this} as this user, with no window. Control it from Infinitary on another ${COMPUTER.one}, or stop that command to open Infinitary here.`,
-  next: "You can close this window.",
-};
+export const WINDOW_PROFILE_FOLDER = "window-profile";
+
+/** The window's own browser profile beside a run (`WINDOW_PROFILE_FOLDER`). */
+export function windowProfileDir(dataDir: string): string {
+  return join(dataDir, WINDOW_PROFILE_FOLDER);
+}
 
 /**
  * The code a run ends with once the installed app was updated: "try again"

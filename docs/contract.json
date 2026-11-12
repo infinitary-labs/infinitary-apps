@@ -49692,7 +49692,7 @@
     },
     "inf:plugins:fetch": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -49852,7 +49852,7 @@
     },
     "inf:sql:query": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -49973,7 +49973,7 @@
     },
     "inf:plugins:personal:list": {
       "effect": "read",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "maxItems": 0
@@ -51010,9 +51010,93 @@
         }
       }
     },
+    "inf:plugins:files": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "source": {
+                "type": "string",
+                "enum": [
+                  "yours",
+                  "installed"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 48,
+                "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+              },
+              "version": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{16}$"
+              },
+              "draft": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "source",
+              "id",
+              "version"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "builtFor": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
+              },
+              "files": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 512
+                    },
+                    "data": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "path",
+                    "data"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "builtFor",
+              "files"
+            ]
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
     "inf:plugins:personal:mounts": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -51123,7 +51207,7 @@
     },
     "inf:plugins:invoke": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -51189,7 +51273,7 @@
     },
     "inf:plugins:db": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -51418,7 +51502,7 @@
     },
     "inf:plugins:retry": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -51447,7 +51531,7 @@
     },
     "inf:plugins:update": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -51467,7 +51551,7 @@
     },
     "inf:plugins:integrations": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -51591,7 +51675,7 @@
     },
     "inf:plugins:ask-again": {
       "effect": "change",
-      "reach": "home",
+      "reach": "views",
       "request": {
         "type": "array",
         "prefixItems": [
@@ -51617,6 +51701,635 @@
       },
       "response": {
         "type": "boolean"
+      }
+    },
+    "inf:own-window:here": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      }
+    },
+    "inf:own-window:answer": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "start-at-login"
+                  },
+                  "enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "enabled"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "choose-files"
+                  },
+                  "paths": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  }
+                },
+                "required": [
+                  "kind",
+                  "paths"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "failed"
+                  },
+                  "message": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 400
+                  }
+                },
+                "required": [
+                  "kind",
+                  "message"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        ],
+        "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      }
+    },
+    "inf:own-window:focused": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      }
+    },
+    "inf:voice:primed": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      }
+    },
+    "inf:settings:keys:get": {
+      "effect": "read",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "saved": {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "number",
+                "const": 2
+              },
+              "preset": {
+                "type": "string",
+                "enum": [
+                  "vim",
+                  "emacs",
+                  "vscode",
+                  "legacy"
+                ]
+              },
+              "keys": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "additionalProperties": {
+                  "maxItems": 8,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32
+                      },
+                      "meta": {
+                        "type": "boolean"
+                      },
+                      "ctrl": {
+                        "type": "boolean"
+                      },
+                      "alt": {
+                        "type": "boolean"
+                      },
+                      "shift": {
+                        "type": "boolean"
+                      },
+                      "second": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 32
+                          },
+                          "meta": {
+                            "type": "boolean"
+                          },
+                          "ctrl": {
+                            "type": "boolean"
+                          },
+                          "alt": {
+                            "type": "boolean"
+                          },
+                          "shift": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "key"
+                        ]
+                      },
+                      "when": {
+                        "type": "string",
+                        "const": "not-typing"
+                      }
+                    },
+                    "required": [
+                      "key"
+                    ]
+                  }
+                }
+              },
+              "kept": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "additionalProperties": {
+                    "maxItems": 8,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 32
+                        },
+                        "meta": {
+                          "type": "boolean"
+                        },
+                        "ctrl": {
+                          "type": "boolean"
+                        },
+                        "alt": {
+                          "type": "boolean"
+                        },
+                        "shift": {
+                          "type": "boolean"
+                        },
+                        "second": {
+                          "type": "object",
+                          "properties": {
+                            "key": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 32
+                            },
+                            "meta": {
+                              "type": "boolean"
+                            },
+                            "ctrl": {
+                              "type": "boolean"
+                            },
+                            "alt": {
+                              "type": "boolean"
+                            },
+                            "shift": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "key"
+                          ]
+                        },
+                        "when": {
+                          "type": "string",
+                          "const": "not-typing"
+                        }
+                      },
+                      "required": [
+                        "key"
+                      ]
+                    }
+                  }
+                }
+              }
+            },
+            "required": [
+              "version",
+              "preset",
+              "keys",
+              "kept"
+            ]
+          },
+          "unreadable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "saved",
+          "unreadable"
+        ]
+      }
+    },
+    "inf:settings:keys:set": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "version": {
+                "type": "number",
+                "const": 2
+              },
+              "preset": {
+                "type": "string",
+                "enum": [
+                  "vim",
+                  "emacs",
+                  "vscode",
+                  "legacy"
+                ]
+              },
+              "keys": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 64
+                },
+                "additionalProperties": {
+                  "maxItems": 8,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "key": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32
+                      },
+                      "meta": {
+                        "type": "boolean"
+                      },
+                      "ctrl": {
+                        "type": "boolean"
+                      },
+                      "alt": {
+                        "type": "boolean"
+                      },
+                      "shift": {
+                        "type": "boolean"
+                      },
+                      "second": {
+                        "type": "object",
+                        "properties": {
+                          "key": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 32
+                          },
+                          "meta": {
+                            "type": "boolean"
+                          },
+                          "ctrl": {
+                            "type": "boolean"
+                          },
+                          "alt": {
+                            "type": "boolean"
+                          },
+                          "shift": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "key"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "when": {
+                        "type": "string",
+                        "const": "not-typing"
+                      }
+                    },
+                    "required": [
+                      "key"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "kept": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 32
+                },
+                "additionalProperties": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
+                  },
+                  "additionalProperties": {
+                    "maxItems": 8,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 32
+                        },
+                        "meta": {
+                          "type": "boolean"
+                        },
+                        "ctrl": {
+                          "type": "boolean"
+                        },
+                        "alt": {
+                          "type": "boolean"
+                        },
+                        "shift": {
+                          "type": "boolean"
+                        },
+                        "second": {
+                          "type": "object",
+                          "properties": {
+                            "key": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 32
+                            },
+                            "meta": {
+                              "type": "boolean"
+                            },
+                            "ctrl": {
+                              "type": "boolean"
+                            },
+                            "alt": {
+                              "type": "boolean"
+                            },
+                            "shift": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "key"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "when": {
+                          "type": "string",
+                          "const": "not-typing"
+                        }
+                      },
+                      "required": [
+                        "key"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                }
+              }
+            },
+            "required": [
+              "version",
+              "preset",
+              "keys",
+              "kept"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      }
+    },
+    "inf:runbooks:folder": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "personal"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "builtin"
+                  },
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "kind",
+                  "id"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "inf:update:hold": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "enum": [
+              "save",
+              "later",
+              "release",
+              "replaced",
+              "status"
+            ]
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "saved": {
+            "type": "boolean"
+          },
+          "work": {
+            "type": "object",
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "saving",
+                  "resuming"
+                ]
+              },
+              "tasks": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "state",
+              "tasks"
+            ]
+          }
+        },
+        "required": [
+          "saved"
+        ]
       }
     },
     "inf:work:card": {
@@ -72275,6 +72988,70 @@
         },
         "required": [
           "id"
+        ]
+      }
+    },
+    "inf:own-window:ask": {
+      "payload": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "ask": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "start-at-login"
+                  },
+                  "set": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "choose-files"
+                  },
+                  "multiple": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "multiple"
+                ]
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "ask"
+        ]
+      }
+    },
+    "inf:presence:dock": {
+      "payload": {
+        "type": "object",
+        "properties": {
+          "showInDock": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "showInDock"
         ]
       }
     }

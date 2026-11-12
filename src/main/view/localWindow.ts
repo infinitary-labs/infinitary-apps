@@ -26,12 +26,19 @@ type Link = Pick<HomeLink, "start" | "invoke" | "state" | "close">;
 export type LocalWindowOptions = {
   /** The local door's folder, which the window reads as any local client does. */
   door: string;
-  /** Hands a push to this computer's windows. */
-  broadcast: (channel: PushChannel, payload: unknown) => void;
+  /** Hands a push to this computer's windows; `replayed` marks one a welcome sent again after a drop. */
+  broadcast: (channel: PushChannel, payload: unknown, replayed: boolean) => void;
   /** A welcome after the first that could not replay what the window missed: it reads everything again. */
   onReload?: () => void;
   /** The door refused the window's key twice: the link has stopped dialing for good. */
   onLost?: () => void;
+  /** The first mate welcomes the window, or no longer does. */
+  onContact?: (inReach: boolean) => void;
+  /**
+   * Each welcome, on a connection the first mate never saw before: a drop
+   * it dialed through at once changes no contact, and is still a new one.
+   */
+  onWelcome?: () => void;
   /** Opens the link; tests stand in their own. */
   link?: (options: HomeLinkOptions) => Link;
 };
@@ -57,6 +64,8 @@ export class LocalWindow {
   private welcome: () => void = () => {};
   private closed = false;
   private welcomedOnce = false;
+  /** `ready` stopped waiting before the first welcome, so the window read nothing yet. */
+  private readBeforeWelcome = false;
 
   constructor(options: LocalWindowOptions) {
     this.welcomed = new Promise((resolve) => {
@@ -72,25 +81,32 @@ export class LocalWindow {
       retryMs: [100, 250, 500, 1_000],
       // Both ends share one process, so a long stall holds both: ping slowly.
       pingMs: 30_000,
-      onPush: (channel, payload) => options.broadcast(channel as PushChannel, payload),
+      onPush: (channel, payload, replayed) =>
+        options.broadcast(channel as PushChannel, payload, replayed),
       onLive: (channel, payload) => {
         if (channel === "inf:browser:frame") this.browsers.show(payload);
         // A streamed reply piece or a tool's start or end (`streamed-events-live.md`).
-        if (channel === "inf:event") options.broadcast("inf:event", payload);
+        if (channel === "inf:event") options.broadcast("inf:event", payload, false);
       },
       onCaughtUp: (catchUp) => {
         // A new connection: the first mate forgot every watch with the last one.
         this.browsers.again();
         // The first welcome comes before the window reads anything; a later
         // reload means pushes the journal no longer held were missed.
-        if (catchUp === "reload" && this.welcomedOnce) options.onReload?.();
+        if (
+          (catchUp === "reload" && this.welcomedOnce) ||
+          (!this.welcomedOnce && this.readBeforeWelcome)
+        )
+          options.onReload?.();
         this.welcomedOnce = true;
         this.welcome();
+        options.onWelcome?.();
       },
       onState: (state: HomeLinkState) => {
         // Two refusals of the key stop the link for good (docs/view.md,
         // "Leave, and Remove at the other Mac"): the shell takes the window back.
         if (state.removed && !this.closed) options.onLost?.();
+        if (!this.closed) options.onContact?.(state.contact === "in-reach");
       },
     });
     this.link.start();
@@ -99,7 +115,11 @@ export class LocalWindow {
   /** Resolves once the first mate welcomed the window, or after `timeoutMs` regardless. */
   ready(timeoutMs = 10_000): Promise<void> {
     return new Promise((resolve) => {
-      const timer = setTimeout(resolve, timeoutMs);
+      const timer = setTimeout(() => {
+        // A welcome after this finds a window that read nothing: it reads everything then.
+        if (!this.welcomedOnce) this.readBeforeWelcome = true;
+        resolve();
+      }, timeoutMs);
       timer.unref?.();
       void this.welcomed.then(() => {
         clearTimeout(timer);

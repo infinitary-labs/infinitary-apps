@@ -4,15 +4,14 @@ import {
   BROWSER_FROM_ANY_VIEW,
   DEVICES_FROM_A_VIEW,
   EVERY_VIEW_ASKS,
+  PANELS_IN_EVERY_WINDOW,
 } from "@core/connection/connection";
 import { contractChange, listsChange } from "@core/connection/contractChanges";
 import { HomeLink, type HomeLinkOptions, type HomeLinkState } from "@core/devices/homeLink";
 import type { Joined, JoinedHome } from "@core/devices/joinedHome";
 import type { HostNotifications } from "@core/host";
-import { CardNotifier } from "@core/notifications";
 import { SIGN_IN_RETURN } from "@core/signInReturns";
 import type { UpdateChecker } from "@core/update/updateChecker";
-import { cardsSnapshotSchema } from "@shared/cards";
 import { sideToUpdate } from "@shared/contractFeatures";
 import { HERE, HOME } from "@shared/deviceNames";
 import { splitDialAddress, type ThisMac } from "@shared/devices";
@@ -27,11 +26,12 @@ import {
   signInEndedSchema,
   signInPageSchema,
 } from "@shared/ipc";
-import { readKeepingUnknown } from "@shared/openLists";
+import { personalSnapshotSchema } from "@shared/personal/manifest";
 import { type ShellPreferences, shellPreferencesSchema } from "@shared/preferences";
 import { BrowserWatches, isBrowserWatchChannel } from "./browserWatches";
 import { namedHere, namedHereError } from "./namedHere";
 import { ViewLook } from "./viewLook";
+import { ViewNotices } from "./viewNotices";
 
 /**
  * The app as a view of another Mac (docs/view.md): the main process's
@@ -86,10 +86,19 @@ export const VIEW_PUSHES: ReadonlySet<PushChannel> = new Set<PushChannel>([
   "inf:devices:sign-in",
   "inf:computers:presence",
   "inf:computers:resources",
+  // The captain's panels, drawn here from the first mate's own files.
+  "inf:plugins:personal",
+  "inf:plugins:db",
 ]);
 
+/** A panel being built shows only in a window on the first mate's own computer. */
+function withoutDrafts(payload: unknown): unknown {
+  const snapshot = personalSnapshotSchema.safeParse(payload);
+  return snapshot.success ? { extensions: snapshot.data.extensions } : payload;
+}
+
 /** Channels answered from this Mac's own look. */
-const OWN_LOOK = new Set<CoreInvokeChannel>([
+export const OWN_LOOK = new Set<CoreInvokeChannel>([
   "inf:shell:preferences",
   "inf:settings:appearance:get",
   "inf:settings:appearance:set",
@@ -98,7 +107,7 @@ const OWN_LOOK = new Set<CoreInvokeChannel>([
 ]);
 
 /** Channels about the app installed on this Mac: its update notice and release page. */
-const OWN_APP = new Set<CoreInvokeChannel>([
+export const OWN_APP = new Set<CoreInvokeChannel>([
   "inf:update:status",
   "inf:update:check",
   "inf:update:channel",
@@ -150,7 +159,7 @@ export type ViewBackendOptions = {
 export class ViewBackend {
   readonly look: ViewLook;
   private readonly link: Link;
-  private readonly notifier: CardNotifier;
+  private readonly notices: ViewNotices;
   private readonly joined: JoinedHome;
   private readonly record: Joined;
   private caughtUp = 0;
@@ -172,11 +181,9 @@ export class ViewBackend {
     this.look = new ViewLook(options.joined, (value) =>
       options.broadcast("inf:shell:preferences", value),
     );
-    this.notifier = new CardNotifier({
-      enabled: () => options.notifications.supported(),
-      focused: () => options.notifications.focused(),
-      show: (notification) => void this.notify(notification),
-    });
+    this.notices = new ViewNotices(options.notifications, (channel, args) =>
+      this.link.invoke(channel, args),
+    );
     this.browsers = new BrowserWatches(
       (channel, args) => this.link.invoke(channel, args),
       () => this.browserWaitsThere(),
@@ -188,12 +195,17 @@ export class ViewBackend {
       as: "view",
       ...(options.dial ? { dial: options.dial } : {}),
       onPush: (channel, payload, replayed) => {
-        if (channel === "inf:cards") this.observeCards(payload);
+        if (channel === "inf:cards") this.notices.observe(payload);
         if (channel === "inf:app:open-page") this.openPage(payload, replayed);
         if (channel === "inf:app:sign-in-page") void this.openSignInPage(payload, replayed);
         if (channel === "inf:app:sign-in-ended") this.signInEnded(payload);
+        // The first mate's look stays its own; only its panels switch is heard here.
+        if (channel === "inf:shell:preferences") this.heardPanels(payload);
         if (VIEW_PUSHES.has(channel as PushChannel))
-          options.broadcast(channel as PushChannel, payload);
+          options.broadcast(
+            channel as PushChannel,
+            channel === "inf:plugins:personal" ? withoutDrafts(payload) : payload,
+          );
       },
       onLive: (channel, payload) => {
         if (channel === "inf:browser:frame") this.browsers.show(payload);
@@ -202,6 +214,7 @@ export class ViewBackend {
       },
       onCaughtUp: (catchUp) => {
         if (!this.look.seeded()) void this.seedLook();
+        void this.readPanels();
         // A new connection: the other Mac forgot every watch with the last one.
         this.browsers.again();
         // Read again whole - at the start too - what the other Mac holds is
@@ -211,8 +224,7 @@ export class ViewBackend {
         if (catchUp === "reload") {
           // Whether the sign-in there still waits is not known: its page again starts anew.
           this.endSignInReturn();
-          this.notifier.forget();
-          void this.seedNotifier();
+          this.notices.startOver();
           this.caughtUp += 1;
           this.changed();
         }
@@ -359,6 +371,7 @@ export class ViewBackend {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    this.notices.stop();
     this.browsers.clear();
     this.signInReturn?.server?.close();
     this.signInReturn = null;
@@ -375,24 +388,7 @@ export class ViewBackend {
     // The window paints nothing until it has a look; a first one waits for
     // the other Mac's, which this Mac starts from.
     if (!this.look.seeded()) await this.seedLook();
-    switch (channel) {
-      case "inf:shell:preferences":
-        return this.look.get();
-      case "inf:settings:appearance:get":
-        return this.look.get().appearance;
-      case "inf:settings:layout:get":
-        return this.look.get().layout;
-      case "inf:settings:appearance:set": {
-        const [appearance] = parseInvokeRequest("inf:settings:appearance:set", rawArgs);
-        return this.look.setAppearance(appearance);
-      }
-      case "inf:settings:layout:set": {
-        const [layout] = parseInvokeRequest("inf:settings:layout:set", rawArgs);
-        return this.look.setLayout(layout);
-      }
-      default:
-        throw new Error(`${channel} is not ${HERE.this}'s own.`);
-    }
+    return answerOwnLook(this.look, channel, rawArgs);
   }
 
   /**
@@ -497,66 +493,35 @@ export class ViewBackend {
     this.changed();
   }
 
-  private observeCards(payload: unknown): void {
-    const cards = readKeepingUnknown(cardsSnapshotSchema, payload);
-    if (cards.success) this.notifier.observe(cards.data);
-  }
-
-  /** What the other Mac shows now, so the next card it gains is news here. */
-  private async seedNotifier(): Promise<void> {
-    try {
-      const cards = readKeepingUnknown(
-        cardsSnapshotSchema,
-        await this.link.invoke("inf:cards:list", []),
-      );
-      if (cards.success) this.notifier.seed(cards.data);
-    } catch {
-      // The next push seeds it instead.
-    }
-  }
-
-  /**
-   * One card-worthy moment, posted here when the other Mac's Notifications
-   * switch is on. Unknown is off: a switch the other Mac could not be asked
-   * about posts nothing.
-   */
-  private async notify(notification: { title: string; body: string }): Promise<void> {
-    let on: unknown = false;
-    try {
-      on = await this.link.invoke("inf:settings:notifications:get", []);
-    } catch {
-      return;
-    }
-    if (on !== true || this.disposed || this.options.notifications.focused()) return;
-    this.options.notifications.show(notification);
-  }
-
   /**
    * This Mac's own update notice, never the other Mac's: a newer Firstmate
    * there asks this Mac to update, and this is where it finds how.
    */
-  private async ownApp(channel: CoreInvokeChannel, rawArgs: unknown[]): Promise<unknown> {
-    switch (channel) {
-      case "inf:update:channel": {
-        const [next] = parseInvokeRequest("inf:update:channel", rawArgs);
-        if (!this.options.updates.setChannel)
-          throw new Error("This installation does not support changing its update channel here.");
-        return this.options.updates.setChannel(next);
-      }
-      case "inf:update:status":
-        return this.options.updates.getStatus();
-      case "inf:update:check":
-        return this.options.updates.checkNow();
-      case "inf:update:open-release":
-        await this.options.updates.openReleasePage();
-        return { ok: true };
-      case "inf:update:install":
-        return this.options.updates.install();
-      case "inf:update:later":
-        return this.options.updates.later?.() ?? this.options.updates.getStatus();
-      default:
-        throw new Error(`${channel} is not ${HERE.this}'s own.`);
+  private ownApp(channel: CoreInvokeChannel, rawArgs: unknown[]): Promise<unknown> {
+    return answerOwnApp(this.options.updates, channel, rawArgs);
+  }
+
+  /**
+   * The first mate's panels switch, read at every welcome (docs/view.md,
+   * "Panels in every window"): a first mate that sends no panel's files
+   * yet leaves them off here, as before.
+   */
+  private async readPanels(): Promise<void> {
+    if (!listsChange(this.link.state().homeChanges, PANELS_IN_EVERY_WINDOW)) {
+      this.look.heardPanels(null);
+      return;
     }
+    try {
+      this.heardPanels(await this.link.invoke("inf:shell:preferences", []));
+    } catch {
+      // Out of reach: the next welcome reads it.
+    }
+  }
+
+  private heardPanels(payload: unknown): void {
+    if (!listsChange(this.link.state().homeChanges, PANELS_IN_EVERY_WINDOW)) return;
+    const heard = shellPreferencesSchema.safeParse(payload);
+    if (heard.success) this.look.heardPanels(heard.data.panels);
   }
 
   /** Takes the other Mac's look once, when this Mac has none of its own yet. */
@@ -604,6 +569,61 @@ export class ViewBackend {
       this.pictures.delete(name);
       this.pictureBytes -= kept.byteLength;
     }
+  }
+}
+
+/** One of `OWN_LOOK`, answered from this computer's own look. */
+export function answerOwnLook(
+  look: ViewLook,
+  channel: CoreInvokeChannel,
+  rawArgs: unknown[],
+): unknown {
+  switch (channel) {
+    case "inf:shell:preferences":
+      return look.get();
+    case "inf:settings:appearance:get":
+      return look.get().appearance;
+    case "inf:settings:layout:get":
+      return look.get().layout;
+    case "inf:settings:appearance:set": {
+      const [appearance] = parseInvokeRequest("inf:settings:appearance:set", rawArgs);
+      return look.setAppearance(appearance);
+    }
+    case "inf:settings:layout:set": {
+      const [layout] = parseInvokeRequest("inf:settings:layout:set", rawArgs);
+      return look.setLayout(layout);
+    }
+    default:
+      throw new Error(`${channel} is not ${HERE.this}'s own.`);
+  }
+}
+
+/** One of `OWN_APP`, answered from this computer's own installed app. */
+export async function answerOwnApp(
+  updates: UpdateChecker,
+  channel: CoreInvokeChannel,
+  rawArgs: unknown[],
+): Promise<unknown> {
+  switch (channel) {
+    case "inf:update:channel": {
+      const [next] = parseInvokeRequest("inf:update:channel", rawArgs);
+      if (!updates.setChannel)
+        throw new Error("This installation does not support changing its update channel here.");
+      return updates.setChannel(next);
+    }
+    case "inf:update:status":
+      return updates.getStatus();
+    case "inf:update:check":
+      return updates.checkNow();
+    case "inf:update:open-release":
+      await updates.openReleasePage();
+      return { ok: true };
+    case "inf:update:install":
+      return updates.install();
+    case "inf:update:later":
+      return updates.later?.() ?? updates.getStatus();
+    default:
+      throw new Error(`${channel} is not ${HERE.this}'s own.`);
   }
 }
 

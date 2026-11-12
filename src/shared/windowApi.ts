@@ -173,6 +173,14 @@ export type FirstmateApi = {
     openExternal: (url: string) => Promise<{ ok: true }>;
     /** The system's folder picker: the chosen folder, or null when cancelled. */
     chooseFolder: (startAt?: string) => Promise<string | null>;
+    /**
+     * Start it here, on the notice over a window whose command stopped
+     * (`ThisMac.command`): the app starts again as this computer's own
+     * first mate. False where nothing offers it.
+     */
+    startHere: () => Promise<boolean>;
+    /** Quits this window's program. */
+    quit: () => Promise<{ ok: true }>;
     /** One of the window's own buttons where the app draws them; answers the window's state after it. */
     controlWindow: (control: WindowControl) => Promise<WindowState>;
     windowState: () => Promise<WindowState>;

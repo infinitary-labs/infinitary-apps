@@ -11,6 +11,7 @@ import {
   voiceStatusSchema,
 } from "../voice";
 import { type ChannelDeclaration, okSchema } from "./common";
+import { runbookFolderRequestSchema } from "./ownWindow";
 
 /**
  * The window's own buttons where the app draws them (design skill readme,
@@ -59,12 +60,23 @@ export const shellChannels = {
   "inf:app:open-runbook-folder": {
     effect: "change",
     surface: "host",
-    request: z.tuple([
-      z.discriminatedUnion("kind", [
-        z.strictObject({ kind: z.literal("personal") }),
-        z.strictObject({ kind: z.literal("builtin"), id: z.string().min(1) }),
-      ]),
-    ]),
+    request: z.tuple([runbookFolderRequestSchema]),
+    response: okSchema,
+  },
+  // The notice over the window opened beside Infinitary started by a command
+  // that stopped (docs/run.md, "When the command stops"): Start it here
+  // starts the app again as this computer's own first mate, and answers
+  // false where nothing offers it; Quit ends this window's program.
+  "inf:app:start-here": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([]),
+    response: z.boolean(),
+  },
+  "inf:app:quit": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([]),
     response: okSchema,
   },
   // A window command the main process runs (the size keys), chosen by name

@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, rmSync, symlinkSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join } from "node:path";
 import { writePrivate } from "@core/devices/identity";
 import {
   bootPlist,
@@ -10,6 +10,7 @@ import {
 } from "@core/helper/background";
 import { lingerStays } from "@core/helper/words";
 import { HERE } from "@shared/deviceNames";
+import type { StartEntry } from "./besideRun";
 import {
   lockHolder,
   processAlive,
@@ -120,6 +121,31 @@ export type BootContext = {
 };
 
 export type BootResult = { code: number; out: string; error: string };
+
+/** Where a Mac's launchd reads the system's jobs at boot. */
+export const MAC_DAEMONS_DIR = "/Library/LaunchDaemons";
+
+/** Where this user's own systemd reads their services. */
+export function userUnitsDir(env: NodeJS.ProcessEnv, homeDir: string): string {
+  const xdg = env.XDG_CONFIG_HOME?.trim();
+  return join(xdg && isAbsolute(xdg) ? xdg : join(homeDir, ".config"), "systemd", "user");
+}
+
+/**
+ * Which start entry this command wrote is in place now: the unit in this
+ * user's systemd folder, or the job an administrator copied into the
+ * system's folder on a Mac. An entry a person wrote by hand, under another
+ * name, is not recognised (docs/run.md, "When the command stops").
+ */
+export function startEntryInPlace(
+  context: Pick<BootContext, "platform" | "unitsDir" | "daemonsDir" | "label">,
+): StartEntry {
+  if (context.platform === "linux")
+    return existsSync(join(context.unitsDir, `${context.label}.service`)) ? "linux-unit" : null;
+  if (context.platform === "darwin")
+    return existsSync(join(context.daemonsDir, `${context.label}.plist`)) ? "mac-daemon" : null;
+  return null;
+}
 
 const said = (lines: readonly string[]) => (lines.length > 0 ? `${lines.join("\n")}\n` : "");
 

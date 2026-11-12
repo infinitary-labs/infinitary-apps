@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { guardStrayFileDrops } from "../attachments/strayDrops";
 import { markShellPainted } from "../design/reveals";
+import { CommandStoppedNotice } from "../devices/CommandStopped";
 import { ViewPill } from "../devices/RemoteControl";
 import { PanelDrafts } from "../personal/PanelDrafts";
 import { guardFrameActivation } from "../plugins/frames/frameActivation";
@@ -38,6 +39,8 @@ export function App() {
   const view = useShellStore((s) => s.view);
   const setView = useShellStore((s) => s.setView);
   const init = useShellStore((s) => s.init);
+  // Under the notice of a command that stopped, nothing in the window is reached.
+  const stopped = useShellStore((s) => s.thisMac?.role === "home" && Boolean(s.thisMac.command));
   const backButtonRef = useRef<HTMLButtonElement>(null);
   // The captain's layout (hidden panels, moved panels) is applied here,
   // over every registered panel, so a change the Firstmate writes lands on
@@ -114,6 +117,7 @@ export function App() {
   // cards still leaves its trace there.
   return (
     <div
+      inert={stopped}
       style={{
         position: "absolute",
         inset: 0,
@@ -124,6 +128,8 @@ export function App() {
         fontFamily: "var(--font-ui)",
       }}
     >
+      {/* Over the whole window: the command this window stood beside stopped (docs/run.md). */}
+      <CommandStoppedNotice />
       {home && <HomeMate />}
       <div
         style={{

@@ -1,4 +1,12 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import type { HandoverOffer } from "@shared/actions";
 import type { Card } from "@shared/cards";
@@ -13,6 +21,8 @@ import {
   signInPageSchema,
   VIEW_INVOKE_CHANNELS,
 } from "@shared/ipc";
+import { presetKeymap, type SavedKeymap } from "@shared/keymap";
+import { OWN_WINDOW_WORDS, type OwnWindowAsked } from "@shared/ownWindow";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { mockModelsJson } from "../../tests/e2e/mockModels";
 import {
@@ -38,6 +48,7 @@ import {
   startGoogleStandIn,
 } from "../../tests/helpers/googleStandIn";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
+import type { BrowserViewer } from "./browser/browserViews";
 import { startConnection } from "./connection/connection";
 import { CONTRACT_CHANGES } from "./connection/contractChanges";
 import { claimLink } from "./devices/dial";
@@ -325,6 +336,54 @@ describe("the connection serves the core to paired devices", () => {
     expect(feed.map((line) => line.text)).toContain("Mac D left.");
   });
 
+  // INF-3660's plan, the captain's answer panels=every-window: "the first
+  // mate would send each panel's built files over the window's connection,
+  // instead of naming a folder".
+  it("answers a view a panel's built files as it answers its own window, and keeps only its own window's word on where one is drawn", async () => {
+    const { grant } = await pairDevice("view", "Mac P");
+    const view = await connectClient(grant);
+    // One of the fixture panels, saved into the workspace as a crewmate saves one.
+    cpSync(
+      join(process.cwd(), "tests", "fixtures", "personal", "shaky"),
+      join(core.paths.personalWorkspaceDir, "shaky"),
+      { recursive: true },
+    );
+    const listed = async () =>
+      (await view.invoke("inf:plugins:personal:list", [])).extensions.find(
+        (extension) => extension.id === "shaky",
+      )?.frame?.version;
+    await expect.poll(listed, { timeout: 30_000 }).toBeTruthy();
+    const version = (await listed()) as string;
+
+    const asked = { source: "yours", id: "shaky", version } as const;
+    const there = await view.invoke("inf:plugins:files", [asked]);
+    expect(there?.builtFor).toBe((await core.dispatch("inf:app:healthcheck", [])).version);
+    expect(there?.files.map((file) => file.path)).toContain("panel.mjs");
+    // The same bytes its own computer's window is answered: no folder is named to either.
+    expect(there).toEqual(await core.dispatch("inf:plugins:files", [asked]));
+    // Another version of it is answered nothing.
+    expect(
+      await view.invoke("inf:plugins:files", [{ ...asked, version: "0123456789abcdef" }]),
+    ).toBeNull();
+
+    // Where a view drew the panel is its own: the first mate keeps its own window's word.
+    const drawn = {
+      id: "shaky",
+      kind: "personal",
+      version,
+      state: "drawn",
+      rail: "left",
+      why: null,
+    } as const;
+    await view.invoke("inf:plugins:personal:mounts", [{ panels: [drawn] }]);
+    expect(core.services.panelMounts.of("shaky", "personal")).toBeUndefined();
+    await core.dispatch("inf:plugins:personal:mounts", [{ panels: [drawn] }]);
+    expect(core.services.panelMounts.of("shaky", "personal")?.state).toBe("drawn");
+    // Removed, as each test here leaves the first mate with no device.
+    await core.dispatch("inf:devices:remove", [grant.deviceId]);
+    expect(await view.closed).toBe(CONNECTION_CLOSE.unpaired);
+  });
+
   it("makes a link only for the captain's own window, and keeps it out of everything saved", async () => {
     let wake: "captain" | "other" = "captain";
     const offered: { target: string; offer: HandoverOffer }[] = [];
@@ -520,6 +579,158 @@ describe("a first mate started by a command, controlled from another computer", 
     const page = await view.push((push) => push.channel === "inf:app:open-page");
     expect((page.payload as { url: string }).url).toMatch(/^https:\/\//);
     expect(shell.opened).toEqual([]);
+  });
+
+  /**
+   * This computer's window as that first mate knows it: one connection that
+   * said it is the window, answering what it is asked from its own program.
+   * `leave` drops that connection.
+   */
+  const ownWindow = async () => {
+    const gone: (() => void)[] = [];
+    const viewer: BrowserViewer = { show: () => {}, onGone: (listener) => gone.push(listener) };
+    const desktop = { startAtLogin: false, asked: [] as OwnWindowAsked["ask"][] };
+    const detach = core.events.subscribe((channel, payload) => {
+      if (channel !== "inf:own-window:ask") return;
+      const { id, ask } = payload as OwnWindowAsked;
+      desktop.asked.push(ask);
+      if (ask.kind !== "start-at-login") return;
+      if (ask.set !== undefined) desktop.startAtLogin = ask.set;
+      void core.dispatch("inf:own-window:answer", [
+        id,
+        { kind: "start-at-login", enabled: desktop.startAtLogin },
+      ]);
+    });
+    await core.dispatch("inf:own-window:here", [], { kind: "captain" }, viewer);
+    return {
+      desktop,
+      leave: () => {
+        detach();
+        for (const listener of gone) listener();
+      },
+    };
+  };
+
+  // The captain's answer on the plan for the window opened beside a first
+  // mate a command started (dock=split): "The first mate keeps Show in Dock
+  // and this window applies it; this window changes Start at login itself",
+  // and with no window open the first mate says plainly it cannot.
+  it("keeps Show in Dock itself, and reads and changes Start at login only through this computer's window", async () => {
+    const dock: unknown[] = [];
+    const detach = core.events.subscribe((channel, payload) => {
+      if (channel === "inf:presence:dock") dock.push(payload);
+    });
+    const before = await core.dispatch("inf:presence:get", []);
+    expect(before.startAtLogin).toBe(false);
+
+    // No window is open: a Dock change is the first mate's own to keep and
+    // push, and a Start at login change has nobody to make it.
+    await expect(
+      core.dispatch("inf:presence:set", [{ startAtLogin: true, showInDock: before.showInDock }]),
+    ).rejects.toThrow(OWN_WINDOW_WORDS.noWindowForLogin);
+    expect(
+      await core.dispatch("inf:presence:set", [
+        { startAtLogin: false, showInDock: !before.showInDock },
+      ]),
+    ).toEqual({ startAtLogin: false, showInDock: !before.showInDock });
+    expect(dock).toEqual([{ showInDock: !before.showInDock }]);
+
+    // The window opens: it is asked, and answers from its own program.
+    const window = await ownWindow();
+    expect(
+      await core.dispatch("inf:presence:set", [
+        { startAtLogin: true, showInDock: !before.showInDock },
+      ]),
+    ).toEqual({ startAtLogin: true, showInDock: !before.showInDock });
+    expect(window.desktop.startAtLogin).toBe(true);
+    expect((await core.dispatch("inf:presence:get", [])).startAtLogin).toBe(true);
+    // The first mate's own program, which the system starts by its entry, is never the one set.
+    expect(shell.loginItem()).toBe(false);
+
+    // The window closes: the first mate answers what the window last said, and still cannot change it.
+    window.leave();
+    expect((await core.dispatch("inf:presence:get", [])).startAtLogin).toBe(true);
+    await expect(
+      core.dispatch("inf:presence:set", [{ startAtLogin: false, showInDock: before.showInDock }]),
+    ).rejects.toThrow(OWN_WINDOW_WORDS.noWindowForLogin);
+    await core.dispatch("inf:presence:set", [
+      { startAtLogin: true, showInDock: before.showInDock },
+    ]);
+    detach();
+  });
+
+  // The plan's assumption for these requests: only this computer's own
+  // window asks them, on its own connection, and no paired computer does.
+  it("takes the window's own requests only from this computer's window", async () => {
+    await expect(core.dispatch("inf:own-window:here", [])).rejects.toThrow(
+      "Only this computer's own window",
+    );
+    await expect(core.dispatch("inf:update:hold", ["status"])).rejects.toThrow(
+      "Only this computer's own window",
+    );
+    const { link } = await core.dispatch("inf:devices:invite", [{ kind: "mac", at }]);
+    await connection.settled();
+    const view = await connectClient(
+      await claimLink(link, { ...AT_FIRST_LAUNCH, name: "Mac mini" }),
+    );
+    for (const channel of [
+      "inf:own-window:here",
+      "inf:own-window:focused",
+      "inf:settings:keys:get",
+      "inf:voice:primed",
+    ] as const)
+      await expect(view.invoke(channel, [])).rejects.toThrow(
+        "answered only on the computer where your first mate lives",
+      );
+  });
+
+  // The captain's answers look_here=follow and extras=same-piece: the first
+  // mate keeps the keys its window follows, hands that window its runbook
+  // folder, and hears from it that dictation's microphone step is done.
+  it("keeps the keys for its window, names the runbook folder to it, and hears its microphone step", async () => {
+    const keymap: SavedKeymap = {
+      ...presetKeymap("emacs"),
+      keys: { "settings.open": [{ key: "KeyD", meta: true }] },
+    };
+    expect((await core.dispatch("inf:settings:keys:get", [])).saved).not.toEqual(keymap);
+    await core.dispatch("inf:settings:keys:set", [keymap]);
+    expect(await core.dispatch("inf:settings:keys:get", [])).toEqual({
+      saved: keymap,
+      unreadable: false,
+    });
+
+    const folder = await core.dispatch("inf:runbooks:folder", [{ kind: "personal" }]);
+    expect(folder.startsWith(userDataDir)).toBe(true);
+    expect(existsSync(folder)).toBe(true);
+
+    // The step counts only while dictation is on, as the window's own does.
+    const dictation = await core.dispatch("inf:settings:dictation:get", []);
+    await core.dispatch("inf:settings:dictation:set", [{ ...dictation, enabled: false }]);
+    await core.dispatch("inf:voice:primed", []);
+    expect((await core.dispatch("inf:voice:status", [])).firstUse).toBe(true);
+    await core.dispatch("inf:settings:dictation:set", [{ ...dictation, enabled: true }]);
+    await core.dispatch("inf:voice:primed", []);
+    expect((await core.dispatch("inf:voice:status", [])).firstUse).toBe(false);
+    await core.dispatch("inf:settings:dictation:set", [dictation]);
+  });
+
+  // The captain's answer notifications=window: "This computer's window,
+  // while Infinitary is running; the run never posts".
+  it("posts no notification from its own program", async () => {
+    const cardPushes: Card[][] = [];
+    const detach = core.events.subscribe((channel, payload) => {
+      if (channel === "inf:cards") cardPushes.push(payload as Card[]);
+    });
+    core.services.supervisor.cards.hostCards.addSystemNoteCard(
+      "card-command-note",
+      "A note from a command's first mate",
+      "A note body.",
+    );
+    await waitFor(() =>
+      cardPushes.some((cards) => cards.some((card) => card.id === "card-command-note")),
+    );
+    detach();
+    expect(shell.notified).toEqual([]);
   });
 });
 

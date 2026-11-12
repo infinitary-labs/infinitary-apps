@@ -6,6 +6,7 @@ import { type ChannelDeclaration, okSchema } from "./channels/common";
 import { deviceChannels } from "./channels/devices";
 import { knowledgeChannels } from "./channels/knowledge";
 import { modelChannels } from "./channels/models";
+import { ownWindowChannels, ownWindowPushes } from "./channels/ownWindow";
 import { panelChannels } from "./channels/panels";
 import { secretsChannels } from "./channels/secrets";
 import { settingsChannels } from "./channels/settings";
@@ -165,6 +166,7 @@ export const invokeContract = {
   ...shellChannels,
   ...activityChannels,
   ...panelChannels,
+  ...ownWindowChannels,
   ...workChannels,
 } as const satisfies Record<string, ChannelDeclaration>;
 
@@ -381,6 +383,7 @@ export const pushContract = {
   // returns to the first mate's computer").
   "inf:app:sign-in-page": { payload: signInPageSchema, surface: "core" },
   "inf:app:sign-in-ended": { payload: signInEndedSchema, surface: "core" },
+  ...ownWindowPushes,
 } as const;
 
 export type PushChannel = keyof typeof pushContract;

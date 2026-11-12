@@ -10,12 +10,18 @@ import {
   personalStoreResponseSchema,
 } from "../personal/manifest";
 import { panelMountsSchema } from "../personal/mounts";
+import { panelFilesRequestSchema, panelFilesSchema } from "../personal/panelFiles";
 import { mediatedFetchCallSchema, mediatedFetchResultSchema } from "../plugins/fetch";
 import { frameMountRequestSchema, frameMountSchema } from "../plugins/frameDocument";
 import { sqlAnswerSchema, sqlRequestSchema } from "../sql";
 import { type ChannelDeclaration, okSchema } from "./common";
 
-/** Added panels and their data, SQL, and the frames that draw them. */
+/**
+ * Added panels and their data, SQL, and the frames that draw them. A panel
+ * shows the same in every window (docs/view.md, "Panels in every window"),
+ * so a window on another computer asks what the window on the first mate's
+ * own computer asks, and the panel's own code still runs once, there.
+ */
 export const panelChannels = {
   // The mediated fetch verb (D6). Born in the core beside quota/http.ts so
   // the trust boundary never moves; until a grant is served (phase 3) every
@@ -24,7 +30,7 @@ export const panelChannels = {
   "inf:plugins:fetch": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([mediatedFetchCallSchema]),
     response: mediatedFetchResultSchema,
   },
@@ -35,7 +41,7 @@ export const panelChannels = {
   "inf:sql:query": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([sqlRequestSchema]),
     response: sqlAnswerSchema,
   },
@@ -46,23 +52,35 @@ export const panelChannels = {
   "inf:plugins:personal:list": {
     effect: "read",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([]),
     response: personalSnapshotSchema,
+  },
+  // A panel's built files, which the window that draws it reads once and
+  // serves to its frame by their hashes (docs/ui-plugins.md, "The frame
+  // realm"): answered only for a panel the first mate serves from that
+  // source at exactly that version, and a draft only to a window on the
+  // first mate's own computer.
+  "inf:plugins:files": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([panelFilesRequestSchema]),
+    response: panelFilesSchema,
   },
   // What the window did with each panel (docs/personal-panels.md, "Placed
   // on the rail"): drawn, refused and why, sent whenever it changes.
   "inf:plugins:personal:mounts": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([panelMountsSchema]),
     response: okSchema,
   },
   "inf:plugins:invoke": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([
       personalIdSchema,
       z.string().min(1).max(64),
@@ -74,7 +92,7 @@ export const panelChannels = {
   "inf:plugins:db": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([personalStoreRequestSchema]),
     response: personalStoreResponseSchema,
   },
@@ -84,7 +102,7 @@ export const panelChannels = {
   "inf:plugins:retry": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([personalIdSchema, personalInvokeOptionsSchema.optional()]),
     response: z.boolean(),
   },
@@ -95,7 +113,7 @@ export const panelChannels = {
   "inf:plugins:update": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([personalIdSchema]),
     response: z.boolean(),
   },
@@ -106,7 +124,7 @@ export const panelChannels = {
   "inf:plugins:integrations": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([
       personalIdSchema,
       panelIntegrationsRequestSchema,
@@ -120,7 +138,7 @@ export const panelChannels = {
   "inf:plugins:ask-again": {
     effect: "change",
     surface: "core",
-    reach: "home",
+    reach: "views",
     request: z.tuple([personalIdSchema, z.string().min(1).max(200), z.string().min(1).max(200)]),
     response: z.boolean(),
   },

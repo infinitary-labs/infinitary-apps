@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { tmpdir } from "node:os";
 import { isDeepStrictEqual } from "node:util";
 import type { AccountView } from "@shared/accounts";
 import {
@@ -31,6 +32,7 @@ import {
   type WorkInvokeChannel,
 } from "@shared/ipc";
 import { KNOWLEDGE_OFF } from "@shared/knowledge";
+import { OWN_WINDOW_WORDS } from "@shared/ownWindow";
 import {
   arrangePanels,
   defaultArrangement,
@@ -50,7 +52,7 @@ import { devicePlace } from "@shared/signIns";
 import type { AppPanelGates } from "@shared/surfaces";
 import { resolveWorkComputer } from "@shared/workComputer";
 import type { RunbookView } from "../shared/runbooks";
-import { asAView } from "./askedFromAView";
+import { asAView, askedFromAView } from "./askedFromAView";
 import { type BrowserViewer, BrowserViews } from "./browser/browserViews";
 import { addedPrivateSite, privateSiteChannels } from "./browser/privateSites";
 import { prepareComposerTurn } from "./composerTurn";
@@ -64,6 +66,8 @@ import { SignInRequiredError, signInRefusal } from "./forge";
 import type { HostCapabilities } from "./host";
 import { isAllowedOpenExternalUrl } from "./openExternal";
 import { CardChoiceUnavailableError } from "./orchestrator/cardActions";
+import type { OwnWindow } from "./ownWindow";
+import { readPanelGraph } from "./personal/panelGraph";
 import { actionValue } from "./pi/appTools";
 import { customCapabilityProfiles } from "./pi/customApiModels";
 import { listSurfaces, type SurfaceView } from "./pi/personalizeTool";
@@ -74,10 +78,11 @@ import { plainSettingsChannels } from "./settingsChannels";
 import type { PhoneDiagnosticEvent } from "./sharing/sharingService";
 import { SIGN_IN_RETURN_WORDS, type SignInReturns } from "./signInReturns";
 import type { ScheduleRecord } from "./storage/scheduleStore";
-import { recordStartAtLogin } from "./storage/startAtLoginRecord";
+import { readStartAtLogin, recordStartAtLogin } from "./storage/startAtLoginRecord";
 import { ProjectKeyRefusal } from "./tasks/projectKey";
 import { recentFeed } from "./tasks/taskFeed";
 import { taskRowChannels } from "./tasks/taskRowChannels";
+import { createUpdateHold } from "./update/updateHold";
 import { projectPageFile } from "./workspace/projectPage";
 
 /**
@@ -171,7 +176,14 @@ const VIEWER_CHANNELS = new Set<CoreInvokeChannel>([
   "inf:browser:watch",
   "inf:browser:unwatch",
   "inf:browser:size",
+  // This computer's window, named by its own connection: it says it is
+  // open, and holds the crew's saved work while it installs an update.
+  "inf:own-window:here",
+  "inf:update:hold",
 ]);
+
+/** A request that names the window asking it, asked by something that is not a window. */
+const OWN_WINDOW_ONLY = "Only this computer's own window asks this of its first mate.";
 
 type CoreHandlers = {
   [C in Exclude<CoreInvokeChannel, WorkInvokeChannel>]: (
@@ -187,11 +199,46 @@ export type CoreDispatcherOptions = {
   onActionRecorded?: (id: string, action: ActionName, value: Record<string, unknown>) => void;
   /** The waiting sign-ins another computer may hand a browser's return to (`startCore`). */
   signInReturns?: SignInReturns;
+  /**
+   * This computer's window, for a first mate a command started: what only a
+   * program in the person's session can do is asked of it (`OwnWindow`).
+   * Absent for a first mate that runs in the window's own program.
+   */
+  ownWindow?: OwnWindow;
 };
 
 export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispatch {
-  const { services, host, emit } = options;
+  const { services, host, emit, ownWindow } = options;
   const browserViews = new BrowserViews(() => services.browsers);
+  /**
+   * Start at login is the system's own setting for the program a person
+   * opens, so a first mate a command started reads and changes it through
+   * this computer's window (docs/run.md, "The window opened beside it").
+   * With no window open it answers what the folder last remembered, and
+   * refuses a change in plain words.
+   */
+  const startAtLogin = async (set?: boolean): Promise<boolean> => {
+    if (!ownWindow) {
+      if (set !== undefined) host.presence.setStartAtLogin(set);
+      return host.presence.getStartAtLogin();
+    }
+    if (ownWindow.open())
+      return (
+        await ownWindow.ask({ kind: "start-at-login", ...(set === undefined ? {} : { set }) })
+      ).enabled;
+    const remembered = readStartAtLogin(services.paths.userData) ?? false;
+    if (set !== undefined && set !== remembered) throw new Error(OWN_WINDOW_WORDS.noWindowForLogin);
+    return remembered;
+  };
+  // The crew's work held saved while this computer's window installs an update.
+  const updateHold = createUpdateHold(
+    {
+      save: (saveOptions) => services.supervisor.updates.saveForUpdate(saveOptions),
+      release: () => services.supervisor.updates.releaseUpdate(),
+      resuming: () => services.supervisor.updates.resumingAfterUpdate(),
+    },
+    () => host.relaunch?.(),
+  );
 
   /** The automation rules as last read: what an unreadable list answers with (docs/automation.md). */
   let lastRules: AutomationRule[] = [];
@@ -650,19 +697,52 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       await host.voice.ensureModel((progress) => emit("inf:voice:progress", progress));
       return { ok: true as const };
     },
-    "inf:presence:get": () => ({
-      startAtLogin: host.presence.getStartAtLogin(),
+    "inf:presence:get": async () => ({
+      startAtLogin: await startAtLogin(),
       showInDock: services.settings.getShowInDock(),
     }),
-    "inf:presence:set": (settings) => {
-      host.presence.setStartAtLogin(settings.startAtLogin);
-      recordStartAtLogin(services.paths.userData, host.presence.getStartAtLogin());
+    "inf:presence:set": async (settings) => {
+      const startsAtLogin = await startAtLogin(settings.startAtLogin);
+      recordStartAtLogin(services.paths.userData, startsAtLogin);
       services.settings.setShowInDock(settings.showInDock);
       host.presence.setShowInDock(settings.showInDock);
-      return {
-        startAtLogin: host.presence.getStartAtLogin(),
-        showInDock: services.settings.getShowInDock(),
-      };
+      // The first mate keeps Show in Dock; a window in another program applies it to itself.
+      emit("inf:presence:dock", { showInDock: settings.showInDock });
+      return { startAtLogin: startsAtLogin, showInDock: services.settings.getShowInDock() };
+    },
+
+    "inf:own-window:answer": (id, answer) => {
+      ownWindow?.answer(id, answer);
+      return { ok: true as const };
+    },
+    "inf:own-window:focused": () => {
+      services.quota.onWindowFocus();
+      return { ok: true as const };
+    },
+    "inf:voice:primed": () => {
+      if (
+        services.settings.getDictation().enabled &&
+        !services.settings.getFlag("voice-mic-primed")
+      )
+        services.settings.setFlag("voice-mic-primed", true);
+      return { ok: true as const };
+    },
+    "inf:settings:keys:get": () => services.preferences.keymap(),
+    "inf:settings:keys:set": (keymap) => {
+      services.preferences.setKeymap(keymap);
+      return { ok: true as const };
+    },
+    // A built-in's copy goes in the host's own temporary folder, as the window's program kept it.
+    "inf:runbooks:folder": (request) =>
+      request.kind === "personal"
+        ? services.runbooks.personalFolder()
+        : services.runbooks.view(request.id, host.temporaryDir?.() ?? tmpdir()),
+    // Both name the window that asks, which only its own connection does (`answerViewer`).
+    "inf:own-window:here": () => {
+      throw new Error(OWN_WINDOW_ONLY);
+    },
+    "inf:update:hold": () => {
+      throw new Error(OWN_WINDOW_ONLY);
     },
 
     "inf:update:status": () => services.updateChecker.getStatus(),
@@ -1306,9 +1386,34 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:plugins:fetch": (call) => services.pluginFetch(call),
     "inf:sql:query": (request) => services.sql.query(request),
     // Personal extensions (talk-to-personalize Step 2).
-    "inf:plugins:personal:list": () => services.personal.snapshot(),
+    // A panel being built shows only in a window on this computer
+    // (docs/view.md, "Panels in every window").
+    "inf:plugins:personal:list": () => {
+      const snapshot = services.personal.snapshot();
+      return askedFromAView() ? { extensions: snapshot.extensions } : snapshot;
+    },
+    "inf:plugins:files": async (request) => {
+      if (request.draft && askedFromAView()) return null;
+      const dir = services.personal.framePanelDir(
+        request.source,
+        request.id,
+        request.version,
+        request.draft ? { draft: true } : {},
+      );
+      if (!dir) return null;
+      const files = await readPanelGraph(dir);
+      return {
+        builtFor: host.app.version,
+        files: [...files].map(([path, bytes]) => ({
+          path,
+          data: Buffer.from(bytes).toString("base64"),
+        })),
+      };
+    },
+    // The placement a crewmate waits on is this computer's window's: a
+    // window on another computer places its panels its own way.
     "inf:plugins:personal:mounts": (mounts) => {
-      services.panelMounts.note(mounts);
+      if (!askedFromAView()) services.panelMounts.note(mounts);
       return { ok: true };
     },
     "inf:plugins:invoke": (extensionId, action, input, options) =>
@@ -1759,6 +1864,23 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       const [taskId] = parseInvokeRequest("inf:browser:unwatch", rawArgs);
       browserViews.unwatch(viewer, taskId);
       return { ok: true };
+    }
+    if (channel === "inf:own-window:here") {
+      parseInvokeRequest("inf:own-window:here", rawArgs);
+      if (ownWindow) {
+        ownWindow.here(viewer);
+        // What the system starts at login, remembered in the folder as the
+        // window reads it, each time it opens (storage/startAtLoginRecord.ts).
+        void startAtLogin().then(
+          (enabled) => recordStartAtLogin(services.paths.userData, enabled),
+          () => {},
+        );
+      }
+      return { ok: true };
+    }
+    if (channel === "inf:update:hold") {
+      const [step] = parseInvokeRequest("inf:update:hold", rawArgs);
+      return updateHold(step, viewer);
     }
     const [taskId, size] = parseInvokeRequest("inf:browser:size", rawArgs);
     browserViews.size(viewer, taskId, size);

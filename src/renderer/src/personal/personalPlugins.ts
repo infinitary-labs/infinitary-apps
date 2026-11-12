@@ -15,6 +15,7 @@ import { noteMountSnapshot } from "../plugins/panelMounts";
 import { panelRail } from "../plugins/panelRail";
 import { createPanelSource } from "../plugins/panelSource";
 import { railRefusals, refusalWords } from "../plugins/railRefusals";
+import { onResync } from "../plugins/reads/resync";
 import { FramedPanelBody, type FramedPanelContent, framedCardBody } from "./FramedPanelBody";
 import { framedCodeOf } from "./framedCode";
 import { panelDrafts } from "./PanelDrafts";
@@ -253,9 +254,19 @@ export function startPersonalPlugins(
       // The push will bring the first snapshot the core sends.
       boot();
     });
+  // A window that missed the first mate's pushes reads its panels again
+  // (docs/view.md, "Panels in every window"): one on another computer whose
+  // first mate was out of reach, or restarted, when it asked.
+  const offResync = onResync(() => {
+    void api
+      .list()
+      .then(apply)
+      .catch(() => {});
+  });
   return () => {
     stopped = true;
     off();
+    offResync();
     plugins.clear();
     noteMountSnapshot({ extensions: [] });
   };

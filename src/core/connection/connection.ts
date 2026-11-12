@@ -175,6 +175,9 @@ export const DEVICES_FROM_A_VIEW = contractChange("devices-from-a-view");
  */
 export const BROWSER_FROM_ANY_VIEW = contractChange("browser-from-any-view");
 
+/** A view draws the captain's panels from the home's own files (`panels-in-every-window.md`). */
+export const PANELS_IN_EVERY_WINDOW = contractChange("panels-in-every-window");
+
 /**
  * Streamed reply pieces and tool starts and ends go to a view as `live`
  * frames, outside the numbering, and to a phone not at all

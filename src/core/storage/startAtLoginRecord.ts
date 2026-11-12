@@ -10,6 +10,9 @@ import { z } from "zod";
  * and the new app, once it has moved this folder in, turns its own on when
  * the record says on (src/core/folderMove/). The record only ever follows
  * the system's own setting; nothing reads it to decide what the app does.
+ * A first mate a command started has no login item of its own to read, so
+ * it answers from this record while no window is open beside it
+ * (docs/run.md, "The window opened beside it").
  */
 export const START_AT_LOGIN_RECORD = "start-at-login.json";
 

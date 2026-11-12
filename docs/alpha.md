@@ -136,6 +136,12 @@ The Mac updater asks once the download is done and before native installation; t
 - **Update later.**
   While the update saves, Update later in the update panel or in command search (`updates.later`, `inf:update:later`) lets the update go: nothing is replaced, a turn still waiting for its calls goes on as if never asked, a turn already stopped carries on from its row, and the words that waited go now, in order.
   An installation that fails after the save, such as a closed password prompt or a refused signature, lets the work carry on the same way.
+- **A first mate started by a command.**
+  Its own updater is the only updater where it can be: on Linux the command replaces the program after the same save and ends with 75, for whatever started it to start the new copy (`docs/run.md`, "After an update").
+  On a Mac only a program in the person's own session can install the update, so the window opened beside the command installs it for that first mate, while the first mate holds the crew's work saved (`createUpdateHold`, `src/core/update/updateHold.ts`; `inf:update:hold`, asked only by this computer's window).
+  The window asks `save` where a window with its own first mate asks the crew's work, `later` for Update later, `release` when nothing replaced the copy, and `replaced` once it did, which ends the first mate with its work still saved for the new copy to resume (`crewWorkHeldThere`).
+  The hold belongs to the window's connection: a window that closes or drops mid-save lets the save go and the work carries on, so a closed window never leaves the crew waiting.
+  A `replaced` with no work saved is refused, and nothing ends.
 - **What it does not wait for.**
   A background job is app-lifetime: the shutdown stops it and its row says the quit stopped it (`src/core/jobs/jobManager.ts`), which the crewmate hears after the restart.
   A turn on another computer goes on there; the connection and Remote Login updates of a computer that runs work still pause its turns the earlier way ("Updating" in `docs/devices.md`).

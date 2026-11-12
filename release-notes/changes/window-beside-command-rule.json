@@ -1,0 +1,31 @@
+{
+  "entries": [
+    {
+      "id": "command-stopped-notice",
+      "kind": "feature",
+      "area": "devices",
+      "title": "The window says when Infinitary started by a command has stopped",
+      "body": "When Infinitary started by a command stops while its window is open, the window now says so over everything else. If the computer starts the command again by itself, or the command is updating, the window waits and carries on once it is back. If nothing will start it again, you can start your first mate in this window, or quit.",
+      "picture": {
+        "dark": "command-stopped-notice-dark.webp",
+        "light": "command-stopped-notice-light.webp",
+        "alt": "A notice titled Infinitary stopped, saying Infinitary started by a command was stopped, with Quit and Start it here"
+      },
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "panels-in-every-window",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Your panels show in every window",
+      "body": "A panel a crewmate built for you now shows in every window of your first mate: on another computer that controls it, and in the window opened beside Infinitary started by a command. Its data and its actions stay with your first mate, so every window shows the same thing. A panel still being built shows only on your first mate's computer, and a window on a different version of Infinitary says the panel shows once both are on the same version.",
+      "picture": {
+        "dark": "panels-in-every-window-dark.webp",
+        "light": "panels-in-every-window-light.webp",
+        "alt": "Two clock panels, Tokyo and London, in a window controlling a first mate on another computer"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -3,6 +3,7 @@ import type { CoreServices } from "./coreServices";
 import { type CoreDispatch, createCoreDispatcher } from "./dispatcher";
 import { CoreEventBus } from "./events";
 import type { HostCapabilities } from "./host";
+import { OwnWindow } from "./ownWindow";
 import type { AppPaths } from "./paths";
 import { createServices } from "./services";
 import { SIGN_IN_RETURN, SIGN_IN_RETURN_WORDS, SignInReturns } from "./signInReturns";
@@ -46,8 +47,34 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
   const events = new CoreEventBus();
   const signInReturns = new SignInReturns();
   const elsewhere = () => options.startedByCommand === true || askedFromAView();
+  // A first mate a command started has no desktop: it keeps the settings,
+  // the records and the crew, and only this computer's window, opened
+  // beside it in another program, touches the desktop (docs/run.md, "The
+  // window opened beside it"). So its own Dock call does nothing, it posts
+  // no notification, and a page's file picker is the window's to show.
+  const ownWindow = options.startedByCommand
+    ? new OwnWindow((asked) => events.emit("inf:own-window:ask", asked))
+    : undefined;
   const host: HostCapabilities = {
     ...given,
+    ...(ownWindow
+      ? {
+          presence: { ...given.presence, setShowInDock: () => {} },
+          notifications: { ...given.notifications, supported: () => false },
+          ...(given.browser
+            ? {
+                browser: {
+                  ...given.browser,
+                  // Nobody to show the picker to is the captain choosing nothing.
+                  chooseFiles: async ({ multiple }) =>
+                    ownWindow.open()
+                      ? (await ownWindow.ask({ kind: "choose-files", multiple })).paths
+                      : [],
+                },
+              }
+            : {}),
+        }
+      : {}),
     openExternal: async (url) =>
       elsewhere() ? events.emit("inf:app:open-page", { url }) : given.openExternal(url),
     // A sign-in page whose browser comes back to this computer's loopback
@@ -70,6 +97,7 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
     services,
     host,
     signInReturns,
+    ...(ownWindow ? { ownWindow } : {}),
     emit: events.emit,
     onActionRecorded: (id, action, value) =>
       services.firstmate.appActionRecorded(id, action, value),
@@ -77,7 +105,8 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
   services.firstmate.bindAppDispatch(dispatch);
   // What the system starts at login, remembered in the folder for an app
   // that later moves it in (storage/startAtLoginRecord.ts).
-  recordStartAtLogin(services.paths.userData, host.presence.getStartAtLogin());
+  // A first mate a command started hears it from its window, when one opens.
+  if (!ownWindow) recordStartAtLogin(services.paths.userData, host.presence.getStartAtLogin());
   services.projectSetups.bindDispatch(dispatch);
   services.projectChanges.bindDispatch(dispatch);
   await services.projectChanges.inspectAll();

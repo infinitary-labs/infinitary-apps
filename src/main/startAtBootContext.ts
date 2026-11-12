@@ -1,5 +1,5 @@
+import { existsSync } from "node:fs";
 import { homedir, userInfo } from "node:os";
-import { isAbsolute, join } from "node:path";
 import { systemSystemctl } from "@core/helper/background";
 import { appLauncher } from "@core/helper/launcher";
 import { hostEnv } from "@core/hostEnv";
@@ -8,7 +8,17 @@ import { findOnPath } from "@core/userBin";
 import { runLabelOf } from "@shared/codeNames";
 import { SETTING_PREFIXES, settingFrom } from "@shared/envSettings";
 import { app } from "electron";
-import { BOOT_WORDS, type BootResult, bootAsked, helpWords, runStartAtBoot } from "./startAtBoot";
+import type { StartEntry } from "./besideRun";
+import {
+  BOOT_WORDS,
+  type BootResult,
+  bootAsked,
+  helpWords,
+  MAC_DAEMONS_DIR,
+  runStartAtBoot,
+  startEntryInPlace,
+  userUnitsDir,
+} from "./startAtBoot";
 import { packagedFlavor, readPackageJsonAt } from "./userDataDir";
 
 /**
@@ -51,14 +61,13 @@ export async function answerBootCommand(
     const found = path || findOnPath(command, hostEnv());
     return found ? systemSystemctl(found) : null;
   };
-  const xdg = env.XDG_CONFIG_HOME?.trim();
   const flavor = app.isPackaged ? packagedFlavor(readPackageJsonAt(app.getAppPath())) : "dev";
   return runStartAtBoot(words, {
     platform: hostPlatform(),
     user: userInfo().username,
     homeDir: homedir(),
-    unitsDir: join(xdg && isAbsolute(xdg) ? xdg : join(homedir(), ".config"), "systemd", "user"),
-    daemonsDir: "/Library/LaunchDaemons",
+    unitsDir: userUnitsDir(env, homedir()),
+    daemonsDir: MAC_DAEMONS_DIR,
     label: runLabelOf(flavor),
     launcher,
     dataDir,
@@ -73,5 +82,26 @@ export async function answerBootCommand(
     cwd: process.cwd(),
     systemctl: program("SYSTEMCTL", "systemctl"),
     loginctl: program("LOGINCTL", "loginctl"),
+  });
+}
+
+/**
+ * Which start entry is in place for this app now (`startEntryInPlace`). A
+ * development run may name a file that stands in for the entry, so a test
+ * never writes a real one; an installed app never reads it.
+ */
+export function ownStartEntry(): StartEntry {
+  const platform = hostPlatform();
+  const standIn = app.isPackaged ? undefined : settingFrom(process.env, "RUN_START_ENTRY")?.trim();
+  if (standIn) {
+    if (!existsSync(standIn)) return null;
+    return platform === "linux" ? "linux-unit" : platform === "darwin" ? "mac-daemon" : null;
+  }
+  const flavor = app.isPackaged ? packagedFlavor(readPackageJsonAt(app.getAppPath())) : "dev";
+  return startEntryInPlace({
+    platform,
+    unitsDir: userUnitsDir(process.env, homedir()),
+    daemonsDir: MAC_DAEMONS_DIR,
+    label: runLabelOf(flavor),
   });
 }

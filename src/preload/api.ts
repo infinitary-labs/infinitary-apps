@@ -143,6 +143,8 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
         startAt === undefined
           ? invoke("inf:app:choose-folder")
           : invoke("inf:app:choose-folder", startAt),
+      startHere: () => invoke("inf:app:start-here"),
+      quit: () => invoke("inf:app:quit"),
       controlWindow: (control) => invoke("inf:window:control", control),
       windowState: () => invoke("inf:window:state"),
       onWindowState: (listener) => subscribe("inf:window:state", listener),

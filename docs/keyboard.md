@@ -560,7 +560,8 @@ A saved value that cannot be read is Legacy's keys, said so above the list, and 
 
 The keys belong to the Mac whose keyboard pressed them.
 On the Mac that holds the first mate they are the `keyboard` row of its settings (`ShellPreferencesService.keymap`), outside the `shell.preferences` read, so no paired device reads them; on a Mac that controls another they are kept with that Mac's own look (`ViewLook`, `docs/view.md`), starting on a new profile's preset, or on Legacy for a look kept from before presets.
-No core channel carries them: the window asks the main process on host channels (`inf:keyboard:keymap`, `inf:keyboard:save`, `inf:keyboard:record`).
+The window asks the main process for them on host channels (`inf:keyboard:keymap`, `inf:keyboard:save`, `inf:keyboard:record`).
+One pair of core requests carries them, on the first mate's own computer only: the window opened beside a first mate a command started reads that first mate's keys at each welcome and saves a change there (`inf:settings:keys:get`, `inf:settings:keys:set`, `reach: "home"`, so no view on another computer is answered them), and keeps a copy with its own look so its keys work before the first mate answers (`docs/run.md`, "The window opened beside it").
 
 ### Which keys a command may take
 

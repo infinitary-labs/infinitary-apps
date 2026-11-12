@@ -9,7 +9,6 @@ import { homeDialOptions } from "@core/helper/route";
 import type { InBackground } from "@core/helper/words";
 import type { HostNotifications } from "@core/host";
 import type { Core } from "@core/index";
-import type { PersonalExtensions } from "@core/personal/personalExtensions";
 import type { UpdateChecker } from "@core/update/updateChecker";
 import { COMPUTER, HERE } from "@shared/deviceNames";
 import {
@@ -23,8 +22,10 @@ import {
 import type { CoreInvokeChannel, InvokeResponse, PushChannel } from "@shared/ipc";
 import type { JoinAtAnswer, JoinAtOptions } from "@shared/joinByAddress";
 import { DEFAULT_SAVED_KEYMAP, type SavedKeymap, type SavedKeymapRead } from "@shared/keymap";
+import type { PanelFiles, PanelFilesRequest } from "@shared/personal/panelFiles";
 import type { KeySystem } from "@shared/platform";
 import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
+import { type BesideOptions, BesideWindow } from "./besideWindow";
 import type { PictureSource } from "./frames/frameProtocol";
 import { InstalledKeymap, type SizeCommandHandlers } from "./keyboard";
 import { LocalWindow, type LocalWindowOptions } from "./view/localWindow";
@@ -60,6 +61,12 @@ type HomeMode = {
   detach: () => void;
 };
 type ViewMode = { kind: "view"; view: ViewBackend };
+/**
+ * The window opened while a command runs this computer's first mate in
+ * another program (docs/run.md, "The window opened beside it"): a view of
+ * it over its local door, with no core here (`BesideWindow`).
+ */
+type BesideMode = { kind: "beside"; beside: BesideWindow };
 
 export type ShellOptions = {
   joined: JoinedHome;
@@ -92,6 +99,12 @@ export type ShellOptions = {
    * waits for its first welcome before the window asks directly; tests stand in their own.
    */
   localWindow?: Pick<LocalWindowOptions, "link"> & { readyMs?: number };
+  /**
+   * A command runs this computer's first mate in another program
+   * (docs/run.md, "The window opened beside it"): the window joins it over
+   * its local door and this process starts no core.
+   */
+  beside?: BesideOptions;
   /** Hands a push to every window. */
   broadcast: (channel: PushChannel, payload: unknown) => void;
   /** This Mac's Notification Center: a view posts the other Mac's cards here. */
@@ -100,8 +113,13 @@ export type ShellOptions = {
   deviceName: () => Promise<string>;
   /** What every window shows changed whole: each starts over. */
   restartWindows: () => void;
-  /** Starts the app again in a new process, for a core that already ran in this one. */
-  relaunch: () => void;
+  /**
+   * Starts the app again in a new process, for a core that already ran in
+   * this one; `startHere` as this computer's own first mate, whatever
+   * started the command the window stood beside (docs/run.md, "When the
+   * command stops").
+   */
+  relaunch: (how?: { startHere?: boolean }) => void;
   /** This Mac's own installed app's update checker, which a view answers its update notice from. */
   updates: UpdateChecker;
   /**
@@ -168,7 +186,7 @@ export class Shell {
    * share: one queue, written through `dispatch` as the picker's choice is.
    */
   readonly size: SizeCommandHandlers = sizeCommands(this);
-  private mode: HomeMode | ViewMode | null = null;
+  private mode: HomeMode | ViewMode | BesideMode | null = null;
   private coreStarted = false;
   /**
    * The times the window on this computer had to read everything again
@@ -193,6 +211,10 @@ export class Shell {
    * version) throws, as `startCore` does.
    */
   async start(): Promise<void> {
+    if (this.options.beside) {
+      await this.becomeBeside(this.options.beside);
+      return;
+    }
     const joined = this.options.joined.read() ?? this.openFromWork();
     if (joined) {
       this.followWork(joined);
@@ -207,11 +229,31 @@ export class Shell {
 
   thisMac(): ThisMac {
     if (this.mode?.kind === "view") return this.mode.view.thisMac();
+    const command = this.mode?.kind === "beside" ? this.mode.beside.notice() : null;
     return {
       role: "home",
       left: this.options.joined.left(),
       ...(this.homeCaughtUp ? { caughtUp: this.homeCaughtUp } : {}),
+      ...(command ? { command } : {}),
     };
+  }
+
+  /**
+   * Start it here, on the notice over the window opened beside a command
+   * that stopped (docs/run.md, "When the command stops"): the app starts
+   * again as this computer's own first mate. False when nothing offers it.
+   */
+  startHere(): boolean {
+    return this.mode?.kind === "beside" ? this.mode.beside.startHere() : false;
+  }
+
+  /**
+   * This program's own update is about to replace the copy and restart
+   * it: the first mate a command started ends with its crew's work saved
+   * (docs/alpha.md, "Saving work before an update").
+   */
+  async updateReplacing(): Promise<void> {
+    if (this.mode?.kind === "beside") await this.mode.beside.replacing();
   }
 
   /** One core channel the window asked: this Mac's core, or the view's rules. */
@@ -226,6 +268,7 @@ export class Shell {
       return mode.window
         ? mode.window.dispatch(channel, rawArgs, viewer)
         : mode.core.dispatch(channel, rawArgs, { kind: "captain" }, viewer);
+    if (mode.kind === "beside") return mode.beside.dispatch(channel, rawArgs, viewer);
     return mode.view.dispatch(channel, rawArgs, viewer);
   }
 
@@ -365,6 +408,7 @@ export class Shell {
 
   /** Whether the window may hear the microphone: voice stays on the Mac where Firstmate lives. */
   dictationEnabled(): boolean {
+    if (this.mode?.kind === "beside") return this.mode.beside.dictationEnabled();
     const core = this.core();
     return core ? core.services.settings.getDictation().enabled : false;
   }
@@ -374,6 +418,7 @@ export class Shell {
    * Mac that holds it. That reading observes any login switched meanwhile.
    */
   windowFocused(): void {
+    if (this.mode?.kind === "beside") this.mode.beside.focused();
     const core = this.core();
     core?.services.quota.onWindowFocus();
   }
@@ -402,12 +447,19 @@ export class Shell {
         fetchTypeface: (fileName: string) => mode.view.typeface(fileName),
       };
     }
+    if (mode?.kind === "beside") return { root: mode.beside.crewmatesDir() };
     return { root: mode?.core.paths.crewmatesDir ?? "" };
   }
 
-  /** A panel's compiled files, its own or one the captain added, while this Mac holds Firstmate; a view has none. */
-  framePanelDir(...args: Parameters<PersonalExtensions["framePanelDir"]>): string | null {
-    return this.core()?.services.personal.framePanelDir(...args) ?? null;
+  /**
+   * A panel's built files, its own or one the captain added, as the first
+   * mate answers them: asked the way every core request is, so the window
+   * on the first mate's own computer, the window opened beside a first mate
+   * a command started and a window on another computer draw the same panel
+   * (docs/view.md, "Panels in every window").
+   */
+  panelFiles(request: PanelFilesRequest): Promise<PanelFiles> {
+    return this.dispatch("inf:plugins:files", [request]);
   }
 
   /** Stops whatever this app is running, for a quit. */
@@ -416,6 +468,7 @@ export class Shell {
     const mode = this.mode;
     this.mode = null;
     if (mode?.kind === "view") mode.view.dispose();
+    if (mode?.kind === "beside") mode.beside.close();
     if (mode?.kind === "home") {
       mode.detach();
       mode.window?.close();
@@ -503,6 +556,28 @@ export class Shell {
       },
     };
     this.preferences.use(core.services.preferences);
+  }
+
+  /** The window beside a command's first mate (`BesideWindow`). */
+  private async becomeBeside(options: BesideOptions): Promise<void> {
+    const beside = new BesideWindow({
+      beside: options,
+      broadcast: this.options.broadcast,
+      notifications: this.options.notifications,
+      updates: this.options.updates,
+      ...(this.options.openPage ? { openPage: this.options.openPage } : {}),
+      relaunch: (how) => {
+        if (this.mode?.kind === "beside") this.options.relaunch(how);
+      },
+      readAgain: () => this.readAgainHere(),
+      restartWindows: this.options.restartWindows,
+      changed: () => this.options.broadcast("inf:devices:this-mac", this.thisMac()),
+      ...(this.options.localWindow ? { localWindow: this.options.localWindow } : {}),
+      now: this.now,
+    });
+    this.mode = { kind: "beside", beside };
+    this.preferences.use(beside.preferences);
+    await beside.start();
   }
 
   /** The window here reads everything again, as a view does after a gap. */

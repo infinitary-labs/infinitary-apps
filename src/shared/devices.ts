@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { commandNoticeSchema } from "./commandNotice";
 import { COMPUTER, HERE } from "./deviceNames";
 
 /**
@@ -744,6 +745,12 @@ export const thisMacSchema = z.discriminatedUnion("role", [
      * its first mate told it over the local door; absent until the first.
      */
     caughtUp: z.number().int().positive().optional(),
+    /**
+     * The window was opened beside Infinitary started by a command, which no
+     * longer runs (`./commandNotice.ts`): absent while it runs, and in a
+     * window whose own program runs the first mate.
+     */
+    command: commandNoticeSchema.optional(),
   }),
   z.strictObject({
     role: z.literal("view"),

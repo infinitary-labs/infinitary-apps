@@ -28,6 +28,12 @@ import { createTaskBrowserHost } from "./taskBrowser";
 export type ElectronHostOptions = {
   /** Settle running work before Squirrel replaces and restarts this app. */
   prepareUpdateRestart?: () => Promise<void>;
+  /**
+   * What starts this program again once its own update replaced it, in
+   * place of quitting and reopening it: Infinitary started by a command
+   * ends for its starter to start the new copy (docs/run.md, "After an update").
+   */
+  relaunch?: (execPath?: string) => void;
   /** Explicit protected capability, also the isolated launcher's injection seam; absent means off. */
   secrets?: HostCapabilities["secrets"];
   /**
@@ -154,6 +160,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
       flavor: app.isPackaged ? packagedFlavor(readPackageJsonAt(app.getAppPath())) : "dev",
     },
     openExternal: (url) => shell.openExternal(url),
+    temporaryDir: () => app.getPath("temp"),
     ...(hostPlatform() === "darwin" &&
     app.isPackaged &&
     !isolatedUserDataDir &&
@@ -163,10 +170,12 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
       : {}),
     // An isolated run is started from outside, which starts it again; only a
     // person's app starts itself again.
-    relaunch: (execPath) => {
-      if (!isolatedUserDataDir) app.relaunch(execPath ? { execPath, args: [] } : undefined);
-      app.quit();
-    },
+    relaunch:
+      options.relaunch ??
+      ((execPath) => {
+        if (!isolatedUserDataDir) app.relaunch(execPath ? { execPath, args: [] } : undefined);
+        app.quit();
+      }),
     notifications: {
       supported: () => !isolatedUserDataDir && Notification.isSupported(),
       focused: () => appWindows().some((win) => win.isFocused()),

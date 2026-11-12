@@ -11,22 +11,29 @@ import {
   DEFAULT_APPEARANCE,
   DEFAULT_LAYOUT,
   type Layout,
+  type PersonalPanels,
   type ShellPreferences,
 } from "@shared/preferences";
 import type { PreferenceSource } from "../windowSize";
+
+/** No word yet from the first mate on its panels switch: none are drawn. */
+const PANELS_UNHEARD: PersonalPanels = { enabled: false, offReason: null };
 
 /**
  * This Mac's own look while it controls Firstmate on another Mac
  * (captain's pick on FI3-681, docs/view.md): size, theme, wash, crew model
  * names and how the panels sit are set here, starting from the other Mac's
- * when it joins, and the other Mac keeps its own. Its panels the captain
- * added stay there, so they are off here. The keys a person changes here
+ * when it joins, and the other Mac keeps its own. Whether the captain's
+ * panels run at all is the first mate's switch, heard from it and never
+ * kept here (docs/view.md, "Panels in every window"). The keys a person changes here
  * are this Mac's too (docs/keyboard.md): they start on a new profile's
  * preset, and the other Mac never hears of them. A look kept from a version
  * before presets, which saved no keys, stays on Legacy.
  */
 export class ViewLook implements PreferenceSource {
   private look: OwnLook | null;
+  /** The first mate's panels switch as last heard; off until it is. */
+  private panels: PersonalPanels = PANELS_UNHEARD;
   private readonly listeners = new Set<(value: ShellPreferences) => void>();
 
   constructor(
@@ -51,8 +58,37 @@ export class ViewLook implements PreferenceSource {
     return {
       appearance: this.look?.appearance ?? DEFAULT_APPEARANCE,
       layout: this.look?.layout ?? DEFAULT_LAYOUT,
-      panels: { enabled: false, offReason: null },
+      panels: this.panels,
     };
+  }
+
+  /**
+   * The first mate's panels switch, which is the first mate's alone
+   * (docs/view.md, "Panels in every window"): heard at each welcome and
+   * whenever it changes there, never kept, and off until it is heard.
+   */
+  heardPanels(panels: PersonalPanels | null): void {
+    const next = panels ?? PANELS_UNHEARD;
+    if (next.enabled === this.panels.enabled && next.offReason === this.panels.offReason) return;
+    this.panels = next;
+    this.tell();
+  }
+
+  /**
+   * Takes the first mate's look whole, and its keys when given: the window
+   * opened beside a first mate a command started follows that first mate's
+   * look and keys, on its computer only (docs/run.md, "The window opened
+   * beside it"). The copy kept here is what the window draws with before
+   * that first mate answers and while it is down.
+   */
+  follow(theirs: ShellPreferences, keys?: SavedKeymap): void {
+    this.panels = theirs.panels;
+    const keyboard = keys ?? this.look?.keyboard;
+    this.save({
+      appearance: theirs.appearance,
+      layout: theirs.layout,
+      ...(keyboard === undefined ? {} : { keyboard }),
+    });
   }
 
   subscribe(listener: (value: ShellPreferences) => void): () => void {
@@ -103,6 +139,10 @@ export class ViewLook implements PreferenceSource {
     } catch {
       // Kept for this run; the next one starts from the other Mac's again.
     }
+    this.tell();
+  }
+
+  private tell(): void {
     const value = this.get();
     this.emit(value);
     for (const listener of this.listeners) listener(value);

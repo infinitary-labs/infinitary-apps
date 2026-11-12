@@ -76,7 +76,8 @@ It reads the door's address, pin and key from the door's folder at each dial, as
 
 - **What stays the same.**
   It asks as the captain himself, as before, so it keeps every request a view is refused, Secrets above all (`docs/secrets.md`): it stays the trusted surface, with no enrollment.
-  Its look, keys, panels, voice, frames and files are this computer's own and never cross; pages it would open open here.
+  Its look, keys, voice, frames and files are this computer's own and never cross; pages it would open open here.
+  Its panels are asked of the first mate as every window asks ("Panels in every window" below).
   The first mate still runs in the same process, Quit is unchanged, and journeys start the app as before.
 - **A task's browser.**
   It watches a task's browser as a view on another computer does: once over the connection for every window here, its pictures arriving as `live` frames (`BrowserWatches`, `src/main/view/browserWatches.ts`; "A task's browser on a view" below).
@@ -84,6 +85,9 @@ It reads the door's address, pin and key from the door's folder at each dial, as
 - **A drop.**
   On one computer a drop is only a restart of the connection, so it dials again within a second, holding reads and refusing changes meanwhile, as every view does ("Reaching the other Mac" below).
   A welcome that could not replay what the window missed makes the window read everything again, as a view's does; with nothing paired the connection keeps no pushes to replay, so a window that missed any reads everything again (`docs/connection.md`, "The handshake and the numbering").
+- **Beside a command.**
+  The window opened while a command runs the first mate in another program is the same view of it, from a process with no core of its own, and the only window that touches this computer's desktop for that first mate: it follows the first mate's look and keys, applies its Dock choice, changes Start at login, posts its notifications and answers what only a program in the person's session can (`docs/run.md`, "The window opened beside it").
+  Once the command no longer runs it says so over itself and starts no first mate by itself (`docs/run.md`, "When the command stops").
 - **When the door cannot open**, when it never welcomes the window, or when it refuses the window's key, and for a command's first mate, which has no window, the window asks the core directly as before, and the log says why.
   A window that lost the door reads everything again from the core.
 
@@ -94,20 +98,21 @@ It reads the door's address, pin and key from the door's folder at each dial, as
 - A channel whose `reach` is `views` goes to the other Mac, as the captain at another Mac (`docs/connection.md`, "Requests").
   What a person types here is the captain's own words there, so the first mate there may make an own-words change on it, such as removing a project (`docs/devices.md`).
 - `inf:shell:preferences` and the appearance and layout reads and writes are this Mac's own (`ViewLook`, `src/main/view/viewLook.ts`), starting from the other Mac's look the first time it is in reach (the captain's pick on FI3-681).
-  Its own panels are off.
+  The panels switch is the exception: it is the other Mac's, read at each welcome and followed when it changes ("Panels in every window" below), while how the panels sit is this Mac's own layout.
   The window's project focus rides that layout, so a Mac that controls another keeps its own focus, and its turns carry it to the first mate there as a hint (`docs/project-focus.md`).
 - The window's keys are this Mac's own too, and never a core channel: the main process's installed map reads and writes them through `ViewLook`, starting on a new profile's keyboard preset, or Legacy for a look kept from before presets, and the other Mac never hears of them (`docs/keyboard.md`, "Changing keys").
 - `inf:update:status`, `inf:update:check` and `inf:update:open-release` are this Mac's own: the app installed here, read by the same update checker the Mac where the first mate lives makes for itself (`createInstalledUpdateChecker`, `src/core/update/updateChecker.ts`; `docs/alpha.md`, "Update channels").
   The top bar shows the same update notice, with this Mac's version, channel and upgrade command, and the version in its line opens that version's release page here.
   The other Mac is never asked: its own notice is about its own app.
 - Anything else is refused here, without being sent: "answered only on the computer where your first mate lives".
-  That is what stays with the first mate's computer (`reach: "home"`): its Secrets (`docs/secrets.md`, "Remote decisions"), and what is only ever that computer's own - its look, dictation, voice model, personal panels and their extensions, Observe, release notes, Dock and update.
+  That is what stays with the first mate's computer (`reach: "home"`): its Secrets (`docs/secrets.md`, "Remote decisions"), and what is only ever that computer's own - its look, dictation, voice model, Observe, release notes, Dock and update, and what only the window on that computer may ask (`docs/run.md`, "The window opened beside it").
   Its computers and phones, the addresses they find it at, and its Knowledge are asked there (`reach: "views"`, the `devices-from-a-view` contract change), as the captain at another computer.
   Whatever started the first mate, a view asks every other request (`docs/connection.md`, "Requests").
 
 Only the pushes a view shows reach the window (`VIEW_PUSHES`): the feed's events, the cards and their threads, quota, model names, the task board, a sign-in's steps, the sign-ins where projects live, integrations, Diagnostics, and the first mate's computers and phones with their addresses, nearby computers, sign-ins, presence and resources.
 Streamed reply pieces and tool starts and ends arrive as `live` frames, outside the numbering, and reach the window as events as they did numbered (docs/connection.md, "Live pushes").
-The other Mac's look, voice and panels are its own.
+The captain's panels and their data reach it too (`inf:plugins:personal`, `inf:plugins:db`).
+The other Mac's look and voice are its own; of its look the view hears only the panels switch.
 
 A file given to the input or a reply goes to the other Mac only inside the message: a picture or text file as its chip, any other file not at all, because a path on this Mac means nothing there (`docs/composer.md`, "Files").
 The input's line names that Mac: "Only pictures and text files can go to MacBook Pro.
@@ -131,6 +136,33 @@ The first mate's core writes its own computer as this computer (`HERE`, `src/sha
 The window on the first mate's own computer asks over the local door, never through `ViewBackend`, so it shows each sentence as written.
 A first mate too old to mark its lines (the `feed-said-here` contract change) has its feed lines shown as written, and its refusals still named.
 A task's timeline in its record, the cards the host writes and the phone show those words as written.
+
+## Panels in every window
+
+A panel the captain made or added shows the same in every window that shows his first mate: the window on the first mate's own computer, the window opened beside a command (`docs/run.md`), and a window on another computer.
+The first mate keeps each panel, builds it and holds its data; a window asks for what it draws and draws it itself, and the panel's own code that runs outside a frame, its server actions, still runs once, on the first mate's computer.
+
+- **What a window asks.**
+  The list of panels (`inf:plugins:personal:list`, then the `inf:plugins:personal` push), each panel's data (`inf:plugins:db` and its push), a server action (`inf:plugins:invoke`), a mediated fetch, an integration, SQL, and Try again, Update and Ask again on a panel that stopped: all have `reach` `views` (the `panels-in-every-window` contract change), asked as the captain at another computer.
+- **A panel's files.**
+  Before a window draws a panel it asks the first mate for that panel's built files (`inf:plugins:files`, `src/shared/personal/panelFiles.ts`), naming the source, the panel and the version its list named.
+  The first mate reads them where they are (`readPanelGraph`, `src/core/personal/panelGraph.ts`) and answers the bytes with the version of the app they were built for, or nothing for a panel it does not serve from that source at exactly that version.
+  The first mate names no folder, so every window draws from the same answer: the window serves those bytes to the panel's frame by their hashes, under the same bounds the first mate's read keeps (`src/main/frames/frameMounts.ts`; `docs/ui-plugins.md`, "The frame realm").
+- **Versions.**
+  The files are built for the panel library of the first mate's version of the app, which only a window on that version serves.
+  A window on another version draws the panel's place with one line of `PANEL_FILES_WORDS` instead: "This panel shows once Infinitary here and on the computer where your first mate lives are on the same version."
+- **A panel being built.**
+  A panel a crewmate is still building is drawn out of sight on the first mate's own computer (`docs/personal-panels.md`, "Built apart").
+  A window on another computer is told of no such panel and is answered none of its files.
+- **Where each panel was drawn.**
+  Every window says what it did with each panel (`inf:plugins:personal:mounts`); the first mate keeps only its own computer's window's word, since that is the window a crewmate's capture photographs.
+- **The switch and the layout.**
+  The panels switch in Settings is the first mate's, set at its own computer's window; a view reads it from `inf:shell:preferences` at each welcome and follows it when it changes, and takes nothing else of that look (`ViewLook.heardPanels`).
+  How the panels sit is each computer's own layout, except in the window opened beside a command, which follows the first mate's whole look.
+- **A gap.**
+  A window that missed the first mate's pushes, because the first mate was out of reach or restarted, reads its panels again with everything else (`startPersonalPlugins`, `src/renderer/src/personal/personalPlugins.ts`).
+- **An older first mate.**
+  A first mate that does not list `panels-in-every-window` refuses these requests from a view, as before, and the view shows no panel of the captain's.
 
 ## Pages it would open
 
@@ -217,7 +249,7 @@ A link or command made here is the first mate's computer's, so the computer it a
 The Notifications switch there governs this Mac's notifications too ("Notifications", above).
 Its words name the computer the first mate lives on where they would say this computer (`firstMatePlace`, `useFirstMatePlace`), and a sentence that computer says of itself as this computer is shown with its name (`hereAs`, through `useHereAs`).
 An account row under a computer that runs work names that computer instead, since the account is on it (`AccountRow`'s `place`, from `DeviceSignInGroups`).
-General leaves out that computer's Start at login, Dock, dictation and panels, which are its own (`GeneralTab`).
+General leaves out that computer's Start at login, Dock, dictation and panels switch, which are set at its own window (`GeneralTab`); the panels it switches show here all the same.
 A project's folder is typed as its path on that computer, since a folder picker here shows only this computer's folders: Choose folder on the projects folder's line under Add project, and Folder on Mac mini in Add project (`FOLDER_THERE_WORDS`, `src/renderer/src/settings/addProjectWords.ts`); that computer checks the path and says why one cannot be used.
 Their keyboard commands work there (`src/renderer/src/app/commandRefusals.ts`).
 
@@ -284,6 +316,9 @@ The first-launch gate stays derived (`docs/first-launch.md`); the line only says
 - `src/renderer/src/app/cardActions.test.ts`, "card action receipts": on a view, a button that opens Devices is sent and opens Devices here, and sends nothing on a first mate too old to answer it, while its other buttons, those that open other Settings sections included, are sent; a request card's take-over is sent and opens the browser view, and on a view of an older first mate sends nothing and says so, while its saved sign-in is sent.
 - `src/main/shell.test.ts`, "shows a task's browser from the other Mac": two windows watch one task through one watch there, only a watching window sizes the page, a drop watches again with its room, and the last window's end stops the pictures; an older first mate is told apart and asked nothing.
 - `tests/e2e/view.spec.ts`, "a Mac that controls another takes over a task's browser there": the second app opens a crewmate's page from its card, takes control, and types a town into the page on the first app, whose button, pressed from the second app, answers with it.
+- `tests/e2e/panels-every-window.spec.ts`: the window opened beside a command and a window on another computer each draw a panel from the first mate's built files, run its action there and show its data, and draw it anew once it is built again; the second window's own folder holds no panel.
+  `src/main/frames/panelMounts.test.ts` holds the mount: the files asked by source, panel and version, a draft asked only as one, another version's line, and the bounds held again.
+  `src/core/core.connection.test.ts` holds the first mate's side with a real panel: a view is answered the same files as its own window, nothing for another version, and its word on where a panel was drawn is not kept; `src/main/shell.test.ts` the view's side, the files asked there, its panels switch followed, no panel being built heard, and an older first mate's panels left off.
 - `tests/e2e/update-channels.spec.ts`, "a Mac controlling a newer Firstmate on another Mac is offered its own update": the other Mac's newer contract named in the top bar, this Mac's own offer there, its release page opened here, and the other Mac offered nothing.
 - `src/main/shell.test.ts`, "a Mac that controls another and runs its work": joining with a link for a Mac keeps the grant for its work and sets it up in the background, a Mac a command added opens as a view with its work's grant and never again as the device it left, and a grant that only runs work stays the work's; `src/core/helper/fromWindow.test.ts` the work folder's side.
 - `tests/e2e/view.spec.ts`, "a Mac joined at its first launch also runs that Mac's work": the home standing in another Mac for each app, a link pasted at first launch joins a Mac that controls and, its work started, is in reach to run work; a Mac a command added opens Infinitary there and controls with no first launch and no new link, and its Leave says it stops its work too.

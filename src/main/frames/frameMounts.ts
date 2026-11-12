@@ -1,6 +1,10 @@
 import { createHash, randomUUID } from "node:crypto";
-import { readdir, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { PANEL_BYTES_CAP, PANEL_FILE_CAP, PanelGraphTooLarge } from "@core/personal/panelGraph";
+import {
+  PANEL_FILES_WORDS,
+  type PanelFiles,
+  type PanelFilesRequest,
+} from "@shared/personal/panelFiles";
 import { frameCsp, panelFrameCsp } from "@shared/plugins/containment";
 import {
   buildFrameDocument,
@@ -58,11 +62,6 @@ export const FRAME_MOUNT_CAP = 32;
 export const CARD_MOUNT_CAP = 8;
 /** Panel documents held at once: two rails of three, with room for a remount. */
 export const PANEL_MOUNT_CAP = 16;
-/** The most compiled files one added panel's graph may bring to its mount. */
-export const PANEL_FILE_CAP = 256;
-/** The most bytes one added panel's compiled graph may bring to its mount. */
-export const PANEL_BYTES_CAP = 8 * 1024 * 1024;
-
 export type ServedFrameDocument = {
   body: string;
   csp: string;
@@ -99,20 +98,19 @@ export function bytesHash(bytes: Uint8Array): string {
 
 /**
  * Where the registry finds what a panel mount draws (the frame realm): the
- * lib's pins, and the directory holding the compiled graph of one of the
+ * lib's pins, this build's own version, and the built files of one of the
  * captain's own panels (or its draft) or of one he added - asked of the
- * core, which answers only for a panel it serves from that source at
+ * first mate, which answers only for a panel it serves from that source at
  * exactly that version, so a mount can never reach a graph the captain did
- * not agree to, one he has since removed, or another source's.
+ * not agree to, one he has since removed, or another source's. The first
+ * mate names no folder (docs/view.md, "Panels in every window"): a window
+ * on its own computer and one on another draw from the same answer.
  */
 export type PanelSources = {
   libPins: FrameLibPins;
-  panelDir: (
-    source: "yours" | "installed",
-    id: string,
-    version: string,
-    draft: boolean,
-  ) => string | null;
+  /** This build's version, which the files' own must match: they were built for its panel library. */
+  version: string;
+  panelFiles: (request: PanelFilesRequest) => Promise<PanelFiles>;
 };
 
 type HeldDocument = ServedFrameDocument & {
@@ -121,38 +119,22 @@ type HeldDocument = ServedFrameDocument & {
   files?: ReadonlyMap<string, Uint8Array>;
 };
 
-const PANEL_FILE_SEGMENT = /^[A-Za-z0-9_.-]+$/;
-
 /**
- * Reads a panel's compiled graph once, at mount: every `.mjs` under
- * its version directory, by forward-slashed relative path. What the mount
- * serves afterwards is exactly these bytes, hashed into the document's
- * import map - a file written to the cache later reaches no frame.
+ * A panel's built files as the first mate answered them, by path: the
+ * same bounds its own read keeps, held again here, since the window serves
+ * whatever it holds.
  */
-async function readPanelGraph(dir: string): Promise<Map<string, Uint8Array>> {
+function heldPanelFiles(answer: NonNullable<PanelFiles>): Map<string, Uint8Array> {
   const files = new Map<string, Uint8Array>();
   let total = 0;
-  const walk = async (relative: string[]): Promise<void> => {
-    const entries = await readdir(join(dir, ...relative), { withFileTypes: true });
-    for (const entry of entries) {
-      if (!PANEL_FILE_SEGMENT.test(entry.name) || entry.name === "." || entry.name === "..") {
-        continue;
-      }
-      if (entry.isDirectory()) {
-        if (relative.length >= 8) continue;
-        await walk([...relative, entry.name]);
-        continue;
-      }
-      if (!entry.isFile() || !entry.name.endsWith(".mjs")) continue;
-      const bytes = new Uint8Array(await readFile(join(dir, ...relative, entry.name)));
-      total += bytes.byteLength;
-      if (files.size + 1 > PANEL_FILE_CAP || total > PANEL_BYTES_CAP) {
-        throw new PanelMountError("this panel's code is larger than a panel may be");
-      }
-      files.set([...relative, entry.name].join("/"), bytes);
+  for (const file of answer.files) {
+    const bytes = new Uint8Array(Buffer.from(file.data, "base64"));
+    total += bytes.byteLength;
+    if (files.size + 1 > PANEL_FILE_CAP || total > PANEL_BYTES_CAP) {
+      throw new PanelMountError(new PanelGraphTooLarge().message);
     }
-  };
-  await walk([]);
+    files.set(file.path, bytes);
+  }
   return files;
 }
 
@@ -276,18 +258,27 @@ export class FrameMountRegistry {
     } else {
       const own = request.panel.source === "personal";
       const draft = request.panel.source === "personal" && request.panel.draft === true;
-      const dir = sources.panelDir(
-        own ? "yours" : "installed",
-        request.panel.id,
-        request.panel.version,
-        draft,
-      );
-      if (!dir) {
+      let answer: PanelFiles;
+      try {
+        answer = await sources.panelFiles({
+          source: own ? "yours" : "installed",
+          id: request.panel.id,
+          version: request.panel.version,
+          ...(draft ? { draft } : {}),
+        });
+      } catch (error) {
+        throw new PanelMountError(error instanceof Error ? error.message : String(error));
+      }
+      if (!answer) {
         throw new PanelMountError(
           `"${request.panel.id}" is not ${own ? (draft ? "a panel being built" : "a panel of the captain's") : "an added panel"} at version ${request.panel.version}`,
         );
       }
-      files = await readPanelGraph(dir);
+      // Built for the first mate's panel library: only a window on its version serves that one.
+      if (answer.builtFor !== sources.version) {
+        throw new PanelMountError(PANEL_FILES_WORDS.otherVersion);
+      }
+      files = heldPanelFiles(answer);
       // A card view is an entry of the same pinned graph (docs/ui-plugins.md,
       // "A panel's cards"): its own module, beside the panel's.
       const entry =

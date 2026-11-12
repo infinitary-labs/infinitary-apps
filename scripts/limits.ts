@@ -243,6 +243,10 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/panels/panelProtocol.ts": {
     PANEL_MESSAGE_MAX_BYTES: physical("refused in words naming the bound; the panel sends less"),
   },
+  "src/core/personal/panelGraph.ts": {
+    PANEL_FILE_CAP: physical("mount refused in words that do not name the bound"),
+    PANEL_BYTES_CAP: physical("mount refused in words that do not name the bound"),
+  },
   "src/core/personal/sequencesSkill.ts": {
     SEQUENCES_MAX_BYTES: physical("the built-in text serves; a feed line says the file is over 16 KB"),
   },
@@ -361,8 +365,6 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     FRAME_MOUNT_CAP: physical("refused in words naming the cap: unmount one first"),
     CARD_MOUNT_CAP: physical("refused in words naming the cap: unmount one first"),
     PANEL_MOUNT_CAP: physical("refused in words naming the cap: unmount one first"),
-    PANEL_FILE_CAP: physical("mount refused in words that do not name the bound"),
-    PANEL_BYTES_CAP: physical("mount refused in words that do not name the bound"),
   },
   "src/main/host/claudeKeychainTool.ts": {
     MAX_OUTPUT: physical("the read counts as incomplete or untrusted; the next refresh retries"),

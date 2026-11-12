@@ -11,12 +11,14 @@ import { startInBackground } from "@core/helper/background";
 import { configureSettingsPath, hostPath } from "@core/hostEnv";
 import { type Core, startCore } from "@core/index";
 import { isAllowedOpenExternalUrl } from "@core/openExternal";
+import { appPathsFor } from "@core/paths";
 import { dataFolderRefusal } from "@core/storage/dataFolderRefusal";
 import {
   SAVED_DATA_REFUSAL_TITLE,
   UnsupportedSavedDataError,
 } from "@core/storage/savedDataCompatibility";
 import { createInstalledUpdateChecker } from "@core/update/updateChecker";
+import { crewWorkHeldThere } from "@core/update/updateHold";
 import { APP_IDENTITIES, readSpellings } from "@shared/codeNames";
 import { settingFrom } from "@shared/envSettings";
 import { currentLanguage } from "@shared/i18n/current";
@@ -31,6 +33,13 @@ import { spellingOfUserDataFolder } from "@shared/userDataFolders";
 import { app, BrowserWindow, dialog, Menu, nativeTheme, powerMonitor, session } from "electron";
 import { hostDesktop, hostPlatform } from "../core/platform";
 import { installAppMenu, resetAllKeysAfterAsking } from "./appMenu";
+import {
+  betweenStops,
+  entryWaitMs,
+  noteStartedHere,
+  START_HERE_ARG,
+  startedHere,
+} from "./besideRun";
 import { disableChromiumFeatures } from "./chromiumFeatures";
 import { frameFontFiles } from "./frames/fontFiles";
 import { frameLibPins } from "./frames/frameLibFiles";
@@ -53,16 +62,18 @@ import { followRendererRecovery } from "./rendererRecovery";
 import {
   followInstalledProgram,
   markRunning,
+  programIdentity,
   RUN_SETTINGS_EXIT,
   RUN_UPDATED_EXIT,
   RUN_WORDS,
-  RUNNING_BY_COMMAND,
   type RunEnd,
   runningByCommand,
   runOptions,
+  windowProfileDir,
 } from "./runCommand";
 import { readKeychainLock, runEnvironment } from "./runEnvironment";
 import { readRunSettings } from "./runSettings";
+import { readRunStatus } from "./runStatus";
 import { showDataRefusal, showSavedDataRefusal } from "./savedDataRefusal";
 import { registerPrivilegedSchemes } from "./schemes";
 import { assertSecurityBaseline, installCsp, REQUIRED_WEB_PREFERENCES } from "./security/baseline";
@@ -73,6 +84,7 @@ import {
   type RendererSourceOptions,
 } from "./security/rendererSource";
 import { Shell } from "./shell";
+import { ownStartEntry } from "./startAtBootContext";
 import { showTrayIcon } from "./trayIcon";
 import {
   chooseUserDataDir,
@@ -338,13 +350,34 @@ export async function startApp(
   // Opens the window again where closing it left Firstmate working with none.
   let reopen: () => void = () => {};
 
-  // Beside a run there is no window to open: the window says a command
-  // started Infinitary here, and quits. It asks first, since a process the
-  // lock refused never becomes ready to say so.
-  if (!windowless && runningByCommand(app.getPath("userData"))) {
-    void app.whenReady().then(() => showDataRefusal(hideWindow, RUNNING_BY_COMMAND));
-    return;
-  }
+  // The data folder: the record and everything a first mate keeps. Beside a
+  // run the window joins it as a view of its first mate (docs/run.md, "The
+  // window opened beside it") and keeps a browser profile of its own, since
+  // the run's holds the folder's; it asks before it asks for the lock.
+  const dataDir = app.getPath("userData");
+  // It joins too when it opens between two commands, where a start entry
+  // will start the next: it waits for that one, under its notice, and
+  // starts no first mate of its own unless the person chose Start it here
+  // (docs/run.md, "When the command stops").
+  // The start entry's own restart wait; a development run may stand in a shorter one.
+  const restartWaitMs =
+    isDev && Number(settingFrom(process.env, "RUN_RESTART_WAIT_MS")) > 0
+      ? Number(settingFrom(process.env, "RUN_RESTART_WAIT_MS"))
+      : undefined;
+  // Start it here: the person chose this window's own first mate over waiting
+  // for the command that ended, which no later launch waits for again.
+  const startsHere = !windowless && process.argv.includes(START_HERE_ARG);
+  if (startsHere) noteStartedHere(dataDir, readRunStatus(dataDir));
+  const besideRun =
+    !windowless &&
+    (runningByCommand(dataDir) ||
+      (!startsHere &&
+        betweenStops(readRunStatus(dataDir), ownStartEntry(), {
+          now: Date.now(),
+          waitMs: entryWaitMs(restartWaitMs),
+          startedHere: startedHere(dataDir),
+        })));
+  if (besideRun) app.setPath("userData", windowProfileDir(dataDir));
   // Single instance: a second launch focuses the existing window instead,
   // or, where closing kept Firstmate working with no window, opens it again.
   // A second run says so and exits.
@@ -358,6 +391,22 @@ export async function startApp(
     // 0 for a stop; an update ends the run with a code its starter starts again on.
     let runExitCode = 0;
     let runEnd: RunEnd = { reason: "quit", exitCode: 0, lines: [RUN_WORDS.stopped] };
+    // The installed program was replaced, by its package or by this run's
+    // own updater: the run stops its crew as a quit does and ends with the
+    // code its starter starts the new version on.
+    let endedUpdated = false;
+    const endUpdated = () => {
+      if (endedUpdated) return;
+      endedUpdated = true;
+      process.stdout.write(`${RUN_WORDS.updated.join("\n")}\n`);
+      runExitCode = RUN_UPDATED_EXIT;
+      runEnd = {
+        reason: "updated",
+        exitCode: RUN_UPDATED_EXIT,
+        lines: [...RUN_WORDS.updated],
+      };
+      stopRun();
+    };
     if (windowless) {
       // Scratch data is not a sandbox for the Mac's Keychain. Never query it in an isolated launch.
       const keychain =
@@ -523,7 +572,14 @@ export async function startApp(
       if (desktop.windowControls === "app") Menu.setApplicationMenu(null);
       installCsp(session.defaultSession, rendererSource);
       const host = createElectronHost({
-        prepareUpdateRestart: () => shell.dispose(),
+        // Beside a command's first mate, that first mate ends first, with its
+        // crew's work saved, before this window's update replaces the copy.
+        prepareUpdateRestart: async () => {
+          await shell.updateReplacing();
+          await shell.dispose();
+        },
+        // A run has no window to reopen: it ends for its starter to start the new copy.
+        ...(windowless ? { relaunch: endUpdated } : {}),
         ...(capabilities.secrets ? { secrets: capabilities.secrets } : {}),
         isolatedUserDataDir,
         ...(userDataChoice.kind === "flavor"
@@ -538,7 +594,8 @@ export async function startApp(
         setAsideProcessPath: join(mainDir, "setAsideProcess.js"),
         ...(desktop.closeToIcon ? { openWindow: () => reopen() } : {}),
       });
-      const voiceModel = new VoiceModelService(join(host.app.userDataDir, "models"));
+      // Voice models live in the data folder, which the window beside a run reads too.
+      const voiceModel = new VoiceModelService(join(dataDir, "models"));
       // The voice helper (docs/architecture.md section 8): Whisper in a
       // process of its own, started on the first recording. A development
       // run may name another entry that speaks its messages, as the
@@ -547,7 +604,7 @@ export async function startApp(
         entryPath:
           (isDev && settingFrom(process.env, "VOICE_HELPER_ENTRY")) ||
           join(mainDir, "voiceHelper.js"),
-        modelsDir: join(host.app.userDataDir, "models"),
+        modelsDir: join(dataDir, "models"),
       };
       const voiceHelper = createVoiceHelper(voiceHelperOptions);
       app.once("will-quit", () => voiceHelper.release());
@@ -608,9 +665,38 @@ export async function startApp(
       // home with the grant its work keeps (docs/view.md, "A Mac that runs work").
       const work = workContext(isolatedUserDataDir);
       const { serviceManager } = work;
+      // Whether the program this window runs was replaced since it started,
+      // read where a run follows it (`followInstalledProgram`).
+      const programPath =
+        (isDev && settingFrom(process.env, "RUN_PROGRAM")) ||
+        process.env.APPIMAGE ||
+        process.execPath;
+      const programAtStart = programIdentity(programPath);
+      const programReplaced = () => {
+        const now = programIdentity(programPath);
+        return programAtStart !== null && now !== null && now !== programAtStart;
+      };
       const shell = new Shell({
         keySystem: desktop.keys,
-        joined: new JoinedHome(join(host.app.userDataDir, "joined")),
+        joined: new JoinedHome(join(dataDir, "joined")),
+        // Beside a run: its local door, its pictures, and this window's own look.
+        ...(besideRun
+          ? {
+              beside: {
+                door: appPathsFor(dataDir).localDoorDir,
+                crewmatesDir: appPathsFor(dataDir).crewmatesDir,
+                look: new JoinedHome(join(app.getPath("userData"), "look")),
+                status: () => readRunStatus(dataDir),
+                startEntry: ownStartEntry,
+                ...(restartWaitMs === undefined ? {} : { restartWaitMs }),
+                presence: host.presence,
+                chooseFiles: async (choice) => (await host.browser?.chooseFiles?.(choice)) ?? [],
+                // Only a window installs an update on a Mac that updates itself.
+                installsUpdates: Boolean(host.macUpdates),
+                programReplaced,
+              },
+            }
+          : {}),
         work: {
           dataDir: work.place.dataDir,
           ...(serviceManager
@@ -683,10 +769,19 @@ export async function startApp(
         restartWindows: () => {
           for (const win of appWindows()) if (!win.isDestroyed()) win.webContents.reload();
         },
-        relaunch: () => {
+        relaunch: (how) => {
           // An isolated run is started from outside, which starts it again;
           // only a person's app starts itself again.
-          if (!isolatedUserDataDir) app.relaunch();
+          if (!isolatedUserDataDir) {
+            // Start it here is asked for one start: no later one carries it on.
+            const args = process.argv.slice(1).filter((arg) => arg !== START_HERE_ARG);
+            if (how?.startHere) args.push(START_HERE_ARG);
+            app.relaunch({
+              args,
+              // A window following a replaced AppImage starts from the new file.
+              ...(besideRun && process.env.APPIMAGE ? { execPath: process.env.APPIMAGE } : {}),
+            });
+          }
           app.quit();
         },
         // A page the first mate would open for this view opens here, where
@@ -696,17 +791,25 @@ export async function startApp(
         },
         ...(standInReturnHost ? { returnHost: standInReturnHost } : {}),
         // A view runs no core, and still tells this Mac when its own app has an update.
+        // Its update channel is kept in the data folder, beside a run too.
         updates: createInstalledUpdateChecker({
-          app: host.app,
+          app: { ...host.app, userDataDir: dataDir },
           ...(host.macUpdates ? { macDriver: host.macUpdates } : {}),
           openExternal: (url) => host.openExternal(url),
           ...(host.relaunch ? { relaunch: host.relaunch } : {}),
+          // Beside a command's first mate, an update this window installs waits for
+          // that first mate to save its crew's work, and holds it saved meanwhile.
+          ...(besideRun && host.macUpdates
+            ? {
+                work: crewWorkHeldThere((step) => shell.dispatch("inf:update:hold", [step])),
+              }
+            : {}),
         }),
       });
       configurePermissions(session.defaultSession, rendererSource, () => shell.dictationEnabled());
       // A folder that moved to Infinitary, or one a move holds, is never opened
       // here: nothing is started on it (./savedDataRefusal.ts).
-      const refusal = dataFolderRefusal(app.getPath("userData"));
+      const refusal = dataFolderRefusal(dataDir);
       if (refusal) {
         if (windowless) endRun(1, RUN_WORDS.refusal(refusal));
         else await showDataRefusal(hideWindow, refusal);
@@ -732,13 +835,13 @@ export async function startApp(
       // The host serves model files; download policy and the trail run through core dispatch.
       // A panel drawn in the frame realm reads the lib this build made
       // (out/frame-lib, beside out/main) and, for one of the captain's own or
-      // one he added, the compiled graph the core serves at exactly the
-      // version asked for.
+      // one he added, the built files the first mate answers at exactly the
+      // version asked for, whichever computer it is on.
       const frameMounts = new FrameMountRegistry({
         panels: {
           libPins: frameLibPins,
-          panelDir: (source, id, version, draft) =>
-            shell.framePanelDir(source, id, version, draft ? { draft } : {}),
+          version: app.getVersion(),
+          panelFiles: (request) => shell.panelFiles(request),
         },
       });
       registerIpc({
@@ -775,16 +878,7 @@ export async function startApp(
           every:
             (isDev && Number(settingFrom(process.env, "RUN_PROGRAM_EVERY_MS"))) ||
             PROGRAM_READ_EVERY_MS,
-          updated: () => {
-            process.stdout.write(`${RUN_WORDS.updated.join("\n")}\n`);
-            runExitCode = RUN_UPDATED_EXIT;
-            runEnd = {
-              reason: "updated",
-              exitCode: RUN_UPDATED_EXIT,
-              lines: [...RUN_WORDS.updated],
-            };
-            stopRun();
-          },
+          updated: endUpdated,
         });
         process.stdout.write(`${RUN_WORDS.started}\n`);
         return;

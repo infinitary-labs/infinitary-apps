@@ -153,14 +153,21 @@ export function registerIpc(options: IpcOptions): void {
   });
 
   handleInvoke("inf:app:open-runbook-folder", rendererSource, async (_event, request) => {
-    const core = shell.core();
-    if (!core) throw new Error("Open this folder on the computer where your first mate lives.");
-    const folder =
-      request.kind === "personal"
-        ? core.services.runbooks.personalFolder()
-        : core.services.runbooks.view(request.id, app.getPath("temp"));
+    // The folder is on the first mate's computer, so only a window there opens it:
+    // the first mate names it, to its own window or the one opened beside it.
+    if (shell.thisMac().role === "view")
+      throw new Error("Open this folder on the computer where your first mate lives.");
+    const folder = await shell.dispatch("inf:runbooks:folder", [request]);
     const error = await systemShell.openPath(folder);
     if (error) throw new Error("The system could not open this folder. Try again.");
+    return { ok: true as const };
+  });
+
+  // The notice over a window whose command stopped (docs/run.md, "When the command stops").
+  handleInvoke("inf:app:start-here", rendererSource, () => shell.startHere());
+  handleInvoke("inf:app:quit", rendererSource, () => {
+    // After this answer, so the window is not torn down under its own request.
+    setImmediate(() => app.quit());
     return { ok: true as const };
   });
 
@@ -262,10 +269,11 @@ export function registerIpc(options: IpcOptions): void {
   // on the Mac that holds Firstmate (docs/view.md), whose first ask with
   // dictation on records the first hold to talk.
   handleInvoke("inf:voice:mic-access", rendererSource, () => {
-    const settings = shell.core()?.services.settings;
-    if (settings?.getDictation().enabled && !settings.getFlag("voice-mic-primed")) {
-      settings.setFlag("voice-mic-primed", true);
-    }
+    // The first mate records it, for its own window and the one opened beside it.
+    if (shell.dictationEnabled())
+      void shell.dispatch("inf:voice:primed", []).catch(() => {
+        // Asked again with the next reading.
+      });
     return { access: micAccess() };
   });
   handleInvoke("inf:voice:open-mic-settings", rendererSource, async () => {

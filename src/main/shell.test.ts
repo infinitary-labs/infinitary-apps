@@ -20,11 +20,15 @@ import type { DeviceKind, ThisMac } from "@shared/devices";
 import { type FeedLine, feedLineFrom } from "@shared/feed";
 import { HOME_CAPABILITIES, PROTOCOL_MAJORS_BEHIND, PROTOCOL_VERSION } from "@shared/ipc";
 import { DEFAULT_SAVED_KEYMAP, presetKeymap, type SavedKeymap } from "@shared/keymap";
+import type { PersonalExtensionView } from "@shared/personal/manifest";
+import type { PanelFiles } from "@shared/personal/panelFiles";
 import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WebSocket } from "ws";
 import { claimedPort } from "../../tests/helpers/claimedPort";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
+import type { StartEntry } from "./besideRun";
+import type { RunStatus } from "./runStatus";
 import { Shell, type ShellOptions } from "./shell";
 
 /**
@@ -99,7 +103,7 @@ async function otherMac(
 ) {
   const asked: string[] = [];
   /** What its stage shows, and its own Notifications switch. */
-  const stage = { cards: [] as Card[], notifications: true };
+  const stage = { cards: [] as Card[], notifications: true, panel: null as PanelFiles };
   /** Its task browsers: each page's watchers, and the room each asked for. */
   const pages = {
     sinks: new Map<string, Set<BrowserFrameSink>>(),
@@ -150,6 +154,7 @@ async function otherMac(
     if (channel === "inf:settings:notifications:get") return stage.notifications;
     const said = answerInOwnWords(channel);
     if (said !== undefined) return said;
+    if (channel === "inf:plugins:files") return stage.panel;
     if (channel === "inf:app:healthcheck")
       return {
         ok: true,
@@ -435,7 +440,6 @@ describe("the app as a view of another Mac", () => {
     expect(air.own.unfollow).toHaveBeenCalledTimes(1);
     expect(air.shell.core()).toBeNull();
     expect(air.shell.dictationEnabled()).toBe(false);
-    expect(air.shell.framePanelDir("yours", "notes", "0".repeat(16))).toBeNull();
     await air.until(() => air.view().contact === "in-reach");
     expect(air.view()).toMatchObject({ role: "view", name: "MacBook Pro", address: "127.0.0.1" });
     expect(pro.pairing.list().map((device) => device.name)).toEqual(["MacBook Air"]);
@@ -460,6 +464,15 @@ describe("the app as a view of another Mac", () => {
     await air.shell.dispatch("inf:settings:appearance:set", [{ theme: "dark", size: 110 }]);
     expect(air.shell.preferences.get().appearance).toEqual({ theme: "dark", size: 110 });
     expect(pro.asked.filter((channel) => channel.startsWith("inf:settings:"))).toEqual([]);
+    // INF-3660's plan, "Your panels, in every window": "the first mate would
+    // send each panel's built files over the window's connection, instead of
+    // naming a folder", so this Mac asks there, and the panels switch it
+    // shows is the first mate's.
+    pro.stage.panel = { builtFor: "9.9.9", files: [{ path: "panel.mjs", data: "ZXhwb3J0IHt9" }] };
+    const notes = { source: "yours" as const, id: "notes", version: "0".repeat(16) };
+    expect(await air.shell.panelFiles(notes)).toEqual(pro.stage.panel);
+    expect(pro.asked).toContain("inf:plugins:files");
+    await air.until(() => air.shell.preferences.get().panels.enabled);
     // Its keys are this Mac's own here too: a new profile's preset to start, kept in its own look.
     expect(air.shell.keymap.current().saved).toEqual(presetKeymap("vim"));
     const here = { ...presetKeymap("vim"), keys: { "settings.open": [] } };
@@ -478,14 +491,49 @@ describe("the app as a view of another Mac", () => {
       fraction: 0.5,
     });
     await air.until(() => air.pushes.some((push) => push.channel === "inf:models:changed"));
-    expect(
-      air.pushes.filter(
-        (push) =>
-          push.channel === "inf:shell:preferences" &&
-          (push.payload as ShellPreferences).appearance.theme === "dark" &&
-          (push.payload as ShellPreferences).panels.enabled === false,
-      ),
-    ).toHaveLength(1);
+    // The look told here is this Mac's own; the one the other Mac just sent
+    // (the catalog's size) never is, though its panels switch is followed.
+    const looks = air.pushes
+      .filter((push) => push.channel === "inf:shell:preferences")
+      .map((push) => (push.payload as ShellPreferences).appearance);
+    expect(looks.at(-1)).toEqual({ theme: "dark", size: 110 });
+    expect(looks.filter((look) => look.size === DEFAULT_SHELL_PREFERENCES.appearance.size)).toEqual(
+      [],
+    );
+
+    // INF-3660's plan: "Panels being built ... stay with a window on the first
+    // mate's computer", so this Mac hears the captain's panels and none being built.
+    const panel: PersonalExtensionView = {
+      id: "notes",
+      source: "yours",
+      by: null,
+      title: "Notes",
+      placement: { x: "left", y: "top" },
+      order: 100,
+      size: "content",
+      present: true,
+      ownPresence: false,
+      moves: false,
+      running: false,
+      reads: [],
+      sql: [],
+      panel: null,
+      frame: { version: "0".repeat(16) },
+      server: null,
+      cardViews: [],
+      cards: {},
+      header: [],
+      commands: [],
+      error: null,
+    };
+    pro.events.emit("inf:plugins:personal", {
+      extensions: [panel],
+      drafts: [{ ...panel, id: "notes-being-built", running: true }],
+    });
+    await air.until(() => air.pushes.some((push) => push.channel === "inf:plugins:personal"));
+    expect(air.pushes.find((push) => push.channel === "inf:plugins:personal")?.payload).toEqual({
+      extensions: [panel],
+    });
 
     // Its size keys step this Mac's own look, through the same door, and never ask there.
     air.shell.size["size.larger"]();
@@ -688,6 +736,10 @@ describe("the app as a view of another Mac", () => {
     await mini.until(() => mini.shell.thisMac().role === "view");
     expect(mini.shell.thisMac()).toMatchObject({ role: "view", devicesNeedUpdateThere: true });
     expect(mini.shell.thisMac()).not.toHaveProperty("needsUpdateThere");
+    // A first mate that sends no panel's files yet leaves the captain's
+    // panels off here, as before (INF-3660's plan, "Your panels, in every window").
+    await mini.until(() => before.asked.includes("inf:cards:list"));
+    expect(mini.shell.preferences.get().panels.enabled).toBe(false);
 
     const current = await otherMac();
     const pro = shell();
@@ -857,12 +909,14 @@ describe("the app as a view of another Mac", () => {
     expect(air.pushes.map((push) => push.channel)).toContain("inf:auth:notice");
     expect(air.pushes.map((push) => push.channel)).toContain("inf:devices");
     expect(air.pushes.map((push) => push.channel)).not.toContain("inf:voice:progress");
-    // A view's own look always has its panels off, so one with them on is the other Mac's.
+    // This view's look started from the other Mac's saved one (light), so a
+    // push in the catalog's theme would be the look the other Mac just sent.
     expect(
       air.pushes.filter(
         (push) =>
           push.channel === "inf:shell:preferences" &&
-          (push.payload as ShellPreferences).panels.enabled,
+          (push.payload as ShellPreferences).appearance.theme ===
+            DEFAULT_SHELL_PREFERENCES.appearance.theme,
       ),
     ).toEqual([]);
   });
@@ -1280,5 +1334,491 @@ describe("the window on the first mate's own computer", () => {
     heard.options?.onCaughtUp?.("reload");
     expect(at.shell.thisMac()).toEqual({ role: "home", left: null, caughtUp: 1 });
     expect(pushed(at.pushes, "inf:devices:this-mac")).toBe(1);
+  });
+});
+
+// INF-1352's plan, piece 6, the captain's answer window_joins=join (docs/run.md, "The window
+// opened beside it"): the window opened while a command runs the first mate joins it over its
+// local door, with no core of its own. INF-3660's plan, the captain's answers, gives it one
+// rule: the first mate keeps the settings, the records and the crew, and only this window
+// touches the desktop.
+describe("the window beside a command's first mate", () => {
+  const JOINED = { pid: 41, startedAt: "2026-11-01T08:00:00.000Z" };
+  /** The command's own records in its data folder, as the window reads them. */
+  type Records = Pick<RunStatus, "running" | "run" | "lastStop">;
+  const stopped = (
+    reason: "quit" | "signal" | "updated" | "start-failed",
+    exitCode: number,
+    of = JOINED,
+  ): Records => ({
+    running: false,
+    run: null,
+    // Stopped just now: the wait for a start entry counts from the record's own time.
+    lastStop: { ...of, stoppedAt: new Date().toISOString(), reason, exitCode, lines: [] },
+  });
+
+  /** The command's first mate in another program: a stand-in core served on its local door. */
+  function commandRun() {
+    const run = ownCore();
+    /** What that first mate keeps, and what this computer's window told it. */
+    const there = {
+      look: {
+        ...DEFAULT_SHELL_PREFERENCES,
+        appearance: { ...DEFAULT_SHELL_PREFERENCES.appearance, theme: "light", size: 125 },
+      } as ShellPreferences,
+      keys: DEFAULT_SAVED_KEYMAP as SavedKeymap,
+      showInDock: true,
+      dictation: true,
+      cards: [] as Card[],
+      here: 0,
+      focused: 0,
+      answers: [] as unknown[][],
+      holds: [] as unknown[],
+    };
+    run.dispatch.mockImplementation((async (channel: string, args: unknown[]) => {
+      switch (channel) {
+        case "inf:shell:preferences":
+          return there.look;
+        case "inf:settings:appearance:set":
+          there.look = { ...there.look, appearance: args[0] as ShellPreferences["appearance"] };
+          run.core.events.emit("inf:shell:preferences", there.look);
+          return there.look.appearance;
+        case "inf:settings:keys:get":
+          return { saved: there.keys, unreadable: false };
+        case "inf:settings:keys:set":
+          there.keys = args[0] as SavedKeymap;
+          return { ok: true };
+        case "inf:presence:get":
+          return { startAtLogin: false, showInDock: there.showInDock };
+        case "inf:settings:dictation:get":
+          return { enabled: there.dictation, key: "AltRight" };
+        case "inf:settings:dictation:set":
+          there.dictation = (args[0] as { enabled: boolean }).enabled;
+          return { enabled: there.dictation, key: "AltRight" };
+        case "inf:own-window:here":
+          there.here += 1;
+          return { ok: true };
+        case "inf:own-window:focused":
+          there.focused += 1;
+          return { ok: true };
+        case "inf:own-window:answer":
+          there.answers.push(args);
+          return { ok: true };
+        case "inf:cards:list":
+          return there.cards;
+        case "inf:settings:notifications:get":
+          return true;
+        case "inf:update:hold":
+          there.holds.push(args[0]);
+          return { saved: true, work: { state: "resuming", tasks: ["Fix the flaky test"] } };
+        default:
+          return { run: channel };
+      }
+    }) as never);
+    const doorDir = join(scratchDir("infinitary-shell-beside-"), "local-door");
+    const pairing = new DevicePairing({
+      dir: join(scratchDir("infinitary-shell-beside-"), "devices"),
+      onProblem: () => {},
+    });
+    let connection: HomeConnection | null = null;
+    const open = () => {
+      connection = startConnection({
+        dispatch: run.core.dispatch,
+        events: run.core.events,
+        devices: pairing,
+        localDoor: doorDir,
+        port: 0,
+        onProblem: () => {},
+      });
+      return connection;
+    };
+    stops.push(async () => {
+      await connection?.close();
+      pairing.dispose();
+    });
+    return {
+      run,
+      there,
+      doorDir,
+      open,
+      stop: () => connection?.close(),
+      asked: (channel: string) =>
+        run.dispatch.mock.calls.filter(([asked]) => asked === channel).map(([, args]) => args),
+    };
+  }
+
+  function besideShell(
+    doorDir: string,
+    options: {
+      records?: Records;
+      entry?: StartEntry;
+      readyMs?: number;
+      installsUpdates?: boolean;
+      programReplaced?: boolean;
+    } = {},
+  ) {
+    const startCore = vi.fn(async () => ownCore().core);
+    const relaunch = vi.fn();
+    const openPage = vi.fn(async (_url: string) => {});
+    const pushes: { channel: string; payload: unknown }[] = [];
+    /** What the command's records say now, and which start entry is in place. */
+    const command = {
+      records: options.records ?? ({ running: true, run: JOINED, lastStop: null } as Records),
+      entry: options.entry ?? (null as StartEntry),
+      programReplaced: options.programReplaced ?? false,
+    };
+    /** This program's own Dock icon, login item, file picker and Notification Center. */
+    const program = {
+      dock: [] as boolean[],
+      startAtLogin: false,
+      picked: ["/home/kai/report.pdf"],
+      notified: [] as { title: string; body: string }[],
+    };
+    const made = new Shell({
+      joined: new JoinedHome(join(scratchDir("infinitary-shell-beside-"), "joined"), () => {}),
+      openPage,
+      beside: {
+        door: doorDir,
+        crewmatesDir: "/run/crewmates",
+        look: new JoinedHome(join(scratchDir("infinitary-shell-beside-"), "look"), () => {}),
+        status: () => command.records,
+        startEntry: () => command.entry,
+        // The entry's own wait is the rule's (besideRun.test.ts); here the window only waits to join.
+        restartWaitMs: 0,
+        presence: {
+          getStartAtLogin: () => program.startAtLogin,
+          setStartAtLogin: (enabled) => {
+            program.startAtLogin = enabled;
+          },
+          setShowInDock: (visible) => program.dock.push(visible),
+        },
+        chooseFiles: async () => program.picked,
+        installsUpdates: options.installsUpdates ?? false,
+        programReplaced: () => command.programReplaced,
+      },
+      startCore,
+      startConnection: () => {
+        throw new Error("A window beside a command serves no connection.");
+      },
+      ...(options.readyMs !== undefined ? { localWindow: { readyMs: options.readyMs } } : {}),
+      broadcast: (channel, payload) => pushes.push({ channel, payload }),
+      notifications: {
+        supported: () => true,
+        focused: () => false,
+        show: (notification) => program.notified.push(notification),
+      },
+      deviceName: async () => "MacBook Pro",
+      restartWindows: vi.fn(),
+      relaunch,
+      updates: ownUpdates().updates,
+    });
+    stops.push(() => made.dispose());
+    return { shell: made, startCore, relaunch, openPage, pushes, command, program };
+  }
+
+  it("asks the command's first mate over its door, with no core here", async () => {
+    const command = commandRun();
+    const opened = command.open();
+    await opened.settled();
+    const at = besideShell(command.doorDir);
+    await at.shell.start();
+    expect(at.startCore).not.toHaveBeenCalled();
+    expect(at.shell.core()).toBeNull();
+    // This computer's own window: nothing to leave, no device of the first mate's.
+    expect(at.shell.thisMac()).toEqual({ role: "home", left: null });
+    expect(await at.shell.dispatch("inf:repos:list", [])).toEqual({ run: "inf:repos:list" });
+    expect(command.run.dispatch.mock.calls.at(-1)?.slice(0, 3)).toEqual([
+      "inf:repos:list",
+      [],
+      { kind: "captain" },
+    ]);
+    command.run.core.events.emit("inf:models:changed", { ok: true });
+    await expect
+      .poll(() => at.pushes.filter((push) => push.channel === "inf:models:changed").length)
+      .toBe(1);
+    // The captain's answer direction=a, the window joins the command's first mate: a reply
+    // piece that first mate streams, sent outside the numbering, reaches this window too.
+    const piece = {
+      type: "assistant_delta",
+      taskId: "t1",
+      text: "The harbour opens at six.",
+    } as const;
+    command.run.core.events.emit("inf:event", piece);
+    await expect
+      .poll(() => at.pushes.filter((push) => push.channel === "inf:event").map((p) => p.payload))
+      .toEqual([piece]);
+    // Card pictures are read from the command's folder; dictation follows its switch.
+    expect(at.shell.pictures()).toEqual({ root: "/run/crewmates" });
+    expect(at.shell.dictationEnabled()).toBe(true);
+    await at.shell.dispatch("inf:settings:dictation:set", [{ enabled: false, key: "AltRight" }]);
+    expect(at.shell.dictationEnabled()).toBe(false);
+    expect(at.relaunch).not.toHaveBeenCalled();
+  });
+
+  // The captain's answer look_here=follow: "Follow the first mate's look and keys, on this
+  // computer only", with a copy kept so the window draws right before the first mate answers.
+  it("follows the first mate's look and keys, and keeps a copy for the next start", async () => {
+    const command = commandRun();
+    command.there.keys = {
+      ...presetKeymap("emacs"),
+      keys: { "settings.open": [{ key: "KeyD", meta: true }] },
+    };
+    await command.open().settled();
+    const at = besideShell(command.doorDir);
+    await at.shell.start();
+    expect(at.shell.preferences.get().appearance).toMatchObject({ theme: "light", size: 125 });
+    expect(at.shell.preferences.keymap()).toEqual({ saved: command.there.keys, unreadable: false });
+    // A change made in this window is the first mate's to keep; the window follows its answer.
+    const dark = { ...command.there.look.appearance, theme: "dark" as const };
+    expect(await at.shell.dispatch("inf:settings:appearance:set", [dark])).toEqual(dark);
+    expect(command.there.look.appearance.theme).toBe("dark");
+    expect(at.shell.preferences.get().appearance.theme).toBe("dark");
+    // A change the first mate makes itself reaches the window, and its windows hear the look.
+    command.there.look = {
+      ...command.there.look,
+      appearance: { ...command.there.look.appearance, size: 150 },
+    };
+    command.run.core.events.emit("inf:shell:preferences", command.there.look);
+    await expect.poll(() => at.shell.preferences.get().appearance.size).toBe(150);
+    expect(at.pushes.findLast((push) => push.channel === "inf:shell:preferences")?.payload).toEqual(
+      at.shell.preferences.get(),
+    );
+    // Keys changed here are installed here and kept by the first mate.
+    const keys: SavedKeymap = {
+      ...presetKeymap("emacs"),
+      keys: { "settings.open": [{ key: "KeyE", meta: true }] },
+    };
+    at.shell.preferences.setKeymap(keys);
+    expect(at.shell.preferences.keymap().saved).toEqual(keys);
+    await expect.poll(() => command.there.keys).toEqual(keys);
+  });
+
+  it("reads everything once the command's door opens after the window", async () => {
+    const command = commandRun();
+    const at = besideShell(command.doorDir, { readyMs: 20 });
+    await at.shell.start();
+    expect(at.shell.thisMac()).toEqual({ role: "home", left: null });
+    await command.open().settled();
+    await expect
+      .poll(() => at.shell.thisMac(), { timeout: 5_000 })
+      .toEqual({
+        role: "home",
+        left: null,
+        caughtUp: 1,
+      });
+    expect(await at.shell.dispatch("inf:repos:list", [])).toEqual({ run: "inf:repos:list" });
+    // The late welcome still gives it the first mate's look and its dictation switch.
+    await expect.poll(() => at.shell.preferences.get().appearance.theme).toBe("light");
+    await expect.poll(() => at.shell.dictationEnabled()).toBe(true);
+  });
+
+  // INF-3645's review: a command's first mate opens no page itself, so a sign-in started
+  // from this window opened no browser page here.
+  it("opens each page the command's first mate sends, a sign-in's too", async () => {
+    const command = commandRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir);
+    await at.shell.start();
+    const page = "https://example.com/sign-in?state=1";
+    command.run.core.events.emit("inf:app:open-page", { url: page });
+    const google = "https://accounts.google.com/o/oauth2/auth?state=2";
+    command.run.core.events.emit("inf:app:sign-in-page", {
+      url: google,
+      id: "return-1",
+      port: 4242,
+    });
+    await expect.poll(() => at.openPage.mock.calls.map(([url]) => url)).toEqual([page, google]);
+  });
+
+  // INF-3645's review: the window's dictation switch followed only its own reads and sets.
+  it("follows the first mate's dictation switch, wherever it is turned", async () => {
+    const command = commandRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir);
+    await at.shell.start();
+    expect(at.shell.dictationEnabled()).toBe(true);
+    command.run.core.events.emit("inf:settings:dictation", { enabled: false, key: "AltRight" });
+    await expect.poll(() => at.shell.dictationEnabled()).toBe(false);
+  });
+
+  // The captain's answer dock=split: "The first mate keeps Show in Dock and this window
+  // applies it; this window changes Start at login itself".
+  it("applies the first mate's Dock choice to this program, and answers Start at login from it", async () => {
+    const command = commandRun();
+    command.there.showInDock = false;
+    await command.open().settled();
+    const at = besideShell(command.doorDir);
+    await at.shell.start();
+    // It says it is open, then applies what the first mate keeps.
+    expect(command.there.here).toBe(1);
+    expect(at.program.dock).toEqual([false]);
+    command.run.core.events.emit("inf:presence:dock", { showInDock: true });
+    await expect.poll(() => at.program.dock).toEqual([false, true]);
+    // The first mate asks this window for what only its program can read or change.
+    command.run.core.events.emit("inf:own-window:ask", {
+      id: "ask-1",
+      ask: { kind: "start-at-login", set: true },
+    });
+    await expect
+      .poll(() => command.there.answers)
+      .toEqual([["ask-1", { kind: "start-at-login", enabled: true }]]);
+    expect(at.program.startAtLogin).toBe(true);
+    // The extras: a task browser page's file dialog is this window's too.
+    command.run.core.events.emit("inf:own-window:ask", {
+      id: "ask-2",
+      ask: { kind: "choose-files", multiple: true },
+    });
+    await expect
+      .poll(() => command.there.answers.at(-1))
+      .toEqual(["ask-2", { kind: "choose-files", paths: ["/home/kai/report.pdf"] }]);
+    // None of it is the window's own pages' to hear.
+    expect(
+      at.pushes.filter(
+        (push) => push.channel === "inf:own-window:ask" || push.channel === "inf:presence:dock",
+      ),
+    ).toEqual([]);
+  });
+
+  // The captain's answer notifications=window: "This computer's window, while Infinitary is
+  // running; the run never posts".
+  it("posts the first mate's new card on this computer", async () => {
+    const command = commandRun();
+    const old = shown("old", { title: "Already there" });
+    command.there.cards = [old];
+    await command.open().settled();
+    const at = besideShell(command.doorDir);
+    await at.shell.start();
+    const report = shown("report", { title: "Tests fixed", body: "<p>All green.</p>" });
+    command.run.core.events.emit("inf:cards", [old, report]);
+    await expect
+      .poll(() => at.program.notified)
+      .toEqual([{ title: "Tests fixed", body: "All green." }]);
+  });
+
+  // The extras, same piece: coming back to the window refreshes the plan's allowance.
+  it("tells the first mate when the window comes to the front", async () => {
+    const command = commandRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir);
+    await at.shell.start();
+    at.shell.windowFocused();
+    await expect.poll(() => command.there.focused).toBe(1);
+  });
+
+  // The captain's answer restart=wait-for-entry: "offer it at once when none will restart the
+  // run". A kill leaves the earlier command's stop record, which names another command.
+  it("says the command stopped and offers Start it here at once when no entry restarts it", async () => {
+    const command = commandRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir);
+    await at.shell.start();
+    at.command.records = stopped("quit", 0, { pid: 7, startedAt: "2026-10-30T08:00:00.000Z" });
+    await command.stop();
+    await expect
+      .poll(() => at.shell.thisMac(), { timeout: 5_000 })
+      .toEqual({ role: "home", left: null, command: { state: "stopped", ending: "crashed" } });
+    expect(at.pushes.at(-1)).toEqual({
+      channel: "inf:devices:this-mac",
+      payload: at.shell.thisMac(),
+    });
+    // It never starts a first mate by itself: only the person's Start it here does.
+    expect(at.relaunch).not.toHaveBeenCalled();
+    expect(at.shell.startHere()).toBe(true);
+    expect(at.relaunch.mock.calls).toEqual([[{ startHere: true }]]);
+  });
+
+  it("never offers Start it here while the command it joined is alive", async () => {
+    const command = commandRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir);
+    await at.shell.start();
+    // Out of reach, with the command still running: no notice, nothing to start.
+    await command.stop();
+    await expect
+      .poll(() => at.shell.dispatch("inf:repos:list", []).catch(() => "lost"))
+      .toBe("lost");
+    expect(at.shell.thisMac()).toEqual({ role: "home", left: null });
+    expect(at.shell.startHere()).toBe(false);
+    expect(at.relaunch).not.toHaveBeenCalled();
+  });
+
+  // "Wait for the start entry when one is in place, then offer it": exit 75 under a
+  // restarting entry waits, and an entry that never comes back ends in the offer.
+  it("waits for the start entry after an update, then offers Start it here when it never comes back", async () => {
+    const command = commandRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir, { entry: "linux-unit", readyMs: 400 });
+    await at.shell.start();
+    at.command.records = stopped("updated", 75);
+    await command.stop();
+    await expect
+      .poll(() => at.shell.thisMac(), { timeout: 5_000 })
+      .toEqual({ role: "home", left: null, command: { state: "waiting", ending: "updated" } });
+    expect(at.shell.startHere()).toBe(false);
+    await expect
+      .poll(() => at.shell.thisMac(), { timeout: 5_000 })
+      .toEqual({ role: "home", left: null, command: { state: "stopped", ending: "updated" } });
+    expect(at.relaunch).not.toHaveBeenCalled();
+  });
+
+  // The third launch state: the window opened while the command is between two stops.
+  it("opened between two commands, waits under the notice and joins the one the entry starts", async () => {
+    const command = commandRun();
+    const at = besideShell(command.doorDir, {
+      records: stopped("updated", 75),
+      entry: "linux-unit",
+      readyMs: 60_000,
+    });
+    // It draws at once, under its notice, and starts no first mate.
+    await at.shell.start();
+    expect(at.startCore).not.toHaveBeenCalled();
+    expect(at.shell.thisMac()).toEqual({
+      role: "home",
+      left: null,
+      command: { state: "waiting", ending: "updated" },
+    });
+    at.command.records = { running: true, run: JOINED, lastStop: at.command.records.lastStop };
+    await command.open().settled();
+    // The command the entry started welcomes it: the notice goes and the window reads everything.
+    await expect
+      .poll(() => at.shell.thisMac(), { timeout: 5_000 })
+      .toEqual({ role: "home", left: null, caughtUp: 1 });
+    await expect.poll(() => at.shell.preferences.get().appearance.theme).toBe("light");
+  });
+
+  // The captain's answer update=window-installs. Where the first mate can replace the program
+  // itself, its updater is the only one, and this window follows the new program.
+  it("asks the first mate's own updater, and starts again on the program it replaced", async () => {
+    const command = commandRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir);
+    await at.shell.start();
+    expect(await at.shell.dispatch("inf:update:status", [])).toEqual({ run: "inf:update:status" });
+    expect(await at.shell.dispatch("inf:update:install", [])).toEqual({
+      run: "inf:update:install",
+    });
+    // The command ended for its update and came back on the new program.
+    at.command.programReplaced = true;
+    await command.stop();
+    await command.open().settled();
+    await expect.poll(() => at.relaunch.mock.calls, { timeout: 5_000 }).toEqual([[undefined]]);
+  });
+
+  // "This window installs it for the run, while the run holds the crew's saved work."
+  it("installs an update itself where only a window can, with the first mate ending first", async () => {
+    const command = commandRun();
+    await command.open().settled();
+    const at = besideShell(command.doorDir, { installsUpdates: true });
+    await at.shell.start();
+    // This program's own notice, with the work the first mate still resumes.
+    const status = await at.shell.dispatch("inf:update:status", []);
+    expect(status).toMatchObject({
+      currentVersion: "0.1.28-alpha.3",
+      work: { state: "resuming", tasks: ["Fix the flaky test"] },
+    });
+    expect(command.asked("inf:update:status")).toEqual([]);
+    // Before this window's update replaces the copy, the first mate ends with its work saved.
+    await at.shell.updateReplacing();
+    expect(command.there.holds.at(-1)).toBe("replaced");
   });
 });

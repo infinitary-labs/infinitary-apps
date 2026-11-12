@@ -114,6 +114,20 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
     "The captain's Ask again on a panel's integration call; it shows that call's approval card again, and nothing is set",
   "inf:plugins:personal:mounts":
     "The window's own answer about which panels it drew, sent whenever it changes; nothing is set",
+  "inf:own-window:here":
+    "This computer's window saying it is open beside a first mate a command started; nothing is set",
+  "inf:own-window:answer":
+    "This computer's window answering what its first mate asked of it; nothing is set",
+  "inf:own-window:focused":
+    "This computer's window coming to the front, which reads a stale allowance again; nothing is set",
+  "inf:voice:primed":
+    "The window's own record of the first hold to talk, after the system was asked about the microphone",
+  "inf:settings:keys:set":
+    "The captain's own keys, changed in Keyboard settings; the first mate never changes a key",
+  "inf:runbooks:folder":
+    "The captain's click on a runbook's folder button; it makes the folder ready and answers its path, and nothing is set",
+  "inf:update:hold":
+    "The hold this computer's window keeps on the crew's saved work while it installs the captain's own update; a model cannot grant it",
   "inf:work:card": WORK_REQUEST,
   "inf:work:card-refused": WORK_REQUEST,
   "inf:work:close-card": WORK_REQUEST,

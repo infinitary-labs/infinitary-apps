@@ -1,5 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { readPanelGraph } from "@core/personal/panelGraph";
+import { PANEL_FILES_WORDS } from "@shared/personal/panelFiles";
 import {
   PANEL_CONFIG_ID,
   PANEL_ROOT_ID,
@@ -45,22 +47,38 @@ function graph(files: Record<string, string>): string {
   return dir;
 }
 
+/** This build's version, which the first mate's answer names the files as built for. */
+const VERSION = "0.7.0";
+
 /**
- * The core's compiled graphs, keyed `id@version` for an added panel, and
+ * The first mate's answer for a panel's built files, from the compiled
+ * graphs it holds: keyed `id@version` for an added panel, and
  * `yours:id@version` (`#draft` for a panel being built) for the captain's own.
  */
 function sources(
   installed: Record<string, string> = {},
   pins: Record<string, string> = libPins,
+  builtFor = VERSION,
 ): PanelSources {
   return {
     libPins: pins,
-    panelDir: (source, id, version, draft) =>
-      installed[
-        source === "installed"
-          ? `${id}@${version}`
-          : `yours:${id}@${version}${draft ? "#draft" : ""}`
-      ] ?? null,
+    version: VERSION,
+    panelFiles: async ({ source, id, version, draft }) => {
+      const dir =
+        installed[
+          source === "installed"
+            ? `${id}@${version}`
+            : `yours:${id}@${version}${draft ? "#draft" : ""}`
+        ];
+      if (!dir) return null;
+      return {
+        builtFor,
+        files: [...(await readPanelGraph(dir))].map(([path, bytes]) => ({
+          path,
+          data: Buffer.from(bytes).toString("base64"),
+        })),
+      };
+    },
   };
 }
 
@@ -269,6 +287,27 @@ describe("a panel mount", () => {
         panels: sources({ "token-meter@0123456789abcdef": noEntry }),
       }).mountPanel(installedRequest()),
     ).rejects.toThrow("no entry");
+
+    // INF-3660's plan, "Your panels, in every window": "A window on a
+    // different version from the first mate says so in plain words instead
+    // of drawing a panel."
+    const built = graph({ "panel.mjs": "export default () => null;" });
+    await expect(
+      new FrameMountRegistry({
+        panels: sources({ "token-meter@0123456789abcdef": built }, libPins, "0.6.9"),
+      }).mountPanel(installedRequest()),
+    ).rejects.toThrow(PANEL_FILES_WORDS.otherVersion);
+    // The first mate's refusal reaches the panel in its own words.
+    await expect(
+      new FrameMountRegistry({
+        panels: {
+          ...sources(),
+          panelFiles: async () => {
+            throw new Error("inf:plugins:files is not a request this home answers.");
+          },
+        },
+      }).mountPanel(installedRequest()),
+    ).rejects.toThrow("is not a request this home answers");
 
     const capped = new FrameMountRegistry({ panelCap: 1, panels: sources() });
     await capped.mountPanel(builtinRequest);

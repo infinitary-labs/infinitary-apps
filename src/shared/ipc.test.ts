@@ -241,7 +241,9 @@ describe("ipc contract", () => {
    * item and the dock, what this app is on its Mac - the one holding
    * Firstmate, or a view of another (docs/view.md) - with its one push, and
    * the window's keys, which belong to the Mac whose keyboard pressed them
-   * (docs/keyboard.md).
+   * (docs/keyboard.md), and the two buttons of the notice over a window
+   * whose command stopped, which start this program again or quit it
+   * (docs/run.md, "When the command stops").
    * Everything else is the core's, so a channel added without a deliberate
    * classification lands on the protocol - and fails here if that was wrong.
    */
@@ -250,6 +252,8 @@ describe("ipc contract", () => {
       "inf:app:choose-folder",
       "inf:app:open-external",
       "inf:app:open-runbook-folder",
+      "inf:app:quit",
+      "inf:app:start-here",
       "inf:devices:join",
       "inf:devices:join-at",
       "inf:devices:join-held",
@@ -452,6 +456,17 @@ describe("ipc contract", () => {
       "inf:models:slots:reset",
       "inf:models:slots:set",
       "inf:models:speed:set",
+      // INF-3660's plan, "Your panels, in every window": a panel asks the first mate from any window.
+      "inf:plugins:ask-again",
+      "inf:plugins:db",
+      "inf:plugins:fetch",
+      "inf:plugins:files",
+      "inf:plugins:integrations",
+      "inf:plugins:invoke",
+      "inf:plugins:personal:list",
+      "inf:plugins:personal:mounts",
+      "inf:plugins:retry",
+      "inf:plugins:update",
       "inf:projects:list",
       "inf:quota:models",
       "inf:quota:refresh",
@@ -500,6 +515,7 @@ describe("ipc contract", () => {
       "inf:settings:sharing:set",
       "inf:settings:sharing:viewed",
       "inf:shell:preferences",
+      "inf:sql:query",
       "inf:task:abort",
       "inf:task:close-done",
       "inf:task:delete",

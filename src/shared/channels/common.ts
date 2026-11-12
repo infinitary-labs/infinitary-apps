@@ -6,10 +6,12 @@ import { PASTE_FILE_MAX_BYTES, PASTE_FILES_MAX } from "../composer";
  * computer alone, or a computer that runs work alone. `home` is what stays
  * with the first mate's own computer: its computers and phones and the
  * address they find it at, a task's browser and a page from a task's
- * project, its Secrets, and its own look, voice, panels and their
- * extensions, Knowledge, Observe, release notes, Dock and update. A view
- * asks everything else, whatever started that first mate
- * (docs/connection.md, "Requests").
+ * project, its Secrets, and its own look, voice, extensions, Knowledge,
+ * Observe, release notes, Dock and update, with what this computer's own
+ * window tells a first mate a command started (docs/run.md, "The window
+ * opened beside it"). A view asks everything else, the captain's panels
+ * included, whatever started that first mate (docs/connection.md,
+ * "Requests").
  */
 type ChannelReach = "views" | "home" | "work";
 

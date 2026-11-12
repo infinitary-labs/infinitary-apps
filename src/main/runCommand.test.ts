@@ -14,8 +14,8 @@ import {
 
 /**
  * Infinitary started by a command (docs/run.md; INF-1228's approved plan,
- * piece 1, and the captain's pick on its question 6, "It says a command
- * started Infinitary here, and quits").
+ * piece 1), and the window opened beside it, which joins it as a view
+ * (INF-1352's plan, piece 6, the captain's answer window_joins=join).
  */
 
 afterEach(() => {

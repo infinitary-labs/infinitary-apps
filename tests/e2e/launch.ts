@@ -205,6 +205,8 @@ export type LaunchOptions = {
    */
   deviceScaleFactor?: number;
   env?: Record<string, string>;
+  /** Words after the app on its command line, such as the one Start it here starts it with. */
+  args?: readonly string[];
   /**
    * Seed files into the throwaway HOME before Electron starts. Claude's
    * credential lives at `$HOME/.claude` (CD-1=B); callers that need a
@@ -454,6 +456,10 @@ export function hermeticEnv(input: {
     // No GitHub CLI unless the spec names its own stand-in, so no test finds
     // or asks the one installed on this Mac (docs/forge.md, "GitHub CLI's sign-in").
     INFINITARY_GITHUB_CLI: "none",
+    // No start entry is in place unless the spec names its own stand-in
+    // file, so no test reads this computer's own (docs/run.md, "When the
+    // command stops").
+    INFINITARY_RUN_START_ENTRY: join(userDataDir, "no-start-entry"),
     INFINITARY_CONNECTION_LOOPBACK_PORT: loopbackPort,
   };
 }
@@ -538,6 +544,7 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
       ...(process.platform === "linux" ? ["--disable-lcd-text"] : []),
       // In a virtual Mac the app draws in software (tests/e2e/virtualMac.ts).
       ...virtualMacSwitches(),
+      ...(options.args ?? []),
     ],
     env: {
       ...hermeticEnv({ userDataDir, homeDir, loopbackPort }),

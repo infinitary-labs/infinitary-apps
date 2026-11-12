@@ -21,7 +21,7 @@ import {
   isPhoneDiagnosticEvent,
 } from "@shared/diagnostics";
 
-const HARDCODED_FALLBACK_HOST = "https://a.kunchenguid.com";
+const HARDCODED_FALLBACK_HOST = "https://diagnostics.getinfinitary.com";
 const UMAMI_PATH = "/api/send";
 const DEFAULT_HOSTNAME = "app";
 const DEFAULT_TITLE = "Firstmate 3000";

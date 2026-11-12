@@ -1180,7 +1180,7 @@ describe("the private alpha (roadmap 1.2)", () => {
       const disclosure = (first ?? "").replace(/\s+/g, " ").trim();
       expect(disclosure).toContain("so Infinitary Labs, Inc. can see");
       expect(disclosure).toMatch(
-        /Feedback is welcome on the Infinitary Discord: https:\/\/discord\.gg\/Wsy2NpnZDu$/,
+        /Feedback is welcome on Discord: https:\/\/discord\.gg\/Wsy2NpnZDu$/,
       );
     }
     expect(notice).toMatch(/^Infinitary is in private alpha/);

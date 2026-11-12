@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "company-diagnostics-address",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "Diagnostics go to an Infinitary address",
+      "body": "Settings → Sharing now says diagnostics are sent to diagnostics.getinfinitary.com, on Infinitary's own domain. What is sent has not changed.",
+      "noPicture": "Only the address in one sentence of Settings → Sharing changes; the view is otherwise the same.",
+      "provenance": { "origin": "change", "covers": [] }
+    }
+  ],
+  "exclusions": []
+}

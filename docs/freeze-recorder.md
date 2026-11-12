@@ -129,6 +129,8 @@ It proves the facts and wording served, not a model's subsequent judgment, and u
 ## Before a change merges
 
 The freeze journey (`tests/e2e/main-thread-freeze.spec.ts`, INF-2061's plan, built as INF-2068) runs the actual app with the recorder on, on a record the captain's size: 160,094 task events, 3,400 tasks and 33 open messages in 13 chains, each a reading of the captain's own record (`tests/e2e/captainSizedRecord.ts`).
+INF-3896's reading adds what a record with none of it never made slow: the closed tasks' goals, 6,449 answered cards with the offers that carry their words, 3,872 links, a board of 1,701 rows holding a week of closed work with its change stories, live validation and CI repair records, nine open cards naming earlier work, and a heaviest task record of 248 offers.
+Only counts and sizes come from the captain's record; every word is made in the seed.
 It drives the work that repeats: first mate turns, which read the open messages before and after each, the task board, typing, and five minute passes with the answer-delivery sweep.
 It also starts a crewmate and waits for its first report, which comes after its first turn opened: every start-path stall the captain's record held ran in that stretch (INF-2297).
 It then starts nine crewmates from one first mate turn while the window takes typing, and finds their nine tasks with one board read per try, so the journey's own reads stay out of the stalls it grades.

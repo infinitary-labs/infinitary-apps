@@ -186,6 +186,31 @@ export const PANELS_IN_EVERY_WINDOW = contractChange("panels-in-every-window");
 export const STREAMED_EVENTS_LIVE = contractChange("streamed-events-live");
 
 /**
+ * The computers' live processor and memory readings go to a view as `live`
+ * frames, outside the numbering, and to a phone not at all
+ * (`computer-readings-live.md`).
+ */
+export const COMPUTER_READINGS_LIVE = contractChange("computer-readings-live");
+
+/** The push the computers' readings ride (`computer-readings-live.md`). */
+const READINGS_CHANNEL = "inf:computers:resources";
+
+/**
+ * How a view is sent a push that stays outside the numbering: as a `live`
+ * frame, under the newest number for a view from before its change, or not at
+ * all, as a phone, which never reads it.
+ */
+type Unnumbered = "live" | "numbered" | "none";
+
+function unnumberedFor(
+  hello: { system?: string; changes?: readonly string[] },
+  change: ReturnType<typeof contractChange>,
+): Unnumbered {
+  if (hello.system === "ios") return "none";
+  return listsChange(hello.changes, change) ? "live" : "numbered";
+}
+
+/**
  * Who a client the local door admitted is (docs/connection.md, "The local
  * door"): no device on the list, never told to pairing, always a view.
  */
@@ -440,7 +465,9 @@ type Client = {
    * (`streamed-events-live.md`): as `live` frames, under the newest number
    * for a view from before the change, or not at all, as a phone.
    */
-  streamed: "live" | "numbered" | "none";
+  streamed: Unnumbered;
+  /** How it is sent the computers' readings (`computer-readings-live.md`), as `streamed` is. */
+  readings: Unnumbered;
   access: ContractAccess;
   closing: boolean;
   /** What the home writes to it, paced by its answers. */
@@ -804,29 +831,42 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       }
       client.out.send(frame);
     };
-    // What is happening in a turn now (`isStreamedEvent`): outside the
-    // numbering, so a stream of reply pieces never pushes a dropped view's
-    // place out of the journal, and only to the views that read it.
-    const sendStreamed = (event: FmEvent) => {
+    // What is happening in a turn now (`isStreamedEvent`), and the
+    // computers' readings: outside the numbering, so a stream of them never
+    // pushes a dropped view's place out of the journal, and only to the views
+    // that read them.
+    const sendUnnumbered = (
+      channel: string,
+      payload: unknown,
+      how: (client: Client) => Unnumbered,
+    ) => {
       for (const client of clients) {
-        if (!client.welcomed || client.role !== "view" || client.streamed === "none") continue;
-        const channel = channelIn("inf:event", client.spelling);
-        if (client.streamed === "live") {
-          send(client, JSON.stringify({ t: "live", channel, payload: event }));
+        if (!client.welcomed || client.role !== "view") continue;
+        const mode = how(client);
+        if (mode === "none") continue;
+        const spelled = channelIn(channel, client.spelling);
+        if (mode === "live") {
+          send(client, JSON.stringify({ t: "live", channel: spelled, payload }));
           continue;
         }
         // A view from before the change reads only numbered pushes: the newest
         // number again moves its cursor nowhere, so a replay still has no hole.
         if (journal.seq > 0)
-          send(client, JSON.stringify({ t: "push", seq: journal.seq, channel, payload: event }));
+          send(client, JSON.stringify({ t: "push", seq: journal.seq, channel: spelled, payload }));
       }
     };
     // Never throws into the core's emit. A push that cannot be written would
     // leave every device with a hole it cannot see, so they all start over.
     const detach = events.subscribe((channel, payload) => {
-      if (channel === "inf:event" && isStreamedEvent(payload as FmEvent)) {
+      const unnumbered =
+        channel === "inf:event" && isStreamedEvent(payload as FmEvent)
+          ? (client: Client) => client.streamed
+          : channel === READINGS_CHANNEL
+            ? (client: Client) => client.readings
+            : null;
+      if (unnumbered) {
         try {
-          sendStreamed(payload as FmEvent);
+          sendUnnumbered(channel, payload, unnumbered);
         } catch (error) {
           onProblem(`could not send ${channel}: ${(error as Error).message}`);
         }
@@ -957,12 +997,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       client.sharedCards =
         hello.system === "ios" || readsSharedCards(hello.protocolVersion, hello.changes);
       client.taskAllow = readsTaskAllow(hello.protocolVersion, hello.changes);
-      client.streamed =
-        hello.system === "ios"
-          ? "none"
-          : listsChange(hello.changes, STREAMED_EVENTS_LIVE)
-            ? "live"
-            : "numbered";
+      client.streamed = unnumberedFor(hello, STREAMED_EVENTS_LIVE);
+      client.readings = unnumberedFor(hello, COMPUTER_READINGS_LIVE);
       // From the welcome on, a long frame goes as parts to a device that reads them.
       client.out.parts = readsFrameParts(hello.protocolVersion, hello.changes);
       // A view changes things across majors its floor allows; work only on this home's own.
@@ -1164,6 +1200,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         sharedCards: false,
         taskAllow: false,
         streamed: "none",
+        readings: "none",
         access: "read",
         closing: false,
         out: new Outbox(ws, pacing),

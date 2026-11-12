@@ -18,6 +18,7 @@ import {
   PROTOCOL_VERSION,
 } from "@shared/ipc";
 import { publishedContract } from "@shared/publishedContract";
+import type { ComputerResourcesView } from "@shared/resources";
 import { describe, expect, it, vi } from "vitest";
 import { connectClient } from "../../../tests/helpers/connectionClient";
 import {
@@ -34,6 +35,7 @@ import { createKeyIdentity } from "../devices/identity";
 import { DevicePairing, type DevicePairingOptions } from "../devices/pairing";
 import type { CoreDispatch } from "../dispatcher";
 import {
+  COMPUTER_READINGS_LIVE,
   DeviceOutOfReachError,
   type PairedDevices,
   STREAMED_EVENTS_LIVE,
@@ -991,6 +993,63 @@ describe("the home's connection", () => {
       cursor.seq,
       cursor.seq + 1,
       cursor.seq + 2,
+    ]);
+  });
+
+  // INF-3851's piece 3: while crew work runs the home pushes the computers' readings every two seconds, and the
+  // phone, which never shows them, was sent every one and woken to read it.
+  it("sends the computers' readings outside the numbering, and none to a phone", async () => {
+    const at = await home({ journal: { entries: 4, bytes: 1_000_000 } });
+    const grant = await at.join();
+    const current = await connectClient(await at.join(), { changes: [COMPUTER_READINGS_LIVE] });
+    const older = await connectClient(await at.join(), { changes: [] });
+    const phone = await connectClient(await at.join(), { system: { system: "ios" } });
+    const first = await connectClient(grant);
+    changed(at.events);
+    await first.push(() => true);
+    const cursor = first.cursor();
+    await first.close();
+
+    const readings: ComputerResourcesView[] = (
+      ["missing", "timeout", "stale", "out-of-reach", "missing", "timeout"] as const
+    ).map((reason) => ({
+      computers: [
+        { computerId: null, label: "This Mac", reading: { status: "unknown", reason } },
+        {
+          computerId: "mac-mini",
+          label: "Mac mini",
+          reading: { status: "unknown", reason: "out-of-reach" },
+        },
+      ],
+    }));
+    for (const reading of readings) at.events.emit("inf:computers:resources", reading);
+    changed(at.events);
+
+    // Six readings against a journal of four: only the one numbered push is kept, so the gap still replays.
+    const back = await connectClient(grant, { cursor });
+    expect(back.welcome.catchUp).toBe("replay");
+    expect(back.pushes.map((push) => [push.seq, push.channel])).toEqual([
+      [cursor.seq + 1, "inf:models:changed"],
+    ]);
+    expect(back.lives).toEqual([]);
+
+    for (const view of [current, older, phone])
+      await view.push((push) => push.seq === cursor.seq + 1);
+    // A current view reads them live, outside the numbering.
+    expect(current.lives).toEqual(
+      readings.map((payload) => ({ channel: "inf:computers:resources", payload })),
+    );
+    expect(current.pushes.map((push) => push.seq)).toEqual([cursor.seq, cursor.seq + 1]);
+    // A view from before the change reads them as before, under the newest number already sent.
+    expect(older.lives).toEqual([]);
+    expect(
+      older.pushes.filter((push) => push.seq === cursor.seq).map((push) => push.payload),
+    ).toEqual([{ ok: true }, ...readings]);
+    // The phone never shows them, so it is sent none, and its numbering stays whole.
+    expect(phone.lives).toEqual([]);
+    expect(phone.pushes.map((push) => [push.seq, push.channel])).toEqual([
+      [cursor.seq, "inf:models:changed"],
+      [cursor.seq + 1, "inf:models:changed"],
     ]);
   });
 

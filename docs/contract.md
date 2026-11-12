@@ -304,6 +304,7 @@ A Mac's memory reading may carry inactive memory, speculative memory and macOS p
 A fresh reading may carry `memoryUsedBytes`, installed memory the home counts as used, by the one figure in `docs/routing.md`.
 The `computers.resources` panel read, the `inf:computers:resources` request and its push share these live observations (`docs/helper.md`, "Shared live readings").
 The request is read-only and open to paired views but not work connections, and a panel must declare the read to subscribe.
+The push goes to a view as a `live` frame, outside the numbering, and to a phone not at all (`computer-readings-live`, `docs/connection.md`, "Live pushes").
 The published reading keeps every raw count, and a panel is handed installed memory, the memory-used figure and Mac pressure, never the raw counts.
 
 ### Files

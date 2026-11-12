@@ -429,6 +429,7 @@ Screens, personal panels and Automatic placement share the `computers.resources`
 ### Shared live readings
 
 `computers.resources` is the read-only catalog interface for screens and personal panels, served by `inf:computers:resources` and the same-named push.
+A paired view is sent that push as a `live` frame outside the numbering, and a phone, which never shows it, is sent none (`docs/connection.md`, "Live pushes").
 A panel must declare that read in its manifest; the frame controller and personal-panel binding refuse an undeclared subscription before making any request.
 An authenticated paired view may read it, but a work connection cannot ask it.
 Its `computers` array contains the home (`computerId: null`) and each paired work computer, with a label and the shared `ComputerResourceReading` shape from `src/shared/resources.ts`.

@@ -87,6 +87,9 @@ export class LocalWindow {
         if (channel === "inf:browser:frame") this.browsers.show(payload);
         // A streamed reply piece or a tool's start or end (`streamed-events-live.md`).
         if (channel === "inf:event") options.broadcast("inf:event", payload, false);
+        // The computers' live readings (`computer-readings-live.md`).
+        if (channel === "inf:computers:resources")
+          options.broadcast("inf:computers:resources", payload, false);
       },
       onCaughtUp: (catchUp) => {
         // A new connection: the first mate forgot every watch with the last one.

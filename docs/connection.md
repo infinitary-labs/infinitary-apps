@@ -172,6 +172,11 @@ A tool's end that reports usage stays numbered, since the usage reads follow it.
 A phone is sent none of them, since it never reads them.
 A view whose hello does not list the change is sent each as a `push` under the newest number already sent, which moves its cursor nowhere, so it reads them as before; the next major removes that.
 
+The computers' processor and memory readings are live the same way (`computer-readings-live`): `inf:computers:resources` goes as a `live` frame, every two seconds while crew work runs or a screen asks (`docs/helper.md`, "Shared live readings").
+Each reading is whole and the next one replaces it, so a replay that skips the ones a view missed leaves nothing behind.
+A phone is sent none of them, since it never shows them, so they never wake it while crew work runs.
+A view whose hello does not list the change is sent each as a `push` under the newest number already sent, as with streamed events; the next major removes that.
+
 ## Closing
 
 | Code | Name | When |

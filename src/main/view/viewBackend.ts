@@ -211,6 +211,9 @@ export class ViewBackend {
         if (channel === "inf:browser:frame") this.browsers.show(payload);
         // A streamed reply piece or a tool's start or end (`streamed-events-live.md`).
         if (channel === "inf:event") options.broadcast("inf:event", payload);
+        // The computers' live readings (`computer-readings-live.md`).
+        if (channel === "inf:computers:resources")
+          options.broadcast("inf:computers:resources", payload);
       },
       onCaughtUp: (catchUp) => {
         if (!this.look.seeded()) void this.seedLook();

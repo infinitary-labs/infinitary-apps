@@ -100,8 +100,9 @@ it("refuses command settings before forwarding to an old or unknown home, withou
 });
 
 // INF-3750's option D: the home sends streamed reply pieces and tool starts and ends as `live` frames, and the
-// window's crewmate transcript and Observe read them as events, as they did numbered.
-it("hands a streamed reply piece the home sent live to this Mac's windows as an event", () => {
+// window's crewmate transcript and Observe read them as events, as they did numbered. INF-3851's piece 3 sends the
+// computers' readings live too, and the window's computer screens and panels read them as they did numbered.
+it("hands a streamed reply piece and a computers' reading the home sent live to this Mac's windows", () => {
   const sent: [string, unknown][] = [];
   let hear: HomeLinkOptions["onLive"];
   const view = new ViewBackend({
@@ -153,5 +154,14 @@ it("hands a streamed reply piece the home sent live to this Mac's windows as an 
     text: "The harbour opens at six.",
   } as const;
   hear?.("inf:event", piece);
-  expect(sent).toEqual([["inf:event", piece]]);
+  const reading = {
+    computers: [
+      { computerId: null, label: "Mac mini", reading: { status: "unknown", reason: "missing" } },
+    ],
+  };
+  hear?.("inf:computers:resources", reading);
+  expect(sent).toEqual([
+    ["inf:event", piece],
+    ["inf:computers:resources", reading],
+  ]);
 });

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "prompt-budget-trim",
+      "reason": "Shortens internal agent instructions without changing their intended behavior."
+    }
+  ]
+}

@@ -45,6 +45,8 @@ export type AskChain = {
   work: TaskCoverageFields[];
   /** The tasks of `work` the first mate's own tools attached the chain's messages to. */
   acted: ReadonlySet<string>;
+  /** When a merge linked each task of `work` it filed or started (`askCoverage`'s `joined`). */
+  joined?: ReadonlyMap<string, number>;
 };
 
 /**
@@ -120,7 +122,7 @@ export class AskEnding {
 
   private withCoverage(root: AskRecord, members: AskRecord[]): AskChain {
     const ids = members.map((member) => member.id);
-    const { work, acted } = this.host.tasks.capture.askCoverage(ids);
+    const { work, acted, joined } = this.host.tasks.capture.askCoverage(ids);
     return {
       root,
       members,
@@ -128,6 +130,7 @@ export class AskEnding {
       newestAt: Math.max(...members.map((member) => member.at)),
       work,
       acted,
+      joined,
     };
   }
 
@@ -283,14 +286,17 @@ export class AskEnding {
 
   /**
    * The chain's own work: the tasks the first mate's tools acted on for
-   * it, and those filed or started after it (a part, a handover, a choice
-   * on its card that started work). A task the message only pointed at
+   * it, and those filed, started or joined by a merge after it (a part, a
+   * handover, a choice on its card that started work, an existing task a
+   * merge set to start for the rest). A task the message only pointed at
    * (its card or panel), which nobody acted on since, is not its work.
    */
   ownWork(chain: AskChain): TaskCoverageFields[] {
     return chain.work.filter(
       (task) =>
-        chain.acted.has(task.id) || Math.max(task.createdAt, task.startedAt ?? 0) > chain.root.at,
+        chain.acted.has(task.id) ||
+        Math.max(task.createdAt, task.startedAt ?? 0, chain.joined?.get(task.id) ?? 0) >
+          chain.root.at,
     );
   }
 

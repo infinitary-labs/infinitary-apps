@@ -108,7 +108,7 @@ export const SKIP_RULES_DESCRIPTION = [
  * a crewmate writes them; the card draws them, so no prose repeats them.
  */
 export const AFTER_MERGE_STORY_RULE =
-  "Optional afterMerge: work started once this merges, not repeated in prose; task: an unstarted task's key; doer firstmate for a change in the app itself (Automation, settings, directions): it files no task.";
+  "Optional afterMerge: work started once this merges, not repeated in prose; task: an unstarted task's key; doer firstmate for a change in the app itself (Automation, settings, directions): it files no task. When you ship a slice, holds names each task waiting on yours (tasks key, blocked tasks) that still needs the step's work: it keeps waiting for the step instead of carrying on at this merge.";
 
 /**
  * INF-3749's free-form part, as the captain amended it: "a freeform

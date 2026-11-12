@@ -48,7 +48,12 @@ import {
   type PermissionField,
 } from "../storage/taskDeliveryFields";
 import { TURN_DECLARATION_FIELDS } from "../storage/taskExecutionStore";
-import type { CardRefusal, PendingSettleIntent, TaskDelivery } from "../storage/taskRecords";
+import type {
+  CardRefusal,
+  PendingSettleIntent,
+  TaskDelivery,
+  TaskRecord,
+} from "../storage/taskRecords";
 import { decideValidation, recordValidation } from "./liveValidation";
 import { TaskGraphRefusal } from "./taskGraph";
 import { TaskService } from "./taskService";
@@ -863,9 +868,11 @@ export class TaskDeliveries {
    * story is prepared: a step's shape (`afterMergeShapeRefusal`), and each
    * task and project it names. An existing task the merge would start must
    * be open and not yet started: a running or closed task has nothing to
-   * start. A step may not wait on its own origin, whose merge it follows.
+   * start. A step may not wait on its own origin, whose merge it follows,
+   * and each task a step holds must wait on the origin now (`holdsRefusal`).
    */
   afterMergeRefusal(sourceId: string, steps: readonly AfterMergeStep[]): string | undefined {
+    const held = new Set<string>();
     for (const [index, step] of steps.entries()) {
       const shape = afterMergeShapeRefusal(step, index);
       if (shape) return shape;
@@ -897,6 +904,46 @@ export class TaskDeliveries {
         if (named && this.waitCycle(blocker.id, named.id))
           return `${at} waits for ${keyOrId(blocker)}, which already waits for ${keyOrId(named)}; nothing could ever start.`;
       }
+      const holding = this.holdsRefusal(sourceId, step, at, held);
+      if (holding) return holding;
+    }
+    return undefined;
+  }
+
+  /**
+   * Why a step's `holds` cannot stand (INF-3846 piece 4): each key must name
+   * live work that waits on this task now, held by one step only, and never
+   * the step's own task or work the step waits for, whose wait on the step
+   * would close a cycle. Which waiters still need the rest is the
+   * crewmate's judgment; the host checks only that the move can be made.
+   */
+  private holdsRefusal(
+    sourceId: string,
+    step: AfterMergeStep,
+    at: string,
+    held: Set<string>,
+  ): string | undefined {
+    const named = step.task ? this.tasks.resolve(step.task) : undefined;
+    const waitsFor = new Set(
+      (step.blockedBy ?? []).flatMap((ref) => this.tasks.resolve(ref)?.id ?? []),
+    );
+    for (const ref of step.holds ?? []) {
+      const waiter = this.tasks.resolve(ref);
+      if (!waiter) return `${at} holds no task "${ref}".`;
+      if (waiter.id === sourceId) return `${at} holds this task itself.`;
+      if (named && waiter.id === named.id) return `${at} holds its own task ${keyOrId(waiter)}.`;
+      if (TaskService.isClosed(waiter))
+        return `${at} holds ${keyOrId(waiter)}, which is closed and waits for nothing.`;
+      if (!this.tasks.graph.blockers(waiter.id).some((blocker) => blocker.id === sourceId))
+        return `${at} holds ${keyOrId(waiter)}, which does not wait for this task; only a task waiting for this task can keep waiting for the rest.`;
+      if (held.has(waiter.id))
+        return `${at} holds ${keyOrId(waiter)}, which another step already holds; one step carries each wait.`;
+      const cycle =
+        [...waitsFor].some((blocker) => this.waitCycle(blocker, waiter.id)) ||
+        (named && this.waitCycle(named.id, waiter.id));
+      if (cycle)
+        return `${at} holds ${keyOrId(waiter)}, which the step already waits for, directly or through other tasks; nothing could ever start.`;
+      held.add(waiter.id);
     }
     return undefined;
   }
@@ -990,16 +1037,40 @@ export class TaskDeliveries {
         }
       }
     };
+    // Each task the step holds keeps waiting, now for the step that does the
+    // rest of the work (INF-3846 piece 4), before the close's sweep reads it:
+    // it is never told to carry on at this merge. A move that would close a
+    // cycle since the card was shown is skipped and noted on the waiter.
+    const holdOn = (carrier: TaskRecord, step: AfterMergeStep) => {
+      if (TaskService.isClosed(carrier)) return;
+      for (const ref of step.holds ?? []) {
+        const waiter = this.tasks.resolve(ref);
+        if (!waiter || waiter.id === carrier.id || TaskService.isClosed(waiter)) continue;
+        if (this.tasks.graph.carryWait(sourceId, waiter.id, carrier.id, "host", at)) continue;
+        if (!this.tasks.graph.blockers(waiter.id).some((blocker) => blocker.id === sourceId))
+          continue;
+        note(
+          waiter.id,
+          `could not keep waiting for the rest of "${source.title}" (${keyOrId(source)}) in "${carrier.title}" (${keyOrId(carrier)}), as its merge card listed: the wait would close a cycle`,
+          undefined,
+        );
+      }
+    };
     return this.crewmateAfterMergeSteps(sourceId).map(({ id, step }): FiledAfterMergeStep => {
       const why = step.why?.trim();
       if (step.task) {
         const named = this.tasks.resolve(step.task);
         if (!named) return { key: step.task, title: step.task };
         const filed = { key: keyOrId(named), title: named.title };
+        holdOn(named, step);
         // Started or closed since the card was shown, or on an earlier
         // activation of this merge: there is nothing left to start.
         if (named.status !== "open" || named.startedAt !== null) return filed;
         waitOn(named.id, step);
+        // The same link a filed step carries: the named task does the rest
+        // of this work, so the message this task served covers it and its
+        // brief reads this task's report and card (INF-3846 piece 4).
+        this.tasks.graph.insertLink(named.id, sourceId, "discovered-from", "host", at);
         if (named.startPolicy !== "when-ready") {
           this.writer.patch(named.id, { startPolicy: "when-ready", updatedAt: at });
           note(
@@ -1042,6 +1113,7 @@ export class TaskDeliveries {
       });
       this.tasks.graph.insertLink(record.id, sourceId, "discovered-from", "host", at);
       waitOn(record.id, step);
+      holdOn(record, step);
       note(
         record.id,
         `filed when "${source.title}" (${keyOrId(source)}) merged, as its merge card listed: ${why}`,
@@ -1057,8 +1129,21 @@ export class TaskDeliveries {
       const record = step.task ? this.tasks.resolve(step.task) : this.tasks.get(id);
       if (!record) return [];
       const closed = step.task && (record.status === "done" || record.status === "dropped");
+      // The held tasks whose wait the merge moved onto this step.
+      const holds = (step.holds ?? []).flatMap((ref) => {
+        const waiter = this.tasks.resolve(ref);
+        return waiter &&
+          this.tasks.graph.blockers(waiter.id).some((blocker) => blocker.id === record.id)
+          ? [keyOrId(waiter)]
+          : [];
+      });
       return [
-        { key: keyOrId(record), title: record.title, ...(closed ? { skipped: "closed" } : {}) },
+        {
+          key: keyOrId(record),
+          title: record.title,
+          ...(closed ? { skipped: "closed" } : {}),
+          ...(holds.length ? { holds } : {}),
+        },
       ];
     });
   }

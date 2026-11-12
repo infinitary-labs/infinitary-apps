@@ -435,7 +435,12 @@ export function afterMergeWords(
   firstmate: readonly FirstmateAfterMergeStep[] = [],
 ): string {
   const named = (list: readonly FiledAfterMergeStep[]) =>
-    list.map((step) => `${step.key} "${step.title}"`).join(", ");
+    list
+      .map(
+        (step) =>
+          `${step.key} "${step.title}"${step.holds?.length ? ` (${step.holds.join(" and ")} ${step.holds.length > 1 ? "keep" : "keeps"} waiting for it)` : ""}`,
+      )
+      .join(", ");
   const started = steps.filter((step) => !step.skipped);
   const skipped = steps.filter((step) => step.skipped);
   return [

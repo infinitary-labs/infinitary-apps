@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "waits-follow-the-work",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Work that ships in parts no longer tells waiting tasks to go on too early",
+      "body": "When a task merges only part of its work and leaves the rest to a follow-on task, the tasks that needed the rest now keep waiting for that follow-on task. Before, they were told to carry on as soon as the first part merged, and your first mate had to point them back by hand. Your request also stays underway until the follow-on work is done.",
+      "noPicture": "This changes which tasks wait and when they start, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

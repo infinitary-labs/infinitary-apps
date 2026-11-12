@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { presentationContentHash } from "../forge/presentation";
+import { AskEnding } from "../orchestrator/askEnding";
 import { afterMergeWords } from "../orchestrator/deliveryWakes";
 import { seedTask } from "./seedTask";
 import { TaskService } from "./taskService";
@@ -542,5 +543,246 @@ describe("after-merge steps at the merge", () => {
     const { tasks, origin } = setup(DOP299_STEP);
     tasks.close(origin.id, { status: "dropped", reason: "discarded", actor: "host" });
     expect(continueTasks(tasks)).toEqual([]);
+  });
+});
+
+// INF-3846 piece 4, the captain's Approve and build of direction A ("Waits
+// follow the work"): the secrets work shipped in slices, and each slice's
+// merge told the part waiting for the storage to carry on before the storage
+// existed. A slice's after-merge step names the waiters the rest still holds,
+// and they keep waiting for that step.
+describe("after-merge steps that hold the rest's waiters", () => {
+  const STORAGE_STEP = {
+    title: "Turn protected storage on",
+    goal: "Integration secrets are written to the secret manager's protected storage.",
+    why: "This change adds the secret manager with storage left off; moving the secrets needs storage on.",
+  };
+
+  function secrets(
+    steps: (waiters: { move: string; cleanup: string }) => AfterMergeStep[],
+    now?: () => number,
+  ) {
+    const tasks = new TaskService({ db: freshDatabase(), strict: true, ...(now ? { now } : {}) });
+    tasks.projects.ensureForRepo({ id: "infinitary", name: "Infinitary" }, "INF");
+    const slice = seedTask(tasks, {
+      id: "inf11090",
+      title: "Add the secrets settings and secret manager",
+      repoId: "infinitary",
+      status: "idle",
+      branch: "fm/task-inf11090",
+    });
+    // Started, then told to wait for the secret manager.
+    const move = seedTask(tasks, {
+      id: "inf07850",
+      title: "Move integration secrets into the secret manager",
+      repoId: "infinitary",
+      status: "idle",
+    });
+    // Waits for the settings alone, and should start at this merge.
+    const cleanup = seedTask(tasks, {
+      id: "inf16430",
+      title: "Show the secrets settings in Settings",
+      repoId: "infinitary",
+      status: "queued",
+      startPolicy: "when-ready",
+    });
+    tasks.graph.insertLink(slice.id, move.id, "blocks", "firstmate", 1);
+    tasks.graph.insertLink(slice.id, cleanup.id, "blocks", "firstmate", 1);
+    const declared = steps({ move: move.key, cleanup: cleanup.key });
+    return { tasks, slice, move, cleanup, declared };
+  }
+
+  it("keeps a held waiter waiting for the step that does the rest, and frees the others", () => {
+    const { tasks, slice, move, cleanup, declared } = secrets(({ move }) => [
+      { ...STORAGE_STEP, holds: [move] },
+    ]);
+    expect(tasks.delivery.afterMergeRefusal(slice.id, declared)).toBeUndefined();
+    declare(tasks, slice, declared);
+
+    tasks.close(slice.id, { status: "done", reason: "merged", actor: "host" });
+
+    const [storage] = continueTasks(tasks);
+    expect(storage?.title).toBe(`Continue: ${STORAGE_STEP.title}`);
+    expect(tasks.graph.waitingOn(move.id).map((task) => task.id)).toEqual([storage?.id]);
+    expect(tasks.graph.waitingOn(cleanup.id)).toEqual([]);
+    expect(tasks.graph.listReady().map((row) => row.id)).toContain(cleanup.id);
+    // The move names the slice, so the step's close tells the waiter whose work it took over.
+    expect(
+      tasks
+        .timeline(move.id)
+        .some(
+          (event) =>
+            event.kind === "unlinked" &&
+            event.data?.fromId === slice.id &&
+            event.data?.movedTo === storage?.id,
+        ),
+    ).toBe(true);
+    const filed = tasks.delivery.filedAfterMergeSteps(slice.id);
+    expect(filed).toEqual([{ key: storage?.key, title: storage?.title, holds: [move.key] }]);
+    expect(afterMergeWords(filed)).toContain(
+      `${storage?.key} "${storage?.title}" (${move.key} keeps waiting for it)`,
+    );
+    // A second activation of the merge moves nothing twice.
+    tasks.delivery.activateAfterMergeSteps(slice.id);
+    expect(tasks.graph.waitingOn(move.id).map((task) => task.id)).toEqual([storage?.id]);
+
+    tasks.close(storage?.id as string, { status: "done", reason: "merged", actor: "host" });
+    expect(tasks.graph.waitingOn(move.id)).toEqual([]);
+  });
+
+  it("keeps a held waiter waiting for an existing task the step names", () => {
+    const { tasks, slice, move } = secrets(() => []);
+    const storage = seedTask(tasks, {
+      id: "inf16590",
+      title: "Turn protected storage on",
+      repoId: "infinitary",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    const declared = [{ task: storage.key, holds: [move.key] }];
+    expect(tasks.delivery.afterMergeRefusal(slice.id, declared)).toBeUndefined();
+    declare(tasks, slice, declared);
+
+    tasks.close(slice.id, { status: "done", reason: "merged", actor: "host" });
+
+    expect(tasks.get(storage.id)?.startPolicy).toBe("when-ready");
+    expect(tasks.graph.waitingOn(move.id).map((task) => task.id)).toEqual([storage.id]);
+  });
+
+  it("keeps the Continue task in the coverage of the message the slice served", () => {
+    const { tasks, slice, move, declared } = secrets(({ move }) => [
+      { ...STORAGE_STEP, holds: [move] },
+    ]);
+    declare(tasks, slice, declared);
+    tasks.capture.openAsk({
+      id: "ask",
+      text: "Move the integration secrets into the secret manager.",
+    });
+    tasks.capture.attachAsk("ask", slice.id, "tool:spawn_crewmate");
+
+    tasks.close(slice.id, { status: "done", reason: "merged", actor: "host" });
+
+    const [storage] = continueTasks(tasks);
+    const covered = tasks.capture.askCoverage(["ask"]).work.map((task) => task.id);
+    expect(covered).toContain(storage?.id);
+    expect(tasks.capture.asksAbove(storage?.id as string).map((ask) => ask.id)).toEqual(["ask"]);
+    // The waiter it holds is not the slice's work, so the message does not take it in.
+    expect(covered).not.toContain(move.id);
+  });
+
+  // Review finding named-step-outside-coverage, the captain's "keep the
+  // request open until an already-filed follow-on task is done too":
+  // INF-1659, turning storage on, was filed from another task's report
+  // before the secrets settings merged.
+  it("covers an existing task a step starts, keeping the line of where its work came from", () => {
+    const { tasks, slice, move } = secrets(() => []);
+    const reporter = seedTask(tasks, {
+      id: "inf07830",
+      title: "Plan the secret manager",
+      repoId: "infinitary",
+      status: "idle",
+    });
+    tasks.capture.openAsk({ id: "plan-ask", text: "Plan where integration secrets live." });
+    tasks.capture.attachAsk("plan-ask", reporter.id, "tool:spawn_crewmate");
+    const storage = seedTask(tasks, {
+      id: "inf16590",
+      title: "Turn protected storage on",
+      repoId: "infinitary",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    tasks.capture.saveOrigin(storage.id, { kind: "report", taskId: reporter.id });
+    const line = tasks.capture.originAbout(storage.id);
+    expect(line).toMatchObject({ kind: "asked", text: "Plan where integration secrets live." });
+    tasks.capture.openAsk({
+      id: "ask",
+      text: "Move the integration secrets into the secret manager.",
+    });
+    tasks.capture.attachAsk("ask", slice.id, "tool:spawn_crewmate");
+    declare(tasks, slice, [{ task: storage.key, holds: [move.key] }]);
+
+    tasks.close(slice.id, { status: "done", reason: "merged", actor: "host" });
+
+    expect(tasks.capture.askCoverage(["ask"]).work.map((task) => task.id)).toContain(storage.id);
+    expect(tasks.capture.asksAbove(storage.id).map((ask) => ask.id)).toContain("ask");
+    expect(tasks.graph.discoveredOrigins(storage.id).map((task) => task.id)).toEqual([slice.id]);
+    expect(tasks.capture.originAbout(storage.id)).toEqual(line);
+  });
+
+  // Review finding named-step-joins-late: a task filed before the message
+  // joins its work only when the merge links it, and a wait can hold its
+  // start, so the message stays underway until that task is done.
+  it("keeps the request underway while an existing task the step starts waits for other work", () => {
+    let clock = 1_000;
+    const { tasks, slice } = secrets(
+      () => [],
+      () => ++clock,
+    );
+    const storage = seedTask(tasks, {
+      id: "inf16590",
+      title: "Turn protected storage on",
+      repoId: "infinitary",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    const keychain = seedTask(tasks, {
+      id: "inf17060",
+      title: "Let the app reach the protected storage",
+      repoId: "infinitary",
+      status: "idle",
+    });
+    tasks.capture.openAsk({
+      id: "ask",
+      text: "Move the integration secrets into the secret manager.",
+    });
+    tasks.capture.attachAsk("ask", slice.id, "tool:spawn_crewmate");
+    tasks.capture.closeAsk("ask", "closed");
+    declare(tasks, slice, [{ task: storage.key, blockedBy: [keychain.key] }]);
+    const ending = new AskEnding({
+      tasks,
+      openCards: () => [],
+      storedCard: () => undefined,
+      shownAt: () => 0,
+      seenCards: () => [],
+    });
+    const state = () =>
+      ending.state(ending.chain("ask") as NonNullable<ReturnType<AskEnding["chain"]>>);
+
+    tasks.close(slice.id, { status: "done", reason: "merged", actor: "host" });
+
+    expect(tasks.get(storage.id)).toMatchObject({ status: "open", startedAt: null });
+    expect(state()).toEqual({ kind: "working" });
+    tasks.close(keychain.id, { status: "done", reason: "merged", actor: "host" });
+    expect(state()).toEqual({ kind: "working" });
+    tasks.close(storage.id, { status: "done", reason: "merged", actor: "host" });
+    expect(state()).not.toEqual({ kind: "working" });
+  });
+
+  it("refuses holds that name no waiter of this task, or a wait that could never clear", () => {
+    const { tasks, slice, move } = secrets(() => []);
+    const unrelated = seedTask(tasks, {
+      id: "inf34330",
+      title: "Sign the company build",
+      repoId: "infinitary",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    const refusal = (...steps: AfterMergeStep[]) =>
+      tasks.delivery.afterMergeRefusal(slice.id, steps);
+
+    expect(refusal({ ...STORAGE_STEP, holds: ["INF-404"] })).toContain('holds no task "INF-404"');
+    expect(refusal({ ...STORAGE_STEP, holds: [slice.key] })).toContain("this task itself");
+    expect(refusal({ ...STORAGE_STEP, holds: [unrelated.key] })).toContain(
+      "does not wait for this task",
+    );
+    expect(
+      refusal({ ...STORAGE_STEP, holds: [move.key] }, { ...STORAGE_STEP, holds: [move.key] }),
+    ).toContain("another step already holds");
+    expect(refusal({ ...STORAGE_STEP, blockedBy: [move.key], holds: [move.key] })).toContain(
+      "nothing could ever start",
+    );
+    expect(refusal({ doer: "firstmate", ...STORAGE_STEP, holds: [move.key] })).toContain(
+      "is the first mate's change in the app",
+    );
   });
 });

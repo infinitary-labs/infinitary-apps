@@ -38,6 +38,12 @@ export const afterMergeStepSchema = z.object({
   project: taskRef.optional(),
   /** Tasks whose merge the step waits for, by key: each a `blocks` link into it. */
   blockedBy: z.array(taskRef).optional(),
+  /**
+   * Tasks waiting on this change that still need the step's work, by key
+   * (INF-3846 piece 4): the merge moves each one's wait onto the step, so it
+   * keeps waiting for the rest instead of being told to carry on.
+   */
+  holds: z.array(taskRef).optional(),
 });
 export const afterMergeStepsSchema = z.array(afterMergeStepSchema);
 export type AfterMergeStep = z.infer<typeof afterMergeStepSchema>;
@@ -50,8 +56,11 @@ export type AfterMergeStep = z.infer<typeof afterMergeStepSchema>;
  */
 export function afterMergeShapeRefusal(step: AfterMergeStep, index: number): string | undefined {
   const at = `afterMerge step ${index + 1}`;
-  if (step.doer === "firstmate" && (step.task || step.project || step.blockedBy?.length))
-    return `${at} is the first mate's change in the app, which files no task: give it a title, a goal and why, with no task, project or blockedBy.`;
+  if (
+    step.doer === "firstmate" &&
+    (step.task || step.project || step.blockedBy?.length || step.holds?.length)
+  )
+    return `${at} is the first mate's change in the app, which files no task: give it a title, a goal and why, with no task, project, blockedBy or holds.`;
   if (step.task)
     return step.title || step.goal || step.project
       ? `${at} names an existing task, which keeps its own title, goal and project.`
@@ -86,7 +95,13 @@ export const afterMergeShownListSchema = z.array(afterMergeShownSchema);
  * One step the host filed or started at a merge, as the settled wake names
  * it; `skipped` says why an existing task named on the card was not started.
  */
-export type FiledAfterMergeStep = { key: string; title: string; skipped?: string };
+export type FiledAfterMergeStep = {
+  key: string;
+  title: string;
+  skipped?: string;
+  /** The tasks whose wait the merge moved onto this step (`AfterMergeStep.holds`). */
+  holds?: string[];
+};
 
 /** A first-mate step a merge hands over, as its settled wake names it: no task holds it. */
 export type FirstmateAfterMergeStep = { title: string; goal: string; why?: string };

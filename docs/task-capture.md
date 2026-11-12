@@ -124,7 +124,7 @@ The host reads only typed facts: the saved message, the task graph, the cards an
 What piece 2's migration adds to `captain_asks`: `followed` (every message saved from then on), `continues`, `answer_card_id` with `accepted_at`, `answered_at` and `crewmate_asked_at`.
 
 - **Its work.**
-  The tasks the message attached to, and every task that carries their work on: parts, builds on a plan (`basis`), retries, branches taken from them, replacements (`replaced-by`) and a stronger model (`escalated_to`), walked by `TaskService.capture.askCoverage`, which reads each message's tasks once for the whole chain.
+  The tasks the message attached to, and every task that carries their work on: parts, builds on a plan (`basis`), retries, branches taken from them, replacements (`replaced-by`), a stronger model (`escalated_to`) and the tasks a merge filed or set to start from its story's after-merge steps (the host's own `discovered-from` link, `TaskGraph.continuations`, which counts as the task's filing for the `before` cutoff, for the message's own work and for `asksAbove`; a crewmate's other follow-ups stay outside it), walked by `TaskService.capture.askCoverage`, which reads each message's tasks once for the whole chain.
   Attribution and escalation edges are read as typed metadata, without decoding each task's entire timeline.
   Coverage reads only task identity, title, status, close reason and creation/start times from the task row, and child identities in their existing order, without composing specifications, shapes, execution or delivery payloads.
   One `openChains` read shares these task fields and successor edges across its roots; these facts are discarded after the synchronous read and invalidated by task writes, including rollback.

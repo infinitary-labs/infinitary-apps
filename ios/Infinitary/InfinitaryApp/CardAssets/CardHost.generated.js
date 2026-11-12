@@ -4805,7 +4805,13 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     /** The project a new step is filed in, by key; the origin's when absent. */
     project: taskRef.optional(),
     /** Tasks whose merge the step waits for, by key: each a `blocks` link into it. */
-    blockedBy: array(taskRef).optional()
+    blockedBy: array(taskRef).optional(),
+    /**
+     * Tasks waiting on this change that still need the step's work, by key
+     * (INF-3846 piece 4): the merge moves each one's wait onto the step, so it
+     * keeps waiting for the rest instead of being told to carry on.
+     */
+    holds: array(taskRef).optional()
   });
   const afterMergeShownSchema = object({
     doer: _enum(AFTER_MERGE_DOERS).optional(),

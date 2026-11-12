@@ -380,6 +380,27 @@ export class TaskGraph {
       .flatMap((link) => [this.writer.store.get(link.toId)].filter((r): r is TaskRecord => !!r));
   }
 
+  /**
+   * The tasks a merge of this task filed or set to start from its story's
+   * after-merge steps (INF-3846 piece 4), each with when the merge linked it:
+   * the discovered-from links the host wrote, which only
+   * `TaskDeliveries.activateAfterMergeSteps` writes. They do the rest of this
+   * task's work, so the message it serves covers them, as work that joined
+   * it at that link's time.
+   */
+  continuations(id: string): { id: string; at: number }[] {
+    return this.linksTo(id)
+      .filter((link) => link.type === "discovered-from" && link.actor === "host")
+      .map((link) => ({ id: link.fromId, at: link.createdAt }));
+  }
+
+  /** The tasks whose merge filed or started this one, with when: the inverse of `continuations`. */
+  continuedFrom(id: string): { id: string; at: number }[] {
+    return this.linksFrom(id)
+      .filter((link) => link.type === "discovered-from" && link.actor === "host")
+      .map((link) => ({ id: link.toId, at: link.createdAt }));
+  }
+
   /** The task that replaced this one, including the older stronger-model lineage. */
   replacementOf(id: string): string | undefined {
     return this.replacementsOf([id]).get(id);
@@ -840,34 +861,8 @@ export class TaskGraph {
     const to = this.writer.store.get(toId);
     if (from && TaskService.isDeliveryChild(from)) return;
     if (to && TaskService.isDeliveryChild(to)) return;
-    const move = (link: TaskLink, next: { fromId: string; toId: string }) => {
-      try {
-        this.insertLink(
-          next.fromId,
-          next.toId,
-          "blocks",
-          actor,
-          at,
-          link.holdsMerge,
-          link.createdAt,
-        );
-      } catch (caught) {
-        if (caught instanceof TaskGraphRefusal) return;
-        throw caught;
-      }
-      this.writer.links.delete(link.fromId, link.toId, "blocks");
-      this.writer.touch(link.fromId);
-      this.writer.addEvent({
-        taskId: link.toId,
-        at,
-        actor,
-        kind: "unlinked",
-        text: `no longer ${LINK_WORDS.blocks} "${this.writer.store.get(link.fromId)?.title ?? link.fromId}"`,
-        data: { fromId: link.fromId, type: "blocks", movedTo: toId },
-        ref: link.fromId,
-        feed: false,
-      });
-    };
+    const move = (link: TaskLink, next: { fromId: string; toId: string }) =>
+      this.moveWait(link, next, toId, actor, at);
     for (const link of this.writer.links.listFrom(fromId, "blocks")) {
       const waiter = this.writer.store.get(link.toId);
       if (!moves(waiter) || TaskService.isClosed(waiter)) continue;
@@ -878,6 +873,57 @@ export class TaskGraph {
       if (!moves(blocker) || !TaskService.blockerHoldsClose(blocker)) continue;
       move(link, { fromId: blocker.id, toId });
     }
+  }
+
+  /**
+   * A shipped slice's after-merge step carries one wait on (INF-3846 piece
+   * 4): `waiterId`'s wait on `fromId` becomes a wait on `carrierId`, the task
+   * that does the rest of the work, keeping its merge mark and when it began,
+   * and the waiter's timeline records the move as `moveWaits` does. False,
+   * with nothing changed, when there is no such wait or the move would close
+   * a cycle; the caller says why.
+   */
+  carryWait(
+    fromId: string,
+    waiterId: string,
+    carrierId: string,
+    actor: TaskEventActor,
+    at: number,
+  ): boolean {
+    const link = this.writer.links
+      .listFrom(fromId, "blocks")
+      .find((candidate) => candidate.toId === waiterId);
+    if (!link) return false;
+    return this.moveWait(link, { fromId: carrierId, toId: waiterId }, carrierId, actor, at);
+  }
+
+  /** One wait moved to `next`, its old link removed and the move on the waiter's timeline. */
+  private moveWait(
+    link: TaskLink,
+    next: { fromId: string; toId: string },
+    movedTo: string,
+    actor: TaskEventActor,
+    at: number,
+  ): boolean {
+    try {
+      this.insertLink(next.fromId, next.toId, "blocks", actor, at, link.holdsMerge, link.createdAt);
+    } catch (caught) {
+      if (caught instanceof TaskGraphRefusal) return false;
+      throw caught;
+    }
+    this.writer.links.delete(link.fromId, link.toId, "blocks");
+    this.writer.touch(link.fromId);
+    this.writer.addEvent({
+      taskId: link.toId,
+      at,
+      actor,
+      kind: "unlinked",
+      text: `no longer ${LINK_WORDS.blocks} "${this.writer.store.get(link.fromId)?.title ?? link.fromId}"`,
+      data: { fromId: link.fromId, type: "blocks", movedTo },
+      ref: link.fromId,
+      feed: false,
+    });
+    return true;
   }
 
   insertLink(

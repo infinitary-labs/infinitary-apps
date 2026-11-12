@@ -58464,6 +58464,14 @@
                             "minLength": 1,
                             "maxLength": 64
                           }
+                        },
+                        "holds": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64
+                          }
                         }
                       }
                     }
@@ -59504,6 +59512,14 @@
                               "maxLength": 64
                             },
                             "blockedBy": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 64
+                              }
+                            },
+                            "holds": {
                               "type": "array",
                               "items": {
                                 "type": "string",

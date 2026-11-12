@@ -146,7 +146,11 @@ it("retains the work graph and current task facts without composing coverage rec
     expect(tasks.capture.askCoverage(["ask"]).work[0]?.title).toBe(
       "Keep the accepted answer intact",
     );
-    expect(tasks.capture.askCoverage(["unknown"])).toEqual({ work: [], acted: new Set() });
+    expect(tasks.capture.askCoverage(["unknown"])).toEqual({
+      work: [],
+      acted: new Set(),
+      joined: new Map(),
+    });
   } finally {
     db.close();
   }

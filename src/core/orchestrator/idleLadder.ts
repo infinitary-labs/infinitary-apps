@@ -1621,8 +1621,10 @@ export class IdleLadder {
   }
 
   /**
-   * The tasks whose wait the task's timeline records moving to `carrierId`
-   * when a replaced-by link was written (INF-1826, `TaskService.moveWaits`).
+   * The tasks whose wait the task's timeline records moving to `carrierId`:
+   * when a replaced-by link was written (INF-1826, `TaskGraph.moveWaits`), or
+   * when a merge's after-merge step held it for the rest of the work
+   * (INF-3846 piece 4, `TaskGraph.carryWait`).
    */
   private movedFrom(taskId: string, carrierId: string): TaskRecord[] {
     const tasks = this.host.tasks;

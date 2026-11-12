@@ -164,8 +164,16 @@ export class TaskCapture {
           const basis = this.writer.references.list(taskId).find((entry) => entry.kind === "basis");
           return basis ? this.tasks.graph.referenceTarget(basis)?.id : undefined;
         },
-        followsUp: (taskId) =>
-          this.writer.links.listFrom(taskId, "discovered-from").map((link) => link.toId),
+        // A merge that set an existing task to start links it to that merge
+        // after the task was filed (INF-3846 piece 4): that link is not where
+        // its work came from, so its own line stays the one it had.
+        followsUp: (taskId) => {
+          const filedAt = this.writer.store.get(taskId)?.createdAt ?? 0;
+          return this.writer.links
+            .listFrom(taskId, "discovered-from")
+            .filter((link) => link.actor !== "host" || link.createdAt <= filedAt)
+            .map((link) => link.toId);
+        },
         events: (taskId) => {
           let read = events.get(taskId);
           if (!read) {
@@ -219,10 +227,14 @@ export class TaskCapture {
    * The work a captain's messages cover (docs/task-capture.md "How a
    * message ends"): the tasks they attached to, those tasks' parts, the
    * work built on them, and the work handed over from them - a
-   * replacement, a stronger model, a retry or a branch taken from one.
+   * replacement, a stronger model, a retry or a branch taken from one - and
+   * the tasks a merge filed or set to start for the rest of the work.
    * With `before`, work filed after that time is left out, apart from a
    * task a message attached to itself: work linked after a message was
-   * answered belongs to the newer message. `acted` is the part of that
+   * answered belongs to the newer message. `joined` gives the time a merge
+   * linked each task it filed or started, which stands in for when that
+   * task was filed: an existing task joins the work only then (INF-3846
+   * piece 4). `acted` is the part of that
    * work the first mate's own tools attached these messages to: work it
    * filed, started, steered or settled for them - never the host's
    * fallback to the task a message pointed at. Both come from one lookup
@@ -232,7 +244,7 @@ export class TaskCapture {
   askCoverage(
     askIds: readonly string[],
     before?: number,
-  ): { work: TaskCoverageFields[]; acted: Set<string> } {
+  ): { work: TaskCoverageFields[]; acted: Set<string>; joined: Map<string, number> } {
     const attributions = this.writer.events.askAttributions(askIds);
     const attached = [...new Set(attributions.map((entry) => entry.taskId))];
     const authored = new Set(
@@ -242,19 +254,30 @@ export class TaskCapture {
     const found = new Map<string, TaskCoverageFields>();
     const queue = [...attached];
     const seeds = new Set(attached);
+    const joined = new Map<string, number>();
     while (queue.length > 0) {
       const id = queue.shift() as string;
       if (found.has(id)) continue;
       const record = this.writer.store.coverageFields(id);
       if (!record) continue;
-      if (before !== undefined && !seeds.has(id) && record.createdAt > before) continue;
+      const filedAt = Math.max(record.createdAt, joined.get(id) ?? 0);
+      if (before !== undefined && !seeds.has(id) && filedAt > before) continue;
       found.set(id, record);
+      for (const next of this.tasks.graph.continuations(id)) {
+        const known = joined.get(next.id);
+        if (known === undefined || next.at < known) joined.set(next.id, next.at);
+      }
       queue.push(...this.workAfter(record));
     }
-    return { work: [...found.values()], acted };
+    // Only the work reached: a link to work left out names nothing covered.
+    for (const id of [...joined.keys()]) if (!found.has(id) || seeds.has(id)) joined.delete(id);
+    return { work: [...found.values()], acted, joined };
   }
 
-  /** The tasks that carry a task's work on: its parts, what builds on it and its handovers. */
+  /**
+   * The tasks that carry a task's work on: its parts, what builds on it, its
+   * handovers and the `Continue: …` tasks its merge filed for the rest.
+   */
   private workAfter(record: Pick<TaskRecord, "id" | "key">): string[] {
     const known = this.writer.projection?.workAfter.get(record.id);
     if (known) return known;
@@ -266,6 +289,7 @@ export class TaskCapture {
         this.writer.references.taskIdsNaming(kind, record.id, key),
       ),
       ...this.escalations(record.id, "escalated_to"),
+      ...this.tasks.graph.continuations(record.id).map((next) => next.id),
     ];
     this.writer.projection?.workAfter.set(record.id, next);
     return next;
@@ -284,6 +308,7 @@ export class TaskCapture {
         )
         .flatMap((entry) => this.tasks.graph.referenceTarget(entry)?.id ?? []),
       ...this.escalations(record.id, "escalated_from"),
+      ...this.tasks.graph.continuedFrom(record.id).map((from) => from.id),
     ];
   }
 
@@ -296,15 +321,20 @@ export class TaskCapture {
    * The captain's messages whose work includes this task, newest first:
    * those attached to it or to the work it came from. A message answered
    * before the task was filed is left out unless it attached to the task
-   * itself (`askCoverage`'s rule, from the other side).
+   * itself (`askCoverage`'s rule, from the other side). Reached through a
+   * merge that started it, the task counts as filed when that merge linked
+   * it, as `askCoverage`'s `joined` says (INF-3846 piece 4).
    */
   asksAbove(id: string): AskRecord[] {
     const seen = new Set<string>();
     const asks = new Map<string, AskRecord>();
     const target = this.writer.store.get(id);
-    const queue = [id];
+    if (!target) return [];
+    // Each task to read, with when the target counts as filed on that path:
+    // a merge's link to the work it started stands in for its filing.
+    const queue: { id: string; filedAt: number }[] = [{ id, filedAt: target.createdAt }];
     while (queue.length > 0) {
-      const current = queue.shift() as string;
+      const { id: current, filedAt } = queue.shift() as { id: string; filedAt: number };
       if (seen.has(current)) continue;
       seen.add(current);
       const record = this.writer.store.get(current);
@@ -312,14 +342,14 @@ export class TaskCapture {
       for (const ref of this.writer.events.refsOf(current, "ask")) {
         const ask = this.writer.asks.get(ref);
         if (!ask || asks.has(ask.id)) continue;
-        const later =
-          current !== id &&
-          target !== undefined &&
-          ask.answeredAt !== null &&
-          target.createdAt > ask.answeredAt;
+        const later = current !== id && ask.answeredAt !== null && filedAt > ask.answeredAt;
         if (!later) asks.set(ask.id, ask);
       }
-      queue.push(...this.workBefore(record));
+      const joins = new Map(
+        this.tasks.graph.continuedFrom(current).map((from) => [from.id, from.at] as const),
+      );
+      for (const next of this.workBefore(record))
+        queue.push({ id: next, filedAt: Math.max(filedAt, joins.get(next) ?? 0) });
     }
     return [...asks.values()].sort((a, b) => b.at - a.at);
   }

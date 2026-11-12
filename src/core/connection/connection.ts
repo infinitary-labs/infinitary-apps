@@ -32,6 +32,7 @@ import {
   PAIR_REFUSAL_STATUS,
   type PairGrant,
   type PairRefusal,
+  REPLACED_PUSH_CHANNEL,
 } from "@shared/connection";
 import {
   type ContractAccess,
@@ -76,6 +77,10 @@ import {
   EventJournal,
   type JournalEntry,
   type JournalLimits,
+  type ReplayEntry,
+  replacedFrame,
+  replayBytes,
+  replayOf,
 } from "./journal";
 import { type OpenLocalDoor, openLocalDoor } from "./localDoor";
 
@@ -484,6 +489,27 @@ type Run = {
 const CORE_CHANNELS = new Set<string>(CORE_INVOKE_CHANNELS);
 
 /**
+ * What a view reads first on a reload (docs/connection.md, "Catching up"):
+ * the card list, Activity, the whole board, the last reply, the conversation's
+ * state and the computers in reach. A computer's window reads more besides.
+ */
+const RELOAD_READS = [
+  "inf:cards:list",
+  "inf:feed:recent",
+  "inf:tasks:board",
+  "inf:conversation:last-turn",
+  "inf:conversation:state",
+  "inf:computers:presence",
+] as const satisfies CoreInvokeChannel[];
+const RELOAD_READ_SET: ReadonlySet<string> = new Set(RELOAD_READS);
+
+/** The read of a reload whose answer a whole list's push is, as it would be read now. */
+const WHOLE_LIST_READS: Partial<Record<string, (typeof RELOAD_READS)[number]>> = {
+  "inf:cards": "inf:cards:list",
+  "inf:tasks": "inf:tasks:board",
+};
+
+/**
  * A numbered push's frame with its channel in `spelling`; the rest is the
  * same bytes, so every device is still sent the same push under the same
  * number. A frame not written as the journal writes one goes as it is.
@@ -758,6 +784,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         return null;
       }
     let journal = new EventJournal(options.journal ?? DEFAULT_JOURNAL_LIMITS);
+    // The bytes of the newest answer to each read a view's reload makes first.
+    const reloadWeights = new Map<string, number>();
     const clients = new Set<Client>();
     const sockets = new WebSocketServer({
       noServer: true,
@@ -810,6 +838,9 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           channel,
           devices.any(),
         );
+        // A whole list pushed is what a reload would read of it now.
+        const read = WHOLE_LIST_READS[channel];
+        if (read) reloadWeights.set(read, Buffer.byteLength(entry.frame));
         for (const client of clients)
           if (client.welcomed && client.role === "view")
             send(
@@ -865,17 +896,51 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       return client.viewer;
     };
 
+    /** What a connection's hello says it does: what it says, or what its kind does. */
+    const roleOf = (client: Client, hello: Extract<ClientFrame, { t: "hello" }>): DeviceRole =>
+      // A Mac that does both runs its work unless it says it controls.
+      hello.as ?? (client.device.kind === "view" ? "view" : "work");
+
+    /**
+     * What a view's replay would send, or null when its cursor cannot be
+     * caught up: only a view is sent pushes, so only a view catches up on them.
+     */
+    const replayFor = (
+      role: DeviceRole,
+      hello: Extract<ClientFrame, { t: "hello" }>,
+    ): ReplayEntry[] | null => {
+      const missed = hello.cursor && role === "view" ? journal.since(hello.cursor) : null;
+      return missed ? replayOf(missed) : null;
+    };
+
+    /**
+     * What a view's reload would read first, weighed from the newest answer
+     * to each this home wrote in this run, or the newest whole list it pushed
+     * since; undefined while any of them has not been written, and a view
+     * then replays (docs/connection.md, "Catching up").
+     */
+    const reloadBytes = (): number | undefined => {
+      let total = 0;
+      for (const channel of RELOAD_READS) {
+        const bytes = reloadWeights.get(channel);
+        if (bytes === undefined) return undefined;
+        total += bytes;
+      }
+      return total;
+    };
+
     const welcome = (client: Client, hello: Extract<ClientFrame, { t: "hello" }>) => {
-      // What this connection does: what it says, or what its kind does. A
-      // Mac that does both runs its work unless it says it controls.
-      const role: DeviceRole = hello.as ?? (client.device.kind === "view" ? "view" : "work");
+      const role = roleOf(client, hello);
       if (!deviceMayBe(client.device.kind, role)) {
         cut(client, CONNECTION_CLOSE.protocol, `a ${client.device.kind} device is never a ${role}`);
         return;
       }
       client.role = role;
-      // Only a view is sent pushes, so only a view catches up on them.
-      const missed = hello.cursor && role === "view" ? journal.since(hello.cursor) : null;
+      // A replay that would weigh more than what a reload reads first reloads instead.
+      const replay = replayFor(role, hello);
+      const reload = replay ? reloadBytes() : undefined;
+      const missed =
+        replay && (reload === undefined || replayBytes(replay) <= reload) ? replay : null;
       client.speaks = hello.protocolVersion;
       client.spelling = spellingFor(readSpellings(hello.spellings), speaks);
       client.appVersion = hello.appVersion;
@@ -947,16 +1012,18 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           ...(homeChanges.length ? { changes: homeChanges } : {}),
         }),
       );
-      for (const entry of missed ?? [])
+      for (const { entry, replaced } of missed ?? [])
         send(
           client,
-          cardPushFor(
-            entry,
-            client.spelling,
-            client.cardReads,
-            client.sharedCards,
-            client.taskAllow,
-          ),
+          replaced
+            ? replacedFrame(entry.seq, channelIn(REPLACED_PUSH_CHANNEL, client.spelling))
+            : cardPushFor(
+                entry,
+                client.spelling,
+                client.cardReads,
+                client.sharedCards,
+                client.taskAllow,
+              ),
         );
       client.welcomed = true;
       // A client of the local door is no device: pairing hears nothing of it.
@@ -993,6 +1060,8 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
             error: `The answer to ${frame.channel} could not be sent.`,
           });
         }
+        if (outcome.ok && RELOAD_READ_SET.has(frame.channel))
+          reloadWeights.set(frame.channel, Buffer.byteLength(text));
         send(client, text);
       };
       if (!CORE_CHANNELS.has(frame.channel)) {

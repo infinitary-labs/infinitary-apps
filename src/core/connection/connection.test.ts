@@ -4,7 +4,8 @@ import { createServer as createPlainServer, connect as plainConnect, type Socket
 import { join } from "node:path";
 import { connect, createServer as createTlsServer } from "node:tls";
 import { cardMessageSchema, cardSchema, cardThreadSchema, pastCardSchema } from "@shared/cards";
-import { CONNECTION_CLOSE } from "@shared/connection";
+import { ownChannel } from "@shared/codeNames";
+import { CONNECTION_CLOSE, REPLACED_PUSH_CHANNEL } from "@shared/connection";
 import { PLACED_WORK_SINCE, SHARED_CARDS_SINCE } from "@shared/contractFeatures";
 import { HOME } from "@shared/deviceNames";
 import { type DeviceGrant, parsePairingLink } from "@shared/devices";
@@ -496,6 +497,111 @@ describe("the home's connection", () => {
     changed(at.events);
     await back.push((push) => push.seq === cursor.seq + 3);
     expect(back.pushes).toHaveLength(3);
+  });
+
+  // INF-3750's option C, the captain's "Start all four": a returning view is sent only the
+  // newest whole card list, or reads everything again when that weighs less than the replay.
+  describe("catching up on what a whole list replaces", () => {
+    const card = (id: string, title: string) =>
+      cardSchema.parse({
+        id,
+        title,
+        author: "firstmate",
+        priority: 15,
+        meta: "First mate",
+        body: `<p>${title}: the sampler has finished.</p>`,
+        actions: [],
+        status: "ready",
+        createdAt: 1000,
+        lifecycleId: `${id}-life`,
+        offerId: `${id}-offer`,
+        seen: false,
+      });
+    const findings = card("card-findings", "Latency findings");
+    const plan = card("card-plan", "Plan for the reconnect");
+    const review = card("card-review", "Review of the catch-up");
+    /** What a view reads first on a reload, as a home with these three cards answers it. */
+    const reloads = [
+      "inf:cards:list",
+      "inf:feed:recent",
+      "inf:tasks:board",
+      "inf:conversation:last-turn",
+      "inf:conversation:state",
+      "inf:computers:presence",
+    ] as const;
+    const reloadReads = (async (channel) => {
+      if (channel === "inf:cards:list") return [findings, plan, review];
+      if (channel === "inf:feed:recent")
+        return [{ kind: "info", text: "INF-3750 reported the catch-up findings", at: 2000 }];
+      if (channel === "inf:tasks:board")
+        return { seq: 7, at: 2000, projects: [], tasks: [], links: [] };
+      if (channel === "inf:conversation:last-turn") return null;
+      if (channel === "inf:conversation:state") return { busy: false };
+      if (channel === "inf:computers:presence") return [];
+      throw new Error(`Unexpected request ${channel}`);
+    }) as CoreDispatch;
+
+    it("sends only the newest card list, each earlier one as an empty push under its number", async () => {
+      const at = await home({ dispatch: reloadReads });
+      const grant = await at.join();
+      // The view's first connection reloads, reading what every reload reads first.
+      const first = await connectClient(grant);
+      for (const channel of reloads) await first.invoke(channel, []);
+      changed(at.events);
+      await first.push(() => true);
+      const cursor = first.cursor();
+      await first.close();
+
+      at.events.emit("inf:cards", [findings]);
+      at.events.emit("inf:cards", [findings, plan]);
+      changed(at.events);
+      at.events.emit("inf:cards", [findings, plan, review]);
+      const back = await connectClient(grant, { cursor });
+      expect(back.welcome.catchUp).toBe("replay");
+      expect(back.pushes.map((push) => [push.seq - cursor.seq, push.channel])).toEqual([
+        [1, REPLACED_PUSH_CHANNEL],
+        [2, REPLACED_PUSH_CHANNEL],
+        [3, "inf:models:changed"],
+        [4, "inf:cards"],
+      ]);
+      expect(back.pushes.at(-1)?.payload).toEqual([findings, plan, review]);
+      // A device on the old spelling hears the empty push in its own.
+      const old = await connectClient(grant, { cursor, spellings: null });
+      expect(old.pushes[0]?.channel).not.toBe(REPLACED_PUSH_CHANNEL);
+      expect(ownChannel(old.pushes[0]?.channel ?? "")).toBe(REPLACED_PUSH_CHANNEL);
+      await back.close();
+      await old.close();
+    });
+
+    it("reads everything again when the replay would weigh more than a reload", async () => {
+      const at = await home({ dispatch: reloadReads });
+      const grant = await at.join();
+      // The view's first connection reloads, reading what every reload reads first.
+      const first = await connectClient(grant);
+      for (const channel of reloads) await first.invoke(channel, []);
+      changed(at.events);
+      await first.push(() => true);
+      const cursor = first.cursor();
+      await first.close();
+
+      // A short gap, one reply line, is lighter than a reload. Streamed pieces of a reply take no number at all
+      // (docs/connection.md, "Live pushes"), so the missed pushes here are the first mate's reply lines.
+      const reply = (text: string) =>
+        at.events.emit("inf:event", { type: "firstmate_reply", text });
+      reply("The board is most of the wait.");
+      const short = await connectClient(grant, { cursor });
+      expect(short.welcome.catchUp).toBe("replay");
+      expect(short.pushes.map((push) => push.channel)).toEqual(["inf:event"]);
+      await short.close();
+
+      // Many reply lines outweigh reading the three cards, Activity and the board again.
+      for (const word of "Most of the catch-up wait is the task board, read whole".split(" "))
+        for (let i = 0; i < 4; i++) reply(`${word} is part of the answer.`);
+      const long = await connectClient(grant, { cursor });
+      expect(long.welcome.catchUp).toBe("reload");
+      expect(long.pushes).toEqual([]);
+      await long.close();
+    });
   });
 
   // INF-2022: the previous desktop card decoder is strict, so capability projection applies to

@@ -171,9 +171,11 @@ import XCTest
     /// waited behind the catch-up on the same link, so at 1 KB/s a catch-up over about a minute was cut 60 s in and
     /// started over. It now writes in pieces, each followed by a ping a phone still receiving answers, and lets only a
     /// few seconds' worth go ahead of the answers, so the phone's own pings are answered during the catch-up too. Away
-    /// from a computer whose card list grows by about 20 KB, the phone misses four card lists and the task board pushed
-    /// with each, both as large as the home's record has grown. The link carries the largest in about 20 s at most and
-    /// the whole catch-up in 80 to 90 s: 1 KB/s for a small record, faster for a grown one.
+    /// from a computer whose card list grows by about 80 KB, the phone misses four card lists and the task board pushed
+    /// with each, both as large as the home's record has grown. A replay sends only the newest card list and board
+    /// whole (INF-3750's option C), so the link carries what the replay sends in about 85 s, at 1 KB/s or faster: a
+    /// slower link outlasts the phone's dial before the welcome. The newest list alone outlasts the phone's answer
+    /// wait and still arrives, in parts (INF-2832).
     func testALargeCatchUpOnASlowLinkArrivesOnOneConnection() async throws {
         let session = try await joined()
         // The heavy cards and this connection leave the home shared with the other checks, even when this one fails.
@@ -194,9 +196,8 @@ import XCTest
         session.stop()
         let away = try await home("heavy-away")
         let cards = try XCTUnwrap(away["cards"] as? [String])
-        let largest = try XCTUnwrap(away["largestBytes"] as? Int)
         let replay = try XCTUnwrap(away["replayBytes"] as? Int)
-        try await shape(bytesPerSec: max(1_000, largest / 20, replay / 90), delayMs: 300)
+        try await shape(bytesPerSec: max(1_000, replay / 85), delayMs: 300)
         let before = try await readings().dials.count
         let watch = Watch(session)
         session.start()

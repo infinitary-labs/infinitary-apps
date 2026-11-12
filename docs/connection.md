@@ -82,7 +82,7 @@ A system or chip this version has no word for is a later major's, so its hello i
 Absent, a connection is what its kind is, and a `mac`'s is its work; a hello whose `as` its kind may not be is closed as `protocol`.
 The home answers `welcome` with its own contract version, its journal's `epoch` and newest `seq`, what the version rule lets the device ask (`access`, below), its own `name` when it can read it (`computerName`, `src/core/devices/computerName.ts`; a view says the Mac it controls by it), the spellings of channel names it reads (`spellings`), the name of each contract change it has (`changes`), and how the device catches up:
 
-- `replay`: the pushes the device missed follow the welcome, in order, before anything else.
+- `replay`: the pushes the device missed follow the welcome, in order, before anything else (below, "Catching up").
 - `reload`: the device reads its state again through ordinary requests.
   A first connection is always a reload.
 
@@ -110,6 +110,20 @@ A cursor is replayed when its epoch is this journal's and its `seq` is no newer 
 A home restart, or a pause in listening, starts a new epoch, so every returning device reloads.
 While the local door is open the run never pauses: a change to the addresses devices are listened on closes their connections but keeps the run and its epoch, so they come back and replay.
 Pushes made while nothing listens are not kept.
+
+### Catching up
+
+A replay sends only what the newest whole list leaves (`replayOf`, `src/core/connection/journal.ts`; INF-3750's option C).
+A card list (`inf:cards`) is pushed whole, so a later card list in the same replay replaces every earlier one.
+A whole board (`inf:tasks`) replaces every earlier board and every change to one (`inf:tasks:delta`).
+Each replaced push goes as an empty push under its own number, on `inf:replaced` (`REPLACED_PUSH_CHANNEL`, `src/shared/connection.ts`) with a null payload, so a device's numbering stays whole, as the phone requires, and it reads nothing from it.
+A device from before the change ignores that push, as it does any push on a channel it does not read (`replay-newest-lists.md`).
+
+The home then weighs the replay against a reload and answers `reload` when the replay would send more bytes.
+A reload is weighed by what a view reads first on one (`RELOAD_READS`, `src/core/connection/connection.ts`): the card list, Activity, the whole board, the last reply, the conversation's state and the computers in reach.
+Each is weighed by the newest answer to it the home wrote to any device in this run, or by the newest card list or whole board it pushed since, so the welcome never waits on a read.
+While any of them has not been answered in this run, the device replays, as before the weighing.
+A computer's window reads more than those on a reload, such as each thread it had read, so the weighing can choose a reload slightly heavier than the replay for it.
 
 ## Requests
 

@@ -256,6 +256,15 @@ export const CONNECTION_MAX_FRAME_BYTES = 64 * 1024 * 1024;
 
 const versionSchema = z.string().regex(/^\d+\.\d+\.\d+$/);
 
+/**
+ * The channel of the push a replay sends in place of one a later whole list
+ * in the same replay replaces (docs/connection.md, "Catching up"): numbered
+ * as that push was, with a null payload, so a device's numbering stays whole and
+ * it reads nothing from it. A device that knows no such channel ignores it,
+ * as it does any push it does not read (`replay-newest-lists.md`).
+ */
+export const REPLACED_PUSH_CHANNEL = "inf:replaced";
+
 /** A place in the numbered pushes: the journal's run and the last push seen. */
 export const connectionCursorSchema = z.strictObject({
   epoch: z.string().min(1).max(64),

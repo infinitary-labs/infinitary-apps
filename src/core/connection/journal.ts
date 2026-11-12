@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { ConnectionCursor } from "@shared/connection";
+import { type ConnectionCursor, REPLACED_PUSH_CHANNEL } from "@shared/connection";
 
 /**
  * One numbered push, already written as the frame every client is sent, and
@@ -81,4 +81,51 @@ export class EventJournal {
     if (cursor.seq < oldest - 1) return null;
     return this.kept.filter((entry) => entry.seq > cursor.seq);
   }
+}
+
+/**
+ * The pushes whose every one carries a whole list, each with the channels it
+ * replaces: the card list replaces every earlier card list, and the whole
+ * board every earlier board and every change to one. A replay sends only
+ * what the newest of each leaves (docs/connection.md, "Catching up").
+ */
+export const WHOLE_LISTS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  ["inf:cards", new Set(["inf:cards"])],
+  ["inf:tasks", new Set(["inf:tasks", "inf:tasks:delta"])],
+]);
+
+/** One push of a replay, or the empty push standing in for a whole list a later one replaces. */
+export type ReplayEntry = { readonly entry: JournalEntry; readonly replaced: boolean };
+
+/** The empty push that stands in for a replaced whole list, numbered as it was. */
+export function replacedFrame(seq: number, channel = REPLACED_PUSH_CHANNEL): string {
+  return JSON.stringify({ t: "push", seq, channel, payload: null });
+}
+
+/**
+ * What a replay of `missed` sends: each push in order, except one that a
+ * later whole list in the replay replaces, which goes as an empty push under
+ * its number.
+ */
+export function replayOf(missed: readonly JournalEntry[]): ReplayEntry[] {
+  // The newest push of each whole list, and from it the newest whole list each channel is replaced by.
+  const newest = new Map<string, number>();
+  for (const entry of missed)
+    if (WHOLE_LISTS.has(entry.channel)) newest.set(entry.channel, entry.seq);
+  const replacedBefore = new Map<string, number>();
+  for (const [whole, seq] of newest)
+    for (const channel of WHOLE_LISTS.get(whole) ?? [])
+      replacedBefore.set(channel, Math.max(seq, replacedBefore.get(channel) ?? 0));
+  return missed.map((entry) => ({
+    entry,
+    replaced: entry.seq < (replacedBefore.get(entry.channel) ?? 0),
+  }));
+}
+
+/** The bytes a replay sends, before any respelling or projection for one device. */
+export function replayBytes(replay: readonly ReplayEntry[]): number {
+  let total = 0;
+  for (const { entry, replaced } of replay)
+    total += Buffer.byteLength(replaced ? replacedFrame(entry.seq) : entry.frame);
+  return total;
 }

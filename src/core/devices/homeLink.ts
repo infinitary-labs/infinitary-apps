@@ -14,6 +14,7 @@ import {
   type HomeFrame,
   homeFrameSchema,
   invokeArgs,
+  REPLACED_PUSH_CHANNEL,
 } from "@shared/connection";
 import type { ContractAccess } from "@shared/contractFeatures";
 import { COMPUTER } from "@shared/deviceNames";
@@ -497,6 +498,8 @@ export class HomeLink {
         }
         if (frame.t === "push") {
           if (this.cursor) this.cursor = { epoch: this.cursor.epoch, seq: frame.seq };
+          // A replayed push a later whole list replaced moves the cursor and carries nothing.
+          if (ownChannel(frame.channel) === REPLACED_PUSH_CHANNEL) return;
           try {
             this.options.onPush(
               ownChannel(frame.channel),

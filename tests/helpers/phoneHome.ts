@@ -5,6 +5,7 @@ import { createServer, type IncomingMessage } from "node:http";
 import { createConnection, createServer as createTCPServer, type Socket } from "node:net";
 import { join } from "node:path";
 import { type PairedDevice, startConnection } from "@core/connection/connection";
+import { type JournalEntry, replayBytes, replayOf } from "@core/connection/journal";
 import { claimLink } from "@core/devices/dial";
 import { createKeyIdentity } from "@core/devices/identity";
 import { absentKeychain } from "@core/host";
@@ -2237,17 +2238,20 @@ export async function startPhoneHome(
         }
         case "POST heavy-away": {
           // INF-2669: what a phone misses while away from a long-running computer whose card list grows by about
-          // 20 KB: four card lists, each pushed whole, and the task board pushed whole with each. Each list waits for
+          // 80 KB, four cards of about 20 KB each: four card lists, each pushed whole, and the task board pushed whole
+          // with each. Each list waits for
           // its own push, as `away-traffic`'s do, so none is coalesced; `away-cleanup` closes the cards. Both grow
-          // with what the journeys sharing this home left, so a check sizes its link from `largestBytes`, the largest
-          // push or board, and `replayBytes`, every push while away.
+          // with what the journeys sharing this home left, so a check sizes its link from `replayBytes`, what a replay
+          // of the pushes while away sends (INF-3750's option C: only the newest card list and board go whole).
           const cardsPushed = new Set<string>();
-          let largestBytes = 0;
-          let replayBytes = 0;
+          const away: JournalEntry[] = [];
           const stopWatching = core.events.subscribe((channel, payload) => {
-            const bytes = Buffer.byteLength(JSON.stringify(payload));
-            largestBytes = Math.max(largestBytes, bytes);
-            replayBytes += bytes;
+            const seq = away.length + 1;
+            away.push({
+              seq,
+              channel,
+              frame: JSON.stringify({ t: "push", seq, channel, payload }),
+            });
             if (channel === "inf:cards")
               for (const card of payload as { id: string }[]) cardsPushed.add(card.id);
           });
@@ -2264,7 +2268,7 @@ export async function startPhoneHome(
               const card = core.services.supervisor.addFirstmateCard({
                 id: `phone-heavy-${n}`,
                 title,
-                body: n === 0 ? line.repeat(Math.ceil(20_000 / line.length)) : `<p>${title}.</p>`,
+                body: `<p>${title}.</p>${line.repeat(Math.ceil(20_000 / line.length))}`,
                 actions: [],
               });
               cards.push(card);
@@ -2274,10 +2278,7 @@ export async function startPhoneHome(
           } finally {
             stopWatching();
           }
-          // A board push still coalescing after the last list is as large as the board read now.
-          const board = await core.dispatch("inf:tasks:board", []);
-          largestBytes = Math.max(largestBytes, Buffer.byteLength(JSON.stringify(board)));
-          result = { cards, largestBytes, replayBytes };
+          result = { cards, replayBytes: replayBytes(replayOf(away)) };
           break;
         }
         case "POST heavy-card": {

@@ -12,6 +12,7 @@ import {
   type ConnectionCursor,
   type HomeFrame,
   homeFrameSchema,
+  REPLACED_PUSH_CHANNEL,
 } from "@shared/connection";
 import type { DeviceGrant, DeviceRole } from "@shared/devices";
 import {
@@ -150,7 +151,9 @@ export async function connectClient(
     } else if (frame.t === "push") {
       // Kept as the wire spelled it; checked against the contract by its own name.
       const channel = frame.channel as PushChannel;
-      pushContract[ownChannel(channel) as PushChannel].payload.parse(frame.payload);
+      // A replayed push a later whole list replaced is numbered and carries nothing.
+      if (ownChannel(channel) !== REPLACED_PUSH_CHANNEL)
+        pushContract[ownChannel(channel) as PushChannel].payload.parse(frame.payload);
       pushes.push({ seq: frame.seq, channel, payload: frame.payload });
       for (const watcher of watchers) watcher();
     } else if (frame.t === "live") {

@@ -86,11 +86,24 @@ let lines = [];
 let beatAt = performance.now();
 let beatWall = Date.now();
 let beatCpu = null;
+let beatProbe = null;
+let fastestProbe = null;
+let windowState = null;
 let tickAt = performance.now();
 let stall = null;
 let capturing = null;
 
 const cpuOf = (usage) => usage.user + usage.system;
+
+// What the main thread's heartbeats said about the windows and its speed
+// just before a stall, and the speed in the heartbeat that ended it.
+function noteContext(line, target) {
+  if (target.window) line.window = target.window;
+  if (target.probeBefore !== undefined && fastestProbe !== null) {
+    line.speed = { beforeNs: target.probeBefore, fastestNs: fastestProbe };
+    if (target.probeAfter !== undefined) line.speed.afterNs = target.probeAfter;
+  }
+}
 
 // Replace an incident's snapshot atomically: a crash keeps either its start
 // or its final facts, never half a JSON line. Legacy lines retain their shape.
@@ -121,6 +134,7 @@ function write(done) {
   if (done.captureRequestedAt !== undefined) line.captureRequestedAt = new Date(done.captureRequestedAt).toISOString();
   if (done.capturedAt !== undefined) line.capturedAt = new Date(done.capturedAt).toISOString();
   if (uncertain) line.uncertain = uncertain;
+  noteContext(line, done);
   persist(line);
   parentPort.postMessage(line);
 }
@@ -151,6 +165,7 @@ function persistStarted(target) {
   if (record.build) line.build = record.build;
   if (target.captureRequestedAt !== undefined) line.captureRequestedAt = new Date(target.captureRequestedAt).toISOString();
   if (target.capturedAt !== undefined) line.capturedAt = new Date(target.capturedAt).toISOString();
+  noteContext(line, target);
   persist(line);
 }
 
@@ -182,11 +197,15 @@ parentPort.on("message", (message) => {
     return;
   }
   const now = performance.now();
+  if (message.window) windowState = message.window;
+  const probe = typeof message.probeNs === "number" ? Math.round(message.probeNs) : null;
+  if (probe !== null && (fastestProbe === null || probe < fastestProbe)) fastestProbe = probe;
   if (stall) {
     const done = stall;
     stall = null;
     done.endedAt = now;
     done.cpuAfter = message.cpu;
+    if (probe !== null) done.probeAfter = probe;
     done.completedAt = new Date().toISOString();
     if (done.frames || capturing !== done) write(done);
     else done.timer = setTimeout(() => write(done), lateMs);
@@ -194,6 +213,7 @@ parentPort.on("message", (message) => {
   beatAt = now;
   beatWall = Date.now();
   beatCpu = message.cpu;
+  beatProbe = probe;
 });
 
 setInterval(() => {
@@ -207,6 +227,8 @@ setInterval(() => {
   }
   if (stall || beatCpu === null || now - beatAt < record.thresholdMs) return;
   stall = { incidentId: randomUUID(), at: new Date(beatWall).toISOString(), startedAt: beatAt, cpuBefore: beatCpu };
+  if (windowState) stall.window = windowState;
+  if (beatProbe !== null) stall.probeBefore = beatProbe;
   // This write must precede the inspector request: native waits may never
   // answer it, and the whole process may end before another heartbeat.
   persistStarted(stall);

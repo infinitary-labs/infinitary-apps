@@ -31,6 +31,31 @@ export const FREEZE_THRESHOLD_MS = 50;
 /** The record keeps the newest lines; older ones drop, so it never grows past this. */
 export const RECORD_MAX_LINES = 500;
 
+/**
+ * The speed probe's fixed work: about 6 microseconds on a Mac's fast core,
+ * so a heartbeat every 10 ms spends well under a thousandth of the main
+ * thread on it.
+ */
+const SPEED_PROBE_ROUNDS = 4_000;
+/** The app's windows are read every this many heartbeats, 100 ms apart. */
+const WINDOW_READ_BEATS = 10;
+
+/** Whether the app's windows were shown at a pause (`Host.windowState`). */
+export const windowStateSchema = z.enum(["focused", "visible", "hidden", "none"]);
+export type WindowState = z.infer<typeof windowStateSchema>;
+
+/**
+ * How fast the main thread ran around a pause: the speed probe's time in the
+ * heartbeat before the stall and the one that ended it, and the fastest the
+ * probe ran in this run so far. A before or after several times the fastest
+ * is the main thread running slowly, not doing more work.
+ */
+const speedSchema = z.object({
+  beforeNs: z.number().int().nonnegative(),
+  afterNs: z.number().int().nonnegative().optional(),
+  fastestNs: z.number().int().nonnegative(),
+});
+
 const frameSchema = z.object({
   name: z.string(),
   file: z.string(),
@@ -58,6 +83,9 @@ export const freezeLineSchema = z.object({
   captureRequestedAt: z.string().optional(),
   capturedAt: z.string().optional(),
   uncertain: z.enum(["waited", "late"]).optional(),
+  // Optional for old records and processes with no windows to read.
+  window: windowStateSchema.optional(),
+  speed: speedSchema.optional(),
 });
 export type FreezeLine = z.infer<typeof freezeLineSchema>;
 
@@ -72,6 +100,8 @@ export const freezeIncidentSchema = z.union([
     build: sourceIdentitySchema.optional(),
     captureRequestedAt: z.string().optional(),
     capturedAt: z.string().optional(),
+    window: windowStateSchema.optional(),
+    speed: speedSchema.optional(),
   }),
 ]);
 export type FreezeIncident = z.infer<typeof freezeIncidentSchema>;
@@ -156,12 +186,20 @@ export class FreezeRecorder {
   /** When the run's awake time was last added to the tally, on the monotonic clock. */
   private ranUntil = 0;
   private readonly memory: MemoryRecorder | undefined;
+  /**
+   * The speed probe's result, kept so neither the bundler nor V8 drops its
+   * work as unused: a module variable only written was dropped from the
+   * app's build.
+   */
+  private probeSink = 1;
 
   constructor(
     private readonly options: {
       recordPath: string;
       build?: SourceIdentity;
       onFreeze: (line: FreezeIncident) => void;
+      /** Whether the app's windows are shown, noted at each pause; absent with no windows. */
+      windowState?: () => WindowState;
       tally?: TallyKeeper;
       onVersionsEnded?: (summaries: VersionSummary[]) => void;
       thresholdMs?: number;
@@ -223,10 +261,45 @@ export class FreezeRecorder {
         maxLines: RECORD_MAX_LINES,
       },
     });
-    const beat = () => worker.postMessage({ cpu: process.threadCpuUsage() });
+    // Each heartbeat carries the speed probe's time and, when it changed, the
+    // windows' state, read every WINDOW_READ_BEATS; the watchdog notes both
+    // at a pause.
+    const windowState = this.options.windowState;
+    let beats = 0;
+    let shown: WindowState | undefined;
+    const beat = () => {
+      const probeNs = this.speedProbe();
+      let window: WindowState | undefined;
+      if (windowState && beats++ % WINDOW_READ_BEATS === 0) {
+        const now = windowState();
+        if (now !== shown) window = shown = now;
+      }
+      worker.postMessage({
+        probeNs,
+        ...(window ? { window } : {}),
+        cpu: process.threadCpuUsage(),
+      });
+    };
     beat();
     this.beat = setInterval(beat, HEARTBEAT_MS);
     this.beat.unref();
+  }
+
+  /**
+   * Times a fixed piece of work on the main thread, in nanoseconds. A slower
+   * core or a throttled process takes longer for the same work, which the
+   * main thread's processor time alone does not show.
+   */
+  private speedProbe(): number {
+    const start = process.hrtime.bigint();
+    let x = this.probeSink | 1;
+    for (let round = 0; round < SPEED_PROBE_ROUNDS; round++) {
+      x ^= x << 13;
+      x ^= x >>> 17;
+      x ^= x << 5;
+    }
+    this.probeSink = x;
+    return Number(process.hrtime.bigint() - start);
   }
 
   private addRunning(): void {

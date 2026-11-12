@@ -1640,6 +1640,7 @@ export async function createServices(
           recordPath: paths.memoryRecordPath,
           ...(host.processFootprint ? { footprint: host.processFootprint } : {}),
         },
+        ...(host.windowState ? { windowState: host.windowState } : {}),
         onFreeze: () => {},
         tally: new FreezeTally(paths.freezeTallyPath, host.app.version, freezeBuild),
         // One summary per ended version (the inbox's once-identity); a

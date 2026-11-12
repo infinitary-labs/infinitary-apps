@@ -52,6 +52,11 @@ A completed line holds when the stall began, its elapsed time between heartbeats
 The same started snapshot is updated as capture facts arrive, so interruption retains observed timing without inventing missing measurements.
 Unfinished snapshots retain no frames, as in the incident lifecycle's original contract.
 An old record or a capture never requested or received leaves the corresponding time absent, never inferred.
+Each line also notes what the main thread's last heartbeat before the stall said about the windows and its speed (INF-3896, which found the app running the same work 2 to 12 times slower than a timing run and could not tell why).
+`window` is `focused` when one of the app's windows had focus, `visible` when one was shown and not minimized, `hidden` when all were hidden or minimized, and `none` with no window; the main thread reads it every tenth heartbeat (`WINDOW_READ_BEATS`), and a process with no windows, such as a computer that runs work, leaves it absent.
+`speed` is how long a fixed piece of work, the speed probe (`SPEED_PROBE_ROUNDS`, about 6 microseconds on a Mac's fast core), took the main thread in nanoseconds: `beforeNs` in the heartbeat before the stall, `afterNs` in the heartbeat that ended it, and `fastestNs`, the fastest it ran in this run so far.
+A before or after several times the fastest is the main thread running slowly, such as on an efficiency core or while the system throttles the app, rather than doing more work; the main thread's processor time alone cannot tell the two apart.
+A start carries the window and the speed before; only a completion has the speed after.
 `build` preserves the recording computer's existing source identity (version, source commit or unknown, and whether its source is mutable), not the investigating checkout's identity.
 It records no arguments, values or text, and nothing sends it anywhere: Diagnostics sends nothing new.
 

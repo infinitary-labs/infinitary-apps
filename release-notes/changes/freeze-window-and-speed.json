@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "freeze-window-and-speed",
+      "reason": "The alpha-only freeze recorder's local record now notes whether the app's windows were shown and how fast the main thread ran at each pause, for diagnosing slow pauses; nothing a person sees changes."
+    }
+  ]
+}

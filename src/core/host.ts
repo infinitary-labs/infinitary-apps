@@ -529,6 +529,14 @@ export type HostCapabilities = {
    */
   readonly processFootprint?: () => Promise<number | null>;
   /**
+   * Whether the app's windows are shown, read by the freeze recorder at each
+   * pause (docs/freeze-recorder.md, "The record"): `focused` when one has
+   * focus, `visible` when one is shown and not minimized, `hidden` when all
+   * are hidden or minimized, `none` with no window. Absent where the process
+   * has no windows.
+   */
+  readonly windowState?: () => "focused" | "visible" | "hidden" | "none";
+  /**
    * Each task's own browser page (docs/task-browser.md). Absent, crewmates
    * have no browser tools.
    */

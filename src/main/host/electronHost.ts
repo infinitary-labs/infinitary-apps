@@ -216,6 +216,13 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
         (info) => (info.private > 0 ? info.private * 1024 : null),
         () => null,
       ),
+    windowState: () => {
+      const windows = appWindows();
+      if (windows.length === 0) return "none";
+      if (windows.some((win) => win.isFocused())) return "focused";
+      if (windows.some((win) => win.isVisible() && !win.isMinimized())) return "visible";
+      return "hidden";
+    },
     // A page the captain holds that asks for a file gets it from the app's own
     // picker, a sheet over the app's window, never one on the page's hidden
     // window (docs/task-browser.md, "A page that asks for a file").

@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { pbkdf2Sync } from "node:crypto";
 import { once } from "node:events";
-import { existsSync, readFileSync, watch, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { runInThisContext } from "node:vm";
 import { Worker } from "node:worker_threads";
@@ -16,6 +16,7 @@ import {
   type FreezeLine,
   FreezeRecorder,
   RECORD_MAX_LINES,
+  type WindowState,
 } from "./freezeRecorder";
 import { FreezeTally, type VersionSummary } from "./freezeTally";
 import { readMemoryRecord } from "./memoryRecorder";
@@ -59,7 +60,7 @@ afterEach(() => {
 async function recordStall(
   recordPath: string,
   hold: () => void,
-  { arm = true }: { arm?: boolean } = {},
+  { arm = true, windowState }: { arm?: boolean; windowState?: () => WindowState } = {},
 ): Promise<FreezeLine> {
   const lines: FreezeLine[] = [];
   const waiters: (() => void)[] = [];
@@ -72,6 +73,7 @@ async function recordStall(
       commit: null,
       mutable: true,
     },
+    ...(windowState ? { windowState } : {}),
     onFreeze: (line) => {
       if ("wallMs" in line) lines.push(line);
       for (const wake of waiters.splice(0)) wake();
@@ -120,6 +122,25 @@ function loadAppSizedCode(): void {
 }
 
 describe("the freeze recorder", () => {
+  // INF-3896's piece 4, the captain's pick: "Record whether the window was
+  // hidden and how fast the main thread ran, at each pause."
+  it("notes whether the window was shown and how fast the main thread ran at a pause", async () => {
+    const recordPath = join(scratchDir("infinitary-freeze-context-"), "freezes.jsonl");
+    const seen = await recordStall(recordPath, () => walkEveryRow(FREEZE_THRESHOLD_MS * 4), {
+      windowState: () => "hidden",
+    });
+
+    expect(seen.window).toBe("hidden");
+    const speed = seen.speed;
+    expect(speed?.beforeNs).toBeGreaterThan(0);
+    expect(speed?.afterNs).toBeGreaterThan(0);
+    expect(speed?.fastestNs).toBeGreaterThan(0);
+    expect(speed?.fastestNs).toBeLessThanOrEqual(speed?.beforeNs ?? 0);
+    expect(speed?.fastestNs).toBeLessThanOrEqual(speed?.afterNs ?? 0);
+    const [written] = readFreezes(recordPath).filter((line) => line.incidentId === seen.incidentId);
+    expect(written).toMatchObject({ window: "hidden", speed });
+  });
+
   it("records a main thread stall with the function that held it, innermost first", async () => {
     const recordPath = join(scratchDir("infinitary-freeze-busy-"), "freezes.jsonl");
     const seen = await recordStall(recordPath, () => renderOpenMessages(FREEZE_THRESHOLD_MS * 8));
@@ -209,22 +230,25 @@ describe("the freeze recorder", () => {
       `
       const { parentPort, workerData } = require("node:worker_threads");
       const fs = require("node:fs");
-      const watcher = fs.watch(workerData.dir, () => {
+      // It reads the record every millisecond, not on file events: on a Mac a
+      // directory's watch delivers events only once it is live, which can be
+      // after the watchdog wrote the start, and the start was never seen.
+      const reading = setInterval(() => {
         if (!fs.existsSync(workerData.path)) return;
         const start = fs.readFileSync(workerData.path, "utf8").split("\\n").filter(Boolean)
           .map(JSON.parse).find(line => line.status === "started");
         if (!start) return;
-        watcher.close();
+        clearInterval(reading);
         parentPort.postMessage(start);
         Atomics.store(workerData.release, 0, 1);
         Atomics.notify(workerData.release, 0);
       });
       parentPort.postMessage("ready");
     `,
-      { eval: true, workerData: { dir, path: recordPath, release } },
+      { eval: true, workerData: { path: recordPath, release } },
     );
     try {
-      // The observer watches before the recorder starts, so the hold follows
+      // The observer reads before the recorder starts, so the hold follows
       // the recorder's first heartbeat with nothing between them.
       await once(observer, "message");
       const observed = once(observer, "message");
@@ -237,6 +261,8 @@ describe("the freeze recorder", () => {
         build: completed.build,
         ...(start.captureRequestedAt ? { captureRequestedAt: completed.captureRequestedAt } : {}),
         ...(start.capturedAt ? { capturedAt: completed.capturedAt } : {}),
+        // The start has the speed before the stall; only the completion has the after.
+        speed: { beforeNs: completed.speed?.beforeNs, fastestNs: start.speed?.fastestNs },
       });
       expect(readFreezes(recordPath)).toContainEqual(completed);
       console.info("Start observed before recovery:", JSON.stringify(start));
@@ -294,17 +320,18 @@ describe("the freeze recorder", () => {
     const ended = once(child, "exit");
     try {
       await once(child.stdout, "data");
+      // It reads the record every millisecond, not on file events: on a Mac a
+      // directory's watch delivers events only once it is live, which can be
+      // after the watchdog wrote the start, and the start was never seen.
       const started = await new Promise<FreezeIncident>((done) => {
-        const check = () => {
+        const reading = setInterval(() => {
           if (!existsSync(recordPath)) return;
           const found = readFreezes(recordPath).find((line) => line.status === "started");
           if (found) {
-            watcher.close();
+            clearInterval(reading);
             done(found);
           }
-        };
-        const watcher = watch(dir, check);
-        check();
+        }, 1);
       });
       expect(started).not.toHaveProperty("wallMs");
       expect(started).not.toHaveProperty("cpuMs");

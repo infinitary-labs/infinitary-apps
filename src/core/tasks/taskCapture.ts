@@ -2,6 +2,7 @@ import type { AttachmentRef } from "@shared/attachments";
 import type { CardAnswer, CardDecisionContext } from "@shared/cards";
 import { reportSummary } from "@shared/feed";
 import type { LastTurn, LastTurnReply } from "@shared/lastTurn";
+import { savedTaskTitle } from "@shared/taskTitle";
 import {
   type AskDelivery,
   type DeliveryEntry,
@@ -487,7 +488,7 @@ export class TaskCapture {
       const record = this.writer.mustGet(id);
       if (record.kind !== "operation") throw new Error(`${record.key} is not an operation.`);
       this.writer.patch(id, {
-        title: input.title,
+        title: savedTaskTitle(input.title),
         outcome: input.outcome,
         outcomeSummary: reportSummary(input.outcome) || null,
         closedAt: at,

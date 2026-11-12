@@ -10,7 +10,7 @@ import {
   type WorkShape,
   type WorkShapeAsk,
 } from "@shared/routingPolicy";
-import { cutText } from "@shared/textCut";
+import { shortTaskTitle, taskTitleRefusal } from "@shared/taskTitle";
 import type { MessageFile } from "../overflow";
 import { NOTHING_SPAWNED, type ReviewAssigned } from "../pi/crewTools";
 import { programShape } from "../program/programRunner";
@@ -247,6 +247,10 @@ export class TaskIntake {
         input.shape.review_of.trim(),
       );
     }
+    // The title is the first mate's words: past its room it is refused
+    // before anything exists, never cut (docs/task-record.md, "A task's title").
+    const titleRefused = taskTitleRefusal(input.title);
+    if (titleRefused) throw new Error(`${NOTHING_SPAWNED} ${titleRefused}`);
     // A personal-ui ask is bound by the host (Step 4): the personal
     // workspace, registered on first need, whatever repo_id came with it.
     const personalRepo = input.intent.kind === "personal-ui" ? this.personalRepo() : undefined;
@@ -324,7 +328,8 @@ export class TaskIntake {
           );
     };
     const taskId = randomUUID().slice(0, 8);
-    const title = cutText(input.title.trim() || input.intent.goal || "Task", 64);
+    // With no title of its own the task is named by the host, from its goal.
+    const title = input.title.trim() || shortTaskTitle(input.intent.goal || "Task");
     // Where the captain said it runs is checked before a row exists
     // (docs/helper.md, "A task's own Runs on").
     let runsOnAsk: string | undefined;
@@ -494,7 +499,7 @@ export class TaskIntake {
       queueMerges(builder.repoId ? this.options.repos.get(builder.repoId) : undefined),
     );
     const taskId = randomUUID().slice(0, 8);
-    const title = cutText(`Review: ${builder.title}`, 64);
+    const title = shortTaskTitle(`Review: ${builder.title}`);
     // The host establishes the kind: a review is never classified, and its
     // basis is the builder, whose report it reads. The builder join is the
     // parent edge below, never a shape field.
@@ -632,6 +637,10 @@ export class TaskIntake {
     },
     alongside?: (record: TaskRecord) => void,
   ): TaskRecord {
+    // The title is its author's words - the first mate's create_task, a
+    // crewmate's start_program: past its room it is refused, never cut.
+    const titleRefused = taskTitleRefusal(input.title);
+    if (titleRefused) throw new TaskGraphRefusal(`Nothing was filed. ${titleRefused}`);
     const placement = this.resolveGraphPlacement(input);
     const brief = renderIntentBrief(
       input.intent,
@@ -641,7 +650,7 @@ export class TaskIntake {
       queueMerges(placement.repoId ? this.options.repos.get(placement.repoId) : undefined),
     );
     const taskId = randomUUID().slice(0, 8);
-    const title = cutText(input.title.trim() || input.intent.goal || "Task", 64);
+    const title = input.title.trim() || shortTaskTitle(input.intent.goal || "Task");
     const handOff = handOffShape(this.options.tasks, input.shape, placement.repoId);
     if ("refused" in handOff) throw new TaskGraphRefusal(`Nothing was filed. ${handOff.refused}`);
     const program = input.shape?.program

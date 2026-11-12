@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "task-titles-whole-words",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Task titles no longer end in the middle of a word",
+      "body": "A task's title could be saved cut off at its last letter that fit, so the board and cards showed titles such as \"…cards on a vi\". Your first mate and crewmates are now asked to say a long title shorter before the task is saved, and a title the app writes itself ends on a whole word.",
+      "noPicture": "A whole title looks like any other title; the fix changes which words a new task is saved with, not how a view draws them.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

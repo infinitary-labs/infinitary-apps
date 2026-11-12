@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
 import type { AttachmentRef } from "@shared/attachments";
-import { cutText } from "@shared/textCut";
+import { shortTaskTitle } from "@shared/taskTitle";
 import type { MessageFile } from "../overflow";
 import {
   type AskAttachedVia,
@@ -39,8 +39,6 @@ import type { TaskService } from "../tasks/taskService";
  * fallbacks is what dogfood watches.
  */
 
-export const ASK_TITLE_MAX = 64;
-
 export type OpenTurnAsk = {
   text: string;
   receipt?: string;
@@ -74,13 +72,16 @@ export type FallbackResult = {
   taskId: string;
 };
 
-/** The first sentence of the ask, clipped, as a question task's title. */
+/**
+ * The first sentence of the ask as a question task's title, ending on a
+ * whole word when it is longer than a title holds; the whole ask stays
+ * attached to the question task.
+ */
 export function askTitle(text: string, images: AskImage[] = []): string {
   const flat = text.replace(/\s+/g, " ").trim();
   if (!flat) return images.length > 0 ? "Image attachment" : "Empty turn";
   const sentence = flat.match(/^.*?[.!?](?=\s|$)/)?.[0] ?? flat;
-  const clipped = cutText(sentence, ASK_TITLE_MAX);
-  return clipped.trim() || cutText(flat, ASK_TITLE_MAX);
+  return shortTaskTitle(sentence);
 }
 
 /**

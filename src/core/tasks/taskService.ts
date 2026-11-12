@@ -22,6 +22,7 @@ import {
 } from "@shared/taskPolicies";
 import { QUEUE_POLICY } from "@shared/taskQueue";
 import type { DropEffects } from "@shared/tasks";
+import { savedTaskTitle, taskTitleRefusal } from "@shared/taskTitle";
 import { cutText } from "@shared/textCut";
 import type { RepetitionNotice, ToolObservation } from "@shared/toolCompletion";
 import { CARE_WORDS } from "@shared/vocabulary";
@@ -950,7 +951,9 @@ export class TaskService {
         projectId: project.id,
         parentId: parent?.id ?? null,
         kind: input.kind ?? "work",
-        title: input.title,
+        // The last guard (docs/task-record.md, "A task's title"): a title
+        // past its room that reaches the row is the host's own.
+        title: savedTaskTitle(input.title),
         goal: input.goal ?? input.intent?.goal ?? null,
         intent: input.intent ?? null,
         prompt: input.prompt,
@@ -1037,6 +1040,9 @@ export class TaskService {
 
   /** Edit the plain fields of a record; one `note` event lists what changed. */
   updateFields(id: string, patch: UpdateTaskPatch, actor: TaskEventActor): string[] {
+    // A new title is its author's words: past the room it is refused whole, never cut.
+    const titleRefused = patch.title !== undefined ? taskTitleRefusal(patch.title) : undefined;
+    if (titleRefused) throw new TaskGraphRefusal(titleRefused);
     const at = this.writer.now();
     const run = this.writer.write((): string[] => {
       let record = this.writer.mustGet(id);

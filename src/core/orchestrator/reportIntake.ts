@@ -9,6 +9,7 @@ import { formatDurationShort } from "@shared/quotaSignals";
 import { keptRecoveryWaySchema, workWaitSchema } from "@shared/recovery";
 import { deliveryFor, opensPullRequest, type RepoDelivery } from "@shared/repos";
 import { type PlanItem, readPlanItems } from "@shared/taskPlan";
+import { taskTitleRefusal } from "@shared/taskTitle";
 import { cutText } from "@shared/textCut";
 import { crewmateCardPicturesDir } from "../paths";
 import {
@@ -89,10 +90,13 @@ export class ReportIntake {
   fileFollowup(task: TaskRuntime, input: FollowupInput): string {
     const origin = this.options.tasks.get(task.id);
     if (!origin) throw new Error(`Task ${task.id} no longer exists.`);
-    const title = cutText(input.title.trim(), 64);
+    const title = input.title.trim();
     const goal = input.goal.trim();
     const why = input.why.trim();
     if (!title) throw new Error("title is required.");
+    // The title is the crewmate's words: past its room it is refused, never cut.
+    const titleRefused = taskTitleRefusal(title);
+    if (titleRefused) throw new Error(`Nothing was filed. ${titleRefused}`);
     if (!goal) throw new Error("goal is required: one sentence saying what done looks like.");
     if (!why) throw new Error("why is required: what you found that makes this follow-up needed.");
     const personal = this.host.isPersonalTask(task.id);

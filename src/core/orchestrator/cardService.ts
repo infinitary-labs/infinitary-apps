@@ -30,7 +30,7 @@ import {
   onStage,
   type PastCard,
 } from "@shared/cards";
-import { cutText } from "@shared/textCut";
+import { shortTaskTitle } from "@shared/taskTitle";
 import { decidedCardWidth } from "../pi/cardWidth";
 import type { EmittedCardInput } from "../session/tools";
 import type { CardResolution, DuplicateResult } from "../storage/cardStore";
@@ -1505,7 +1505,7 @@ export class CardService {
     if (this.host.tasks.capture.openCardTaskFor(card.id)) return;
     this.host.tasks.capture.fileHostCardTask({
       id: randomUUID().slice(0, 8),
-      title: cutText(card.title.trim(), 64),
+      title: shortTaskTitle(card.title),
       cardId: card.id,
     });
   }

@@ -31,6 +31,15 @@ Completing the synchronous projection drops its shared facts, rather than keepin
 Recent supervision outcomes seek the newest sort ids through their ledger index before reading payloads, rather than sorting the retained history.
 The former public `recordDelivery` field bag is private; fixture injection of older mixed records lives only in the test helper.
 
+## A task's title
+
+A task's title is the one line the board, the feed, a card's strip and the record show for it, and it holds at most 64 characters (`TASK_TITLE_MAX`, `src/shared/taskTitle.ts`).
+A title an author writes is refused whole past that room, never saved cut: the refusal names the room and the title's length, and the author says it shorter.
+That covers the first mate's `spawn_crewmate`, `create_task` and `update_task` (`Intake.commission`, `Intake.plan`, `TaskService.updateFields`), a crewmate's `file_followup` and `start_program`, and an after-merge step's title, whose room leaves space for the `Continue: ` its task adds.
+A title the host makes itself from longer words has no author to refuse, so it ends on its last whole word that fits, marked with an ellipsis (`shortTaskTitle`): the first sentence of a captain's message filed as a question, a card's title on the record it files, `Review: ` and `Assess repair: ` before a builder's title, a required action's title, a program part's label, an operation's words, and a goal standing in for a missing title.
+Only a first word longer than the room is cut inside it.
+`TaskService.create` and an operation's revision apply the same shortening to any title past the room that reaches them, so no path saves a title cut mid-word; titles saved before this rule keep the words they were saved with.
+
 ## Conversations on a task
 
 `TaskService.turns.setSessionFile` commits the current resume pointer and its `task_sessions` association together.

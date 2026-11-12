@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readFile, realpath, rm, stat } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
 import { deflateRawSync } from "node:zlib";
+import { AFTER_MERGE_TITLE_PREFIX } from "@shared/afterMerge";
 import { CARD_PICTURE_TYPES, CARD_TYPEFACE_HOST } from "@shared/cardPictures";
 import type { CardPicture } from "@shared/cards";
 import {
@@ -13,6 +14,7 @@ import {
   type StagedChangePresentation,
 } from "@shared/changePresentation";
 import { APP_FRAME_SCHEME } from "@shared/csp";
+import { TASK_TITLE_MAX } from "@shared/taskTitle";
 import { presentationHtmlText } from "../forge";
 import { readCardBodyFile } from "./cardBodyFile";
 import { type CardPictureRoot, containedFile, verifyCardImages } from "./cardImages";
@@ -110,6 +112,24 @@ async function readPart(
   return part;
 }
 
+/**
+ * An after-merge step's title becomes a task's title after the prefix the
+ * host adds, so past its room it is refused naming the room and its length
+ * (docs/task-record.md, "A task's title"), before the schema's own bound
+ * answers in words without the length.
+ */
+function afterMergeTitlesFit(steps: unknown): void {
+  if (!Array.isArray(steps)) return;
+  const room = TASK_TITLE_MAX - AFTER_MERGE_TITLE_PREFIX.length;
+  for (const [index, step] of steps.entries()) {
+    const title: unknown = (step as { title?: unknown } | null)?.title;
+    if (typeof title === "string" && title.length > room)
+      throw new Error(
+        `afterMerge step ${index + 1}'s title is ${title.length} characters, and it holds at most ${room}: its task is titled "${AFTER_MERGE_TITLE_PREFIX}" and the step's title, at most ${TASK_TITLE_MAX} in all. Say it in ${room} or fewer.`,
+      );
+  }
+}
+
 /** Validate selected bytes using the existing card reader, without displaying a card. */
 export async function stageChangePresentation(
   input: ChangePresentationDraft,
@@ -117,6 +137,7 @@ export async function stageChangePresentation(
   /** The task's card body folder, where a free-form part's file usually is. */
   cardBodiesDir?: string,
 ): Promise<StagedChangePresentation> {
+  afterMergeTitlesFit(input.afterMerge);
   const draft = changePresentationDraftSchema.parse(input);
   const selected = draft.views.flatMap((view) => [...view.before, ...view.after]);
   // These figures are generated solely from typed selected paths, never arbitrary author HTML.

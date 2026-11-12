@@ -3,7 +3,7 @@ import type { AttachmentRef } from "@shared/attachments";
 import type { TurnImage } from "@shared/cards";
 import { deviceUpdateCardOfOffer } from "@shared/deviceUpdateNudge";
 import type { HostReplyEmote } from "@shared/emotes";
-import { cutText } from "@shared/textCut";
+import { shortTaskTitle } from "@shared/taskTitle";
 import { loadImages } from "../attachments";
 import type { CoreDispatch } from "../dispatcher";
 import {
@@ -496,7 +496,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
           }),
           {
             schedule_prompt: (params) => ({
-              title: `Scheduled: ${clipTitle(stringParam(params.prompt) ?? "a prompt")}`,
+              title: shortTaskTitle(`Scheduled: ${stringParam(params.prompt) ?? "a prompt"}`),
             }),
           },
         )
@@ -599,7 +599,7 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
               const action = stringParam(params.action) ?? "record";
               const what = stringParam(params.title) ?? stringParam(params.id) ?? "knowledge";
               return {
-                title: `Knowledge ${action}: ${clipTitle(what)}`,
+                title: shortTaskTitle(`Knowledge ${action}: ${what}`),
                 ...(scope && host.options.repos.get(scope) ? { repoId: scope } : {}),
               };
             },
@@ -822,7 +822,7 @@ function fileCard(host: FirstmateToolHost, card: EmittedCard, cardId: string): s
     const hinted = host.asks.hintedTask();
     const row = tasks.capture.fileDecision({
       id: randomUUID().slice(0, 8),
-      title: clipTitle(card.title),
+      title: shortTaskTitle(card.title),
       cardId,
       repoId: hinted?.repoId ?? null,
       ...(hinted ? { projectId: hinted.projectId } : {}),
@@ -850,7 +850,7 @@ function fileCard(host: FirstmateToolHost, card: EmittedCard, cardId: string): s
   }
   const row = tasks.capture.fileQuestion({
     id: randomUUID().slice(0, 8),
-    title: clipTitle(card.title),
+    title: shortTaskTitle(card.title),
     outcome: card.body,
     cardId,
   });
@@ -901,7 +901,7 @@ function filingOperations<Tool extends BoundTool>(
           const described = describer((params ?? {}) as Record<string, unknown>);
           const row = host.options.tasks.capture.fileOperation({
             id: randomUUID().slice(0, 8),
-            title: clipTitle(described.title),
+            title: shortTaskTitle(described.title),
             outcome: output.text.trim(),
             tool: tool.name,
             repoId: described.repoId ?? null,
@@ -957,10 +957,4 @@ function personalizeTitle(params: Record<string, unknown>): string {
 
 function stringParam(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
-
-/** A task title from free text: one line, at most 64 characters. */
-function clipTitle(text: string): string {
-  const flat = text.replace(/\s+/g, " ").trim();
-  return flat.length <= 64 ? flat : `${cutText(flat, 63).trimEnd()}…`;
 }

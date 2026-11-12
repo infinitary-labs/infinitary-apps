@@ -1,4 +1,3 @@
-import { cutText } from "@shared/textCut";
 import type { StartProgramInput } from "../session/tools";
 import type { TaskRecord } from "../storage/taskRecords";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
@@ -51,7 +50,8 @@ export class CrewmatePrograms {
     const tasks = this.core.options.tasks;
     const origin = tasks.get(task.id);
     if (!origin) throw new Error(`Task ${task.id} no longer exists.`);
-    const title = cutText(input.title?.trim() ?? "", 64);
+    // A title past its room is refused by intake.plan, never cut here.
+    const title = input.title?.trim() ?? "";
     const goal = input.goal?.trim() ?? "";
     if (!title || !goal)
       return "Nothing was filed. Give the program a title and a goal, one sentence saying what it finds or does.";

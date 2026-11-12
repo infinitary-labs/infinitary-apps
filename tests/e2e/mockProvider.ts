@@ -7,6 +7,8 @@ import {
 import type { AddressInfo } from "node:net";
 import { zstdDecompressSync } from "node:zlib";
 import type { ServedSegment } from "@shared/servedFrame";
+import { TASK_TITLE_MAX } from "@shared/taskTitle";
+import { cutText } from "@shared/textCut";
 import { CORRECTION_QUESTION } from "../../src/core/decisions/correctionQuestion";
 import {
   ANSWER_MISSING_ENDED_OPENING,
@@ -1123,7 +1125,11 @@ export async function startMockProvider(
               {
                 name: "spawn_crewmate",
                 args: {
-                  title,
+                  // The host refuses a title past its room, and a model says
+                  // it shorter; the stand-in keeps the ask's start, which each
+                  // journey finds its task by. The markers read the whole ask,
+                  // carried whole in user_words.
+                  title: cutText(title, TASK_TITLE_MAX).trim(),
                   goal: mockSpawnGoal(title),
                   user_words: `${SPAWN_PROMPT_MARKER} ${title}`,
                   ...(bound ? { repo_id: bound[1] } : {}),

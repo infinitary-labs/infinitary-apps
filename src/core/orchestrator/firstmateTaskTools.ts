@@ -163,7 +163,8 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
               "program_bound is raised only on the captain's words: ask the captain on a card first.",
             );
           const rest = {
-            ...(input.title !== undefined ? { title: cutText(input.title.trim(), 64) } : {}),
+            // A title past its room is refused by updateFields, never cut here.
+            ...(input.title !== undefined ? { title: input.title.trim() } : {}),
             ...(input.programBound !== undefined ? { programBound: input.programBound } : {}),
             ...(input.basis !== undefined ? { basis: input.basis } : {}),
             ...handOff,

@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { availableParallelism } from "node:os";
 import { type IntelligenceBucket, intelligenceBucketSchema } from "@shared/modelSlots";
 import type { WorkShape, WorkShapeAsk } from "@shared/routingPolicy";
+import { shortTaskTitle } from "@shared/taskTitle";
 import { cutText } from "@shared/textCut";
 import type { HostChildProcess, HostChildSpawner } from "../host";
 import type { CrewSupervisorOptions, FirstmateHooks } from "../orchestrator/crewSupervisorOptions";
@@ -717,7 +718,9 @@ export class CrewPrograms {
       },
       intent,
     );
-    const title = cutText(part.label, 64);
+    // The label is the script's name for the part, its full words kept on the
+    // part; the title the host makes from it ends on a whole word.
+    const title = shortTaskTitle(part.label);
     const record = this.options.tasks.create({
       id: randomUUID().slice(0, 8),
       kind: "work",

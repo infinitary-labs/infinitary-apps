@@ -210,9 +210,6 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/observe/transcript.ts": {
     TOOL_TEXT_LIMIT: physical("clipped with the omitted count; the session file keeps it whole"),
   },
-  "src/core/orchestrator/askCapture.ts": {
-    ASK_TITLE_MAX: physical("clipped; the whole ask stays attached to the question task"),
-  },
   "src/core/orchestrator/changePresentations.ts": {
     GITHUB_STORY_BODY_LIMIT: outside("refused in words naming the limit; shorten the story or its text"),
   },
@@ -525,6 +522,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   },
   "src/shared/taskPlan.ts": {
     PLAN_LINE_MAX: physical("the line folds its tail; the record lists every item"),
+  },
+  "src/shared/taskTitle.ts": {
+    TASK_TITLE_MAX: physical("an author is refused naming 64 and its length; a host title ends on a whole word"),
   },
   "src/shared/usage.ts": {
     USAGE_TASKS_MAX: physical("none yet: Show more stops at 5,000; older tasks are not listed"),

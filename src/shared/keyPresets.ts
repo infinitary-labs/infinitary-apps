@@ -59,9 +59,9 @@ const cmd = (key: string, shift = false): KeyChord => ({
   ...(shift ? { shift: true } : {}),
 });
 
-/** The catalog's own keys for a command, then the preset's beside them. */
+/** The preset's own keys for a command, then the catalog's it keeps beside them. */
 function withLegacy(id: CommandId, ...more: KeyBinding[]): readonly KeyBinding[] {
-  return [...KEYBOARD_COMMANDS[id].keys, ...more];
+  return [...more, ...KEYBOARD_COMMANDS[id].keys];
 }
 
 /** A preset's keys for the commands it changes; every other command keeps the catalog's. */
@@ -78,7 +78,8 @@ const ctrlX = (second: KeyChord): KeyBinding => pair(ctrl("x"), second);
 const cmdK = (second: KeyChord): KeyBinding => pair(cmd("k"), second);
 
 /**
- * Vim: every ⌘ key of today stays, and while the person is not typing h j k
+ * Vim: every ⌘ key of today stays, listed after Vim's own so a hint names
+ * Vim's, and while the person is not typing h j k
  * l move, g starts a "go to", : searches commands, / finds a task and Ctrl+W
  * moves between the window's parts. Anywhere, Ctrl+N and Ctrl+P move down
  * and up, Ctrl+[ cancels and Ctrl+Tab steps through a card's tabs. While
@@ -116,8 +117,8 @@ const VIM: PresetTable = {
   "settings.open": withLegacy("settings.open", go("s")),
   "settings.keyboard": [bare("?")],
   "project-focus.open": withLegacy("project-focus.open", go("p")),
-  "panel:now/find": [cmd("f", true), bare("/")],
-  "panel:now/board": [cmd("b"), go("b")],
+  "panel:now/find": [bare("/"), cmd("f", true)],
+  "panel:now/board": [go("b"), cmd("b")],
   // Ctrl+P moves up anywhere, which in the main message brings back the last one.
   "message.recall": [{ key: "ArrowUp" }],
 };
@@ -145,8 +146,8 @@ const EMACS: PresetTable = {
   // Ctrl+P moves up anywhere, which in the main message brings back the last one.
   "message.recall": [{ key: "ArrowUp" }],
   "regions.next": withLegacy("regions.next", ctrlX({ key: "o" })),
-  "panel:now/find": [cmd("f", true), ctrlX({ key: "b" }), ctrl("s")],
-  "panel:now/board": [cmd("b"), ctrlX(ctrl("b"))],
+  "panel:now/find": [ctrlX({ key: "b" }), ctrl("s"), cmd("f", true)],
+  "panel:now/board": [ctrlX(ctrl("b")), cmd("b")],
   "project-focus.open": withLegacy("project-focus.open", ctrlX({ key: "p" })),
   "cards.minimize": withLegacy("cards.minimize", ctrlX({ key: "0" }), ctrlX({ key: "k" })),
   "cards.maximize": [ctrlX({ key: "1" })],
@@ -176,7 +177,7 @@ const VSCODE: PresetTable = {
   "cards.minimize": [cmdK({ key: "w" }), cmd("m", true)],
   "cards.show-crewmate": [ctrl("`")],
   "project-focus.open": [ctrl("r")],
-  "focus.main-message": [cmd("l"), { key: "i", meta: true, ctrl: true }],
+  "focus.main-message": [{ key: "i", meta: true, ctrl: true }, cmd("l")],
   "regions.left": [cmdK(cmd("ArrowLeft"))],
   "regions.down": [cmdK(cmd("ArrowDown"))],
   "regions.up": [cmdK(cmd("ArrowUp"))],
@@ -221,22 +222,22 @@ const EMACS_CTRL: PresetTable = {
   "message.recall": [{ key: "ArrowUp" }],
   "message.delete-to-line-end": [lin("k")],
   "message.put-back-deleted": [{ key: "y", alt: true }],
-  "regions.next": [{ key: "F6" }, linX({ key: "o" })],
-  "panel:now/find": [lin("f", true), linX({ key: "b" }), lin("s")],
+  "regions.next": [linX({ key: "o" }), { key: "F6" }],
+  "panel:now/find": [linX({ key: "b" }), lin("s"), lin("f", true)],
   "panel:now/board": [linX(lin("b"))],
-  "project-focus.open": [lin("p", true), linX({ key: "p" })],
-  "cards.minimize": [lin("m", true), linX({ key: "0" }), linX({ key: "k" })],
+  "project-focus.open": [linX({ key: "p" }), lin("p", true)],
+  "cards.minimize": [linX({ key: "0" }), linX({ key: "k" }), lin("m", true)],
   "cards.maximize": [linX({ key: "1" })],
-  "cards.previous": [lin("[", true), lin("{", true), linX({ key: "ArrowLeft" })],
-  "cards.next": [lin("]", true), lin("}", true), linX({ key: "ArrowRight" })],
+  "cards.previous": [linX({ key: "ArrowLeft" }), lin("[", true), lin("{", true)],
+  "cards.next": [linX({ key: "ArrowRight" }), lin("]", true), lin("}", true)],
   "cards.next-tab": [lin("Tab")],
   "cards.previous-tab": [lin("Tab", true)],
-  "focus.main-message": [lin("l"), linX({ key: "m" })],
+  "focus.main-message": [linX({ key: "m" }), lin("l")],
   "settings.keyboard": [linH("b")],
   "whats-new.show": [linH("n")],
-  "size.larger": [lin("+"), lin("="), linX(lin("+")), linX(lin("="))],
-  "size.smaller": [lin("-"), linX(lin("-"))],
-  "size.reset": [lin("0"), linX(lin("0"))],
+  "size.larger": [linX(lin("+")), linX(lin("=")), lin("+"), lin("=")],
+  "size.smaller": [linX(lin("-")), lin("-")],
+  "size.reset": [linX(lin("0")), lin("0")],
 };
 
 /** A preset's own table for a Ctrl system, written as that system presses keys, where the Mac's cannot be read there. */

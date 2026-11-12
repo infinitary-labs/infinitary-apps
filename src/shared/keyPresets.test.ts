@@ -3,11 +3,13 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   allCommandIds,
+  bindingLabel,
   COMMAND_IDS,
   catalogKeys,
   DEFAULT_BINDINGS,
   isCatalogCommand,
   type KeyBinding,
+  keyHint,
   keysOf,
   type PanelCommand,
   panelCommandId,
@@ -70,6 +72,27 @@ describe("each preset", () => {
             if (!catalogHas(id, binding, system))
               expect(bindingProblem(binding, id, panels, system), `${id}`).toBeNull();
           }
+        }
+      });
+    }
+
+  // The captain, on Vim: "most of the tooltip i'm seeing across the app still
+  // tell me the legacy bindings", then the pick "Show each preset's own keys
+  // first". A hint shows a command's first key, so a preset lists its own key
+  // before any it keeps from Legacy.
+  for (const system of SYSTEMS)
+    for (const preset of PRESET_IDS) {
+      it(`${preset} on ${system}: a hint names the preset's own key before a kept Legacy one`, () => {
+        const bindings = resolveBindings(presetKeymap(preset), panels, system);
+        const legacy = resolveBindings(presetKeymap("legacy"), panels, system);
+        for (const id of allCommandIds(panels)) {
+          const kept = keysOf(legacy, id);
+          const own = keysOf(bindings, id).filter(
+            (key) => !kept.some((old) => sameBinding(old, key)),
+          );
+          if (own.length === 0) continue;
+          const labels = own.map((key) => bindingLabel(key, system));
+          expect(labels, `${id}'s hint`).toContain(keyHint(id, bindings, system));
         }
       });
     }

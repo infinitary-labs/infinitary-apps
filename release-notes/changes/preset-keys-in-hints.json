@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "preset-keys-in-hints",
+      "kind": "fix",
+      "title": "Hints show your keyboard preset's own keys",
+      "body": "On Vim, Emacs or VS Code keys, the labels beside buttons, command search, Keyboard settings and the main message now name the preset's own key, such as ⇧L for the next card on Vim, instead of the ⌘ key it keeps from the earlier keys. The ⌘ keys still work as before.",
+      "area": "cards",
+      "picture": {
+        "dark": "preset-keys-in-hints-dark.webp",
+        "light": "preset-keys-in-hints-light.webp",
+        "alt": "A card's foot on Vim keys: the reply field shows R, and the Next card label under the pager shows ⇧L"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -179,6 +179,7 @@ function runQuickActions(description: string, ran: string[]): string {
 
 type StubMergeRequest = {
   iid: number;
+  sourceProjectId?: number;
   branch: string;
   title: string;
   description: string;
@@ -277,7 +278,7 @@ export async function startGitLabStub(host: string) {
     | { response: Promise<void>; waiting: boolean; release: () => void }
     | undefined;
   const notes: { iid: number; body: string }[] = [];
-  // Merge approvals belong to merge-request notes, separate from pause-issue notes.
+  // Merge approvals and crew stories share request notes, separate from pause-issue notes.
   const requestNotes = new Map<
     number,
     { id: number; body: string; author: { id: number; username: string } }[]
@@ -334,7 +335,7 @@ export async function startGitLabStub(host: string) {
       references: { full: `${GITLAB_STUB_PROJECT}!${request.iid}` },
       updated_at: new Date(Date.UTC(2026, 9, 9, 12, request.iid)).toISOString(),
       project_id: project.id,
-      source_project_id: project.id,
+      source_project_id: request.sourceProjectId ?? project.id,
       target_project_id: project.id,
       source_branch: request.branch,
       target_branch: "main",
@@ -666,24 +667,48 @@ export async function startGitLabStub(host: string) {
         send(200, { id: 1, username: GITLAB_STUB_LOGIN, access_level: 40 });
         return;
       }
-      const numbered = /^\/merge_requests\/(\d+)(\/merge|\/pipelines|\/notes)?$/.exec(rest);
-      const request = numbered ? mergeRequests.get(Number(numbered[1])) : undefined;
-      if (numbered && !request) {
-        send(404, { message: "404 Not found" });
-        return;
-      }
-      if (request && numbered?.[2] === "/notes" && (method === "GET" || method === "POST")) {
-        const rows = requestNotes.get(request.iid) ?? [];
-        if (method === "GET") send(200, paged(rows));
-        else {
+      const requestNote = /^\/merge_requests\/(\d+)\/notes(?:\/(\d+))?$/.exec(rest);
+      if (requestNote) {
+        const iid = Number(requestNote[1]);
+        if (!mergeRequests.has(iid)) {
+          send(404, { message: "404 Not found" });
+          return;
+        }
+        const rows = requestNotes.get(iid) ?? [];
+        if (method === "GET" && !requestNote[2]) {
+          if (page * perPage < rows.length) {
+            const next = new URL(url);
+            next.searchParams.set("page", String(page + 1));
+            res.setHeader("link", `<${next.href}>; rel="next"`);
+          }
+          send(200, paged(rows));
+          return;
+        }
+        if (method === "POST" && !requestNote[2]) {
           const row = {
             id: nextNoteId++,
             body: String(body.body ?? ""),
             author: { id: 1, username: GITLAB_STUB_LOGIN },
           };
-          requestNotes.set(request.iid, [...rows, row]);
+          requestNotes.set(iid, [...rows, row]);
           send(201, row);
+          return;
         }
+        if (method === "PUT" && requestNote[2]) {
+          const row = rows.find((row) => row.id === Number(requestNote[2]));
+          if (!row) {
+            send(404, { message: "404 Not found" });
+            return;
+          }
+          row.body = String(body.body ?? "");
+          send(200, row);
+          return;
+        }
+      }
+      const numbered = /^\/merge_requests\/(\d+)(\/merge|\/pipelines)?$/.exec(rest);
+      const request = numbered ? mergeRequests.get(Number(numbered[1])) : undefined;
+      if (numbered && !request) {
+        send(404, { message: "404 Not found" });
         return;
       }
       if (request && method === "GET" && numbered?.[2] === undefined) {
@@ -1001,6 +1026,12 @@ export async function startGitLabStub(host: string) {
     /** Each merge request's description as GitLab holds it now, by its number. */
     descriptions: () =>
       new Map([...mergeRequests.values()].map((request) => [request.iid, request.description])),
+    /** Contributor-owned text and its separately written story notes. */
+    requestText: (iid: number) => {
+      const request = mergeRequests.get(iid);
+      return request ? { title: request.title, description: request.description } : undefined;
+    },
+    comments: (iid: number) => (requestNotes.get(iid) ?? []).map(({ id, body }) => ({ id, body })),
     /** Turn the project's "Require authentication to view media files" on or off. */
     protectMedia: (on: boolean) => {
       mediaProtected = on;
@@ -1033,11 +1064,17 @@ export async function startGitLabStub(host: string) {
       onMergeRequest = apply;
     },
     /** Open a merge request as a person would on GitLab's own page, for a change the app finds. */
-    openMergeRequest: (input: { branch: string; title: string; description?: string }) => {
+    openMergeRequest: (input: {
+      branch: string;
+      title: string;
+      description?: string;
+      sourceProjectId?: number;
+    }) => {
       const request: StubMergeRequest = {
         iid: nextIid++,
         branch: input.branch,
         title: input.title,
+        ...(input.sourceProjectId !== undefined ? { sourceProjectId: input.sourceProjectId } : {}),
         description: input.description ?? "",
         state: "opened",
       };

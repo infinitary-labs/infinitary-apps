@@ -38,6 +38,9 @@ import { join } from "node:path";
  */
 
 type StubPull = {
+  /** A contributor source, named by the host independently of its branch. */
+  headRepo?: string;
+  headRepoId?: number;
   /** GitHub's `mergeable_state` for this change: `clean` unless a spec names another. */
   mergeableState?: string;
   /**
@@ -112,6 +115,9 @@ export type GitHubStub = {
   queueStarts: () => { ref: string; inputs: Record<string, string> }[];
   /** Every asynchronous merge GitHub accepted, in order. */
   asyncMerges: () => StubAsyncMerge[];
+  /** Contributor request text and review comments, as the host holds them. */
+  requestText: (number: number) => { title: string; description: string } | undefined;
+  comments: (number: number) => { id: number; body: string }[];
   /** The rule sets holding the default branch; none by default. */
   setRulesets: (sets: StubRuleset[]) => void;
   /**
@@ -144,6 +150,8 @@ export type GitHubStub = {
     title: string;
     body?: string;
     headSha: string;
+    headRepo?: string;
+    headRepoId?: number;
     mergeableState?: string;
     undecidedReads?: number;
   }) => void;
@@ -246,6 +254,7 @@ export type GitHubStub = {
   close: () => Promise<void>;
 };
 
+export const GITHUB_STUB_KEY = "gho_e2e_sign_in";
 export const STUB_USER_CODE = "WDJB-MJHT";
 export const STUB_LOGIN = "octo";
 /** The notification `/notifications` answers with, and the pull request on a listing's second page. */
@@ -298,7 +307,7 @@ export async function startGitHubStub(
   let anyPull: StubPull | null = null;
   const opened = new Map<string, StubPull>();
   const queued: StubPull[] = [];
-  // Queue approvals and revocations are issue comments, persisted and read
+  // Crew stories, queue approvals and revocations share issue comments, read
   // through GitHub's API before the app writes its waiting status.
   const issueComments = new Map<
     number,
@@ -320,7 +329,7 @@ export async function startGitHubStub(
     token: string;
   } = {
     mode: "pending",
-    token: "gho_e2e_sign_in",
+    token: GITHUB_STUB_KEY,
   };
   let userCode = STUB_USER_CODE;
   let shortLived = false;
@@ -374,10 +383,14 @@ export async function startGitHubStub(
     number: pull.number,
     title: pull.title,
     html_url: `https://${webHost}/${owner}/${name}/pull/${pull.number}`,
+    base: { ref: "main" },
     head: {
       sha: headOfPull(pull),
       ref: pull.branch ?? "",
-      repo: { full_name: `${owner}/${name}` },
+      repo: {
+        full_name: pull.headRepo ?? `${owner}/${name}`,
+        ...(pull.headRepoId !== undefined ? { id: pull.headRepoId } : {}),
+      },
     },
     body: pull.body ?? "",
   });
@@ -728,6 +741,54 @@ export async function startGitHubStub(
             return;
           }
         }
+        const thread = /^\/issues\/(\d+)\/comments$/.exec(rest);
+        const commentWrite = /^\/issues\/comments\/(\d+)$/.exec(rest);
+        if (thread) {
+          const number = Number(thread[1]);
+          const pull =
+            [...opened.values()].find((pull) => pull.number === number) ??
+            (anyPull?.number === number ? anyPull : undefined);
+          if (!pull) {
+            send(404, { message: "Not Found" });
+            return;
+          }
+          const rows = issueComments.get(number) ?? [];
+          if (method === "GET") {
+            const size = Number(url.searchParams.get("per_page") ?? 30);
+            const page = Number(url.searchParams.get("page") ?? 1);
+            if (page * size < rows.length) {
+              const next = new URL(url);
+              next.searchParams.set("page", String(page + 1));
+              res.setHeader("link", `<${next.href}>; rel="next"`);
+            }
+            send(200, rows.slice((page - 1) * size, page * size));
+            return;
+          }
+          if (method === "POST") {
+            const id = nextCommentId++;
+            const row = {
+              id,
+              body: String(JSON.parse(raw || "{}").body ?? ""),
+              user: { login: STUB_LOGIN },
+              html_url: `https://${webHost}/${owner}/${name}/issues/${number}#issuecomment-${id}`,
+            };
+            issueComments.set(number, [...rows, row]);
+            send(201, row);
+            return;
+          }
+        }
+        if (commentWrite && method === "PATCH") {
+          const row = [...issueComments.values()]
+            .flat()
+            .find((row) => row.id === Number(commentWrite[1]));
+          if (!row) {
+            send(404, { message: "Not Found" });
+            return;
+          }
+          row.body = String(JSON.parse(raw || "{}").body ?? "");
+          send(200, row);
+          return;
+        }
         if (method === "GET" && rest === "/issues" && url.searchParams.get("labels")) {
           const label = url.searchParams.get("labels");
           send(
@@ -743,25 +804,6 @@ export async function startGitHubStub(
                 ]
               : [],
           );
-          return;
-        }
-        const comments = /^\/issues\/(\d+)\/comments$/.exec(rest);
-        if (comments && (method === "GET" || method === "POST")) {
-          const number = Number(comments[1]);
-          const rows = issueComments.get(number) ?? [];
-          if (method === "GET") send(200, rows);
-          else {
-            const body = JSON.parse(raw || "{}") as { body?: string };
-            const id = nextCommentId++;
-            const row = {
-              id,
-              body: body.body ?? "",
-              user: { login: STUB_LOGIN },
-              html_url: `https://${webHost}/${owner}/${name}/issues/${number}#issuecomment-${id}`,
-            };
-            issueComments.set(number, [...rows, row]);
-            send(201, row);
-          }
           return;
         }
         if (method === "GET" && rest === `/collaborators/${STUB_LOGIN}/permission`) {
@@ -824,10 +866,31 @@ export async function startGitHubStub(
           return;
         }
         if (method === "GET" && rest === "/pulls") {
+          // The shipped queue lists every open request, forks included, without a branch filter.
+          if (!url.searchParams.has("head")) {
+            const all = new Map(
+              [...opened.values(), ...(anyPull ? [anyPull] : [])].map((pull) => [
+                pull.number,
+                pull,
+              ]),
+            );
+            send(
+              200,
+              [...all.values()]
+                .filter((pull) => !pull.merged && !pull.closed)
+                .map((pull) => pullJson(pull, owner, name)),
+            );
+            return;
+          }
           const head = url.searchParams.get("head") ?? "";
           const branch = head.slice(head.indexOf(":") + 1);
           const found = opened.get(branch);
-          if (found && !found.merged && !found.closed) {
+          if (
+            found &&
+            !found.merged &&
+            !found.closed &&
+            (!found.headRepo || found.headRepo === `${owner}/${name}`)
+          ) {
             send(200, [pullJson(found, owner, name)]);
           } else if (
             anyPull &&
@@ -1159,6 +1222,13 @@ export async function startGitHubStub(
     dispatches: () => [...dispatches],
     queueStarts: () => [...queueStarts],
     asyncMerges: () => [...asyncMerges],
+    requestText: (number) => {
+      const pull =
+        [...opened.values()].find((pull) => pull.number === number) ??
+        (anyPull?.number === number ? anyPull : undefined);
+      return pull ? { title: pull.title, description: pull.body ?? "" } : undefined;
+    },
+    comments: (number) => (issueComments.get(number) ?? []).map(({ id, body }) => ({ id, body })),
     setRulesets: (sets) => {
       rulesets = sets;
     },
@@ -1174,6 +1244,8 @@ export async function startGitHubStub(
       title: string;
       body?: string;
       headSha: string;
+      headRepo?: string;
+      headRepoId?: number;
       mergeableState?: string;
       undecidedReads?: number;
     }) {
@@ -1234,7 +1306,7 @@ export async function startGitHubStub(
       setCode: (code) => {
         userCode = code;
       },
-      approve: (token = "gho_e2e_sign_in") => {
+      approve: (token = GITHUB_STUB_KEY) => {
         device = { mode: "approved", token };
       },
       deny: () => {
@@ -1277,7 +1349,7 @@ export async function startGitHubStub(
  */
 export function seedGitHubSignIn(
   userDataDir: string,
-  token = "gho_e2e_sign_in",
+  token = GITHUB_STUB_KEY,
   host = "github.com",
 ): void {
   const dir = join(userDataDir, "forges", host);

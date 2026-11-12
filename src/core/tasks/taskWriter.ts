@@ -1,3 +1,4 @@
+import { isForkReview } from "@shared/mergeReview";
 import { deliveryForRecord } from "@shared/repos";
 import type { WorkShape } from "@shared/routingPolicy";
 import { askedFromTheCommand, THROUGH_THE_COMMAND } from "../askedFromTheCommand";
@@ -469,6 +470,9 @@ export class TaskWriter {
           storyLedgers(delivery),
           record.branch,
           currentChange(delivery, record.branch).branch,
+          delivery.checkTarget && isForkReview(delivery.checkTarget)
+            ? delivery.checkTarget.number
+            : undefined,
         ),
       );
     // Kept files own the bytes. CI polls and event rows never copy transcripts.

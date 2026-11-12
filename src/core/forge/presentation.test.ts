@@ -6,7 +6,12 @@ import { DomUtils, parseDocument } from "htmlparser2";
 import { describe, expect, it } from "vitest";
 import { DEMO_POSTER, DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
 import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
-import { readCommitEnvelope } from "../queue/shipped/message.mjs";
+import {
+  commitEnvelope,
+  NAMING_DECISION,
+  readCommitApproval,
+  readCommitEnvelope,
+} from "../queue/shipped/message.mjs";
 import {
   PresentationAroundError,
   presentationCardBody,
@@ -136,6 +141,32 @@ function inGrid(body: string) {
 }
 
 describe("the layout GitHub can actually display", () => {
+  // Accepted fork queue repair: the new protocol separates identity from literal squash words.
+  it("reads approved squash words while retaining the captured request title and head guards", () => {
+    const selected = story([], "private");
+    const requestTitle = "Fix typo";
+    const comment = commitEnvelope(
+      selected.head,
+      selected.whatChanged.join("\n\n"),
+      selected.title,
+      { naming: NAMING_DECISION.off, requestTitle },
+    );
+    expect(readCommitApproval(comment, selected.head, requestTitle)).toEqual({
+      title: selected.title,
+      body: selected.whatChanged.join("\n\n"),
+    });
+    expect(() => readCommitApproval(comment, selected.head, `${requestTitle} edited`)).toThrow(
+      "title changed",
+    );
+    expect(() =>
+      readCommitApproval(
+        comment,
+        selected.base === selected.head ? "9".repeat(40) : selected.base,
+        requestTitle,
+      ),
+    ).toThrow("does not cover");
+  });
+
   // The approval-record boundary: public stories carry narrative, not queue authority.
   it("publishes either story format without a queue approval envelope", () => {
     for (const version of [1, 2] as const) {

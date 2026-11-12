@@ -330,6 +330,30 @@ export class ChangeChecks {
         "The project no longer names the selected pull request's host and repository.",
       );
     }
+    // A selected request is read by number, never by a same-named project
+    // branch. Fork commits have their own checks at their exact version.
+    if (
+      target.headRepo &&
+      target.headRepo.toLowerCase() !== `${target.owner}/${target.name}`.toLowerCase()
+    ) {
+      const pull = await this.context.pullOf(forge, target.number);
+      if (
+        pull.headRepo?.toLowerCase() !== target.headRepo.toLowerCase() ||
+        (target.headRepoId !== undefined && pull.headRepoId !== target.headRepoId) ||
+        pull.branch !== target.branch ||
+        pull.base !== target.base
+      )
+        throw new Error("The selected pull request's source changed; prepare a new review.");
+      if (pull.merged || pull.state !== "open") return null;
+      return {
+        number: pull.number,
+        branch: target.branch,
+        headSha: pull.headSha,
+        title: pull.title,
+        base: pull.base,
+        url: pull.url ?? null,
+      };
+    }
     const change = await forge.changeFor(target.branch);
     if (change && (change.number !== target.number || change.branch !== target.branch)) {
       throw new Error(

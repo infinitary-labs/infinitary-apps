@@ -143,7 +143,8 @@ So Infinitary starts each queue pipeline itself, through GitLab's API on the def
 When Infinitary's queue is newer than a project's stamp, copy the newer stamped files over the old ones, carry the team's grants in the queue file's `checks` job over unchanged, into its `confirm` job too (GitHub), and say in the pull request which version it moves to.
 An update from before queue-owned merging also wires every GitHub after-merge workflow to `repository_dispatch: { types: [infinitary-after-merge] }` as in the build above, including its event conditions and changed-path reads; this wiring is part of the update offer, never silently omitted.
 On GitLab it preserves the ordinary push pipelines and the existing environment-scoped queue key.
-The current app links each waiting mark to a trusted comment carrying the approved head, actual pull request title, exact squash body and active naming check's result or explicit off state.
+The current app links each waiting mark to a trusted comment carrying the approved head, actual pull request title, separately approved squash title, exact squash body and active naming check's result or explicit off state.
+Queue version 12 separates the request title, which still detects an external rename, from the approved squash title; projects on earlier queue-owned merge versions need its update for differing titles.
 The publisher applies its active naming rule before marking; the public packet carries only `checked` or `off`, never its naming pattern.
 Queue integrations use the same approval contract instead of adding a fixed title rule or accepting a fork author's envelope.
 A client without this approved naming decision gets an explicit failure and queues the version again with a current app; a failed merge marks that change failed, continues to other passed changes and starts the next batch.

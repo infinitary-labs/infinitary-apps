@@ -17,6 +17,8 @@ import {
   type ForgeCheckState,
   type ForgePull,
   type ForgeRuleset,
+  forkStoryForge,
+  isForkReview,
   isRedCheckState,
   isSignInForgeFailure,
   isTransientForgeFailure,
@@ -55,7 +57,7 @@ import { taskContributesUpstream } from "./workShape";
  * whether the task closes.
  */
 const SELECTED_CHANGE_WORDS =
-  "It is now this task's current change: check_change reads it until you name another or open_change opens one. Your merge card merges it, its review naming this review and its after saying whether the task continues or closes.";
+  "It is now this task's current change: check_change reads it until you name another or open_change opens one. Your merge card merges it, with after saying whether the task continues or closes. A saved-story card gives presentation and omits review, because this is the current change; otherwise name this review in the merge effect.";
 
 /** A review's pull request read again, or why it may not merge. */
 type Reread =
@@ -143,6 +145,12 @@ export class MergeReviews {
       checks.text,
       `Merge review ${review.id} for ${forge.kind === "gitlab" ? "!" : "#"}${number} at ${pull.headSha} into ${pull.base} on ${where}.`,
       SELECTED_CHANGE_WORDS,
+      ...(isForkReview(review)
+        ? [
+            "This change comes from a contributor's fork. Read its code before running it. Check out the reviewed commit unchanged, then prepare_change and open_change with presentation to publish the crew's story in a comment and the merged commit, keeping the contributor's description.",
+            "Offer this contributor change with asks_first on its merge effect: the captain's click authorizes running this version in the queue. A later push needs a new review and a new click.",
+          ]
+        : []),
       "This request grants no approval and does not itself merge anything. With autonomy off, only the captain's merge button authorizes execution.",
       absentChecks
         ? "Absence evidence stored for this version. A merge offer expresses the crew's judgment; this evidence grants no merge permission."
@@ -259,9 +267,14 @@ export class MergeReviews {
         said: `Merge review refused: pull request ${number} is at ${pull.headSha}, not the version you named (${head}). Read it again and prepare the review at the version you mean.`,
       };
     }
-    if (!pull.headRepo || pull.headRepo.toLowerCase() !== project.toLowerCase()) {
+    if (head !== undefined && pull.headRepo?.toLowerCase() !== project.toLowerCase()) {
       return {
-        said: `Merge review refused: pull request ${number} is not a branch in ${project}. Forks are out of scope.`,
+        said: `Merge review refused: pull request ${number} is not a branch in ${project}. Forks are out of scope for a merge past the branch rules.`,
+      };
+    }
+    if (!pull.headRepo) {
+      return {
+        said: `Merge review refused: pull request ${number} did not name its source repository.`,
       };
     }
     return { pull, branch: pull.branch };
@@ -575,7 +588,8 @@ export class MergeReviews {
       pull.base !== review.base ||
       pull.branch !== review.branch ||
       !pull.headRepo ||
-      pull.headRepo.toLowerCase() !== project.toLowerCase()
+      pull.headRepo.toLowerCase() !== (review.headRepo ?? project).toLowerCase() ||
+      (review.headRepoId !== undefined && pull.headRepoId !== review.headRepoId)
     ) {
       return {
         ok: false,
@@ -883,6 +897,12 @@ export class MergeReviews {
     guard?: MergeGuard,
     settle = false,
   ): Promise<MergeAttempt> {
+    if (isForkReview(review) && guard && guard.head !== review.headSha)
+      return {
+        ok: false,
+        stop: "moved",
+        text: "Cannot merge: a contributor's later version needs a new review and a new click.",
+      };
     const candidate = guard ? { ...review, headSha: guard.head } : review;
     const fresh = await this.readReviewTarget(taskId, candidate, !guard?.unattended || settle);
     if (!fresh.ok) {
@@ -937,19 +957,34 @@ export class MergeReviews {
     });
     let dispatched = false;
     try {
-      if (hasChangeRequests(forge.kind))
+      if (!isForkReview(review) && hasChangeRequests(forge.kind))
         requireNamed(change.title ?? "", "pull request title", this.options.namingRule?.() ?? null);
       // The task's own pull request merges with its description, as the
       // finishing merge sends it.
-      if (change.branch === this.options.tasks.get(taskId)?.branch) {
+      if (!isForkReview(review) && change.branch === this.options.tasks.get(taskId)?.branch) {
         const own = await forge.changeFor(change.branch);
         if (own && own.number === change.number) change = { ...change, body: own.body ?? "" };
       }
-      const storied = await this.merges.withPublishedStory(taskId, forge, change, guard);
+      const hasStory = this.options.tasks.delivery.changePresentation(
+        taskId,
+        change.branch,
+        change.number,
+      );
+      const storyForge =
+        isForkReview(review) && hasStory ? forkStoryForge(forge, candidate, taskId) : forge;
+      const storied = await this.merges.withPublishedStory(taskId, storyForge, change, guard);
       if ("held" in storied) return { ok: false, stop: "guidance", text: storied.held };
       change = storied.change;
+      // The story publisher applies the active naming runbook; a fork adds no wording rule.
       const held = guard?.held?.();
       if (held) return { ok: false, stop: "guidance", text: held };
+      if (isForkReview(review)) {
+        const last = await this.reread(candidate, async () => ({
+          pull: await this.context.pullOf(forge, review.number),
+          waited: 0,
+        }));
+        if (!last.ok) return { ok: false, text: `Cannot merge: ${last.text}`, stop: last.stop };
+      }
       if (fresh.queueWait)
         return await this.merges.enqueue(
           taskId,
@@ -961,6 +996,7 @@ export class MergeReviews {
           false,
           guard?.held,
           guard?.queueInterrupted,
+          isForkReview(review) ? candidate.title : undefined,
         );
       if (this.merges.queueOwnsMerge(taskId, change.number))
         return {

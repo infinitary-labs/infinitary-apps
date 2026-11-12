@@ -1,5 +1,7 @@
+import type { ChangePresentationDraft } from "@shared/changePresentation";
 import { fixedHoldWords } from "@shared/holds";
 import type { MergeReview } from "@shared/mergeReview";
+import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { describe, expect, it, vi } from "vitest";
 import {
   FakeForge,
@@ -9,6 +11,7 @@ import {
 } from "../../../tests/helpers/prCiHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import {
+  type ForgeApi,
   ForgeBaseMoved,
   type ForgeChange,
   ForgeError,
@@ -17,8 +20,12 @@ import {
   type ForgeReadiness,
   type ForgeRuleset,
   type ForgeSkipMerge,
+  forkStoryForge,
+  parseApiRequest,
   QUEUE_STATUS,
 } from "../forge";
+import { stageChangePresentation } from "../pi/changePresentation";
+import { GITHUB_QUEUE_PART, QUEUE_SEPARATE_TITLES_VERSION } from "../queue/shipped";
 import type { MergeGuard } from "./changeMerge";
 import type { TypedWake, WakeFacts } from "./wakes";
 
@@ -78,9 +85,17 @@ const SKIPPABLE: ForgeRuleset = {
  * number, with its branch rules and the merge past them. The test moves
  * `host` between calls. A shape puts the project's delivery ask on the task.
  */
-async function onGitHub(shape?: { delivery_ask: "queue-pr" }, wakes: QueueWakes = {}) {
+async function onGitHub(
+  shape?: { delivery_ask: "queue-pr" },
+  wakes: QueueWakes = {},
+  prepareContribution?: (taskId: string) => Promise<string | undefined>,
+) {
   const forge = new FakeForge();
-  const harness = setup({ forge, ...wakes });
+  const harness = setup({
+    forge,
+    ...wakes,
+    ...(prepareContribution ? { prepareContribution } : {}),
+  });
   await insertDirectPrTask(harness.tasks, harness.repos, {
     ...(shape ? { shape: { kind: "fix", kind_source: "none", ...shape } } : {}),
   });
@@ -181,13 +196,9 @@ describe("preparing a review of a pull request named by its number", () => {
     expect(await ask(23)).toBe(
       "Merge review refused: pull request 23 did not name its branch, version and destination.",
     );
-    host.pull = openPull({ headRepo: "someone/y" });
-    expect(await ask(23)).toBe(
-      "Merge review refused: pull request 23 is not a branch in x/y. Forks are out of scope.",
-    );
     host.pull = openPull({ headRepo: undefined });
     expect(await ask(23)).toBe(
-      "Merge review refused: pull request 23 is not a branch in x/y. Forks are out of scope.",
+      "Merge review refused: pull request 23 did not name its source repository.",
     );
     host.pull = openPull();
     const absent = (overrides: Partial<{ headSha: string; evidence: string; localGate: string }>) =>
@@ -254,6 +265,331 @@ describe("preparing a review of a pull request named by its number", () => {
     expect(review.id).toMatch(/^mr[0-9a-f]{12}$/);
     expect(reviews()).toHaveLength(1);
     expect(await service.reviews.reviewGate(task.id, review.id)).toBeUndefined();
+  });
+});
+
+// Accepted contributor plan, piece A: a crewmate names a fork and the
+// captain's click queues only that source at that version. The in-memory
+// host readings are the remote fixture; real task storage owns the consent.
+describe("reviewed contributor changes", () => {
+  // The saved-story click defect exposed by the accepted contributor plan:
+  // its ordinary merge must use the real published comment and crew title,
+  // even when the fork's branch collides with the task's own branch.
+  // Real task/presentation owners prepare, publish and verify the story;
+  // only the existing forge's remote readings and writes are stand-ins.
+  it.each([
+    "direct-pr",
+    "direct-pr-with-contribution-hook",
+    "queue-pr",
+    "owned-queue",
+    "older-owned-queue",
+    "waiting-owned-queue",
+    "waiting-older-owned-queue",
+  ] as const)(
+    "the ordinary saved-story merge uses the selected fork's comment for %s",
+    async (delivery) => {
+      const contribution =
+        delivery === "direct-pr-with-contribution-hook"
+          ? vi.fn(async () => "The task's own contribution would need setup")
+          : undefined;
+      const at = await onGitHub(
+        delivery.startsWith("direct-pr") ? undefined : { delivery_ask: "queue-pr" },
+        {},
+        contribution,
+      );
+      at.host.pull = openPull({ title: "Fix typo", headRepo: "contributor/y", headRepoId: 912 });
+      const review = await at.prepare();
+      const comments: { id: number; body: string }[] = [];
+      const writes: string[] = [];
+      const api: ForgeApi = {
+        place: "GitHub",
+        defaultPerPage: 100,
+        route: (method, path) => parseApiRequest(method, path, { owner: "x", name: "y" }),
+        nextPath: () => null,
+        call: async (method, path, body) => {
+          if (method !== "GET") {
+            writes.push(`${method} ${path}`);
+            comments.push({ id: 41, body: JSON.parse(body ?? "{}").body });
+          }
+          return {
+            status: 200,
+            requestId: null,
+            rateLimit: null,
+            retryAfterSeconds: null,
+            link: null,
+            body: JSON.stringify(method === "GET" ? comments : comments[0]),
+          };
+        },
+      };
+      Object.assign(at.forge, {
+        api,
+        attachments: {
+          destination: async () => ({
+            host: review.host,
+            projectId: 1,
+            fullName: `${review.owner}/${review.name}`,
+            visibility: "public",
+          }),
+          upload: async () => {
+            throw new Error("The text-only review story has no media to upload.");
+          },
+        },
+      });
+      // Like the real host, the project branch lookup cannot find this fork.
+      at.forge.change = null;
+      at.readHead.mockResolvedValue(review.headSha);
+      const draft: ChangePresentationDraft = {
+        title: "fix: preserve the contributor's explanation",
+        base: review.headSha,
+        head: review.headSha,
+        publishable: true,
+        why: ["Contributors keep their request text."],
+        whatChanged: ["The crew publishes its review in a comment."],
+        before: ["The merge used the contributor's title."],
+        after: ["The merge uses the crew's story title."],
+        views: [],
+        noPicture: "This change affects the merged commit, not an app view.",
+        checked: [{ check: "Source review", result: "The selected version's checks passed." }],
+        verification: [],
+        risk: Object.fromEntries(
+          RISK_DIMENSIONS.map((dimension) => [
+            dimension,
+            { level: "low", why: "This fixture preserves the contribution's text." },
+          ]),
+        ) as RiskDeclaration,
+        requiredActions: [],
+        unfinished: [],
+      };
+      const staged = await stageChangePresentation(draft, {
+        taskId: at.task.id,
+        worktree: at.paths,
+        dir: at.paths,
+      });
+      const storyForge = forkStoryForge(at.forge, review, at.task.id);
+      if (contribution) {
+        // A selected fork's comment is not publication of the task's own contribution.
+        expect(await at.service.publication.preparePresentation(at.task.id, staged)).toContain(
+          "Prepared presentation",
+        );
+        const revision = at.tasks.delivery
+          .changePresentation(at.task.id)
+          ?.revisions.at(-1)?.revision;
+        if (revision === undefined) throw new Error("The fork story was not prepared");
+        expect(
+          await at.service.publication.open(at.task.id, {
+            title: draft.title,
+            presentation: revision,
+          }),
+        ).toContain("Published the crew's story in a comment");
+        expect(contribution).not.toHaveBeenCalled();
+      } else {
+        const revision = await at.presentations.prepare(at.task.id, staged, storyForge);
+        await at.presentations.publish(
+          at.task.id,
+          revision,
+          storyForge,
+          review.branch,
+          draft.title,
+        );
+      }
+      if (delivery.endsWith("owned-queue")) {
+        if (!at.task.repoId) throw new Error("The fixture project is missing");
+        at.repos.recordQueue(at.task.repoId, {
+          workflows: [
+            {
+              path: GITHUB_QUEUE_PART.queueFile,
+              active: true,
+              shipped: delivery.includes("older")
+                ? QUEUE_SEPARATE_TITLES_VERSION - 1
+                : GITHUB_QUEUE_PART.version,
+            },
+          ],
+        });
+      }
+      const approvals: import("../forge").ForgeQueueApproval[] = [];
+      const dispatched: ForgeChange[] = [];
+      const marked: string[] = [];
+      at.forge.putIn = async (change) => {
+        dispatched.push(change);
+      };
+      at.forge.markQueued = async (head, approval) => {
+        if (approval) approvals.push(approval);
+        marked.push(head);
+        return {};
+      };
+      const guard: MergeGuard = {
+        head: review.headSha,
+        prNumber: review.number,
+        unattended: false,
+        beforeDispatch: () => undefined,
+      };
+      if (delivery.startsWith("waiting-")) {
+        at.forge.states = ["success", "pending"];
+        at.forge.names = ["build", QUEUE_STATUS];
+      }
+      const waiting = await at.service.merges.merge(at.task.id, guard);
+      if (delivery.includes("older-owned-queue")) {
+        // An incompatible protocol needs a fix; nothing is queued or being tested.
+        expect(waiting).toMatchObject({ ok: false, stop: "refused" });
+        expect(marked).toEqual([]);
+        expect(approvals).toEqual([]);
+        expect(dispatched).toEqual([]);
+        expect(at.host.pull.title).toBe(review.title);
+        return;
+      }
+      // New queue protocol: the queue owns dispatch and receives both captured titles.
+      if (delivery.endsWith("owned-queue")) {
+        expect(waiting).toMatchObject({ ok: false, stop: "queue" });
+        expect(marked).toEqual([review.headSha]);
+        expect(approvals).toHaveLength(1);
+        expect(approvals[0]).toMatchObject({ title: draft.title, requestTitle: review.title });
+        at.forge.states = ["success", "success"];
+        at.forge.names = ["build", QUEUE_STATUS];
+        expect(await at.service.merges.merge(at.task.id, guard)).toMatchObject({
+          ok: false,
+          stop: "queue",
+        });
+        expect(dispatched).toEqual([]);
+        expect(at.host.pull.title).toBe(review.title);
+        expect(writes).toEqual([`POST /repos/x/y/issues/${review.number}/comments`]);
+        return;
+      }
+      if (delivery === "queue-pr") {
+        expect(waiting).toMatchObject({ ok: false, stop: "queue" });
+        expect(marked).toEqual([review.headSha]);
+        expect(dispatched).toEqual([]);
+        at.forge.states = ["success", "success"];
+        at.forge.names = ["build", QUEUE_STATUS];
+        expect(await at.service.merges.merge(at.task.id, guard)).toMatchObject({ ok: true });
+      } else expect(waiting).toMatchObject({ ok: true });
+      expect(dispatched).toHaveLength(1);
+      expect(dispatched[0]).toMatchObject({
+        number: review.number,
+        headSha: review.headSha,
+        title: draft.title,
+      });
+      expect(dispatched[0]?.squashMessage).toContain(draft.whatChanged[0]);
+      expect(at.host.pull.title).toBe("Fix typo");
+      expect(writes).toEqual([`POST /repos/x/y/issues/${review.number}/comments`]);
+    },
+  );
+  // Accepted naming boundary: fork merge paths add no conventional-title wording rule.
+  it.each(["ordinary", "numbered"] as const)(
+    "the %s fork path accepts the request's unchanged wording",
+    async (route) => {
+      const at = await onGitHub();
+      at.host.pull = openPull({ title: "Fix typo", headRepo: "contributor/y", headRepoId: 912 });
+      const review = await at.prepare();
+      // A real fork host exposes an empty comments resource even when no story was published.
+      const api: ForgeApi = {
+        place: "GitHub",
+        defaultPerPage: 100,
+        route: (method, path) => parseApiRequest(method, path, { owner: "x", name: "y" }),
+        nextPath: () => null,
+        call: async (method) => {
+          if (method !== "GET") throw new Error("No-story merging must not write a story");
+          return {
+            status: 200,
+            requestId: null,
+            rateLimit: null,
+            retryAfterSeconds: null,
+            link: null,
+            body: "[]",
+          };
+        },
+      };
+      Object.assign(at.forge, { api });
+      const sent = vi.spyOn(at.forge, "putIn");
+      const result =
+        route === "ordinary"
+          ? await at.service.merges.merge(at.task.id)
+          : await at.service.reviews.mergeReview(at.task.id, review.id);
+      expect(result, result.text).toMatchObject({ ok: true });
+      expect(sent).toHaveBeenCalledWith(
+        expect.objectContaining({ title: review.title, headSha: review.headSha }),
+        review.headSha,
+      );
+    },
+  );
+
+  it("reads checks by number and version even when a project branch has the same name", async () => {
+    const at = await onGitHub({ delivery_ask: "queue-pr" });
+    at.host.pull = openPull({ headRepo: "contributor/y", headRepoId: 912 });
+    const marked: string[] = [];
+    at.forge.markQueued = async (sha) => {
+      marked.push(sha);
+      return {};
+    };
+    // A project branch with precisely the fork's name is a different PR.
+    at.forge.change = {
+      number: 99,
+      headSha: MERGED,
+      branch: at.host.pull.branch ?? "",
+      url: null,
+      title: at.host.pull.title,
+    };
+    const review = await at.prepare();
+    expect(review).toMatchObject({ headRepo: "contributor/y", headRepoId: 912, headSha: HEAD });
+    expect(at.tasks.get(at.task.id)?.delivery?.checkTarget?.number).toBe(review.number);
+    expect(
+      at.tasks
+        .changesFor(at.task.id)
+        .find((change) => change.handle?.number === review.number)
+        ?.versions.find((version) => version.head === HEAD)?.checks?.snapshot?.headSha,
+    ).toBe(HEAD);
+    expect(await at.service.reviews.reviewGate(at.task.id, review.id)).toBeUndefined();
+    expect(marked).toEqual([]);
+    const merged = await at.service.reviews.mergeReview(at.task.id, review.id);
+    expect(merged.ok).toBe(false);
+    expect(marked).toEqual([HEAD]);
+    expect(at.forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
+  });
+
+  it.each([
+    { headRepo: "another/y" },
+    { headRepoId: 913 },
+    { headSha: MERGED },
+    { branch: "another-branch" },
+  ])("refuses a changed source or version before the merge click: %j", async (changed) => {
+    const at = await onGitHub({ delivery_ask: "queue-pr" });
+    at.host.pull = openPull({ headRepo: "contributor/y", headRepoId: 912 });
+    const review = await at.prepare();
+    at.host.pull = { ...at.host.pull, ...changed };
+    expect(await at.service.reviews.reviewGate(at.task.id, review.id)).toMatch(/Card refused/);
+    expect((await at.service.reviews.mergeReview(at.task.id, review.id)).ok).toBe(false);
+    expect(at.forge.calls.some((call) => /^(markQueued|putIn) /.test(call))).toBe(false);
+  });
+
+  it("does not carry a contributor approval to a later repair version", async () => {
+    const at = await onGitHub();
+    at.host.pull = openPull({ headRepo: "contributor/y" });
+    const review = await at.prepare();
+    at.host.pull.headSha = MERGED;
+    const outcome = await at.service.reviews.mergeReview(at.task.id, review.id, {
+      head: MERGED,
+      prNumber: review.number,
+      unattended: true,
+      held: () => undefined,
+      beforeDispatch: () => undefined,
+    });
+    expect(outcome).toMatchObject({ ok: false, stop: "moved" });
+    expect(at.forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
+  });
+
+  it("merges the same reviewed fork only after its batch passes", async () => {
+    const at = await onGitHub({ delivery_ask: "queue-pr" });
+    at.host.pull = openPull({ headRepo: "contributor/y" });
+    const review = await at.prepare();
+    at.forge.states = ["success", "success"];
+    at.forge.names = ["build", QUEUE_STATUS];
+    expect((await at.service.reviews.mergeReview(at.task.id, review.id)).ok).toBe(true);
+    expect(at.forge.calls).toContain(`putIn ${review.branch} ${HEAD}`);
+    const forks = at.tasks
+      .changesFor(at.task.id)
+      .filter((change) => change.handle?.number === review.number);
+    expect(forks).toHaveLength(1);
+    expect(forks[0]?.receipt?.outcome).toBe("merged");
+    expect(at.tasks.changeFor(at.task.id)?.receipt).toBeNull();
   });
 });
 
@@ -332,7 +668,7 @@ describe("preparing a merge past the branch rules (FI3-1571 piece 2)", () => {
     );
     host.pull = openPull({ readiness: "blocked", headRepo: "someone/y" });
     expect(await ask()).toBe(
-      "Merge review refused: pull request 23 is not a branch in x/y. Forks are out of scope.",
+      "Merge review refused: pull request 23 is not a branch in x/y. Forks are out of scope for a merge past the branch rules.",
     );
     host.pull = openPull({ readiness: "blocked", base: "release" });
     expect(await ask()).toBe(

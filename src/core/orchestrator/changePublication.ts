@@ -18,6 +18,8 @@ import {
   type ForgeChange,
   ForgeError,
   ForgeWriteError,
+  forkStoryForge,
+  isForkReview,
   isSignInForgeFailure,
   PresentationAroundError,
   presentationLines,
@@ -77,8 +79,11 @@ export class ChangePublication {
   ): Promise<{ revision?: number; said: string }> {
     const said = (text: string) => ({ said: text });
     try {
-      const contribution = await this.options.prepareContribution?.(taskId);
-      if (contribution) return said(contribution);
+      const fork = this.options.tasks.get(taskId)?.delivery?.checkTarget;
+      if (!fork || !isForkReview(fork)) {
+        const contribution = await this.options.prepareContribution?.(taskId);
+        if (contribution) return said(contribution);
+      }
       const local = this.localStoryDestination(taskId);
       if (local) {
         if (!this.options.presentations) return said("Saved change stories are unavailable.");
@@ -90,7 +95,11 @@ export class ChangePublication {
       }
       // A story is prepared for the task's own project; a change opened in
       // another managed project carries its body instead (INF-2510).
-      const located = this.context.locate(taskId, "open", "own");
+      const located = this.context.locate(
+        taskId,
+        "open",
+        fork && isForkReview(fork) ? "current" : "own",
+      );
       if ("said" in located) return said(located.said);
       if (!this.options.presentations) return said("Saved change stories are unavailable.");
       try {
@@ -103,6 +112,7 @@ export class ChangePublication {
         // a recorded one that has closed is forgotten, as for any new task.
         if (
           !ledger &&
+          !(fork && isForkReview(fork)) &&
           hasChangeRequests(located.forge.kind) &&
           (await located.forge.changeFor(branch))
         )
@@ -189,14 +199,21 @@ export class ChangePublication {
   }
 
   /**
-   * The branch the working copy has checked out, whose change a story is
-   * prepared for (INF-2184, INF-2490): the task's own, or an existing
+   * With "current" (the default), a selected contributor review supplies its
+   * branch. "own" ignores that review, as a named-project publication needs.
+   * Otherwise the branch the working copy has checked out, whose change a
+   * story is prepared for (INF-2184, INF-2490): the task's own, or an existing
    * branch the crewmate checked out to deliver, on this Mac or on the
    * computer that runs the task. Undefined - the current change - with no
    * branch checked out. A computer that cannot say delivers the task's own.
    */
-  async presentationBranch(taskId: string): Promise<string | undefined> {
+  async presentationBranch(
+    taskId: string,
+    target: "current" | "own" = "current",
+  ): Promise<string | undefined> {
     const record = this.options.tasks.get(taskId);
+    const selected = record?.delivery?.checkTarget;
+    if (target === "current" && selected && isForkReview(selected)) return selected.branch;
     if (record?.deviceId) {
       const there = await this.options.checkedOut?.(taskId);
       return there ? (there.branch ?? undefined) : record.branch;
@@ -239,16 +256,19 @@ export class ChangePublication {
     const located = this.context.locate(taskId, "open");
     if ("said" in located) throw new Error(located.said);
     if (!this.options.presentations) throw new Error("Saved change stories are unavailable.");
-    // The story is on the change of the branch the working copy has checked
-    // out, as prepare_change and open_change read it (INF-3717 piece 1);
-    // with none checked out, the task's current change (INF-2490).
+    const target = located.record.delivery?.checkTarget;
+    const fork = target && isForkReview(target) ? target : undefined;
+    const forge = fork ? forkStoryForge(located.forge, fork, taskId) : located.forge;
+    // Own changes follow the checked-out branch; a fork review stays bound to its numbered request.
     const selected = currentChange(located.record.delivery, located.branch);
     const checkedOut = await this.presentationBranch(taskId).catch(() => undefined);
-    const branch = checkedOut ?? selected.branch;
-    const change = await located.forge.changeFor(branch);
+    const branch = fork?.branch ?? checkedOut ?? selected.branch;
+    const change = await forge.changeFor(branch);
     if (!change)
       throw new Error(
-        `The story's pull request is not open: no open pull request was found for ${branch}${checkedOut ? ", the branch the working copy has checked out" : ""}. Publish its story with open_change, which opens one.`,
+        fork
+          ? "The story's pull request is not open."
+          : `The story's pull request is not open: no open pull request was found for ${branch}${checkedOut ? ", the branch the working copy has checked out" : ""}. Publish its story with open_change, which opens one.`,
       );
     // INF-2509: a pull request that moved past its published story shows it
     // republished at the pushed version, with the same words.
@@ -256,35 +276,36 @@ export class ChangePublication {
       taskId,
       revision,
       change,
-      located.forge,
+      forge,
       this.context.attestsAt(taskId),
     );
     const current =
       shown === revision
         ? change
-        : await located.forge.changeFor(change.branch).then((read) => {
+        : await forge.changeFor(change.branch).then((read) => {
             if (!read || read.number !== change.number || read.headSha !== change.headSha)
               throw new Error("The pull request changed while its story was republished.");
             return read;
           });
-    await this.options.presentations.assertPublished(taskId, current, located.forge, shown);
+    await this.options.presentations.assertPublished(taskId, current, forge, shown);
     const completion = await this.options.presentations.completion(
       taskId,
       shown,
       current.headSha,
       current.branch,
+      current.number,
     );
     // The merge card merges the task's current change: the change whose
     // story it shows becomes current, as open_change makes it (INF-3717).
-    if (branch !== selected.branch) {
+    if (!fork && branch !== selected.branch) {
       if (branch === located.record.branch)
         this.options.tasks.delivery.selectOwnChange(taskId, {
           ...(current.number !== undefined ? { number: current.number } : {}),
           headSha: current.headSha,
           ...(current.base ? { base: current.base } : {}),
         });
-      else await this.selectOpened(located.record, located.forge, current, undefined);
-      this.checks.noteChange(taskId, { change: current, forge: located.forge });
+      else await this.selectOpened(located.record, forge, current, undefined);
+      this.checks.noteChange(taskId, { change: current, forge });
     }
     return { ...completion, revision: shown };
   }
@@ -299,6 +320,43 @@ export class ChangePublication {
    * `pr_opened` on the timeline, the label and link on the delivery facts.
    */
   async open(taskId: string, input: OpenChangeInput): Promise<string> {
+    const selected = this.options.tasks.get(taskId)?.delivery?.checkTarget;
+    if (
+      selected &&
+      isForkReview(selected) &&
+      input.repository === undefined &&
+      (input.branch === undefined || input.branch === selected.branch)
+    ) {
+      const located = this.context.locate(taskId, "open");
+      if ("said" in located) return located.said;
+      try {
+        if (
+          !this.options.presentations ||
+          input.presentation === undefined ||
+          input.body !== undefined
+        )
+          return "Prepare the contributor review story with prepare_change, then pass presentation to open_change. The contributor's description stays unchanged.";
+        if (input.base !== undefined && input.base !== selected.base)
+          return "The reviewed contributor change keeps its destination branch.";
+        const forge = forkStoryForge(located.forge, selected, taskId);
+        const change = await this.options.presentations.publish(
+          taskId,
+          input.presentation,
+          forge,
+          selected.branch,
+          input.title,
+          "passed",
+          input.recovery,
+          input.around,
+        );
+        await this.checks.run(taskId, "crewmate");
+        return `Published the crew's story in a comment on ${numberLabel(forge, selected.number)}. The contributor's description is unchanged. ${change.url ?? ""}`;
+      } catch (caught) {
+        if (isSignInForgeFailure(caught))
+          return crewSignInText(this.context.signInFact(located.forge, located.record.repoId));
+        return `Could not publish the contributor review story: ${caught instanceof Error ? caught.message : String(caught)}`;
+      }
+    }
     const contribution = await this.options.prepareContribution?.(taskId);
     if (contribution) return contribution;
     const located = this.context.locate(taskId, "open", "own");
@@ -315,7 +373,7 @@ export class ChangePublication {
     // merge card shows (INF-3717 piece 1); the task's own with none.
     const branch =
       input.branch?.trim() ||
-      ((await this.presentationBranch(taskId).catch(() => undefined)) ?? located.branch);
+      ((await this.presentationBranch(taskId, "own").catch(() => undefined)) ?? located.branch);
     const own = branch === record.branch;
     try {
       requireNamed(input.title, "pull request title", this.options.namingRule?.() ?? null);

@@ -268,7 +268,8 @@ A GitLab project's direct-pr task delivers the way a GitHub one does: the crewma
   A new merge request's description is its saved story: gitlab.com confirms every selected upload first, while a self-hosted server publishes the text and retains media on the merge card ("Saved change stories" below).
   It is named `!N` with GitLab's page, and recorded on the task as `changeLabel`, `prNumber` and `prUrl` like a pull request; surfaces keep the app's word, pull request.
   Its head is the merge request's `sha`.
-  Its head repository, which a merge review requires, is the project's own path only when GitLab names the same `source_project_id` and `target_project_id`; a fork's, or one naming neither, has none, and the review refuses it.
+  Its head repository, which a merge review requires, is the project's own path when GitLab names the same `source_project_id` and `target_project_id`, and an immutable `gitlab-project:<id>` identity for a fork.
+  A missing source or target identity remains unproven and the review refuses it.
 - **Its checks** are read for the head and nothing older (`checks()`):
   - every pipeline on the head counts - a branch pipeline, a merge request pipeline (`refs/merge-requests/<N>/head`) - and so does a merged-results or merge-train pipeline (`.../merge`, `.../train`), whose own commit is a merge of the head into the target branch: the app reads that commit's parents and counts it only when the head is one of them;
   - a later pipeline on the same ref for the same head stands for that ref, the way a rerun does on GitHub; pipelines on different refs all count;
@@ -612,12 +613,33 @@ Its `merge` effect says what follows the merge, `after: close` or `after: contin
 `check_change` with `pull` stores a review of that number in the task's project and returns its id.
 Any open pull request there may be named, whoever opened it: naming it makes it one of the task's changes (INF-2490, [changes](../primitives/changes.md)).
 Preparing the review grants no approval and merges nothing.
+A contributor's fork is accepted on GitHub and GitLab, with its source repository and immutable host id retained in the review when supplied.
+Checks of a selected fork are read by pull request number and head, never by a same-named branch in the project.
+GitLab pipeline jobs are read from the pipeline's own project, including a fork's source project.
+The card and click reread its source, branch, destination and version; another source or later push needs a new review and a new click, never a carried conflict repair.
+The crewmate reads contributor code before running it, and declares `asks_first` on the merge effect so the captain decides whether that version enters the project's queue.
+To publish its story, the crewmate checks out the reviewed commit without changing it, calls `prepare_change`, then `open_change` with the presentation revision while that fork is selected.
+The saved-story publisher writes and reads back a comment (GitHub issue comment or GitLab merge-request note), with its existing attachment barrier and uncertain-write recovery.
+It never changes the contributor's description or title, pushes to their fork, or opens a replacement request.
+The story comment opens with the crew's title, separate from the contributor's request title.
+The active naming runbook owns its wording; fork merging adds no conventional-title requirement.
+The verified story supplies the fork's squash commit title, summary and breaking-change footer, without renaming the contributor's request.
+Queue version 12 or later binds the approval to the request's captured title and head while using the separately approved crew title for the squash.
+Projects with older queue-owned merge protocols must update before queuing a fork with different request and squash titles.
+Older queues that still rely on the app retain their existing merge route.
+Fork stories carry their pull request number beside their branch in the ledger, so a fork using the task's branch name cannot share its story.
+A merge and its attachment receipts read that request's ledger explicitly, even when another change is selected.
+Comment reads use the gateway's smaller-page recovery when a long thread exceeds its response limit.
+The branch-rule bypass route remains limited to same-project requests.
+
 A review on another branch becomes the task’s current change, its explicit check target (`delivery.checkTarget`), so status, `check_change` and the check watch follow that pull request’s branch and number rather than the task’s own branch (INF-1246).
 Opening the task’s own change, selecting its own pull request or naming its own change id returns status to its own branch.
 The task's single pull request fields then name its own pull request at its own head, keeping none of the other pull request's number, head or checks; opening it names none until the opened pull request is noted.
 Every change id a reading reports is the id of the change it read, so passing it back selects that same change; a change whose review the capped list no longer keeps is read again by its number, never swapped for the current one.
 `open_change` with `branch` opens or updates the pull request of an existing pushed branch the captain asked for, without moving its head, and that pull request becomes the current change (INF-2184).
-`prepare_change`, `open_change` with no `branch`, `show_merge_card` and the saved-story merge card all act on the branch the working copy has checked out, and the task's own branch only when none is (INF-3717).
+`prepare_change`, `open_change` with no `branch` and the saved-story merge card act on the selected numbered contributor request while a fork review is current, except when `open_change` explicitly names a project or another branch.
+For a selected contributor review, `show_merge_card` stops before setup, commit or host reads and directs the crewmate to `prepare_change`, `open_change` with `presentation` and `emit_card` with `presentation` and `asks_first` on its merge effect.
+For task-authored changes, those tools and `show_merge_card` act on the branch the working copy has checked out, and the task's own branch only when none is (INF-3717).
 `open_change` makes the change it opened or answered current only once it succeeds, so a refused call leaves the current change as it was; the merge card makes the change whose story it shows current, since its merge acts on the current change.
 A crewmate on a computer that runs work does the same with a branch it checked out there: the home reads its checkout for the story and brings that branch home to read it (`docs/helper.md`, "Reading its branch here").
 
@@ -792,7 +814,8 @@ The squash keeps the title and the story's What changed plus the footers the act
 On every change, including same-project requests, only the trusted approval record supplies squash words, title and naming result.
 Descriptions and review stories never supply merge authority or carry a queue approval envelope.
 The contributor's description stays unchanged.
-The trusted approval comment alone carries the head-bound literal summary, actual pull request title and naming result, independently of the story's display title.
+The trusted approval comment alone carries the head-bound literal summary, captured request title, approved squash title and naming result.
+The queue checks the captured request title for external edits and merges with the approved squash title; older approvals without a separate request title retain their original same-title guard.
 A story override carries the current version's override words through that same approved comment, so an older story or breaking footer cannot replace them.
 Preparing a same-head story with changed title or squash words suspends its existing queue eligibility through the durable withdrawal owner until publication, without ending the captain's click.
 Ordinary queue restoration then posts the newest approved merge words and may start a replacement batch.

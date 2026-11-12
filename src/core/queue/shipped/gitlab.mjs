@@ -29,7 +29,7 @@
  */
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
-import { labelApproval, newestTrustedApproval, readCommitEnvelope } from "./message.mjs";
+import { labelApproval, newestTrustedApproval, readCommitApproval } from "./message.mjs";
 import {
   answerWords,
   conflictsWithMain,
@@ -853,7 +853,7 @@ export async function mergePassed({ api, env, log }) {
           throw new Error(
             "No current trusted approval for this version; it was withdrawn or has not been approved.",
           );
-        const body = readCommitEnvelope(approval.body, entry.head, request.title);
+        const words = readCommitApproval(approval.body, entry.head, request.title);
         const still = await queueAt(api, env, entry.head);
         if (still?.kind !== "passed" || still.run !== queue.run) continue;
         const finalApproval = await readApproval(api, env, entry.number, entry.head);
@@ -869,7 +869,7 @@ export async function mergePassed({ api, env, log }) {
           receipt = await api.send("PUT", `${path}/merge`, {
             sha: entry.head,
             squash: true,
-            squash_commit_message: body ? `${request.title}\n\n${body}` : request.title,
+            squash_commit_message: words.body ? `${words.title}\n\n${words.body}` : words.title,
           });
         } catch (error) {
           const after = await api.get(path).catch(() => null);

@@ -1,14 +1,22 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+import { presentationCommitMessage, presentationMarkdownText } from "../../src/core/forge";
+import { QUEUE_STATUS, QUEUE_WAITING_WORDS } from "../../src/core/forge/forge";
+import { GITHUB_QUEUE_PART, GITLAB_QUEUE_PART, shippedFiles } from "../../src/core/queue/shipped";
+import { passed } from "../../src/core/queue/shipped/rules.mjs";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
+import { TaskStore } from "../../src/core/storage/taskRecords";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { RepoRegistry } from "../../src/core/workspace/repoRegistry";
 import { type MergeReview, mergeRuleWords } from "../../src/shared/mergeReview";
 import { MERGE_WORDS, SKIP_RULES_MERGE_WORDS } from "../../src/shared/vocabulary";
 import { NEVER_SENT_AGAIN } from "../../src/shared/writeAsk";
+import { BUNDLED_NAMING } from "../helpers/namingRunbook";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedDelivery } from "../helpers/taskDelivery";
 import {
@@ -17,15 +25,31 @@ import {
   SKIP_RULES_MERGE_MARKER,
   SKIP_RULES_PULL,
 } from "./apiWriteCases";
+import { startDemo } from "./demo";
 import { cardBody } from "./frames";
 import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
+import { GITLAB_STUB_PROJECT, seedGitLabSignIn, startGitLabStub } from "./gitlabStub";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { seedHostedOrigins, seedProject } from "./projectSeed";
 import { promptInput } from "./prompt";
+import { mergePassedFixture } from "./queueMergeDriver";
 import { expandDock, taskKey, taskLine } from "./rails";
+import { readSavedData } from "./savedData";
+import { MOCK_GITHUB_STORY } from "./scenarios/changeStory";
+import {
+  CONTRIBUTOR_PULL,
+  CONTRIBUTOR_REVIEW_MARKER,
+  CONTRIBUTOR_REVIEW_TITLE,
+  contributorReview,
+} from "./scenarios/contributorReview";
+import {
+  CONTRIBUTOR_STORY_MARKER,
+  CONTRIBUTOR_STORY_TITLE,
+  contributorStory,
+} from "./scenarios/contributorStory";
 import { SKIP_RULES_ASKING_AGAIN, skipRules } from "./scenarios/skipRules";
 import { expectNoCard, showCard, shownCard } from "./stack";
 import { pressKey } from "./windowKeys";
@@ -650,3 +674,362 @@ test("a merge that skips the branch rules is prepared by its crewmate, named on 
     await github.close();
   }
 });
+
+// Accepted contributor plan A. Real git owns the contribution; a local host
+// serves the fork's source and successful checks. A scripted crewmate reads
+// its code before check_change and emits a merge card. Enter queues only
+// that head, and its kept approval merges after the queue passes. No real
+// account, contributed package scripts or shared host changes are involved.
+test("a crewmate reads a fork and the captain's keyboard merge queues its reviewed version", async () => {
+  const userDataDir = scratchDir("infinitary-contributor-review-");
+  const repo = seedRepo(userDataDir, "forkfixture");
+  execFileSync("git", ["-C", repo.repoDir, "branch", "contribution", repo.headSha]);
+  const github = await startGitHubStub();
+  github.serveNumbered({
+    number: CONTRIBUTOR_PULL,
+    branch: "contribution",
+    title: "fix: read the meter on time",
+    body: "The contributor's explanation stays here.",
+    headSha: repo.headSha,
+    headRepo: "contributor/r",
+    headRepoId: 912,
+  });
+  github.setChecks([{ name: "build", status: "completed", conclusion: "success" }]);
+  seedGitHubSignIn(userDataDir);
+  const db = openDatabase(userDataDir);
+  seedProject(db, {
+    id: "repo-forks",
+    path: repo.repoDir,
+    name: "r",
+    setupKind: "clone",
+    origin: "https://github.com/o/r.git",
+    runsOn: null,
+    delivery: "queue-pr",
+    rigor: "quick",
+  });
+  seedHostedOrigins(db, userDataDir);
+  db.close();
+  const demo = await startDemo({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [contributorReview],
+    env: github.env,
+    size: { width: 1280, height: 800 },
+  });
+  let launched = demo.launched;
+  try {
+    const { page } = launched;
+    const input = promptInput(page);
+    await input.fill(`${SPAWN_PROMPT_MARKER} r ${CONTRIBUTOR_REVIEW_MARKER}`);
+    await input.press("Enter");
+    const card = shownCard(page, CONTRIBUTOR_REVIEW_TITLE);
+    await expect(card).toBeVisible({ timeout: 45_000 });
+    expect(github.merges()).toEqual([]);
+    expect(github.statuses(repo.headSha)).toEqual([]);
+    await regionShot(card, test.info().outputPath("contributor-review.png"));
+    await demo.record("Queue the reviewed contribution", "window", async () => {
+      await demo.step(async () => {
+        await pressKey(page.getByRole("button", { name: MERGE, exact: true }), "Enter");
+        await expect
+          .poll(() => github.statuses(repo.headSha))
+          .toContainEqual(expect.objectContaining({ context: QUEUE_STATUS, state: "pending" }));
+        await expectNoCard(page, CONTRIBUTOR_REVIEW_TITLE);
+      });
+    });
+    expect(github.merges()).toEqual([]);
+    await demo.finish({
+      dir: test.info().outputPath("demo"),
+      name: "reviewed-fork-queues",
+      format: "mp4",
+    });
+    github.setStatus(repo.headSha, { context: QUEUE_STATUS, state: "success" });
+    launched = await launchApp({
+      userDataDir,
+      withMockProvider: true,
+      scenarios: [contributorReview],
+      env: github.env,
+    });
+    await expect
+      .poll(() => github.merges(), { timeout: 30_000 })
+      .toEqual([
+        expect.objectContaining({ number: CONTRIBUTOR_PULL, sha: repo.headSha, method: "squash" }),
+      ]);
+    const requests = github.requests();
+    expect(
+      requests.some((request) => request.startsWith(`GET /repos/o/r/pulls/${CONTRIBUTOR_PULL}`)),
+    ).toBe(true);
+    expect(requests.some((request) => request.startsWith("PATCH "))).toBe(false);
+    await test.info().attach("fork-review-queue-merge", {
+      body: JSON.stringify(
+        { requests, merges: github.merges(), statuses: github.statuses(repo.headSha) },
+        null,
+        2,
+      ),
+      contentType: "application/json",
+    });
+  } finally {
+    await launched.close();
+    await github.close();
+  }
+});
+
+// Careful proof for accepted piece A and the captain's title choice. Each
+// case runs the actual app, git, publisher, forge and saved approval against
+// one private HTTP stand-in. Real host permissions/events remain INF-3569's
+// declared gap. The result is the retained comment, original request text,
+// queued head and squash payload, not a claim about a real model's judgment.
+for (const kind of ["github", "gitlab"] as const) {
+  for (const owned of [false, true]) {
+    test(`${kind}: the app publishes a fork story and keeps its title through the queued merge${owned ? " on the current shipped queue" : ""}`, async () => {
+      const userDataDir = scratchDir("infinitary-contributor-story-");
+      const repoDir = join(userDataDir, "meterlab");
+      const bare = join(userDataDir, "host.git");
+      const git = (...args: string[]) =>
+        execFileSync("git", args, { stdio: "pipe" }).toString().trim();
+      const host = kind === "github" ? "github.com" : "gitlab.com";
+      const fullName = kind === "github" ? "o/r" : GITLAB_STUB_PROJECT;
+      const origin = `https://${host}/${fullName}.git`;
+      git("init", "--initial-branch=main", repoDir);
+      git("-C", repoDir, "config", "user.name", "Test");
+      git("-C", repoDir, "config", "user.email", "test@localhost");
+      git("-C", repoDir, "config", "commit.gpgsign", "false");
+      git("-C", repoDir, "config", "core.hooksPath", "/dev/null");
+      git("-C", repoDir, "commit", "--allow-empty", "-m", "chore: seed the meter");
+      git("-C", repoDir, "switch", "-c", "contribution");
+      // e2e-fixture: input -- The contributor's actual commit is read by the scripted reviewer.
+      writeFileSync(join(repoDir, "meter.txt"), "The meter reads on time.\n");
+      git("-C", repoDir, "add", "meter.txt");
+      git("-C", repoDir, "commit", "-m", "fix: keep the meter reading current");
+      const head = git("-C", repoDir, "rev-parse", "HEAD");
+      git("-C", repoDir, "switch", "main");
+      git("init", "--bare", "--initial-branch=main", bare);
+      git("-C", repoDir, "remote", "add", "origin", origin);
+      git("-C", repoDir, "config", `url.${bare}.insteadOf`, origin);
+      git("-C", repoDir, "push", "origin", "main", "contribution");
+      git("-C", repoDir, "fetch", "origin");
+      const github = kind === "github" ? await startGitHubStub() : undefined;
+      const gitlab = kind === "gitlab" ? await startGitLabStub(host) : undefined;
+      const stub = github ?? gitlab;
+      if (!stub) throw new Error("The proof needs its isolated host");
+      stub.headOf((branch) => git("-C", bare, "rev-parse", `refs/heads/${branch}`));
+      const original = {
+        title: "Fix typo",
+        description: "The contributor's original explanation stays here.",
+      };
+      let number = CONTRIBUTOR_PULL;
+      if (github) {
+        github.serveNumbered({
+          number,
+          branch: "contribution",
+          title: original.title,
+          body: original.description,
+          headSha: head,
+          headRepo: "contributor/r",
+          headRepoId: 99,
+        });
+        github.setChecks([{ name: "build", status: "completed", conclusion: "success" }]);
+        seedGitHubSignIn(userDataDir);
+      }
+      if (gitlab) {
+        number = gitlab.openMergeRequest({
+          branch: "contribution",
+          title: original.title,
+          description: original.description,
+          sourceProjectId: 99,
+        });
+        gitlab.protectMedia(true);
+        seedGitLabSignIn(userDataDir, host);
+      }
+      const part = kind === "github" ? GITHUB_QUEUE_PART : GITLAB_QUEUE_PART;
+      if (owned) {
+        const files = shippedFiles(
+          fileURLToPath(new URL("../../src/core/queue/shipped/", import.meta.url)),
+          part,
+        );
+        if (github)
+          github.serveWorkflows(
+            files
+              .filter((file) => file.path === part.queueFile)
+              .map((file) => ({ path: file.path, state: "active", text: file.text })),
+          );
+        if (gitlab)
+          gitlab.serveFiles({
+            ...Object.fromEntries(files.map((file) => [file.path, file.text])),
+            ".gitlab-ci.yml": `include:\n  - local: ${part.queueFile}\n`,
+          });
+      }
+      const db = openDatabase(userDataDir);
+      seedProject(db, {
+        id: "repo-contributor",
+        path: repoDir,
+        name: "meterlab",
+        setupKind: "clone",
+        origin,
+        runsOn: null,
+        delivery: "queue-pr",
+        rigor: "quick",
+      });
+      if (owned)
+        new RepoRegistry(db, join(userDataDir, "fleet")).recordQueue("repo-contributor", {
+          workflows: [{ path: part.queueFile, active: true, shipped: part.version }],
+        });
+      seedHostedOrigins(db, userDataDir);
+      db.close();
+      const scenario = contributorStory(number);
+      const demo = await startDemo({
+        userDataDir,
+        withMockProvider: true,
+        scenarios: [scenario],
+        env: stub.env,
+        size: { width: 1280, height: 1000 },
+      });
+      let launched = demo.launched;
+      try {
+        const { page } = launched;
+        const input = promptInput(page);
+        await input.fill(`${SPAWN_PROMPT_MARKER} meterlab ${CONTRIBUTOR_STORY_MARKER}`);
+        await input.press("Enter");
+        const card = shownCard(page, CONTRIBUTOR_STORY_TITLE);
+        await expect(card).toBeVisible({ timeout: 45_000 });
+        const task = (await page.evaluate(() => window.infinitary.tasks.board())).tasks.find(
+          (task) => task.title.includes(CONTRIBUTOR_STORY_MARKER),
+        );
+        if (!task) throw new Error("The proof task was not recorded");
+        const approval = () =>
+          readSavedData(
+            userDataDir,
+            (db) => new TaskStore(db).get(task.id)?.delivery?.mergeAuthorization,
+          );
+        const comments = () => stub.comments(number);
+        const text = () => stub.requestText(number);
+        const queueReadings = () => github?.statuses(head) ?? gitlab?.statuses(head);
+        const keepProof = (waiting = queueReadings()) =>
+          test.info().attach(`${kind}-contributor-story-proof`, {
+            body: JSON.stringify(
+              {
+                kind,
+                queueVersion: owned ? part.version : null,
+                request: number,
+                head,
+                original,
+                after: text(),
+                comments: comments(),
+                waiting,
+                approval: approval(),
+                merges: stub.merges(),
+                requests: stub.requests(),
+              },
+              null,
+              2,
+            ),
+            contentType: "application/json",
+          });
+        expect(text()).toEqual(original);
+        expect(comments()).toHaveLength(1);
+        expect(comments()[0]?.body).toContain(
+          `# ${presentationMarkdownText(CONTRIBUTOR_STORY_TITLE)}`,
+        );
+        expect(stub.merges()).toEqual([]);
+        expect(approval()).toBeUndefined();
+        await regionShot(card, test.info().outputPath(`${kind}-contributor-story.png`));
+        await demo.record("Queue the contributor's story", "window", async () => {
+          await demo.step(async () => {
+            await pressKey(page.getByRole("button", { name: MERGE, exact: true }), "Enter");
+            await expect.poll(approval).toMatchObject({ approvedHead: head, status: "standing" });
+            // Accepted contributor flow: persistence precedes the asynchronous host mark.
+            // Wait for that mark itself, never for a clock or another incidental event.
+            try {
+              await expect.poll(queueReadings).toContainEqual(
+                expect.objectContaining(
+                  github
+                    ? { context: QUEUE_STATUS, state: "pending" }
+                    : {
+                        name: QUEUE_STATUS,
+                        status: "skipped",
+                        description: QUEUE_WAITING_WORDS,
+                      },
+                ),
+              );
+            } catch (error) {
+              await keepProof();
+              throw error;
+            }
+            await expectNoCard(page, CONTRIBUTOR_STORY_TITLE);
+          });
+        });
+        expect(stub.merges()).toEqual([]);
+        const waiting = queueReadings();
+        await demo.finish({
+          dir: test.info().outputPath("demo"),
+          name: `${kind}-contributor-story`,
+          format: "mp4",
+        });
+        const resultWords = owned
+          ? passed(1, git("-C", repoDir, "rev-parse", `${head}^{tree}`))
+          : "The batch passed.";
+        if (github)
+          github.setStatus(head, {
+            context: QUEUE_STATUS,
+            state: "success",
+            ...(owned ? { description: resultWords } : {}),
+          });
+        if (gitlab)
+          gitlab.setStatus(head, {
+            name: QUEUE_STATUS,
+            status: "success",
+            description: resultWords,
+          });
+        if (owned) {
+          expect(comments()).toHaveLength(2);
+          expect(comments()[1]?.body).toContain("<!-- infinitary-merge-approval -->");
+          await mergePassedFixture({
+            kind,
+            url: stub.url,
+            project: fullName,
+            base: git("-C", repoDir, "rev-parse", "main"),
+          });
+        }
+        launched = await launchApp({
+          userDataDir,
+          withMockProvider: true,
+          scenarios: [scenario],
+          env: stub.env,
+        });
+        await expect.poll(() => stub.merges(), { timeout: 30_000 }).toHaveLength(1);
+        await expect.poll(approval).toMatchObject({ status: "consumed", receipt: { head } });
+        const summary = presentationCommitMessage(MOCK_GITHUB_STORY, BUNDLED_NAMING);
+        if (github)
+          expect(github.merges()).toEqual([
+            {
+              number,
+              sha: head,
+              method: "squash",
+              title: CONTRIBUTOR_STORY_TITLE,
+              message: summary,
+            },
+          ]);
+        if (gitlab)
+          expect(gitlab.merges()).toEqual([
+            {
+              iid: number,
+              sha: head,
+              squash: true,
+              message: `${CONTRIBUTOR_STORY_TITLE}\n\n${summary}`,
+            },
+          ]);
+        expect(text()).toEqual(original);
+        expect(comments()).toHaveLength(owned ? 2 : 1);
+        const requests = stub.requests();
+        const nativeWrite =
+          kind === "github"
+            ? `PATCH /repos/${fullName}/pulls/${number}`
+            : `PUT /api/v4/projects/${encodeURIComponent(fullName)}/merge_requests/${number}`;
+        expect(requests).not.toContain(nativeWrite);
+        await keepProof(waiting);
+      } finally {
+        await launched.close();
+        await stub.close();
+      }
+    });
+  }
+}

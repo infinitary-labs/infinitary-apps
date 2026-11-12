@@ -3,6 +3,7 @@ import { CONTRIBUTION_MERGE_REFUSAL } from "@shared/contributions";
 import { hasChangeRequests } from "@shared/forge";
 import { fixedHoldWords, overridePasses, softHoldWords } from "@shared/holds";
 import { englishOf, type Said, said } from "@shared/i18n/said";
+import { isForkReview } from "@shared/mergeReview";
 import { isMergeConflict } from "@shared/plainProblem";
 import { deliveryForRecord, opensPullRequest, queueShipped, type RepoView } from "@shared/repos";
 import {
@@ -15,6 +16,7 @@ import {
   type ForgeQueueMark,
   type ForgeReadiness,
   forgeLocationOf,
+  forkStoryForge,
   isRedCheckState,
   isSignInForgeFailure,
   isTransientForgeFailure,
@@ -23,6 +25,7 @@ import {
   QUEUE_STATUS,
   QUEUE_WAITING_WORDS,
 } from "../forge";
+import { QUEUE_SEPARATE_TITLES_VERSION } from "../queue/shipped";
 import type { QueueApprovalRemoval, TaskRecord } from "../storage/taskRecords";
 import { requireNamed } from "../workspace/naming";
 import type { ChangeChecks } from "./changeChecks";
@@ -93,7 +96,8 @@ export type PrOutcome = {
  * before the request went out; `sign-in` the app's sign-in; `transient` a
  * hiccup before anything was sent; `outcome` a request whose answer never
  * came and whose result could not be read back; `guidance` the captain's
- * newer words still wait for the crewmate's declaration (FI3-662).
+ * newer words still wait for the crewmate's declaration (FI3-662);
+ * `refused` a cause that needs fixing before merging can proceed.
  */
 export type MergeStop =
   | "conflict"
@@ -110,7 +114,8 @@ export type MergeStop =
   | "transient"
   | "outcome"
   | "guidance"
-  | "queue";
+  | "queue"
+  | "refused";
 
 /**
  * What a merge under the captain's kept approval holds to (FI3-304): the one
@@ -313,6 +318,7 @@ export class ChangeMerge {
     // waiting again once, as a version with no status is.
     let answered = false;
     let restoring = false;
+    let reapprovingFork = false;
     if (queued && checked) {
       const items = this.queueItems(taskId, checked.change);
       const queue = items?.find((item) => item.name === QUEUE_STATUS);
@@ -326,7 +332,18 @@ export class ChangeMerge {
         othersPassed &&
         status.recorded &&
         queueAnswer(this.options.tasks.get(taskId)?.delivery, checked.change.headSha) !== undefined;
-      if (queue?.state === "pending" && othersPassed && status.recorded) {
+      // A fresh captain click may replace a fork's existing nomination with its crew story.
+      // A kept approval's unattended retry never republishes merge words.
+      const selected = this.options.tasks.get(taskId)?.delivery?.checkTarget;
+      reapprovingFork =
+        queue?.state === "pending" &&
+        othersPassed &&
+        status.recorded &&
+        selected !== undefined &&
+        isForkReview(selected) &&
+        !guard?.unattended &&
+        !boundary?.unattended;
+      if (queue?.state === "pending" && othersPassed && status.recorded && !reapprovingFork) {
         if (!guard?.unattended && !boundary?.unattended) this.restartQueue(taskId, checked.forge);
         return {
           ok: false,
@@ -343,6 +360,7 @@ export class ChangeMerge {
     const checksPassed =
       answered ||
       restoring ||
+      reapprovingFork ||
       (unfinished &&
         status.recorded &&
         checked !== undefined &&
@@ -368,10 +386,12 @@ export class ChangeMerge {
     let dispatched = false;
     try {
       const record = this.options.tasks.get(taskId);
+      const target = record?.delivery?.checkTarget;
+      const fork = target && isForkReview(target) ? target : undefined;
       // The task's own branch is checked where it was made, commit by
       // commit. Any other change the task names was opened elsewhere or
       // checked when the task opened it; its title is checked below.
-      const own = change.branch === record?.branch;
+      const own = !fork && change.branch === record?.branch;
       if (own && record && !record.delivery?.presentation) await this.context.branchHome(record);
       // Another change is read in the project it is in (INF-2510).
       const elsewhere =
@@ -389,10 +409,10 @@ export class ChangeMerge {
             change.headSha,
           )
         : (repo?.path ?? record?.repoDir ?? "");
-      if (hasChangeRequests(forge.kind))
+      if (!fork && hasChangeRequests(forge.kind))
         requireNamed(change.title ?? "", "pull request title", this.options.namingRule?.() ?? null);
       const fresh = this.options.tasks.get(taskId) ?? record;
-      if (fresh) {
+      if (fresh && !fork) {
         await carryPassedReview({
           tasks: this.options.tasks,
           taskId,
@@ -424,10 +444,24 @@ export class ChangeMerge {
         if (held && !(queueWait && held.stop === "protected")) return held;
       }
       // The change's saved story, the same way a continuing merge reads it.
-      const storied = await this.withPublishedStory(taskId, forge, change, guard);
+      // A saved-story card names no review: its ordinary merge still reads
+      // the selected fork by number and uses the crew's title, not the
+      // contributor's title or a same-named project branch.
+      const storyForge = fork ? forkStoryForge(forge, fork, taskId) : forge;
+      const storied = await this.withPublishedStory(taskId, storyForge, change, guard);
       if ("held" in storied)
         return { ok: false, text: `Cannot merge yet: ${storied.held}.`, stop: "guidance" };
       const publishedChange = storied.change;
+      if (fork) {
+        // Recheck the reviewed source/version after the story's awaits,
+        // including when no story exists, before either queue or merge.
+        if (!(await storyForge.changeFor(change.branch)))
+          return {
+            ok: false,
+            text: "Cannot merge: the contributor's request is no longer open.",
+            stop: "closed",
+          };
+      }
       const held = guard?.held?.();
       if (held) return { ok: false, text: `Cannot merge yet: ${held}.`, stop: "guidance" };
       if (queueWait)
@@ -443,6 +477,7 @@ export class ChangeMerge {
           answered,
           guard?.held,
           guard?.queueInterrupted,
+          fork ? change.title : undefined,
         );
       // Queue version 10 introduced queue-owned merges on both hosts. Older
       // queues still depend on the approving app, so keep that compatibility.
@@ -515,7 +550,11 @@ export class ChangeMerge {
     change: ForgeChange,
     guard?: MergeGuard,
   ): Promise<{ change: ForgeChange } | { held: string }> {
-    const ledger = this.options.tasks.delivery.changePresentation(taskId, change.branch);
+    const ledger = this.options.tasks.delivery.changePresentation(
+      taskId,
+      change.branch,
+      change.number,
+    );
     const published = ledger?.published ?? ledger?.publication;
     // A publication names the pull request it went to.
     if (!ledger || (published?.number !== undefined && published.number !== change.number))
@@ -770,6 +809,7 @@ export class ChangeMerge {
     answered = false,
     held?: () => string | undefined,
     queueInterrupted?: () => Promise<void>,
+    requestTitle?: string,
   ): Promise<PrOutcome> {
     if (state !== undefined && state !== "pending") {
       return {
@@ -791,19 +831,32 @@ export class ChangeMerge {
         stop: guidance ? "guidance" : "withdrawn",
       };
     }
-    if (state === undefined) {
-      // Each click that marks a version reads the project's workflows
-      // again, so its waiting note says what is there now.
+    const forkApproval = requestTitle !== undefined;
+    const separateTitles = forkApproval && requestTitle !== change.title;
+    if (state === undefined || (attended && forkApproval)) {
+      // An explicit fork approval may replace an earlier waiting nomination's merge words.
       const repoId = this.options.tasks.get(taskId)?.repoId;
       if (repoId) await this.queue?.readWorkflows(repoId);
-      const record = this.options.tasks.get(taskId);
-      const targetRepo =
-        record && change.number !== undefined
-          ? this.projectOfNumber(record, change.number)
-          : undefined;
-      const repo =
-        targetRepo ?? (record?.repoId ? this.options.repos.get(record.repoId) : undefined);
-      const owned = queueMerges(repo ?? undefined);
+    }
+    const record = this.options.tasks.get(taskId);
+    const targetRepo =
+      record && change.number !== undefined
+        ? this.projectOfNumber(record, change.number)
+        : undefined;
+    const repo = targetRepo ?? (record?.repoId ? this.options.repos.get(record.repoId) : undefined);
+    const owned = queueMerges(repo ?? undefined);
+    if (
+      owned &&
+      separateTitles &&
+      (repo ? (queueShipped(repo) ?? 0) : 0) < QUEUE_SEPARATE_TITLES_VERSION
+    )
+      return {
+        ok: false,
+        stop: "refused",
+        text: "Update this project's queue before merging a fork with the crew's story title.",
+      };
+    const markHere = state === undefined || (owned && attended && forkApproval);
+    if (markHere) {
       const naming = this.options.namingRule?.() ?? null;
       // Evaluate the captured active rule here, not in a public queue packet or a copied grammar.
       if (owned && change.number !== undefined)
@@ -832,6 +885,7 @@ export class ChangeMerge {
             ? {
                 number: change.number,
                 title: change.title ?? "",
+                ...(forkApproval ? { requestTitle } : {}),
                 message: change.squashMessage ?? (change.body || undefined),
                 naming: naming ? { pattern: naming.pattern } : null,
                 beforeDispatch: () => held?.() ?? look(),
@@ -863,7 +917,7 @@ export class ChangeMerge {
     // A host whose mark starts nothing has the queue started here: on the
     // mark, and on the captain's own click on a version already waiting
     // (`restartQueue`), never on a kept approval's unattended retry.
-    if (state === undefined && !forge.markStartsQueue) this.startNextBatch(taskId, "mark");
+    if (markHere && !forge.markStartsQueue) this.startNextBatch(taskId, "mark");
     else if (attended) this.restartQueue(taskId, forge);
     if (state === undefined) await this.checks.run(taskId);
     return {

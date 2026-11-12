@@ -61,7 +61,7 @@ export const CHECK_CHANGE_TOOL_DESCRIPTION = [
   "An empty hosted reading stays pending. absentChecks, with pull or alone for your own pull request, records positive no-CI evidence from trusted default-branch policy and the local gate; time, history or missing workflows prove nothing.",
   "The app watches running checks, waking you on first failure and completion. End your turn until that wake; no watchable checks means no wake.",
   "conflictRepair and captainGuidance grant no fresh merge consent.",
-  "Put pull's review id in your merge card's merge effect, with after saying whether the task continues or closes. Only the captain's click sends it with autonomy off.",
+  "A merge past the branch rules names its review on a card without presentation. Otherwise a saved-story merge card gives presentation and omits review: pull selected the current change. On a card without presentation, put pull's review id in the merge effect. Give after saying whether the task continues or closes. Only the captain's click sends it with autonomy off.",
 ].join(" ");
 
 /**
@@ -223,7 +223,7 @@ export const SHOW_MERGE_CARD_TOOL_DESCRIPTION = [
   "It does each step that is its own - preparing the story, preparing the same words again once live proof was accepted since, opening the pull request, publishing the story and reading it back - and stops at the first step someone else supplies.",
   "Its answer says what it did, the one thing missing and who supplies it: do your part, or end your turn for someone else's, then call again. It repeats nothing already done and adds no revision for the same words.",
   "The card is the saved story's merge card, with the one merge action the app builds; there is no body, risk, required actions or actions to give. id names it: reuse it to revise your open merge card; after the captain answered one, the app uses a new id.",
-  "Use prepare_change, open_change and emit_card only for rare cases: words around a story, recovery after an uncertain write, another project, a stacked change or an upstream contribution.",
+  "Use prepare_change, open_change and emit_card only for rare cases: words around a story, recovery after an uncertain write, another project, a stacked change, an upstream contribution or a contributor's fork review.",
 ].join(" ");
 
 export const SHOW_MERGE_CARD_TOOL = crewmateTool({

@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "review-contributor-forks",
+      "kind": "feature",
+      "area": "tasks",
+      "title": "Review and queue contributions from forks",
+      "body": "A crewmate can review a contributor's pull request on GitHub or GitLab and show a merge card for that version. Your merge click sends it through the project's queue. A different source or later push needs a new review and click. The crew's story title and summary go into the merged commit, keeping the contributor's title and description. Projects whose queue merges changes itself need the queue update to use separate titles.",
+      "noPicture": "The existing merge card is unchanged; this adds support for contributor sources and preserves their descriptions.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

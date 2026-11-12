@@ -59,7 +59,7 @@ export type ForgeChange = {
   branch: string;
   /** The version the host holds for that branch now. */
   headSha: string;
-  /** Host title; required on a pull or merge request, absent for plain Git branches. */
+  /** Request title; at a contributor merge, the verified story supplies the squash title. */
   title?: string;
   /** A prerequisite publication remains a draft until final proof is reviewed. */
   draft?: boolean;
@@ -141,7 +141,10 @@ export type ForgeQueueStart =
 /** The active naming decision and exact squash words approved at one head. */
 export type ForgeQueueApproval = {
   number: number;
+  /** Exact approved squash title, independent of the contributor's request title. */
   title: string;
+  /** Request title captured by the review; omitted by clients whose two titles are identical. */
+  requestTitle?: string;
   message?: string;
   naming: { pattern: string } | null;
   /** Recheck the existing local permission before publishing either hosted write; never serialized. */
@@ -197,6 +200,8 @@ export type ForgeReadiness = "clean" | "conflict" | "behind" | "blocked" | "comp
 
 /** One pull request (a merge request on GitLab) read by its number, whatever its state (FI3-304). */
 export type ForgePull = {
+  /** The request's page, as the host returned it. */
+  url?: string;
   number: number;
   state: "open" | "closed";
   merged: boolean;
@@ -211,10 +216,12 @@ export type ForgePull = {
   branch?: string;
   title?: string;
   /**
-   * The repository the head commit belongs to (`owner/name`). Absent when
+   * The source repository (`owner/name`, or GitLab's immutable project identity). Absent when
    * the host did not say, which a referenced merge treats as unproven.
    */
   headRepo?: string;
+  /** Immutable host repository id, when supplied. */
+  headRepoId?: number;
   readiness: ForgeReadiness;
   mergeable?: boolean | null;
   mergeableState?: string;
@@ -353,6 +360,8 @@ export interface Forge {
    * green with zero checks; the app watches nothing there and says so.
    */
   readonly hasChecks: boolean;
+  /** The selected contributor change publishes its saved story in a comment. */
+  readonly storyInComment?: boolean;
   /** Optional read-only workflow evidence; absent on hosts without a reader. */
   readonly workflows?: ForgeWorkflows;
   /** Native evidence attachments, offered only on hosts qualified for publication. */

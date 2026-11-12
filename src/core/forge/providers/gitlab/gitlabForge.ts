@@ -502,6 +502,7 @@ export class GitLabForge implements Forge {
     const mergedSha = request.merge_commit_sha ?? request.squash_commit_sha;
     return {
       number: request.iid,
+      url: request.web_url,
       // Locked is a merge GitLab is still making: open until it reads merged.
       state: request.state === "opened" || request.state === "locked" ? "open" : "closed",
       merged,
@@ -511,7 +512,14 @@ export class GitLabForge implements Forge {
       base: request.target_branch,
       ...(request.source_branch ? { branch: request.source_branch } : {}),
       ...(request.title ? { title: request.title } : {}),
-      ...(sameProject(request) ? { headRepo: `${this.location.owner}/${this.location.name}` } : {}),
+      ...(request.source_project_id !== undefined && request.target_project_id !== undefined
+        ? {
+            headRepo: sameProject(request)
+              ? `${this.location.owner}/${this.location.name}`
+              : `gitlab-project:${request.source_project_id}`,
+            headRepoId: request.source_project_id,
+          }
+        : {}),
       readiness: readinessOf(request),
       mergeable: null,
       mergeableState: request.detailed_merge_status ?? request.merge_status,

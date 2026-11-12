@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   commitEnvelope,
   NAMING_DECISION,
+  readCommitApproval,
   readCommitEnvelope,
   revocationEnvelope,
 } from "../../../queue/shipped/message.mjs";
@@ -73,6 +74,40 @@ describe("GitLabForge", () => {
       }),
     ).rejects.toThrow("The merge approval was withdrawn");
     expect(fetcher.mock.calls.filter(([, init]) => init?.method === "POST")).toEqual([]);
+  });
+
+  // Accepted fork queue repair: publish the distinct approved squash title, never edit the request.
+  it("queues a fork's approved squash title independently of its request title", async () => {
+    const current = request({ title: "Fix typo" });
+    const title = "Review the meter";
+    const notes: string[] = [];
+    const { forge, fetcher } = forgeAnswering((method, path, init) => {
+      if (method === "GET" && path.endsWith(`/merge_requests/${current.iid}`))
+        return Response.json(current);
+      if (method === "POST" && path.endsWith("/notes")) {
+        notes.push(JSON.parse(String(init?.body)).body);
+        return Response.json({ id: 72 });
+      }
+      if (method === "POST" && path.endsWith(`/statuses/${current.sha}`))
+        return Response.json({ id: 73 });
+      return Response.json({ message: "Unexpected request" }, { status: 500 });
+    });
+    await forge.markQueued(current.sha, {
+      number: current.iid,
+      title,
+      requestTitle: current.title,
+      message: "Keep the meter reading.",
+      naming: null,
+    });
+    expect(readCommitApproval(notes[0] ?? "", current.sha, current.title)).toEqual({
+      title,
+      body: "Keep the meter reading.",
+    });
+    expect(
+      fetcher.mock.calls
+        .filter(([, init]) => init?.method !== "GET")
+        .map(([, init]) => init?.method),
+    ).toEqual(["POST", "POST"]);
   });
 
   // F4/F5 + INF-3623: a passive reconcile never gets authority to rebind an external edit.
@@ -662,9 +697,9 @@ describe("GitLabForge", () => {
   // A user's report: check_change refused a no-checks declaration on a merge
   // request from a branch in the same GitLab project as a fork. Expected:
   // accept a verified same-project merge request, "while continuing to
-  // reject forks and unknown identity". The merge review reads that
+  // reject unknown identity. The accepted contributor plan adds fork identity". The merge review reads that
   // identity as the pull request's head repository.
-  it("names the project as a merge request's head repository only when GitLab says its source is the target", async () => {
+  it("keeps a fork source as its immutable project identity and refuses an unknown source", async () => {
     const pulled = async (fields: Record<string, unknown>) => {
       const { forge } = forgeAnswering(() =>
         Response.json(request({ target_project_id: 7, ...fields })),
@@ -672,9 +707,40 @@ describe("GitLabForge", () => {
       return (await forge.pull(4)).headRepo;
     };
     expect(await pulled({})).toBe("group/subgroup/app");
-    expect(await pulled({ source_project_id: 99 })).toBeUndefined();
+    expect(await pulled({ source_project_id: 99 })).toBe("gitlab-project:99");
     expect(await pulled({ source_project_id: undefined })).toBeUndefined();
     expect(await pulled({ target_project_id: undefined })).toBeUndefined();
+  });
+
+  // Accepted contributor plan A: a fork's jobs belong to the project GitLab
+  // names on the pipeline, not necessarily the merge request's target.
+  it("reads a fork pipeline's failed jobs from the source project", async () => {
+    const head = request().sha;
+    const { forge, fetcher } = forgeAnswering((_method, path) => {
+      if (path.endsWith("/merge_requests/4/pipelines"))
+        return Response.json([
+          {
+            id: 44,
+            project_id: 99,
+            sha: head,
+            ref: "fm/task-1",
+            status: "success",
+            source: "merge_request_event",
+          },
+        ]);
+      if (path === "/api/v4/projects/99/pipelines/44/jobs")
+        return Response.json([{ id: 78, name: "build", status: "failed", allow_failure: false }]);
+      return Response.json([]);
+    });
+    const checks = await forge.checks({ number: 4, branch: "fm/task-1", headSha: head, url: null });
+    expect(checks.items).toContainEqual(
+      expect.objectContaining({ name: "build", state: "failure" }),
+    );
+    expect(
+      fetcher.mock.calls.some(
+        ([input]) => new URL(String(input)).pathname === "/api/v4/projects/99/pipelines/44/jobs",
+      ),
+    ).toBe(true);
   });
 
   // INF-2952 piece 2, the captain's approved plan: "a crewmate's merge

@@ -1,7 +1,13 @@
 import type { StagedChangePresentation } from "@shared/changePresentation";
 import { hasChangeRequests } from "@shared/forge";
 import { acceptedValidation } from "@shared/liveValidation";
-import { type Forge, type ForgeChange, ForgeError, isSignInForgeFailure } from "../forge";
+import {
+  type Forge,
+  type ForgeChange,
+  ForgeError,
+  isForkReview,
+  isSignInForgeFailure,
+} from "../forge";
 import { currentChange } from "../storage/changeProjection";
 import { type ChangeContext, changeWords, crewSignInText } from "./changeContext";
 import type { ChangePublication } from "./changePublication";
@@ -80,6 +86,7 @@ function wordsOf(caught: unknown): string {
  * request and publishing the story there - and stops at the first step
  * someone else supplies. Called again it repeats nothing: the same words add
  * no revision, and a published story is not sent again.
+ * Selected contributor reviews use the explicit publisher path, not this own-project walk.
  */
 export class MergeCardSteps {
   constructor(
@@ -112,6 +119,13 @@ export class MergeCardSteps {
       stop: { step, missing, by },
     });
     const { options } = this.context;
+    const selected = options.tasks.get(taskId)?.delivery?.checkTarget;
+    if (selected && isForkReview(selected))
+      return stop(
+        "story",
+        "A selected contributor review uses prepare_change, then open_change with presentation, then emit_card with presentation and asks_first on its merge effect. Do not use show_merge_card for this review.",
+        "crewmate",
+      );
     const presentations = options.presentations;
     if (!presentations) return stop("story", "Saved change stories are unavailable here.", "app");
     const contribution = await options.prepareContribution?.(taskId);

@@ -216,6 +216,46 @@ describe.each(["gitlab.com", "gitlab.example.com"])(
   },
 );
 
+// Accepted contributor-story proof: source identity and notes belong to the
+// fixture's host owner, not a journey-specific endpoint in product code.
+it("keeps a fork's story notes separate from its merge request text", async () => {
+  const head = sha("comment contribution");
+  const { gitlab: stub, forge } = await forgeOver("gitlab.com", { contribution: head });
+  const number = stub.openMergeRequest({
+    branch: "contribution",
+    title: "Fix typo",
+    description: BODY,
+    sourceProjectId: 99,
+  });
+  expect(await forge.pull(number)).toMatchObject({
+    headRepo: "gitlab-project:99",
+    headRepoId: 99,
+    title: "Fix typo",
+  });
+  expect(await forge.changeFor("contribution")).toBeNull();
+  const api = forge.api;
+  if (!api) throw new Error("The fixture needs its API");
+  const path = `/projects/${encodeURIComponent(GITLAB_STUB_PROJECT)}/merge_requests/${number}/notes`;
+  const created = JSON.parse(
+    (await api.call("POST", path, JSON.stringify({ body: "The crew's story." }))).body,
+  );
+  await api.call(
+    "PUT",
+    `${path}/${created.id}`,
+    JSON.stringify({ body: "The verified crew story." }),
+  );
+  expect(JSON.parse((await api.call("GET", `${path}?per_page=100`)).body)).toEqual([
+    { ...created, body: "The verified crew story." },
+  ]);
+  expect(stub.comments(number)).toEqual([{ id: created.id, body: "The verified crew story." }]);
+  expect(stub.requestText(number)).toEqual({ title: "Fix typo", description: BODY });
+  // A no-op native write still logs the full API path and must be caught by the journey.
+  const nativePath = path.slice(0, -"/notes".length);
+  await api.call("PUT", nativePath, JSON.stringify({ title: "Fix typo" }));
+  expect(stub.requests()).toContain(`PUT /api/v4${nativePath}`);
+  expect(stub.requestText(number)).toEqual({ title: "Fix typo", description: BODY });
+});
+
 describe("pipelines read as checks on the merge request's head", () => {
   it("reads a branch pipeline and its jobs, and names each", async () => {
     const checks = await readingOf([{ status: "success" }]);

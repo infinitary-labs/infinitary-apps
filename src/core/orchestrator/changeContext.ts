@@ -6,7 +6,14 @@ import { acceptedValidation } from "@shared/liveValidation";
 import { MERGE_REVIEW_CAP, type MergeReview } from "@shared/mergeReview";
 import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repos";
 import type { NamingRule } from "../../shared/runbooks";
-import { type Forge, type ForgeChange, ForgeError, type ForgePull, type ForgeRepo } from "../forge";
+import {
+  type Forge,
+  type ForgeChange,
+  ForgeError,
+  type ForgePull,
+  type ForgeRepo,
+  isForkReview,
+} from "../forge";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
 import { git } from "../workspace/git";
@@ -214,7 +221,7 @@ export class ChangeContext {
       review,
       ...(record.delivery?.mergeReviews ?? []).filter((item) => item.id !== review.id),
     ].slice(0, MERGE_REVIEW_CAP);
-    const own = review.branch === record.branch;
+    const own = review.branch === record.branch && !isForkReview(review);
     this.options.tasks.delivery.recordPermissionRecords(record.id, {
       mergeReviews: kept,
       ...(own ? {} : { checkTarget: review }),
@@ -276,7 +283,15 @@ export class ChangeContext {
 export function reviewOf(
   forge: Forge,
   origin: { host: string; owner: string; name: string },
-  pull: { number: number; headSha: string; base: string; branch: string; title?: string },
+  pull: {
+    number: number;
+    headSha: string;
+    base: string;
+    branch: string;
+    title?: string;
+    headRepo?: string;
+    headRepoId?: number;
+  },
   at: number,
   more: Partial<Pick<MergeReview, "repoId" | "absentChecks" | "skips">> = {},
 ): MergeReview {
@@ -290,6 +305,8 @@ export function reviewOf(
     name: origin.name,
     number: pull.number,
     headSha: pull.headSha,
+    ...(pull.headRepo ? { headRepo: pull.headRepo } : {}),
+    ...(pull.headRepoId !== undefined ? { headRepoId: pull.headRepoId } : {}),
     base: pull.base,
     branch: pull.branch,
     method: "squash",

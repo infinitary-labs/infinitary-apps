@@ -205,6 +205,7 @@ export function setup(
     tell?: (facts: Extract<WakeFacts, { kind: "queue-stalled" }>) => void;
     /** Check commit names against real git rather than skipping the check. */
     realRange?: boolean;
+    prepareContribution?: (taskId: string) => Promise<string | undefined>;
     bringBranchHome?: (taskId: string) => Promise<string | undefined>;
     /** The branch a placed task's working copy has checked out there, wired as the app wires it. */
     checkedOut?: CheckedOut;
@@ -236,6 +237,7 @@ export function setup(
     repos,
     forgeFor: options.forgeFor ?? (() => forge),
     presentations,
+    ...(options.prepareContribution ? { prepareContribution: options.prepareContribution } : {}),
     ...(options.checkedOut ? { checkedOut: options.checkedOut } : {}),
     ...(options.bringBranchHome ? { bringBranchHome: options.bringBranchHome } : {}),
     ...(options.realRange ? {} : { validateRange: async () => {} }),

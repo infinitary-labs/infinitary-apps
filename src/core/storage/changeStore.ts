@@ -281,8 +281,8 @@ export class ChangeStore {
     for (const number of otherChangeNumbers(task)) {
       const other = prepared(
         this.db,
-        "SELECT * FROM changes WHERE task_id = ? AND handle_number = ? AND head_branch IS NOT ?",
-      ).get(task.id, number, task.branch) as ChangeRow | undefined;
+        "SELECT * FROM changes WHERE task_id = ? AND handle_number = ? AND id IS NOT ?",
+      ).get(task.id, number, existing?.id ?? this.rowForTask(task.id)?.id) as ChangeRow | undefined;
       // A change the task opened in another managed project is that project's (INF-2510).
       const elsewhere = otherChangeRepoId(task, number);
       const where = elsewhere ? this.repo(elsewhere) : repo;
@@ -420,14 +420,14 @@ export class ChangeStore {
     this.db.prepare("DELETE FROM changes").run();
   }
 
-  /** The task's own change: the oldest row it carries, on its own branch. */
+  /** The task's own change is inserted first; equal clocks never select a fork on that branch. */
   private rowForTask(taskId: string): ChangeRow | undefined {
     if (!this.exists()) return undefined;
     return prepared(
       this.db,
       `SELECT changes.* FROM changes JOIN tasks ON tasks.id = changes.task_id
        WHERE changes.task_id = ? AND changes.head_branch IS tasks.branch
-       ORDER BY changes.created_at, changes.id LIMIT 1`,
+       ORDER BY changes.rowid LIMIT 1`,
     ).get(taskId) as ChangeRow | undefined;
   }
 

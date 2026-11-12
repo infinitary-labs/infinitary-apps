@@ -6,6 +6,7 @@ A change is the host's typed record of one unit of work offered to a project: wh
 
 Record every change a task carries as one record with a stable id, so the pull request, its checks, its reviews, its story, the consent given and the merge are facts about the change at a version rather than fields scattered over the task.
 A task carries one change on its own branch and one for every other pull request it names, whoever opened it (INF-2490): one change per pull request.
+A fork may use the same branch name as the task; its source and request number keep the review, checks and story separate.
 Surfaces show the current pull request; the task record's Info tab and its `pullRequests` list name every one with its own checks, and which merge closes the task.
 Each change keeps its own saved story, so a story on one pull request never blocks another's.
 Give each version pushed its own row in the order the host saw it, holding the checks read, the review verdict declared with its findings and its reading, the story prepared and published, and the consent given there.

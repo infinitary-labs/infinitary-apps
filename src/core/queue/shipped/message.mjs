@@ -11,16 +11,22 @@ export function commitMessage(story) {
 export function commitEnvelope(head, body, title, policy) {
   if (!policy || !Object.values(NAMING_DECISION).includes(policy.naming))
     throw new Error("An approval needs a checked/off naming result.");
-  return `<!-- infinitary-squash:${Buffer.from(JSON.stringify({ head, body, title, naming: policy.naming, literal: true })).toString("hex")} -->`;
+  return `<!-- infinitary-squash:${Buffer.from(JSON.stringify({ head, body, title, requestTitle: policy.requestTitle ?? title, naming: policy.naming, literal: true })).toString("hex")} -->`;
 }
 
 /** Read the approved literal body; descriptions and older story formats cannot grant authority. */
 export function readCommitEnvelope(comment, head, title) {
+  return readCommitApproval(comment, head, title).body;
+}
+
+/** Keep request identity separate from the explicitly approved squash words. */
+export function readCommitApproval(comment, head, title) {
   const data = decodeEnvelope(comment);
   if (
     !data ||
     !Object.values(NAMING_DECISION).includes(data.naming) ||
-    typeof data.title !== "string"
+    typeof data.title !== "string" ||
+    (data.requestTitle !== undefined && typeof data.requestTitle !== "string")
   )
     throw new Error(
       "The queue needs this version's approved naming policy. Queue it again before merging.",
@@ -29,7 +35,7 @@ export function readCommitEnvelope(comment, head, title) {
     throw new Error(
       "The approved merge summary does not cover this version. Queue it again before merging.",
     );
-  if (data.title !== title)
+  if ((data.requestTitle ?? data.title) !== title)
     throw new Error(
       "The title changed after the merge was approved. Queue this version again before merging.",
     );
@@ -37,7 +43,7 @@ export function readCommitEnvelope(comment, head, title) {
     throw new Error(
       "The queue needs literal approved merge words. Queue this version again before merging.",
     );
-  return data.body;
+  return { title: data.title, body: data.body };
 }
 
 /**

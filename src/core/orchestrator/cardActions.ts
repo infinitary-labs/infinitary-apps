@@ -53,7 +53,7 @@ import { keepImages } from "../attachments";
 import type { BrowserReturned } from "../browser/taskBrowsers";
 import type { IntegrationAskTaken } from "../integrations";
 import { type MessageFile, withPastedFiles } from "../overflow";
-import { currentChange, storyLedgerOf } from "../storage/changeProjection";
+import { currentChange } from "../storage/changeProjection";
 import { StaleValidationDecisionError } from "../tasks/liveValidation";
 import { TaskGraphRefusal } from "../tasks/taskGraph";
 import { TaskService } from "../tasks/taskService";
@@ -347,10 +347,10 @@ export class CardActions {
         )
           ? taskPull(associated, changes, shownFor)
           : undefined;
-      const ledger = storyLedgerOf(
-        delivery,
-        associated.branch,
+      const ledger = this.core.options.tasks.delivery.changePresentation(
+        associated.id,
         elsewhere?.branch ?? current.branch,
+        shownFor ?? current.number,
       );
       // Approval follows the code, never the story's words (INF-3623): a
       // story revised at the version the card showed keeps the click, and

@@ -89,6 +89,62 @@ describe("the GitHub stand-in, through the app's forge", () => {
     await forge.removeQueued(head, change.number);
     expect(writes()).toHaveLength(2);
   });
+
+  // Accepted contributor plan A: the fixture must preserve the fork source
+  // through the real forge and never return it as a project-owned branch.
+  it("keeps a numbered fork distinct from the project's same-named branch", async () => {
+    const head = sha("contribution");
+    const { github: stub, forge } = await forgeOver({ contribution: head });
+    stub.serveNumbered({
+      number: 151,
+      branch: "contribution",
+      title: TITLE,
+      body: BODY,
+      headSha: head,
+      headRepo: "contributor/meterlab",
+      headRepoId: 912,
+    });
+    expect(await forge.pull(151)).toMatchObject({
+      number: 151,
+      headSha: head,
+      headRepo: "contributor/meterlab",
+      headRepoId: 912,
+    });
+    expect(await forge.changeFor("contribution")).toBeNull();
+  });
+
+  // Accepted contributor-story proof: the fixture's comments are a separate
+  // resource from the contributor's title and description.
+  it("keeps contributor review comments separate from the pull request text", async () => {
+    const head = sha("comment contribution");
+    const { github: stub, forge } = await forgeOver({ contribution: head });
+    stub.serveNumbered({
+      number: 151,
+      branch: "contribution",
+      title: "Fix typo",
+      body: BODY,
+      headSha: head,
+      headRepo: "contributor/meterlab",
+      headRepoId: 912,
+    });
+    const api = forge.api;
+    if (!api) throw new Error("The fixture needs its API");
+    const path = "/repos/octo/meterlab/issues/151/comments";
+    const created = JSON.parse(
+      (await api.call("POST", path, JSON.stringify({ body: "The crew's story." }))).body,
+    );
+    await api.call(
+      "PATCH",
+      `/repos/octo/meterlab/issues/comments/${created.id}`,
+      JSON.stringify({ body: "The verified crew story." }),
+    );
+    expect(JSON.parse((await api.call("GET", `${path}?per_page=100`)).body)).toEqual([
+      { ...created, body: "The verified crew story." },
+    ]);
+    expect(stub.comments(151)).toEqual([{ id: created.id, body: "The verified crew story." }]);
+    expect(stub.requestText(151)).toEqual({ title: "Fix typo", description: BODY });
+  });
+
   // INF-285 F4: the existing endpoint override keeps real evidence bytes off GitHub.
   it("uploads and reads back pictures and recordings entirely through the local API override", async () => {
     github = await startGitHubStub();
@@ -258,6 +314,7 @@ describe("the GitHub stand-in, through the app's forge", () => {
       number: 55,
       url: "https://github.com/octo/meterlab/pull/55",
       branch: "fm/task-a",
+      base: await forge.defaultBranch(),
       headSha: sha("a"),
       title: "feat: the crewmate's work",
       body: "Why it matters.",

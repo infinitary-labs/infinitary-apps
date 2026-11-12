@@ -1,4 +1,4 @@
-import { labelApproval, newestTrustedApproval, readCommitEnvelope } from "./message.mjs";
+import { labelApproval, newestTrustedApproval, readCommitApproval } from "./message.mjs";
 /**
  * The shipped queue's GitHub part (docs/forge.md, "The shipped queue"): it
  * runs the host-neutral rules in rules.mjs inside GitHub Actions, through
@@ -568,7 +568,7 @@ export async function mergePassed({ github, context, core }) {
           throw new Error(
             "No current trusted approval for this version; it was withdrawn or has not been approved.",
           );
-        const message = readCommitEnvelope(approval.body, entry.head, pull.title);
+        const words = readCommitApproval(approval.body, entry.head, pull.title);
         const still = await queueAt(github, repo, entry.head);
         if (still?.kind !== "passed" || still.run !== queue.run) continue;
         if (!base)
@@ -590,8 +590,8 @@ export async function mergePassed({ github, context, core }) {
               pull_number: entry.number,
               sha: entry.head,
               merge_method: "squash",
-              commit_title: pull.title,
-              commit_message: message,
+              commit_title: words.title,
+              commit_message: words.body,
               request: { retries: 0 },
             })
           ).data;

@@ -12,17 +12,20 @@ import { join, resolve } from "node:path";
 import { inflateRawSync } from "node:zlib";
 import {
   type ChangePresentationDraft,
-  type PresentationRecovery,
   presentationRecoverySchema,
-  type StoryAround,
 } from "@shared/changePresentation";
-import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { RISK_DIMENSIONS } from "@shared/risk";
+import { describe, expect, it, vi } from "vitest";
 import { DEMO_POSTER, DEMO_RECORDING, GIF_DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
 import { MAP_DATA } from "../../../tests/helpers/architectureMap";
-import { bundledRunbooks } from "../../../tests/helpers/crewHarness";
+import {
+  arrange,
+  BRANCH,
+  HEAD,
+  risk,
+  TASK,
+} from "../../../tests/helpers/changePresentationsHarness";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
-import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import {
   AttachmentUploadError,
@@ -37,209 +40,9 @@ import {
 } from "../forge";
 import { presentationMarkdownText } from "../forge/presentation";
 import { stageChangePresentation } from "../pi/changePresentation";
-import { CardStore } from "../storage/cardStore";
-import { openDatabase } from "../storage/db";
-import { seedTask } from "../tasks/seedTask";
-import { TaskService } from "../tasks/taskService";
-import { ChangePresentations, GITHUB_STORY_BODY_LIMIT } from "./changePresentations";
+import { GITHUB_STORY_BODY_LIMIT } from "./changePresentations";
 
-// INF-92 / accepted INF-132 owns the upload barrier, saved story parity and recovery.
-// Real, already committed app photographs exercise the existing media reader.
-const HEAD = "5ca2d466ee21f9733827383f23df81f3874e0d10";
-const TASK = "ab12cd34";
-const BRANCH = `fm/task-${TASK}`;
 const sha256 = (bytes: Buffer) => createHash("sha256").update(bytes).digest("hex");
-const risk = Object.fromEntries(
-  RISK_DIMENSIONS.map((dimension) => [
-    dimension,
-    { level: "low", why: `The ${dimension} assessment for this fixture.` },
-  ]),
-) as RiskDeclaration;
-const closes: (() => void)[] = [];
-afterEach(() => {
-  for (const close of closes.splice(0)) close();
-});
-
-async function arrange(
-  onPrepared?: (taskId: string, head: string, branch?: string) => Promise<void>,
-) {
-  const root = scratchDir("infinitary-presentation-");
-  const media = join(root, "cards");
-  const worktree = join(root, "work");
-  mkdirSync(media);
-  mkdirSync(worktree);
-  for (const theme of ["dark", "light"])
-    copyFileSync(
-      resolve(`release-notes/pictures/action-reply-line-${theme}.webp`),
-      join(worktree, `${theme}.webp`),
-    );
-  let db = openDatabase(join(root, "data"));
-  let tasks = new TaskService({ db, strict: true });
-  seedTask(tasks, {
-    id: TASK,
-    title: "Show the change",
-    prompt: "Share the evidence",
-    branch: BRANCH,
-    worktreeDir: worktree,
-    repoDir: worktree,
-    status: "idle",
-  });
-  closes.push(() => db.close());
-  let head = HEAD;
-  let change: ForgeChange | null = null;
-  let destination = {
-    host: "github.com",
-    projectId: 1422452335,
-    fullName: "kunchenguid/infinitary-evidence-test-public",
-    visibility: "public" as "public" | "private",
-  };
-  const order: string[] = [];
-  const upload = vi.fn(async () => {
-    order.push("upload");
-    return {
-      url: `https://github.com/user-attachments/assets/846dced7-16ad-44c0-b6f5-${String(upload.mock.calls.length).padStart(12, "0")}`,
-    };
-  });
-  const open = vi.fn(async (input: { branch: string; title: string; body: string }) => {
-    order.push("open");
-    change = {
-      ...input,
-      headSha: head,
-      number: 1,
-      url: "https://github.com/kunchenguid/infinitary-evidence-test-public/pull/1",
-    };
-    return { ...change };
-  });
-  const update = vi.fn(async (_current: ForgeChange, body: string, title?: string) => {
-    order.push("update");
-    if (!change) throw new Error("No open change");
-    change = { ...change, body, headSha: head, ...(title === undefined ? {} : { title }) };
-  });
-  const forge: Forge = {
-    kind: "github",
-    host: "github.com",
-    place: "GitHub",
-    hasChecks: true,
-    attachments: { destination: async () => ({ ...destination }), upload },
-    branchHead: async () => head,
-    changeFor: async () => (change ? { ...change } : null),
-    openChange: open,
-    updateChangeBody: update,
-    checks: async () => ({ overall: "green", items: [] }),
-    defaultBranch: async () => "main",
-    listProjects: async () => [],
-    close: async () => {},
-    putIn: async () => undefined,
-    label: () => "#1",
-    url: (value) => value.url,
-  };
-  const draft: ChangePresentationDraft = {
-    title: "feat: share the change story",
-    base: HEAD,
-    head: HEAD,
-    publishable: true,
-    why: ["The pull request should tell the same story as the merge card."],
-    whatChanged: ["The description carries the selected photographs."],
-    before: ["The earlier description contained text alone."],
-    after: ["Both views show the same evidence."],
-    views: [
-      {
-        id: "completion",
-        caption: "Completion story",
-        kind: "changed",
-        before: [
-          {
-            path: "dark.webp",
-            alt: "The existing dark completion view",
-            captureHead: HEAD,
-            inspected: true,
-          },
-        ],
-        after: [
-          {
-            path: "light.webp",
-            alt: "The inspected light completion view",
-            captureHead: HEAD,
-            inspected: true,
-            faults: [],
-          },
-        ],
-      },
-    ],
-    checked: [{ check: "Publication", result: "The selected story and evidence agree." }],
-    verification: ["Opened both pictures and read the description back."],
-    risk,
-    requiredActions: [],
-    unfinished: [],
-    projectText: "Closes #24",
-  };
-  const staged = await stageChangePresentation(draft, { taskId: TASK, worktree, dir: media });
-  const readHead = vi.fn(async () => head);
-  // The map part and naming rule the app ships, read as the app reads them.
-  const runbooks = bundledRunbooks();
-  const create = () =>
-    new ChangePresentations({
-      tasks,
-      mediaDir: () => media,
-      head: readHead,
-      onPrepared,
-      mapPart: () => runbooks.mapPart(),
-      namingRule: () => runbooks.naming(),
-    });
-  let service = create();
-  return {
-    root,
-    media,
-    worktree,
-    draft,
-    staged,
-    forge,
-    order,
-    readHead,
-    upload,
-    open,
-    update,
-    get service() {
-      return service;
-    },
-    get tasks() {
-      return tasks;
-    },
-    get cards() {
-      return new CardStore(db);
-    },
-    get change() {
-      return change;
-    },
-    set change(value: ForgeChange | null) {
-      change = value;
-    },
-    setHead(value: string) {
-      head = value;
-    },
-    setVisibility(value: "public" | "private") {
-      destination = { ...destination, visibility: value };
-    },
-    restart() {
-      db.close();
-      db = openDatabase(join(root, "data"));
-      tasks = new TaskService({ db, strict: true });
-      service = create();
-    },
-    prepare: () => service.prepare(TASK, staged, forge),
-    publish: (revision = 1, recovery?: PresentationRecovery, around?: StoryAround) =>
-      service.publish(
-        TASK,
-        revision,
-        forge,
-        BRANCH,
-        "feat: share the change story",
-        "pending",
-        recovery,
-        around,
-      ),
-  };
-}
 
 describe("saved change publication", () => {
   // INF-467 submitted answers: short typed parts, with instruction-only version hygiene.
@@ -1713,7 +1516,6 @@ it("keeps a closed card's pictures and recording after later publications prune 
   expect(files.map((file) => readFileSync(join(at.media, file)))).toEqual(bytes);
   expect(readFileSync(join(at.worktree, "sample.mp4"))).toEqual(DEMO_RECORDING.bytes);
 });
-
 // INF-169 R3: missing or duplicated boundaries follow the deliberate human-edit path.
 describe("edited story boundaries", () => {
   const { start, end } = presentationRegionMarkers(TASK);
@@ -1762,7 +1564,6 @@ describe("edited story boundaries", () => {
     expect(at.upload).toHaveBeenCalledTimes(2);
   });
 });
-
 it("cleans a busy preparation's fresh staging copies without deleting the active preparation's files (INF-169 R4)", async () => {
   const at = await arrange();
   let signal = () => {};
@@ -1799,7 +1600,6 @@ it("cleans a busy preparation's fresh staging copies without deleting the active
   }
   expect(at.staged.assets.every((asset) => existsSync(join(at.media, asset.file)))).toBe(true);
 });
-
 it("recovers an uncertain replacement with edited markers through the same deliberate path (INF-169 R3)", async () => {
   const at = await arrange();
   await at.prepare();
@@ -1824,7 +1624,6 @@ it("recovers an uncertain replacement with edited markers through the same delib
     squashMessage: at.draft.whatChanged.join("\n\n"),
   });
 });
-
 // INF-1965: the saved story belongs to every destination, not only native-upload hosts.
 // Existing inspected photographs and the publisher's host readings own the fixture.
 describe("stories without native attachment publication", () => {
@@ -1875,7 +1674,6 @@ describe("stories without native attachment publication", () => {
       );
     },
   );
-
   it("binds a plain branch's retained story without inventing a description or pull request", async () => {
     const at = await arrange();
     at.change = { branch: BRANCH, headSha: HEAD, url: null };
@@ -1911,7 +1709,6 @@ describe("stories without native attachment publication", () => {
       "destination or audience changed",
     );
   });
-
   it("prepares and completes local work without a forge, and refuses stale code or missing pictures", async () => {
     const at = await arrange();
     const local = { kind: "local", project: "repo-meterlab" } as const;
@@ -1937,7 +1734,6 @@ describe("stories without native attachment publication", () => {
         rmSync(join(at.media, name));
     await expect(at.service.assertLocal(TASK, local)).rejects.toThrow();
   });
-
   it("never downgrades a native host to text when its upload capability disappears", async () => {
     const at = await arrange();
     await at.prepare();
@@ -1954,7 +1750,6 @@ describe("stories without native attachment publication", () => {
     expect(at.tasks.delivery.changePresentation(TASK)?.published).toBeUndefined();
   });
 });
-
 // Accepted live-validation view plan: saved stories bind proof before publication and completion.
 it("fills no-surface stories from the record and refuses a stale proof snapshot", async () => {
   const at = await arrange();

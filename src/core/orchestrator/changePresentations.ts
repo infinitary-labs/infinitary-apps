@@ -41,6 +41,7 @@ import {
   presentationContentHash,
   presentationLines,
   presentationMarkdown,
+  presentationMarkdownText,
   presentationRegionMarkers,
   presentationSizingUrl,
   readPresentationRegion,
@@ -368,7 +369,12 @@ export class ChangePresentations {
       if (reconciled && ledger.publication.revision === revision && !around) return reconciled;
       ledger = this.ledger(taskId, branch);
     }
-    if (existing && !ledger.published && !ledger.reconciled)
+    if (
+      existing &&
+      !ledger.published &&
+      !ledger.reconciled &&
+      (!forge.storyInComment || !!existing.body)
+    )
       throw new Error(`This ${words.change} predates the saved story. It will not be rewritten.`);
     if (!existing && (ledger.published || ledger.reconciled))
       throw new Error(
@@ -390,12 +396,22 @@ export class ChangePresentations {
     // INF-1793: Careful counts as no-mistakes on github.com; the attestation sits at
     // the end of the app's own region, read from the records when the region is written.
     const { end: regionEnd } = presentationRegionMarkers(taskId);
-    const attested = (rendered: string): string =>
-      destination.host === "github.com" &&
-      rendered.endsWith(regionEnd) &&
-      opening?.attests?.(story.head)
+    const attested = (rendered: string): string => {
+      // A request's native title belongs to its contributor. Keep the crew's
+      // conventional squash title in its own story comment instead.
+      if (forge.storyInComment) {
+        const { start } = presentationRegionMarkers(taskId);
+        rendered = rendered.replace(
+          start,
+          `${start}\n\n# ${presentationMarkdownText(story.title)}`,
+        );
+      }
+      return destination.host === "github.com" &&
+        rendered.endsWith(regionEnd) &&
+        opening?.attests?.(story.head)
         ? `${rendered.slice(0, -regionEnd.length)}${pipelineAttestationSection(story.head, story.liveValidation)}\n\n${regionEnd}`
         : rendered;
+    };
     const bodyFor = (region: string, current: ForgeChange | null): string => {
       if (around && !current)
         throw new PresentationAroundError(
@@ -588,7 +604,13 @@ export class ChangePresentations {
       );
     // INF-717: the title went in the same write; a person may have renamed the change meanwhile.
     const shown = changeTitle(forge.kind, read);
-    if (fresh && story.version === 2 && shown !== undefined && shown !== title)
+    if (
+      !forge.storyInComment &&
+      fresh &&
+      story.version === 2 &&
+      shown !== undefined &&
+      shown !== title
+    )
       throw new PresentationAroundError(
         `The story is published, but ${words.place} shows the title "${shown}" rather than "${title}"; someone may have renamed the ${words.change} at the same time. Read it with github_read before calling open_change again.`,
       );
@@ -610,6 +632,7 @@ export class ChangePresentations {
     if (story.version !== 2 || !current) return undefined;
     const hosted = changeTitle(forge.kind, current);
     if (hosted === undefined || hosted === title) return undefined;
+    if (forge.storyInComment) return undefined;
     const published = record.published;
     const left = published?.title;
     if (hosted === left) return title;
@@ -629,9 +652,15 @@ export class ChangePresentations {
   }
 
   /** A completion offer must use the newest fully published story at the current committed version. */
-  async completion(taskId: string, revision: number, head: string, branch?: string) {
+  async completion(
+    taskId: string,
+    revision: number,
+    head: string,
+    branch?: string,
+    number?: number,
+  ) {
     return this.serial(taskId, async () => {
-      const story = this.publishedStory(taskId, branch, head, revision);
+      const story = this.publishedStory(taskId, branch, head, revision, number);
       const committed = await this.options.head(taskId);
       if (committed !== head)
         throw new Error(
@@ -817,14 +846,14 @@ export class ChangePresentations {
   ): Promise<ForgeChange> {
     // The story of the change being checked, on its own branch (INF-2490).
     const branch = change.branch;
-    const record = this.ledger(taskId, branch);
-    const story = this.publishedStory(taskId, branch, change.headSha, revision);
+    const record = this.ledger(taskId, branch, change.number);
+    const story = this.publishedStory(taskId, branch, change.headSha, revision, change.number);
     if (!samePresentationDestination(story.destination, await storyDestination(forge)))
       throw new Error("The story's destination or audience changed.");
     if (!hostedPresentation(story.destination)) return change;
     if (!record.published) throw new Error("The current story has not been published.");
     for (const asset of this.nativeAssets(story)) {
-      const receipt = this.receipt(story, branch, asset);
+      const receipt = this.receipt(story, branch, asset, change.number);
       if (receipt?.state !== "confirmed" || !receipt.url)
         throw new Error("The current story is missing a confirmed attachment.");
     }
@@ -843,6 +872,9 @@ export class ChangePresentations {
           : "";
     return {
       ...change,
+      ...(forge.storyInComment
+        ? { title: requireNamed(story.title, "story title", this.options.namingRule?.() ?? null) }
+        : {}),
       squashMessage: presentationCommitMessage(
         { ...story, projectText },
         this.options.namingRule?.() ?? null,
@@ -939,8 +971,9 @@ export class ChangePresentations {
     branch: string | undefined,
     head: string,
     revision?: number,
+    number?: number,
   ): ChangePresentation {
-    const record = this.ledger(taskId, branch);
+    const record = this.ledger(taskId, branch, number);
     const story = record.revisions.at(-1);
     if (story && !hostedPresentation(story.destination)) {
       const ready = readyPresentation(record);
@@ -1087,7 +1120,7 @@ export class ChangePresentations {
     attests?: (head: string) => boolean,
   ): Promise<number> {
     return this.serial(taskId, async () => {
-      const record = this.ledger(taskId, change.branch);
+      const record = this.ledger(taskId, change.branch, change.number);
       const published = record.published;
       const newest = record.revisions.at(-1);
       if (
@@ -1205,8 +1238,12 @@ export class ChangePresentations {
     return changePresentationSchema.parse(story);
   }
   /** The story ledger of the change on `branch`; undefined names the task's current change. */
-  private ledger(taskId: string, branch: string | undefined): ChangePresentationRecord {
-    return this.required(this.options.tasks.delivery.changePresentation(taskId, branch));
+  private ledger(
+    taskId: string,
+    branch: string | undefined,
+    number?: number,
+  ): ChangePresentationRecord {
+    return this.required(this.options.tasks.delivery.changePresentation(taskId, branch, number));
   }
   private required(record: ChangePresentationRecord | undefined): ChangePresentationRecord {
     if (!record) throw new Error("Prepare the change story before opening its pull request.");
@@ -1223,8 +1260,9 @@ export class ChangePresentations {
     story: ChangePresentation,
     branch: string,
     asset: PresentationAsset,
+    number?: number,
   ): PresentationReceipt | undefined {
-    return this.ledger(story.taskId, branch).receipts.find((receipt) =>
+    return this.ledger(story.taskId, branch, number).receipts.find((receipt) =>
       receiptMatches(story, asset, receipt),
     );
   }

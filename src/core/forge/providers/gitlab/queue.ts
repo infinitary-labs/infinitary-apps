@@ -103,14 +103,14 @@ export class GitLabQueue {
         undefined,
         GITLAB_READ_MAX_BYTES,
       )) as { sha?: string; description?: string; title?: string; web_url?: string };
-      if (pull.sha !== sha || pull.title !== approval.title)
+      if (pull.sha !== sha || pull.title !== (approval.requestTitle ?? approval.title))
         throw new ForgeError("refused", "The approved change moved before it could be queued.");
       checkApproval();
       const comment = (await this.client.write(
         "POST",
         `${this.projectPath()}/merge_requests/${approval.number}/notes`,
         {
-          body: `Approved for the batch queue at this version.\n\n<!-- infinitary-merge-approval -->\n${commitEnvelope(sha, approval.message ?? pull.description ?? "", approval.title, { naming: approval.naming ? NAMING_DECISION.checked : NAMING_DECISION.off })}`,
+          body: `Approved for the batch queue at this version.\n\n<!-- infinitary-merge-approval -->\n${commitEnvelope(sha, approval.message ?? pull.description ?? "", approval.title, { naming: approval.naming ? NAMING_DECISION.checked : NAMING_DECISION.off, requestTitle: approval.requestTitle ?? approval.title })}`,
         },
         "publishing the approved merge words",
       )) as { id?: number };

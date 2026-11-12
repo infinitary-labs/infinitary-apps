@@ -11,7 +11,7 @@ import type {
 } from "@shared/change";
 import type { ChangePresentationRecord } from "@shared/changePresentation";
 import { type ForgeKind, hasChangeRequests } from "@shared/forge";
-import type { MergeReview } from "@shared/mergeReview";
+import { isForkReview, type MergeReview } from "@shared/mergeReview";
 import type { RepoKind } from "@shared/repos";
 import type { TaskPullRequest } from "@shared/tasks";
 import type { TaskDelivery, TaskRecord } from "./taskRecords";
@@ -98,8 +98,11 @@ export function storyLedgerOf(
   delivery: Pick<TaskDelivery, "presentation" | "presentations"> | null | undefined,
   ownBranch: string,
   branch: string,
+  forkNumber?: number,
 ): ChangePresentationRecord | undefined {
-  return storyLedgers(delivery).find((ledger) => (ledger.branch ?? ownBranch) === branch);
+  return storyLedgers(delivery).find(
+    (ledger) => (ledger.branch ?? ownBranch) === branch && ledger.forkNumber === forkNumber,
+  );
 }
 
 /**
@@ -111,8 +114,11 @@ export function placeStories(
   ledgers: readonly ChangePresentationRecord[],
   ownBranch: string,
   currentBranch: string,
+  forkNumber?: number,
 ): Pick<TaskDelivery, "presentation" | "presentations"> {
-  const current = ledgers.find((ledger) => (ledger.branch ?? ownBranch) === currentBranch);
+  const current = ledgers.find(
+    (ledger) => (ledger.branch ?? ownBranch) === currentBranch && ledger.forkNumber === forkNumber,
+  );
   const others = ledgers.filter((ledger) => ledger !== current);
   return { presentation: current, presentations: others.length > 0 ? others : undefined };
 }
@@ -134,7 +140,7 @@ function reviewsOf(delivery: TaskDelivery): MergeReview[] {
 function referencedNumbers(delivery: TaskDelivery, branch: string): Set<number> {
   const numbers = new Set<number>();
   for (const review of reviewsOf(delivery))
-    if (review.branch !== branch) numbers.add(review.number);
+    if (review.branch !== branch || isForkReview(review)) numbers.add(review.number);
   return numbers;
 }
 
@@ -178,12 +184,20 @@ function ownFacts(delivery: TaskDelivery, branch: string): TaskDelivery {
     delete own.changeLabel;
     delete own.prBase;
     const number =
-      (delivery.mergeReviews ?? []).find((review) => review.branch === branch)?.number ??
-      own.completionOffers?.find((offer) => offer.prNumber !== undefined)?.prNumber;
+      (delivery.mergeReviews ?? []).find(
+        (review) => review.branch === branch && !isForkReview(review),
+      )?.number ?? own.completionOffers?.find((offer) => offer.prNumber !== undefined)?.prNumber;
     if (number !== undefined) own.prNumber = number;
   }
-  if (delivery.mergeAuthorization && delivery.mergeAuthorization.target.branch !== branch)
+  if (
+    delivery.mergeAuthorization &&
+    (delivery.mergeAuthorization.target.branch !== branch ||
+      (delivery.mergeAuthorization.target.prNumber !== undefined &&
+        referenced.has(delivery.mergeAuthorization.target.prNumber)))
+  )
     delete own.mergeAuthorization;
+  own.mergeReviews = delivery.mergeReviews?.filter((review) => !referenced.has(review.number));
+  if (delivery.checkTarget && referenced.has(delivery.checkTarget.number)) delete own.checkTarget;
   // Each change keeps its own story (INF-2490): this change's is the ledger
   // kept for its branch, while it was not published on another's pull request.
   const story = storyLedgerOf(delivery, branch, branch);
@@ -523,7 +537,9 @@ export function currentReceipt(record: TaskRecord): ChangeReceipt | null {
   const delivery = record.delivery ? ownFacts(record.delivery, record.branch) : null;
   return receiptOf(record, delivery, record.branch, {
     own: true,
-    current: currentChange(record.delivery, record.branch).branch === record.branch,
+    current:
+      currentChange(record.delivery, record.branch).branch === record.branch &&
+      !(record.delivery?.checkTarget && isForkReview(record.delivery.checkTarget)),
   });
 }
 
@@ -540,7 +556,9 @@ export function projectChange(
   const delivery = record.delivery ? ownFacts(record.delivery, record.branch) : null;
   return projected(record, repo, delivery, record.branch, recorded, {
     own: true,
-    current: currentChange(record.delivery, record.branch).branch === record.branch,
+    current:
+      currentChange(record.delivery, record.branch).branch === record.branch &&
+      !(record.delivery?.checkTarget && isForkReview(record.delivery.checkTarget)),
   });
 }
 
@@ -651,7 +669,16 @@ export function projectOtherChange(
   const delivery = factsFor(
     record.delivery,
     number,
-    storyLedgerOf(record.delivery, record.branch, branch),
+    storyLedgerOf(
+      record.delivery,
+      record.branch,
+      branch,
+      record.delivery.mergeReviews?.some(
+        (review) => review.number === number && isForkReview(review),
+      )
+        ? number
+        : undefined,
+    ),
   );
   const review = [...(delivery.mergeReviews ?? [])].sort((a, b) => b.at - a.at)[0];
   const change = projected(record, repo, delivery, branch, recorded, {

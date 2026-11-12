@@ -20,12 +20,17 @@ import {
 } from "../../../tests/helpers/prCiHarness";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import {
+  type Forge,
+  type ForgeApi,
   type ForgeChange,
+  type ForgePull,
   NO_MISTAKES_ATTESTATION_PREFIX,
   NO_MISTAKES_SIGNATURE,
+  parseApiRequest,
   presentationCommitMessage,
   presentationContentHash,
   presentationMarkdown,
+  QUEUE_STATUS,
 } from "../forge";
 import { stageChangePresentation } from "../pi/changePresentation";
 import { commitEnvelope, NAMING_DECISION, readCommitEnvelope } from "../queue/shipped/message.mjs";
@@ -46,13 +51,18 @@ vi.mock("../utilityQos", async (importOriginal) =>
 describe("shared story delivery boundaries", () => {
   const original = "5ca2d466ee21f9733827383f23df81f3874e0d10";
   const repaired = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
-  async function saved(kind: "github" | "gitlab" = "github", checkedOut?: CheckedOut) {
+  async function saved(
+    kind: "github" | "gitlab" = "github",
+    checkedOut?: CheckedOut,
+    prepareContribution?: (taskId: string) => Promise<string | undefined>,
+  ) {
     const bringBranchHome = vi.fn(async (): Promise<string> => {
       throw new Error("Work computer is asleep");
     });
     const at = setup({
       bringBranchHome,
       ...(checkedOut ? { checkedOut } : {}),
+      ...(prepareContribution ? { prepareContribution } : {}),
       ...(kind === "gitlab" ? { forge: new FakeForge({ kind, place: "GitLab" }) } : {}),
     });
     await insertDirectPrTask(at.tasks, at.repos, { deviceId: "sleeping-work-computer" });
@@ -1165,6 +1175,47 @@ describe("shared story delivery boundaries", () => {
     expect(at.tasks.get("ab12cd34")?.delivery?.presentation?.branch).toBe(phone);
   });
 
+  // Contributor-review isolation: explicitly naming the own project publishes its checkout, not the selected fork.
+  it("publishes the checkout when the own project is named while a fork review is selected", async () => {
+    const { at, story } = await deliveringFromAnotherBranch();
+    expect(await at.service.publication.preparePresentation("ab12cd34", story)).toContain(
+      "Prepared presentation 1 ",
+    );
+    const task = at.tasks.get("ab12cd34");
+    if (!task?.repoId) throw new Error("The task has no project");
+    const fork: MergeReview = {
+      id: "mrcontributor57",
+      kind: "github",
+      host: "github.com",
+      owner: "x",
+      name: "y",
+      number: 57,
+      headSha: original,
+      headRepo: "contributor/y",
+      headRepoId: 99,
+      base: "main",
+      branch: "contributor-reading",
+      method: "squash",
+      title: "Fix typo",
+      at: 2,
+    };
+    seedDelivery(at.tasks, task.id, { checkTarget: fork, prNumber: fork.number });
+    const opened = await at.service.publication.open(task.id, {
+      repository: task.repoId,
+      title: "feat: share the story",
+      presentation: 1,
+    });
+    const change = at.forge.change;
+    if (!change) throw new Error("The project change was not opened");
+    expect(change.branch).toBe(phone);
+    expect(opened).toContain(`#${change.number} ${change.url} for ${phone}.`);
+    expect(at.tasks.get(task.id)?.delivery?.checkTarget).toMatchObject({
+      branch: phone,
+      number: change.number,
+    });
+    expect(at.forge.calls).not.toContain(`changeFor ${fork.branch}`);
+  });
+
   it("makes the checked-out branch's change current when the card call shows its story (INF-3717)", async () => {
     const { at, story } = await deliveringFromAnotherBranch();
     expect(await at.service.publication.preparePresentation("ab12cd34", story)).toContain(
@@ -1563,4 +1614,165 @@ describe("shared story delivery boundaries", () => {
       "Commit the task's changes",
     );
   });
+  // INF-3585's story-selection finding and the captain's title choice:
+  // a request's published comment belongs to its review, not checkTarget.
+  it.each([false, true])(
+    "a fork review merges its story title and summary after another change is selected (queued: %s)",
+    async (queued) => {
+      const prepareContribution = vi.fn(async () => undefined);
+      const at = await saved("github", undefined, prepareContribution);
+      const task = at.tasks.get("ab12cd34");
+      if (!task?.repoId) throw new Error("The task has no project");
+      at.repos.configure(task.repoId, {
+        origin: "https://github.com/x/y.git",
+        delivery: queued ? "queue-pr" : "direct-pr",
+      });
+      const own = at.tasks.delivery.changePresentation(task.id);
+      if (!own?.published) throw new Error("The fixture needs its published story");
+      const story = {
+        ...at.story,
+        title: "fix: retain the reviewed contributor story",
+        whatChanged: ["The reviewed contribution keeps its own story."],
+      };
+      const region = presentationMarkdown(story, new Map(), "passed");
+      const publication = {
+        ...own.published,
+        number: 151,
+        region,
+        regionHash: createHash("sha256").update(region).digest("hex"),
+        contentHash: presentationContentHash(story),
+      };
+      const fork: ForgePull = {
+        number: 151,
+        branch: task.branch,
+        headSha: original,
+        base: "main",
+        title: "Fix typo",
+        headRepo: "contributor/y",
+        headRepoId: 99,
+        state: "open",
+        merged: false,
+        readiness: "clean",
+      };
+      const api: ForgeApi = {
+        place: "GitHub",
+        defaultPerPage: 30,
+        route: (method, path) => parseApiRequest(method, path, { owner: "x", name: "y" }),
+        nextPath: () => null,
+        call: async (method, path) => {
+          if (method !== "GET" || !path.startsWith("/repos/x/y/issues/151/comments"))
+            throw new Error(`Unexpected story write or read: ${method} ${path}`);
+          return {
+            status: 200,
+            requestId: null,
+            rateLimit: null,
+            retryAfterSeconds: null,
+            link: null,
+            body: JSON.stringify([{ id: 41, body: region }]),
+          };
+        },
+      };
+      Object.assign(at.forge, { pull: async () => fork, api });
+      expect(await at.service.checkTool.checkForCrew(task.id, { pull: fork.number })).toContain(
+        "Merge review mr",
+      );
+      const review = at.tasks.get(task.id)?.delivery?.checkTarget;
+      if (!review) throw new Error("No fork review was stored");
+      at.tasks.delivery.updateChangePresentation(task.id, () => ({
+        revisions: [story],
+        receipts: [],
+        publication,
+        published: publication,
+      }));
+      // Contributor-review isolation: the own-project merge walk must not read or push this source.
+      const headRead = vi.spyOn(at.service.publication, "presentationHead");
+      const forge: Forge = at.forge;
+      const pushRead = vi.spyOn(forge, "branchHead");
+      prepareContribution.mockClear();
+      const walk = await at.service.mergeCard.walk(task.id);
+      expect(walk).toMatchObject({ did: [], stop: { step: "story", by: "crewmate" } });
+      expect(walk.stop?.missing).toMatch(
+        /prepare_change.*open_change.*presentation.*emit_card.*asks_first/,
+      );
+      expect(prepareContribution).not.toHaveBeenCalled();
+      expect(headRead).not.toHaveBeenCalled();
+      expect(pushRead).not.toHaveBeenCalled();
+      expect(at.tasks.get(task.id)?.delivery?.checkTarget?.id).toBe(review.id);
+      // A fork completion reads its numbered comment, not the same-named project branch.
+      const completion = await at.service.publication.completionPresentation(
+        task.id,
+        story.revision,
+      );
+      expect(completion).toMatchObject({ title: story.title, revision: story.revision });
+      expect(at.tasks.get(task.id)?.delivery?.checkTarget?.id).toBe(review.id);
+      const putIn = vi.spyOn(at.forge, "putIn");
+      if (queued) {
+        const marked: string[] = [];
+        at.forge.markQueued = async (head) => {
+          marked.push(head);
+          return {};
+        };
+        const waiting = await at.service.reviews.mergeReview(task.id, review.id);
+        expect(waiting).toMatchObject({ ok: false, stop: "queue" });
+        expect(marked).toEqual([original]);
+        expect(putIn).not.toHaveBeenCalled();
+        seedDelivery(at.tasks, task.id, {
+          mergeAuthorization: {
+            version: 1,
+            id: "approved-contributor",
+            generation: 1,
+            issuer: "captain",
+            at: 1,
+            card: { id: "contributor-card", offerId: "contributor-offer", actionId: "merge" },
+            review,
+            target: {
+              repoId: task.repoId,
+              host: review.host,
+              owner: review.owner,
+              name: review.name,
+              prNumber: review.number,
+              branch: review.branch,
+              delivery: "direct-pr",
+              method: "squash",
+            },
+            approvedHead: original,
+            proceedWithOpen: false,
+            status: "standing",
+            lineage: [],
+          },
+        });
+        at.forge.atHead[original] = [
+          { name: "build", state: "success" },
+          { name: QUEUE_STATUS, state: "success" },
+        ];
+      }
+      at.tasks.delivery.selectOwnChange(task.id, { number: 23, headSha: original, base: "main" });
+      const outcome = await at.service.reviews.mergeReview(
+        task.id,
+        review.id,
+        queued
+          ? {
+              head: original,
+              prNumber: review.number,
+              unattended: true,
+              beforeDispatch: () => undefined,
+            }
+          : undefined,
+      );
+      expect(outcome.ok, outcome.text).toBe(true);
+      expect(putIn).toHaveBeenCalledWith(
+        expect.objectContaining({
+          number: 151,
+          title: story.title,
+          squashMessage: presentationCommitMessage(story, BUNDLED_NAMING),
+          body: region,
+        }),
+        original,
+      );
+      expect(at.forge.change?.title).not.toBe(story.title);
+      expect(at.update).not.toHaveBeenCalled();
+      expect(at.tasks.get(task.id)?.delivery?.checkTarget).toBeUndefined();
+      expect(at.tasks.delivery.changePresentation(task.id)).toEqual(own);
+    },
+  );
 });

@@ -14,6 +14,7 @@ import {
 } from "@shared/captainAllowances";
 import type { ChangePresentationRecord } from "@shared/changePresentation";
 import type { KeptValidationInput } from "@shared/liveValidation";
+import { isForkReview } from "@shared/mergeReview";
 import {
   type CaptainAction,
   captainActionResult,
@@ -327,13 +328,44 @@ export class TaskDeliveries {
    * The publication ledger's one writer; a claim is committed before any
    * external write. Each change keeps its own ledger (INF-2490): `branch`
    * names the change's branch, and none means the current change.
+   * A request number binds an explicit read independently of that selection.
    */
-  changePresentation(id: string, branch?: string): ChangePresentationRecord | undefined {
+  changePresentation(
+    id: string,
+    branch?: string,
+    number?: number,
+  ): ChangePresentationRecord | undefined {
     const record = this.writer.mustGet(id);
+    // An explicit request keeps its fork ledger even after another card or
+    // check selected a different change. The selection is only the default.
+    if (number !== undefined) {
+      const target = branch ?? currentChange(record.delivery, record.branch).branch;
+      const numbered = storyLedgers(record.delivery).find(
+        (ledger) =>
+          (!branch || (ledger.branch ?? record.branch) === branch) &&
+          (ledger.forkNumber ??
+            ledger.published?.number ??
+            ledger.publication?.number ??
+            ledger.reconciled?.number) === number,
+      );
+      if (numbered) return numbered;
+      const unbound = storyLedgerOf(record.delivery, record.branch, target);
+      return unbound &&
+        !unbound.published?.number &&
+        !unbound.publication?.number &&
+        !unbound.reconciled?.number
+        ? unbound
+        : undefined;
+    }
     return storyLedgerOf(
       record.delivery,
       record.branch,
       branch ?? currentChange(record.delivery, record.branch).branch,
+      record.delivery?.checkTarget &&
+        isForkReview(record.delivery.checkTarget) &&
+        (!branch || branch === record.delivery.checkTarget.branch)
+        ? record.delivery.checkTarget.number
+        : undefined,
     );
   }
 
@@ -348,8 +380,18 @@ export class TaskDeliveries {
         throw new Error("A closed task cannot publish another story.");
       const target = branch ?? currentChange(record.delivery, record.branch).branch;
       const ledgers = storyLedgers(record.delivery);
-      const previous = storyLedgerOf(record.delivery, record.branch, target);
-      const next = { ...update(previous), branch: target };
+      const forkNumber =
+        record.delivery?.checkTarget &&
+        isForkReview(record.delivery.checkTarget) &&
+        target === record.delivery.checkTarget.branch
+          ? record.delivery.checkTarget.number
+          : undefined;
+      const previous = storyLedgerOf(record.delivery, record.branch, target, forkNumber);
+      const next = {
+        ...update(previous),
+        branch: target,
+        ...(forkNumber !== undefined ? { forkNumber } : {}),
+      };
       this.writer.patch(id, {
         delivery: this.writer.mergeDelivery(
           record,
@@ -357,6 +399,7 @@ export class TaskDeliveries {
             [...ledgers.filter((ledger) => ledger !== previous), next],
             record.branch,
             currentChange(record.delivery, record.branch).branch,
+            forkNumber,
           ),
         ),
         updatedAt: this.writer.now(),

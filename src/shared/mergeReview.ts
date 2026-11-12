@@ -53,6 +53,9 @@ export type MergeReview = {
   name: string;
   number: number;
   headSha: string;
+  /** Source identity read with this review; absent on older same-project reviews. */
+  headRepo?: string;
+  headRepoId?: number;
   base: string;
   branch: string;
   method: MergeReviewMethod;
@@ -119,3 +122,11 @@ const MERGE_RULE_WORDS: Record<string, string> = {
   file_extension_restriction: "file restrictions",
   max_file_size: "file restrictions",
 };
+
+/** A contributor source is a host fact, never inferred from its branch name. */
+export function isForkReview(review: MergeReview): boolean {
+  return (
+    !!review.headRepo &&
+    review.headRepo.toLowerCase() !== `${review.owner}/${review.name}`.toLowerCase()
+  );
+}

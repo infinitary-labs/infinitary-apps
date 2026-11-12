@@ -322,6 +322,8 @@ export type ChangePresentationRecord = {
    * the task's own branch's.
    */
   branch?: string;
+  /** A fork may use the same branch name as another change. */
+  forkNumber?: number;
   revisions: ChangePresentation[];
   completion?: PresentationCompletion;
   receipts: PresentationReceipt[];

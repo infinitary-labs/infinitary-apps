@@ -8,9 +8,14 @@ export function commitEnvelope(
   head: string,
   body: string,
   title: string,
-  policy: { naming: "checked" | "off" },
+  policy: { naming: "checked" | "off"; requestTitle?: string },
 ): string;
 export function readCommitEnvelope(comment: string, head: string, title: string): string;
+export function readCommitApproval(
+  comment: string,
+  head: string,
+  requestTitle: string,
+): { title: string; body: string };
 
 export type ApprovalRecord = {
   id: number;

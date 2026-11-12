@@ -103,6 +103,7 @@ export {
   presentationHtmlText,
   presentationLines,
   presentationMarkdown,
+  presentationMarkdownText,
   presentationRegionMarkers,
   presentationSizingUrl,
   readPresentationRegion,
@@ -240,3 +241,6 @@ export function createForgeResolver(
     return new PlainGitForge({ ...location, place: forgePlace(location) });
   };
 }
+
+export { isForkReview } from "@shared/mergeReview";
+export { forkStoryForge } from "./forkStory";

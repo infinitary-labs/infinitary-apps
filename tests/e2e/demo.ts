@@ -376,7 +376,9 @@ function encodeMp4(encoder: string, input: DemoInput): DemoFiles {
     ...frameInput(capture, mark),
     ...[
       "-vf",
-      `crop=${crop.width}:${crop.height}:${crop.x}:${crop.y},${fit},fps=${DEMO_TARGET.fps},${toVideo},format=yuv420p`,
+      // Even-sized fitted frames need square pixels so the display header
+      // and the poster decoded from those frames name the same dimensions.
+      `crop=${crop.width}:${crop.height}:${crop.x}:${crop.y},${fit},setsar=1,fps=${DEMO_TARGET.fps},${toVideo},format=yuv420p`,
     ],
     ...["-c:v", "libx264", "-profile:v", "high", "-preset", "slow", "-crf", String(MP4_CRF)],
     ...["-x264-params", "aq-mode=3"],

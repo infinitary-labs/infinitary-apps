@@ -11,6 +11,7 @@ import { WORKFLOW as QUEUE_WORKFLOW } from "../../../queue/shipped/github.mjs";
 import {
   commitEnvelope,
   NAMING_DECISION,
+  readCommitApproval,
   readCommitEnvelope,
   revocationEnvelope,
 } from "../../../queue/shipped/message.mjs";
@@ -406,6 +407,39 @@ describe("GitHubForge", () => {
       }),
     ).rejects.toThrow("The merge approval was withdrawn");
     expect(seen.filter((row) => row.method === "POST")).toEqual([]);
+  });
+
+  // Accepted fork queue repair: request identity and approved squash words are independent.
+  it("queues a fork's approved squash title without renaming its request", async () => {
+    const head = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
+    const requestTitle = "Fix typo";
+    const title = "Review the meter";
+    const comments: string[] = [];
+    const { forge, seen } = await stub({
+      "GET /repos/octo/meter/pulls/23": () => ({
+        json: { head: { sha: head }, title: requestTitle },
+      }),
+      "POST /repos/octo/meter/issues/23/comments": (request) => {
+        comments.push((request.body as { body: string }).body);
+        return { json: { html_url: "https://github.com/octo/meter/pull/23#issuecomment-72" } };
+      },
+      [`POST /repos/octo/meter/statuses/${head}`]: () => ({ json: { id: 73 } }),
+    });
+    await forge.markQueued(head, {
+      number: 23,
+      title,
+      requestTitle,
+      message: "Keep the meter reading.",
+      naming: null,
+    });
+    expect(readCommitApproval(comments[0] ?? "", head, requestTitle)).toEqual({
+      title,
+      body: "Keep the meter reading.",
+    });
+    expect(seen.filter((row) => row.method !== "GET").map((row) => row.method)).toEqual([
+      "POST",
+      "POST",
+    ]);
   });
 
   // F4/F5 + INF-3623: only an explicit approved mark may replace words, never a passive live edit.
@@ -1306,7 +1340,9 @@ describe("GitHubForge", () => {
       "computing",
     );
     pull = { state: "closed", merged: true, merge_commit_sha: "squash01" };
+    // Contributor review retains the host's page instead of losing the fork's link.
     expect(await forge.pull(23)).toEqual({
+      url: PULL.html_url,
       mergeable: null,
       number: 23,
       state: "closed",

@@ -157,7 +157,7 @@ type PullJson = {
   html_url: string;
   title: string;
   body: string | null;
-  head: { sha: string; ref: string; repo?: { full_name?: string } | null };
+  head: { sha: string; ref: string; repo?: { full_name?: string; id?: number } | null };
   base?: { ref: string };
 };
 
@@ -795,6 +795,7 @@ export class GitHubForge implements Forge {
     const headRepo = pull.head.repo?.full_name;
     return {
       number: pull.number,
+      url: pull.html_url,
       state: pull.state === "open" ? "open" : "closed",
       merged,
       ...(merged && pull.merge_commit_sha ? { mergedSha: pull.merge_commit_sha } : {}),
@@ -804,6 +805,7 @@ export class GitHubForge implements Forge {
       ...(pull.head.ref ? { branch: pull.head.ref } : {}),
       ...(pull.title ? { title: pull.title } : {}),
       ...(headRepo ? { headRepo } : {}),
+      ...(pull.head.repo?.id !== undefined ? { headRepoId: pull.head.repo.id } : {}),
       readiness: readinessOf(pull),
       mergeable: pull.mergeable ?? null,
       ...(pull.mergeable_state ? { mergeableState: pull.mergeable_state } : {}),
@@ -939,7 +941,7 @@ export class GitHubForge implements Forge {
         body?: string | null;
         title?: string;
       };
-      if (pull.head?.sha !== sha || pull.title !== approval.title)
+      if (pull.head?.sha !== sha || pull.title !== (approval.requestTitle ?? approval.title))
         throw new ForgeError("refused", "The approved change moved before it could be queued.");
       checkApproval();
       const message = approval.message ?? pull.body ?? "";
@@ -947,7 +949,7 @@ export class GitHubForge implements Forge {
         "POST",
         `${this.repoPath()}/issues/${approval.number}/comments`,
         {
-          body: `Approved for the batch queue at this version.\n\n<!-- infinitary-merge-approval -->\n${commitEnvelope(sha, message, approval.title, { naming: approval.naming ? NAMING_DECISION.checked : NAMING_DECISION.off })}`,
+          body: `Approved for the batch queue at this version.\n\n<!-- infinitary-merge-approval -->\n${commitEnvelope(sha, message, approval.title, { naming: approval.naming ? NAMING_DECISION.checked : NAMING_DECISION.off, requestTitle: approval.requestTitle ?? approval.title })}`,
         },
       )) as { html_url?: string };
       if (!comment.html_url)

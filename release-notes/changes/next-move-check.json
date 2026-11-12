@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "next-move-check",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Work that has begun no longer stops half way unnoticed",
+      "body": "When part of a larger piece of work has started, the parts still waiting for a start, and started parts moved back to the backlog, are now watched. If nothing will start one, no card asks you about it and you did not ask for it to wait, your first mate is told once. If it still stands after that, a card shows you which part is standing still, with Start it and Leave it. A pause you ask for raises nothing, and parts of a main task you paused raise nothing either.",
+      "picture": {
+        "dark": "next-move-check-dark.webp",
+        "light": "next-move-check-light.webp",
+        "alt": "A card says a part of a larger task is standing still, with Start it and Leave it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -40,6 +40,19 @@ export function leftBacklogActivity(actor: "captain" | "firstmate"): string {
   return `${actor === "captain" ? "You" : "Your first mate"} started this task again from the backlog. Its crewmate carries on in the same conversation.`;
 }
 
+/**
+ * The record's Activity line when the first mate records that the captain
+ * asked for a task to wait (INF-3846 piece 2): until it starts again, the
+ * app counts it as stopped by the captain and raises no alarm about it.
+ */
+export const CAPTAIN_STOP_ACTIVITY =
+  "Your first mate recorded that you asked for this task to wait. It stays stopped until it starts again.";
+
+/** The declaration on work that does not wait for a start. */
+export function captainStopRefusal(key: string): string {
+  return `Cannot record a stop on ${key}: only work that waits for a start takes one - open work on request, or started work back in the backlog. Pass start_policy on-request with it.`;
+}
+
 export function queueMissingRefusal(key: string): string {
   return `Cannot move ${key}: that task is not here.`;
 }

@@ -155,6 +155,12 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         ok: true,
         text: expect.stringContaining("back to the backlog"),
       });
+      // The captain asked for the pause, so the first mate records their stop
+      // with it (update_task captain_stop, INF-3846 piece 2): nothing alarms.
+      expect(h.tasks.starts.declareCaptainStop(h.taskId, "firstmate")).toEqual({
+        ok: true,
+        changed: true,
+      });
       await settle();
       expect(
         h.tasks

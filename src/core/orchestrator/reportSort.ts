@@ -124,10 +124,13 @@ export type ReportSortRule =
  * The idle ladder's rungs, the job bound and the cut-off wakes
  * (docs/report-sort.md), recorded the same way when they act: the nudge to
  * the crewmate, the wake to the Firstmate and its repeat, the host's own
- * card, a background job past its bound, and an account whose crewmates a
- * cut-off paused, or let go on.
+ * card, a background job past its bound, an account whose crewmates a
+ * cut-off paused, or let go on, and the next-move check's wake and card on
+ * begun work nothing will move (INF-3846 piece 2).
  */
 export type IdleRule =
+  | "next-move-wake"
+  | "next-move-card"
   | "idle-nudge"
   | "idle-wake"
   | "idle-repeat"

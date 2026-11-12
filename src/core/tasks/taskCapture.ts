@@ -865,6 +865,16 @@ export class TaskCapture {
     run();
   }
 
+  /** When a card on the task other than `exceptCardId` was last resolved, if one ever was. */
+  cardResolvedAt(id: string, exceptCardId: string): number | undefined {
+    return this.writer.events.latestAtOtherRef(id, "card_resolved", exceptCardId);
+  }
+
+  /** When a card with this id was last raised on the task, if it ever was. */
+  cardRaisedAt(id: string, cardId: string): number | undefined {
+    return this.writer.events.latestAtForRef(id, "card_raised", cardId);
+  }
+
   /**
    * A card about this task went on the stack. A crewmate's card is recorded
    * when it reaches the stage, with the close-out that released it

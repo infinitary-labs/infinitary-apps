@@ -229,7 +229,7 @@ Every other card keeps its row as its author allows.
 
 ### The stuck alert's reply row
 
-One host card takes a reply: the idle ladder's stuck alert (`card-stall-<task>`, INF-1670, the captain's word: "i would remove the "drop task" option and leave nuanced operations to the reply").
+Host cards that name the first mate as their answerer take a reply: the idle ladder's stuck alert (`card-stall-<task>`, INF-1670, the captain's word: "i would remove the "drop task" option and leave nuanced operations to the reply"), the next-move check's card (`card-next-move-<task>`, `docs/report-sort.md` "The next-move check") and the cost limit card (`card-cost-<task>`, `docs/usage.md`).
 The host names its answerer when it raises the card (`Card.answeredBy` "firstmate", the `cards.answered_by` column), and `cardTakesReplies`, the phone's `takesReplies` and `CardActions.replyToCard` read that field, never the id.
 A reply there is a captain turn about the card, the same as a reply on a first mate card, and the first mate answers it with an `emit_card` reply naming the message (`CardThreads.firstmateAnswers`, `cardThreads.ts`).
 It is never a thread the task's crewmate owes (`CardService.threadsAwaitingAuthor` leaves it out), so no nudge or reminder names it.

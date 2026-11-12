@@ -30,6 +30,7 @@ import {
 import { crewHoldWays, idleStallWays } from "./holds";
 import { idleNudge, type WakeNote } from "./idleWakes";
 import { jobBoundOnce, jobBoundWake } from "./jobWakes";
+import { NextMove } from "./nextMove";
 import {
   CUT_OFF_ONCE_PREFIX,
   cutOffOnce,
@@ -272,7 +273,12 @@ export class IdleLadder {
    */
   private readonly resumesTried = new Set<string>();
 
-  constructor(private readonly host: IdleLadderHost) {}
+  /** Begun work's parts that wait for a start (INF-3846 piece 2). */
+  private readonly nextMove: NextMove;
+
+  constructor(private readonly host: IdleLadderHost) {
+    this.nextMove = new NextMove(host, STALL_WAKE_MS);
+  }
 
   // ---- the witnesses ------------------------------------------------------
 
@@ -640,6 +646,7 @@ export class IdleLadder {
     this.host.tasks.readProjection(() => {
       this.checkCutOffs();
       for (const record of this.host.tasks.listActive()) this.reconcileIdleTask(record.id, now);
+      this.nextMove.reconcile(now);
     });
   }
 

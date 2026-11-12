@@ -16,7 +16,7 @@ Any first mate or crewmate may write on a card it did not author, as itself and 
 
 Use a card for a decision the work waits on, a finished outcome, a plan or preview to approve, a host-held effect such as a merge, or a captain-only step after merging (required actions).
 Never raise a progress, CI-wait or status card: those are feed lines.
-The host raises two cards about work: the idle ladder's stall card, after two ignored wakes (captain, 2026-09-26; `docs/report-sort.md`), and the first mate's closing note on started work it closed without the captain's click (INF-547; `docs/card-authoring.md`).
+The host raises three cards about work: the idle ladder's stall card, after two ignored wakes (captain, 2026-09-26; `docs/report-sort.md`), the next-move check's card about a part of begun work that still waits for a start after the first mate was told (`docs/report-sort.md`, "The next-move check"), and the first mate's closing note on started work it closed without the captain's click (INF-547; `docs/card-authoring.md`).
 Every other host moment (a refused settle, a dead gate, a quiet crewmate) is a feed line plus one wake, not a card.
 Do not build a feature-specific button kind, card kind, stamp or runner: a new feature declares actions and, where the host must act, one of the existing effects.
 Do not build a second consent path (a confirm dialog in a panel, a frame-side button that settles, an agent tool that merges): consent is a click on a card's host chrome.
@@ -107,6 +107,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 - Completion merge offer: a crewmate's finished change, with the host's merge and discard pair, settle facts, risk chart and required actions.
 - Plan and preview approval: Approve and build, Save and defer and Abandon under `HANDOFF`.
 - The idle ladder's stall card (`card-stall-<task>`) with Nudge, Back to backlog and Discard, and a reply row the first mate answers (`Card.answeredBy`).
+- The next-move check's card (`card-next-move-<task>`) with Start it and Leave it, and a reply row the first mate answers (`docs/report-sort.md`, "The next-move check").
 - The first mate's closing note on started work it closed without the captain's click, at most one for each of the captain's messages (`TaskClosing.placeOutcome`, `docs/task-capture.md` "How a message ends"); work no message covers gets one only for a merge or a release.
 - The cost limit card `card-cost-<task>` with Allow more, No limit for this task and Stop here, a host card the first mate answers (`docs/usage.md`, "The cost limit").
 - The answer-delivery notice `card-ask-<message>` (`docs/task-capture.md`) and the project setup card `card-project-setup-<project>` (`docs/fleet.md`).

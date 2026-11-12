@@ -843,6 +843,66 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     expect(tasks.get(started.id)?.backlogSince).toBeNull();
   });
 
+  // INF-3846 piece 2: a pause the captain asked for counts as their stop, and raises no alarm.
+  it("records the captain's stop with update_task captain_stop, on started work it parks and on open work", async () => {
+    const { agent, specs, tasks } = setup();
+    await agent.converse("pause the color work");
+    const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
+    const text = async (name: string, params: Record<string, unknown>) => {
+      const tool = tools.find((entry) => entry.name === name);
+      if (!tool) throw new Error(`missing ${name}`);
+      return (await tool.execute("c", params, undefined, undefined, {})).content[0]?.text ?? "";
+    };
+    await text("create_task", { title: "Color audit", goal: "Audit", user_words: "audit" });
+    await text("update_task", { task: "SCR-1", start_now: true });
+    await startedBehind(tasks, tasks.byKey("SCR-1")?.id ?? "SCR-1");
+    const started = tasks.byKey("SCR-1");
+    if (started?.status !== "active") throw new Error("The task did not start");
+
+    // Started work: the move to the backlog lands first, then the stop.
+    const parked = await text("update_task", {
+      task: "SCR-1",
+      start_policy: "on-request",
+      captain_stop: true,
+      reason: "The captain asked to pause it.",
+    });
+    expect(parked).toContain("back to the backlog");
+    expect(parked).toContain("Recorded that the captain asked SCR-1 to wait.");
+    expect(tasks.starts.stoppedByCaptain(tasks.get(started.id) ?? started)).toBe(true);
+    expect(
+      await text("update_task", { task: "SCR-1", start_policy: "on-request", captain_stop: true }),
+    ).toContain("SCR-1 is already recorded as stopped by the captain.");
+
+    // Open work it files on request in the same call takes it too.
+    await text("create_task", {
+      title: "Color tokens",
+      goal: "Tokens",
+      user_words: "tokens",
+      start_policy: "on-request",
+      blocked_by: [],
+    });
+    const open = tasks.byKey("SCR-2");
+    if (!open) throw new Error("The open task was not filed");
+    expect(await text("update_task", { task: "SCR-2", captain_stop: true })).toContain(
+      "Recorded that the captain asked SCR-2 to wait.",
+    );
+    expect(tasks.starts.stoppedByCaptain(tasks.get(open.id) ?? open)).toBe(true);
+
+    // Started work still running does not wait for a start: refused, nothing written.
+    await text("create_task", {
+      title: "Color names",
+      goal: "Names",
+      user_words: "names",
+      start_policy: "when-ready",
+      blocked_by: [],
+    });
+    const running = tasks.byKey("SCR-3");
+    if (!running) throw new Error("The third task was not filed");
+    expect(await text("update_task", { task: "SCR-3", captain_stop: true })).toContain(
+      "Cannot record a stop on SCR-3",
+    );
+  });
+
   it("names the filed wait while an independent when-ready task starts immediately", async () => {
     const { agent, specs, tasks, supervisor } = setup();
     await agent.converse("fix the meter");

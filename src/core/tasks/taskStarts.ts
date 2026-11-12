@@ -13,6 +13,8 @@ import {
 import type { WorkShape } from "@shared/routingPolicy";
 import {
   backlogActivity,
+  CAPTAIN_STOP_ACTIVITY,
+  captainStopRefusal,
   leftBacklogActivity,
   QUEUE_POLICY,
   QUEUED_ACTIVITY,
@@ -324,6 +326,77 @@ export class TaskStarts {
   }
 
   /**
+   * The first mate's word that the captain asked for this task to wait
+   * (INF-3846 piece 2, `update_task` `captain_stop`): one line on its
+   * timeline, so the next-move check reads it as stopped by the captain
+   * until it starts again. Only a task that waits for a start takes it -
+   * open on request, or started and in the backlog; anything else is
+   * refused as text and nothing is written. A task already stopped that
+   * way is left as it is.
+   */
+  declareCaptainStop(
+    id: string,
+    actor: TaskEventActor,
+  ): { ok: true; changed: boolean } | { ok: false; text: string } {
+    const run = this.writer.write(
+      (): { ok: true; changed: boolean } | { ok: false; text: string } => {
+        const record = this.writer.store.get(id);
+        if (!record) return { ok: false, text: queueMissingRefusal(id) };
+        const waits =
+          record.kind === "work" &&
+          ((record.status === "open" && record.startPolicy === "on-request") ||
+            (record.status === "active" && record.backlogSince != null));
+        if (!waits) return { ok: false, text: captainStopRefusal(keyOrId(record)) };
+        if (this.stoppedByCaptain(record)) return { ok: true, changed: false };
+        const at = this.writer.now();
+        this.writer.patch(id, { updatedAt: at });
+        this.writer.addEvent({
+          taskId: id,
+          at,
+          actor,
+          kind: "note",
+          text: CAPTAIN_STOP_ACTIVITY,
+          data: { captainStop: true },
+          feed: false,
+        });
+        return { ok: true, changed: true };
+      },
+    );
+    return run();
+  }
+
+  /** When the newest line that stopped or started this task was written, if any. */
+  latestStopAt(id: string): number | undefined {
+    return this.writer.events.latestStopLine(id)?.at;
+  }
+
+  /**
+   * Whether the captain stopped this task (INF-3846 piece 2): it waits for a
+   * start - open on request, or started and in the backlog - and the newest
+   * line that stopped or started it is the captain's own move to the
+   * backlog, or the first mate's declaration that the captain asked for it
+   * (`declareCaptainStop`). A started task's line counts only from its
+   * current stay in the backlog.
+   */
+  stoppedByCaptain(record: TaskRecord): boolean {
+    if (record.kind !== "work") return false;
+    const open = record.status === "open" && record.startPolicy === "on-request";
+    const parked = record.status === "active" && record.backlogSince != null;
+    if (!open && !parked) return false;
+    const line = this.writer.events.latestStopLine(record.id);
+    if (!line) return false;
+    if (parked && line.at < (record.backlogSince ?? 0)) return false;
+    if (line.data?.captainStop === true) return true;
+    // A later line that sets the start policy, whoever wrote it, ends an
+    // earlier stop: only the captain's own move to on-request is one.
+    const changes = line.data?.changes as { startPolicy?: unknown } | undefined;
+    const policy = line.data?.startPolicy ?? changes?.startPolicy;
+    return (
+      line.actor === "captain" && (line.data?.backlog === "entered" || policy === "on-request")
+    );
+  }
+
+  /**
    * A crewmate takes the task: workspace, account, assignee, model. Shared
    * by an immediate commission and the ready sweep's dispatch.
    */
@@ -491,7 +564,8 @@ export class TaskStarts {
               }
             : {
                 text: `could not start - ${outcome.reason}`,
-                data: { startNotice: { reason: outcome.reason } },
+                // Back on request: the next-move check reads it as a new stay.
+                data: { startNotice: { reason: outcome.reason }, startPolicy: "on-request" },
                 feed: outcome.feed ?? false,
               }),
       });

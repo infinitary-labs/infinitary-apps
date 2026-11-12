@@ -443,6 +443,47 @@ export class TaskEventStore {
     return row ? fromRow(row) : undefined;
   }
 
+  /**
+   * A task's newest line that stopped or started it (INF-3846 piece 2): a
+   * note whose data moves it into or out of the backlog, sets its start
+   * policy (a board move's `startPolicy`, or an edit's `changes.startPolicy`)
+   * or declares a stop the captain asked for (`captainStop`), or the status
+   * line of a failed start that put it back on request (`startPolicy`).
+   */
+  latestStopLine(taskId: string): TaskEvent | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT * FROM task_events WHERE task_id = ? AND kind IN ('note', 'status')
+         AND CASE WHEN json_valid(data_json) THEN
+           json_type(data_json, '$.backlog') IS NOT NULL
+           OR json_type(data_json, '$.startPolicy') IS NOT NULL
+           OR json_type(data_json, '$.changes.startPolicy') IS NOT NULL
+           OR json_type(data_json, '$.captainStop') IS NOT NULL
+         END
+         ORDER BY at DESC, id DESC LIMIT 1`,
+      )
+      .get(taskId) as Row | undefined;
+    return row ? fromRow(row) : undefined;
+  }
+
+  /** When a task's newest event of `kind` naming `ref` happened, if it has one. */
+  latestAtForRef(taskId: string, kind: TaskEventKind, ref: string): number | undefined {
+    const row = this.db
+      .prepare("SELECT MAX(at) AS at FROM task_events WHERE task_id = ? AND kind = ? AND ref = ?")
+      .get(taskId, kind, ref) as { at: number | null } | undefined;
+    return row?.at ?? undefined;
+  }
+
+  /** When a task's newest event of `kind` naming any ref but `ref` happened, if it has one. */
+  latestAtOtherRef(taskId: string, kind: TaskEventKind, ref: string): number | undefined {
+    const row = this.db
+      .prepare(
+        "SELECT MAX(at) AS at FROM task_events WHERE task_id = ? AND kind = ? AND (ref IS NULL OR ref != ?)",
+      )
+      .get(taskId, kind, ref) as { at: number | null } | undefined;
+    return row?.at ?? undefined;
+  }
+
   /** When a task's newest event of `kind` happened, if it has one. */
   latestAt(taskId: string, kind: TaskEventKind): number | undefined {
     const row = this.db

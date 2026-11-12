@@ -95,6 +95,24 @@ export type IdleFacts =
       news: string;
     }
   | {
+      /**
+       * A part of begun work with no next move (INF-3846 piece 2): it waits
+       * for a start nobody gave, no card of it asks the captain anything,
+       * and no stop from the captain is recorded on it. Told once per stay in that state;
+       * if it still stands after the turn that read it, the captain gets
+       * one card.
+       */
+      kind: "next-move";
+      task: WakeTask;
+      key: string;
+      /** How it waits: open on request, or started and back in the backlog. */
+      stands: "on-request" | "backlog";
+      /** Why it counts as begun work, and the task that makes it so when another does. */
+      begun: NextMoveBegun;
+      /** How long it has stood that way. */
+      standingMs: number;
+    }
+  | {
       /** Rung 2 (and its repeat) on a task a captain gate holds with no card up. */
       kind: "idle-owed";
       held: "ci-cap" | "review-cap" | "captain-gate";
@@ -195,6 +213,30 @@ export function idleThreadNudgeText(waiting?: readonly WakeNote[]): string {
   if (!waiting?.length) return IDLE_THREAD_NUDGE_TEXT;
   const one = waiting.length === 1;
   return `The captain wrote under your ${waitingCardWords(waiting)} and you have not answered: answer in ${one ? "that card's" : "each card's"} thread with reply, naming its card_id, or pass your answer as the reply of ${one ? "that card's" : "its"} emit_card revision under the same id, naming their message in answers_message.`;
+}
+
+type NamedTask = { id: string; key: string; title: string };
+
+/**
+ * Why a task counts as begun work (INF-3846 piece 2): it sits under a parent
+ * where building work has started (`part`, naming the parent), started work
+ * waits on it (`waited-on`, naming that work, and `via`, the parent above it
+ * that work waits on when it is not the task itself), or it started itself
+ * (`started`).
+ */
+export type NextMoveBegun =
+  | { why: "part"; task: NamedTask }
+  | { why: "waited-on"; task: NamedTask; via?: NamedTask }
+  | { why: "started" };
+
+/** The begun work a next-move wake names, in words. */
+function begunWords(begun: NextMoveBegun): string {
+  if (begun.why === "started") return "it started before";
+  const named = `${begun.task.key} "${begun.task.title}"`;
+  if (begun.why === "part") return `it is a part of ${named}, where work has started`;
+  return begun.via
+    ? `started work waits on ${begun.via.key} "${begun.via.title}", which it is a part of: ${named}`
+    : `started work waits on it: ${named}`;
 }
 
 /** A note up on a task: a card with no actions, which holds no turn. */
@@ -301,6 +343,16 @@ export const IDLE_WORDS: KindWords<IdleFacts> = {
   },
   "backlog-news": (facts) =>
     `[fm-op] task ${facts.task.id} "${facts.task.title}" has waited in the backlog for ${formatDurationShort(facts.waitedMs)}, and news from the app reached it there; its crewmate hears it only once it starts again. If the news means it can move, start it with update_task start_now; otherwise leave it parked. You are told this once per stay in the backlog. The news: ${facts.news}`,
+  "next-move": (facts) => {
+    const open = facts.stands === "on-request";
+    const stands = open
+      ? `has waited on request for ${formatDurationShort(facts.standingMs)} for a start nobody has given`
+      : `went back to the backlog ${formatDurationShort(facts.standingMs)} ago and waits there for a start`;
+    const start = open
+      ? "start it with update_task start_now, or start_policy when-ready to start once nothing holds it"
+      : "start it with update_task start_now";
+    return `[fm-op] task ${facts.key} "${facts.task.title}" is begun work (${begunWords(facts.begun)}), and nothing will move it: it ${stands}, no card of it asks the captain anything, and no stop from the captain is recorded on it. Begun work is always moving, waiting on the captain with a card up, or stopped by the captain. First read its history with tasks: if the captain asked for it to wait, record that with update_task captain_stop true and leave it. Otherwise give it a next move: ${start}; put what holds it to the captain on a card; or drop it with update_task drop and a reason if it is no longer needed. You are told this once: if it still stands after this turn, the app shows the captain one card about it.`;
+  },
   "idle-owed": (facts, wake) => {
     if (facts.held !== "captain-gate") return retiredCountHold(facts.task);
     return renderHold(

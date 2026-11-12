@@ -229,7 +229,8 @@ The tick, every idle boundary and the boot sweep call `CrewWatch.reconcileIdle` 
 The order is the rule's own:
 
 1. Closed: nothing.
-   A started task in the backlog (INF-2062, `inBacklog`): the captain's turn, nothing, whatever else stands - it waits for a Start, so it gets no nudge, no wake, no card and no stall line however long it stays.
+   A started task in the backlog (INF-2062, `inBacklog`): the captain's turn, nothing, whatever else stands - it waits for a Start, so the ladder gives it no nudge, no wake, no card and no stall line however long it stays.
+   One the captain did not stop is still begun work with no next move, which the next-move check below reads.
 2. An open card currently waits for its author's answer **and nothing is deliverable on its lane**, no cut-off holds its account, and its computer is not out of reach: nobody's turn.
    Before the card check, as row 0 outranks row 1 above - a reply hides its card on the captain's screen while the core keeps it open, so the card no longer holds the turn, and a reply that can no longer be delivered is a stranded task, not the crewmate's turn.
 3. Its crewmate's last report asked the first mate to act (`needs_firstmate`), and the first mate has not acted on the task since (`askedFirstmate`, FI3-714): the first mate's turn, whatever card is up and whatever still moves, as row 0a outranks them in the sort - and after an unanswered captain reply, which the crewmate answers first.
@@ -280,11 +281,12 @@ The ladder holds its clock at each tick the wake still waits (`InboxStore.holdsU
   It leaves on a choice (putting it away keeps its card minimized, and the task's standing line stays), when the task moves (a new turn retires it, unless a reply under it still waits on the first mate's answer), when the task goes back to the backlog, or when the task closes.
 
 **Parking an unchanged blocker** (INF-3143, the captain's direction A, "Park it where it shows up"): every Nudge or steer starts a new episode, so a blocker no steer can change would run the ladder again and again.
-The backlog is where such a task rests: the stall card's Back to backlog and the stall wake's park way (`update_task` `start_policy` on-request) both run `HostOps.moveToBacklog`, which takes the stall card down, and nothing on the ladder reads a task in the backlog.
+The backlog is where such a task rests: the stall card's Back to backlog and the stall wake's park way (`update_task` `start_policy` on-request) both run `HostOps.moveToBacklog`, which takes the stall card down, and no rung of the ladder reads a task in the backlog.
 The first mate parks a stalled task on its own judgment when the blocker is one no steer will change, as well as when the captain asks.
 News from the app that reaches it there wakes the first mate once per stay (`backlog-news`), so a blocker that changes is not missed.
+A park the captain did not ask for is still begun work with no next move, which the next-move check below reads.
 
-**The first mate's closing note** (INF-547, the captain's choice of 2026-10-19) is the other card the host raises about work: started work the first mate closed without the captain's click, when it is the answer to the captain's message, at most one for each message (`docs/task-capture.md`, "How a message ends").
+**The first mate's closing note** (INF-547, the captain's choice of 2026-10-19) is another card the host raises about work: started work the first mate closed without the captain's click, when it is the answer to the captain's message, at most one for each message (`docs/task-capture.md`, "How a message ends").
 It carries the first mate's own sentence, has no actions, places no gate, and no rung reads it (`docs/card-authoring.md`, "Work that closed without the captain's click").
 Work no message of the captain's covers gets it only for a merge or a release (INF-1467).
 
@@ -344,6 +346,37 @@ Nothing here closes, lands, merges or discards anything.
 Two edges carried from the specification: the card map and the card store are written by adjacent synchronous calls, not one transaction - a crash between them is the window the gate sweep already tolerates for first mate decision rows.
 A crewmate declares a wait with `report`'s `waiting_on_captain`, which stores `delivery.captainWait` (`TaskService`); a typed wait on work nobody has started is row 2a.
 The host does not parse a free-text "I am waiting on X until Y".
+
+## The next-move check
+
+INF-3846, the captain's ask to find why a workstream paused half way and broke continuity, and to avoid it by design.
+The ladder's rungs read started crewmates; a part of begun work that waits for a start had no reader, so a workstream whose next part was filed on request, or whose started part was parked, stopped with nobody told.
+The check (`NextMove`, `src/core/orchestrator/nextMove.ts`) is the same pass widened to those parts, run at the end of `IdleLadder.reconcileIdle` inside its projection, with no queue, timer or scheduler of its own.
+
+It reads live work that waits for a start: open work on request, and started work in the backlog.
+A delivery step, a review task and a parent whose parts do the work are not read (a task that delivers an answer is read itself, since its parts are never read in its place); an open part with an uncleared wait moves once that work closes, and a wait that can never clear has its own wake.
+Such a part is begun work when, at its own level or at any level of its live parents above it:
+
+- that parent or another part under it started building work (a task that delivers an answer, `shape.deliverable` `answer`, is not building work, and a dropped part does not count), so a part under a sub-task of begun work is begun too;
+- started work waits on that level through a `blocks` link, directly or through open work that is begun itself; or
+- it started itself and went back to the backlog.
+
+Work the captain stopped is never the reason: a started part or a waiter they parked, or one under a parent they stopped, makes nothing begun.
+
+Ideas filed for later stay exempt: on-request work on its own, or under a task that delivers an answer, is not begun, whatever started above that task - the walk up through live parents ends at a task that delivers an answer, as it ends at a closed parent.
+
+Begun work is always in one of three states, and a part in none of them stands still:
+
+1. Moving: open work when-ready, open work held at a gate (a wait for a time, a quota reset or a computer starts it by itself, and a gate on the captain is theirs), or started work out of the backlog.
+2. Waiting on the captain with a card up: a decision card of the task's that is not the check's own, a marked saved answer, a declared wait on the captain with a card of the task up, or its browser in the captain's hands.
+3. Stopped by the captain (`TaskStarts.stoppedByCaptain`): the newest line that stopped or started it is the captain's own move to the backlog or to on-request, or the first mate's record that the captain asked for the wait (`update_task` `captain_stop`, `TaskStarts.declareCaptainStop`); a started task's line counts only from its current stay in the backlog, and a later line that sets its start policy, whoever wrote it, ends the stop.
+   A part under a parent the captain stopped is stopped too.
+
+A standing part's stay begins at the newest typed fact that left it standing, read from the record and never stored: its creation, its newest line that stopped or started it (a board move, an edit of its start policy, the first mate's record of a captain stop, or a failed start that put it back on request), its move to the backlog, the close of the last work it waited on, the start of the work that made it begun, and the end of another card about it.
+Once it has stood for `STALL_WAKE_MS` and no news about it waits on the first mate's lane, the first mate gets one typed `next-move` wake (`rule:next-move-wake`), once per stay (`docs/inbox.md`, "Once per fact"), naming why it is begun, telling it to read the task's history for a pause the captain asked for and record that stop, and otherwise the ways to give it a next move: a start, a card to the captain or a drop.
+When the first mate has finished a turn on that news and the part still stands, the host raises one card, `card-next-move-<task>` (`rule:next-move-card`): Start it starts the task (host op `start-task`), Leave it only closes the card, and a reply goes to the first mate.
+The card's raised line on the task's timeline keeps it to one per stay, so Leave it does not bring it back until a new stay begins.
+A state answers it, never a turn ending: the card comes down at the next pass once the part moves, the captain holds it, the captain stopped it or it closes, unless a reply under it still waits on the first mate.
 
 ## What it writes
 

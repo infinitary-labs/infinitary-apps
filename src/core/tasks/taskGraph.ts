@@ -211,6 +211,33 @@ export class TaskGraph {
       .flatMap((link) => [this.writer.store.get(link.toId)].filter((r): r is TaskRecord => !!r));
   }
 
+  /**
+   * The live work waiting on this task - open or started - in link order,
+   * without composing closed waiters (INF-2342, INF-2457).
+   */
+  liveWaiters(id: string): TaskRecord[] {
+    const links = this.linksFrom(id).filter((link) => link.type === "blocks");
+    const live = new Map(
+      this.writer.store
+        .getAmong(
+          links.map((link) => link.toId),
+          ["open", "active"],
+        )
+        .map((record) => [record.id, record]),
+    );
+    return links.flatMap((link) => live.get(link.toId) ?? []);
+  }
+
+  /** The earliest start among a parent's done building parts (`TaskRecordStore.earliestDonePartStart`). */
+  earliestDonePartStart(parentId: string): number | undefined {
+    return this.writer.store.earliestDonePartStart(parentId);
+  }
+
+  /** When the last work this task waits on closed (`TaskRecordStore.latestBlockerClose`). */
+  latestBlockerClose(id: string): number | undefined {
+    return this.writer.store.latestBlockerClose(id);
+  }
+
   linksTo(id: string): TaskLink[] {
     const known = this.writer.projection?.linksTo.get(id);
     if (known) return known;

@@ -601,6 +601,42 @@ const CASES: WordsCases<FirstmateWakeKind> = {
         '[fm-op] task 479823ee "Restructure the wakes file" has waited in the backlog for 2h, and news from the app reached it there; its crewmate hears it only once it starts again. If the news means it can move, start it with update_task start_now; otherwise leave it parked. You are told this once per stay in the backlog. The news: Every check on your pull request passed.',
     },
   ],
+  "next-move": [
+    {
+      // INF-3846 piece 2: an open part of begun work nobody started.
+      name: "a part waits on request under a parent where work started",
+      wake: {
+        facts: {
+          kind: "next-move",
+          task: TASK,
+          key: "INF-12",
+          stands: "on-request",
+          begun: {
+            why: "part",
+            task: { id: "c2d8e1a0", key: "INF-10", title: "Move secrets behind one owner" },
+          },
+          standingMs: 3_600_000,
+        },
+      },
+      words:
+        '[fm-op] task INF-12 "Restructure the wakes file" is begun work (it is a part of INF-10 "Move secrets behind one owner", where work has started), and nothing will move it: it has waited on request for 1h for a start nobody has given, no card of it asks the captain anything, and no stop from the captain is recorded on it. Begun work is always moving, waiting on the captain with a card up, or stopped by the captain. First read its history with tasks: if the captain asked for it to wait, record that with update_task captain_stop true and leave it. Otherwise give it a next move: start it with update_task start_now, or start_policy when-ready to start once nothing holds it; put what holds it to the captain on a card; or drop it with update_task drop and a reason if it is no longer needed. You are told this once: if it still stands after this turn, the app shows the captain one card about it.',
+    },
+    {
+      name: "started work went back to the backlog",
+      wake: {
+        facts: {
+          kind: "next-move",
+          task: TASK,
+          key: "INF-12",
+          stands: "backlog",
+          begun: { why: "started" },
+          standingMs: 900_000,
+        },
+      },
+      words:
+        '[fm-op] task INF-12 "Restructure the wakes file" is begun work (it started before), and nothing will move it: it went back to the backlog 15m ago and waits there for a start, no card of it asks the captain anything, and no stop from the captain is recorded on it. Begun work is always moving, waiting on the captain with a card up, or stopped by the captain. First read its history with tasks: if the captain asked for it to wait, record that with update_task captain_stop true and leave it. Otherwise give it a next move: start it with update_task start_now; put what holds it to the captain on a card; or drop it with update_task drop and a reason if it is no longer needed. You are told this once: if it still stands after this turn, the app shows the captain one card about it.',
+    },
+  ],
   "idle-owed": [
     {
       name: "a captain gate with its reason, its repeat",

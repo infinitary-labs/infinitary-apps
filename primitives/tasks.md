@@ -40,6 +40,7 @@ Agent tools: the first mate's `create_task`, `update_task`, `link_tasks` and `ta
 Status is `open | active | done | dropped`, with `activity` and `closed_reason` beside it; settling closes a row, it never deletes it.
 An open row waits on a gate (`quota-reset | at-time | captain`), on `blocks` links, or on request (`start_policy`).
 The ready query is the dispatch list: open work, no gate, `when-ready`, every blocker `done`; on-request rows never dispatch on their own.
+An on-request part of begun work is never left there unseen: unless the captain stopped it or a card of it asks them something, the next-move check tells the first mate once and then shows the captain one card ([report sort](../docs/report-sort.md), "The next-move check").
 An active work row may wait in the backlog too (INF-2062): `backlog_since` on its running work (`TaskService.starts.setQueued`, `leaveBacklog`) keeps its work while nothing the host sends wakes it, and the idle ladder and the sort read it as the witness `inBacklog` ([task board](../docs/task-board.md), "A started task in the backlog").
 It runs on the shared tick, after any close, after any graph change, on quota refresh and at boot (`CrewWatch.sweepGates`).
 The gate is a witness: every card with actions, and a wait on the captain a crewmate declares in its report, places the `captain` gate on its task (a task-less host card files an `operation` row) (`docs/task-graph.md`).

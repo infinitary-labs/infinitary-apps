@@ -33,6 +33,7 @@ export type FirstmateWakeKind =
   | "validation-question-stale"
   | "idle-stall"
   | "backlog-news"
+  | "next-move"
   | "idle-asked"
   | "idle-owed"
   | "outage-failed"

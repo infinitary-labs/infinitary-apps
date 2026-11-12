@@ -99,6 +99,8 @@ const IDLE_RULES: ReadonlySet<string> = new Set<IdleRule>([
   "job-bound",
   "provider-cut-off",
   "provider-back",
+  "next-move-wake",
+  "next-move-card",
 ]);
 
 /**

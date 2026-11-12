@@ -1268,6 +1268,34 @@ export class TaskStore {
     return rows.map((row) => row.id);
   }
 
+  /**
+   * The earliest start among a parent's merged or finished building parts -
+   * work parts that started, not delivering an answer and not raised by the host
+   * - for the next-move check (INF-3846 piece 2). One seek on the parent's
+   * done rows, never composing them, so a pass grows with live work only.
+   */
+  earliestDonePartStart(parentId: string): number | undefined {
+    const row = prepared(
+      this.db,
+      `SELECT MIN(started_at) AS at FROM ${this.readTable()}
+       WHERE parent_id = ? AND status = 'done' AND kind = 'work' AND started_at IS NOT NULL
+         AND COALESCE(json_extract(shape_json, '$.deliverable'), '') != 'answer'
+         AND COALESCE(json_extract(shape_json, '$.kind_source'), '') NOT LIKE 'host:%'`,
+    ).get(parentId) as { at: number | null };
+    return row.at ?? undefined;
+  }
+
+  /** When the last work this task waits on through a `blocks` link closed, without composing it. */
+  latestBlockerClose(id: string): number | undefined {
+    const row = prepared(
+      this.db,
+      `SELECT MAX(blocker.closed_at) AS at FROM task_links AS link
+       JOIN tasks AS blocker ON blocker.id = link.from_id
+       WHERE link.to_id = ? AND link.type = 'blocks'`,
+    ).get(id) as { at: number | null };
+    return row.at ?? undefined;
+  }
+
   /** Live children for review witnesses; closed children's payloads are not read. */
   listLiveChildren(parentId: string): TaskRecord[] {
     const key = `live-children:${parentId}`;

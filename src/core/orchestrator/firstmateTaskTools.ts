@@ -237,10 +237,25 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
             : undefined;
           if (backlog?.ok) tookEffect(record.id);
           if (move?.ok) tookEffect(record.id);
+          // The captain asked for it to wait (INF-3846 piece 2): recorded after
+          // the start policy and any move to the backlog, which it needs.
+          const stop = input.captainStop
+            ? tasks.starts.declareCaptainStop(record.id, "firstmate")
+            : undefined;
+          if (stop?.ok && stop.changed) tookEffect(record.id);
+          const stopText = !stop
+            ? undefined
+            : !stop.ok
+              ? stop.text
+              : stop.changed
+                ? `Recorded that the captain asked ${record.key || record.id} to wait.`
+                : `${record.key || record.id} is already recorded as stopped by the captain.`;
           if (changes.length === 0) {
             if (move && !move.ok) throw new TaskGraphRefusal(move.text);
             if (backlog && !backlog.ok) throw new TaskGraphRefusal(backlog.text);
-            if (move || backlog) return [move?.text, backlog?.text].filter(Boolean).join(" ");
+            if (stop && !stop.ok && !move && !backlog) throw new TaskGraphRefusal(stop.text);
+            if (move || backlog || stop)
+              return [move?.text, backlog?.text, stopText].filter(Boolean).join(" ");
             return `${record.key || record.id} is unchanged.`;
           }
           const updated = tasks.get(record.id) ?? record;
@@ -271,7 +286,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
             supervisor.intake.graphChanged();
           }
           const now = tasks.get(record.id);
-          return `Updated ${now?.key || record.id}: ${changes.join(", ")}.${policyNote ? ` ${policyNote}` : ""}${move ? ` ${move.text}` : ""}${backlog ? ` ${backlog.text}` : ""}`;
+          return `Updated ${now?.key || record.id}: ${changes.join(", ")}.${policyNote ? ` ${policyNote}` : ""}${move ? ` ${move.text}` : ""}${backlog ? ` ${backlog.text}` : ""}${stopText ? ` ${stopText}` : ""}`;
         })();
         return { text, ok: true };
       } catch (caught) {

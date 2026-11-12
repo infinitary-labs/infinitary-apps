@@ -60,6 +60,8 @@ export type TaskToolsDelegate = {
     startPolicy?: TaskStartPolicy;
     /** Why started work goes back to the backlog (start_policy on-request, INF-2062). */
     reason?: string;
+    /** The captain asked for it to wait (INF-3846 piece 2): it counts as stopped by them. */
+    captainStop?: boolean;
     /** Prerequisites to add. Already-linked ones stay; none are removed. */
     declaredBlockers?: string[];
     verdict?: string | null;
@@ -275,9 +277,11 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       start_policy: Type.Optional(
         stringEnum(START_POLICY_VALUES, {
           description:
-            "As create_task's start_policy. on-request on started work moves it back to the backlog: its turn stops, its work stays, its stuck card comes down, nothing wakes it until start_now picks it up, and you hear once if news reaches it there. Do this with a reason when the captain asks to pause a task, or when a stall wake shows it stopped on a blocker no steer will change; never steer it to stay idle.",
+            "As create_task's start_policy. on-request on started work moves it back to the backlog: its turn stops, its work stays, its stuck card comes down, nothing wakes it until start_now picks it up, and you hear once if news reaches it there. Do this with a reason when the captain asks to pause a task, or when a stall wake shows it stopped on a blocker no steer will change; never steer it to stay idle. Add captain_stop true when the captain asked for the wait: until it starts again, nothing alarms about it.",
         }),
       ),
+      // What it records is said on start_policy, so it is served bare.
+      captain_stop: Type.Optional(Type.Boolean()),
       // What [] declares is said once, on create_task's blocked_by.
       blocked_by: Type.Optional(
         Type.Array(Type.String(), {
@@ -596,6 +600,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         ...(params.project !== undefined ? { project: params.project } : {}),
         ...(params.start_policy ? { startPolicy: params.start_policy } : {}),
         ...(params.start_policy && params.reason?.trim() ? { reason: params.reason.trim() } : {}),
+        ...(params.captain_stop ? { captainStop: true } : {}),
         ...(params.blocked_by !== undefined ? { declaredBlockers: params.blocked_by } : {}),
         ...(params.verdict !== undefined ? { verdict: params.verdict } : {}),
       };

@@ -1,6 +1,3 @@
-import { hasNotTypingKeys } from "@shared/keyboard";
-import { installedBindings } from "../design/core/installedKeys";
-import { focusWithRing } from "../design/focus";
 import { available, type Landing } from "./focusRecovery";
 import { typingTarget } from "./notTypingKeys";
 import { enterCard } from "./regions";
@@ -8,11 +5,12 @@ import { useShellStore } from "./store";
 
 /**
  * Where focus lands when the control holding it goes away (docs/keyboard.md,
- * "Where focus lands"): a shortcut never changes whether a person is typing.
- * This module keeps one fact about the last place focus rested - whether a
- * person was typing there - and the lost-focus fallback (`guardLostFocus`)
- * lands by it: in the main message while typing, else on the shown card,
- * else on the empty card area where plain keys are installed.
+ * "Where focus lands"): a shortcut never changes whether a person is typing
+ * while a card is left to act on. This module keeps one fact about the last
+ * place focus rested - whether a person was typing there - and the
+ * lost-focus fallback (`guardLostFocus`) lands by it: in the main message
+ * while typing, else on the shown card, and in the main message once no card
+ * is left, in every preset.
  *
  * Typing means focus rests in a text field, inside a frame (whose control
  * the window cannot see), or where a pointer put it. Only a key, or code
@@ -98,9 +96,10 @@ export function landLostFocus(): void {
     waitingForCard = true;
     return;
   }
+  // No card left, as when a key closed the last one: the main message, so
+  // the words typed next reach it.
   waitingForCard = false;
-  if (area && hasNotTypingKeys(installedBindings())) focusWithRing(area, { preventScroll: true });
-  else prompt.focus({ preventScroll: true });
+  prompt.focus({ preventScroll: true });
 }
 
 /** The landing the lost-focus fallback uses, with the typing fact kept for it. */

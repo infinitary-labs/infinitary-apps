@@ -509,9 +509,10 @@ The window's own keys (F6, ⌘L, ⌘K) are the main process's, so a script that 
 
 ## Where focus lands
 
-A shortcut never changes whether a person is typing.
+A shortcut never changes whether a person is typing while a card is left to act on.
 It may move focus to the thing it acted on; only the person moves the caret into a text field or out of one.
 This holds in every preset, so a key that pages, answers or puts a card aside can be pressed again at once, with no Escape between.
+A key that leaves no card on screen, such as one that answers or puts aside the last card, puts the caret in the main message, so the words typed next reach it, as after a pointer click.
 
 One owner keeps one fact about the last place focus rested: whether the person was typing there (`src/renderer/src/app/focusLanding.ts`).
 Focus rests while typing in a text-like control (`typingTarget`, the same test the keys used when not typing make), inside a frame, whose control the window cannot see, and wherever a pointer put it.
@@ -523,10 +524,11 @@ When the control holding focus goes away, as when the shown card pages, is answe
 1. Typing: the main message, its words and caret as they were.
 2. Not typing: the shown card, whole and ringed, never one of its buttons, so a held Enter cannot answer it.
    While the card that takes its place is drawn but not ready, focus waits on the card area (`[data-stage]`), out of every field, and lands on the card once it is.
-3. Not typing and no card left: the empty card area where the installed keys include plain keys ("Keys used when not typing"), so they still work; the main message otherwise.
+3. Not typing and no card left, as when a key answers or puts aside the last card: the main message, in every preset, plain keys installed or not.
+   Escape in the main message still leaves it for the empty card area, where plain keys work ("Keys used when not typing").
 
 Focus that rests anywhere else, such as in a side panel, stays there when a card changes: the card stack never asks for the main message.
-Closing something that opened over the work returns focus where it was: command search gives back the control it remembered ("Command search"), and leaving Settings lands by the fact from before Settings opened.
+Closing something that opened over the work returns focus where it was: command search gives back the control it remembered ("Command search"), and leaving Settings lands by the fact from before Settings opened, in the main message when no card is left.
 A pointer click that removes its own control, such as Got it, leaves the caret in the main message.
 A card the person points at, and a card the first mate brings forward, still take focus ("Cards and frames"); sending, starting a draft, dictation and recall still focus the main message.
 
@@ -539,7 +541,7 @@ While it is open its keys reach nothing underneath, and the window's other comma
 
 Closing gives focus back at once to what had it (`closeCommandSearch`), and only then does a chosen command run, so a command that moves focus moves it from there.
 When focus was inside a card's or a panel's frame, the field inside it gets it back with its caret, as when the picture viewer closes ("Cards and frames"), unless the chosen command moves focus on.
-When nothing had focus, focus lands by the rule in "Where focus lands": the main message while the person was typing, unless the chosen command puts focus somewhere itself in the same render (`focusMainMessage`'s `yields`, `focusTakenElsewhere`), and otherwise the shown card.
+When nothing had focus, focus lands by the rule in "Where focus lands": the main message while the person was typing, unless the chosen command puts focus somewhere itself in the same render (`focusMainMessage`'s `yields`, `focusTakenElsewhere`), and otherwise the shown card, or the main message when no card is left.
 Each opening starts with an empty field and the first row chosen, also when search opens again while its last closing still fades out.
 A main-process command chosen there (a size step) is asked of the main process by its id on `inf:keyboard:run`, which runs the same handler its key runs.
 

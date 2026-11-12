@@ -1051,9 +1051,9 @@ describe("task records on the card stack", () => {
     );
     expect(shell().focusRequest).toBe(before);
   });
-  // INF-3818's accepted rule: a shortcut never changes whether a person is
-  // typing, so closing the final entry asks nothing of the main message; the
-  // lost-focus fallback lands by where focus rested (focusLanding.ts).
+  // INF-3818's accepted rule: closing an entry asks nothing of the main
+  // message itself; the lost-focus fallback lands (focusLanding.ts), in the
+  // main message once no card is left.
   it("never asks for the main message as entries close, the final one included", () => {
     const shell = () => useShellStore.getState();
     shell().openRecord("t1");

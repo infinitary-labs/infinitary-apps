@@ -18,23 +18,25 @@ import {
   stageAtRest,
 } from "./stack";
 import { MAC_ONLY_TAG } from "./tags";
-import { boardCard } from "./taskBoard";
 import {
   focusedRegion,
   focusOn,
   pressKey,
   pressWindowKey,
+  typeInto,
   type WindowKeyModifier,
 } from "./windowKeys";
 
 /**
  * INF-3818's accepted plan, "Where focus lands" (docs/keyboard.md): a
- * shortcut never changes whether the person is typing, so a key that pages,
- * answers or puts a card aside can be pressed again at once in every preset.
- * Data: four ordinary first mate cards in a private home, two questions and
- * two notes, one long enough to scroll. Signal: the pager's position, the
- * focused element and its ring, and the main message's words. Hidden
- * Electron with the mock provider; no Mac-only resource, sign-in or real data.
+ * shortcut never changes whether the person is typing while a card is left,
+ * so a key that pages, answers or puts a card aside can be pressed again at
+ * once in every preset; the captain's later ask puts the caret in the main
+ * message once a key closes the last card. Data: four ordinary first mate
+ * cards in a private home, two questions and two notes, one long enough to
+ * scroll. Signal: the pager's position, the focused element and its ring,
+ * and the main message's words. Hidden Electron with the mock provider; no
+ * Mac-only resource, sign-in or real data.
  */
 
 const LONG_NOTE = "Tide tables for the week";
@@ -164,24 +166,17 @@ test("Vim: paging, putting aside and answering chain from the shown card, with n
       }
     });
 
-    await test.step("answering two cards in a row lands on the next card, then the empty card area", async () => {
+    // The captain's ask: a key that closes the last card drops focus into the
+    // main message, where Vim's plain keys type words instead of running.
+    await test.step("answering two cards in a row lands on the next card, then in the main message", async () => {
       await pressWindowKey(app, "1", ["meta"]);
       await expect(pager(page, 2)).toHaveCount(0);
       await expectCardFocused(page);
       await pressWindowKey(app, "1", ["meta"]);
       await expect(page.locator(SHOWN_ENTRY)).toHaveCount(0);
-      await expect
-        .poll(() =>
-          page.evaluate(() => {
-            const area = document.querySelector("[data-stage]");
-            return document.activeElement === area && area?.matches(":focus-visible");
-          }),
-        )
-        .toBe(true);
-      await pressWindowKey(app, "G");
-      await pressWindowKey(app, "B");
-      await expect(boardCard(page)).toBeVisible();
-      await expect(prompt).toHaveValue("");
+      await expect(prompt).toBeFocused();
+      await typeInto(prompt, "go with the blue crew");
+      await expect(prompt).toHaveValue("go with the blue crew");
     });
   } finally {
     await close();

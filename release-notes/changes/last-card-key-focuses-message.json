@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "last-card-key-focuses-message",
+      "kind": "improvement",
+      "title": "Closing the last card with a key puts you back in the message box",
+      "body": "When a keyboard shortcut answers or puts aside the last card on screen, the caret now moves into the message box, so the words you type next go straight into your next message. This works the same in every keyboard preset, including Vim and tmux. Press Escape in the message box when you want the single-letter keys instead.",
+      "area": "cards",
+      "noPicture": "Where the keyboard's place lands after the last card closes cannot show in a still picture.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}
